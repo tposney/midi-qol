@@ -1130,7 +1130,7 @@ export var MidiActivityMixin = Base => {
       const workflow = usage.workflow;
       const removeWorkflow = async (workflow) => {
         Workflow.removeWorkflow(workflow.id);
-        const consumed = workflow.chatCard?.getFlag("dnd5e", "consumed");
+        const consumed = workflow.chatCard?.getFlag("dnd5e", "use.consumed");
         if (!foundry.utils.isEmpty(consumed)) {
           await workflow.activity.refund(consumed);
         }

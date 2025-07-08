@@ -531,9 +531,25 @@ Reaction spells must be prepared (if preparation is required for the spell) and 
 
 There is an optional configuration on the optional tab to remove this restriction, if using some other mechanism to determine if a spell can be cast, e.g. spell points.
 
-Instead of triggering on attacks reactions can trigger on damage application (e.g. hellish rebuke).
+Instead of triggering on attacks reactions can trigger on damage application (e.g. hellish rebuke) or other timings.
 
-Midi supports 3 activation types, **reaction** (triggers if hit), **reaction damage** (triggers if damaged), **reaction manual** (midi will ignore this when prompting for reactions).
+***deprecated*** ~~Midi supports 3 activation types, **reaction** (triggers if hit), **reaction damage** (triggers if damaged), **reaction manual** (midi will ignore this when prompting for reactions).~~
+
+**Reactions** Use activation type Reaction, and then in the MidiQOL tab, of the Item's details add the desired reaction trigger from the following list:
+
+Available reaction triggers
+- 'preAttack', called before an Item (with creates an attack roll, or in Foundry data schema terms item.hasAttack == true) rolls for the Attack,
+- 'isAttacked' called when an item.hasAttack has rolled the Attack, but before checks for hit/miss,
+- 'isMissed', item.hasAttack misses,
+- 'isHit', item.hasAttack hits,
+- 'isDamaged', item.hasAttack deals damage,
+- 'isHealed', item does healing (either actionType == 'heal' OR the first damage type is 'healing' or 'temporary healing'),
+- 'isSave', item.hasSave triggers a saving throw, but before the result has been adjudicated
+- 'isSaveSuccess', item.hasSave and save success
+- 'isSaveFail', item.hasSave and save failure.
+
+**Usage**, in MidiQOL item details tab, in the "Activation Conditions" fields and the "Reaction will be triggered if true", add `reaction === 'isHit'` for example.
+
 
 Items in the SRD have the activation type set to reaction for reaction spells/features, so you will need to edit them in your game.
 
