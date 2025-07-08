@@ -5,6 +5,7 @@
 	"description": "Automates rolling weapon/spell attacks and applying damage amongst other things",
 	"devDir": "/home/timp/foundry-data/foundryv13/Data/modules/",
 	"main": "src/midi-qol.ts",
+	"types": "types/midi-qol.d.ts",
 	"scripts": {
 		"build": "npx gulp",
 		"watch": "npx gulp watch",
@@ -13,7 +14,8 @@
 		"devwatch": "npx gulp devWatch",
 		"devclean": "npx gulp devClean",
 		"release": "npx gulp zip",
-		"tag": "git tag -a v$npm_package_version -m \"version $npm_package_version release tag\" && git push origin --follow-tags"
+		"tag": "git tag -a v$npm_package_version -m \"version $npm_package_version release tag\" && git push origin --follow-tags",
+		"generate:types": "tsc --project tsconfig.types.json"
 	},
 	"prettier": {
 		"tabWidth": 2,

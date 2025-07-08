@@ -453,7 +453,7 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
   }
 }
 
-export async function removeChatCard(chatCard: ChatMessage | undefined) {
+export async function removeChatCard(chatCard: ChatMessage | undefined): Promise<ChatMessage | undefined> {
   if (!chatCard || !chatCard.content) return;
   const shouldDelete = configSettings.undoChatColor === "Delete";
   if (shouldDelete) {

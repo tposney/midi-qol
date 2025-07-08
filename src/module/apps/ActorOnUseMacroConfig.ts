@@ -74,7 +74,6 @@ export class ActorOnUseMacrosConfig extends HandlebarsApplicationMixin(Applicati
     event?.preventDefault();
     const a = event?.currentTarget;
     const macros = getCurrentSourceMacros(this.document);
-    //@ts-expect-error
     const formMacros = Object.entries(new foundry.applications.ux.FormDataExtended(this.element.querySelector("form") as HTMLFormElement)?.object) ?? [];
     for (const [k, v] of formMacros) {
       foundry.utils.setProperty(macros, k.split('.').slice(1).join('.'), v);
