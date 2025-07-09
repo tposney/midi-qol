@@ -1,3 +1,6 @@
+### 12.4.63
+* version bump for recreated zip file
+
 ### 12.4.62
 * Fix for reactions when using emanation/emanation no template targeting.
 * Add damageTypes and defaultDamageType in the createConditionData - thanks @thatlonelybugbear
