@@ -1314,6 +1314,7 @@ export var MidiActivityMixin = Base => {
       }
       if (tokenToUse && emanationNoTemplate) {
         setRangedTargets(tokenToUse, this.target);
+        message.workflow.setTargets(validTargetTokens(game.user?.targets));
       }
 
       foundry.utils.setProperty(message.data, "flags.dnd5e.targets", globalThis.dnd5e.utils.getTargetDescriptors());

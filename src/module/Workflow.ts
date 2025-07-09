@@ -2709,7 +2709,7 @@ export class Workflow {
               case "hitTargets": targetUuids = toUuids(this.hitTargets); break;
               case "missedTargets": targetUuids = toUuids(this.targets.difference(this.hitTargets)); break;
               case "failedSaves": targetUuids = toUuids(this.failedSaves); break;
-              case "saveTargets": targetUuids = toUuids(this.saveTargets); break;
+              case "saveTargets": targetUuids = toUuids(this.saves); break;
               case "targets": targetUuids = toUuids(this.targets); break;
               case "retarget":
               default:

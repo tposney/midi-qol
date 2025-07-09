@@ -1,3 +1,9 @@
+### 12.4.62
+* Fix for reactions when using emanation/emanation no template targeting.
+* Add damageTypes and defaultDamageType in the createConditionData - thanks @thatlonelybugbear
+* Fix for versatile weapon usage (i.e. changing from 1 handed to two handed) not failing when checking for a shield equipped.
+* Fix for config.attackMode (onehanded/twohanded) being overridden when using an item.
+
 ### 12.4.61
 * Fix for summons with instantaneous duration throwing an error
 

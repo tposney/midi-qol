@@ -493,6 +493,7 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data?,
       //@ts-expect-error
       VolumetricTemplates.compute3Dtemplate(templateDocument.object, canvas?.tokens?.placeables);
     }
+    this.setTargets?.(game.user?.targets);
   }
   if (this) {
     this.templateUuid = templateDocument?.uuid;
