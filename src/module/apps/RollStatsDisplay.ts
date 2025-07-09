@@ -17,6 +17,7 @@ export class RollStatsDisplay extends HandlebarsApplicationMixin(ApplicationV2) 
     Object.keys(this.stats.currentStats).forEach(aid => {
       this.expanded[aid] = this.playersOnly;
     })
+    //@ts-expect-error
     this.statsHookId = Hooks.on("midi-qol.StatsUpdated", () => {
       this.render({force: true});
     });
@@ -51,6 +52,7 @@ export class RollStatsDisplay extends HandlebarsApplicationMixin(ApplicationV2) 
 
   _onClose(options) {
     super._onClose(options);
+    //@ts-expect-error
     Hooks.off("midi-qol.StatsUpdated", this.statsHookId);
   }
 

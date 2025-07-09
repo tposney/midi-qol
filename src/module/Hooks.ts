@@ -24,13 +24,14 @@ export let readyHooks = async () => {
     if ((update.x || update.y) === undefined) return;
     const actor = tokenDocument.actor;
     const expiredEffects = actor?.effects.filter(ef => {
-      const specialDuration = foundry.utils.getProperty(ef, "flags.dae.specialDuration");
+      const specialDuration = foundry.utils.getProperty(ef, "flags.dae.specialDuration") as string[];
       return specialDuration?.includes("isMoved");
     }) ?? [];
     if (expiredEffects.length > 0) expireEffects(actor, expiredEffects, { "expiry-reason": "midi-qol:isMoved" });
 
   });
 
+  //@ts-expect-error
   Hooks.on("template3dUpdatePreview", (at, t) => {
     //@ts-expect-error VolumetricTemplates
     VolumetricTemplates.compute3Dtemplate(t);
@@ -38,9 +39,12 @@ export let readyHooks = async () => {
 
   Hooks.on("targetToken", foundry.utils.debounce(checkFlanking, 150));
 
+  //@ts-expect-error
   Hooks.on("ddb-game-log.pendingRoll", (data) => {
     ddbglPendingHook(data);
   });
+
+  //@ts-expect-error
   Hooks.on("ddb-game-log.fulfilledRoll", (data) => {
     ddbglPendingHook(data);
   });
@@ -92,28 +96,28 @@ export let readyHooks = async () => {
   Hooks.on("preUpdateActor", (actor: Actor, changes: any, options: any = {}, userId) => {
     if (userId !== game.user?.id) return true;
     if (userId !== game.user?.id)
-        return true;
+      return true;
 
     const shouldCheckTempHP = configSettings.tempHPDamageConcentrationCheck;
     const relevantHpChange = changes.system?.attributes?.hp;
 
     const isHpChangeInvalid =
-        relevantHpChange &&
-        !("value" in relevantHpChange) &&
-        (!shouldCheckTempHP || !("temp" in relevantHpChange));
+      relevantHpChange &&
+      !("value" in relevantHpChange) &&
+      (!shouldCheckTempHP || !("temp" in relevantHpChange));
 
     if (
-        isHpChangeInvalid ||
-        !isConcentrating(actor) ||
-        configSettings.doConcentrationCheck === "none" ||
-        // @ts-expect-error
-        game.settings?.get("dnd5e", "disableConcentration") ||
-        options.noConcentrationCheck ||
-        options.dnd5e?.concentrationCheck === false
+      isHpChangeInvalid ||
+      !isConcentrating(actor) ||
+      configSettings.doConcentrationCheck === "none" ||
+      // @ts-expect-error
+      game.settings?.get("dnd5e", "disableConcentration") ||
+      options.noConcentrationCheck ||
+      options.dnd5e?.concentrationCheck === false
     ) {
-        options.noConcentrationCheck = true;
-        foundry.utils.setProperty(options, "dnd5e.concentrationCheck", false);
-        return true;
+      options.noConcentrationCheck = true;
+      foundry.utils.setProperty(options, "dnd5e.concentrationCheck", false);
+      return true;
     }
 
     const hpUpdate = relevantHpChange?.value;
@@ -143,6 +147,7 @@ export let readyHooks = async () => {
     }
   })
 
+  //@ts-expect-error
   Hooks.on("renderActorArmorConfig", (app: never, html, data) => {
     if (!["none", undefined, false].includes(checkRule("challengeModeArmor"))) {
       const ac = data.ac;
@@ -181,10 +186,13 @@ export let readyHooks = async () => {
   })
 
   // Hooks.on("restCompleted", restManager); I think this means 1.6 is required.
+  //@ts-expect-error
   Hooks.on("dnd5e.restCompleted", restManager);
-
+  //@ts-expect-error
   Hooks.on("dnd5e.preActivityConsumption", preActivityConsumptionHook);
+  //@ts-expect-error
   Hooks.on("dnd5e.activityConsumption", activityConsumptionHook);
+  //@ts-expect-error
   Hooks.on("dnd5e.rollDeathSave", deathSaveHook);
   Hooks.on("updateCombat", (combat: Combat, update: Combat.UpdateData, options, userId) => {
     if (userId != preferredActiveGM()?.id) return;
@@ -251,7 +259,7 @@ export let readyHooks = async () => {
 export async function restManager(actor, result) {
   if (!actor || !result)
     return;
-  const specialDuration = (effect) => { return foundry.utils.getProperty(effect, "flags.dae.specialDuration") };
+  const specialDuration = (effect): string[] | undefined => { return foundry.utils.getProperty(effect, "flags.dae.specialDuration") as string[] };
   const effectsToExpire = (actorRef) => {
     const effects = actorRef.appliedEffects;
     const validEffects = effects.filter(effect => (specialDuration(effect) ?? []).length > 0);
@@ -326,6 +334,7 @@ export function initHooks() {
     clearUpdatesCache(message.uuid);
   });
 
+  //@ts-expect-error
   Hooks.on("midi-qol.RollComplete", async (workflow: Workflow) => {
     const activityUuid = workflow.activity.uuid;
 
@@ -565,7 +574,9 @@ export function initHooks() {
     return data;
   }
 
+  //@ts-expect-error
   Hooks.once('tidy5e-sheet.ready', (api) => {
+    //@ts-expect-error
     Hooks.on('tidy5e-sheet.getActivitiesForPlay', (parent, data) => {
       if (data.activities && data.activities instanceof Array) {
         data.activities = data.activities.filter(activity => !activity?.midiProperties?.automationOnly && !parent.getFlag("dnd5e", "riders.activity")?.includes(activity.id));
@@ -607,7 +618,8 @@ export function initHooks() {
     ]);
     return;
   });
-  
+
+  //@ts-expect-error
   Hooks.once("tidy5e-sheet.ready", api => {
     if ((game.user?.role ?? CONST.USER_ROLES.PLAYER) < (configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER)) return;
     api.registerItemHeaderControls?.({
@@ -623,6 +635,21 @@ export function initHooks() {
     });
   });
 
+
+  Hooks.on("getHeaderControlsActorSheetV2", (app, controls) => {
+    if (configSettings.allowActorUseMacro) {
+      //@ts-expect-error ApplicationV2.HeaderControlsEntry not properly defined in fvtt-types
+      controls.push({
+        label: i18n("midi-qol.ActorOnUseMacros"),
+        icon: "fa-solid fa-wrench",
+        onClick: () => {
+          new ActorOnUseMacrosConfig({ document: app.document }).render({ force: true });
+        }
+      });
+    }
+  })
+
+  //@ts-expect-error
   Hooks.on("getHeaderControlsItemSheet5e", (
     app: foundry.applications.api.DocumentSheetV2<Item>,
     controls: foundry.applications.api.ApplicationV2.HeaderControlsEntry[]
@@ -725,6 +752,7 @@ function setupMidiFlagTypes() {
 export function setupHooks() {
 }
 
+//@ts-expect-error
 Hooks.on("dnd5e.preRollDamageV2", (rollConfig, dialogConfig, messageConfig) => {
   if (!rollConfig.subject) return true;
   if (rollConfig.subject.actor && rollConfig.subject.isSpell) {
@@ -735,6 +763,7 @@ Hooks.on("dnd5e.preRollDamageV2", (rollConfig, dialogConfig, messageConfig) => {
   return true;
 });
 
+//@ts-expect-error
 Hooks.on("dnd5e.preCalculateDamage", (actor: Actor.Implementation, damages, options) => {
   try {
     const downgrade = type => options.downgrade === true || options.downgrade?.has?.(type);
@@ -787,7 +816,7 @@ Hooks.on("dnd5e.preCalculateDamage", (actor: Actor.Implementation, damages, opti
           for (let key of ["idi", "idr", "idv", "ida"]) {
             //@ts-expect-error no dnd5e types
             if (sourceActor && foundry.utils.getProperty(sourceActor as any, `system.traits.${key}`) && sourceActor.system.traits[key]?.value.size > 0) {
-              const trait = foundry.utils.getProperty(sourceActor as any, `system.traits.${key}`);
+              const trait = foundry.utils.getProperty(sourceActor as any, `system.traits.${key}`) as any;
               if (!options.ignore?.[categories[key]]) foundry.utils.setProperty(options, `ignore.${categories[key]}`, new Set())
               for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
                 if (!damages.some(di => di.type === dt)) continue;
@@ -837,6 +866,7 @@ Hooks.on("dnd5e.preCalculateDamage", (actor: Actor.Implementation, damages, opti
     }
       , 0);
     foundry.utils.setProperty(options, "midi.totalDamage", totalDamage);
+    //@ts-expect-error
     if (Hooks.call("midi-qol.dnd5ePreCalculateDamage", actor, damages, options) === false) return false;
   } catch (err) {
     const message = `Error in preCalculateDamage`;
@@ -847,6 +877,7 @@ Hooks.on("dnd5e.preCalculateDamage", (actor: Actor.Implementation, damages, opti
   }
 });
 
+//@ts-expect-error
 Hooks.on("dnd5e.calculateDamage", (actor: Actor.Implementation /* Actor - no dnd5e types*/, damages, options) => {
   try {
     const downgrade = type => options.downgrade === true || options.downgrade?.has?.(type);
@@ -1095,6 +1126,7 @@ Hooks.on("dnd5e.calculateDamage", (actor: Actor.Implementation /* Actor - no dnd
       if (dmAll) {
         damages.push({ type: "none", value: dmAll, active: { DR: true, multiplier: 1 }, allActives: drAllActives, properties: new Set() });
       }
+      //@ts-expect-error
       Hooks.callAll("midi-qol.dnd5eCalculateDamage", actor, damages, options);
       while (damages.find((di, idx) => {
         if (di.type === "midi-none") {
@@ -1125,7 +1157,7 @@ function recalculateDamage(actor, amount, updates, options) {
   updates['system.attributes.hp.temp'] = newHpTemp
   updates['system.attributes.hp.value'] = newHpValue
 }
-
+//@ts-expect-error
 Hooks.on("dnd5e.preApplyDamage", (actor: Actor.Implementation, amount: number, updates: Actor.UpdateData, options: any = {}) => {
   if (updates["system.attributes.hp.temp"]) updates["system.attributes.hp.temp"] = Math.floor(updates["system.attributes.hp.temp"]);
   // recalculateDamage(actor, amount, updates, options);
@@ -1135,7 +1167,7 @@ Hooks.on("dnd5e.preApplyDamage", (actor: Actor.Implementation, amount: number, u
     // @ts-expect-error no dnd5e-types
     const hp = actor.system.attributes.hp;
     const vitalityDamage = amount - (hp.temp + hp.value);
-    updates[vitalityResource] = Math.max(0, foundry.utils.getProperty(actor, vitalityResource) - vitalityDamage);
+    updates[vitalityResource] = Math.max(0, foundry.utils.getProperty(actor, vitalityResource) as number - vitalityDamage);
   }
   if (options.midi) {
     foundry.utils.setProperty(options, "midi.amount", amount);
@@ -1144,6 +1176,7 @@ Hooks.on("dnd5e.preApplyDamage", (actor: Actor.Implementation, amount: number, u
   return true;
 });
 
+//@ts-expect-error
 Hooks.on("dnd5e.preRollConcentrationV2", (rollConfig: any, dialogConfig: any, messageConfig: any) => {
   if (!rollConfig.subject) return true;
   const actor = rollConfig.subject;
@@ -1170,6 +1203,7 @@ Hooks.on("dnd5e.preRollConcentrationV2", (rollConfig: any, dialogConfig: any, me
   return true;
 })
 
+//@ts-expect-error
 Hooks.on("dnd5e.rollConcentrationV2", (rolls, { subject }) => {
   if (configSettings.doConcentrationCheck === "item") return;
   if (!subject || !(subject instanceof CONFIG.Actor.documentClass)) {
@@ -1193,12 +1227,14 @@ Hooks.on("dnd5e.rollConcentrationV2", (rolls, { subject }) => {
 });
 
 // Make activity templates a tiny bit bigger so that the off by one pixel errors don't happen.
+//@ts-expect-error
 Hooks.on("dnd5e.preCreateActivityTemplate", (activity, templateData) => {
   templateData.distance += 0.000001; // Make the template fractionally larger to avoid rounding errors
   return true;
 });
 
 // insert midi initiative changes into the initiative config.
+//@ts-expect-error
 Hooks.on("dnd5e.preConfigureInitiative", (actor: Actor, rollConfig: any) => {
   let { parts, data, options, subject } = rollConfig;
   //@ts-expect-error no dnd5e-types
@@ -1222,6 +1258,7 @@ Hooks.on("dnd5e.preConfigureInitiative", (actor: Actor, rollConfig: any) => {
   }
 });
 
+//@ts-expect-error
 Hooks.on("dnd5e.preRollAbilityCheckV2", (config, dialog, message) => {
   if (autoFastForwardAbilityRolls) {
     dialog.configure = false;

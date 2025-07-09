@@ -160,9 +160,9 @@ export var MidiActivityMixin = Base => {
     getOnUseMacros({ onlyOnUseItemMacros = false } = {}) {
       const onUseMacros = new OnUseMacros();
       this.ammunitionOnUseMacros = new OnUseMacros();
-      const itemOnUseMacros = foundry.utils.getProperty(this.item ?? {}, `flags.${MODULE_ID}.onUseMacroParts`) ?? new OnUseMacros();
-      const ammunitionOnUseMacros = foundry.utils.getProperty(this.ammunitionItem ?? {}, `flags.${MODULE_ID}.onUseMacroParts`) ?? new OnUseMacros();
-      const actorOnUseMacros = foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.onUseMacroParts`) ?? new OnUseMacros();
+      const itemOnUseMacros = foundry.utils.getProperty(this.item ?? {}, `flags.${MODULE_ID}.onUseMacroParts`) as OnUseMacros?? new OnUseMacros();
+      const ammunitionOnUseMacros = foundry.utils.getProperty(this.ammunitionItem ?? {}, `flags.${MODULE_ID}.onUseMacroParts`) as OnUseMacros ?? new OnUseMacros();
+      const actorOnUseMacros = foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.onUseMacroParts`) as OnUseMacros ?? new OnUseMacros();
       if (onlyOnUseItemMacros) {
         onUseMacros.items = [...itemOnUseMacros.items];
       } else {
@@ -426,6 +426,7 @@ export var MidiActivityMixin = Base => {
 
         let useResults;
         let upcastActivity;
+        //@ts-expect-error
         preUseActivityHookId = Hooks.on("dnd5e.preUseActivity", (newActivity, usageConfig, messageConfig) => {
           if (usage.workflow.activity.uuid !== newActivity.uuid) return true;
           // Not sure if required but set the workflow in the super.usageConfig.
@@ -437,6 +438,7 @@ export var MidiActivityMixin = Base => {
           return true;
         });
         let usageData;
+        //@ts-expect-error
         activityConsumptionHookId = Hooks.on("dnd5e.activityConsumption", (newActivity, usageConfig, messageConfig) => {
           if (usage.workflow.activity.uuid !== newActivity.uuid) return;
           usageData = usageConfig;
@@ -507,7 +509,9 @@ export var MidiActivityMixin = Base => {
         await usage.workflow.performState(usage.workflow.WorkflowState_Start, {});
         return useResults;
       } finally {
+        //@ts-expect-error
         if (preUseActivityHookId) Hooks.off("dnd5e.preUseActivity", preUseActivityHookId);
+        //@ts-expect-error
         if (activityConsumptionHookId) Hooks.off("dnd5e.activityConsumption", activityConsumptionHookId);
       }
     }
@@ -584,6 +588,7 @@ export var MidiActivityMixin = Base => {
           }
           if (config.workflow?.rollOptions?.rollToggle) dialog.configure = !dialog.configure;
           // if (dialog.configure) config.midiOptions.isCritical = false;
+          //@ts-expect-error
           preRollDamageHookId = Hooks.once(`${game.system?.id}.preRollDamageV2`, (rollConfig, dialogConfig, messageConfig) => {
             if (keys.critical) rollConfig.isCritical = true;
             else if (keys.normal) rollConfig.isCritical = false;
@@ -594,6 +599,7 @@ export var MidiActivityMixin = Base => {
               } else dialogConfig.options.defaultButton = "normal";
             } return true;
           });
+          //@ts-expect-error
           rollDamageHookId = Hooks.once(`${game.system?.id}.rollDamageV2`, rolls => {
             if (rolls[0] && config.workflow && config.midiOptions.updateWorkflow !== false) config.workflow.isCritical = rolls[0].options.isCritical;
           });
@@ -646,7 +652,9 @@ export var MidiActivityMixin = Base => {
         TroubleShooter.recordError(err, message);
         error(message, err);
       } finally {
+        //@ts-expect-error
         if (preRollDamageHookId) Hooks.off(`${game.system?.id}.preRollDamageV2`, preRollDamageHookId);
+        //@ts-expect-error
         if (rollDamageHookId) Hooks.off(`${game.system?.id}.rollDamageV2`, rollDamageHookId);
       }
       return result ?? [];
@@ -771,15 +779,15 @@ export var MidiActivityMixin = Base => {
         }
         const firstTarget = config.workflow.hitTargets.first() ?? config.workflow.targets?.first() as (Token | TokenDocument);
         const firstTargetActor: Actor = firstTarget?.actor as Actor;
-        const targetMaxFlags = foundry.utils.getProperty(firstTargetActor, `flags.${MODULE_ID}.grants.max.damage`) ?? {};
-        const maxFlags = foundry.utils.getProperty(config.workflow, `actor.flags.${MODULE_ID}.max`) ?? {};
+        const targetMaxFlags = foundry.utils.getProperty(firstTargetActor, `flags.${MODULE_ID}.grants.max.damage`) as any ?? {};
+        const maxFlags = foundry.utils.getProperty(config.workflow, `actor.flags.${MODULE_ID}.max`) as any ?? {};
         let needsMaxDamage = (maxFlags.damage?.all && await evalActivationCondition(config.workflow, maxFlags.damage.all, firstTarget, { async: true, errorReturn: false }))
           || (maxFlags.damage && maxFlags.damage[this.actionType] && await evalActivationCondition(config.workflow, maxFlags.damage[this.actionType], firstTarget, { async: true, errorReturn: false }));
         needsMaxDamage = needsMaxDamage || (
           (targetMaxFlags.all && await evalActivationCondition(config.workflow, targetMaxFlags.all, firstTarget, { async: true, errorReturn: false }))
           || (targetMaxFlags[this.actionType] && await evalActivationCondition(config.workflow, targetMaxFlags[this.actionType], firstTarget, { async: true, errorReturn: false })));
-        const targetMinFlags = foundry.utils.getProperty(firstTargetActor, `flags.${MODULE_ID}.grants.min.damage`) ?? {};
-        const minFlags = foundry.utils.getProperty(config.workflow, `actor.flags.${MODULE_ID}.min`) ?? {};
+        const targetMinFlags = foundry.utils.getProperty(firstTargetActor, `flags.${MODULE_ID}.grants.min.damage`) as any ?? {};
+        const minFlags = foundry.utils.getProperty(config.workflow, `actor.flags.${MODULE_ID}.min`) as any ?? {};
         let needsMinDamage = (minFlags.damage?.all && await evalActivationCondition(config.workflow, minFlags.damage.all, firstTarget, { async: true, errorReturn: false }))
           || (minFlags?.damage && minFlags.damage[this.actionType] && await evalActivationCondition(config.workflow, minFlags.damage[this.actionType], firstTarget, { async: true, errorReturn: false }));
         needsMinDamage = needsMinDamage || (
@@ -789,7 +797,7 @@ export var MidiActivityMixin = Base => {
           needsMaxDamage = false;
           needsMinDamage = false;
         }
-        const bonusDamageFlags = foundry.utils.getProperty(firstTargetActor, `flags.${MODULE_ID}.grants.bonus.damage`) ?? {};
+        const bonusDamageFlags = foundry.utils.getProperty(firstTargetActor, `flags.${MODULE_ID}.grants.bonus.damage`) as any ?? {};
         if (bonusDamageFlags.all || bonusDamageFlags[this.actionType]) {
           const bonusDamage = await new DamageRoll(bonusDamageFlags[this.actionType] ?? bonusDamageFlags.all).roll();
           result[0] = addRollTo(result[0], bonusDamage);
@@ -892,6 +900,7 @@ export var MidiActivityMixin = Base => {
           const target = getToken(tokenRef);
           if (!target || !target.vision?.los) continue;
           const sourceId = target.sourceId;
+          //@ts-expect-error
           canvas?.effects?.visionSources.set(sourceId, target.vision);
         }
       }
@@ -1316,6 +1325,7 @@ export var MidiActivityMixin = Base => {
       }
       if (tokenToUse && emanationNoTemplate) {
         setRangedTargets(tokenToUse, this.target);
+        message.workflow?.setTargets(validTargetTokens(game.user?.targets));
       }
 
       foundry.utils.setProperty(message.data, "flags.dnd5e.targets", globalThis.dnd5e.utils.getTargetDescriptors());
@@ -1570,11 +1580,14 @@ export var MidiActivityMixinSheet = Base => {
     }
 
     async _preparePartContext(partId, context) {
+      await super._preparePartContext(partId, context);
+      context.hasDamage = this.activity.damage;
+      context.isSummons = this.activity.type === "summon";
       if (partId === "midi-qol") {
         context.tab = context.tabs["midi-qol"];
         return this._prepareMidiQolContext(context);
       }
-      return super._preparePartContext(partId, context);
+      return context;
     }
 
     /** @override */ // This does not seem to work for activity sheets
@@ -1629,5 +1642,6 @@ export function setupMidiActivityMixin() {
       return context;
     }
   }
+  //@ts-expect-error
   Hooks.on("renderActivitySheet", renderActivitySheetHook);
 }

@@ -700,7 +700,7 @@ export function initGMActionSetup() {
 }
 
 async function _createChatMessage(data: { chatData: any; }) {
-  const messageData = foundry.utils.getProperty(data, "chatData.messageData") ?? {};
+  const messageData = foundry.utils.getProperty(data, "chatData.messageData") as any ?? {};
   messageData.user = game.user?.id;
   return await ChatMessage.create(data.chatData);
 }
@@ -917,9 +917,11 @@ async function prepareDamageListItems(data: {
       }
       if (createPromises && doHits && (data.autoApplyDamage.includes("yes") || data.forceApply)) {
         //recover the options used when calculating the damage
+        //@ts-expect-error
         if (Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, damageItem.calcDamageOptions ?? {}) !== false) {
           // The actor update - when no changes are made will update the passed options with a target
           await actor.update(updates, foundry.utils.mergeObject(damageItem.calcDamageOptions, data.updateOptions ?? {}, { inplace: false }));
+          //@ts-expect-error
           Hooks.call("dnd5e.applyDamage", actor, amount, damageItem.calcDamageOptions ?? {});
         }
       }
@@ -1110,7 +1112,7 @@ export let processUndoDamageCard = (message: ChatMessage, html, data) => {
   let button = html.find("#all-reverse");
   button.click((ev: { stopPropagation: () => void; }) => {
     (async () => {
-      const undoDamageData = recoverDamageListFromJSON(foundry.utils.getProperty(message, "flags.midiqol.undoDamage"));
+      const undoDamageData = recoverDamageListFromJSON(foundry.utils.getProperty(message, "flags.midiqol.undoDamage")as any);
       if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, oldVitality, newVitality, damageDetail, updateOptions, calcDamageOptions } of undoDamageData) {
         // recoverDamageDetailFromJSON(damageDetail);
         if (!actorUuid) continue;
@@ -1138,7 +1140,7 @@ export let processUndoDamageCard = (message: ChatMessage, html, data) => {
   button = html.find("#all-apply");
   button.click((ev: { stopPropagation: () => void; }) => {
     (async () => {
-      const undoDamageData = recoverDamageListFromJSON(foundry.utils.getProperty(message, "flags.midiqol.undoDamage"));
+      const undoDamageData = recoverDamageListFromJSON(foundry.utils.getProperty(message, "flags.midiqol.undoDamage") as any);
       if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageDetail, updateOptions, calcDamageOptions, oldVitality, newVitality } of undoDamageData) {
         if (!actorUuid) continue;
         let actor = fromActorUuid(actorUuid);
@@ -1160,7 +1162,7 @@ export let processUndoDamageCard = (message: ChatMessage, html, data) => {
     })();
   })
 
-  const undoDamageData = recoverDamageListFromJSON(foundry.utils.getProperty(message, "flags.midiqol.undoDamage"));
+  const undoDamageData = recoverDamageListFromJSON(foundry.utils.getProperty(message, "flags.midiqol.undoDamage") as any);
   undoDamageData?.forEach(({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, oldVitality, newVitality, damageDetail, calcDamageOptions, updateOptions }) => {
     if (!actorUuid) return;
     // recoverDamageDetailFromJSON(damageDetail);
@@ -1235,7 +1237,6 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
   const targetToken = getToken(data.targetUuid);
   const targetTokenDocument = getTokenDocument(targetToken);
   if (!canvas || !canvas.dimensions || !canvas.grid || !targetToken || !data.point || !targetTokenDocument) return;
-  // @ts-expect-error v13ism
   let ray = new foundry.canvas.geometry.Ray(data.point, targetToken.center);
   let distance = data.distance / canvas.dimensions.distance * canvas.dimensions.size;
   let newCenter = ray.project(1 + distance / ray.distance);
@@ -1245,6 +1246,7 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
   if (data.checkCollision) {
     //@ts-expect-error
     const testCollision = CONFIG.Canvas.polygonBackends.move.testCollision(targetToken.center, newCenter, { source: targetToken.document, type: "move", any: "closest" });
+    //@ts-expect-error
     if (testCollision?.length > 0 && testCollision[0] instanceof foundry.canvas.edges.PolygonVertex ) {
       const collisionPoint = { x: testCollision[0].x, y: testCollision[0].y };
       const getCenterCollisionPoint = canvas.grid.getCenterPoint(collisionPoint);

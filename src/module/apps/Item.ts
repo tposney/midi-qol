@@ -31,6 +31,8 @@ export class OnUseMacros {
 export class OnUseMacro {
   macroName: string;
   option: string;
+  macro: string | undefined = undefined;
+  macroPassOptions: string[] = [];
 
   constructor(macro: string | undefined = undefined) {
     if (macro === undefined) {
@@ -86,7 +88,6 @@ export function activateMacroListeners(app: foundry.applications.api.DocumentShe
   if (app.isEditable) {
     html.querySelectorAll(".macro-control").forEach(el => 
       el.addEventListener("click", _onMacroControl.bind(app)));
-    //@ts-expect-error
     const dd = new foundry.applications.ux.DragDrop.implementation({
       dragSelector: undefined,
       dropSelector: ".midi-onuse-macro-name",
@@ -141,7 +142,7 @@ async function _onMacroControl(event) {
 }
 
 export function getCurrentMacros(object): OnUseMacros {
-  const macroField = foundry.utils.getProperty(object, "flags.midi-qol.onUseMacroParts");
+  const macroField = foundry.utils.getProperty(object, "flags.midi-qol.onUseMacroParts") as OnUseMacros;
   return macroField;
 }
 

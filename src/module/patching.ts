@@ -180,12 +180,13 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
     }
     if (config.midiOptions.fastForward) dialog.configure = false;
     if (success === undefined) {
-      const maxFlags = foundry.utils.getProperty(this, "flags.midi-qol.max") ?? {};
+      const maxFlags = foundry.utils.getProperty(this, "flags.midi-qol.max") as any ?? {};
       const maxValue = (maxFlags.skill && maxFlags.skill.all);
-      const minFlags = foundry.utils.getProperty(this, "flags.midi-qol.min") ?? {};
+      const minFlags = foundry.utils.getProperty(this, "flags.midi-qol.min") as any ?? {};
       const minValue = (minFlags.skill && minFlags.skill.all);
       config.advantage ||= config.midiOptions.advantage;
       config.disadvantage ||= config.midiOptions.disadvantage;
+      //@ts-expect-error
       preRollSkillHookId = Hooks.once(`${game.system?.id}.preRollSkill`, (config, dialog, message) => {
         message.data ??= {};
         if (overtimeActorUuid)
@@ -198,6 +199,7 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
         })
         setDialogOptions(dialog, config);
       })
+      //@ts-expect-error
       rollSkillHookId = Hooks.once(`${game.system?.id}.postSkillRollConfiguration`, (rolls, config, dialog, messageDetails) => {
         // record message configuration details for later display
         message = messageDetails;
@@ -237,7 +239,9 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
     throw err;
   }
   finally {
+    //@ts-expect-error
     if (preRollSkillHookId) Hooks.off(`${game.system?.id}.preRollSkill`, preRollSkillHookId);
+    //@ts-expect-error
     if (rollSkillHookId) Hooks.off(`${game.system?.id}.postSkillRollConfiguration`, rollSkillHookId);
     if (saveRollMode) game.settings?.set("core", "rollMode", saveRollMode);
     if (oldFormat) return result?.[0];
@@ -529,6 +533,7 @@ async function doRollAbility(wrapped, rollType, config: any = {}, dialog: any = 
       const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId]));
       config.advantage ||= config.midiOptions.advantage;
       config.disadvantage ||= config.midiOptions.disadvantage;
+      //@ts-expect-error
       preRollAbilityHookId = Hooks.once(`${game.system?.id}.preRoll${type}`, (config, dialog, message) => {
         config.rolls.forEach(roll => {
           if (maxValue !== undefined && Number.isNumeric(maxValue)) roll.options.maximum = Math.min(roll.options.maximum ?? Infinity, Number(maxValue));
@@ -536,6 +541,7 @@ async function doRollAbility(wrapped, rollType, config: any = {}, dialog: any = 
         });
         setDialogOptions(dialog, config);
       });
+      //@ts-expect-error
       rollAbilityHookId = Hooks.once(`${game.system?.id}.post${type}RollConfiguration`, (rolls, config, dialog, messageDetails) => {
         // record the configured message data for later display
         message = messageDetails;
@@ -598,7 +604,9 @@ async function doRollAbility(wrapped, rollType, config: any = {}, dialog: any = 
     TroubleShooter.recordError(err, message);
     error(message, err);
   } finally {
+    //@ts-expect-error
     if (preRollAbilityHookId) Hooks.off(`${game.system?.id}.preRoll${type}`, preRollAbilityHookId);
+    //@ts-expect-error
     if (rollAbilityHookId) Hooks.off(`${game.system?.id}.post${type}RollConfiguration`, rollAbilityHookId);
     if (saveRollMode) game.settings?.set("core", "rollMode", saveRollMode);
     return oldFormat ? result?.[0] : result
@@ -615,9 +623,9 @@ async function rollAbilityCheck(wrapped, config = {}, dialog = {}, message = {})
 
 async function rollDeathSave(wrapped, config: any = {}, dialog: any = {}, message: any = {}) {
   const options: any = {};
-  const advFlags = foundry.utils.getProperty(this, "flags.midi-qol")?.advantage;
-  const disFlags = foundry.utils.getProperty(this, "flags.midi-qol")?.disadvantage;
-  const deathSaveBonus = foundry.utils.getProperty(this, "flags.midi-qol")?.deathSaveBonus;
+  const advFlags = (foundry.utils.getProperty(this, "flags.midi-qol") as any)?.advantage;
+  const disFlags = (foundry.utils.getProperty(this, "flags.midi-qol") as any)?.disadvantage;
+  const deathSaveBonus = (foundry.utils.getProperty(this, "flags.midi-qol") as any)?.deathSaveBonus;
 
   if (advFlags?.all || advFlags?.deathSave || disFlags?.all || disFlags?.deathSave || deathSaveBonus) {
     const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: this });
@@ -649,6 +657,7 @@ async function rollDeathSave(wrapped, config: any = {}, dialog: any = {}, messag
   }
   config.midiOptions = options;
   const blindSaveRoll = configSettings.rollSavesBlind.includes("all") || configSettings.rollSavesBlind.includes("death");
+  //@ts-expect-error
   Hooks.once("dnd5e.preRollDeathSave", (config, dialog, message) => {
     for (let roll of config.rolls) {
       roll.options.advantage = config.midiOptions.advantage;
@@ -789,7 +798,6 @@ function _midiATIRefresh(template) {
     distance *= dimensions.size / dimensions.distance;
     const tokens: Token[] | undefined = canvas.tokens.placeables;
     const tokensToCheck = tokens?.filter(tk => {
-      // @ts-expect-error v13ism
       const r: Ray = new foundry.canvas.geometry.Ray(
         { x: template.document?.x ?? template.x, y: template.document?.y ?? template.y },
         //@ts-ignore .width .height TODO check this v10
@@ -1123,10 +1131,10 @@ export function prepareOnUseMacroData(actorOrItem) {
 
 export function preUpdateItemActorOnUseMacro(itemOrActor: Item | Actor, changes, options, user) {
   try {
-    const macroChanges = foundry.utils.getProperty(changes, "flags.midi-qol.onUseMacroParts") ?? {};
+    const macroChanges = foundry.utils.getProperty(changes, "flags.midi-qol.onUseMacroParts") as any ?? {};
     //@ts-ignore
     if (foundry.utils.isEmpty(macroChanges)) return true;
-    const macros = foundry.utils.getProperty(itemOrActor._source, "flags.midi-qol.onUseMacroName");
+    const macros = foundry.utils.getProperty(itemOrActor._source, "flags.midi-qol.onUseMacroName") as string;
     const macroParts = new OnUseMacros(macros ?? null);
 
     if (!Array.isArray(macroChanges.items)) { // we have an update from editing the macro changes
@@ -1564,6 +1572,7 @@ export async function rollToolCheck(wrapped, config: any = {}, dialog: any = {},
     let baseConfig, baseDialog;
     message.create = false;
     if (autoFastForwardAbilityRolls) dialog.configure = false;
+    //@ts-expect-error
     preRollHookId = Hooks.once("dnd5e.preRollTool", (configData, dialogData, messageData) => {
       baseConfig = configData;
       baseDialog = dialogData;
@@ -1586,6 +1595,7 @@ export async function rollToolCheck(wrapped, config: any = {}, dialog: any = {},
     TroubleShooter.recordError(err, message);
     throw err;
   } finally {
+    //@ts-expect-error
     if (preRollHookId) Hooks.off(`dnd5e.preRollTool`, preRollHookId);
     return result;
   }

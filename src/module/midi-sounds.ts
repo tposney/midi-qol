@@ -195,11 +195,13 @@ export class MidiSounds {
   }
 
   static midiSoundsReadyHooks() {
+    //@ts-expect-error
     Hooks.on("midi-qol.preItemRoll", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
       await this.processHook(workflow, "itemRoll");
       return true; // sounds can never block roll
     });
+    //@ts-expect-error
     Hooks.on("midi-qol.preAttackRoll", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
       if (dice3dEnabled() 
@@ -209,6 +211,7 @@ export class MidiSounds {
       return true;
     });
 
+    //@ts-expect-error
     Hooks.on("midi-qol.AttackRollComplete", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
       if (!dice3dEnabled() 
@@ -227,7 +230,7 @@ export class MidiSounds {
       return true;
     });
 
-
+    //@ts-expect-error
     Hooks.on("midi-qol.DamageRollComplete", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
       const result = await this.processHook(workflow, workflow.defaultDamageType);

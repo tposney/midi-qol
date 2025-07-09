@@ -25,6 +25,7 @@ const knownSheets = {
 };
 export function setupSheetQol() {
   for (let sheetName of Object.keys(knownSheets)) {
+    //@ts-expect-error
     Hooks.on("render" + sheetName, enableSheetQOL);
   }
   // Hooks.on("renderedAlt5eSheet", enableSheetQOL);
@@ -34,21 +35,6 @@ let enableSheetQOL = (app, html, data) => {
   if (["Tidy5eSheet", "Tidy5eNPC"].includes(app.constructor.name)) {
   } else {
     // WIP addItemSheetButtons(app, html, data);
-  }
-
-  if (configSettings.allowActorUseMacro) {
-    // Add actor macros
-    if (html.find(".midiqol-onuse-macros").length === 0) {
-      html.find('.config-button[data-action="senses').parent().parent().parent().append(`<div>
-      <label>${i18n("midi-qol.ActorOnUseMacros")}</label>
-      <a class="config-button midiqol-onuse-macros" data-action="midi-onuse-macros" title="midi onuse macros">
-        <i class="fas fa-cog"></i>
-      </a>
-      </div>`);
-      html.find(".midiqol-onuse-macros").click(ev => {
-        new ActorOnUseMacrosConfig({document: app.object}).render({force: true});
-      });
-    }
   }
   return true;
 };

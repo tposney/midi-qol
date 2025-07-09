@@ -236,7 +236,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         let ammunition = this.ammunitionItem;
         if (!ammunition) ammunition = config.workflow?.ammunition;
         if (!ammunition && config.workflow) {
-          const data = foundry.utils.getProperty(config.workflow.chatCard, "flags.midi-qol.ammunitionData");
+          const data = foundry.utils.getProperty(config.workflow.chatCard, "flags.midi-qol.ammunitionData") as any;
           if (data) return new Item.implementation(data, { parent: this.actor });
         }
         config.ammunition = ammunition;
@@ -265,6 +265,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         }
         return super.use(usage, dialog, message);
       } finally {
+        //@ts-expect-error
         if (preValidateRollHookId) Hooks.off("dnd5e.preValidateRollAttack", preValidateRollHookId);
       }
     }
@@ -357,12 +358,13 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         if (keys.disadvantage) workflow.rollOptions.disadvantage = keys.disadvantage;
         config.advantage ??= !!keys.advantage || !!(config.midiOptions.advantage ?? workflow.workflowOptions.advantage);
         config.disadvantage ??= !!keys.disadvantage || !!(config.midiOptions.disadvantage ?? workflow.workflowOptions.disadvantage);
+        //@ts-expect-error
         preRollHookId = Hooks.once("dnd5e.preRollAttack", (rollConfig, dialogConfig, messageConfig) => {
           if (workflow?.aborted) return false;
           if (workflow?.rollOptions?.rollToggle) dialogConfig.configure = !dialogConfig.configure;
           if (configSettings.checkTwoHanded && ["twoHanded", "offhand"].includes(rollConfig.attackMode)) {
             // check equipment - shield other weapons for equipped status
-            if (this.actor.items.some(i => i.type === "equipment" && (i.system.type.baseItem === "shield" || i.system.type.value === "shield") && i.system.equipped)) {
+            if (this.actor.system.attributes.ac?.shield > 0) {
               ui.notifications?.warn(i18n("midi-qol.TwoHandedShieldWarning"));
               if (workflow) workflow.aborted = true;
               return false;
@@ -378,16 +380,27 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           }
           return true;
         });
+        // @ts-expect-error
         rollAttackHookId = Hooks.once("dnd5e.rollAttack", (rolls, { ammoUpdate, subject }) => {
           if (ammoUpdate?.destroy) {
             const data = this.actor.items.get(ammoUpdate.id).toObject();
             addUpdatesCache(workflow.id, { "flags.midi-qol.ammunitionData": data });
           }
         });
+        //@ts-expect-error
         postAttackRollConfigurationHook = Hooks.once("dnd5e.postAttackRollConfiguration", (rolls, config: any, dialog: any, message: any) => {
+          if (configSettings.checkTwoHanded && ["twoHanded", "offhand"].includes(rolls?.[0].options?.attackMode)) {
+            // check equipment - shield other weapons for equipped status
+            if (this.actor.system.attributes.ac?.shield > 0) {
+              ui.notifications?.warn(i18n("midi-qol.TwoHandedShieldWarning"));
+              if (config.workflow) config.workflow.aborted = true;
+              return false;
+            }
+          }
           if (this.requireAmmunition && this.item.system.properties?.has("amm")) {
             const chosenAmmunition = this.actor.items.get(rolls[0].options.ammunition);
             if ((chosenAmmunition?.system.quantity ?? 0) <= 0) ui.notifications?.error(i18nFormat("midi-qol.NoAmmunition", { name: chosenAmmunition?.name ?? "Ammunition" }));
+            else this.ammunitionItem = chosenAmmunition;
             return chosenAmmunition?.system.quantity > 0;
           }
           return true;
@@ -401,7 +414,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           message.create = true;
           message.rollMode = rollMode;
         }
-        config.attackMode = this.attackMode ?? "oneHanded";
+        config.attackMode ??= this.attackMode ?? "oneHanded";
         if (config.event && areMidiKeysPressed(config.event, "Versatile") && this.item.system.damage?.versatile && this.item.system.properties.has("ver")) {
           config.attackMode = "twoHanded";
         }
@@ -416,13 +429,14 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         if (dialog.configure && rolls[0]?.options?.ammunition && rolls[0].options.ammunition !== this.ammunition) {
           await this.update({ ammunition: rolls[0].options.ammunition });
           this.ammunition = rolls[0].options.ammunition;
+          this.ammunitionItem = this.actor.items.get(this.ammunition);
           this._otherActivity = undefined; // reset this in case ammunition changed
         }
 
         if (workflow) {
           workflow.attackMode = rolls[0].options.attackMode ?? config.attackMode;
           if (this.ammunition && !this.ammunitionItem) { // assume it was deleted
-            const storedData = foundry.utils.getProperty(workflow.chatCard, "flags.midi-qol.ammunitionData");
+            const storedData = foundry.utils.getProperty(workflow.chatCard, "flags.midi-qol.ammunitionData") as any;
             if (storedData) workflow.ammunition = new Item.implementation(storedData, { parent: this.actor })
           } else workflow.ammunition = this.ammunitionItem;
 
@@ -443,8 +457,11 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       } catch (err) {
         error("AttackActivity | rollAttack | Error configuring dialog", err);
       } finally {
+        //@ts-expect-error
         if (preRollHookId) Hooks.off("dnd5e.preRollAttack", preRollHookId);
+        //@ts-expect-error
         if (rollAttackHookId) Hooks.off("dnd5e.rollAttack", rollAttackHookId);
+        //@ts-expect-error
         if (postAttackRollConfigurationHook) Hooks.off("dnd5e.postRollConfiguration", postAttackRollConfigurationHook);
 
       }
@@ -520,6 +537,10 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         console.warn("midi-qol | attack roll blocked by preAttackRoll hook");
         return false;
       }
+      if (configSettings.allowUseMacro && workflow.workflowOptions?.noOnUseMacro !== true) {
+        await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("preAttackRollConfig"), "OnUse", "preAttackRollConfig");
+        if (workflow.ammunition) await workflow.callMacros(workflow.ammunition, workflow.ammunitionOnUseMacros?.getMacros("preAttackRollConfig"), "OnUse", "preAttackRollConfig");
+      }
 
       // Active defence resolves by triggering saving throws and returns early
       if (game.user?.isGM && workflow.useActiveDefence) {
@@ -552,6 +573,8 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         workflow.attackAdvAttribution.add(`ADV:keyPress`);
         workflow.advReminderAttackAdvAttribution.add(`ADV:keyPress`);
       }
+      if (workflow.workflowOptions?.advantage)
+        workflow.attackAdvAttribution.add(`ADD:workflowOptions`);
       if (workflow.flankingAdvantage) {
         workflow.attackAdvAttribution.add(`ADV:flanking`);
         workflow.advReminderAttackAdvAttribution.add(`ADV:Flanking`);
@@ -560,10 +583,13 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       let disadvantage = config.midiOptions.disadvantage
         || workflow.workflowOptions.disadvantage
         || workflow.disadvantage
-        || workflow.workflowOptions?.disadvantage
-        || workflow.rollOptions.disadvantage;
+        || workflow.rollOptions.disadvantage
+        || workflow.workflowOptions?.disadvantage;
       if (workflow.noDisadvantage) disadvantage = false;
-
+      if (workflow.rollOptions.disadvantage) {
+        workflow.attackAdvAttribution.add(`DIS:keyPress`);
+        workflow.advReminderAttackAdvAttribution.add(`DIS:keyPress`);
+      }
       if (workflow.workflowOptions?.disadvantage)
         workflow.attackAdvAttribution.add(`DIS:workflowOptions`);
 

@@ -28,11 +28,16 @@
     {{#if ../possibleOtherActivity}}
     {{ formField fields.otherActivityCompatible value=../source.midiProperties.otherActivityCompatible }}
     {{/if}}
+    {{#if ../hasDamage }}
     {{ formField fields.ignoreFullCover value=../source.midiProperties.ignoreFullCover}}
     {{ formField fields.ignoreTraits value=../source.midiProperties.ignoreTraits options=../ignoreTraitsOptions
     label="midi-qol.SHARED.ignore.header" localize=true classes="multi-select"}}
     {{ formField fields.magicDamage value=../source.midiProperties.magicDamage}}
+    {{/if}}
     {{/with}}
+    {{#if isSummons}}
+    {{ formField fields.friendlySummon value=source.friendlySummon }}
+    {{/if}}
   </fieldset>
   {{#if (ne fields.otherActivityId undefined)}}
   <fieldset>

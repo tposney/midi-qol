@@ -1,7 +1,7 @@
 import { debugEnabled, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
-import { asyncHooksCall } from "../utils.js";
+import { getTokenDocument } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export var MidiSummonActivity;
@@ -20,6 +20,12 @@ export function setupSummonActivity() {
   } else {
     GameSystemConfig.activityTypes["midiSummon"] = { documentClass: MidiSummonActivity };
   }
+  //@ts-expect-error
+  Hooks.on("dnd5e.summonToken", (activity, profile, tokenData, options) => {
+    if (!activity.friendlySummon) return;
+    const caster = getTokenDocument(activity.actor);
+    if (caster) tokenData.disposition = caster.disposition;
+  });
 }
 let defineMidiSummonSheetClass = (baseClass: any) => {
   return class MidiSummonSheet extends MidiActivityMixinSheet(baseClass) {
@@ -47,6 +53,12 @@ let defineMidiSummonActivityClass = (ActivityClass: any) => {
         },
       }, { inplace: false, insertKeys: true, insertValues: true });
 
+    static defineSchema() {
+      return {
+        ...super.defineSchema(),
+        friendlySummon: new foundry.data.fields.BooleanField({ initial: false, name: "friendlySummon", required: false })
+      }
+    }
     get possibleOtherActivity() {
       return false;
     }

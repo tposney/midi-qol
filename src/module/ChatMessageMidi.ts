@@ -83,7 +83,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       const type = this.flags.dnd5e?.roll?.type;
       // @ts-expect-error no dnd5e-types
       if (type !== undefined || !this.flags?.["midi-qol"]) return super.applyChatCardDamage(li, multiplier);
-      const rollsToCheck = this.rolls.filter(r => MQDamageRollTypes.includes(foundry.utils.getProperty(r, "options.midi-qol.rollType")));
+      const rollsToCheck = this.rolls.filter(r => MQDamageRollTypes.includes(foundry.utils.getProperty(r, "options.midi-qol.rollType") as string));
       //@ts-expect-error
       const damages = game.system.dice.aggregateDamageRolls(rollsToCheck, { respectProperties: true }).map(roll => ({
         value: roll.total,
@@ -99,7 +99,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
     applyChatCardTemp(li) {
       if (!canvas?.tokens) return;
-      const rollsToCheck = this.rolls.filter(r => MQDamageRollTypes.includes(foundry.utils.getProperty(r, "options.midi-qol.rollType")));
+      const rollsToCheck = this.rolls.filter(r => MQDamageRollTypes.includes(foundry.utils.getProperty(r, "options.midi-qol.rollType") as string));
       const total = rollsToCheck.reduce((acc, roll) => acc + (roll.total ?? 0), 0);
 
       return Promise.all(canvas.tokens.controlled.map(t => {
@@ -377,22 +377,22 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     prepareDerivedData() {
-      const attackRoll = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.attackRoll);
+      const attackRoll = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.attackRoll) as any;
       if (attackRoll)
         foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.attackRoll, Roll.fromData(attackRoll));
-      const damageRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.damageRolls);
+      const damageRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.damageRolls) as any[];
       if (damageRolls)
         foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.damageRolls, damageRolls.map(d => Roll.fromData(d)));
-      const otherDamageRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.otherDamageRolls);
+      const otherDamageRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.otherDamageRolls) as any[];
       if (otherDamageRolls)
         foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.otherDamageRolls, otherDamageRolls.map(d => Roll.fromData(d)));
-      const bonusDamageRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.bonusDamageRolls);
+      const bonusDamageRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.bonusDamageRolls) as any[];
       if (bonusDamageRolls)
         foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.bonusDamageRolls, bonusDamageRolls.map(d => Roll.fromData(d)));
-      const utilityRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.utilityRolls);
+      const utilityRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.utilityRolls) as any[];
       if (utilityRolls)
         foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.utilityRolls, utilityRolls.map(d => Roll.fromData(d)));
-        const extraRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.extraRolls);
+        const extraRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.extraRolls) as any[];
         if (extraRolls)
         foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.extraRolls, extraRolls.map(d => Roll.fromData(d)));
       super.prepareDerivedData();
