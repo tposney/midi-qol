@@ -603,8 +603,10 @@ async function registerTests() {
             await busyWait(0.2);
             const target = getToken(target2Name);
             updateUserTargets([target?.id ?? ""]);
+            //@ts-expect-error
             const hookId = Hooks.on("OnUseMacroTest", (pass: string) => {macroPasses.push(pass); warn(pass, macroPasses)});
             await completeItemUse(actor.items.getName("Longsword"), {}, { workflowOptions }); // Apply the effect
+            //@ts-expect-error
             Hooks.off("OnUseMacroTest", hookId);
             let hasEffects: any = actor.effects.filter(e => e.name === "OnUseMacroTest") ?? [];
             assert.ok(hasEffects);
@@ -631,8 +633,10 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             const macroPasses: string[] = [];
             const expectedPasses = ['preTargeting', 'preItemRoll', 'prePreambleComplete', 'preSave', 'postSave', 'preActiveEffects', 'postActiveEffects'];
+            //@ts-expect-error
             const hookId = Hooks.on("Item OnUseMacroTest", (pass: string) => macroPasses.push(pass));
             await completeItemUse(actor.items.getName("Item OnUseMacroTest"), {}, { workflowOptions });
+            //@ts-expect-error
             Hooks.off("OnUseMacroTest", hookId);
             for (let expectedPass of expectedPasses) {
               assert.ok(macroPasses.includes(expectedPass), `onUseMacro pass ${expectedPass}`);
@@ -827,14 +831,14 @@ async function registerTests() {
             assert.ok(["number", "string"].includes(typeof foundry.utils.getProperty(target.actor, changeKey)))
             assert.ok(Number.isNumeric(foundry.utils.getProperty(target.actor, changeKey)));
 
-            const oldHp = foundry.utils.getProperty(target, "actor.system.attributes.hp.value");
+            const oldHp = foundry.utils.getProperty(target, "actor.system.attributes.hp.value") as number;
             updateUserTargets([target?.id ?? ""]);
             await completeItemUse(actor.items.getName("AppliesDamage"), {}, { workflowOptions });
             updateUserTargets([]);
             const newHp = foundry.utils.getProperty(target, "actor.system.attributes.hp.value");
-            assert.equal(newHp, oldHp - foundry.utils.getProperty(actor, "system.abilities.str.mod"));
+            assert.equal(newHp, oldHp - (foundry.utils.getProperty(actor, "system.abilities.str.mod") as number));
             await target.actor?.deleteEmbeddedDocuments("ActiveEffect", theEffects?.map(ef => ef.id) ?? [])
-            assert.ok([undefined, ""].includes(foundry.utils.getProperty(target.actor, changeKey)));
+            assert.ok([undefined, ""].includes(foundry.utils.getProperty(target.actor, changeKey) as string));
           });
 
           it("sets DR.rwak", async function () {
@@ -898,13 +902,13 @@ async function registerTests() {
           it("tests applyTokenDamageMany", async function () {
             await resetActors();
             const token = getToken(target2Name);
-            const oldHp = token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value");
+            const oldHp = token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value") as number;
 
             await applyTokenDamage([{ damage: 5, type: 'piercing' }], 5, new Set([token]), null, new Set(), {});
-            assert.equal(token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value"), oldHp - 5)
+            assert.equal(token && oldHp && foundry.utils.getProperty(token, "actor.system.attributes.hp.value"), (oldHp ?? 0) - 5)
 
             await applyTokenDamage([{ damage: 5, type: 'healing' }], 5, new Set([token]), null, new Set(), {});
-            assert.equal(token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value"), oldHp)
+            assert.equal(token && oldHp && foundry.utils.getProperty(token, "actor.system.attributes.hp.value"), oldHp)
           });
 
           it("tests applyTokenDamage reduction", async function () {
@@ -927,7 +931,7 @@ async function registerTests() {
             await resetActors();
             const token = getToken(target2Name);
             const tokenActor: Actor | null | undefined = token?.actor;
-            const oldHp = token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value");
+            const oldHp = (token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value") as number) ?? 0;
             let effectData = {
               name: "test effect",
               label: "test effect",
@@ -935,7 +939,7 @@ async function registerTests() {
             };
             let theEffects = (await tokenActor?.createEmbeddedDocuments("ActiveEffect", [effectData]) ?? []) as ActiveEffect[];
             await applyTokenDamage([{ damage: 10, type: 'fire' }], 10, new Set([token]), null, new Set(), {});
-            assert.equal(token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value"), oldHp - 5);
+            assert.equal(token && oldHp && foundry.utils.getProperty(token, "actor.system.attributes.hp.value"), (oldHp ?? 0) - 5);
             await tokenActor?.deleteEmbeddedDocuments("ActiveEffect", theEffects.map(ef => ef.id as string));
             // @ts-expect-error no dnd5e-types
             await tokenActor?.update({ "system.attributes.hp.value": oldHp });
@@ -945,10 +949,10 @@ async function registerTests() {
             await resetActors();
             const token = getToken(target2Name);
             const actor = getActor(actor1Name)
-            const oldHp = token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value");
+            const oldHp = token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value") as number;
             const theItem = actor?.items.getName("Saving Throw Test");
             await applyTokenDamage([{ damage: 10, type: 'piercing' }], 10, new Set([token]), theItem, new Set([token]), {});
-            assert.equal(token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value"), oldHp - 5);
+            assert.equal(token && oldHp && foundry.utils.getProperty(token, "actor.system.attributes.hp.value"), (oldHp ?? 0) - 5);
             // @ts-expect-error no dnd5e-types
             await actor?.update({ "system.attributes.hp.value": oldHp });
           });
@@ -967,10 +971,10 @@ async function registerTests() {
             await resetActors();
             const token = getToken(target2Name);
             const actor = getActor(actor1Name)
-            const oldHp = token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value");
+            const oldHp = token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value") as number;
             const theItem = actor?.items.getName("Saving Throw Test");
             await applyTokenDamage([{ damage: 10, type: 'piercing' }], 10, new Set([token]), theItem, new Set(), { superSavers: new Set([token]) });
-            assert.equal(token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value"), oldHp - 5);
+            assert.equal(token && oldHp && foundry.utils.getProperty(token, "actor.system.attributes.hp.value"), (oldHp ?? 0) - 5);
             // @ts-expect-error no dnd5e-types
             await actor?.update({ "system.attributes.hp.value": oldHp });
           });

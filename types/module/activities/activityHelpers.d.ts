@@ -22,4 +22,4 @@ export declare function selectTargets(templateDocument: MeasuredTemplateDocument
  * Get currently selected tokens in the scene or user's character's tokens.
  * @returns {Token5e[]}
  */
-export declare function getSceneTargets(): Token[];
+export declare function getSceneTargets(): foundry.canvas.placeables.Token[];

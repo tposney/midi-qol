@@ -39,7 +39,7 @@ export function checkOverTimeSaves(message, data, options, user) {
     actor = game.scenes?.get(message.speaker.scene)?.tokens?.get(message.speaker.token)?.actor;
   }
   if (!actor) return true;
-  const overtimeActorUuid = foundry.utils.getProperty(message, "flags.midi-qol.overtimeActorUuid");
+  const overtimeActorUuid = foundry.utils.getProperty(message, "flags.midi-qol.overtimeActorUuid") as any;
   if (actor.uuid !== overtimeActorUuid) {
     if (overtimeActorUuid) {
       const overTimeActor = fromUuidSync(overtimeActorUuid) as Actor | undefined;
@@ -163,7 +163,7 @@ export let hideRollUpdate = (message, data, diff, id) => {
 
 export let hideStuffHandler = (message, html, data) => {
   let htmlElement = (html instanceof HTMLElement) ? html : html[0];
-  const messageActor: Actor | undefined = (fromUuidSync(foundry.utils.getProperty(message, `flags.${WorkflowDataFlags.actor}`)) ?? game.actors?.get(message.speaker.actor)) as Actor;
+  const messageActor: Actor | undefined = (fromUuidSync(foundry.utils.getProperty(message, `flags.${WorkflowDataFlags.actor}`) as string) ?? game.actors?.get(message.speaker.actor)) as Actor;
   const messageActorOwner = messageActor?.isOwner;
   if (debugEnabled > 1) debug("hideStuffHandler message: ", message.id, message)
   // Hide rolls which are blind and not the GM if force hide is true

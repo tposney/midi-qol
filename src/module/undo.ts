@@ -7,6 +7,7 @@ import { MQfromUuidSync, getConcentrationEffect, getTokenDocument, isReactionIte
 import { Workflow } from "./Workflow.js";
 
 var dae;
+//@ts-expect-error
 Hooks.once("DAE.setupComplete", () => {
   dae = globalThis.DAE;
 })
@@ -55,7 +56,6 @@ export function _queueUndoDataDirect(undoDataDef) {
   undoData.itemName = undoDataDef.itemName;
   undoData.userName = undoDataDef.userName;
   undoData.allTargets = undoDataDef.targets ?? new Collection();
-  //@ts-expect-error
   undoData.serverTime = game.time?.serverTime;
   undoData.templateUuids = undoDataDef.templateUuids ?? [];
   undoData.isReaction = undoDataDef.isReaction;
@@ -163,7 +163,6 @@ export async function saveTargetsUndoData(workflow: Workflow) {
     if ((tokendoc?.actor as unknown as Actor)?.uuid === workflow.actor.uuid) return;
     workflow.undoData.targets.push({ tokenUuid: tokendoc?.uuid, actorUuid: (tokendoc?.actor as unknown as Actor)?.uuid });
   });
-  //@ts-expect-error
   workflow.undoData.serverTime = game.time?.serverTime;
   workflow.undoData.itemCardUuid = workflow.itemCardUuid;
   if (workflow.templateUuid) workflow.undoData.templateUuids.push(workflow.templateUuid);
@@ -179,7 +178,7 @@ export async function addUndoChatMessage(message: ChatMessage) {
     unTimedExecuteAsGM("updateUndoChatCardUuids", currentUndo);
   }
 }
-
+//@ts-expect-error
 Hooks.on("createChatMessage", (message: ChatMessage, data: any, options:any, user) => {
   if (!configSettings.undoWorkflow) return;
   if ((undoDataQueue ?? []).length < 1) return;
@@ -258,6 +257,7 @@ export function addQueueEntry(queue: any[], data: any) {
     }
   }
   if (!added) queue.push(data);
+  //@ts-expect-error
   Hooks.callAll("midi-qol.addUndoEntry", data)
   if (queue.length > MAXUNDO) {
     log("Removed undoEntry due to overflow", queue.pop());
@@ -286,6 +286,7 @@ export async function undoTillWorkflow(workflowId: string, undoTarget: boolean, 
       socketlibSocket.executeAsUser("removeWorkflow", workflow.userId, workflow.id);
     }
   } finally {
+    //@ts-expect-error
     if (queueLength !== undoDataQueue.length) Hooks.callAll("midi-qol.removeUndoEntry");
   }
   return queueLength !== undoDataQueue.length;
@@ -301,6 +302,7 @@ export async function _undoMostRecentWorkflow() {
       else return undoWorkflow(undoData);
     }
   } finally {
+    //@ts-expect-error
     if (undoData) Hooks.callAll("midi-qol.removeUndoEntry", undoData);
   }
   return;
@@ -316,6 +318,7 @@ export async function _removeMostRecentWorkflow() {
       else return undoData;
     }
   } finally {
+    //@ts-expect-error
     if (undoData) Hooks.callAll("midi-qol.removeUndoEntry", undoData);
   }
   return;

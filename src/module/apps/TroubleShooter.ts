@@ -21,6 +21,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(options?) {
     super(options);
     TroubleShooter.data = TroubleShooter.collectTroubleShooterData();
+    //@ts-expect-error
     this._hookId = Hooks.on("midi-qol.TroubleShooter.recordError", (errorDetail) => {
       if (TroubleShooter.data.isLocal) {
         TroubleShooter.data = TroubleShooter.collectTroubleShooterData();
@@ -97,7 +98,8 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     const timeString = `${new Date(timestamp).toLocaleDateString()} - ${new Date(timestamp).toLocaleTimeString()}`;
     const stack = err.stack?.split("\n").map(s => removeIpAddressAndHostName(s));
     const errorDetail = { timestamp, timeString, error: { message: err.message, stack }, message };
-    this.errors.push(errorDetail)
+    this.errors.push(errorDetail);
+    //@ts-expect-error
     Hooks.callAll("midi-qol.TroubleShooter.recordError", errorDetail);
   }
 
@@ -188,6 +190,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _preClose(options) {
     await super._preClose(options);
+    //@ts-expect-error
     Hooks.off("midi-qol.TroubleShooter.recordError", this._hookId);
   }
 
@@ -270,6 +273,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
               await exportSettingsToJSON(); // Just a safety net saving of the settings
               const settingsJSON = TroubleShooter.data.midiSettings;
               importSettingsFromJSON(settingsJSON);
+              //@ts-expect-error
               Hooks.callAll("midi-qol.configSettingsChanged");
               resolve(true);
             }

@@ -366,7 +366,6 @@ function isTokenInside(template: MeasuredTemplate, token: Token, wallsBlockTarge
           tx = tx + template.shape.width / 2;
           ty = ty + template.shape.height / 2;
         }
-        // @ts-expect-error v13ism
         const r = new foundry.canvas.geometry.Ray({ x: tx, y: ty }, { x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y });
 
         // If volumetric templates installed always leave targeting to it.
@@ -497,11 +496,13 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data?,
       //@ts-expect-error
       VolumetricTemplates.compute3Dtemplate(templateDocument.object, canvas?.tokens?.placeables);
     }
+    this.setTargets?.(game.user?.targets);
   }
   if (this) {
     this.templateUuid = templateDocument?.uuid;
   }
   if (targeting === "none") { // this is no good
+    //@ts-expect-error
     Hooks.callAll("midi-qol-targeted", this?.targets);
     return true;
   }
@@ -530,6 +531,7 @@ function blockRoll(item, workflow) {
   if (item) {
     if (workflow) workflow.aborted = true;
     let hookName = `midi-qol.RollComplete.${item?.uuid}`;
+    //@ts-expect-error
     Hooks.callAll(hookName, workflow)
   }
   return false;
@@ -541,6 +543,6 @@ function blockRoll(item, workflow) {
  */
 
 
-export function getSceneTargets(): Token[] {
+export function getSceneTargets(): foundry.canvas.placeables.Token[] {
   return globalThis.dnd5e.utils.getSceneTargets();
 }

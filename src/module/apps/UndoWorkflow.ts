@@ -9,7 +9,9 @@ export class UndoWorkflow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   constructor(options) {
     super(options);
+    //@ts-expect-error
     this.undoAddedHookId = Hooks.on("midi-qol.addUndoEntry", this.render.bind(this));
+    //@ts-expect-error
     this.undoRemovedHookId = Hooks.on("midi-qol.removeUndoEntry", this.render.bind(this));
     if (!configSettings.undoWorkflow) {
       configSettings.undoWorkflow = true;
@@ -70,7 +72,9 @@ export class UndoWorkflow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   async close(options = {}) {
+    //@ts-expect-error
     Hooks.off("midi-qol.addUndoEntry", this.undoAddedHookId);
+    //@ts-expect-error
     Hooks.off("midi-qol.removeUndoEntry", this.undoRemovedHookId);
     return super.close(options);
   }

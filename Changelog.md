@@ -1,3 +1,26 @@
+### 13.0.8
+* Tokens with the hidden status are no longer targetable.
+* Fix for not setting activity.ammunitionItem correctly in some cases.
+* Fix for reactions when using emanation/emanation no template targeting.
+* Fix for versatile weapon usage (i.e. changing from 1 handed to two handed) not failing when checking for a shield equipped.
+* Fix for config.attackMode (onehanded/twohanded) being overridden when using an item.
+* Added option to force summoned tokens to be friendly to summoner.
+* Item and activity macros are specified in the midi-qol macros app in the item header buttons.
+* Properly link the context data and damageTotal to the doEffectsData object - thanks @thatlonelybugbear
+* Fix for spellLevel in chooseEffects() - thanks @thatlonelybugbear
+* Added new macroPass, preAttackRollConfig.
+* ActorOnUseMacro editor is not accessed from the header controls on the actor sheet.
+  * This finalises the changes to actor/item/activity macros for v13.
+  * Actor macros (specified in the actor on UseMacro header control app) are called when any actor's item is used at the appropriate pass. You may reference any item/activity/world macro when specifying the macro to call.
+  * Item macros are called when any activity on the item is called, at the appropriate pass.
+  * Activity macros are called when the specified activity is run, at the appropriate pass.
+
+
+* Moved to fvtt-types 13.345.0 - quite a lot of changes from this. (Relevant to those who have forked midi)
+
+### 13.0.7
+* Fix for summons with instantaneous duration throwing an error
+
 ### 13.0.6
 * First open beta for midi-qol and foundry v13 dnd5e v5. This is **NOT** ready for gameplay but we are actively seeking feedback on any issues. Please read the whole changelog as there are substantial changes. The main one being that the item midi-qol tab is no more.
 * Requires the v13 branch of dae: https://gitlab.com/tposney/dae/raw/v13/package/module.json

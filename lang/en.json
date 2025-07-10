@@ -329,6 +329,7 @@
     "preItemRoll": "Called before the item is rolled (*)",
     "templatePlaced": "Only called once a template is placed",
     "preAttackRoll": "Before Attack Roll",
+    "preAttackRollConfig": "Before Attack Configuration",
     "preCheckHits": "Before Check Hits",
     "postAttackRoll": "After Attack Roll",
     "preDamageRoll": "Before Damage Roll",
@@ -1077,6 +1078,10 @@
           "label": "Apply Convenient Effects",
           "hint": "Apply convenient effects which match activity name (if no match, item name) when item used. Requires auto apply active effects enabled as well."
         }
+      },
+      "friendlySummon": {
+        "label": "Friendly summons",
+        "hint": "The summoned token has the same disposition as the caster"
       },
       "isOverTimeFlag": {
         "label": "Is Over Time",

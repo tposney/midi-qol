@@ -12,6 +12,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   constructor(options?) {
     super(options);
+    //@ts-expect-error
     this.configHookId = Hooks.on("midi-qol.ConfigSettingsChanged", () => {
       this.close();
     });
@@ -334,6 +335,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _preClose(options) {
     await super._preClose(options);
+    //@ts-expect-error
     if (this.configHookId) Hooks.off("midi-qol.ConfigSettingsChanged", this.configHookId);
   }
 

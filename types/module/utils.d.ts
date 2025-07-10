@@ -214,7 +214,7 @@ export declare function bonusDialog(bonusFlags: any, flagSelector: any, showRoll
 export declare function getOptionalCountRemainingShortFlag(actor: globalThis.dnd5e.documents.Actor5e, flag: string): any;
 export declare function getOptionalCountRemaining(actor: globalThis.dnd5e.documents.Actor5e, flag: string): any;
 export declare function removeEffectGranting(actor: globalThis.dnd5e.documents.Actor5e, changeKey: string): Promise<any>;
-export declare function hasEffectGranting(actor: globalThis.dnd5e.documents.Actor5e, key: string, selector: string): any;
+export declare function hasEffectGranting(actor: globalThis.dnd5e.documents.Actor5e, key: string, selector: string): {} | null;
 export declare function isConcentrating(actor: globalThis.dnd5e.documents.Actor5e): undefined | ActiveEffect;
 export declare const reactionTypes: {
     reaction: {
@@ -328,10 +328,19 @@ export declare function setReactionUsed(actor: Actor, active?: boolean): Promise
 export declare function setBonusActionUsed(actor: Actor): Promise<void>;
 export declare function removeActionUsed(actor: Actor): Promise<any>;
 export declare function removeReactionUsed(actor: Actor, force?: boolean): Promise<void>;
-export declare function hasUsedAction(actor: Actor): never;
-export declare function hasUsedReaction(actor: Actor): never;
+export declare function hasUsedAction(actor: Actor): string | boolean | {
+    sheetLock?: boolean;
+    sheetClass?: string;
+} | undefined;
+export declare function hasUsedReaction(actor: Actor): string | boolean | {
+    sheetLock?: boolean;
+    sheetClass?: string;
+} | undefined;
 export declare function expirePerTurnBonusActions(combat: Combat, data: any, options: any): Promise<void>;
-export declare function hasUsedBonusAction(actor: Actor): never;
+export declare function hasUsedBonusAction(actor: Actor): string | boolean | {
+    sheetLock?: boolean;
+    sheetClass?: string;
+} | undefined;
 export declare function removeBonusActionUsed(actor: Actor, force?: boolean): Promise<void>;
 export declare function needsReactionCheck(actor: any): boolean;
 export declare function needsAOOCheck(actor: any): boolean;
@@ -491,8 +500,8 @@ export declare function isConvenientEffect(effect: any): boolean;
 export declare function getActivityDefaultDamageType(workflow: Workflow): string;
 export declare function getDefaultDamageType(item: any): any;
 export declare function activityHasAreaTarget(activity: any): boolean;
-export declare function getSaveRollModeFor(abilityId: any): "gmroll" | "blindroll" | "public";
-export declare function getCheckRollModeFor(abilityId: any): "gmroll" | "blindroll" | "public";
+export declare function getSaveRollModeFor(abilityId: any): "public" | "gmroll" | "blindroll";
+export declare function getCheckRollModeFor(abilityId: any): "public" | "gmroll" | "blindroll";
 export declare function areMidiKeysPressed(event: any, action: any): boolean | undefined;
 export declare function setRangedTargets(tokenToUse: any, targetDetails: any): boolean;
 export declare function updateUserTargets(targetIds: string[]): void;

@@ -16,7 +16,7 @@ export declare const BooleanField: typeof foundry.data.fields.BooleanField;
 export declare const NumberField: typeof foundry.data.fields.NumberField;
 export declare const StringField: typeof foundry.data.fields.StringField;
 export declare const SchemaField: typeof foundry.data.fields.SchemaField;
-export declare const TokenClass: any;
+export declare const TokenClass: typeof Token;
 export declare var isDnD: boolean;
 export declare let i18n: (key: string) => string;
 export declare function i18nSystem(key: any): string;

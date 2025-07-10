@@ -46,7 +46,6 @@ export const BooleanField: typeof foundry.data.fields.BooleanField = foundry.dat
 export const NumberField: typeof foundry.data.fields.NumberField = foundry.data.fields.NumberField;
 export const StringField: typeof foundry.data.fields.StringField = foundry.data.fields.StringField;
 export const SchemaField: typeof foundry.data.fields.SchemaField = foundry.data.fields.SchemaField;
-//@ts-expect-error
 export const TokenClass = foundry.canvas.placeables.Token;
 export var isDnD = false;
 
@@ -128,6 +127,7 @@ export let cleanSpellName = (name: string): string => {
 /* ------------------------------------ */
 /* Initialize module					*/
 /* ------------------------------------ */
+//@ts-expect-error
 Hooks.once("levelsReady", function () {
   //@ts-ignore
   levelsAPI = CONFIG.Levels.API;
@@ -183,6 +183,7 @@ Hooks.once('init', async function () {
   setupSheets();
   //@ts-expect-error
   const systemVersion = game.system.version;
+  //@ts-expect-error
   Hooks.once('dfreds-convenient-effects.ready()', () => {
     setupMidiStatusEffects();
   });
@@ -221,6 +222,7 @@ Hooks.once('init', async function () {
   // Try a delay before doing this - hopefully allowing localisation to complete
   // If babele is installed then wait for it to be ready
   if (game.modules?.get("babele")?.active) {
+    //@ts-expect-error
     Hooks.once("babele.ready", MidiSounds.getWeaponBaseTypes);
   } else {
     setTimeout(MidiSounds.getWeaponBaseTypes, 6000);
@@ -237,6 +239,7 @@ Hooks.once('init', async function () {
     TroubleShooter.recordError(err, message);
   });
 });
+//@ts-expect-error
 Hooks.on("dae.modifySpecials", (specKey, specials, _characterSpec) => {
   specials[`flags.${MODULE_ID}.onUseMacroName`] = [new StringField(), CONST.ACTIVE_EFFECT_MODES.CUSTOM];
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.onUseMacroName`);
@@ -313,9 +316,11 @@ Hooks.on("dae.modifySpecials", (specKey, specials, _characterSpec) => {
   daeFieldBrowserFields.push(`system.traits.idm.value`);
 });
 
+//@ts-expect-error
 Hooks.on("dae.modifyBaseValues", (specKey: string, baseValues, _characterSpec) => {
   baseValues[`flags.${MODULE_ID}.ActivityOverTime`] = [new StringField({initial: ""}), -1];
 });
+//@ts-expect-error
 Hooks.on("dae.addFieldMappings", (fieldMappings) => {
   let allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
   if (game.system?.id === "sw5e") allAttackTypes = ["rwak", "mwak", "rpak", "mpak"];
@@ -373,6 +378,7 @@ Hooks.on("dae.addFieldMappings", (fieldMappings) => {
 
 });
 
+//@ts-expect-error
 Hooks.on("dae.addSpecialDurations", daeSpecialDurations => {
   daeSpecialDurations["1Action"] = i18n("dae.1Action");
   daeSpecialDurations["Bonus Action"] = i18n("dae.Bonus Action");
@@ -447,6 +453,7 @@ Hooks.on("dae.addSpecialDurations", daeSpecialDurations => {
 
 var daeFieldBrowserFields: Array<string> = [];
 
+//@ts-expect-error
 Hooks.on("dae.setFieldData", (fieldData: Record<string, string[]>) => {
   fieldData["MidiQOL"] = Array.from(new Set(daeFieldBrowserFields)).sort();
   log("setDaeFieldData | fieldData", fieldData);
@@ -599,6 +606,7 @@ Hooks.once('ready', function () {
     "preItemRoll": "Called before the item is rolled (*)",
     "templatePlaced": "Only called once a template is placed",
     "preAttackRoll": "Before Attack Roll",
+    "preAttackRollConfig": "Before Attack Configuration",
     "preCheckHits": "Before Check Hits",
     "postAttackRoll": "After Attack Roll",
     "preSave": "Before Save",
@@ -664,6 +672,7 @@ Hooks.once('ready', function () {
       }
       readySettingsSetup();
     }
+    //@ts-expect-error
     Hooks.callAll("midi-qol.ready")
   }
 
@@ -704,6 +713,7 @@ Hooks.once('ready', function () {
     disableWorkflowAutomation();
     setTimeout(disableWorkflowAutomation, 2000)
   }
+  //@ts-expect-error
   Hooks.callAll("midi-qol.midiReady");
 
   if (game.user?.isGM) { // need to improve the test
@@ -734,11 +744,13 @@ import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/E
 import { MidiCombat5e } from './module/MidiCombat5e.js';
 import { setupMidiItemSheet5e } from './module/ItemSheet5e.js';
 
+//@ts-expect-error
 Hooks.once("midi-qol.midiReady", () => {
   setupMidiTests();
 });
 
 // Add any additional hooks if necessary
+//@ts-expect-error
 Hooks.on("monaco-editor.ready", (registerTypes) => {
   registerTypes("midi-qol/index.ts", `
   const MidiQOL = {
@@ -1058,6 +1070,7 @@ function setupMidiQOLApi() {
     setReactionUsed,
   }
   globalThis.MidiQOL.actionQueue = new foundry.utils.Semaphore();
+  //@ts-expect-error
   Hooks.callAll("midi-qol.setup", globalThis.MidiQOL);
 }
 

@@ -31,6 +31,8 @@ export class OnUseMacros {
 export class OnUseMacro {
   macroName: string;
   option: string;
+  macro: string | undefined = undefined;
+  macroPassOptions: string[] = [];
 
   constructor(macro: string | undefined = undefined) {
     if (macro === undefined) {
@@ -140,7 +142,7 @@ async function _onMacroControl(event) {
 }
 
 export function getCurrentMacros(object): OnUseMacros {
-  const macroField = foundry.utils.getProperty(object, "flags.midi-qol.onUseMacroParts");
+  const macroField = foundry.utils.getProperty(object, "flags.midi-qol.onUseMacroParts") as OnUseMacros;
   return macroField;
 }
 

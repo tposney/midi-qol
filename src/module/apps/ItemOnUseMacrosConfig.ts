@@ -53,7 +53,7 @@ export class ItemOnUseMacrosConfig extends HandlebarsApplicationMixin(DocumentSh
       ...activityMacros,
       Custom: i18n("midi-qol.CustomMacro")
     }
-    const onUseMacros = foundry.utils.getProperty(this.document, "flags.midi-qol.onUseMacroParts")?.items ?? [];
+    const onUseMacros = (foundry.utils.getProperty(this.document, "flags.midi-qol.onUseMacroParts") as OnUseMacros)?.items ?? [];
     for (const currMacro of onUseMacros) {
       if (currMacro.macroName.startsWith("ActivityMacro-")) {
         currMacro.macro = currMacro.macroName;
@@ -98,7 +98,7 @@ export class ItemOnUseMacrosConfig extends HandlebarsApplicationMixin(DocumentSh
     _event: PointerEvent,
     _target: HTMLElement
   ) {
-    const currOnUseMacros = foundry.utils.getProperty(this.document, "flags.midi-qol.onUseMacroParts") ?? new OnUseMacros();
+    const currOnUseMacros = foundry.utils.getProperty(this.document, "flags.midi-qol.onUseMacroParts") as OnUseMacros ?? new OnUseMacros();
     currOnUseMacros.items.push(new OnUseMacro());
     // @ts-expect-error can't know about flags
     this.document.update({ "flags.midi-qol.onUseMacroName": currOnUseMacros.toString() });
@@ -109,10 +109,10 @@ export class ItemOnUseMacrosConfig extends HandlebarsApplicationMixin(DocumentSh
     _event: PointerEvent,
     target: HTMLElement
   ) {
-    const currOnUseMacros = foundry.utils.getProperty(this.document, "flags.midi-qol.onUseMacroParts")?.items ?? [];
+    const currOnUseMacros = (foundry.utils.getProperty(this.document, "flags.midi-qol.onUseMacroParts") as OnUseMacros)?.items ?? [];
     const macroIndex = target.closest<HTMLDivElement>("[data-macro-index]")?.dataset.macroIndex;
     if (macroIndex === undefined) return;
-    const newOnUseMacros = OnUseMacros.parseParts({ items: currOnUseMacros.toSpliced(macroIndex, 1) });
+    const newOnUseMacros = OnUseMacros.parseParts({ items: currOnUseMacros.toSpliced(Number(macroIndex), 1) });
     // @ts-expect-error can't know about flags
     this.document.update({ "flags.midi-qol.onUseMacroName": newOnUseMacros.toString() });
   }
@@ -124,7 +124,7 @@ export class ItemOnUseMacrosConfig extends HandlebarsApplicationMixin(DocumentSh
   ) {
     const macroIndex = target.closest<HTMLDivElement>("[data-macro-index]")?.dataset.macroIndex;
     if (macroIndex === undefined) return;
-    const currOnUse = foundry.utils.getProperty(this.document, "flags.midi-qol.onUseMacroParts")?.items?.[macroIndex];
+    const currOnUse = (foundry.utils.getProperty(this.document, "flags.midi-qol.onUseMacroParts") as OnUseMacros)?.items?.[macroIndex];
     if (!currOnUse) return;
     const DIMEditor = globalThis.DAE?.DIMEditor;
     if (!DIMEditor) return ui.notifications?.error("DIMEditor not available - install Dynamic Active Effects");

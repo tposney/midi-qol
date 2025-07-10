@@ -9,6 +9,8 @@ export declare class OnUseMacros {
 export declare class OnUseMacro {
     macroName: string;
     option: string;
+    macro: string | undefined;
+    macroPassOptions: string[];
     constructor(macro?: string | undefined);
     static parsePart(parts: {
         macroName: string;

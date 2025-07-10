@@ -632,6 +632,7 @@ export let fetchParams = () => {
       game.settings?.set("midi-qol", "ConfigSettings", configSettings)
     });
   }
+  //@ts-expect-error
   Hooks.callAll("midi-qol.ConfigSettingsChanged");
 }
 

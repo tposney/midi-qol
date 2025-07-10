@@ -5,6 +5,7 @@ import { configSettings } from "./settings.js";
 
 function fetchStats() {
   gameStats.fetchStats();
+  //@ts-expect-error
   Hooks.call("midi-qol.StatsUpdated");
 }
 const blankStat = {
@@ -198,7 +199,8 @@ export class RollStats {
     }
     this.updateEntity({ id: item.actor.id });
     //@ts-ignore
-    if (playerStats) this.updateEntity({ id: game.user?.id })
+    if (playerStats) this.updateEntity({ id: game.user?.id }) 
+    //@ts-expect-error
     Hooks.call("midi-qol.StatsUpdated");
   }
 
@@ -231,8 +233,10 @@ export class RollStats {
     }
     this.updateEntity({ id: item.actor.id });
     //@ts-ignore
-    if (playerStats) this.updateEntity({ id: game.user?.id })
+    if (playerStats) this.updateEntity({ id: game.user?.id }) 
+    //@ts-expect-error
     Hooks.call("midi-qol.StatsUpdated");
+    
   }
 
   public updateEntity({ id }) {
