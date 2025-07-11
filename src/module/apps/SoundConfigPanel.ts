@@ -107,7 +107,7 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
     SoundConfigPanel.defaultPlaylist = Object.keys(context.playlists ?? {})[0];
     SoundConfigPanel.defaultSound = Object.keys(context.playlists[SoundConfigPanel.defaultPlaylist] ?? {})[0] ?? "";
     context.buttons = [{
-      icon: "fas fa-save",
+      icon: "fas fa-floppy-disk",
       action: "save",
       label: "Save Changes",
       type: "button",

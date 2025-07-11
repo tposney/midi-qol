@@ -1059,7 +1059,7 @@ export async function testFormBuilder() {
     })
 
     // Randomize Button
-    .button({ label: "Randomize", icon: "fas fa-d6", callback: function (e) { console.log(this, e); } });
+    .button({ label: "Randomize", icon: "fas fa-dice-d6", callback: function (e) { console.log(this, e); } });
 
   const data = await formBuilder.render();
 

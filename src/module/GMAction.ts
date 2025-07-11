@@ -1300,7 +1300,7 @@ async function rollActionSave(data: any) {
     if (!foundry.utils.isEmpty(buttons)) {
       buttons.push({
         action: "no",
-        icon: "fa-solid fa-times",
+        icon: "fa-solid fa-xmark",
         label: `No`,
         callback: async () => {
           resolve(undefined);
