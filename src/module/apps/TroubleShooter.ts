@@ -153,7 +153,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           },
           {
             action: "no",
-            label: '<i class="fas fa-times"></i> Cancel',
+            label: '<i class="fas fa-xmark"></i> Cancel',
             callback: event => resolve(false)
           }
         ],
@@ -273,7 +273,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           {
             action: "cancel",
             default: true,
-            label: '<i class="fas fa-times"></i> Cancel',
+            label: '<i class="fas fa-xmark"></i> Cancel',
             callback: event => resolve(false)
           }
         ],
@@ -314,19 +314,19 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
       {
         type: "button",
         action: "refresh",
-        icon: "fa-solid fa-cogs",
+        icon: "fa-solid fa-gears",
         label: "MENU.Reload"
       },
       {
         type: "button",
         action: "clear",
-        icon: "fa-solid fa-cogs",
+        icon: "fa-solid fa-gears",
         label: "midi-qol.TroubleShooter.ClearErrors"
       },
       {
         type: "button",
         action: "export",
-        icon: "fa-solid fa-save",
+        icon: "fa-solid fa-floppy-disk",
         label: "SIDEBAR.Export"
       },
       {

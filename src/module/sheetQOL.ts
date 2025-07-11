@@ -42,7 +42,7 @@ let enableSheetQOL = (app, html, data) => {
       html.find('.config-button[data-action="senses').parent().parent().parent().append(`<div>
       <label>${i18n("midi-qol.ActorOnUseMacros")}</label>
       <a class="config-button midiqol-onuse-macros" data-action="midi-onuse-macros" title="midi onuse macros">
-        <i class="fas fa-cog"></i>
+        <i class="fas fa-gear"></i>
       </a>
       </div>`);
       html.find(".midiqol-onuse-macros").click(ev => {
