@@ -5841,6 +5841,34 @@ export class Workflow {
           // const adRoll = this.activeDefenceRolls[getTokenDocument(targetToken)?.uuid ?? ""] ?? {};
           // hitString = `(${adRoll.result ?? adRoll.total}): ${hitString}`
         }
+        // Invert the isHitResult and hitSymbol so that the results of the defense roll looks the same as when making a saving throw
+        if (!challengeModeArmorSet) {
+          switch (hitSymbol) {
+            case "fa-check-double":
+              // display critical hit as critical failure of the defense roll
+              isHitResult = "fumble";
+              hitSymbol = "fa-xmarks-lines";
+              break;
+            case "fa-check":
+              // display hit as a failure of the defense roll
+              isHitResult = "miss";
+              hitSymbol = "fa-xmark";
+              break;
+            case "fa-times":
+              // deprecated name of FA icon
+            case "fa-xmark":
+              if (isHitResult === "fumble") {
+                // display fumble as a critical success of the defense roll
+                isHitResult = "critical";
+                hitSymbol = "fa-check-double";
+              } else {
+                // display miss as a success of the defense roll
+                isHitResult = "hit";
+                hitSymbol = "fa-check";
+              }
+              break;
+          }
+        }
       }
       if (this.isFumble) hitResultNumeric = "--";
       const targetUuid = getTokenDocument(targetToken)?.uuid ?? "";
