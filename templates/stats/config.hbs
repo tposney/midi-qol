@@ -1,22 +1,22 @@
 <section id="midi-stats-config-tab" class="tab{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
     {{#if isGM}}
         <button type="button" name="clear" id="clear-stats">
-            <i class="fas fa-save"></i> {{localize "midi-qol.ClearStats"}}
+            <i class="fas fa-floppy-disk"></i> {{localize "midi-qol.ClearStats"}}
         </button>
         <button type="button" name="clear" id="export-stats-json">
-            <i class="fas fa-save"></i> {{localize "midi-qol.ExportJSON"}}
+            <i class="fas fa-floppy-disk"></i> {{localize "midi-qol.ExportJSON"}}
         </button>
         <button type="button" name="clear" id="export-stats-csv">
-            <i class="fas fa-save"></i> {{localize "midi-qol.ExportCSV"}}
+            <i class="fas fa-floppy-disk"></i> {{localize "midi-qol.ExportCSV"}}
         </button>
         <button type="button" name="clear" id="end-session">
-            <i class="fas fa-save"></i> {{localize "midi-qol.EndSession"}}
+            <i class="fas fa-floppy-disk"></i> {{localize "midi-qol.EndSession"}}
         </button>
     {{/if}}
     <div class="midi-qol-box">
         {{#each stats}}
             <button type="button" name="remove-{{this.name}}" id=remove-stats-{{@key}}>
-                <i class="fas fa-cogs"></i> {{localize "midi-qol.RemoveStats"}} {{this.name}}
+                <i class="fas fa-gears"></i> {{localize "midi-qol.RemoveStats"}} {{this.name}}
             </button>
         {{/each}}
     </div>
