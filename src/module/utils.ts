@@ -3193,7 +3193,7 @@ class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       return obj;
     }, {})
     this.data.buttons.no = {
-      icon: '<i class="fas fa-times"></i>',
+      icon: '<i class="fas fa-xmark"></i>',
       label: i18n("Cancel"),
       callback: () => {
         this.data.flags = [];

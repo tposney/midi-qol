@@ -65,7 +65,7 @@ export class FormBuilder {
         restricted ??= true;
         defaultValue ??= {};
         key ??= "settings";
-        icon ??= "fas fa-cogs";
+        icon ??= "fas fa-gears";
         label ??= "Configure";
         name ??= "Configuration Menu";
         hint ??= "Configure the module settings";

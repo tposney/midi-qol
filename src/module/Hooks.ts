@@ -538,7 +538,7 @@ export function initHooks() {
 
     api.config.actorTraits.registerActorTrait({
       title: i18n("midi-qol.ActorOnUseMacros"),
-      iconClass: "fas fa-cog",
+      iconClass: "fas fa-gear",
       enabled: () => configSettings.allowActorUseMacro,
       openConfiguration: (params) => {
         new ActorOnUseMacrosConfig({ document: params.app.object }).render({ force: true });

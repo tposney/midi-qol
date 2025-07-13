@@ -290,7 +290,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         },
         ok: {
           label: "DND5E.TraitSave",
-          icon: "far fa-save",
+          icon: "far fa-floppy-disk",
           callback: (evt, button) => {
             const data = new FormDataExtended(button.form as HTMLFormElement);
             // @ts-expect-error
@@ -397,7 +397,7 @@ async function importFromJSONDialog() {
         },
         {
           action: "no",
-          label: '<i class="fas fa-times"></i> Cancel',
+          label: '<i class="fas fa-xmark"></i> Cancel',
           callback: event => resolve(false)
         }
       ],
