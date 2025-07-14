@@ -40,12 +40,12 @@ export let timelog = (...args) => warn("midi-qol | ", Date.now(), ...args);
 export var levelsAPI;
 export var allDamageTypes;
 export const MODULE_ID = "midi-qol";
-export const ArrayField = foundry.data.fields.ArrayField;
-export const ObjectField = foundry.data.fields.ObjectField
-export const BooleanField = foundry.data.fields.BooleanField;
-export const NumberField = foundry.data.fields.NumberField;
-export const StringField = foundry.data.fields.StringField;
-export const SchemaField = foundry.data.fields.SchemaField;
+export const ArrayField: typeof foundry.data.fields.ArrayField = foundry.data.fields.ArrayField;
+export const ObjectField: typeof foundry.data.fields.ObjectField = foundry.data.fields.ObjectField
+export const BooleanField: typeof foundry.data.fields.BooleanField = foundry.data.fields.BooleanField;
+export const NumberField: typeof foundry.data.fields.NumberField = foundry.data.fields.NumberField;
+export const StringField: typeof foundry.data.fields.StringField = foundry.data.fields.StringField;
+export const SchemaField: typeof foundry.data.fields.SchemaField = foundry.data.fields.SchemaField;
 export const TokenClass = foundry.canvas.placeables.Token;
 export var isDnD = false;
 
@@ -109,7 +109,7 @@ export let midiBonusActionEffect;
 export let midiFlankingEffect;
 export let midiFlankedEffect;
 
-export const NumericTerm = foundry.dice.terms.NumericTerm;
+export const NumericTerm: typeof foundry.dice.terms.NumericTerm = foundry.dice.terms.NumericTerm;
 export const MESSAGE_TYPES = {
   HITS: 1,
   SAVES: 2,

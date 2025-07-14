@@ -1,0 +1,31 @@
+import { Workflow } from "./Workflow.js";
+export declare var undoDataQueue: any[];
+export declare function queueUndoDataDirect(undoDataDef: any): void;
+export declare function _queueUndoDataDirect(undoDataDef: any): void;
+export declare function saveUndoData(workflow: Workflow): Promise<boolean>;
+export declare function createTargetData(tokenUuid: any): {
+    tokenUuid: any;
+    actorUuid: any;
+    actorData: any;
+    tokenData: any;
+} | undefined;
+export declare function startUndoWorkflow(undoData: any): boolean;
+export declare function updateUndoChatCardUuidsById(data: any): void;
+export declare function updateUndoChatCardUuids(data: any): void;
+export declare function saveTargetsUndoData(workflow: Workflow): Promise<any>;
+export declare function addUndoChatMessage(message: ChatMessage): Promise<void>;
+export declare function showUndoQueue(): void;
+export declare function getUndoQueue(): any[];
+export declare function queueUndoData(data: any): boolean;
+export declare function addQueueEntry(queue: any[], data: any): void;
+export declare function undoMostRecentWorkflow(): Promise<any>;
+export declare function removeMostRecentWorkflow(): Promise<any>;
+export declare function undoTillWorkflow(workflowId: string, undoTarget: boolean, removeWorkflow?: boolean): Promise<boolean>;
+export declare function _undoMostRecentWorkflow(): Promise<false | void>;
+export declare function _removeMostRecentWorkflow(): Promise<any>;
+export declare function _removeChatCards(data: {
+    chatCardUuids: string[];
+}): Promise<void>;
+export declare function getRemoveUndoEffects(effectsData: any, actor: any): string[];
+export declare function removeChatCard(chatCard: ChatMessage | undefined): Promise<ChatMessage | undefined>;
+export declare function undoWorkflow(undoData: any): Promise<void>;

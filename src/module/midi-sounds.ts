@@ -240,7 +240,7 @@ export class MidiSounds {
     });
   }
 
-  static async createDefaultPlayList() {
+  static async createDefaultPlayList(): Promise<Playlist | undefined> {
     if (!game.user?.isGM) {
       ui.notifications?.warn("Only a GM can create the default playlist");
       return;

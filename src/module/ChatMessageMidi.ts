@@ -133,10 +133,10 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           foundry.utils.setProperty(rolls[0], "flags.midi-qol.total", total);
         }
         let formulaInToolTip = ["formula", "formulaadv"].includes(configSettings.rollAlternate);
-        let hideDetails = this.author.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none";
-        let hideFormula = this.author.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none";
+        let hideDetails = this.author?.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none";
+        let hideFormula = this.author?.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none";
         if (options.blind && !game.user?.isGM) hideFormula = true;
-        if (this.author.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none") {
+        if (this.author?.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none") {
           switch (configSettings.hideRollDetails) {
             case "none":
               break;
@@ -234,7 +234,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
               html.querySelector(`.midi-qol-${rType}-roll`)?.appendChild(flavor);
             }
             html.querySelector(`.midi-qol-${rType}-roll`)?.appendChild(roll);
-            if ((configSettings.hideRollDetails ?? "none") !== "none" && !game.user?.isGM && this.author.isGM) {
+            if ((configSettings.hideRollDetails ?? "none") !== "none" && !game.user?.isGM && this.author?.isGM) {
               html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
             }
           }
@@ -359,7 +359,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
       // @ts-expect-error no dnd5e-types
       super._enrichChatCard(html);
-      if (this.author.isGM && (configSettings.hideRollDetails ?? "none") !== "none" && !game.user?.isGM) {
+      if (this.author?.isGM && (configSettings.hideRollDetails ?? "none") !== "none" && !game.user?.isGM) {
         html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
         html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
         html.querySelectorAll(".midi-attack-roll .dice-tooltip").forEach(el => el.style.height = "0");

@@ -282,7 +282,7 @@ export async function resolveTargetConfirmation(activity, options: any = {}): Pr
   return !!shouldContinue;
 }
 
-export async function showItemInfo() {
+export async function showItemInfo(): Promise<ChatMessage | undefined> {
   const token = this.actor.token;
   const sceneId = token?.scene && token.scene.id || canvas?.scene?.id;
 

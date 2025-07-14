@@ -1249,7 +1249,6 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       };
       itemData.img = "icons/svg/aura.svg";
       if (typeof itemName === "string") {
-        // @ts-expect-error
         let theItem = await fromUuid(itemName);
         if (!theItem && itemName.startsWith("Actor.")) {
           const localName = itemName.replace("Actor.", "")
@@ -1668,7 +1667,6 @@ export async function completeActivityUse(activity, usage: any = {}, dialog: any
 
 export async function completeItemUse(item, config: any = {}, dialog: any = {}, message: any = {}) {
   if (typeof item === "string") {
-    // @ts-expect-error
     item = await fromUuid(item);
   }
   const { legacy, chooseActivity, ...activityConfig } = config;
@@ -3053,7 +3051,6 @@ export function validTargetTokens(tokenSet: Set<Token> | undefined | any): Set<T
 // TODO when v12 only change all refs to fromUuidSync
 export function MQfromUuidSync(uuid: string | undefined | null): any {
   if (!!!uuid) return null;
-  // @ts-expect-error
   return fromUuidSync(uuid);
 }
 
@@ -4273,7 +4270,6 @@ export async function promptReactions(tokenUuid: string, reactionActivityList: R
     try {
       enableNotifications(false);
       for (let ref of reactionActivityList) {
-        // @ts-expect-error
         if (typeof ref === "string") reactionActivities.push(await fromUuid(ref));
         else reactionActivities.push(ref);
       };
@@ -6164,7 +6160,6 @@ export function getActor(actorRef: Actor | Token | TokenDocument | string | null
   if (actorRef instanceof TokenClass) return ((actorRef as Token).actor as unknown as Actor);
   if (actorRef instanceof TokenDocument) return (actorRef.actor as unknown as Actor);
   let entity: any = actorRef;
-  // @ts-expect-error
   if (typeof actorRef === "string") entity = fromUuidSync(actorRef);
   if (entity instanceof Actor) return entity;
   if (entity instanceof TokenDocument) return (entity.actor as unknown as Actor);

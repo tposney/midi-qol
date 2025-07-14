@@ -2723,7 +2723,6 @@ export class Workflow {
           if (this.activity.midiProperties.triggeredActivityTargets !== "retarget" && targetUuids?.length === 0)
             shouldTrigger = false;
           if (this.activity.midiProperties?.triggeredActivityConditionText && shouldTrigger) {
-            // @ts-expect-error
             const target: any = await fromUuid(targetUuids[0]);
             const condition = this.activity.midiProperties?.triggeredActivityConditionText;
             const conditionData = createConditionData({ workflow: this, activity: this.activity, item: this.item, target });
@@ -3858,7 +3857,6 @@ export class Workflow {
     let macroActivity = this.activity;
     let macroEntity;
     if (uuid?.length > 0) {
-      // @ts-expect-error
       macroEntity = await fromUuid(uuid);
     }
     if (macroEntity) {
@@ -3906,7 +3904,6 @@ export class Workflow {
           } else {
             const parts = name.split(".");
             const itemNameOrUuid = parts.slice(1).join(".");
-            // @ts-expect-error
             macroItem = await fromUuid(itemNameOrUuid); // item or activity
             if (macroItem instanceof ActiveEffect && macroItem.parent instanceof Item)
               macroItem = macroItem.parent;
@@ -3951,7 +3948,6 @@ export class Workflow {
             let itemToUse = macroItem;
             macroItem = item;
             if (!macro) {
-              // @ts-expect-error
               const activityOrItem: any = (activitySpec) ? await fromUuid(activitySpec) : macroActivity;
               if (activityOrItem instanceof Item)
                 itemToUse = activityOrItem;
@@ -3992,7 +3988,6 @@ export class Workflow {
           if (name.startsWith("Macro.")) name = name.replace("Macro.", "");
           macro = game.macros?.getName(name)
           if (!macro) {
-            // @ts-expect-error
             const itemOrMacro = await fromUuid(name);
             if (itemOrMacro instanceof Item) {
               macroData.sourceItemUuid = itemOrMacro.uuid;
@@ -4304,7 +4299,7 @@ export class Workflow {
         img = (targetToken.actor as Actor).img ?? targetToken.document?.texture.src;
       }
       if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
-        img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 });
+        img = (await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 })) ?? "";
       }
       const tokenUuid = getTokenDocument(targetToken)?.uuid ?? "";
       this.hitDisplayData[tokenUuid] = {
@@ -6414,7 +6409,6 @@ export class DamageOnlyWorkflow extends Workflow {
   async WorkflowState_Start(context: any = {}): Promise<WorkflowState> {
     this.effectsAlreadyExpired = [];
 
-    // @ts-expect-error
     if (this.itemCardUuid === "new" || !fromUuidSync(this.itemCardUuid)) {
       const message = {}
       const messageConfig = foundry.utils.mergeObject({

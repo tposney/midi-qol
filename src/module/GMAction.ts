@@ -506,7 +506,6 @@ async function _completeActivityUse(data: {
 }) {
   if (!game.user) return null;
   let { activityUuid, actorUuid, usage, dialog, message } = data;
-  // @ts-expect-error
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
   if (usage.midiOptions?.targetsToUse) {
@@ -523,7 +522,6 @@ async function _completeItemUse(data: {
 }) {
   if (!game.user) return null;
   let { itemData, actorUuid, config, dialog, message } = data;
-  // @ts-expect-error
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
   //@ts-ignore v10
@@ -556,7 +554,6 @@ async function createActor(data) {
 }
 
 async function deleteToken(data: { tokenUuid: string }) {
-  // @ts-expect-error
   const token = await fromUuid(data.tokenUuid);
   if (token) { // token will be a token document.
     //@ts-expect-error
@@ -607,7 +604,6 @@ async function deleteItemEffects(data: { targets, origin: string, ignore: string
           error("GMAction:deleteItemEffects | could not find actor for ", idData.tokenUuid);
           continue;
         }
-        // @ts-expect-error
         let originEntity = await fromUuid(origin);
         if (!originEntity) {
           error("GMAction:deleteItemEffects | could not find origin for ", origin);
