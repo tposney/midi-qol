@@ -26,8 +26,8 @@ export async function confirmWorkflow(existingWorkflow: Workflow): Promise<boole
         buttons: [
           { action: "complete", label: `<i class="fas fa-check"></i> Complete previous`, callback: () => { return "complete" } },
           { action: "discard", label: `<i class="fas fa-trash"></i> Discard previous`, callback: () => { return "discard" } },
-          { action: "undo", label: `<i class="fas fa-undo"></i> Undo until previous`, callback: () => { return "undo" } },
-          { action: "cancel", default: true, label: `<i class="fas fa-times"></i> Cancel New`, callback: () => { return "cancel" } }
+          { action: "undo", label: `<i class="fas fa-arrow-rotate-left"></i> Undo until previous`, callback: () => { return "undo" } },
+          { action: "cancel", default: true, label: `<i class="fas fa-xmark"></i> Cancel New`, callback: () => { return "cancel" } }
         ],
       })) {
         case "complete":

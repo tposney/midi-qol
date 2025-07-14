@@ -625,7 +625,7 @@ export function initHooks() {
     api.registerItemHeaderControls?.({
       controls: [
         {
-          icon: 'fas fa-cog',
+          icon: 'fas fa-gear',
           label: "Midi-QOL",
           async onClickAction() {
             new ItemOnUseMacrosConfig({ document: this.document }).render({ force: true });

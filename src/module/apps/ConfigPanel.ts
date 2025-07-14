@@ -289,7 +289,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         },
         ok: {
           label: "DND5E.TraitSave",
-          icon: "fa-solid fa-save",
+          icon: "fa-solid fa-floppy-disk",
           callback: (evt, button) => {
             const data = new foundry.applications.ux.FormDataExtended(button.form as HTMLFormElement);
             // @ts-expect-error
@@ -399,7 +399,7 @@ async function importFromJSONDialog() {
         },
         {
           action: "no",
-          icon: "fa-solid fa-times",
+          icon: "fa-solid fa-xmark",
           label: 'Cancel',
           callback: event => resolve(false)
         }
