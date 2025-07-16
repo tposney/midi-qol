@@ -319,7 +319,7 @@ export function initHooks() {
     // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
   });
 
-  Hooks.on("renderChatMessage", (message: ChatMessage, html, data) => {
+  Hooks.on("renderChatMessageHTML", (message: ChatMessage, html, data) => {
     if (debugEnabled > 1) debug("render message hook ", message.id, message, html, data);
     // chatDamageButtons(message, html, data); This no longer works since the html is rewritten
     processUndoDamageCard(message, html, data);

@@ -2212,10 +2212,10 @@ export class Workflow {
       await asyncHooksCallAll("midi-qol.preCheckSaves", this);
       if (this.item) await asyncHooksCallAll(`midi-qol.preCheckSaves.${this.item?.uuid}`, this);
       if (this.aborted) return this.WorkflowState_Abort;
-      if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessage"]?.length)
+      if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length)
       // setup to process saving throws as generated
       //@ts-expect-error
-      let hookId = Hooks.on("renderChatMessage", this.processSaveRoll.bind(this));
+      let hookId = Hooks.on("renderChatMessageHTML", this.processSaveRoll.bind(this));
       // let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
       let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
       try {
@@ -2226,12 +2226,12 @@ export class Workflow {
         TroubleShooter.recordError(err, message);
         error(message, err)
       } finally {
-        Hooks.off("renderChatMessage", hookId);
+        Hooks.off("renderChatMessageHTML", hookId);
         // Hooks.off("renderChatMessage", brHookId);
         Hooks.off("updateChatMessage", monksId);
       }
       if (debugEnabled > 1) debug("Check Saves: ", this.saveRequests, this.saveTimeouts, this.saves);
-      if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessage"]?.length)
+      if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length)
       await asyncHooksCallAll("midi-qol.postCheckSaves", this);
       if (this.item) await asyncHooksCallAll(`midi-qol.postCheckSaves.${this.item?.uuid}`, this);
       if (this.aborted) return this.WorkflowState_Abort;
@@ -5481,7 +5481,7 @@ export class Workflow {
     return true;
   }
 
-  processSaveRoll(message, html, data) {
+  processSaveRoll(message, html: HTMLElement, data) {
     if (!this.saveRequests) return {};
     const ddbglFlags = message.flags && message.flags["ddb-game-log"];
     const isDDBGL = ddbglFlags?.cls === "save" && !ddbglFlags?.pending;
@@ -5931,7 +5931,7 @@ export class Workflow {
 
   async activeDefence(item, roll) {
     // Roll is d20 + AC - 10
-    let hookId = Hooks.on("renderChatMessage", this.processDefenceRoll.bind(this));
+    let hookId = Hooks.on("renderChatMessageHTML", this.processDefenceRoll.bind(this));
     try {
       this.hitTargets = new Set();
       this.hitTargetsEC = new Set();
@@ -5947,7 +5947,7 @@ export class Workflow {
     } catch (err) {
       TroubleShooter.recordError(err, "activeDefence");
     } finally {
-      Hooks.off("renderChatMessage", hookId);
+      Hooks.off("renderChatMessageHTML", hookId);
     }
     return this.performState(this.WorkflowState_AttackRollComplete);
   }
@@ -6243,23 +6243,35 @@ export class Workflow {
 
       const style = `
         <style>
-        .dnd5e2.effectNoTarget.dialog .dialog-buttons button.dialog-button {
-          border: 5px;
-          margin: 0;
-          display: grid;			
-          grid-template-columns: 40px 150px;
-          grid-gap: 5px
-        }
-           .dnd5e2.effectNoTarget.dialog .dialog-buttons button.dialog-button span {
-          overflow: hidden;
-            text-overflow: ellipsis;
+          .dnd5e2.effectNoTarget.dialog {
+            max-height: 800px;
+            .window-content {
+              overflow: auto;
+            }
+            .dialog-content {
+              display: none;
+            }
+            .dialog-buttons {
+              flex-direction: column;
+              button.dialog-button {
+                border: 5px;
+                margin: 0;
+                display: grid;			
+                grid-template-columns: 40px 150px;
+                grid-gap: 5px;
+                span {
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                }
+              }
+            }
           }
-         .dnd5e2.effectNoTarget.dialog .window-header .window-title {
-          visibility: visible;
-          color: initial;
-          text-align: center;
-          font-weight: bold;
-           }
+          .dnd5e2.effectNoTarget.dialog .window-header .window-title {
+            visibility: visible;
+            color: initial;
+            text-align: center;
+            font-weight: bold;
+          }
         </style>`;
       function render([html]) {
         html.parentElement.querySelectorAll('.dialog-button').forEach((n) => {
@@ -6567,11 +6579,11 @@ export class TrapWorkflow extends Workflow {
     } catch (err) {
       TroubleShooter.recordError(err, "checkSaves");
     } finally {
-      Hooks.off("renderChatMessage", hookId);
+      Hooks.off("createChatMessage", hookId);
       //          Hooks.off("renderChatMessage", brHookId);
       Hooks.off("updateChatMessage", monksId)
     }
-    if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessage"]?.length);
+    if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length);
     const saveDisplay = (this.activity?.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity?.saveDisplay;
     await this.displaySaves(saveDisplay === "whisper");
     return this.WorkflowState_SavesComplete;

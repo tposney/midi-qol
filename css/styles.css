@@ -239,6 +239,14 @@
   visibility: visible;
 }
 
+/* Show full damage tooltip */
+.message-content:has(.midi-qol-tooltiptext) {
+  overflow: visible;
+  table {
+    overflow: visible;
+  }
+}
+
 * ----------------------------------------- */
 /* Dialog Window
 /* ----------------------------------------- */
@@ -750,7 +758,8 @@
   
   .midi-qol-tooltiptext {
       width: max-content;
-    font-size: 14px;
+      font-size: 14px;
+      bottom: 100%;
   }
   
   .chat-message.message.flexcol:has(.xmidi-qol-flex-container) table > tbody > tr > td:nth-child(1) > div:nth-child(1) > div:nth-child(1) {

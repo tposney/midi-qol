@@ -1103,21 +1103,21 @@ async function createGMReverseDamageCard(
   return chatCardUuid;
 }
 
-export let processUndoDamageCard = (message: ChatMessage, html, data) => {
+export let processUndoDamageCard = (message: ChatMessage, html: HTMLElement, data) => {
   if (!((message.flags as any)?.midiqol)?.undoDamage) return true;
-  let button = html.find("#all-reverse");
-  button.click((ev: { stopPropagation: () => void; }) => {
+  let button = html.querySelector<HTMLButtonElement>("#all-reverse");
+  button?.addEventListener("click", (ev) => {
     (async () => {
       const undoDamageData = recoverDamageListFromJSON(foundry.utils.getProperty(message, "flags.midiqol.undoDamage")as any);
       if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, oldVitality, newVitality, damageDetail, updateOptions, calcDamageOptions } of undoDamageData) {
         // recoverDamageDetailFromJSON(damageDetail);
         if (!actorUuid) continue;
-        const applyButton = html.find(`#apply-${actorUuid.replaceAll(".", "")}`);
-        applyButton.children()[0].classList.add("midi-qol-enable-damage-button");
-        applyButton.children()[0].classList.remove("midi-qol-disable-damage-button");
-        const reverseButton = html.find(`#reverse-${actorUuid.replaceAll(".", "")}`);
-        reverseButton.children()[0].classList.remove("midi-qol-enable-damage-button");
-        reverseButton.children()[0].classList.add("midi-qol-disable-damage-button");
+        const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
+        applyButton?.children[0].classList.add("midi-qol-enable-damage-button");
+        applyButton?.children[0].classList.remove("midi-qol-disable-damage-button");
+        const reverseButton = html.querySelector<HTMLButtonElement>(`#reverse-${actorUuid.replaceAll(".", "")}`);
+        reverseButton?.children[0].classList.remove("midi-qol-enable-damage-button");
+        reverseButton?.children[0].classList.add("midi-qol-disable-damage-button");
         let actor = fromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP} ${actor.name} ${actorUuid}`);
         const update = { "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 };
@@ -1133,19 +1133,19 @@ export let processUndoDamageCard = (message: ChatMessage, html, data) => {
     })();
   });
 
-  button = html.find("#all-apply");
-  button.click((ev: { stopPropagation: () => void; }) => {
+  button = html.querySelector<HTMLButtonElement>("#all-apply");
+  button?.addEventListener("click", (ev) => {
     (async () => {
       const undoDamageData = recoverDamageListFromJSON(foundry.utils.getProperty(message, "flags.midiqol.undoDamage") as any);
       if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageDetail, updateOptions, calcDamageOptions, oldVitality, newVitality } of undoDamageData) {
         if (!actorUuid) continue;
         let actor = fromActorUuid(actorUuid);
-        const applyButton = html.find(`#apply-${actorUuid.replaceAll(".", "")}`);
-        applyButton.children()[0].classList.add("midi-qol-disable-damage-button");
-        applyButton.children()[0].classList.remove("midi-qol-enable-damage-button");
-        const reverseButton = html.find(`#reverse-${actorUuid.replaceAll(".", "")}`);
-        reverseButton.children()[0].classList.remove("midi-qol-disable-damage-button");
-        reverseButton.children()[0].classList.add("midi-qol-enable-damage-button");
+        const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
+        applyButton?.children[0].classList.add("midi-qol-disable-damage-button");
+        applyButton?.children[0].classList.remove("midi-qol-enable-damage-button");
+        const reverseButton = html.querySelector<HTMLButtonElement>(`#reverse-${actorUuid.replaceAll(".", "")}`);
+        reverseButton?.children[0].classList.remove("midi-qol-disable-damage-button");
+        reverseButton?.children[0].classList.add("midi-qol-enable-damage-button");
         log(`Setting HP to ${newTempHP} and ${newHP} ${actor.name} ${actorUuid}`);
         const update = { "system.attributes.hp.temp": newTempHP ?? 0, "system.attributes.hp.value": newHP ?? 0 };
         const vitalityResource = checkRule("vitalityResource");
@@ -1163,14 +1163,14 @@ export let processUndoDamageCard = (message: ChatMessage, html, data) => {
     if (!actorUuid) return;
     // recoverDamageDetailFromJSON(damageDetail);
     // ids should not have "." in the or it's id.class
-    let button = html.find(`#reverse-${actorUuid.replaceAll(".", "")}`);
+    let button = html.querySelector<HTMLButtonElement>(`#reverse-${actorUuid.replaceAll(".", "")}`);
     // button.click((ev: { stopPropagation: () => void; }) => {
-    button.click((ev: { stopPropagation: () => void; currentTarget: any }) => {
-      ev.currentTarget.children[0].classList.add("midi-qol-disable-damage-button");
-      ev.currentTarget.children[0].classList.remove("midi-qol-enable-damage-button");
-      const otherButton = html.find(`#apply-${actorUuid.replaceAll(".", "")}`);
-      otherButton.children()[0].classList.remove("midi-qol-disable-damage-button");
-      otherButton.children()[0].classList.add("midi-qol-enable-damage-button");
+    button?.addEventListener("click", (ev) => {
+      (ev.currentTarget as HTMLElement)?.children[0].classList.add("midi-qol-disable-damage-button");
+      (ev.currentTarget as HTMLElement)?.children[0].classList.remove("midi-qol-enable-damage-button");
+      const otherButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
+      otherButton?.children[0].classList.remove("midi-qol-disable-damage-button");
+      otherButton?.children[0].classList.add("midi-qol-enable-damage-button");
       (async () => {
         let actor = fromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP} ${actor.name} ${actorUuid}`);
@@ -1185,22 +1185,22 @@ export let processUndoDamageCard = (message: ChatMessage, html, data) => {
     });
 
     // Default action of button is to do midi damage
-    button = html.find(`#apply-${actorUuid.replaceAll(".", "")}`);
-    button.click((ev: { stopPropagation: () => void; currentTarget: any }) => {
-      ev.currentTarget.children[0].classList.add("midi-qol-disable-damage-button");
-      ev.currentTarget.children[0].classList.remove("midi-qol-enable-damage-button");
-      const otherButton = html.find(`#reverse-${actorUuid.replaceAll(".", "")}`);
-      otherButton.children()[0].classList.remove("midi-qol-disable-damage-button");
-      otherButton.children()[0].classList.add("midi-qol-enable-damage-button");
-      let multiplierString = html.find(`#dmg-multiplier-${actorUuid.replaceAll(".", "")}`).val();
+    button = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
+    button?.addEventListener("click", (ev) => {
+      (ev.currentTarget as HTMLElement)?.children[0].classList.add("midi-qol-disable-damage-button");
+      (ev.currentTarget as HTMLElement)?.children[0].classList.remove("midi-qol-enable-damage-button");
+      const otherButton = html.querySelector<HTMLButtonElement>(`#reverse-${actorUuid.replaceAll(".", "")}`);
+      otherButton?.children[0].classList.remove("midi-qol-disable-damage-button");
+      otherButton?.children[0].classList.add("midi-qol-enable-damage-button");
+      let multiplierString = html.querySelector<HTMLSelectElement>(`#dmg-multiplier-${actorUuid.replaceAll(".", "")}`)?.value;
       const mults = { "-1": -1, "x1": 1, "x0.25": 0.25, "x0.5": 0.5, "x2": 2 };
       let multiplier = 1;
       (async () => {
         const calcOptions = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false });
         let actor = fromActorUuid(actorUuid);
         log(`Setting HP to ${newTempHP} and ${newHP} ${actor.name} ${actorUuid}`);
-        if (mults[multiplierString]) {
-          multiplier = mults[multiplierString]
+        if (mults[multiplierString ?? ""]) {
+          multiplier = mults[multiplierString ?? ""]
           await actor.applyDamage(damageDetail, foundry.utils.mergeObject(calcOptions, { multiplier: calcOptions.multiplier * multiplier }, { inplace: false }));
         } else {
           log(`Setting HP to ${newTempHP} and ${newHP} ${actor.name} ${actorUuid}`);
