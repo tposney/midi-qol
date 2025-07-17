@@ -6538,25 +6538,37 @@ export async function chooseEffect({ speaker, actor, token, character, item, arg
     };
 
     const style = `
-			<style>
-			.dnd5e2.effectNoTarget.dialog .dialog-buttons button.dialog-button {
-			  border: 5px;
-				margin: 0;
-				display: grid;			
-				grid-template-columns: 40px 150px;
-				grid-gap: 5px
-			}
-	   		.dnd5e2.effectNoTarget.dialog .dialog-buttons button.dialog-button span {
-				overflow: hidden;
-    			text-overflow: ellipsis;
-		  	}
-		   .dnd5e2.effectNoTarget.dialog .window-header .window-title {
-				visibility: visible;
-				color: initial;
-				text-align: center;
-				font-weight: bold;
-		   	}
-			</style>`;
+      <style>
+        .dnd5e2.effectNoTarget.dialog {
+          max-height: 800px;
+          .window-content {
+            overflow: auto;
+          }
+          .dialog-content {
+            display: none;
+          }
+          .dialog-buttons {
+            flex-direction: column;
+            button.dialog-button {
+              border: 5px;
+              margin: 0;
+              display: grid;			
+              grid-template-columns: 40px 150px;
+              grid-gap: 5px;
+              span {
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+            }
+          }
+        }
+        .dnd5e2.effectNoTarget.dialog .window-header .window-title {
+          visibility: visible;
+          color: initial;
+          text-align: center;
+          font-weight: bold;
+        }
+      </style>`;
     function render([html]) {
       html.parentElement.querySelectorAll('.dialog-button').forEach((n) => {
         const img = document.createElement('IMG');
@@ -6763,16 +6775,16 @@ export function blankOrUndefinedDamageType(s: string | undefined): string {
   return s;
 }
 
-export function processConcentrationRequestMessage(message, html, data) {
+export function processConcentrationRequestMessage(message, html: HTMLElement, data) {
   if (configSettings.doConcentrationCheck !== "chat") return;
-  let elt = html.find("[data-action=concentration]");
+  let elt = html.querySelectorAll<HTMLElement>("[data-action=concentration]");
   const hasRolled = foundry.utils.getProperty(message, `flags.${MODULE_ID}.concentrationRolled`);
   if (hasRolled || !preferredActiveGM()?.isSelf) return;
   if (elt.length === 1 && !hasRolled) {
-    let { action, dc, type } = elt[0].dataset;
+    let { action, dc: dcStr, type } = elt[0].dataset;
     let token: Token, actor: Actor;
     if (action === "concentration" && type === "midi-concentration") {
-      dc = Number(dc);
+      let dc = Number(dcStr);
       let { actor, alias, scene, token } = message.speaker;
       if (scene && token) token = game.scenes?.get(scene)?.tokens.get(token)?.object as Token | undefined;
       if (token) actor = token.actor as Actor;
