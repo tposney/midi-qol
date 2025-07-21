@@ -3096,7 +3096,7 @@ export class Workflow {
         if (!targetSpotted) {
           this.attackAdvAttribution.add("DIS:hidden foe");
           this.advReminderAttackAdvAttribution.add("DIS:Hidden Foe");
-          foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.hidden", { vale: true, effects: ["Hidden Defender"] });
+          foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.hidden", { value: true, effects: ["Hidden Defender"] });
           this.disadvantage = true;
         }
       }
