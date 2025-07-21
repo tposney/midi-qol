@@ -3000,11 +3000,11 @@ export class Workflow {
     const midiFlags: any = this.actor?.flags[MODULE_ID];
     const advantage = midiFlags?.advantage;
     const disadvantage = midiFlags?.disadvantage;
-    const actType = this.activity?.actionType || "none"
+    const actType = this.activity?.actionType || "none";
+    //@ts-expect-error
+    const target: Token = this.targets?.first();
     let conditionData;
     if (advantage || disadvantage) {
-      //@ts-expect-error
-      const target: Token = this.targets.first();
       conditionData = createConditionData({ workflow: this, target, actor: this.actor });
 
       if (advantage) {
@@ -3040,7 +3040,6 @@ export class Workflow {
       await this.checkAbilityAdvantage();
     }
     // TODO Hidden should check the target to see if they notice them?
-    const target = this.targets?.first();
     if (checkRule("invisAdvantage") && checkRule("invisAdvantage") !== "none" && target) {
       // if we are using a proxy token to attack use that for hidden invisible
       const invisibleToken = this.token ? hasCondition(this.token.actor as Actor, "invisible") : false;
@@ -3120,24 +3119,26 @@ export class Workflow {
     }
 
     // Nearby foe gives disadvantage on ranged attacks
-    if (checkRule("nearbyFoe")
-      && !foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.ignoreNearbyFoes`)
-      && (["rwak", "rsak", "rpak"].includes(actType) || (this.item.system.properties?.has("thr") && actType == "mwak"))) {
-      let nearbyFoe;
-      if (this.token) {
-        if (actType !== "mwak") { // one of rwak/rsak/rpak
-          nearbyFoe = checkNearby(-1, getToken(this.token), configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
-        } else if (this.item.system.properties?.has("thr")) {
-          const meleeRange = this.item.system.range.reach ?? 5;
-          if (computeDistance(this.token, this.targets.first(), { wallsBlock: false }) <= meleeRange) nearbyFoe = false;
-          else nearbyFoe = checkNearby(-1, getToken(this.token), configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
-        }
-        if (nearbyFoe) {
-          if (debugEnabled > 0) warn(`checkAttackAdvantage | Ranged attack by ${this.actor.name} at disadvantage due to nearby foe`);
-          this.attackAdvAttribution.add("DIS:nearbyFoe");
-          this.advReminderAttackAdvAttribution.add("DIS:Nearby foe");
-          foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.nearbyFoe", { value: true, effects: ["Nearby Foe"] });
-          this.disadvantage = true;
+    if (checkRule("nearbyFoe")) {
+      if (!conditionData) conditionData = createConditionData({ workflow: this, target, actor: this.actor });
+      if (!await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.ignoreNearbyFoes`, conditionData)
+        && (["rwak", "rsak", "rpak"].includes(actType) || (this.item.system.properties?.has("thr") && actType == "mwak"))) {
+        let nearbyFoe;
+        if (this.token) {
+          if (actType !== "mwak") { // one of rwak/rsak/rpak
+            nearbyFoe = checkNearby(-1, getToken(this.token), configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
+          } else if (this.item.system.properties?.has("thr")) {
+            const meleeRange = this.item.system.range.reach ?? 5;
+            if (computeDistance(this.token, target, { wallsBlock: false }) <= meleeRange) nearbyFoe = false;
+            else nearbyFoe = checkNearby(-1, getToken(this.token), configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
+          }
+          if (nearbyFoe) {
+            if (debugEnabled > 0) warn(`checkAttackAdvantage | Ranged attack by ${this.actor.name} at disadvantage due to nearby foe`);
+            this.attackAdvAttribution.add("DIS:nearbyFoe");
+            this.advReminderAttackAdvAttribution.add("DIS:Nearby foe");
+            foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.nearbyFoe", { value: true, effects: ["Nearby Foe"] });
+            this.disadvantage = true;
+          }
         }
       }
     }
