@@ -3002,7 +3002,7 @@ export class Workflow {
     const disadvantage = midiFlags?.disadvantage;
     const actType = this.activity?.actionType || "none";
     //@ts-expect-error
-    const target: Token = this.targets.first();
+    const target: Token = this.targets?.first();
     let conditionData;
     if (advantage || disadvantage) {
       conditionData = createConditionData({ workflow: this, target, actor: this.actor });
