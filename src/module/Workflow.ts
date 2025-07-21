@@ -3001,12 +3001,10 @@ export class Workflow {
     const advantage = midiFlags?.advantage;
     const disadvantage = midiFlags?.disadvantage;
     const actType = this.activity?.actionType || "none"
-    let conditionData;
+    const target = this.targets?.first();
+    let conditionData = createConditionData({ workflow: this, target, actor: this.actor });
     if (advantage || disadvantage) {
       //@ts-expect-error
-      const target: Token = this.targets.first();
-      conditionData = createConditionData({ workflow: this, target, actor: this.actor });
-
       if (advantage) {
         if (advantage.all && await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.advantage.all`, conditionData)) {
           this.advantage = true;
@@ -3040,7 +3038,6 @@ export class Workflow {
       await this.checkAbilityAdvantage();
     }
     // TODO Hidden should check the target to see if they notice them?
-    const target = this.targets?.first();
     if (checkRule("invisAdvantage") && checkRule("invisAdvantage") !== "none" && target) {
       // if we are using a proxy token to attack use that for hidden invisible
       const invisibleToken = this.token ? hasCondition(this.token.actor as Actor, "invisible") : false;
@@ -3121,7 +3118,7 @@ export class Workflow {
 
     // Nearby foe gives disadvantage on ranged attacks
     if (checkRule("nearbyFoe")
-      && !foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.ignoreNearbyFoes`)
+      && !await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.ignoreNearbyFoes`, conditionData)
       && (["rwak", "rsak", "rpak"].includes(actType) || (this.item.system.properties?.has("thr") && actType == "mwak"))) {
       let nearbyFoe;
       if (this.token) {
