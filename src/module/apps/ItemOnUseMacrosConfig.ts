@@ -4,7 +4,10 @@ import { OnUseMacro, OnUseMacros } from "./Item.js";
 
 const { DocumentSheetV2, HandlebarsApplicationMixin } = foundry.applications.api
 
-export class ItemOnUseMacrosConfig extends HandlebarsApplicationMixin(DocumentSheetV2<Item>) {
+export class ItemOnUseMacrosConfig extends HandlebarsApplicationMixin(DocumentSheetV2)<
+  Item.Implementation,
+  foundry.applications.api.DocumentSheetV2.RenderContext<any>
+> {
   static override PARTS = {
     form: {
       id: "item-on-use-config",

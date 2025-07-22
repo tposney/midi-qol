@@ -2214,7 +2214,6 @@ export class Workflow {
       if (this.aborted) return this.WorkflowState_Abort;
       if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length)
       // setup to process saving throws as generated
-      //@ts-expect-error
       let hookId = Hooks.on("renderChatMessageHTML", this.processSaveRoll.bind(this));
       // let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
       let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
@@ -5481,7 +5480,7 @@ export class Workflow {
     return true;
   }
 
-  processSaveRoll(message, html: HTMLElement, data) {
+  processSaveRoll(message, html, data) {
     if (!this.saveRequests) return {};
     const ddbglFlags = message.flags && message.flags["ddb-game-log"];
     const isDDBGL = ddbglFlags?.cls === "save" && !ddbglFlags?.pending;
@@ -5508,7 +5507,7 @@ export class Workflow {
     }
     const saveDisplay = (this.activity?.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity?.saveDisplay;
     if (game.user?.id !== message.author.id && !["allShow"].includes(saveDisplay)) {
-      setTimeout(() => html.remove(), 100);
+      setTimeout(() => ui.chat?.element.querySelector(`[data-message-id="${message.id}"]`)?.remove(), 100);
     }
     return true;
   }
