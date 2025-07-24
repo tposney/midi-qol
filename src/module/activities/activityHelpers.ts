@@ -254,11 +254,8 @@ export async function resolveTargetConfirmation(activity, options: any = {}): Pr
   if (!canvas?.tokens?.active) {
     await canvas?.tokens?.activate();
   }
-  //@ts-expect-error
   const savedControl = ui.controls?.control?.name;
-  //@ts-expect-error
   const savedTool = ui.controls?.tool?.name;
-  // @ts-expect-error v13ism
   await ui.controls?.render({ control: "tokens", tool: "target" });
   const wasMaximized = !(activity.actor.sheet?._minimized);
   // Hide the sheet that originated the preview
@@ -274,7 +271,6 @@ export async function resolveTargetConfirmation(activity, options: any = {}): Pr
   let shouldContinue = await targets;
   //@ts-expect-error
   for (let token of canvas?.tokens?.placeables) await token.initializeVisionSource();
-  // @ts-expect-error v13ism
   if (savedTool) await ui.controls?.render({ control: savedControl, tool: savedTool });
 
 

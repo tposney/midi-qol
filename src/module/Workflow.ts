@@ -5457,7 +5457,7 @@ export class Workflow {
     return true;
   }
 
-  processSaveRoll(message, html: HTMLElement, data) {
+  processSaveRoll(message, html, data) {
     if (!this.saveRequests) return {};
     const ddbglFlags = message.flags && message.flags["ddb-game-log"];
     const isDDBGL = ddbglFlags?.cls === "save" && !ddbglFlags?.pending;
@@ -5484,7 +5484,7 @@ export class Workflow {
     }
     const saveDisplay = (this.activity?.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity?.saveDisplay;
     if (game.user?.id !== message.author.id && !["allShow"].includes(saveDisplay)) {
-      setTimeout(() => html.remove(), 100);
+      setTimeout(() => ui.chat?.element.querySelector(`[data-message-id="${message.id}"]`)?.remove(), 100);
     }
     return true;
   }
