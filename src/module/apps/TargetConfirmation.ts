@@ -24,7 +24,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     this.position.top = TargetConfirmationDialog.yPosition;
     let maxTargets = activity.target?.affects?.count;
     const inCombat = isInCombat(activity.item.parent);
-    const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && inCombat);
+    const requiresTargets = configSettings.requiresTargets === "always" 
+    || (configSettings.requiresTargets === "tokens" && (canvas?.scene?.tokens.size ?? 0) > 0)
+    || (configSettings.requiresTargets === "combat" && inCombat);
     if (activity.item.type === "weapon" && !maxTargets) {
       if (requiresTargets && configSettings.enforceSingleWeaponTarget && allAttackTypes.includes(activity.actionType)) {
       maxTargets = 1;
@@ -244,8 +246,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         targetName.addEventListener("click", async (event) => {
           event.stopPropagation();
           // @ts-expect-error
-          const doc = await fromUuid(event.currentTarget?.dataset.uuid);
-          return doc?.sheet.render({force: true});
+          const doc = await fromUuid(event.currentTarget?.dataset.uuid) as Actor | null;
+          //@ts-expect-error render not updated for v2 parameters
+          return doc?.sheet?.render({force: true});
         });
       }
       let imgs = this.element.getElementsByTagName("img");

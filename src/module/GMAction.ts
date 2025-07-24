@@ -378,7 +378,7 @@ export function preferredActiveGM(): User | null {
   if (preferredGMId !== "none") {
     const preferredGM = game.users?.get(preferredGMId) as User;
     if (preferredGM?.active) return preferredGM;
-    log(`preferredGM ${preferredGMId} is not active`); 
+    log(`preferredGM ${preferredGMId} is not active`);
   }
   if (game.user?.isGM) return game.user;
   return game.users?.activeGM ?? null;
@@ -430,7 +430,7 @@ async function _canSense(data: { tokenUuid, targetUuid }) {
   const target = (fromUuidSync(data.targetUuid) as TokenDocument)?.object;
   if (!target || !token) return true;
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-  if (token.vision &&(!token.vision.active || !token.vision.los)) {
+  if (token.vision && (!token.vision.active || !token.vision.los)) {
     token.vision.initialize({
       x: token.center.x,
       y: token.center.y,
@@ -460,7 +460,7 @@ async function _gmOverTimeEffect(data: { actorUuid, effectUuid, startTurn, optio
 }
 
 async function _localActivityOverTimeEffect(data: { actorUuid, effectUuid, startTurn, options }) {
-  const actor: Actor | undefined  = await fromUuid(data.actorUuid) as Actor | undefined;
+  const actor: Actor | undefined = await fromUuid(data.actorUuid) as Actor | undefined;
   const effect: Actor | undefined = await fromUuid(data.effectUuid) as Actor | undefined;
   if (!actor || !effect) {
     const message = `localActivityOverTimeEffect | actor or effect not found actor: ${data.actorUuid} effect: ${data.effectUuid}`;
@@ -506,6 +506,7 @@ async function _completeActivityUse(data: {
 }) {
   if (!game.user) return null;
   let { activityUuid, actorUuid, usage, dialog, message } = data;
+  //@ts-expect-error
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
   if (usage.midiOptions?.targetsToUse) {
@@ -522,6 +523,7 @@ async function _completeItemUse(data: {
 }) {
   if (!game.user) return null;
   let { itemData, actorUuid, config, dialog, message } = data;
+  //@ts-expect-error
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
   //@ts-ignore v10
@@ -554,9 +556,9 @@ async function createActor(data) {
 }
 
 async function deleteToken(data: { tokenUuid: string }) {
-  const token = await fromUuid(data.tokenUuid);
+  //@ts-expect-error
+  const token = await fromUuid(data.tokenUuid) as TokenDocument | undefined;
   if (token) { // token will be a token document.
-    //@ts-expect-error
     token.delete();
   }
 }
@@ -604,6 +606,7 @@ async function deleteItemEffects(data: { targets, origin: string, ignore: string
           error("GMAction:deleteItemEffects | could not find actor for ", idData.tokenUuid);
           continue;
         }
+        //@ts-expect-error
         let originEntity = await fromUuid(origin);
         if (!originEntity) {
           error("GMAction:deleteItemEffects | could not find origin for ", origin);
@@ -695,41 +698,71 @@ export function initGMActionSetup() {
   traitList.dv = "dv";
 }
 
-async function _createChatMessage(data: { chatData: any; }) {
-  const messageData = foundry.utils.getProperty(data, "chatData.messageData") as any ?? {};
+async function _createChatMessage(params: { chatData: any; }) {
+  const messageData = foundry.utils.getProperty(params, "chatData.messageData") as any ?? {};
   messageData.user = game.user?.id;
-  return await ChatMessage.create(data.chatData);
+  return await ChatMessage.create(params.chatData);
 }
 
-async function _D20Roll(data: { request: string, targetUuid: string, formula: string, rollMode: string, options: any, targetDC: number, messageData: any }) {
-  const actor = fromActorUuid(data.targetUuid);
-  if (!actor) {
-    error(`GMAction.D20Roll | no actor for ${data.targetUuid}`)
+async function _D20Roll(params: { request: string, targetUuid: string, formula: string, bonus: number, coverBonus: number, flavor: string, midiType: string, rollMode: string, rollOptions: any, messageData: any }) {
+  const actor = fromActorUuid(params.targetUuid);
+  if (!actor || !params.rollOptions) {
+    error(`GMAction.D20Roll | no actor for ${params.targetUuid}`)
     return {};
   }
+
+  /*
+      criticalSuccess: criticalTarget,
+      criticalFailure: fumbleTarget,
+      advantageMode,
+      target: this.activeDefenceDC
+    */
   return new Promise(async (resolve) => {
     let timeoutId;
     let result;
+    //@ts-expect-error D20Roll
+    const D20Roll = CONFIG.Dice.D20Roll;
     if (configSettings.playerSaveTimeout > 0) timeoutId = setTimeout(async () => {
       warn(`Roll request for {actor.name}timed out. Doing roll`);
-      data.options.fastForward = true; // assume player is asleep force roll without dialog
-      //@ts-expect-error D20Roll
-      result = await new CONFIG.Dice.D20Roll(data.formula, {}, data.options).roll();
-      foundry.utils.setProperty(roll, "flags.midi-qol.rollType", data.options?.midiType)
+      params.rollOptions.fastForward = true; // assume player is asleep force roll without dialog
+      let result = await new D20Roll(params.formula, {}, params.rollOptions).roll();
+      foundry.utils.setProperty(result, "flags.midi-qol.rollType", params.midiType)
       resolve(result ?? {});
     }, configSettings.playerSaveTimeout * 1000);
-    if (!data.options) data.options = {};
-    data.options.configured = false;
-    //@ts-expect-error D20Roll
-    const roll = new CONFIG.Dice.D20Roll(data.formula, {}, data.options);
-    await roll.configureDialog({ title: data.request, defaultRollMode: data.rollMode, defaultAction: data.options?.advantage });
-    result = await roll.roll();
-    roll.toMessage(data.messageData);
+    const roll = new D20Roll();
+    const { parts, data } = D20Roll.constructParts({ "mod": params.bonus, "cover": params.coverBonus });
+    roll.data = data;
+    roll.parts = parts;
+    const config = {
+      advantage: params.rollOptions?.advantageMode === D20Roll.ADV_MODE.ADVANTAGE,
+      disadvantage: params.rollOptions?.advantageMode === D20Roll.ADV_MODE.DISADVANTAGE,
+      rolls: [roll],
+      target: params.rollOptions?.target,
+      dialog: true,
+    };
+    const dialog = {
+      options: {
+        window: {
+          title: params.flavor,
+          subtitle: actor.name,
+        }
+      }
+    }
+    const message = {
+      create: true,
+      data: { flavor: params.flavor },
+      speaker: ChatMessage.getSpeaker({ actor }),
+      rollMode: params.rollMode,
+    }
+    const rolls = await D20Roll.build(config, dialog, message)
+    // ({ title: data.request, defaultRollMode: data.rollMode, defaultAction: data.options?.advantage });
+    // result = await roll.roll();
     if (timeoutId) clearTimeout(timeoutId);
-    foundry.utils.setProperty(result, "flags.midi-qol.rollType", data.options?.midiType)
-    resolve(result ?? {})
+    if (rolls) foundry.utils.setProperty(rolls[0], "flags.midi-qol.rollType", params.midiType)
+    resolve(rolls[0] ?? {})
   });
 }
+
 async function rollConcentration(data: { actorUuid, target, whisper, create, rollMode }) {
   const actor = fromUuidSync(data.actorUuid);
   if (!actor) {
@@ -1108,7 +1141,7 @@ export let processUndoDamageCard = (message: ChatMessage, html: HTMLElement, dat
   let button = html.querySelector<HTMLButtonElement>("#all-reverse");
   button?.addEventListener("click", (ev) => {
     (async () => {
-      const undoDamageData = recoverDamageListFromJSON(foundry.utils.getProperty(message, "flags.midiqol.undoDamage")as any);
+      const undoDamageData = recoverDamageListFromJSON(foundry.utils.getProperty(message, "flags.midiqol.undoDamage") as any);
       if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, oldVitality, newVitality, damageDetail, updateOptions, calcDamageOptions } of undoDamageData) {
         // recoverDamageDetailFromJSON(damageDetail);
         if (!actorUuid) continue;
@@ -1224,7 +1257,7 @@ async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: 
   if (!tokenDocument || !canvas?.grid || !tokenDocument.object) return;
   const targetToken = tokenDocument.object;
   const newCenter = canvas.grid.getSnappedPoint(data.newCenter, { mode: CONST.GRID_SNAPPING_MODES.CENTER });
-  const newPosition = {x: data.newCenter.x - targetToken.w / 2, y: data.newCenter.y - targetToken.h / 2};
+  const newPosition = { x: data.newCenter.x - targetToken.w / 2, y: data.newCenter.y - targetToken.h / 2 };
   return tokenDocument.update(newPosition, { animate: data.animate ?? true });
 }
 
@@ -1243,14 +1276,15 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
     //@ts-expect-error
     const testCollision = CONFIG.Canvas.polygonBackends.move.testCollision(targetToken.center, newCenter, { source: targetToken.document, type: "move", any: "closest" });
     //@ts-expect-error
-    if (testCollision?.length > 0 && testCollision[0] instanceof foundry.canvas.edges.PolygonVertex ) {
+    if (testCollision?.length > 0 && testCollision[0] instanceof foundry.canvas.edges.PolygonVertex) {
       const collisionPoint = { x: testCollision[0].x, y: testCollision[0].y };
       const getCenterCollisionPoint = canvas.grid.getCenterPoint(collisionPoint);
       if (Math.sign(ray.dx) > 0) getCenterCollisionPoint.x -= canvas.grid.sizeX;
       if (Math.sign(ray.dy) > 0) getCenterCollisionPoint.y -= canvas.grid.sizeY;
-      const newPosition = canvas.grid.getSnappedPoint({x: getCenterCollisionPoint.x - Math.sign(ray.dx) * targetToken.w / 2, y: getCenterCollisionPoint.y - Math.sign(ray.dy) * targetToken.h / 2}, { mode: M.TOP_LEFT_VERTEX });
+      const newPosition = canvas.grid.getSnappedPoint({ x: getCenterCollisionPoint.x - Math.sign(ray.dx) * targetToken.w / 2, y: getCenterCollisionPoint.y - Math.sign(ray.dy) * targetToken.h / 2 }, { mode: M.TOP_LEFT_VERTEX });
       //@ts-expect-error
-      return targetTokenDocument.update(newPosition, { animate: data.animate ?? true });    }
+      return targetTokenDocument.update(newPosition, { animate: data.animate ?? true });
+    }
   }
   const newX = targetToken.position.x + newCenter.x - targetToken.center.x;
   const newY = targetToken.position.y + newCenter.y - targetToken.center.y;
@@ -1349,8 +1383,8 @@ function recoverDamageListFromJSON(damageList: any[]): any[] {
   for (let damageItem of newDL) {
     const options = damageItem.calcDamageOptions;
     if (options.downgrade) options.downgrade = new Set(options.downgrade);
-    if (options.ignore) for (let key of Object.keys(options.ignore)) 
-        options.ignore[key] = new Set(options.ignore[key]);
+    if (options.ignore) for (let key of Object.keys(options.ignore))
+      options.ignore[key] = new Set(options.ignore[key]);
     for (let damageDetail of [damageItem.damageDetail ?? [], damageItem.rawDamageDetail ?? [], ...Object.values(damageItem.damageDetails ?? [])]) {
       if (damageDetail instanceof Array) recoverDamageDetailFromJSON(damageDetail);
     }

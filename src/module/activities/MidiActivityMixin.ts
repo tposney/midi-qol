@@ -1,9 +1,9 @@
 import { GameSystemConfig, MODULE_ID, SystemString, allAttackTypes, debugEnabled, error, geti18nOptions, i18n, i18nFormat, log, warn } from "../../midi-qol.js";
 import { cancelWorkflow, socketlibSocket } from "../GMAction.js";
-import { DDBGameLogWorkflow, DamageOnlyWorkflow, TrapWorkflow, Workflow } from "../Workflow.js";
+import { ActiveDefenceWorkflow, DDBGameLogWorkflow, DamageOnlyWorkflow, TrapWorkflow, Workflow } from "../Workflow.js";
 import { OnUseMacro, OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { checkMechanic, configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
+import { checkMechanic, checkRule, configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
 import { busyWait } from "../tests/setupTest.js";
 import { saveUndoData } from "../undo.js";
@@ -339,13 +339,15 @@ export var MidiActivityMixin = Base => {
 
     async _onChatAction(event, target, message) {
       const scaling = message.getFlag("dnd5e", "scaling") ?? 0;
-      const item = scaling ? this.item.clone({ "flags.dnd5e.scaling": scaling }, { keepId: true }) : this.item;
-      let activity = this.otherActivity;
+      const existingItem = this.workflow?.item ?? this.item;
+      // const item = scaling ? this.item.clone({ "flags.dnd5e.scaling": scaling }, { keepId: true }) : this.item;
+      const item = scaling ? existingItem.clone({ "flags.dnd5e.scaling": scaling }, { keepId: true }) : existingItem;
+      // let activity = this.otherActivity;
+      const activity = this.workflow?.activity ?? existingItem.system.activities.get(this.id);
       const action = target.dataset.action;
       let handler = activity?.metadata.usage?.actions?.[action];
       const workflow = Workflow.getWorkflow(message._uuid);
       if (!handler && workflow) {
-        activity = workflow.activity;
         if (activity) handler = activity?.metadata.usage?.actions?.[action];
       }
       if (handler) await handler.call(activity, event, target, message);
@@ -389,6 +391,9 @@ export var MidiActivityMixin = Base => {
         let activity = item.system.activities.get(this.id);
         if (!usage.workflow) {
           let workflowClass = usage?.midi?.workflowClass ?? globalThis.MidiQOL.workflowClass;
+          if (game.user?.isGM && checkRule("activeDefence")) {
+            workflowClass = ActiveDefenceWorkflow;
+          }
           if (!(workflowClass.prototype instanceof Workflow)) workflowClass = Workflow;
           const workflowOptions = { ...usage.midiOptions, ...(usage.midiOptions?.workflowOptions ?? {}), event: usage.event, storeWorkflow: false };
           delete workflowOptions.workflowOptions;
@@ -1162,7 +1167,9 @@ export var MidiActivityMixin = Base => {
         let isAoETargeting = !isEmanationTargeting && activityHasAreaTarget(this);
         let selfTarget = this.target?.affects.type === "self";
         const inCombat = isInCombat(this.actor);
-        const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && inCombat);
+        const requiresTargets = configSettings.requiresTargets === "always" 
+          || (configSettings.requiresTargets === "combat" && inCombat) 
+          || (configSettings.requiresTargets === "tokens" && (canvas?.scene?.tokens?.size ?? 0) > 0);
         let speaker = getSpeaker(this.actor);
 
         const token = tokenForActor(this.actor);
@@ -1177,6 +1184,7 @@ export var MidiActivityMixin = Base => {
           || (!this.attack && !this.hasDamage && !this.hasSave); // does not do anything - need to check dynamic effects
 
         if (!shouldAllowRoll) {
+          ui.notifications?.warn(i18n("midi-qol.noTargets"))
           return removeWorkflow(usage.workflow);
         }
 
@@ -1186,7 +1194,7 @@ export var MidiActivityMixin = Base => {
           allowedTargets = 9999;
         else
           allowedTargets = (this.target?.affects.type === "creature" ? this.target?.affects.count : 9999) ?? 9999;
-        if (requiresTargets && configSettings.enforceSingleWeaponTarget && allAttackTypes.includes(this.actionType) && allowedTargets === 9999) {
+        if (options.checkTargets && requiresTargets && configSettings.enforceSingleWeaponTarget && allAttackTypes.includes(this.actionType) && allowedTargets === 9999) {
           allowedTargets = 1;
           if (requiresTargets && workflow.targets.size !== 1) {
             ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));

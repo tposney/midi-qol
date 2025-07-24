@@ -11,6 +11,7 @@ import { Options } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { busyWait } from "./tests/setupTest.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
+import { AnyFunction } from "xstate";
 
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -315,7 +316,7 @@ export async function applyTokenDamage(damageDetail, totalDamage, theTargets, it
     allDamages[actor.uuid].damageDetails[`rawcombinedDamage`] = damageDetail;
     setupV3DamageDetails(allDamages, "combinedDamage", actor);
   }
-  
+
   const cardIds: string[] = await timedAwaitExecuteAsGM("createReverseDamageCard", {
     autoApplyDamage: configSettings.autoApplyDamage,
     sender: game.user?.name,
@@ -393,7 +394,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   let hitTargets: Set<Token | TokenDocument> = new Set([...workflow.hitTargets, ...workflow.hitTargetsEC]);
   let theTargets = new Set(workflow.targets);
   // TODO becomes activity.target.affects.type === "self"
-  if (activity.target.affects.type === "self") theTargets = await getOrCreateTokenForActorAsSet(actor) || theTargets;
+  // if (activity.target.affects.type === "self") theTargets = await getOrCreateTokenForActorAsSet(actor) || theTargets;
   let effectsToExpire: string[] = [];
   if (hitTargets.size > 0 && activity.attack) effectsToExpire.push("1Hit");
   if (hitTargets.size > 0 && activity.damage) effectsToExpire.push("DamageDealt");
@@ -418,6 +419,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
 
   for (let tokenRef of theTargets) {
     const token = getToken(tokenRef) as Token;
+    console.error(token === tokenRef, theTargets.has(token), hitTargets.has(token), tokenRef, token);
     const actor = token?.actor as Actor;
     const tokenDocument = getTokenDocument(tokenRef);
     if (!actor || !tokenDocument) continue;
@@ -689,33 +691,34 @@ export function requestPCSave(ability: string, rollType, player, actor, options:
   }
 }
 
-export function requestPCActiveDefence(player, actor, advantage, saveItemName, rollDC, formula, requestId, options?: { workflow: Workflow }) {
+export function requestPCActiveDefence(player: User, actor: Actor, saveItemName: string, requestId: string, options: { formula: string, bonus: number, coverBonus: number, rollOptions: any, workflow: Workflow }) {
   const useUuid = true;
   const actorId = useUuid ? actor.uuid : actor.id;
-  if (!player.isGM && false) {
-    advantage = 2;
-  } else {
-    advantage = (advantage === true ? 1 : advantage === false ? -1 : 0);
-  }
+
   let mode = checkRule("activeDefenceShow") ?? CONST.DICE_ROLL_MODES.SELF;
-  let message = `${saveItemName} ${configSettings.hideRollDetails === "none" ? "DC " + rollDC : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
-  if (options?.workflow) { //prompt for a normal roll.
-    const rollOptions: any = { advantage, midiType: "defenceRoll", flavor: message };
-    if (configSettings.autoCheckHit === "all") rollOptions.targetValue = rollDC;
-    socketlibSocket.executeAsUser("D20Roll", player.id, { targetUuid: actor.uuid, formula, request: message, rollMode: mode, options: rollOptions, messageData: { speaker: getSpeaker(actor) } }).then(result => {
-      if (debugEnabled > 1) debug("D20Roll result ", result);
-      log("midi-qol | D20Roll result ", result);
-      const handler = options.workflow.defenceRequests[requestId];
-      delete options.workflow.defenceRequests[requestId];
-      delete options.workflow.defenceTimeouts[requestId];
-      let returnValue;
-      try {
-        //@ts-expect-error D20Roll
-        returnValue = CONFIG.Dice.D20Roll.fromJSON(JSON.stringify(result));
-      } catch (err) { returnValue = {} }
-      handler(returnValue);
-    });
-  }
+  let flavor = `${saveItemName} ${configSettings.optionalRules.activeDefenceDC ? "DC " + options.rollOptions.target : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
+  const midiType = "defenceRoll";
+  /*  const options = {
+      criticalSuccess: criticalTarget,
+      criticalFailure: fumbleTarget,
+      advantageMode,
+      target: this.activeDefenceDC
+    };*/
+  socketlibSocket.executeAsUser("D20Roll", player.id, {targetUuid: actor.uuid, formula: options.formula, bonus: options.bonus, coverBonus: options.coverBonus, rollOptions: options.rollOptions, rollMode: mode, midiType, flavor, messageData: { speaker: getSpeaker(actor) } }).then(result => {
+    if (debugEnabled > 1) debug("D20Roll result ", result);
+    log("midi-qol | D20Roll result ", result);
+    const handler = options.workflow.defenceRequests[requestId];
+    if (!handler) // Roll must have timed out so we can ignore the return value;
+      return;
+    delete options.workflow.defenceRequests[requestId];
+    delete options.workflow.defenceTimeouts[requestId];
+    let returnValue;
+    try {
+      //@ts-expect-error D20Roll
+      returnValue = CONFIG.Dice.D20Roll.fromJSON(JSON.stringify(result));
+    } catch (err) { returnValue = {} }
+    handler(returnValue);
+  });
 }
 
 export function midiCustomEffect(...args) {
@@ -1249,6 +1252,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       };
       itemData.img = "icons/svg/aura.svg";
       if (typeof itemName === "string") {
+        //@ts-expect-error
         let theItem = await fromUuid(itemName);
         if (!theItem && itemName.startsWith("Actor.")) {
           const localName = itemName.replace("Actor.", "")
@@ -1278,8 +1282,8 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       activityData.img = effect.img;
       itemData.img = effect.img; // v12 icon -> img
       foundry.utils.setProperty(itemData, "target.affects.type", "self")
-      itemData.type = "equipment";
-      foundry.utils.setProperty(itemData, "system.type.value", "trinket");
+      itemData.type = "feat";
+      foundry.utils.setProperty(itemData, "system.type.value", "feat");
       foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.noProvokeReaction`, true);
       if (saveMagic) {
         itemData.type = "spell";
@@ -1605,7 +1609,7 @@ export async function completeActivityUse(activity, usage: any = {}, dialog: any
       });
 
       let completeHookName = `midi-qol.postCleanup.${activity.uuid}`;
-      
+
       if (!activity || activity.activity?.id) {
         // Magic items create a pseudo item when doing the roll so have to hope we get the right completion
         // forward activities wont call the expected postCleanup Hook
@@ -1667,6 +1671,7 @@ export async function completeActivityUse(activity, usage: any = {}, dialog: any
 
 export async function completeItemUse(item, config: any = {}, dialog: any = {}, message: any = {}) {
   if (typeof item === "string") {
+    //@ts-expect-error
     item = await fromUuid(item);
   }
   const { legacy, chooseActivity, ...activityConfig } = config;
@@ -2101,7 +2106,7 @@ export function checkActivityRange(activityIn, tokenRef: Token | TokenDocument |
         const bonusValue = evalCondition(rangeBonus, conditionData, { errorReturn: 0, async: false });
         range = Math.max(0, range + bonusValue);
       };
-      let longRangeBonus: string = foundry.utils.getProperty(activity.actor, `flags.${MODULE_ID}.long.${attackType}`) as string?? "0"
+      let longRangeBonus: string = foundry.utils.getProperty(activity.actor, `flags.${MODULE_ID}.long.${attackType}`) as string ?? "0"
       longRangeBonus = longRangeBonus + " + " + (foundry.utils.getProperty(activity.actor, `flags.${MODULE_ID}.long.all`) ?? "0");
       if (longRangeBonus !== "0 + 0") {
         if (!conditionData)
@@ -2182,7 +2187,7 @@ export function checkActivityRange(activityIn, tokenRef: Token | TokenDocument |
         }
       }
       // check the range TODO riview total cover flag and activity as part of midi properties
-      const ignoreTotalCover = activity.midiProperties?.ignoreFullCover ?? foundry.utils.getProperty(activity.item, "flags.midiProperties.ignoreTotalCover");
+      const ignoreTotalCover = activity.midiProperties?.ignoreFullCover;
 
       const coverOptions = {
         wallsBlock: configSettings.optionalRules.wallsBlockRange && !ignoreTotalCover,
@@ -2398,7 +2403,7 @@ export function checkRange(itemIn, tokenRef: Token | TokenDocument | string | un
         }
       }
       // check the range
-      const ignoreTotalCover = activity.mnidiProperties?.ignoreFullCover ?? foundry.utils.getProperty(activity.item, "flags.midiProperties.ignoreTotalCover");
+      const ignoreTotalCover = activity.mnidiProperties?.ignoreFullCover;
       const distance = computeDistance(token, target, { wallsBlock: configSettings.optionalRules.wallsBlockRange, includeCover: !ignoreTotalCover });
 
       if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
@@ -2569,8 +2574,8 @@ export function computeCoverBonus(attacker: Token | TokenDocument, target: Token
     }
 
     //TODO is this right or should it be the same as non-spell?
-    if ((activity?.midiProperties?.ignoreFullCover ?? item?.flags?.midiProperties?.ignoreTotalCover) && item?.type === "spell") coverBonus = 0;
-    else if ((activity?.midiProperties.ignoreFullCover ?? item?.flags?.midiProperties?.ignoreTotalCover) && coverBonus === FULL_COVER) coverBonus = THREE_QUARTERS_COVER;
+    if ((activity?.midiProperties?.ignoreFullCover) && item?.type === "spell") coverBonus = 0;
+    else if ((activity?.midiProperties.ignoreFullCover) && coverBonus === FULL_COVER) coverBonus = THREE_QUARTERS_COVER;
 
     if ((activity?.actionType ?? item?.system.actionType) === "rwak" && attacker.actor && coverBonus !== FULL_COVER && coverBonus !== 0
       && (foundry.utils.getProperty(attacker.actor, `flags.${MODULE_ID}.sharpShooter`) || foundry.utils.getProperty(attacker.actor, "flags.dnd5e.sharpShooter"))) {
@@ -2734,9 +2739,9 @@ function getPlayerNPCNameHideNPCNAmes(token) {
         hideParts: "hideParts",
         showOnActorDirectory: "showOnActorDirectory"
       */
-    if (actorFlags === undefined) {
-      let hideSetting;
-      switch (token.document?.disposition ?? token.disposition) {
+  if (actorFlags === undefined) {
+    let hideSetting;
+    switch (token.document?.disposition ?? token.disposition) {
       case CONST.TOKEN_DISPOSITIONS.FRIENDLY:
         hideSetting = safeGetGameSetting("hide-npc-names", "hideFriendlyNames");
         if (hideSetting) return safeGetGameSetting("hide-npc-names", "friendlyNameReplacement");
@@ -3051,6 +3056,7 @@ export function validTargetTokens(tokenSet: Set<Token> | undefined | any): Set<T
 // TODO when v12 only change all refs to fromUuidSync
 export function MQfromUuidSync(uuid: string | undefined | null): any {
   if (!!!uuid) return null;
+  //@ts-expect-error
   return fromUuidSync(uuid);
 }
 
@@ -3358,7 +3364,7 @@ export async function processAttackRollBonusFlags() { // bound to workflow
     .map(flag => `flags.${MODULE_ID}.optional.${flag}`);
 
   if (bonusFlags.length > 0) {
-    const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined) 
+    const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
       ?? checkMechanic("displayBonusRolls");
     const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll")
     this.setAttackRoll(newRoll);
@@ -3381,7 +3387,7 @@ export async function processAttackRollBonusFlags() { // bound to workflow
         })
         .map(flag => `flags.${MODULE_ID}.optional.${flag}`);
       if (bonusFlags.length > 0) {
-        const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined) 
+        const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
           ?? checkMechanic("displayBonusRolls");
         const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll");
         this.setAttackRoll(newRoll);
@@ -3409,7 +3415,7 @@ export async function processDamageRollBonusFlags(damageRolls): Promise<Roll[]> 
     // this.damageRollHTML = await midiRenderDamageRoll(this.damageRoll);
     // this.damamgeRollHTML = $(this.damageRolHTML).find(".dice-roll").remove();
     // TODO dnd3 work out what this means for multiple rolls
-    const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined) 
+    const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
       ?? checkMechanic("displayBonusRolls");
     let newRoll = await bonusDialog.bind(this)(bonusFlags, damageBonus, displayBonusRolls === true, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, damageRolls[0], "damageRoll", { hideDSN })
     if (newRoll) damageRolls[0] = newRoll;
@@ -3483,8 +3489,8 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       macroToCall = button.value;
       if (macroToCall.startsWith("Macro.")) macroToCall = macroToCall.replace("Macro.", "");
       specificMacro = true;
-    } else if ((foundry.utils.getProperty(this.actor ?? {}, `${button.key}.macroToCall`)as string)?.trim()) {
-      macroToCall = (foundry.utils.getProperty(this.actor ?? {}, `${button.key}.macroToCall`)as string)?.trim();
+    } else if ((foundry.utils.getProperty(this.actor ?? {}, `${button.key}.macroToCall`) as string)?.trim()) {
+      macroToCall = (foundry.utils.getProperty(this.actor ?? {}, `${button.key}.macroToCall`) as string)?.trim();
     }
     if (macroToCall) {
       let result;
@@ -4128,7 +4134,7 @@ export async function doReactions(targetRef: Token | TokenDocument | string, tri
       const midiFlags: any = target.actor.flags[MODULE_ID];
       reactionCount = reactionCount + Object.keys(midiFlags?.optional ?? [])
         .filter(flag => {
-          if (triggerType !== "reaction" || !midiFlags?.optional[flag].ac) return false;
+          if (!(triggerType === "reactionattacked" && midiFlags?.optional[flag].ac)) return false;
           if (!midiFlags?.optional[flag].count) return true;
           return getOptionalCountRemainingShortFlag(target.actor, flag) > 0;
         }).length
@@ -4270,6 +4276,7 @@ export async function promptReactions(tokenUuid: string, reactionActivityList: R
     try {
       enableNotifications(false);
       for (let ref of reactionActivityList) {
+        //@ts-expect-error
         if (typeof ref === "string") reactionActivities.push(await fromUuid(ref));
         else reactionActivities.push(ref);
       };
@@ -4627,12 +4634,8 @@ async function asyncMySafeEval(expression: string, sandbox: any, onErrorReturn: 
   try {
     expression = expression.replace(/confirm\((.*)\)/g, "await confirm($1)");
     const src = 'with (sandbox) { return ' + expression + '}';
-    let AsyncFunction = foundry.utils.AsyncFunction;
-    if (!AsyncFunction)
-    //@ts-expect-error
-      AsyncFunction = (async function () { }).constructor;
-      //@ts-expect-error
-    const evl = AsyncFunction("sandbox", src) as (function(any): Promise<any>);
+    //@ts-expect-error AsyncFunction is declared with (...args: never)
+    const evl: AnyFunction = foundry.utils.AsyncFunction("sandbox", src) as AnyFunction;
     sandbox = foundry.utils.mergeObject(sandbox, { Roll, findNearby, findNearbyCount, checkNearby, hasCondition, checkDefeated, checkIncapacitated, canSee, canSense, computeDistance, checkRange, checkDistance, contestedRoll, fromUuidSync: MQfromUuidSync, confirm, nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid, combat: game.combat, evalRaceOrType: raceOrType, evalTypeOrRace: typeOrRace });
     const sandboxProxy = new Proxy(sandbox, {
       has: () => true, // Include everything
@@ -4862,7 +4865,7 @@ export function evalAllConditions(actorRef: Token | TokenDocument | Actor | stri
         if (condValue) {
           returnValue = condValue;
           foundry.utils.setProperty(actor, `${keyToUse}.value`, condValue);
-         (foundry.utils.getProperty(actor, `${keyToUse}.effects`) as string[]).push(effect.name);
+          (foundry.utils.getProperty(actor, `${keyToUse}.effects`) as string[]).push(effect.name);
         }
       }
     }
@@ -6160,6 +6163,7 @@ export function getActor(actorRef: Actor | Token | TokenDocument | string | null
   if (actorRef instanceof TokenClass) return ((actorRef as Token).actor as unknown as Actor);
   if (actorRef instanceof TokenDocument) return (actorRef.actor as unknown as Actor);
   let entity: any = actorRef;
+  //@ts-expect-error
   if (typeof actorRef === "string") entity = fromUuidSync(actorRef);
   if (entity instanceof Actor) return entity;
   if (entity instanceof TokenDocument) return (entity.actor as unknown as Actor);
@@ -6240,10 +6244,6 @@ export function calcTokenCover(attacker: Token | TokenDocument, target: Token | 
 
 export function itemRequiresConcentration(item): boolean {
   return item?.requiresConcentration;
-  // midi properties no longer supported so just use dnd5e's function
-  if (!item) return false;
-  return item.system.properties.has("concentration")
-    || item.flags.midiProperties?.concentration;
 }
 
 const MaxNameLength = 20;
@@ -6475,6 +6475,7 @@ export function addRollTo(roll: Roll, bonusRoll: Roll): Roll {
   }
   //@ts-expect-error
   let newRoll = roll.constructor.fromTerms(terms);
+  newRoll.resetFormula();
   newRoll.options = roll.options;
   return newRoll;
 }

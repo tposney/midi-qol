@@ -1,3 +1,20 @@
+### 13.0.9
+* This release is now a general release of midi-qol for v13. If you have not yet installed the public alpha please read through the changelog especially the notes for 13.0.4.
+* Please be aware that many of the modules built on top of midi-qol are not yet fully ready for v13 so there will be a delay before you may be able to run your games in v13 with midi.
+* Fixes for Damage Reduction/Damage Resistance/Saves damage calculations to implement specified ordering.
+  - You an configure when saves are applied, either before or after damage reduction/modification.
+  - You can configure when midi specific damage modification is applied, system.traits.dm.midi.xxxx, either before saves/resistance or after. Note dnd5e damage modification is always applied before resistance/immunity/vulnerability.
+* Active defence now works again with some little changes.
+  - If not auto forwarding attack rolls the attacker will be presented with the normal attack roll dialog allowing you to set advantage/bonuses to attack which will be taken into account in the active defence roll.
+  - The defence roll is 1d20 + AC + cover with a DC of 22 + attack bonus. This is the original form of the optional rule.
+  - Advantage/disadvantage are calculated appropriately.
+  - The is a workflow setting (on the optional rules tab) to hide/display the active defence DC when prompting players for an active defence roll.
+  - **Note** not all reaction processing is working with active defence.
+* Removed all references to flags.midiProperties - now always on activity.midiProperties.
+* Tooltip on GM reverse damage ard now visible - thanks @Michael
+* Allow evaluation of `flags.midi-qol.ignoreNearbyFoes` thanks @SagaTympana
+* Added midi types - thanks @Tminz
+
 ### 13.0.8
 * Tokens with the hidden status are no longer targetable.
 * Fix for not setting activity.ammunitionItem correctly in some cases.

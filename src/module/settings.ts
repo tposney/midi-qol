@@ -80,7 +80,7 @@ class ConfigSettings {
   autoRollAttack: boolean = false;
   autoRollDamage: string = "none";
   autoCompleteWorkflow = false;
-  saveDROrder = "SaveDRdr";
+  saveDROrder = "DRSaveDr";
   autoTarget: string = "none";
   averageDamage: string = "none";
   checkSaveText: boolean = false;
@@ -368,8 +368,12 @@ export let fetchParams = () => {
 
   //@ts-expect-error
   configSettings = game.settings?.get("midi-qol", "ConfigSettings");
-  //TODO create a config.html for this
-  if (configSettings.saveDROrder === undefined) configSettings.saveDROrder = "DRSavedr";
+  if (configSettings.saveDROrder === undefined) configSettings.saveDROrder = "DRSaveDr";
+  configSettings.saveDROrder = "DRSaveDr";
+  if (!["DRSaveDr", "SaveDRDr", "SaveDrDR"].includes(configSettings.saveDROrder)) {
+    ui.notifications?.warn("invalidSaveDROrder reset to 'dm.midi/dnd5e.dm -> Saves/(dr/dv/di) - dnd5e RAW'");
+    configSettings.saveDROrder = "DRSaveDr";
+  }
   if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["dice"];
   if (!configSettings.criticalSound) configSettings.criticalSound = CONFIG.sounds["dice"];
   if (!configSettings.diceSound) configSettings.diceSound = CONFIG.sounds["dice"];

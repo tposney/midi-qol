@@ -21,5 +21,5 @@ export declare function preferredActiveGM(): User | null;
 export declare function unTimedExecuteAsGM(toDo: string, ...args: any[]): Promise<any>;
 export declare function timedAwaitExecuteAsGM(toDo: string, data: any): Promise<any>;
 export declare function initGMActionSetup(): void;
-export declare let processUndoDamageCard: (message: ChatMessage, html: any, data: any) => boolean;
+export declare let processUndoDamageCard: (message: ChatMessage, html: HTMLElement, data: any) => boolean;
 export declare function prepareDamageListToJSON(damageList: any[]): any[];

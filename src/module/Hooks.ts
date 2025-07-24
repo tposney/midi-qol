@@ -148,12 +148,14 @@ export let readyHooks = async () => {
   })
 
   //@ts-expect-error
-  Hooks.on("renderActorArmorConfig", (app: never, html, data) => {
+  Hooks.on("renderActorArmorConfig", (app: never, html: HTMLElement, data) => {
     if (!["none", undefined, false].includes(checkRule("challengeModeArmor"))) {
       const ac = data.ac;
-      const element = html.find(".stacked"); // TODO do this better
-      let ARHtml = $(`<div>EC: ${ac.EC}</div><div>AR: ${ac.AR}</div>`);
-      element.append(ARHtml);
+      const element = html.querySelector(".card");
+      if (!element) return;
+      const arTemplate = document.createElement("template");
+      arTemplate.innerHTML = `<div>EC: ${ac.EC}</div><div>AR: ${ac.AR}</div>`;
+      element.append(...Array.from(arTemplate.content.children));
     }
   });
 
@@ -448,47 +450,34 @@ export function initHooks() {
       context.showCEOn = ["none", "itempri"].includes(configSettings.autoCEEffects);
     }
 
-    foundry.utils.setProperty(context, "flags.midiProperties", (item.flags as any)?.midiProperties ?? {});
     if (["spell", "feat", "weapon", "consumable", "equipment", "power", "maneuver"].includes(item?.type)) {
-      for (let prop of Object.keys(midiProps)) {
-        //@ts-expect-error no dnd5e types
-        if ((item.system.properties)?.has(prop)
-          && foundry.utils.getProperty(item, `flags.midiProperties.${prop}`) === undefined) {
-          foundry.utils.setProperty(item, `flags.midiProperties.${prop}`, true);
-        } else if (foundry.utils.getProperty(item, `flags.midiProperties.${prop}`) === undefined) {
-          /* This has been moved to the activity
-                    if (["confirmTargets"].includes(prop)) {
-                      foundry.utils.setProperty(data, `flags.midiProperties.${prop}`, "default");
-                    } else foundry.utils.setProperty(data, `flags.midiProperties.${prop}`, false);
-          */
-          foundry.utils.setProperty(context, `flags.midiProperties.${prop}`, false);
-        }
-      }
       if (!foundry.utils.getProperty(context, "flags.midi-qol.rollAttackPerTarget")) foundry.utils.setProperty(context, "flags.midi-qol.rollAttackPerTarget", "default");
-      delete context.flags.midiProperties.rollOther;
-      delete context.flags.midiProperties.fulldam;
-      delete context.flags.midiProperties.halfdam
-      delete context.flags.midiProperties.nodam;
-      delete context.flags.midiProperties.concentration;
-      delete context.flags.midiProperties.critOther
-      delete context.flags.midiProperties.rollOther;
-      delete context.flags.midiProperties.saveDamage;
-      delete context.flags.midiProperties.bonusSaveDamage;
-      delete context.flags.midiProperties.offHandWeapon;
-      delete context.flags.midiProperties.otherSaveDamage;
-      delete context.flags.midiProperties.confirmTargets;
-      delete context.flags.midiProperties.autoFailFriendly;
-      delete context.flags.midiProperties.autoSaveFriendly;
-      delete context.flags.midiProperties.magicdam;
-      delete context.flags.midiProperties.magiceffect;
-      delete context.flags.midiProperties.noConcentrationCheck;
-      delete context.flags.midiProperties.idi;
-      delete context.flags.midiProperties.idr;
-      delete context.flags.midiProperties.ida;
-      delete context.flags.midiProperties.idv;
-      delete context.flags.midiProperties.toggleEffect;
-      delete context.flags.midiProperties.ignoreTotalCover;
-      delete context.flags.AoETargetTypeIncludeSelf;
+      if (context.flags.midiProperties) {
+        delete context.flags.midiProperties.rollOther;
+        delete context.flags.midiProperties.fulldam;
+        delete context.flags.midiProperties.halfdam
+        delete context.flags.midiProperties.nodam;
+        delete context.flags.midiProperties.concentration;
+        delete context.flags.midiProperties.critOther
+        delete context.flags.midiProperties.rollOther;
+        delete context.flags.midiProperties.saveDamage;
+        delete context.flags.midiProperties.bonusSaveDamage;
+        delete context.flags.midiProperties.offHandWeapon;
+        delete context.flags.midiProperties.otherSaveDamage;
+        delete context.flags.midiProperties.confirmTargets;
+        delete context.flags.midiProperties.autoFailFriendly;
+        delete context.flags.midiProperties.autoSaveFriendly;
+        delete context.flags.midiProperties.magicdam;
+        delete context.flags.midiProperties.magiceffect;
+        delete context.flags.midiProperties.noConcentrationCheck;
+        delete context.flags.midiProperties.idi;
+        delete context.flags.midiProperties.idr;
+        delete context.flags.midiProperties.ida;
+        delete context.flags.midiProperties.idv;
+        delete context.flags.midiProperties.toggleEffect;
+        delete context.flags.midiProperties.ignoreTotalCover;
+        delete context.flags.AoETargetTypeIncludeSelf;
+      }
       if (context.flags[`${MODULE_ID}`]?.rollAttackPerTarget !== undefined)
         delete context.flags[`${MODULE_ID}`].rollAttackPerTarget;
       if (context.flags[`${MODULE_ID}`]?.fumbleThreshold !== undefined)
@@ -536,35 +525,26 @@ export function initHooks() {
       data.showCEOn = ["none", "itempri"].includes(configSettings.autoCEEffects);
     }
 
-    foundry.utils.setProperty(data, "flags.midiProperties", (item.flags as any)?.midiProperties ?? {});
     if (["spell", "feat", "weapon", "consumable", "equipment", "power", "maneuver"].includes(item?.type)) {
-      for (let prop of Object.keys(midiProps)) {
-        //@ts-expect-error no dnd5e types
-        if ((item.system.properties)?.has(prop)
-          && foundry.utils.getProperty(item, `flags.midiProperties.${prop}`) === undefined) {
-          foundry.utils.setProperty(item, `flags.midiProperties.${prop}`, true);
-        } else if (foundry.utils.getProperty(item, `flags.midiProperties.${prop}`) === undefined) {
-
-          foundry.utils.setProperty(data, `flags.midiProperties.${prop}`, false);
-        }
-      }
       if (!foundry.utils.getProperty(data, "flags.midi-qol.rollAttackPerTarget")) foundry.utils.setProperty(data, "flags.midi-qol.rollAttackPerTarget", "default");
-      delete data.flags.midiProperties.rollOther;
-      delete data.flags.midiProperties.fulldam;
-      delete data.flags.midiProperties.halfdam
-      delete data.flags.midiProperties.nodam;
-      delete data.flags.midiProperties.concentration;
-      delete data.flags.midiProperties.critOther
-      delete data.flags.midiProperties.rollOther;
-      delete data.flags.midiProperties.saveDamage;
-      delete data.flags.midiProperties.bonusSaveDamage;
-      delete data.flags.midiProperties.offHandWeapon;
-      delete data.flags.midiProperties.otherSaveDamage;
-      delete data.flags.midiProperties.confirmTargets;
-      delete data.flags.midiProperties.idi;
-      delete data.flags.midiProperties.idr;
-      delete data.flags.midiProperties.ida;
-      delete data.flags.midiProperties.idv;
+      if (data.flags.midiProperties) {
+        delete data.flags.midiProperties.rollOther;
+        delete data.flags.midiProperties.fulldam;
+        delete data.flags.midiProperties.halfdam
+        delete data.flags.midiProperties.nodam;
+        delete data.flags.midiProperties.concentration;
+        delete data.flags.midiProperties.critOther
+        delete data.flags.midiProperties.rollOther;
+        delete data.flags.midiProperties.saveDamage;
+        delete data.flags.midiProperties.bonusSaveDamage;
+        delete data.flags.midiProperties.offHandWeapon;
+        delete data.flags.midiProperties.otherSaveDamage;
+        delete data.flags.midiProperties.confirmTargets;
+        delete data.flags.midiProperties.idi;
+        delete data.flags.midiProperties.idr;
+        delete data.flags.midiProperties.ida;
+        delete data.flags.midiProperties.idv;
+      }
       delete data.flags.AoETargetTypeIncludeSelf;
       if (data.flags["midi-qol"]?.AoETargetType)
         delete data.flags["midi-qol"].AoETargetType;
@@ -786,26 +766,21 @@ Hooks.on("dnd5e.preCalculateDamage", (actor: Actor.Implementation, damages, opti
         || ((category === "immunity") && downgrade(type) && !skipDowngrade)
         || ((category === "resistance") && downgrade(type) && !hasEffect("di", type));
     };
-
+    /*
+    "DRSaveDr": "dm.midi/dm -> Saves/(dr/dv/di)",
+    "SavesDRDr": "Saves -> dm.midi/dm -> (dr/dv/di)",
+    "SaveDrDR": "Saves -> dm -> (dr/dv/di) -> dm.midi"
+    */
     const mo = options.midi;
     if (mo?.noCalc) return true;
     if (mo) {
-      if (configSettings.saveDROrder === "DRSavedr" && options?.ignore !== true) {
+      if (configSettings.saveDROrder === "DRSaveDr" && options?.ignore !== true) {
+        if (!applyDamageReduction(actor, damages, options)) return false;
         // Currently no way to disable just super saver and leave saver
-      } else if (configSettings.saveDROrder === "SaveDRdr" && options.ignore !== true) {
-        for (let damage of damages) {
-          if (mo.superSaver && (options?.ignore?.superSaver === true || options?.ignore?.superSaver?.has(damage.type))) continue;
-          if (mo.semiSuperSaver && (options?.ignore?.semiSuperSaver === true || options?.ignore?.semiSuperSaver?.has(damage.type))) continue;
-          if (mo.saved && (options?.ignore?.saved === true || options?.ignore?.saved?.has(damage.type))) continue;
-          if (mo.superSaver) {
-            foundry.utils.setProperty(damage, "active.superSaver", true);
-          } else if (mo.semiSuperSaver && (mo.saveMultiplier ?? 1) !== 1) {
-            foundry.utils.setProperty(damage, "active.semiSuperSaver", true);
-          } else if (mo.saved && (mo.saveMultiplier ?? 1) !== 1) {
-            foundry.utils.setProperty(damage, "active.saved", true);
-          }
-          damage.value = damage.value * (mo.saveMultiplier ?? 1);
-          foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * (mo.saveMultiplier ?? 1));
+      } else if (["SaveDrDR", "SaveDRDr"].includes(configSettings.saveDROrder) && options.ignore !== true) {
+        applySavesToDamage(actor, damages, options);
+        if (configSettings.saveDROrder === "SaveDRDr") {
+          if (!applyDamageReduction(actor, damages, options)) return false;
         }
       }
 
@@ -889,6 +864,9 @@ Hooks.on("dnd5e.calculateDamage", (actor: Actor.Implementation /* Actor - no dnd
         || ((category === "resistance") && downgrade(type))
     };
     const mo = options.midi;
+    if (configSettings.saveDROrder === "DRSaveDr" && options?.ignore !== true) {
+      applySavesToDamage(actor, damages, options);
+    }
     //@ts-expect-error no dnd5e types
     const actorTraits: any = actor.system.traits;
     if (mo?.noCalc) return true;
@@ -980,167 +958,181 @@ Hooks.on("dnd5e.calculateDamage", (actor: Actor.Implementation /* Actor - no dnd
         }
       }
     }
-    if (configSettings.saveDROrder === "DRSavedr" && options?.ignore !== true) {
+    /*
+    if (configSettings.saveDROrder === "DRSaveDr" && options?.ignore !== true) {
       // Currently now way to disable just super saver and leave saver
-      for (let damage of damages) {
-        if (mo.superSaver && (options?.ignore?.superSaver === true || options?.ignore?.superSaver?.has(damage.type))) continue;
-        if (mo.semiSuperSaver && (options?.ignore?.semiSuperSaver === true || options?.ignore?.semiSuperSaver?.has(damage.type))) continue;
-        if (mo.saved && (options?.ignore?.saved === true || options?.ignore?.saved?.has(damage.type))) continue;
-        damage.value = damage.value * (mo.saveMultiplier ?? 1);
-        foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * (mo.saveMultiplier ?? 1));
-        if (mo.superSaver) {
-          foundry.utils.setProperty(damage, "active.superSaver", true);
-        } else if (mo.semiSuperSaver && (mo.saveMultiplier ?? 1) !== 1) {
-          foundry.utils.setProperty(damage, "active.semiSuperSaver", true);
-        } else if (mo.saved && (mo.saveMultiplier ?? 1) !== 1) {
-          foundry.utils.setProperty(damage, "active.saved", true);
-        }
-      };
+      applySavesToDamage(actor, damages, options);
     }
-
-    function selectDamages(damages, selectDamage: (damage) => boolean) {
-      return damages.reduce((total, damage) => {
-        // if (!GameSystemConfig.damageTypes[damage.type]) return total;
-        if (["none", "midi-none"].includes(damage.type)) return total;
-        return total + (selectDamage(damage) ? damage.value : 0);
-      }, 0);
-
-    }
-    let drAllActives: string[] = [];
-    // Insert DR.ALL as a -ve damage value maxed at the total damage.
-    let dmAll;
-    if (options.ignore !== true && !options.ignore?.DR?.has("none") && !options.ignore?.DR?.has("all")) {
-      // think about how to do custom dm.const specials = [...(actorTraits.dm.custom ?? []).split(";"), ...Object.keys(actorTraits.dm?.midi ?? {})];
-      const specials = Object.keys(actorTraits?.dm?.midi ?? {});
-      for (let special of specials) {
-        let dm;
-        let dmRoll;
-        let selectedDamage;
-        let oldDamage
-        let dmActive;
-        dmRoll = new Roll(`${actorTraits?.dm.midi?.[special]}`, actor.getRollData() as any)
-        dm = doSyncRoll(dmRoll, `traits.dm.midi.${special}`)?.total ?? 0;
-        const bypasses = actorTraits["dm"].bypasses ?? new Set();
-
-        switch (special) {
-          case "all":
-            selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type]);
-            if (selectedDamage > 0) dmActive = i18n("All");
-            break;
-
-          case "mwak":
-          case "rwak":
-            if (options.ignore?.modification?.has(special)) continue;
-            selectedDamage = selectDamages(damages, (damage) => {
-              const bypassesPresent = damage.properties.intersection(bypasses);
-              return !GameSystemConfig.healingTypes[damage.type]
-                && damage.properties.has(special)
-                && bypassesPresent.size === 0
-            });
-            if (selectedDamage > 0) dmActive = i18n(special);
-            break;
-          case "msak":
-          case "rsak":
-            if (options.ignore?.modification?.has(special)) continue;
-            selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties.has(special));
-            if (selectedDamage > 0) dmActive = i18n(special);
-            break;
-
-          case "magical":
-            selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties.has("mgc"));
-            if (selectedDamage > 0) dmActive = i18n("midi-qol.Magical");
-            break;
-          case "non-magical":
-            selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && !damage.properties.has("mgc"));
-            if (selectedDamage > 0) dmActive = i18n("midi-qol.NonMagical")
-            break;
-          case "non-magical-physical":
-            selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties.has("mgc"));
-            if (selectedDamage > 0) dmActive = i18n("midi-qol.NonMagicalPhysical");
-            break;
-
-          case "non-silver-physical":
-            selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties.has("sil"));
-            if (selectedDamage > 0) dmActive = i18n("midi-qol.NonSilverPhysical");
-            break;
-
-          case "non-adamant-physical":
-            selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties.has("ada"));
-            if (selectedDamage > 0) dmActive = i18n("midi-qol.NonAdamantinePhysical");
-            break;
-
-          case "non-physical":
-            selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && !GameSystemConfig.damageTypes[damage.type]?.isPhysical);
-            if (selectedDamage > 0) dmActive = i18n("midi-qol.NonPhysical");
-            break;
-
-          case "physical":
-            selectedDamage = selectDamages(damages, (damage) => {
-              const bypassesPresent = damage.properties.intersection(bypasses);
-              return !GameSystemConfig.healingTypes[damage.type]
-                && GameSystemConfig.damageTypes[damage.type]?.isPhysical
-                && bypassesPresent.size === 0;
-            });
-            if (selectedDamage > 0) dmActive = i18n("midi-qol.Physical");
-            break;
-
-          case "spell":
-            selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties.has("spell"));
-            if (selectedDamage > 0) dmActive = i18n("midi-qol.SpellDamage");
-            break;
-
-          case "non-spell":
-            selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && !damage.properties.has("spell"));
-            if (selectedDamage > 0) dmActive = i18n("midi-qol.NonSpellDamage");
-            break;
-
-          default: dm = 0; selectedDamage = 0; break;
-        }
-        if (dm) {
-          if (Math.sign(selectedDamage + dm) !== Math.sign(selectedDamage)) {
-            dm = -selectedDamage
-          }
-          if (checkRule("maxDRValue") && (dm < dmAll || dmAll === undefined)) {
-            dmAll = dm;
-            drAllActives = [dmActive];
-          } else if (!checkRule("maxDRValue")) {
-            drAllActives.push(dmActive);
-            dmAll = (dmAll ?? 0) + dm;
-          }
-        }
-      }
-      let { totalDamage, temp } = damages.reduce((acc, d) => {
-        if (d.type === "temphp") acc.temp += d.value;
-        else if (d.type !== "midi-none") acc.totalDamage += d.value;
-        return acc;
-      }, { totalDamage: 0, temp: 0 });
-      // const totalDamage = damages.reduce((a, b) => a + b.value, 0);
-      if (!dmAll) dmAll = 0;
-      //@ts-expect-error no dnd5e types
-      if (totalDamage > 0 && totalDamage < actor.system.attributes.hp.dt) {
-        // total damage is less than the damage threshold so no damage
-        dmAll = -totalDamage;
-      } else if (Math.sign(totalDamage) !== Math.sign(dmAll + totalDamage)) {
-        dmAll = -totalDamage;
-      }
-      if (dmAll) {
-        damages.push({ type: "none", value: dmAll, active: { DR: true, multiplier: 1 }, allActives: drAllActives, properties: new Set() });
-      }
-      //@ts-expect-error
-      Hooks.callAll("midi-qol.dnd5eCalculateDamage", actor, damages, options);
-      while (damages.find((di, idx) => {
-        if (di.type === "midi-none") {
-          damages.splice(idx, 1);
-          return true;
-        }
-        return false;
-      }));
+    */
+    if (configSettings.saveDROrder === "SaveDrDR" && options?.ignore !== true) {
+      if (!applyDamageReduction(actor, damages, options)) return false;
     }
   } catch (err) {
     error(err);
   }
   return true;
 });
+
+function applySavesToDamage(actor: Actor.Implementation, damages: any[], options: any) {
+  const mo = options.midi;
+  for (let damage of damages) {
+    if (mo.superSaver && (options?.ignore?.superSaver === true || options?.ignore?.superSaver?.has(damage.type))) continue;
+    if (mo.semiSuperSaver && (options?.ignore?.semiSuperSaver === true || options?.ignore?.semiSuperSaver?.has(damage.type))) continue;
+    if (mo.saved && (options?.ignore?.saved === true || options?.ignore?.saved?.has(damage.type))) continue;
+    if (mo.superSaver) {
+      foundry.utils.setProperty(damage, "active.superSaver", true);
+    } else if (mo.semiSuperSaver && (mo.saveMultiplier ?? 1) !== 1) {
+      foundry.utils.setProperty(damage, "active.semiSuperSaver", true);
+    } else if (mo.saved && (mo.saveMultiplier ?? 1) !== 1) {
+      foundry.utils.setProperty(damage, "active.saved", true);
+    }
+    damage.value = damage.value * (mo.saveMultiplier ?? 1);
+    foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * (mo.saveMultiplier ?? 1));
+  }
+}
+function applyDamageReduction(actor: Actor.Implementation, damages: any, options: any): boolean {
+  function selectDamages(damages, selectDamage: (damage) => boolean) {
+    return damages.reduce((total, damage) => {
+      // if (!GameSystemConfig.damageTypes[damage.type]) return total;
+      if (["none", "midi-none"].includes(damage.type)) return total;
+      return total + (selectDamage(damage) ? damage.value : 0);
+    }, 0);
+  }
+  //@ts-expect-error no dnd5e types
+  const actorTraits: any = actor.system.traits;
+
+  if (options.ignore !== true && !options.ignore?.DR?.has("none") && !options.ignore?.DR?.has("all")) {
+    let drAllActives: string[] = [];
+    // Insert DR.ALL as a -ve damage value maxed at the total damage.
+    let dmAll;
+    // think about how to do custom dm.const specials = [...(actorTraits.dm.custom ?? []).split(";"), ...Object.keys(actorTraits.dm?.midi ?? {})];
+    const specials = Object.keys(actorTraits?.dm?.midi ?? {});
+    for (let special of specials) {
+      let dm;
+      let dmRoll;
+      let selectedDamage;
+      let oldDamage
+      let dmActive;
+      dmRoll = new Roll(`${actorTraits?.dm.midi?.[special]}`, actor.getRollData() as any)
+      dm = doSyncRoll(dmRoll, `traits.dm.midi.${special}`)?.total ?? 0;
+      const bypasses = actorTraits["dm"].bypasses ?? new Set();
+
+      switch (special) {
+        case "all":
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type]);
+          if (selectedDamage > 0) dmActive = i18n("All");
+          break;
+
+        case "mwak":
+        case "rwak":
+          if (options.ignore?.modification?.has(special)) continue;
+          selectedDamage = selectDamages(damages, (damage) => {
+            const bypassesPresent = damage.properties.intersection(bypasses);
+            return !GameSystemConfig.healingTypes[damage.type]
+              && damage.properties.has(special)
+              && bypassesPresent.size === 0
+          });
+          if (selectedDamage > 0) dmActive = i18n(special);
+          break;
+        case "msak":
+        case "rsak":
+          if (options.ignore?.modification?.has(special)) continue;
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties.has(special));
+          if (selectedDamage > 0) dmActive = i18n(special);
+          break;
+
+        case "magical":
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties.has("mgc"));
+          if (selectedDamage > 0) dmActive = i18n("midi-qol.Magical");
+          break;
+        case "non-magical":
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && !damage.properties.has("mgc"));
+          if (selectedDamage > 0) dmActive = i18n("midi-qol.NonMagical")
+          break;
+        case "non-magical-physical":
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties.has("mgc"));
+          if (selectedDamage > 0) dmActive = i18n("midi-qol.NonMagicalPhysical");
+          break;
+
+        case "non-silver-physical":
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties.has("sil"));
+          if (selectedDamage > 0) dmActive = i18n("midi-qol.NonSilverPhysical");
+          break;
+
+        case "non-adamant-physical":
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties.has("ada"));
+          if (selectedDamage > 0) dmActive = i18n("midi-qol.NonAdamantinePhysical");
+          break;
+
+        case "non-physical":
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && !GameSystemConfig.damageTypes[damage.type]?.isPhysical);
+          if (selectedDamage > 0) dmActive = i18n("midi-qol.NonPhysical");
+          break;
+
+        case "physical":
+          selectedDamage = selectDamages(damages, (damage) => {
+            const bypassesPresent = damage.properties.intersection(bypasses);
+            return !GameSystemConfig.healingTypes[damage.type]
+              && GameSystemConfig.damageTypes[damage.type]?.isPhysical
+              && bypassesPresent.size === 0;
+          });
+          if (selectedDamage > 0) dmActive = i18n("midi-qol.Physical");
+          break;
+
+        case "spell":
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties.has("spell"));
+          if (selectedDamage > 0) dmActive = i18n("midi-qol.SpellDamage");
+          break;
+
+        case "non-spell":
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && !damage.properties.has("spell"));
+          if (selectedDamage > 0) dmActive = i18n("midi-qol.NonSpellDamage");
+          break;
+
+        default: dm = 0; selectedDamage = 0; break;
+      }
+      if (dm) {
+        if (Math.sign(selectedDamage + dm) !== Math.sign(selectedDamage)) {
+          dm = -selectedDamage
+        }
+        if (checkRule("maxDRValue") && (dm < dmAll || dmAll === undefined)) {
+          dmAll = dm;
+          drAllActives = [dmActive];
+        } else if (!checkRule("maxDRValue")) {
+          drAllActives.push(dmActive);
+          dmAll = (dmAll ?? 0) + dm;
+        }
+      }
+    }
+    let { totalDamage, temp } = damages.reduce((acc, d) => {
+      if (d.type === "temphp") acc.temp += d.value;
+      else if (d.type !== "midi-none") acc.totalDamage += d.value;
+      return acc;
+    }, { totalDamage: 0, temp: 0 });
+    // const totalDamage = damages.reduce((a, b) => a + b.value, 0);
+    if (!dmAll) dmAll = 0;
+    //@ts-expect-error no dnd5e types
+    if (totalDamage > 0 && totalDamage < actor.system.attributes.hp.dt) {
+      // total damage is less than the damage threshold so no damage
+      dmAll = -totalDamage;
+    } else if (Math.sign(totalDamage) !== Math.sign(dmAll + totalDamage)) {
+      dmAll = -totalDamage;
+    }
+    if (dmAll) {
+      damages.push({ type: "none", value: dmAll, active: { DR: true, multiplier: 1 }, allActives: drAllActives, properties: new Set() });
+    }
+    //@ts-expect-error
+    Hooks.callAll("midi-qol.dnd5eCalculateDamage", actor, damages, options);
+    while (damages.find((di, idx) => {
+      if (di.type === "midi-none") {
+        damages.splice(idx, 1);
+        return true;
+      }
+      return false;
+    }));
+  }
+  return true;
+}
 
 function recalculateDamage(actor, amount, updates, options) {
   const hpMax = Math.floor(actor?.system?.attributes?.hp?.max ?? 0);

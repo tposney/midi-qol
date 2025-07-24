@@ -488,7 +488,6 @@ Hooks.once('setup', function () {
 });
 
 function addConfigOptions() {
-
   //@ts-expect-error
   let config = game.system?.config ?? {};
   if (game.system?.id === "dnd5e" || game.system?.id === "n5e") {
