@@ -419,7 +419,6 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
 
   for (let tokenRef of theTargets) {
     const token = getToken(tokenRef) as Token;
-    console.error(token === tokenRef, theTargets.has(token), hitTargets.has(token), tokenRef, token);
     const actor = token?.actor as Actor;
     const tokenDocument = getTokenDocument(tokenRef);
     if (!actor || !tokenDocument) continue;

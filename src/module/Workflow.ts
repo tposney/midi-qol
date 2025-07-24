@@ -6348,7 +6348,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         advantageMode,
         target: this.activeDefenceDC
       };
-      let player = playerFor(target instanceof Token ? target : target.object);
+      let player = playerFor(target instanceof foundry.canvas.placeables.Token ? target : target.object);
       // if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
       if (debugEnabled > 0) warn(`checkSaves | Player ${player?.name} controls actor ${(target.actor as Actor).name} - requesting DC ${this.activeDefenceDC} save`);
       if (player && player.active && !player.isGM && target.actor) {
@@ -6696,7 +6696,6 @@ export class TrapWorkflow extends Workflow {
       this.failedSaves = new Set(allHitTargets);
       return this.WorkflowState_WaitForDamageRoll;
     }
-    //@ts-expect-error
     let hookId = Hooks.on("createChatMessage", this.processSaveRoll.bind(this));
     //        let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
     let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
