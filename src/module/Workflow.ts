@@ -3294,7 +3294,7 @@ export class Workflow {
     if (!["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(actionType)) return;
     const attackAdvantage = grants.advantage?.attack || {};
     let grantsAdvantage;
-    const conditionData = createConditionData({ workflow: this, target: this.token, actor: this.actor });
+    const conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
     if (grants.advantage?.all && await evalCondition(grants.advantage.all, conditionData, { errorReturn: false, async: true })) {
       grantsAdvantage = true;
       this.attackAdvAttribution.add(`ADV:grants.advantage.all ${firstTargetDocument.name}`);
