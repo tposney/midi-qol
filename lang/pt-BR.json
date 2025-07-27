@@ -20,6 +20,7 @@
   "midi-qol.requiresTargetsOptions": {
     "none": "Nunca",
     "combat": "Em Combate",
+    "tokens": "Tokens na Cena",
     "always": "Sempre"
   },
   "midi-qol.AutoApplyDamage.Name": "Aplicar Dano Automaticamente",
@@ -72,7 +73,6 @@
   "midi-qol.noTemplateSeen": "Modelo não foi posicionado",
   "midi-qol.AutoTarget.Name": "Marcar ao Posicionar Modelo",
   "midi-qol.AutoTarget.Hint": "Quando posicionar um modelo (como de uma magia), marca automaticamente os tokens dentro do modelo. Se 'Centro + Levels' estiver configurado em alvos à distância, Levels Volumetric Templates será usado (se instalado).",
-  "midi-qol._comment for translators_noDamageOnSaveSpells": "In foundry v9 the array json element is no longer supported, so only the v9 version will be used",
   "midi-qol.undoDamageFrom": "Desfazer dano aplicado de ",
   "midi-qol.noGM": "Sem usuário Mestre conectado. Não é possível aplicar efeitos ou atualizar Pontos de Vida",
   "midi-qol.noSelection": "Nenhum Token/Ator selecionado",
@@ -147,7 +147,7 @@
   "midi-qol.DiceSound.Name": "Rolagem de Ataque",
   "midi-qol.AttackRoll": "Rolagem de Ataque",
   "midi-qol.CriticalSoundName": "Acerto Crítico",
-  "midi-qol.FumbleSoundName": "Falha crítica",
+  "midi-qol.FumbleSoundName": "Falha Crítica",
   "midi-qol.DiceSounds.Hint": "Sons para tocarem em diferentes tipos de rolagens. Aplicado somente para 'Cartões Mesclados'.",
   "midi-qol.CustomSoundsPlaylist.Name": "Playlist de Som",
   "midi-qol.WeaponUseSound.Name": " Arma Usada",
@@ -259,10 +259,13 @@
   },
   "midi-qol.playerRollSavesOptions": {
     "none": "Nenhum",
-    "noneDialog": "Rolar e Mostrar o Diálogo de Rolagem",
+    "nonePublic": "Nenhum (Rolagem Pública)",
+    "noneDialogPublic": "Rolar e Mostrar o Diálogo de Rolagem (Rolagem Pública)",
+    "noneDialogPrivate": "Rolar e Mostrar o Diálogo de Rolagem (Rolagem Privada)",
+    "noneDialogBlind": "Rolar e Mostrar o Diálogo de Rolagem (Rolagem Cega)",
     "chat": "Mensagem do Chat",
     "mtb": "Monk's Token Bar",
-    "rer": "Rippers Epic Rolls"
+    "rer": "Ripper's Epic Rolls"
   },
   "midi-qol.playerRollSavesOptionsReduced": {
     "none": "Nenhum",
@@ -314,19 +317,6 @@
   "midi-qol.ForceHideRoll.Hint": "Não exibe nada para não-destinatários para rolagens privadas/cegas/pessoais. Agradecimentos ao felix.mueller.86@web.de.",
   "midi-qol.EnableWorkflow.Name": "Habilitar Automação de Rolagens",
   "midi-qol.EnableWorkflow.Hint": "Se ativado, a automação de rolagens pode ser configurada no painel 'Configurações de Workflow'",
-  "midi-qol.magicalProp": "Mágico",
-  "midi-qol.confirmTargetsProp": "Confirmar Alvos",
-  "midi-qol.noDamageSaveProp": "Sem Dano Sucesso",
-  "midi-qol.fullDamageSaveProp": "Todo Dano Sucesso",
-  "midi-qol.defaultDamageType": "midi-none",
-  "midi-qol.halfDamageSaveProp": "Metade Dano Sucesso",
-  "midi-qol.rollOtherProp": "Também Rolar Outro",
-  "midi-qol.otherCritProp": "Outro Crítico",
-  "midi-qol.magicalDamageProp": "Dano Mágico",
-  "midi-qol.magicalEffectProp": "Efeito Mágico",
-  "midi-qol.concentrationEffectProp": "Concentração",
-  "midi-qol.noConcentrationEffectProp": "Sem Salv. de Conc.",
-  "midi-qol.toggleEffectProp": "Alternar Efeito",
   "midi-qol.playerControlsInvisibleTokens.Name": "Jogadores Controlam Seus Tokens Escondidos",
   "midi-qol.playerControlsInvisibleTokens.Hint": "Experimental. Talvez funcione",
   "midi-qol.Debug.Name": "Habilitar Debug",
@@ -340,6 +330,7 @@
     "preItemRoll": "Chamada Antes do Item ser Rolado (*)",
     "templatePlaced": "Chamada Apenas Quando o Modelo é Posicionado",
     "preAttackRoll": "Antes da Rolagem de Ataque",
+    "preAttackRollConfig": "Antes da Configuração do Ataque",
     "preCheckHits": "Antes da Verificação de Acerto",
     "postAttackRoll": "Depois da da Rolagem de Ataque",
     "preDamageRoll": "Antes da Rolagem de Dano",
@@ -347,6 +338,7 @@
     "damageBonus": "Retornar um Bônus de Dano",
     "preSave": "Antes de Verificar Salvaguardas",
     "postSave": "Depois de Verificar Salvaguardas",
+    "preDamageRollConfig": "Antes da Configuração do Dano",
     "preDamageApplication": "Antes de Aplicar Dano",
     "preActiveEffects": "Antes de Efeitos Ativos",
     "postActiveEffects": "Depois de Efeitos Ativos ",
@@ -558,6 +550,8 @@
   "midi-qol.ActiveDefenceString": "Active Defence",
   "midi-qol.ActiveDefence.Name": "Defesa Ativa",
   "midi-qol.ActiveDefence.Hint": "Ao invés do Mestre rolar 'Para Atingir', jogadores fazem uma rolagem de defesa.",
+  "midi-qol.ActiveDefenceDC.Name": "Exibir CD da Defesa Ativa",
+  "midi-qol.ActiveDefenceDC.Hint": "Se habilitado, a CD da Defesa Ativa será mostrada no cartão de chat.",
   "midi-qol.ActiveDefenceShow.Name": "Exibição Padrão para Rolagens de Defesa Ativa",
   "midi-qol.ActiveDefenceShow.Hint": "Se definido para 'Rolagem Pessoal', a rolagem será escondida do Mestre, independente de outras configurações.",
   "midi-qol.GMHide3dDice.Name": "Esconder Rolagens de Dados 3D do Mestre. Subscreve outras configurações (apenas Cartão Mesclado)",
@@ -716,7 +710,6 @@
   "midi-qol.DisplayHitResultNumeric.Name": "Exibir CA do Alvo",
   "midi-qol.EnforceBonusActions.Title": "Ação Bônus Usada",
   "midi-qol.EnforceBonusActions.Content": "Você já usou sua Ação Bônus nesta rodada. Quer continuar mesmo assim?",
-  "midi-qol.MidiProperties": "Propriedades de Item do Midi QOL",
   "midi-qol.SoundSettings.Name": "Configurar Sons do Midi QOL",
   "midi-qol.SoundSettings.Hint": "Configura os sons personalizados do Midi QOL para rolagem de itens.",
   "midi-qol.SoundSettings.Label": "Configurar Sons do Midi QOL",
@@ -863,8 +856,9 @@
   "midi-qol.SaveDROrder.Name": "Ordem de Redução de Dano",
   "midi-qol.SaveDROrder.Hint": "Ordem em que a redução de dano será aplicada.",
   "midi-qol.SaveDROrderOptions": {
-    "DRSavedr": "Redução de Dano -> Salvaguarda -> Resistência (dr/dv/di)",
-    "SaveDRdr": "Salvaguarda -> Redução de dano -> Resistência (dr/dv/di)"
+    "DRSaveDr": "Mod. Dano (dm.midi/dnd5e.dm) -> Salv./Red. Dano (dr/dv/di)",
+    "SaveDRDr": "Salv. -> Mod. Dano (dm.midi/dnd5e.dm) -> Red. Dano (dr/dv/di)",
+    "SaveDrDR": "Salv. -> Mod. Dano -> Red. Dano (dr/dv/di) -> Mod. Dano (dm.midi)"
   },
   "midi-qol.WaitingForPreviousWorkflow": "Rolagem anterior de {name} não foi completada.",
   "midi-qol.ResolvePreviousWorkflow": "Escolha o que fazer com a rolagem anterior",
@@ -954,6 +948,9 @@
   "midi-qol.dummyCards.Name": "Exibir Ataque/Dano em Cartão Mesclado Oculto",
   "midi-qol.dummyCards.Hint": "(Experimental) Para jogadas do Mestre (pessoal, privado, cego), exibe um cartão da jogada de ataque/dano que acionará um cartão 'o Mestre rolou alguns dados' nos chats dos jogadores. Somente para o caso de você querer que os jogadores saibam que você rolou algo, mas não o que foi",
   "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><strong><center>Monitoramento de Concentração do D&D5e Desabilitado</strong><br></center><br><center>O Monitoramento de Concentração está desabilitado nas configurações do sistema D&D5e.</center><center>Habilite nas configurações do D&D5e para habilitar as configurações de concentração do Midi QOL</center><br>",
+  "midi-qol.ItemSheetMidiTab": "Midi QoL",
+  "midi-qol.AddOnUseMacro": "Adicionar Macro Ao Usar",
+  "midi-qol.CustomMacro": "Macro Personalizada",
   "midi-qol.SHARED": {
     "use-condition": {
       "header": "Condições do Midi QOL"
@@ -983,8 +980,11 @@
           "label": "Modo de Rolagem",
           "hint": "Modo de rolagem para usar para a Atividade."
         },
-        "ignoreFullCover":
-        {
+        "removeChatButtons": {
+          "label": "Remover Botões de Chat",
+          "hint": "Exclui os botões do cartão de chat de atividades."
+        },
+        "ignoreFullCover": {
           "label": "Ignorar Cobertura Total",
           "hint": "Ignora Cobertura Total em jogadas de dano/salvaguardas."
         },
@@ -1040,9 +1040,21 @@
           "label": "Outra Atividade",
           "hint": "Pode ser usada como uma outra Atividade."
         },
-        "toggleEffect": {
-          "label": "Alternar Efeito",
+        "toggleEffects": {
+          "label": "Alternar Efeitos",
           "hint": "Desabilitar um efeito irá alternar entra ativado e desativado ao invés de removê-lo."
+        },
+        "magicEffect": {
+          "label": "Efeito Mágico",
+          "hint": "Salvaguardas contra esta atividade são tratadas como salvaguardas contra magia."
+        },
+        "magicDamage": {
+          "label": "Dano Mágico",
+          "hint": "O dano desta atividade é tratado como dano mágico."
+        },
+        "noConcentrationCheck": {
+          "label": "Sem Salvaguarda de Concentração",
+          "hint": "O dano da atividade não aciona uma salvaguarda de concentração."
         },
         "ignoreTraits": {
           "idi": {
@@ -1065,7 +1077,15 @@
             "label": "Modificação",
             "hint": "Ignora Modificação de danos ao aplicar o dano."
           }
+        },
+        "autoCEEffects": {
+          "label": "Aplicar Convenient Effects",
+          "hint": "Aplique Convenient Effects que correspondam ao nome da atividade (se não houver correspondência, nome do item) quando o item for usado. Requer que a opção 'Aplicar Efeito de Itens' esteja habilitada."
         }
+      },
+      "friendlySummon": {
+        "label": "Invocações Amigáveis",
+        "hint": "O token invocado tem a mesma disposição do conjurador."
       },
       "isOverTimeFlag": {
         "label": "É Over Time",
@@ -1119,12 +1139,6 @@
       }
     }
   },
-  "midi-qol.FORWARD": {
-    "Title": {
-      "one": "Avanço Midi",
-      "other": "Avanços Midi"
-    }
-  },
   "midi-qol.ATTACK": {
     "Title": {
       "one": "Ataque Midi",
@@ -1141,6 +1155,14 @@
       "ammunition": {
         "label": "Munição",
         "hint": "Munição padrão a ser consumida."
+      },
+      "attackRollPerTarget": {
+        "label": "Rolagem de Ataque por Alvo",
+        "hint": "Faz uma jogada de ataque separada para cada alvo."
+      },
+      "fumbleThreshold": {
+        "label": "Margem de Falha Crítica",
+        "hint": "Se a jogada de ataque for menor ou igual a esse valor, será uma falha crítica."
       }
     }
   },
@@ -1150,16 +1172,44 @@
       "other": "Conjurações Midi"
     }
   },
+  "midi-qol.CHECK": {
+    "Title": {
+      "one": "Teste Midi",
+      "other": "Testes Midi"
+    }
+  },
   "midi-qol.DAMAGE": {
     "Title": {
       "one": "Dano Midi",
-      "other": "Danos Midi"
+      "other": "Danos Midi",
+      "FIELDS": {
+        "damage": {
+          "label": "Dano Salvaguarda",
+          "critical": {
+            "label": "Dano Crítico",
+            "allow": {
+              "label": "Permitir Dano Crítico",
+              "hint": "Permite que dano crítico seja aplicado."
+            },
+            "bonus": {
+              "label": "Dano Crítico Bônus",
+              "hint": "Dano adicional aplicado ao crítico, se o dano crítico for permitido."
+            }
+          }
+        }
+      }
     }
   },
   "midi-qol.ENCHANT": {
     "Title": {
       "one": "Encanto Midi",
       "other": "Encantos Midi"
+    }
+  },
+  "midi-qol.FORWARD": {
+    "Title": {
+      "one": "Avanço Midi",
+      "other": "Avanços Midi"
     }
   },
   "midi-qol.HEAL": {
@@ -1201,6 +1251,20 @@
     "Title": {
       "one": "Salvaguarda Midi",
       "other": "Salvaguardas Midi"
+    },
+    "extras": {
+      "header": "Campos Salvaguarda Midi"
+    },
+    "FriendlySave": {
+      "Default": "Rolar Salvaguarda",
+      "FriendlySuccess": "Sucesso Aliado",
+      "FriendlyFail": "Falha Aliado"
+    },
+    "FIELDS": {
+      "friendlySave": {
+        "label": "Salvaguarda Amigável",
+        "hint": "Se habilitado, permite que os aliados tenham um sucesso ou falha ao invés de rolar a salvaguarda."
+      }
     }
   },
   "midi-qol.UTILITY": {
@@ -1213,12 +1277,6 @@
     "Title": {
       "one": "Invocação Midi",
       "other": "Invocações Midi"
-    }
-  },
-  "midi-qol.CHECK": {
-    "Title": {
-      "one": "Teste Midi",
-      "other": "Testes Midi"
     }
   },
   "midi-qol.fields": {
