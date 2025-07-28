@@ -562,6 +562,8 @@
   "midi-qol.ActiveDefenceString": "Active Defence",
   "midi-qol.ActiveDefence.Name": "Active Defence",
   "midi-qol.ActiveDefence.Hint": "Instead of GM rolling 'To Hit', players make a defence roll.",
+  "midi-qol.ActiveDefenceDC.Name": "Show Active Defence DC",
+  "midi-qol.ActiveDefenceDC.Hint": "If set the active defence DC will be shown in the chat card",
   "midi-qol.ActiveDefenceShow.Name": "Default display for active defence rolls",
   "midi-qol.ActiveDefenceShow.Hint": "If set to 'Self Roll' the roll will be hidden from the GM regardless of other settings",
   "midi-qol.GMHide3dDice.Name": "Hide GM attack/damage/saving throw 3d dice rolls - overrides other settings (merge card only)",
@@ -865,12 +867,12 @@
   "midi-qol.TargetConfirmationAllies": "Confirm targets if any target is an ally",
   "midi-qol.OutOfRange": "Out of Range",
   "midi-qol.SaveDROrder.Name": "Damage Reduction Save Order",
-  "midi-qol.SaveDROrder.Hint": "Order in which damage reduction is applied. If 'none' damage reduction is applied",
+  "midi-qol.SaveDROrder.Hint": "Order in which damage reduction is applied.<br>dm.midi is midi specific damage reduction. <br>dm is dnd5e damage reduction",
   "midi-qol.SaveDROrderOptions": {
-    "DRSavedr": "Damage Reduction -> Saves -> damage resistance (dr/dv/di)",
-    "SaveDRdr": "Saves -> Damage Reduction -> damage resistance (dr/dv/di)"
-  },
-  "midi-qol.WaitingForPreviousWorkflow": "Previous roll of {name} has not completed.",
+    "DRSaveDr": "dm.midi/dnd5e.dm -> Saves/(dr/dv/di) - dnd5e RAW",
+    "SaveDRDr": "Saves -> dm.midi/dm.dnd5e -> (dr/dv/di)",
+    "SaveDrDR": "Saves -> dm -> (dr/dv/di) -> dm.midi"
+  },  "midi-qol.WaitingForPreviousWorkflow": "Previous roll of {name} has not completed.",
   "midi-qol.ResolvePreviousWorkflow": "Choose what to do with the previous roll",
   "midi-qol.ConfirmTargetOptions": {
     "default": "Midi Settings",

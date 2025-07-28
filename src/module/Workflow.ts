@@ -1785,6 +1785,7 @@ export class Workflow {
 
     return this.WorkflowState_AoETargetConfirmation;
   }
+
   async WorkflowState_AwaitItemCard(context: any = {}): Promise<WorkflowState> {
     if (this.needItemCard || !this.itemUseComplete) {
       if (debugEnabled > 0) warn("WorkflowState_AwaitItemCard suspending because needItemCard/itemUseComplete", this.needItemCard, this.itemUseComplete);
@@ -1797,6 +1798,7 @@ export class Workflow {
     if (debugEnabled > 0) warn("WorkflowState_AwaitItemCard  -> TemplatePlaced");
     return this.WorkflowState_TemplatePlaced;
   }
+
   async WorkflowState_AwaitTemplate(context: any = {}): Promise<WorkflowState> {
     if (debugEnabled > 0) warn("WorkflowState_AwaitTemplate started");
     if (context.templateUuid || this.templateUuid) {
@@ -1811,6 +1813,7 @@ export class Workflow {
     if (debugEnabled > 0) warn("WorkflowState_AwaitTemplate suspending", "needTemplate", this.needTemplate, "needItemCard", this.needItemCard, "itemUseComplete", this.itemUseComplete);
     return this.WorkflowState_Suspend;
   }
+
   async WorkflowState_TemplatePlaced(context: any = {}): Promise<WorkflowState> {
     if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
       await this.callMacros(this.item, this.onUseMacros?.getMacros("templatePlaced"), "OnUse", "templatePlaced");
@@ -1832,6 +1835,7 @@ export class Workflow {
     await this.performDebouncedUpdate(chatMessage, { content, "flags.midi-qol.type": MESSAGE_TYPES.ITEM, style: CONST.CHAT_MESSAGE_STYLES.OTHER });
     return this.WorkflowState_AoETargetConfirmation;
   }
+
   async WorkflowState_AoETargetConfirmation(context: any = {}): Promise<WorkflowState> {
     const hasAoETemplate = activityHasAreaTarget(this.activity);
     const emanationNoTemplate = activityHasEmanationNoTemplate(this.activity);
@@ -1842,6 +1846,7 @@ export class Workflow {
     }
     return this.WorkflowState_ValidateRoll;
   }
+
   async WorkflowState_ValidateRoll(context: any = {}): Promise<WorkflowState> {
     if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) {
       await this.triggerTargetMacros(["isTargeted"]);
@@ -1868,6 +1873,7 @@ export class Workflow {
     }
     return this.WorkflowState_PreambleComplete;
   }
+
   async WorkflowState_PreambleComplete(context: any = {}): Promise<WorkflowState> {
     if (configSettings.undoWorkflow) await saveTargetsUndoData(this);
     this.effectsAlreadyExpired = [];
@@ -1899,6 +1905,7 @@ export class Workflow {
     }
     return this.WorkflowState_WaitForAttackRoll;
   }
+
   async WorkflowState_WaitForAttackRoll(context: any = {}): Promise<WorkflowState> {
     if (context.attackRoll) {
       if (this.abort) return this.WorkflowState_Abort;
@@ -2102,6 +2109,7 @@ export class Workflow {
     }
     return this.WorkflowState_Suspend; // wait for a damage roll to advance the state.
   }
+
   async WorkflowState_ConfirmRoll(context: any = {}): Promise<WorkflowState> {
     if (context.attackRoll) return this.WorkflowState_AttackRollComplete;
     if (configSettings.confirmAttackDamage !== "none" && (this.activity.attack || this.activity.damage)) {
@@ -2110,11 +2118,13 @@ export class Workflow {
     }
     return this.WorkflowState_DamageRollStarted;
   }
+
   async WorkflowState_RollConfirmed(context: any = {}): Promise<WorkflowState> {
     expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"])
     await this.expireTargetEffects(["isAttacked"]);
     return this.WorkflowState_DamageRollStarted;
   }
+
   async WorkflowState_DamageRollStarted(context: any = {}): Promise<WorkflowState> {
     if (this.itemCardUuid) {
       await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: false, removeAttackButtons: getRemoveAttackButtons(this.item), removeDamageButtons: getRemoveDamageButtons(this.item), removeConfirmButtons: true });
@@ -2132,6 +2142,7 @@ export class Workflow {
     }
     return this.WorkflowState_DamageRollComplete;
   }
+
   async WorkflowState_DamageRollComplete(context: any = {}): Promise<WorkflowState> {
     if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) { //
       await this.callMacros(this.item, this.onUseMacros?.getMacros("postDamageRoll"), "OnUse", "postDamageRoll");
@@ -2182,12 +2193,13 @@ export class Workflow {
     }
     return this.WorkflowState_WaitForDamageRoll;
   }
+
   async WorkflowState_DamageRollCompleteCancelled(context: any = {}): Promise<WorkflowState> {
     if (configSettings.undoWorkflow) {
-
     }
     return this.WorkflowState_Suspend;
   }
+
   async WorkflowState_WaitForSaves(context: any = {}): Promise<WorkflowState> {
     // TODO remove this afet CPR change
     if (this.damageRolls) this.rawDamageDetail = createDamageDetailV4({ roll: this.damageRolls, activity: this.activity, defaultType: this.defaultDamageType });
@@ -2242,6 +2254,7 @@ export class Workflow {
     }
     return this.WorkflowState_SavesComplete;
   }
+
   async WorkflowState_SavesComplete(context: any = {}): Promise<WorkflowState> {
     expireMyEffects.bind(this)(["1Action", "1Spell"]);
     if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
@@ -2250,6 +2263,7 @@ export class Workflow {
     }
     return this.WorkflowState_AllRollsComplete;
   }
+
   async WorkflowState_AllRollsComplete(context: any = {}): Promise<WorkflowState> {
     this.otherDamageMatches = new Set();
     let items: any[] = [];
@@ -2610,6 +2624,7 @@ export class Workflow {
     }
     return this.WorkflowState_RollFinished;
   }
+
   async WorkflowState_Cleanup(context: any = {}): Promise<WorkflowState> {
     if (this.placeTemplateHookId) {
       Hooks.off("createMeasuredTemplate", this.placeTemplateHookId);
@@ -2933,7 +2948,7 @@ export class Workflow {
           effectData.duration = {
             startRound: game.combat?.round,
             startTurn: game.combat?.turn,
-          startTime: game.time?.worldTime
+            startTime: game.time?.worldTime
           }
           //@ts-expect-error CONFIG.DND5E
         } else if (CONFIG.DND5E.permanentTimePeriods[activityDuration.units]) {
@@ -2979,6 +2994,7 @@ export class Workflow {
     }
     return this.WorkflowState_Cleanup;
   }
+
   async WorkflowState_Default(context: any = {}): Promise<WorkflowState> { return this.WorkflowState_Suspend };
 
   initSaveResults() {
@@ -3836,7 +3852,6 @@ export class Workflow {
     return results;
   }
 
-
   async callMacro(item, macroName: string, macroData: any, options: any): Promise<damageBonusMacroResult | any> {
     let [name, uuid] = macroName?.trim().split("|");
     let macroItem = item;
@@ -4046,6 +4061,7 @@ export class Workflow {
       await this.performDebouncedUpdate(chatMessage, { content });
     }
   }
+
   async displayUtilityRolls(displayOptions: any = {}) {
     const chatMessage = this.chatCard;
     let content = chatMessage && foundry.utils.duplicate(chatMessage.content);
@@ -4082,31 +4098,6 @@ export class Workflow {
     const flags = chatMessage?.flags || {};
     let newFlags = {};
 
-    if (game.user?.isGM && this.useActiveDefence) {
-      const searchRe = /<div class="midi-qol-attack-roll"[\s\S]*?<div class="end-midi-qol-attack-roll">/;
-      let DCString = "DC";
-      if (game.system?.id === "dnd5e") {
-        DCString = i18n(`${this.systemString}.AbbreviationDC`) ?? "DC";
-      } else if (i18n("SW5E.AbbreviationDC") !== "SW5E.AbbreviationDC") {
-        DCString = i18n("SW5E.AbbreviationDC") ?? "DC";
-      }
-      const attackString = `<label class="midi-qol-saveDC">${DCString} ${this.activeDefenceDC}</label> ${i18n("midi-qol.ActiveDefenceString")}`;
-      const replaceString = `<div class="midi-qol-attack-roll"> <div style="text-align:center"> ${attackString} </div><div class="end-midi-qol-attack-roll">`;
-      content = content.replace(searchRe, replaceString);
-      const targetUuids = Array.from(this.targets).map(t => getTokenDocument(t)?.uuid);
-      newFlags = foundry.utils.mergeObject(flags, {
-        "midi-qol":
-        {
-          isHit: this.hitTargets.size > 0,
-          isHitEC: this.hitTargetsEC.size > 0,
-        },
-        [WorkflowDataFlags.isCritical]: this.isCritical,
-        [WorkflowDataFlags.isFumble]: this.isFumble,
-        [WorkflowDataFlags.targets]: Array.from(this.targets).map(t => getTokenDocument(t)?.uuid),
-        [WorkflowDataFlags.hitTargets]: Array.from(this.hitTargets).map(t => getTokenDocument(t)?.uuid),
-        [WorkflowDataFlags.hitTargetsEC]: Array.from(this.hitTargetsEC).map(t => getTokenDocument(t)?.uuid),
-      }, { overwrite: true, inplace: false });
-    }
     if (chatMessage) { // display the attack roll
       let searchRe = /<div class="midi-qol-attack-roll"[\s\S]*?<div class="end-midi-qol-attack-roll">/
       let options: any = this.attackRoll?.terms[0].options;
@@ -4374,6 +4365,7 @@ export class Workflow {
     if (halfDamage.length > 0) halfDamageText = halfDamage.join(", ");
     return { fullDamageText, halfDamageText, noDamageText };
   }
+
   //TODO refactor this with displaysaves
   async displaySaveTargets(whisper = false) {
     this.saveTargetsDisplayed = true;
@@ -4458,6 +4450,7 @@ export class Workflow {
     content = content.replace(searchRe, replaceString);
     await this.performDebouncedUpdate(chatMessage, { content, "flags.midi-qol.type": MESSAGE_TYPES.SAVES }, true);
   }
+
   async displaySaves(whisper: boolean = false) {
     let chatData: any = {};
     let { fullDamageText, halfDamageText, noDamageText } = this.computeSaveFlavors();
@@ -5595,10 +5588,7 @@ export class Workflow {
     if (this.activity.target?.affects?.type === "self") {
       this.targets = await getOrCreateTokenForActorAsSet(this.actor);
     }
-    if (!this.useActiveDefence) {
-      this.hitTargets = new Set();
-      this.hitTargetsEC = new Set(); //TODO wonder if this can work with active defence?
-    };
+
     this.hitDisplayData = {};
     const challengeModeArmorSet = !([undefined, false, "none"].includes(checkRule("challengeModeArmor")));
     for (let targetToken of this.targets) {
@@ -5629,154 +5619,151 @@ export class Workflow {
       isHitEC = false;
       let attackTotal = this.attackTotal;
 
-      if (this.useActiveDefence) {
-        isHit = this.hitTargets.has(targetToken);
-        hitResultNumeric = "";
-      } else {
-        const noCoverFlag = foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.ignoreCover`);
-        let ignoreCover = false;
-        if (noCoverFlag) {
-          const conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
-          ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.ignoreCover`, conditionData);
-        }
-        if (this.activity?.actionType === "rsak" && foundry.utils.getProperty(this.actor, "flags.dnd5e.spellSniper")) {
-          const conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
-          ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.dnd5e.spellSniper`, conditionData);
-        }
-        const sharpShooterFlag = foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.sharpShooter`) || foundry.utils.getProperty(this.actor, `flags.dnd5e.sharpShooter`);
-        if (this.activity?.actionType === "rwak" && sharpShooterFlag) {
-          const conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
-          ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.sharpShooter`, conditionData);
-          ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.dnd5e.sharpShooter`, conditionData);
-        }
-        if (this.token) bonusAC = computeCoverBonus(this.token, targetToken, activity);
-        if (ignoreCover && bonusAC < FULL_COVER) bonusAC = 0;
-        targetAC += bonusAC;
 
-        const midiFlagsAttackBonus = foundry.utils.getProperty(targetActor, `flags.${MODULE_ID}.grants.attack.bonus`);
-        if (!this.isFumble) {
-          if (midiFlagsAttackBonus) {
-            if (midiFlagsAttackBonus?.all) {
-              const attackBonusRoll = await (new Roll(midiFlagsAttackBonus.all, targetActor.getRollData()))?.evaluate();
-              attackBonus = attackBonusRoll?.total ?? 0;
-              foundry.utils.setProperty(this.actor, "flags.midi.evaluated.grants.attack.bonus.all", { value: attackBonus, effects: [`${targetActor.name}`] });
-            }
-            if (midiFlagsAttackBonus[activity.actionType]) {
-              const attackBonusRoll = await (new Roll(midiFlagsAttackBonus[activity.actionType], targetActor.getRollData())).evaluate();
-              attackBonus = attackBonusRoll?.total ?? 0;
-              foundry.utils.setProperty(this.actor, `flags.midi.evaluated.grants.attack.bonus.${activity.actionType}`, { value: attackBonus, effects: [`${targetActor.name}`] });
-            }
-          }
-          if (challengeModeArmorSet) isHit = attackTotal > targetAC || this.isCritical;
-          else {
-            if (this.attackRoll && !foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
-              const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
-              const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
-              // TODO what else to do once rolled
-              targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + bonusAC;
-            }
-            isHit = (attackTotal + attackBonus) >= targetAC || this.isCritical;
-          }
-          if (bonusAC === FULL_COVER) isHit = false; // bonusAC will only be FULL_COVER if cover bonus checking is enabled.
-
-          if (targetEC) isHitEC = challengeModeArmorSet && attackTotal <= targetAC && attackTotal >= targetEC && bonusAC !== FULL_COVER;
-          // check to see if the roll hit the target
-          if ((isHit || isHitEC) && this.activity?.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
-            const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
-            // reaction is the same as reactionhit to accomodate the existing reaction workflow
-            let result;
-            if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
-              result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
-            }
-            if (!Workflow.getWorkflow(this.id)) // workflow has been removed - bail out
-              return;
-            targetAC = Number.parseInt(targetActor.system.attributes.ac.value) + bonusAC;
-            if (targetEC) targetEC = targetActor.system.attributes.ac.EC + bonusAC;
-            if (result.ac) targetAC = result.ac + bonusAC; // deal with bonus ac if any.
-            if (targetEC) targetEC = targetAC - targetAR;
-            if (bonusAC === FULL_COVER) isHit = false; // bonusAC will only be FULL_COVER if cover bonus checking is enabled.
-            isHit = (attackTotal + attackBonus >= targetAC || this.isCritical) && result.name !== "missed";
-            if (challengeModeArmorSet) isHit = this.attackTotal >= targetAC || this.isCritical;
-            if (targetEC) isHitEC = challengeModeArmorSet && this.attackTotal <= targetAC && this.attackTotal >= targetEC;
-          } else if ((!isHit && !isHitEC) && this.activity?.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`)) {
-            const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
-            if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
-              let result;
-              if (isHit || isHitEC) {
-                result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionhit", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
-              }
-              else
-                result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
-
-            }
-            // TODO what else to do once rolled
-          }
-          const optionalCrits = checkRule("optionalCritRule");
-          if (this.targets.size === 1 && optionalCrits !== false && optionalCrits > -1) {
-            if (checkRule("criticalNat20") && this.isCritical) {
-            } else {
-              this.isCritical = attackTotal >= targetAC + optionalCrits;
-            }
-          }
-          hitResultNumeric = this.isCritical ? "++" : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
-        }
-
-        // TODO come back and parameterise with flags and actor to use
-
-        const midiFlagsActorFail = foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.fail`);
-        if (midiFlagsActorFail) {
-          const conditionData = createConditionData({ workflow: this, target: this.token, actor: this.actor });
-          if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.fail.all`, conditionData)
-            || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.fail.attack`, conditionData)
-            || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.fail.attack.${activity.actionType}`, conditionData)) {
-            isHit = false;
-            isHitEC = false;
-            this.isCritical = false;
-          }
-        }
-        const midiFlagsActorSuccess = foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.success`);
-        if (midiFlagsActorSuccess) {
-          const conditionData = createConditionData({ workflow: this, target: this.token, actor: this.actor });
-          if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.success.all`, conditionData)
-            || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.success.attack.all`, conditionData)
-            || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.success.attack.${activity.actionType}`, conditionData)) {
-            isHit = true;
-            isHitEC = false;
-            this.isFumble = false;
-          }
-        }
-
-        const midiFlagsGrantsAttackSuccess = foundry.utils.getProperty(targetActor, `flags.${MODULE_ID}.grants.attack.success`);
-        const midiFlagsGrantsAttackFail = foundry.utils.getProperty(targetActor, `flags.${MODULE_ID}.grants.attack.fail`);
-        let conditionData;
-        if (midiFlagsGrantsAttackSuccess || midiFlagsGrantsAttackFail) {
-          conditionData = createConditionData({ workflow: this, target: this.token, actor: this.actor });
-
-          if (await evalAllConditionsAsync(targetActor, `flags.${MODULE_ID}.grants.attack.success.all`, conditionData)
-            || await evalAllConditionsAsync(targetActor, `flags.${MODULE_ID}.grants.attack.success.${activity.actionType}`, conditionData)) {
-            isHit = true;
-            isHitEC = false;
-            this.isFumble = false;
-          }
-          if (await evalAllConditionsAsync(targetActor, `flags.${MODULE_ID}.grants.attack.fail.all`, conditionData)
-            || await evalAllConditionsAsync(targetActor, `flags.${MODULE_ID}.grants.attack.fail.${activity.actionType}`, conditionData)) {
-            isHit = false;
-            isHitEC = false;
-            this.isCritical = false;
-          }
-        }
-
-        let hitScale = 1;
-        if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor")) && !this.isCritical) hitScale = Math.floor((this.attackTotal - targetEC + 1) / ((targetActor?.system.attributes.ac.AR ?? 0) + 1) * 10) / 10;
-        if (!this.challengeModeScale) this.challengeModeScale = {};
-        this.challengeModeScale[(targetToken.actor as Actor)?.uuid ?? "dummy"] = hitScale;
-        if (this.isCritical) isHit = true;
-        if (isHit || this.isCritical) this.hitTargets.add(targetToken);
-        if (isHitEC) this.hitTargetsEC.add(targetToken);
-        if (isHit || isHitEC) await this.processCriticalFlags();
-        // This was set by computeCoverBonus so clear it after use.
-        foundry.utils.setProperty(targetActor, `flags.${MODULE_ID}.acBonus`, 0);
+      const noCoverFlag = foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.ignoreCover`);
+      let ignoreCover = false;
+      if (noCoverFlag) {
+        const conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
+        ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.ignoreCover`, conditionData);
       }
+      if (this.activity?.actionType === "rsak" && foundry.utils.getProperty(this.actor, "flags.dnd5e.spellSniper")) {
+        const conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
+        ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.dnd5e.spellSniper`, conditionData);
+      }
+      const sharpShooterFlag = foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.sharpShooter`) || foundry.utils.getProperty(this.actor, `flags.dnd5e.sharpShooter`);
+      if (this.activity?.actionType === "rwak" && sharpShooterFlag) {
+        const conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
+        ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.sharpShooter`, conditionData);
+        ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.dnd5e.sharpShooter`, conditionData);
+      }
+      if (this.token) bonusAC = computeCoverBonus(this.token, targetToken, activity);
+      if (ignoreCover && bonusAC < FULL_COVER) bonusAC = 0;
+      targetAC += bonusAC;
+
+      const midiFlagsAttackBonus = foundry.utils.getProperty(targetActor, `flags.${MODULE_ID}.grants.attack.bonus`);
+      if (!this.isFumble) {
+        if (midiFlagsAttackBonus) {
+          if (midiFlagsAttackBonus?.all) {
+            const attackBonusRoll = await (new Roll(midiFlagsAttackBonus.all, targetActor.getRollData()))?.evaluate();
+            attackBonus = attackBonusRoll?.total ?? 0;
+            foundry.utils.setProperty(this.actor, "flags.midi.evaluated.grants.attack.bonus.all", { value: attackBonus, effects: [`${targetActor.name}`] });
+          }
+          if (midiFlagsAttackBonus[activity.actionType]) {
+            const attackBonusRoll = await (new Roll(midiFlagsAttackBonus[activity.actionType], targetActor.getRollData())).evaluate();
+            attackBonus = attackBonusRoll?.total ?? 0;
+            foundry.utils.setProperty(this.actor, `flags.midi.evaluated.grants.attack.bonus.${activity.actionType}`, { value: attackBonus, effects: [`${targetActor.name}`] });
+          }
+        }
+        if (challengeModeArmorSet) isHit = attackTotal > targetAC || this.isCritical;
+        else {
+          if (this.attackRoll && !foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
+            const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
+            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+            // TODO what else to do once rolled
+            targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + bonusAC;
+          }
+          isHit = (attackTotal + attackBonus) >= targetAC || this.isCritical;
+        }
+        if (bonusAC === FULL_COVER) isHit = false; // bonusAC will only be FULL_COVER if cover bonus checking is enabled.
+
+        if (targetEC) isHitEC = challengeModeArmorSet && attackTotal <= targetAC && attackTotal >= targetEC && bonusAC !== FULL_COVER;
+        // check to see if the roll hit the target
+        if ((isHit || isHitEC) && this.activity?.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
+          const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
+          // reaction is the same as reactionhit to accomodate the existing reaction workflow
+          let result;
+          if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
+            result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+          }
+          if (!Workflow.getWorkflow(this.id)) // workflow has been removed - bail out
+            return;
+          targetAC = Number.parseInt(targetActor.system.attributes.ac.value) + bonusAC;
+          if (targetEC) targetEC = targetActor.system.attributes.ac.EC + bonusAC;
+          if (result.ac) targetAC = result.ac + bonusAC; // deal with bonus ac if any.
+          if (targetEC) targetEC = targetAC - targetAR;
+          if (bonusAC === FULL_COVER) isHit = false; // bonusAC will only be FULL_COVER if cover bonus checking is enabled.
+          isHit = (attackTotal + attackBonus >= targetAC || this.isCritical) && result.name !== "missed";
+          if (challengeModeArmorSet) isHit = this.attackTotal >= targetAC || this.isCritical;
+          if (targetEC) isHitEC = challengeModeArmorSet && this.attackTotal <= targetAC && this.attackTotal >= targetEC;
+        } else if ((!isHit && !isHitEC) && this.activity?.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`)) {
+          const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
+          if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
+            let result;
+            if (isHit || isHitEC) {
+              result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionhit", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+            }
+            else
+              result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionmissed", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
+
+          }
+          // TODO what else to do once rolled
+        }
+        const optionalCrits = checkRule("optionalCritRule");
+        if (this.targets.size === 1 && optionalCrits !== false && optionalCrits > -1) {
+          if (checkRule("criticalNat20") && this.isCritical) {
+          } else {
+            this.isCritical = attackTotal >= targetAC + optionalCrits;
+          }
+        }
+        hitResultNumeric = this.isCritical ? "++" : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
+      }
+
+      // TODO come back and parameterise with flags and actor to use
+
+      const midiFlagsActorFail = foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.fail`);
+      if (midiFlagsActorFail) {
+        const conditionData = createConditionData({ workflow: this, target: this.token, actor: this.actor });
+        if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.fail.all`, conditionData)
+          || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.fail.attack`, conditionData)
+          || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.fail.attack.${activity.actionType}`, conditionData)) {
+          isHit = false;
+          isHitEC = false;
+          this.isCritical = false;
+        }
+      }
+      const midiFlagsActorSuccess = foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.success`);
+      if (midiFlagsActorSuccess) {
+        const conditionData = createConditionData({ workflow: this, target: this.token, actor: this.actor });
+        if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.success.all`, conditionData)
+          || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.success.attack.all`, conditionData)
+          || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.success.attack.${activity.actionType}`, conditionData)) {
+          isHit = true;
+          isHitEC = false;
+          this.isFumble = false;
+        }
+      }
+
+      const midiFlagsGrantsAttackSuccess = foundry.utils.getProperty(targetActor, `flags.${MODULE_ID}.grants.attack.success`);
+      const midiFlagsGrantsAttackFail = foundry.utils.getProperty(targetActor, `flags.${MODULE_ID}.grants.attack.fail`);
+      let conditionData;
+      if (midiFlagsGrantsAttackSuccess || midiFlagsGrantsAttackFail) {
+        conditionData = createConditionData({ workflow: this, target: this.token, actor: this.actor });
+
+        if (await evalAllConditionsAsync(targetActor, `flags.${MODULE_ID}.grants.attack.success.all`, conditionData)
+          || await evalAllConditionsAsync(targetActor, `flags.${MODULE_ID}.grants.attack.success.${activity.actionType}`, conditionData)) {
+          isHit = true;
+          isHitEC = false;
+          this.isFumble = false;
+        }
+        if (await evalAllConditionsAsync(targetActor, `flags.${MODULE_ID}.grants.attack.fail.all`, conditionData)
+          || await evalAllConditionsAsync(targetActor, `flags.${MODULE_ID}.grants.attack.fail.${activity.actionType}`, conditionData)) {
+          isHit = false;
+          isHitEC = false;
+          this.isCritical = false;
+        }
+      }
+
+      let hitScale = 1;
+      if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor")) && !this.isCritical) hitScale = Math.floor((this.attackTotal - targetEC + 1) / ((targetActor?.system.attributes.ac.AR ?? 0) + 1) * 10) / 10;
+      if (!this.challengeModeScale) this.challengeModeScale = {};
+      this.challengeModeScale[(targetToken.actor as Actor)?.uuid ?? "dummy"] = hitScale;
+      if (this.isCritical) isHit = true;
+      if (isHit || this.isCritical) this.hitTargets.add(targetToken);
+      if (isHitEC) this.hitTargetsEC.add(targetToken);
+      if (isHit || isHitEC) await this.processCriticalFlags();
+      // This was set by computeCoverBonus so clear it after use.
+      foundry.utils.setProperty(targetActor, `flags.${MODULE_ID}.acBonus`, 0);
+
       if (game.user?.isGM) log(`${this.speaker.alias} Rolled a ${this.attackTotal + attackBonus} to hit ${targetName} 's AC of ${targetAC} ${(isHit || this.isCritical) ? "hitting" : "missing"}`);
       // Log the hit on the target
       let attackType = ""; //item?.name ? i18n(item.name) : "Attack";
@@ -5834,43 +5821,7 @@ export class Workflow {
       if (VideoHelper.hasVideoExtension(img ?? "")) {
         img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 }) ?? "";
       }
-      // If using active defence hitTargets are up to date already.
-      if (this.useActiveDefence) {
-        if (this.activeDefenceRolls[getTokenDocument(targetToken)?.uuid ?? ""]) {
-          const adRoll = this.activeDefenceRolls[getTokenDocument(targetToken)?.uuid ?? ""] ?? {};
-          targetAC = adRoll.result ?? adRoll.total;
-          // const adRoll = this.activeDefenceRolls[getTokenDocument(targetToken)?.uuid ?? ""] ?? {};
-          // hitString = `(${adRoll.result ?? adRoll.total}): ${hitString}`
-        }
-        // Invert the isHitResult and hitSymbol so that the results of the defense roll looks the same as when making a saving throw
-        if (!challengeModeArmorSet) {
-          switch (hitSymbol) {
-            case "fa-check-double":
-              // display critical hit as critical failure of the defense roll
-              isHitResult = "fumble";
-              hitSymbol = "fa-xmarks-lines";
-              break;
-            case "fa-check":
-              // display hit as a failure of the defense roll
-              isHitResult = "miss";
-              hitSymbol = "fa-xmark";
-              break;
-            case "fa-times":
-              // deprecated name of FA icon
-            case "fa-xmark":
-              if (isHitResult === "fumble") {
-                // display fumble as a critical success of the defense roll
-                isHitResult = "critical";
-                hitSymbol = "fa-check-double";
-              } else {
-                // display miss as a success of the defense roll
-                isHitResult = "hit";
-                hitSymbol = "fa-check";
-              }
-              break;
-          }
-        }
-      }
+
       if (this.isFumble) hitResultNumeric = "--";
       const targetUuid = getTokenDocument(targetToken)?.uuid ?? "";
 
@@ -5917,133 +5868,8 @@ export class Workflow {
     this.hitTargetsEC = this.hitTargetsEC; // force update
   }
 
-  async activeDefence(item, roll) {
-    // Roll is d20 + AC - 10
-    let hookId = Hooks.on("renderChatMessage", this.processDefenceRoll.bind(this));
-    try {
-      this.hitTargets = new Set();
-      this.hitTargetsEC = new Set();
-      this.defenceRequests = {};
-      this.defenceTimeouts = {};
-      this.activeDefenceRolls = {};
-      this.isCritical = false;
-      this.isFumble = false;
-      // Get the attack bonus for the attack
-      const attackBonus = roll.total - roll.dice[0].total; // TODO see if there is a better way to work out roll plusses
-      await this.checkActiveAttacks(attackBonus, false, 20 - (roll.options.fumble ?? 1) + 1, 20 - (roll.options.critical ?? 20) + 1);
-      this.hitTargets = this.hitTargets; // force update
-    } catch (err) {
-      TroubleShooter.recordError(err, "activeDefence");
-    } finally {
-      Hooks.off("renderChatMessage", hookId);
-    }
-    return this.performState(this.WorkflowState_AttackRollComplete);
-  }
-
   get useActiveDefence() {
     return game.user?.isGM && checkRule("activeDefence");
-  }
-
-  async checkActiveAttacks(attackBonus = 0, whisper = false, fumbleTarget, criticalTarget) {
-    if (debugEnabled > 1) debug(`active defence : whisper ${whisper}  hit targets ${this.targets}`)
-    if (this.targets.size <= 0) {
-      return;
-    }
-    this.activeDefenceDC = 12 + attackBonus;
-
-    let promises: Promise<any>[] = [];
-
-    for (let target of this.targets) {
-      if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
-      let advantage: boolean | undefined = undefined;
-      // @ts-expect-error no dnd5e-types
-      let advantageMode = game.system.dice.D20Roll.ADV_MODE.NORMAL;
-      const targetActorSystem = target.actor.system;
-
-      // TODO: Add in AC Bonus for cover
-      // @ts-expect-error no dnd5e-types
-      const dcMod = targetActorSystem.attributes.ac.value - 10;
-      let modString;
-      if (dcMod < 0) modString = ` ${dcMod}`;
-      else if (dcMod == 0) modString = "";
-      else modString = `+ ${dcMod}`;
-      let formula = `1d20${modString}`;
-      // Advantage/Disadvantage is reversed for active defence rolls.
-      const wfadvantage = this.advantage || this.rollOptions.advantage;
-      const wfdisadvantage = this.disadvantage || this.rollOptions.disadvantage;
-      if (wfadvantage && !wfdisadvantage) {
-        advantage = false;
-        formula = `2d20kl${modString}`;
-        // @ts-expect-error no dnd5e-types
-        advantageMode = game.system.dice.D20Roll.ADV_MODE.DISADVANTAGE;
-      } else if (!wfadvantage && wfdisadvantage) {
-        // @ts-expect-error no dnd5e-types
-        advantageMode = game.system.dice.D20Roll.ADV_MODE.ADVANTAGE;
-        advantage = true;
-        formula = `2d20kh${modString}`;
-      }
-      var player = playerFor(target instanceof Token ? target : target.object);
-      // if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
-      if (debugEnabled > 0) warn(`checkSaves | Player ${player?.name} controls actor ${(target.actor as Actor).name} - requesting ${this.activity.save.ability} save`);
-      if (player && player.active && !player.isGM) {
-        promises.push(new Promise((resolve) => {
-          const requestId = (target.actor as Actor)?.uuid ?? foundry.utils.randomID();
-          const playerId = player?.id;
-          this.defenceRequests[requestId] = resolve;
-          requestPCActiveDefence(player, target.actor, advantage, this.item.name, this.activeDefenceDC, formula, requestId, { workflow: this })
-          // set a timeout for taking over the roll
-          if (configSettings.playerSaveTimeout > 0) {
-            this.defenceTimeouts[requestId] = setTimeout(async () => {
-              if (this.defenceRequests[requestId]) {
-                delete this.defenceRequests[requestId];
-                delete this.defenceTimeouts[requestId];
-                //@ts-expect-error
-                const result = await (new game.system.dice.D20Roll(formula, {}, { advantageMode })).evaluate();
-                result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")}` });
-
-                resolve(result);
-              }
-            }, configSettings.playerSaveTimeout * 1000);
-          }
-        }));
-      } else {  // must be a GM so can do the roll direct
-        promises.push(
-          new Promise(async (resolve) => {
-            //@ts-expect-error
-            const result = await (new game.system.dice.D20Roll(formula, {}, { advantageMode })).evaluate();
-            displayDSNForRoll(result, "attackRoll")
-            resolve(result);
-          })
-        );
-      }
-    }
-    if (debugEnabled > 1) debug("check saves: requests are ", this.saveRequests)
-    var results = await Promise.all(promises);
-
-    this.rollResults = results;
-    let i = 0;
-    for (let target of this.targets) {
-      if (!target.actor) continue; // these were skipped when doing the rolls so they can be skipped now
-      if (!results[i]) {
-        const message = `Token ${target?.name} ${getTokenDocument(target)?.uuid}, "could not roll active defence assuming 1`;
-        error(message, target);
-        TroubleShooter.recordError(new Error(message), message);
-        //@ts-expect-error
-        const D20Roll = CONFIG.Dice.D20Roll;
-        results[i] = await new D20Roll("1").evaluate();
-      }
-      const result = results[i];
-      let rollTotal = results[i]?.total || 0;
-      this.isCritical = result.dice[0].total <= criticalTarget
-      this.isFumble = result.dice[0].total >= fumbleTarget;
-      this.activeDefenceRolls[getTokenDocument(target)?.uuid ?? ""] = results[i];
-      let hit = this.isCritical || rollTotal < this.activeDefenceDC;
-      if (hit) {
-        this.hitTargets.add(target);
-      } else this.hitTargets.delete(target);
-      if (game.user?.isGM) log(`Ability active defence: ${target.name} rolled ${rollTotal} vs attack DC ${this.activeDefenceDC}`);
-      i++;
-    }
   }
 
   async setAttackRoll(roll: Roll) {
@@ -6291,6 +6117,293 @@ export class Workflow {
     return [await returnValue];
   }
 }
+
+export class ActiveDefenceWorkflow extends Workflow {
+  get useActiveDefence() { return true; }
+
+  async WorkflowState_WaitForAttackRoll(context?: any): Promise<WorkflowState> {
+    return super.WorkflowState_WaitForAttackRoll(context);
+  }
+  async processAttackRoll() {
+    return super.processAttackRoll();
+  }
+
+  async WorkflowState_AttackRollComplete(context?: any): Promise<WorkflowState> {
+    //@ts-expect-error
+    let attackBonus = this.attackRoll.total - this.attackRoll.dice[0]?.total; // TODO see if there is a better way to work out roll plusses
+    this.activeDefenceDC = 22 + attackBonus;
+    return super.WorkflowState_AttackRollComplete(context);
+  }
+  async checkHits() {
+    if (!this.attackRoll || !this.item) return;
+    const item = this.item;
+    if (!this.attackRoll?.total) {
+      this.abort = true;
+      return this.performState(this.WorkflowState_Aborted);
+    }
+
+    this.displayHitTargets(false);
+    // Roll is d20 + AC - 10
+    let hookId = Hooks.on("renderChatMessageHTML", this.processDefenceRoll.bind(this));
+    try {
+      this.hitTargets = new Set();
+      this.hitTargetsEC = new Set();
+      this.defenceRequests = {};
+      this.defenceTimeouts = {};
+      this.activeDefenceRolls = {};
+      this.isCritical = false;
+      this.isFumble = false;
+      // Get the attack bonus for the attack
+
+      await this.displayAttackRoll();
+      await this.checkActiveAttacks(false, this.attackRoll);
+      this.hitTargets = this.hitTargets; // force update
+      const isHitEC = false;
+      for (let targetToken of this.targets) {
+        let targetAC;
+        let adRoll;
+        const targetTokenDocument = getTokenDocument(targetToken);
+        if (!targetTokenDocument) continue;
+        if (this.activeDefenceRolls[targetTokenDocument?.uuid ?? ""]) {
+          adRoll = this.activeDefenceRolls[getTokenDocument(targetTokenDocument)?.uuid ?? ""] ?? {};
+
+          let attackType = ""; //item?.name ? i18n(item.name) : "Attack";
+          const isHit = this.hitTargets.has(targetToken);
+          let hitSymbol = "fa-blank"
+          // if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor")) && !this.isCritical) hitScale = Math.floor(this.challengeModeScale[targetActor.uuid]);
+          let isHitResult = "miss";
+          if (game.user?.isGM && ["hitDamage", "all"].includes(configSettings.hideRollDetails) && (this.isCritical || this.isHit || this.isHitEC)) {
+            isHitResult = "hit";
+            hitSymbol = "fa-tick";
+          } else if (this.isCritical) {
+            isHitResult = "critical";
+            hitSymbol = "fa-check-double"
+          } else if (game.user?.isGM && this.isFumble && ["hitDamage", "all"].includes(configSettings.hideRollDetails)) {
+            isHitResult = "miss";
+            hitSymbol = "fa-times";
+          } else if (this.isFumble) {
+            isHitResult = "fumble";
+            hitSymbol = "fa-xmarks-lines"
+          } else if (isHit) {
+            isHitResult = "hit";
+            hitSymbol = "fa-check";
+          } else if (isHitEC && ["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor"))) {
+            isHitResult = "hitEC";
+            hitSymbol = "fa-check";
+          } else if (isHitEC) {
+            isHitResult = "hitEC";
+            hitSymbol = "fa-check";
+          } else {
+            isHitResult = "miss";
+            hitSymbol = "fa-times";
+          }
+          let hitStyle = "";
+          //TODO work out how to do
+          /*
+          if (attackTotal !== this.attackTotal) {
+            if (!configSettings.displayHitResultNumeric &&
+              (!game.user?.isGM || ["none", "detailsDSN", "details"].includes(configSettings.hideRollDetails))) {
+              // hitString = `(${attackTotal}) ${hitString}`; // prepend the modified hit roll
+            } else {
+              // hitString = `(${attackTotal - this.attackTotal}) ${hitString}`; // prepend the diff in the modified roll
+            }
+          }
+    */
+          let img = (targetTokenDocument instanceof Token ? targetTokenDocument.document : targetTokenDocument)?.texture?.src || (targetTokenDocument.actor as Actor).img;
+          // @ts-expect-error no dnd5e-types
+          if (configSettings.usePlayerPortrait && (targetTokenDocument.actor as Actor)?.type === "character") {
+            img = (targetTokenDocument.actor as Actor).img || (targetTokenDocument instanceof Token ? targetTokenDocument.document : targetTokenDocument)?.texture?.src;
+          }
+          if (VideoHelper.hasVideoExtension(img ?? "")) {
+            img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 }) ?? "";
+          }
+          let acBonusString;
+          const acDisplay = `${adRoll.total}${acBonusString ?? ""}`;
+          const bonusAC = 0;
+          let attackBonus = this.activeDefenceDC - 22;
+          // Compute cover bonus and apply
+          const targetUuid = targetTokenDocument.uuid;
+          this.hitDisplayData[targetUuid] = {
+            isPC: (targetTokenDocument.actor as Actor)?.hasPlayerOwner,
+            target: targetTokenDocument,
+            actorUuid: (targetTokenDocument.actor as Actor).uuid,
+            tokenuuid: targetUuid,
+            hitStyle,
+            attackBonus,
+            ac: targetAC - attackBonus,
+            acDisplay,
+            baseAc: targetAC - bonusAC,
+            hitClass: ["hit", "critical", "isHitEC"].includes(isHitResult) ? "success" : "failure",
+            acClass: (targetTokenDocument.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-ac",
+            hitSymbol,
+            attackType,
+            showAC: true,
+            img,
+            gmName: getTokenName(targetTokenDocument),
+            playerName: getTokenPlayerName(targetTokenDocument),
+            bonusAC: undefined,
+            hitResultNumeric: adRoll.total,
+            attackTotal: adRoll.total
+          };
+        }
+      }
+    } catch (err) {
+      TroubleShooter.recordError(err, "activeDefence");
+    } finally {
+      Hooks.off("renderChatMessage", hookId);
+    }
+  }
+
+  //@ts-expect-error no dnd5e types
+  async checkActiveAttacks(whisper = false, roll: CONFIG.Dice.D20Roll, coverBonus = 0) {
+    if (debugEnabled > 1) debug(`active defence : whisper ${whisper}  hit targets ${this.targets}`)
+    if (this.targets.size <= 0) {
+      return;
+    }
+    //@ts-expect-error no dnd5e types
+    const D20Roll = CONFIG.Dice.D20Roll;
+    const criticalTarget = 20 - (roll.options.criticalFailure ?? 1) + 1;
+    const fumbleTarget = 20 - (roll.options.criticalSuccess ?? 20) + 1;
+    let advantageMode = roll?.options?.advantageMode ?? D20Roll.NORMAL;
+    let promises: Promise<any>[] = [];
+    for (let target of this.targets) {
+      if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
+      let advantage: boolean | undefined = undefined;
+      const targetActorSystem = target.actor.system;
+
+      // TODO: Add in AC Bonus for cover
+      // @ts-expect-error no dnd5e-types
+      const dcMod = targetActorSystem.attributes.ac.value;
+      let modString;
+      modString = `+ ${dcMod}`;
+
+      let coverBonus = 0;
+      const noCoverFlag = foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.ignoreCover`);
+      let ignoreCover = false;
+      if (noCoverFlag) {
+        const conditionData = createConditionData({ workflow: this, target, actor: this.actor });
+        ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.ignoreCover`, conditionData);
+      }
+      if (this.activity?.actionType === "rsak" && foundry.utils.getProperty(this.actor, "flags.dnd5e.spellSniper")) {
+        const conditionData = createConditionData({ workflow: this, target, actor: this.actor });
+        ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.dnd5e.spellSniper`, conditionData);
+      }
+      const sharpShooterFlag = foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.sharpShooter`) || foundry.utils.getProperty(this.actor, `flags.dnd5e.sharpShooter`);
+      if (this.activity?.actionType === "rwak" && sharpShooterFlag) {
+        const conditionData = createConditionData({ workflow: this, target, actor: this.actor });
+        ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.sharpShooter`, conditionData);
+        ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.dnd5e.sharpShooter`, conditionData);
+      }
+      if (this.token) coverBonus = computeCoverBonus(this.token, target, this.activity);
+      if (ignoreCover && coverBonus < FULL_COVER) coverBonus = 0;
+      if (coverBonus) modString += ` + ${coverBonus}`;
+      let formula = `1d20${modString}`;
+
+      if (advantageMode === D20Roll.ADV_MODE.ADVANTAGE) {
+        advantageMode = D20Roll.ADV_MODE.DISADVANTAGE
+      } else if (advantageMode === D20Roll.ADV_MODE.DISADVANTAGE) {
+        advantageMode = D20Roll.ADV_MODE.ADVANTAGE;
+      }
+      const options = {
+        criticalSuccess: criticalTarget,
+        criticalFailure: fumbleTarget,
+        advantageMode,
+        target: this.activeDefenceDC
+      };
+      let player = playerFor(target instanceof Token ? target : target.object);
+      // if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
+      if (debugEnabled > 0) warn(`checkSaves | Player ${player?.name} controls actor ${(target.actor as Actor).name} - requesting DC ${this.activeDefenceDC} save`);
+      if (player && player.active && !player.isGM && target.actor) {
+        promises.push(new Promise((resolve) => {
+          const requestId = (target.actor as Actor)?.uuid ?? foundry.utils.randomID();
+          this.defenceRequests[requestId] = resolve;
+          if (player) requestPCActiveDefence(player, target.actor as Actor, this.item.name, requestId, { formula, rollOptions: options, bonus: dcMod, coverBonus, workflow: this })
+          // set a timeout for taking over the roll
+          if (configSettings.playerSaveTimeout > 0) {
+            this.defenceTimeouts[requestId] = setTimeout(async () => {
+              if (this.defenceRequests[requestId]) {
+                delete this.defenceRequests[requestId];
+                delete this.defenceTimeouts[requestId];
+                const result = await (new D20Roll(formula, {}, options)).evaluate();
+                result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")}` });
+                resolve(result);
+              }
+            }, configSettings.playerSaveTimeout * 1000);
+          }
+        }));
+      } else {  // must be a GM so can do the roll direct
+        promises.push(
+          new Promise(async (resolve) => {
+            const result = await (new D20Roll(formula, {}, options)).evaluate();
+            result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")} ${options.criticalSuccess}/${options.criticalFailure}` });
+            displayDSNForRoll(result, "attackRoll")
+            resolve(result);
+          })
+        );
+      }
+    }
+    if (debugEnabled > 1) debug("check saves: requests are ", this.saveRequests)
+    var results = await Promise.all(promises);
+
+    this.rollResults = results;
+    let i = 0;
+    for (let target of this.targets) {
+      if (!target.actor) continue; // these were skipped when doing the rolls so they can be skipped now
+      if (!results[i]) {
+        const message = `Token ${target?.name} ${getTokenDocument(target)?.uuid}, "could not roll active defence assuming 1`;
+        error(message, target);
+        TroubleShooter.recordError(new Error(message), message);
+        //@ts-expect-error
+        const D20Roll = CONFIG.Dice.D20Roll;
+        results[i] = await new D20Roll("1").evaluate();
+      }
+      const result = results[i];
+      let rollTotal = results[i]?.total || 0;
+      this.isFumble = result.dice[0].total >= criticalTarget; // save fumbled so critical hit
+      this.isCritical = result.dice[0].total <= fumbleTarget; // save critical so fumbled attack
+      this.activeDefenceRolls[getTokenDocument(target)?.uuid ?? ""] = results[i];
+      let hit = this.isCritical || rollTotal < this.activeDefenceDC;
+      if (hit) {
+        this.hitTargets.add(target);
+      } else this.hitTargets.delete(target);
+      if (game.user?.isGM) log(`Ability active defence: ${target.name} rolled ${rollTotal} vs attack DC ${this.activeDefenceDC}`, results[i]);
+      i++;
+    }
+  }
+
+  async displayAttackRoll() {
+    const chatMessage = this.chatCard;
+    let content = chatMessage && foundry.utils.duplicate(chatMessage.content);
+    const flags = chatMessage?.flags || {};
+    let newFlags = {};
+    const searchRe = /<div class="midi-qol-attack-roll"[\s\S]*?<div class="end-midi-qol-attack-roll">/;
+    let DCString = "DC";
+    if (game.system?.id === "dnd5e") {
+      DCString = i18n(`${this.systemString}.AbbreviationDC`) ?? "DC";
+    } else if (i18n("SW5E.AbbreviationDC") !== "SW5E.AbbreviationDC") {
+      DCString = i18n("SW5E.AbbreviationDC") ?? "DC";
+    }
+    const attackString = `<label class="midi-qol-active-defence-dc">${DCString} ${this.activeDefenceDC}</label> ${i18n("midi-qol.ActiveDefenceString")}`;
+    const replaceString = `<div class="midi-qol-attack-roll"> <div style="text-align:center"> ${attackString} </div><div class="end-midi-qol-attack-roll">`;
+    content = content.replace(searchRe, replaceString);
+    const targetUuids = Array.from(this.targets).map(t => getTokenDocument(t)?.uuid);
+    newFlags = foundry.utils.mergeObject(flags, {
+      "midi-qol":
+      {
+        isHit: this.hitTargets.size > 0,
+        isHitEC: this.hitTargetsEC.size > 0,
+      },
+      [WorkflowDataFlags.isCritical]: this.isCritical,
+      [WorkflowDataFlags.isFumble]: this.isFumble,
+      [WorkflowDataFlags.targets]: Array.from(this.targets).map(t => getTokenDocument(t)?.uuid),
+      [WorkflowDataFlags.hitTargets]: Array.from(this.hitTargets).map(t => getTokenDocument(t)?.uuid),
+      [WorkflowDataFlags.hitTargetsEC]: Array.from(this.hitTargetsEC).map(t => getTokenDocument(t)?.uuid),
+    }, { overwrite: true, inplace: false });
+    const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
+    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true);
+  }
+}
+
 export class UserWorkflow extends Workflow {
   static get forceCreate() { return true; }
 }

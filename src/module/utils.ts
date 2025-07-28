@@ -391,7 +391,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   let hitTargets: Set<Token | TokenDocument> = new Set([...workflow.hitTargets, ...workflow.hitTargetsEC]);
   let theTargets = new Set(workflow.targets);
   // TODO becomes activity.target.affects.type === "self"
-  if (activity.target.affects.type === "self") theTargets = await getOrCreateTokenForActorAsSet(actor) || theTargets;
+  // if (activity.target.affects.type === "self") theTargets = await getOrCreateTokenForActorAsSet(actor) || theTargets;
   let effectsToExpire: string[] = [];
   if (hitTargets.size > 0 && activity.attack) effectsToExpire.push("1Hit");
   if (hitTargets.size > 0 && activity.damage) effectsToExpire.push("DamageDealt");
@@ -687,33 +687,34 @@ export function requestPCSave(ability: string, rollType, player, actor, options:
   }
 }
 
-export function requestPCActiveDefence(player, actor, advantage, saveItemName, rollDC, formula, requestId, options?: { workflow: Workflow }) {
+export function requestPCActiveDefence(player: User, actor: Actor, saveItemName: string, requestId: string, options: { formula: string, bonus: number, coverBonus: number, rollOptions: any, workflow: Workflow }) {
   const useUuid = true;
   const actorId = useUuid ? actor.uuid : actor.id;
-  if (!player.isGM && false) {
-    advantage = 2;
-  } else {
-    advantage = (advantage === true ? 1 : advantage === false ? -1 : 0);
-  }
+
   let mode = checkRule("activeDefenceShow") ?? CONST.DICE_ROLL_MODES.SELF;
-  let message = `${saveItemName} ${configSettings.hideRollDetails === "none" ? "DC " + rollDC : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
-  if (options?.workflow) { //prompt for a normal roll.
-    const rollOptions: any = { advantage, midiType: "defenceRoll", flavor: message };
-    if (configSettings.autoCheckHit === "all") rollOptions.targetValue = rollDC;
-    socketlibSocket.executeAsUser("D20Roll", player.id, { targetUuid: actor.uuid, formula, request: message, rollMode: mode, options: rollOptions, messageData: { speaker: getSpeaker(actor) } }).then(result => {
-      if (debugEnabled > 1) debug("D20Roll result ", result);
-      log("midi-qol | D20Roll result ", result);
-      const handler = options.workflow.defenceRequests[requestId];
-      delete options.workflow.defenceRequests[requestId];
-      delete options.workflow.defenceTimeouts[requestId];
-      let returnValue;
-      try {
-        //@ts-expect-error D20Roll
-        returnValue = CONFIG.Dice.D20Roll.fromJSON(JSON.stringify(result));
-      } catch (err) { returnValue = {} }
-      handler(returnValue);
-    });
-  }
+  let flavor = `${saveItemName} ${configSettings.optionalRules.activeDefenceDC ? "DC " + options.rollOptions.target : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
+  const midiType = "defenceRoll";
+  /*  const options = {
+      criticalSuccess: criticalTarget,
+      criticalFailure: fumbleTarget,
+      advantageMode,
+      target: this.activeDefenceDC
+    };*/
+  socketlibSocket.executeAsUser("D20Roll", player.id, {targetUuid: actor.uuid, formula: options.formula, bonus: options.bonus, coverBonus: options.coverBonus, rollOptions: options.rollOptions, rollMode: mode, midiType, flavor, messageData: { speaker: getSpeaker(actor) } }).then(result => {
+    if (debugEnabled > 1) debug("D20Roll result ", result);
+    log("midi-qol | D20Roll result ", result);
+    const handler = options.workflow.defenceRequests[requestId];
+    if (!handler) // Roll must have timed out so we can ignore the return value;
+      return;
+    delete options.workflow.defenceRequests[requestId];
+    delete options.workflow.defenceTimeouts[requestId];
+    let returnValue;
+    try {
+      //@ts-expect-error D20Roll
+      returnValue = CONFIG.Dice.D20Roll.fromJSON(JSON.stringify(result));
+    } catch (err) { returnValue = {} }
+    handler(returnValue);
+  });
 }
 
 export function midiCustomEffect(...args) {
@@ -4076,7 +4077,7 @@ export async function doReactions(targetRef: Token | TokenDocument | string, tri
       const midiFlags: any = target.actor.flags[MODULE_ID];
       reactionCount = reactionCount + Object.keys(midiFlags?.optional ?? [])
         .filter(flag => {
-          if (triggerType !== "reaction" || !midiFlags?.optional[flag].ac) return false;
+          if (triggerType !== "reactionattacked" || !midiFlags?.optional[flag].ac) return false;
           if (!midiFlags?.optional[flag].count) return true;
           return getOptionalCountRemainingShortFlag(target.actor, flag) > 0;
         }).length

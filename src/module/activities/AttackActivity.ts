@@ -352,6 +352,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         if (keys.disadvantage) workflow.rollOptions.disadvantage = keys.disadvantage;
         config.advantage ??= !!keys.advantage || !!(config.midiOptions.advantage ?? workflow.workflowOptions.advantage);
         config.disadvantage ??= !!keys.disadvantage || !!(config.midiOptions.disadvantage ?? workflow.workflowOptions.disadvantage);
+
         preRollHookId = Hooks.once("dnd5e.preRollAttackV2", (rollConfig, dialogConfig, messageConfig) => {
           if (workflow?.aborted) return false;
           if (workflow?.rollOptions?.rollToggle) dialogConfig.configure = !dialogConfig.configure;
@@ -411,6 +412,12 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         if (config.event && workflow) {
           workflow.rollOptions.rollToggle = areMidiKeysPressed(config.event, "RollToggle");
         }
+
+        // Active defence allow the attack roll to complete - only used to evaluate attack bonus
+        if (workflow.useActiveDefence) {
+          message.create = false; // go through the roll process but don't show the attack roll.
+        }
+
         rolls = await super.rollAttack(config, dialog, message);
         if (!rolls || rolls.length === 0) {
           // if (workflow) workflow.aborted = true;
@@ -522,24 +529,6 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         || await asyncHooksCall(`midi-qol.preAttackRoll.${this.uuid}`, workflow) === false) {
         console.warn("midi-qol | attack roll blocked by preAttackRoll hook");
         return false;
-      }
-
-      // Active defence resolves by triggering saving throws and returns early
-      if (game.user?.isGM && workflow.useActiveDefence) {
-        delete config.midiOptions.event; // for dnd 3.0
-        // TODO work out what to do with active defense 
-        /*
-        let result: Roll = await wrapped(foundry.utils.mergeObject(options, {
-          advantage: false,
-          disadvantage: workflow.rollOptions.disadvantage,
-          chatMessage: false,
-          fastForward: true,
-          messageData: {
-            speaker: getSpeaker(this.actor)
-          }
-        }, { overwrite: true, insertKeys: true, insertValues: true }));
-        return workflow.activeDefence(this, result);
-        */
       }
 
       // Advantage is true if any of the sources of advantage are true;

@@ -1,3 +1,15 @@
+### 12.4.64
+* Fixes for Damage Reduction/Damage Resistance/Saves damage calculations to implement specified ordering.
+  - You can configure when saves are applied, either before or after damage reduction/modification.
+  - You can configure when midi specific damage modification is applied, system.traits.dm.midi.xxxx, either before saves/resistance or after. Note dnd5e damage modification is always applied before resistance/immunity/vulnerability.
+* Active defence now works again with some little changes.
+  - If not auto forwarding attack rolls the attacker will be presented with the normal attack roll dialog allowing you to set advantage/bonuses to attack which will be taken into account in the active defence roll.
+  - The defence roll is 1d20 + AC + cover with a DC of 22 + attack bonus. This is the original form of the optional rule.
+  - Advantage/disadvantage are calculated appropriately.
+  - The is a workflow setting (on the optional rules tab) to hide/display the active defence DC when prompting players for an active defence roll.
+  - **Note** not all reaction processing is working with active defence.
+* Various fixes - thanks many contributors.
+  
 ### 12.4.63
 * version bump for recreated zip file
 

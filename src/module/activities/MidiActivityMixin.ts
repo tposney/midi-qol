@@ -1,9 +1,9 @@
 import { GameSystemConfig, MODULE_ID, SystemString, allAttackTypes, debugEnabled, error, geti18nOptions, i18n, i18nFormat, log, warn } from "../../midi-qol.js";
 import { cancelWorkflow, socketlibSocket } from "../GMAction.js";
-import { DDBGameLogWorkflow, DamageOnlyWorkflow, TrapWorkflow, Workflow } from "../Workflow.js";
+import { ActiveDefenceWorkflow, DDBGameLogWorkflow, DamageOnlyWorkflow, TrapWorkflow, Workflow } from "../Workflow.js";
 import { OnUseMacro, OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { checkMechanic, configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
+import { checkMechanic, checkRule, configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
 import { busyWait } from "../tests/setupTest.js";
 import { saveUndoData } from "../undo.js";
@@ -217,7 +217,7 @@ export var MidiActivityMixin = Base => {
         actions: {
           rollDamage: MidiActivityMixin.#rollDamage,
           rollDamageNoCritical: MidiActivityMixin.#rollDamageNoCritical,
-          rollDamageCritical: MidiActivityMixin.#rollDamgeCritical,
+          rollDamageCritical: MidiActivityMixin.#rollDamageCritical,
           confirmDamageRollCancel: MidiActivityMixin.#confirmDamageRollCancel,
           confirmDamageRollComplete: MidiActivityMixin.#confirmDamageRollComplete,
           confirmDamageRollCompleteHit: MidiActivityMixin.#confirmDamageRollCompleteHit,
@@ -315,7 +315,7 @@ export var MidiActivityMixin = Base => {
       return this.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
     }
 
-    static #rollDamgeCritical(event, target, message) {
+    static #rollDamageCritical(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       return this.rollDamage({ event, workflow, midiOptions: { isCritical: true } }, {}, message);
@@ -384,6 +384,9 @@ export var MidiActivityMixin = Base => {
         let activity = item.system.activities.get(this.id);
         if (!usage.workflow) {
           let workflowClass = usage?.midi?.workflowClass ?? globalThis.MidiQOL.workflowClass;
+          if (game.user?.isGM && checkRule("activeDefence")) {
+            workflowClass = ActiveDefenceWorkflow;
+          }
           if (!(workflowClass.prototype instanceof Workflow)) workflowClass = Workflow;
           const workflowOptions = { ...usage.midiOptions, ...(usage.midiOptions?.workflowOptions ?? {}), event: usage.event, storeWorkflow: false };
           delete workflowOptions.workflowOptions;

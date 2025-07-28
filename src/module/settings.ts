@@ -80,7 +80,7 @@ class ConfigSettings {
   autoRollAttack: boolean = false;
   autoRollDamage: string = "none";
   autoCompleteWorkflow = false;
-  saveDROrder = "SaveDRdr";
+  saveDROrder = "DRSaveDr";
   autoTarget: string = "none";
   averageDamage: string = "none";
   checkSaveText: boolean = false;
@@ -193,6 +193,7 @@ class ConfigSettings {
   optionalRules: any = {
     actionSpecialDurationImmediate: false,
     activeDefence: false,
+    activeDefenceDC: true,
     activeDefenceShow: "selfroll",
     autoRerollInitiative: false,
     challengeModeArmor: "none",
@@ -370,7 +371,12 @@ export let fetchParams = () => {
   //@ts-expect-error
   configSettings = game.settings?.get("midi-qol", "ConfigSettings");
   //TODO create a config.html for this
-  if (configSettings.saveDROrder === undefined) configSettings.saveDROrder = "DRSavedr";
+  if (configSettings.saveDROrder === undefined) configSettings.saveDROrder = "DRSaveDr";
+  configSettings.saveDROrder = "DRSaveDr";
+  if (!["DRSaveDr", "SaveDRDr", "SaveDrDR"].includes(configSettings.saveDROrder)) {
+    ui.notifications?.warn("invalidSaveDROrder reset to 'dm.midi/dnd5e.dm -> Saves/(dr/dv/di) - dnd5e RAW'");
+    configSettings.saveDROrder = "DRSaveDr";
+  }
   if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["dice"];
   if (!configSettings.criticalSound) configSettings.criticalSound = CONFIG.sounds["dice"];
   if (!configSettings.diceSound) configSettings.diceSound = CONFIG.sounds["dice"];
@@ -445,6 +451,7 @@ export let fetchParams = () => {
   configSettings.optionalRules = foundry.utils.mergeObject({ // eventually split this into mechanics and rules
     actionSpecialDurationImmediate: false,
     activeDefence: false,
+    activeDefenceDC: true,
     activeDefenceShow: "selfroll",
     challengeModeArmor: "none",
     challengeModeArmorScale: false,
@@ -485,6 +492,7 @@ export let fetchParams = () => {
     configSettings.optionalRules.activeDefenceShow = "gmroll";
     delete configSettings.optionalRules.activeDefenceShowGM;
   }
+  if (configSettings.optionalRules.activeDefenceDC === undefined) configSettings.optionalRules.activeDefenceDC = true;
   if (typeof configSettings.confirmAttackDamage !== "string") configSettings.confirmAttackDamage = "none";
   if (typeof configSettings.requireMagical !== "string" && configSettings.requireMagical !== true) configSettings.requireMagical = "off";
   if (typeof configSettings.requireMagical !== "string" && configSettings.requireMagical === true) configSettings.requireMagical = "nonspell";

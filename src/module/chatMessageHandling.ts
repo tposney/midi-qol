@@ -269,6 +269,11 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-saves-display .midi-qol-save-class").removeClass("critical");
       html.find(".midi-qol-saves-display .midi-qol-save-class").removeClass("fumble");
     }
+
+    if (!configSettings.optionalRules.activeDefenceDC) {
+      html.find(".midi-qol-active-defence-dc").remove();
+    }
+
     if (safeGetGameSetting("dnd5e", "attackRollVisibility")) {
       const visibility = safeGetGameSetting("dnd5e", "attackRollVisibility");
       if (visibility === "none") {
