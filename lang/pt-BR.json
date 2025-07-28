@@ -562,6 +562,8 @@
   "midi-qol.ActiveDefenceString": "Active Defence",
   "midi-qol.ActiveDefence.Name": "Defesa Ativa",
   "midi-qol.ActiveDefence.Hint": "Ao invés do Mestre rolar 'Para Atingir', jogadores fazem uma rolagem de defesa.",
+  "midi-qol.ActiveDefenceDC.Name": "Exibir CD da Defesa Ativa",
+  "midi-qol.ActiveDefenceDC.Hint": "Se habilitado, a CD da Defesa Ativa será mostrada no cartão de chat.",
   "midi-qol.ActiveDefenceShow.Name": "Exibição Padrão para Rolagens de Defesa Ativa",
   "midi-qol.ActiveDefenceShow.Hint": "Se definido para 'Rolagem Pessoal', a rolagem será escondida do Mestre, independente de outras configurações.",
   "midi-qol.GMHide3dDice.Name": "Esconder Rolagens de Dados 3D do Mestre. Subscreve outras configurações (apenas Cartão Mesclado)",
@@ -867,8 +869,9 @@
   "midi-qol.SaveDROrder.Name": "Ordem de Redução de Dano",
   "midi-qol.SaveDROrder.Hint": "Ordem em que a redução de dano será aplicada.",
   "midi-qol.SaveDROrderOptions": {
-    "DRSavedr": "Redução de Dano -> Salvaguarda -> Resistência (dr/dv/di)",
-    "SaveDRdr": "Salvaguarda -> Redução de dano -> Resistência (dr/dv/di)"
+    "DRSaveDr": "Mod. Dano (dm.midi/dnd5e.dm) -> Salv./Red. Dano (dr/dv/di)",
+    "SaveDRDr": "Salv. -> Mod. Dano (dm.midi/dnd5e.dm) -> Red. Dano (dr/dv/di)",
+    "SaveDrDR": "Salv. -> Mod. Dano -> Red. Dano (dr/dv/di) -> Mod. Dano (dm.midi)"
   },
   "midi-qol.WaitingForPreviousWorkflow": "Rolagem anterior de {name} não foi completada.",
   "midi-qol.ResolvePreviousWorkflow": "Escolha o que fazer com a rolagem anterior",
@@ -1123,12 +1126,6 @@
       }
     }
   },
-  "midi-qol.FORWARD": {
-    "Title": {
-      "one": "Avanço Midi",
-      "other": "Avanços Midi"
-    }
-  },
   "midi-qol.ATTACK": {
     "Title": {
       "one": "Ataque Midi",
@@ -1154,6 +1151,12 @@
       "other": "Conjurações Midi"
     }
   },
+  "midi-qol.CHECK": {
+    "Title": {
+      "one": "Teste Midi",
+      "other": "Testes Midi"
+    }
+  },
   "midi-qol.DAMAGE": {
     "Title": {
       "one": "Dano Midi",
@@ -1164,6 +1167,12 @@
     "Title": {
       "one": "Encanto Midi",
       "other": "Encantos Midi"
+    }
+  },
+  "midi-qol.FORWARD": {
+    "Title": {
+      "one": "Avanço Midi",
+      "other": "Avanços Midi"
     }
   },
   "midi-qol.HEAL": {
@@ -1217,12 +1226,6 @@
     "Title": {
       "one": "Invocação Midi",
       "other": "Invocações Midi"
-    }
-  },
-  "midi-qol.CHECK": {
-    "Title": {
-      "one": "Teste Midi",
-      "other": "Testes Midi"
     }
   },
   "midi-qol.fields": {
