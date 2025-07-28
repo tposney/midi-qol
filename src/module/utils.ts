@@ -3653,14 +3653,18 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
     const sourceActor = sourceToken?.actor ?? MQfromUuidSync(this.optionalBonusEffectsAC.workflowOptions?.sourceActorUuid);
     if (!sourceToken && sourceActor) sourceToken = await getOrCreateTokenForActor(sourceActor);
     parameters = {
+      ...this.optionalBonusEffectsAC,
       actor: sourceActor,
       tokenUuid: sourceToken?.document?.uuid,
-      item: this.optionalBonusEffectsAC.item,
       target: MQfromUuidSync(this.tokenUuid),
+      triggeringRoll: this.roll,
+      triggeringRollTotal: this.rollTotal,
+      triggeringRollHTML: this.rollHTML,
       options
     }
   } else {
     parameters = {
+      activity: this.activity,
       item: this.item,
       actor: this.actor,
       target: this.targets?.first(),
