@@ -11,10 +11,10 @@
       <div class="midi-qol-box">
         <div class="form-group">
           <label>{{localize "midi-qol.TargetConfirmationAll"}}</label>
-          <input class="midi-always-target-confirmation" type="checkbox" name="all" data-dtype="Boolean" {{checked
-            targetConfirmation.all}} />
+          <input class="midi-always-target-confirmation" type="checkbox" name="always" data-dtype="Boolean" {{checked
+            targetConfirmation.always}} />
         </div>
-        {{#unless targetConfirmation.all}}
+        {{#unless targetConfirmation.always}}
         <div class="midi-qol-box">
           <div class="form-group">
             <label>{{localize "midi-qol.TargetConfirmationNoneTargeted"}}</label>

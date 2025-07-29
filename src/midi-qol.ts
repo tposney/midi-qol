@@ -316,6 +316,7 @@ Hooks.on("dae.modifyBaseValues", (specKey: string, baseValues, _characterSpec) =
 });
 //@ts-expect-error
 Hooks.on("dae.addFieldMappings", (fieldMappings) => {
+  GameSystemConfig = CONFIG.DND5E;
   let allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
   registerSettings();
   fetchParams();
@@ -1389,6 +1390,8 @@ export async function createMidiMacros() {
 }
 
 export function setupMidiStatusEffects() {
+  // @ts-expect-error no dnd5e-types
+  systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;
   if (!CONFIG.statusEffects.find(e => e.id === systemConcentrationId)) {
     // @ts-expect-error not expecting special
     CONFIG.statusEffects.push({ id: systemConcentrationId, name: i18n("EFFECT.DND5E.StatusConcentrating"), img: "systems/dnd5e/icons/svg/statuses/concentrating.svg", special: "CONCENTRATING" });
