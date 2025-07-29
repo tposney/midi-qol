@@ -97,6 +97,11 @@
                         configSettings.optionalRules.activeDefence}} />
                         <div class="notes midi-qol-faint">{{{localize "midi-qol.ActiveDefence.Hint"}}}</div>
                     </div>
+                    <div class = "form-group">
+                      <label> {{ localize "midi-qol.ActiveDefenceDC.Name"}} </label>
+                      <input type="checkbox" name="optionalRules.activeDefenceDC" data-dtype="Boolean" {{checked configSettings.optionalRules.activeDefenceDC}} />
+                      <div class="notes midi-qol-faint">{{{localize "midi-qol.ActiveDefenceDC.Hint"}}}</div>
+                    </div>
                     <div class="form-group">
                         <label>{{localize "midi-qol.ActiveDefenceShow.Name"}}</label>
                         <select name="optionalRules.activeDefenceShow" data-dtype="String">

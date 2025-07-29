@@ -30,6 +30,7 @@ declare module "fvtt-types/configuration" {
       "dnd5e.calculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;
       "dnd5e.postAbilityCheckRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postAttackRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
+      "dnd5e.postBuildSkillRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
       "dnd5e.postSavingThrowRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postSkillRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postSummon": (activity: Activity, profile: unknown, tokens: foundry.canvas.placeables.Token.Implementation[], options: unknown) => void;
@@ -1050,24 +1051,26 @@ export type DamageDescription = {
   allActives?: string[];
 };
 
+type BasicRollConfig = {
+  parts?: string[];
+  data?: AnyObject;
+  situational?: boolean;
+  options?: {
+    target?: number;
+    "midi-qol"?: {
+      modifiers?: string[];
+    };
+    properties?: string[];
+    maximum?: number;
+    minimum?: number;
+    advantage?: boolean;
+    disadvantage?: boolean;
+    rollMode?: string;
+  }
+}
+
 export type RollProcessConfig = {
-  rolls?: {
-    parts?: string[];
-    data?: AnyObject;
-    situational?: boolean;
-    options?: {
-      target?: number;
-      "midi-qol"?: {
-        modifiers?: string[];
-      };
-      properties?: string[];
-      maximum?: number;
-      minimum?: number;
-      advantage?: boolean;
-      disadvantage?: boolean;
-      rollMode?: string;
-    }
-  }[];
+  rolls?: BasicRollConfig[];
   evaluate?: boolean;
   event?: Event;
   hookNames?: string[];

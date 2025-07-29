@@ -81,7 +81,7 @@ class ConfigSettings {
   autoRollAttack: boolean = false;
   autoRollDamage: string = "none";
   autoCompleteWorkflow = false;
-  saveDROrder = "SaveDRdr";
+  saveDROrder = "DRSaveDr";
   autoTarget: string = "none";
   averageDamage: string = "none";
   checkSaveText: boolean = false;
@@ -136,6 +136,7 @@ class ConfigSettings {
   mergeCardCondensed: boolean = false;
   mergeCardMulti: boolean = false;
   mergeCardMultiDamage: boolean = false;
+  displayProperties: boolean = true;
   midiPropertiesTabRole: number = CONST.USER_ROLES.PLAYER;
   confirmAttackDamage: string = "none";
   highlightSuccess: boolean = false;
@@ -349,8 +350,11 @@ export let fetchParams = () => {
   const blfxActive = game.modules.get("boss-loot-assets-premium")?.active || game.modules.get("boss-loot-assets-free")?.active;
 
   configSettings = game.settings.get("midi-qol", "ConfigSettings");
-  //TODO create a config.html for this
-  if (configSettings.saveDROrder === undefined) configSettings.saveDROrder = "DRSavedr";
+  if (configSettings.saveDROrder === undefined) configSettings.saveDROrder = "DRSaveDr";
+  if (!["DRSaveDr", "SaveDRDr", "SaveDrDR"].includes(configSettings.saveDROrder)) {
+    ui.notifications?.warn("invalidSaveDROrder reset to 'dm.midi/dnd5e.dm -> Saves/(dr/dv/di) - dnd5e RAW'");
+    configSettings.saveDROrder = "DRSaveDr";
+  }
   if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["dice"];
   if (!configSettings.criticalSound) configSettings.criticalSound = CONFIG.sounds["dice"];
   if (!configSettings.diceSound) configSettings.diceSound = CONFIG.sounds["dice"];
@@ -447,6 +451,7 @@ export let fetchParams = () => {
     wallsBlockRange: "center",
     mergeCardMulti: false,
     mergeCardMultiDamage: false,
+    displayProperties: true,
   }, configSettings.optionalRules ?? {}, { overwrite: true, insertKeys: true, insertValues: true });
   if (!configSettings.optionalRules.incapacitated) configSettings.optionalRules.incapacitated = "nothing";
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
@@ -540,6 +545,7 @@ export let fetchParams = () => {
   //configSettings.v3DamageApplication = true;
   configSettings.useDamageDetail = false;
   if (configSettings.collapsibleTargets === undefined) configSettings.collapsibleTargets = true;
+  if (configSettings.displayProperties === undefined) configSettings.displayProperties = true;
   criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
   if (criticalDamage === "none") criticalDamage = "default";
   criticalDamageGM = game.settings.get("midi-qol", "CriticalDamageGM");

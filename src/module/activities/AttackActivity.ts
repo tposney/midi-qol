@@ -280,6 +280,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       let checkReaction = !usage.midiOptions.isTriggered; // first pass do reaction checks
       let checkBonusAction = !usage.midiOptions.isTriggered; // first pass do bonus action checks
       let targets: Set<foundry.canvas.placeables.Token.Implementation> | undefined;
+      const savedTargets = foundry.utils.deepClone(game.user?.targets);
       if (usage.midiOptions.targetsToUse) targets = usage.midiOptions.targetsToUse;
       if (!targets) targets = new Set(game.user?.targets);
       for (let target of targets) {
@@ -299,6 +300,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         checkReaction = false;
         checkBonusAction = false;
       }
+      if (game.user && savedTargets) game.user.targets = savedTargets; // restore targets
       return returnValue;
     }
 
@@ -408,6 +410,12 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           }
           return true;
         })
+        // Active defence resolves by triggering saving throws and returns early
+        if (workflow.useActiveDefence) {
+          message.create = false; // go through the roll process but don't show the attack roll.
+        }
+
+
         message ??= {};
         message.create ??= config.midiOptions.chatMessage;
         const rollMode = safeGetGameSetting("core", "rollMode");
@@ -547,24 +555,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         if (workflow.ammunition) await workflow.callMacros(workflow.ammunition, workflow.ammunitionOnUseMacros?.getMacros("preAttackRollConfig"), "OnUse", "preAttackRollConfig");
       }
 
-      // Active defence resolves by triggering saving throws and returns early
-      if (game.user?.isGM && workflow.useActiveDefence) {
-        delete config.midiOptions.event; // for dnd 3.0
-        // TODO work out what to do with active defense 
-        /*
-        let result: Roll = await wrapped(foundry.utils.mergeObject(options, {
-          advantage: false,
-          disadvantage: workflow.rollOptions.disadvantage,
-          chatMessage: false,
-          fastForward: true,
-          messageData: {
-            speaker: getSpeaker(this.actor)
-          }
-        }, { overwrite: true, insertKeys: true, insertValues: true }));
-        return workflow.activeDefence(this, result);
-        */
-      }
-
       // Advantage is true if any of the sources of advantage are true;
       let advantage = config.advantage
         || workflow.workflowOptions.advantage
@@ -651,7 +641,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       return `${type.value === "ranged" ? "r" : "m"}${type.classification === "spell" ? "sak" : "wak"}`;
     }
 
-    set ammunitionItem (value) {
+    set ammunitionItem(value) {
       this._ammunitionItem = value;
     }
 

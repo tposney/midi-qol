@@ -527,12 +527,13 @@
       "_stats": {
         "compendiumSource": "Actor.BogmFuNh1wswTouJ.Item.6XzLslWBNChhYDxO.ActiveEffect.a9mFBJjGO0O0a3tJ",
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.346",
         "systemId": "dnd5e",
         "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/weapons/maces/shortmace-ornate-gold.webp",
       "type": "base",
@@ -610,12 +611,13 @@
       "_stats": {
         "compendiumSource": "Actor.BogmFuNh1wswTouJ.Item.YCcHOQ1E2KnbQ7ML.ActiveEffect.FmPrza7P664YbcmP",
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.346",
         "systemId": "dnd5e",
         "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "_key": "!items.effects!KihN6bk9RwLTOifd.niA6BzSDARi7F5NP"
     }
@@ -832,12 +834,13 @@
   "_stats": {
     "compendiumSource": "Compendium.world.fixup.Item.VDyxqasUquN98Am6",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741783014361,
     "modifiedTime": 1741783014382,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "_id": "KihN6bk9RwLTOifd",
   "sort": 100391,

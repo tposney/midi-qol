@@ -424,12 +424,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.346",
         "systemId": "dnd5e",
         "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "_key": "!items.effects!a627MAr0dMmnCdyx.d23QTwP434lw72W2"
     }
@@ -494,12 +495,13 @@
   "_stats": {
     "compendiumSource": "Compendium.world.fixup.Item.ZnszbQGsRNeYnzoP",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741783009450,
     "modifiedTime": 1741783009466,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "_id": "a627MAr0dMmnCdyx",
   "sort": 106250,

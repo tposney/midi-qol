@@ -267,6 +267,10 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
       html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("critical"));
       html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("fumble"));
     }
+    // TODO: Right check?
+    if (!configSettings.optionalRules.activeDefence) {
+      html.querySelectorAll<HTMLElement>(".midi-qol-active-defence-dc").forEach(el => el.remove());
+    }
     if (safeGetGameSetting("dnd5e", "attackRollVisibility")) {
       const visibility = safeGetGameSetting("dnd5e", "attackRollVisibility");
       if (visibility === "none") {
@@ -316,7 +320,7 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
       // Can update the attack roll here, but damage rolls are redone in the ChatMessageMidi code so do the hiding for those there
       html.querySelectorAll<HTMLElement>(".midi-qol-confirm-damage-roll-cancel").forEach(el => el.style.display = "none");
       // hide the gm version of the name from` players
-      html.querySelectorAll(".midi-qol-gmTokenName").forEach(el => el.remove);
+      html.querySelectorAll<HTMLElement>(".midi-qol-gmTokenName").forEach(el => el.remove());
     }
   }
   // @ ts-expect-error protected

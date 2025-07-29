@@ -4,7 +4,7 @@ variables:
   PACKAGE_REGISTRY_URL: $CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/$PACKAGE_NAME
   PACKAGE_REGISTRY_URL_FULL: $PACKAGE_REGISTRY_URL/$CI_COMMIT_TAG
   PACKAGE_TYPE: module
-  FOUNDRY_RELEASE_URL: https://api.foundryvtt.com/_api/packages/release_version/
+  FOUNDRY_RELEASE_URL: https://foundryvtt.com/_api/packages/release_version/
 
 stages:
   - prepare-release

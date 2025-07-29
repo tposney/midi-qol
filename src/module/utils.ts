@@ -332,7 +332,7 @@ export async function applyTokenDamage(
     }, "combinedDamage", actor);
     if (fullDamage) allDamages[actor.uuid] = fullDamage;
   }
-  
+
   const cardIds: string[] = await timedAwaitExecuteAsGM("createReverseDamageCard", {
     autoApplyDamage: configSettings.autoApplyDamage,
     sender: game.user?.name,
@@ -406,7 +406,8 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
 
   let hitTargets = new Set([...workflow.hitTargets, ...workflow.hitTargetsEC]);
   let theTargets = new Set(workflow.targets);
-  if (workflow.activity.target.affects.type === "self") theTargets = getOrCreateTokenForActorAsSet(actor) || theTargets;
+  // TODO becomes activity.target.affects.type === "self"
+  // if (activity.target.affects.type === "self") theTargets = await getOrCreateTokenForActorAsSet(actor) || theTargets;
   let effectsToExpire: string[] = [];
   if (hitTargets.size > 0 && workflow.activity.attack) effectsToExpire.push("1Hit");
   if (hitTargets.size > 0 && workflow.activity.damage) effectsToExpire.push("DamageDealt");
@@ -706,41 +707,35 @@ export function requestPCSave(ability: string, rollType: string | undefined, pla
   }
 }
 
-// TODO: This - honestly _D20Roll probably needs fixin'
-export function requestPCActiveDefence(
-  player: User.Implementation,
-  actor: Actor.Implementation,
-  advantage: boolean | number,
-  saveItemName: string,
-  rollDC: number,
-  formula: string,
-  requestId: string,
-  options?: { workflow: Workflow }) {
+export function requestPCActiveDefence(player: User, actor: Actor, saveItemName: string, requestId: string, options: { formula: string, bonus: number, coverBonus: number, rollOptions: any, workflow: Workflow }) {
   const useUuid = true;
-  if (!player.isGM && false) {
-    advantage = 2;
-  } else {
-    advantage = (advantage === true ? 1 : advantage === false ? -1 : 0);
-  }
+  const actorId = useUuid ? actor.uuid : actor.id;
+
   let mode = checkRule("activeDefenceShow") ?? CONST.DICE_ROLL_MODES.SELF;
-  let message = `${saveItemName} ${configSettings.hideRollDetails === "none" ? "DC " + rollDC : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
-  if (options?.workflow) { //prompt for a normal roll.
-    const rollOptions: any = { advantage, midiType: "defenceRoll", flavor: message };
-    if (configSettings.autoCheckHit === "all") rollOptions.targetValue = rollDC;
-    socketlibSocket.executeAsUser("D20Roll", player.id, { targetUuid: actor.uuid, formula, request: message, rollMode: mode, options: rollOptions, messageData: { speaker: getSpeaker(actor) } }).then(result => {
-      if (debugEnabled > 1) debug("D20Roll result ", result);
-      log("midi-qol | D20Roll result ", result);
-      const handler = options.workflow.defenceRequests[requestId];
-      delete options.workflow.defenceRequests[requestId];
-      delete options.workflow.defenceTimeouts[requestId];
-      let returnValue;
-      try {
-        //@ts-expect-error D20Roll
-        returnValue = CONFIG.Dice.D20Roll.fromJSON(JSON.stringify(result));
-      } catch (err) { returnValue = {} }
-      handler(returnValue);
-    });
-  }
+  // TODO: Right check?
+  let flavor = `${saveItemName} ${configSettings.optionalRules.activeDefence ? "DC " + options.rollOptions.target : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
+  const midiType = "defenceRoll";
+  /*  const options = {
+      criticalSuccess: criticalTarget,
+      criticalFailure: fumbleTarget,
+      advantageMode,
+      target: this.activeDefenceDC
+    };*/
+  socketlibSocket.executeAsUser("D20Roll", player.id, {targetUuid: actor.uuid, formula: options.formula, bonus: options.bonus, coverBonus: options.coverBonus, rollOptions: options.rollOptions, rollMode: mode, midiType, flavor, messageData: { speaker: getSpeaker(actor) } }).then(result => {
+    if (debugEnabled > 1) debug("D20Roll result ", result);
+    log("midi-qol | D20Roll result ", result);
+    const handler = options.workflow.defenceRequests[requestId];
+    if (!handler) // Roll must have timed out so we can ignore the return value;
+      return;
+    delete options.workflow.defenceRequests[requestId];
+    delete options.workflow.defenceTimeouts[requestId];
+    let returnValue;
+    try {
+      //@ts-expect-error D20Roll
+      returnValue = CONFIG.Dice.D20Roll.fromJSON(JSON.stringify(result));
+    } catch (err) { returnValue = {} }
+    handler(returnValue);
+  });
 }
 
 export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffect.ChangeData & {effect?: ActiveEffect.Implementation}, current: unknown, delta: unknown, changes: unknown) {
@@ -1306,8 +1301,8 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
       activityData.img = effect.img;
       itemData.img = effect.img; // v12 icon -> img
       foundry.utils.setProperty(itemData, "target.affects.type", "self")
-      itemData.type = "equipment";
-      foundry.utils.setProperty(itemData, "system.type.value", "trinket");
+      itemData.type = "feat";
+      foundry.utils.setProperty(itemData, "system.type.value", "feat");
       foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.noProvokeReaction`, true);
       if (saveMagic) {
         itemData.type = "spell";
@@ -2250,7 +2245,7 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
         }
       }
       // check the range TODO riview total cover flag and activity as part of midi properties
-      const ignoreTotalCover = activity.midiProperties?.ignoreFullCover ?? foundry.utils.getProperty(activity.item, "flags.midiProperties.ignoreTotalCover") as boolean;
+      const ignoreTotalCover = activity.midiProperties?.ignoreFullCover;
 
       const coverOptions = {
         wallsBlock: !!configSettings.optionalRules.wallsBlockRange && !ignoreTotalCover,
@@ -2431,11 +2426,10 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
         break;
     }
 
-    // TODO is this right or should it be the same as non-spell?
-    // TODO: get rid of the `midiProperties` flag reference once ready
+    //TODO is this right or should it be the same as non-spell?
     // @ts-expect-error no dnd5e-types
-    if ((activity?.midiProperties?.ignoreFullCover ?? foundry.utils.getProperty(item ?? {}, "flags.midiProperties.ignoreTotalCover")) && item?.type === "spell") coverBonus = 0;
-    else if ((activity?.midiProperties?.ignoreFullCover ?? foundry.utils.getProperty(item ?? {}, "flags.midiProperties.ignoreTotalCover")) && coverBonus === FULL_COVER) coverBonus = THREE_QUARTERS_COVER;
+    if ((activity?.midiProperties?.ignoreFullCover) && item?.type === "spell") coverBonus = 0;
+    else if ((activity?.midiProperties?.ignoreFullCover) && coverBonus === FULL_COVER) coverBonus = THREE_QUARTERS_COVER;
 
     // @ts-expect-error no dnd5e-types
     if ((activity?.actionType ?? item?.system.actionType) === "rwak" && attacker.actor && coverBonus !== FULL_COVER && coverBonus !== 0
@@ -3387,8 +3381,8 @@ export async function bonusDialog(
       macroToCall = button.value;
       if (macroToCall.startsWith("Macro.")) macroToCall = macroToCall.replace("Macro.", "");
       specificMacro = true;
-    } else if ((foundry.utils.getProperty(this.actor ?? {}, `${button.key}.macroToCall`)as string)?.trim()) {
-      macroToCall = (foundry.utils.getProperty(this.actor ?? {}, `${button.key}.macroToCall`)as string)?.trim();
+    } else if ((foundry.utils.getProperty(this.actor ?? {}, `${button.key}.macroToCall`) as string)?.trim()) {
+      macroToCall = (foundry.utils.getProperty(this.actor ?? {}, `${button.key}.macroToCall`) as string)?.trim();
     }
     if (macroToCall) {
       let result: any;
@@ -3548,14 +3542,18 @@ export async function bonusDialog(
     const sourceActor = sourceToken?.actor ?? fromUuidSync(this.optionalBonusEffectsAC.workflowOptions?.sourceActorUuid) as Actor.Implementation | undefined;
     if (!sourceToken && sourceActor) sourceToken = getOrCreateTokenForActor(sourceActor);
     parameters = {
+      ...this.optionalBonusEffectsAC,
       actor: sourceActor,
       tokenUuid: sourceToken?.document?.uuid,
-      item: this.optionalBonusEffectsAC.item,
       target: fromUuidSync(this.tokenUuid) as TokenDocument.Implementation | undefined,
+      triggeringRoll: this.roll,
+      triggeringRollTotal: this.rollTotal,
+      triggeringRollHTML: this.rollHTML,
       options
     }
   } else {
     parameters = {
+      activity: this.activity,
       item: this.item,
       actor: this.actor,
       target: this.targets?.first(),
@@ -4024,7 +4022,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
       const midiFlags = target.actor.flags[MODULE_ID];
       reactionCount = reactionCount + Object.keys(midiFlags?.optional ?? [])
         .filter(flag => {
-          if (triggerType !== "reaction" || !midiFlags?.optional?.[flag].ac) return false;
+          if (!(triggerType === "reactionattacked" && midiFlags?.optional?.[flag].ac)) return false;
           if (!midiFlags?.optional[flag].count) return true;
           return getOptionalCountRemainingShortFlag(target.actor!, flag) > 0;
         }).length
@@ -4812,7 +4810,7 @@ export function evalAllConditions(
         if (condValue) {
           returnValue = condValue;
           foundry.utils.setProperty(actor, `${keyToUse}.value`, condValue);
-         (foundry.utils.getProperty(actor, `${keyToUse}.effects`) as string[]).push(effect.name);
+          (foundry.utils.getProperty(actor, `${keyToUse}.effects`) as string[]).push(effect.name);
         }
       }
     }
@@ -6274,6 +6272,7 @@ export function addRollTo(roll: Roll, bonusRoll: Roll | Roll.Evaluated<Roll.Any>
   }
   //@ts-expect-error
   let newRoll = roll.constructor.fromTerms(terms);
+  newRoll.resetFormula();
   newRoll.options = roll.options;
   return newRoll;
 }

@@ -5,9 +5,7 @@
   "effects": [],
   "folder": null,
   "flags": {
-    "core": {
-      "sourceId": "Compendium.dnd5e.items.setcTdSZ09rmsqMn"
-    },
+    "core": {},
     "favtab": {
       "isFavorite": true
     },
@@ -401,12 +399,13 @@
   "_stats": {
     "compendiumSource": "Compendium.dnd5e.items.setcTdSZ09rmsqMn",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741783015947,
     "modifiedTime": 1741783015965,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "_id": "U57xKktkCxLCLrDU",
   "sort": 100196,

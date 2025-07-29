@@ -65,12 +65,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.346",
         "systemId": "dnd5e",
         "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/magic/perception/eye-ringed-glow-angry-small-red.webp",
       "type": "base",
@@ -132,12 +133,13 @@
       "_stats": {
         "compendiumSource": "Compendium.midi-qol.midiqol-sample-items.Item.6IXuB99Ghl0usHya.ActiveEffect.1u2srq7ti2lvguvx",
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.346",
         "systemId": "dnd5e",
         "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/magic/perception/eye-ringed-glow-angry-small-red.webp",
       "type": "base",
@@ -457,12 +459,13 @@
   "_stats": {
     "compendiumSource": "Compendium.world.fixup.Item.HavE2PV2g1IGUFTN",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741783010670,
     "modifiedTime": 1741783010684,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": null,
   "_id": "7jMEN36K5VvR3lxT",

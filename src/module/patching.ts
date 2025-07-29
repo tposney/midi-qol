@@ -41,7 +41,6 @@ export interface Options {
   chatMessage: boolean | undefined,
   rollToggle: boolean | undefined,
   other: boolean | undefined,
-  isCritical: boolean | undefined,
   autoRollAttack: boolean | undefined,
   autoRollDamage: boolean | undefined,
   fastForwardAttack: boolean | undefined,
@@ -65,7 +64,6 @@ export const defaultRollOptions: Options = {
   chatMessage: undefined,
   rollToggle: undefined,
   other: undefined,
-  isCritical: false,
   autoRollAttack: undefined,
   autoRollDamage: undefined,
   fastForwardAttack: undefined,
@@ -140,6 +138,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
   config.midiOptions ??= {};
   let preRollSkillHookId: number | undefined;
   let rollSkillHookId: number | undefined;
+  let postBuildSkillRollConfigHoodId: number | undefined;
   //@ts-expect-error
   let result: CONFIG.Dice.D20Roll[] = [];
   const saveRollMode = safeGetGameSetting("core", "rollMode");
@@ -164,16 +163,6 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     await procAdvantageSkill(this, skillId ?? "", config.midiOptions);
 
     let success: boolean | undefined = undefined;
-    if (procAutoFailSkill(this, skillId)
-      // @ts-expect-error no dnd5e-types
-      || (configSettings.skillAbilityCheckAdvantage && procAutoFail(this, "check", this.system.skills[skillId].ability))) {
-      //@ts-expect-error
-      const D20Roll = CONFIG.Dice.D20Roll;
-      // TODO: maintain roll info here, just ensure failure. Could move this down to after wrapped and instead do 
-      // something like result[0]._total = -1;
-      result = [new D20Roll("-1[auto fail]").evaluateSync()];
-      success = false;
-    }
     let rollMode: string = message.rollMode ?? config.rollMode ?? safeGetGameSetting("core", "rollMode");
     const blindSkillRoll = configSettings.rollSkillsBlind.includes("all") || configSettings.rollSkillsBlind.includes(skillId ?? "");
     if (blindSkillRoll && [CONST.DICE_ROLL_MODES.PUBLIC, "roll", CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode)) {
@@ -190,19 +179,32 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
       config.disadvantage ||= config.midiOptions.disadvantage;
       preRollSkillHookId = Hooks.once("dnd5e.preRollSkill", (config, dialog, message) => {
         message.data ??= {};
-        if (overtimeActorUuid)
-          message.data["flags.midi-qol.overtimeActorUuid"] = overtimeActorUuid;
-        config.rolls?.forEach(roll => {
-          //          roll.options.advantage ||= config.midiOptions.advantage;
-          //          roll.options.disadvantage ||= config.midiOptions.disadvantage;
+        if (overtimeActorUuid) message.data["flags.midi-qol.overtimeActorUuid"] = overtimeActorUuid;
+        // @ts-expect-error no dnd5e-types
+        if (procAutoFailSkill(this, skillId) || (configSettings.skillAbilityCheckAdvantage && procAutoFail(this, "check", this.system.skills[skillId].ability))) {
+          dialog.configure = false;
+          config.rolls = [config.rolls![0]];
+          success = false;
+          config.rolls[0].options!.maximum = 1;
+          config.rolls[0].parts = [];
+          dialog.configure = false;
+        } else config.rolls!.forEach(roll => {
           if (maxValue && Number.isNumeric(maxValue)) roll.options!.maximum = Math.min(Number(maxValue), roll.options!.maximum ?? Infinity);
           if (minValue && Number.isNumeric(minValue)) roll.options!.minimum = Math.max(Number(minValue), roll.options!.minimum ?? -Infinity);
-        })
+        });
         setDialogOptions(dialog, config);
+      });
+      postBuildSkillRollConfigHoodId = Hooks.once("dnd5e.postBuildSkillRollConfig", (config, roll, index) => {
+        // @ts-expect-error no dnd5e-types
+        if (procAutoFailSkill(this, skillId) || (configSettings.skillAbilityCheckAdvantage && procAutoFail(this, "check", this.system.skills[skillId].ability))) {
+          roll.parts = [];
+          roll.options!.target = 20;
+        }
       })
       rollSkillHookId = Hooks.once("dnd5e.postSkillRollConfiguration", (rolls, config, dialog, messageDetails) => {
         // record message configuration details for later display
         message = messageDetails;
+        return true;
       });
 
       const saveCreate = message.create;
@@ -241,6 +243,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
   finally {
     if (preRollSkillHookId) Hooks.off("dnd5e.preRollSkill", preRollSkillHookId);
     if (rollSkillHookId) Hooks.off("dnd5e.postSkillRollConfiguration", rollSkillHookId);
+    if (postBuildSkillRollConfigHoodId) Hooks.off("dnd5e.postBuildSkillRollConfig", postBuildSkillRollConfigHoodId);
     if (saveRollMode) game.settings.set("core", "rollMode", saveRollMode);
     if (oldFormat) return result?.[0];
     return result;
@@ -317,7 +320,9 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
     return;
   }
   if (!this.configured) applyDamageModifiers(this);
-  if (options.critical.allow === false || !this.isCritical) {
+  if ((this.options.critical?.allow === false || options.critical?.allow === false) || !this.isCritical) {
+    options.critical.allow = false;
+    this.options.isCritical = false;
     return wrapped(options);
   }
   this.simplify();
@@ -519,15 +524,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     if (overtimeActorUuid)
       message.data["flags.midi-qol.overtimeActorUuid"] = overtimeActorUuid;
 
-    let success;
-    if (abilityId && procAutoFail(this, rollType, abilityId)) {
-      success = false;
-      //@ts-expect-error
-      const D20Roll = CONFIG.Dice.D20Roll;
-      // TODO: maintain roll info here, just ensure failure. Could move this down to after wrapped and instead do 
-      // something like result[0]._total = -1;
-      result = [new D20Roll("-1[auto fail]").evaluateSync()];
-    }
+    let success: boolean | undefined;
     if (success === undefined) {
       const saveCreate = message.create;
       message.create = false;
@@ -537,10 +534,18 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
       const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId]));
       config.advantage ||= config.midiOptions.advantage;
       config.disadvantage ||= config.midiOptions.disadvantage;
-      preRollAbilityHookId = Hooks.once(`dnd5e.preRoll${type}`, (config: any, dialog, message) => {
-        config.rolls.forEach(roll => {
-          if (maxValue !== undefined && Number.isNumeric(maxValue)) roll.options.maximum = Math.min(roll.options.maximum ?? Infinity, Number(maxValue));
-          if (minValue !== undefined && Number.isNumeric(minValue)) roll.options.minimum = Math.max(roll.options.minimum ?? -Infinity, Number(minValue));
+      preRollAbilityHookId = Hooks.once(`dnd5e.preRoll${type}`, (config, dialog, message) => {
+        if (procAutoFail(this, rollType, abilityId ?? "")) {
+          // auto failing roll - replace roll with a single d20 roll with a max of 1
+          config.rolls = [config.rolls![0]];
+          success = false;
+          config.rolls[0].options!.maximum = 1;
+          config.rolls[0].options!.target = 20;
+          config.rolls[0].parts = [];
+          dialog.configure = false;
+        } else config.rolls!.forEach(roll => {
+          if (maxValue !== undefined && Number.isNumeric(maxValue)) roll.options!.maximum = Math.min(roll.options!.maximum ?? Infinity, Number(maxValue));
+          if (minValue !== undefined && Number.isNumeric(minValue)) roll.options!.minimum = Math.max(roll.options!.minimum ?? -Infinity, Number(minValue));
         });
         setDialogOptions(dialog, config);
       });
@@ -600,7 +605,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     }
     if (saveRollMode) game.settings.set("core", "rollMode", saveRollMode);
     if (abilityId) await expireRollEffect.bind(this)(rollType, abilityId, success);
-    if (config.midiOptions.isConcentrationCheck) expireRollEffect.bind(this)("isConcentrationSave", success);
+    if (config.midiOptions.isConcentrationCheck) expireRollEffect.bind(this)("isConcentrationSave", "", success);
   } catch (err) {
     const message = `doAbilityRoll error ${this.name} ${abilityId} ${rollType} ${this.uuid}`;
     TroubleShooter.recordError(err, message);

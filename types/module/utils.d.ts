@@ -90,7 +90,11 @@ export interface pcSaveOptions {
     };
 }
 export declare function requestPCSave(ability: string, rollType: any, player: any, actor: any, options: pcSaveOptions): Promise<ChatMessage> | undefined;
-export declare function requestPCActiveDefence(player: any, actor: any, advantage: any, saveItemName: any, rollDC: any, formula: any, requestId: any, options?: {
+export declare function requestPCActiveDefence(player: User, actor: Actor, saveItemName: string, requestId: string, options: {
+    formula: string;
+    bonus: number;
+    coverBonus: number;
+    rollOptions: any;
     workflow: Workflow;
 }): void;
 export declare function midiCustomEffect(...args: any[]): boolean;
@@ -328,19 +332,10 @@ export declare function setReactionUsed(actor: Actor, active?: boolean): Promise
 export declare function setBonusActionUsed(actor: Actor): Promise<void>;
 export declare function removeActionUsed(actor: Actor): Promise<any>;
 export declare function removeReactionUsed(actor: Actor, force?: boolean): Promise<void>;
-export declare function hasUsedAction(actor: Actor): string | boolean | {
-    sheetLock?: boolean;
-    sheetClass?: string;
-} | undefined;
-export declare function hasUsedReaction(actor: Actor): string | boolean | {
-    sheetLock?: boolean;
-    sheetClass?: string;
-} | undefined;
+export declare function hasUsedAction(actor: Actor): never;
+export declare function hasUsedReaction(actor: Actor): never;
 export declare function expirePerTurnBonusActions(combat: Combat, data: any, options: any): Promise<void>;
-export declare function hasUsedBonusAction(actor: Actor): string | boolean | {
-    sheetLock?: boolean;
-    sheetClass?: string;
-} | undefined;
+export declare function hasUsedBonusAction(actor: Actor): never;
 export declare function removeBonusActionUsed(actor: Actor, force?: boolean): Promise<void>;
 export declare function needsReactionCheck(actor: any): boolean;
 export declare function needsAOOCheck(actor: any): boolean;
@@ -458,7 +453,7 @@ export declare function getCachedDocument(uuid: string | undefined | null): any;
 export declare function isEffectExpired(effect: any): boolean;
 export declare function expireEffects(actor: any, effects: ActiveEffect[], options: any): Promise<any>;
 export declare function blankOrUndefinedDamageType(s: string | undefined): string;
-export declare function processConcentrationRequestMessage(message: any, html: any, data: any): void;
+export declare function processConcentrationRequestMessage(message: any, html: HTMLElement, data: any): void;
 export declare function setRollOperatorEvaluated(roll: any): any;
 export declare function doSyncRoll(roll: any, source: string | undefined): any;
 export declare function setRollMinDiceTerm(roll: Roll, minValue: number, count?: number): Roll<import("fvtt-types/utils").EmptyObject>;

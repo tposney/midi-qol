@@ -398,12 +398,13 @@
       "_stats": {
         "compendiumSource": "Item.AHBtevoHo5K46Y7F.ActiveEffect.ZveR6kPKafjcwQdY",
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.346",
         "systemId": "dnd5e",
         "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "_key": "!items.effects!edNz67q1wmIV1xWu.ZveR6kPKafjcwQdY"
     },
@@ -474,12 +475,13 @@
       "_stats": {
         "compendiumSource": "Actor.3ZGg2qDcCMlXnq1j.Item.JDUO1Jzgz5gpMMdn.ActiveEffect.BqzfX8p9NqtZ1Qxx",
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.346",
         "systemId": "dnd5e",
         "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/magic/water/heart-ice-freeze.webp",
       "type": "base",
@@ -528,12 +530,13 @@
   "_stats": {
     "compendiumSource": "Compendium.world.fixup.Item.cv5XCJdJKeIjhfQp",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741783018743,
     "modifiedTime": 1741783018759,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "_id": "edNz67q1wmIV1xWu",
   "sort": 100049,

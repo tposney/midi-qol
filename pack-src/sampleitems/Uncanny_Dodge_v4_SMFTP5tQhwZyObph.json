@@ -54,12 +54,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.346",
         "systemId": "dnd5e",
         "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/skills/movement/feet-winged-boots-brown.webp",
       "type": "base",
@@ -352,12 +353,13 @@
   "_stats": {
     "compendiumSource": "Compendium.dnd5e.classfeatures.Mm64SKAHJWYecgXS",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741782991287,
     "modifiedTime": 1744024412909,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "_id": "SMFTP5tQhwZyObph",
   "sort": 1100000,

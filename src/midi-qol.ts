@@ -468,7 +468,6 @@ function addConfigOptions() {
     "nonAdamantPhysical": i18n("midi-qol.NonAdamantinePhysical"),
   };
 
-
   // config.damageResistanceTypes = config.damageResistanceTypes ?? {};
   // config.damageResistanceTypes["silver"] = i18n("midi-qol.NonSilverPhysical");
   // config.damageResistanceTypes["adamant"] = i18n("midi-qol.NonAdamantinePhysical");

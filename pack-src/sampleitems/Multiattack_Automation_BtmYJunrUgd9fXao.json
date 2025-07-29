@@ -203,12 +203,13 @@
       "_stats": {
         "compendiumSource": "Scene.VUTmnLQOHLsSo5lF.Token.IyRV8LwSCk1FiSWh.Actor.K58INTSFII9dCu9i.Item.FXy68z4tsAoyYBv2.ActiveEffect.Eb9vz83kYdtdho2B",
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.346",
         "systemId": "dnd5e",
         "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/skills/melee/blade-tips-triple-steel.webp",
       "type": "base",
@@ -335,12 +336,13 @@
   "_stats": {
     "compendiumSource": null,
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741782991287,
     "modifiedTime": 1744024412909,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "_id": "BtmYJunrUgd9fXao",
   "sort": 500000,

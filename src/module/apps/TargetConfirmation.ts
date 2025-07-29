@@ -26,7 +26,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     this.position.top = TargetConfirmationDialog.yPosition;
     let maxTargets = Number(activity.target?.affects?.count ?? "1");
     const inCombat = activity.item.parent && isInCombat(activity.item.parent);
-    const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && inCombat);
+    const requiresTargets = configSettings.requiresTargets === "always" 
+    || (configSettings.requiresTargets === "tokens" && (canvas?.scene?.tokens.size ?? 0) > 0)
+    || (configSettings.requiresTargets === "combat" && inCombat);
     // @ts-expect-error no dnd5e-types
     if (activity.item.type === "weapon" && !maxTargets) {
       if (requiresTargets && configSettings.enforceSingleWeaponTarget && allAttackTypes.includes(activity.actionType)) {
@@ -263,8 +265,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         targetName.addEventListener("click", async (event) => {
           event.stopPropagation();
           // @ts-expect-error
-          const doc = await fromUuid(event.currentTarget?.dataset.uuid);
-          return doc?.sheet.render({force: true});
+          const doc = await fromUuid(event.currentTarget?.dataset.uuid) as Actor | null;
+          //@ts-expect-error render not updated for v2 parameters
+          return doc?.sheet?.render({force: true});
         });
       }
       let imgs = this.element.getElementsByTagName("img");

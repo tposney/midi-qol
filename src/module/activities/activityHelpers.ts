@@ -260,9 +260,13 @@ export async function resolveTargetConfirmation(activity: Activity, options: Tar
   if (!canvas.tokens?.active) {
     await canvas.tokens?.activate();
   }
-  const savedControl = ui.controls?.control?.name;
-  const savedTool = ui.controls?.tool?.name;
-  await ui.controls?.render({ control: "tokens", tool: "target" });
+  // TODO looks like fvtt-types is broken for scene controls
+  const uiControls = ui.controls as any;
+  const savedControl = uiControls?.control;
+  const savedTool = uiControls?.tool;
+  const tokenControl = uiControls?.controls.tokens;
+  const tokenTargetTool = tokenControl?.tools?.target;
+  await uiControls?.activate({ control: tokenControl.name, tool: tokenTargetTool.name });
   const wasMaximized = !((activity.actor?.sheet as foundry.applications.api.ApplicationV2)?.minimized);
   // Hide the sheet that originated the preview
   if (wasMaximized) await activity.actor?.sheet?.minimize();
@@ -276,7 +280,7 @@ export async function resolveTargetConfirmation(activity: Activity, options: Tar
   });
   let shouldContinue = await targets;
   for (let token of canvas.tokens?.placeables ?? []) token.initializeVisionSource();
-  if (savedTool) await ui.controls?.render({ control: savedControl, tool: savedTool });
+  if (savedTool) await ui.controls?.activate({ control: savedControl.name, tool: savedTool.name });
 
 
   if (wasMaximized) await activity.actor?.sheet?.maximize();

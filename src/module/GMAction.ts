@@ -432,7 +432,7 @@ async function _canSense(data: { tokenUuid: string, targetUuid: string }) {
   const token = (fromUuidSync(data.tokenUuid) as TokenDocument)?.object;
   const target = (fromUuidSync(data.targetUuid) as TokenDocument)?.object;
   if (!target || !token) return true;
-  if (token.vision &&(!token.vision.active || !token.vision.los)) {
+  if (token.vision && (!token.vision.active || !token.vision.los)) {
     token.vision.initialize({
       x: token.center.x,
       y: token.center.y,
@@ -698,33 +698,62 @@ async function _createChatMessage(data: { chatData: ChatMessage.CreateData; }) {
   return await ChatMessage.create(data.chatData);
 }
 
-async function _D20Roll(data: { request: string, targetUuid: string, formula: string, rollMode: string, options: any, targetDC: number, messageData: any }) {
-  const actor = fromActorUuid(data.targetUuid);
-  if (!actor) {
-    error(`GMAction.D20Roll | no actor for ${data.targetUuid}`)
+async function _D20Roll(params: { request: string, targetUuid: string, formula: string, bonus: number, coverBonus: number, flavor: string, midiType: string, rollMode: string, rollOptions: any, messageData: any }) {
+  const actor = fromActorUuid(params.targetUuid);
+  if (!actor || !params.rollOptions) {
+    error(`GMAction.D20Roll | no actor for ${params.targetUuid}`)
     return {};
   }
+
+  /*
+      criticalSuccess: criticalTarget,
+      criticalFailure: fumbleTarget,
+      advantageMode,
+      target: this.activeDefenceDC
+    */
   return new Promise(async (resolve) => {
     let timeoutId;
     let result;
+    //@ts-expect-error D20Roll
+    const D20Roll = CONFIG.Dice.D20Roll;
     if (configSettings.playerSaveTimeout > 0) timeoutId = setTimeout(async () => {
       warn(`Roll request for {actor.name}timed out. Doing roll`);
-      data.options.fastForward = true; // assume player is asleep force roll without dialog
-      //@ts-expect-error D20Roll
-      result = await new CONFIG.Dice.D20Roll(data.formula, {}, data.options).roll();
-      foundry.utils.setProperty(roll, "flags.midi-qol.rollType", data.options?.midiType)
+      params.rollOptions.fastForward = true; // assume player is asleep force roll without dialog
+      let result = await new D20Roll(params.formula, {}, params.rollOptions).roll();
+      foundry.utils.setProperty(result, "flags.midi-qol.rollType", params.midiType)
       resolve(result ?? {});
     }, configSettings.playerSaveTimeout * 1000);
-    if (!data.options) data.options = {};
-    data.options.configured = false;
-    //@ts-expect-error D20Roll
-    const roll = new CONFIG.Dice.D20Roll(data.formula, {}, data.options);
-    await roll.configureDialog({ title: data.request, defaultRollMode: data.rollMode, defaultAction: data.options?.advantage });
-    result = await roll.roll();
-    roll.toMessage(data.messageData);
+    const roll = new D20Roll();
+    const { parts, data } = D20Roll.constructParts({ "mod": params.bonus, "cover": params.coverBonus });
+    roll.data = data;
+    roll.parts = parts;
+    roll.options = { ...params.rollOptions };
+    const config = {
+      advantage: params.rollOptions?.advantageMode === D20Roll.ADV_MODE.ADVANTAGE,
+      disadvantage: params.rollOptions?.advantageMode === D20Roll.ADV_MODE.DISADVANTAGE,
+      rolls: [roll],
+      dialog: true,
+    };
+    const dialog = {
+      options: {
+        window: {
+          title: params.flavor,
+          subtitle: actor.name,
+        }
+      }
+    }
+    const message = {
+      create: true,
+      data: { flavor: params.flavor },
+      speaker: ChatMessage.getSpeaker({ actor }),
+      rollMode: params.rollMode,
+    }
+    const rolls = await D20Roll.build(config, dialog, message)
+    // ({ title: data.request, defaultRollMode: data.rollMode, defaultAction: data.options?.advantage });
+    // result = await roll.roll();
     if (timeoutId) clearTimeout(timeoutId);
-    foundry.utils.setProperty(result, "flags.midi-qol.rollType", data.options?.midiType)
-    resolve(result ?? {})
+    if (rolls) foundry.utils.setProperty(rolls[0], "flags.midi-qol.rollType", params.midiType)
+    resolve(rolls[0] ?? {})
   });
 }
 async function rollConcentration(data: { actorUuid: string, target: number, whisper: string[], create: boolean, rollMode: string }) {
@@ -1304,7 +1333,7 @@ async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: 
   if (!tokenDocument || !canvas.grid || !tokenDocument.object) return;
   const targetToken = tokenDocument.object;
   const newCenter = canvas.grid.getSnappedPoint(data.newCenter, { mode: CONST.GRID_SNAPPING_MODES.CENTER });
-  const newPosition = {x: data.newCenter.x - targetToken.w / 2, y: data.newCenter.y - targetToken.h / 2};
+  const newPosition = { x: data.newCenter.x - targetToken.w / 2, y: data.newCenter.y - targetToken.h / 2 };
   return tokenDocument.update(newPosition, { animate: data.animate ?? true });
 }
 
@@ -1326,7 +1355,7 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
       const getCenterCollisionPoint = canvas.grid.getCenterPoint(collisionPoint);
       if (Math.sign(ray.dx) > 0) getCenterCollisionPoint.x -= canvas.grid.sizeX;
       if (Math.sign(ray.dy) > 0) getCenterCollisionPoint.y -= canvas.grid.sizeY;
-      const newPosition = canvas.grid.getSnappedPoint({x: getCenterCollisionPoint.x - Math.sign(ray.dx) * targetToken.w / 2, y: getCenterCollisionPoint.y - Math.sign(ray.dy) * targetToken.h / 2}, { mode: M.TOP_LEFT_VERTEX });
+      const newPosition = canvas.grid.getSnappedPoint({ x: getCenterCollisionPoint.x - Math.sign(ray.dx) * targetToken.w / 2, y: getCenterCollisionPoint.y - Math.sign(ray.dy) * targetToken.h / 2 }, { mode: M.TOP_LEFT_VERTEX });
       return void targetTokenDocument.update(newPosition, { animate: data.animate ?? true });    }
   }
   const newX = targetToken.position.x + newCenter.x - targetToken.center.x;

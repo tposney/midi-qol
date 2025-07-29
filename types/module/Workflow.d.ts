@@ -503,9 +503,6 @@ export declare class Workflow {
         noOnuseMacro?: boolean;
         noTargetOnUseMacro?: boolean;
     }): Promise<void>;
-    activeDefence(item: any, roll: any): Promise<void>;
-    get useActiveDefence(): any;
-    checkActiveAttacks(attackBonus: number | undefined, whisper: boolean | undefined, fumbleTarget: any, criticalTarget: any): Promise<void>;
     setAttackRoll(roll: Roll): Promise<void>;
     setUtilityRolls(rolls: Array<Roll> | Roll | undefined | null): Promise<void>;
     setUtilityRoll(roll: Roll): void;
@@ -518,6 +515,15 @@ export declare class Workflow {
     setOtherDamageRolls(rolls: Array<Roll> | Roll | undefined | null): Promise<void>;
     setOtherDamageRoll(roll: Roll): Promise<void>;
     chooseEffects(effects: any, options: any): Promise<false | unknown[]>;
+}
+export declare class ActiveDefenceWorkflow extends Workflow {
+    get useActiveDefence(): boolean;
+    WorkflowState_WaitForAttackRoll(context?: any): Promise<WorkflowState>;
+    processAttackRoll(): Promise<void>;
+    WorkflowState_AttackRollComplete(context?: any): Promise<WorkflowState>;
+    checkHits(): Promise<void>;
+    checkActiveAttacks(whisper: boolean | undefined, roll: CONFIG.Dice.D20Roll, coverBonus?: number): Promise<void>;
+    displayAttackRoll(): Promise<void>;
 }
 export declare class UserWorkflow extends Workflow {
     static get forceCreate(): boolean;

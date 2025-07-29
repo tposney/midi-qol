@@ -13,41 +13,34 @@
           {{#each damageList as |damage iid|}}
           <tr>
             <td style="line-height: 22px">
-              <div class="midi-qol-tooltip">
+              <div class="midi-qol-tooltip" {{#if damage.tooltip}}data-tooltip='{{damage.tooltip}}' {{/if}}>
                 <div style="text-align: left;">
                   {{iconPrefix}}
                   <img src="{{damage.tokenImg}}" id="{{damage.tokenId}}" class="midi-qol-target-name" height="25"
                     style="border:0px">
 
-                  <div class="midi-qol-tooltiptext" style="text-align: left;">
-                    {{#if damage.tooltip}}
-                    <div>{{{damage.tooltip}}}</div>
-                    {{/if}}
-                  </div>
+
                   </img>
                 </div>
               </div>
               <!--check if this is not being used somewhere
       <label class="midi-qol-target-name" id="{{damage.tokenId}}" style="display:none ;"></label>
       -->
-
-              <div class="midi-qol-tooltip">
+              {{#if damage.tempDamage}}
+              <div class="midi-qol-tooltip"
+                data-tooltip='{{damage.damageItem.oldHP}}[{{damage.damageItem.oldTempHP}}]{{damage.dmgSign}}{{damage.hpDamage}}[{{damage.tempDamage}}]({{{damage.rawTotalDamage}}})={{damage.damageItem.newHP}}[{{damage.damageItem.newTempHP}}]'>
                 <span>
-                  <div style="vertical-align: middle;text-align: right;">
-                    {{#if damage.tempDamage}}
-                    {{damage.damageItem.oldHP}}[{{damage.damageItem.oldTempHP}}]{{damage.dmgSign}}{{damage.absDamage}}[{{damage.tempDamage}}]={{damage.damageItem.newHP}}[{{damage.damageItem.newTempHP}}]
-                  </div>
-                  <span
-                    class="midi-qol-tooltiptext midi-qol-tooltip-top">{{damage.damageItem.oldHP}}[{{damage.damageItem.oldTempHP}}]{{damage.dmgSign}}{{damage.hpDamage}}[{{damage.tempDamage}}]({{{damage.rawTotalDamage}}})={{damage.damageItem.newHP}}[{{damage.damageItem.newTempHP}}]
-                  </span>
-                  {{else}}
-                  <div>
-                    {{damage.damageItem.oldHP}}{{damage.dmgSign}}{{damage.abshpDamage}}({{damage.rawTotalDamage}})={{damage.damageItem.newHP}}
-                    <span
-                      class="midi-qol-tooltiptext midi-qol-tooltip-top">{{damage.damageItem.oldHP}}{{damage.dmgSign}}{{abshpDamage}}[{{damage.rawTotalDamage}}]={{damage.damageItem.newHP}}</span>
-                    {{/if}}
+                  {{damage.damageItem.oldHP}}[{{damage.damageItem.oldTempHP}}]{{damage.dmgSign}}{{damage.absDamage}}[{{damage.tempDamage}}]={{damage.damageItem.newHP}}[{{damage.damageItem.newTempHP}}]
                 </span>
               </div>
+              {{else}}
+              <div class="midi-qol-tooltip"
+                data-tooltip='{{damage.damageItem.oldHP}}{{damage.dmgSign}}{{abshpDamage}}[{{damage.rawTotalDamage}}]={{damage.damageItem.newHP}}'>
+                <span>
+                  {{damage.damageItem.oldHP}}{{damage.dmgSign}}{{damage.abshpDamage}}({{damage.rawTotalDamage}})={{damage.damageItem.newHP}}
+                </span>
+              </div>
+              {{/if}}
             </td>
 
             <td style="text-align:center;">

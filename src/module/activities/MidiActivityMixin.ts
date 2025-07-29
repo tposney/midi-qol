@@ -1,10 +1,10 @@
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, geti18nOptions, i18n, i18nFormat, warn } from "../../midi-qol.js";
 import { socketlibSocket } from "../GMAction.js";
-import { AugmentedEvent, Workflow } from "../Workflow.js";
+import { ActiveDefenceWorkflow, AugmentedEvent, Workflow } from "../Workflow.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { checkMechanic, configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
+import { checkMechanic, checkRule, configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
 import { busyWait } from "../tests/setupTest.js";
 import { saveUndoData } from "../undo.js";
@@ -269,7 +269,7 @@ export let MidiActivityMixin = Base => {
         actions: {
           rollDamage: MidiActivityMixin.#rollDamage,
           rollDamageNoCritical: MidiActivityMixin.#rollDamageNoCritical,
-          rollDamageCritical: MidiActivityMixin.#rollDamgeCritical,
+          rollDamageCritical: MidiActivityMixin.#rollDamageCritical,
           confirmDamageRollCancel: MidiActivityMixin.#confirmDamageRollCancel,
           confirmDamageRollComplete: MidiActivityMixin.#confirmDamageRollComplete,
           confirmDamageRollCompleteHit: MidiActivityMixin.#confirmDamageRollCompleteHit,
@@ -358,7 +358,7 @@ export let MidiActivityMixin = Base => {
     static #rollDamage(this: Activity, event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
-      return this.rollDamage({ event, workflow, critical: { allow: true } }, {}, message);
+      return this.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.isCritical } }, {}, message);
     }
 
     static #rollDamageNoCritical(this: Activity, event, target, message) {
@@ -367,7 +367,7 @@ export let MidiActivityMixin = Base => {
       return this.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
     }
 
-    static #rollDamgeCritical(this: Activity, event, target, message) {
+    static #rollDamageCritical(this: Activity, event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       return this.rollDamage({ event, workflow, midiOptions: { isCritical: true } }, {}, message);
@@ -386,13 +386,16 @@ export let MidiActivityMixin = Base => {
 
     async _onChatAction(event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const scaling = message.getFlag("dnd5e", "scaling") ?? 0;
-      const item = scaling ? this.item.clone({ flags: { dnd5e: { scaling } } }, { keepId: true }) : this.item;
-      let activity = this.otherActivity;
+      const existingItem = this.workflow?.item ?? this.item;
+      // const item = scaling ? this.item.clone({ flags: { dnd5e: { scaling } } }, { keepId: true }) : this.item;
+      const item = scaling ? existingItem.clone({ flags: { dnd5e: { scaling } } }, { keepId: true }) : existingItem;
+      // let activity = this.otherActivity;
+      // @ts-expect-error no dnd5e-types
+      const activity = this.workflow?.activity ?? existingItem.system.activities.get(this.id);
       const action = target.dataset.action ?? "";
       let handler = activity?.metadata.usage?.actions?.[action];
       const workflow = Workflow.getWorkflow(message.uuid);
       if (!handler && workflow) {
-        activity = workflow.activity;
         if (activity) handler = activity?.metadata.usage?.actions?.[action];
       }
       if (handler) await handler.call(activity, event, target, message);
@@ -438,6 +441,9 @@ export let MidiActivityMixin = Base => {
         let activity = item.system.activities.get(this.id) as MidiActivityMixin;
         if (!usage.workflow) {
           let workflowClass = usage?.midi?.workflowClass ?? globalThis.MidiQOL.workflowClass;
+          if (game.user?.isGM && checkRule("activeDefence")) {
+            workflowClass = ActiveDefenceWorkflow;
+          }
           if (!(workflowClass.prototype instanceof Workflow)) workflowClass = Workflow;
           const workflowOptions = { ...usage.midiOptions, ...(usage.midiOptions?.workflowOptions ?? {}), event: usage.event, storeWorkflow: false };
           delete workflowOptions.workflowOptions;
@@ -836,18 +842,18 @@ export let MidiActivityMixin = Base => {
         const firstTargetActor = firstTarget?.actor;
         const targetMaxFlags = firstTargetActor?.flags?.[MODULE_ID]?.grants?.max?.damage ?? {};
         const maxFlags = config.workflow.actor.flags?.[MODULE_ID]?.max ?? {};
-        let needsMaxDamage = (maxFlags.damage?.all && evalActivationCondition(config.workflow, maxFlags.damage.all, firstTarget, { async: true, errorReturn: false }))
-          || (maxFlags.damage && maxFlags.damage[this.actionType] && evalActivationCondition(config.workflow, maxFlags.damage[this.actionType], firstTarget, { async: true, errorReturn: false }));
+        let needsMaxDamage = (maxFlags.damage?.all && await evalActivationCondition(config.workflow, maxFlags.damage.all, firstTarget, { async: true, errorReturn: false }))
+          || (maxFlags.damage && maxFlags.damage[this.actionType] && await evalActivationCondition(config.workflow, maxFlags.damage[this.actionType], firstTarget, { async: true, errorReturn: false }));
         needsMaxDamage = needsMaxDamage || (
-          (targetMaxFlags.all && evalActivationCondition(config.workflow, targetMaxFlags.all, firstTarget, { async: true, errorReturn: false }))
-          || (targetMaxFlags[this.actionType] && evalActivationCondition(config.workflow, targetMaxFlags[this.actionType], firstTarget, { async: true, errorReturn: false })));
+          (targetMaxFlags.all && await evalActivationCondition(config.workflow, targetMaxFlags.all, firstTarget, { async: true, errorReturn: false }))
+          || (targetMaxFlags[this.actionType] && await evalActivationCondition(config.workflow, targetMaxFlags[this.actionType], firstTarget, { async: true, errorReturn: false })));
         const targetMinFlags = firstTargetActor?.flags?.[MODULE_ID]?.grants?.min?.damage ?? {};
         const minFlags = config.workflow.actor.flags?.[MODULE_ID]?.min ?? {};
-        let needsMinDamage = (minFlags.damage?.all && evalActivationCondition(config.workflow, minFlags.damage.all, firstTarget, { async: true, errorReturn: false }))
-          || (minFlags?.damage && minFlags.damage[this.actionType] && evalActivationCondition(config.workflow, minFlags.damage[this.actionType], firstTarget, { async: true, errorReturn: false }));
+        let needsMinDamage = (minFlags.damage?.all && await evalActivationCondition(config.workflow, minFlags.damage.all, firstTarget, { async: true, errorReturn: false }))
+          || (minFlags?.damage && minFlags.damage[this.actionType] && await evalActivationCondition(config.workflow, minFlags.damage[this.actionType], firstTarget, { async: true, errorReturn: false }));
         needsMinDamage = needsMinDamage || (
-          (targetMinFlags.all && evalActivationCondition(config.workflow, targetMinFlags.all, firstTarget, { async: true, errorReturn: false }))
-          || (targetMinFlags[this.actionType] && evalActivationCondition(config.workflow, targetMinFlags[this.actionType], firstTarget, { async: true, errorReturn: false })));
+          (targetMinFlags.all && await evalActivationCondition(config.workflow, targetMinFlags.all, firstTarget, { async: true, errorReturn: false }))
+          || (targetMinFlags[this.actionType] && await evalActivationCondition(config.workflow, targetMinFlags[this.actionType], firstTarget, { async: true, errorReturn: false })));
         if (needsMaxDamage && needsMinDamage) {
           needsMaxDamage = false;
           needsMinDamage = false;
@@ -1086,7 +1092,7 @@ export let MidiActivityMixin = Base => {
       }
 
       if (options.checkUse && this.useCondition && this.activation?.type !== "reaction") { // reactions condition evaluation is handled elsewhere
-        if (!(evalActivationCondition(workflow, this.useCondition, workflow.targets.first(), { async: true }))) {
+        if (!(await evalActivationCondition(workflow, this.useCondition, workflow.targets.first(), { async: true }))) {
           const message = `${this.useConditionReason} ${this.actor?.name} unable to use ${this.item.name}:${this.name}`;
           if (!(usage.midiOptions?.noUseWarning || usage.midiOptions?.workflowOptions?.noUseWarning))
             ui.notifications?.warn(message);
@@ -1237,7 +1243,7 @@ export let MidiActivityMixin = Base => {
           allowedTargets = 9999;
         else
           allowedTargets = (this.target?.affects.type === "creature" ? this.target?.affects.count : 9999) ?? 9999;
-        if (requiresTargets && configSettings.enforceSingleWeaponTarget && allAttackTypes.includes(this.actionType) && allowedTargets === 9999) {
+        if (options.checkTargets && requiresTargets && configSettings.enforceSingleWeaponTarget && allAttackTypes.includes(this.actionType) && allowedTargets === 9999) {
           allowedTargets = 1;
           if (requiresTargets && workflow.targets.size !== 1) {
             ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
