@@ -716,6 +716,14 @@ export async function procAbilityAdvantage(actor: Actor.Implementation, rollType
   const disadvantage = midiFlags.disadvantage;
   let withAdvantage = options.advantage;
   let withDisadvantage = options.disadvantage;
+  if (foundry.utils.isNewerVersion(game.system.version, "5.1")) {
+    // @ts-expect-error no dnd5e-types
+    const { advantage: systemAdvantage, disadvantage: systemDisadvantage } = dnd5e.dataModels.fields.AdvantageModeField.combineFields(actor.system, [
+      `abilities.${abilityId}.${rollType}.roll.mode`
+    ]);
+    withAdvantage ||= systemAdvantage;
+    withDisadvantage ||= systemDisadvantage;
+  }
 
   if (rollType === "save" && options.isMagicSave) {
     const mr = (i18n("midi-qol.MagicResistant") ?? "Magic Resistant").trim();
@@ -740,7 +748,7 @@ export async function procAbilityAdvantage(actor: Actor.Implementation, rollType
         || await evalAllConditionsAsync(actor, `flags.midi-qol.advantage.ability.all`, conditionData)
         || await evalAllConditionsAsync(actor, `flags.midi-qol.advantage.ability.${rollType}.all`, conditionData)
         || await evalAllConditionsAsync(actor, `flags.midi-qol.advantage.ability.${rollType}.${abilityId}`, conditionData)) {
-        options.advantage ||= true;
+        withAdvantage ||= true;
       }
     }
 
@@ -749,10 +757,12 @@ export async function procAbilityAdvantage(actor: Actor.Implementation, rollType
         || await evalAllConditionsAsync(actor, `flags.midi-qol.disadvantage.ability.all`, conditionData)
         || await evalAllConditionsAsync(actor, `flags.midi-qol.disadvantage.ability.${rollType}.all`, conditionData)
         || await evalAllConditionsAsync(actor, `flags.midi-qol.disadvantage.ability.${rollType}.${abilityId}`, conditionData)) {
-        options.disadvantage ||= true;
+        withDisadvantage ||= true;
       }
     }
   }
+  options.advantage ||= withAdvantage;
+  options.disadvantage ||= withDisadvantage;
   return options;
 }
 
@@ -760,8 +770,16 @@ export async function procAdvantageSkill(actor: Actor.Implementation, skillId: s
   const midiFlags = actor.flags[MODULE_ID];
   const advantage = midiFlags?.advantage;
   const disadvantage = midiFlags?.disadvantage;
-  var withAdvantage = options.advantage;
-  var withDisadvantage = options.disadvantage;
+  let withAdvantage = options.advantage;
+  let withDisadvantage = options.disadvantage;
+  if (foundry.utils.isNewerVersion(game.system.version, "5.1")) {
+    // @ts-expect-error no dnd5e-types
+    const { advantage: systemAdvantage, disadvantage: systemDisadvantage } = dnd5e.dataModels.fields.AdvantageModeField.combineFields(actor.system, [
+      `skills.${skillId}.roll.mode`
+    ]);
+    withAdvantage ||= systemAdvantage;
+    withDisadvantage ||= systemDisadvantage;
+  }
   if (advantage || disadvantage) {
     const conditionData = createConditionData({ workflow: undefined, target: undefined, actor, item: options.item ?? options.itemUuid ?? options.saveItem ?? options.saveItemUuid });
     if (await evalAllConditionsAsync(actor, "flags.midi-qol.advantage.all", conditionData)
