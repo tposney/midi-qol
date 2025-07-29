@@ -38,7 +38,6 @@ export interface Options {
   chatMessage: boolean | undefined,
   rollToggle: boolean | undefined,
   other: boolean | undefined,
-  isCritical: boolean | undefined,
   autoRollAttack: boolean | undefined,
   autoRollDamage: boolean | undefined,
   fastForwardAttack: boolean | undefined,
@@ -62,7 +61,6 @@ export const defaultRollOptions: Options = {
   chatMessage: undefined,
   rollToggle: undefined,
   other: undefined,
-  isCritical: false,
   autoRollAttack: undefined,
   autoRollDamage: undefined,
   fastForwardAttack: undefined,
@@ -142,6 +140,7 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
   config.midiOptions ??= {};
   let preRollSkillHookId;
   let rollSkillHookId;
+  let postBuildSkillRollConfigHoodId;
   //@ts-expect-error
   let result: CONFIG.Dice.D20Roll[] = [];
   const saveRollMode = safeGetGameSetting("core", "rollMode");
@@ -165,13 +164,6 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
     await procAdvantageSkill(this, skillId, config.midiOptions);
 
     let success: boolean | undefined = undefined;
-    if (procAutoFailSkill(this, skillId)
-      || (configSettings.skillAbilityCheckAdvantage && procAutoFail(this, "check", this.system.skills[skillId].ability))) {
-      //@ts-expect-error
-      const D20Roll = CONFIG.Dice.D20Roll;
-      result = [new D20Roll("-1[auto fail]").evaluateSync()];
-      success = false;
-    }
     let rollMode: string = message.rollMode ?? config.rollMode ?? safeGetGameSetting("core", "rollMode");
     const blindSkillRoll = configSettings.rollSkillsBlind.includes("all") || configSettings.rollSkillsBlind.includes(skillId);
     if (blindSkillRoll && [CONST.DICE_ROLL_MODES.PUBLIC, "roll", CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode)) {
@@ -191,18 +183,36 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
         message.data ??= {};
         if (overtimeActorUuid)
           message.data["flags.midi-qol.overtimeActorUuid"] = overtimeActorUuid;
-        config.rolls.forEach(roll => {
+          if (procAutoFailSkill(this, skillId)
+          || (configSettings.skillAbilityCheckAdvantage && procAutoFail(this, "check", this.system.skills[skillId].ability))) {
+            dialog.configure = false;
+            config.rolls = [config.rolls[0]];
+            success = false;
+            config.rolls[0].options.maximum = 1;
+            config.rolls[0].parts = [];
+            dialog.configure = false;
+          } else config.rolls.forEach(roll => {
           //          roll.options.advantage ||= config.midiOptions.advantage;
           //          roll.options.disadvantage ||= config.midiOptions.disadvantage;
           if (maxValue && Number.isNumeric(maxValue)) roll.options.maximum = Math.min(Number(maxValue), roll.options.maximum ?? Infinity);
           if (minValue && Number.isNumeric(minValue)) roll.options.minimum = Math.max(Number(minValue), roll.options.minimum ?? -Infinity);
+
         })
         setDialogOptions(dialog, config);
+      });
+      //@ts-expect-error
+      postBuildSkillRollConfigHoodId = Hooks.once(`${game.system?.id}.postBuildSkillRollConfig`, (config, roll, index) => {
+        if (procAutoFailSkill(this, skillId)
+        || (configSettings.skillAbilityCheckAdvantage && procAutoFail(this, "check", this.system.skills[skillId].ability))) {
+        roll.parts = [];
+        roll.options.target = 20;
+        }
       })
       //@ts-expect-error
       rollSkillHookId = Hooks.once(`${game.system?.id}.postSkillRollConfiguration`, (rolls, config, dialog, messageDetails) => {
         // record message configuration details for later display
         message = messageDetails;
+        return true;
       });
 
       const saveCreate = message.create;
@@ -243,6 +253,8 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
     if (preRollSkillHookId) Hooks.off(`${game.system?.id}.preRollSkill`, preRollSkillHookId);
     //@ts-expect-error
     if (rollSkillHookId) Hooks.off(`${game.system?.id}.postSkillRollConfiguration`, rollSkillHookId);
+    //@ts-expect-error
+    if (postBuildSkillRollConfigHoodId) Hooks.off(`${game.system?.id}.postBuildSkillRollConfig`, postBuildSkillRollConfigHoodId);
     if (saveRollMode) game.settings?.set("core", "rollMode", saveRollMode);
     if (oldFormat) return result?.[0];
     return result;
@@ -320,7 +332,9 @@ function configureDamage(wrapped, options: any = { critical: {} }) {
     return;
   }
   if (!this.configured) applyDamageModifiers(this);
-  if (options.critical.allow === false || !this.isCritical) {
+  if ((this.options.critical?.allow === false || options.critical?.allow === false) || !this.isCritical) {
+    options.critical.allow = false;
+    this.options.isCritical = false;
     return wrapped(options);
   }
   this.simplify();
@@ -518,12 +532,6 @@ async function doRollAbility(wrapped, rollType, config: any = {}, dialog: any = 
       message.data["flags.midi-qol.overtimeActorUuid"] = overtimeActorUuid;
 
     let success;
-    if (procAutoFail(this, rollType, abilityId)) {
-      success = false;
-      //@ts-expect-error
-      const D20Roll = CONFIG.Dice.D20Roll;
-      result = [new D20Roll("-1[auto fail]").evaluateSync()];
-    }
     if (success === undefined) {
       const saveCreate = message.create;
       message.create = false;
@@ -535,10 +543,19 @@ async function doRollAbility(wrapped, rollType, config: any = {}, dialog: any = 
       config.disadvantage ||= config.midiOptions.disadvantage;
       //@ts-expect-error
       preRollAbilityHookId = Hooks.once(`${game.system?.id}.preRoll${type}`, (config, dialog, message) => {
-        config.rolls.forEach(roll => {
+        if (procAutoFail(this, rollType, abilityId)) {
+          // auto failing roll - replace roll with a single d20 roll with a max of 1
+          config.rolls = [config.rolls[0]];
+          success = false;
+          config.rolls[0].options.maximum = 1;
+          config.rolls[0].options.target = 20;
+          config.rolls[0].parts = [];
+          dialog.configure = false;
+        } else config.rolls.forEach(roll => {
           if (maxValue !== undefined && Number.isNumeric(maxValue)) roll.options.maximum = Math.min(roll.options.maximum ?? Infinity, Number(maxValue));
           if (minValue !== undefined && Number.isNumeric(minValue)) roll.options.minimum = Math.max(roll.options.minimum ?? -Infinity, Number(minValue));
         });
+
         setDialogOptions(dialog, config);
       });
       //@ts-expect-error
@@ -590,7 +607,6 @@ async function doRollAbility(wrapped, rollType, config: any = {}, dialog: any = 
         }
       }
     }
-
 
     if (message.create !== false && result) {
       //@ts-expect-error no dnd5e-types
@@ -1545,23 +1561,10 @@ export let actorAbilityRollPatching = () => {
 
   log("Patching roll abilities Save/Test/Skill/Tool")
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollSavingThrow", rollSavingThrow, "MIXED");
-  // libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollAbilitySave", rollAbilitySave, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollAbilityCheck", rollAbilityCheck, "MIXED");
-  //libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollAbilityTest", rollAbilityTest, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollDeathSave", rollDeathSave, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollSkill", doRollSkill, "MIXED");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollToolCheck", rollToolCheck, "WRAPPER");
-}
-
-async function rollAbilitySave(wrapped, config: any = {}, dialog = {}, message: any = {}) {
-  message.midiOptions ??= {};
-  message.midiOptions.oldFormat = true;
-  return wrapped(config, dialog, message);
-}
-async function rollAbilityTest(wrapped, config: any = {}, dialog = {}, message: any = {}) {
-  message.midiOptions ??= {};
-  message.midiOptions.oldFormat = true;
-  return wrapped(config, dialog, message);
 }
 
 export async function rollToolCheck(wrapped, config: any = {}, dialog: any = {}, message: any = {}) {

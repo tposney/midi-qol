@@ -7,7 +7,6 @@ export interface Options {
     chatMessage: boolean | undefined;
     rollToggle: boolean | undefined;
     other: boolean | undefined;
-    isCritical: boolean | undefined;
     autoRollAttack: boolean | undefined;
     autoRollDamage: boolean | undefined;
     fastForwardAttack: boolean | undefined;

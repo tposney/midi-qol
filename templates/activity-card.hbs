@@ -153,6 +153,7 @@
   {{/each}}
 
   {{!-- Item Properties --}}
+  {{#if displayProperties}}
   {{#if properties}}
   <ul class="card-footer pills unlist">
     {{#each properties}}
@@ -161,5 +162,6 @@
     </li>
     {{/each}}
   </ul>
+  {{/if}}
   {{/if}}
 </div>

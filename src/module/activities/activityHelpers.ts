@@ -275,7 +275,7 @@ export async function resolveTargetConfirmation(activity, options: any = {}): Pr
   let shouldContinue = await targets;
   //@ts-expect-error
   for (let token of canvas?.tokens?.placeables) await token.initializeVisionSource();
-  //@ts-expect-error - leave this as a ts-error incase fvtt-types gets fixed
+  //@ts-expect-error - leave this as a ts-error in case fvtt-types gets fixed
   if (savedTool) await ui.controls?.activate({ control: savedControl.name, tool: savedTool.name });
 
 

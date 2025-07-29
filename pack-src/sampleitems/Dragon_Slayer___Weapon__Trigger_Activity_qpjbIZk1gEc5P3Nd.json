@@ -410,12 +410,13 @@
       "_stats": {
         "compendiumSource": "Compendium.midi-qol.midiqol-sample-items.Item.1DpmxWLaeEPEX81I.ActiveEffect.ZveR6kPKafjcwQdY",
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.346",
         "systemId": "dnd5e",
         "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": 1743048804962,
-        "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+        "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+        "exportSource": null
       },
       "_key": "!items.effects!qpjbIZk1gEc5P3Nd.ZveR6kPKafjcwQdY"
     }
@@ -460,12 +461,13 @@
   "_stats": {
     "compendiumSource": "Compendium.world.fixup.Item.6S17JeLLIdnHmUL0",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741783006911,
     "modifiedTime": 1741783006933,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "_id": "qpjbIZk1gEc5P3Nd",
   "sort": 112500,

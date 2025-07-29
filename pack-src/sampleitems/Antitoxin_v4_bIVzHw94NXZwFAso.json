@@ -233,12 +233,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.346",
         "systemId": "dnd5e",
         "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/consumables/potions/bottle-round-corked-pink.webp",
       "type": "base",
@@ -392,12 +393,13 @@
   "_stats": {
     "compendiumSource": "Compendium.dnd5e.items.Fc6UfFNOnW80XMzi",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741782992877,
     "modifiedTime": 1741782992877,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "5Ok9Jbl5nOokCkqf",
   "_id": "bIVzHw94NXZwFAso",

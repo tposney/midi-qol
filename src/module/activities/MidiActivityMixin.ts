@@ -81,7 +81,7 @@ export var MidiActivityMixin = Base => {
           displayActivityName: new BooleanField({ name: "displayActivityName", initial: false }),
           rollMode: new StringField({ name: "rollMode", initial: "default", required: true, blank: false }),
           chooseEffects: new BooleanField({ name: "chooseEffects", initial: false }),
-          toggleEffects: new BooleanField({ name: "toggleEffects", initial: false }),
+          toggleEffect: new BooleanField({ name: "toggleEffect", initial: false }),
           ignoreFullCover: new BooleanField({ name: "ignoreFullCover", initial: false }),
           removeChatButtons: new StringField({ name: "removeChatButtons", initial: "default", blank: false, required: true }),
           magicEffect: new BooleanField({ name: "magicEffect", initial: false }),
@@ -222,7 +222,7 @@ export var MidiActivityMixin = Base => {
         actions: {
           rollDamage: MidiActivityMixin.#rollDamage,
           rollDamageNoCritical: MidiActivityMixin.#rollDamageNoCritical,
-          rollDamageCritical: MidiActivityMixin.#rollDamgeCritical,
+          rollDamageCritical: MidiActivityMixin.#rollDamageCritical,
           confirmDamageRollCancel: MidiActivityMixin.#confirmDamageRollCancel,
           confirmDamageRollComplete: MidiActivityMixin.#confirmDamageRollComplete,
           confirmDamageRollCompleteHit: MidiActivityMixin.#confirmDamageRollCompleteHit,
@@ -311,7 +311,7 @@ export var MidiActivityMixin = Base => {
     static #rollDamage(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
-      return this.rollDamage({ event, workflow, critical: { allow: true } }, {}, message);
+      return this.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.isCritical } }, {}, message);
     }
 
     static #rollDamageNoCritical(event, target, message) {
@@ -320,7 +320,7 @@ export var MidiActivityMixin = Base => {
       return this.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
     }
 
-    static #rollDamgeCritical(event, target, message) {
+    static #rollDamageCritical(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       return this.rollDamage({ event, workflow, midiOptions: { isCritical: true } }, {}, message);
@@ -549,6 +549,7 @@ export var MidiActivityMixin = Base => {
       if (!config.workflow) {
         return super.rollDamage(config, dialog, message);
       }
+      config.options ??= {};
       if (!config.workflow && config.workflow?.currentAction === config.workflow?.WorkflowState_Aborted || config.workflow?.currentAction === config.workflow?.WorkflowState_Completed)
         return this.use(config, dialog, {});
       config.midiOptions ??= config.workflow?.workflowOptions ?? {};
@@ -581,9 +582,12 @@ export var MidiActivityMixin = Base => {
             || areKeysPressed(config.event, "skipDialogDisadvantage"),
           critical: areKeysPressed(config.event, "skipDialogAdvantage")
         };
-
         config.midiOptions.isCritical ??= config.workflow.workflowOptions?.isCritical || config.workflow.isCritical;
         config.midiOptions.fastForwardDamage ??= config.workflow.workflowOptions?.fastForwardDamage;
+        if (config.options.critical?.allow === undefined) {
+          config.options.critical ??= {};
+          config.options.critical.allow = this.damage?.critical?.allow;
+        }
         if (this.hasDamage || this.hasHealing) {
           if (Object.values(keys).some(k => k)) dialog.configure = !!(this.midiProperties.forceDialog);
           else dialog.configure ??= !config.midiOptions?.fastForwardDamage || !!this.midiProperties.forceDialog;
@@ -604,6 +608,13 @@ export var MidiActivityMixin = Base => {
               } else dialogConfig.options.defaultButton = "normal";
             } return true;
           });
+          /*
+          postRollConfigurationHookId = Hooks.once(`${game.system?.id}.postRollConfigurationV2`, (rolls, rollConfig, dialogConfig, messageConfig) => {
+            rolls.forEach(roll => {
+              if (roll.)
+          });
+        */
+
           //@ts-expect-error
           rollDamageHookId = Hooks.once(`${game.system?.id}.rollDamageV2`, rolls => {
             if (rolls[0] && config.workflow && config.midiOptions.updateWorkflow !== false) config.workflow.isCritical = rolls[0].options.isCritical;
@@ -632,6 +643,10 @@ export var MidiActivityMixin = Base => {
           if (shouldRollOther && (this.otherActivity.hasDamage || this.otherActivity.hasHealing || this.otherActivity.roll?.formula)) {
             // Check conditions & flags
             const otherConfig = foundry.utils.deepClone(config);
+            if (this.otherActivity.damage?.critical?.allow !== undefined) {
+              otherConfig.options.critical ??= {};
+              otherConfig.options.critical.allow = this.otherActivity.damage.critical.allow;
+            }
             otherConfig.midiOptions.fastForward = config.midiOptions.fastForwardDamage;
             otherConfig.midiOptions.updateWorkflow = false; // rollFormula will try and restart the workflow
             // Undo the roll toggle since rollFormula will look at it as well

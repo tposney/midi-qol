@@ -1,5 +1,4 @@
-import { error, debugEnabled, i18n } from "../midi-qol.js";
-import { log } from "../midi-qol.js";
+import { error, warn, log, debugEnabled, i18n } from "../midi-qol.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { configSettings } from "./settings.js";
 
@@ -53,7 +52,7 @@ export let setupModules = () => {
         const message = `midi-qol requires ${name} to be of version ${REQUIRED_MODULE_VERSIONS[name]} or later, but it is version ${game.modules?.get(name)?.version}`;
         error(message);
         TroubleShooter.recordError(new Error(message), message);
-      } else console.warn(`midi-qol | optional module ${name} not active - some features disabled`)
+      } else warn(`optional module ${name} not active - some features disabled`)
     }
   }
   if (debugEnabled > 0) {

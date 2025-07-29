@@ -47,6 +47,13 @@
             <div class="notes midi-qol-faint">{{{localize "midi-qol.ShowItemDetails.Hint"}}}</div>
         </div>
         <div class="form-group">
+          <label> {{localize "midi-qol.DisplayItemProperties.Name"}} </label>
+            <input type="checkbox" name="displayProperties" data-dtype="Boolean" {{checked
+            configSettings.displayProperties}} />
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.DisplayItemProperties.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
             <label>{{localize "midi-qol.MergeCardCondensed.Name"}}</label>
             <input type="checkbox" name="mergeCardCondensed" data-dtype="Boolean" {{checked
             configSettings.mergeCardCondensed}} />

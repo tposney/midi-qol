@@ -131,6 +131,8 @@
   "midi-qol.MergeCard.Hint": "Merge Attack, Hits, Damage, Saves to a single chat card",
   "midi-qol.MergeCardCondensed.Name": "Condense Attack/Damage Rolls",
   "midi-qol.MergeCardCondensed.Hint": "Conserve a little chat log space by making attack and damage rolls smaller ",
+  "midi-qol.DisplayItemProperties.Name": "Display Item Properties",
+  "midi-qol.DisplayItemProperties.Hint": "Display item properties in the chat card. Disabling saves some chat card space.",
   "midi-qol.ConfigTitle": "Midi-QOL Configuration",
   "midi-qol.WorkflowSettings": "Workflow Settings",
   "midi-qol.CheckSaveText.Name": "Search item description",

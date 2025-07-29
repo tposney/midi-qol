@@ -733,11 +733,11 @@ async function _D20Roll(params: { request: string, targetUuid: string, formula: 
     const { parts, data } = D20Roll.constructParts({ "mod": params.bonus, "cover": params.coverBonus });
     roll.data = data;
     roll.parts = parts;
+    roll.options = { ...params.rollOptions };
     const config = {
       advantage: params.rollOptions?.advantageMode === D20Roll.ADV_MODE.ADVANTAGE,
       disadvantage: params.rollOptions?.advantageMode === D20Roll.ADV_MODE.DISADVANTAGE,
       rolls: [roll],
-      target: params.rollOptions?.target,
       dialog: true,
     };
     const dialog = {
@@ -791,8 +791,8 @@ rollDC: number,
 saveItemUuid: string,
 workflowOptions: object
 workflowId: string
-
 */
+
   let config: any = { midiOptions: data.options, advantage: data.advantage, disadvantage: data.disadvantage, isMagicSave: data.isMagicSave, isConcentrationCheck: data.isConcentrationCheck, rollDC: data.rollDC, saveItemUuid: data.saveItemUuid, workflowOptions: data.workflowOptions, workflowId: data.workflowId }
   if (data.ability) config.ability = data.ability;
   if (data.skill) config.skill = data.skill;

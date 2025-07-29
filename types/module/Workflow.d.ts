@@ -484,7 +484,7 @@ export declare class Workflow {
     displayChatCardWithoutDamageDetail(): Promise<void>;
     callV3DamageHooks(damages: any, token: Token): Promise<void>;
     processDefenceRoll(message: any, html: any, data: any): boolean;
-    processSaveRoll(message: any, html: HTMLElement, data: any): {};
+    processSaveRoll(message: any, html: any, data: any): {};
     checkSuperSaver(token: any, abilities: Set<string> | undefined): boolean;
     checkSemiSuperSaver(token: any, abilities: Set<string> | undefined): boolean;
     processCustomRoll(customRoll: any): true | {

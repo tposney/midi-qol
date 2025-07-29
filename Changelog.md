@@ -1,3 +1,11 @@
+### 13.0.10
+* Added an option to not display item properties in the chat card - saves some space.
+* Fix for not picking up critical damage rolls when using the damage button.
+* Module missing warnings are now only displayed if debug is set to warn.
+* Auto fail saves/checks/skills will always roll a 1.
+* Respect allow critical flag on otherActivity damage rolls.
+* Updated Mace of disruption to only use activities and deal with all effects (I think).
+
 ### 13.0.9
 * This release is now a general release of midi-qol for v13. If you have not yet installed the public alpha please read through the changelog especially the notes for 13.0.4.
 * Please be aware that many of the modules built on top of midi-qol are not yet fully ready for v13 so there will be a delay before you may be able to run your games in v13 with midi.

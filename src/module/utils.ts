@@ -4644,7 +4644,7 @@ async function asyncMySafeEval(expression: string, sandbox: any, onErrorReturn: 
     });
     result = await evl.call(null, sandboxProxy);
   } catch (err) {
-    const message = `midi-qol | asyncMySafeEval | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
+    const message = `midi-qol | asyncMySafeEval | activation condition (${expression}) error, actorUuid: ${sandbox?.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox?.targetUuid}`;
     console.warn(message, err)
     TroubleShooter.recordError(err, message);
     result = onErrorReturn;

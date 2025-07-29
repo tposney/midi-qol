@@ -373,12 +373,13 @@
   "_stats": {
     "compendiumSource": "Compendium.world.fixup.Item.atouILWWnyIcVD30",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741783011910,
     "modifiedTime": 1741783011925,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "_id": "0u9PqRJa5Qkkv9CC",
   "sort": 101563,

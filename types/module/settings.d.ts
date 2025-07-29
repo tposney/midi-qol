@@ -125,6 +125,7 @@ declare class ConfigSettings {
     mergeCardCondensed: boolean;
     mergeCardMulti: boolean;
     mergeCardMultiDamage: boolean;
+    displayProperties: boolean;
     midiPropertiesTabRole: number;
     confirmAttackDamage: string;
     highlightSuccess: boolean;

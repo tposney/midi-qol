@@ -135,6 +135,7 @@ class ConfigSettings {
   mergeCardCondensed: boolean = false;
   mergeCardMulti: boolean = false;
   mergeCardMultiDamage: boolean = false;
+  displayProperties: boolean = true;
   midiPropertiesTabRole: number = CONST.USER_ROLES.PLAYER;
   confirmAttackDamage: string = "none";
   highlightSuccess: boolean = false;
@@ -470,6 +471,7 @@ export let fetchParams = () => {
     wallsBlockRange: "center",
     mergeCardMulti: false,
     mergeCardMultiDamage: false,
+    displayProperties: true,
   }, configSettings.optionalRules ?? {}, { overwrite: true, insertKeys: true, insertValues: true });
   if (!configSettings.optionalRules.incapacitated) configSettings.optionalRules.incapacitated = "nothing";
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
@@ -555,6 +557,7 @@ export let fetchParams = () => {
   //configSettings.v3DamageApplication = true;
   configSettings.useDamageDetail = false;
   if (configSettings.collapsibleTargets === undefined) configSettings.collapsibleTargets = true;
+  if (configSettings.displayProperties === undefined) configSettings.displayProperties = true;
   //@ts-expect-error
   criticalDamage = String(game.settings?.get("midi-qol", "CriticalDamage"));
   if (criticalDamage === "none") criticalDamage = "default";

@@ -3131,6 +3131,7 @@ export class Workflow {
 
     // Nearby foe gives disadvantage on ranged attacks
     if (checkRule("nearbyFoe")) {
+      conditionData ??= createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
       const ignoreNearbyFoes = await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.ignoreNearbyFoes`, conditionData);
       if (!ignoreNearbyFoes && (["rwak", "rsak", "rpak"].includes(actType) || (this.item.system.properties?.has("thr") && actType == "mwak"))) {
         let nearbyFoe;
@@ -3155,8 +3156,7 @@ export class Workflow {
 
     if (this.item.system.properties?.has("hvy")) {
       const failDisadvantageHeavy = foundry.utils.getProperty(this.actor, `flags.${MODULE_ID}.fail.disadvantage.heavy`);
-      if (failDisadvantageHeavy && !conditionData)
-        conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
+      if (failDisadvantageHeavy) conditionData ??= createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
       if (!failDisadvantageHeavy || !await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.fail.disadvantage.heavy`, conditionData)) {
         if (safeGetGameSetting("dnd5e", "rulesVersion") === "modern") {
           if ((this.activity?.actionType === "mwak" && this.actor.system.abilities?.str.value < 13) ||
@@ -3193,10 +3193,10 @@ export class Workflow {
     this.noCritFlagSet = false;
     //@ts-expect-error .first()
     const firstTarget: Token = this.hitTargets.first();
-
+    let conditionData;
     if (criticalFlags || noCriticalFlags) {
 
-      const conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
+      conditionData ??= createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
       if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.critical.all`, conditionData)
         || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.critical.${attackType}`, conditionData)) {
         this.critFlagSet = true;
@@ -5816,43 +5816,7 @@ export class Workflow {
       if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
         img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 }) ?? "";
       }
-      // If using active defence hitTargets are up to date already.
-      if (this.useActiveDefence) {
-        if (this.activeDefenceRolls[getTokenDocument(targetToken)?.uuid ?? ""]) {
-          const adRoll = this.activeDefenceRolls[getTokenDocument(targetToken)?.uuid ?? ""] ?? {};
-          targetAC = adRoll.result ?? adRoll.total;
-          // const adRoll = this.activeDefenceRolls[getTokenDocument(targetToken)?.uuid ?? ""] ?? {};
-          // hitString = `(${adRoll.result ?? adRoll.total}): ${hitString}`
-        }
-        // Invert the isHitResult and hitSymbol so that the results of the defense roll looks the same as when making a saving throw
-        if (!challengeModeArmorSet) {
-          switch (hitSymbol) {
-            case "fa-check-double":
-              // display critical hit as critical failure of the defense roll
-              isHitResult = "fumble";
-              hitSymbol = "fa-xmarks-lines";
-              break;
-            case "fa-check":
-              // display hit as a failure of the defense roll
-              isHitResult = "miss";
-              hitSymbol = "fa-xmark";
-              break;
-            case "fa-times":
-            // deprecated name of FA icon
-            case "fa-xmark":
-              if (isHitResult === "fumble") {
-                // display fumble as a critical success of the defense roll
-                isHitResult = "critical";
-                hitSymbol = "fa-check-double";
-              } else {
-                // display miss as a success of the defense roll
-                isHitResult = "hit";
-                hitSymbol = "fa-check";
-              }
-              break;
-          }
-        }
-      }
+
       if (this.isFumble) hitResultNumeric = "--";
       const targetUuid = getTokenDocument(targetToken)?.uuid ?? "";
 
@@ -6172,6 +6136,7 @@ export class ActiveDefenceWorkflow extends Workflow {
     this.activeDefenceDC = 22 + attackBonus;
     return super.WorkflowState_AttackRollComplete(context);
   }
+
   async checkHits() {
     if (!this.attackRoll || !this.item) return;
     const item = this.item;
