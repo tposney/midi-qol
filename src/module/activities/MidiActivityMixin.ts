@@ -1103,7 +1103,7 @@ export let MidiActivityMixin = Base => {
       }
 
       // @ts-expect-error no dnd5e-types
-      if (this.isSpell || this.item?.system.type.value === "scroll") {
+      if (this.isSpell || this.item?.system.type?.value === "scroll") {
         const midiFlags = this.actor?.flags[MODULE_ID];
         // @ts-expect-error no dnd5e-types
         const needsVerbal = this.item.system.properties.has("vocal");
