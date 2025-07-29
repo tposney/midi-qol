@@ -23,14 +23,6 @@
           "minimum": "5.0.0",
           "maximum": "5.9.99"
         }
-      },
-      {
-        "id": "sw5e",
-        "type": "system",
-        "compatibility": {
-          "minimum": "2.0.2.2.2.5",
-          "compatible": "2.0.2.2.2.5"
-        }
       }
     ],
     "requires": [

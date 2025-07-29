@@ -1,19 +1,18 @@
-import { debugEnabled, i18n, warn } from "../../midi-qol.js";
+import { Activity } from "../../globals.js";
+import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { getTokenDocument } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
-export var MidiSummonActivity;
-export var MidiSummonSheet;
+export let MidiSummonActivity: ReturnType<typeof defineMidiSummonActivityClass>;
+export let MidiSummonSheet: ReturnType<typeof defineMidiSummonSheetClass>;
 
 export function setupSummonActivity() {
   if (debugEnabled > 0) warn("MidiQOL | SummonActivity | setupSummonActivity | Called");
   //@ts-expect-error
-  const GameSystemConfig = game.system.config;
-  //@ts-expect-error
   MidiSummonSheet = defineMidiSummonSheetClass(game.system.applications.activity.SummonSheet);
-  MidiSummonActivity = defineMidiSummonActivityClass(GameSystemConfig.activityTypes.summon.documentClass);
+  MidiSummonActivity = defineMidiSummonActivityClass(GameSystemConfig.activityTypes.summon.documentClass as Activity);
   if (ReplaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eSummon"] = GameSystemConfig.activityTypes.summon;
     GameSystemConfig.activityTypes.summon = { documentClass: MidiSummonActivity };
@@ -32,7 +31,7 @@ let defineMidiSummonSheetClass = (baseClass: any) => {
   }
 }
 
-let defineMidiSummonActivityClass = (ActivityClass: any) => {
+let defineMidiSummonActivityClass = <T extends Activity>(ActivityClass: T) => {
   return class MidiSummonActivity extends MidiActivityMixin(ActivityClass) {
     static LOCALIZATION_PREFIXES = ["midi-qol.SUMMON", ...super.LOCALIZATION_PREFIXES];
     static metadata =

@@ -1,17 +1,16 @@
-import { debugEnabled, i18n, warn } from "../../midi-qol.js";
+import { Activity } from "../../globals.js";
+import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
-export var MidiEnchantActivity;
-export var MidiEnchantSheet;
+export let MidiEnchantActivity: ReturnType<typeof defineMidiEnchantActivityClass>;
+export let MidiEnchantSheet: ReturnType<typeof defineMidiEnchantSheetClass>;
 
 export function setupEnchantActivity() {
   if (debugEnabled > 0) warn("MidiQOL | EnchantActivity | setupEnchantActivity | Called");
   //@ts-expect-error
-  const GameSystemConfig = game.system.config;
-  //@ts-expect-error
   MidiEnchantSheet = defineMidiEnchantSheetClass(game.system.applications.activity.EnchantSheet);
-  MidiEnchantActivity = defineMidiEnchantActivityClass(GameSystemConfig.activityTypes.enchant.documentClass);
+  MidiEnchantActivity = defineMidiEnchantActivityClass(GameSystemConfig.activityTypes.enchant.documentClass as Activity);
   if (ReplaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eEnchant"] = GameSystemConfig.activityTypes.enchant;
     GameSystemConfig.activityTypes.enchant = { documentClass: MidiEnchantActivity };
@@ -20,7 +19,7 @@ export function setupEnchantActivity() {
   }
 }
 
-let defineMidiEnchantActivityClass = (ActivityClass: any) => {
+let defineMidiEnchantActivityClass = <T extends Activity>(ActivityClass: T) => {
   return class MidiEnchantActivity extends MidiActivityMixin(ActivityClass) {
     static LOCALIZATION_PREFIXES = ["midi-qol.ENCHANT", ...super.LOCALIZATION_PREFIXES];
     static metadata =

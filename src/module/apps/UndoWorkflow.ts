@@ -9,13 +9,10 @@ export class UndoWorkflow extends HandlebarsApplicationMixin(ApplicationV2) {
 
   constructor(options) {
     super(options);
-    //@ts-expect-error
-    this.undoAddedHookId = Hooks.on("midi-qol.addUndoEntry", this.render.bind(this));
-    //@ts-expect-error
-    this.undoRemovedHookId = Hooks.on("midi-qol.removeUndoEntry", this.render.bind(this));
+    this.undoAddedHookId = Hooks.on("midi-qol.addUndoEntry", () => {this.render()});
+    this.undoRemovedHookId = Hooks.on("midi-qol.removeUndoEntry", () => {this.render()});
     if (!configSettings.undoWorkflow) {
       configSettings.undoWorkflow = true;
-      //@ts-expect-error
       game.settings.set("midi-qol", "ConfigSettings", configSettings);
       ui.notifications?.warn("Undo Workflow enabled");
     }
@@ -49,7 +46,7 @@ export class UndoWorkflow extends HandlebarsApplicationMixin(ApplicationV2) {
       entry.itemName = undoEntry.itemName;
       entry.userName = undoEntry.userName;
       entry.targets = [];
-      for (let targetEntry of undoEntry.allTargets) {
+      for (let targetEntry of undoEntry.allTargets ?? []) {
         entry.targets.push(targetEntry);
       }
       context.entries.push(entry)
@@ -72,9 +69,7 @@ export class UndoWorkflow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   async close(options = {}) {
-    //@ts-expect-error
     Hooks.off("midi-qol.addUndoEntry", this.undoAddedHookId);
-    //@ts-expect-error
     Hooks.off("midi-qol.removeUndoEntry", this.undoRemovedHookId);
     return super.close(options);
   }

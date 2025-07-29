@@ -1,19 +1,18 @@
-import { debugEnabled, i18n, warn } from "../../midi-qol.js";
+import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { asyncHooksCall } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
-export var MidiForwardActivity;
-export var MidiForwardSheet;
+export let MidiForwardActivity: ReturnType<typeof defineMidiForwardActivityClass>;
+export let MidiForwardSheet: ReturnType<typeof defineMidiForwardSheetClass>;
 
 export function setupForwardActivity() {
   if (debugEnabled > 0) warn("MidiQOL | ForwardActivity | setupForwardActivity | Called");
   //@ts-expect-error
-  const GameSystemConfig = game.system.config;
-  //@ts-expect-error
   MidiForwardSheet = defineMidiForwardSheetClass(game.system.applications.activity.ForwardSheet);
-  MidiForwardActivity = defineMidiForwardActivityClass(GameSystemConfig.activityTypes.forward.documentClass);
+  MidiForwardActivity = defineMidiForwardActivityClass(GameSystemConfig.activityTypes.forward.documentClass as Activity);
   if (ReplaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eForward"] = GameSystemConfig.activityTypes.forward;
     GameSystemConfig.activityTypes.forward = { documentClass: MidiForwardActivity };
@@ -26,7 +25,7 @@ let defineMidiForwardSheetClass = (baseClass: any) => {
   }
 }
 
-let defineMidiForwardActivityClass = (ActivityClass: any) => {
+let defineMidiForwardActivityClass = <T extends Activity>(ActivityClass: T) => {
   return class MidiForwardActivity extends MidiActivityMixin(ActivityClass) {
     static LOCALIZATION_PREFIXES = ["midi-qol.FORWARD", ...super.LOCALIZATION_PREFIXES];
     static metadata =
@@ -46,7 +45,7 @@ let defineMidiForwardActivityClass = (ActivityClass: any) => {
     get effects() { return [] };
 
     /** @override */
-    async use(usage = {}, dialog = {}, message = {}) {
+    async use(usage: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       const usageConfig = foundry.utils.mergeObject({
         cause: {
           activity: this.relativeUUID
@@ -57,6 +56,7 @@ let defineMidiForwardActivityClass = (ActivityClass: any) => {
         }
       }, usage);
 
+      // @ts-expect-error no dnd5e-types
       const activity = this.item.system.activities.get(this.activity.id);
       if (!activity) ui.notifications?.error("DND5E.FORWARD.Warning.NoActivity", { localize: true });
       return activity?.use(usageConfig, dialog, message);

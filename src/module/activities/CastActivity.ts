@@ -1,19 +1,19 @@
-import { debugEnabled, i18n, warn } from "../../midi-qol.js";
+import { AnyObject } from "fvtt-types/utils";
+import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
+import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { asyncHooksCall } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
-export var MidiCastActivity;
-export var MidiCastSheet;
+export let MidiCastActivity: ReturnType<typeof defineMidiCastActivityClass>;
+export let MidiCastSheet: ReturnType<typeof defineMidiCastSheetClass>;
 
 export function setupCastActivity() {
   if (debugEnabled > 0) warn("MidiQOL | CastActivity | setupCastActivity | Called");
   //@ts-expect-error
-  const GameSystemConfig = game.system.config;
-  //@ts-expect-error
   MidiCastSheet = defineMidiCastSheetClass(game.system.applications.activity.CastSheet);
-  MidiCastActivity = defineMidiCastActivityClass(GameSystemConfig.activityTypes.cast.documentClass);
+  MidiCastActivity = defineMidiCastActivityClass(GameSystemConfig.activityTypes.cast.documentClass as Activity);
   if (ReplaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eCast"] = GameSystemConfig.activityTypes.cast;
     GameSystemConfig.activityTypes.cast = { documentClass: MidiCastActivity };
@@ -26,7 +26,7 @@ let defineMidiCastSheetClass = (baseClass: any) => {
   }
 }
 
-let defineMidiCastActivityClass = (ActivityClass: any) => {
+let defineMidiCastActivityClass =  <T extends Activity>(ActivityClass: T) => {
   return class MidiCastActivity extends MidiActivityMixin(ActivityClass) {
     static LOCALIZATION_PREFIXES = ["midi-qol.CAST", ...super.LOCALIZATION_PREFIXES];
     static metadata =
@@ -41,7 +41,8 @@ let defineMidiCastActivityClass = (ActivityClass: any) => {
         },
       }, { inplace: false, insertKeys: true, insertValues: true });
 
-    async use(usage?: any, dialog?: any, message?: any) {
+    async use(usage?: ActivityUseConfiguration, dialog?: RollDialogConfig, message?: RollMessageConfig) {
+      // @ts-expect-error
       return ActivityClass.prototype.use.bind(this)(usage, dialog, message);
     }
 

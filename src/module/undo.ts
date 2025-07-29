@@ -3,17 +3,11 @@ import { debug, debugEnabled, error, log, warn } from "../midi-qol.js";
 import { socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { configSettings } from "./settings.js";
 import { busyWait } from "./tests/setupTest.js";
-import { MQfromUuidSync, getConcentrationEffect, getTokenDocument, isReactionItem } from "./utils.js";
-import { Workflow } from "./Workflow.js";
+import { getConcentrationEffect, getTokenDocument, isReactionItem } from "./utils.js";
+import { UndoData, Workflow } from "./Workflow.js";
 
-var dae;
-//@ts-expect-error
-Hooks.once("DAE.setupComplete", () => {
-  dae = globalThis.DAE;
-})
-
-export var undoDataQueue: any[] = [];
-let startedUndoDataQueue: any[] = [];
+export let undoDataQueue: UndoData[] = [];
+let startedUndoDataQueue: UndoData[] = [];
 const MAXUNDO = 15;
 interface undoTokenActorEntry {
   actorUuid: string;
@@ -21,52 +15,53 @@ interface undoTokenActorEntry {
   actorData: any;
   tokenData: any;
 }
-interface undoDataDef {
+interface UndoDataDirect {
   id: string;
   userId: string;
   userName: string;
   itemName: string;
   itemUuid: string;
-  tokendocUuid: string;
   actorUuid: string;
   actorName: string;
-  chatCardUuids: string[] | undefined;
   isReaction: boolean;
-  templateUuids: string[] | undefined;
-  sequencerUuid: string | undefined;
-  itemCardUuid: string | undefined;
-  targets: { actorUuid: string, tokenUuid: string }[] | undefined;
+  tokendocUuid?: string;
+  chatCardUuids?: string[];
+  templateUuids?: string[];
+  sequencerUuid?: string;
+  itemCardUuid?: string;
+  targets?: { actorUuid: string; tokenUuid: string;  }[];
 }
 
-export function queueUndoDataDirect(undoDataDef) {
+export function queueUndoDataDirect(undoDataDef: UndoDataDirect) {
   if (!configSettings.undoWorkflow) return;
   unTimedExecuteAsGM("queueUndoDataDirect", undoDataDef);
 }
-export function _queueUndoDataDirect(undoDataDef) {
+export function _queueUndoDataDirect(undoDataDef: UndoDataDirect) {
   if (!configSettings.undoWorkflow) return;
-  const undoData: any = {};
-  const tokenDoc = MQfromUuidSync(undoDataDef.tokendocUuid);
-  const actor = MQfromUuidSync(undoDataDef.actorUuid);
+  const tokenDoc = fromUuidSync(undoDataDef.tokendocUuid) as TokenDocument.Implementation | undefined;
+  const actor = fromUuidSync(undoDataDef.actorUuid) as Actor.Implementation | undefined;
   if (!actor) return;
-  undoData.id = undoDataDef.id ?? foundry.utils.randomID();
-  undoData.actorEntry = { actorUuid: undoDataDef.actorUuid, tokenUuid: undoDataDef.tokendocUuid, actorData: actor?.toObject(true), tokenData: tokenDoc?.toObject(true) };
-  undoData.chatCardUuids = undoDataDef.chatCardUuids ?? [];
-  undoData.itemCardUuid = undoDataDef.itemCardUuid;
-  undoData.actorName = actor.name;
-  undoData.itemName = undoDataDef.itemName;
-  undoData.userName = undoDataDef.userName;
-  undoData.allTargets = undoDataDef.targets ?? new Collection();
-  undoData.serverTime = game.time?.serverTime;
-  undoData.templateUuids = undoDataDef.templateUuids ?? [];
-  undoData.isReaction = undoDataDef.isReaction;
+  const undoData: UndoData = {
+    id: undoDataDef.id ?? foundry.utils.randomID(),
+    actorUuid: undoDataDef.actorUuid,
+    actorEntry: { actorUuid: undoDataDef.actorUuid, tokenUuid: undoDataDef.tokendocUuid, actorData: actor?.toObject(true), tokenData: tokenDoc?.toObject(true) },
+    chatCardUuids: undoDataDef.chatCardUuids ?? [],
+    itemCardUuid: undoDataDef.itemCardUuid,
+    actorName: actor.name,
+    itemName: undoDataDef.itemName,
+    userName: undoDataDef.userName,
+    allTargets: new Collection(),
+    serverTime: game.time?.serverTime,
+    templateUuids: undoDataDef.templateUuids ?? [],
+    isReaction: undoDataDef.isReaction,
+  };
 
-  if (undoData.targets) {
-    for (let undoEntry of undoDataDef.allTargets) {
-      let { actorUuid, tokenUuid } = undoEntry;
-      const targetData = createTargetData(tokenUuid)
-      if (targetData) {
-        foundry.utils.mergeObject(undoEntry, targetData, { inplace: true });
-      }
+  for (let undoEntry of undoDataDef.targets ?? []) {
+    let { actorUuid, tokenUuid } = undoEntry;
+    const targetData = createTargetData(tokenUuid);
+    if (targetData) {
+      // TODO: Verify this works
+      undoData.allTargets?.set(actorUuid, targetData);
     }
   }
   addQueueEntry(undoDataQueue, undoData);
@@ -74,20 +69,20 @@ export function _queueUndoDataDirect(undoDataDef) {
 // Called by workflow to start a new undoWorkflow entry
 export async function saveUndoData(workflow: Workflow): Promise<boolean> {
   if (!configSettings.undoWorkflow) return true;
-  workflow.undoData = {};
-  workflow.undoData.id = workflow.id;
-  workflow.undoData.userId = game.user?.id;
-  workflow.undoData.itemName = workflow.item?.name;
-  workflow.undoData.itemUuid = workflow.item?.uuid;
-  workflow.undoData.userName = game.user?.name;
-  workflow.undoData.userId = game.user?.id;
-  workflow.undoData.tokendocUuid = workflow.token?.document.uuid;
-  workflow.undoData.actorUuid = workflow.actor?.uuid;
-  workflow.undoData.actorName = workflow.actor?.name;
-  workflow.undoData.chatCardUuids = [];
-  workflow.undoData.isReaction = workflow.workflowOptions?.isReaction || isReactionItem(workflow.item);
-  workflow.undoData.templateUuids = [];
-  workflow.undoData.sequencerUuid = workflow.item?.uuid;
+  workflow.undoData = {
+    id: workflow.id,
+    userId: game.user?.id,
+    itemName: workflow.item.name,
+    itemUuid: workflow.item.uuid,
+    userName: game.user?.name,
+    tokendocUuid: workflow.token?.document.uuid,
+    actorUuid: workflow.actor.uuid,
+    actorName: workflow.actor.name,
+    chatCardUuids: [],
+    isReaction: workflow.workflowOptions?.isReaction || isReactionItem(workflow.item),
+    templateUuids: [],
+    sequencerUuid: workflow.item.uuid,
+  };
   if (!await unTimedExecuteAsGM("startUndoWorkflow", workflow.undoData)) {
     error("Could not startUndoWorkflow");
     return false;
@@ -95,36 +90,34 @@ export async function saveUndoData(workflow: Workflow): Promise<boolean> {
   return true;
 }
 
-export function createTargetData(tokenUuid) {
+export function createTargetData(tokenUuid: string) {
   if (!tokenUuid) return undefined;
-  const tokendoc = MQfromUuidSync(tokenUuid);
-  if (!tokendoc) {
+  const tokenDoc = fromUuidSync(tokenUuid) as TokenDocument.Implementation | undefined;
+  if (!tokenDoc) {
     error("undo | createTargetData could not fetch token document for ", tokenUuid);
     return undefined;
   }
-  const targetData = { tokenUuid, actorUuid: tokendoc?.actor?.uuid, actorData: tokendoc?.actor?.toObject(true), tokenData: tokendoc?.toObject(true) };
-  delete targetData.tokenData?.actorData;
-  delete targetData.tokenData?.delta;
+  const targetData = { tokenUuid, actorUuid: tokenDoc.actor?.uuid ?? "", actorData: tokenDoc.actor?.toObject(true), tokenData: tokenDoc.toObject(true) };
   return targetData;
 }
 
 // Called to save snapshots of workflow actor/token data
-export function startUndoWorkflow(undoData: any): boolean {
+export function startUndoWorkflow(undoData: UndoData): boolean {
   if (!configSettings.undoWorkflow) return true;
-  let actor = MQfromUuidSync(undoData.actorUuid);
+  let actor = fromUuidSync(undoData.actorUuid) as Actor.Implementation | TokenDocument.Implementation | null | undefined;
   if (actor instanceof TokenDocument) actor = actor.actor;
   const actorData = actor?.toObject(true);
-  const tokenData = actor?.isToken ? actor.token.toObject(true) : MQfromUuidSync(undoData.tokendocUuid ?? "")?.toObject(true);
+  const tokenData = actor?.isToken ? actor.token!.toObject(true) : (fromUuidSync(undoData.tokendocUuid ?? "") as TokenDocument.Implementation)?.toObject(true);
   undoData.actorEntry = { actorUuid: undoData.actorUuid, tokenUuid: undoData.tokendocUuid, actorData, tokenData };
-  undoData.allTargets = new Collection; // every token referenced by the workflow
+  undoData.allTargets = new Collection(); // every token referenced by the workflow
   const concentrationEffect = getConcentrationEffect(actor, undoData.itemUuid);
   if (concentrationEffect) {
     // @ts-expect-error no dnd5e-types
     for (let dependent of concentrationEffect.getDependents()) {
-      let token;
+      let token: TokenDocument.Implementation | null | undefined;
       if (dependent instanceof ActiveEffect) dependent = dependent.parent;
       if (dependent instanceof Actor && dependent.isToken) token = dependent.token;
-      else if (dependent instanceof Actor) token = dependent.getActiveTokens()[0];
+      else if (dependent instanceof Actor) token = dependent.getActiveTokens(false, true)[0];
       if (!token) continue;
       const targetData = createTargetData(token.uuid);
       if (targetData) undoData.allTargets.set(dependent.uuid, targetData);
@@ -134,7 +127,7 @@ export function startUndoWorkflow(undoData: any): boolean {
   return true;
 }
 
-export function updateUndoChatCardUuidsById(data) {
+export function updateUndoChatCardUuidsById(data: { id: string, chatCardUuids: string[] }) {
   if (!configSettings.undoWorkflow) return;
   const currentUndo = undoDataQueue.find(undoEntry => undoEntry.id === data.id);
   if (!currentUndo) {
@@ -143,7 +136,7 @@ export function updateUndoChatCardUuidsById(data) {
   }
   currentUndo.chatCardUuids = data.chatCardUuids;
 }
-export function updateUndoChatCardUuids(data) {
+export function updateUndoChatCardUuids(data: UndoData) {
   if (!configSettings.undoWorkflow) return;
   const currentUndo = undoDataQueue.find(undoEntry => undoEntry.serverTime === data.serverTime && undoEntry.userId === data.userId);
   if (!currentUndo) {
@@ -157,11 +150,13 @@ export function updateUndoChatCardUuids(data) {
 // This is a bit convoluted since we don't want to pass massive data elements over the wire.
 // The total data for an undo entry can be measred in megabytes, so just pass uuids to the gm client and they can look up the tokens/actors
 export async function saveTargetsUndoData(workflow: Workflow) {
+  if (!workflow.undoData) return;
   workflow.undoData.targets = [];
   workflow.targets.forEach(t => {
-    let tokendoc: TokenDocument | undefined = getTokenDocument(t);
-    if ((tokendoc?.actor as unknown as Actor)?.uuid === workflow.actor.uuid) return;
-    workflow.undoData.targets.push({ tokenUuid: tokendoc?.uuid, actorUuid: (tokendoc?.actor as unknown as Actor)?.uuid });
+    let tokenDoc = getTokenDocument(t);
+    if (!tokenDoc) return;
+    if ((tokenDoc?.actor)?.uuid === workflow.actor.uuid) return;
+    workflow.undoData!.targets!.push({ tokenUuid: tokenDoc?.uuid, actorUuid: (tokenDoc?.actor)?.uuid ?? "" });
   });
   workflow.undoData.serverTime = game.time?.serverTime;
   workflow.undoData.itemCardUuid = workflow.itemCardUuid;
@@ -169,7 +164,7 @@ export async function saveTargetsUndoData(workflow: Workflow) {
   return unTimedExecuteAsGM("queueUndoData", workflow.undoData)
 }
 
-export async function addUndoChatMessage(message: ChatMessage) {
+export async function addUndoChatMessage(message: ChatMessage.Implementation) {
   const currentUndo = undoDataQueue[0];
   if (message instanceof Promise) message = await message;
   if (configSettings.undoWorkflow && currentUndo && !currentUndo.chatCardUuids.some(uuid => uuid === message.uuid)) {
@@ -178,8 +173,7 @@ export async function addUndoChatMessage(message: ChatMessage) {
     unTimedExecuteAsGM("updateUndoChatCardUuids", currentUndo);
   }
 }
-//@ts-expect-error
-Hooks.on("createChatMessage", (message: ChatMessage, data: any, options:any, user) => {
+Hooks.on("createChatMessage", (message, data, user) => {
   if (!configSettings.undoWorkflow) return;
   if ((undoDataQueue ?? []).length < 1) return;
   const currentUndo = undoDataQueue[0];
@@ -187,10 +181,10 @@ Hooks.on("createChatMessage", (message: ChatMessage, data: any, options:any, use
   // if (currentUndo.userId !== user) return;
   if (speaker.token) {
     const tokenUuid = `Scene.${speaker.scene}.Token.${speaker.token}`;
-    if (currentUndo.allTargets.has(tokenUuid)) currentUndo.chatCardUuids.push(message.uuid);
+    if (currentUndo.allTargets?.has(tokenUuid)) currentUndo.chatCardUuids.push(message.uuid);
   } else if (speaker.actor) {
     const actorUuid = `Actor.${speaker.actor}`;
-    if (currentUndo.allTargets.has(actorUuid)) currentUndo.chatCardUuids.push(message.uuid);
+    if (currentUndo.allTargets?.has(actorUuid)) currentUndo.chatCardUuids.push(message.uuid);
   }
 });
 
@@ -204,26 +198,26 @@ export function getUndoQueue() {
   return undoDataQueue;
 }
 
-export function queueUndoData(data: any): boolean {
+export function queueUndoData(data: UndoData): boolean {
   let inProgress = startedUndoDataQueue.find(undoData => undoData.userId === data.userId && undoData.id === data.id);
   if (!inProgress) {
-    error("Could not find started undo entry for ", data.userId, data.uuid);
+    error("Could not find started undo entry for ", data.userId, data.id);
     return false;
   };
   inProgress = foundry.utils.mergeObject(inProgress, data, { overwrite: false });
   startedUndoDataQueue = startedUndoDataQueue.filter(undoData => undoData.userId !== data.userId || undoData.itemUuid !== data.itemUuid);
 
-  data.targets.forEach(undoEntry => {
-    if (!inProgress.allTargets.get(undoEntry.actorUuid)) {
+  data.targets?.forEach(undoEntry => {
+    if (!inProgress.allTargets?.get(undoEntry.actorUuid ?? "")) {
       const targetData = createTargetData(undoEntry.tokenUuid)
       if (targetData) {
         foundry.utils.mergeObject(undoEntry, targetData, { inplace: true });
-        inProgress.allTargets.set(undoEntry.actorUuid, undoEntry);
+        inProgress.allTargets?.set(undoEntry.actorUuid!, undoEntry);
       }
     }
     /* This replaces the use of midi-qol concentration data but I'm not sure it's needed
     //@ts-expect-error
-    let actor = MQfromUuidSync(undoEntry.actorUuid);
+    let actor = fromUuidSync(undoEntry.actorUuid);
     if (actor instanceof TokenDocument) actor = actor.actor;
     for (let effect of actor?.appliedEffects) {
       const dependents = effect.getDependents();
@@ -246,18 +240,17 @@ export function queueUndoData(data: any): boolean {
   return true;
 }
 
-export function addQueueEntry(queue: any[], data: any) {
+export function addQueueEntry(queue: UndoData[], data: UndoData) {
   // add the item
   let added = false;
   for (let i = 0; i < queue.length; i++) {
-    if (data.serverTime > queue[i].serverTime) {
+    if ((data.serverTime ?? 0) > (queue[i].serverTime ?? 0)) {
       queue.splice(i, 0, data);
       added = true;
       break;
     }
   }
   if (!added) queue.push(data);
-  //@ts-expect-error
   Hooks.callAll("midi-qol.addUndoEntry", data)
   if (queue.length > MAXUNDO) {
     log("Removed undoEntry due to overflow", queue.pop());
@@ -281,12 +274,13 @@ export async function undoTillWorkflow(workflowId: string, undoTarget: boolean, 
     }
     if (undoTarget) await undoWorkflow(undoDataQueue[0]);
     if (undoDataQueue.length > 0 && removeWorkflow) {
-      const workflow = undoDataQueue.shift();
-      // This should be unneeded as removing the chat card should trigger removal of the workflow
-      socketlibSocket.executeAsUser("removeWorkflow", workflow.userId, workflow.id);
+      const undoData = undoDataQueue.shift();
+      if (undoData) {
+        // This should be unneeded as removing the chat card should trigger removal of the workflow
+        socketlibSocket.executeAsUser("removeWorkflow", undoData.userId, undoData.id);
+      }
     }
   } finally {
-    //@ts-expect-error
     if (queueLength !== undoDataQueue.length) Hooks.callAll("midi-qol.removeUndoEntry");
   }
   return queueLength !== undoDataQueue.length;
@@ -294,15 +288,14 @@ export async function undoTillWorkflow(workflowId: string, undoTarget: boolean, 
 
 export async function _undoMostRecentWorkflow() {
   if (undoDataQueue.length === 0) return false;
-  let undoData;
+  let undoData: UndoData | undefined;
   try {
     while (undoDataQueue.length > 0) {
       undoData = undoDataQueue.shift();
-      if (undoData.isReaction) await undoWorkflow(undoData);
+      if (undoData?.isReaction) await undoWorkflow(undoData);
       else return undoWorkflow(undoData);
     }
   } finally {
-    //@ts-expect-error
     if (undoData) Hooks.callAll("midi-qol.removeUndoEntry", undoData);
   }
   return;
@@ -310,15 +303,14 @@ export async function _undoMostRecentWorkflow() {
 
 export async function _removeMostRecentWorkflow() {
   if (undoDataQueue.length === 0) return false;
-  let undoData;
+  let undoData: UndoData | undefined;
   try {
     while (undoDataQueue.length > 0) {
       undoData = undoDataQueue.shift();
-      if (undoData.isReaction) continue;
+      if (undoData?.isReaction) continue;
       else return undoData;
     }
   } finally {
-    //@ts-expect-error
     if (undoData) Hooks.callAll("midi-qol.removeUndoEntry", undoData);
   }
   return;
@@ -329,39 +321,44 @@ export async function _removeChatCards(data: { chatCardUuids: string[] }) {
   if (!data.chatCardUuids) return;
   try {
     for (let uuid of data.chatCardUuids) {
-      const card = await MQfromUuidSync(uuid);
+      const card = fromUuidSync(uuid) as ChatMessage.Implementation | undefined;
       await removeChatCard(card);
     }
   } catch (err) {
-    debugger;
+    error(err);
+    // debugger;
   }
 }
 
-export function getRemoveUndoEffects(effectsData, actor): string[] {
+export function getRemoveUndoEffects(effectsData: ActiveEffect.Source[], actor: Actor.Implementation): string[] {
   if (!effectsData) return []; // should only hapoen for unlinked unmodified
   const effectsToRemove = actor.effects.filter(effect => {
     return !effectsData.some(effectData => effect.id === effectData._id);
-  }).map(effect => effect.id) ?? [];
+  }).map(effect => effect.id!) ?? [];
   return effectsToRemove;
 }
 
-function getRemoveUndoItems(itemsData, actor): string[] {
+function getRemoveUndoItems(itemsData: Item.Source[], actor: Actor.Implementation): string[] {
   if (!itemsData) return []; // Should only happen for unchanged unlinked actors
   const itemsToRemove = actor.items.filter(item => {
     return !itemsData?.some(itemData => item.id === itemData._id);
-  }).map(item => item.id);
+  }).map(item => item.id!);
   return itemsToRemove;
 }
 
-function getChanges(newData, savedData): any {
+function getChanges(newData?: Actor.Source | TokenDocument.Source, savedData?: Actor.Source | TokenDocument.Source): Partial<Actor.Source | TokenDocument.Source> {
   if (!newData && !savedData) return {};
-  delete newData.items;
-  delete newData.effects;
-  delete savedData.items;
-  delete savedData.effects;
+  if (newData) {
+    delete (newData as Partial<Actor.Source>).items;
+    delete (newData as Partial<Actor.Source>).effects;
+  }
+  if (savedData) {
+    delete (savedData as Partial<Actor.Source>).items;
+    delete (savedData as Partial<Actor.Source>).effects;
+  }
 
-  const changes = foundry.utils.flattenObject(foundry.utils.diffObject(newData, savedData));
-  const tempChanges = foundry.utils.flattenObject(foundry.utils.diffObject(savedData, newData));
+  const changes = foundry.utils.flattenObject(foundry.utils.diffObject(newData ?? {}, savedData ?? {}));
+  const tempChanges = foundry.utils.flattenObject(foundry.utils.diffObject(savedData ?? {}, newData ?? {}));
   const toDelete = {};
   for (let key of Object.keys(tempChanges)) {
     if (!changes[key]) {
@@ -373,90 +370,91 @@ function getChanges(newData, savedData): any {
   }
   return foundry.utils.mergeObject(changes, toDelete);
 }
-async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData }) {
-  let actor = MQfromUuidSync(actorUuid ?? "");
+async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData }: { tokenUuid?: string; actorUuid?: string; actorData?: Actor.Source, tokenData?: TokenDocument.Source}) {
+  let actor = fromUuidSync(actorUuid ?? "") as Actor.Implementation | TokenDocument.Implementation | undefined | null;
   if (actor instanceof TokenDocument) actor = actor.actor;
-  const tokendoc = actor?.isToken ? actor.token : MQfromUuidSync(tokenUuid ?? "");
+  const tokenDoc = actor?.isToken ? actor.token : fromUuidSync(tokenUuid ?? "") as TokenDocument.Implementation | undefined;
   if (!actor) return;
-  let actorChanges;
-  let tokenChanges;
+  let actorChanges: Partial<Actor.Source> | undefined;
+  let tokenChanges: Partial<TokenDocument.Source> | undefined;
   if (debugEnabled > 0) warn("undoSingleTokenActor | starting for ", actor.name);
 
   const removeItemsFunc = async () => {
-    const itemsToRemove = getRemoveUndoItems(actorData.items ?? [], actor);
+    const itemsToRemove = getRemoveUndoItems(actorData?.items ?? [], actor);
+    // @ts-expect-error extra option silliness
     if (itemsToRemove?.length > 0) await actor.deleteEmbeddedDocuments("Item", itemsToRemove, { isUndo: true });
     if (debugEnabled > 0) warn("undoSingleTokenActor | items to remove ", actor.name, itemsToRemove);
     // await busyWait(0.1);
   }
-  if (dae.actionQueue) await dae.actionQueue.add(removeItemsFunc)
+  if (globalThis.DAE.actionQueue) await globalThis.DAE.actionQueue.add(removeItemsFunc)
   else await removeItemsFunc();
   if (debugEnabled > 0) warn("undoSingleTokenActor |  removeItemFunc completed")
 
   if (debugEnabled > 0) warn("undoSingleTokenActor | about to remove effects")
   const removeEffectsFunc = async () => {
-    const effectsToRemove = getRemoveUndoEffects(actorData.effects ?? [], actor);
+    const effectsToRemove = getRemoveUndoEffects(actorData?.effects ?? [], actor);
     if (debugEnabled > 0) warn("undoSingleTokenActor |", effectsToRemove);
+    // @ts-expect-error extra option silliness
     if (effectsToRemove.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToRemove, { noConcentrationCheck: true, isUndo: true });
   }
-  if (dae?.actionQueue) await dae.actionQueue.add(removeEffectsFunc)
+  if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(removeEffectsFunc)
   else await removeEffectsFunc();
   if (debugEnabled > 0) warn("undoSingleTokenActor | remove effects completed")
 
   const itemsToAdd = actorData?.items?.filter(itemData => /*!itemData.flags?.dae?.DAECreated && */ !actor.items.some(item => itemData._id === item.id));
   if (debugEnabled > 0) warn("undoSingleTokenActor | Items to add ", actor.name, itemsToAdd)
-  if (itemsToAdd?.length > 0) {
-    if (dae?.actionQueue) await dae.actionQueue.add(actor.createEmbeddedDocuments.bind(actor), "Item", itemsToAdd, { keepId: true, isUndo: true });
+  if ((itemsToAdd?.length ?? 0) > 0) {
+    if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.createEmbeddedDocuments.bind(actor), "Item", itemsToAdd, { keepId: true, isUndo: true });
+    // @ts-expect-error extra option silliness
     else await actor?.createEmbeddedDocuments("Item", itemsToAdd, { keepId: true, isUndo: true });
     await busyWait(0.1);
   }
   let effectsToAdd = actorData?.effects?.filter(efData => !actor.effects.some(effect => efData._id === effect.id));
-  effectsToAdd = effectsToAdd.filter(efData => !efData?.flags?.dae?.transfer);
+  effectsToAdd = effectsToAdd?.filter(efData => !efData?.flags?.dae?.transfer) ?? [];
   // revisit this for v11 and effects not transferred
 
   if (debugEnabled > 0) warn("undoSingleTokenActor | Effects to add ", actor.name, effectsToAdd);
   if (effectsToAdd?.length > 0) {
-    if (dae?.actionQueue) dae.actionQueue.add(async () => {
-      effectsToAdd = effectsToAdd.filter(efId => !actor.effects.some(effect => effect.id === efId))
+    if (globalThis.DAE?.actionQueue) globalThis.DAE.actionQueue.add(async () => {
+      effectsToAdd = effectsToAdd?.filter(eff => !actor.effects.some(effect => effect.id === eff._id!));
       if (debugEnabled > 0) warn("undoSingleTokenActor | Effects to add are ", effectsToAdd, actor.name);
+      // @ts-expect-error extra option silliness
       await actor.createEmbeddedDocuments("ActiveEffect", effectsToAdd, { keepId: true, isUndo: true })
     });
+    // @ts-expect-error extra option silliness
     else await actor.createEmbeddedDocuments("ActiveEffect", effectsToAdd, { keepId: true, isUndo: true });
   }
 
-  // older versions of effect macro will throw an error when multiple items are updated.
-  //@ts-expect-error .version
-  if (game.modules.get("effectmacro")?.active && foundry.utils.isNewerVersion("12.0.1", game.modules.get("effectmacro")?.version)) {
-    for (let itemData of actorData.items) {
-      await actor.updateEmbeddedDocuments("Item", [itemData], { keepId: true, isUndo: true });
-    }
-  } else {
-    if (dae?.actionQueue) await dae.actionQueue.add(actor.updateEmbeddedDocuments.bind(actor), "Item", actorData.items, { keepId: true, isUndo: true });
-    else await actor.updateEmbeddedDocuments("Item", actorData.items, { keepId: true, isUndo: true });
+  if (actorData && globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.updateEmbeddedDocuments.bind(actor), "Item", actorData.items, { keepId: true, isUndo: true });
+  // @ts-expect-error extra option silliness
+  else if (actorData) await actor.updateEmbeddedDocuments("Item", actorData.items, { keepId: true, isUndo: true });
+  if ((actorData?.effects?.length ?? 0) > 0) {
+    if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.updateEmbeddedDocuments.bind(actor), "ActiveEffect", actorData!.effects, { keepId: true, isUndo: true });
+    // @ts-expect-error extra option silliness
+    else await actor.updateEmbeddedDocuments("ActiveEffect", actorData!.effects, { keepId: true, isUndo: true });
   }
-  if (actorData.effects?.length > 0) {
-    if (dae?.actionQueue) await dae.actionQueue.add(actor.updateEmbeddedDocuments.bind(actor), "ActiveEffect", actorData.effects, { keepId: true, isUndo: true });
-    else await actor.updateEmbeddedDocuments("ActiveEffect", actorData.effects, { keepId: true, isUndo: true });
-  }
-
 
   actorChanges = actorData ? getChanges(actor.toObject(true), actorData) : {};
   if (debugEnabled > 0) warn("undoSingleTokenActor | Actor data ", actor.name, actorData, actorChanges);
   if (!foundry.utils.isEmpty(actorChanges)) {
     delete actorChanges.items;
     delete actorChanges.effects;
+    // @ts-expect-error extra option silliness
     await actor.update(actorChanges, { noConcentrationCheck: true })
   }
-  if (tokendoc) {
-    tokenChanges = tokenData ? getChanges(tokendoc.toObject(true), tokenData) : {};
+  if (tokenDoc) {
+    tokenChanges = tokenData ? getChanges(tokenDoc.toObject(true), tokenData) : {};
+    // @ts-expect-error pretty sure this doesn't exist but idk
     delete tokenChanges.actorData;
     delete tokenChanges.delta;
     if (!foundry.utils.isEmpty(tokenChanges)) {
-      await tokendoc.update(tokenChanges, { noConcentrationCheck: true })
+      // @ts-expect-error extra option silliness
+      await tokenDoc.update(tokenChanges, { noConcentrationCheck: true })
     }
   }
 }
 
-export async function removeChatCard(chatCard: ChatMessage | undefined): Promise<ChatMessage | undefined> {
+export async function removeChatCard(chatCard?: ChatMessage.Implementation): Promise<ChatMessage.Implementation | undefined> {
   if (!chatCard || !chatCard.content) return;
   const shouldDelete = configSettings.undoChatColor === "Delete";
   if (shouldDelete) {
@@ -466,21 +464,22 @@ export async function removeChatCard(chatCard: ChatMessage | undefined): Promise
   return await chatCard.update({ content: `<div style="background-color: ${configSettings.undoChatColor};"> ${chatCard.content}</div>` });
 }
 
-export async function undoWorkflow(undoData: any) {
-  log(`Undoing workflow for Player ${undoData.userName} Token: ${undoData.actorEntry.actorData.name} Item: ${undoData.itemName ?? ""}`)
+export async function undoWorkflow(undoData?: UndoData) {
+  if (!undoData) return;
+  log(`Undoing workflow for Player ${undoData.userName} Token: ${undoData.actorEntry?.actorData?.name} Item: ${undoData.itemName ?? ""}`)
   for (let templateUuid of undoData.templateUuids)
-    await MQfromUuidSync(templateUuid)?.delete();
+    await (fromUuidSync(templateUuid) as MeasuredTemplateDocument.Implementation | undefined)?.delete();
   if (globalThis.Sequencer && undoData.sequencerUuid) await globalThis.Sequencer.EffectManager.endEffects({ origin: undoData.sequencerUuid })
 
-  for (let undoEntry of undoData.allTargets) {
+  for (let undoEntry of undoData?.allTargets ?? []) {
     log("undoing target ", undoEntry.actorData?.name ?? undoEntry.tokenData?.name, undoEntry)
     await undoSingleTokenActor(undoEntry)
   };
-  await undoSingleTokenActor(undoData.actorEntry);
+  if (undoData.actorEntry) await undoSingleTokenActor(undoData.actorEntry);
   const shouldDelete = false;
   // delete cards...
   if (undoData.itemCardUuid) {
-    const message = MQfromUuidSync(undoData.itemCardUuid);
+    const message = fromUuidSync(undoData.itemCardUuid) as ChatMessage.Implementation | undefined;
     await removeChatCard(message);
   }
   await _removeChatCards({ chatCardUuids: undoData.chatCardUuids });

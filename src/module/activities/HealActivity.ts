@@ -1,18 +1,18 @@
-import { debugEnabled, i18n, warn } from "../../midi-qol.js";
+import { AnyMutableObject } from "fvtt-types/utils";
+import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
-export var MidiHealActivity;
-export var MidiHealSheet;
+export let MidiHealActivity: ReturnType<typeof defineMidiHealActivityClass>;
+export let MidiHealSheet: ReturnType<typeof defineMidiHealSheetClass>;
 
 export function setupHealActivity() {
   if (debugEnabled > 0) warn("MidiQOL | HealActivity | setupHealActivity | Called");
   //@ts-expect-error
-  const GameSystemConfig = game.system.config;
-  //@ts-expect-error
   MidiHealSheet = defineMidiHealSheetClass(game.system.applications.activity.HealSheet);
-  MidiHealActivity = defineMidiHealActivityClass(GameSystemConfig.activityTypes.heal.documentClass);
+  MidiHealActivity = defineMidiHealActivityClass(GameSystemConfig.activityTypes.heal.documentClass as Activity);
   if (ReplaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eHeal"] = GameSystemConfig.activityTypes.heal;
     GameSystemConfig.activityTypes.heal = { documentClass: MidiHealActivity };
@@ -21,7 +21,7 @@ export function setupHealActivity() {
   }
 }
 
-let defineMidiHealActivityClass = (ActivityClass: any) => {
+let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
   return class MidiHealActivity extends MidiActivityMixin(ActivityClass) {
     static LOCALIZATION_PREFIXES = ["midi-qol.HEAL", ...super.LOCALIZATION_PREFIXES];
     static metadata =
@@ -38,10 +38,9 @@ let defineMidiHealActivityClass = (ActivityClass: any) => {
         },
       }, { inplace: false, insertKeys: true, insertValues: true })
 
-    static #rollHealing(event, target, message) {
+    static #rollHealing(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.getWorkflow(message?.uuid);
-      //@ts-expect-error
-      return this.rollDamage(event, workflow);
+      return this.rollDamage({event, workflow}, {}, {});
     }
     get possibleOtherActivity() { 
       return true;
@@ -54,7 +53,7 @@ let defineMidiHealActivityClass = (ActivityClass: any) => {
       return true;
     }
     
-    async rollDamage(config: any = {}, dialog: any = {}, message: any = {}) {
+    async rollDamage(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       config.midiOptions ??= {};
       config.midiOptions.fastForwardHeal ??= game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward);
       config.midiOptions.fastForwardDamage ??= game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward);

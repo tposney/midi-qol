@@ -10,63 +10,63 @@
   </fieldset>
   <fieldset>
     {{#with fields.midiProperties.fields as |fields|}}
-    {{ formField fields.rollMode value=../source.midiProperties.rollMode options=../RollModeOptions}}
-    {{ formField fields.removeChatButtons value=../source.midiProperties.removeChatButtons options=../RemoveChatButtonsOptions}}
-    {{ formField fields.displayActivityName value=../source.midiProperties.displayActivityName }}
-    {{ formField fields.identifier value=../source.midiProperties.identifier placeholder=../placeholderIdentifier }}
-    {{ formField fields.forceDialog value=../source.midiProperties.forceDialog }}
-    {{ formField fields.confirmTargets value=../source.midiProperties.confirmTargets options=../ConfirmTargetOptions}}
-    {{#if ../hasAreaTarget}}
-    {{ formField fields.autoTargetType value=../source.midiProperties.autoTargetType options=../AutoTargetTypeOptions}}
-    {{ formField fields.autoTargetAction value=../source.midiProperties.autoTargetAction
-    options=../AutoTargetActionOptions}}
-    {{/if}}
-    {{#if CEActive}}
-    {{ formField fields.autoCEEffects value=../source.midiProperties.autoCEEffects options=../AutoCEEffectsOptions}}
-    {{/if}}
-    {{ formField fields.automationOnly value=../source.midiProperties.automationOnly }}
-    {{#if ../possibleOtherActivity}}
-    {{ formField fields.otherActivityCompatible value=../source.midiProperties.otherActivityCompatible }}
-    {{/if}}
-    {{#if ../hasDamage }}
-    {{ formField fields.ignoreFullCover value=../source.midiProperties.ignoreFullCover}}
-    {{ formField fields.ignoreTraits value=../source.midiProperties.ignoreTraits options=../ignoreTraitsOptions
-    label="midi-qol.SHARED.ignore.header" localize=true classes="multi-select"}}
-    {{ formField fields.magicDamage value=../source.midiProperties.magicDamage}}
-    {{/if}}
+      {{ formField fields.rollMode value=../source.midiProperties.rollMode options=../RollModeOptions}}
+      {{ formField fields.removeChatButtons value=../source.midiProperties.removeChatButtons options=../RemoveChatButtonsOptions}}
+      {{ formField fields.displayActivityName value=../source.midiProperties.displayActivityName }}
+      {{ formField fields.identifier value=../source.midiProperties.identifier placeholder=../placeholderIdentifier }}
+      {{ formField fields.forceDialog value=../source.midiProperties.forceDialog }}
+      {{ formField fields.confirmTargets value=../source.midiProperties.confirmTargets options=../ConfirmTargetOptions}}
+      {{#if ../hasAreaTarget}}
+        {{ formField fields.autoTargetType value=../source.midiProperties.autoTargetType options=../AutoTargetTypeOptions}}
+        {{ formField fields.autoTargetAction value=../source.midiProperties.autoTargetAction
+          options=../AutoTargetActionOptions}}
+      {{/if}}
+      {{#if CEActive}}
+        {{ formField fields.autoCEEffects value=../source.midiProperties.autoCEEffects options=../AutoCEEffectsOptions}}
+      {{/if}}
+      {{ formField fields.automationOnly value=../source.midiProperties.automationOnly }}
+      {{#if ../possibleOtherActivity}}
+        {{ formField fields.otherActivityCompatible value=../source.midiProperties.otherActivityCompatible }}
+      {{/if}}
+      {{#if ../hasDamage }}
+        {{ formField fields.ignoreFullCover value=../source.midiProperties.ignoreFullCover}}
+        {{ formField fields.ignoreTraits value=../source.midiProperties.ignoreTraits options=../ignoreTraitsOptions
+          label="midi-qol.SHARED.ignore.header" localize=true classes="multi-select"}}
+        {{ formField fields.magicDamage value=../source.midiProperties.magicDamage}}
+      {{/if}}
     {{/with}}
     {{#if isSummons}}
-    {{ formField fields.friendlySummon value=source.friendlySummon }}
+      {{ formField fields.friendlySummon value=source.friendlySummon }}
     {{/if}}
   </fieldset>
   {{#if (ne fields.otherActivityId undefined)}}
-  <fieldset>
-    {{ formField fields.otherActivityId value=source.otherActivityId options=otherActivityOptions}}
-  </fieldset>
+    <fieldset>
+      {{ formField fields.otherActivityId value=source.otherActivityId options=otherActivityOptions}}
+    </fieldset>
   {{/if}}
   <fieldset>
     {{#with fields.midiProperties.fields as |fields|}}
-    {{ formField fields.triggeredActivityId value=../source.midiProperties.triggeredActivityId
-    options=../triggeredActivityOptions}}
-    {{#if (ne ../source.midiProperties.triggeredActivityId "none")}}
-    {{ formField fields.triggeredActivityConditionText value=../source.midiProperties.triggeredActivityConditionText }}
-    {{ formField fields.triggeredActivityTargets value=../source.midiProperties.triggeredActivityTargets
-    options=../triggeredActivityTargetOptions}}
-    {{ formField fields.triggeredActivityRollAs value=../source.midiProperties.triggeredActivityRollAs
-    options=../triggeredActivityRollAsOptions}}
-    {{/if}}
+      {{ formField fields.triggeredActivityId value=../source.midiProperties.triggeredActivityId
+        options=../triggeredActivityOptions}}
+      {{#if (ne ../source.midiProperties.triggeredActivityId "none")}}
+        {{ formField fields.triggeredActivityConditionText value=../source.midiProperties.triggeredActivityConditionText }}
+        {{ formField fields.triggeredActivityTargets value=../source.midiProperties.triggeredActivityTargets
+          options=../triggeredActivityTargetOptions}}
+        {{ formField fields.triggeredActivityRollAs value=../source.midiProperties.triggeredActivityRollAs
+          options=../triggeredActivityRollAsOptions}}
+      {{/if}}
     {{/with}}
   </fieldset>
   <fieldset>
     <legend> {{ localize "midi-qol.OVERTIME.extras.header" }} </legend>
     {{ formField fields.isOverTimeFlag value=source.isOverTimeFlag}}
     {{#if source.isOverTimeFlag}}
-    {{#with fields.overTimeProperties.fields as |fields|}}
-    {{ formField fields.turnChoice value=../source.overTimeProperties.turnChoice options=../turnChoiceOptions }}
-    {{ formField fields.saveRemoves value=../source.overTimeProperties.saveRemoves }}
-    {{ formField fields.preRemoveConditionText value=../source.overTimeProperties.preRemoveConditionText}}
-    {{ formField fields.postRemoveConditionText value=../source.overTimeProperties.postRemoveConditionText}}
-    {{/with}}
+      {{#with fields.overTimeProperties.fields as |fields|}}
+        {{ formField fields.turnChoice value=../source.overTimeProperties.turnChoice options=../turnChoiceOptions }}
+        {{ formField fields.saveRemoves value=../source.overTimeProperties.saveRemoves }}
+        {{ formField fields.preRemoveConditionText value=../source.overTimeProperties.preRemoveConditionText}}
+        {{ formField fields.postRemoveConditionText value=../source.overTimeProperties.postRemoveConditionText}}
+        {{/with}}
     {{/if}}
   </fieldset>
   <fieldset>

@@ -1,20 +1,19 @@
 import { templates } from "handlebars";
-import { debugEnabled, i18n, warn } from "../../midi-qol.js";
+import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { asyncHooksCall, evalActivationCondition } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet, MidiConditionField } from "./MidiActivityMixin.js";
-export var MidiOverTimeActivity;
-export var MidiOverTimeSheet;
+import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
+export let MidiOverTimeActivity: ReturnType<typeof defineMidiOverTimeActivityClass>;
+export let MidiOverTimeSheet: ReturnType<typeof defineMidiOverTimeSheetClass>;
 
 // Not currently used - might be relevant later on
 export function setupOvertimeActivity() {
   if (debugEnabled > 0) warn("MidiQOL | ForwardActivity | setupOverTimeActivity | Called");
   //@ts-expect-error
-  const GameSystemConfig = game.system.config;
-  //@ts-expect-error
   MidiOverTimeSheet = defineMidiOverTimeSheetClass(game.system.applications.activity.ForwardSheet);
-  MidiOverTimeActivity = defineMidiOverTimeActivityClass(GameSystemConfig.activityTypes.forward.documentClass);
+  MidiOverTimeActivity = defineMidiOverTimeActivityClass(GameSystemConfig.activityTypes.forward.documentClass as Activity);
   GameSystemConfig.activityTypes.overTime = { documentClass: MidiOverTimeActivity };
 }
 let defineMidiOverTimeSheetClass = (baseClass: any) => {
@@ -48,7 +47,7 @@ let defineMidiOverTimeSheetClass = (baseClass: any) => {
 
 }
 
-let defineMidiOverTimeActivityClass = (ActivityClass: any) => {
+let defineMidiOverTimeActivityClass = <T extends Activity>(ActivityClass: T) => {
   return class MidiOverTimeActivity extends MidiActivityMixin(ActivityClass) {
     static LOCALIZATION_PREFIXES = ["midi-qol.OVERTIME", ...super.LOCALIZATION_PREFIXES];
     static defineSchema() {
@@ -81,7 +80,7 @@ let defineMidiOverTimeActivityClass = (ActivityClass: any) => {
     get isTriggerableActivity() {
       return false;
     }
-    async postChatCardChecks(config, dialog, message, options): Promise<boolean> {
+    async postChatCardChecks(config: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, options): Promise<boolean> {
       if (this.useCondition) { // reactions condition evaluation is handled elsewhere
         if (!(await evalActivationCondition(config.workflow, this.useCondition, config.workflow?.targets.first(), { async: true }))) {
           return this.removeWorkflow(config.workflow,);

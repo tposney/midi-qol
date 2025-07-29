@@ -7,12 +7,13 @@ import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiSaveActivity } from "./activities/SaveActivity.js";
 export const MAESTRO_MODULE_NAME = "maestro";
 export const MODULE_LABEL = "Maestro";
+import Token = foundry.canvas.placeables.Token;
 
-export let colorChatMessageHandler = (message, html: HTMLElement, data) => {
+export let colorChatMessageHandler = (message: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
   if (coloredBorders === "none") return true;
-  let actorId = message.speaker.actor;
-  let userId = message.author;
-  let actor = game.actors?.get(actorId) as Actor | undefined;
+  let actorId = message.speaker.actor ?? "";
+  let userId = message.author?.id ?? "";
+  let actor = message.speakerActor;
   let user = game.users?.get(userId) as User.Implementation | undefined;
 
   if (actor) user = playerForActor(actor);
@@ -32,17 +33,17 @@ export let colorChatMessageHandler = (message, html: HTMLElement, data) => {
 
 // TODO think about monks tb on preUpdateChatMessage?
 // Also should ideally be async.
-export function checkOverTimeSaves(message, data, options, user) {
-  if (!message.rolls?.length || !["skill", "save", "ability"].includes(data.flags?.dnd5e?.roll?.type)) return true;
-  let actor: Actor | undefined | null = game.actors?.get(message.speaker.actor) as Actor;
+export function checkOverTimeSaves(message: ChatMessage.Implementation, data: ChatMessage.CreateData, options: ChatMessage.Database.CreateOptions, user: string) {
+  if (!message.rolls?.length || !["skill", "save", "ability"].includes(data.flags?.dnd5e?.roll?.type ?? "")) return true;
+  let actor = message.speakerActor;
   if (message.speaker.token) {
-    actor = game.scenes?.get(message.speaker.scene)?.tokens?.get(message.speaker.token)?.actor;
+    actor = game.scenes?.get(message.speaker?.scene ?? "")?.tokens?.get(message.speaker.token)?.actor ?? actor;
   }
   if (!actor) return true;
-  const overtimeActorUuid = foundry.utils.getProperty(message, "flags.midi-qol.overtimeActorUuid") as any;
+  const overtimeActorUuid = message.flags?.[MODULE_ID]?.overtimeActorUuid;
   if (actor.uuid !== overtimeActorUuid) {
     if (overtimeActorUuid) {
-      const overTimeActor = fromUuidSync(overtimeActorUuid) as Actor | undefined;
+      const overTimeActor = fromUuidSync(overtimeActorUuid) as Actor.Implementation | undefined;
       ui.notifications?.warn(`Over time actor mismatch ${actor.name} should be ${overTimeActor?.name}`);
     }
     return true;
@@ -61,7 +62,7 @@ export function checkOverTimeSaves(message, data, options, user) {
         await doOverTimeEffect(actor, effect, true, { saveToUse: roll, rollFlags: data.flags?.dnd5e?.roll, isActionSave: true })
       }
     };
-    func(actor, data.flags.dnd5e.roll, message.rolls[message.rolls.length - 1]);
+    func(actor, data.flags?.dnd5e?.roll, message.rolls[message.rolls.length - 1]);
   } catch (err) {
     const message = `checkOverTimeSaves error for ${actor?.name} ${actor.uuid}`;
     console.warn(message, err);
@@ -71,25 +72,25 @@ export function checkOverTimeSaves(message, data, options, user) {
   }
 }
 
-export let nsaMessageHandler = (message, data, ...args) => {
+export let nsaMessageHandler = (message: ChatMessage.Implementation, data: ChatMessage.CreateData, options: ChatMessage.Database.PreCreateOptions, user: string) => {
   if (!nsaFlag || !message.whisper || message.whisper.length === 0) return true;
-  let gmIds = ChatMessage.getWhisperRecipients("GM").filter(u => (u as unknown as User).active)?.map(u => u.id);
-  let currentIds = message.whisper.map(u => typeof (u) === "string" ? u : u.id);
+  let gmIds = ChatMessage.getWhisperRecipients("GM").filter(u => u.active).map(u => u.id);
+  let currentIds = message.whisper as string[];
   gmIds = gmIds.filter(id => !currentIds.includes(id));
   if (debugEnabled > 1) debug("nsa handler active GMs ", gmIds, " current ids ", currentIds, "extra gmIds ", gmIds)
   if (gmIds.length > 0) message.updateSource({ "whisper": currentIds.concat(gmIds) });
   return true;
 }
 
-let _highlighted: Token | null = null;
+let _highlighted: Token.Implementation | null = null;
 
 let _onTargetHover = (event) => {
   event.preventDefault();
-  if (!(canvas?.scene as unknown as Scene)?.active) return;
-  const token: Token | undefined = canvas?.tokens?.get(event.currentTarget.dataset.id) as Token;
+  if (!canvas.scene?.active) return;
+  const token = canvas.tokens?.get(event.currentTarget?.dataset?.id ?? "");
   if (token?.isVisible) {
-    //@ts-expect-error _controlled, _onHoverIn
-    if (!token?._controlled) token._onHoverIn(event);
+    //@ts-expect-error _onHoverIn
+    if (!token.controlled) token._onHoverIn(event);
     _highlighted = token;
   }
 }
@@ -102,7 +103,7 @@ let _onTargetHover = (event) => {
  */
 let _onTargetHoverOut = (event) => {
   event.preventDefault();
-  if (!(canvas?.scene as unknown as Scene)?.active) return;
+  if (!canvas.scene?.active) return;
   //@ts-expect-error onHoverOut
   if (_highlighted) _highlighted._onHoverOut(event);
   _highlighted = null;
@@ -111,12 +112,12 @@ let _onTargetHoverOut = (event) => {
 let _onTargetSelect = (event) => {
   event.stopPropagation();
   event.preventDefault();
-  if (!(canvas?.scene as unknown as Scene)?.active) return;
-  const token: Token = canvas?.tokens?.get(event.currentTarget.dataset.id) as Token;
+  if (!canvas.scene?.active) return;
+  const token = canvas.tokens?.get(event.currentTarget.dataset.id);
   if (token?.controlled) token?.release();
-  else if (token && token?.isVisible && game.user && (token.actor as Actor)?.testUserPermission(game.user, "OWNER")) {
-    token?.control({ releaseOthers: false });
-    canvas?.animatePan(token.center)
+  else if (token && token?.isVisible && game.user && token.actor?.testUserPermission(game.user, "OWNER")) {
+    token.control({ releaseOthers: false });
+    canvas.animatePan(token.center)
   }
 
 };
@@ -124,16 +125,16 @@ let _onTargetSelect = (event) => {
 function _onTargetShow(event) {
   event.stopImmediatePropagation();
   event.preventDefault();
-  if (!(canvas?.scene as unknown as Scene)?.active) return;
-  const token = canvas?.tokens?.get(event.currentTarget.dataset.id) as Token;
-  if (game.user && (token?.actor as Actor)?.testUserPermission(game.user, "OWNER")) {
-    (token.actor as Actor).sheet?.render(true);
+  if (!canvas.scene?.active) return;
+  const token = canvas.tokens?.get(event.currentTarget.dataset.id);
+  if (game.user && token?.actor?.testUserPermission(game.user, "OWNER")) {
+    token.actor.sheet?.render(true);
   }
 }
 
-export let hideRollRender = (msg, html: HTMLElement, data) => {
+export let hideRollRender = (msg: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
   if (forceHideRoll && (msg.whisper.length > 0 || msg?.blind)) {
-    if (!game.user?.isGM && !msg.isAuthor && msg.whisper.indexOf(game.user?.id) === -1) {
+    if (!game.user?.isGM && !msg.isAuthor && msg.whisper.indexOf(game.user?.id ?? "") === -1) {
       if (debugEnabled > 0) warn("hideRollRender | hiding message", msg.whisper);
       html.style.display = "none";
       // It seems that html.remove() can get called before the message is rendered to the dom?
@@ -144,25 +145,23 @@ export let hideRollRender = (msg, html: HTMLElement, data) => {
 };
 
 
-export let hideRollUpdate = (message, data, diff, id) => {
+export let hideRollUpdate = (message: ChatMessage.Implementation, data: ChatMessage.UpdateData, options: ChatMessage.Database.UpdateOptions, id: string) => {
   if (forceHideRoll && (message.whisper.length > 0 || message.blind)) {
-    if (!game.user?.isGM && ((!message.isAuthor && (message.whisper.indexOf(game.user?.id) === -1) || message.blind))) {
-      let messageLi = $(`.message[data-message-id=${data._id}]`);
+    if (!game.user?.isGM && ((!message.isAuthor && (message.whisper.indexOf(game.user?.id ?? "") === -1) || message.blind))) {
+      let messageLi = document.querySelector<HTMLLIElement>(`.message[data-message-id=${data._id}]`);
       if (debugEnabled > 0) warn("hideRollUpdate: Hiding ", message.whisper, messageLi)
-      messageLi.hide();
-      //@ts-expect-error
-      if (window.ui.sidebar.popouts.chat) {
-        //@ts-expect-error
-        let popoutLi = window.ui.sidebar.popouts.chat.element.find(`.message[data-message-id=${data._id}]`)
-        popoutLi.hide();
+      if (messageLi) messageLi.style.display = "none";
+      if (ui.sidebar?.popouts.chat) {
+        let popoutLi = ui.sidebar.popouts.chat.element.querySelector<HTMLLIElement>(`.message[data-message-id=${data._id}]`)
+        if (popoutLi) popoutLi.style.display = "none";
       }
     }
   }
   return true;
 };
 
-export let hideStuffHandler = (message, html: HTMLElement, data) => {
-  const messageActor: Actor | undefined = (fromUuidSync(foundry.utils.getProperty(message, `flags.${WorkflowDataFlags.actor}`) as string) ?? game.actors?.get(message.speaker.actor)) as Actor;
+export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
+  const messageActor = (fromUuidSync(message.flags?.[MODULE_ID]?.[WorkflowDataFlags.actor]) as Actor.Implementation ?? message.speakerActor);
   const messageActorOwner = messageActor?.isOwner;
   if (debugEnabled > 1) debug("hideStuffHandler message: ", message.id, message)
   // Hide rolls which are blind and not the GM if force hide is true
@@ -181,7 +180,7 @@ export let hideStuffHandler = (message, html: HTMLElement, data) => {
   // If force hide rolls and your are not the author/target of a whisper roll hide it.
   if (forceHideRoll
     && !game.user?.isGM
-    && message.whisper.length > 0 && !message.whisper.includes(game.user?.id)
+    && message.whisper.length > 0 && !message.whisper.includes(game.user?.id ?? "")
     && !message.isAuthor) {
     html.style.display = "none";
     return;
@@ -332,20 +331,20 @@ export function ddbglPendingFired(data: { sceneId: string, tokenId: string, acto
     error("DDB Game Log - no item/action for pending roll"); return
   }
   // const tokenUuid = `Scene.${sceneId??0}.Token.${tokenId??0}`;
-  const token: Token | undefined = fromUuidSync(`Scene.${sceneId ?? 0}.Token.${tokenId ?? 0}`)?.object as Token | undefined;
-  const actor: Actor | undefined = (token instanceof CONFIG.Token.documentClass) ? token?.actor ?? game.actors?.get(actorId ?? "") as Actor : undefined;
+  const token = fromUuidSync(`Scene.${sceneId ?? 0}.Token.${tokenId ?? 0}`)?.object as Token.Implementation | undefined;
+  const actor = (token instanceof TokenDocument) ? token?.actor ?? game.actors?.get(actorId ?? "") : undefined;
   if (!actor || !(token instanceof CONFIG.Token.documentClass)) {
     warn(" ddb-game-log hook could not find actor");
     return;
   }
   // find the player who controls the character.
-  let player;
+  let player: User.Implementation | null | undefined;
   if (token) {
     player = playerFor(token);
   } else {
     player = game.users?.players.find(p => p.active && actor?.testUserPermission(p, "OWNER"));
   }
-  if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => (u as unknown as User).active);
+  if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
   if (player?.id !== game.user?.id) return;
 
   let item = actor.items.get(itemId);
@@ -354,7 +353,7 @@ export function ddbglPendingFired(data: { sceneId: string, tokenId: string, acto
     return;
   }
 
-  let workflow: Workflow | undefined = DDBGameLogWorkflow.get(item.uuid);
+  let workflow: DDBGameLogWorkflow | undefined = DDBGameLogWorkflow.get(item.uuid);
   if (actionType === "attack") {
     if (DDBGameLogWorkflow.get(item.uuid)) Workflow.removeWorkflow(item.uuid);
     workflow = undefined;
@@ -373,6 +372,7 @@ export function ddbglPendingFired(data: { sceneId: string, tokenId: string, acto
       actor: actorId,
       alias: token?.name ?? actor.name
     }
+    // @ts-expect-error TODO: Halp. Item? Activity?
     workflow = new DDBGameLogWorkflow(actor, item, speaker, Array.from(game.user?.targets ?? new Set()), {});
     // @ts-expect-error no dnd5e-types
     item.displayCard({ showFullCard: false, workflow, createMessage: false, defaultCard: true });
@@ -382,29 +382,29 @@ export function ddbglPendingFired(data: { sceneId: string, tokenId: string, acto
 }
 
 export function ddbglPendingHook(data) { // need to propagate this to all players.
-  if (!configSettings.optionalRules.enableddbGL) return;
+  if (!configSettings.enableDDBGL) return;
   socketlibSocket.executeForEveryone("ddbglPendingFired", data);
 }
 
-export function processCreateDDBGLMessages(message: ChatMessage, options: any, user: string) {
-  if (!configSettings.optionalRules.enableddbGL) return;
+export function processCreateDDBGLMessages(message: ChatMessage.Implementation, options: ChatMessage.Database.CreateOptions, user: string) {
+  if (!configSettings.enableDDBGL) return;
 
-  const flags: any = message.flags;
+  const flags = message.flags;
   if (!flags || !flags["ddb-game-log"] || !game.user) return;
   const ddbGLFlags: any = flags["ddb-game-log"];
   if (!ddbGLFlags || ddbGLFlags.pending) return;
   // let sceneId, tokenId, actorId, itemId;
-  if (!(["attack", "damage", "heal"].includes(flags.dnd5e?.roll?.type))) return;
+  if (!(["attack", "damage", "heal"].includes(flags.dnd5e?.roll?.type ?? ""))) return;
   const itemId = flags.dnd5e?.roll?.itemId;
   if (!itemId) { error("Could not find item for fulfilled roll"); return }
-  const token = fromUuidSync(`Scene.${message.speaker.scene}.Token.${message.speaker.token}`)?.object as Token | null;
+  const token = fromUuidSync(`Scene.${message.speaker.scene}.Token.${message.speaker.token}`)?.object as Token.Implementation | null;
   const actor = token?.actor ?? game.actors?.get(message.speaker.actor ?? "");
   if (!actor) {
     error("ddb-game-log could not find actor for roll");
     return;
   }
   // find the player who controls the character.
-  let player;
+  let player: User.Implementation | null | undefined;
   if (token) {
     player = playerFor(token);
   } else {
@@ -415,11 +415,11 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
 
   const item = actor.items.get(itemId);
   if (!item) {
-    error(`ddb-game-log roll could not find item ${flags.dnd5e.roll.itemId} on actor ${actor.name}`);
+    error(`ddb-game-log roll could not find item ${flags?.dnd5e?.roll?.itemId} on actor ${actor.name}`);
     return;
   }
 
-  let workflow: Workflow | undefined = DDBGameLogWorkflow.get(item.uuid);
+  let workflow: DDBGameLogWorkflow | undefined = DDBGameLogWorkflow.get(item.uuid);
   //@ts-expect-error no dnd5e-types
   if (!workflow && flags.dnd5e.roll.type === "damage" && item.hasAttack && ["rwak", "mwak"].includes(item.actionType)) {
     warn(`ddb-game-log roll damage roll without workflow being started ${actor.name} using ${item.name}`);
@@ -434,12 +434,13 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
     workflow.undoData.chatCardUuids = workflow.undoData.chatCardUuids.concat([message.uuid]);
     unTimedExecuteAsGM("updateUndoChatCardUuids", workflow.undoData);
   }
-  if (flags.dnd5e.roll.type === "attack") {
+  if (flags?.dnd5e?.roll?.type === "attack") {
     let rolls = message.rolls;
     if (!(rolls instanceof Array)) rolls = [rolls];
     // workflow.needItemCard = false; TODO revisit this
     workflow.attackRoll = rolls[0] ?? undefined;
     workflow.attackTotal = rolls[0]?.total ?? 0;
+    // @ts-expect-error no dnd5e-types
     workflow.needsDamage = workflow.item.hasDamage;
     workflow.attackRollHTML = message.content;
     workflow.attackRolled = true;
@@ -449,7 +450,7 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
     }
   }
 
-  if (["damage", "heal"].includes(flags.dnd5e.roll.type)) {
+  if (["damage", "heal"].includes(flags.dnd5e?.roll?.type ?? "")) {
     let rolls = message.rolls;
     if (!rolls) return;
     // workflow.needItemCard = false; TODO revisit this
