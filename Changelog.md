@@ -1,3 +1,6 @@
+### 13.0.11
+* Fix for toggleEffect not getting its heading displayed.
+
 ### 13.0.10
 * Added an option to not display item properties in the chat card - saves some space.
 * Fix for not picking up critical damage rolls when using the damage button.
