@@ -1,3 +1,6 @@
+### 13.0.12
+* version bump for failed tag update
+
 ### 13.0.11
 * Fix for toggleEffect not getting its heading displayed.
 
