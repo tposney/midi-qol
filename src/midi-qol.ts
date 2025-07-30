@@ -218,7 +218,7 @@ Hooks.once('init', async function () {
     //@ts-expect-error
     Hooks.once("babele.ready", MidiSounds.getWeaponBaseTypes);
   } else {
-    setTimeout(MidiSounds.getWeaponBaseTypes, 6000);
+    Hooks.once("ready", MidiSounds.getWeaponBaseTypes);
   }
   // Preload Handlebars templates
   preloadTemplates();

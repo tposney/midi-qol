@@ -1,7 +1,7 @@
 <fieldset>
   <legend> {{ localize "midi-qol.OVERTIME.extras.header" }} </legend>
   {{ formField fields.turnChoice value=source.turnChoice options=turnChoiceOptions }}
-  {{ formField fields.saveRemoves value=source.saveRemoves }}
+  {{ formField fields.saveRemoves value=source.saveRemoves input=@root.inputs.createCheckboxInput}}
   {{ formField fields.removeConditionBeforeActivity value=source.removeConditionBeforeActivity}}
   {{ formField fields.removeConditionText value=source.removeConditionText}}
 </fieldset>

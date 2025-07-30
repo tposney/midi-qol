@@ -1086,7 +1086,7 @@
         }
       },
       "friendlySummon": {
-        "label": "Friendly summons",
+        "label": "Friendly Summons",
         "hint": "The summoned token has the same disposition as the caster"
       },
       "isOverTimeFlag": {

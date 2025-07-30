@@ -4,17 +4,17 @@
     {{ formField fields.useConditionText value=source.useConditionText }}
     {{ formField fields.useConditionReason value=source.useConditionReason }}
     {{ formField fields.effectConditionText value=source.effectConditionText }}
-    {{ formField fields.midiProperties.fields.chooseEffects value=source.midiProperties.chooseEffects }}
-    {{ formField fields.midiProperties.fields.toggleEffect value=source.midiProperties.toggleEffect }}
-    {{ formField fields.midiProperties.fields.noConcentrationCheck value=source.midiProperties.noConcentrationCheck}}
+    {{ formField fields.midiProperties.fields.chooseEffects value=source.midiProperties.chooseEffects input=@root.inputs.createCheckboxInput }}
+    {{ formField fields.midiProperties.fields.toggleEffect value=source.midiProperties.toggleEffect input=@root.inputs.createCheckboxInput }}
+    {{ formField fields.midiProperties.fields.noConcentrationCheck value=source.midiProperties.noConcentrationCheck input=@root.inputs.createCheckboxInput }}
   </fieldset>
   <fieldset>
     {{#with fields.midiProperties.fields as |fields|}}
       {{ formField fields.rollMode value=../source.midiProperties.rollMode options=../RollModeOptions}}
       {{ formField fields.removeChatButtons value=../source.midiProperties.removeChatButtons options=../RemoveChatButtonsOptions}}
-      {{ formField fields.displayActivityName value=../source.midiProperties.displayActivityName }}
+      {{ formField fields.displayActivityName value=../source.midiProperties.displayActivityName input=@root.inputs.createCheckboxInput }}
       {{ formField fields.identifier value=../source.midiProperties.identifier placeholder=../placeholderIdentifier }}
-      {{ formField fields.forceDialog value=../source.midiProperties.forceDialog }}
+      {{ formField fields.forceDialog value=../source.midiProperties.forceDialog input=@root.inputs.createCheckboxInput }}
       {{ formField fields.confirmTargets value=../source.midiProperties.confirmTargets options=../ConfirmTargetOptions}}
       {{#if ../hasAreaTarget}}
         {{ formField fields.autoTargetType value=../source.midiProperties.autoTargetType options=../AutoTargetTypeOptions}}
@@ -24,19 +24,19 @@
       {{#if CEActive}}
         {{ formField fields.autoCEEffects value=../source.midiProperties.autoCEEffects options=../AutoCEEffectsOptions}}
       {{/if}}
-      {{ formField fields.automationOnly value=../source.midiProperties.automationOnly }}
+      {{ formField fields.automationOnly value=../source.midiProperties.automationOnly input=@root.inputs.createCheckboxInput }}
       {{#if ../possibleOtherActivity}}
-        {{ formField fields.otherActivityCompatible value=../source.midiProperties.otherActivityCompatible }}
+        {{ formField fields.otherActivityCompatible value=../source.midiProperties.otherActivityCompatible input=@root.inputs.createCheckboxInput }}
       {{/if}}
       {{#if ../hasDamage }}
-        {{ formField fields.ignoreFullCover value=../source.midiProperties.ignoreFullCover}}
+        {{ formField fields.ignoreFullCover value=../source.midiProperties.ignoreFullCover input=@root.inputs.createCheckboxInput }}
         {{ formField fields.ignoreTraits value=../source.midiProperties.ignoreTraits options=../ignoreTraitsOptions
           label="midi-qol.SHARED.ignore.header" localize=true classes="multi-select"}}
-        {{ formField fields.magicDamage value=../source.midiProperties.magicDamage}}
+        {{ formField fields.magicDamage value=../source.midiProperties.magicDamage input=@root.inputs.createCheckboxInput }}
       {{/if}}
     {{/with}}
     {{#if isSummons}}
-      {{ formField fields.friendlySummon value=source.friendlySummon }}
+      {{ formField fields.friendlySummon value=source.friendlySummon input=@root.inputs.createCheckboxInput }}
     {{/if}}
   </fieldset>
   {{#if (ne fields.otherActivityId undefined)}}
@@ -59,11 +59,11 @@
   </fieldset>
   <fieldset>
     <legend> {{ localize "midi-qol.OVERTIME.extras.header" }} </legend>
-    {{ formField fields.isOverTimeFlag value=source.isOverTimeFlag}}
+    {{ formField fields.isOverTimeFlag value=source.isOverTimeFlag input=@root.inputs.createCheckboxInput }}
     {{#if source.isOverTimeFlag}}
       {{#with fields.overTimeProperties.fields as |fields|}}
         {{ formField fields.turnChoice value=../source.overTimeProperties.turnChoice options=../turnChoiceOptions }}
-        {{ formField fields.saveRemoves value=../source.overTimeProperties.saveRemoves }}
+        {{ formField fields.saveRemoves value=../source.overTimeProperties.saveRemoves input=@root.inputs.createCheckboxInput }}
         {{ formField fields.preRemoveConditionText value=../source.overTimeProperties.preRemoveConditionText}}
         {{ formField fields.postRemoveConditionText value=../source.overTimeProperties.postRemoveConditionText}}
         {{/with}}
