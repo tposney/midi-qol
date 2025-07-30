@@ -1,12 +1,11 @@
-import { error, gameStats, getGame, i18n } from "../midi-qol.js";
+import { error, i18n } from "../midi-qol.js";
 
 export class MidiKeyManager {
   constructor() {
   }
   
   initKeyMappings() {
-    const game = getGame();
-    if (!game?.keybindings) {
+    if (!game.keybindings) {
       error("MidiKeyManager | initKeyMappings | Game is not initialized");
       return;
     }

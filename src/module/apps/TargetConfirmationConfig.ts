@@ -3,12 +3,7 @@ import { configSettings, defaultTargetConfirmationSettings, targetConfirmation }
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class TargetConfirmationConfig extends HandlebarsApplicationMixin(ApplicationV2) {
-  gridMappings: any;
-  selectedPosition: {x: number, y: number};
-i
-  constructor(options) {
-    super(options);
-    this.gridMappings = {
+  gridMappings = {
       "midi-qol-grid1": {x: -1, y: -1},
       "midi-qol-grid2": {x: 0, y: -1},
       "midi-qol-grid3": {x: 1, y: -1},
@@ -19,8 +14,7 @@ i
       "midi-qol-grid8": {x: 0, y: 1},
       "midi-qol-grid9": {x: 1, y: 1}
     };
-    this.selectedPosition = targetConfirmation.gridPosition ?? foundry.utils.duplicate(defaultTargetConfirmationSettings.gridPosition);
-  }
+  selectedPosition: {x: number, y: number} = targetConfirmation.gridPosition ?? foundry.utils.duplicate(defaultTargetConfirmationSettings.gridPosition);
 
   static override PARTS = {
     main: { template: "modules/midi-qol/templates/targetConfirmationConfig.hbs" }
@@ -54,11 +48,9 @@ i
       newSettings = foundry.utils.duplicate(defaultTargetConfirmationSettings);
       newSettings.gridPosition = formData.gridPosition;
     }
-    //@ts-expect-error
-    game.settings?.set("midi-qol", "TargetConfirmation", newSettings);
-    this.render(true);
-    //@ts-expect-error
-    game.settings?.set("midi-qol", "LateTargeting", "none");
+    game.settings.set("midi-qol", "TargetConfirmation", newSettings);
+    this.render({ force: true });
+    game.settings.set("midi-qol", "LateTargeting", "none");
     if (game.user?.isGM) configSettings.gmLateTargeting = "none";
   }
 
@@ -98,12 +90,10 @@ i
 
   async _preClose(options) {
     targetConfirmation.gridPosition = this.selectedPosition;
-    // @ts-expect-error
-    await game.settings?.set("midi-qol", "TargetConfirmation", targetConfirmation);
+    await game.settings.set("midi-qol", "TargetConfirmation", targetConfirmation);
   }
 
-  static async #onSubmit(event, target) {
-    // @ts-expect-error
+  static async #onSubmit(this: TargetConfirmationConfig, event, target) {
     this.close();
   }
 }

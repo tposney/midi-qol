@@ -1,20 +1,18 @@
-import { debugEnabled, geti18nOptions, i18n, warn } from "../../midi-qol.js";
+import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { debugEnabled, GameSystemConfig, geti18nOptions, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { MidiSaveActivity } from "./SaveActivity.js";
 // WIP
-export var MidiContestedCheckActivity;
-export var MidiCheckSheet;
-var ContestedCheckActivity;
+export let MidiContestedCheckActivity: ReturnType<typeof defineMidiContestedCheckActivityClass>;
+export let MidiCheckSheet: ReturnType<typeof defineMidiCheckSheetClass>;
+
 export function setupContestedCheckActivity() {
   if (debugEnabled > 0) warn("MidiQOL | ContestedCheckActivity | setupContestedCheckActivity | Called");
   //@ts-expect-error
-  const GameSystemConfig = game.system.config;
-  ContestedCheckActivity = GameSystemConfig.activityTypes.check.documentClass;
-  //@ts-expect-error
   MidiCheckSheet = defineMidiCheckSheetClass(game.system.applications.activity.CheckSheet);
-  MidiContestedCheckActivity = defineMidiContestedCheckActivityClass(ContestedCheckActivity);
+  MidiContestedCheckActivity = defineMidiContestedCheckActivityClass(GameSystemConfig.activityTypes.check.documentClass as Activity);
   if (ReplaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eAttack"] = GameSystemConfig.activityTypes.attack;
     GameSystemConfig.activityTypes.check = { documentClass: MidiContestedCheckActivity };
@@ -23,13 +21,13 @@ export function setupContestedCheckActivity() {
   }
 }
 function getSceneTargets() {
-  if (!canvas?.tokens) return [];
-  const controlledTokens: Token[] | undefined = canvas?.tokens?.controlled;
+  if (!canvas.tokens) return [];
+  const controlledTokens: Token[] | undefined = canvas.tokens?.controlled;
   let targets: Token[] | undefined = controlledTokens?.filter(t => t.actor);
   if (!targets?.length && game.user?.character) targets = game.user?.character?.getActiveTokens(false, false);
   return targets;
 }
-let defineMidiContestedCheckActivityClass = (ActivityClass: any) => {
+let defineMidiContestedCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
   return class MidiContestedCheckActivity extends MidiActivityMixin(ActivityClass) {
     static LOCALIZATION_PREFIXES = ["DND5E.SAVE", "DND5E.CHECK", "midi-qol.CHECK", "midi-qol.SAVE", ...super.LOCALIZATION_PREFIXES];
     static superMetadata = super.metadata;
@@ -68,21 +66,19 @@ let defineMidiContestedCheckActivityClass = (ActivityClass: any) => {
       return schema;
     }
 
-    static async #rollCheck(event, target, message) {
+    static async #rollCheck(this: Activity, event, target, message) {
       const workflow = message ? Workflow.getWorkflow(message._uuid) : null;
       if (workflow) workflow.activity = this;
       const targets = getSceneTargets();
       if (!targets?.length) ui.notifications?.warn("DND5E.ActionWarningNoToken", { localize: true });
       let { ability, dc, skill, tool } = target.dataset;
       dc = parseInt(dc);
-      //@ts-expect-error
       let item = this.item;
-      //@ts-expect-error
       let check = this.check;
-      const data: any = { event, targetValue: Number.isFinite(dc) ? dc : check.dc.value };
+      const data: any = { event, targetValue: Number.isFinite(dc) ? dc : check?.dc.value };
 
       if (targets) for (const token of targets) {
-        data.speaker = ChatMessage.getSpeaker({ scene: canvas?.scene ?? undefined, token: token.document });
+        data.speaker = ChatMessage.getSpeaker({ scene: canvas.scene ?? undefined, token: token.document });
         if (skill) {
           const actor: Actor | null = token.actor;
           if (!actor) return;
@@ -90,8 +86,11 @@ let defineMidiContestedCheckActivityClass = (ActivityClass: any) => {
           await actor.rollSkill(skill, { ...data, ability });
         } else if (tool) {
           const checkData = { ...data, ability };
-          if ((item.type === "tool") && !check.associated.size) {
+          // @ts-expect-error no dnd5e-types
+          if ((item.type === "tool") && !check?.associated.size) {
+            // @ts-expect-error no dnd5e-types
             checkData.bonus = item.system.bonus;
+            // @ts-expect-error no dnd5e-types
             checkData.prof = item.system.prof;
             checkData.item = item;
           }
@@ -116,10 +115,10 @@ let defineMidiContestedCheckActivityClass = (ActivityClass: any) => {
       return false;
     }
 
-    async rollDamage(config={}, dialog={}, message={}) {
+    async rollDamage(config: RollProcessConfig, dialog: RollDialogConfig={}, message: RollMessageConfig={}) {
       message = foundry.utils.mergeObject({
         "data.flags.dnd5e.roll": {
-          damageOnSave: this.damage.onSave
+          damageOnSave: this.damage?.onSave
         }
       }, message);
       return super.rollDamage(config, dialog, message);
@@ -132,7 +131,7 @@ let defineMidiContestedCheckActivityClass = (ActivityClass: any) => {
 
     _usageChatButtons(message) {
       const buttons: any[] = [];
-      if (this.damage.parts.length) buttons.push({
+      if (this.damage?.parts.length) buttons.push({
         label: i18n("DND5E.Damage"),
         icon: '<i class="fas fa-burst" inert></i>',
         dataset: {

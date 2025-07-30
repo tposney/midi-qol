@@ -1,6 +1,6 @@
 import { criticalDamage, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow } from "../settings.js"
 import { configSettings } from "../settings.js"
-import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log, GameSystemConfig } from "../../midi-qol.js";
+import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log, GameSystemConfig, ceInterface } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -12,7 +12,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   constructor(options?) {
     super(options);
-    //@ts-expect-error
     this.configHookId = Hooks.on("midi-qol.ConfigSettingsChanged", () => {
       this.close();
     });
@@ -52,28 +51,29 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   // V13 version:
-  // static TABS = {
-  //   sheet: {
-  //     tabs: [
-  //       {id: "gm"},
-  //       {id: "player"},
-  //       {id: "workflow"},
-  //       {id: "concentration"},
-  //       {id: "reactions"},
-  //       {id: "misc"},
-  //       {id: "mechanics"},
-  //       {id: "rules"},
-  //       {id: "quick"},
-  //     ],
-  //     initial: "gm",
-  //     labelPrefix: "midi-qol.Config.Tabs"
-  //   }
-  // }
+  static TABS = {
+    sheet: {
+      tabs: [
+        {id: "gm"},
+        {id: "player"},
+        {id: "workflow"},
+        {id: "concentration"},
+        {id: "reactions"},
+        {id: "misc"},
+        {id: "mechanics"},
+        {id: "rules"},
+        {id: "quick"},
+      ],
+      initial: "gm",
+      labelPrefix: "midi-qol.Config.Tabs"
+    }
+  // This is silly, but for now there's some types-thinks "mandatory" fields 
+  } as unknown as Record<string, foundry.applications.api.ApplicationV2.TabsConfiguration>
 
   // V12 version:
-  tabGroups = {
-    sheet: "gm"
-  }
+  // tabGroups = {
+  //   sheet: "gm"
+  // }
 
   get title() {
     return i18n("midi-qol.ConfigTitle") ?? "Midi-QOL Configuration";
@@ -83,8 +83,8 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!enableWorkflow) {
       ui.notifications?.error("Workflow automation is not enabled")
     }
-    let wallsBlockRangeOptions: any = foundry.utils.duplicate(geti18nOptions("WallsBlockRangeOptionsNew"));
-    let CoverCalculationOptions: any = foundry.utils.duplicate(geti18nOptions("CoverCalculationOptions"));
+    let wallsBlockRangeOptions = foundry.utils.duplicate(geti18nOptions("WallsBlockRangeOptionsNew"));
+    let CoverCalculationOptions = foundry.utils.duplicate(geti18nOptions("CoverCalculationOptions"));
     [{ id: "levelsautocover", name: "'Levels Auto Cover'" }, { id: "simbuls-cover-calculator", name: "'Simbuls Cover Calculator'" }, { id: "tokencover", name: "Alternative Token Cover" }].forEach(module => {
       if (!installedModules.get(module.id)) {
         wallsBlockRangeOptions[module.id] += ` - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
@@ -120,7 +120,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
           if (!installedModules.get("epic-rolls-5e")) rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
       }
     }
-    let playerRollSavesOptions: any = foundry.utils.duplicate(geti18nOptions("playerRollSavesOptions"));
+    let playerRollSavesOptions = foundry.utils.duplicate(geti18nOptions("playerRollSavesOptions"));
     for (let key of Object.keys(playerRollSavesOptions)) {
       switch (key) {
         case "mtb":
@@ -132,15 +132,12 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     };
 
     let statusEffectList = CONFIG.statusEffects.map((se) => {
-      let name = i18n(se.name as string);
+      let name = i18n(se.name);
       if (se.id.startsWith("Convenient Effect")) name = `${name} (CE)`;
       return { id: se.id, name: name }
     });
 
-    //@ts-expect-error
-    const ceInterface = game.dfreds?.effectInterface;
-    //@ts-expect-error
-    if (ceInterface && foundry.utils.isNewerVersion(game.modules.get("dfreds-convenient-effects")?.version, "6.9")) {
+    if (ceInterface) {
       statusEffectList = statusEffectList.concat(ceInterface.findEffects().map(ae => ({ id: `z${ae.flags["dfreds-convenient-effects"].ceEffectId}`, name: `${ae.name} (CE)` })));
     }
     let StatusEffectOptions = statusEffectList.reduce((acc, { id, name }) => { acc[id] = name; return acc }, { "none": "None" });
@@ -182,10 +179,8 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       coloredBorders,
       playerRollSavesOptions: (autoFastForwardAbilityRolls && false) ? geti18nOptions("playerRollSavesOptionsReduced") : playerRollSavesOptions,
       rollNPCSavesOptions,
-      //@ts-ignore .map undefined
-      customSoundsPlaylistOptions: game.playlists.contents.reduce((acc, e) => { acc[e.id] = e.name; return acc }, {}) || {},
-      //@ts-ignore .sounds
-      customSoundOptions: game.playlists?.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) => { acc[s.id] = s.name; return acc }, { "none": "" }),
+      customSoundsPlaylistOptions: game.playlists?.contents.reduce((acc, e) => { acc[e.id] = e.name; return acc }, {}) || {},
+      customSoundOptions: game.playlists?.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) => { acc[s.id ?? ""] = s.name; return acc }, { "none": "" }),
       rollSoundOptions: CONFIG.sounds,
       isBetterRolls: installedModules.get("betterrolls5e"),
       rollAlternateOptions: geti18nOptions("RollAlternateOptions"),
@@ -214,10 +209,9 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       rollModes: CONFIG.Dice.rollModes,
     };
     context = foundry.utils.mergeObject(await super._prepareContext(options), context, { inplace: false });
-    //@ts-expect-error
-    context.concentrationDisabled = game.settings?.get("dnd5e", "disableConcentration")
+    context.concentrationDisabled = game.settings.get("dnd5e", "disableConcentration")
 
-    context.tabs = this.#getTabs();
+    // context.tabs = this.#getTabs();
     if (debugEnabled > 0) warn("Config Panel: getData ", context)
     return context;
   }
@@ -228,28 +222,32 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   // V12-only: It does not seem to be
-  #getTabs() {
-    const tabs = {
-      gm: { id: "gm", group: "sheet", label: "midi-qol.Config.Tabs.gm" },
-      player: { id: "player", group: "sheet", label: "midi-qol.Config.Tabs.player" },
-      workflow: { id: "workflow", group: "sheet", label: "midi-qol.Config.Tabs.workflow" },
-      concentration: { id: "concentration", group: "sheet", label: "midi-qol.Config.Tabs.concentration" },
-      reactions: { id: "reactions", group: "sheet", label: "midi-qol.Config.Tabs.reactions" },
-      misc: { id: "misc", group: "sheet", label: "midi-qol.Config.Tabs.misc" },
-      mechanics: { id: "mechanics", group: "sheet", label: "midi-qol.Config.Tabs.mechanics" },
-      rules: { id: "rules", group: "sheet", label: "midi-qol.Config.Tabs.rules" },
-      quick: { id: "quick", group: "sheet", label: "midi-qol.Config.Tabs.quick" },
-    }
-    tabs[this.activeTab].active = true;
-    return tabs;
-  }
+  // #getTabs() {
+  //   const tabs = {
+  //     gm: { id: "gm", group: "sheet", label: "midi-qol.Config.Tabs.gm" },
+  //     player: { id: "player", group: "sheet", label: "midi-qol.Config.Tabs.player" },
+  //     workflow: { id: "workflow", group: "sheet", label: "midi-qol.Config.Tabs.workflow" },
+  //     concentration: { id: "concentration", group: "sheet", label: "midi-qol.Config.Tabs.concentration" },
+  //     reactions: { id: "reactions", group: "sheet", label: "midi-qol.Config.Tabs.reactions" },
+  //     misc: { id: "misc", group: "sheet", label: "midi-qol.Config.Tabs.misc" },
+  //     mechanics: { id: "mechanics", group: "sheet", label: "midi-qol.Config.Tabs.mechanics" },
+  //     rules: { id: "rules", group: "sheet", label: "midi-qol.Config.Tabs.rules" },
+  //     quick: { id: "quick", group: "sheet", label: "midi-qol.Config.Tabs.quick" },
+  //   }
+  //   tabs[this.activeTab].active = true;
+  //   return tabs;
+  // }
 
   // V12-only (I think): does not seem to be
   async _preparePartContext(partId, context) {
-    if (Object.keys(context.tabs).includes(partId)) {
-      context.tab = context.tabs[partId];
-    }
-    return context;
+    // @ts-expect-error shhh
+    const partContext = await super._preparePartContext(partId, context);
+    // @ts-expect-error it's okay
+    if (partId in (partContext.tabs ?? {})) partContext.tab = partContext.tabs[partId];
+    // if (Object.keys(context.tabs).includes(partId)) {
+    //   context.tab = context.tabs[partId];
+    // }
+    return partContext;
   }
 
   _onSearch(term) {
@@ -335,14 +333,12 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _preClose(options) {
     await super._preClose(options);
-    //@ts-expect-error
     if (this.configHookId) Hooks.off("midi-qol.ConfigSettingsChanged", this.configHookId);
   }
 
   // async _playList(event) {
   //   event.preventDefault();
   //   configSettings.customSoundsPlaylist = `${$(event.currentTarget).children("option:selected").val()}`;
-  //   //@ts-ignore
   //   await this.submit({ preventClose: true });
   //   this.render();
   // }
@@ -365,10 +361,9 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
     let newSettings = foundry.utils.mergeObject(configSettings, realData, { overwrite: true, inplace: false });
     if (game.user?.can("SETTINGS_MODIFY")) {
-      // @ts-expect-error
-      game.settings?.set("midi-qol", "ConfigSettings", newSettings);
-      //@ts-expect-error reloadConfirm
-      if (needReload) SettingsConfig.reloadConfirm({world: true});
+      game.settings.set("midi-qol", "ConfigSettings", newSettings);
+      //@ts-expect-error v13 stubby
+      if (needReload) foundry.applications.settings.SettingsConfig.reloadConfirm({world: true});
     }
   }
 }
@@ -635,7 +630,7 @@ let quickSettingsDetails: any = {
     },
     codeChecks: (current, settings) => {
       //@ts-expect-error
-      game.settings?.set(game.system?.id, "disableConcentration", false);
+      game.settings.set(game.system?.id, "disableConcentration", false);
     }
   },
   NoDamageApplication: {
@@ -646,7 +641,7 @@ let quickSettingsDetails: any = {
     },
     codeChecks: (current, settings) => {
       //@ts-expect-error
-      game.settings?.set("midi-qol", "AddChatDamageButtons", "gm");
+      game.settings.set("midi-qol", "AddChatDamageButtons", "gm");
     }
   },
   DisableConcentration: {
@@ -658,7 +653,7 @@ let quickSettingsDetails: any = {
     },
     codeChecks: (current, settings) => {
       //@ts-expect-error
-      game.settings?.set(game.system?.id, "disableConcentration", true);
+      game.settings.set(game.system?.id, "disableConcentration", true);
     }
   },
 
@@ -710,7 +705,7 @@ export async function applySettings(key: string) {
     if (await showDiffs(configSettings, settingsToApply, "", config.shortDescription)) {
       settingsToApply = foundry.utils.mergeObject(configSettings, settingsToApply, { overwrite: true, inplace: true });
       //@ts-expect-error
-      if (game.user?.can("SETTINGS_MODIFY")) game.settings?.set("midi-qol", "ConfigSettings", settingsToApply);
+      if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", settingsToApply);
       return true;
     }
   } else if (config.fileName) {

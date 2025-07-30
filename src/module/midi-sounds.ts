@@ -14,104 +14,67 @@ interface rollSpec {
   playlistName: string;
   soundName: string; // soundName or random
 }
+interface SoundSpec {
+  playlistName: string;
+  soundName: string;
+};
 export class MidiSounds {
-  static midiSoundSpecs: {};
   static weaponBaseTypes: {};
 
   static getSound(playListName: string, soundName: string) {
-    const playlist: Playlist | undefined = game.playlists?.getName(playListName);
+    const playlist: Playlist.Implementation | undefined = game.playlists?.getName(playListName);
     return { playlist, sound: playlist?.sounds.getName(soundName) };
   }
 
   static async playSound(playListName: string, soundName: string) {
     const { playlist, sound } = this.getSound(playListName, soundName);
-    if (playlist && sound) {
-        return foundry.audio.AudioHelper.play({ src: sound.path as string, volume: sound.volume, loop: false }, true);
+    if (playlist && sound?.path) {
+        return foundry.audio.AudioHelper.play({ src: sound.path, volume: sound.volume, loop: false }, true);
     }
     return null;
   }
 
-  static ActionTypes(): any {
-    const systemId = game.system?.id.toUpperCase() ?? "dnd5e";
-    let damageEntries: any = {};
-    Object.keys(GameSystemConfig.damageTypes).forEach(
-      key => damageEntries[key] = `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes[key].label}`
-    );
-
-    let itemActionEntries: any = {};
-    Object.keys(GameSystemConfig.itemActionTypes).forEach(
-      key => itemActionEntries[key] = `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes[key]}`
-    );
-
-    let actionTypes = {
-      itemRoll: `${i18n("DOCUMENT.Item")} ${i18n("TABLE.Roll")}`,
-      attack: i18n(`${systemId}.AttackRoll`),
-      damage: i18n(`${systemId}.DamageRoll`),
-      critical: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.CriticalSoundName")}`,
-      fumble: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.FumbleSoundName")}`,
-      hit: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.Hits")}`,
-      miss: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.Misses")}`,
-      none: i18n("None")
-    };
-    actionTypes = foundry.utils.mergeObject(actionTypes, itemActionEntries);
-    actionTypes = foundry.utils.mergeObject(actionTypes, damageEntries);
-    return actionTypes;
+  static ActionTypes(): Record<string, string> {
+    const damageEntries = Object.fromEntries(Object.entries(GameSystemConfig.damageTypes as Record<string, {label: string}>).map(([key, {label}]) => [key, `${i18n("DND5E.Damage")}: ${label}`]));
+    const itemActionEntries = Object.fromEntries(Object.entries(GameSystemConfig.itemActionTypes as Record<string, string>).map(([key, label]) => [key, `${i18n("DND5E.Action")}: ${label}`]));
 
     return {
       itemRoll: `${i18n("DOCUMENT.Item")} ${i18n("TABLE.Roll")}`,
-      attack: i18n(`${systemId}.AttackRoll`),
-      damage: i18n(`${systemId}.DamageRoll`),
-      critical: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.CriticalSoundName")}`,
-      fumble: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.FumbleSoundName")}`,
-      hit: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.Hits")}`,
-      miss: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.Misses")}`,
-      abil: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["abil"]}`,
-      heal: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["heal"]}`,
-      msak: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes[`${game.system?.id === "sw5e" ? "mpak" : "msak"}`]}`,
-      mwak: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["mwak"]}`,
-      other: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["other"]}`,
-      rsak: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes[`${game.system?.id === "sw5e" ? "rpak" : "rsak"}`]}`,
-      rwak: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["rwak"]}`,
-      save: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["save"]}`,
-      util: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["util"]}`,
-      acid: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.acid}`,
-      bludgeoning: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.bludgeoning}`,
-      cold: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.cold}`,
-      fire: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.fire}`,
-      force: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.force}`,
-      lightning: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.lightning}`,
-      necrotic: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.necrotic}`,
-      piercing: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.piercing}`,
-      poison: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.poison}`,
-      psychic: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.psychic}`,
-      radiant: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.radiant}`,
-      slashing: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.slashing}`,
-      thunder: `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes.thunder}`,
-      "midi-none": `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes["midi-none"]}`,
-      none: i18n("None")
-    }
+      attack: i18n("DND5E.AttackRoll"),
+      damage: i18n("DND5E.DamageRoll"),
+      critical: `${i18n("DND5E.Attack")}: ${i18n("midi-qol.CriticalSoundName")}`,
+      fumble: `${i18n("DND5E.Attack")}: ${i18n("midi-qol.FumbleSoundName")}`,
+      hit: `${i18n("DND5E.Attack")}: ${i18n("midi-qol.Hits")}`,
+      miss: `${i18n("DND5E.Attack")}: ${i18n("midi-qol.Misses")}`,
+      none: i18n("None"),
+      ...itemActionEntries,
+      ...damageEntries,
+    };
   }
   static async playRandomSound(playListName: string) {
     const playlist: Playlist | undefined = game.playlists?.getName(playListName);
     if (playlist) {
-      //@ts-ignore
       const sounds = playlist.sounds;
       const soundIndex = Math.floor(Math.random() * sounds.contents.length);
-      //@ts-ignore
-      const sound = playlist.sounds.contents[soundIndex];
-      return foundry.audio.AudioHelper.play({ src: sound.path as string, volume: sound.volume, loop: false }, true);
+      const sound = sounds.contents[soundIndex];
+      return this.playSound(playlist.name, sound.name);
     }
     return null;
   }
 
-  static getSubtype(item: any): string {
-    if (!item.type) return "";
+  static getSubtype(item?: Item.Implementation): string {
+    if (!item?.type) return "";
     let subtype = "";
     switch (item.type) {
+      // @ts-expect-error no dnd5e-types
       case "weapon": subtype = "weapon." + item.system.type.value; break;
+      // @ts-expect-error no dnd5e-types
       case "equipment": subtype = "equipment." + item.system.type.value; break;
+      // @ts-expect-error no dnd5e-types
       case "consumable": subtype = "consumable." + item.system.type.value; break;
+      // @ts-expect-error no dnd5e-types
       case "spell": subtype = "spell." + item.system.school; break;
+      // @ts-expect-error no dnd5e-types
       case "tool": subtype = "tool." + item.system.type.value; break;
       default: subtype = item.type + "any";
     }
@@ -120,88 +83,73 @@ export class MidiSounds {
 
   static async getWeaponBaseTypes() {
     MidiSounds.weaponBaseTypes = {};
-    // TODO remove this if dnd5e getBaseItem bug is fixed
-    const config: any = CONFIG;
     const packname = GameSystemConfig.sourcePacks.ITEMS;
     if (packname) {
       const packObject = game.packs?.get(packname);
-      // TODO check this for v10 compendia
-      //@ts-ignore getindex 0 params
+      // @ts-expect-error no dnd5e-types
       await packObject?.getIndex({ fields: ["system.armor.type", "system.toolType", "system.weaponType", "img"] });
 
       const weaponTypes = Object.keys(GameSystemConfig.weaponTypes);
-      const sheetClass = config.Item.sheetClasses.weapon[`${game.system?.id}.ItemSheet5e`].cls;
-      for (let wt of weaponTypes) {
+      for (const wt of weaponTypes) {
         const baseTypes = await MidiSounds.getItemBaseTypes("weapon", wt);
-        MidiSounds.weaponBaseTypes = foundry.utils.mergeObject(MidiSounds.weaponBaseTypes, baseTypes)
+        foundry.utils.mergeObject(MidiSounds.weaponBaseTypes, baseTypes)
       }
     }
     debug("Weapon base types are ", MidiSounds.weaponBaseTypes);
   }
 
   static async getItemBaseTypes(type: string, weaponType: string) {
-    const ConfigSettings = GameSystemConfig;
-    //@ts-ignore DND5e
-    const baseIds = ConfigSettings[`${type}Ids`];
+    const baseIds = GameSystemConfig[`${type}Ids`];
     if (baseIds === undefined) return {};
 
     const typeProperty = `type.value`;
     const baseType = weaponType;
 
-    const items = {};
+    const items: Record<string, string> = {};
     for (const [name, id] of Object.entries(baseIds)) {
-      let baseItem;
-      if (globalThis.sw5e?.documents.Trait.getBaseItem) {
-        baseItem = await globalThis.sw5e.documents.Trait.getBaseItem(id);
-      } else if (globalThis.dnd5e?.documents.Trait.getBaseItem) {
-        baseItem = await globalThis.dnd5e.documents.Trait.getBaseItem(id);
-      } else {
-        globalThis.dnd5e.applications.ProficiencySelector.getBaseItem(id);
-      }
+      let baseItem = await globalThis.dnd5e.documents.Trait.getBaseItem(id);
       if (baseType !== baseItem && foundry.utils.getProperty(baseItem.system, typeProperty)) continue;
       items[name] = baseItem?.name;
     }
-    //@ts-ignore lhs[1]
     const result =  Object.fromEntries(Object.entries(items).sort((lhs, rhs) => lhs[1].localeCompare(rhs[1])));
     return result;
   }
 
-  static getSpecFor(actorType, type, subtype, weaponSubType, selector) {
-    let spec;
-    for (let atype of [actorType, "any"]) {
-      let specs = foundry.utils.getProperty(midiSoundSettings, atype) ?? {};
-      if (!spec) spec = foundry.utils.getProperty(foundry.utils.getProperty(specs, `weapon.${weaponSubType}`) ?? {}, selector);
-      if (!spec) spec = foundry.utils.getProperty(foundry.utils.getProperty(specs, subtype) ?? {}, selector);
-      if (!spec) spec = foundry.utils.getProperty(foundry.utils.getProperty(specs, `${type}.any`) ?? {}, selector);
-      if (!spec) spec = foundry.utils.getProperty(foundry.utils.getProperty(specs, "all.any") ?? {}, selector);
+  static getSpecFor(actorType: string, type: string, subtype: string, weaponSubType: string, selector: string) {
+    let spec: SoundSpec | undefined;
+    for (let aType of [actorType, "any"]) {
+      let specs = foundry.utils.getProperty(midiSoundSettings, aType) ?? {};
+      if (!spec) spec = foundry.utils.getProperty(specs, `weapon.${weaponSubType}.${selector}`) as SoundSpec;
+      if (!spec) spec = foundry.utils.getProperty(specs, `${subtype}.${selector}`) as SoundSpec;
+      if (!spec) spec = foundry.utils.getProperty(specs, `${type}.any.${selector}`) as SoundSpec;
+      if (!spec) spec = foundry.utils.getProperty(specs, `all.any.${selector}`) as SoundSpec;
       if (spec) return spec;
     }
     return undefined;
   }
 
-  static playSpec(spec) {
+  static playSpec(spec: SoundSpec) {
     if (spec.soundName !== "random")
       return this.playSound(spec.playlistName, spec.soundName);
     else
       return this.playRandomSound(spec.playlistName)
   }
 
-  static processHook(workflow, selector) {
+  static processHook(workflow: Workflow, selector: string) {
     const subtype = this.getSubtype(workflow.item);
-    const baseType = workflow.item?.system.type?.baseItem ?? "";
-    let spec = this.getSpecFor(workflow.item?.parent?.type ?? "all", workflow.item.type, subtype, baseType, selector);
+    // @ts-expect-error no dnd5e-types
+    const baseType = workflow.item.system.type?.baseItem as string ?? "";
+    let spec = this.getSpecFor(workflow.item.parent?.type ?? "all", workflow.item.type ?? "any", subtype, baseType, selector);
     if (!spec) return false;
     return this.playSpec(spec);
   }
 
   static midiSoundsReadyHooks() {
-    //@ts-expect-error
     Hooks.on("midi-qol.preItemRoll", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
       await this.processHook(workflow, "itemRoll");
       return true; // sounds can never block roll
     });
-    //@ts-expect-error
     Hooks.on("midi-qol.preAttackRoll", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
       if (dice3dEnabled() 
@@ -211,7 +159,6 @@ export class MidiSounds {
       return true;
     });
 
-    //@ts-expect-error
     Hooks.on("midi-qol.AttackRollComplete", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
       if (!dice3dEnabled() 
@@ -230,7 +177,6 @@ export class MidiSounds {
       return true;
     });
 
-    //@ts-expect-error
     Hooks.on("midi-qol.DamageRollComplete", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
       const result = await this.processHook(workflow, workflow.defaultDamageType);
@@ -240,7 +186,7 @@ export class MidiSounds {
     });
   }
 
-  static async createDefaultPlayList(): Promise<Playlist | undefined> {
+  static async createDefaultPlayList(): Promise<Playlist.Implementation | undefined> {
     if (!game.user?.isGM) {
       ui.notifications?.warn("Only a GM can create the default playlist");
       return;
@@ -249,142 +195,140 @@ export class MidiSounds {
       ui.notifications?.error("Midi Item Tracks already exists - delete it before creating the default playlist");
       return;
     }
-    const playlistData = {
-      "name": "Midi Item Tracks",
-      "description": "Midi Qol sample custom sounds",
-      "mode": CONST.PLAYLIST_MODES.DISABLED,
-      "sounds": [
+    const playlistData: Playlist.CreateData = {
+      name: "Midi Item Tracks",
+      description: "Midi Qol sample custom sounds",
+      mode: CONST.PLAYLIST_MODES.DISABLED,
+      sounds: [
         {
-          "path": "modules/midi-qol/sounds/success-drums.ogg",
-          "repeat": false,
-          "volume": 0.125,
-          "name": "success-drums",
-          "playing": false,
-          "streaming": false,
-          "pausedTime": null,
-          "sort": 0
+          path: "modules/midi-qol/sounds/success-drums.ogg",
+          repeat: false,
+          volume: 0.125,
+          name: "success-drums",
+          playing: false,
+          pausedTime: null,
+          sort: 0
         },
         {
-          "name": "dice",
-          "description": "",
-          "path": "sounds/dice.wav",
-          "playing": false,
-          "pausedTime": null,
-          "repeat": false,
-          "volume": 0.5240467536394058,
-          "sort": 0,
+          name: "dice",
+          description: "",
+          path: "sounds/dice.wav",
+          playing: false,
+          pausedTime: null,
+          repeat: false,
+          volume: 0.5240467536394058,
+          sort: 0,
         },
         {
-          "name": "drink",
-          "description": "",
-          "path": "modules/midi-qol/sounds/drink.wav",
-          "playing": false,
-          "pausedTime": null,
-          "repeat": false,
-          "volume": 0.5240467536394058,
-          "sort": 0,
+          name: "drink",
+          description: "",
+          path: "modules/midi-qol/sounds/drink.wav",
+          playing: false,
+          pausedTime: null,
+          repeat: false,
+          volume: 0.5240467536394058,
+          sort: 0,
         },
         {
-          "name": "fail1",
-          "description": "",
-          "path": "modules/midi-qol/sounds/fail1.wav",
-          "playing": false,
-          "pausedTime": null,
-          "repeat": false,
-          "volume": 0.5240467536394058,
-          "sort": 0,
+          name: "fail1",
+          description: "",
+          path: "modules/midi-qol/sounds/fail1.wav",
+          playing: false,
+          pausedTime: null,
+          repeat: false,
+          volume: 0.5240467536394058,
+          sort: 0,
         },
         {
-          "name": "fail2",
-          "description": "",
-          "path": "modules/midi-qol/sounds/fail2.wav",
-          "playing": false,
-          "pausedTime": null,
-          "repeat": false,
-          "volume": 0.5240467536394058,
-          "sort": 0,
+          name: "fail2",
+          description: "",
+          path: "modules/midi-qol/sounds/fail2.wav",
+          playing: false,
+          pausedTime: null,
+          repeat: false,
+          volume: 0.5240467536394058,
+          sort: 0,
         },
         {
-          "name": "good-results",
-          "description": "",
-          "path": "modules/midi-qol/sounds/good-results.ogg",
-          "playing": false,
-          "pausedTime": null,
-          "repeat": false,
-          "volume": 0.5240467536394058,
-          "sort": 0,
+          name: "good-results",
+          description: "",
+          path: "modules/midi-qol/sounds/good-results.ogg",
+          playing: false,
+          pausedTime: null,
+          repeat: false,
+          volume: 0.5240467536394058,
+          sort: 0,
         },
         {
-          "name": "spell",
-          "description": "",
-          "path": "modules/midi-qol/sounds/spell.wav",
-          "playing": false,
-          "pausedTime": null,
-          "repeat": false,
-          "volume": 0.5240467536394058,
-          "sort": 0,
+          name: "spell",
+          description: "",
+          path: "modules/midi-qol/sounds/spell.wav",
+          playing: false,
+          pausedTime: null,
+          repeat: false,
+          volume: 0.5240467536394058,
+          sort: 0,
         },
         {
-          "name": "success",
-          "description": "",
-          "path": "modules/midi-qol/sounds/success.wav",
-          "playing": false,
-          "pausedTime": null,
-          "repeat": false,
-          "volume": 0.5240467536394058,
-          "sort": 0,
+          name: "success",
+          description: "",
+          path: "modules/midi-qol/sounds/success.wav",
+          playing: false,
+          pausedTime: null,
+          repeat: false,
+          volume: 0.5240467536394058,
+          sort: 0,
         },
         {
-          "name": "swing",
-          "description": "",
-          "path": "modules/midi-qol/sounds/swing.wav",
-          "playing": false,
-          "pausedTime": null,
-          "repeat": false,
-          "volume": 0.5240467536394058,
-          "sort": 0,
+          name: "swing",
+          description: "",
+          path: "modules/midi-qol/sounds/swing.wav",
+          playing: false,
+          pausedTime: null,
+          repeat: false,
+          volume: 0.5240467536394058,
+          sort: 0,
         },
         {
-          "name": "use",
-          "description": "",
-          "path": "modules/midi-qol/sounds/use.wav",
-          "playing": false,
-          "pausedTime": null,
-          "repeat": false,
-          "volume": 0.5240467536394058,
-          "sort": 0,
+          name: "use",
+          description: "",
+          path: "modules/midi-qol/sounds/use.wav",
+          playing: false,
+          pausedTime: null,
+          repeat: false,
+          volume: 0.5240467536394058,
+          sort: 0,
         },
         {
-          "name": "fail3",
-          "description": "",
-          "path": "modules/midi-qol/sounds/fail3.ogg",
-          "playing": false,
-          "pausedTime": null,
-          "repeat": false,
-          "volume": 0.5240467536394058,
-          "sort": 0,
+          name: "fail3",
+          description: "",
+          path: "modules/midi-qol/sounds/fail3.ogg",
+          playing: false,
+          pausedTime: null,
+          repeat: false,
+          volume: 0.5240467536394058,
+          sort: 0,
         },
         {
-          "name": "bowshot",
-          "description": "",
-          "path": "modules/midi-qol/sounds/bow-and-arrow.mp3",
-          "playing": false,
-          "pausedTime": null,
-          "repeat": false,
-          "volume": 0.5240467536394058,
-          "sort": 0,
+          name: "bowshot",
+          description: "",
+          path: "modules/midi-qol/sounds/bow-and-arrow.mp3",
+          playing: false,
+          pausedTime: null,
+          repeat: false,
+          volume: 0.5240467536394058,
+          sort: 0,
         }
       ]
     };
     return Playlist.create(playlistData, {});
-    // await game.packs.get("midi-qol.midiqol-sample-tracks")?.importAll({});
   }
 
   static async setupDetailedSounds() {
     const soundSettings = {
       version: "0.9.48",
-      "any": {
-        "all": {
+      any: {
+        all: {
           any: {
             itemRoll: { playlistName: "Midi Item Tracks", soundName: "dice" },
             attack: { playlistName: "Midi Item Tracks", soundName: "dice" },
@@ -453,14 +397,13 @@ export class MidiSounds {
         }
       }
     }
-    //@ts-expect-error
-    if (game.user?.can("SETTINGS_MODIFY")) await game.settings?.set("midi-qol", "MidiSoundSettings", soundSettings);
+    if (game.user?.can("SETTINGS_MODIFY")) await game.settings.set("midi-qol", "MidiSoundSettings", soundSettings);
   }
   static async setupFullSounds() {
     const soundSettings = {
       version: "0.9.48",
-      "any": {
-        "all": {
+      any: {
+        all: {
           any: {
             itemRoll: { playlistName: "Midi Item Tracks", soundName: "dice" },
             attack: { playlistName: "Midi Item Tracks", soundName: "dice" },
@@ -584,14 +527,13 @@ export class MidiSounds {
         }
       }
     }
-    //@ts-expect-error
-    if (game.user?.can("SETTINGS_MODIFY")) await game.settings?.set("midi-qol", "MidiSoundSettings", soundSettings);
+    if (game.user?.can("SETTINGS_MODIFY")) await game.settings.set("midi-qol", "MidiSoundSettings", soundSettings);
   }
   static async setupBasicSounds() {
     const soundSettings: any = {
       version: "0.9.48",
-      "any": {
-        "all": {
+      any: {
+        all: {
           any: {
             itemRoll: { playlistName: "Midi Item Tracks", soundName: "dice" },
             attack: { playlistName: "Midi Item Tracks", soundName: "dice" },
@@ -637,13 +579,6 @@ export class MidiSounds {
         }
       }
     }
-    if (game.system?.id === "sw5e") {
-      soundSettings.rpak = soundSettings.rsak;
-      soundSettings.mpak = soundSettings.msak;
-      delete soundSettings.rsak;
-      delete soundSettings.msak;
-    }
-    //@ts-expect-error
-    if (game.user?.can("SETTINGS_MODIFY")) await game.settings?.set("midi-qol", "MidiSoundSettings", soundSettings);
+    if (game.user?.can("SETTINGS_MODIFY")) await game.settings.set("midi-qol", "MidiSoundSettings", soundSettings);
   }
 }

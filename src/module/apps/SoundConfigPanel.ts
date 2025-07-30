@@ -1,4 +1,4 @@
-import { geti18nOptions, i18n } from "../../midi-qol.js";
+import { GameSystemConfig, geti18nOptions, i18n } from "../../midi-qol.js";
 import { MidiSounds } from "../midi-sounds.js";
 import { configSettings, midiSoundSettings } from "../settings.js";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -6,9 +6,6 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   static defaultPlaylist: string | undefined;
   static defaultSound: string | undefined;
-  constructor(options?) {
-    super(options);
-  }
 
   get title() {
     return i18n("midi-qol.ConfigTitle") ?? "Sound Config";
@@ -53,21 +50,19 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
 
   async _prepareContext(options) {
     const context: any = await super._prepareContext(options);
-    //@ts-expect-error
-    const systemConfig = (game.system?.id === "dnd5e") ? CONFIG.DND5E : CONFIG.SW5E;
-    const consumableSubtypesData = Object.keys(systemConfig.consumableTypes).reduce((obj, key) => { obj[key] = systemConfig.consumableTypes[key].label; return obj }, {});
-    const spellSchoolData = Object.keys(systemConfig.spellSchools).reduce((obj, key) => { obj[key] = systemConfig.spellSchools[key].label; return obj }, {});
+    const consumableSubtypesData = Object.keys(GameSystemConfig.consumableTypes).reduce((obj, key) => { obj[key] = GameSystemConfig.consumableTypes[key].label; return obj }, {});
+    const spellSchoolData = Object.keys(GameSystemConfig.spellSchools).reduce((obj, key) => { obj[key] = GameSystemConfig.spellSchools[key].label; return obj }, {});
     const itemTypes: any = foundry.utils.duplicate(CONFIG.Item.typeLabels);
     delete itemTypes.backpack;
     delete itemTypes.class;
     itemTypes.all = "All";
     itemTypes.none = "None";
-    context.weaponSubtypes = foundry.utils.mergeObject({ any: "Any", none: "None" }, systemConfig.weaponTypes);
+    context.weaponSubtypes = foundry.utils.mergeObject({ any: "Any", none: "None" }, GameSystemConfig.weaponTypes);
     context.weaponSubtypes = foundry.utils.mergeObject(context.weaponSubtypes, MidiSounds.weaponBaseTypes);
-    context.equipmentSubtypes = foundry.utils.mergeObject({ any: "Any" }, systemConfig.equipmentTypes);
+    context.equipmentSubtypes = foundry.utils.mergeObject({ any: "Any" }, GameSystemConfig.equipmentTypes);
     context.consumableSubTypes = foundry.utils.mergeObject({ any: "Any" }, consumableSubtypesData);
     context.spellSubtypes = foundry.utils.mergeObject({ any: "Any" }, spellSchoolData);
-    context.toolSubtypes = foundry.utils.mergeObject({ any: "Any" }, systemConfig.toolTypes);
+    context.toolSubtypes = foundry.utils.mergeObject({ any: "Any" }, GameSystemConfig.toolTypes);
     context.defaultSubtypes = { any: "Any" };
     context.characterTypes = { any: "Any", npc: "NPC", character: "Character", "none": "None" };
     context.subTypes = {
@@ -201,7 +196,7 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
     return context;
   }
 
-  static async #onAdd(event, target) {
+  static async #onAdd(this: SoundConfigPanel, event, target) {
     if (!SoundConfigPanel.defaultPlaylist) {
       ui.notifications?.error("Midi Sound Configuration: You must define at least one playlist before adding a sound");
       event.preventDefault();
@@ -220,24 +215,23 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
     }
 
     await SoundConfigPanel.#onSubmit.bind(this)(event, target, formData);
-    //@ts-expect-error
     this.render({ force: true });
   }
 
-  static #onDelete(event, target) {
+  static #onDelete(this: SoundConfigPanel, event, target) {
     event.preventDefault();
     const rowTarget = target.closest("tr");
     rowTarget.remove();
     // event.currentTarget.requestSubmit();
   }
 
-  static async #onSave(event, target) {
+  static async #onSave(this: SoundConfigPanel, event, target) {
     const form = event.currentTarget;
     const formData = new foundry.applications.ux.FormDataExtended(form);
     SoundConfigPanel.#onSubmit.bind(this)(event, form, formData);
   }
 
-  static async #onSubmit(event, form, formDataIn): Promise<void> {
+  static async #onSubmit(this: SoundConfigPanel, event, form, formDataIn): Promise<void> {
     if (!game.user?.can("SETTINGS_MODIFY")) return;
     if (!game.user?.can("SETTINGS_MODIFY")) return;
 
@@ -262,16 +256,12 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
         settings[chartype][category][subtype][action] = { playlistName, soundName };
       }
     }
-    //@ts-expect-error
     if (this.canSave(settings) === false) {
       // ui.notifications?.warn("Midi Sound Configuration: Some referenced sounds are missing")
-      // @ts-expect-error
       ui.notifications?.warn(`Missing ${this.missingSounds(settings).join("<br>")}`);
     }
     settings.version = "12.4.40";
-    // @ts-expect-error
-    await game.settings?.set("midi-qol", "MidiSoundSettings", settings);
-    // @ts-expect-error
+    await game.settings.set("midi-qol", "MidiSoundSettings", settings);
     this.render();
   }
 
@@ -284,27 +274,6 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
   }
   async _onRender(context, options) {
     super._onRender(context, options);
-    // html.find(".soundName").change(function (event) {
-    //   this.submit({ preventClose: true }).then(() => this.render());
-    // }.bind(this));
-    // html.find(".playlistName").change(function (event) {
-    //   this.submit({ preventClose: true }).then(() => this.render());
-    // }.bind(this));
-    // html.find(".category").change(function (event) {
-    //   this.submit({ preventClose: true }).then(() => this.render());
-    // }.bind(this));
-    // html.find(".action").change(function (event) {
-    //   this.submit({ preventClose: true }).then(() => this.render());
-    // }.bind(this));
-    // html.find(".subtype").change(function (event) {
-    //   this.submit({ preventClose: true }).then(() => this.render());
-    // }.bind(this))
-//    for (const elem of Array.from(this.element.querySelectorAll(".playlistName"))) {
-//      elem.addEventListener("change", function (event) {
-//        SoundConfigPanel.#onSubmit.bind(this)(event, event.currentTarget, new FormDataExtended(this.form))
-//        .then(() => this.render({force: true}));
-//      })
-//    };
     for (const elem of Array.from(this.element.querySelectorAll(".import-quick-setting"))) {
       elem.addEventListener("click", function (event) {
         const key = event.currentTarget?.id;
@@ -320,8 +289,6 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
 
   changeHandler(event) {
     if (!this.element.querySelector("form")) return;
-    //@ts-expect-error
-    const formData = new foundry.applications.ux.FormDataExtended(this.element.querySelector("form"));
     this.render({ force: true });
   }
 }

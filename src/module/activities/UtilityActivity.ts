@@ -1,21 +1,21 @@
-import { debugEnabled, i18n, warn, error } from "../../midi-qol.js";
-import { Workflow } from "../Workflow.js";
+import { AnyMutableObject } from "fvtt-types/utils";
+import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { debugEnabled, i18n, warn, error, GameSystemConfig } from "../../midi-qol.js";
+import { AugmentedEvent, Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { areMidiKeysPressed, asyncHooksCall, isAutoFastDamage } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
-export var MidiUtilityActivity;
-export var MidiUtilitySheet;
+export let MidiUtilityActivity: ReturnType<typeof defineMidiUtilityActivityClass>;
+export let MidiUtilitySheet: ReturnType<typeof defineMidiUtilitySheetClass>;
 
 export function setupUtilityActivity() {
   if (debugEnabled > 0) warn("MidiQOL | UtilityActivity | setupUtilityActivity | Called");
   //@ts-expect-error
-  const GameSystemConfig = game.system.config;
-  //@ts-expect-error
   MidiUtilitySheet = defineMidiUtilitySheetClass(game.system.applications.activity.UtilitySheet);
 
-  MidiUtilityActivity = defineMidiUtilityActivityClass(GameSystemConfig.activityTypes.utility.documentClass);
+  MidiUtilityActivity = defineMidiUtilityActivityClass(GameSystemConfig.activityTypes.utility.documentClass as Activity);
   if (ReplaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eUtility"] = GameSystemConfig.activityTypes.utility;
     GameSystemConfig.activityTypes.utility = { documentClass: MidiUtilityActivity };
@@ -24,7 +24,7 @@ export function setupUtilityActivity() {
   }
 }
 
-let defineMidiUtilityActivityClass = (ActivityClass: any) => {
+let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
   return class MidiUtilityActivity extends MidiActivityMixin(ActivityClass) {
     static LOCALIZATION_PREFIXES = ["midi-qol.UTILITY", ...super.LOCALIZATION_PREFIXES];
 
@@ -56,12 +56,11 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
         };
         return schema;
       }
-    static #rollFormula(event, target, message) {
+    static #rollFormula(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
 
-      //@ts-expect-error
-      return this.rollFormula({ event, workflow }, {}, {});
+      return this.rollFormula?.({ event, workflow }, {}, {});
     }
 
     get possibleOtherActivity() {
@@ -72,13 +71,14 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
       return false;
     }
 
-    async rollFormula(config, dialog, message: any = {}) {
+    // @ts-expect-error weird types stuff
+    async rollFormula(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) {
       if (debugEnabled > 0)
         warn("UtilityActivity | rollFormula | Called", config, dialog, message);
       config ??= {};
       dialog ??= {};
       message ??= {}
-      const workflow = config.workflow;
+      const workflow = config.workflow as Workflow;
       if (!workflow) {
         const errorMessage = "MidiUtilityActivity | rollFormula | No workflow found";
         error(errorMessage);
@@ -102,14 +102,14 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
       const keys = {
         normal: areKeysPressed(config.event, "skipDialogNormal") || areKeysPressed(config.event, "skipDialogAdvantage") || areKeysPressed(config.event, "skipDialogDisadvantage")
       };
-      if (Object.values(keys).some(k => k)) dialog.configure = this.midiProperties.forceDialog;
-      else dialog.configure ??= !config.midiOptions.fastForward || this.midiProperties.forceDialog;
-      if (workflow?.rollOptions?.rollToggle) dialog.configure = !!!dialog.configure;
-      const rollToggle = areMidiKeysPressed(config.event, "RollToggle");
+      if (Object.values(keys).some(k => k)) dialog.configure = this.midiProperties?.forceDialog;
+      else dialog.configure ??= !config.midiOptions.fastForward || this.midiProperties?.forceDialog;
+      if (workflow.rollOptions?.rollToggle) dialog.configure = !!!dialog.configure;
+      const rollToggle = areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle");
       if (workflow) workflow.rollOptions.rollToggle = rollToggle;
       if (rollToggle) dialog.configure = !!!dialog.configure;
       message.create ??= false;
-      let result = await super.rollFormula(config, dialog, message);
+      let result = await super.rollFormula!(config, dialog, message) as Roll[] | undefined;
       if (config.midiOptions.updateWorkflow !== false && workflow) {
         if (result) await workflow.setUtilityRolls(result);
         if (workflow.suspended)

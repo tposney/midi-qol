@@ -1,32 +1,35 @@
+import { Activity } from "../../globals.js";
 import { i18n, error, i18nFormat, allAttackTypes } from "../../midi-qol.js";
 import { checkMechanic, checkRule, configSettings, targetConfirmation } from "../settings.js";
 import { FULL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, computeCoverBonus, computeFlankingStatus, getToken, isInCombat, isValidTarget, markFlanking, tokenForActor, updateUserTargets, getTokenName } from "../utils.js";
 import { getTokenPlayerName } from "../utils.js";
 import { TroubleShooter } from "./TroubleShooter.js";
-const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+import ApplicationV2 = foundry.applications.api.ApplicationV2
+import { WorkflowOptions } from "../Workflow.js";
+const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class TargetConfirmationDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   callback: ((data) => {}) | undefined;
   data: {
-    actor: Actor.Implementation,
-    // no dnd5e types, so "any" it is
-    activity: any,
-    user: User | null,
-    targets: Token[],
-    options: any,
-    maxTargets: number | null | undefined
+    actor: Actor.Implementation;
+    activity: Activity;
+    user: User | null;
+    targets: Token.Implementation[];
+    options: any;
+    maxTargets: number | null | undefined;
   };
   hookId: number;
 
-  constructor(actor: Actor.Implementation, activity, user, options: any = {}) {
+  constructor(actor: Actor.Implementation, activity: Activity, user: User.Implementation, options: TargetConfirmationOptions = {}) {
     super(options);
     this.position.left = TargetConfirmationDialog.xPosition;
     this.position.top = TargetConfirmationDialog.yPosition;
-    let maxTargets = activity.target?.affects?.count;
-    const inCombat = isInCombat(activity.item.parent);
+    let maxTargets = Number(activity.target?.affects?.count ?? "1");
+    const inCombat = activity.item.parent && isInCombat(activity.item.parent);
     const requiresTargets = configSettings.requiresTargets === "always" 
     || (configSettings.requiresTargets === "tokens" && (canvas?.scene?.tokens.size ?? 0) > 0)
     || (configSettings.requiresTargets === "combat" && inCombat);
+    // @ts-expect-error no dnd5e-types
     if (activity.item.type === "weapon" && !maxTargets) {
       if (requiresTargets && configSettings.enforceSingleWeaponTarget && allAttackTypes.includes(activity.actionType)) {
       maxTargets = 1;
@@ -41,7 +44,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       foundry.utils.setProperty(options, "workflowOptions.fastForward", options.workflowOptions?.fastForward);
       return options.callback ? options.callback(value) : value;
     }
-    if (["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(checkRule("checkFlanking")) && game.user?.targets) {
+    if (["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(checkRule("checkFlanking") as string) && game.user?.targets) {
       const actor = this.data.activity.actor;
       const token = tokenForActor(actor);
       if (token)
@@ -121,10 +124,26 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     }
   };
 
-  async _prepareContext(options) {
-    let data: any = foundry.utils.mergeObject(this.data, await super._prepareContext(options));
+  async _prepareContext(options: ApplicationV2.RenderOptions) {
+    let context: Omit<typeof this.data, 'targets'> & ApplicationV2.RenderContext & {
+      blurb?: string;
+      buttons?: {
+        type?: string;
+        icon?: string;
+        label?: string;
+        action?: string;
+      }[]
+      targets: (Token.Implementation | {
+        name: string;
+        img: string;
+        displayedDisposition?: string;
+        details: string;
+        hasDetails: boolean;
+        uuid: string;
+      })[]
+    } = {...this.data, ...await super._prepareContext(options)};
     const targets = Array.from(game.user?.targets ?? []);
-    data.targets = [];
+    context.targets = [];
     const actor = this.data.activity.actor;
     const token = tokenForActor(actor);
     for (let target of targets) {
@@ -138,13 +157,13 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
           break;
         default: break;
       }
-      let img = target.document.texture.src;
-      if (foundry.helpers.media.VideoHelper.hasVideoExtension(img as string)) {
+      let img = target.document.texture.src as string;
+      if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
         img = await game.video?.createThumbnail(img as string, { width: 50, height: 50 }) ?? "";
       }
 
       let details: string[] = [];
-      if (["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(checkRule("checkFlanking"))) {
+      if (["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(checkRule("checkFlanking") as string)) {
         if (token && computeFlankingStatus(token, target)) details.push((i18n("midi-qol.Flanked") ?? "Flanked"));
       }
 
@@ -185,15 +204,14 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         }
       }
 
-      let name;
+      let name: string;
       if (game.user?.isGM) {
         name = getTokenName(target);
       } else {
-        name = getTokenPlayerName(target);
+        name = getTokenPlayerName(target) ?? "";
       }
-      //@ts-expect-error .disposition
-      const relativeDisposition = token?.document.disposition * target.document.disposition;
-      let displayedDisposition: any = undefined;
+      const relativeDisposition = (token?.document.disposition ?? 0) * target.document.disposition;
+      let displayedDisposition: string | undefined = undefined;
       if (target.document.disposition !== CONST.TOKEN_DISPOSITIONS.SECRET) {
         if (relativeDisposition === CONST.TOKEN_DISPOSITIONS.FRIENDLY) {
           displayedDisposition = i18n("TOKEN.DISPOSITION.FRIENDLY");
@@ -203,7 +221,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
           displayedDisposition = i18n("TOKEN.DISPOSITION.HOSTILE");
         }*/
       }
-      data.targets.push({
+      context.targets.push({
         name, // : name: game.user.isGM ? getLinkText(target.actor) : getTokenPlayerName(target),
         img,
         displayedDisposition,
@@ -214,14 +232,14 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     }
     if (this.data.activity.target) {
       if (this.data.maxTargets)
-        data.blurb = i18nFormat("midi-qol.TargetConfirmation.Blurb", { targetCount: this.data.maxTargets, targetType: this.data.activity.target.affects.type || "targets" })
-      else data.blurb = i18n("midi-qol.TargetConfirmation.BlurbAny");
+        context.blurb = i18nFormat("midi-qol.TargetConfirmation.Blurb", { targetCount: this.data.maxTargets, targetType: this.data.activity.target.affects.type || "targets" })
+      else context.blurb = i18n("midi-qol.TargetConfirmation.BlurbAny");
     }
-    data.buttons = [
+    context.buttons = [
       { type: "button", icon: "fa-solid fa-dice-d20", label: "DND5E.Roll", action: "roll" },
       { type: "button", icon: "fa-solid fa-stop", label: "Cancel", action: "cancel" }
     ];
-    return data;
+    return context;
   }
 
   static #onRoll(this: TargetConfirmationDialog) {
@@ -241,6 +259,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
   async _onRender(context, options) {
     await super._onRender(context, options);
     if (canvas) {
+      // TODO: This doing anything? 
       let targetNames = this.element.getElementsByClassName("content-link midi-qol");
       for (let targetName of Array.from(targetNames)) {
         targetName.addEventListener("click", async (event) => {
@@ -263,7 +282,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         });
         i.closest(".midi-qol-box")?.addEventListener('click', async function () {
           const token = getToken(i.id);
-          if (token) await canvas?.ping(token.center);
+          if (token) await canvas.ping(token.center);
         });
         i.closest(".midi-qol-box")?.addEventListener('mouseover', function () {
           const token = getToken(i.id);
@@ -298,4 +317,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       error(message, err);
     }
   }
+}
+
+export type TargetConfirmationOptions = Partial<ApplicationV2.Configuration> & {
+  callback?: (value: unknown) => void;
+  workflowOptions?: WorkflowOptions;
 }

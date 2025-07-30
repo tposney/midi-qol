@@ -1,19 +1,19 @@
-import { debugEnabled, warn, i18n } from "../../midi-qol.js";
+import { AnyMutableObject } from "fvtt-types/utils";
+import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { getSceneTargets } from "./activityHelpers.js";
 
-export var MidiSaveActivity;
-export var MidiSaveSheet;
+export let MidiSaveActivity: ReturnType<typeof defineMidiSaveActivityClass>;
+export let MidiSaveSheet: ReturnType<typeof defineMidiSaveSheetClass>;
 
 export function setupSaveActivity() {
   if (debugEnabled > 0) warn("MidiQOL | SaveActivity | setupSaveActivity | Called");
   //@ts-expect-error
-  const GameSystemConfig = game.system.config;
-  //@ts-expect-error
   MidiSaveSheet = defineMidiSaveSheetClass(game.system.applications.activity.SaveSheet);
-  MidiSaveActivity = defineMidiSaveActivityClass(GameSystemConfig.activityTypes.save.documentClass);
+  MidiSaveActivity = defineMidiSaveActivityClass(GameSystemConfig.activityTypes.save.documentClass as Activity);
   if (ReplaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eSave"] = GameSystemConfig.activityTypes.save;
     GameSystemConfig.activityTypes.save = { documentClass: MidiSaveActivity };
@@ -23,7 +23,7 @@ export function setupSaveActivity() {
   // Localization.localizeDataModel(MidiSaveActivity);
 }
 
-let defineMidiSaveActivityClass = (ActivityClass: any) => {
+let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
   return class MidiSaveActivity extends MidiActivityMixin(ActivityClass) {
     static LOCALIZATION_PREFIXES = ["DND5E.SAVE", "DND5E.DAMAGE", "midi-qol.SAVE", ...super.LOCALIZATION_PREFIXES];
     static metadata =
@@ -69,37 +69,36 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
       }
     }
 
-    static #rollDamage(event, target, message) {
+    static #rollDamage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
-      //@ts-expect-error
-      return this.rollDamage({event, workflow});
+      return this.rollDamage({event, workflow}, {}, {});
     }
 
-    static async #rollSave(event, target, message) {
+    static async #rollSave(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       // return ActivityClass.#rollSave.bind(this)(event, target, message);
       // Can't call ActivityClass.#rollSave.bind(this)(event, target, message) as it's private
-      const targets: Array<Token | Actor> = getSceneTargets();
+      const targets: Array<foundry.canvas.placeables.Token.Implementation | Actor.Implementation> = getSceneTargets();
       if (!targets.length && game.user?.character) targets.push(game.user?.character);
       if (!targets.length) ui.notifications?.warn("DND5E.ActionWarningNoToken", { localize: true });
-      const dc = parseInt(target.dataset.dc);
+      const dc = parseInt(target.dataset.dc ?? "0");
       for (const token of targets) {
         const actor = token instanceof Actor ? token : token.actor;
-        const speaker = ChatMessage.getSpeaker({ actor, scene: canvas?.scene, token: token instanceof Token ? token.document : null });
-        const message: any = { data: { speaker } };
+        const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: token instanceof Token ? token.document : null });
+        const message: AnyMutableObject = { data: { speaker } };
         // if (!actor?.hasPlayerOwner && workflow) message.create = false - this breaks save checking from chat card
-        if (token instanceof Token) foundry.utils.setProperty(message, "flags.midi-qol.requestId", token.document.uuid);
+        if (token instanceof foundry.canvas.placeables.Token) foundry.utils.setProperty(message, "flags.midi-qol.requestId", token.document.uuid);
         else foundry.utils.setProperty(message, "flags.midi-qol.requestId", token?.uuid);
-        if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) message.rollMode = game.settings?.get("core", "rollMode");
+        if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) message.rollMode = game.settings.get("core", "rollMode");
         else message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
         if (!game.user?.isGM) {
           if (configSettings.playerRollSaves === "noneDialogPublic") message.rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
           else if (configSettings.playerRollSaves === "noneDialogPrivate") message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
           else if (configSettings.playerRollSaves === "noneDialogSelf") message.rollMode = CONST.DICE_ROLL_MODES.SELF;
           else if (configSettings.playerRollSaves === "noneDialogBlind") message.rollMode = CONST.DICE_ROLL_MODES.BLIND;
-          else message.rollMode = game.settings?.get("core", "rollMode");
+          else message.rollMode = game.settings.get("core", "rollMode");
         }
         
 
@@ -115,7 +114,7 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
       }
     }
 
-    use(config = {}, dialog = {}, message = {}) {
+    use(config: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       return super.use(config, dialog, message);
     }
 
@@ -129,19 +128,19 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
       return true;
     }
     
-    getDamageConfig(config = {}) {
+    getDamageConfig(config: RollProcessConfig = {}) {
       const rollConfig = super.getDamageConfig(config);
 
       rollConfig.critical ??= {};
-      rollConfig.critical.allow = this.damage.critical.allow;
-      rollConfig.critical.bonusDamage = this.damage.critical.bonus;
+      rollConfig.critical.allow = this.damage?.critical.allow;
+      rollConfig.critical.bonusDamage = this.damage?.critical.bonus;
 
       return rollConfig;
     }
-    async rollDamage(config: any = {}, dialog = {}, message = {}) {
+    async rollDamage(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       message = foundry.utils.mergeObject({
         "data.flags.dnd5e.roll": {
-          damageOnSave: this.damage.onSave
+          damageOnSave: this.damage?.onSave
         }
       }, message);
       config.midiOptions ??= {};
