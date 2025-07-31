@@ -874,16 +874,16 @@ Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
           if (!GameSystemConfig.customDamageResistanceTypes[custom])
             custom = Object.keys(GameSystemConfig.customDamageResistanceTypes).find(key => GameSystemConfig.customDamageResistanceTypes[key].toLocaleLowerCase() === custom.toLocaleLowerCase()) ?? custom;
           switch (custom) {
-            case "spell": if (!damage.properties.has("spell")) continue; break;
+            case "spell": if (!damage.properties?.has("spell")) continue; break;
             case "nonSpell":
             case "non-spell":
-              if (damage.properties.has("spell")) continue; break;
-            case "magical": if (!damage.properties.has("mgc")) continue; break;
+              if (damage.properties?.has("spell")) continue; break;
+            case "magical": if (!damage.properties?.has("mgc")) continue; break;
             case "nonMagical":
             case "non-magical":
-              if (damage.properties.has("mgc")) continue; break;
+              if (damage.properties?.has("mgc")) continue; break;
             case "physical":
-              bypassesPresent = damage.properties.intersection(bypasses);
+              bypassesPresent = damage.properties?.intersection(bypasses);
               if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || bypassesPresent.size > 0) continue;
               break;
             case "nonPhysical":
@@ -891,22 +891,22 @@ Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
               if (GameSystemConfig.damageTypes[damage.type]?.isPhysical) continue; break;
             case "nonMagicalPhysical":
             case "non-magical-physical":
-              if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || damage.properties.has("mgc")) continue; break;
+              if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || damage.properties?.has("mgc")) continue; break;
             case "nonSilverPhysical":
             case "non-silver-physical":
-              if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || damage.properties.has("sil")) continue;
+              if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || damage.properties?.has("sil")) continue;
               break;
             case "nonAdamantPhysical":
             case "non-adamant-physical":
-              if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || damage.properties.has("ada")) continue;
+              if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || damage.properties?.has("ada")) continue;
               break;
             case "mwak":
             case "rwak":
-              bypassesPresent = damage.properties.intersection(bypasses);
-              if (!damage.properties.has(custom) || bypassesPresent.size > 0) continue;
+              bypassesPresent = damage.properties?.intersection(bypasses);
+              if (!damage.properties?.has(custom) || bypassesPresent.size > 0) continue;
               break;
             case "all": if (damage.type === "midi-none") continue; break;
-            default: if (!damage.properties.has(custom)) continue; break;
+            default: if (!damage.properties?.has(custom)) continue; break;
           }
           damage.active ??= {};
           damage.active[GameSystemConfig.customDamageResistanceTypes[custom] ?? custom] = true;
@@ -983,9 +983,9 @@ function applyDamageReduction(actor: Actor.Implementation, damages: DamageDescri
         case "rwak":
           if (options.ignore?.modification?.has(special)) continue;
           selectedDamage = selectDamages(damages, (damage) => {
-            const bypassesPresent = damage.properties.intersection(bypasses);
+            const bypassesPresent = (damage.properties ?? new Set()).intersection(bypasses) ?? new Set();
             return !GameSystemConfig.healingTypes[damage.type]
-              && damage.properties.has(special)
+              && damage.properties?.has(special)
               && bypassesPresent.size === 0
           });
           if (selectedDamage > 0) dmActive = i18n(special);
@@ -993,30 +993,30 @@ function applyDamageReduction(actor: Actor.Implementation, damages: DamageDescri
         case "msak":
         case "rsak":
           if (options.ignore?.modification?.has(special)) continue;
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties.has(special));
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties?.has(special));
           if (selectedDamage > 0) dmActive = i18n(special);
           break;
 
         case "magical":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties.has("mgc"));
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties?.has("mgc"));
           if (selectedDamage > 0) dmActive = i18n("midi-qol.Magical");
           break;
         case "non-magical":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && !damage.properties.has("mgc"));
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && !damage.properties?.has("mgc"));
           if (selectedDamage > 0) dmActive = i18n("midi-qol.NonMagical")
           break;
         case "non-magical-physical":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties.has("mgc"));
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties?.has("mgc"));
           if (selectedDamage > 0) dmActive = i18n("midi-qol.NonMagicalPhysical");
           break;
 
         case "non-silver-physical":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties.has("sil"));
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties?.has("sil"));
           if (selectedDamage > 0) dmActive = i18n("midi-qol.NonSilverPhysical");
           break;
 
         case "non-adamant-physical":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties.has("ada"));
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties?.has("ada"));
           if (selectedDamage > 0) dmActive = i18n("midi-qol.NonAdamantinePhysical");
           break;
 
@@ -1027,7 +1027,7 @@ function applyDamageReduction(actor: Actor.Implementation, damages: DamageDescri
 
         case "physical":
           selectedDamage = selectDamages(damages, (damage) => {
-            const bypassesPresent = damage.properties.intersection(bypasses);
+            const bypassesPresent = (damage.properties ?? new Set()).intersection(bypasses);
             return !GameSystemConfig.healingTypes[damage.type]
               && GameSystemConfig.damageTypes[damage.type]?.isPhysical
               && bypassesPresent.size === 0;
@@ -1036,12 +1036,12 @@ function applyDamageReduction(actor: Actor.Implementation, damages: DamageDescri
           break;
 
         case "spell":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties.has("spell"));
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties?.has("spell"));
           if (selectedDamage > 0) dmActive = i18n("midi-qol.SpellDamage");
           break;
 
         case "non-spell":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && !damage.properties.has("spell"));
+          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && !damage.properties?.has("spell"));
           if (selectedDamage > 0) dmActive = i18n("midi-qol.NonSpellDamage");
           break;
 

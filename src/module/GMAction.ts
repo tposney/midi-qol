@@ -1484,7 +1484,7 @@ export function prepareDamageListToJSON(damageList: DamageListEntry[]) {
 }
 
 function prepareDamageDetailToJSON(damageDetail?: DamageDescription[]): DamageDescriptionObject[] {
-  return (damageDetail ?? []).map(d => ({...d, properties: Array.from(d.properties)}));
+  return (damageDetail ?? []).map(d => ({...d, properties: Array.from(d.properties ?? [])}));
 }
 
 function recoverDamageListFromJSON(damageList: SerializedDamageListEntry[]): DamageListEntry[] {

@@ -1028,7 +1028,7 @@ export interface Activity extends AnyMutableObject {
 export type DamageDescription = {
   value: number;
   type: string;
-  properties: Set<string>;
+  properties?: Set<string>;
   active?: {
     multiplier?: number;
     modifications?: boolean;
