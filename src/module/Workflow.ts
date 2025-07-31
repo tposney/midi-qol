@@ -22,7 +22,6 @@ import {
   playerFor,
   requestPCActiveDefence,
   evalActivationCondition,
-  processDamageRollBonusFlags,
   asyncHooksCallAll,
   asyncHooksCall,
   midiRenderRoll,
@@ -79,7 +78,9 @@ import {
   addUpdatesCache,
   addUpdatesCacheFlags,
   updatesCache,
-  MidiOptions
+  MidiOptions,
+  getOptionalCountRemainingShortFlag,
+  bonusDialog
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, procAbilityAdvantage } from "./patching.js";
@@ -181,7 +182,7 @@ export class Workflow {
   public static WorkflowDataFlags = WorkflowDataFlags;
 
   static get forceCreate(): boolean { return true };
-  
+
   static #workflows: Map<string, WeakRef<Workflow> | Workflow> = new Map();
   static get workflows() {
     return Workflow.#workflows
@@ -286,7 +287,7 @@ export class Workflow {
   get actor(): Actor.Implementation {
     if (this.#actor) return this.#actor;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#actor = fromUuidSync(this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.actor)) as Actor.Implementation;
+      this.#actor = fromUuidSync(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.actor)) as Actor.Implementation;
     }
     return this.#actor!;
   }
@@ -301,7 +302,7 @@ export class Workflow {
   get abort() {
     if (this.#abort !== undefined) return this.#abort;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#abort = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.abort);
+      this.#abort = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.abort);
     }
     return this.#abort ?? false;
   }
@@ -316,7 +317,7 @@ export class Workflow {
   get itemUseComplete() {
     if (this.#itemUseComplete !== undefined) return this.#itemUseComplete;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#itemUseComplete = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.itemUseComplete);
+      this.#itemUseComplete = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.itemUseComplete);
     }
     return this.#itemUseComplete ?? false;
   }
@@ -331,7 +332,7 @@ export class Workflow {
   get token(): Token.Implementation | undefined {
     if (this.#token) return this.#token;
     if (this.itemCardUuid && SaveToChatCard) {
-      const tokenUuid = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.token);
+      const tokenUuid = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.token);
       this.#token = getToken(tokenUuid);
     }
     return this.#token;
@@ -347,7 +348,7 @@ export class Workflow {
   get workflowOptions(): WorkflowOptions {
     if (this.#workflowOptions) return this.#workflowOptions;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#workflowOptions = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.workflowOptions);
+      this.#workflowOptions = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.workflowOptions);
     }
     return this.#workflowOptions ?? {};
   }
@@ -365,9 +366,9 @@ export class Workflow {
     if (this.#activity) return this.#activity;
     if (this.itemCardUuid && SaveToChatCard) {
       // If fetching the activity we need to redo scaling for the fetched activity.
-      const activityUuid = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.activity);
+      const activityUuid = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.activity);
       this.#activity = fromUuidSync(activityUuid) as Activity;
-      const scaling = this.chatCard.getFlag("dnd5e", "scaling");
+      const scaling = this.chatCard?.getFlag("dnd5e", "scaling");
       if (scaling) {
         const item = this.#activity.item.clone({ flags: { dnd5e: { scaling } } }, { keepId: true });
         // @ts-expect-error no dnd5e-types
@@ -392,7 +393,7 @@ export class Workflow {
   get item(): Item.Implementation {
     if (this.#item) return this.#item;
     if (this.itemCardUuid && SaveToChatCard) {
-      const itemUuid = this.chatCard.getFlag("dnd5e", "item")?.uuid;
+      const itemUuid = this.chatCard?.getFlag("dnd5e", "item")?.uuid;
       this.#item = fromUuidSync(itemUuid) as Item.Implementation;
       if (!this.#item) {
         // foundry.utils.getProperty(this.chatCard, "flags." + chatCardFlags.item)?.itemData - can use this get the item back?
@@ -439,7 +440,7 @@ export class Workflow {
   #targets: Set<Token.Implementation> | undefined;
   get targets(): Set<Token.Implementation> {
     if (this.#targets) return this.#targets;
-    const cardTargets = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.targets);
+    const cardTargets = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.targets);
     if (cardTargets) {
       this.#targets = new Set(cardTargets.map(data => (fromUuidSync(data) as TokenDocument.Implementation | undefined)?.object).filter(t => !!t));
       return this.#targets
@@ -458,7 +459,7 @@ export class Workflow {
   #targetsCanSee: Set<Token.Implementation> | undefined;
   get targetsCanSee(): Set<Token.Implementation> {
     if (this.#targetsCanSee) return this.#targetsCanSee;
-    const cardTargets = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.targetsCanSee);
+    const cardTargets = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.targetsCanSee);
     if (cardTargets) {
       this.#targetsCanSee = new Set(cardTargets.map(uuid => (fromUuidSync(uuid) as TokenDocument.Implementation | undefined)?.object).filter(t => !!t));
       return this.#targetsCanSee
@@ -476,7 +477,7 @@ export class Workflow {
   #targetsCanSense: Set<Token.Implementation> | undefined;
   get targetsCanSense(): Set<Token.Implementation> {
     if (this.#targetsCanSense) return this.#targetsCanSense;
-    const cardTargets = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.targetsCanSense);
+    const cardTargets = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.targetsCanSense);
     if (cardTargets) {
       this.#targetsCanSense = new Set(cardTargets.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
       return this.#targetsCanSense
@@ -495,7 +496,7 @@ export class Workflow {
   #tokenCanSee: Set<Token.Implementation> | undefined;
   get tokenCanSee(): Set<Token.Implementation> {
     if (this.#tokenCanSee) return this.#tokenCanSee;
-    const cardTargets = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.tokenCanSee);
+    const cardTargets = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.tokenCanSee);
     if (cardTargets) {
       this.#tokenCanSee = new Set(cardTargets.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
       return this.#tokenCanSee
@@ -514,7 +515,7 @@ export class Workflow {
   #tokenCanSense: Set<Token.Implementation> | undefined;
   get tokenCanSense(): Set<Token.Implementation> {
     if (this.#tokenCanSense) return this.#tokenCanSense;
-    const cardTargets = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.tokenCanSense);
+    const cardTargets = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.tokenCanSense);
     if (cardTargets) {
       this.#tokenCanSense = new Set(cardTargets.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
       return this.#tokenCanSense
@@ -534,7 +535,7 @@ export class Workflow {
   get templateUuid(): string | undefined {
     if (this.#templateUuid) return this.#templateUuid;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#templateUuid = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.templateUuid);
+      this.#templateUuid = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.templateUuid);
     }
     return this.#templateUuid;
   }
@@ -567,7 +568,7 @@ export class Workflow {
   get AoO() {
     if (this.#AoO !== undefined) return this.#AoO;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#AoO = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.AoO);
+      this.#AoO = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.AoO);
     }
     return this.#AoO ?? false;
   }
@@ -583,7 +584,7 @@ export class Workflow {
     if (this.#damageList) return this.#damageList;
     // See below
     // if (this.itemCardUuid && SaveToChatCard) {
-    //   this.#damageList = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.damageList);
+    //   this.#damageList = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.damageList);
     // }
     return this.#damageList ?? [];
   }
@@ -611,7 +612,7 @@ export class Workflow {
   get suspended() {
     if (this.#suspended !== undefined) return this.#suspended;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#suspended = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.suspended);
+      this.#suspended = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.suspended);
     }
     return this.#suspended ?? false;
   }
@@ -627,7 +628,7 @@ export class Workflow {
     if (this.#currentAction) return this.#currentAction;
     if (this.itemCardUuid && SaveToChatCard) {
 
-      const [className, currentActionName] = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.currentAction) ?? ["none", "none"];
+      const [className, currentActionName] = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.currentAction) ?? ["none", "none"];
       if (className !== "none") {
         const actionClass = eval(className);
         if (actionClass === Workflow || actionClass.prototype instanceof Workflow) {
@@ -653,7 +654,7 @@ export class Workflow {
   get isCritical() {
     if (this.#isCritical !== undefined) return this.#isCritical;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#isCritical = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.isCritical);
+      this.#isCritical = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.isCritical);
     }
     return this.#isCritical ?? false;
   }
@@ -668,7 +669,7 @@ export class Workflow {
   get isFumble() {
     if (this.#isFumble !== undefined) return this.#isFumble;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#isFumble = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.isFumble);
+      this.#isFumble = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.isFumble);
     }
     return this.#isFumble ?? false;
   }
@@ -683,7 +684,7 @@ export class Workflow {
   get d20AttackRoll() {
     if (this.#d20AttackRoll) return this.#d20AttackRoll;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#d20AttackRoll = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.d20AttackRoll);
+      this.#d20AttackRoll = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.d20AttackRoll);
     }
     return this.#d20AttackRoll ?? -1;
   }
@@ -697,7 +698,7 @@ export class Workflow {
   #hitTargets: Set<Token.Implementation> | undefined;
   get hitTargets(): Set<Token.Implementation> {
     if (this.#hitTargets) return this.#hitTargets;
-    const cardTargets = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.hitTargets);
+    const cardTargets = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.hitTargets);
     if (cardTargets) {
       this.#hitTargets = new Set(cardTargets.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
       return this.#hitTargets
@@ -716,7 +717,7 @@ export class Workflow {
   #hitTargetsEC: Set<Token.Implementation> | undefined;
   get hitTargetsEC(): Set<Token.Implementation> {
     if (this.#hitTargetsEC) return this.#hitTargetsEC;
-    const cardTargets = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.hitTargetsEC);
+    const cardTargets = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.hitTargetsEC);
     if (cardTargets) {
       this.#hitTargetsEC = new Set(cardTargets.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
       return this.#hitTargetsEC
@@ -736,7 +737,7 @@ export class Workflow {
   get attackRoll(): Roll | undefined {
     if (this.#attackRoll) return this.#attackRoll;
     if (this.itemCardUuid && SaveToChatCard) {
-      const rollData = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.attackRoll);
+      const rollData = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.attackRoll);
       this.#attackRoll = rollData ? Roll.fromData(rollData) as Roll : undefined;
     }
     return this.#attackRoll;
@@ -754,7 +755,7 @@ export class Workflow {
   get diceRoll() {
     if (this.#diceRoll) return this.#diceRoll;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#diceRoll = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.diceRoll);
+      this.#diceRoll = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.diceRoll);
     }
     return this.#diceRoll ?? 0;
   }
@@ -769,7 +770,7 @@ export class Workflow {
   get attackTotal() {
     if (this.#attackTotal) return this.#attackTotal;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#attackTotal = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.attackTotal);
+      this.#attackTotal = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.attackTotal);
     }
     return this.#attackTotal ?? 0;
   }
@@ -781,12 +782,12 @@ export class Workflow {
   }
 
   attackRollHTML: HTMLElement | string | undefined;
-  
+
   #attackRollCount: number | undefined;
   get attackRollCount() {
     if (this.#attackRollCount) return this.#attackRollCount;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#attackRollCount = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.attackRollCount);
+      this.#attackRollCount = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.attackRollCount);
     }
     return this.#attackRollCount ?? 0;
   }
@@ -904,7 +905,7 @@ export class Workflow {
   get damageRolls(): Roll[] {
     if (this.#damageRolls) return this.#damageRolls;
     if (this.itemCardUuid && SaveToChatCard) {
-      const rollData = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.damageRolls);
+      const rollData = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.damageRolls);
       this.#damageRolls = rollData ? rollData.map(r => Roll.fromData(r) as Roll) : undefined;
     }
     return this.#damageRolls ?? [];
@@ -920,7 +921,7 @@ export class Workflow {
   get bonusDamageRolls(): Roll[] | undefined {
     if (this.#bonusDamageRolls) return this.#bonusDamageRolls;
     if (this.itemCardUuid && SaveToChatCard) {
-      const rollData = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.bonusDamageRolls);
+      const rollData = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.bonusDamageRolls);
       this.#bonusDamageRolls = rollData ? rollData.map(r => Roll.fromData(r) as Roll) : undefined;
 
     }
@@ -937,7 +938,7 @@ export class Workflow {
   get otherDamageRolls(): Roll[] | undefined {
     if (this.#otherDamageRolls) return this.#otherDamageRolls;
     if (this.itemCardUuid && SaveToChatCard) {
-      const rollData = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.otherDamageRolls);
+      const rollData = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.otherDamageRolls);
       this.#otherDamageRolls = rollData ? rollData.map(r => Roll.fromData(r) as Roll) : undefined;
     }
     return this.#otherDamageRolls;
@@ -953,7 +954,7 @@ export class Workflow {
   get extraRolls(): Roll[] | undefined {
     if (this.#extraRolls) return this.#extraRolls;
     if (this.itemCardUuid && SaveToChatCard) {
-      const rollData = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.extraRolls);
+      const rollData = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.extraRolls);
       this.#extraRolls = rollData ? rollData.map(r => Roll.fromData(r) as Roll) : undefined;
     }
     return this.#extraRolls ?? [];
@@ -969,7 +970,7 @@ export class Workflow {
   get utilityRolls(): Roll[] | undefined {
     if (this.#utilityRolls) return this.#utilityRolls;
     if (this.itemCardUuid && SaveToChatCard) {
-      const rollData = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.utilityRolls);
+      const rollData = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.utilityRolls);
       this.#utilityRolls = rollData ? rollData.map(r => Roll.fromData(r) as Roll) : undefined;
     }
     return this.#utilityRolls ?? [];
@@ -987,7 +988,7 @@ export class Workflow {
     if (this.itemCardUuid && SaveToChatCard) {
       //@ts-expect-error can't figure out how to tell it this exists
       const D20Roll = CONFIG.Dice.D20Roll;
-      this.#saveRolls = (this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.saveRolls))?.map(d => new D20Roll(d.formula, d));
+      this.#saveRolls = (this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.saveRolls))?.map(d => new D20Roll(d.formula, d));
     }
     return this.#saveRolls ?? [];
   }
@@ -1002,7 +1003,7 @@ export class Workflow {
   get damageTotal() {
     if (this.#damageTotal) return this.#damageTotal;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#damageTotal = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.damageTotal);
+      this.#damageTotal = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.damageTotal);
     }
     return this.#damageTotal ?? 0;
   }
@@ -1017,7 +1018,7 @@ export class Workflow {
   get rawDamageDetail(): DamageDescription[] | undefined {
     if (this.#rawDamageDetail) return this.#rawDamageDetail;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#rawDamageDetail = damageDetailsFromObject(this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.rawDamageDetail));
+      this.#rawDamageDetail = damageDetailsFromObject(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.rawDamageDetail));
     }
     return this.#rawDamageDetail;
   }
@@ -1032,7 +1033,7 @@ export class Workflow {
   get rawOtherDamageDetail(): DamageDescription[] | undefined {
     if (this.#rawOtherDamageDetail) return this.#rawOtherDamageDetail;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#rawOtherDamageDetail = damageDetailsFromObject(this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.rawOtherDamageDetail));
+      this.#rawOtherDamageDetail = damageDetailsFromObject(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.rawOtherDamageDetail));
     }
     return this.#rawOtherDamageDetail;
   }
@@ -1042,12 +1043,12 @@ export class Workflow {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.rawOtherDamageDetail]: damageDetailToObject(rawOtherDamageDetail) }, true);
     }
   }
-  
+
   #rawBonusDamageDetail: DamageDescription[] | undefined = undefined;
   get rawBonusDamageDetail(): DamageDescription[] | undefined {
     if (this.#rawBonusDamageDetail) return this.#rawBonusDamageDetail;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#rawBonusDamageDetail = damageDetailsFromObject(this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.rawBonusDamageDetail));
+      this.#rawBonusDamageDetail = damageDetailsFromObject(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.rawBonusDamageDetail));
     }
     return this.#rawBonusDamageDetail;
   }
@@ -1057,12 +1058,12 @@ export class Workflow {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.rawBonusDamageDetail]: damageDetailToObject(rawBonusDamageDetail) }, true);
     }
   }
-  
+
   #damageDetail: DamageDescription[] | undefined;
   get damageDetail(): DamageDescription[] | undefined {
     if (this.#damageDetail) return this.#damageDetail;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#damageDetail = damageDetailsFromObject(this.chatCard.getFlag(MODULE_ID, "damageDetail"));
+      this.#damageDetail = damageDetailsFromObject(this.chatCard?.getFlag(MODULE_ID, "damageDetail"));
     }
     return this.#damageDetail;
   }
@@ -1078,7 +1079,7 @@ export class Workflow {
   get damageRollCount(): number {
     if (this.#damageRollCount) return this.#damageRollCount;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#damageRollCount = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.damageRollCount);
+      this.#damageRollCount = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.damageRollCount);
     }
     return this.#damageRollCount ?? 0;
   }
@@ -1093,7 +1094,7 @@ export class Workflow {
   get defaultDamageType(): string {
     if (this.#defaultDamageType) return this.#defaultDamageType;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#defaultDamageType = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.defaultDamageType);
+      this.#defaultDamageType = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.defaultDamageType);
     }
     return this.#defaultDamageType ?? "";
   }
@@ -1108,7 +1109,7 @@ export class Workflow {
   get effectsAlreadyExpired(): string[] {
     if (this.#effectsAlreadyExpired) return this.#effectsAlreadyExpired;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#effectsAlreadyExpired = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.effectsAlreadyExpired);
+      this.#effectsAlreadyExpired = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.effectsAlreadyExpired);
     }
     return this.#effectsAlreadyExpired ?? [];
   }
@@ -1124,7 +1125,7 @@ export class Workflow {
   #saves: Set<Token.Implementation> | undefined;
   get saves(): Set<Token.Implementation> {
     if (this.#saves) return this.#saves;
-    const cardSaves = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.saves);
+    const cardSaves = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.saves);
     if (cardSaves) {
       this.#saves = new Set(cardSaves.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
       return this.#saves
@@ -1143,7 +1144,7 @@ export class Workflow {
   #superSavers: Set<Token.Implementation> | undefined;
   get superSavers(): Set<Token.Implementation> {
     if (this.#superSavers) return this.#superSavers;
-    const cardSaves = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.superSavers);
+    const cardSaves = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.superSavers);
     if (cardSaves) {
       this.#superSavers = new Set(cardSaves.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
       return this.#superSavers
@@ -1161,7 +1162,7 @@ export class Workflow {
   #semiSuperSavers: Set<Token.Implementation> | undefined
   get semiSuperSavers(): Set<Token.Implementation> {
     if (this.#semiSuperSavers) return this.#semiSuperSavers;
-    const cardSaves = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.semiSuperSavers);
+    const cardSaves = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.semiSuperSavers);
     if (cardSaves) {
       this.#semiSuperSavers = new Set(cardSaves.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
       return this.#semiSuperSavers
@@ -1180,7 +1181,7 @@ export class Workflow {
   #failedSaves: Set<Token.Implementation> | undefined;
   get failedSaves(): Set<Token.Implementation> {
     if (this.#failedSaves) return this.#failedSaves;
-    const cardSaves = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.failedSaves);
+    const cardSaves = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.failedSaves);
     if (cardSaves) {
       this.failedSaves = new Set(cardSaves.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
       return this.failedSaves
@@ -1199,7 +1200,7 @@ export class Workflow {
   #fumbleSaves: Set<Token.Implementation> | undefined;
   get fumbleSaves(): Set<Token.Implementation> {
     if (this.#fumbleSaves) return this.#fumbleSaves;
-    const cardSaves = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.fumbleSaves);
+    const cardSaves = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.fumbleSaves);
     if (cardSaves) {
       this.#fumbleSaves = new Set(cardSaves.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
       return this.#fumbleSaves
@@ -1217,7 +1218,7 @@ export class Workflow {
   #criticalSaves: Set<Token.Implementation> | undefined;
   get criticalSaves(): Set<Token.Implementation> {
     if (this.#criticalSaves) return this.#criticalSaves;
-    const cardSaves = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.criticalSaves);
+    const cardSaves = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.criticalSaves);
     if (cardSaves) {
       this.#criticalSaves = new Set(cardSaves.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
       return this.#criticalSaves
@@ -1235,7 +1236,7 @@ export class Workflow {
   #advantageSaves: Set<Token.Implementation> | undefined;
   get advantageSaves(): Set<Token.Implementation> {
     if (this.#advantageSaves) return this.#advantageSaves;
-    const cardSaves = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.advantageSaves);
+    const cardSaves = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.advantageSaves);
     if (cardSaves) {
       this.#advantageSaves = new Set(cardSaves.map(uuid => (fromUuidSync(uuid) as TokenDocument)?.object).filter(t => !!t));
       return this.#advantageSaves
@@ -1297,7 +1298,7 @@ export class Workflow {
   get attackAdvAttribution() {
     if (this.#attackAdvAttribution) return this.#attackAdvAttribution;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#attackAdvAttribution = new Set(this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.attackAdvAttribution));
+      this.#attackAdvAttribution = new Set(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.attackAdvAttribution));
     }
     return this.#attackAdvAttribution ?? new Set();
   }
@@ -1312,7 +1313,7 @@ export class Workflow {
   get advReminderAttackAdvAttribution() {
     if (this.#advReminderAttackAdvAttribution) return this.#advReminderAttackAdvAttribution;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#advReminderAttackAdvAttribution = new Set(this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.advReminderAttackAdvAttribution));
+      this.#advReminderAttackAdvAttribution = new Set(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.advReminderAttackAdvAttribution));
     }
     return this.#advReminderAttackAdvAttribution ?? new Set();
   }
@@ -1327,7 +1328,7 @@ export class Workflow {
   get noOptionalRules() {
     if (this.#noOptionalRules) return this.#noOptionalRules;
     if (this.itemCardUuid && SaveToChatCard) {
-      this.#noOptionalRules = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.noOptionalRules);
+      this.#noOptionalRules = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.noOptionalRules);
     }
     return this.#noOptionalRules ?? false;
   }
@@ -1371,7 +1372,7 @@ export class Workflow {
   get needTemplate() {
     if (this.#needTemplate) return this.#needTemplate;
     if (this.chatCard && SaveToChatCard) {
-      this.#needTemplate = this.chatCard.getFlag(MODULE_ID, WorkflowDataFlags.needTemplate);
+      this.#needTemplate = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.needTemplate);
     }
     return this.#needTemplate ?? (activityHasAreaTarget(this.activity) && !activityHasAutoPlaceTemplate(this.activity));
   }
@@ -1388,6 +1389,9 @@ export class Workflow {
 
   get otherDamageFlavor() {
     if (this.otherActivity?.type === "heal") return i18n("midi-qol.OtherHealIngFlavor");
+    if (this.otherActivity?.midiProperties?.displayActivityName) {
+      return i18n(this.otherActivity.name);
+    }
     return i18n("midi-qol.OtherDamageFlavor");
   }
 
@@ -1434,7 +1438,7 @@ export class Workflow {
   }
 
   get workflowType() { return "BaseWorkflow" };
-  
+
   setTargets(targets: Set<TokenOrDocument>) {
     this.targets = new Set(targets);
     this.saves = new Set();
@@ -2650,7 +2654,7 @@ export class Workflow {
         }
       }
     };
-    let origin = this.actor.effects.get(this.chatCard.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid;
+    let origin = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid;
     let damageComponents = {};
     let damageListItem;
     let hpDamage;
@@ -2681,8 +2685,8 @@ export class Workflow {
         itemData: this.item.toObject(),
         flags: {
           dnd5e: {
-            scaling: this.chatCard.getFlag("dnd5e", "scaling"),
-            spellLevel: this.chatCard.getFlag("dnd5e", "use.spellLevel")
+            scaling: this.chatCard?.getFlag("dnd5e", "scaling"),
+            spellLevel: this.chatCard?.getFlag("dnd5e", "use.spellLevel")
           }
         }
       }
@@ -2743,8 +2747,8 @@ export class Workflow {
               }
               effectData.origin = origin ?? this.activity.uuid ?? this.activity.item.uuid;
               const effects = await CEAddEffectWith({ effectData, effectName: ceEffect.name, uuid: token.actor.uuid, origin, overlay: false });
-              if (this.chatCard.getFlag("dnd5e", "use.concentrationId")) {
-                const originEffect = this.actor.effects.get(this.chatCard.getFlag("dnd5e", "use.concentrationId") ?? "");
+              if (this.chatCard?.getFlag("dnd5e", "use.concentrationId")) {
+                const originEffect = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "");
                 if (originEffect) {
                   if (!effects) {
                     for (let effect of token.actor.effects.filter(ef => ef.origin === originEffect.uuid)) {
@@ -2836,8 +2840,8 @@ export class Workflow {
           const effectData: ActiveEffect.CreateData = foundry.utils.mergeObject(ceEffect!.toObject(), metaData);
           effectData.origin = origin;
           const effects = await CEAddEffectWith({ effectData, effectName: this.activity.name, uuid: this.actor.uuid, origin, overlay: false });
-          if (this.chatCard.getFlag("dnd5e", "use.concentrationId")) {
-            const originEffect = this.actor.effects.get(this.chatCard.getFlag("dnd5e", "use.concentrationId") ?? "");
+          if (this.chatCard?.getFlag("dnd5e", "use.concentrationId")) {
+            const originEffect = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "");
             if (originEffect) {
               if (!effects) {
                 for (let effect of this.actor.effects.filter(ef => ef.origin === originEffect.uuid)) {
@@ -2924,7 +2928,7 @@ export class Workflow {
       let triggeredActivity = await this.activity.getTriggeredActivity();
       if (shouldTrigger && triggeredActivity) {
         if (shouldTrigger) {
-          let usage: {midiOptions: MidiOptions} = { midiOptions: {} };
+          let usage: { midiOptions: MidiOptions } = { midiOptions: {} };
           usage.midiOptions.event = this.event;
           usage.midiOptions.workflowOptions = this.workflowOptions;
           usage.midiOptions.rollOptions = this.rollOptions;
@@ -3029,6 +3033,7 @@ export class Workflow {
       this.hitDisplayData = {};
       const theTargets = (this.effectTargets && (this.effectTargets?.size > 0)) ? this.effectTargets : this.targets;
       for (let targetToken of theTargets) {
+        if (!targetToken.actor) continue;
         const targetTokenUuid = targetToken.actor?.uuid;
         if (!targetTokenUuid) continue;
         let img: string | null | undefined = targetToken.document?.texture.src ?? targetToken.actor.img;
@@ -3081,8 +3086,8 @@ export class Workflow {
     // @ts-expect-error no dnd5e-types
     let hasConcentration: boolean = this.item.requiresConcentration;
     const template = await fromUuid(this.templateUuid) as MeasuredTemplateDocument | null;
-    if (hasConcentration && template && this.chatCard.getFlag("dnd5e", "use.concentrationId")) {
-      let origin = this.actor.effects.get(this.chatCard.getFlag("dnd5e", "use.concentrationId")!);
+    if (hasConcentration && template && this.chatCard?.getFlag("dnd5e", "use.concentrationId")) {
+      let origin = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId")!);
       if (origin instanceof ActiveEffect) {
         // @ts-expect-error no dnd5e-types
         await origin.addDependent(template);
@@ -3160,7 +3165,7 @@ export class Workflow {
       }
     }
     if (hasConcentration && this.summonedCreatures && configSettings.autoRemoveSummonedCreature) {
-      let origin = this.actor.effects.get(this.chatCard.getFlag("dnd5e", "use.concentrationId") ?? "");
+      let origin = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "");
       if (origin) {
         // @ts-expect-error no dnd5e-types
         await origin.addDependent(...this.summonedCreatures);
@@ -3196,7 +3201,7 @@ export class Workflow {
             startTurn: game.combat?.turn,
             startTime: game.time?.worldTime
           }
-        //@ts-expect-error CONFIG.DND5E
+          //@ts-expect-error CONFIG.DND5E
         } else if (CONFIG.DND5E.permanentTimePeriods[activityDuration.units]) {
           effectData.duration = {
             startRound: game.combat?.round,
@@ -3246,7 +3251,7 @@ export class Workflow {
     this.saves = new Set();
     this.criticalSaves = new Set();
     this.fumbleSaves = new Set();
-    this.failedSaves = this.activity.hasAttack ? new Set(this.hitTargets) : new Set(this.targets);
+    this.failedSaves = this.activity.hasAttack ? new Set(this.#hitTargets ?? []) : new Set(this.#targets ?? []);
     this.advantageSaves = new Set();
     this.disadvantageSaves = new Set();
     this.saveDisplayData = [];
@@ -3391,10 +3396,10 @@ export class Workflow {
         if (this.token) {
           if (actType !== "mwak") { // one of rwak/rsak/rpak
             nearbyFoe = checkNearby(-1, getToken(this.token), configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
-          // @ts-expect-error no dnd5e-types
-        } else if (this.item.system.properties?.has("thr")) {
             // @ts-expect-error no dnd5e-types
-          const meleeRange = this.item.system.range.reach ?? 5;
+          } else if (this.item.system.properties?.has("thr")) {
+            // @ts-expect-error no dnd5e-types
+            const meleeRange = this.item.system.range.reach ?? 5;
             if (computeDistance(this.token, firstTarget, { wallsBlock: false }) <= meleeRange) nearbyFoe = false;
             else nearbyFoe = checkNearby(-1, getToken(this.token), configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
           }
@@ -3617,7 +3622,7 @@ export class Workflow {
     this.disadvantage = this.disadvantage || grantsDisadvantage;
   }
 
-  async triggerTargetMacros(triggerList: string[], targets: Set<Token.Implementation> = this.targets, options: {saved?: boolean} = {}) {
+  async triggerTargetMacros(triggerList: string[], targets: Set<Token.Implementation> = this.targets, options: { saved?: boolean } = {}) {
     let results: Record<string, unknown[]> = {};
     for (let target of targets) {
       results[target.document.uuid] = [];
@@ -3967,7 +3972,7 @@ export class Workflow {
       semiSuperSavers.push(save.document);
       semiSuperSaverUuids.push(save.document.uuid);
     };
-    const itemData = (item?.toObject(false) ?? {}) as Item.Source & {uuid?: string};
+    const itemData = (item?.toObject(false) ?? {}) as Item.Source & { uuid?: string };
     itemData.uuid = item?.uuid; // provide the uuid so the actual item can be recovered
     //@ts-expect-error no dnd5e-types
     Object.defineProperty(itemData, "actionType", { get() { return item?.actionType } });
@@ -4337,7 +4342,7 @@ export class Workflow {
     await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true);
   }
 
-  async displayAttackRoll(displayOptions: { GMOnlyAttackRoll?: boolean} = {}) {
+  async displayAttackRoll(displayOptions: { GMOnlyAttackRoll?: boolean } = {}) {
     const chatMessage = this.chatCard;
     let content = chatMessage && foundry.utils.duplicate(chatMessage.content);
     const flags = chatMessage?.flags || {};
@@ -5365,7 +5370,7 @@ export class Workflow {
       }
 
       let tmpResult = results[i];
-      let result = tmpResult instanceof Array 
+      let result = tmpResult instanceof Array
         ? tmpResult
         : tmpResult
           ? [tmpResult]
@@ -5855,6 +5860,83 @@ export class Workflow {
     if (debugEnabled > 1) debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble);
   }
 
+  async processAttackRollBonusFlags() {
+    let attackBonus = "attack.all";
+    if (this.activity && this.activity.hasAttack) attackBonus = `attack.${this.activity.actionType}`;
+    const optionalFlags = this.actor.flags?.[MODULE_ID]?.optional ?? {};
+    // If the attack roll is a fumble only select flags that allow the roll to be rerolled.
+    let bonusFlags = Object.keys(optionalFlags)
+      .filter(flag => {
+        const hasAttackFlag = foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.optional.${flag}.attack.all`) as string ||
+          foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.optional.${flag}.${attackBonus}`) as string;
+        if (hasAttackFlag === undefined) return false;
+        if (this.isFumble && !hasAttackFlag?.includes("roll")) return false;
+        if (!this.actor.flags[MODULE_ID]!.optional![flag].count) return true;
+        return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
+      })
+      .map(flag => `flags.${MODULE_ID}.optional.${flag}`);
+
+    if (bonusFlags.length > 0) {
+      const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
+        ?? checkMechanic("displayBonusRolls") as boolean;
+      const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll!, "attackRoll")
+      if (newRoll) this.setAttackRoll(newRoll);
+    }
+    if (this.targets.size === 1) {
+      // @ts-expect-error no dnd5e-types
+      const targetAC = this.targets.first()!.actor?.system.attributes.ac.value;
+      this.processAttackRoll();
+      const isMiss = this.isFumble || (this.attackRoll!.total ?? 0) < targetAC;
+      if (isMiss) {
+        attackBonus = "attack.fail.all"
+        if (this.activity && this.activity.hasAttack) attackBonus = `attack.fail.${this.activity.actionType}`;
+        let bonusFlags = Object.keys(optionalFlags)
+          .filter(flag => {
+            const hasAttackFlag = foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.optional.${flag}.attack.fail.all`) as string
+              || foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.optional.${flag}.${attackBonus}`) as string;
+            if (hasAttackFlag === undefined) return false;
+            if (this.isFumble && !hasAttackFlag?.includes("roll")) return false;
+            if (!this.actor.flags[MODULE_ID]!.optional![flag].count) return true;
+            return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
+          })
+          .map(flag => `flags.${MODULE_ID}.optional.${flag}`);
+        if (bonusFlags.length > 0) {
+          const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
+            ?? checkMechanic("displayBonusRolls") as boolean;
+          const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll");
+          if (newRoll) this.setAttackRoll(newRoll);
+        }
+      }
+    }
+    return this.attackRoll!;
+  }
+
+  async processDamageRollBonusFlags(damageRolls: Roll[]): Promise<Roll[]> {
+    let damageBonus = "damage.all";
+    const rollMode = safeGetGameSetting("core", "rollMode");
+    const hideDSN = game.user?.isGM && configSettings.gmAttackDamageCards && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
+    if (this.activity) damageBonus = `damage.${this.activity.actionType}`;
+    const optionalFlags = this.actor.flags?.[MODULE_ID]?.optional ?? {};
+    const bonusFlags = Object.keys(optionalFlags)
+      .filter(flag => {
+        const hasDamageFlag = foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.optional.${flag}.damage.all`) !== undefined ||
+          foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.optional.${flag}.${damageBonus}`) !== undefined;
+        if (!hasDamageFlag) return false;
+        return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
+      })
+      .map(flag => `flags.${MODULE_ID}.optional.${flag}`);
+    if (bonusFlags.length > 0) {
+      // this.damageRollHTML = await midiRenderDamageRoll(this.damageRoll);
+      // this.damamgeRollHTML = $(this.damageRolHTML).find(".dice-roll").remove();
+      // TODO dnd3 work out what this means for multiple rolls
+      const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
+        ?? checkMechanic("displayBonusRolls") as boolean;
+      let newRoll = await bonusDialog.bind(this)(bonusFlags, damageBonus, displayBonusRolls === true, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, damageRolls[0], "damageRoll", { hideDSN })
+      if (newRoll) damageRolls[0] = newRoll;
+    }
+    return damageRolls;
+  }
+
   async checkHits(options: { workflowOptions?: WorkflowOptions, noOnuseMacro?: boolean, noTargetOnUseMacro?: boolean } = {}) {
     let isHit = true;
     let isHitEC = false;
@@ -5940,7 +6022,7 @@ export class Workflow {
             const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
             const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
             // TODO what else to do once rolled
-              // @ts-expect-error no dnd5e-types
+            // @ts-expect-error no dnd5e-types
             targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + bonusAC;
           }
           isHit = (attackTotal + attackBonus) >= targetAC || this.isCritical;
@@ -5958,9 +6040,9 @@ export class Workflow {
           }
           if (!Workflow.getWorkflow(this.id)) // workflow has been removed - bail out
             return;
-            // @ts-expect-error no dnd5e-types
+          // @ts-expect-error no dnd5e-types
           targetAC = Number.parseInt(targetActor.system.attributes.ac.value) + bonusAC;
-            // @ts-expect-error no dnd5e-types
+          // @ts-expect-error no dnd5e-types
           if (targetEC) targetEC = targetActor.system.attributes.ac.EC + bonusAC;
           if (result.ac) targetAC = result.ac + bonusAC; // deal with bonus ac if any.
           if (targetEC) targetEC = targetAC - targetAR;
@@ -5972,10 +6054,10 @@ export class Workflow {
           const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
           if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
             let result: {
-                name?: string;
-                uuid?: string;
-                ac?: number;
-              };
+              name?: string;
+              uuid?: string;
+              ac?: number;
+            };
             if (isHit || isHitEC) {
               result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionhit", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
             }
@@ -6041,7 +6123,7 @@ export class Workflow {
       }
 
       let hitScale = 1;
-        // @ts-expect-error no dnd5e-types
+      // @ts-expect-error no dnd5e-types
       if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor")) && !this.isCritical) hitScale = Math.floor((this.attackTotal - targetEC + 1) / ((targetActor?.system.attributes.ac.AR ?? 0) + 1) * 10) / 10;
       if (!this.challengeModeScale) this.challengeModeScale = {};
       this.challengeModeScale[targetToken.actor?.uuid ?? "dummy"] = hitScale;
@@ -6611,7 +6693,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         promises.push(new Promise((resolve) => {
           const requestId = target.actor?.uuid ?? foundry.utils.randomID();
           this.defenceRequests[requestId] = resolve;
-          if (player) requestPCActiveDefence(player , target.actor!, this.item.name, requestId, { formula, rollOptions: options, bonus: dcMod, coverBonus, workflow: this })
+          if (player) requestPCActiveDefence(player, target.actor!, this.item.name, requestId, { formula, rollOptions: options, bonus: dcMod, coverBonus, workflow: this })
           // set a timeout for taking over the roll
           if (configSettings.playerSaveTimeout > 0) {
             this.defenceTimeouts[requestId] = setTimeout(async () => {
@@ -6843,7 +6925,7 @@ export class DamageOnlyWorkflow extends Workflow {
     const whisperCard = configSettings.autoCheckHit === "whisper" || safeGetGameSetting("core", "rollMode") === CONST.DICE_ROLL_MODES.BLIND;
     if (this.actor) { // Hacky process bonus flags
       // TODO come back and fix this for dnd3
-      const newRolls = await processDamageRollBonusFlags.bind(this)(this.damageRolls);
+      const newRolls = await this.processDamageRollBonusFlags(this.damageRolls);
       await this.setDamageRolls(newRolls);
     }
 
@@ -7401,9 +7483,9 @@ type MidiMacroData = {
   id: string;
   isCritical?: boolean;
   isFumble: boolean;
-  item: Item.Source & {uuid?: string};
+  item: Item.Source & { uuid?: string };
   itemCardUuid?: string;
-  itemData: Item.Source & {uuid?: string};
+  itemData: Item.Source & { uuid?: string };
   itemUuid?: string;
   macroPass?: string;
   options?: AnyObject;

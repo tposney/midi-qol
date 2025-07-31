@@ -1183,20 +1183,20 @@
   "midi-qol.DAMAGE": {
     "Title": {
       "one": "Midi Damage",
-      "other": "Midi Damage",
-      "FIELDS": {
-        "damage": {
-          "label": "Save Damage",
-          "critical": {
-            "label": "Critical Damage",
-            "allow": {
-              "label": "Allow Critical Damage",
-              "hint": "Allow critical damage to be applied"
-            },
-            "bonus": {
-              "label": "Bonus Critical Damage",
-              "hint": "Bonus critical damage to be applied if critical damage is allowed"
-            }
+      "other": "Midi Damage"
+    },
+    "FIELDS": {
+      "damage": {
+        "label": "Damage",
+        "critical": {
+          "label": "Critical Damage",
+          "allow": {
+            "label": "Allow Critical Damage",
+            "hint": "Allow critical damage to be applied"
+          },
+          "bonus": {
+            "label": "Bonus Critical Damage",
+            "hint": "Bonus critical damage to be applied if critical damage is allowed"
           }
         }
       }

@@ -25,7 +25,7 @@ export function setupCheckActivity() {
 
 let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
   return class MidiCheckActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = ["DND5E.CHECK", "DND5E.DAMAGE", "midi-qol.CHECK", "midi-qol.SAVE", ...super.LOCALIZATION_PREFIXES];
+    static LOCALIZATION_PREFIXES = [ ...super.LOCALIZATION_PREFIXES, "midi-qol.SAVE", "midi-qol.CHECK", "DND5E.DAMAGE"];
     static superMetadata = super.metadata;
     static metadata =
       foundry.utils.mergeObject(
@@ -50,20 +50,26 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
       const { ActivationField: ActivationField, CreatureTypeField, CurrencyTemplate, DamageData,
         DamageField, DurationField, MovementField, RangeField, RollConfigField, SensesField,
         SourceField, TargetField, UsesField } = dataModels.shared
-        const FormulaField = dataModels.fields.FormulaField;
+      const FormulaField = dataModels.fields.FormulaField;
 
       const schema = {
         ...super.defineSchema(),
         otherActivityId: new StringField({ name: "otherActivity", initial: "none" }),
         damage: new SchemaField({
-          onSave: new StringField({ initial: "half", default: "half", name: "onSave" }),
+          onSave: new StringField({
+            initial: "half",
+            default: "half",
+            name: "onSave",
+            hint: i18n("DND5E.SAVE.FIELDS.damage.onSave.hint"),
+            label: i18n("DND5E.SAVE.FIELDS.damage.onSave.label")
+          }),
+          parts: new ArrayField(new DamageField()),
           critical: new SchemaField({
             allow: new BooleanField(),
             bonus: new FormulaField(),
           }),
-          parts: new ArrayField(new DamageField()),
         }),
-        friendlySave: new StringField({ initial: "default", name: "friendlySave"})
+        friendlySave: new StringField({ initial: "default", name: "friendlySave" })
         // WIP
         // saveDisplay: new StringField({initial: "default"}),
       };
@@ -84,7 +90,7 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
       const item = this.item;
       const rollData: AnyMutableObject = { event, target: Number.isFinite(dc) ? dc : check!.dc.value };
       if (ability && (ability in globalThis.dnd5e.config.abilities)) rollData.ability = ability;
-      
+
       for (const token of targets) {
         const actor = token instanceof Actor ? token : token.actor;
         const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: token instanceof Token ? token.document : null });
@@ -126,7 +132,7 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
     get canUseOtherActivity() {
       return true;
     }
-    
+
     get isSelfTriggerableOnly() {
       return false;
     }
@@ -169,7 +175,7 @@ export function defineMidiCheckSheetClass(baseClass: any) {
         templates: [
           ...super.PARTS.effect.templates,
           "modules/midi-qol/templates/activity/parts/save-extras.hbs",
-          "systems/dnd5e/templates/activity/parts/save-damage.hbs",
+          "modules/midi-qol/templates/activity/parts/save-damage.hbs",
           "systems/dnd5e/templates/activity/parts/damage-part.hbs",
           "systems/dnd5e/templates/activity/parts/damage-parts.hbs",
         ]
@@ -179,9 +185,9 @@ export function defineMidiCheckSheetClass(baseClass: any) {
     async _prepareEffectContext(context) {
       context = await super._prepareEffectContext(context);
       context.FriendlySaveOptions = [
-        {value: "default", label: i18n("midi-qol.SAVE.FriendlySave.Default")},
-        {value: "friendlySuccess", label: i18n("midi-qol.SAVE.FriendlySave.FriendlySuccess")},
-        {value: "friendlyFail", label: i18n("midi-qol.SAVE.FriendlySave.FriendlyFail")},
+        { value: "default", label: i18n("midi-qol.SAVE.FriendlySave.Default") },
+        { value: "friendlySuccess", label: i18n("midi-qol.SAVE.FriendlySave.FriendlySuccess") },
+        { value: "friendlyFail", label: i18n("midi-qol.SAVE.FriendlySave.FriendlyFail") },
       ];
       context.onSaveOptions = [
         { value: "none", label: i18n("DND5E.SAVE.FIELDS.damage.onSave.None") },

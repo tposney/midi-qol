@@ -206,10 +206,7 @@
               "bonus": "",
               "types": [
                 "none"
-              ],
-              "scaling": {
-                "number": 1
-              }
+              ]
             }
           ],
           "critical": {
@@ -251,7 +248,7 @@
           "identifier": "undead-save",
           "autoTargetType": "any",
           "autoTargetAction": "default",
-          "displayActivityName": false,
+          "displayActivityName": true,
           "rollMode": "default",
           "chooseEffects": false,
           "ignoreFullCover": false,
@@ -272,7 +269,11 @@
         "otherActivityId": "none",
         "friendlySave": "default",
         "name": "Undead Save",
-        "_id": "O5g90PIsPa69McZb"
+        "_id": "O5g90PIsPa69McZb",
+        "img": "",
+        "appliedEffects": [
+          "Z49QSPjltZ1NT28K"
+        ]
       },
       "AWw4LoxiRD0pEmaq": {
         "type": "damage",
@@ -336,10 +337,7 @@
               "bonus": "",
               "types": [
                 "radiant"
-              ],
-              "scaling": {
-                "number": 1
-              }
+              ]
             }
           ]
         },
@@ -369,7 +367,7 @@
           "automationOnly": true,
           "otherActivityCompatible": true,
           "identifier": "",
-          "displayActivityName": false,
+          "displayActivityName": true,
           "rollMode": "default",
           "chooseEffects": false,
           "toggleEffect": false,
@@ -387,7 +385,9 @@
           "postRemoveConditionText": ""
         },
         "name": "Undead Damage",
-        "_id": "AWw4LoxiRD0pEmaq"
+        "_id": "AWw4LoxiRD0pEmaq",
+        "img": "",
+        "appliedEffects": []
       }
     },
     "uses": {
@@ -602,7 +602,7 @@
     "systemId": "dnd5e",
     "systemVersion": "5.0.4",
     "createdTime": 1753768450085,
-    "modifiedTime": 1753768450106,
+    "modifiedTime": 1753963269313,
     "lastModifiedBy": "pEOrrBXRIpR6dPVY"
   },
   "_id": "QpTwPVI99WdaUDWH",

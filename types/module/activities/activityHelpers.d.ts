@@ -1,25 +1,33 @@
+import { Activity, ActivityUseConfiguration, RollMessageConfig, TokenOrDocument } from "../../globals.js";
 import { Workflow } from "../Workflow.js";
+import { TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
+import { MidiOptions } from "../utils.js";
+import Token = foundry.canvas.placeables.Token;
 export declare function confirmWorkflow(existingWorkflow: Workflow): Promise<boolean>;
-export declare function removeFlanking(actor: Actor): Promise<void>;
-export declare function setDamageRollMinTerms(rolls: Array<Roll | any> | undefined): void;
-export declare function doActivityReactions(activity: any, workflow: Workflow): Promise<any[]>;
-export declare function preActivityConsumptionHook(activity: any, usageConfig: any, messageConfig: any): boolean;
-export declare function activityConsumptionHook(activity: any, usageConfig: any, messageConfig: any, updates: any): boolean;
-export declare function requiresTargetConfirmation(activity: any, options: any): boolean;
-export declare function preTemplateTargets(activity: any, options: any): Promise<boolean>;
-export declare function postTemplateConfirmTargets(activity: any, options: any, workflow: any): Promise<boolean>;
-export declare function resolveTargetConfirmation(activity: any, options?: any): Promise<boolean>;
-export declare function showItemInfo(): Promise<ChatMessage | undefined>;
-export declare function isAoETargetable(targetToken: any, options?: {
-    selfToken?: Token | TokenDocument | string | null | undefined;
+export declare function removeFlanking(actor: Actor.Implementation): Promise<void>;
+export declare function setDamageRollMinTerms(rolls?: Roll[]): void;
+export declare function doActivityReactions(activity: Activity, workflow: Workflow): Promise<{
+    name?: string;
+    uuid?: string;
+    ac?: number;
+}[]>;
+export declare function preActivityConsumptionHook(activity: Activity, usageConfig: ActivityUseConfiguration, messageConfig: RollMessageConfig): boolean;
+export declare function activityConsumptionHook(activity: Activity, usageConfig: ActivityUseConfiguration, messageConfig: RollMessageConfig, updates: unknown): boolean;
+export declare function requiresTargetConfirmation(activity: Activity, options: MidiOptions): boolean;
+export declare function preTemplateTargets(activity: Activity, options: MidiOptions): Promise<boolean>;
+export declare function postTemplateConfirmTargets(activity: Activity, options: MidiOptions, workflow: Workflow): Promise<boolean>;
+export declare function resolveTargetConfirmation(activity: Activity, options?: TargetConfirmationOptions): Promise<boolean>;
+export declare function showItemInfo(this: Item.Implementation): Promise<ChatMessage.Implementation | undefined>;
+export declare function isAoETargetable(targetToken: Token.Implementation, options?: {
+    selfToken?: TokenOrDocument | string | null | undefined;
     ignoreSelf?: boolean;
     AoETargetType?: string;
     autoTarget?: string;
 }): boolean;
-export declare function templateTokens(templateDetails: MeasuredTemplate, selfTokenRef?: Token | TokenDocument | string | null | undefined, ignoreSelf?: boolean, AoETargetType?: string, autoTarget?: string): Token[];
-export declare function selectTargets(templateDocument: MeasuredTemplateDocument, data?: any, user?: any): true | undefined;
+export declare function templateTokens(templateDetails: foundry.canvas.placeables.MeasuredTemplate.Implementation, selfTokenRef?: TokenOrDocument | string | null | undefined, ignoreSelf?: boolean, AoETargetType?: string, autoTarget?: string): Token.Implementation[];
+export declare function selectTargets(this: Workflow | Activity | undefined, templateDocument: MeasuredTemplateDocument, data?: unknown, userId?: string): true | undefined;
 /**
  * Get currently selected tokens in the scene or user's character's tokens.
  * @returns {Token5e[]}
  */
-export declare function getSceneTargets(): foundry.canvas.placeables.Token[];
+export declare function getSceneTargets(): Token.Implementation[];

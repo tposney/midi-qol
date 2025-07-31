@@ -34,7 +34,6 @@ import {
   logIncapacitatedCheckResult,
   needsBonusActionCheck,
   needsReactionCheck,
-  processDamageRollBonusFlags,
   setBonusActionUsed,
   setReactionUsed,
   sumRolls,
@@ -85,7 +84,7 @@ export let MidiActivityMixin = Base => {
       foundry.utils.logCompatibilityWarning("MidiActivityMixin | setting activity.targets is not supported. Use workflow.targets instead");
     }
 
-    static LOCALIZATION_PREFIXES = ["midi-qol.SHARED", "midi-qol.DAMAGE", ...super.LOCALIZATION_PREFIXES];
+    static LOCALIZATION_PREFIXES = [ ...super.LOCALIZATION_PREFIXES, "midi-qol.SHARED"];
 
     static defineSchema() {
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, SetField } = foundry.data.fields;
@@ -915,7 +914,7 @@ export let MidiActivityMixin = Base => {
           let promises = result.map(r => displayDSNForRoll(r, "damageRoll"));
           await Promise.all(promises);
         }
-        result = await processDamageRollBonusFlags.bind(config.workflow)(result);
+        result = await config.workflow.processDamageRollBonusFlags(result);
         if (showChatDamageCards) {
           DamageRoll.toMessage(result, {}, { create: true, rollMode: game.settings.get("core", "rollMode") });
         }
@@ -1428,6 +1427,7 @@ export let MidiActivityMixin = Base => {
         RequiredMaterials: i18n("DND5E.RequiredMaterials"),
         Attack: i18n("DND5E.Attack"),
         OtherFormula: i18n("DND5E.OtherFormula"),
+        displayProperties: configSettings.displayProperties,
         canCancel: configSettings.undoWorkflow // TODO enable this when more testing done.
       };
       const rollSaveOptions = new Set();
@@ -1589,11 +1589,17 @@ export let MidiActivityMixinSheet = Base => {
 
       context.otherActivityOptions = this.item.system.activities
         .filter(a => a.id !== this.activity.id && a.isOtherActivityCompatible)
-        .reduce((ret, a) => { ret.push({ label: `${a.name} (${a.identifier})`, value: a.identifier, id: a.id }); return ret }, [{ label: "Auto", value: "" }, { label: "None", value: "none" }]);
+        .reduce((ret, a) => { 
+          const identifierString = a.identifier === a.name.slugify() ? "" : ` (${a.identifier})`;
+          ret.push({ label: `${a.name}${identifierString}`, value: a.identifier, id: a.id }); 
+          return ret 
+        }, [{ label: "Auto", value: "" }, { label: "None", value: "none" }]);
       context.otherActivityOptions?.forEach(option => { option.selected = option.value === this.activity.otherActivityId || option.id === this.activity.otherActivityId });
       context.triggeredActivityOptions = this.item.system.activities
         .filter(a => a.id !== this.activity.id && a.isTriggerableActivity)
-        .reduce((ret, a) => { ret.push({ label: `${a.name} (${a.identifier})`, value: a.identifier, id: a.id }); return ret }, [{ label: "None", value: "none" }]);
+        .reduce((ret, a) => {
+          const identifierString = a.identifier === a.name.slugify() ? "" : ` (${a.identifier})`;
+          ret.push({ label: `${a.name}${identifierString}`, value: a.identifier, id: a.id }); return ret }, [{ label: "None", value: "none" }]);
       context.triggeredActivityOptions?.filter(option => { option.selected = option.value === this.activity.midiProperties.triggeredActivityId || option.id === this.activity.midiProperties.triggeredActivityId });
       let activity = context.activity;
       let triggeredActivity = await context.activity.getTriggeredActivity();

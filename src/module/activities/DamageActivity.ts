@@ -23,7 +23,7 @@ export function setupDamageActivity() {
 
 let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {
   return class MidiDamageActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = ["midi-qol.DAMAGE", ...super.LOCALIZATION_PREFIXES];
+    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES];
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {

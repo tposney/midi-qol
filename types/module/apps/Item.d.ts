@@ -4,20 +4,18 @@ export declare class OnUseMacros {
     static parseParts(parts: any): OnUseMacros;
     getMacros(currentOption: string | undefined): string;
     toString(): string;
-    get selectListOptions(): string;
 }
 export declare class OnUseMacro {
     macroName: string;
     option: string;
     macro: string | undefined;
-    macroPassOptions: string[];
+    macroPassOptions: Record<string, string>;
     constructor(macro?: string | undefined);
     static parsePart(parts: {
         macroName: string;
         option: string | undefined;
     }): OnUseMacro;
     toString(): string;
-    toListItem(index: Number, macroOptions: OnUseMacroOptions): string;
 }
 export declare class OnUseMacroOptions {
     static options: Array<{
@@ -30,6 +28,4 @@ export declare class OnUseMacroOptions {
         label: string;
     }>;
 }
-export declare function activateMacroListeners(app: foundry.applications.api.DocumentSheetV2<Item>, html: HTMLElement): void;
-export declare function getCurrentMacros(object: any): OnUseMacros;
-export declare function getCurrentSourceMacros(object: any): OnUseMacros;
+export declare function getCurrentSourceMacros(document: Actor.Implementation): OnUseMacros;

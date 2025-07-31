@@ -3,9 +3,4 @@
   {{ formField fields.friendlySave value=source.friendlySave options=FriendlySaveOptions }}
   {{ formField fields.midiProperties.fields.magicEffect value=source.midiProperties.magicEffect
   input=@root.inputs.createCheckboxInput }}
-  {{ formField fields.damage.fields.critical.fields.allow value=source.damage.critical.allow
-  input=@root.inputs.createCheckboxInput }}
-  {{#if source.damage.critical.allow}}
-  {{ formField fields.damage.fields.critical.fields.bonus value=source.damage.critical.bonus }}
-  {{/if}}
 </fieldset>

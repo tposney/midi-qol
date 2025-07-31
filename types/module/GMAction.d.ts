@@ -1,4 +1,6 @@
-export declare var socketlibSocket: any;
+import { DamageDescriptionObject } from "./Workflow.js";
+import { DamageApplicationOptions, DamageListEntry } from "../globals.js";
+export declare let socketlibSocket: any;
 export declare let setupSocket: () => void;
 export declare class SaferSocket {
     #private;
@@ -21,5 +23,32 @@ export declare function preferredActiveGM(): User | null;
 export declare function unTimedExecuteAsGM(toDo: string, ...args: any[]): Promise<any>;
 export declare function timedAwaitExecuteAsGM(toDo: string, data: any): Promise<any>;
 export declare function initGMActionSetup(): void;
-export declare let processUndoDamageCard: (message: ChatMessage, html: HTMLElement, data: any) => boolean;
-export declare function prepareDamageListToJSON(damageList: any[]): any[];
+export declare let processUndoDamageCard: (message: ChatMessage.Implementation, html: HTMLElement, data: any) => boolean;
+export interface SerializedDamageListEntry extends Omit<DamageListEntry, "calcDamageOptions" | "damageDetail" | "rawDamageDetail" | "damageDetails"> {
+    damageDetail: DamageDescriptionObject[];
+    damageDetails: {
+        bonusDamage?: DamageDescriptionObject[];
+        combinedDamage: DamageDescriptionObject[];
+        defaultDamage?: DamageDescriptionObject[];
+        otherDamage?: DamageDescriptionObject[];
+        rawbonusDamage?: DamageDescriptionObject[];
+        rawcombinedDamage: DamageDescriptionObject[];
+        rawdefaultDamage?: DamageDescriptionObject[];
+        rawotherDamage?: DamageDescriptionObject[];
+    };
+    rawDamageDetail: DamageDescriptionObject[];
+    calcDamageOptions: Omit<DamageApplicationOptions, "downgrade" | "ignore"> & {
+        downgrade?: true | string[];
+        ignore?: true | {
+            immunity: true | string[];
+            resistance: true | string[];
+            vulnerability: true | string[];
+            modification: true | string[];
+            superSaver?: true | string[];
+            semiSuperSaver?: true | string[];
+            saved?: true | string[];
+            DR?: string[];
+        };
+    };
+}
+export declare function prepareDamageListToJSON(damageList: DamageListEntry[]): SerializedDamageListEntry[];

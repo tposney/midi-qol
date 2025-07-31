@@ -1,3 +1,9 @@
+### 13.0.13
+* Massive refactor/retyping - thanks (and amazement) @michael
+* For otherActivities, if they have the midi setting Display Activity Name set, midi will display the activity name, rather than "Other" in the chat card.
+  - So for example, Mace of Disruption, Undead Damage activity set Display Activity Name to checked and the chat card will display Undead Damage for the damage that only applies to undead targets.
+* Allow macro writers to overwrite the options set in reactionDialog
+
 ### 13.0.12
 * version bump for failed tag update
 

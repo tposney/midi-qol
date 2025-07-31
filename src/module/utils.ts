@@ -3223,83 +3223,6 @@ class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 }
 
-export async function processAttackRollBonusFlags(this: Workflow) {
-  let attackBonus = "attack.all";
-  if (this.activity && this.activity.hasAttack) attackBonus = `attack.${this.activity.actionType}`;
-  const optionalFlags = this.actor.flags?.[MODULE_ID]?.optional ?? {};
-  // If the attack roll is a fumble only select flags that allow the roll to be rerolled.
-  let bonusFlags = Object.keys(optionalFlags)
-    .filter(flag => {
-      const hasAttackFlag = foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.optional.${flag}.attack.all`) as string ||
-        foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.optional.${flag}.${attackBonus}`) as string;
-      if (hasAttackFlag === undefined) return false;
-      if (this.isFumble && !hasAttackFlag?.includes("roll")) return false;
-      if (!this.actor.flags[MODULE_ID]!.optional![flag].count) return true;
-      return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
-    })
-    .map(flag => `flags.${MODULE_ID}.optional.${flag}`);
-
-  if (bonusFlags.length > 0) {
-    const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined) 
-      ?? checkMechanic("displayBonusRolls") as boolean;
-    const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll!, "attackRoll")
-    if (newRoll) this.setAttackRoll(newRoll);
-  }
-  if (this.targets.size === 1) {
-    // @ts-expect-error no dnd5e-types
-    const targetAC = this.targets.first()!.actor?.system.attributes.ac.value;
-    this.processAttackRoll();
-    const isMiss = this.isFumble || (this.attackRoll!.total ?? 0) < targetAC;
-    if (isMiss) {
-      attackBonus = "attack.fail.all"
-      if (this.activity && this.activity.hasAttack) attackBonus = `attack.fail.${this.activity.actionType}`;
-      let bonusFlags = Object.keys(optionalFlags)
-        .filter(flag => {
-          const hasAttackFlag = foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.optional.${flag}.attack.fail.all`) as string
-            || foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.optional.${flag}.${attackBonus}`) as string;
-          if (hasAttackFlag === undefined) return false;
-          if (this.isFumble && !hasAttackFlag?.includes("roll")) return false;
-          if (!this.actor.flags[MODULE_ID]!.optional![flag].count) return true;
-          return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
-        })
-        .map(flag => `flags.${MODULE_ID}.optional.${flag}`);
-      if (bonusFlags.length > 0) {
-        const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined) 
-          ?? checkMechanic("displayBonusRolls") as boolean;
-        const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll");
-        if (newRoll) this.setAttackRoll(newRoll);
-      }
-    }
-  }
-  return this.attackRoll!;
-}
-
-export async function processDamageRollBonusFlags(this: Workflow, damageRolls: Roll[]): Promise<Roll[]> {
-  let damageBonus = "damage.all";
-  const rollMode = safeGetGameSetting("core", "rollMode");
-  const hideDSN = game.user?.isGM && configSettings.gmAttackDamageCards && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
-  if (this.activity) damageBonus = `damage.${this.activity.actionType}`;
-  const optionalFlags = this.actor.flags?.[MODULE_ID]?.optional ?? {};
-  const bonusFlags = Object.keys(optionalFlags)
-    .filter(flag => {
-      const hasDamageFlag = foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.optional.${flag}.damage.all`) !== undefined ||
-        foundry.utils.getProperty(this.actor ?? {}, `flags.${MODULE_ID}.optional.${flag}.${damageBonus}`) !== undefined;
-      if (!hasDamageFlag) return false;
-      return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
-    })
-    .map(flag => `flags.${MODULE_ID}.optional.${flag}`);
-  if (bonusFlags.length > 0) {
-    // this.damageRollHTML = await midiRenderDamageRoll(this.damageRoll);
-    // this.damamgeRollHTML = $(this.damageRolHTML).find(".dice-roll").remove();
-    // TODO dnd3 work out what this means for multiple rolls
-    const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined) 
-      ?? checkMechanic("displayBonusRolls") as boolean;
-    let newRoll = await bonusDialog.bind(this)(bonusFlags, damageBonus, displayBonusRolls === true, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, damageRolls[0], "damageRoll", { hideDSN })
-    if (newRoll) damageRolls[0] = newRoll;
-  }
-  return damageRolls;
-}
-
 async function displayBeforeAfterRolls(data: {
   originalRoll: Roll,
   newRoll: Roll,
@@ -4278,7 +4201,7 @@ export async function reactionDialog(
         if (activity) {
           dialog.close();
           // options = foundry.utils.mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid, checkGMStatus: false}, {overwrite: true});
-          const itemRollOptions = foundry.utils.mergeObject(options, {
+          const itemRollOptions = foundry.utils.mergeObject({
             createWorkflow: true,
             configureDialog: true,
             checkGMStatus: false,
@@ -4286,7 +4209,8 @@ export async function reactionDialog(
             isReaction: true,
             workflowOptions: { targetConfirmation: "none" },
             ignoreUserTargets: true
-          });
+          }, options);
+
           let useTimeoutId = setTimeout(() => {
             clearTimeout(useTimeoutId);
             resolve({})
@@ -6887,7 +6811,21 @@ export async function cleanCPRFlanked() {
   }
   cprEffect = getCPREffect(flankedId);
 }
-function getItemFromEffectOrigin(origin: string) {
+function getItemFromEffectOrigin(origin: string, alreadyVisited: string[] = []): Item.Implementation | undefined {
+  let originItem: Item.Implementation | undefined;
+  if (alreadyVisited.includes(origin)) return;
+  const originEffectOrItem = fromUuidSync(origin) as ActiveEffect.Implementation | Item.Implementation | undefined;
+  if (originEffectOrItem instanceof Item) return originEffectOrItem;
+  if (originEffectOrItem?.origin) {
+    if (originEffectOrItem.parent instanceof Item) {
+      originItem = originEffectOrItem.parent;
+    } else originItem = getItemFromEffectOrigin(originEffectOrItem.origin, [...alreadyVisited, origin]);
+    // recursive so @michael can feel fancy
+  }
+  return originItem;
+}
+
+function getItemFromEffectOriginOLD(origin: string) {
   let originItem: Item.Implementation | undefined;
   const originEffect = fromUuidSync(origin) as ActiveEffect.Implementation | undefined;
   if (originEffect?.origin) {

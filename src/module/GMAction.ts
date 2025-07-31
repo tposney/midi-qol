@@ -1199,7 +1199,7 @@ async function createGMReverseDamageCard(
 }
 
 export let processUndoDamageCard = (message: ChatMessage.Implementation, html: HTMLElement, data) => {
-  if (!((message.flags as any)?.midiqol)?.undoDamage) return true;
+  if (!message.flags?.[MODULE_ID]?.undoDamage) return true;
   let button = html.querySelector<HTMLButtonElement>("#all-reverse");
   button?.addEventListener("click", (ev) => {
     (async () => {

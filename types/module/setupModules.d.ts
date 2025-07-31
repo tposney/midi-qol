@@ -26,8 +26,8 @@ export declare const REQUIRED_MODULE_VERSIONS: {
     walledtemplates: string;
     wjmais: string;
 };
-export declare let installedModules: Map<any, any>;
-export declare function getModuleVersion(moduleName: any): string;
+export declare let installedModules: Map<string, boolean>;
+export declare function getModuleVersion(moduleName: string): string;
 export declare let setupModules: () => void;
-export declare function dice3dEnabled(): any;
+export declare function dice3dEnabled(): boolean;
 export declare function checkModules(): void;

@@ -1,52 +1,73 @@
 import { RollStats } from './module/RollStats.js';
-export declare function getGame(): Game | undefined;
-export declare function getCanvas(): Canvas | undefined;
+export declare function getCanvas(): foundry.canvas.Canvas | undefined;
+export declare let ceInterface: {
+    findEffects: () => ActiveEffect.Implementation[];
+    findEffect: (input: {
+        folderId?: string;
+        effectId?: string;
+        effectName?: string;
+    }) => ActiveEffect.Implementation | null;
+    hasEffectApplied: (input: {
+        effectId?: string;
+        effectName?: string;
+        uuid?: string;
+    }) => boolean;
+    addEffect: (input: {
+        effectId?: string;
+        effectName?: string;
+        effectData?: ActiveEffect.CreateData;
+        uuid?: string;
+        overlay?: boolean;
+        origin?: string | null;
+    }) => Promise<ActiveEffect.Implementation[]>;
+    removeEffect: (input: {
+        effectId?: string;
+        effectName?: string;
+        uuid?: string;
+        origin?: string | null;
+    }) => Promise<void>;
+    toggleEffect: (input: {
+        effectId?: string;
+        effectName?: string;
+        uuids?: string[];
+        overlay?: boolean;
+        prioritizeTargets?: boolean;
+        origin?: string | null;
+    }) => Promise<void>;
+} | undefined;
 export declare let debugEnabled: number;
 export declare let debug: (...args: any[]) => void;
 export declare let log: (...args: any[]) => void;
 export declare let warn: (...args: any[]) => void;
 export declare let error: (...args: any[]) => void;
 export declare let timelog: (...args: any[]) => void;
-export declare var levelsAPI: any;
-export declare var allDamageTypes: any;
+export declare let levelsAPI: any;
 export declare const MODULE_ID = "midi-qol";
-export declare const ArrayField: typeof foundry.data.fields.ArrayField;
-export declare const ObjectField: typeof foundry.data.fields.ObjectField;
-export declare const BooleanField: typeof foundry.data.fields.BooleanField;
-export declare const NumberField: typeof foundry.data.fields.NumberField;
-export declare const StringField: typeof foundry.data.fields.StringField;
-export declare const SchemaField: typeof foundry.data.fields.SchemaField;
-export declare const TokenClass: typeof Token;
-export declare var isDnD: boolean;
 export declare let i18n: (key: string) => string;
-export declare function i18nSystem(key: any): string;
 export declare let i18nFormat: (key: string, data?: {}) => string;
-export declare function geti18nOptions(key: any): any;
-export declare function geti18nTranslations(): object;
+export declare function geti18nOptions(key: string): Record<string, string>;
+export declare function geti18nTranslations(): string | Localization.Translations;
 export declare function getStaticID(id: string): string;
 export declare let setDebugLevel: (debugText: string) => void;
-export declare let noDamageSaves: string[];
-export declare let undoDamageText: any;
-export declare let savingThrowText: any;
-export declare let savingThrowTextAlt: any;
-export declare let MQdefaultDamageType: any;
+export declare let MQdefaultDamageType: string;
 export declare let midiFlags: string[];
 export declare let allAttackTypes: string[];
 export declare let gameStats: RollStats;
-export declare let overTimeEffectsToDelete: {};
-export declare let savedOverTimeEffectsToDelete: {};
+export declare let overTimeEffectsToDelete: Record<string, {
+    uuid: string;
+}>;
+export declare let savedOverTimeEffectsToDelete: Record<string, {
+    uuid: string;
+}>;
 export declare let MQItemMacroLabel: string;
 export declare let MQActivityMacroLabel: string;
-export declare let MQDeferMacroLabel: string;
-export declare let MQOnUseOptions: any;
-export declare let GameSystemConfig: any;
-export declare let SystemString: any;
-export declare let systemConcentrationId: any;
-export declare let midiReactionEffect: any;
-export declare let midiBonusActionEffect: any;
-export declare let midiFlankingEffect: any;
-export declare let midiFlankedEffect: any;
-export declare const NumericTerm: typeof foundry.dice.terms.NumericTerm;
+export declare let MQOnUseOptions: Record<string, string>;
+export declare let GameSystemConfig: typeof CONFIG.DND5E;
+export declare let systemConcentrationId: string;
+export declare let midiReactionEffect: ActiveEffect.Implementation | undefined;
+export declare let midiBonusActionEffect: ActiveEffect.Implementation | undefined;
+export declare let midiFlankingEffect: ActiveEffect.Implementation | undefined;
+export declare let midiFlankedEffect: ActiveEffect.Implementation | undefined;
 export declare const MESSAGE_TYPES: {
     HITS: number;
     SAVES: number;
@@ -55,9 +76,31 @@ export declare const MESSAGE_TYPES: {
     OTHER: number;
     ITEM: number;
 };
-export declare let cleanSpellName: (name: string) => string;
-export declare let systemString: string;
 export declare let MQDamageRollTypes: string[];
+import { TokenOrDocument } from './globals.js';
 export declare function testfunc(...args: any[]): void;
+export declare function moveToken(tokenRef: TokenOrDocument | string, newCenter: {
+    x: number;
+    y: number;
+}, animate?: boolean): Promise<any>;
+export declare function moveTokenAwayFromPoint(targetRef: TokenOrDocument | string, distance: number, point: {
+    x: number;
+    y: number;
+}, animate?: boolean, checkCollision?: boolean): Promise<any>;
+export declare function createEffects(data: {
+    actorUuid: string;
+    effects: ActiveEffect.CreateData[];
+    options: {
+        keepId: boolean;
+    };
+}): Promise<any>;
+export declare function removeEffects(data: {
+    actorUuid: string;
+    effects: string[];
+}): Promise<any>;
+export declare function updateEffects(data: {
+    actorUuid: string;
+    updates: ActiveEffect.UpdateData[];
+}): Promise<any>;
 export declare function createMidiMacros(): Promise<void>;
 export declare function setupMidiStatusEffects(): void;

@@ -4,7 +4,7 @@ import { AugmentedEvent, Workflow } from "../Workflow.js";
 import { defaultRollOptions } from "../patching.js";
 import { ReplaceDefaultActivities, configSettings, safeGetGameSetting } from "../settings.js";
 import { busyWait } from "../tests/setupTest.js";
-import { addAdvAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, processAttackRollBonusFlags } from "../utils.js";
+import { addAdvAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
@@ -102,7 +102,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
   return class MidiAttackActivity extends MidiActivityMixin(ActivityClass) {
     _otherActivity: Activity | undefined;
 
-    static LOCALIZATION_PREFIXES = ["midi-qol.ATTACK", "midi-qol.SHARED", ...super.LOCALIZATION_PREFIXES];
+    static LOCALIZATION_PREFIXES = [ ...super.LOCALIZATION_PREFIXES, "midi-qol.ATTACK"];
 
     static defineSchema() {
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, NumberField, DocumentIdField } = foundry.data.fields;
@@ -458,7 +458,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           }
           if (workflow.workflowOptions?.attackRollDSN !== false && !showChatAttackCard) await displayDSNForRoll(rolls[0], "attackRollD20");
           await workflow?.setAttackRoll(rolls[0]);
-          rolls[0] = await processAttackRollBonusFlags.bind(workflow)();
+          rolls[0] = await workflow.processAttackRollBonusFlags();
           if (["formulaadv", "adv"].includes(configSettings.rollAlternate)) addAdvAttribution(rolls[0], workflow.attackAdvAttribution);
           await workflow?.setAttackRoll(rolls[0]);
         }

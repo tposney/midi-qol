@@ -340,8 +340,8 @@ async function registerTests() {
             assert.ok(item);
             const workflow = await completeItemUse(item!, { midiOptions: { workflowOptions } });
             assert.ok(workflow.saveResults.length === 1);
-            assert.equal(workflow.saveResults[0][0].terms[0].results.length, 1);
-            assert.ok(workflow.saveResults[0][0].formula.startsWith("1d20"))
+            assert.equal(workflow.saveResults[0].terms[0].results.length, 1);
+            assert.ok(workflow.saveResults[0].formula.startsWith("1d20"))
           });
           it("rolls a magic resistance spell saving throw", async function () {
             const actor: any = getActor(actor1Name);
@@ -354,8 +354,8 @@ async function registerTests() {
               await actor.setFlag("midi-qol", "magicResistance.all", true);
               const workflow = await completeItemUse(item, { midiOptions: { workflowOptions } });
               assert.equal(workflow.saveResults.length, 1);
-              assert.equal(workflow.saveResults[0][0].terms[0].results.length, 2);
-              assert.ok(workflow.saveResults[0][0].formula.startsWith("2d20kh"))
+              assert.equal(workflow.saveResults[0].terms[0].results.length, 2);
+              assert.ok(workflow.saveResults[0].formula.startsWith("2d20kh"))
             } finally {
               await actor.unsetFlag("midi-qol", "magicResistance");
             }
@@ -371,8 +371,8 @@ async function registerTests() {
               await actor.setFlag("midi-qol", "magicVulnerability.all", true);
               const workflow = await completeItemUse(item, { midiOptions: { workflowOptions } });
               assert.equal(workflow.saveResults.length, 1);
-              assert.equal(workflow.saveResults[0][0].terms[0].results.length, 2);
-              assert.ok(workflow.saveResults[0][0].formula.startsWith("2d20kl"))
+              assert.equal(workflow.saveResults[0].terms[0].results.length, 2);
+              assert.ok(workflow.saveResults[0].formula.startsWith("2d20kl"))
             } finally {
               await actor.unsetFlag("midi-qol", "magicVulnerability");
             }

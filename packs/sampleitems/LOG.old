@@ -1,3 +1,14 @@
-2025/07/29-23:49:39.072787 7fdc93fff640 Recovering log #525
-2025/07/29-23:49:39.080901 7fdc93fff640 Delete type=0 #525
-2025/07/29-23:49:39.080950 7fdc93fff640 Delete type=3 #524
+2025/07/31-21:58:47.846628 7fcb76fbe640 Recovering log #529
+2025/07/31-21:58:47.855396 7fcb76fbe640 Delete type=0 #529
+2025/07/31-21:58:47.855421 7fcb76fbe640 Delete type=3 #528
+2025/07/31-22:01:19.735698 7fc6557ff640 Level-0 table #533: started
+2025/07/31-22:01:19.739009 7fc6557ff640 Level-0 table #533: 7128 bytes OK
+2025/07/31-22:01:19.742488 7fc6557ff640 Delete type=0 #531
+2025/07/31-22:01:19.742636 7fc6557ff640 Manual compaction at level-0 from '!folders!5Ok9Jbl5nOokCkqf' @ 72057594037927935 : 1 .. '!items.effects!x1C4i0oA7cZCg1Pl.6hAZJkE4UfjO7Adp' @ 0 : 0; will stop at '!items!QpTwPVI99WdaUDWH' @ 1158 : 1
+2025/07/31-22:01:19.742642 7fc6557ff640 Compacting 1@0 + 1@1 files
+2025/07/31-22:01:19.748728 7fc6557ff640 Generated table #534@0: 157 keys, 299146 bytes
+2025/07/31-22:01:19.748741 7fc6557ff640 Compacted 1@0 + 1@1 files => 299146 bytes
+2025/07/31-22:01:19.751940 7fc6557ff640 compacted to: files[ 0 1 0 0 0 0 0 ]
+2025/07/31-22:01:19.751995 7fc6557ff640 Delete type=2 #533
+2025/07/31-22:01:19.752064 7fc6557ff640 Delete type=2 #517
+2025/07/31-22:01:19.752205 7fc6557ff640 Manual compaction at level-0 from '!items!QpTwPVI99WdaUDWH' @ 1158 : 1 .. '!items.effects!x1C4i0oA7cZCg1Pl.6hAZJkE4UfjO7Adp' @ 0 : 0; will stop at (end)

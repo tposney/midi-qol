@@ -1,65 +1,61 @@
 export declare class RollStats {
-    currentStats: {
-        actorId: {
-            name: string;
-            session: {
-                numAttacks: number;
-                numAttack20: number;
-                numAttackFumble: number;
-                numAttackCritical: number;
-                attackRollsDiceTotal: number;
-                attackRollTotal: number;
-                numD20Rolls: number;
-                numDamageRolls: number;
-                damageApplied: number;
-                damageTotal: number;
-            };
-            lifetime: {
-                numAttacks: number;
-                numAttack20: number;
-                numAttackFumble: number;
-                numAttackCritical: number;
-                numAttackMisses: number;
-                attackRollsDiceTotal: number;
-                attackRollTotal: number;
-                numD20Rolls: number;
-                numDamageRolls: number;
-                damageApplied: number;
-                damageTotal: number;
-            };
-            itemStats: any;
-        };
-    };
+    currentStats: Record<string, Stats>;
     showStats(): void;
-    getEntityStats(id: any, collection: any): any;
-    prepareStats(): any;
-    getItemStats(item: any, id: any, collection: any): any;
-    rollCount: any;
+    getEntityStats(id?: string | null, collection?: ValidCollection): Stats | undefined;
+    prepareStats(): Record<string, Stats>;
+    getItemStats(item: Item.Implementation, id: string, collection: ValidCollection): ItemStats | undefined;
+    rollCount: number;
     static saveInterval: number;
     constructor();
     endSession(): Promise<void>;
     clearStats(): Promise<void>;
     clearActorStats(actorId: string): Promise<void>;
-    GMremoveActorStats(actorId: any): void;
-    toPrecision(number: any, digits: any): number;
-    get statData(): any;
+    GMremoveActorStats(actorId: string): void;
+    toPrecision(number: number, digits: number): number;
+    get statData(): Record<string, Stats>;
     fetchStats(): void;
-    addDamage(hpDamage: number, totalDamage: number, numTargets: number, item: any): void;
+    addDamage(hpDamage: number, totalDamage: number, numTargets: number, item?: Item.Implementation): void;
     addAttackRoll({ rawRoll, fumble, critical, total }: {
-        rawRoll: any;
-        fumble: any;
-        critical: any;
-        total: any;
-    }, item: any): void;
-    updateEntity({ id }: {
-        id: any;
-    }): void;
+        rawRoll: number;
+        fumble: boolean;
+        critical: boolean;
+        total: number;
+    }, item: Item.Implementation): void;
+    updateEntity(id?: string | null): void;
     exportToJSON(): void;
     headerLine: string;
-    dumpStatLine(actorName: string, itemName: string, stats: any): string;
+    dumpStatLine(actorName: string, itemName: string, stats: InnerStats): string;
     exportToCSV(): void;
     GMupdateEntity({ id, currentStats }: {
-        id: any;
-        currentStats: any;
+        id: string;
+        currentStats: Stats;
     }): Promise<void>;
 }
+type InnerStats = {
+    numAttacks: number;
+    numAttack20: number;
+    numAttackFumble: number;
+    numAttackCritical: number;
+    numAttackMisses: number;
+    attackRollsDiceTotal: number;
+    attackRollTotal: number;
+    numD20Rolls: number;
+    numDamageRolls: number;
+    damageApplied: number;
+    damageTotal: number;
+    attackRollAverage?: number;
+    damageTotalAverage?: number;
+    damageAppliedAverage?: number;
+};
+type ItemStats = {
+    name: string;
+    session: InnerStats;
+};
+export type Stats = {
+    name: string;
+    session: InnerStats;
+    lifetime: InnerStats;
+    itemStats: Record<string, ItemStats>;
+};
+type ValidCollection = foundry.documents.collections.Actors | foundry.documents.collections.Users;
+export {};
