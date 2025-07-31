@@ -116,7 +116,7 @@ export async function bonusCheck(actor: Actor.Implementation, result: Roll, cate
       else if (category.startsWith("skill")) title = i18nFormat("DND5E.SkillPromptTitle", { skill: GameSystemConfig.skills[detail] ?? "" });
     }
     
-    const displayBonusRolls = bonusFlags.reduce((returnValue, flag) => returnValue || !!foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`), false) 
+    const displayBonusRolls = bonusFlags.reduce((returnValue, flag) => returnValue || !!foundry.utils.getProperty(actor ?? {}, `${flag}.displayBonusRolls`), false) 
       ?? checkMechanic("displayBonusRolls");
     const newRoll = await bonusDialog.bind(data)(
       bonusFlags,
