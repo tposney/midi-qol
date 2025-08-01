@@ -4628,7 +4628,7 @@ export function createConditionData(data: {
     }
     rollData.humanoid = globalThis.MidiQOL.humanoid;
     rollData.tokenUuid = data.workflow?.tokenUuid ?? data.tokenUuid;
-    rollData.tokenId = (data.target as (TokenOrDocument))?.id ?? data.workflow?.token?.id; // deprecated
+    rollData.tokenId = (data.token as (TokenOrDocument))?.id ?? data.workflow?.token?.id; // deprecated
     if (data.workflow) {
       rollData.w = data.workflow;
       rollData.workflow = data.workflow;
