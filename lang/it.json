@@ -20,6 +20,7 @@
 "midi-qol.requiresTargetsOptions": {
     "none": "Mai",
     "combat": "In Combattimento",
+    "tokens": "Token in scena",
     "always": "Sempre"
 },
 "midi-qol.AutoApplyDamage.Name": "Applica automaticamente il danno al bersaglio",
@@ -73,31 +74,12 @@
 "midi-qol.AutoTarget.Name": "Auto seleziona al disegno del template",
 "midi-qol.AutoTarget.Hint": "Quando viene posizionato un template (ad esempio un incantesimo), seleziona automaticamente i token all'interno del template. Se è impostato 'Centro + Livelli' nei template di mira a distanza verranno utilizzati i template volumetrici dei livelli (se installati)",
 "midi-qol._comment for translators_noDamageonSaveSpells": "In Foundry v9 l'elemento json array non è più supportato, quindi verrà utilizzata solo la versione v9",
-"midi-qol.noDamageonSaveSpells": [
-    "Fiotto Acido",
-    "Turbine di Spade",
-    "Rombo di Tuono",
-    "Beffa Crudele",
-    "Creare Falò",
-    "Fulmine Adescante",
-    "Spruzzo Velenoso",
-    "Cordone di Freccia",
-    "Disintegrazione",
-    "Fiamma Sacra",
-    "Cordone di Frecce",
-    "Morsa del Gelo",
-    "Infestazione",
-    "Rintocco dei Morti",
-    "Parola Radiosa",
-    "Catapulta",
-    "Scossa Tellurica"
-],
-"midi-qol.noDamageonSaveSpellsv9": "Acid Splash, Sword Burst, Thunderclap, Vicious Mockery, Create Bonfire, Lightning Lure, Poison Spray, Cordon of Arrows, Disintegrate, Sacred Flame, Frostbite, Infestation, Toll the Dead, Word of Radiance, Catapult, Earth Tremor",
 "midi-qol.undoDamageFrom": "Annulla il danno applicato da",
 "midi-qol.noGM": "Nessun utente DM connesso, impossibile applicare effetti/aggiornare i Punti Ferita",
 "midi-qol.noSelection": "Nessun Token/Personaggio selezionato",
 "midi-qol.showGM.Name": "Il DM vede tutti i messaggi sussurrati",
-"midi-qol.showGM.Hint": "Il DM vede tutti i messaggi sussurrati inviati, anche se le impostazioni di gioco dicono che il DM non dovrebbe vederli",
+"midi-qol.PreferredGM.Name": "DM preferito",
+"midi-qol.PreferredGM.Hint": "GM preferito per le chiamate socket. Se impostato su 'nessuno', verrà utilizzato il primo GM nella scena corrente.",
 "midi-qol.ColoredBorders.Name": "Messaggi con Bordi Colorati",
 "midi-qol.ColoredBorders.Hint": "Ogni messaggio chat ha un bordo nel colore dei personaggi dei giocatori",
 "midi-qol.AutoEffects.Name": "Applica automaticamente gli effetti dell'oggetto",
@@ -149,6 +131,8 @@
 "midi-qol.MergeCard.Hint": "Unisci Attacchi, Colpi, Danni, Tiri Salvezza in una sola scheda chat",
 "midi-qol.MergeCardCondensed.Name": "Condensa Tiri di Attacco/Danno",
 "midi-qol.MergeCardCondensed.Hint": "Conserva un po' di spazio nel log chat rendendo più piccoli i tiri di attacco e danno",
+"midi-qol.DisplayItemProperties.Name": "Visualizza Proprietà Elemento",
+"midi-qol.DisplayItemProperties.Hint": "Visualizza le proprietà degli elementi nella scheda della chat. Disattivandola si risparmia spazio nella scheda della chat.",
 "midi-qol.ConfigTitle": "Configurazione Midi-QoL",
 "midi-qol.WorkflowSettings": "Impostazioni del Workflow",
 "midi-qol.CheckSaveText.Name": "Cerca nella descrizione dell'oggetto",
@@ -210,7 +194,6 @@
     "wallsBlock": "Blocchi del Muro",
     "wallsBlockIgnoreIncapacitated": "Blocchi del Muro - Ignora Incapacitati/Morti",
     "wallsBlockIgnoreDefeated": "Blocchi del Muro - Ignora Sconfitti",
-    "dftemplates": "Usa Modelli Enhanced di DF",
     "walledtemplates": "Usa Modelli con Muri"
 },
 "midi-qol.autoCheckSavesOptions": {
@@ -255,7 +238,8 @@
     "off": "Spento",
     "attack": "Solo Tiri di Attacco",
     "damage": "Solo Tiri di Danno",
-    "all": "Tiri di Attacco e Danno"
+    "all": "Tiri di Attacco e Danno",
+    "everything": "Tutti i Pulsanti"
 },
 "midi-qol.damageImmunitiesOptions": {
     "none": "Mai",
@@ -276,8 +260,11 @@
     "rer": "Rippers Epic Rolls"
 },
 "midi-qol.playerRollSavesOptions": {
-    "none": "Nessuno",
-    "noneDialog": "Tira automaticamente e mostra il dialogo di tiro",
+    "none": "Nessuno (Tiro privato)",
+    "nonePublic": "Nessuno (Tiro pubblico)",
+    "noneDialogPublic": "Tira automaticamente e mostra finestra di dialogo del tiro (Tiro Pubblico)",
+    "noneDialogPrivate": "Tira automaticamente e mostra finestra di dialogo del tiro (Tiro Privato)",
+    "noneDialogBlind": "Tira automaticamente e mostra finestra di dialogo del tiro (Tiro Segreto)",
     "chat": "Messaggio Chat",
     "mtb": "Monks Token Bar",
     "rer": "Rippers Epic Rolls"
@@ -332,19 +319,6 @@
 "midi-qol.ForceHideRoll.Hint": "Non mostra nulla ai non destinatari per i tiri privati, nascosti o personali.",
 "midi-qol.EnableWorkflow.Name": "Abilita supporto automazione dei tiri",
 "midi-qol.EnableWorkflow.Hint": "Se abilitato, è possibile configurare l'automazione dei tiri nel pannello delle Impostazioni di Workflow",
-"midi-qol.magicalProp": "Magico",
-"midi-qol.confirmTargetsProp": "Conferma Bersagli",
-"midi-qol.noDamageSaveProp": "Nessun Danno al Salvataggio",
-"midi-qol.fullDamageSaveProp": "Danno Completo al Salvataggio",
-"midi-qol.defaultDamageType": "Nessuno",
-"midi-qol.halfDamageSaveProp": "Metà Danno al Salvataggio",
-"midi-qol.rollOtherProp": "Tira anche Alternativo",
-"midi-qol.otherCritProp": "Critico Alternativo",
-"midi-qol.magicalDamageProp": "Danno Magico",
-"midi-qol.magicalEffectProp": "Effetto Magico",
-"midi-qol.concentrationEffectProp": "Concentrazione",
-"midi-qol.noConcentrationEffectProp": "Nessun Tiro Salvezza per la Concentrazione",
-"midi-qol.toggleEffectProp": "Attiva/Disattiva Effetto",
 "midi-qol.playerControlsInvisibleTokens.Name": "I Giocatori controllano i Token Nascosti di loro proprietà",
 "midi-qol.playerControlsInvisibleTokens.Hint": "Sperimentale - potrebbe funzionare",
 "midi-qol.Debug.Name": "Abilita debug",
@@ -358,6 +332,7 @@
     "preItemRoll": "Chiamato prima che l'oggetto venga lanciato (*)",
     "templatePlaced": "Chiamato solo una volta che un modello è posizionato",
     "preAttackRoll": "Prima del Tiro per Colpire",
+    "preAttackRollConfig": "Configurazione prima dell'Attacco",
     "preCheckHits": "Prima del Controllo dei Colpi",
     "postAttackRoll": "Dopo il Tiro per Colpire",
     "preDamageRoll": "Prima del Tiro del Danno",
@@ -365,6 +340,7 @@
     "damageBonus": "Aggiungi un bonus al danno",
     "preSave": "Prima del Controllo dei Tiri Salvezza",
     "postSave": "Dopo il Controllo dei Tiri Salvezza",
+    "preDamageRollConfig": "Configurazione prima del danno",
     "preDamageApplication": "Prima dell'applicazione del Danno",
     "preActiveEffects": "Prima degli Effetti Attivi",
     "postActiveEffects": "Dopo gli Effetti Attivi",
@@ -576,6 +552,8 @@
 "midi-qol.ActiveDefenceString": "Difesa Attiva",
 "midi-qol.ActiveDefence.Name": "Difesa Attiva",
 "midi-qol.ActiveDefence.Hint": "Invece di far effettuare il tiro 'Per Colpire' al DM, i giocatori effettuano un tiro di difesa. Richiede LMRTFY e non funziona con migliori tiri",
+"midi-qol.ActiveDefenceDC.Name": "Mostra CD Difesa Attiva",
+"midi-qol.ActiveDefenceDC.Hint": "Se impostato, la CD di difesa attiva verrà mostrata nella scheda chat",
 "midi-qol.ActiveDefenceShow.Name": "Visualizzazione predefinita per tiri di difesa attiva",
 "midi-qol.ActiveDefenceShow.Hint": "Se impostato su 'Tiro Automatico' quando si usa LMRTFY, il tiro è nascosto al DM secondo le altre impostazioni",
 "midi-qol.GMHide3dDice.Name": "Nascondi i tiri del DM per attacco/danno/tiro salvezza a 3D - sovrascrive altre impostazioni (unisci solo scheda)",
@@ -734,7 +712,6 @@
 "midi-qol.DisplayHitResultNumeric.Name": "Mostra quanto un attacco ha colpito o mancato (per bersaglio)",
 "midi-qol.EnforceBonusActions.Title": "Azione Bonus Usata",
 "midi-qol.EnforceBonusActions.Content": "Hai usato la tua azione bonus in questo round. Vuoi procedere comunque?",
-"midi-qol.MidiProperties": "Proprietà degli Oggetti di Midi-qol",
 "midi-qol.SoundSettings.Name": "Configura Suoni Personalizzati Midi",
 "midi-qol.SoundSettings.Hint": "Imposta i suoni personalizzati di Midi-qol per i tiri degli oggetti",
 "midi-qol.SoundSettings.Label": "Configura Suoni Personalizzati Midi",
@@ -881,8 +858,9 @@
 "midi-qol.SaveDROrder.Name": "Ordine di Riduzione del Danno e TS",
 "midi-qol.SaveDROrder.Hint": "Ordine nel quale è applicata la Riduzione del Danno. Se 'Nessuno' si applica la Riduzione del Danno",
 "midi-qol.SaveDROrderOptions": {
-  "DRSavedr": "Riduzione Danno -> TS -> Resistenza Danno",
-  "SaveDRdr": "TS -> Riduzione Danno -> Resistenza Danno"
+  "DRSaveDr": "Riduzione Danno -> TS -> Resistenza Danno",
+  "SaveDRDr": "TS -> Riduzione Danno -> Resistenza Danno",
+  "SaveDrDR": "TS -> Resistenza Danno -> Riduzione Danno"
 },
 "midi-qol.WaitingForPreviousWorkflow": "Il precedente tiro di {name} non è stato completato.",
 "midi-qol.ResolvePreviousWorkflow": "Scegli cosa fare con il tiro precedente",
@@ -962,13 +940,25 @@
     "firstSaveTarget": "Primo bersaglio TS superato",
     "firstFailedSaveTarget": "Primo bersaglio TS fallito"
   },
-  "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><strong><center>DND5E Concentration Tracking Disabled</strong><br></center><br><center>Concentration Tracking is disabled in the dnd5e system settings.</center><center>Enable in DND5E settings to enable midi concentration settings</center><br>",
+  "midi-qol.ActivationAutomation.Name": "Automazione Costi Attivazione",
+  "midi-qol.ActivationAutomation.Hint": "Attiva automaticamente le attività con costi di attivazione di riposo breve/lungo o di inizio incontro o di inizio/fine turno.",
+  "midi-qol.ActivationAutomationOptions": {
+    "none": "Nessuna automazione/nessuna chat",
+    "chat": "Comportamento predefinito dnd5e",
+    "auto": "Attivazione automatica di attività auto-mirate"
+  },
+  "midi-qol.dummyCards.Name": "Mostra sempre riquadri attacco/danno per riquadri uniti nascosti",
+  "midi-qol.dummyCards.Hint": "(Sperimentale) Per i tiri del GM (personali, privati, alla cieca) mostra una carta tiro attacco/danno che attiverà una carta 'il GM ha tirato dei dadi' nelle chat dei giocatori. Solo nel caso in cui si voglia che i giocatori sappiano che hai tirato qualcosa, ma non il risultato.",
+  "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><strong><center>Tracciamento della concentrazione DND5E disabilitato</strong><br></center><br><center>Il tracciamento della concentrazione è disabilitato nelle impostazioni di sistema di dnd5e.</center><center>Abilitalo nelle impostazioni di DND5E per abilitare le impostazioni di concentrazione midi</center><br>",
+  "midi-qol.ItemSheetMidiTab": "Midi QoL",
+  "midi-qol.AddOnUseMacro": "Aggiungi Macro all'Uso",
+  "midi-qol.CustomMacro": "Macro Personalizzata",
   "midi-qol.SHARED": {
     "use-condition": {
-      "header": "Conditioni Midi"
+      "header": "Condizioni Midi"
     },
     "ignore": {
-      "header": "Ignore Damage Traits"
+      "header": "Ignora Tratti Danno"
     },
     "FIELDS": {
       "useConditionText": {
@@ -992,8 +982,11 @@
           "label": "Roll Mode",
           "hint": "Roll mode to use for the activity"
         },
-        "ignoreFullCover":
-        {
+        "removeChatButtons": {
+          "label": "Remove Chat Buttons",
+          "hint": "Remove buttons from the activity chat card"
+        },
+        "ignoreFullCover": {
           "label": "Ignore Full Cover",
           "hint": "Ignore full cover when applying damage/saves"
         },
@@ -1049,9 +1042,21 @@
           "label": "Other Activity Compatible",
           "hint": "Can be used as an other activity"
         },
-        "toggleEffect": {
-          "label": "Toggle Effect",
+        "toggleEffects": {
+          "label": "Toggle Effects",
           "hint": "Disabling an effect will toggle it rather than removing it"
+        },
+        "magicEffect": {
+          "label": "Magic Effect",
+          "hint": "Saves against this activity are treated as saves against magic"
+        },
+        "magicDamage": {
+          "label": "Magic Damage",
+          "hint": "Damage from this activity is treated as magic damage"
+        },
+        "noConcentrationCheck": {
+          "label": "No Concentration Save",
+          "hint": "The activity's damage does not trigger a concentration save"
         },
         "ignoreTraits": {
           "idi": {
@@ -1074,7 +1079,15 @@
             "label": "Modification",
             "hint": "Ignore damage modification when applying damage"
           }
+        },
+        "autoCEEffects": {
+          "label": "Apply Convenient Effects",
+          "hint": "Apply convenient effects which match activity name (if no match, item name) when item used. Requires auto apply active effects enabled as well."
         }
+      },
+      "friendlySummon": {
+        "label": "Friendly summons",
+        "hint": "The summoned token has the same disposition as the caster"
       },
       "isOverTimeFlag": {
         "label": "Is Over Time",
@@ -1144,6 +1157,14 @@
       "ammunition": {
         "label": "Ammunition",
         "hint": "Default ammunition to consume"
+      },
+      "attackRollPerTarget": {
+        "label": "Attack Roll Per Target",
+        "hint": "Roll a separate attack roll for each target"
+      },
+      "fumbleThreshold": {
+        "label": "Fumble Threshold",
+        "hint": "If the attack roll is less than or equal to this value it is a fumble"
       }
     }
   },
@@ -1163,6 +1184,22 @@
     "Title": {
       "one": "Midi Damage",
       "other": "Midi Damage"
+      },
+    "FIELDS": {
+      "damage": {
+        "label": "Danno",
+        "critical": {
+          "label": "Danno Critico",
+          "allow": {
+            "label": "Consenti Danno Critico",
+            "hint": "Consentire Applicazione Danno Critico"
+          },
+          "bonus": {
+            "label": "Danno Critico Bonus ",
+            "hint": "Danno critico bonus da applicare se sono consentiti danni critici"
+          }
+        }
+      }
     }
   },
   "midi-qol.ENCHANT": {
@@ -1216,6 +1253,20 @@
     "Title": {
       "one": "Midi Save",
       "other": "Midi Saves"
+    },
+    "extras": {
+      "header": "Midi Save Fields"
+    },
+    "FriendlySave": {
+      "Default": "Roll save",
+      "FriendlySuccess": "Friends Succeed",
+      "FriendlyFail": "Friends Fail"
+    },
+    "FIELDS": {
+      "friendlySave": {
+        "label": "Friendly Save",
+        "hint": "If enabled allow allies to succeed or fail rather than rolling a save"
+      }
     }
   },
   "midi-qol.UTILITY": {
@@ -1237,8 +1288,10 @@
     "force-dialog": "Force Configuration Dialog",
     "midi-automation-only": "Only use in midi automation"
   },
-  "midi-qol.BaseDamageFlavor": "Danno Base",
+  "midi-qol.BaseDamageFlavor": "Danno",
+  "midi-qol.BaseHealingFlavor": "Guarigione",
   "midi-qol.OtherDamageFlavor": "Danno Alternativo",
+  "midi-qol.OtherHealingFlavor": "Guarigione Alternativa",
   "midi-qol.RequireAmmunition.Name": "Richiede munizioni disponibili per un Attacco",
   "midi-qol.CheckTwoHanded.Name": "Richiede nessuno scudo equipaggiato per attacchi a due mani o con mano secondaria",
   "midi-qol.NoAmmunition": "Ci sono 0 {name} nel tuo inventario",
