@@ -1,8 +1,8 @@
-import { debugEnabled, warn, error, GameSystemConfig, debug, log, i18n, MODULE_ID, i18nFormat, geti18nOptions } from "../../midi-qol.js";
+import { debugEnabled, warn, error, GameSystemConfig, debug, log, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { unTimedExecuteAsGM } from "../GMAction.js";
 import { AugmentedEvent, Workflow } from "../Workflow.js";
 import { defaultRollOptions } from "../patching.js";
-import { ReplaceDefaultActivities, configSettings, safeGetGameSetting } from "../settings.js";
+import { ReplaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
 import { busyWait } from "../tests/setupTest.js";
 import { addAdvAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
@@ -81,7 +81,7 @@ let defineMidiAttackSheetClass = (baseClass: any) => {
           return this._prepareDamagePartContext(context, part);
         })
       }
-      context.ConfirmTargetOptions = Object.entries(geti18nOptions("ConfirmTargetOptions")).map(([value, label]) => ({ value, label }));
+      context.ConfirmTargetOptions = Object.entries(confirmTargetOptions).map(([value, label]) => ({ value, label }));
 
       if (debugEnabled > 0) {
         warn(("prepareEffectContext | context"), context);

@@ -9,7 +9,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.ConsumeResource.Name"}}</label>
       <select name="gmConsumeResource" data-dtype="String">
-        {{selectOptions ConsumeResourceOptions selected=configSettings.gmConsumeResource}}
+        {{selectOptions ConsumeResourceOptions selected=configSettings.gmConsumeResource localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{{localize "midi-qol.ConsumeResource.Hint"}}}</div>
     </div>
@@ -35,7 +35,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.AutoDamage.Name"}}</label>
       <select name="gmAutoDamage" data-dtype="String">
-        {{selectOptions autoRollDamageOptions selected=configSettings.gmAutoDamage}}
+        {{selectOptions autoRollDamageOptions selected=configSettings.gmAutoDamage localize=true}}
       </select>
     </div>
 
@@ -48,26 +48,26 @@
     <div class="form-group">
       <label>{{localize "midi-qol.AverageDamage.Name"}}</label>
       <select name="averageDamage" data-dtype="String">
-        {{selectOptions AverageDamageOptions selected=configSettings.averageDamage}}
+        {{selectOptions AverageDamageOptions selected=configSettings.averageDamage localize=true}}
       </select>
     </div>
 
     <div class="form-group">
       <label>{{localize "midi-qol.RemoveButtons.Name"}}</label>
       <select name="gmRemoveButtons" data-dtype="String">
-        {{selectOptions removeButtonsOptions selected=configSettings.gmRemoveButtons}}
+        {{selectOptions removeButtonsOptions selected=configSettings.gmRemoveButtons localize=true}}
       </select>
     </div>
 
     <div class="form-group">
       <label>{{localize "midi-qol.HideRollDetails.Name"}}</label>
       <select name="hideRollDetails" data-dtype="String">
-        {{selectOptions hideRollDetailsOptions selected=configSettings.hideRollDetails}}
+        {{selectOptions hideRollDetailsOptions selected=configSettings.hideRollDetails localize=true}}
       </select>
       <ul>
         {{#each hideRollDetailsHint as |label val|}}
         <li class="notes midi-qol-faint">
-          {{{label}}}
+          {{{localize label}}}
         </li>
         {{/each}}
       </ul>

@@ -1,7 +1,7 @@
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
-import { debugEnabled, GameSystemConfig, geti18nOptions, i18n, warn } from "../../midi-qol.js";
+import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { ReplaceDefaultActivities, configSettings } from "../settings.js";
+import { ReplaceDefaultActivities, autoCheckSavesOptions, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { MidiSaveActivity } from "./SaveActivity.js";
 // WIP
@@ -168,7 +168,7 @@ export function defineMidiCheckSheetClass(baseClass: any) {
         { value: "full", label: i18n("DND5E.SAVE.FIELDS.damage.onSave.Full") }
       ];
       // WIP
-      let autoCheckOptions = foundry.utils.duplicate(geti18nOptions("autoCheckSavesOptions"));
+      let autoCheckOptions = foundry.utils.duplicate(autoCheckSavesOptions);
       delete autoCheckOptions["none"];
       context.SaveDisplayOptions = Object.keys(autoCheckOptions).reduce((acc: any, key: string) => {
         acc.push({ value: key, label: autoCheckOptions[key] });

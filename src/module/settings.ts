@@ -1,4 +1,4 @@
-import { debug, setDebugLevel, i18n, debugEnabled, geti18nOptions, error, gameStats } from "../midi-qol.js";
+import { debug, setDebugLevel, i18n, debugEnabled, error, gameStats } from "../midi-qol.js";
 import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -708,7 +708,7 @@ const settings = [
     default: "none",
     type: String,
     config: false,
-    choices: "LateTargetingOptions",
+    // choices: "LateTargetingOptions",
   },
 ];
 
@@ -735,31 +735,481 @@ export function readySettingsSetup() {
   }
 }
 
-export function registerSetupSettings() {
-  game.settings.register("midi-qol", "CriticalDamageGM", {
-    name: "midi-qol.CriticalDamageGM.Name",
-    // hint: "midi-qol.CriticalDamageGM.Hint",
-    scope: "world",
-    default: "none",
-    type: String,
-    config: true,
-    choices: geti18nOptions("CriticalDamageChoices"),
-    onChange: fetchParams
-  });
-
-  game.settings.register("midi-qol", "CriticalDamage", {
-    name: "midi-qol.CriticalDamage.Name",
-    hint: "midi-qol.CriticalDamage.Hint",
-    scope: "world",
-    default: "default",
-    type: String,
-    config: true,
-    choices: geti18nOptions("CriticalDamageChoices"),
-    onChange: fetchParams
-  });
+function keysToOptionsObj(prefix: string, keys: string[]) {
+  return Object.fromEntries(keys.map(key => [key, `midi-qol.${prefix}.${key}`]));
 }
 
+export const criticalDamageChoices = keysToOptionsObj("CriticalDamageChoices", [
+  "default",
+  "maxDamage",
+  "maxCrit",
+  "maxCritRoll",
+  "maxAll",
+  "doubleDice",
+  "explode",
+  "maxDamageExplode",
+  "explodeCharacter",
+  "explodeNPC",
+  "baseDamage",
+  "maxBaseRollCrit",
+  "bestOfTwo"
+]);
+
+export const addChatDamageButtonsOptions = keysToOptionsObj("AddChatDamageButtonsOptions", [
+  "none",
+  "gm",
+  "pc",
+  "both"
+]);
+
+export const coloredBordersOptions = keysToOptionsObj("ColoredBordersOptions", [
+  "none",
+  "borders",
+  "borderNamesText",
+  "borderNamesBackground"
+]);
+
+export const autoRemoveTargetsOptions = keysToOptionsObj("AutoRemoveTargetsOptions", [
+  "none",
+  "dead",
+  "allGM",
+  "all"
+]);
+
+export const debugOptions = keysToOptionsObj("DebugOptions", [
+  "none",
+  "warn",
+  "debug",
+  "all"
+]);
+
+export const autoRollDamageOptions = keysToOptionsObj("autoRollDamageOptions", [
+  "none",
+  "always",
+  "saveOnly",
+  "onHit"
+]);
+
+export const autoCheckHitOptions = keysToOptionsObj("autoCheckHitOptions", [
+  "none",
+  "all",
+  "whisper"
+]);
+
+export const clickOptions = keysToOptionsObj("clickOptions", [
+  "off",
+  "attack",
+  "damage",
+  "all"
+]);
+
+export const autoTargetOptions = keysToOptionsObj("autoTargetOptions", [
+  "none",
+  "always",
+  "alwaysIgnoreIncapacitated",
+  "alwaysIgnoreDefeated",
+  "wallsBlock",
+  "wallsBlockIgnoreIncapacitated",
+  "wallsBlockIgnoreDefeated",
+  "walledtemplates"
+]);
+
+export const autoCheckSavesOptions = keysToOptionsObj("autoCheckSavesOptions", [
+  "none",
+  "allNoRoll",
+  "all",
+  "whisper",
+  "allShow"
+]);
+
+export const rangeTargetOptions = keysToOptionsObj("rangeTargetOptions", [
+  "none",
+  "always",
+  "alwaysIgnoreIncapacitated",
+  "alwaysIgnoreDefeated",
+  "wallsBlock",
+  "wallsBlockIgnoreIncapacitated",
+  "wallsBlockIgnoreDefeated"
+]);
+
+export const autoApplyDamageOptions = keysToOptionsObj("autoApplyDamageOptions", [
+  "none",
+  "noCard",
+  "noCardMisses",
+  "yes",
+  "yesCard",
+  "yesCardMisses",
+  "yesCardNPC"
+]);
+
+export const playerDamageCardOptions = keysToOptionsObj("playerDamageCardOptions", [
+  "none",
+  "playerresults",
+  "playerbuttons",
+  "npcplayerresults",
+  "npcplayerbuttons"
+]);
+
+export const removeButtonsOptions = keysToOptionsObj("removeButtonsOptions", [
+  "off",
+  "attack",
+  "damage",
+  "all",
+  "everything"
+]);
+
+export const damageImmunitiesOptions = keysToOptionsObj("damageImmunitiesOptions", [
+  "none",
+  "immunityDefault",
+  "immunityPhysical"
+]);
+
+export const showItemDetailsOptions = keysToOptionsObj("showItemDetailsOptions", [
+  "none",
+  "cardOnly",
+  "pc",
+  "all"
+]);
+
+export const rollNPCSavesOptions = keysToOptionsObj("rollNPCSavesOptions", [
+  "none",
+  "auto",
+  "autoDialog",
+  "mtb",
+  "rer"
+]);
+
+export const playerRollSavesOptions = keysToOptionsObj("playerRollSavesOptions", [
+  "none",
+  "nonePublic",
+  "noneDialogPublic",
+  "noneDialogPrivate",
+  "noneDialogBlind",
+  "chat",
+  "mtb",
+  "rer"
+]);
+
+export const playerRollSavesOptionsReduced = keysToOptionsObj("playerRollSavesOptionsReduced", [
+  "none",
+  "chat"
+]);
+
+export const hideRollDetailsOptions = keysToOptionsObj("hideRollDetailsOptions", [
+  "none",
+  "detailsDSN",
+  "details",
+  "d20Only",
+  "hitDamage",
+  "hitCriticalDamage",
+  "attackTotalOnly",
+  "d20AttackOnly",
+  "all"
+]);
+
+export const rollOtherDamageOptions = keysToOptionsObj("RollOtherDamageOptions", [
+  "none",
+  "always",
+  "condition",
+  "ifSave"
+]);
+
+export const showReactionAttackRollOptions = keysToOptionsObj("ShowReactionAttackRollOptions", [
+  "none",
+  "d20",
+  "all",
+  "allCrit"
+]);
+
+export const onUseMacroOptions = keysToOptionsObj("onUseMacroOptions", [
+  "preTargeting",
+  "preItemRoll",
+  "templatePlaced",
+  "preAttackRoll",
+  "preAttackRollConfig",
+  "preCheckHits",
+  "postAttackRoll",
+  "preDamageRoll",
+  "postDamageRoll",
+  "damageBonus",
+  "preSave",
+  "postSave",
+  "preDamageRollConfig",
+  "preDamageApplication",
+  "preActiveEffects",
+  "postActiveEffects",
+  "isTargeted",
+  "isPreAttacked",
+  "isAttacked",
+  "isHit",
+  "preTargetSave",
+  "isSave",
+  "isSaveSuccess",
+  "isSaveFailure",
+  "preTargetDamageApplication",
+  "postTargetEffectApplication",
+  "isDamaged",
+  "all"
+]);
+
+export const confirmTargetOptions = keysToOptionsObj("ConfirmTargetOptions", [
+  "default",
+  "always",
+  "never"
+]);
+
+export const triggeredActivityTargetOptions = keysToOptionsObj("TriggeredActivityTargetOptions", [
+  "self",
+  "Targets",
+  "hitTargets",
+  "missedTargets",
+  "failedSaves",
+  "saveTargets",
+  "retarget"
+]);
+
+export const triggeredActivityRollAsOptions = keysToOptionsObj("TriggeredActivityRollAsOptions", [
+  "self",
+  "firstTarget",
+  "firstHitTarget",
+  "firstMissedTarget",
+  "firstSaveTarget",
+  "firstFailedSaveTarget"
+]);
+
+export const ignoreTraitsOptions = {
+  idi: {
+    label: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idi.label",
+    hint: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idi.hint"
+  },
+  idr: {
+    label: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idr.label",
+    hint: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idr.hint"
+  },
+  idv: {
+    label: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idv.label",
+    hint: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idv.hint"
+  },
+  ida: {
+    label: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.ida.label",
+    hint: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.ida.hint"
+  },
+  idm: {
+    label: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idm.label",
+    hint: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idm.hint"
+  }
+};
+
+export const aoeTargetTypeOptions = keysToOptionsObj("AoETargetTypeOptions", [
+  "any",
+  "ally",
+  "notAlly",
+  "enemy",
+  "notEnemy",
+  "neutral",
+  "notNeutral",
+  "hostile",
+  "notHostile",
+  "Friendly", //grr
+  "notFriendly"
+]);
+
+export const autoCEEffectsOptions = keysToOptionsObj("AutoCEEffectsOptions", [
+  "none",
+  "itempri",
+  "cepri",
+  "both"
+]);
+
+export const wallsBlockRangeOptionsNew = keysToOptionsObj("WallsBlockRangeOptionsNew", [
+  "none",
+  "center",
+  "centerLevels",
+  "levelsautocover",
+  "simbuls-cover-calculator",
+  "tokencover",
+  "tokenvisibility"
+]);
+
+export const coverCalculationOptions = keysToOptionsObj("CoverCalculationOptions", [
+  "none",
+  "simbuls-cover-calculator",
+  "levelsautocover",
+  "tokencover",
+  "tokenvisibility"
+]);
+
+export const hiddenAdvantageOptions = keysToOptionsObj("HiddenAdvantageOptions", [
+  "none",
+  "effect",
+  "perceptive"
+]);
+
+export const addDeadOptions = keysToOptionsObj("AddDeadOptions", [
+  "none",
+  "overlay",
+  "normal"
+]);
+
+export const quickSettingsBlurb = keysToOptionsObj("QuickSettingsBlurb", [
+  "1",
+  "2",
+  "3",
+  "4"
+]);
+
+export const requiresTargetsOptions = keysToOptionsObj("requiresTargetsOptions", [
+  "none",
+  "combat",
+  "tokens",
+  "always"
+]);
+
+export const doReactionsOptions = keysToOptionsObj("DoReactionsOptions", [
+  "all",
+  "allMI",
+  "none"
+]);
+
+export const gmDoReactionsOptions = keysToOptionsObj("GMDoReactionsOptions", [
+  "all",
+  "allMI",
+  "none"
+]);
+
+export const recordAOOOptions = keysToOptionsObj("RecordAOOOptions", [
+  "none",
+  "character",
+  "all"
+]);
+
+export const EnforceReactionsOptions = keysToOptionsObj("EnforceReactionsOptions", [
+  "none",
+  "displayOnly",
+  "character",
+  "all"
+]);
+
+export const autoEffectsOptions = keysToOptionsObj("AutoEffectsOptions", [
+  "off",
+  "applyNoButton",
+  "applyRemove",
+  "applyLeave"
+]);
+
+export const requireMagicalOptions = keysToOptionsObj("RequireMagicalOptions", [
+  "off",
+  "nonspell",
+  "allitems"
+]);
+
+export const checkFlankingOptions = keysToOptionsObj("CheckFlankingOptions", [
+  "off",
+  "advonly",
+  "ceonly",
+  "midiFlanking",
+  "ceflanked",
+  "midiFlanked",
+  "ceflankedNoconga",
+  "midiFlankedNoConga"
+]);
+
+export const hideRollDetailsHintLongOptions = keysToOptionsObj("HideRollDetails.HintLong", [
+  "none",
+  "detailsDSN",
+  "details",
+  "d20Only",
+  "hitDamage",
+  "d20attackOnly",
+  "all"
+]);
+
+export const rollAlternateOptions = keysToOptionsObj("RollAlternateOptions", [
+  "off",
+  "formula",
+  "adv",
+  "formulaadv"
+]);
+
+export const consumeResourceOptions = keysToOptionsObj("ConsumeResourceOptions", [
+  "none",
+  "spell",
+  "item",
+  "both"
+]);
+
+export const averageDamageOptions = keysToOptionsObj("AverageDamageOptions", [
+  "none",
+  "npc",
+  "character",
+  "all"
+]);
+
+export const removeConcentrationEffectsOptions = keysToOptionsObj("RemoveConcentrationEffectsOptions", [
+  "none",
+  "effects",
+  "effectsTemplates"
+]);
+
+export const incapacitatedOptions = keysToOptionsObj("IncapacitatedOptions", [
+  "nothing",
+  "enforce",
+  "warn"
+]);
+
+export const checkRangeOptions = keysToOptionsObj("CheckRangeOptions", [
+  "none",
+  "longfail",
+  "longdisadv"
+]);
+
+export const invisAdvantageOptions = keysToOptionsObj("InvisAdvantageOptions", [
+  "none",
+  "RAW",
+  "vision"
+]);
+
+export const confirmAttackDamageOptions = keysToOptionsObj("ConfirmAttackDamageOptions", [
+  "none",
+  "gmOnly",
+  "GMPlayer"
+]);
+
+export const challengeModeArmorOptions = keysToOptionsObj("ChallengeModeArmorOptions", [
+  "none",
+  "challenge",
+  "scale",
+  "scaleNoAR"
+]);
+
+export const saveDROrderOptions = keysToOptionsObj("SaveDROrderOptions", [
+  "DRSaveDr",
+  "SaveDRDr",
+  "SaveDrDR"
+]);
+
+export const doConcentrationCheckOptions = keysToOptionsObj("DoConcentrationCheckOptions", [
+  "none",
+  "chatOnly",
+  "chat",
+  "item"
+]);
+
+export const activationAutomationOptions = keysToOptionsObj("ActivationAutomationOptions", [
+  "none",
+  "chat",
+  "auto"
+]);
+
+export const soundSettingsBlurb = keysToOptionsObj("SoundSettingsBlurb", [
+  "1",
+  "2",
+  "3",
+  "4"
+]);
+
 export const registerSettings = function () {
+
   // Register any custom module settings here
   settings.forEach((setting, i) => {
     let MODULE = "midi-qol"
@@ -770,11 +1220,10 @@ export const registerSettings = function () {
       config: (setting.config === undefined) ? true : setting.config,
       default: setting.default,
       type: setting.type,
-      choices: (typeof setting.choices === "string") ? geti18nOptions(`${setting.choices}`) : {},
+      choices: {},
       onChange: setting.onChange,
       requiresReload: setting.requiresReload
     };
-    // @ts-expect-error
     if (setting.choices) options.choices = setting.choices;
     // @ts-expect-error
     game.settings.register("midi-qol", setting.name, options);
@@ -798,7 +1247,7 @@ export const registerSettings = function () {
     default: "none",
     type: String,
     config: true,
-    choices: geti18nOptions("CriticalDamageChoices"),
+    choices: criticalDamageChoices,
     onChange: fetchParams
   });
   game.settings.register("midi-qol", "CriticalDamage", {
@@ -808,7 +1257,7 @@ export const registerSettings = function () {
     default: "default",
     type: String,
     config: true,
-    choices: geti18nOptions("CriticalDamageChoices"),
+    choices: criticalDamageChoices,
     onChange: fetchParams
   });
 
@@ -820,7 +1269,7 @@ export const registerSettings = function () {
     default: "none",
     type: String,
     config: false,
-    choices: geti18nOptions("AddChatDamageButtonsOptions"),
+    choices: addChatDamageButtonsOptions,
     onChange: fetchParams
   });
 
@@ -832,7 +1281,7 @@ export const registerSettings = function () {
       default: "None",
       type: String,
       config: true,
-      choices: geti18nOptions("ColoredBordersOptions"),
+      choices: coloredBordersOptions,
       onChange: fetchParams
     });
 
@@ -854,7 +1303,7 @@ export const registerSettings = function () {
     default: "dead",
     type: String,
     config: true,
-    choices: geti18nOptions("AutoRemoveTargetsOptions"),
+    choices: autoRemoveTargetsOptions,
     onChange: fetchParams
   });
   game.settings.registerMenu("midi-qol", "midi-qol", {
@@ -911,7 +1360,7 @@ export const registerSettings = function () {
     default: "None",
     type: String,
     config: true,
-    choices: geti18nOptions("DebugOptions"),
+    choices: debugOptions,
     onChange: fetchParams
   });
   game.settings.register("midi-qol", "UseWeakReferences", {

@@ -1,5 +1,5 @@
-import { geti18nOptions, i18n, systemConcentrationId, error } from "../../midi-qol.js";
-import { CheckedAuthorsList, checkedModuleList, checkMechanic, collectSettingData, configSettings, enableWorkflow, exportSettingsToJSON, fetchParams, importSettingsFromJSON, safeGetGameSetting } from "../settings.js";
+import { i18n, systemConcentrationId, error } from "../../midi-qol.js";
+import { autoApplyDamageOptions, autoCEEffectsOptions, autoCheckHitOptions, autoCheckSavesOptions, autoEffectsOptions, autoTargetOptions, CheckedAuthorsList, checkedModuleList, checkMechanic, collectSettingData, configSettings, coverCalculationOptions, enableWorkflow, exportSettingsToJSON, fetchParams, importSettingsFromJSON, rangeTargetOptions, safeGetGameSetting } from "../settings.js";
 import { REQUIRED_MODULE_VERSIONS, getModuleVersion, installedModules } from "../setupModules.js";
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -465,18 +465,18 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
 
     data.summary.midiSettings = {};
     data.summary.midiSettings["Enable Roll Automation Support (Client Setting)"] = enableWorkflow;
-    data.summary.midiSettings["Auto Target on Template Draw"] = geti18nOptions("autoTargetOptions")[configSettings.autoTarget];
-    data.summary.midiSettings["Auto Target for Ranged Targets/Spells"] = geti18nOptions("rangeTargetOptions")[configSettings.rangeTarget];
-    data.summary.midiSettings["Auto Apply Item Effects"] = geti18nOptions("AutoEffectsOptions")[configSettings.autoItemEffects];
-    data.summary.midiSettings["Apply Convenient Effects"] = geti18nOptions("AutoCEEffectsOptions")[configSettings.autoCEEffects];
-    data.summary.midiSettings["Auto Check Hits"] = geti18nOptions("autoCheckHitOptions")[configSettings.autoCheckHit];
+    data.summary.midiSettings["Auto Target on Template Draw"] = autoTargetOptions[configSettings.autoTarget];
+    data.summary.midiSettings["Auto Target for Ranged Targets/Spells"] = rangeTargetOptions[configSettings.rangeTarget];
+    data.summary.midiSettings["Auto Apply Item Effects"] = autoEffectsOptions[configSettings.autoItemEffects];
+    data.summary.midiSettings["Apply Convenient Effects"] = autoCEEffectsOptions[configSettings.autoCEEffects];
+    data.summary.midiSettings["Auto Check Hits"] = autoCheckHitOptions[configSettings.autoCheckHit];
     data.summary.midiSettings["Roll Seperate Attacks per Target"] = configSettings.attackPerTarget;
-    data.summary.midiSettings["Auto Check Saves"] = geti18nOptions("autoCheckSavesOptions")[configSettings.autoCheckSaves];
-    data.summary.midiSettings["Auto Apply Damage to Target"] = geti18nOptions("autoApplyDamageOptions")[configSettings.autoApplyDamage];
+    data.summary.midiSettings["Auto Check Saves"] = autoCheckSavesOptions[configSettings.autoCheckSaves];
+    data.summary.midiSettings["Auto Apply Damage to Target"] = autoApplyDamageOptions[configSettings.autoApplyDamage];
     // data.summary.midiSettings["Enable Concentration Automation"] = configSettings.concentrationAutomation;
     data.summary.midiSettings["Expire 1Hit/1Attack/1Action on roll"] = checkMechanic("actionSpecialDurationImmediate");
     data.summary.midiSettings["Inapacitated Actors can't Take Actions"] = checkMechanic("incapacitated");
-    data.summary.midiSettings["Calculate Cover"] = geti18nOptions("CoverCalculationOptions")[configSettings.optionalRules.coverCalculation];
+    data.summary.midiSettings["Calculate Cover"] = coverCalculationOptions[configSettings.optionalRules.coverCalculation];
     data.summary.midiSettings["Add Fake GM Dice"] = configSettings.addFakeDice;
     data.summary.knownModules = {};
     let tempModules = {};

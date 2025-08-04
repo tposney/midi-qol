@@ -13,7 +13,7 @@
                 <div class="form-group">
                     <label>{{localize "midi-qol.CheckFlanking.Name"}}</label>
                     <select name="optionalRules.checkFlanking" data-dtype="String">
-                        {{selectOptions checkFlankingOptions selected=configSettings.optionalRules.checkFlanking}}
+                        {{selectOptions checkFlankingOptions selected=configSettings.optionalRules.checkFlanking localize=true}}
                     </select>
                     <div class="notes midi-qol-faint">{{{localize "midi-qol.CheckFlanking.Hint"}}}</div>
                 </div>
@@ -21,7 +21,7 @@
                     <div class="form-group">
                         <label>{{localize "midi-qol.InvisAdvantage.Name"}}</label>
                         <select name="optionalRules.invisAdvantage" data-dtype="String">
-                            {{selectOptions InvisAdvantageOptions selected=configSettings.optionalRules.invisAdvantage}}
+                            {{selectOptions InvisAdvantageOptions selected=configSettings.optionalRules.invisAdvantage localize=true}}
                         </select>
                         <ul>
                             <li class="notes midi-qol-faint">{{{localize "midi-qol.InvisAdvantage.Hint"}}}</li>
@@ -31,7 +31,7 @@
                     <div class="form-group">
                         <label>{{localize "midi-qol.HiddenAdvantage.Name"}}</label>
                         <select name="optionalRules.hiddenAdvantage" data-dtype="String">
-                            {{selectOptions HiddenAdvantageOptions selected=configSettings.optionalRules.hiddenAdvantage}}
+                            {{selectOptions HiddenAdvantageOptions selected=configSettings.optionalRules.hiddenAdvantage localize=true}}
                         </select>
                         <div class="notes midi-qol-faint">{{{localize "midi-qol.HiddenAdvantage.Hint"}}}</div>
                     </div>
@@ -114,7 +114,7 @@
                     <div class="form-group">
                         <label>{{localize "midi-qol.ChallengeModeArmor.Name"}}</label>
                         <select class="midi-qol-blind-select" name="optionalRules.challengeModeArmor">
-                            {{selectOptions ChallengeModeArmorOptions selected=configSettings.optionalRules.challengeModeArmor}}
+                            {{selectOptions ChallengeModeArmorOptions selected=configSettings.optionalRules.challengeModeArmor localize=true}}
                         </select>
                         <ul>
                             <li class="notes midi-qol-faint">{{{localize "midi-qol.ChallengeModeArmor.Hint"}}}</li>

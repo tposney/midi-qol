@@ -1,6 +1,6 @@
-import { criticalDamage, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow } from "../settings.js"
+import { criticalDamage, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, quickSettingsBlurb, autoCheckHitOptions, clickOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, checkFlankingOptions, hideRollDetailsHintLongOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions } from "../settings.js"
 import { configSettings } from "../settings.js"
-import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log, GameSystemConfig, ceInterface } from "../../midi-qol.js";
+import { warn, i18n, error, debug, gameStats, debugEnabled, log, GameSystemConfig, ceInterface } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -83,21 +83,21 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!enableWorkflow) {
       ui.notifications?.error("Workflow automation is not enabled")
     }
-    let wallsBlockRangeOptions = foundry.utils.duplicate(geti18nOptions("WallsBlockRangeOptionsNew"));
-    let CoverCalculationOptions = foundry.utils.duplicate(geti18nOptions("CoverCalculationOptions"));
+    let wallsBlockRangeOptions = foundry.utils.duplicate(wallsBlockRangeOptionsNew);
+    let CoverCalculationOptions = foundry.utils.duplicate(coverCalculationOptions);
     [{ id: "levelsautocover", name: "'Levels Auto Cover'" }, { id: "simbuls-cover-calculator", name: "'Simbuls Cover Calculator'" }, { id: "tokencover", name: "Alternative Token Cover" }].forEach(module => {
       if (!installedModules.get(module.id)) {
-        wallsBlockRangeOptions[module.id] += ` - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
-        CoverCalculationOptions[module.id] += ` - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
+        wallsBlockRangeOptions[module.id] = `${i18n(wallsBlockRangeOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
+        CoverCalculationOptions[module.id] = `${i18n(CoverCalculationOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
       }
     });
     if (!installedModules.get("levels")) {
-      wallsBlockRangeOptions["centerLevels"] += ` - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Levels" })}`;
+      wallsBlockRangeOptions["centerLevels"] = `${i18n(wallsBlockRangeOptions["centerLevels"])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Levels" })}`;
     }
-    let HiddenAdvantageOptions: any = foundry.utils.duplicate(geti18nOptions("HiddenAdvantageOptions"));
+    let HiddenAdvantageOptions: any = foundry.utils.duplicate(hiddenAdvantageOptions);
     [{ id: "perceptive", name: "Perceptive" }].forEach(module => {
       if (!installedModules.get(module.id)) {
-        HiddenAdvantageOptions[module.id] += ` - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
+        HiddenAdvantageOptions[module.id] = `${i18n(HiddenAdvantageOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
       }
     });
     let quickSettingsOptions = {};
@@ -108,9 +108,8 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     if (configSettings.addWounded > 0 && ["none", undefined].includes(configSettings.addWoundedStyle))
       configSettings.addWoundedStyle = "normal";
     */
-    const AddWoundedOptions = foundry.utils.duplicate(geti18nOptions("AddDeadOptions"));
+    const AddWoundedOptions = foundry.utils.duplicate(addDeadOptions);
     delete AddWoundedOptions["none"];
-    let rollNPCSavesOptions: any = foundry.utils.duplicate(geti18nOptions("rollNPCSavesOptions"));
     for (let key of Object.keys(rollNPCSavesOptions)) {
       switch (key) {
         case "mtb":
@@ -120,7 +119,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
           if (!installedModules.get("epic-rolls-5e")) rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
       }
     }
-    let playerRollSavesOptions = foundry.utils.duplicate(geti18nOptions("playerRollSavesOptions"));
     for (let key of Object.keys(playerRollSavesOptions)) {
       switch (key) {
         case "mtb":
@@ -142,70 +140,69 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     let StatusEffectOptions = statusEffectList.reduce((acc, { id, name }) => { acc[id] = name; return acc }, { "none": "None" });
     let context: any = {
-      QuickSettingsBlurb: geti18nOptions("QuickSettingsBlurb"),
+      QuickSettingsBlurb: quickSettingsBlurb,
       configSettings,
       quickSettings: true,
       quickSettingsOptions,
-      autoCheckHitOptions: geti18nOptions("autoCheckHitOptions"),
-      clickOptions: geti18nOptions("clickOptions"),
-      autoTargetOptions: geti18nOptions("autoTargetOptions"),
-      rangeTargetOptions: geti18nOptions("rangeTargetOptions"),
-      requiresTargetsOptions: geti18nOptions("requiresTargetsOptions"),
-      autoCheckSavesOptions: geti18nOptions("autoCheckSavesOptions"),
-      autoRollDamageOptions: geti18nOptions("autoRollDamageOptions"),
-      removeButtonsOptions: geti18nOptions("removeButtonsOptions"),
+      autoCheckHitOptions,
+      clickOptions,
+      autoTargetOptions,
+      rangeTargetOptions,
+      requiresTargetsOptions,
+      autoCheckSavesOptions,
+      autoRollDamageOptions,
+      removeButtonsOptions,
       criticalDamage,
-      autoApplyDamageOptions: geti18nOptions("autoApplyDamageOptions"),
-      playerDamageCardOptions: geti18nOptions("playerDamageCardOptions"),
-      damageImmunitiesOptions: geti18nOptions("damageImmunitiesOptions"),
-      showItemDetailsOptions: geti18nOptions("showItemDetailsOptions"),
-      doReactionsOptions: geti18nOptions("DoReactionsOptions"),
+      autoApplyDamageOptions,
+      playerDamageCardOptions,
+      damageImmunitiesOptions,
+      showItemDetailsOptions,
+      doReactionsOptions,
       wallsBlockRangeOptions,
-      gmDoReactionsOptions: geti18nOptions("GMDoReactionsOptions"),
-      AutoCEEffectsOptions: geti18nOptions("AutoCEEffectsOptions"),
-      rollOtherDamageOptions: geti18nOptions("RollOtherDamageOptions"),
-      showReactionAttackRollOptions: geti18nOptions("ShowReactionAttackRollOptions"),
+      gmDoReactionsOptions,
+      AutoCEEffectsOptions: autoCEEffectsOptions,
+      rollOtherDamageOptions,
+      showReactionAttackRollOptions,
       CoverCalculationOptions,
-      RecordAOOOptions: geti18nOptions("RecordAOOOptions"),
-      EnforceReactionsOptions: geti18nOptions("EnforceReactionsOptions"),
-      AutoEffectsOptions: geti18nOptions("AutoEffectsOptions"),
-      RequireMagicalOptions: geti18nOptions("RequireMagicalOptions"),
+      RecordAOOOptions: recordAOOOptions,
+      EnforceReactionsOptions: EnforceReactionsOptions,
+      AutoEffectsOptions: autoEffectsOptions,
+      RequireMagicalOptions: requireMagicalOptions,
       itemTypeLabels: Object.keys(CONFIG.Item.typeLabels).filter(key => !["backpack", "base"].includes(key)).reduce((acc, key) => { acc[key] = CONFIG.Item.typeLabels[key]; return acc }, {}),
       hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),
-      hideRollDetailsOptions: geti18nOptions("hideRollDetailsOptions"),
-      checkFlankingOptions: geti18nOptions("CheckFlankingOptions"),
-      hideRollDetailsHint: geti18nOptions("HideRollDetails")?.HintLong ?? {},
+      hideRollDetailsOptions,
+      checkFlankingOptions,
+      hideRollDetailsHint: hideRollDetailsHintLongOptions,
       nsaFlag,
       coloredBorders,
-      playerRollSavesOptions: (autoFastForwardAbilityRolls && false) ? geti18nOptions("playerRollSavesOptionsReduced") : playerRollSavesOptions,
+      playerRollSavesOptions: (autoFastForwardAbilityRolls && false) ? playerRollSavesOptionsReduced : playerRollSavesOptions,
       rollNPCSavesOptions,
       customSoundsPlaylistOptions: game.playlists?.contents.reduce((acc, e) => { acc[e.id] = e.name; return acc }, {}) || {},
       customSoundOptions: game.playlists?.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) => { acc[s.id ?? ""] = s.name; return acc }, { "none": "" }),
       rollSoundOptions: CONFIG.sounds,
       isBetterRolls: installedModules.get("betterrolls5e"),
-      rollAlternateOptions: geti18nOptions("RollAlternateOptions"),
-      ConsumeResourceOptions: geti18nOptions("ConsumeResourceOptions"),
-      AddDeadOptions: geti18nOptions("AddDeadOptions"),
+      rollAlternateOptions,
+      ConsumeResourceOptions: consumeResourceOptions,
+      AddDeadOptions: addDeadOptions,
       AddWoundedOptions,
-      AverageDamageOptions: geti18nOptions("AverageDamageOptions"),
-      TargetConfirmationOptions: geti18nOptions("TargetConfirmationOptions"),
-      RemoveConcentrationEffectsOptions: geti18nOptions("RemoveConcentrationEffectsOptions"),
-      IncapacitatedOptions: geti18nOptions("IncapacitatedOptions"),
-      CheckRangeOptions: geti18nOptions("CheckRangeOptions"),
-      InvisAdvantageOptions: geti18nOptions("InvisAdvantageOptions"),
+      AverageDamageOptions: averageDamageOptions,
+      RemoveConcentrationEffectsOptions: removeConcentrationEffectsOptions,
+      IncapacitatedOptions: incapacitatedOptions,
+      CheckRangeOptions: checkRangeOptions,
+      InvisAdvantageOptions: invisAdvantageOptions,
       HiddenAdvantageOptions,
-      ConfirmAttackDamageOptions: geti18nOptions("ConfirmAttackDamageOptions"),
-      ChallengeModeArmorOptions: geti18nOptions("ChallengeModeArmorOptions"),
+      ConfirmAttackDamageOptions: confirmAttackDamageOptions,
+      ChallengeModeArmorOptions: challengeModeArmorOptions,
       RollSkillsBlindOptions: foundry.utils.mergeObject({ "all": "All" }, Object.keys(GameSystemConfig.skills).reduce((acc, s) => { acc[s] = GameSystemConfig.skills[s].label; return acc }, {})),
       RollSavesBlindOptions: foundry.utils.mergeObject({ "all": "All", "death": i18n("DND5E.DeathSave") }, Object.keys(GameSystemConfig.abilities).reduce((acc, s) => { acc[s] = GameSystemConfig.abilities[s].label; return acc }, {})),
       RollChecksBlindOptions: foundry.utils.mergeObject({ "all": "All" }, Object.keys(GameSystemConfig.abilities).reduce((acc, s) => { acc[s] = GameSystemConfig.abilities[s].label; return acc }, {})),
       midiPropertiesTabOptions: CONST.USER_ROLE_NAMES,
       StatusEffectOptions,
-      SaveDROrderOptions: geti18nOptions("SaveDROrderOptions"),
+      SaveDROrderOptions: saveDROrderOptions,
       ColorOptions: colorList.reduce((acc, c) => { acc[c] = c; return acc }, { "Delete": "Delete" }),
-      DoConcentrationCheckOptions: geti18nOptions("DoConcentrationCheckOptions"),
-      AddChatDamageButtonsOptions: geti18nOptions("AddChatDamageButtonsOptions"),
-      ActivationAutomationOptions: geti18nOptions("ActivationAutomationOptions"),
+      DoConcentrationCheckOptions: doConcentrationCheckOptions,
+      AddChatDamageButtonsOptions: addChatDamageButtonsOptions,
+      ActivationAutomationOptions: activationAutomationOptions,
       rollModes: CONFIG.Dice.rollModes,
     };
     context = foundry.utils.mergeObject(await super._prepareContext(options), context, { inplace: false });

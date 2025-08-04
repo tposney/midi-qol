@@ -15,7 +15,7 @@
         <div class="form-group midiPropertiesTab">
             <label>{{localize "midi-qol.MidiPropertiesTab.Name"}}</label>
             <select name="midiPropertiesTabRole" data-dtype="String">
-                {{selectOptions midiPropertiesTabOptions selected=configSettings.midiPropertiesTabRole}}
+                {{selectOptions midiPropertiesTabOptions selected=configSettings.midiPropertiesTabRole localize=true}}
             </select>
             <div class="notes midi-qol-faint">{{{localize "midi-qol.MidiPropertiesTab.Hint"}}}</div>
         </div>
@@ -36,7 +36,7 @@
             <label>{{localize "midi-qol.ShowItemDetails.Name"}}</label>
             <div>
                 <select name="showItemDetails" data-dtype="String">
-                    {{selectOptions showItemDetailsOptions selected=configSettings.showItemDetails}}
+                    {{selectOptions showItemDetailsOptions selected=configSettings.showItemDetails localize=true}}
                 </select>
                 <label>{{localize "midi-qol.DisplayItems"}}</label>
                 <a class="itemTypeListEdit" style="flex-shrink:3" data-action="edit"
@@ -81,7 +81,7 @@
             <div class="form-group">
                 <label>{{localize "midi-qol.ConfirmAttackDamage.Name"}}</label>
                 <select name="confirmAttackDamage" data-dtype="String">
-                    {{selectOptions ConfirmAttackDamageOptions selected=configSettings.confirmAttackDamage}}
+                    {{selectOptions ConfirmAttackDamageOptions selected=configSettings.confirmAttackDamage localize=true}}
                 </select>
                 <div class="notes midi-qol-faint">{{{localize "midi-qol.ConfirmAttackDamage.Hint"}}}</div>
             </div>
@@ -107,7 +107,7 @@
         <div class="form-group">
             <label>{{localize "midi-qol.RollAlternate.Name"}}</label>
             <select name="rollAlternate" data-dtype="String">
-                {{selectOptions rollAlternateOptions selected=configSettings.rollAlternate}}
+                {{selectOptions rollAlternateOptions selected=configSettings.rollAlternate localize=true}}
             </select>
             <div class="notes midi-qol-faint">{{{localize "midi-qol.RollAlternate.Hint"}}}</div>
         </div>

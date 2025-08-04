@@ -1,10 +1,10 @@
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
-import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, geti18nOptions, i18n, i18nFormat, warn } from "../../midi-qol.js";
+import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn } from "../../midi-qol.js";
 import { socketlibSocket } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, Workflow } from "../Workflow.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { checkMechanic, checkRule, configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
+import { aoeTargetTypeOptions, autoCEEffectsOptions, autoTargetOptions, checkMechanic, checkRule, configSettings, confirmTargetOptions, ignoreTraitsOptions, removeButtonsOptions, safeGetGameSetting, targetConfirmation, triggeredActivityRollAsOptions, triggeredActivityTargetOptions } from "../settings.js";
 import { installedModules } from "../setupModules.js";
 import { busyWait } from "../tests/setupTest.js";
 import { saveUndoData } from "../undo.js";
@@ -1572,7 +1572,7 @@ export let MidiActivityMixinSheet = Base => {
 
     async _prepareMidiQolContext(context) {
       // context = await super._prepareEffectContext(context);
-      context.ConfirmTargetOptions = Object.entries(geti18nOptions("ConfirmTargetOptions")).map(([value, label]) => ({ value, label }));
+      context.ConfirmTargetOptions = Object.entries(confirmTargetOptions).map(([value, label]) => ({ value, label }));
       if (this.activity.forcedTargetConfirmation) context.ConfirmTargetOptions = context.ConfirmTargetOptions.filter(o => o.value === this.activity.forcedTargetConfirmation);
       const ROLL_MODES = CONST.DICE_ROLL_MODES;
       context.RollModeOptions = [
@@ -1582,7 +1582,7 @@ export let MidiActivityMixinSheet = Base => {
         { value: ROLL_MODES.BLIND, label: i18n("CHAT.RollBlind") },
         { value: ROLL_MODES.SELF, label: i18n("CHAT.RollSelf") }
       ];
-      context.RemoveChatButtonsOptions = Object.entries(foundry.utils.mergeObject({ "default": i18n("midi-qol.MidiSettings") }, geti18nOptions("removeButtonsOptions")))
+      context.RemoveChatButtonsOptions = Object.entries(foundry.utils.mergeObject({ "default": i18n("midi-qol.MidiSettings") }, removeButtonsOptions))
       .map(([value, label]) => ({ value, label }));
       context.placeholderIdentifier = context.activity.identifier;
       const midiProperties = context.activity.midiProperties;
@@ -1612,25 +1612,24 @@ export let MidiActivityMixinSheet = Base => {
         }
         triggeredActivity = await triggeredActivity.getTriggeredActivity();
       }
-      context.triggeredActivityTargetOptions = Object.entries(geti18nOptions("TriggeredActivityTargetOptions")).map(([value, label]) => {
+      context.triggeredActivityTargetOptions = Object.entries(triggeredActivityTargetOptions).map(([value, label]) => {
         return { value, label, selected: midiProperties.triggeredActivityTargets === value }
       })
-      context.triggeredActivityRollAsOptions = Object.entries(geti18nOptions("TriggeredActivityRollAsOptions")).map(([value, label]) => {
+      context.triggeredActivityRollAsOptions = Object.entries(triggeredActivityRollAsOptions).map(([value, label]) => {
         return { value, label, selected: midiProperties.triggeredActivityRollAs === value }
       });
       if ((await context.activity.getTriggeredActivity())?.isSelfTriggerableOnly) {
         context.triggeredActivityRollAsOptions = context.triggeredActivityRollAsOptions.filter(o => o.value === "self");
         // adjust target list
       }
-      context.ignoreTraitsOptions = Object.entries(geti18nOptions("SHARED.FIELDS.midiProperties.ignoreTraits")).map(([value, entry]) => {
-        //@ts-expect-error
+      context.ignoreTraitsOptions = Object.entries(ignoreTraitsOptions).map(([value, entry]) => {
         return { value, label: entry.label, selected: this.activity.midiProperties.ignoreTraits.has(value) }
       });
-      context.AutoTargetTypeOptions = Object.entries(geti18nOptions("AoETargetTypeOptions")).map(([value, label]) => ({ value, label }));
-      const AutoCEEffectsOptions = Object.entries(geti18nOptions("AutoCEEffectsOptions")).map(([value, label]) => ({ value, label }));  
+      context.AutoTargetTypeOptions = Object.entries(aoeTargetTypeOptions).map(([value, label]) => ({ value, label }));
+      const AutoCEEffectsOptions = Object.entries(autoCEEffectsOptions).map(([value, label]) => ({ value, label }));  
       context.AutoCEEffectsOptions = [{value: "default", label: i18n("midi-qol.MidiSettings")}, ...AutoCEEffectsOptions];
       const defaultAction = { "default": i18n("midi-qol.MidiSettings") };
-      context.AutoTargetActionOptions = Object.entries(foundry.utils.mergeObject(defaultAction, geti18nOptions("autoTargetOptions"))).map(([value, label]) => ({ value, label }));
+      context.AutoTargetActionOptions = Object.entries(foundry.utils.mergeObject(defaultAction, autoTargetOptions)).map(([value, label]) => ({ value, label }));
       context.hasAreaTarget = this.activity.target?.template?.type;
       context.possibleOtherActivity = this.activity.possibleOtherActivity;
       context.turnChoiceOptions = [{ value: "start", label: i18n("midi-qol.OVERTIME.FIELDS.turnChoice.start") }, { value: "end", label: i18n("midi-qol.OVERTIME.FIELDS.turnChoice.end") }];

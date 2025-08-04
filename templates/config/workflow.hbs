@@ -6,7 +6,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.AutoTarget.Name"}}</label>
       <select name="autoTarget" data-dtype="String">
-        {{selectOptions autoTargetOptions selected=configSettings.autoTarget}}
+        {{selectOptions autoTargetOptions selected=configSettings.autoTarget localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{{localize "midi-qol.AutoTarget.Hint"}}}</div>
     </div>
@@ -14,7 +14,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.RangeTarget.Name"}}</label>
       <select name="rangeTarget" data-dtype="String">
-        {{selectOptions rangeTargetOptions selected=configSettings.rangeTarget}}
+        {{selectOptions rangeTargetOptions selected=configSettings.rangeTarget localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{{localize "midi-qol.RangeTarget.Hint"}}}</div>
     </div>
@@ -22,7 +22,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.RequiresTargets.Name"}}</label>
       <select name="requiresTargets" data-dtype="String">
-        {{selectOptions requiresTargetsOptions selected=configSettings.requiresTargets}}
+        {{selectOptions requiresTargetsOptions selected=configSettings.requiresTargets localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{{localize "midi-qol.RequiresTargets.Hint"}}}</div>
     </div>
@@ -61,7 +61,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.AutoEffects.Name"}}</label>
       <select name="autoItemEffects" data-dtype="String">
-        {{selectOptions AutoEffectsOptions selected=configSettings.autoItemEffects}}
+        {{selectOptions AutoEffectsOptions selected=configSettings.autoItemEffects localize=true}}
       </select>
       <p class="notes midi-qol-faint">{{{localize "midi-qol.AutoEffects.Hint"}}}</p>
     </div>
@@ -70,7 +70,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.AutoCEEffects.Name"}}</label>
       <select name="autoCEEffects" data-dtype="String">
-        {{selectOptions AutoCEEffectsOptions selected=configSettings.autoCEEffects}}
+        {{selectOptions AutoCEEffectsOptions selected=configSettings.autoCEEffects localize=true}}
       </select>
       <p class="notes midi-qol-faint">{{{localize "midi-qol.AutoCEEffects.Hint"}}}</p>
     </div>
@@ -92,7 +92,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.AutoCheckHit.Name"}}</label>
       <select name="autoCheckHit" data-dtype="String">
-        {{selectOptions autoCheckHitOptions selected=configSettings.autoCheckHit}}
+        {{selectOptions autoCheckHitOptions selected=configSettings.autoCheckHit localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{{localize "midi-qol.AutoCheckHit.Hint"}}}</div>
     </div>
@@ -115,7 +115,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.AutoCheckSaves.Name"}}</label>
       <select name="autoCheckSaves" data-dtype="String">
-        {{selectOptions autoCheckSavesOptions selected=configSettings.autoCheckSaves}}
+        {{selectOptions autoCheckSavesOptions selected=configSettings.autoCheckSaves localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{localize "midi-qol.AutoCheckSaves.Hint"}}</div>
     </div>
@@ -141,7 +141,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.PlayerRollSaves.Name"}}</label>
       <select name="playerRollSaves" data-dtype="String">
-        {{selectOptions playerRollSavesOptions selected=configSettings.playerRollSaves}}
+        {{selectOptions playerRollSavesOptions selected=configSettings.playerRollSaves localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{{localize "midi-qol.PlayerRollSaves.Hint"}}}</div>
     </div>
@@ -149,14 +149,14 @@
     <div class="form-group">
       <label>{{localize "midi-qol.rollNPCSaves.Name"}}</label>
       <select name="rollNPCSaves" data-dtype="String">
-        {{selectOptions rollNPCSavesOptions selected=configSettings.rollNPCSaves}}
+        {{selectOptions rollNPCSavesOptions selected=configSettings.rollNPCSaves localize=true}}
       </select>
     </div>
 
     <div class="form-group">
       <label>{{localize "midi-qol.rollNPCLinkedSaves.Name"}}</label>
       <select name="rollNPCLinkedSaves" data-dtype="String">
-        {{selectOptions rollNPCSavesOptions selected=configSettings.rollNPCLinkedSaves}}
+        {{selectOptions rollNPCSavesOptions selected=configSettings.rollNPCLinkedSaves localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{{localize "midi-qol.rollNPCSaves.Hint"}}}</div>
     </div>
@@ -174,7 +174,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.AutoApplyDamage.Name"}}</label>
       <select name="autoApplyDamage" data-dtype="String">
-        {{selectOptions autoApplyDamageOptions selected=configSettings.autoApplyDamage}}
+        {{selectOptions autoApplyDamageOptions selected=configSettings.autoApplyDamage localize=true}}
       </select>
     </div>
 
@@ -182,7 +182,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.AddChatDamageButtons.Name"}}</label>
       <select name="addChatDamageButtons" data-dtype="String">
-        {{selectOptions AddChatDamageButtonsOptions selected=configSettings.addChatDamageButtons}}
+        {{selectOptions AddChatDamageButtonsOptions selected=configSettings.addChatDamageButtons localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{{localize "midi-qol.AddChatDamageButtons.Hint"}}}</div>
     </div>
@@ -190,7 +190,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.PlayerDamageCard.Name"}}</label>
       <select name="playerDamageCard" data-dtype="String">
-        {{selectOptions playerDamageCardOptions selected=configSettings.playerDamageCard}}
+        {{selectOptions playerDamageCardOptions selected=configSettings.playerDamageCard localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{{localize "midi-qol.PlayerDamageCard.Hint"}}}</div>
     </div>
@@ -204,7 +204,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.DamageImmunities.Name"}}</label>
       <select name="damageImmunities" data-dtype="String">
-        {{selectOptions damageImmunitiesOptions selected=configSettings.damageImmunities}}
+        {{selectOptions damageImmunitiesOptions selected=configSettings.damageImmunities localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{{localize "midi-qol.DamageImmunities.Hint"}}}</div>
     </div>
@@ -230,7 +230,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.SaveDROrder.Name"}}</label>
       <select name="saveDROrder" data-dtype="String">
-        {{selectOptions SaveDROrderOptions selected=configSettings.saveDROrder}}
+        {{selectOptions SaveDROrderOptions selected=configSettings.saveDROrder localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{{localize "midi-qol.SaveDROrder.Hint"}}}</div>
     </div>
@@ -238,7 +238,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.RequireMagical.Name"}}</label>
       <select name="requireMagical" data-dtype="String">
-        {{selectOptions RequireMagicalOptions selected=configSettings.requireMagical}}
+        {{selectOptions RequireMagicalOptions selected=configSettings.requireMagical localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{{localize "midi-qol.RequireMagical.Hint"}}}</div>
     </div>

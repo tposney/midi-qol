@@ -5,14 +5,14 @@
         <div class="form-group">
             <label>{{localize "midi-qol.DoReactions.Name"}}</label>
             <select name="doReactions" data-dtype="String">
-                {{selectOptions doReactionsOptions selected=configSettings.doReactions}}
+                {{selectOptions doReactionsOptions selected=configSettings.doReactions localize=true}}
             </select>
         </div>
 
         <div class="form-group">
             <label>{{localize "midi-qol.GMDoReactions.Name"}}</label>
             <select name="gmDoReactions" data-dtype="String">
-                {{selectOptions gmDoReactionsOptions selected=configSettings.gmDoReactions}}
+                {{selectOptions gmDoReactionsOptions selected=configSettings.gmDoReactions localize=true}}
             </select>
         </div>
 
@@ -31,7 +31,7 @@
         <div class="form-group">
             <label>{{localize "midi-qol.ShowReactionAttackRoll.Name"}}</label>
             <select name="showReactionAttackRoll" data-dtype="String">
-                {{selectOptions showReactionAttackRollOptions selected=configSettings.showReactionAttackRoll}}
+                {{selectOptions showReactionAttackRollOptions selected=configSettings.showReactionAttackRoll localize=true}}
             </select>
         </div>
 
@@ -45,14 +45,14 @@
         <div class="form-group">
             <label>{{localize "midi-qol.EnforceReactions.Name"}}</label>
             <select name="enforceReactions" data-dtype="String">
-                {{selectOptions EnforceReactionsOptions selected=configSettings.enforceReactions}}
+                {{selectOptions EnforceReactionsOptions selected=configSettings.enforceReactions localize=true}}
             </select>
         </div>
 
         <div class="form-group">
             <label>{{localize "midi-qol.EnforceBonusActions.Name"}}</label>
             <select name="enforceBonusActions" data-dtype="String">
-                {{selectOptions EnforceReactionsOptions selected=configSettings.enforceBonusActions}}
+                {{selectOptions EnforceReactionsOptions selected=configSettings.enforceBonusActions localize=true}}
             </select>
             <div class="notes midi-qol-faint">{{{localize "midi-qol.EnforceReactions.Hint"}}}</div>
         </div>
@@ -60,7 +60,7 @@
         <div class="form-group">
             <label>{{localize "midi-qol.RecordAOO.Name"}}</label>
             <select name="recordAOO" data-dtype="String">
-                {{selectOptions RecordAOOOptions selected=configSettings.recordAOO}}
+                {{selectOptions RecordAOOOptions selected=configSettings.recordAOO localize=true}}
             </select>
             <div class="notes midi-qol-faint">{{{localize "midi-qol.RecordAOO.Hint"}}}</div>
         </div>
