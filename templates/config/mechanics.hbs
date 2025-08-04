@@ -6,10 +6,10 @@
       <div class="flexrow 5">
         <input type="number" style="width:40px;" name="addWounded" value="{{configSettings.addWounded}}" />
         <select style="margin: 0 5px" name="midiWoundedCondition" data-dtype="String">
-          {{selectOptions StatusEffectOptions selected=configSettings.midiWoundedCondition}}
+          {{selectOptions StatusEffectOptions selected=configSettings.midiWoundedCondition localize=true}}
         </select>
         <select name="addWoundedStyle" data-dtype="String">
-          {{selectOptions AddDeadOptions selected=configSettings.addWoundedStyle}}
+          {{selectOptions AddDeadOptions selected=configSettings.addWoundedStyle localize=true}}
         </select>
       </div>
       <div class="notes midi-qol-faint">{{localize "midi-qol.AddWounded.Hint"}}</div>
@@ -22,13 +22,13 @@
       <div></div>
       <label>{{localize "midi-qol.AddDead.Name"}}</label>
       <select name="midiUnconsciousCondition" data-dtype="String">
-        {{selectOptions StatusEffectOptions selected=configSettings.midiUnconsciousCondition}}
+        {{selectOptions StatusEffectOptions selected=configSettings.midiUnconsciousCondition localize=true}}
       </select>
       <select name="midiDeadCondition" data-dtype="String">
-        {{selectOptions StatusEffectOptions selected=configSettings.midiDeadCondition}}
+        {{selectOptions StatusEffectOptions selected=configSettings.midiDeadCondition localize=true}}
       </select>
       <select name="addDead" data-dtype="String">
-        {{selectOptions AddDeadOptions selected=configSettings.addDead}}
+        {{selectOptions AddDeadOptions selected=configSettings.addDead localize=true}}
       </select>
       <label>{{localize "midi-qol.markDefeated"}}</label>
       <input type="checkbox" name="markPlayerDefeated" data-dtype="Boolean" {{checked
@@ -41,7 +41,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.RollChecksBlind.Name"}}</label>
       <multi-select class="midi-qol-blind-select" name="rollChecksBlind">
-        {{selectOptions RollChecksBlindOptions selected=configSettings.rollChecksBlind}}
+        {{selectOptions RollChecksBlindOptions selected=configSettings.rollChecksBlind localize=true}}
         {{#each rollChecksBlind}}
         <option value "{{id}}" {{selected id ../configSettings.rollChecksBlind.id}}>{{name}}</option>
         {{/each}}
@@ -50,7 +50,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.RollSavesBlind.Name"}}</label>
       <multi-select class="midi-qol-blind-select" name="rollSavesBlind">
-        {{selectOptions RollSavesBlindOptions selected=configSettings.rollSavesBlind}}
+        {{selectOptions RollSavesBlindOptions selected=configSettings.rollSavesBlind localize=true}}
         {{#each rollSavesBlind}}
         <option value "{{id}}" {{selected id ../configSettings.rollSavesBlind.id}}>{{name}}</option>
         {{/each}}
@@ -59,7 +59,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.RollSkillsBlind.Name"}}</label>
       <multi-select class="midi-qol-blind-select" name="rollSkillsBlind">
-        {{selectOptions RollSkillsBlindOptions selected=configSettings.rollSkillsBlind}}
+        {{selectOptions RollSkillsBlindOptions selected=configSettings.rollSkillsBlind localize=true}}
         {{#each rollSkillsBlind}}
         <option value "{{id}}" {{selected id ../configSettings.rollSkillsBlind.id}}>{{name}}</option>
         {{/each}}
@@ -77,7 +77,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.Incapacitated.Name"}}</label>
       <select name="optionalRules.incapacitated" data-dtype="String">
-        {{selectOptions IncapacitatedOptions selected=configSettings.optionalRules.incapacitated}}
+        {{selectOptions IncapacitatedOptions selected=configSettings.optionalRules.incapacitated localize=true}}
       </select>
     </div>
   </div>
@@ -85,7 +85,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.CheckRange.Name"}}</label>
       <select name="optionalRules.checkRange" data-dtype="String">
-        {{selectOptions CheckRangeOptions selected=configSettings.optionalRules.checkRange}}
+        {{selectOptions CheckRangeOptions selected=configSettings.optionalRules.checkRange localize=true}}
       </select>
     </div>
     <div class="form-group">
@@ -107,7 +107,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.WallsBlockRange.Name"}}</label>
       <select name="optionalRules.wallsBlockRange" data-dtype="String">
-        {{selectOptions wallsBlockRangeOptions selected=configSettings.optionalRules.wallsBlockRange}}
+        {{selectOptions wallsBlockRangeOptions selected=configSettings.optionalRules.wallsBlockRange localize=true}}
       </select>
       <ul>
         <li class="notes midi-qol-faint">{{localize "midi-qol.WallsBlockRange.Hint1"}}</li>
@@ -120,7 +120,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.CoverCalculation.Name"}}</label>
       <select name="optionalRules.coverCalculation" data-dtype="String">
-        {{selectOptions CoverCalculationOptions selected=configSettings.optionalRules.coverCalculation}}
+        {{selectOptions CoverCalculationOptions selected=configSettings.optionalRules.coverCalculation localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{localize "midi-qol.CoverCalculation.Hint"}}</div>
     </div>
@@ -163,7 +163,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.UndoChatColor.Name"}}</label>
       <select name="undoChatColor" data-dtype="String">
-        {{selectOptions ColorOptions selected=configSettings.undoChatColor}}
+        {{selectOptions ColorOptions selected=configSettings.undoChatColor localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{localize "midi-qol.UndoChatColor.Hint"}}</div>
     </div>
@@ -172,7 +172,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.ActivationAutomation.Name"}}</label>
       <select name="activationAutomation" data-dtype="String">
-        {{selectOptions ActivationAutomationOptions selected=configSettings.activationAutomation}}
+        {{selectOptions ActivationAutomationOptions selected=configSettings.activationAutomation localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{localize "midi-qol.ActivationAutomation.Hint"}}</div>
     </div>

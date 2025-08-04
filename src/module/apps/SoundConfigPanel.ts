@@ -1,6 +1,6 @@
-import { GameSystemConfig, geti18nOptions, i18n } from "../../midi-qol.js";
+import { GameSystemConfig, i18n } from "../../midi-qol.js";
 import { MidiSounds } from "../midi-sounds.js";
-import { configSettings, midiSoundSettings } from "../settings.js";
+import { configSettings, midiSoundSettings, soundSettingsBlurb } from "../settings.js";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -80,7 +80,7 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
       return list
     }, {});
     context.midiSoundSettings = foundry.utils.duplicate(midiSoundSettings);
-    context.SoundSettingsBlurb = geti18nOptions("SoundSettingsBlurb");
+    context.SoundSettingsBlurb = soundSettingsBlurb;
     context.quickSettingsOptions = { createPlaylist: "Create Sample Playlist", basic: "Basic Settings", detailed: "Detailed Settings", full: "Full Settings" };
     context.playlists = this.playlists;
     const requiredPlayLists = this.requiredPlaylists;

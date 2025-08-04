@@ -10,7 +10,7 @@ import { SaferSocket, SerializedDamageListEntry } from "./module/GMAction";
 import { MidiActivityMixin } from "./module/activities/MidiActivityMixin";
 import * as undo from "./module/undo";
 import { ConfigPanel } from "./module/apps/ConfigPanel";
-import { createEffects, debug, geti18nOptions, geti18nTranslations, log, moveToken, moveTokenAwayFromPoint, removeEffects, updateEffects, warn } from "./midi-qol";
+import { createEffects, debug, log, moveToken, moveTokenAwayFromPoint, removeEffects, updateEffects, warn } from "./midi-qol";
 import { TargetConfirmationDialog } from "./module/apps/TargetConfirmation";
 import { MidiSounds } from "./module/midi-sounds";
 import { resolveTargetConfirmation, templateTokens } from "./module/activities/activityHelpers";
@@ -545,8 +545,6 @@ declare global {
     getChanges: typeof utils.getChanges;
     getCheckRollModeFor: typeof utils.getCheckRollModeFor;
     getConcentrationEffect: typeof utils.getConcentrationEffect;
-    geti18nOptions: typeof geti18nOptions;
-    geti18nTranslations: typeof geti18nTranslations;
     getSaveRollModeFor: typeof utils.getSaveRollModeFor;
     getTokenForActor: typeof utils.getOrCreateTokenForActor;
     getTokenForActorAsSet: typeof utils.getOrCreateTokenForActorAsSet;

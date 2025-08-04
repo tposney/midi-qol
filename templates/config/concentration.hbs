@@ -6,7 +6,7 @@
         <div class="form-group">
             <label>{{localize "midi-qol.DoConcentrationCheck.Name"}}</label>
             <select name="doConcentrationCheck" data-dtype="String">
-                {{selectOptions DoConcentrationCheckOptions selected=configSettings.doConcentrationCheck}}
+                {{selectOptions DoConcentrationCheckOptions selected=configSettings.doConcentrationCheck localize=true}}
             </select>
             <div class="notes midi-qol-faint">{{{localize "midi-qol.DoConcentrationCheck.Hint"}}}</div>
         </div>
@@ -38,7 +38,7 @@
         <div class="form-group">
             <label>{{localize "midi-qol.RemoveConcentrationEffects.Name"}}</label>
             <select name="removeConcentrationEffects" data-dtype="String">
-                {{selectOptions RemoveConcentrationEffectsOptions selected=configSettings.removeConcentrationEffects}}
+                {{selectOptions RemoveConcentrationEffectsOptions selected=configSettings.removeConcentrationEffects localize=true}}
             </select>
             <div class="notes midi-qol-faint">{{{localize "midi-qol.RemoveConcentrationEffects.Hint"}}}</div>
         </div>

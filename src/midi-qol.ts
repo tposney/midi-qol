@@ -83,20 +83,6 @@ export let i18nFormat = (key: string, data = {}) => {
   return game.i18n?.format(key, data) ?? key;
 }
 
-export function geti18nOptions(key: string): Record<string, string> {
-  let translation: any = game.i18n?.translations[MODULE_ID] ?? {};
-  // let fallback: any = game.i18n._fallback[MODULE_ID] ?? {};
-  // fallback = (fallback instanceof String) ? fallback : (foundry.utils.getProperty(fallback, key) ?? {});
-  translation = (translation instanceof String) ? translation : (foundry.utils.getProperty(translation, key) ?? {});
-
-  // translation = foundry.utils.mergeObject(fallback ?? {}, translation ?? {}, { overwrite: true, inplace: false });
-  return translation;
-}
-export function geti18nTranslations() {
-  return game.i18n?.translations[MODULE_ID] ?? {};
-  // return foundry.utils.mergeObject(game.i18n?._fallback[MODULE_ID] ?? {}, game.i18n.translations[MODULE_ID] ?? {});
-}
-
 export function getStaticID(id: string): string {
   id = `dnd5e${id}`;
   if (id.length >= 16) return id.substring(0, 16);
@@ -726,8 +712,6 @@ function setupMidiQOLApi() {
     getCachedChatMessage: getCachedDocument,
     getChanges, // (actorOrItem, key) - what effects on the actor or item target the specific key
     getConcentrationEffect,
-    geti18nOptions,
-    geti18nTranslations,
     getSaveRollModeFor,
     getCheckRollModeFor,
     getTokenPlayerName,

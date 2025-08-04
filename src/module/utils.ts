@@ -1,5 +1,5 @@
-import { debug, i18n, error, warn, MQdefaultDamageType, allAttackTypes, debugEnabled, overTimeEffectsToDelete, geti18nOptions, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface } from "../midi-qol.js";
-import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, DebounceInterval, _debouncedUpdateAction } from "./settings.js";
+import { debug, i18n, error, warn, MQdefaultDamageType, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface } from "../midi-qol.js";
+import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, DebounceInterval, _debouncedUpdateAction, autoRollDamageOptions, showReactionAttackRollOptions } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
@@ -2481,7 +2481,7 @@ export function autoConsumeResource(workflow?: Workflow): string {
 export function getAutoRollDamage(workflow?: Workflow): string {
   if (workflow?.actor.type === configSettings.averageDamage || configSettings.averageDamage === "all") return "onHit";
   if (workflow?.workflowOptions?.autoRollDamage) {
-    const damageOptions = Object.keys(geti18nOptions("autoRollDamageOptions"));
+    const damageOptions = Object.keys(autoRollDamageOptions);
     if (damageOptions.includes(workflow.workflowOptions.autoRollDamage))
       return workflow.workflowOptions.autoRollDamage;
     console.warn(`midi-qol | getAutoRollDamage | could not find ${workflow.workflowOptions.autoRollDamage} workflowOptions.autoRollDamage must be ond of ${damageOptions} defaulting to "onHit"`)
@@ -3968,7 +3968,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
       }
       chatMessage = await ChatMessage.create(chatData) as ChatMessage.Implementation;
     }
-    const rollOptions = geti18nOptions("ShowReactionAttackRollOptions");
+    const rollOptions = showReactionAttackRollOptions;
     // {"none": "Attack Hit", "d20": "d20 roll only", "d20Crit": "d20 + Critical", "all": "Whole Attack Roll"},
 
     let content: string | undefined = reactionFlavor;
@@ -4576,7 +4576,8 @@ export function createConditionData(data: {
   extraData?: any,
   activity?: Activity,
   tokenUuid?: string,
-  options?: any | undefined
+  options?: any | undefined,
+  token?: TokenOrDocument // pretty sure this never actually gets passed but eh
 }) {
   const actor = data.workflow?.actor ?? data.actor;
   let item: Item.Implementation | undefined;

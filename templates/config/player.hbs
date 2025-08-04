@@ -9,7 +9,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.ConsumeResource.Name"}}</label>
       <select name="consumeResource" data-dtype="String">
-        {{selectOptions ConsumeResourceOptions selected=configSettings.consumeResource}}
+        {{selectOptions ConsumeResourceOptions selected=configSettings.consumeResource localize=true}}
       </select>
     </div>
 
@@ -30,21 +30,21 @@
     <div class="form-group">
       <label>{{localize "midi-qol.AutoDamage.Name"}}</label>
       <select name="autoRollDamage" data-dtype="String">
-        {{selectOptions autoRollDamageOptions selected=configSettings.autoRollDamage}}
+        {{selectOptions autoRollDamageOptions selected=configSettings.autoRollDamage localize=true}}
       </select>
     </div>
 
     <div class="form-group">
       <label>{{localize "midi-qol.AutoFastForward.Name"}}</label>
       <select name="autoFastForward" data-dtype="String">
-        {{selectOptions clickOptions selected=configSettings.autoFastForward}}
+        {{selectOptions clickOptions selected=configSettings.autoFastForward localize=true}}
       </select>
     </div>
 
     <div class="form-group">
       <label>{{localize "midi-qol.RemoveButtons.Name"}}</label>
       <select name="removeButtons" data-dtype="String">
-        {{selectOptions removeButtonsOptions selected=configSettings.removeButtons}}
+        {{selectOptions removeButtonsOptions selected=configSettings.removeButtons localize=true}}
       </select>
     </div>
   </div>

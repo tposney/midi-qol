@@ -1,8 +1,8 @@
-import { AnyObject } from "fvtt-types/utils";
-import { geti18nOptions, i18n, MODULE_ID } from "../../midi-qol.js";
+import { MODULE_ID } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { getCurrentSourceMacros, OnUseMacro, OnUseMacros } from "./Item.js";
 import ApplicationV2 = foundry.applications.api.ApplicationV2;
+import { onUseMacroOptions } from "../settings.js";
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class ActorOnUseMacrosConfig extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -54,7 +54,7 @@ export class ActorOnUseMacrosConfig extends HandlebarsApplicationMixin(Applicati
     context.onUseMacroName = foundry.utils.getProperty(this.document._source, "flags.midi-qol.onUseMacroName");
     if (context.onUseMacroName !== undefined) context.onUseMacroParts = new OnUseMacros(context.onUseMacroName);
     else context.onUseMacroParts = new OnUseMacros(null);
-    context.MacroPassOptions = foundry.utils.mergeObject(geti18nOptions("onUseMacroOptions"), Workflow.stateHooks);
+    context.MacroPassOptions = foundry.utils.mergeObject(onUseMacroOptions, Workflow.stateHooks);
     return context;
   }
 
