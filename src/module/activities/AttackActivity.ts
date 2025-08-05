@@ -389,7 +389,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         });
         postAttackRollConfigurationHookId = Hooks.once("dnd5e.postAttackRollConfiguration", (rolls, config, dialog, message) => {
           // @ts-expect-error no dnd5e-types
-          if (configSettings.checkTwoHanded && ["twoHanded", "offhand"].includes(rolls?.[0].options?.attackMode)) {
+          if (configSettings.checkTwoHanded && ["twoHanded", "offhand"].includes(rolls?.[0]?.options?.attackMode)) {
             // check equipment - shield other weapons for equipped status
             // @ts-expect-error no dnd5e-types
             if (this.actor.system.attributes.ac?.shield > 0) {
@@ -401,7 +401,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           // @ts-expect-error no dnd5e-types
           if (this.requireAmmunition && this.item.system.properties?.has("amm")) {
             // @ts-expect-error no dnd5e-types
-            const chosenAmmunition = this.actor.items.get(rolls[0].options.ammunition);
+            const chosenAmmunition = this.actor.items.get(rolls?.[0]?.options?.ammunition);
             // @ts-expect-error no dnd5e-types
             if ((chosenAmmunition?.system.quantity ?? 0) <= 0) ui.notifications?.error(i18nFormat("midi-qol.NoAmmunition", { name: chosenAmmunition?.name ?? "Ammunition" }));
             else this.ammunitionItem = chosenAmmunition;
