@@ -131,6 +131,8 @@
   "midi-qol.MergeCard.Hint": "Mescla Ataques, Acertos, Dano e Salvaguardas em um único cartão de chat.",
   "midi-qol.MergeCardCondensed.Name": "Condensar Rolagens de Ataque/Dano",
   "midi-qol.MergeCardCondensed.Hint": "Conserva um pouco de espaço no log de chat fazendo as rolagens de ataque e dano menores.",
+  "midi-qol.DisplayItemProperties.Name": "Exibir Propriedades de Itens",
+  "midi-qol.DisplayItemProperties.Hint": "Mostra as propriedades do item no cartão de chat. Desabilitar economiza espaço no cartão de chat.",
   "midi-qol.ConfigTitle": "Configurações do Midi QOL",
   "midi-qol.WorkflowSettings": "Configurações de Workflow",
   "midi-qol.CheckSaveText.Name": "Procurar Descrição",
@@ -1040,7 +1042,7 @@
           "label": "Outra Atividade",
           "hint": "Pode ser usada como uma outra Atividade."
         },
-        "toggleEffects": {
+        "toggleEffect": {
           "label": "Alternar Efeitos",
           "hint": "Desabilitar um efeito irá alternar entra ativado e desativado ao invés de removê-lo."
         },
@@ -1181,20 +1183,20 @@
   "midi-qol.DAMAGE": {
     "Title": {
       "one": "Dano Midi",
-      "other": "Danos Midi",
-      "FIELDS": {
-        "damage": {
-          "label": "Dano Salvaguarda",
-          "critical": {
-            "label": "Dano Crítico",
-            "allow": {
-              "label": "Permitir Dano Crítico",
-              "hint": "Permite que dano crítico seja aplicado."
-            },
-            "bonus": {
-              "label": "Dano Crítico Bônus",
-              "hint": "Dano adicional aplicado ao crítico, se o dano crítico for permitido."
-            }
+      "other": "Danos Midi"
+    },
+    "FIELDS": {
+      "damage": {
+        "label": "Dano Salvaguarda",
+        "critical": {
+          "label": "Dano Crítico",
+          "allow": {
+            "label": "Permitir Dano Crítico",
+            "hint": "Permite que dano crítico seja aplicado."
+          },
+          "bonus": {
+            "label": "Dano Crítico Bônus",
+            "hint": "Dano adicional aplicado ao crítico, se o dano crítico for permitido."
           }
         }
       }
