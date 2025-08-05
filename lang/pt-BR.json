@@ -27,7 +27,7 @@
   "midi-qol.AutoApplyDamage.Hint": "Aplica o dano automaticamente a um alvo atingido (se 'Verificação de Acerto' estiver ativado) ou a alvos que o usuário selecionou.",
   "midi-qol.PlayerDamageCard.Name": "Exibir Cartão de Dano de Jogador",
   "midi-qol.PlayerDamageCard.Hint": "Uma versão mais simples do cartão de dano. Exibido somente se o cartão do Mestre é exibido. O cartão não é exibido ao Mestre.",
-  "midi-qol.PlayerCardDamageDifferent.Name": "Exiber cartão de dano do jogador se o dano rolado não corresponder ao dano aplicado a algum alvo",
+  "midi-qol.PlayerCardDamageDifferent.Name": "Exibir cartão de dano do jogador se o dano rolado não corresponder ao dano aplicado a algum alvo",
   "midi-qol.ItemRollButtons.Name": "Adicionar Botões de Ataque/Dano ao Inventário",
   "midi-qol.ItemRollButtons.Hint": "Adiciona botões de rolagem na descrição do item. Esses botões aceitam ctrl/alt/shift para pular o diálogo.",
   "midi-qol.AddChatDamageButtons.Name": "Adicionar Botões de Dano no Chat",
@@ -122,7 +122,7 @@
     "explode": "Explodir Dado Crítico",
     "maxDamageExplode": "Dano Normal Máximo e Explodir Dado Crítico",
     "explodeCharacter": "Explodir Dado Crítico de PJ",
-    "explodeNPC": "Explodir Dado Crítico de PnJ",
+    "explodeNPC": "Explodir Dado Crítico de PNJ",
     "baseDamage": "Dano Extra de Acerto Crítico",
     "maxBaseRollCrit": "Crítico Base Máximo",
     "bestOfTwo": "Vantagem Rolagem de Dano"
@@ -225,14 +225,14 @@
     "yes": "Sim",
     "yesCard": "Sim + Cartão de Dano",
     "yesCardMisses": "Sim + Cartão de Dano + Erros",
-    "yesCardNPC": "Sim(PnJ) Não(PJ) + Cartão de Dano"
+    "yesCardNPC": "Sim(PNJ) Não(PJ) + Cartão de Dano"
   },
   "midi-qol.playerDamageCardOptions": {
     "none": "Não Exibir",
     "playerresults": "Exibir Resultados de Jogador",
     "playerbuttons": "Exibir Resultados de Jogador + Botões",
-    "npcplayerresults": "Exibir Resultados de Jogador e PnJ",
-    "npcplayerbuttons": "Exibir Resultados de Jogador e PnJ + Botões"
+    "npcplayerresults": "Exibir Resultados de Jogador e PNJ",
+    "npcplayerbuttons": "Exibir Resultados de Jogador e PNJ + Botões"
   },
   "midi-qol.removeButtonsOptions": {
     "off": "Desativado",
@@ -250,7 +250,7 @@
     "none": "Nenhum",
     "cardOnly": "Apenas Cartão",
     "pc": "Detalhes: Apenas PJ",
-    "all": "Detalhes: PJ + PnJ"
+    "all": "Detalhes: PJ + PNJ"
   },
   "midi-qol.rollNPCSavesOptions": {
     "none": "Mensagem do Chat",
@@ -593,7 +593,7 @@
   "midi-qol.ReactionActivationCondition.Name": "Reação",
   "midi-qol.OtherActivationCondition.Name": "Outro Dano",
   "midi-qol.HPUpdated": "PV Atualizado",
-  "midi-qol.HPNPCUpdated": "PV de PdJ Atualizado",
+  "midi-qol.HPNPCUpdated": "PV de PJ Atualizado",
   "midi-qol.HPNotUpdated": "PV Não Atualizado",
   "midi-qol.reactionDamaged": "Sofrer Dano",
   "midi-qol.reactionManual": "Manual",
@@ -685,7 +685,7 @@
   "midi-qol.Reactions": "Avisar Para Reações",
   "midi-qol.DoReactions.Name": "Verificar Reações de Jogador",
   "midi-qol.DoReactions.Hint": "Dá a um ator atacado a opção de usar sua reação antes de completar a rolagem. Reações ao atingir exigem a opção 'Verificação de Acerto' habilitada. Reações de dano se aplicar dano.",
-  "midi-qol.GMDoReactions.Name": "Verificar Reações de PdJ/Mestre",
+  "midi-qol.GMDoReactions.Name": "Verificar Reações de PJ/Mestre",
   "midi-qol.ReactionTimeout.Name": "Tempo de Reação",
   "midi-qol.ReactionTimeout.Hint": "Quanto tempo esperar antes de assumir que nenhuma reação foi tomada.",
   "midi-qol.NoOptionalRules.Name": "Sem Regras Opcionais",
@@ -833,7 +833,7 @@
   "midi-qol.AverageDamage.Name": "Rolagens de Dano/Crítico 'Médias'",
   "midi-qol.AverageDamageOptions" : {
     "none": "Nenhum",
-    "npc": "Apenas rolagens de dano de PnJs",
+    "npc": "Apenas rolagens de dano de PNJs",
     "character": "Apenas rolagens de dano de PJs",
     "all": "Todas as rolagens de dano"
   },
