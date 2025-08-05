@@ -1118,13 +1118,13 @@ There are some additional actor only onUse macro triggers that can be defined fo
   There are some additional **actor** onUse macro triggers (but NOT item triggers) available when the actor is the target of an attack/spell/feature use: These are called per target and the macros to be called are looked up on the  **target** of the attack, not the actor doing the attack
 
   ```
-    isAttacked: the actor is a target of an attack
-    isHit: the actor is a target of a hit
-    preSaveTarget: 
-    isSave: the actor makes a successful save in response to being targeted
-    isSaveSuccess: the actor makes a successful save in response to being targeted
-    isSaveFailure: the actor makes a failed save in response to being targeted
-    isDamaged: "the actor is damaged by an item roll
+    isAttacked: the targetActor is a target of an attack
+    isHit: the targetActor is a target of a hit
+    preTargetSave: the targetActor is about to roll for a save
+    isSave: the targetActor makes a successful save in response to being targeted
+    isSaveSuccess: the targetActor makes a successful save in response to being targeted
+    isSaveFailure: the targetActor makes a failed save in response to being targeted
+    isDamaged: "the targetActor is damaged by an item roll
     preTargetDamageApplication: this is ALSO called per target just before the damage is applied. workflow.damageItem has the details fo the damage to be applied and can be modified by the macro.
 ```
 
