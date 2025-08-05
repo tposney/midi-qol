@@ -381,7 +381,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           }
         });
         postAttackRollConfigurationHook = Hooks.once("dnd5e.postAttackRollConfiguration", (rolls, config: any, dialog: any, message: any) => {
-          if (configSettings.checkTwoHanded && ["twoHanded", "offhand"].includes(rolls?.[0].options?.attackMode)) {
+          if (configSettings.checkTwoHanded && ["twoHanded", "offhand"].includes(rolls?.[0]?.options?.attackMode)) {
             // check equipment - shield other weapons for equipped status
             if (this.actor.system.attributes.ac?.shield > 0) {
               ui.notifications?.warn(i18n("midi-qol.TwoHandedShieldWarning"));
@@ -390,7 +390,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
             }
           }
           if (this.requireAmmunition && this.item.system.properties?.has("amm")) {
-            const chosenAmmunition = this.actor.items.get(rolls[0].options.ammunition);
+            const chosenAmmunition = this.actor.items.get(rolls?.[0]?.options?.ammunition);
             if ((chosenAmmunition?.system.quantity ?? 0) <= 0) ui.notifications?.error(i18nFormat("midi-qol.NoAmmunition", { name: chosenAmmunition?.name ?? "Ammunition" }));
             return chosenAmmunition?.system.quantity > 0;
           }
