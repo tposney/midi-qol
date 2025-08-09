@@ -15,9 +15,33 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if ((this.flags?.[MODULE_ID]?.roll?.length ?? 0) > 0) return true;
       return super.isRoll;
     }
-    // midi has it's own target handling so don't display the attack targets here
+    // midi has it's own target handling so don't display the attack targets here (however, DO display the mastery)
     _enrichAttackTargets(html) {
+      // This code borrowed from the start of the system's ChatMessage5e#_enrichAttackTargets method
+      const attackRoll = this.rolls[0];
+      // @ts-expect-error no dnd5e-types
+      if (!(attackRoll instanceof dnd5e.dice.D20Roll)) return;
+
+      // @ts-expect-error no dnd5e-types
+      const masteryConfig = CONFIG.DND5E.weaponMasteries[attackRoll.options.mastery];
+      if (!masteryConfig) return;
+
+      const p = document.createElement("p");
+      p.classList.add("supplement");
+      let mastery = masteryConfig.label;
+      if (masteryConfig.reference) mastery = `
+        <a class="content-link" draggable="true" data-link data-uuid="${masteryConfig.reference}"
+           data-tooltip="${mastery}" style="text-wrap: auto;">${mastery}</a>
+      `;
+      p.innerHTML = `<string>${i18n("DND5E.WEAPON.Mastery.Flavor")}</string> ${mastery}`;
+      const condensedSection = html.querySelector(".midi-results > .flexrow");
+      if (condensedSection) {
+        condensedSection.after(p);
+      } else {
+        html.querySelector(".midi-qol-attack-roll")?.appendChild(p);
+      }
       return;
+
     }
     get canSelectTargets() {
       if (this.flags?.[MODULE_ID]?.messageType === "attack") return true;

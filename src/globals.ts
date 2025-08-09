@@ -705,6 +705,7 @@ declare global {
         expertise?: boolean;
         mastery?: boolean;
       }>
+      weaponMasteries: Record<string, {label: string, reference: string}>;
       weaponTypes: Record<string, string>;
     }
   }
