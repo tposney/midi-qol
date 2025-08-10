@@ -1095,10 +1095,10 @@
       },
       "overTimeProperties": {
         "turnChoice": {
-          "label": "Turn Choice",
-          "hint": "Start or end of turn",
-          "start": "Start of Turn",
-          "end": "End of Turn"
+          "label": "Scelta Turno",
+          "hint": "Inizio o fine del turno",
+          "start": "Inizio del turno",
+          "end": "Fine del turno"
         },
         "saveRemoves": {
           "label": "Save Removes",
@@ -1123,31 +1123,31 @@
       },
       "ignoreTraits": {
         "idi": {
-          "label": "Ignore Immunity",
-          "hint": "Ignore damage immunity when applying damage"
+          "label": "Ignora Immunità",
+          "hint": "Ignora Immunità al danno quando applichi il danno"
         },
         "idr": {
-          "label": "Ignore Resistance",
-          "hint": "Ignore damage resistance when applying damage"
+          "label": "Ignora Resistenza",
+          "hint": "Ignora Resistenza al danno quando applichi il danno"
         },
         "idv": {
-          "label": "Ignore Vulnerability",
-          "hint": "Ignore damage vulnerability when applying damage"
+          "label": "Ignora Vulnerabilità",
+          "hint": "Ignora Vulnerabilità al danno quando applichi il danno"
         },
         "ida": {
-          "label": "Ignore Absorption",
-          "hint": "Ignore damage absorption when applying damage"
+          "label": "Ignora Assorbimento",
+          "hint": "Ignora Assorbimento del danno quando applichi il danno"
         }
       }
     }
   },
   "midi-qol.ATTACK": {
     "Title": {
-      "one": "Midi Attack",
-      "other": "Midi Attacks"
+      "one": "Attacco Midi",
+      "other": "Attacchi Midi"
     },
     "extras": {
-      "header": "Midi Attack Fields"
+      "header": "Campi Attacco Midi"
     },
     "FIELDS": {
       "attackMode": {
@@ -1155,8 +1155,8 @@
         "hint": "Default attack mode"
       },
       "ammunition": {
-        "label": "Ammunition",
-        "hint": "Default ammunition to consume"
+        "label": "Munizioni",
+        "hint": "Munizioni predefinite da consumare"
       },
       "attackRollPerTarget": {
         "label": "Attack Roll Per Target",
@@ -1182,8 +1182,8 @@
   },
   "midi-qol.DAMAGE": {
     "Title": {
-      "one": "Midi Damage",
-      "other": "Midi Damage"
+      "one": "Danno Midi",
+      "other": "Danni Midi"
       },
     "FIELDS": {
       "damage": {
@@ -1195,7 +1195,7 @@
             "hint": "Consentire Applicazione Danno Critico"
           },
           "bonus": {
-            "label": "Danno Critico Bonus ",
+            "label": "Danno Critico Bonus",
             "hint": "Danno critico bonus da applicare se sono consentiti danni critici"
           }
         }
@@ -1230,10 +1230,10 @@
     },
     "FIELDS": {
       "turnChoice": {
-        "label": "Turn Choice",
-        "hint": "Start or end of turn",
-        "start": "Start of Turn",
-        "end": "End of Turn"
+        "label": "Scelta Turno",
+        "hint": "Inizio o fine del turno",
+        "start": "Inizio del turno",
+        "end": "Fine del turno"
       },
       "saveRemoves": {
         "label": "Save Removes",
@@ -1300,64 +1300,64 @@
   "midi-qol.TwoHandedShieldWarning": "Non è possibile usare attacchi a due mani o con la mano secondaria con uno scudo equipaggiato",
   "dae.MidiQOL.fieldData": {
     "flags.midi-qol.absorption.acid": {
-      "name": "Absorption Acid",
-      "description": "Converts Acid Damage taken to healing."
+      "name": "Assorbimento Acido",
+      "description": "Converte Danno da Acido subito in guarigione."
     },
     "flags.midi-qol.absorption.bludgeoning": {
-      "name": "Absorption Bludgeoning",
-      "description": "Converts Bludgeoning Damage taken to healing."
+      "name": "Assorbimento Contundente",
+      "description": "Converte Danno Contundente subito in guarigione."
     },
     "flags.midi-qol.absorption.cold": {
-      "name": "Absorption Cold",
-      "description": "Converts Cold Damage taken to healing."
+      "name": "Assorbimento Freddo",
+      "description": "Converte Danno da Freddo subito in guarigione."
     },
     "flags.midi-qol.absorption.fire": {
-      "name": "Absorption Fire",
-      "description": "Converts Fire Damage taken to healing."
+      "name": "Assorbimento Fuoco",
+      "description": "Converte Danno da Fuoco subito in guarigione."
     },
     "flags.midi-qol.absorption.force": {
-      "name": "Absorption Force",
-      "description": "Converts Force Damage taken to healing."
+      "name": "Assorbimento Forza",
+      "description": "Converte Danno da Forza subito in guarigione."
     },
     "flags.midi-qol.absorption.lightning": {
-      "name": "Absorption Lightning",
-      "description": "Converts Lightning Damage taken to healing."
+      "name": "Assorbimento Fulmine",
+      "description": "Converte Danno da Fulmine subito in guarigione."
     },
     "flags.midi-qol.absorption.midi-none": {
-      "name": "Absorption None",
+      "name": "Nessun Assorbimento",
       "description": ""
     },
     "flags.midi-qol.absorption.necrotic": {
-      "name": "Absorption Necrotic",
-      "description": "Converts Necrotic Damage taken to healing."
+      "name": "Assorbimento Necrotico",
+      "description": "Converte Danno Necrotico subito in guarigione."
     },
     "flags.midi-qol.absorption.none": {
-      "name": "No Absorption",
+      "name": "Nessun Assorbimento",
       "description": ""
     },
     "flags.midi-qol.absorption.piercing": {
-      "name": "Absorption Piercing",
-      "description": "Converts Piercing Damage taken to healing."
+      "name": "Assorbimento Perforante",
+      "description": "Converte Danno Perforante subito in guarigione."
     },
     "flags.midi-qol.absorption.poison": {
-      "name": "Absorption Poison",
-      "description": "Converts Poison Damage taken to healing."
+      "name": "Assorbimento Veleno",
+      "description": "Converte Danno da Veleno subito in guarigione."
     },
     "flags.midi-qol.absorption.psychic": {
-      "name": "Absorption Psychic",
-      "description": "Converts Psychic Damage taken to healing."
+      "name": "Assorbimento Psichico",
+      "description": "Converte Danno Psichico subito in guarigione."
     },
     "flags.midi-qol.absorption.radiant": {
-      "name": "Absorption Radiant",
-      "description": "Converts Radiant Damage taken to healing."
+      "name": "Assorbimento Radioso",
+      "description": "Converte Danno Radioso subito in guarigione."
     },
     "flags.midi-qol.absorption.slashing": {
-      "name": "Absorption Slashing",
-      "description": "Converts Slashing Damage taken to healing."
+      "name": "Assorbimento Tagliente",
+      "description": "Converte Danno Tagliente subito in guarigione."
     },
     "flags.midi-qol.absorption.thunder": {
-      "name": "Absorption Thunder",
-      "description": "Converts Thunder Damage taken to healing."
+      "name": "Assorbimento Tuono",
+      "description": "Converte Danno da Tuono subito in guarigione."
     },
     "flags.midi-qol.advantage.ability.all": {
       "name": "Advantage All Ability",
