@@ -977,6 +977,10 @@
         "label": "Usar Outra Atividade",
         "hint": "Atividade extra para causar 'outros' danos."
       },
+      "otherActivityAsParentType": {
+        "label": "Subrepor Tipo de Ação",
+        "hint": "Substitui as propriedades do tipo de atividade do Outro Dano por esta atividade (Armado Corpo a Corpo, Armado à Distância, etc)."
+      },
       "midiProperties": {
         "rollMode": {
           "label": "Modo de Rolagem",
@@ -997,6 +1001,14 @@
         "forceDialog": {
           "label": "Forçar Diálogo de Configuração",
           "hint": "Força o diálogo de configuração ao rolar ataques."
+        },
+        "forceAttackDialog" : {
+          "label": "Forçar Configuração de Ataque",
+          "hint": "Força o Diálogo de Configuração de Ataque quando a atividade é usada."
+        },
+        "forceDamageDialog": {
+          "label": "Forçar Configuração de Dano",
+          "hint": "Força o Diálogo de Configuração de Dano quando a atividade é usada"
         },
         "confirmTargets": {
           "label": "Confirmação do Alvo",
@@ -2549,7 +2561,7 @@
     },
     "flags.midi-qol.noAdvantage.attack.all": {
       "name": "Sem Vantagem (Todos)",
-      "description": "Ataques não recebem Vantagem."
+      "description": "Qualquer ataque contra o alvo não recebe Vantagem"
     },
     "flags.midi-qol.grants.noAdvantage.attack.heal": {
       "name": "Não Conceder Vantagem (Cura)",
