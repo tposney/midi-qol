@@ -55,6 +55,13 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
       return {
         ...super.defineSchema(),
         otherActivityId: new StringField({ name: "otherActivity", initial: "" }),
+        otherActivityAsParentType: new BooleanField({
+          name: "otherActivityAsParentType",
+          initial: true,
+          required: false,
+          label: i18n("midi-qol.SHARED.FIELDS.otherActivityAsParentType.label"),
+          hint: i18n("midi-qol.SHARED.FIELDS.otherActivityAsParentType.hint")
+        }),
         damage: new SchemaField({
           onSave: new StringField({
             initial: "half",

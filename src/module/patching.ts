@@ -116,8 +116,8 @@ export async function bonusCheck(actor: Actor.Implementation, result: Roll, cate
       else if (category.startsWith("skill")) title = i18nFormat("DND5E.SkillPromptTitle", { skill: GameSystemConfig.skills[detail] ?? "" });
     }
     
-    const displayBonusRolls = bonusFlags.reduce((returnValue, flag) => returnValue || !!foundry.utils.getProperty(actor ?? {}, `${flag}.displayBonusRolls`), false) 
-      ?? checkMechanic("displayBonusRolls");
+    const displayBonusRolls: boolean = !!(bonusFlags.reduce((returnValue: boolean | undefined, flag: string) => returnValue || (foundry.utils.getProperty(actor ?? {}, `${flag}.displayBonusRolls`) as boolean | undefined), undefined) 
+      ?? checkMechanic("displayBonusRolls"));
     const newRoll = await bonusDialog.bind(data)(
       bonusFlags,
       detail ? `${category}.${detail}` : category,
@@ -892,7 +892,7 @@ export function _prepareDerivedData(this: Actor.Implementation, wrapped, ...args
         // @ts-expect-error no dnd5e-types
         this.system.attributes.ac.EC = ec;
         // @ts-expect-error no dnd5e-types
-        this.system.attributes.ac.AR = armorReduction;;
+        this.system.attributes.ac.AR = armorReduction;
       } else {
         // @ts-expect-error no dnd5e-types
         if (!this.system.abilities) {
@@ -1644,7 +1644,7 @@ export async function doItemUse(this: Item.Implementation, wrapped, config: Acti
     const attackActivity = attackActivities[0];
     const extraActivities = activities?.filter(a => a !== attackActivity && a !== attackActivity?.otherActivity);
     if (extraActivities?.length === 0) {
-      return attackActivity.use(config, dialog, message);
+      return await attackActivity.use(config, dialog, message);
     }
   }
   //@ts-expect-error
@@ -1652,15 +1652,15 @@ export async function doItemUse(this: Item.Implementation, wrapped, config: Acti
   const skipPressed = areKeysPressed(config.event, "skipDialogAdvantage") || areKeysPressed(config.event, "skipDialogDisadvantage") || areKeysPressed(config.event, "skipDialogNormal");
   if (skipPressed) {
     const attackActivity = attackActivities[0];
-    if (attackActivity) return attackActivity.use(config, dialog, message);
-    else return activities?.[0]?.use(config, dialog, message);
+    if (attackActivity) return await attackActivity.use(config, dialog, message);
+    else return await activities?.[0]?.use(config, dialog, message);
   }
   if (activities?.length > 1 || chooseActivity) {
     const activity = await MidiActivityChoiceDialog.create(this);
-    return activity?.use(config, dialog, message);
+    return await activity?.use(config, dialog, message);
   }
   if (activities?.length === 1) {
-    return activities[0].use(config, dialog, message);
+    return await activities[0].use(config, dialog, message);
   }
   // @ts-expect-error no dnd5e-types
   if (this.actor) return this.displayCard(message);

@@ -3,7 +3,6 @@ import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { TargetConfirmationConfig } from "./apps/TargetConfirmationConfig.js";
-import { _updateAction } from "./utils.js";
 import { Workflow } from "./Workflow.js";
 
 export let itemRollButtons: boolean;
@@ -23,7 +22,6 @@ export let targetConfirmation: typeof defaultTargetConfirmationSettings;
 export let midiSoundSettings: any = {};
 export let midiSoundSettingsBackup: any = undefined;
 export let DebounceInterval: number;
-export let _debouncedUpdateAction;
 export let ReplaceDefaultActivities: boolean = true;
 export let UseWeakReferences: boolean = false;
 export let SaveToChatCard: boolean = false;
@@ -185,7 +183,6 @@ class ConfigSettings {
   useTokenNames: boolean = false;
   undoChatColor: string = "Delete";
   undoWorkflow: boolean = false;
-  //v3DamageApplication: boolean = true;
   useDamageDetail: boolean = true;
   weaponHitSound: string = "";
   weaponUseSound: string = "";
@@ -542,8 +539,7 @@ export let fetchParams = () => {
   if (configSettings.autoTarget === "wallsBlockIgnoreIncapcitated") configSettings.autoTarget = "wallsBlockIgnoreIncapacitated";
   if (configSettings.autoTarget === "wallsBlockIgnoreIncapacitated") configSettings.autoTarget = "wallsBlockIgnoreIncapacitated";
   if (configSettings.autoTarget === "alwaysIgnoreIncapcitated") configSettings.autoTarget = "alwaysIgnoreIncapacitated";
-  //configSettings.v3DamageApplication = true;
-  configSettings.useDamageDetail = false;
+  configSettings.useDamageDetail = true;
   if (configSettings.collapsibleTargets === undefined) configSettings.collapsibleTargets = true;
   if (configSettings.displayProperties === undefined) configSettings.displayProperties = true;
   criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
@@ -566,7 +562,6 @@ export let fetchParams = () => {
   dragDropTargeting = game.settings.get("midi-qol", "DragDropTarget");
   DebounceInterval = game.settings.get("midi-qol", "DebounceInterval");
   ReplaceDefaultActivities = game.settings.get("midi-qol", "ReplaceDefaultActivities");
-  _debouncedUpdateAction = foundry.utils.debounce(_updateAction, DebounceInterval);
   const oldWeakReferences = UseWeakReferences;
   UseWeakReferences = game.settings.get("midi-qol", "UseWeakReferences") ?? false;
   if (UseWeakReferences !== oldWeakReferences) Workflow.clearWorkflows();
@@ -625,7 +620,7 @@ const settings = [
   {
     name: "PreferredGM",
     scope: "world",
-    default: "none",
+    default: "",
     config: true,
     type: String,
   },
@@ -717,7 +712,7 @@ export function readySettingsSetup() {
     name: "midi-qol.PreferredGM.Name",
     hint: "midi-qol.PreferredGM.Hint",
     scope: "world",
-    default: "none",
+    default: "",
     config: true,
     type: String,
     choices: game.users?.filter(user => user.isGM).reduce((acc, user) => {
@@ -960,7 +955,7 @@ export const confirmTargetOptions = keysToOptionsObj("ConfirmTargetOptions", [
 
 export const triggeredActivityTargetOptions = keysToOptionsObj("TriggeredActivityTargetOptions", [
   "self",
-  "Targets",
+  "targets",
   "hitTargets",
   "missedTargets",
   "failedSaves",
@@ -1363,18 +1358,18 @@ export const registerSettings = function () {
     choices: debugOptions,
     onChange: fetchParams
   });
-  game.settings.register("midi-qol", "UseWeakReferences", {
-    name: "Use Weak References for Workflows",
-    hint: "Developer Only: Leave unchecked",
+  game.settings.register("midi-qol", "SaveToChatCard", {
+    name: "Save to Chat Card",
+    hint: "save the workflow state to the chat card - so that it can be restored on reload",
     scope: "world",
     default: false,
     type: Boolean,
     config: true,
     onChange: fetchParams
   });
-  game.settings.register("midi-qol", "SaveToChatCard", {
-    name: "Save to Chat Card",
-    hint: "Developer Only: Leave unchecked",
+  game.settings.register("midi-qol", "UseWeakReferences", {
+    name: "Use Weak References for Workflows",
+    hint: "Only enable if Save to Chat Card is enabled. This will use WeakReferences to store workflows - should save some memory.",
     scope: "world",
     default: false,
     type: Boolean,

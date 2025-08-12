@@ -37,7 +37,7 @@ let defineMidiEnchantActivityClass = <T extends Activity>(ActivityClass: T) => {
       return false;
     }
     get isTriggerableActivity() {
-      return false;
+      return true;
     }
 
     async _triggerSubsequentActions(config, results) {

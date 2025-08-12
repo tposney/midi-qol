@@ -375,11 +375,15 @@ export async function timedExecuteAsGM(toDo: string, data: any) {
 }
 
 export function preferredActiveGM() {
-  const preferredGMId = safeGetGameSetting("midi-qol", "PreferredGM");
-  if (preferredGMId !== "none") {
+  let preferredGMId = safeGetGameSetting("midi-qol", "PreferredGM");
+  if (preferredGMId === "none") {
+    game.settings.set("midi-qol", "PreferredGM", ""); // reset to no preferred GM
+    preferredGMId = "";
+  }
+  if (preferredGMId !== "") {
     const preferredGM = game.users?.get(preferredGMId);
     if (preferredGM?.active) return preferredGM as User.Implementation;
-    log(`preferredGM ${preferredGMId} is not active`); 
+    log(`preferredGM ${preferredGMId} is not active`);
   }
   if (game.user?.isGM) return game.user;
   return game.users?.activeGM ?? null;
@@ -391,7 +395,7 @@ export async function unTimedExecuteAsGM(toDo: string, ...args) {
   const preferredGMId = safeGetGameSetting("midi-qol", "PreferredGM");
   let preferredGM = game.users?.get(preferredGMId);
   if (!preferredGM?.active) {
-    if (preferredGMId !== "none") log(`preferredGM ${preferredGMId} is not active`);
+    if (preferredGMId !== "") log(`preferredGM ${preferredGMId} is not active`);
     preferredGM = undefined;
   }
   let gmOnScene;
@@ -461,7 +465,7 @@ async function _gmOverTimeEffect(data: { actorUuid: string, effectUuid: string, 
 }
 
 async function _localActivityOverTimeEffect(data: { actorUuid: string, effectUuid: string, startTurn: boolean, options: any }) {
-  const actor  = await fromUuid(data.actorUuid) as Actor.Implementation | undefined;
+  const actor = await fromUuid(data.actorUuid) as Actor.Implementation | undefined;
   const effect = await fromUuid(data.effectUuid) as ActiveEffect.Implementation | undefined;
   if (!actor || !effect) {
     const message = `localActivityOverTimeEffect | actor or effect not found actor: ${data.actorUuid} effect: ${data.effectUuid}`;
@@ -540,7 +544,7 @@ async function _completeItemUse(data: {
   else return true;
 }
 
-async function updateActor(data: {actorUuid: string, updates?: Actor.UpdateData, actorData?: Actor.UpdateData}) {
+async function updateActor(data: { actorUuid: string, updates?: Actor.UpdateData, actorData?: Actor.UpdateData }) {
   let actor = fromUuidSync(data.actorUuid) as Actor.Implementation | undefined;
   if (!actor) return;
   if (data.actorData) {
@@ -550,7 +554,7 @@ async function updateActor(data: {actorUuid: string, updates?: Actor.UpdateData,
   if (data.updates) await actor.update(data.updates);
 }
 
-async function createActor(data: {actorData: Actor.CreateData | Actor.CreateData[], context: Actor.Database.CreateOperation<false>}) {
+async function createActor(data: { actorData: Actor.CreateData | Actor.CreateData[], context: Actor.Database.CreateOperation<false> }) {
   let actorsData = data.actorData instanceof Array ? data.actorData : [data.actorData];
   const actors = await CONFIG.Actor.documentClass.createDocuments(actorsData, data.context ?? {});
   return actors?.length ? actors.map(a => a.id) : false;
@@ -593,7 +597,7 @@ async function deleteEffects(data: { actorUuid: string, effectsToDelete: string[
   }
 }
 
-async function deleteItemEffects(data: { targets: {tokenUuid?: string; actorUuid?: string}[], origin: string, ignore: string[], ignoreTransfer: boolean, options: any }) {
+async function deleteItemEffects(data: { targets: { tokenUuid?: string; actorUuid?: string }[], origin: string, ignore: string[], ignoreTransfer: boolean, options: any }) {
   debug("deleteItemEffects: started", globalThis.DAE?.actionQueue)
   let deleteFunc = async () => {
     let effectsToDelete: ActiveEffect.Implementation[] | undefined;
@@ -876,20 +880,23 @@ async function createReverseDamageCard(data: {
   charName: string,
   actorId: string,
   forceApply: boolean,
-  updateOptions: any
+  updateOptions: any,
 }): Promise<string[]> {
   let cardIds: string[] = [];
+  let startTime;
+  startTime = Date.now();
   const newDamageList = recoverDamageListFromJSON(data.damageList);
-  let id = await createPlayerDamageCard({...data, damageList: newDamageList});
+  let id = await createPlayerDamageCard({ ...data, damageList: newDamageList });
   if (id) cardIds.push(id);
   if (data.damageList.some(di => di.wasHit)) {
-    id = await createGMReverseDamageCard({...data, damageList: newDamageList}, true);
+    id = await createGMReverseDamageCard({ ...data, damageList: newDamageList }, true);
     if (id) cardIds.push(id);
   }
   if (data.damageList.some(di => !di.wasHit) && ["yesCardMisses", "noCardMisses"].includes(data.autoApplyDamage)) {
-    id = await createGMReverseDamageCard({...data, damageList: newDamageList}, false);
+    id = await createGMReverseDamageCard({ ...data, damageList: newDamageList }, false);
     if (id) cardIds.push(id);
   }
+  console.log("createReverseDamageCard took ", Date.now() - startTime, "ms");
   return cardIds;
 }
 
@@ -924,7 +931,7 @@ async function prepareDamageListItems(
     autoApplyDamage: string;
     flagTags: any;
     forceApply: boolean;
-    updateOptions: any
+    updateOptions: any;
   },
   templateData: {
     damageApplied: string;
@@ -961,17 +968,20 @@ async function prepareDamageListItems(
       // const hpDamage = damageItem.damageDetail.reduce((acc, di) => acc + (di.type !== "temphp" ? di.value : 0), 0);
       // @ts-expect-error no dnd5e-types
       const hp = actor.system.attributes.hp;
-      let { amount, temp } = damageItem.damageDetail.reduce((acc, d) => {
+      let { amount, temp, healing } = damageItem.damageDetail.reduce((acc, d) => {
         if (d.type === "temphp") acc.temp += d.value;
+        else if (["healing"].includes(d.type) || d.active?.absorption) acc.healing += d.value;
         else if (d.type !== "midi-none") acc.amount += d.value;
         return acc;
-      }, { amount: 0, temp: 0 });
-      let { rawAmount, rawTemp } = damageItem.rawDamageDetail.reduce((acc, d) => {
+      }, { amount: 0, temp: 0, healing: 0 });
+      let { rawAmount, rawTemp, rawHealing } = damageItem.rawDamageDetail.reduce((acc, d) => {
         if (d.type === "temphp") acc.rawTemp += d.value;
+        else if (["healing"].includes(d.type) || d.active?.absorption) acc.rawHealing += d.value;
         else if (d.type !== "midi-none") acc.rawAmount += d.value;
         return acc;
-      }, { rawAmount: 0, rawTemp: 0 });
+      }, { rawAmount: 0, rawTemp: 0, rawHealing: 0 });
       damageItem.totalDamage = damageItem.damageDetail.reduce((acc, d) => acc + (!["temphp", "midi-none"].includes(d.type) ? d.value : 0), 0);
+      amount = amount + healing;
       amount = amount > 0 ? Math.floor(amount) : Math.ceil(amount);
 
       let deltaTemp = amount > 0 ? Math.min(hp.temp, amount) : 0;
@@ -1006,9 +1016,13 @@ async function prepareDamageListItems(
         //recover the options used when calculating the damage
         if (Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, damageItem.calcDamageOptions as DamageApplicationOptions) !== false) {
           // The actor update - when no changes are made will update the passed options with a target
-          // @ts-expect-error no dnd5e-types
-          await actor.update(updates, foundry.utils.mergeObject(damageItem.calcDamageOptions, data.updateOptions ?? {}, { inplace: false }));
-          Hooks.call("dnd5e.applyDamage", actor, amount, damageItem.calcDamageOptions as DamageApplicationOptions);
+          promises.push(
+            // @ts-expect-error no dnd5e-types
+            actor.update(updates, foundry.utils.mergeObject(damageItem.calcDamageOptions, data.updateOptions ?? {}, { inplace: false })).then(updatedActor => {
+              Hooks.call("dnd5e.applyDamage", updatedActor ?? actor, amount, damageItem.calcDamageOptions as DamageApplicationOptions);
+              return updatedActor;
+            })
+          )
         }
       }
     }
@@ -1064,6 +1078,7 @@ async function prepareDamageListItems(
       }, []);
       if ((di.allActives?.length ?? 0) > 0) allMods = allMods.concat(di.allActives!);
       let mods = (allMods.length > 0) ? `| ${allMods.join(",")}` : "";
+      // if (!["healing", "none"].includes(di.type)) di.value = Math.max(0, di.value);
       return `${di.value > 0 ? Math.floor(di.value) : Math.ceil(di.value)} ${{ ...GameSystemConfig.damageTypes, ...GameSystemConfig.healingTypes }[di.type === "" ? "none" : di.type]?.label ?? "none"} ${mods}`
     }).map(s => s.replaceAll(",,", ",").replaceAll(",,", ","));
     const toolTipHeader: string[] = [];
@@ -1081,6 +1096,10 @@ async function prepareDamageListItems(
 
     templateData.damageList.push(listItem);
   }
+  const allPromises = Promise.all(promises).then((allPromised) => {
+    if (debugEnabled > 0) warn("GMAction.prepareDamageListItems: all promises completed", allPromised);
+  });
+  if (data.updateOptions?.awaitDamageApplication !== false) await allPromises;
 }
 
 // Fetch the token, then use the tokenData.actor.id
@@ -1116,7 +1135,6 @@ async function createPlayerDamageCard(data: {
   let showNPC = ["npcplayerresults", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
   let playerButtons = ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
   const damageList = data.damageList;
-  const startTime = Date.now();
   let tokenDataList: DamageListEntry[] = [];
   let templateData = {
     damageApplied: ["yes", "yesCard", "yesCardMisses"].includes(data.autoApplyDamage) ? i18n("midi-qol.HPUpdated") : i18n("midi-qol.HPNotUpdated"),
@@ -1150,7 +1168,6 @@ async function createPlayerDamageCard(data: {
     if (data.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? "", data.flagTags);
     chatCardUuid = (await ChatMessage.create(chatData))?.uuid;
   }
-  log(`createPlayerReverseDamageCard elapsed: ${Date.now() - startTime}ms`)
   return chatCardUuid;
 }
 
@@ -1161,12 +1178,11 @@ async function createGMReverseDamageCard(
     autoApplyDamage: string;
     flagTags: any,
     forceApply: boolean,
-    updateOptions: any
+    updateOptions: any,
   },
   doHits: boolean = true
 ): Promise<string | undefined> {
   const damageList = data.damageList;
-  const startTime = Date.now();
   let tokenDataList: DamageListEntry[] = [];
   let chatCardUuid: string | undefined;
   const damageWasApplied = (doHits && (["yes", "yesCard", "yesCardMisses"].includes(data.autoApplyDamage) || data.forceApply));
@@ -1177,9 +1193,7 @@ async function createGMReverseDamageCard(
     needsButtonAll: false
   };
   await prepareDamageListItems(data, templateData, tokenDataList, true, true, doHits)
-
   templateData.needsButtonAll = damageList.length > 1;
-
   if (["yesCard", "noCard", "yesCardNPC", "yesCardMisses", "noCardMisses"].includes(data.autoApplyDamage)) {
     const content = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/damage-results.html", templateData);
     const speaker = ChatMessage.getSpeaker();
@@ -1193,8 +1207,9 @@ async function createGMReverseDamageCard(
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
     if (data.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? {}, data.flagTags);
     chatCardUuid = (await ChatMessage.create(chatData))?.uuid;
+    //@ts-expect-error no fvtt-types scrollbottom
+    ui.chat?.scrollBottom();
   }
-  log(`createGMReverseDamageCard elapsed: ${Date.now() - startTime}ms`);
   return chatCardUuid;
 }
 
@@ -1207,7 +1222,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midiqol.undoDamage") as SerializedDamageListEntry[];
       const undoDamageData = recoverDamageListFromJSON(undoFlag);
       // @ts-expect-error TODO: pretty sure `updateOptions` isn't a thing here
-      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, oldVitality, newVitality, updateOptions={} } of undoDamageData) {
+      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, oldVitality, newVitality, updateOptions = {} } of undoDamageData) {
         // recoverDamageDetailFromJSON(damageDetail);
         if (!actorUuid) continue;
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
@@ -1239,7 +1254,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midiqol.undoDamage") as SerializedDamageListEntry[];
       const undoDamageData = recoverDamageListFromJSON(undoFlag);
       // @ts-expect-error TODO: pretty sure `updateOptions` isn't a thing here
-      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, updateOptions={}, newVitality } of undoDamageData) {
+      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, updateOptions = {}, newVitality } of undoDamageData) {
         if (!actorUuid) continue;
         let actor = fromActorUuid(actorUuid);
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
@@ -1265,7 +1280,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
   const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midiqol.undoDamage") as SerializedDamageListEntry[];
   const undoDamageData = recoverDamageListFromJSON(undoFlag);
   // @ts-expect-error TODO: pretty sure `updateOptions` isn't a thing here
-  undoDamageData?.forEach(({ actorUuid, oldTempHP, oldHP, newHP, newTempHP, oldVitality, newVitality, damageDetail, calcDamageOptions, updateOptions={} }) => {
+  undoDamageData?.forEach(({ actorUuid, oldTempHP, oldHP, newHP, newTempHP, oldVitality, newVitality, damageDetail, calcDamageOptions, updateOptions = {} }) => {
     if (!actorUuid) return;
     // recoverDamageDetailFromJSON(damageDetail);
     // ids should not have "." in the or it's id.class
@@ -1305,7 +1320,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       (async () => {
         const calcOptions = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false });
         let actor = fromActorUuid(actorUuid);
-        log(`Setting HP to ${newTempHP} and ${newHP} ${actor?.name} ${actorUuid}`);
+        // damageDetail.forEach(di => {if (!["healing", "none"].includes(di.type)) di.value = Math.max(0, di.value)});
         if (mults[multiplierString ?? ""]) {
           multiplier = mults[multiplierString ?? ""]
           // @ts-expect-error no dnd5e-types
@@ -1356,7 +1371,8 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
       if (Math.sign(ray.dx) > 0) getCenterCollisionPoint.x -= canvas.grid.sizeX;
       if (Math.sign(ray.dy) > 0) getCenterCollisionPoint.y -= canvas.grid.sizeY;
       const newPosition = canvas.grid.getSnappedPoint({ x: getCenterCollisionPoint.x - Math.sign(ray.dx) * targetToken.w / 2, y: getCenterCollisionPoint.y - Math.sign(ray.dy) * targetToken.h / 2 }, { mode: M.TOP_LEFT_VERTEX });
-      return void targetTokenDocument.update(newPosition, { animate: data.animate ?? true });    }
+      return void targetTokenDocument.update(newPosition, { animate: data.animate ?? true });
+    }
   }
   const newX = targetToken.position.x + newCenter.x - targetToken.center.x;
   const newY = targetToken.position.y + newCenter.y - targetToken.center.y;
@@ -1450,7 +1466,7 @@ export interface SerializedDamageListEntry extends Omit<DamageListEntry, "calcDa
 }
 export function prepareDamageListToJSON(damageList: DamageListEntry[]) {
   const newDL = foundry.utils.deepClone(damageList).map(damageItem => {
-    const {downgrade, ignore} = damageItem.calcDamageOptions;
+    const { downgrade, ignore } = damageItem.calcDamageOptions;
     let newDowngrade: true | string[] | undefined;
     if (downgrade instanceof Set) newDowngrade = Array.from(downgrade);
     else if (downgrade) newDowngrade = downgrade;
@@ -1484,12 +1500,12 @@ export function prepareDamageListToJSON(damageList: DamageListEntry[]) {
 }
 
 function prepareDamageDetailToJSON(damageDetail?: DamageDescription[]): DamageDescriptionObject[] {
-  return (damageDetail ?? []).map(d => ({...d, properties: Array.from(d.properties ?? [])}));
+  return (damageDetail ?? []).map(d => ({ ...d, properties: Array.from(d.properties ?? []) }));
 }
 
 function recoverDamageListFromJSON(damageList: SerializedDamageListEntry[]): DamageListEntry[] {
   const newDL = foundry.utils.deepClone(damageList).map(damageItem => {
-    const {downgrade, ignore} = damageItem.calcDamageOptions;
+    const { downgrade, ignore } = damageItem.calcDamageOptions;
     let newDowngrade: true | Set<string> | undefined;
     if (downgrade instanceof Array) newDowngrade = new Set(downgrade);
     else if (downgrade) newDowngrade = downgrade;
@@ -1522,5 +1538,5 @@ function recoverDamageListFromJSON(damageList: SerializedDamageListEntry[]): Dam
 }
 
 function recoverDamageDetailFromJSON(damageDetail?: DamageDescriptionObject[]): DamageDescription[] {
-  return (damageDetail ?? []).map(d => ({...d, properties: new Set(d.properties)}));
+  return (damageDetail ?? []).map(d => ({ ...d, properties: new Set(d.properties) }));
 }

@@ -15,7 +15,7 @@
           </button>
         {{/if}}
         <select name="onUseMacros.{{@index}}.option">
-          {{selectOptions macroPassOptions selected=option}}
+          {{selectOptions macroPassOptions selected=option localize=true}}
         </select>
         <button type="button" data-action="deleteMacro">
           <i class="fa-solid fa-minus"></i>

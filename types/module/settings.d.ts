@@ -15,7 +15,6 @@ export declare let targetConfirmation: typeof defaultTargetConfirmationSettings;
 export declare let midiSoundSettings: any;
 export declare let midiSoundSettingsBackup: any;
 export declare let DebounceInterval: number;
-export declare let _debouncedUpdateAction: any;
 export declare let ReplaceDefaultActivities: boolean;
 export declare let UseWeakReferences: boolean;
 export declare let SaveToChatCard: boolean;
@@ -251,7 +250,193 @@ export declare function importSettingsFromJSON(json: any): Promise<void>;
 export declare let fetchSoundSettings: () => void;
 export declare let fetchParams: () => void;
 export declare function readySettingsSetup(): void;
-export declare function registerSetupSettings(): void;
+export declare const criticalDamageChoices: {
+    [k: string]: string;
+};
+export declare const addChatDamageButtonsOptions: {
+    [k: string]: string;
+};
+export declare const coloredBordersOptions: {
+    [k: string]: string;
+};
+export declare const autoRemoveTargetsOptions: {
+    [k: string]: string;
+};
+export declare const debugOptions: {
+    [k: string]: string;
+};
+export declare const autoRollDamageOptions: {
+    [k: string]: string;
+};
+export declare const autoCheckHitOptions: {
+    [k: string]: string;
+};
+export declare const clickOptions: {
+    [k: string]: string;
+};
+export declare const autoTargetOptions: {
+    [k: string]: string;
+};
+export declare const autoCheckSavesOptions: {
+    [k: string]: string;
+};
+export declare const rangeTargetOptions: {
+    [k: string]: string;
+};
+export declare const autoApplyDamageOptions: {
+    [k: string]: string;
+};
+export declare const playerDamageCardOptions: {
+    [k: string]: string;
+};
+export declare const removeButtonsOptions: {
+    [k: string]: string;
+};
+export declare const damageImmunitiesOptions: {
+    [k: string]: string;
+};
+export declare const showItemDetailsOptions: {
+    [k: string]: string;
+};
+export declare const rollNPCSavesOptions: {
+    [k: string]: string;
+};
+export declare const playerRollSavesOptions: {
+    [k: string]: string;
+};
+export declare const playerRollSavesOptionsReduced: {
+    [k: string]: string;
+};
+export declare const hideRollDetailsOptions: {
+    [k: string]: string;
+};
+export declare const rollOtherDamageOptions: {
+    [k: string]: string;
+};
+export declare const showReactionAttackRollOptions: {
+    [k: string]: string;
+};
+export declare const onUseMacroOptions: {
+    [k: string]: string;
+};
+export declare const confirmTargetOptions: {
+    [k: string]: string;
+};
+export declare const triggeredActivityTargetOptions: {
+    [k: string]: string;
+};
+export declare const triggeredActivityRollAsOptions: {
+    [k: string]: string;
+};
+export declare const ignoreTraitsOptions: {
+    idi: {
+        label: string;
+        hint: string;
+    };
+    idr: {
+        label: string;
+        hint: string;
+    };
+    idv: {
+        label: string;
+        hint: string;
+    };
+    ida: {
+        label: string;
+        hint: string;
+    };
+    idm: {
+        label: string;
+        hint: string;
+    };
+};
+export declare const aoeTargetTypeOptions: {
+    [k: string]: string;
+};
+export declare const autoCEEffectsOptions: {
+    [k: string]: string;
+};
+export declare const wallsBlockRangeOptionsNew: {
+    [k: string]: string;
+};
+export declare const coverCalculationOptions: {
+    [k: string]: string;
+};
+export declare const hiddenAdvantageOptions: {
+    [k: string]: string;
+};
+export declare const addDeadOptions: {
+    [k: string]: string;
+};
+export declare const quickSettingsBlurb: {
+    [k: string]: string;
+};
+export declare const requiresTargetsOptions: {
+    [k: string]: string;
+};
+export declare const doReactionsOptions: {
+    [k: string]: string;
+};
+export declare const gmDoReactionsOptions: {
+    [k: string]: string;
+};
+export declare const recordAOOOptions: {
+    [k: string]: string;
+};
+export declare const EnforceReactionsOptions: {
+    [k: string]: string;
+};
+export declare const autoEffectsOptions: {
+    [k: string]: string;
+};
+export declare const requireMagicalOptions: {
+    [k: string]: string;
+};
+export declare const checkFlankingOptions: {
+    [k: string]: string;
+};
+export declare const hideRollDetailsHintLongOptions: {
+    [k: string]: string;
+};
+export declare const rollAlternateOptions: {
+    [k: string]: string;
+};
+export declare const consumeResourceOptions: {
+    [k: string]: string;
+};
+export declare const averageDamageOptions: {
+    [k: string]: string;
+};
+export declare const removeConcentrationEffectsOptions: {
+    [k: string]: string;
+};
+export declare const incapacitatedOptions: {
+    [k: string]: string;
+};
+export declare const checkRangeOptions: {
+    [k: string]: string;
+};
+export declare const invisAdvantageOptions: {
+    [k: string]: string;
+};
+export declare const confirmAttackDamageOptions: {
+    [k: string]: string;
+};
+export declare const challengeModeArmorOptions: {
+    [k: string]: string;
+};
+export declare const saveDROrderOptions: {
+    [k: string]: string;
+};
+export declare const doConcentrationCheckOptions: {
+    [k: string]: string;
+};
+export declare const activationAutomationOptions: {
+    [k: string]: string;
+};
+export declare const soundSettingsBlurb: {
+    [k: string]: string;
+};
 export declare const registerSettings: () => void;
 export declare function disableWorkflowAutomation(): void;
 export declare function safeGetGameSetting(moduleName: string, settingName: string): any | undefined;

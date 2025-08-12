@@ -61,7 +61,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         const storedData = this.flags.dnd5e?.item?.data;
         //@ts-expect-error no dnd5e-types
         const actor = super.getAssociatedActor();
-        if (storedData) return new Item.implementation(storedData, {parent: actor})
+        if (storedData) return new Item.implementation(storedData, { parent: actor })
       }
       // @ts-expect-error no dnd5e-types
       return super.getAssociatedItem();
@@ -128,7 +128,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }));
     }
 
-    collectRolls(rollsToAccumulate: Roll[], multiRolls: boolean = false, options: {blind?: boolean}): any[] {
+    collectRolls(rollsToAccumulate: Roll[], multiRolls: boolean = false, options: { blind?: boolean }): any[] {
       let returns: any[] = [];
       let rolls: Roll[] = [];
       setDamageRollMinTerms(rollsToAccumulate);
@@ -140,7 +140,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         //@ts-expect-error
         let { formula, total, breakdown } = game.system.dice.aggregateDamageRolls(rolls).reduce((obj: any, r) => {
           obj.formula.push(r.formula);
-          obj.total += r.total;
+          obj.total += Math.max(0, r.total);
           // @ts-expect-error no dnd5e-types
           obj.breakdown.push(this._simplifyDamageRoll(r));
           return obj;
@@ -227,8 +227,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
     _enrichUsageEffects(html: HTMLLIElement) {
       if (["off", "applyLeave"].includes(configSettings.autoItemEffects))
-      //@ts-expect-error
-      return super._enrichUsageEffects(html);
+        //@ts-expect-error
+        return super._enrichUsageEffects(html);
     }
 
     _enrichDamageTooltip(rolls: Roll[], html: HTMLElement) {
@@ -242,7 +242,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         else if (rollType === "bonusDamage") rType = "bonus-damage";
         if (rollsToCheck?.length) {
           html.querySelectorAll(`.midi-${rType}-roll`)?.forEach(el => el.remove());
-          for (let roll of this.collectRolls(rollsToCheck, configSettings.mergeCardMultiDamage, {blind: this.blind})) {
+          for (let roll of this.collectRolls(rollsToCheck, configSettings.mergeCardMultiDamage, { blind: this.blind })) {
             roll.classList.add(`midi-${rType}-roll`);
             if (rType === "bonus-damage") {
               const flavor = document.createElement("div");
@@ -273,7 +273,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           damageApplication.classList.add("dnd5e2");
           //@ts-expect-error
           damageApplication.damages = game.system.dice.aggregateDamageRolls(rolls, { respectProperties: true }).map(roll => ({
-            value: roll.total,
+            value: Math.max(0, roll.total),
             type: roll.options.type,
             properties: new Set(roll.options.properties ?? [])
           }));
@@ -399,22 +399,22 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     prepareDerivedData() {
       const attackRoll = this.flags?.[MODULE_ID]?.[WorkflowDataFlags.attackRoll];
       if (attackRoll)
-        foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.attackRoll, Roll.fromData(attackRoll));
+        foundry.utils.setProperty(this, "flags.midi-qol." + WorkflowDataFlags.attackRoll, Roll.fromData(attackRoll));
       const damageRolls = this.flags?.[MODULE_ID]?.[WorkflowDataFlags.damageRolls];
       if (damageRolls)
-        foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.damageRolls, damageRolls.map(d => Roll.fromData(d)));
+        foundry.utils.setProperty(this, "flags.midi-qol." + WorkflowDataFlags.damageRolls, damageRolls.map(d => Roll.fromData(d)));
       const otherDamageRolls = this.flags?.[MODULE_ID]?.[WorkflowDataFlags.otherDamageRolls];
       if (otherDamageRolls)
-        foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.otherDamageRolls, otherDamageRolls.map(d => Roll.fromData(d)));
+        foundry.utils.setProperty(this, "flags.midi-qol." + WorkflowDataFlags.otherDamageRolls, otherDamageRolls.map(d => Roll.fromData(d)));
       const bonusDamageRolls = this.flags?.[MODULE_ID]?.[WorkflowDataFlags.bonusDamageRolls];
       if (bonusDamageRolls)
-        foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.bonusDamageRolls, bonusDamageRolls.map(d => Roll.fromData(d)));
+        foundry.utils.setProperty(this, "flags.midi-qol." + WorkflowDataFlags.bonusDamageRolls, bonusDamageRolls.map(d => Roll.fromData(d)));
       const utilityRolls = this.flags?.[MODULE_ID]?.[WorkflowDataFlags.utilityRolls];
       if (utilityRolls)
-        foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.utilityRolls, utilityRolls.map(d => Roll.fromData(d)));
-        const extraRolls = this.flags?.[MODULE_ID]?.[WorkflowDataFlags.extraRolls];
-        if (extraRolls)
-        foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.extraRolls, extraRolls.map(d => Roll.fromData(d)));
+        foundry.utils.setProperty(this, "flags.midi-qol." + WorkflowDataFlags.utilityRolls, utilityRolls.map(d => Roll.fromData(d)));
+      const extraRolls = this.flags?.[MODULE_ID]?.[WorkflowDataFlags.extraRolls];
+      if (extraRolls)
+        foundry.utils.setProperty(this, "flags.midi-qol." + WorkflowDataFlags.extraRolls, extraRolls.map(d => Roll.fromData(d)));
       super.prepareDerivedData();
     }
 

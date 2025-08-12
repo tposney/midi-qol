@@ -363,12 +363,14 @@ declare module "fvtt-types/configuration" {
         attackTotal?: number;
         attackRoll?: Roll.Data;
         attackRollCount?: number;
+        bonusDamageDetail?: DamageDescriptionObject[];
         bonusDamageRolls?: Roll.Data[];
         bonusDamageTotal?: number;
         concentrationRolled?: boolean;
         criticalSaveUuids?: string[];
         currentAction?: [string, string];
         d20AttackRoll?: number;
+        damageDetail?: DamageDescriptionObject[];
         damageList?: DamageListEntry[];
         damageRollCount?: number;
         damageRolls?: Roll.Data[];
@@ -388,6 +390,7 @@ declare module "fvtt-types/configuration" {
         needTemplate?: boolean;
         noOptionalRules?: boolean;
         OnUseMacros?: OnUseMacros;
+        otherDamageDetail: DamageDescriptionObject[];
         otherDamageRolls?: Roll.Data[];
         otherDamageTotal?: number;
         rawBonusDamageDetail?: DamageDescriptionObject[];
@@ -417,7 +420,6 @@ declare module "fvtt-types/configuration" {
         overtimeActorUuid?: string;
         messageType?: string;
         roll?: unknown[];
-        damageDetail?: DamageDescriptionObject[];
         syntheticItem?: boolean;
         isHit?: boolean;
       };
@@ -525,7 +527,7 @@ declare global {
     configSettings: () => typeof configSettings;
     contestedRoll: typeof utils.contestedRoll;
     createConditionData: typeof utils.createConditionData;
-    createDamageDetailV4: typeof utils.createDamageDetailV4;
+    createDamageDetail: typeof utils.createDamageDetail;
     createEffects: typeof createEffects;
     DamageOnlyWorkflow: typeof DamageOnlyWorkflow;
     debouncedUpdate: typeof utils.debouncedUpdate;
@@ -1004,6 +1006,8 @@ export interface Activity extends AnyMutableObject {
     triggeredActivityTargets: string;
     triggeredActivityRollAs?: string;
     forceDialog?: boolean;
+    forceAttackDialog?: boolean;
+    forceDamageDialog?: boolean;
     confirmTargets: string;
     autoTargetType: string;
     autoTargetAction?: string;
@@ -1027,7 +1031,7 @@ export interface Activity extends AnyMutableObject {
 export type DamageDescription = {
   value: number;
   type: string;
-  properties?: Set<string>;
+  properties: Set<string>;
   active?: {
     multiplier?: number;
     modifications?: boolean;
@@ -1075,9 +1079,7 @@ export type RollProcessConfig = {
   hookNames?: string[];
   subject?: foundry.abstract.Document.Any;
   target?: number;
-  ammunition?: {
-    attackBonus?: number;
-  };
+  ammunition?: Item.Implementation;
   workflow?: Workflow;
   midiOptions?: MidiOptions;
   advantage?: boolean;

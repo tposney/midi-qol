@@ -10,7 +10,7 @@ import { SaferSocket, SerializedDamageListEntry } from "./module/GMAction";
 import { MidiActivityMixin } from "./module/activities/MidiActivityMixin";
 import * as undo from "./module/undo";
 import { ConfigPanel } from "./module/apps/ConfigPanel";
-import { createEffects, debug, geti18nOptions, geti18nTranslations, log, moveToken, moveTokenAwayFromPoint, removeEffects, updateEffects, warn } from "./midi-qol";
+import { createEffects, debug, log, moveToken, moveTokenAwayFromPoint, removeEffects, updateEffects, warn } from "./midi-qol";
 import { TargetConfirmationDialog } from "./module/apps/TargetConfirmation";
 import { MidiSounds } from "./module/midi-sounds";
 import { resolveTargetConfirmation, templateTokens } from "./module/activities/activityHelpers";
@@ -388,12 +388,14 @@ declare module "fvtt-types/configuration" {
                 attackTotal?: number;
                 attackRoll?: Roll.Data;
                 attackRollCount?: number;
+                bonusDamageDetail?: DamageDescriptionObject[];
                 bonusDamageRolls?: Roll.Data[];
                 bonusDamageTotal?: number;
                 concentrationRolled?: boolean;
                 criticalSaveUuids?: string[];
                 currentAction?: [string, string];
                 d20AttackRoll?: number;
+                damageDetail?: DamageDescriptionObject[];
                 damageList?: DamageListEntry[];
                 damageRollCount?: number;
                 damageRolls?: Roll.Data[];
@@ -413,6 +415,7 @@ declare module "fvtt-types/configuration" {
                 needTemplate?: boolean;
                 noOptionalRules?: boolean;
                 OnUseMacros?: OnUseMacros;
+                otherDamageDetail: DamageDescriptionObject[];
                 otherDamageRolls?: Roll.Data[];
                 otherDamageTotal?: number;
                 rawBonusDamageDetail?: DamageDescriptionObject[];
@@ -442,7 +445,6 @@ declare module "fvtt-types/configuration" {
                 overtimeActorUuid?: string;
                 messageType?: string;
                 roll?: unknown[];
-                damageDetail?: DamageDescriptionObject[];
                 syntheticItem?: boolean;
                 isHit?: boolean;
             };
@@ -550,7 +552,7 @@ declare global {
         configSettings: () => typeof configSettings;
         contestedRoll: typeof utils.contestedRoll;
         createConditionData: typeof utils.createConditionData;
-        createDamageDetailV4: typeof utils.createDamageDetailV4;
+        createDamageDetail: typeof utils.createDamageDetail;
         createEffects: typeof createEffects;
         DamageOnlyWorkflow: typeof DamageOnlyWorkflow;
         debouncedUpdate: typeof utils.debouncedUpdate;
@@ -570,8 +572,6 @@ declare global {
         getChanges: typeof utils.getChanges;
         getCheckRollModeFor: typeof utils.getCheckRollModeFor;
         getConcentrationEffect: typeof utils.getConcentrationEffect;
-        geti18nOptions: typeof geti18nOptions;
-        geti18nTranslations: typeof geti18nTranslations;
         getSaveRollModeFor: typeof utils.getSaveRollModeFor;
         getTokenForActor: typeof utils.getOrCreateTokenForActor;
         getTokenForActorAsSet: typeof utils.getOrCreateTokenForActorAsSet;
@@ -729,6 +729,10 @@ declare global {
                 sortCategories?: boolean;
                 expertise?: boolean;
                 mastery?: boolean;
+            }>;
+            weaponMasteries: Record<string, {
+                label: string;
+                reference: string;
             }>;
             weaponTypes: Record<string, string>;
         };
@@ -1019,6 +1023,8 @@ export interface Activity extends AnyMutableObject {
         triggeredActivityTargets: string;
         triggeredActivityRollAs?: string;
         forceDialog?: boolean;
+        forceAttackDialog?: boolean;
+        forceDamageDialog?: boolean;
         confirmTargets: string;
         autoTargetType: string;
         autoTargetAction?: string;
@@ -1085,9 +1091,7 @@ export type RollProcessConfig = {
     hookNames?: string[];
     subject?: foundry.abstract.Document.Any;
     target?: number;
-    ammunition?: {
-        attackBonus?: number;
-    };
+    ammunition?: Item.Implementation;
     workflow?: Workflow;
     midiOptions?: MidiOptions;
     advantage?: boolean;

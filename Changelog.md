@@ -1,8 +1,22 @@
 ### 13.0.13
-* Massive refactor/retyping - thanks (and amazement) @michael
 * For otherActivities, if they have the midi setting Display Activity Name set, midi will display the activity name, rather than "Other" in the chat card.
   - So for example, Mace of Disruption, Undead Damage activity set Display Activity Name to checked and the chat card will display Undead Damage for the damage that only applies to undead targets.
-* Allow macro writers to overwrite the options set in reactionDialog
+* Allow macro writers to overwrite the options set in reactionDialog.
+* Fix some cases where an item roll would silently fail with no targets selected.
+* Fixed bug in ActorOnUse macro app when deleting a macro.
+* When rolling damage and specified roll contains multiple damage types the configure damage dialog will always be displayed to allow you to choose the actual damage type for the roll.
+* Some fixes for displaying attack config when no ammunition is available.
+* Fixed behaviour of Target Confirmation "no targets selected".
+* Corrected some out of date fa icons thanks @morepurplemorebetter
+* Revered Active defence to the original calculations of DC: 12 + attack bonus and defence roll AC - 10 + 1d20 due to popular demand.
+* Couple of fixes for ActorOnUseMacro/ItemOnUseMacro localisation.
+* Updated pt.br.json - thanks @kharmans
+* Some 5.1 compatibility changes - thanks @michael.
+* Massive refactor/retyping - thanks (and amazement) @michael
+* Fix for some edge cases of damage calculation.
+  - Only healing can have negative values when a damage roll is set, others will be set to 0, in line with dnd5e behaviour.
+  - **For macro/symbiotic module writers** As a side effect of this, if your macro changes the damage rolls of a workflow you **must** call workflow.setDamageRolls(workflow.damageRolls) for the changes to be recorded.
+* Quite a lot of changes to chat message update caching.
 
 ### 13.0.12
 * version bump for failed tag update

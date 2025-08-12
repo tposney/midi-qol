@@ -50,15 +50,21 @@ export let readyHooks = async () => {
 
   Hooks.on("preUpdateChatMessage", (message, update, options, user) => {
     try {
-      if (!getCachedDocument(message.uuid)) return true;
-      const cachedUpdates = getUpdatesCache(message.uuid);
-      clearUpdatesCache(message.uuid);
-      // hideStuffHandler(message, $(message.content), user);
-      if (!foundry.utils.isEmpty(cachedUpdates)) {
-        if (debugEnabled > 0) warn("preUpdateChatMessage inserting updates", message.uuid, update, cachedUpdates);
-        Object.keys(cachedUpdates).forEach(key => {
-          if (!foundry.utils.getProperty(update, key)) foundry.utils.setProperty(update, key, cachedUpdates[key])
-        })
+      const cachedUpdates = foundry.utils.flattenObject(getUpdatesCache(message.uuid));
+      if (cachedUpdates) {
+        // console.error("preUpdateChatMessage cached updates for", message.uuid, update);
+        // clearUpdatesCache(message.uuid);
+        // hideStuffHandler(message, $(message.content), user);
+        if (!foundry.utils.isEmpty(cachedUpdates)) {
+          const insertedUpdates = {};
+          Object.keys(cachedUpdates).forEach(key => {
+            if (cachedUpdates[key] !== undefined && foundry.utils.getProperty(update, key) === undefined) {
+              if (debugEnabled) insertedUpdates[key] = cachedUpdates[key];
+              foundry.utils.setProperty(update, key, cachedUpdates[key])
+            }
+          });
+          if (debugEnabled && !foundry.utils.isEmpty(insertedUpdates)) warn("preUpdateChatMessage inserting updates", message.uuid, insertedUpdates);
+        }
       }
       return true;
     } finally {
@@ -149,14 +155,14 @@ export let readyHooks = async () => {
 
   //@ts-expect-error
   Hooks.on("renderActorArmorConfig", (app: never, html: HTMLElement, data) => {
-  if (!["none", undefined, false].includes(checkRule("challengeModeArmor") as string | boolean | undefined)) {
-    const ac = data.ac;
-    const element = html.querySelector(".card");
-    const arTemplate = document.createElement("template");
-    arTemplate.innerHTML = `<div>EC: ${ac.EC}</div><div>AR: ${ac.AR}</div>`;
-    element?.append(...Array.from(arTemplate.content.children));
-  }
-});
+    if (!["none", undefined, false].includes(checkRule("challengeModeArmor") as string | boolean | undefined)) {
+      const ac = data.ac;
+      const element = html.querySelector(".card");
+      const arTemplate = document.createElement("template");
+      arTemplate.innerHTML = `<div>EC: ${ac.EC}</div><div>AR: ${ac.AR}</div>`;
+      element?.append(...Array.from(arTemplate.content.children));
+    }
+  });
 
   // Handle removal of concentration
   Hooks.on("deleteActiveEffect", (deletedEffect, options: any, user) => {
@@ -202,7 +208,7 @@ export let readyHooks = async () => {
   });
 }
 
-export async function restManager(actor: Actor.Implementation, result: {longRest: boolean; newDay: boolean}) {
+export async function restManager(actor: Actor.Implementation, result: { longRest: boolean; newDay: boolean }) {
   if (!actor || !result)
     return;
   const specialDuration = (effect): string[] | undefined => { return foundry.utils.getProperty(effect, "flags.dae.specialDuration") as string[] };
@@ -247,8 +253,8 @@ export function initHooks() {
     if (!update.content) return;
     //@ts-expect-error fvtt-missing
     if (ui.chat?.isAtBottom || (message.author._id === game.user?._id)) {
-      //@ts-expect-error fvtt-missing
-      setTimeout(() => ui.chat?.scrollBottom({ waitImages: true }), 1000);
+      //@ts -expect-error fvtt-missing
+      // setTimeout(() => ui.chat?.scrollBottom({ waitImages: true }), 0);
     }
   });
 
@@ -340,7 +346,7 @@ export function initHooks() {
       //@ts-expect-error
       message.updateSource({ "system.activations": activations });
       const processActivations = async () => {
-        // if (activityList.length > 0) await busyWait(0.01);
+        // if (activityList.length > 0) await busyWait(10);
         for (let activity of activityList) {
           await completeActivityUse(activity, { midiOptions: { noUseWarning: true } }, {}, {});
           // await unTimedExecuteAsGM("completeActivityUse", { activityUuid: activity.uuid, actorUuid: actor.uuid, usage: {}, dialog: {}, message: {} });
@@ -745,10 +751,10 @@ Hooks.on("dnd5e.preCalculateDamage", (actor, damages, options) => {
       }
 
       if (!options.midiIgnoreComputed) {
-        const categories = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption" };
+        const categories = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption", "idm": "modification" };
         if (mo?.sourceActorUuid) {
           const sourceActor = fromUuidSync(mo.sourceActorUuid) as Actor.Implementation | undefined;
-          for (let key of ["idi", "idr", "idv", "ida"]) {
+          for (let key of ["idi", "idr", "idv", "ida", "idm"]) {
             //@ts-expect-error no dnd5e types
             if (sourceActor && foundry.utils.getProperty(sourceActor, `system.traits.${key}`) && sourceActor.system.traits[key]?.value.size > 0) {
               const trait = foundry.utils.getProperty(sourceActor, `system.traits.${key}`) as any;
@@ -789,7 +795,7 @@ Hooks.on("dnd5e.preCalculateDamage", (actor, damages, options) => {
           foundry.utils.setProperty(damage, "active.uncannyDodge", true);
           // @ts-expect-error TODO: Should this be `damage.active.multiplier`?
           foundry.utils.setProperty(damage, "multiplier", (damage.multiplier ?? 1) * 0.5);
-          damage.value = damage.value * 0.5;;
+          damage.value = damage.value * 0.5;
         }
       }
     }
@@ -846,6 +852,7 @@ Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
         damage.active.multiplier ??= 1;
         damage.active.multiplier *= multiplier;
         damage.value *= multiplier;
+        damage.damage = damage.value; // for backwards compatibility
         damage.active.absorption = true;
       }
     }
@@ -918,12 +925,14 @@ Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
           }
           damage.active.multiplier = (damage.active.multiplier ?? 1) * multiplier;
           damage.value = damage.value * multiplier;
+          damage.damage = damage.value; // for backwards compatibility
         }
       }
     }
     if (configSettings.saveDROrder === "SaveDrDR" && options?.ignore !== true) {
       if (!applyDamageReduction(actor, damages, options)) return false;
     }
+    if (Hooks.call("midi-qol.dnd5eCalculateDamage", actor, damages, options) === false) return false;
   } catch (err) {
     error(err);
   }
@@ -1077,7 +1086,6 @@ function applyDamageReduction(actor: Actor.Implementation, damages: DamageDescri
     if (dmAll) {
       damages.push({ type: "none", value: dmAll, active: { DR: true, multiplier: 1 }, allActives: drAllActives, properties: new Set() });
     }
-    Hooks.callAll("midi-qol.dnd5eCalculateDamage", actor, damages, options);
     while (damages.find((di, idx) => {
       if (di.type === "midi-none") {
         damages.splice(idx, 1);

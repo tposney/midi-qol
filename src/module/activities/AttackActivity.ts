@@ -1,14 +1,14 @@
-import { debugEnabled, warn, error, GameSystemConfig, debug, log, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
+import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, log, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { unTimedExecuteAsGM } from "../GMAction.js";
 import { AugmentedEvent, Workflow } from "../Workflow.js";
 import { defaultRollOptions } from "../patching.js";
 import { ReplaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
-import { busyWait } from "../tests/setupTest.js";
 import { addAdvAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { TargetConfirmationConfig } from "../apps/TargetConfirmationConfig.js";
 
 export let MidiAttackSheet: ReturnType<typeof defineMidiAttackSheetClass>;
 export let MidiAttackActivity: ReturnType<typeof defineMidiAttackActivityClass>;;
@@ -110,13 +110,19 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       const schema = {
         ...super.defineSchema(),
         otherActivityId: new StringField({ name: "otherActivity", initial: "" }),
+        otherActivityAsParentType: new BooleanField({
+          name: "otherActivityAsParentType",
+          initial: true,
+          required: false,
+          label: i18n("midi-qol.SHARED.FIELDS.otherActivityAsParentType.label"),
+          hint: i18n("midi-qol.SHARED.FIELDS.otherActivityAsParentType.hint")
+        }),
         attackMode: new StringField({ name: "attackMode", initial: "oneHanded" }),
         ammunition: new StringField({ name: "ammunition", initial: "" }),
         // deprecated 
         otherActivityUuid: new StringField({ name: "otherActivityUuid", required: false, initial: "" }),
         attackRollPerTarget: new StringField({ name: "attackRollPerTarget", initial: "default", required: true }),
         fumbleThreshold: new NumberField({ name: "fumbleThreshold", initial: 1, required: false }),
-
       };
       return schema;
     }
@@ -206,7 +212,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       // @ts-expect-error
-      return this.rollDamage({ event, workflow, critical: { allow: true } }, {}, message);
+      return this.rollDamage({ event, workflow, critical: { allow: true, isCritical: workflow?.isCritical } }, {}, message);
     }
 
     static #rollDamageNoCritical(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
@@ -351,9 +357,9 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           }
           requiresAmmoConfirmation = ammoConfirmation.confirm;
         }
-        if (Object.values(keys).some(k => k)) dialog.configure = !!(this.midiProperties?.forceDialog || requiresAmmoConfirmation);
+        if (Object.values(keys).some(k => k)) dialog.configure = !!(this.midiProperties?.forceAttackDialog || requiresAmmoConfirmation);
         if (config.workflow && areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle")) config.workflow.rollOptions.rollToggle = !config.workflow.rollOptions.rollToggle;
-        else dialog.configure ??= !(config.midiOptions.fastForwardAttack ?? workflow.workflowOptions.fastForwardAttack ?? false) || this.midiProperties?.forceDialog || requiresAmmoConfirmation;
+        else dialog.configure ??= !(config.midiOptions.fastForwardAttack ?? workflow.workflowOptions.fastForwardAttack ?? false) || this.midiProperties?.forceAttackDialog || requiresAmmoConfirmation;
         if (keys.advantage) workflow.rollOptions.advantage = keys.advantage;
         if (keys.disadvantage) workflow.rollOptions.disadvantage = keys.disadvantage;
         config.advantage ??= !!keys.advantage || !!(config.midiOptions.advantage ?? workflow.workflowOptions.advantage);
@@ -369,7 +375,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
               if (workflow) workflow.aborted = true;
               return false;
             }
-          }
+          } else if (!rollConfig.attackMode) dialogConfig.configure = true;
           if (keys.disadvantage && workflow) {
             workflow.attackAdvAttribution.add(`DIS:keyPress`);
             workflow.advReminderAttackAdvAttribution.add(`DIS:keyPress`);
@@ -388,6 +394,10 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           }
         });
         postAttackRollConfigurationHookId = Hooks.once("dnd5e.postAttackRollConfiguration", (rolls, config, dialog, message) => {
+          if (rolls?.length === 0) {
+            // if (config.workflow) config.workflow.aborted = true;
+            return false;
+          }
           // @ts-expect-error no dnd5e-types
           if (configSettings.checkTwoHanded && ["twoHanded", "offhand"].includes(rolls?.[0]?.options?.attackMode)) {
             // check equipment - shield other weapons for equipped status
@@ -452,7 +462,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
             const storedData = foundry.utils.getProperty(workflow.chatCard, "flags.midi-qol.ammunitionData") as any;
             if (storedData) workflow.ammunition = new Item.implementation(storedData, { parent: this.actor })
           } else workflow.ammunition = this.ammunitionItem;
-
+          if (this.ammunition) this.update({ ammunition: this.ammunitionItem?.id ?? "" });
           if (configSettings.allowUseMacro) {
             workflow.ammunitionOnUseMacros = workflow.ammunition?.flags?.[MODULE_ID]?.onUseMacroParts ?? new OnUseMacros();
           }
@@ -532,7 +542,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       if (workflow.workflowType === "TrapWorkflow") workflow.workflowOptions.fastForward = true;
 
       await doActivityReactions(this, workflow);
-      await busyWait(0.01);
+      await busyWait(10);
       if (configSettings.allowUseMacro && workflow.workflowOptions.noTargetOnUseMacro !== true) {
         await workflow.triggerTargetMacros(["isPreAttacked"]);
         if (workflow.aborted) {
@@ -675,15 +685,17 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     get confirmAmmunition(): { reason?: string, confirm: boolean, proceed: boolean } {
       // @ts-expect-error no dnd5e-types
       const ammunitionOptions = this.item.system.ammunitionOptions;
+      let ammoAutoSelected = false;
       const ammoCount = (ammunitionOptions?.filter(ammo => !ammo.disabled) ?? []).length;
       if ((ammoCount ?? 0) > 0 && (this.ammunition ?? "") === "") {
         this.ammunition = ammunitionOptions?.find((ammo: { disabled?: boolean; value?: string }) => !ammo.disabled)?.value ?? "";
+        ammoAutoSelected = true;
       }
       if (this.requireAmmunition && ammoCount === 0) return { reason: i18n("midi-qol.NoAmmunitionAvailable"), proceed: false, confirm: true };
       if (this.requireAmmunition && !this.ammunition) return { reason: i18n("midi-qol.NoAmmunitionSelected"), proceed: true, confirm: true };
       if (ammunitionOptions.some(ammo => ammo.value === this.ammunition && ammo.disabled)) return { reason: game.i18n?.format("midi-qol.NoAmmunition", { name: this.ammunitionItem?.name }), proceed: true, confirm: true };
-      if (game.user?.isGM) return { confirm: configSettings.gmConfirmAmmunition && ammoCount > 1, proceed: true };
-      return { confirm: configSettings.confirmAmmunition && (ammoCount > 1), proceed: true };
+      if (game.user?.isGM) return { confirm: configSettings.gmConfirmAmmunition && (ammoCount > 1 || ammoAutoSelected), proceed: true };
+      return { confirm: configSettings.confirmAmmunition && (ammoCount > 1 || ammoAutoSelected), proceed: true };
     }
 
     get requireAmmunition(): boolean {

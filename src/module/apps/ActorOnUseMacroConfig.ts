@@ -1,4 +1,4 @@
-import { MODULE_ID } from "../../midi-qol.js";
+import { MODULE_ID, i18n } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { getCurrentSourceMacros, OnUseMacro, OnUseMacros } from "./Item.js";
 import ApplicationV2 = foundry.applications.api.ApplicationV2;
@@ -55,6 +55,9 @@ export class ActorOnUseMacrosConfig extends HandlebarsApplicationMixin(Applicati
     if (context.onUseMacroName !== undefined) context.onUseMacroParts = new OnUseMacros(context.onUseMacroName);
     else context.onUseMacroParts = new OnUseMacros(null);
     context.MacroPassOptions = foundry.utils.mergeObject(onUseMacroOptions, Workflow.stateHooks);
+    Object.keys(context.MacroPassOptions).forEach((k) => {
+      context.MacroPassOptions[k] = i18n(context.MacroPassOptions[k]);
+    })
     return context;
   }
 
@@ -85,7 +88,7 @@ export class ActorOnUseMacrosConfig extends HandlebarsApplicationMixin(Applicati
     for (const [k, v] of formMacros) {
       foundry.utils.setProperty(macros, k.split('.').slice(1).join('.'), v);
     }
-    const li = (event.currentTarget as HTMLAnchorElement)!.closest<HTMLLIElement>(".macro-change");
+    const li = (event.target as HTMLAnchorElement)!.closest<HTMLLIElement>("[data-macroPart]")!;
     macros.items.splice(Number(li!.dataset!.macropart), 1);
     await this.document.setFlag(MODULE_ID, "onUseMacroName", macros.toString());
     this.render({force: true});

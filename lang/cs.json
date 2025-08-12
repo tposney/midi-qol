@@ -20,6 +20,7 @@
   "midi-qol.requiresTargetsOptions": {
     "none": "Nepoužívat",
     "combat": "V boji",
+    "tokens": "Tokeny na scéně",
     "always": "Vždy"
   },
   "midi-qol.AutoApplyDamage.Name": "Automatizace aplikace zásahu na cíl",
@@ -40,7 +41,7 @@
 "midi-qol.AutoRollDamage.Name": "Používat automatizovaný hod na zásah?",
   "midi-qol.AutoRollDamage.Hint": "Po hodu na útok se bude automaticky házet na zásah. Pokud je zaškrtnuto automatizované házení na zásah, Midi hodí na zásah i když nejsou vybrány žádné cíle, útok zasáhne (viz automatická kontrola zásahů), nebo pokud zásahy nejsou kontrolovány.",
   "midi-qol.AutoCheckSaves.Name": "Automatizace záchranných hodů",
-  "midi-qol.AutoCheckSaves.Hint": "Když bude požadován záchranný hod, bude Midi automaticky ověřovat záchranné hody. Pokud je tato funkce zakázána, bude Midi předpokládat, že všechny cíle v záchraně selhaly.",
+  "midi-qol.AutoCheckSaves.Hint": "Když bude požadována záchrana, bude Midi automaticky ověřovat záchranné hody. Pokud je tato funkce zakázána, bude Midi předpokládat, že všechny cíle v záchraně selhaly.",
   "midi-qol.DisplaySaveDC.Name": "Má se zobrazovat stupeň obtížnosti záchran?",
   "midi-qol.DisplaySaveDC.Hint": "Pokud nebude zaškrtnuto, bude stupeň obtížnosti záchran hráčům skrýván (pouze u sloučených karet).",
   "midi-qol.AutoRemoveTargets.Name": "Zacílení tokenů na konci tahu",
@@ -59,7 +60,7 @@
   "midi-qol.criticals": "kriticky zasahuje",
   "midi-qol.fumbles": "kriticky selže",
   "midi-qol.hits": "zasahuje",
-  "midi-qol.hitsEC": "Zásah EC",
+  "midi-qol.hitsEC": " zásah s EC",
   "midi-qol.misses": "selže",
   "midi-qol.save-success": "uspěje",
   "midi-qol.save-failure": "selže",
@@ -72,7 +73,6 @@
   "midi-qol.noTemplateSeen": "Šablona nebyla umístěna",
   "midi-qol.AutoTarget.Name": "Automatizované cílení šablonou",
   "midi-qol.AutoTarget.Hint": "Po umístění šablony (např. kouzla) se automaticky označí tokeny uvnitř šablony. Pokud je nastaveno 'Střed + Levels' u cílení na dálku, budou použity objemové šablony úrovní (pokud je nainstalován modul Levels).",
-  "midi-qol._comment for translators_noDamageOnSaveSpells": "Ve Foundry v9 již není element array json podporován, takže bude použita pouze verze v9.",
   "midi-qol.undoDamageFrom": "Vrátit aplikované zranění z ",
   "midi-qol.noGM": "Není připojen žádný PJ, nelze aplikovat efekty/aktualizovat body výdrže",
   "midi-qol.noSelection": "Není vybrán žádný token/aktér",
@@ -93,12 +93,12 @@
   "midi-qol.RangeTarget.Name": "Automatizované cílení útoků/kouzel na dálku",
   "midi-qol.RangeTarget.Hint": "Automaticky zaměřuje cíle v dálce, pokud je typ cíle bytost/nepřítel/spojenec.",
   "midi-qol.PlayerRollSaves.Name": "Výzva hráčům k záchraně",
-  "midi-qol.PlayerRollSaves.Hint": "Když mají hráči hodit na záchranu. 'Nevyzývat' znamená, že Midi provede hod na záchranu. Jinak hráč obdrží šeptanou výzvu v chatu, případně pomocí Monk's Token baru.",
+  "midi-qol.PlayerRollSaves.Hint": "Když mají hráči hodit záchranu. 'Nevyzývat' znamená, že Midi záchranu sám hodí. Jinak hráč obdrží šeptanou výzvu v chatu, případně pomocí modulu Monk's Token Bar.",
   "midi-qol.rollNPCSaves.Name": "Výzva PJ k záchraně nepropojených aktérů",
   "midi-qol.rollNPCLinkedSaves.Name": "Výzva PJ k záchraně propojených aktérů",
-  "midi-qol.rollNPCSaves.Hint": "'Automaticky' znamená, že Midi provede hod na záchranu za aktéra. Jinak bude PJ vyzván podle nastavení.",
+  "midi-qol.rollNPCSaves.Hint": "'Automaticky' znamená, že Midi hodí záchranu za aktéra. Jinak bude PJ vyzván podle nastavení.",
   "midi-qol.PlayerSaveTimeout.Name": "Časový limit hodu hráče",
-  "midi-qol.PlayerSaveTimeout.Hint": "Jak dlouho (v sekundách) čekat, než bude hod na záchranu proveden za hráče.",
+  "midi-qol.PlayerSaveTimeout.Hint": "Jak dlouho (v sekundách) čekat, než bude záchrana hozena za hráče.",
   "midi-qol.MagicResistant": "odolání vůči magii",
   "midi-qol.MagicResistanceFeat": "Odolání vůči magii",
   "midi-qol.PreRollChecks.Name": "Experimentální: Kontroly před rychlým/makro hodem",
@@ -108,10 +108,10 @@
   "midi-qol.noSaveTargets": "Žádné cíle na záchranu",
   "midi-qol.UseTokenNames.Name": "Mají karty chatu používat název tokenu?",
   "midi-qol.UseTokenNames.Hint": "Po zaškrtnutí budou karty chatu a názvy cílů používat název tokenu namísto názvu aktéra.",
-  "midi-qol.CriticalDamage.Name": "Výběr kritického zranění způsobovaného hráči",
+  "midi-qol.CriticalDamage.Name": "Kritické zranění způsobované hráči",
   "midi-qol.CriticalDamage.Hint": "Výchozí nastavení DnD5e = standardní hod na kritický zásah DnD5e, Maximální normální zranění = pouze základní kostky zbraně (žádné kritické), ale všechny maximalizované, Maximální kritické kostky = maximalizované kritické kostky, Všechny kostky maximální = položka + kritické kostky maximalizovány, Zdvojnásobení hodnoty kostek = výsledek kostek x2, Exploze kritických kostek = hod normálních kritických kostek s explozí kritických kostek, Pouze kritický bonus položky = jediný bonus ke kritickému je z pole extra critical u položky, Maximální základní hod a kritické kostky = použít maximální základní zranění a poté hodit kritické kostky jako obvykle.",
-  "midi-qol.CriticalDamageGM.Name": "Výběr kritického zranění způsobovaného PJ",
-  "midi-qol.CriticalDamageGM.Hint": "Vybírá kritické zranění způsobované PJ.",
+  "midi-qol.CriticalDamageGM.Name": "Kritické zranění způsobované PJ",
+  "midi-qol.CriticalDamageGM.Hint": "",
   "midi-qol.CriticalDamageChoices": {
     "default": "Výchozí nastavení DnD5e",
     "maxDamage": "Maximální normální zranění",
@@ -130,7 +130,9 @@
   "midi-qol.MergeCard.Name": "Sloučení hodů do jedné karty",
   "midi-qol.MergeCard.Hint": "Sloučí v chatu útoky, zásahy, zranění a záchrany do jedné karty.",
   "midi-qol.MergeCardCondensed.Name": "Slučovat hody na útok a zásah?",
-  "midi-qol.MergeCardCondensed.Hint": "Ušetří trochu místa v chatu zmenšením hodů na útok a zásah.",
+  "midi-qol.MergeCardCondensed.Hint": "Zaškrtnutí ušetří trochu místa v chatu zmenšením hodů na útok a zásah.",
+  "midi-qol.DisplayItemProperties.Name": "Zobrazovat nastavení položky?",
+  "midi-qol.DisplayItemProperties.Hint": "Zaškrtnutí ušetří trochu místa v chatu skrytím nastavení položek.",
   "midi-qol.ConfigTitle": "Nastavení Midi-QoL",
   "midi-qol.WorkflowSettings": "Nastavit pracovní proces",
   "midi-qol.CheckSaveText.Name": "Vyhledání popisu položky",
@@ -138,9 +140,9 @@
   "midi-qol.Save": "Uložit nastavení",
   "midi-qol.saving-throws": "Záchranné hody",
   "midi-qol.saving-throw": "Záchranný hod",
-  "midi-qol.ability-check": "Hod na vlastnost",
-  "midi-qol.ability-checks": "Hody na vlastnosti",
-  "midi-qol.skill-check": "Hod na dovednost",
+  "midi-qol.ability-check": "Ověření vlastnosti",
+  "midi-qol.ability-checks": "Ověření vlastností",
+  "midi-qol.skill-check": "Ověření dovednosti",
   "midi-qol.noAttackRoll": "Musíš hodit na útok před hodem na zásah",
   "midi-qol.config": "Nastavení Midi QoL",
   "midi-qol.Hint": "Nastaví různá nastavení pracovního procesu Midi-QoL. Upozornění: je jich hodně.",
@@ -156,7 +158,7 @@
   "midi-qol.PotionUseSound.Name": "Použití lektvaru",
   "midi-qol.SpellUseSoundRanged.Name": "Použití kouzla (na dálku)",
   "midi-qol.ItemUseSound.Name": "Použití předmětu",
-  "midi-qol.AutoFastForwardAbilityRolls.Name": "Mohou být hody na vlastnosti řešeny rychle?",
+  "midi-qol.AutoFastForwardAbilityRolls.Name": "Řešit rychle hody na vlastnosti?",
   "midi-qol.AutoFastForwardAbilityRolls.Hint": "Kliknutím na vlastnost hodíš na ověření/záchranu/dovednost, hod se pak automaticky vyřeší.",
   "midi-qol.UseCustomSounds.Name": "Mohou být používány vlastní zvuky Midi-QoL?",
   "midi-qol.UseCustomSounds.Hint": "Pokud je zaškrtnuto, přepíše systémové zvuky. Nastavení zvuků proveď v aplikaci 'Nastavení vlastních zvuků Midi'.",
@@ -313,23 +315,10 @@
     "all": "<strong>Skrývat všechno</strong>: Skrývat před hráči všechny detaily hodů"
   },
   "midi-qol.DiceRolled": "<div>Padlo</div>",
-  "midi-qol.ForceHideRoll.Name": "Skrývat ostatním soukromé, slepé a vlastní hody?",
-  "midi-qol.ForceHideRoll.Hint": "Neadresátům soukromých, slepých a vlastních hodů nezobrazí nic. Díky felix.mueller.86@web.de.",
+  "midi-qol.ForceHideRoll.Name": "Skrývat soukromé/slepé/vlastní hody?",
+  "midi-qol.ForceHideRoll.Hint": "Neadresátům soukromých, slepých a vlastních hodů se nezobrazí nic. Díky felix.mueller.86@web.de.",
   "midi-qol.EnableWorkflow.Name": "Povolit podporu automatizace hodů?",
   "midi-qol.EnableWorkflow.Hint": "Pokud je zaškrtnuto, může být v panelu nastavení pracovního procesu navolena automatizace hodů.",
-  "midi-qol.magicalProp": "Magické",
-  "midi-qol.confirmTargetsProp": "Potvrdit cíle",
-  "midi-qol.noDamageSaveProp": "Žádné zranění při úspěšné záchraně",
-  "midi-qol.fullDamageSaveProp": "Plné zranění při úspěšné záchraně",
-  "midi-qol.defaultDamageType": "midi-žádné",
-  "midi-qol.halfDamageSaveProp": "Poloviční zranění při úspěšné záchraně",
-  "midi-qol.rollOtherProp": "Hodit další",
-  "midi-qol.otherCritProp": "Další krit",
-  "midi-qol.magicalDamageProp": "Magické zranění",
-  "midi-qol.magicalEffectProp": "Magický efekt",
-  "midi-qol.concentrationEffectProp": "Soustředění",
-  "midi-qol.noConcentrationEffectProp": "Žádná záchrana soustředění",
-  "midi-qol.toggleEffectProp": "Přepnout efekt",
   "midi-qol.playerControlsInvisibleTokens.Name": "Mají hráči ovládat své skryté tokeny?",
   "midi-qol.playerControlsInvisibleTokens.Hint": "Experimentální – může fungovat.",
   "midi-qol.Debug.Name": "Ladění",
@@ -343,6 +332,7 @@
     "preItemRoll": "Voláno před hodem na položku (*)",
     "templatePlaced": "Voláno pouze po umístění šablony",
     "preAttackRoll": "Před hodem na útok",
+    "preAttackRollConfig": "Před nastavením útoku",
     "preCheckHits": "Před kontrolou zásahů",
     "postAttackRoll": "Po hodu na útok",
     "preDamageRoll": "Před hodem na zásah",
@@ -456,7 +446,7 @@
     "longfail": "Cíl je mimo maximální dostřel: útok selže",
     "longdisadv": "Cíl je v dlouhém dostřelu: útok s Nevýhodou"
   },
-  "midi-qol.NearbyFoe.Name": "Mají mít útoky střelbou Nevýhodu, pokud je nepřítel blíže než tato vzdálenost ve stopách? (0 to deaktivuje.)",
+  "midi-qol.NearbyFoe.Name": "Nevýhoda útoků střelbou, pokud je nepřítel blíže, než daná vzdálenost ve stopách (0 to deaktivuje)",
   "midi-qol.WallsBlockRange.Name": "Blokování střelby stěnami",
   "midi-qol.WallsBlockRange.Hint1": "Neblokovat = stěny neblokují ověření střelby.",
   "midi-qol.WallsBlockRange.Hint2": "Střed = kontrola středu ke středu linie.",
@@ -472,7 +462,7 @@
     "tokencover": "Alternative Token Cover",
     "tokenvisibility": "Alternative Token Visibility (zastaralé)"
   },
-  "midi-qol.NearbyAllyRanged.Name": "(Domácí pravidlo) Mají mít útoky střelbou na nepřátele se spojenci poblíž Nevýhodu?",
+  "midi-qol.NearbyAllyRanged.Name": "(Domácí pravidlo) Útoky střelbou na nepřátele se spojenci poblíž mají Nevýhodu",
   "midi-qol.WallsBlockRangeOptions": {
     "none": "Ne",
     "center": "Kontrola středu",
@@ -494,9 +484,9 @@
     "enforce": "Znemožní provést jakékoliv akce",
     "warn": "Pouze zobrazí varování"
   },
-  "midi-qol.RemoveHiddenInvis.Name": "Má útok odstranit stav ´skrytý´? (Používá speciální stavy CE/CV/CUB/Foundry.)",
+  "midi-qol.RemoveHiddenInvis.Name": "Má útok odstranit stav ´skrytý´ (používá speciální stavy CE/CV/CUB/Foundry)?",
   "midi-qol.CriticalSaves.Name": "(Domácí pravidlo) Má při kritu záchranný hod vždy uspět či selhat?",
-  "midi-qol.MaxDRValue.Name": "(Domácí pravidlo) Má být používáno pouze nejúčinnější snížení zranění? (Odškrtnutí znamená, že se budou snížení zranění sčítat.)",
+  "midi-qol.MaxDRValue.Name": "(Domácí pravidlo) Má být používáno pouze nejúčinnější snížení zranění (odškrtnutí znamená, že se budou snížení zranění sčítat)?",
   "midi-qol.DRAllPerDamageDetail.Name": "(Domácí pravidlo) Má být DRALL (DR.rwak/...) odečítán jak ze zranění útoku, tak z ostatních zranění?",
   "midi-qol.DRAllPerDamageDetail.Hint": "Nezaškrtnutí znamená, že DRALL bude aplikováno pouze jednou na celkové zranění.",
   "midi-qol.invisible": "Neviditelný",
@@ -524,7 +514,7 @@
   "midi-qol.DefaultSaveMult.Name": "Výchozí násobitel záchranného hodu",
   "midi-qol.DefaultSaveMult.Hint": "Pokud neexistují žádné další opravy, záchranný hod způsobí tuto část zranění původního útoku. Výchozí hodnota 0.5, tedy poloviční zranění při úspěchu. Měň pouze, pokud rozumíš fungování násobitelů.",
   "midi-qol.RequireMagical.Name": "Vyžádání parametru 'Magická'",
-  "midi-qol.RequireMagical.Hint": "Parametr 'Magická' je buď parametr <strong>Magická</strong> z DnD5e, nebo parametr <strong>Midi-QoL Magické zranění</strong>. Pokud je u položky nastaveno, pak položka způsobuje magické zranění.<br><strong>Nepožadovat:</strong> znamená, že i jiné položky než zbraně způsobují výchozí magické zranění. Zbraně pak způsobují magické zranění, pokud je bonus k útoku větší než 0.<br><strong>Pouze kouzla</strong> znamená, že výchozí magické zranění způsobují pouze kouzla.<br><strong>Všechny položky</strong> znamená, že žádná položka nezpůsobuje výchozí magické zranění.",
+  "midi-qol.RequireMagical.Hint": "Parametr 'Magická' je buď parametr <strong>Magická</strong> z DnD5e, nebo parametr <strong>Midi-QoL Magické zranění</strong>. Pokud je u položky zaškrtnuto, pak položka způsobuje magické zranění.<br><strong>Nepožadovat...</strong> znamená, že i jiné položky než zbraně způsobují výchozí magické zranění. Zbraně pak způsobují magické zranění, pokud je bonus k útoku větší než 0.<br><strong>Pouze kouzla...</strong> znamená, že výchozí magické zranění způsobují pouze kouzla.<br><strong>Všechny položky...</strong> znamená, že žádná položka nezpůsobuje výchozí magické zranění.",
   "midi-qol.RequireMagicalOptions": {
     "off": "Nepožadovat: i jiné než zbraně způsobují magické zranění",
     "nonspell": "Pouze kouzla způsobují výchozí magické zranění",
@@ -535,9 +525,9 @@
     "none": "Nevynucovat",
     "chatOnly": "Stačí zpráva do chatu (výchozí chování DnD5e)",
     "chat": "Zpráva v chatu + automatizovaný hod",
-    "item": "Hod na soustředění položky"
+    "item": "Záchrana soustředění položky"
   },
-  "midi-qol.DoConcentrationCheck.Hint": "<strong>Pouze zpráva v chatu</strong> zobrazí zprávu v chatu s tlačítkem (výchozí chování DnD5e a vyžaduje DnD5e soustředění)<br><strong>Zpráva v chatu + automatizovaný hod</strong> zobrazí zprávu v chatu a automaticky provede hod (vyžaduje DnD5e soustředění)<br><strong>Hod na soustředění přes položku</strong> provede hod na soustředění pomocí položky (standardní chování Midi).",
+  "midi-qol.DoConcentrationCheck.Hint": "<strong>Pouze zpráva v chatu</strong> zobrazí zprávu v chatu s tlačítkem (výchozí chování DnD5e a vyžaduje DnD5e soustředění)<br><strong>Zpráva v chatu + automatizovaný hod</strong> zobrazí zprávu v chatu a automaticky provede hod (vyžaduje DnD5e soustředění)<br><strong>Záchrana soustředění přes položku</strong> hodí na záchranu soustředění pomocí položky (standardní chování Midi).",
   "midi-qol.RemoveConcentration.Name": "Má být soustředění po selhání v záchranném hodu odstraněno?",
   "midi-qol.UsePlayerPortrait.Name": "Má být v kartách chatu používán portrét aktéra?",
   "midi-qol.UsePlayerPortrait.Hint": "Pro aktéry typu postava bude v kartách chatu Midi-QoL používat namísto obrázku tokenu portrét aktéra.",
@@ -562,12 +552,14 @@
   "midi-qol.ActiveDefenceString": "Aktivní obrana",
   "midi-qol.ActiveDefence.Name": "Používat aktivní obranu?",
   "midi-qol.ActiveDefence.Hint": "Místo toho, aby PJ házel na útok, tak hráči ´hází na obranu´.",
+  "midi-qol.ActiveDefenceDC.Name": "Zobrazovat SO aktivní obrany?",
+  "midi-qol.ActiveDefenceDC.Hint": "Po zaškrtnutí bude SO aktivní obrany zobrazováno v kartě chatu.",
   "midi-qol.ActiveDefenceShow.Name": "Výchozí zobrazení hodů na aktivní obranu",
-  "midi-qol.ActiveDefenceShow.Hint": "Pokud je nastaven 'Hod pro sebe', hod bude skryt PJ bez ohledu na další nastavení.",
-  "midi-qol.GMHide3dDice.Name": "Skrývat 3D hody na útok/zásah/záchranu PJ? (Přepisuje to další nastavení, ale pouze u sloučených karet.)",
-  "midi-qol.GhostRolls.Name": "Zobrazovat hody na útok/zásah pomocí 'DiceSoNice ghost rolls' místo jejich skrývání? (Pouze u sloučených karet.)",
-  "midi-qol.convenientEffectsOn": "Použít Convenient Effect",
-  "midi-qol.convenientEffectsOff": "Nepoužít Convenient Effect",
+  "midi-qol.ActiveDefenceShow.Hint": "Pokud je nastaven 'Osobní hod', bude hod skrýván i PJ bez ohledu na další nastavení.",
+  "midi-qol.GMHide3dDice.Name": "Skrývat 3D hody na útok/zásah/záchranu PJ (přepisuje to další nastavení pouze u sloučených karet)?",
+  "midi-qol.GhostRolls.Name": "Zobrazovat hody na útok/zásah pomocí 'DiceSoNice ghost rolls' místo jejich skrývání (pouze u sloučených karet)?",
+  "midi-qol.convenientEffectsOn": "Používat Convenient Effect",
+  "midi-qol.convenientEffectsOff": "Nepoužívat Convenient Effect",
   "midi-qol.ConsumeResource.Name": "Dialog spotřeby zdroje",
   "midi-qol.ConsumeResource.Hint": "Pokud je nastaven zákaz automatické spotřeby, bude dialog pro spotřebu zdroje přeskakován (spotřebuje výchozí zdroj/pozici kouzla a umístí šablony). K přeskočení nedojde, pokud není k dispozici žádná pozice správného stupně, nebo pokud budou při kliknutí stisknuty klávesové zkratky Výhody či Nevýhody.",
   "midi-qol.ConsumeResourceOptions": {
@@ -607,7 +599,7 @@
   "midi-qol.reactionManual": "Manuální",
   "midi-qol.reactionPreAttack": "Před hodem na útok",
   "midi-qol.ddbGL.Name": "Povolit podporu ddb-game-log?",
-  "midi-qol.ddbGL.Hint": "Po zaškrtnutí bude akceptovat útoky/zásahy/záchranné hody z ddb-game-log ke spuštění pracovního procesu Midi ve Foundry.",
+  "midi-qol.ddbGL.Hint": "Po zaškrtnutí budou akceptovány útoky/zásahy/záchranné hody z ddb-game-log ke spuštění pracovního procesu Midi ve Foundry.",
   "midi-qol.ShowReactionChatMessage.Name": "Zobrazovat výzvy reakce v chatu?",
   "midi-qol.reactionFlavorHit": "{actorName} je zasažen {itemName} a může použít reakci",
   "midi-qol.reactionFlavorTargeted": "{actorName} je cílen {itemName} a může použít reakci",
@@ -720,7 +712,6 @@
   "midi-qol.DisplayHitResultNumeric.Name": "Má se zobrazovat OČ cíle?",
   "midi-qol.EnforceBonusActions.Title": "Bonusová akce již byla použita",
   "midi-qol.EnforceBonusActions.Content": "V tomto kole již byla bonusová akce použita. Chceš pokračovat i tak?",
-  "midi-qol.MidiProperties": "Parametry položky Midi-QoL",
   "midi-qol.SoundSettings.Name": "Nastavení vlastních zvuků Midi",
   "midi-qol.SoundSettings.Hint": "Nastaví vlastní zvuky Midi-QoL pro hody položek.",
   "midi-qol.SoundSettings.Label": "Nastavit vlastní zvuky Midi",
@@ -753,7 +744,7 @@
     "adv": "Zvýrazňovat Výhodu",
     "formulaadv": "Vzorec do popisku a zvýrazňovat Výhodu"
   },
-  "midi-qol.OptionalCritRule.Name": "(Domácí pravidlo) Má být používán práh automatického kritu?",
+  "midi-qol.OptionalCritRule.Name": "(Domácí pravidlo) Práh automatického kritu",
   "midi-qol.OptionalCritRule.Hint": "Útoky, které mají o ´práh´ více než OČ, budou vždy kritické. (-1 to deaktivuje.)",
   "midi-qol.CriticalNat20.Name": "(Domácí pravidlo) Budou povoleny normální kritické hody?",
   "midi-qol.CriticalNat20.Hint": "Hod vyšší než kritický práh bude stále kritický, i když nenaplní požadavek prahu.",
@@ -790,7 +781,7 @@
   "midi-qol.AutoRerollInitiative.Hint": "Automaticky přehazuje iniciativu pro všechny bojovníky na začátku každého nového kola. Upozornění: může narušit fungování vypršení efektů trvajících kola/tahy.",
   "midi-qol.RollChecksBlind.Name": "Ověření vlastností házená naslepo",
   "midi-qol.RollSavesBlind.Name": "Záchrany házené naslepo",
-  "midi-qol.RollSkillsBlind.Name": "Ověření dovedností házená naslepo?",
+  "midi-qol.RollSkillsBlind.Name": "Ověření dovedností házená naslepo",
   "midi-qol.UndoWorkflow": {
     "Name": "Má být umožněno vrácení hodu položky?",
     "Hint": "Pokud je zaškrnuto, bude Midi ukládat data pro vrácení všech hodů položek. Bere to čas. Vrací se pomocí MidiQoL.undoMostRecentWorkflow().",
@@ -803,7 +794,7 @@
     "GMOnly": "Pracovní proces může vrátit pouze PJ"
   },
   "midi-qol.cubNotSupported": "Combat Utility Belt nebude migrován na verzi 11. Midi odstraní podporu CUB ve verzi midi 11.1.0",
-  "midi-qol.ContestedRoll": "Hod na konflikt",
+  "midi-qol.ContestedRoll": "Ověření konfliktu",
   "midi-qol.versus": "proti",
   "midi-qol.Skipped": "Přeskočeno",
   "midi-qol.ExportTroubleShooting": "Exportovat data pro řešení problémů",
@@ -865,10 +856,11 @@
   "midi-qol.TargetConfirmationAllies": "Potvrdit cíle, pokud je některý z nich spojenec?",
   "midi-qol.OutOfRange": "Mimo dosah",
   "midi-qol.SaveDROrder.Name": "Pořadí snížení zranění při záchraně",
-  "midi-qol.SaveDROrder.Hint": "Pořadí, ve kterém bude aplikováno snížení zranění. Pokud je nastaveno na 'neaplikovat', snížení zranění se neaplikuje.",
+  "midi-qol.SaveDROrder.Hint": "Pořadí, ve kterém se aplikuje snížení zranění.<br>dm.midi je snížení zranění specifické pro Midi.<br>dm je snížení zranění podle systému DnD5e.",
   "midi-qol.SaveDROrderOptions": {
-    "DRSavedr": "Snížení zranění -> záchranné hody -> odolání vůči zranění (dr/dv/di)",
-    "SaveDRdr": "Záchranné hody -> snížení zranění -> odolání vůči zranění (dr/dv/di)"
+    "DRSaveDr": "dm.midi/DnD5e.dm -> Záchrany/(dr/dv/di) = DnD5e RAW",
+    "SaveDRDr": "Záchrany -> dm.midi/dm.DnD5e -> (dr/dv/di)",
+    "SaveDrDR": "Záchrany -> dm -> (dr/dv/di) -> dm.midi"
   },
   "midi-qol.WaitingForPreviousWorkflow": "Předchozí hod {name} nebyl dokončen.",
   "midi-qol.ResolvePreviousWorkflow": "Zvol, co dělat s předchozím hodem",
@@ -906,12 +898,12 @@
   "DND5E.DamageApplication.Change.DR": "Odolání",
   "midi-qol.SettingsSearch": "Hledat nastavení",
   "midi-qol.MidiPropertiesTab.Name": "Nejnižší uživatelská role pro parametry položky",
-  "midi-qol.MidiPropertiesTab.Hint": "Nejnižší uživatelská role, která může přistupovat k záložce parametrů položek Midi-QoL. <strong>Změna vyžaduje restart.</strong>",
+  "midi-qol.MidiPropertiesTab.Hint": "Nejnižší uživatelská role, která může přistupovat k záložce parametrů položek Midi-QoL. <strong>Změna vyžaduje znovunačtení.</strong>",
   "midi-qol.CollapsibleTargets.Name": "Mají být cíle sbalitelné?",
   "midi-qol.CollapsibleTargets.Hint": "Po zaškrtnutí bude zobrazení zasažených/nezasažených cílů v kartě chatu sbalitelné.",
   "midi-qol.AutoRemoveInstantaneousTemplate.Name": "Odstraňovat automaticky šablony okamžitých kouzel po vypořádání?",
   "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "Šablony umístěné položkou s trváním ´ihned´ budou odstraněny na konci hodu položky.",
-  "midi-qol.ReplaceDefaultActivities.Name": "Nahrazovat aktivity DnD5E ekvivalenty Midi-QoL?",
+  "midi-qol.ReplaceDefaultActivities.Name": "Změnit aktivity DnD5E na Midi-QoL?",
   "midi-qol.ReplaceDefaultActivities.Hint": "Jakékoliv existující aktivity (Útok, Zranění, Záchrana, Ověření, Pomocná aktivita) budou používat Midi verze. Je to nutné pro automatizaci položek SRD, jinak bude třeba každou položku pro automatizaci Midi nastavovat ručně.",
   "midi-qol.AutoMergeActivityOther.Name": "Automaticky sloučit jinou aktivitu s Midi aktivitou ´útok´ (Změna vyžaduje restart)",
   "midi-qol.AutoMergeActivityOther.Hint": "Pokud má položka pouze aktivitu ´útok´ a jedno zranění, záchranu, ověření, či pomocnou aktivitu, bude sloučena s aktivitou útoku.",
@@ -958,12 +950,15 @@
   "midi-qol.dummyCards.Name": "Zobrazovat vždy karty útoku/zásahu u skrytých sloučených karet?",
   "midi-qol.dummyCards.Hint": "(Experimentální) Pro hody PJ (vlastní, soukromé, slepé) zobrazí kartu hodu na útok/zásahu, která spustí kartu 'PJ hodil nějaké kostky' v chatu hráčů. Pouze pro případy, kdy je dobré, aby hráči věděli, že PJ na něco házel, ale nemají vědět, na co přesně to bylo.",
   "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><strong><center>Je vypnuté sledování soustředění DnD5e.</strong><br></center><br><center>Sledování soustředění je v nastavení systému DnD5e deaktivováno.</center><center>Povol v nastavení DnD5e, aby se aktivovalo i nastavení Midi soustředění.</center><br>",
+  "midi-qol.ItemSheetMidiTab": "Midi QoL",
+  "midi-qol.AddOnUseMacro": "Přidat makro při použití",
+  "midi-qol.CustomMacro": "Vlastní makro",
   "midi-qol.SHARED": {
     "use-condition": {
       "header": "Midi podmínky"
     },
     "ignore": {
-      "header": "Ignorovat parametry zranění"
+      "header": "Ignorace parametrů zranění"
     },
     "FIELDS": {
       "useConditionText": {
@@ -985,40 +980,43 @@
       "midiProperties": {
         "rollMode": {
           "label": "Režim hodu",
-          "hint": "Jaký režim hodu má aktivita použít."
+          "hint": "Režim hodu, který se má použít pro tuto aktivitu."
         },
-        "ignoreFullCover":
-        {
-          "label": "Ignorování plného krytu",
-          "hint": "Při aplikaci zranění/záchran bude ignorovat plný kryt."
+        "removeChatButtons": {
+          "label": "Odstranění tlačítek v chatu",
+          "hint": "Jaká tlačítka odstraňovat z karty aktivity v chatu."
+        },
+        "ignoreFullCover": {
+          "label": "Ignorace plného krytu?",
+          "hint": "Po zaškrtnutí bude při aplikaci zranění/záchran ignorován plný kryt."
         },
         "chooseEffects": {
-          "label": "Výběr efektů",
-          "hint": "Výběr efektů k aplikaci."
+          "label": "Vybírat efekty?",
+          "hint": "Po zaškrtnutí se budou vybírat efekty k aplikaci."
         },
         "forceDialog": {
-          "label": "Vynucení dialogu nastavení",
-          "hint": "Vynutí dialog nastavení při hodu na útok."
+          "label": "Vynucovat dialog nastavení?",
+          "hint": "Po zaškrtnutí bude vynucovat dialog nastavení při hodu na útok."
         },
         "confirmTargets": {
           "label": "Potvrzení cíle",
           "hint": "Potvrdí cíle před hodem."          
         },
         "autoTargetType": {
-          "label": "Typ cíle pro plošný efekt (AoE)",
-          "hint": "Midi bude při použití šablon plošných efektů cílit pouze na tokeny zadaného typu"
+          "label": "Typ cílů plošného efektu (AoE)",
+          "hint": "Midi bude při použití šablon plošných efektů cílit pouze na tokeny zadaného typu."
         },
         "autoTargetAction": {
           "label": "Cílení při vykreslení šablony",
-          "hint": "Při umístění šablony (např. kouzla) cílit na tokeny uvnitř šablony. Pokud je v cílení na dálku astavena možnost 'Střed + úrovně', budou použity objemové šablony modulu Levels (pokud jsou nainstalovány)"
+          "hint": "Při umístění šablony (např. kouzla) cílit na tokeny uvnitř šablony. Pokud je v cílení na dálku astavena možnost 'Střed + úrovně', budou použity objemové šablony modulu Levels (pokud jsou nainstalovány)."
         },
         "automationOnly": {
-          "label": "Pouze automatizace",
-          "hint": "Aktivita je určena pouze pro automatizaci Midi, nikoli pro manuální použití."
+          "label": "Pouze automatizace!",
+          "hint": "Aktivita je určena pouze pro automatizaci Midi, nikoli pro manuální používání."
         },
         "displayActivityName": {
-          "label": "Zobrazení názvu aktivity",
-          "hint": "Zobrazí název aktivity v kartě chatu."
+          "label": "Zobrazovat název aktivity?",
+          "hint": "Po zaškrtnutí bude zobrazovat název aktivity v kartě chatu."
         },
         "identifier": {
           "label": "Identifikátor",
@@ -1029,24 +1027,36 @@
           "hint": "Aktivita, která má být vykonána."
         },
         "triggeredActivityConditionText": {
-          "label": "Podmínka spuštění",
+          "label": "Podmínka spuštěče",
           "hint": "Podmínka pro aktivaci spuštěné aktivity."
         },
         "triggeredActivityTargets": {
           "label": "Cíle spuštěné aktivity",
-          "hint": "Které cíle vybrat pro spuštěnou aktivitu."
+          "hint": "Jaké cíle vybrat pro spuštěnou aktivitu."
         },
         "triggeredActivityRollAs": {
           "label": "Hodit jako",
           "hint": "Hodí aktivitu, jako by byla vlastněná..."
         },
         "otherActivityCompatible": {
-          "label": "Kompatibilní s jinou aktivitou",
+          "label": "Kompatibilita s jinou aktivitou",
           "hint": "Lze použít jako jinou aktivitu."
         },
-        "toggleEffect": {
-          "label": "Přepnutí efektu",
-          "hint": "Deaktivace efektu jej namísto odstranění přepne."
+        "toggleEffects": {
+          "label": "Přepnout efekt?",
+          "hint": "Deaktivace efektu jej přepne namísto toho, aby jej odstranila."
+        },
+        "magicEffect": {
+          "label": "Magický efekt",
+          "hint": "Záchranné hody proti této aktivitě se počítají jako proti magii."
+        },
+        "magicDamage": {
+          "label": "Magické zranění?",
+          "hint": "Po zaškrtnutí bude zranění této aktivity vyhodnocováno jako magické."
+        },
+        "noConcentrationCheck": {
+          "label": "Nenutit záchranu soustředění?",
+          "hint": "Zranění touto aktivitou nebude po zaškrtnutí spouštět záchranu soustředění."
         },
         "ignoreTraits": {
           "idi": {
@@ -1069,22 +1079,30 @@
             "label": "Úprava",
             "hint": "Bude při aplikaci zranění ignorovat úpravu zranění."
           }
+        },
+        "autoCEEffects": {
+          "label": "Použití efektů CE",
+          "hint": "Při použití položky používat také modul Convenient Effects (CE = Pohodlné efekty) odpovídající názvu aktivity (nebo názvu položky, pokud aktivita neodpovídá). Vyžaduje též zapnuté automatické aplikování aktivních efektů."
         }
+      },
+      "friendlySummon": {
+        "label": "Přátelské přivolání?",
+        "hint": "Po zaškrtnutí bude mít přivolaný token stejný postoj jako vyvolávač."
       },  
       "isOverTimeFlag": {
-        "label": "Prodlužovaná aktivita",
-        "hint": "Aktivita může být prodlužována."
+        "label": "Prodlužovaná aktivita?",
+        "hint": "Po zaškrtnutí může být tato aktivita prodlužována."
       },
       "overTimeProperties": {
          "turnChoice": {
             "label": "Výběr tahu",
-            "hint": "Zda začátek, nebo konec tahu.",
+            "hint": "Začátek, nebo konec tahu?",
             "start": "Začátek tahu",
             "end": "Konec tahu"
         },
         "saveRemoves": {
           "label": "Odstranění záchranou",
-          "hint": "Zda má záchana efekt odstranit."
+          "hint": "Zda má záchrana efekt odstranit."
         },
         "preRemoveConditionText": {
           "label": "Podmínka odstranění před aktivitou",
@@ -1139,6 +1157,14 @@
       "ammunition": {
         "label": "Munice",
         "hint": "Výchozí munice ke spotřebování."
+      },
+      "attackRollPerTarget": {
+        "label": "Hod na útok proti všem cílům",
+        "hint": "Samostatně hodí na útok proti všem cílům."
+      },
+      "fumbleThreshold": {
+        "label": "Práh fatálního selhání",
+        "hint": "Pokud je hod na útok menší nebo roven této hodnotě, jedná se o fatální selhání."
       }
     }
   },
@@ -1157,7 +1183,23 @@
   "midi-qol.DAMAGE": {
     "Title": {
       "one": "Midi zranění",
-      "other": "Midi Zranění"
+      "other": "Midi Zranění",
+      "FIELDS": {
+        "damage": {
+          "label": "Zranění po záchraně",
+          "critical": {
+            "label": "Kritické zranění",
+            "allow": {
+              "label": "Povolení kritického Zranění",
+              "hint": "Povolí použití kritického zranění."
+            },
+            "bonus": {
+              "label": "Bonusové kritické zranění",
+              "hint": "Bonusové kritické zranění, které se použije, pokud je povoleno kritické zranění."
+            }
+          }
+        }
+      }
     }
   },
   "midi-qol.ENCHANT": {
@@ -1195,7 +1237,7 @@
       },
       "saveRemoves": {
         "label": "Odstranění záchranou",
-        "hint": "Zda má záchrana efekt odstranit."
+        "hint": "Zda záchrana efekt odstraní."
       },
       "removeConditionBeforeActivity": {
         "label": "Odstranění efektu před hodem",
@@ -1211,6 +1253,20 @@
     "Title": {
       "one": "Midi záchrana",
       "other": "Midi záchrany"
+    },
+    "extras": {
+      "header": "Pole záchranných hodů Midi"
+    },
+    "FriendlySave": {
+      "Default": "Záchrana",
+      "FriendlySuccess": "Spojenci uspějí",
+      "FriendlyFail": "Spojenci selžou"
+    },
+    "FIELDS": {
+      "friendlySave": {
+        "label": "Záchrana spojenců",
+        "hint": "Pokud je povoleno, umožní spojencům automaticky uspět či selhat místo hodu na záchranu."
+      }
     }
   },
   "midi-qol.UTILITY": {
@@ -1241,7 +1297,7 @@
   "midi-qol.NoAmmunition": "Ve tvém inventáři není žádná munice typu {name}",
   "midi-qol.NoAmmunitionAvailable": "Ve tvém inventáři není žádná munice.",
   "midi-qol.NoAmmunitionSelected": "Musíš vybrat, jakou munici používat.",
-  "midi-qol.TwoHandedShieldWarning": "Pokud je aktér vybaven štítem, takn nelze používat obouruční zbraň ani útok druhou rukou",
+  "midi-qol.TwoHandedShieldWarning": "Pokud je aktér vybaven štítem, pak nelze používat obouruční zbraň ani útok druhou rukou",
 "dae.MidiQOL.fieldData": {
     "flags.midi-qol.absorption.acid": { 
       "name": "Absorpce kyseliny", 
@@ -1313,27 +1369,27 @@
     },
     "flags.midi-qol.advantage.ability.check.cha": {
       "name": "Výhoda na Charisma",
-      "description": "Výhoda na hod na Charisma."
+      "description": "Výhoda na ověření Charismatem."
     },
     "flags.midi-qol.advantage.ability.check.con": {
       "name": "Výhoda na Odolnost",
-      "description": "Výhoda na hod na Odolnost."
+      "description": "Výhoda na ověření Odolnosti."
     },
     "flags.midi-qol.advantage.ability.check.dex": {
       "name": "Výhoda na Obratnost",
-      "description": "Výhoda na hod na Obratnost."
+      "description": "Výhoda na ověření Obratnosti."
     },
     "flags.midi-qol.advantage.ability.check.int": {
       "name": "Výhoda na Inteligenci",
-      "description": "Výhoda na hod na Inteligenci."
+      "description": "Výhoda na ověření Inteligence."
     },
     "flags.midi-qol.advantage.ability.check.str": {
       "name": "Výhoda na Sílu",
-      "description": "Výhoda na hod na Sílu."
+      "description": "Výhoda na ověření Síly."
     },
     "flags.midi-qol.advantage.ability.check.wis": {
       "name": "Výhoda na Moudrost",
-      "description": "Výhoda na hod na Moudrost."
+      "description": "Výhoda na ověření Moudrosti."
     },
     "flags.midi-qol.advantage.ability.save.all": {
       "name": "Výhoda na všechny záchrany",
@@ -1341,27 +1397,27 @@
     },
     "flags.midi-qol.advantage.ability.save.cha": {
       "name": "Výhoda na záchranu Charismatem",
-      "description": "Výhoda na záchranný hod Charismatem."
+      "description": "Výhoda na záchranu Charismatem."
     },
     "flags.midi-qol.advantage.ability.save.con": {
       "name": "Výhoda na záchranu Odolností",
-      "description": "Výhoda na záchranný hod Odolností."
+      "description": "Výhoda na záchranu Odolností."
     },
     "flags.midi-qol.advantage.ability.save.dex": {
       "name": "Výhoda na záchranu Obratností",
-      "description": "Výhoda na záchranný hod Obratností."
+      "description": "Výhoda na záchranu Obratností."
     },
     "flags.midi-qol.advantage.ability.save.int": {
       "name": "Výhoda na záchranu Inteligencí",
-      "description": "Výhoda na záchranný hod Inteligencí."
+      "description": "Výhoda na záchranu Inteligencí."
     },
     "flags.midi-qol.advantage.ability.save.str": {
       "name": "Výhoda na záchranu Silou",
-      "description": "Výhoda na záchranný hod Silou."
+      "description": "Výhoda na záchranu Silou."
     },
     "flags.midi-qol.advantage.ability.save.wis": {
       "name": "Výhoda na záchranu Moudrostí",
-      "description": "Výhoda na záchranný hod Moudrostí."
+      "description": "Výhoda na záchranu Moudrostí."
     },
     "flags.midi-qol.advantage.all": {
       "name": "Výhoda na vše",
@@ -1369,7 +1425,7 @@
     },
     "flags.midi-qol.advantage.attack.all": {
       "name": "Výhoda na všechny útoky",
-      "description": "Výhoda na všechny typy útoků (zbraněmi, kouzely i další)."
+      "description": "Výhoda na všechny typy útoků (zbraněmi, kouzly i jinými)."
     },
     "flags.midi-qol.advantage.attack.cha": {
       "name": "Výhoda na útoky Charismatem",
@@ -1432,7 +1488,7 @@
       "description": "Nevýhoda k Nenápadnosti kvůli těžké zbroji."
     },
     "flags.midi-qol.": {
-      "name": "MIDI-QoL Příznaky",
+      "name": "Příznaky MIDI-QoL",
       "description": ""
     },
     "flags.midi-qol.DR.msak": {
@@ -1476,7 +1532,7 @@
       "description": "Použij místo toho pole system.traits.dm (se zápornou hodnotou)."
     },
     "flags.midi-qol.DR.save": {
-      "name": "Snížení zranění (záchranný hod) (Zastaralé)",
+      "name": "Snížení zranění (Záchranný hod) (Zastaralé)",
       "description": "Použij místo toho pole system.traits.dm (se zápornou hodnotou)."
     },
     "flags.midi-qol.DR.util": {
@@ -1569,7 +1625,7 @@
     },
     "flags.midi-qol.advantage.deathSave": {
       "name": "Výhoda (Záchrana před smrtí)",
-      "description": "Výhoda při záchranném hodu proti smrti."
+      "description": "Výhoda při záchraně před smrtí."
     },
     "flags.midi-qol.advantage.skill.acr": {
       "name": "Výhoda (Akrobacie)",
@@ -1732,31 +1788,31 @@
       "description": ""
     },
     "flags.midi-qol.disadvantage.ability.save.all": {
-      "name": "Nevýhoda (Všechny záchranné hody)",
+      "name": "Nevýhoda (Všechny záchrany)",
       "description": ""
     },
     "flags.midi-qol.disadvantage.ability.save.cha": {
-      "name": "Nevýhoda (Záchranný hod na Charisma)",
+      "name": "Nevýhoda (Záchrana Charismatem)",
       "description": ""
     },
     "flags.midi-qol.disadvantage.ability.save.con": {
-      "name": "Nevýhoda (Záchranný hod na Odolnost)",
+      "name": "Nevýhoda (Záchrana Odolností)",
       "description": ""
     },
     "flags.midi-qol.disadvantage.ability.save.dex": {
-      "name": "Nevýhoda (Záchranný hod na Obratnost)",
+      "name": "Nevýhoda (Záchrana Obratností)",
       "description": ""
     },
     "flags.midi-qol.disadvantage.ability.save.int": {
-      "name": "Nevýhoda (Záchranný hod na Inteligenci)",
+      "name": "Nevýhoda (Záchrana Inteligencí)",
       "description": ""
     },
     "flags.midi-qol.disadvantage.ability.save.str": {
-      "name": "Nevýhoda (Záchranný hod na Sílu)",
+      "name": "Nevýhoda (Záchrana Silou)",
       "description": ""
     },
     "flags.midi-qol.disadvantage.ability.save.wis": {
-      "name": "Nevýhoda (Záchranný hod na Moudrost)",
+      "name": "Nevýhoda (Záchrana Moudrostí)",
       "description": ""
     },
     "flags.midi-qol.disadvantage.all": {
@@ -1824,7 +1880,7 @@
       "description": ""
     },
     "flags.midi-qol.disadvantage.deathSave": {
-      "name": "Nevýhoda (Záchrana proti smrti)",
+      "name": "Nevýhoda (Záchrana před smrtí)",
       "description": ""
     },
     "flags.midi-qol.disadvantage.skill.acr": {
@@ -1860,7 +1916,7 @@
       "description": ""
     },
     "flags.midi-qol.disadvantage.skill.inv": {
-      "name": "Nevýhoda (Vyšetřování)",
+      "name": "Nevýhoda (Pátrání)",
       "description": ""
     },
     "flags.midi-qol.disadvantage.skill.itm": {
@@ -1940,27 +1996,27 @@
       "description": ""
     },
     "flags.midi-qol.fail.ability.save.cha": {
-      "name": "Selhání (Záchranný hod na Charisma)",
+      "name": "Selhání (Záchrana Charismatem)",
       "description": ""
     },
     "flags.midi-qol.fail.ability.save.con": {
-      "name": "Selhání (Záchranný hod na Odolnost)",
+      "name": "Selhání (Záchrana Odolností)",
       "description": ""
     },
     "flags.midi-qol.fail.ability.save.dex": {
-      "name": "Selhání (Záchranný hod na Obratnost)",
+      "name": "Selhání (Záchrana Obratností)",
       "description": ""
     },
     "flags.midi-qol.fail.ability.save.int": {
-      "name": "Selhání (Záchranný hod na Inteligenci)",
+      "name": "Selhání (Záchrana Inteligencí)",
       "description": ""
     },
     "flags.midi-qol.fail.ability.save.str": {
-      "name": "Selhání (Záchranný hod na Sílu)",
+      "name": "Selhání (Záchrana Silou)",
       "description": ""
     },
     "flags.midi-qol.fail.ability.save.wis": {
-      "name": "Selhání (Záchranný hod na Moudrost)",
+      "name": "Selhání (Záchrana Moudrostí)",
       "description": ""
     },
     "flags.midi-qol.fail.all": {
@@ -2072,7 +2128,7 @@
       "description": ""
     },
     "flags.midi-qol.fail.skill.inv": {
-      "name": "Selhání (Vyšetřování)",
+      "name": "Selhání (Pátrání)",
       "description": ""
     },
     "flags.midi-qol.fail.skill.itm": {
@@ -2196,27 +2252,27 @@
       "description": ""
     },
     "flags.midi-qol.grants.advantage.save.cha": {
-      "name": "Zajistí Výhodu (Záchranný hod na Charisma)",
+      "name": "Zajistí Výhodu (Záchrana Charismatem)",
       "description": ""
     },
     "flags.midi-qol.grants.advantage.save.con": {
-      "name": "Zajistí Výhodu (Záchranný hod na Odolnost)",
+      "name": "Zajistí Výhodu (Záchrana Odolností)",
       "description": ""
     },
     "flags.midi-qol.grants.advantage.save.dex": {
-      "name": "Zajistí Výhodu (Záchranný hod na Obratnost)",
+      "name": "Zajistí Výhodu (Záchrana Obratností)",
       "description": ""
     },
     "flags.midi-qol.grants.advantage.save.int": {
-      "name": "Zajistí Výhodu (Záchranný hod na Inteligenci)",
+      "name": "Zajistí Výhodu (Záchrana Inteligencí)",
       "description": ""
     },
     "flags.midi-qol.grants.advantage.save.str": {
-      "name": "Zajistí Výhodu (Záchranný hod na Sílu)",
+      "name": "Zajistí Výhodu (Záchrana Silou)",
       "description": ""
     },
     "flags.midi-qol.grants.advantage.save.wis": {
-      "name": "Zajistí Výhodu (Záchranný hod na Moudrost)",
+      "name": "Zajistí Výhodu (Záchrana Moudrostí)",
       "description": ""
     },
     "flags.midi-qol.grants.advantage.skill.all": {
@@ -2436,27 +2492,27 @@
       "description": ""
     },
     "flags.midi-qol.grants.disadvantage.save.cha": {
-      "name": "Zajistí Nevýhodu (Záchranný hod na Charisma)",
+      "name": "Zajistí Nevýhodu (Záchrana Charismatem)",
       "description": ""
     },
     "flags.midi-qol.grants.disadvantage.save.con": {
-      "name": "Zajistí Nevýhodu (Záchranný hod na Odolnost)",
+      "name": "Zajistí Nevýhodu (Záchrana Odolností)",
       "description": ""
     },
     "flags.midi-qol.grants.disadvantage.save.dex": {
-      "name": "Zajistí Nevýhodu (Záchranný hod na Obratnost)",
+      "name": "Zajistí Nevýhodu (Záchrana Obratností)",
       "description": ""
     },
     "flags.midi-qol.grants.disadvantage.save.int": {
-      "name": "Zajistí Nevýhodu (Záchranný hod na Inteligenci)",
+      "name": "Zajistí Nevýhodu (Záchrana Inteligencí)",
       "description": ""
     },
     "flags.midi-qol.grants.disadvantage.save.str": {
-      "name": "Zajistí Nevýhodu (Záchranný hod na Sílu)",
+      "name": "Zajistí Nevýhodu (Záchrana Silou)",
       "description": ""
     },
     "flags.midi-qol.grants.disadvantage.save.wis": {
-      "name": "Zajistí Nevýhodu (Záchranný hod na Moudrost)",
+      "name": "Zajistí Nevýhodu (Záchrana Moudrostí)",
       "description": ""
     },
     "flags.midi-qol.grants.disadvantage.skill.all": { 
@@ -2525,7 +2581,7 @@
     },
     "flags.midi-qol.grants.{noAdvantage.attack.skill": {
       "name": "Neposkytne Výhodu (Dovednost)",
-      "description": "Žádný hod na dovednost vynucený tímto aktérem nebude mít Výhodu"
+      "description": "Žádné ověření dovednosti vynucené tímto aktérem nebude mít Výhodu"
     },
     "flags.midi-qol.grants.fail.advantage.attack.msak": {
       "name": "Neposkytne Výhodu (Útok kouzlem na blízko)",
@@ -2552,7 +2608,7 @@
       "description": "Žádné ověření vynucené tímto aktérem nebude mít Výhodu"
     },
     "flags.midi-qol.grants.fail.advantage.attack.skill": {
-      "name": "Neposkytne Výhodu (Hod na dovednost)",
+      "name": "Neposkytne Výhodu (Ověření dovednosti)",
       "description": "Žádné ověření dovednosti vynucené tímto aktérem nebude mít Výhodu"
     },
     "flags.midi-qol.grants.fail.disadvantage.attack.all": {
@@ -2872,7 +2928,7 @@
       "description": "Maximální hoditelná hodnota na hlavní k20 pro záchranné hody Odolností."
     },
     "flags.midi-qol.max.ability.save.concentration": { 
-      "name": "Maximální soustředění",
+      "name": "Maximální záchrana soustředění",
       "description": "Maximální hoditelná hodnota na hlavní k20 pro záchranné hody na soustředění."
     },
     "flags.midi-qol.max.ability.save.dex": {
@@ -3261,7 +3317,7 @@
     },
     "flags.midi-qol.optional.NAME.force": { 
       "name": "Volitelná síla", 
-      "description": "Podmínka pro vynucenou aktivaci bonusu." 
+      "description": "Podmínka vynucené aktivace bonusu." 
     },
     "flags.midi-qol.optional.NAME.label": { 
       "name": "Volitelný štítek", 
@@ -3480,31 +3536,31 @@
       "description": "Předem vybrané cíle kouzel se záchranou automaticky uspějí a získají stav \"super-saver\"." 
     },
     "flags.midi-qol.semiSuperSaver.all": { 
-      "name": "Poloviční Super Saver (Vše)", 
+      "name": "Poloviční super-záchrana (Vše)", 
       "description": "Při úspěšné záchraně žádné zranění." 
     },
     "flags.midi-qol.semiSuperSaver.cha": { 
-      "name": "Poloviční Super Saver (Charisma)", 
+      "name": "Poloviční super-záchrana (Charisma)", 
       "description": "Při úspěšné záchraně žádné zranění." 
     },
     "flags.midi-qol.semiSuperSaver.con": { 
-      "name": "Poloviční Super Saver (Odolnost)", 
+      "name": "Poloviční super-záchrana (Odolnost)", 
       "description": "Při úspěšné záchraně žádné zranění." 
     },
     "flags.midi-qol.semiSuperSaver.dex": { 
-      "name": "Poloviční Super Saver (Obratnost)", 
+      "name": "Poloviční super-záchrana (Obratnost)", 
       "description": "Při úspěšné záchraně žádné zranění." 
     },
     "flags.midi-qol.semiSuperSaver.int": { 
-      "name": "Poloviční Super Saver (Inteligence)", 
+      "name": "Poloviční super-záchrana (Inteligence)", 
       "description": "Při úspěšné záchraně žádné zranění." 
     },
     "flags.midi-qol.semiSuperSaver.str": { 
-      "name": "Poloviční Super Saver (Síla)", 
+      "name": "Poloviční super-záchrana (Síla)", 
       "description": "Při úspěšné záchraně žádné zranění." 
     },
     "flags.midi-qol.semiSuperSaver.wis": { 
-      "name": "Poloviční Super Saver (Moudrost)", 
+      "name": "Poloviční super-záchrana (Moudrost)", 
       "description": "Při úspěšné záchraně žádné zranění." 
     },
     "flags.midi-qol.sharpShooter": { 
@@ -3548,31 +3604,31 @@
       "description": "" 
     },
     "flags.midi-qol.superSaver.all": { 
-      "name": "Super Saver (Vše)", 
+      "name": "Super-záchrana (Vše)", 
       "description": "Při úspěšné záchraně žádné zranění, při selhání poloviční zranění." 
     },
     "flags.midi-qol.superSaver.cha": { 
-      "name": "Super Saver (Charisma)", 
+      "name": "Super-záchrana  (Charisma)", 
       "description": "Při úspěšné záchraně žádné zranění, při selhání poloviční zranění." 
     },
     "flags.midi-qol.superSaver.con": { 
-      "name": "Super Saver (Odolnost)", 
+      "name": "Super-záchrana  (Odolnost)", 
       "description": "Při úspěšné záchraně žádné zranění, při selhání poloviční zranění." 
     },
     "flags.midi-qol.superSaver.dex": { 
-      "name": "Super Saver (Obratnost)", 
+      "name": "Super-záchrana  (Obratnost)", 
       "description": "Při úspěšné záchraně žádné zranění, při selhání poloviční zranění." 
     },
     "flags.midi-qol.superSaver.int": { 
-      "name": "Super Saver (Inteligence)", 
+      "name": "Super-záchrana  (Inteligence)", 
       "description": "Při úspěšné záchraně žádné zranění, při selhání poloviční zranění." 
     },
     "flags.midi-qol.superSaver.str": { 
-      "name": "Super Saver (Síla)", 
+      "name": "Super-záchrana  (Síla)", 
       "description": "Při úspěšné záchraně žádné zranění, při selhání poloviční zranění." 
     },
     "flags.midi-qol.superSaver.wis": { 
-      "name": "Super Saver (Moudrost)", 
+      "name": "Super-záchrana  (Moudrost)", 
       "description": "Při úspěšné záchraně žádné zranění, při selhání poloviční zranění." 
     },
     "flags.midi-qol.uncanny-dodge": { 

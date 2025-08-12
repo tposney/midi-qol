@@ -1,12 +1,11 @@
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
-import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn } from "../../midi-qol.js";
+import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn, busyWait } from "../../midi-qol.js";
 import { socketlibSocket } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, Workflow } from "../Workflow.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { aoeTargetTypeOptions, autoCEEffectsOptions, autoTargetOptions, checkMechanic, checkRule, configSettings, confirmTargetOptions, ignoreTraitsOptions, removeButtonsOptions, safeGetGameSetting, targetConfirmation, triggeredActivityRollAsOptions, triggeredActivityTargetOptions } from "../settings.js";
 import { installedModules } from "../setupModules.js";
-import { busyWait } from "../tests/setupTest.js";
 import { saveUndoData } from "../undo.js";
 import {
   activityHasAreaTarget,
@@ -105,7 +104,8 @@ export let MidiActivityMixin = Base => {
           idi: new BooleanField({ name: "idi", initial: false }),
           idr: new BooleanField({ name: "idr", initial: false }),
           idv: new BooleanField({ name: "idv", initial: false }),
-          ida: new BooleanField({ name: "ida", initial: false })
+          ida: new BooleanField({ name: "ida", initial: false }),
+          idm: new BooleanField({ name: "idm", initial: false })
         }),
         midiProperties: new SchemaField({
           ignoreTraits: new SetField(new StringField(), { initial: [] }),
@@ -115,11 +115,14 @@ export let MidiActivityMixin = Base => {
           triggeredActivityTargets: new StringField({ name: "triggeredActivityTargets", initial: "targets", required: true, blank: false }),
           triggeredActivityRollAs: new StringField({ name: "triggeredActivityRollAs", initial: "self" }),
           forceDialog: new BooleanField({ name: "forceDialog", initial: false }),
+          forceAttackDialog: new BooleanField({ name: "forceAttackDialog", initial: false }),
+          forceDamageDialog: new BooleanField({ name: "forceDamageDialog", initial: false }),
           confirmTargets: new StringField({ name: "confirmTargets", initial: "default", required: true, blank: false }),
           autoTargetType: new StringField({ name: "autoTargetType", initial: "any", required: true, blank: false }),
           autoTargetAction: new StringField({ name: "autoTargetAction", initial: "default" }),
           automationOnly: new BooleanField({ name: "automationOnly", initial: false }),
           otherActivityCompatible: new BooleanField({ name: "otherActivityCompatible", initial: true }),
+          otherActivityAsParentType: new BooleanField({ name: "otherActivityAsParentType", initial: true, required: false }),  
           identifier: new StringField({ name: "identifier", initial: "", required: false }),
           displayActivityName: new BooleanField({ name: "displayActivityName", initial: false }),
           rollMode: new StringField({ name: "rollMode", initial: "default", required: true, blank: false }),
@@ -295,7 +298,7 @@ export let MidiActivityMixin = Base => {
           return;
         }
         if (game.user?.targets.size === 0) {
-          ui.notifications?.warn(i18n("midi-qol.noTokens"));
+          ui.notifications?.warn(i18n("midi-qol.noTargets"));
           return;
         }
         const result = (await socketlibSocket.executeAsUser("applyEffects", authorId, {
@@ -369,7 +372,7 @@ export let MidiActivityMixin = Base => {
     static #rollDamageCritical(this: Activity, event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
-      return this.rollDamage({ event, workflow, midiOptions: { isCritical: true } }, {}, message);
+      return this.rollDamage({ event, workflow, critical: {allow: true}, midiOptions: { isCritical: true } }, {}, message);
     }
 
     get identifier() {
@@ -380,6 +383,10 @@ export let MidiActivityMixin = Base => {
     prepareData() {
       //@ts-expect-error
       if (!this.midiProperties.identifier && !this.name) this.midiProperties.identifier = i18n(this.constructor.metadata.dnd5eTitle).slugify();
+      if (this.midiProperties?.forceDialog) {
+        this.midiProperties.forceAttackDialog = true;
+        this.midiProperties.forceDamageDialog = true;
+      }
       super.prepareData();
     }
 
@@ -498,7 +505,10 @@ export let MidiActivityMixin = Base => {
         });
 
         if (!await activity.preTargetingChecks(usage, dialog, message)) return false;
-        if (!await activity.setupTargets(usage, dialog, message)) return false;
+        if (!await activity.setupTargets(usage, dialog, message)) {
+          ui.notifications?.warn(i18n("midi-qol.noTargets"));
+          return false;
+        }
         if (!await activity.preChatChecks(usage, dialog, message)) return false;
         try {
           useResults = await super.use.bind(activity)(usage, dialog, message);
@@ -637,21 +647,28 @@ export let MidiActivityMixin = Base => {
         };
 
         config.midiOptions!.isCritical ??= config.workflow.workflowOptions?.isCritical || config.workflow.isCritical;
+        config.isCritical ??= config.midiOptions!.isCritical;
         config.midiOptions!.fastForwardDamage ??= config.workflow.workflowOptions?.fastForwardDamage;
         if (this.hasDamage || this.hasHealing) {
-          if (Object.values(keys).some(k => k)) dialog.configure = !!(this.midiProperties?.forceDialog);
-          else dialog.configure ??= !config.midiOptions?.fastForwardDamage || !!this.midiProperties?.forceDialog;
+          if (Object.values(keys).some(k => k)) dialog.configure = !!(this.midiProperties?.forceDamageDialog);
+          else dialog.configure ??= !config.midiOptions?.fastForwardDamage || !!this.midiProperties?.forceDamageDialog;
           if (config.workflow && areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle")) config.workflow.rollOptions.rollToggle = !config.workflow.rollOptions.rollToggle;
           // @ts-expect-error no dnd5e-types
           if (this.item.system.properties?.has("ver") && areMidiKeysPressed(config.event ?? config.workflow.workflowOptions.event, "Versatile")) {
             config.workflow.attackMode = "twoHanded";
           }
           if (config.workflow.rollOptions?.rollToggle) dialog.configure = !dialog.configure;
+          // If the activity damage has any choice force configuration dialog
           // if (dialog.configure) config.midiOptions.isCritical = false;
           preRollDamageHookId = Hooks.once("dnd5e.preRollDamageV2", (rollConfig, dialogConfig, messageConfig) => {
             if (keys.critical) rollConfig.isCritical = true;
             else if (keys.normal) rollConfig.isCritical = false;
             else if (!dialogConfig.configure) rollConfig.isCritical ||= rollConfig.midiOptions?.isCritical;
+            if (this.damage?.parts.some(part => part.types.size > 1)) dialogConfig.configure = true;
+            ///@ts-expect-error no dnd5e-types
+            else if (rollConfig.ammunition?.system.damage.base?.types.size ?? 0 > 1) dialogConfig.configure = true;
+            else if ((this.healing?.types?.size ?? 0) > 1) dialogConfig.configure = true;
+
             if (dialogConfig.configure) {
               dialogConfig.options ??= {};
               if (rollConfig.isCritical || rollConfig.midiOptions?.isCritical) {
@@ -664,8 +681,7 @@ export let MidiActivityMixin = Base => {
             if (rolls[0] && config.workflow && config.midiOptions?.updateWorkflow !== false) config.workflow.isCritical = rolls[0].options.isCritical;
           });
           message.create ??= false;
-          if (this.damage?.parts.some(part => part.types.size > 1)) dialog.configure = true;
-          if ((this.healing?.types?.size ?? 0) > 1) dialog.configure = true;
+
           result = await super.rollDamage(config, dialog, message);
           if (!result) { // user backed out of roll 
             config.workflow.currentAction = config.workflow.WorkflowState_WaitForDamageRoll;
@@ -689,6 +705,7 @@ export let MidiActivityMixin = Base => {
             const otherConfig = foundry.utils.deepClone(config);
             otherConfig.midiOptions!.fastForward = config.midiOptions!.fastForwardDamage;
             otherConfig.midiOptions!.updateWorkflow = false; // rollFormula will try and restart the workflow
+            if (this.otherActivity.ac)
             // Undo the roll toggle since rollFormula will look at it as well
             if (config.workflow.rollOptions?.rollToggle) dialog.configure = !dialog.configure;
             if (this.otherActivity?.hasDamage)
@@ -702,6 +719,16 @@ export let MidiActivityMixin = Base => {
                   new game.system.dice.DamageRoll(roll.formula, {}, {})
                 );
               }
+            }
+            if (otherResult && this.otherActivityAsParentType) {
+              otherResult.forEach(r => {
+                //@ts-expect-error no dnd5e-types
+                const properties = new Set(r.options.properties ?? []);
+                properties?.delete(this.otherActivity.actionType);
+                properties?.add(this.actionType);
+                //@ts-expect-error no dnd5e-types
+                r.options.properties = Array.from(properties); 
+              })
             }
             // @ts-expect-error might be false from above `if`
             if (otherResult && config.midiOptions!.updateWorkflow !== false && config.workflow) await config.workflow.setOtherDamageRolls(otherResult);
@@ -824,7 +851,8 @@ export let MidiActivityMixin = Base => {
         // @ts-expect-error no dnd5e-types
         magicalDamage ??= this.item?.system.properties.has("mgc");
         magicalDamage = magicalDamage || (configSettings.requireMagical === "off" && this.attackBonus > 0);
-        magicalDamage ||= configSettings.requireMagical === "off" && (config.ammunition?.attackBonus ?? 0) > 0;
+        //@ts-expect-error no dnd5e-types
+        magicalDamage ||= configSettings.requireMagical === "off" && (config.ammunition?.system.magicalBonus ?? 0) > 0;
         magicalDamage = magicalDamage || (configSettings.requireMagical === "off" && (this.attack?.type.classification ?? "none") !== "weapon");
         magicalDamage = magicalDamage || (configSettings.requireMagical === "nonspell" && this.isSpell);
 
@@ -946,7 +974,7 @@ export let MidiActivityMixin = Base => {
         }
       }
       if (needPause) {
-        await busyWait(0.1);
+        await busyWait(100);
         for (let tokenRef of workflow.targets) {
           const target = getToken(tokenRef);
           if (!target || !target.vision?.los) continue;
@@ -986,6 +1014,7 @@ export let MidiActivityMixin = Base => {
         if (((this.target?.affects.type ?? "") !== "") 
           || configSettings.enforceSingleWeaponTarget
           || (targetConfirmation.enabled && targetConfirmation.always)
+          || (targetConfirmation.enabled && targetConfirmation.noneTargeted)
           || this.forcedTargetConfirmation) {
           if (!(await preTemplateTargets(this, config.midiOptions ?? {})))
             return false;
@@ -1233,6 +1262,7 @@ export let MidiActivityMixin = Base => {
           || (!this.attack && !this.hasDamage && !this.hasSave); // does not do anything - need to check dynamic effects
 
         if (!shouldAllowRoll) {
+          ui.notifications?.warn(i18n("midi-qol.noTargets"));
           return removeWorkflow(workflow);
         }
 
@@ -1348,7 +1378,7 @@ export let MidiActivityMixin = Base => {
         if (templateDocuments && templateDocuments.length > 0) {
           let td = templateDocuments[0];
           td.object?.refresh();
-          await busyWait(0.01);
+          await busyWait(10);
           if (workflow) {
             workflow.templateUuid = td.uuid;
             if (installedModules.get("walledtemplates") && this.flags?.walledtemplates?.attachToken === "caster") {

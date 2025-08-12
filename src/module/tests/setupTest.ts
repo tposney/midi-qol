@@ -1,4 +1,4 @@
-import { MODULE_ID, ceInterface, error, warn } from "../../midi-qol.js";
+import { MODULE_ID, busyWait, ceInterface, error, warn } from "../../midi-qol.js";
 import { applySettings } from "../apps/ConfigPanel.js";
 import { CEHasEffectApplied, CERemoveEffect, applyTokenDamage, completeItemUse, findNearby, updateUserTargets } from "../utils.js";
 import { TrapWorkflow, Workflow } from "../Workflow.js";
@@ -10,9 +10,7 @@ const target2Name = "Orc2";
 const target3Name = "Skeleton1";
 
 const workflowOptions = { targetConfirmation: "none" };
-export async function busyWait(seconds: number) {
-  return (new Promise(resolve => setTimeout(resolve, seconds * 1000)));
-}
+
 export async function resetActors() {
   for (let name of [actor1Name, actor2Name, target1Name, target2Name, target3Name]) {
     const a = getActor(name);
@@ -146,7 +144,7 @@ async function registerTests() {
                 const workflow: TrapWorkflow = new TrapWorkflow(targetActor, trapItem.system.activities.contents[0], undefined, templateLocation);
                 assert.ok(trapWorkflowMacro, "TrapWorkflowTest macro not found");
                 assert.ok(!!workflow && workflow instanceof TrapWorkflow);
-                await busyWait(1);
+                await busyWait(1000);
                 const fireballEffect = targetActor?.effects.find(e => e.name === "FireballTest Template");
                 assert.ok(fireballEffect, "No template effect found");
                 await fireballEffect?.delete();
@@ -224,7 +222,7 @@ async function registerTests() {
         });
         describe("initiative rolls", function () {
           it("rolls a normal initiative roll", async function () {
-            await busyWait(0.1); // let previous chat message creation complete
+            await busyWait(100); // let previous chat message creation complete
             this.timeout(3000);
 
             const rollResult: Promise<Roll> = new Promise((resolve) => {
@@ -411,12 +409,12 @@ async function registerTests() {
               await cltInterface.removeCondition("Blinded", [target]);
             assert.ok(!cltInterface.hasCondition("Blinded", [target]));
             assert.ok(!!(await completeItemUse(actor.items.getName("Clt Test")!, { midiOptions: { workflowOptions } })));
-            await busyWait(0.5);
+            await busyWait(500);
             assert.ok(cltInterface.hasCondition("Blinded", [target]));
             const effect: ActiveEffect | undefined = targetActor?.effects.find(e => e.name === "Clt Test");
             results = await targetActor?.deleteEmbeddedDocuments("ActiveEffect", [effect?.id ?? "bad"]);
             // results = await globalThis.DAE.actionQueue.add(target.actor?.deleteEmbeddedDocuments.bind(target.actor),"ActiveEffect", [effect?.id ?? "bad"]);
-            await busyWait(0.5);
+            await busyWait(500);
             if (cltInterface.hasCondition("Blinded", [target])) {
               console.warn("testcltCondition", "Blinded not removed")
               await cltInterface.removeCondition("Blinded", [target]);
@@ -440,11 +438,11 @@ async function registerTests() {
             }
             assert.ok(!await CEHasEffectApplied({ effectName: "Deafened", uuid: targetActor?.uuid ?? "" }));
             await completeItemUse(actor.items.getName("CE Test")!, { midiOptions: { workflowOptions } });
-            await busyWait(0.5);
+            await busyWait(500);
             assert.ok(await CEHasEffectApplied({ effectName: "Deafened", uuid: targetActor?.uuid ?? "" }));
             const effect: ActiveEffect | undefined = targetActor?.effects.find(e => e.name === "CE Test");
             results = await targetActor?.deleteEmbeddedDocuments("ActiveEffect", [effect?.id ?? "bad"]);
-            await busyWait(0.1);
+            await busyWait(500);
             if (await CEHasEffectApplied({ effectName: "Deafened", uuid: targetActor?.uuid ?? "" })) {
               console.warn("testCECondition", "Deafened not removed")
               await CERemoveEffect({ effectName: "Deafened", uuid: targetActor?.uuid ?? "" });
@@ -484,7 +482,7 @@ async function registerTests() {
             const effects3 = target3.actor.effects.contents.filter(ef => (ef.name) === "MODTest");
             if (effects2.length) await target2.actor.deleteEmbeddedDocuments("ActiveEffect", effects2.map(ae => ae.id))
             if (effects3.length) await target3.actor.deleteEmbeddedDocuments("ActiveEffect", effects3.map(ae => ae.id))
-            await busyWait(0.1);
+            await busyWait(100);
             const condition2 = target2.actor.effects.contents.filter(ef => (ef.name) === "Frightened");
             const condition3 = target3.actor.effects.contents.filter(ef => (ef.name) === "Frightened");
             if (condition2.length) await target2.actor.deleteEmbeddedDocuments("ActiveEffect", condition2.map(ae => ae.id))
@@ -509,7 +507,7 @@ async function registerTests() {
             const effects3 = target3.actor.effects.contents.filter(ef => (ef.name) === "MODTestNoActivation");
             if (effects2.length) await target2.actor.deleteEmbeddedDocuments("ActiveEffect", effects2.map(ae => ae.id))
             if (effects3.length) await target3.actor.deleteEmbeddedDocuments("ActiveEffect", effects3.map(ae => ae.id))
-            await busyWait(0.1);
+            await busyWait(100);
             const condition2 = target2.actor.effects.contents.filter(ef => (ef.name) === "Frightened");
             const condition3 = target3.actor.effects.contents.filter(ef => (ef.name) === "Frightened");
             if (condition2.length) await target2.actor.deleteEmbeddedDocuments("ActiveEffect", condition2.map(ae => ae.id))
@@ -537,7 +535,7 @@ async function registerTests() {
               if (hasEffect?.length > 0) await targetActor?.deleteEmbeddedDocuments("ActiveEffect", hasEffect.map(e => e.id));
               updateUserTargets([target?.id ?? ""]);
               await completeItemUse(actor.items.getName("Macro Execute Test")!, { midiOptions: { workflowOptions } });
-              await busyWait(0.1);
+              await busyWait(100);
               console.log("Macro Execute Test checking flag", foundry.utils.getProperty(actor, "flags.midi-qol.test"));
               let flags: any = actor.flags[MODULE_ID];
               assert.equal(flags?.test, "metest")
@@ -566,12 +564,12 @@ async function registerTests() {
             assert.ok(globalThis.TokenMagic);
             const theEffects: ActiveEffect.Implementation[] = (await actor.createEmbeddedDocuments("ActiveEffect", [effectData]) ?? []) as ActiveEffect[];
             assert.ok(actor.effects.find(ef => (ef.name === effectData.name)));
-            await busyWait(3);
+            await busyWait(3000);
             const actorToken = canvas.tokens?.placeables.find(t => t.name === (actor.token?.name ?? actor.name))
             assert.ok(actorToken, "found actor token");
             assert.ok(globalThis.TokenMagic.hasFilterId(actorToken, "blur"), "applied blur effect");
             await actor.deleteEmbeddedDocuments("ActiveEffect", theEffects.map(ef => ef.id as string));
-            await busyWait(3);
+            await busyWait(3000);
             assert.equal(globalThis.TokenMagic.hasFilterId(actorToken, "blur"), false, "test blur");
             return true;
           });
@@ -579,7 +577,7 @@ async function registerTests() {
                       const actor = getActor(actor1Name);
                       const actorToken = canvas.tokens?.placeables.find(t=> t.name === actor.token?.name)
                       this.retries(10);
-                      await busyWait(1);
+                      await busyWait(1000);
                       assert.equal(globalThis.TokenMagic.hasFilterId(actorToken,"blur"), false, "test blur");
                     });
           */
@@ -598,7 +596,7 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             const macroPasses: string[] = [];
             await completeItemUse(actor.items.getName("OnUseMacroTest")!, { midiOptions: { workflowOptions } }); // Apply the effect
-            await busyWait(0.2);
+            await busyWait(200);
             const target = getToken(target2Name);
             updateUserTargets([target?.id ?? ""]);
             //@ts-expect-error
@@ -726,13 +724,13 @@ async function registerTests() {
             assert.ok(actor && foundry.utils.getProperty(actor, "flags.midi-qol.OverTime.Test"), "overtime flag set");
 
             await combat?.nextRound();
-            await busyWait(1);
+            await busyWait(1000);
             //@ts-expect-error no dnd5e-types
             let newHp = actor?.system.attributes.hp.value;
             assert.equal(hp - 15, newHp, "verify hp deduction 1st");
             assert.equal(actor?.effects.contents.length, 0, "check effect is removed");
             await combat?.nextRound();
-            await busyWait(1);
+            await busyWait(1000);
             //@ts-expect-error no dnd5e-types
             newHp = actor?.system.attributes.hp.value;
             assert.equal(hp - 15, newHp, "verify hp deduction 2nd");

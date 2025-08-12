@@ -17,7 +17,6 @@ const knownSheets = {
   // Tidy5eSheet: ".item .item-image",
   // Tidy5eNPC: ".item .item-image",
   MonsterBlock5e: ".item .item-name",
-  "sw5e.ActorSheet5eNPC": ".item .item-name"
   //  Sky5eSheet: ".item .item-image",
 };
 export function setupSheetQol() {
