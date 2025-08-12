@@ -4,7 +4,7 @@
 * Allow macro writers to overwrite the options set in reactionDialog.
 * Fix some cases where an item roll would silently fail with no targets selected.
 * Fixed bug in ActorOnUse macro app when deleting a macro.
-* When rolling damage and specified roll contains multiple damage types the configure damage dialog will always be displayed to allow you to choose the actual damage type for the roll.
+* When rolling damage and the specified roll contains multiple damage types the configure damage dialog will always be displayed to allow you to choose the actual damage type for the roll.
 * Some fixes for displaying attack config when no ammunition is available.
 * Fixed behaviour of Target Confirmation "no targets selected".
 * Corrected some out of date fa icons thanks @morepurplemorebetter
