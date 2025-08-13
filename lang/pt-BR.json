@@ -978,7 +978,7 @@
         "hint": "Atividade extra para causar 'outros' danos."
       },
       "otherActivityAsParentType": {
-        "label": "Subrepor Tipo de Ação",
+        "label": "Sobrepor Tipo de Ação",
         "hint": "Substitui as propriedades do tipo de atividade do Outro Dano por esta atividade (Armado Corpo a Corpo, Armado à Distância, etc)."
       },
       "midiProperties": {
