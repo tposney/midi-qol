@@ -375,7 +375,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
               if (workflow) workflow.aborted = true;
               return false;
             }
-          } else if (!rollConfig.attackMode) dialogConfig.configure = true;
+          } else if (!rollConfig.attackMode && dialogConfig.options?.attackModeOptions?.length ) dialogConfig.configure = true;
           if (keys.disadvantage && workflow) {
             workflow.attackAdvAttribution.add(`DIS:keyPress`);
             workflow.advReminderAttackAdvAttribution.add(`DIS:keyPress`);

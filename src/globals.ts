@@ -1106,6 +1106,7 @@ export type RollDialogConfig = {
       buildConfig?: unknown;
       rendering?: unknown;
     };
+    attackModeOptions?: string[];
     defaultButton?: string;
     advantageMode?: number;
   };
