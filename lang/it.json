@@ -977,6 +977,10 @@
         "label": "Use Other Activity",
         "hint": "Extra activity to preform 'other' damage"
       },
+      "otherActivityAsParentType": {
+        "label": "Sovrascrivi Tipo Azione",
+        "hint": "Sostituisci altri tipi di attività con proprietà danno usando questa attività (mwak, rwak etc)"
+      },
       "midiProperties": {
         "rollMode": {
           "label": "Roll Mode",
@@ -997,6 +1001,14 @@
         "forceDialog": {
           "label": "Force Configuration Dialog",
           "hint": "Force Configuration Dialog when activity used"
+        },
+        "forceAttackDialog" : {
+          "label": "Force Attack Config",
+          "hint": "Force Attack Configuration Dialog when activity used"
+        },
+        "forceDamageDialog": {
+          "label": "Force Damage Config",
+          "hint": "Force Damage Configuration Dialog when activity used"
         },
         "confirmTargets": {
           "label": "Target Confirmation",
@@ -1035,8 +1047,8 @@
           "hint": "Which targets to select for the triggered activity"
         },
         "triggeredActivityRollAs": {
-          "label": "Roll as",
-          "hint": "Roll the activity as if owned by..."
+          "label": "Tira come",
+          "hint": "Tira per l'attività come se appartentente a..."
         },
         "otherActivityCompatible": {
           "label": "Other Activity Compatible",
