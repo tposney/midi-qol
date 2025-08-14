@@ -6073,7 +6073,7 @@ export class Workflow {
           // TODO what else to do once rolled
         }
         const optionalCrits = checkRule("optionalCritRule") as number;
-        if (this.targets.size === 1 && optionalCrits > -1) {
+        if (this.targets.size === 1 && configSettings.optionalRulesEnabled && optionalCrits > -1) {
           if (checkRule("criticalNat20") && this.isCritical) {
           } else {
             this.isCritical = attackTotal >= targetAC + optionalCrits;

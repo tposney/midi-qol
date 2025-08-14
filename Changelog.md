@@ -1,3 +1,6 @@
+### 13.0.14
+* Fix for all rolls being critical or miss if optional rules are disabled.
+
 ### 13.0.13
 * For otherActivities, if they have the midi setting Display Activity Name set, midi will display the activity name, rather than "Other" in the chat card.
   - So for example, Mace of Disruption, Undead Damage activity set Display Activity Name to checked and the chat card will display Undead Damage for the damage that only applies to undead targets.
