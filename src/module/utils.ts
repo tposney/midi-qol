@@ -4566,6 +4566,57 @@ export function raceOrType(entity: TokenOrDocument | Actor | string): string {
   return systemData.details.type?.value?.toLocaleLowerCase() ?? "";
 }
 
+/**
+ * Collects damage types from damage rolls and updates `rollData` if provided,
+ * otherwise returns the computed result.
+ *
+ * @param damageRolls.
+ * @param rollData Optional object to which damageTypes and defaultDamageType will be assigned.
+ * @returns Void if `rollData` is provided; otherwise an object containing `damageTypes` and `defaultDamageType`.
+ */
+export function collectDamageRollTypes(
+  damageRolls: {
+    options?: { type?: string };
+    parts?: string[];
+  }[] = [],
+  rollData?: {
+    damageTypes?: { [key: string]: boolean };
+    defaultDamageType?: { [key: string]: boolean };
+    [key: string]: any;
+  }
+): void | { damageTypes: { [key: string]: boolean }, defaultDamageType?: { [key: string]: boolean } } {
+  const existingTypes = rollData?.damageTypes ?? {};
+  const damageTypes: { [key: string]: boolean } = { ...existingTypes };
+  let defaultType: string | undefined = undefined;
+
+  for (const roll of damageRolls) {
+    const type = roll.options?.type;
+    if (type && !defaultType) defaultType = type;
+    if (type) damageTypes[type] = true;
+
+    for (const part of roll.parts ?? []) {
+      if (!part?.length) continue;
+      const match = [...part.matchAll(/\[([^\]]+)\]/g)].map(m => m[1].trim().toLowerCase());
+      for (const partType of match) {
+        if (!defaultType) defaultType = partType;
+        damageTypes[partType] = true;
+      }
+    }
+  }
+
+  const defaultDamageType = defaultType ? { [defaultType]: true } : {};
+
+  if (rollData) {
+    rollData.damageTypes = damageTypes;
+    if (!rollData.defaultDamageType) {
+      rollData.defaultDamageType = defaultDamageType;
+    }
+    return;
+  } else {
+    return { damageTypes, defaultDamageType };
+  }
+}
+
 export function createConditionData(data: {
   workflow?: Workflow,
   target?: TokenOrDocument | Actor | string,
@@ -4585,6 +4636,7 @@ export function createConditionData(data: {
   }
   if (!item) item = data.activity?.item ?? data.workflow?.activity?.item ?? data.workflow?.item;
   let rollData: any = data.activity?.getRollData() ?? item?.getRollData() ?? actor?.getRollData() ?? {};
+  collectDamageRollTypes(data?.options?.damageRolls, rollData);
   rollData = foundry.utils.mergeObject(rollData, data.extraData ?? {});
   rollData.isAttuned = rollData.item?.attuned || rollData.item?.attunement === "";
   rollData.options = data?.options;
