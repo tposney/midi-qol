@@ -3,7 +3,7 @@
   "title": "Midi QOL",
   "description": "Automates rolling weapon/spell attacks and applying damage amongst other things",
 
-  "version": "13.0.14",
+  "version": "13.0.15",
   "authors": [
     {
       "name": "Tim Posney",
@@ -121,7 +121,7 @@
   ],
   "compatibility": {
     "minimum": "13",
-    "verified": "13.346",
+    "verified": "13.347",
     "maximum": "13.999"
   },
   "bugs": "https://gitlab.com/tposney/midi-qol/-/issues",
@@ -130,6 +130,6 @@
   },
   "url": "https://gitlab.com/tposney/midi-qol",
   "manifest": "https://gitlab.com/tposney/midi-qol/raw/v13/package/module.json",
-  "download": "https://gitlab.com/tposney/midi-qol/raw/v13/package/midi-qol-v13.0.14.zip",
+  "download": "https://gitlab.com/tposney/midi-qol/raw/v13/package/midi-qol-v13.0.15.zip",
   "changelog": "https://gitlab.com/tposney/midi-qol/raw/v13/Changelog.md"
 }

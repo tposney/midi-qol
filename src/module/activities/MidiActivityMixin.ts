@@ -526,7 +526,7 @@ export let MidiActivityMixin = Base => {
         Workflow.workflows.delete(usage.workflow!.activity?.uuid ?? "");
         // Force a few values to be added to the updates cache now we have the chat card.
         usage.workflow.itemCardUuid = useResults.message.uuid;
-        usage.workflow.id = useResults.message.uuid;
+        usage.workflow.id = useResults.message.uuid ?? usage.workflow.id;
         usage.workflow.activity = usage.workflow.activity;
         usage.workflow.item = usage.workflow!.activity?.item;
         activity = usage.workflow!.activity! as MidiActivityMixin;
@@ -1412,9 +1412,8 @@ export let MidiActivityMixin = Base => {
       if (tokenToUse && emanationNoTemplate) {
         setRangedTargets(tokenToUse, this.target);
         message.workflow?.setTargets(validTargetTokens(new Set(game.user?.targets)));
+        foundry.utils.setProperty(message.data, "flags.dnd5e.targets", globalThis.dnd5e.utils.getTargetDescriptors());
       }
-
-      foundry.utils.setProperty(message.data, "flags.dnd5e.targets", globalThis.dnd5e.utils.getTargetDescriptors());
       const context = await super._usageChatContext(message);
       if (debugEnabled > 0) warn("show item card ", this, this.actor, this.actor?.token, systemCard, workflow);
       let needAttackButton = !getRemoveAttackButtons(this) || configSettings.mergeCardMulti
@@ -1430,7 +1429,11 @@ export let MidiActivityMixin = Base => {
       const isPlayerOwned = this.item.actor?.hasPlayerOwner;
       const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned))
         || !configSettings.itemTypeList?.includes(this.item.type);
-      const hasEffects = !["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects) && workflow?.workflowType === "BaseWorkflow" && this.effects.some(ae => !ae.effect?.transfer && !ae.effect?.flags?.dae?.dontApply);
+      // Are there any potential effects to apply
+      let hasEffects = workflow?.workflowType === "BaseWorkflow" && this.effects.some(ae => !ae.effect?.transfer && !ae.effect?.flags?.dae?.dontApply);;
+      // if target type is not blank or there are targets only set hasEffects if we are not going to remove the button later
+      if (this.target?.affects.type !== "" || workflow.targets.size !== 0)
+        hasEffects &&= !["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects);
       let dmgBtnText = (this.actionType === "heal") ? i18n("DND5E.Healing") : i18n("DND5E.Damage");
       if (workflow?.workflowOptions?.fastForwardDamage && configSettings.showFastForward) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
 
@@ -1448,7 +1451,6 @@ export let MidiActivityMixin = Base => {
         configSettings,
         hideItemDetails,
         dmgBtnText,
-        showProperties: workflow?.workflowType === "BaseWorkflow",
         hasEffects,
         effects: this.item.effects,
         isMerge: true,

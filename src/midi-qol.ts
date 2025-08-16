@@ -98,7 +98,6 @@ export async function busyWait(milliSeconds: number) {
   return (new Promise(resolve => setTimeout(resolve, milliSeconds)));
 }
 
-export let MQdefaultDamageType: string;
 export let midiFlags: string[] = [];
 export let allAttackTypes: string[] = []
 export let gameStats: RollStats;
@@ -434,7 +433,7 @@ Hooks.once('setup', function () {
   visionPatching();
   initGMActionSetup();
   setupHooks();
-  MQdefaultDamageType = i18n("midi-qol.defaultDamageType");
+  MidiQOL.MQdefaultDamageType = i18n("midi-qol.defaultDamageType");
   MQItemMacroLabel = i18n("midi-qol.ItemMacroText") ?? "ItemMacro";
   MQActivityMacroLabel = i18n("midi-qol.ActivityMacroText") ?? "ActivityMacro";
   setupSheetQol();

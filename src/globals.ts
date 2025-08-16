@@ -74,6 +74,7 @@ declare module "fvtt-types/configuration" {
   interface SettingConfig {
     "dnd5e.disableConcentration": boolean;
     "dnd5e.metricLengthUnits": boolean;
+    "dnd5e.attackRollVisibility": string;
     "midi-qol.MidiSoundSettings": Record<string, any>;
     "midi-qol.playerControlsInvisibleTokens": boolean;
     "midi-qol.RollStats": Record<string, Stats>;
@@ -576,6 +577,7 @@ declare global {
     modifyDamageBy: typeof utils.modifyDamageBy;
     moveToken: typeof moveToken;
     moveTokenAwayFromPoint: typeof moveTokenAwayFromPoint;
+    MQdefaultDamageType: string;
     MQfromActorUuid: typeof utils.fromActorUuid;
     MQfromUuid: typeof fromUuidSync;
     MQOnUseOptions: Record<string, string>;
@@ -1164,3 +1166,25 @@ export type D20RollOptions = {
   maximum?: number;
   minimum?: number;
 };
+
+export type DND5ETargetDescriptor = {
+  name: string,
+  img: string,
+  uuid: string,
+  ac: number | null,
+};
+
+export type MidiTargetDescriptor = {
+  saved?: boolean;
+  semiSuperSaver?: boolean;
+  superSaver?: boolean;
+  saveMults?: {
+    otherDamage: number;
+    defaultDamage: number;
+    bonusDamage: number;
+  };
+  itemType?: string;
+  uncannyDodge?: boolean;
+};
+
+export type CombinedTargetDescriptor = MidiTargetDescriptor & DND5ETargetDescriptor;

@@ -301,22 +301,15 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         const total = totals[index];
         if (!total) continue;
         if (!game.user?.isGM && configSettings.autoCheckHit === "whisper") {
-          if (total.classList.contains("success")) total.classList.remove("success");
-          if (total.classList.contains("failure")) total.classList.remove("failure");
-          if (total.classList.contains("critical")) total.classList.remove("critical");
-          if (total.classList.contains("fumble")) total.classList.remove("fumble");
+          if (total.classList.contains("success")) total.classList.remove("success", "failure", "critical", "fumble");
         } else if (total && configSettings.highLightCriticalAttackOnly) {
           //@ts-expect-error
           if (d20Roll?.isCritical) total.classList.add("critical");
           //@ts-expect-error
           if (d20Roll?.isFumble) total.classList.add("fumble");
-          if (total.classList.contains("success")) total.classList.remove("success");
-          if (total.classList.contains("failure")) total.classList.remove("failure");
+          if (total.classList.contains("success")) total.classList.remove("success", "failure");
         } else if (total && !configSettings.highlightSuccess) {
-          if (total.classList.contains("success")) total.classList.remove("success");
-          if (total.classList.contains("failure")) total.classList.remove("failure");
-          if (total.classList.contains("critical")) total.classList.remove("critical");
-          if (total.classList.contains("fumble")) total.classList.remove("fumble");
+          if (total.classList.contains("success")) total.classList.remove("success", "failure", "critical", "fumble");
         } else if (total && !configSettings.highlightSuccess) {
           //@ts-expect-error
           if (d20Roll.isCritical) total.classList.add("critical");

@@ -8,7 +8,7 @@
 </div>
 <ul class="dnd5e2 unlist evaluation wrapper">
   {{#each saves as |save iid|}}
-  <li class="midi-qol midi-qol-save-class target midi-qol-target-select {{save.saveClass}}" data-id="{{save.target.id}}">
+  <li class="midi-qol midi-qol-save-class target midi-qol-target-select {{save.targetClass}} {{save.saveClass}}" data-id="{{save.target.id}}">
     <i class="fas {{save.saveSymbol}}"></i>
     <img src="{{save.img}}" style="background-color: var(--dnd5e-background-10); width: 30px; height: 30px;" />
     <div class="midi-qol-target-name " id="{{save.target.id}}" data-uuid="{{save.target.document.uuid}}">
@@ -24,7 +24,7 @@
         </div>
       </div>
     </div>
-    <div style="font-weight: bold;">{{save.rollTotal}}</div>
+    <div class="{{saveTotalClass}}" style="font-weight: bold;">{{save.rollTotal}}</div>
   </li>
   {{/each}}
 </ul>

@@ -1,3 +1,24 @@
+### 13.0.15
+* Active defence rolls now use the Active Defence Modifier field. 
+  - The active defence roll DC = ActiveDefenceModifier + Attack Roll Bonus
+  - The active defence roll will be (AC - Active Defence Modifier) + 1d20.
+  - You can set that value to whatever you want, common choices are 12, 0 or 10, each of which makes the DC or the defence roll more obvious.
+  - Cleaned up the dice so nice handling for active defence rolls so that the DSN dice are only shown once.
+* Active defence now supports isAttacked/isHit reactions which means, for example, the Shield spell can be triggered with active defence enabled.
+* Revisited the attack and save display to better align with the dnd5e visibility settings.
+  - Midi will use the most restrictive of the dnd5e settings and the midi settings. So you can tailor it a bit.
+  - Added a new option "check and only gm sees anything" - if enabled players will see nothing for the saves/hits display.
+  - Removed the display AC setting from midi-qol workflow settings - use the dnd5e attack visibility setting instead. The current dnd5e setting is displayed on the midi workflow tab.
+* Support dnd5e 5.1 self enchant option.
+* If you roll an activity that has effects to apply, with no target type and no targets selected midi would remove the apply effects button if the settings include remove buttons. However that means you would never be able to apply the effect. So in that special case midi will always leave the apply effects button.
+* Midi will now remember the last rolled default damage for an activity that does damage and use that as the default damage for any activity that rolls damage but has not damage specified. An example use for this would be if you don't automate sneak attack. Roll the weapon that does the sneak attack and if you want to roll sneak attack (making sure it is specified with no damage types) and it will pick up the weapon damage type. Can be useful for low automation environments.
+* Fixed a few localisation issues on the Workflow Settings app.
+* Updated it.json and pt-br.json thanks to @GregoryWarn and @Kharmans.
+* Added "collectDamageRollTypes" merge request - thanks @thatlonelybugbear.
+* **For macro writers** Midi will now use the values stored in flags.dnd5e.targets (dnd5e's TargetDescriptors) when checking hits. So if you change the ac value stored there (for example when rolling an attack) midi will respect the change.
+  - The change is noted before hits are checked and changes to the target AC, for example reactions/3rd party reactions will still work and workflow.
+  - checkHits can be called multiple times without issue.
+
 ### 13.0.14
 * Fix for all rolls being critical or miss if optional rules are disabled.
 

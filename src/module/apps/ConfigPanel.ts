@@ -87,8 +87,8 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     let CoverCalculationOptions = foundry.utils.duplicate(coverCalculationOptions);
     [{ id: "levelsautocover", name: "'Levels Auto Cover'" }, { id: "simbuls-cover-calculator", name: "'Simbuls Cover Calculator'" }, { id: "tokencover", name: "Alternative Token Cover" }].forEach(module => {
       if (!installedModules.get(module.id)) {
-        wallsBlockRangeOptions[module.id] = `${i18n(wallsBlockRangeOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
-        CoverCalculationOptions[module.id] = `${i18n(CoverCalculationOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
+        wallsBlockRangeOptions[module.id] = `${i18n(wallsBlockRangeOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
+        CoverCalculationOptions[module.id] = `${i18n(CoverCalculationOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
       }
     });
     if (!installedModules.get("levels")) {
@@ -97,7 +97,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     let HiddenAdvantageOptions: any = foundry.utils.duplicate(hiddenAdvantageOptions);
     [{ id: "perceptive", name: "Perceptive" }].forEach(module => {
       if (!installedModules.get(module.id)) {
-        HiddenAdvantageOptions[module.id] = `${i18n(HiddenAdvantageOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
+        HiddenAdvantageOptions[module.id] = `${i18n(HiddenAdvantageOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
       }
     });
     let quickSettingsOptions = {};
@@ -110,22 +110,25 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     */
     const AddWoundedOptions = foundry.utils.duplicate(addDeadOptions);
     delete AddWoundedOptions["none"];
+    const rollNPCSavesOptionsLocalized = foundry.utils.duplicate(rollNPCSavesOptions);
     for (let key of Object.keys(rollNPCSavesOptions)) {
       switch (key) {
         case "mtb":
-          if (!installedModules.get("monks-tokenbar")) rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Monks Token Bar" })}`;
+          if (!installedModules.get("monks-tokenbar")) rollNPCSavesOptionsLocalized[key] = `${i18n(rollNPCSavesOptions[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
           break;
         case "rer":
-          if (!installedModules.get("epic-rolls-5e")) rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
+          if (!installedModules.get("epic-rolls-5e")) rollNPCSavesOptionsLocalized[key] = `${i18n(rollNPCSavesOptions[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
       }
+
     }
+    let playerRollSavesOptionsLocalized = foundry.utils.duplicate(playerRollSavesOptions);
     for (let key of Object.keys(playerRollSavesOptions)) {
       switch (key) {
         case "mtb":
-          if (!installedModules.get("monks-tokenbar")) playerRollSavesOptions[key] = `${playerRollSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Monks Token Bar" })}`;
+          if (!installedModules.get("monks-tokenbar")) playerRollSavesOptionsLocalized[key] = `${i18n(playerRollSavesOptionsLocalized[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
           break;
         case "rer":
-          if (!installedModules.get("epic-rolls-5e")) playerRollSavesOptions[key] = `${playerRollSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
+          if (!installedModules.get("epic-rolls-5e")) playerRollSavesOptionsLocalized[key] = `${i18n(playerRollSavesOptionsLocalized[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
       }
     };
 
@@ -175,8 +178,8 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       hideRollDetailsHint: hideRollDetailsHintLongOptions,
       nsaFlag,
       coloredBorders,
-      playerRollSavesOptions: (autoFastForwardAbilityRolls && false) ? playerRollSavesOptionsReduced : playerRollSavesOptions,
-      rollNPCSavesOptions,
+      playerRollSavesOptions: (autoFastForwardAbilityRolls && false) ? playerRollSavesOptionsReduced : playerRollSavesOptionsLocalized,
+      rollNPCSavesOptions: rollNPCSavesOptionsLocalized,
       customSoundsPlaylistOptions: game.playlists?.contents.reduce((acc, e) => { acc[e.id] = e.name; return acc }, {}) || {},
       customSoundOptions: game.playlists?.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) => { acc[s.id ?? ""] = s.name; return acc }, { "none": "" }),
       rollSoundOptions: CONFIG.sounds,

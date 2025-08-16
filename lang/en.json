@@ -178,7 +178,8 @@
   "midi-qol.autoCheckHitOptions": {
     "none": "None",
     "all": "Check - all see result",
-    "whisper": "Check - only GM sees"
+    "whisper": "Check - only GM sees results",
+    "gmOnly": "Check - only GM sees anything"
   },
   "midi-qol.clickOptions": {
     "off": "Off",
@@ -200,8 +201,9 @@
     "none": "Off",
     "allNoRoll": "Save - All see result only",
     "all": "Save - All see result + save total",
-    "whisper": "Save - only GM sees",
-    "allShow": "Save - All see Result + Rolls"
+    "allShow": "Save - All see Result + Rolls",
+    "whisper": "Save - only GM sees results + rolls",
+    "gmOnly": "Save - only GM sees anything"
   },
   "midi-qol.rangeTargetOptions": {
     "none": "None",
@@ -514,7 +516,7 @@
   "midi-qol.DefaultSaveMult.Name": "Default saving throw multiplier",
   "midi-qol.DefaultSaveMult.Hint": "If there are no other modifiers a saving throw will do this fraction of the damage of the original attack. Default 0.5, half damage on save. You should only change this if you know how multipliers work",
   "midi-qol.RequireMagical.Name": "Require 'Magical' property",
-  "midi-qol.RequireMagical.Hint": "Magical Property is either the dnd5e property <strong>Magical</strong> or the <strong>midi-qol Magic Damage</strong> property. If set the item does magical damage. <br><strong>Off</strong> non-weapons do magical damage by default, weapons do magical damage if attack bonus > 0.<br><strong>Non Spell</strong> means only spells do magical damage by default.<br><strong>All</strong> no item does magical damage by default",
+  "midi-qol.RequireMagical.Hint": "Magical Property is either the dnd5e property <strong>Magical</strong> or the <strong>midi-qol Magic Damage</strong> property. If set the item does magical damage. <br><strong>Off</strong> non-weapons do magical damage by default, weapons do magical damage if the item's magical property set.<br><strong>Non Spell</strong> means only spells do magical damage by default.<br><strong>All</strong> no item does magical damage by default",
   "midi-qol.RequireMagicalOptions": {
     "off": "Off: Non-weapons do magical damage",
     "nonspell": "Non spells do non-magical damage",
@@ -551,6 +553,8 @@
   "midi-qol.NoChangelogs": "Midi-qol supports and recommends the ChangeLogs or Module Manager+ modules to show you any changes since you last updated",
   "midi-qol.ActiveDefenceString": "Active Defence",
   "midi-qol.ActiveDefence.Name": "Active Defence",
+  "midi-qol.ActiveDefenceModifier.Name": "Active Defence Modifier",
+  "midi-qol.ActiveDefenceModifier.Hint": "The active defence DC will be attack bonus + (22 - this modifier) and the active defence roll will be AC - modifier + 1d20. <br>The value does not matter just choose what makes the rolls look good to you. <br> Suggested values are <strong>12</strong>, 10 or 0",
   "midi-qol.ActiveDefence.Hint": "Instead of GM rolling 'To Hit', players make a defence roll.",
   "midi-qol.ActiveDefenceDC.Name": "Show Active Defence DC",
   "midi-qol.ActiveDefenceDC.Hint": "If set the active defence DC will be shown in the chat card",
@@ -709,7 +713,6 @@
   },
   "midi-qol.EnforceReactions.Title": "Reaction Used",
   "midi-qol.EnforceReactions.Content": "You have used your reaction this round. Do you want to proceed anyway?",
-  "midi-qol.DisplayHitResultNumeric.Name": "Display target AC",
   "midi-qol.EnforceBonusActions.Title": "Bonus Action Used",
   "midi-qol.EnforceBonusActions.Content": "You have used your bonus action this round. Do you want to proceed anyway?",
   "midi-qol.SoundSettings.Name": "Configure Midi Custom Sounds",
@@ -999,7 +1002,7 @@
           "hint": "Choose effects to apply"
         },
         "forceDialog": {
-          "label": "Force Configuration Dialog",
+          "label": "Force Configuration Dialog (Deprecated)",
           "hint": "Force Configuration Dialog when activity used"
         },
         "forceAttackDialog" : {
@@ -1172,7 +1175,7 @@
       },
       "attackRollPerTarget": {
         "label": "Attack Roll Per Target",
-        "hint": "Roll a separate attack roll for each target"
+        "hint": "Roll a separate attack roll for each target. Creates a chat card for each target."
       },
       "fumbleThreshold": {
         "label": "Fumble Threshold",

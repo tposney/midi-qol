@@ -1024,7 +1024,7 @@ function _DAgetTargetOptions(...args) {
     let targetDetails;
 
     if (damageType) {
-      const targets = this?.chatMessage?.flags?.["midi-qol"]?.dnd5eTargets ?? [];
+      const targets = this?.chatMessage?.flags?.dnd5e?.targetDetails ?? [];
       targetDetails = targets.find(target => target.uuid === uuid);
       if (!targetDetails) return options;
       options.midi = foundry.utils.duplicate(targetDetails);
@@ -1048,15 +1048,14 @@ function _DAgetTargetOptions(...args) {
         sourceActorUuid = targetDetails.sourceActorUuid;
       }
     }
-
   } catch (err) {
     const message = `midi-qol | _DAgetTargetOptions failed to get target options`;
     console.warn(message, err);
     TroubleShooter.recordError(err, message);
   } finally {
     foundry.utils.setProperty(options, "midi.sourceActorUuid", sourceActorUuid);
+    return options;
   }
-  return options;
 }
 
 function _DAcalculateDamage(actor: Actor.Implementation, options: DamageApplicationOptions) {

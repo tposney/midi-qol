@@ -99,7 +99,6 @@ class ConfigSettings {
   damageVulnerabilityMultiplier: number = 2;
   defaultSaveMultiplier: number = 0.5;
   diceSound: string = "";
-  displayHitResultNumeric: boolean = true;
   displaySaveAdvantage: boolean = true;
   displaySaveDC: boolean = true;
   doConcentrationCheck: string = "chat";
@@ -191,7 +190,9 @@ class ConfigSettings {
   optionalRules = {
     actionSpecialDurationImmediate: false,
     activeDefence: false,
+    activeDefenceModifier: 12,
     activeDefenceShow: "selfroll",
+    ActiveDefenceDC: true,
     autoRerollInitiative: false,
     challengeModeArmor: "none",
     checkFlanking: "off",
@@ -393,7 +394,6 @@ export let fetchParams = () => {
   if (configSettings.autoItemEffects === false) configSettings.autoItemEffects = "off";
   if (configSettings.playerDamageCard === undefined) configSettings.playerDamageCard = "none";
   if (configSettings.playerCardDamageDifferent === undefined) configSettings.playerCardDamageDifferent = true;
-  if (configSettings.displayHitResultNumeric === undefined) configSettings.displayHitResultNumeric = false;
   if (configSettings.rollAlternate === undefined) configSettings.rollAlternate = "off";
   //@ts-expect-error legacy boolean value
   if (configSettings.rollAlternate === false) configSettings.rollAlternate = "off";
@@ -426,7 +426,9 @@ export let fetchParams = () => {
   configSettings.optionalRules = foundry.utils.mergeObject({ // eventually split this into mechanics and rules
     actionSpecialDurationImmediate: false,
     activeDefence: false,
+    activeDefenceModifier: 12, // default value for active defence modifier
     activeDefenceShow: "selfroll",
+    ActiveDefenceDC: true,
     challengeModeArmor: "none",
     challengeModeArmorScale: false,
     checkFlanking: "off",
@@ -788,7 +790,8 @@ export const autoRollDamageOptions = keysToOptionsObj("autoRollDamageOptions", [
 export const autoCheckHitOptions = keysToOptionsObj("autoCheckHitOptions", [
   "none",
   "all",
-  "whisper"
+  "whisper",
+  "gmOnly"
 ]);
 
 export const clickOptions = keysToOptionsObj("clickOptions", [
@@ -813,8 +816,9 @@ export const autoCheckSavesOptions = keysToOptionsObj("autoCheckSavesOptions", [
   "none",
   "allNoRoll",
   "all",
+  "allShow",
   "whisper",
-  "allShow"
+  "gmOnly",
 ]);
 
 export const rangeTargetOptions = keysToOptionsObj("rangeTargetOptions", [

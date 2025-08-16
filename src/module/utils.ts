@@ -1,4 +1,4 @@
-import { debug, i18n, error, warn, busyWait, MQdefaultDamageType, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface } from "../midi-qol.js";
+import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, DebounceInterval, autoRollDamageOptions, showReactionAttackRollOptions } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
@@ -9,7 +9,7 @@ import { concentrationCheckItemDisplayName, midiFlagTypes } from "./Hooks.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
-import { Activity, ActivityUseConfiguration, CalcDamageOptions, DamageDescription, DamageListEntry, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument } from "../globals.js";
+import { Activity, ActivityUseConfiguration, CalcDamageOptions, DamageDescription, DamageListEntry, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor } from "../globals.js";
 
 import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject, AnyObject } from "fvtt-types/utils";
@@ -74,7 +74,7 @@ export function modifyDamageBy({
 export function createDamageDetail({
   roll,
   activity,
-  defaultType = MQdefaultDamageType
+  defaultType = MidiQOL.MQdefaultDamageType
 }: {
   roll: Roll | Roll[];
   activity: Activity | null;
@@ -143,12 +143,12 @@ export let getTraitMult = (actor: Actor.Implementation, dmgTypeString: string, i
     // @ts-expect-error no dnd5e-types
     magicalDamage ??= item?.system.properties?.has("mgc");
     // @ts-expect-error no dnd5e-types
-    magicalDamage = magicalDamage || (configSettings.requireMagical === "off" && item?.system.attackBonus > 0);
+    magicalDamage ||= (configSettings.requireMagical === "off" && (item?.system.magicalBonus > 0 || item?.system.attackBonus > 0));
     // @ts-expect-error no dnd5e-types
-    magicalDamage = magicalDamage || (configSettings.requireMagical === "off" && item?.type !== "weapon");
+    magicalDamage ||= (configSettings.requireMagical === "off" && item?.type !== "weapon");
     // @ts-expect-error no dnd5e-types
-    magicalDamage = magicalDamage || (configSettings.requireMagical === "nonspell" && item?.type === "spell");
-    magicalDamage = magicalDamage || damageProperties.includes("mgc");
+    magicalDamage ||= (configSettings.requireMagical === "nonspell" && item?.type === "spell");
+    magicalDamage ||= damageProperties.includes("mgc");
     // @ts-expect-error no dnd5e-types
     const silverDamage = item?.system.properties.has("sil") || magicalDamage || damageProperties.includes("sil");
     // @ts-expect-error no dnd5e-types
@@ -709,7 +709,7 @@ export function requestPCActiveDefence(player: User, actor: Actor, saveItemName:
   const useUuid = true;
   const actorId = useUuid ? actor.uuid : actor.id;
 
-  let mode = checkRule("activeDefenceShow") ?? CONST.DICE_ROLL_MODES.SELF;
+  let rollMode = checkRule("activeDefenceShow") ?? CONST.DICE_ROLL_MODES.SELF;
   // TODO: Right check?
   let flavor = `${saveItemName} ${configSettings.optionalRules.activeDefence ? "DC " + options.rollOptions.target : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
   const midiType = "defenceRoll";
@@ -719,7 +719,7 @@ export function requestPCActiveDefence(player: User, actor: Actor, saveItemName:
       advantageMode,
       target: this.activeDefenceDC
     };*/
-  socketlibSocket.executeAsUser("D20Roll", player.id, { targetUuid: actor.uuid, formula: options.formula, bonus: options.bonus, coverBonus: options.coverBonus, rollOptions: options.rollOptions, rollMode: mode, midiType, flavor, messageData: { speaker: getSpeaker(actor) } }).then(result => {
+  socketlibSocket.executeAsUser("D20Roll", player.id, { targetUuid: actor.uuid, formula: options.formula, bonus: options.bonus, coverBonus: options.coverBonus, rollOptions: options.rollOptions, rollMode, midiType, flavor, messageData: { speaker: getSpeaker(actor) } }).then(result => {
     if (debugEnabled > 1) debug("D20Roll result ", result);
     log("midi-qol | D20Roll result ", result);
     const handler = options.workflow.defenceRequests[requestId];
@@ -6483,8 +6483,10 @@ async function _updateAction(document: foundry.abstract.Document.Any) {
   // const flatCache = foundry.utils.flattenObject(updatesCache[baseDocument.uuid] ?? {});
   updatesCache[baseDocument.uuid] = foundry.utils.diffObject(updates, updatesCache[baseDocument.uuid] ?? {});
   delete updatesCache[document.uuid].rolls; // This is handled by the chat card and will be already setup as [Roll] rather than json
+  
   //@ts-expect-error
-  if (updates.content) ui.chat?.scrollBottom();
+  if (updates.content && ui.chat.isAtBottom) ui.chat?.scrollBottom();
+  
   if (debugEnabled > 1 && updates.content && updatesCache[baseDocument.uuid]?.content) 
     warn("_updateAction | queued content differences ", diffStringsFull(updates.content, updatesCache[baseDocument.uuid].content, {ignoreWhitespace: true, ignoreNewlines: true}));
   if (debugEnabled) warn("_updateAction | post update updatesCache", updatesCache[baseDocument.uuid]);
@@ -6506,9 +6508,9 @@ export function getUpdatesCache(uuid: string | undefined | null) {
   return updatesCache[uuid] ?? {};
 }
 
-export function addUpdatesCacheFlags(uuid: string | undefined | null, updates: any, prependMidi = false) {
+export function addUpdatesCacheFlags(uuid: string | undefined | null, updates: any, prepend = MODULE_ID) {
   if (!uuid) return;
-  if (prependMidi) updates = { [MODULE_ID]: updates };
+  if (prepend) updates = { [prepend]: updates };
   updates = foundry.utils.expandObject({ flags: updates });
   if (updates._id) debugger;
   updatesCache[uuid] = foundry.utils.mergeObject(updatesCache[uuid] ?? {}, updates, { insertKeys: true, insertValue: true });
@@ -6729,14 +6731,14 @@ export function getActivityDefaultDamageType(workflow: Workflow): string {
   let defaultDamageType = workflow.activity.damage?.parts[0]?.types.first();
   if (defaultDamageType) return defaultDamageType;
   if (workflow.defaultDamageType) defaultDamageType = workflow.defaultDamageType;
-  if (!defaultDamageType) defaultDamageType = MQdefaultDamageType;
+  if (!defaultDamageType) defaultDamageType = MidiQOL.MQdefaultDamageType;
   return defaultDamageType;
 }
 
 export function getDefaultDamageType(item: Item.Implementation): string {
   // @ts-expect-error no dnd5e-types
   const activity = item.system.activities.get("dnd5eactivity000");
-  return activity?.damage?.parts[0]?.types.first() ?? MQdefaultDamageType;
+  return activity?.damage?.parts[0]?.types.first() ?? MidiQOL.MQdefaultDamageType;
 }
 
 export function activityHasAreaTarget(activity?: Activity): boolean {
@@ -6844,15 +6846,6 @@ function getCPREffect(id: string): ActiveEffect.Implementation | undefined {
 export function updateUserTargets(targetIds: string[]) {
   // @ts-expect-error not in v13 yet
   canvas.tokens?.setTargets(targetIds);
-  // if (!game.user) return;
-  // if (game.release.generation > 12) { // TODO make sure this really works NOTE from Michael: Should work now
-  //   game.user.broadcastActivity({ targets: targetIds });
-  //   // @ts-expect-error types isn't v13 yet but this is how core does it
-  //   game.user._onUpdateTokenTargets(targetIds);
-  // } else {
-  //   //@ts-expect-error types does not have this yet
-  //   game.user.updateTokenTargets(targetIds);
-  // }
 }
 
 export async function cleanCPRFlanked() {
@@ -7070,3 +7063,7 @@ const b = "The 🐶 sits   on a mat!";
 console.log(diffStringsFull(a, b, { ignoreWhitespace: true, ignoreNewlines: true }));
 --------------------------------------------------- */
 
+export function getTargetDescriptor(uuid: string, targetDescriptors: Array<DND5ETargetDescriptor> | undefined): DND5ETargetDescriptor | undefined {
+  if (!uuid || !targetDescriptors) return undefined;
+  return targetDescriptors?.find(td => td.uuid === uuid);
+}

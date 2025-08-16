@@ -7,11 +7,11 @@ import { addAdvAttribution, areMidiKeysPressed, asyncHooksCall, completeActivity
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
-import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { Activity, ActivityUseConfiguration, DND5ETargetDescriptor, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { TargetConfirmationConfig } from "../apps/TargetConfirmationConfig.js";
 
 export let MidiAttackSheet: ReturnType<typeof defineMidiAttackSheetClass>;
-export let MidiAttackActivity: ReturnType<typeof defineMidiAttackActivityClass>;;
+export let MidiAttackActivity: ReturnType<typeof defineMidiAttackActivityClass>;
 // export let MidiAttackActivityData;
 
 export function setupAttackActivity() {
@@ -314,7 +314,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     async rollAttack(config: RollProcessConfig={}, dialog: RollDialogConfig={}, message: RollMessageConfig={}) {
       let preRollHookId: number | undefined;
       let rollAttackHookId: number | undefined;
-      let postAttackRollConfigurationHookId: number | undefined;;
+      let postAttackRollConfigurationHookId: number | undefined;
       let rolls;
       const workflow = config.workflow;
       config.midiOptions ??= {};
@@ -364,6 +364,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         if (keys.disadvantage) workflow.rollOptions.disadvantage = keys.disadvantage;
         config.advantage ??= !!keys.advantage || !!(config.midiOptions.advantage ?? workflow.workflowOptions.advantage);
         config.disadvantage ??= !!keys.disadvantage || !!(config.midiOptions.disadvantage ?? workflow.workflowOptions.disadvantage);
+        let targetDescriptors: Array<DND5ETargetDescriptor> | undefined;
         preRollHookId = Hooks.once("dnd5e.preRollAttack", (rollConfig, dialogConfig, messageConfig) => {
           if (workflow?.aborted) return false;
           if (workflow?.rollOptions?.rollToggle) dialogConfig.configure = !dialogConfig.configure;
@@ -384,6 +385,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
             workflow.attackAdvAttribution.add(`ADV:keyPress`);
             workflow.advReminderAttackAdvAttribution.add(`ADV:keyPress`);
           }
+          targetDescriptors = foundry.utils.getProperty(messageConfig, "data.flags.dnd5e.targets") as Array<DND5ETargetDescriptor>;
           return true;
         });
         rollAttackHookId = Hooks.once("dnd5e.rollAttack", (rolls, { ammoUpdate, subject }) => {
@@ -443,8 +445,11 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         if (config.event && workflow) {
           workflow.rollOptions.rollToggle = areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle");
         }
+
         // @ts-expect-error weirdness with how I did the types
         rolls = await super.rollAttack(config, dialog, message);
+        if (targetDescriptors) workflow.targetDescriptors = targetDescriptors;
+
         if (!rolls || rolls.length === 0) {
           // if (workflow) workflow.aborted = true;
           return;
@@ -621,7 +626,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       if (disadvantage) config.midiOptions.disadvantage ||= true; // disadvantage passed to the roll takes precedence
 
       // Setup labels for advantage reminder
-      const advantageLabels = Array.from(workflow.advReminderAttackAdvAttribution).filter(s => s.startsWith("ADV:")).map(s => s.replace("ADV:", ""));;
+      const advantageLabels = Array.from(workflow.advReminderAttackAdvAttribution).filter(s => s.startsWith("ADV:")).map(s => s.replace("ADV:", ""));
       if (advantageLabels.length > 0) foundry.utils.setProperty(config.midiOptions, "dialogOptions.adv-reminder.advantageLabels", advantageLabels);
       const disadvantageLabels = Array.from(workflow.advReminderAttackAdvAttribution).filter(s => s.startsWith("DIS:")).map(s => s.replace("DIS:", ""));
       if (disadvantageLabels.length > 0) foundry.utils.setProperty(config.midiOptions, "dialogOptions.adv-reminder.disadvantageLabels", disadvantageLabels);

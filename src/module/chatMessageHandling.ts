@@ -146,6 +146,8 @@ export let hideRollRender = (msg: ChatMessage.Implementation, html: HTMLElement,
 
 
 export let hideRollUpdate = (message: ChatMessage.Implementation, data: ChatMessage.UpdateData, options: ChatMessage.Database.UpdateOptions, id: string) => {
+  return true;
+  /*
   if (forceHideRoll && (message.whisper.length > 0 || message.blind)) {
     if (!game.user?.isGM && ((!message.isAuthor && (message.whisper.indexOf(game.user?.id ?? "") === -1) || message.blind))) {
       let messageLi = document.querySelector<HTMLLIElement>(`.message[data-message-id=${data._id}]`);
@@ -158,6 +160,7 @@ export let hideRollUpdate = (message: ChatMessage.Implementation, data: ChatMess
     }
   }
   return true;
+  */
 };
 
 export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
@@ -170,13 +173,8 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
     return;
   }
   // message.shouldDisplayChallenge returns true for message owners, which is not quite what we want.
-  let shouldDisplayChallenge = true;
-  if (game.user?.isGM) shouldDisplayChallenge = true;
-  else switch (safeGetGameSetting("dnd5e", "challengeVisibility")) {
-    case "all": shouldDisplayChallenge = true; break;
-    case "player": shouldDisplayChallenge = !message.author?.isGM; break;
-    default: shouldDisplayChallenge = false; break;
-  }
+  let shouldDisplayChallenge = safeGetGameSetting("dnd5e", "challengeVisibility");
+  if (game.user?.isGM) shouldDisplayChallenge = "all";
   // If force hide rolls and your are not the author/target of a whisper roll hide it.
   if (forceHideRoll
     && !game.user?.isGM
@@ -210,18 +208,13 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
     html.querySelectorAll<HTMLDivElement>(".midi-qol-hits-display").forEach((el) => el.style.display = "");
     html.querySelectorAll<HTMLElement>(".midi-qol-target-npc-Player").forEach(el => el.style.display = "none");
     if (!configSettings.highlightSuccess) {
-      html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("success"));
-      html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("failure"));
-      html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("critical"));
-      html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("fumble"));
+      html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => {
+        el.classList.remove("success", "failure", "critical", "fumble");
+      });
     }
-    if (!configSettings.highlightSuccess || !shouldDisplayChallenge) {
-      html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("success"));
-      html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("failure"));
-      html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("critical"));
-      html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("fumble"));
+    if (!configSettings.highlightSuccess) {
+      html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("success", "failure", "critical", "fumble"));
     }
-    return;
   } else {
     if (message.blind) {
       html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => {
@@ -230,103 +223,92 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
       // html.find(".midi-damage-roll .dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
       if (!(message.flags && message.flags["monks-tokenbar"])) // not a monks roll
         html.querySelectorAll(".dice-roll").forEach(el => {
-          el.outerHTML =  `<span>${i18n("midi-qol.DiceRolled")}</span>`;
+          el.outerHTML = `<span>${i18n("midi-qol.DiceRolled")}</span>`;
         });
       // html.find(".dice-result").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`); Monks saving throw css
       //TODO this should probably just check formula
     }
-    if (configSettings.autoCheckHit === "whisper" || message.blind || safeGetGameSetting("dnd5e", "attackRollVisibility") === "none") {
+
+    if (configSettings.autoCheckHit === "gmOnly") {
       html.querySelectorAll<HTMLElement>(".midi-qol-hits-display").forEach(el => el.style.display = "none");
     }
-    if ((configSettings.autoCheckSaves === "whisper" || message.blind)) {
+
+
+
+    /*
+    "midi-qol.autoCheckSavesOptions": {
+      "none": "Off",
+      "allNoRoll": "Save - All see result only",
+      "all": "Save - All see result + save total",
+      "whisper": "Save - only GM sees",
+      "gmOnly": "Save - only GM sees anything",
+      "allShow": "Save - All see Result + Rolls"
+    },
+    */
+    if (configSettings.autoCheckSaves === "gmOnly") {
       html.querySelectorAll<HTMLElement>(".midi-qol-saves-display").forEach(el => el.style.display = "none");
+    } else {
+      const displayNPCSaves = safeGetGameSetting("dnd5e", "challengeVisibility") === "all";
+      const displayPlayerSaves = safeGetGameSetting("dnd5e", "challengeVisibility") !== "none";
+      const autoCheckSaves = configSettings.autoCheckSaves;
+      // hide tool tips from non-gm
+      if (!displayPlayerSaves || autoCheckSaves === "whisper" || message.blind) {
+        html.querySelectorAll(".midi-qol-save-total").forEach(el => el.remove());
+        html.querySelectorAll(".midi-qol-save-tooltip").forEach(el => el.remove());
+        html.querySelectorAll(".midi-qol-save-symbol").forEach(el => el.remove());
+        html.querySelectorAll(".midi-qol-saveDC").forEach(el => el.remove());
+      }
+      if (!displayNPCSaves || autoCheckSaves === "whisper" || message.blind) {
+        html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-symbol").forEach(el => el.remove());
+        html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-tooltip").forEach(el => el.remove());
+        html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-total").forEach(el => el.remove())
+        if (!displayNPCSaves && message.author?.isGM) { // only show dc for player initiated saves
+          html.querySelectorAll(".midi-qol-saveDC").forEach(el => el.remove());
+        }
+      } else if (!["allShow"].includes(autoCheckSaves)) {
+          html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-tooltip").forEach(el => el.remove());
+          if (autoCheckSaves === "allNoRoll") {
+            html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-total").forEach(el => el.remove());
+          }
+      }
+      if (!configSettings.highlightSuccess || !["all", "player"].includes(shouldDisplayChallenge) || ["whisper", "none"].includes(autoCheckSaves)) {
+        html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("success", "failure", "critical", "fumble"));
+      } 
+      if (!displayNPCSaves || shouldDisplayChallenge !== "all" || !configSettings.highlightSuccess) {
+        html.querySelectorAll<HTMLElement>(".midi-qol-save-class.midi-qol-npc-target").forEach(el => el.classList.remove("success", "failure", "critical", "fumble"));
+      }
     }
 
-    const displayNPCSaves = safeGetGameSetting("dnd5e", "challengeVisibility") === "all";
-    const displayPlayerSaves = safeGetGameSetting("dnd5e", "challengeVisibility") !== "none";
-    // hide tool tips from non-gm
-    if (!displayPlayerSaves) 
-      html.querySelectorAll(".midi-qol-save-tooltip").forEach(el => el.remove());
-    else if (!displayNPCSaves || configSettings.autoCheckSaves !== "allShow") 
-      html.querySelectorAll(".midi-qol-npc-save-tooltip").forEach(el => el.remove());
-
-    if (!displayPlayerSaves) html.querySelectorAll(".midi-qol-save-total").forEach(el => el.remove());
-    else if (!["allShow", "all"].includes(configSettings.autoCheckSaves) || !displayNPCSaves) {
-      html.querySelectorAll(".midi-qol-npc-save-total").forEach(el => el.remove());
-    }
-
-    if (!displayPlayerSaves)
-      html.querySelectorAll(".midi-qol-saves-display .midi-qol-save-symbol").forEach(el => el.remove());
-    else if (!displayNPCSaves) 
-      html.querySelectorAll(".midi-qol-npc-save-symbol").forEach(el => el.remove());
-    else if (!shouldDisplayChallenge || configSettings.autoCheckSaves === "whisper")
-      html.querySelectorAll(".midi-qol-saves-display .midi-qol-save-symbol").forEach(el => el.remove());
-    if (!configSettings.highlightSuccess || !shouldDisplayChallenge) {
-      html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("success"));
-      html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("failure"));
-      html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("critical"));
-      html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("fumble"));
-    }
-    // TODO: Right check?
-    if (!configSettings.optionalRules.activeDefence) {
+    if (!configSettings.optionalRules.ActiveDefenceDC) {
       html.querySelectorAll<HTMLElement>(".midi-qol-active-defence-dc").forEach(el => el.remove());
     }
-    if (safeGetGameSetting("dnd5e", "attackRollVisibility")) {
-      const visibility = safeGetGameSetting("dnd5e", "attackRollVisibility");
-      if (visibility === "none") {
-        html.querySelectorAll<HTMLElement>(".midi-qol-attack-roll .dice-total").forEach(el => el.classList.remove("success"));
-        html.querySelectorAll<HTMLElement>(".midi-qol-attack-roll .dice-total").forEach(el => el.classList.remove("failure"));
-        html.querySelectorAll<HTMLElement>(".midi-qol-attack-roll .dice-total").forEach(el => el.classList.remove("fumble"));
-        html.querySelectorAll<HTMLElement>(".midi-qol-attack-roll .dice-total").forEach(el => el.classList.remove("critical"));
-        html.querySelectorAll(".midi-qol-attack-roll .dice-total .icons").forEach(el => el.remove());
-
-        html.querySelectorAll(".midi-qol-hits-display .midi-qol-hit-symbol").forEach(el => el.remove());
-        html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("success"));
-        html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("failure"));
-        html.querySelectorAll(".midi-qol-hit-symbol").forEach(el => el.remove());
-        html.querySelectorAll(".midi-qol-npc-ac").forEach(el => el.remove());
-      } else if (visibility === "hideAC" || !configSettings.displayHitResultNumeric) {
-        html.querySelectorAll(".midi-qol-npc-ac").forEach(el => el.remove());
-        if (!configSettings.highlightSuccess) {
-          html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("success"));
-          html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("failure"));
-          html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("critical"));
-          html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("fumble"));
-        }
-      }
-    } else {
-      if (!shouldDisplayChallenge) {
-        html.querySelectorAll(".midi-qol-hits-display .midi-qol-hit-symbol").forEach(el => el.remove());
-        html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("success"));
-        html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("failure"));
-      }
-      if (!configSettings.displayHitResultNumeric || !shouldDisplayChallenge) {
-        html.querySelectorAll(".midi-qol-npc-ac").forEach(el => el.remove());
-      }
-      if (!configSettings.highlightSuccess) {
-        html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("success"));
-        html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("failure"));
-        html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("critical"));
-        html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("fumble"));
-      }
+    const attackVisibility = safeGetGameSetting("dnd5e", "attackRollVisibility");
+    const midiAttackVisibility = configSettings.autoCheckHit
+    if (!configSettings.highlightSuccess || attackVisibility === "none" || midiAttackVisibility === "whisper" || message.blind) {
+      html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("success", "failure", "critical", "fumble"));
     }
-    if (message.isAuthor || configSettings.confirmAttackDamage === "gmOnly") {
+    if (attackVisibility === "none" || midiAttackVisibility !== "all" || message.blind) {
+      html.querySelectorAll(".midi-qol-attack-roll .dice-total .icons").forEach(el => el.remove());
+      html.querySelectorAll(".midi-qol-hits-display .midi-qol-hit-symbol").forEach(el => el.remove());
+      html.querySelectorAll(".midi-qol-hit-symbol").forEach(el => el.remove());
+      html.querySelectorAll(".midi-qol-npc-ac").forEach(el => el.remove());
+    } else if (attackVisibility === "hideAC") {
+      html.querySelectorAll(".midi-qol-npc-ac").forEach(el => el.remove());
+    }
+    if (!message.isAuthor || configSettings.confirmAttackDamage === "gmOnly") {
       html.querySelectorAll<HTMLElement>(".midi-qol-confirm-damage-roll-complete-hit").forEach(el => el.style.display = "none");
       html.querySelectorAll<HTMLElement>(".midi-qol-confirm-damage-roll-complete-miss").forEach(el => el.style.display = "none");
       html.querySelectorAll<HTMLElement>(".midi-qol-confirm-damage-roll-complete-critical").forEach(el => el.style.display = "none");
-    }
-
-    if (!game.user?.isGM) {
       // Can update the attack roll here, but damage rolls are redone in the ChatMessageMidi code so do the hiding for those there
       html.querySelectorAll<HTMLElement>(".midi-qol-confirm-damage-roll-cancel").forEach(el => el.style.display = "none");
-      // hide the gm version of the name from` players
-      html.querySelectorAll<HTMLElement>(".midi-qol-gmTokenName").forEach(el => el.remove());
     }
+
+    // hide the gm version of the name from` players
+    html.querySelectorAll<HTMLElement>(".midi-qol-gmTokenName").forEach(el => el.remove());
   }
   // @ ts-expect-error protected
   // setTimeout(() => ui.chat?.scrollBottom(), 0);
   return true;
-
 }
 
 export function ddbglPendingFired(data: { sceneId: string, tokenId: string, actorId: string, itemId: string, actionType: string }) {

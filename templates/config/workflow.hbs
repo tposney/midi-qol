@@ -89,6 +89,7 @@
   <!-- Hits-->
   <div class="midi-qol-box"> 
     <div class="midi-qol-settings heading">{{localize "midi-qol.Hits"}}</div>
+    <label><strong>DND5E {{{localize "SETTINGS.DND5E.VISIBILITY.Attack.Name"}}}: {{attackRollVisibility}}</strong></label>
     <div class="form-group">
       <label>{{localize "midi-qol.AutoCheckHit.Name"}}</label>
       <select name="autoCheckHit" data-dtype="String">
@@ -100,12 +101,6 @@
     <div class="form-group">
       <label>{{localize "midi-qol.AttackPerTarget.Name"}}</label>
       <input type="checkbox" name="attackPerTarget" data-dtype="Boolean" {{checked configSettings.attackPerTarget}} />
-    </div>
-
-    <div class="form-group">
-      <label>{{localize "midi-qol.DisplayHitResultNumeric.Name"}}</label>
-      <input type="checkbox" name="displayHitResultNumeric" data-dtype="Boolean" {{checked
-        configSettings.displayHitResultNumeric}} />
     </div>
   </div>
 

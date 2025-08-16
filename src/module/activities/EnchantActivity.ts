@@ -41,6 +41,9 @@ let defineMidiEnchantActivityClass = <T extends Activity>(ActivityClass: T) => {
     }
 
     async _triggerSubsequentActions(config, results) {
+      // for enchantment activities we do want to support the dnd5e default behaviour
+      await super._triggerSubsequentActions(config, results);;
+      await config.workflow.performState(config.workflow.WorkflowState_AllRollsComplete);
     }
   }
 }

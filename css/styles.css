@@ -581,7 +581,7 @@
   border: 1px solid var(--dnd5e-border-light);
 }
 
-:is(.chat-popout, #chat-log) .message .dnd5e2.evaluation .midi-qol.target>img {
+:is(.chat-popout, #chat-log, .chat-log) .midi-results .midi-qol.target>img {
   width: 22px !important;
   height: 22px !important;
   object-fit: cover;
@@ -604,7 +604,7 @@
   
   /* Chat message borders */
   
-  :is(.chat-popout, #chat-log) .message {
+  :is(.chat-popout, #chat-log, .chat-log) .message {
     border-width: 0;	
     border-left: 0.2rem solid;
     border-color: var(--user-color);
@@ -612,7 +612,7 @@
   
   /* Fix chat message corners */
   
-  :is(.chat-popout, #chat-log) .message.whisper::before {
+  :is(.chat-popout, #chat-log, .chat-log) .message.whisper::before {
       border-radius: 6px !important;
   }
   
@@ -635,32 +635,32 @@
   
   /* Condensed hits, misses and saves evaluation */
   
-  :is(.chat-popout, #chat-log) .message .dnd5e2.evaluation {
+  :is(.chat-popout, #chat-log, .chat-log) .midi-results {
       gap: 0.15rem;
     margin-bottom: 0.25rem;
   }
   
-  :is(.chat-popout, #chat-log) .message .dnd5e2.evaluation .target {
+  :is(.chat-popout, #chat-log, .chat-log) .midi-results .target {
     padding: 0.2rem 0.3rem;
   }
   
-  :is(.chat-popout, #chat-log) .message .dnd5e2.evaluation .target .name-stacked {
+  :is(.chat-popout, #chat-log, .chat-log) .midi-results .target .name-stacked {
     min-height: auto;
   }
   
-  :is(.chat-popout, #chat-log) .message .dnd5e2.evaluation .target .name-stacked .title {
+  :is(.chat-popout, #chat-log, .chat-log) .midi-results .target .name-stacked .title {
     font-size: var(--font-size-14);
     margin-bottom: 0.1rem;
   }
   
-  :is(.chat-popout, #chat-log) .message .dnd5e2.evaluation .target.failure,
-  .message .dnd5e2.evaluation .target.failure  {
+  :is(.chat-popout, #chat-log, .chat-log) .midi-results .target.failure,
+  .midi-results .target.failure  {
       border-color: rgba(110,0,0,0.4);
     background-color: var(--dnd5e-color-failure-background);
   }
   
-  :is(.chat-popout, #chat-log) .message .dnd5e2.evaluation .target.success,
-  .message .dnd5e2.evaluation .target.success  {
+  :is(.chat-popout, #chat-log, .chat-log) .midi-results .target.success,
+  .midi-results .target.success  {
       border-color: rgba(0,108,0,0.4);
     background-color: var(--dnd5e-color-success-background);
   }
@@ -736,7 +736,7 @@
   
   /* Midi Damage application card (tested with DnD5E damage application OFF)  */
   
-  :is(.chat-popout, #chat-log) .message:has(.xmidi-qol-flex-container) {
+  :is(.chat-popout, #chat-log, .chat-log) .message:has(.xmidi-qol-flex-container) {
       padding: 0 ;
     border: none;
     border-left: 0.2rem solid var(--user-color);
@@ -799,7 +799,7 @@
     padding-bottom: 7px;
   }
   
-  :is(.chat-popout, #chat-log) .message.whisper::before {
+  :is(.chat-popout, #chat-log, .chat-log) .message.whisper::before {
       border-radius: 0px;
   }
   

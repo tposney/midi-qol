@@ -252,9 +252,9 @@ export function initHooks() {
     hideRollUpdate(message, update, options, user);
     if (!update.content) return;
     //@ts-expect-error fvtt-missing
-    if (ui.chat?.isAtBottom || (message.author._id === game.user?._id)) {
-      //@ts -expect-error fvtt-missing
-      // setTimeout(() => ui.chat?.scrollBottom({ waitImages: true }), 0);
+    if (message.content && (ui.chat?.isAtBottom && message.author._id !== game.user?._id)) {
+      //@ts-expect-error fvtt-missing scrollBottom
+      setTimeout(() => ui.chat?.scrollBottom({ waitImages: true }), 10);
     }
   });
 
