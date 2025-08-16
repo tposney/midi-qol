@@ -1002,7 +1002,7 @@
           "hint": "Escolha efeitos para aplicar."
         },
         "forceDialog": {
-          "label": "Forçar Diálogo de Configuração (Obsoleto",
+          "label": "Forçar Diálogo de Configuração (Obsoleto)",
           "hint": "Força o diálogo de configuração ao rolar ataques."
         },
         "forceAttackDialog" : {
