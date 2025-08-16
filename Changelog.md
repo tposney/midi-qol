@@ -14,7 +14,7 @@
 * Midi will now remember the last rolled default damage for an activity that does damage and use that as the default damage for any activity that rolls damage but has not damage specified. An example use for this would be if you don't automate sneak attack. Roll the weapon that does the sneak attack and if you want to roll sneak attack (making sure it is specified with no damage types) and it will pick up the weapon damage type. Can be useful for low automation environments.
 * Fixed a few localisation issues on the Workflow Settings app.
 * Updated it.json and pt-br.json thanks to @GregoryWarn and @Kharmans.
-* Added "collectDamageRollTypes" merge request - thanks @thatlonelybugbear.
+* Added "collectDamageRollTypes" merge request npm- thanks @thatlonelybugbear.
 * **For macro writers** Midi will now use the values stored in flags.dnd5e.targets (dnd5e's TargetDescriptors) when checking hits. So if you change the ac value stored there (for example when rolling an attack) midi will respect the change.
   - The change is noted before hits are checked and changes to the target AC, for example reactions/3rd party reactions will still work and workflow.
   - checkHits can be called multiple times without issue.
