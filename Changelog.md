@@ -1,3 +1,10 @@
+### 13.0.16
+* Fix for Use Activity display having expanded rolls.
+* Fix for Check Activities always failing the roll.
+* Updated Auto Consumption to support all dnd5e consumption types. If there are insufficient resources/spell slots midi will present the item usage configuration dialog.
+* Added auto consume option to the midi properties tab for activities. If set midi will attempt to auto consume resources/spell slots/item ro activity uses when the activity is rolled.
+* Fix for critical damage calculation when clicking on the damage configuration card - applying critical changes twice or not removing critical damage.
+
 ### 13.0.15
 * Active defence rolls now use the Active Defence Modifier field. 
   - The active defence roll DC = ActiveDefenceModifier + Attack Roll Bonus

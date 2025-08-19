@@ -42,7 +42,7 @@ declare module "fvtt-types/configuration" {
       "dnd5e.preCreateActivityTemplate": (activity: Activity, templateData: MeasuredTemplateDocument.CreateData) => boolean | void;
       "dnd5e.preRollAbilityCheck": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.preRollAbilityCheckV2": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
-      "dnd5e.preRollAttack": (rollConfig: RollProcessConfig & {attackMode: string}, dialogConfig: RollDialogConfig, messageConfig: RollMessageConfig) => boolean | void;
+      "dnd5e.preRollAttack": (rollConfig: RollProcessConfig & { attackMode: string }, dialogConfig: RollDialogConfig, messageConfig: RollMessageConfig) => boolean | void;
       "dnd5e.preRollConcentrationV2": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.preRollDamageV2": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.preRollDeathSave": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
@@ -50,11 +50,11 @@ declare module "fvtt-types/configuration" {
       "dnd5e.preRollSkill": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.preRollTool": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.preUseActivity": (activity: Activity, usageConfig: AnyMutableObject, dialogConfig: AnyMutableObject, messageConfig: AnyMutableObject) => boolean | void;
-      "dnd5e.restCompleted": (actor: Actor.Implementation, result: {longRest: boolean; newDay: boolean}, config: unknown) => void;
-      "dnd5e.rollAttack": (rolls: Roll[], data: { subject: Activity | null, ammoUpdate: {id: string, destroy: boolean; quantity: number} | null}) => void;
+      "dnd5e.restCompleted": (actor: Actor.Implementation, result: { longRest: boolean; newDay: boolean }, config: unknown) => void;
+      "dnd5e.rollAttack": (rolls: Roll[], data: { subject: Activity | null, ammoUpdate: { id: string, destroy: boolean; quantity: number } | null }) => void;
       "dnd5e.rollConcentrationV2": (rolls: Roll[], data: { subject?: Actor.Implementation }) => void;
       "dnd5e.rollDamageV2": (rolls: Roll[], data?: { subject?: Activity }) => void;
-      "dnd5e.rollDeathSave": (rolls: Roll[], data: {chatString: string; updates: Actor.UpdateData; subject: Actor.Implementation}) => boolean | void;
+      "dnd5e.rollDeathSave": (rolls: Roll[], data: { chatString: string; updates: Actor.UpdateData; subject: Actor.Implementation }) => boolean | void;
       "midi-qol.ConfigSettingsChanged": () => void;
       "midi-qol.RollComplete": (workflow: Workflow) => Promise<void>;
       "midi-qol.dnd5ePreCalculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;
@@ -709,7 +709,7 @@ declare global {
         expertise?: boolean;
         mastery?: boolean;
       }>
-      weaponMasteries: Record<string, {label: string, reference?: string}>;
+      weaponMasteries: Record<string, { label: string, reference?: string }>;
       weaponTypes: Record<string, string>;
     }
   }
@@ -824,6 +824,25 @@ export type DamageListEntry = PreSetupDamageListEntry & {
 }
 
 // Temporary, so that I can at least type them to _something_
+export type ActivitySave = {
+  ability: Set<string>;
+  dc: {
+    calculation: string;
+    formula: string;
+    value: number
+  };
+}
+
+export type ActivityCheck = {
+  ability: string;
+  associated: Set<string>;
+  dc: {
+    calculation: string;
+    formula: string;
+    value: number
+  };
+}
+
 export interface Activity extends AnyMutableObject {
   actor?: Actor.Implementation;
   item: Item.Implementation;
@@ -972,23 +991,8 @@ export interface Activity extends AnyMutableObject {
     condition: string;
     cost?: number;
   };
-  save?: {
-    ability: Set<string>;
-    dc: {
-      calculation: string;
-      formula: string;
-      value: number
-    };
-  };
-  check?: {
-    ability: Set<string>;
-    associated: Set<string>;
-    dc: {
-      calculation: string;
-      formula: string;
-      value: number
-    };
-  };
+  save?: ActivitySave;
+  check?: ActivityCheck;
   getAbility?: (associated: string) => string | null;
   hasDamage: boolean;
   hasHealing: boolean;
@@ -1007,8 +1011,9 @@ export interface Activity extends AnyMutableObject {
     triggeredActivityConditionText?: string;
     triggeredActivityTargets: string;
     triggeredActivityRollAs?: string;
+    autoConsume: boolean;
     forceDialog?: boolean;
-    forceAttackDialog?: boolean;
+    forceRollDialog?: boolean;
     forceDamageDialog?: boolean;
     confirmTargets: string;
     autoTargetType: string;

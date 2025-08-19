@@ -16,7 +16,7 @@ export class MidiActivityChoiceDialog extends ActivityChoiceDialog {
   get item() {return super.item};
 
   // Only here to satisfy the linter
-  _prepareActivityContext(...args) { return super._prepareActivityContext(...args) }
+_prepareActivityContext(...args) { return super._prepareActivityContext(...args) }
   async _prepareContext(options) {
     let controlHint;
     if ( safeGetGameSetting("dnd5e", "controlHints") ) {

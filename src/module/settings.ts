@@ -122,7 +122,6 @@ class ConfigSettings {
   gmHide3dDice: boolean = false;
   gmLateTargeting: string = "none";
   gmRemoveButtons: string = "all";
-  gmAttackDamageCards: boolean = false;
   hideRollDetails: string = "none";
   ignoreSpellReactionRestriction: boolean = false;
   itemRollStartWorkflow: boolean = false;

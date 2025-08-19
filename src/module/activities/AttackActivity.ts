@@ -357,9 +357,9 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           }
           requiresAmmoConfirmation = ammoConfirmation.confirm;
         }
-        if (Object.values(keys).some(k => k)) dialog.configure = !!(this.midiProperties?.forceAttackDialog || requiresAmmoConfirmation);
+        if (Object.values(keys).some(k => k)) dialog.configure = !!(this.midiProperties?.forceRollDialog || requiresAmmoConfirmation);
         if (config.workflow && areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle")) config.workflow.rollOptions.rollToggle = !config.workflow.rollOptions.rollToggle;
-        else dialog.configure ??= !(config.midiOptions.fastForwardAttack ?? workflow.workflowOptions.fastForwardAttack ?? false) || this.midiProperties?.forceAttackDialog || requiresAmmoConfirmation;
+        else dialog.configure ??= !(config.midiOptions.fastForwardAttack ?? workflow.workflowOptions.fastForwardAttack ?? false) || this.midiProperties?.forceRollDialog || requiresAmmoConfirmation;
         if (keys.advantage) workflow.rollOptions.advantage = keys.advantage;
         if (keys.disadvantage) workflow.rollOptions.disadvantage = keys.disadvantage;
         config.advantage ??= !!keys.advantage || !!(config.midiOptions.advantage ?? workflow.workflowOptions.advantage);
@@ -431,7 +431,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         message ??= {};
         message.create ??= config.midiOptions.chatMessage;
         const rollMode = safeGetGameSetting("core", "rollMode");
-        const showChatAttackCard = game.user?.isGM && configSettings.gmAttackDamageCards && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
+        const showChatAttackCard = game.user?.isGM && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
         if (showChatAttackCard) {
           // Show a chat card for attack rolls if the players are not going to see the card.
           message.create = true;

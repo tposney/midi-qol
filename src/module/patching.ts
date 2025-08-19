@@ -115,8 +115,8 @@ export async function bonusCheck(actor: Actor.Implementation, result: Roll, cate
       else if (category.startsWith("save")) title = i18nFormat("DND5E.SavePromptTitle", { ability: GameSystemConfig.abilities[detail] ?? "" });
       else if (category.startsWith("skill")) title = i18nFormat("DND5E.SkillPromptTitle", { skill: GameSystemConfig.skills[detail] ?? "" });
     }
-    
-    const displayBonusRolls: boolean = !!(bonusFlags.reduce((returnValue: boolean | undefined, flag: string) => returnValue || (foundry.utils.getProperty(actor ?? {}, `${flag}.displayBonusRolls`) as boolean | undefined), undefined) 
+
+    const displayBonusRolls: boolean = !!(bonusFlags.reduce((returnValue: boolean | undefined, flag: string) => returnValue || (foundry.utils.getProperty(actor ?? {}, `${flag}.displayBonusRolls`) as boolean | undefined), undefined)
       ?? checkMechanic("displayBonusRolls"));
     const newRoll = await bonusDialog.bind(data)(
       bonusFlags,
@@ -293,7 +293,7 @@ export function averageDice(roll: Roll) {
     if (term instanceof foundry.dice.terms.DiceTerm) {
       const mult = term.modifiers.includes("mx2") ? 2 : 1
       const newTerm = new NumericTerm({ number: Math.floor((term.number ?? 1) * mult * ((term.faces ?? 1) + 1) / 2) });
-      newTerm.options = term.options;
+      newTerm.options = foundry.utils.duplicate(term.options);
       return newTerm;
     }
     return term;
@@ -316,25 +316,22 @@ function applyDamageModifiers(damageRoll: Roll): Roll {
 
 // @ts-expect-error no dnd5e-types
 function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = { critical: {} }) {
-  if (this.options.configured && !this.isCritical) {
-    return;
-  }
-  if (!this.configured) applyDamageModifiers(this);
-  if ((this.options.critical?.allow === false || options.critical?.allow === false) || !this.isCritical) {
-    options.critical.allow = false;
-    this.options.isCritical = false;
-    return wrapped(options);
-  }
-  this.simplify();
-  const OperatorTerm = foundry.dice.terms.OperatorTerm
-  const DiceTerm = foundry.dice.terms.DiceTerm;
-  const Die = foundry.dice.terms.Die;
+  // Remove existing critical damage
+  this.terms = this.terms.filter(t => !t.options.criticalBonusDamage && !t.options.criticalFlatBonus);
+  this.terms.forEach(term => {
+    term.number = term.options.baseNumber ?? term.number;
+    if (term.options.baseModifiers) {
+      term.modifiers = foundry.utils.deepClone(term.options.baseModifiers);
+    }
+  });
+  this.resetFormula();
+  //if (!this.configured) applyDamageModifiers(this);
   let useDefaultCritical = getCriticalDamage() === "default";
   useDefaultCritical ||= (getCriticalDamage() === "explodeCharacter" && this.data.actorType !== "character");
   useDefaultCritical ||= (getCriticalDamage() === "explodeNPC" && this.data.actorType !== "npc");
-  if (useDefaultCritical) {
-    while (this.terms.length > 0 && this.terms[this.terms.length - 1] instanceof OperatorTerm)
-      this.terms.pop();
+  if (this.options.critical?.allow === false || options.critical?.allow === false || !this.isCritical || useDefaultCritical) {
+    options.critical.allow = this.isCritical;
+    this.options.isCritical = this.isCritical;
     //@ts-expect-error "dnd5e"
     options.critical.multiplyNumeric ??= game.settings.get("dnd5e", "criticalDamageModifiers");
     //@ts-expect-error "dnd5e"
@@ -343,6 +340,11 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
     if (this.data.actorType === configSettings.averageDamage || configSettings.averageDamage === "all") averageDice(this);
     return;
   }
+  this.simplify();
+  const OperatorTerm = foundry.dice.terms.OperatorTerm
+  const DiceTerm = foundry.dice.terms.DiceTerm;
+  const Die = foundry.dice.terms.Die;
+
   // if (this.options.configured) return; seems this is not required.
   let bonusTerms: foundry.dice.terms.RollTerm[] = [];
   /* criticalDamage is one of 
@@ -362,9 +364,25 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
  */
   // if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
   this.simplify();
+
+
   for (let [i, term] of this.terms.entries()) {
     let cm = this.options.critical?.multiplier ?? 2;
     let cb = (this.options.critical?.bonusDice && (i === 0)) ? this.options.critical?.bonusDice : 0;
+    if (term._number instanceof Roll) {
+      // Complex number term.
+      if (!term._number.isDeterministic) continue;
+      if (!term._number._evaluated) term._number.evaluateSync();
+    }
+    if (term.modifiers && !term.options.baseModifiers) {
+      term.options.baseModifiers = foundry.utils.deepClone(term.modifiers);
+    }
+    if (term.modifiers) {
+      term.modifiers = foundry.utils.deepClone(term.options.baseModifiers);
+    }
+    term.options.baseNumber = term.options.baseNumber ?? term.number;
+    term.number = term.options.baseNumber;
+
     switch (getCriticalDamage()) {
       case "maxDamage":
         if (term instanceof DiceTerm) term.modifiers.push(`min${term.faces}`);
@@ -372,10 +390,13 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
       case "maxDamageExplode":
         if (term instanceof DiceTerm) term.modifiers.push(`min${term.faces}`);
         if (term instanceof DiceTerm) {
-          bonusTerms.push(new OperatorTerm({ operator: "+" }));
+          //@ts-expect-error no dnd5e-types
+          bonusTerms.push(new OperatorTerm({ operator: "+", options: { criticalBonusDamage: true } }));
           const newTerm = new Die({ number: term.number + cb, faces: term.faces })
           newTerm.modifiers.push(`x${term.faces}`);
-          newTerm.options = term.options;
+          newTerm.options = foundry.utils.deepClone(term.options)
+          //@ts-expect-error no dnd5e-types
+          newTerm.options.criticalBonusDamage = true;
           // foundry.utils.setProperty(newTerm.options, "sourceTerm", term);
           bonusTerms.push(newTerm);
         }
@@ -384,15 +405,17 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
       case "maxCritRoll":
         if (term instanceof DiceTerm) {
           let critTerm;
-          bonusTerms.push(new OperatorTerm({ operator: "+" }));
+          //@ts-expect-error no dnd5e-types
+          bonusTerms.push(new OperatorTerm({ operator: "+", options: { criticalBonusDamage: true } }));
           if (getCriticalDamage() === "maxCrit")
             critTerm = new NumericTerm({ number: (term.number + cb) * (term.faces ?? 1) });
           else {
             critTerm = new Die({ number: term.number + cb, faces: term.faces });
-            critTerm.modifiers = foundry.utils.duplicate(term.modifiers);
+            critTerm.modifiers = foundry.utils.deepClone(term.modifiers);
             critTerm.modifiers.push(`min${term.faces}`);
           }
-          critTerm.options = term.options;
+          critTerm.options = foundry.utils.deepClone(term.options);
+          critTerm.options.criticalBonusDamage = true;
           bonusTerms.push(critTerm);
         } else if (term instanceof NumericTerm && options.multiplyNumeric) {
           term.number *= cm;
@@ -424,10 +447,13 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
       case "explodeCharacter":
       case "explodeNPC":
         if (term instanceof DiceTerm) {
-          bonusTerms.push(new OperatorTerm({ operator: "+" }));
+          //@ts-expect-error no dnd5e-types
+          bonusTerms.push(new OperatorTerm({ operator: "+", options: { criticalBonusDamage: true } }));
           const newTerm = new Die({ number: term.number + cb, faces: term.faces })
           newTerm.modifiers.push(`x${term.faces}`);
-          newTerm.options = term.options;
+          newTerm.options = foundry.utils.deepClone(term.options);
+          //@ts-expect-error no dnd5e-types
+          newTerm.options.criticalBonusDamage = true;
           // foundry.utils.setProperty(newTerm.options, "sourceTerm", term);
           bonusTerms.push(newTerm);
         }
@@ -435,9 +461,12 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
       case "maxBaseRollCrit":
         if (term instanceof DiceTerm) term.modifiers.push(`min${term.faces}`);
         if (term instanceof DiceTerm) {
-          bonusTerms.push(new OperatorTerm({ operator: "+" }));
+          //@ts-expect-error no dnd5e-types
+          bonusTerms.push(new OperatorTerm({ operator: "+", options: { criticalBonusDamage: true } }));
           const newTerm = new Die({ number: term.number, faces: term.faces })
-          newTerm.options = term.options;
+          newTerm.options = foundry.utils.deepClone(term.options);
+          // @ts-expect-error no dnd5e-types
+          newTerm.options.criticalBonusDamage = true;
           // foundry.utils.setProperty(newTerm.options, "sourceTerm", term);
           bonusTerms.push(newTerm);
         }
@@ -452,9 +481,13 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
     const extra = new Roll(this.options.critical.bonusDamage, this.data);
     for (let term of extra.terms) {
       if (term instanceof DiceTerm || term instanceof NumericTerm)
-        if (!term.options?.flavor) term.options = this.terms[0].options;
+        if (!term.options?.flavor) term.options = foundry.utils.deepClone(this.terms[0].options);
+      //@ts-expect-error
+      term.options.criticalBonusDamage = true;
     }
-    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
+    if (!(extra.terms[0] instanceof OperatorTerm))
+      //@ts-expect-error no dnd5e-types
+      this.terms.push(new OperatorTerm({ operator: "+", options: { criticalBonusDamage: true } }));
     this.terms.push(...extra.terms);
   }
   while (this.terms.length > 0 && this.terms[this.terms.length - 1] instanceof OperatorTerm)
@@ -464,7 +497,7 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
   if (this.data.actorType === configSettings.averageDamage || configSettings.averageDamage === "all") averageDice(this);
 }
 
-async function doRollAbility(this: Actor.Implementation, wrapped, rollType: string, config: RollProcessConfig & {ability?: string} = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
+async function doRollAbility(this: Actor.Implementation, wrapped, rollType: string, config: RollProcessConfig & { ability?: string } = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
   let oldFormat = false;
   if (config.midiOptions?.target) config.target = config.midiOptions.target;
   if (config.midiOptions?.isConcentrationCheck) {
@@ -675,7 +708,7 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
   return wrapped(config, dialog, message);
 }
 
-export function deathSaveHook(rolls: Roll[], {chatString, subject: actor}: {chatString: string; updates: Actor.UpdateData; subject: Actor.Implementation}) {
+export function deathSaveHook(rolls: Roll[], { chatString, subject: actor }: { chatString: string; updates: Actor.UpdateData; subject: Actor.Implementation }) {
   if (chatString === "DND5E.DeathSaveFailure") {
     if (hasCondition(actor, "unconscious")) {
       const _id = CONFIG.statusEffects.find(e => e.id === "unconscious")?._id;
@@ -873,7 +906,7 @@ export function _prepareDerivedData(this: Actor.Implementation, wrapped, ...args
       let armorAC = equippedArmor?.system.armor.value ?? 10;
       const equippedShield = armorDetails.equippedShield;
       const shieldAC = equippedShield?.system.armor.value ?? 0;
-      
+
       if (checkRule("challengeModeArmor") !== "challenge") {
         switch (armorDetails.calc) {
           // @ts-expect-error no dnd5e-types
@@ -905,8 +938,8 @@ export function _prepareDerivedData(this: Actor.Implementation, wrapped, ...args
         if (equippedArmor?.system.armor.type === "heavy") dexMod = 0;
         if (equippedArmor?.system.armor.type === "medium") dexMod = Math.min(dexMod, 2);
         // @ts-expect-error no dnd5e-types
-      this.system.attributes.ac.EC = 10 + dexMod + shieldAC;
-      // @ts-expect-error no dnd5e-types
+        this.system.attributes.ac.EC = 10 + dexMod + shieldAC;
+        // @ts-expect-error no dnd5e-types
         this.system.attributes.ac.AR = ac - 10 - dexMod;
       }
     }
@@ -939,11 +972,11 @@ function removeMidiProperties(wrapped, ...args) {
           }
         }
       }
-      console.error("migrating midiProperties to dnd5e.persistSourceMigration", source.name, source);  
+      console.error("migrating midiProperties to dnd5e.persistSourceMigration", source.name, source);
       delete source.flags.midiProperties;
       source.flags.midiProperties = {};
       foundry.utils.setProperty(source, "flags.dnd5e.persistSourceMigration", true);
-      console.error("migrating midiProperties to dnd5e.persistSourceMigration", source.name, source);  
+      console.error("migrating midiProperties to dnd5e.persistSourceMigration", source.name, source);
     }
   } catch (err) {
     TroubleShooter.recordError(err, "removeMidiProperties error");
@@ -1374,12 +1407,12 @@ export function readyPatching() {
   }
 }
 
-function removeDependent(dependent: {uuid: string}) {
+function removeDependent(dependent: { uuid: string }) {
   const dependents = (this.getFlag("dnd5e", "dependents") || []).filter(dep => dep.uuid !== dependent.uuid);
   if (dependents.length === 0) return this.unsetFlag("dnd5e", "dependents");
   return this.setFlag("dnd5e", "dependents", dependents);
 }
-function setDependents(dependents: {uuid: string}[]) {
+function setDependents(dependents: { uuid: string }[]) {
   return this.setFlag("dnd5e", "dependents", dependents);
 }
 async function clearDependents() {
@@ -1539,7 +1572,7 @@ export let actorAbilityRollPatching = () => {
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollToolCheck", rollToolCheck, "WRAPPER");
 }
 
-export async function rollToolCheck(this: Actor.Implementation, wrapped, config: RollProcessConfig & {ability?: string} = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
+export async function rollToolCheck(this: Actor.Implementation, wrapped, config: RollProcessConfig & { ability?: string } = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
   let result: Roll[] | undefined;
   let preRollHookId: number | undefined;
   try {
@@ -1633,7 +1666,7 @@ export async function _preDeleteCombat(this: Combat.Implementation, wrapped, ...
   }
 }
 
-export async function doItemUse(this: Item.Implementation, wrapped, config: ActivityUseConfiguration & {chooseActivity?: boolean}= {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
+export async function doItemUse(this: Item.Implementation, wrapped, config: ActivityUseConfiguration & { chooseActivity?: boolean } = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
   if (this.pack) return;
   const { chooseActivity, ...activityConfig } = config;
   // @ts-expect-error no dnd5e-types

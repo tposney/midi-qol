@@ -1,7 +1,6 @@
 <fieldset>
   <legend> {{ localize "midi-qol.ATTACK.extras.header" }} </legend>
   {{ formField fields.attackMode value=source.attackMode options=attackModeOptions }}
-  {{ formField fields.midiProperties.fields.forceAttackDialog value=source.midiProperties.forceAttackDialog input=@root.inputs.createCheckboxInput }}
   {{#if hasAmmunition}}
   {{ formField fields.ammunition value=source.ammunition options=ammunitionOptions }}
   {{/if}}

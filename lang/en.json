@@ -1001,17 +1001,21 @@
           "label": "Choose Effects",
           "hint": "Choose effects to apply"
         },
+        "autoConsume": {
+          "label": "Auto Consume",
+          "hint": "Consume any resources/spell slots when used. If there are insufficient resources the configuration dialog will be shown"
+        },
         "forceDialog": {
           "label": "Force Configuration Dialog (Deprecated)",
           "hint": "Force Configuration Dialog when activity used"
         },
-        "forceAttackDialog" : {
-          "label": "Force Attack Config",
-          "hint": "Force Attack Configuration Dialog when activity used"
+        "forceRollDialog": {
+          "label": "Force Roll Config",
+          "hint": "Force Roll Configuration Dialog when activity used"
         },
         "forceDamageDialog": {
           "label": "Force Damage Config",
-          "hint": "Force Damage Configuration Dialog when activity used"
+          "hint": "Force Damage Configuration Dialog when activity used and the activity rolls damage"
         },
         "confirmTargets": {
           "label": "Target Confirmation",

@@ -66,7 +66,7 @@ export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.Formu
 }
 
 export let MidiActivityMixin = Base => {
-  interface MidiActivityMixin extends Activity {};
+  interface MidiActivityMixin extends Activity { };
   class MidiActivityMixin extends Base {
     get workflow() {
       warn("MidiActivityMixin | activity.workflow is deprecated. activities no long store workflow references");
@@ -83,7 +83,7 @@ export let MidiActivityMixin = Base => {
       foundry.utils.logCompatibilityWarning("MidiActivityMixin | setting activity.targets is not supported. Use workflow.targets instead");
     }
 
-    static LOCALIZATION_PREFIXES = [ ...super.LOCALIZATION_PREFIXES, "midi-qol.SHARED"];
+    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.SHARED"];
 
     static defineSchema() {
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, SetField } = foundry.data.fields;
@@ -114,15 +114,16 @@ export let MidiActivityMixin = Base => {
           triggeredActivityConditionText: new MidiConditionField({ name: "triggeredActivityCondition", initial: "" }),
           triggeredActivityTargets: new StringField({ name: "triggeredActivityTargets", initial: "targets", required: true, blank: false }),
           triggeredActivityRollAs: new StringField({ name: "triggeredActivityRollAs", initial: "self" }),
+          autoConsume: new BooleanField({ name: "autoConsume", initial: false }),
           forceDialog: new BooleanField({ name: "forceDialog", initial: false }),
-          forceAttackDialog: new BooleanField({ name: "forceAttackDialog", initial: false }),
+          forceRollDialog: new BooleanField({ name: "forceRollDialog", initial: false }),
           forceDamageDialog: new BooleanField({ name: "forceDamageDialog", initial: false }),
           confirmTargets: new StringField({ name: "confirmTargets", initial: "default", required: true, blank: false }),
           autoTargetType: new StringField({ name: "autoTargetType", initial: "any", required: true, blank: false }),
           autoTargetAction: new StringField({ name: "autoTargetAction", initial: "default" }),
           automationOnly: new BooleanField({ name: "automationOnly", initial: false }),
           otherActivityCompatible: new BooleanField({ name: "otherActivityCompatible", initial: true }),
-          otherActivityAsParentType: new BooleanField({ name: "otherActivityAsParentType", initial: true, required: false }),  
+          otherActivityAsParentType: new BooleanField({ name: "otherActivityAsParentType", initial: true, required: false }),
           identifier: new StringField({ name: "identifier", initial: "", required: false }),
           displayActivityName: new BooleanField({ name: "displayActivityName", initial: false }),
           rollMode: new StringField({ name: "rollMode", initial: "default", required: true, blank: false }),
@@ -203,6 +204,11 @@ export let MidiActivityMixin = Base => {
       return false;
     }
 
+    get canUse() {
+      if (this.midiProperties?.automationOnly) return false;
+      return super.canUse;
+    }
+    
     getOnUseMacros({ onlyOnUseItemMacros = false } = {}) {
       const onUseMacros = new OnUseMacros();
       this.ammunitionOnUseMacros = new OnUseMacros();
@@ -372,7 +378,7 @@ export let MidiActivityMixin = Base => {
     static #rollDamageCritical(this: Activity, event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
-      return this.rollDamage({ event, workflow, critical: {allow: true}, midiOptions: { isCritical: true } }, {}, message);
+      return this.rollDamage({ event, workflow, critical: { allow: true }, midiOptions: { isCritical: true } }, {}, message);
     }
 
     get identifier() {
@@ -384,7 +390,7 @@ export let MidiActivityMixin = Base => {
       //@ts-expect-error
       if (!this.midiProperties.identifier && !this.name) this.midiProperties.identifier = i18n(this.constructor.metadata.dnd5eTitle).slugify();
       if (this.midiProperties?.forceDialog) {
-        this.midiProperties.forceAttackDialog = true;
+        this.midiProperties.forceRollDialog = true;
         this.midiProperties.forceDamageDialog = true;
       }
       super.prepareData();
@@ -476,10 +482,12 @@ export let MidiActivityMixin = Base => {
 
         foundry.utils.setProperty(message, "data.flags.midi-qol.messageType", "attack");
         if (usage.midiOptions?.configureDialog === false) dialog.configure = false;
+        await activity.checkAutoConsume(usage, dialog);
         const rollToggle = areMidiKeysPressed(usage.event as AugmentedEvent, "RollToggle");
-        if (rollToggle && usage.workflow) 
+        if (rollToggle && usage.workflow) {
           foundry.utils.setProperty(usage.workflow, "rollOptions.rollToggle", true);
-        activity.checkAutoConsume(usage, dialog, message, rollToggle);
+          dialog.configure = !dialog.configure; // toggle the configure dialog
+        }
         // if (rollToggle) dialog.configure = !dialog.configure; Should this always be looked at
         // Synthetic items don't have an _id so setup for them to be recovered from the chat card
         if (!activity.item._id || foundry.utils.getProperty(activity.item, `flags.${MODULE_ID}.syntheticItem`))
@@ -555,12 +563,12 @@ export let MidiActivityMixin = Base => {
         if (usage.workflow.itemUsesBonusAction && this.actor && !hasUsedBonusAction(this.actor))
           await setBonusActionUsed(this.actor);
         // @ts-expect-error no dnd5e-types
-        if (activity.item?.type === "spell" || activity.item.flags?.dnd5e?.spellLevel) { 
+        if (activity.item?.type === "spell" || activity.item.flags?.dnd5e?.spellLevel) {
           usage.workflow.castData = {
             // @ts-expect-error no dnd5e-types
             baseLevel: activity.item.system.level ?? activity.item.flags?.dnd5e?.spellLevel?.base,
             // @ts-expect-error no dnd5e-types
-            castLevel: activity.item.system.level !== undefined ? activity.item.system.level + (usageData?.scaling ?? 0) : activity.item.flags?.dnd5e?.spellLevel?.value, 
+            castLevel: activity.item.system.level !== undefined ? activity.item.system.level + (usageData?.scaling ?? 0) : activity.item.flags?.dnd5e?.spellLevel?.value,
             scaling: (usageData?.scaling ?? activity.item.flags?.dnd5e?.scaling) || 0,
             itemUuid: activity.item.uuid
           };
@@ -580,30 +588,29 @@ export let MidiActivityMixin = Base => {
       }
     }
 
-    checkAutoConsume(usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, rollToggle?: boolean) {
-      if (dialog.configure === false) return;
-      if (this.isSpell) {
-        if (["both", "spell"].includes(autoConsumeResource(usage.workflow))) {
-          dialog.configure = false;
-          // Check that there is a spell slot of the right level
-          // @ts-expect-error no dnd5e-types
-          const spells = this.actor?.system.spells;
-          // Come back and check for spell level in activities
-          // @ts-expect-error no dnd5e-types
-          if (spells[`spell${this.item.system.level}`]?.value === 0 &&
-            // @ts-expect-error no dnd5e-types
-            (spells.pact.value === 0 || spells.pact.level < this.item.system.level)) {
-            dialog.configure = true;
-          }
+    async checkAutoConsume(usage: ActivityUseConfiguration, dialog: RollDialogConfig = {}) {
+      if (dialog.configure === true) return;
+      if (!this.midiProperties?.autoConsume) {
+        if (autoConsumeResource(usage.workflow) === "none") return;
+        //@ts-expect-error no dnd5e-types
+        if (autoConsumeResource(usage.workflow) === "spell" && this.item?.type !== "spell") return;
+        //@ts-expect-error no dnd5e-types
+        if (autoConsumeResource(usage.workflow) === "item" && this.item?.type === "spell") return;
+      }
+      const consumption = this._prepareUsageConfig(usage);
+      const autoConsume = await this._prepareUsageUpdates(consumption, { returnErrors: true });
+      if (autoConsume.length ?? 0 > 0) {
+        console.error(autoConsume);
+        dialog.configure = true;
+        return;
+      }
 
-          if (!dialog.configure && this.hasAreaTarget && this.actor?.sheet) {
-            setTimeout(() => {
-              this.actor?.sheet?.minimize();
-            }, 100)
-          }
-        }
-      } else dialog.configure = !(["both", "item"].includes(autoConsumeResource(usage.workflow)));
-      if (autoConsumeResource(usage.workflow) !== "none" && rollToggle) dialog.configure = true;
+      dialog.configure = false;
+      if (this.hasAreaTarget && this.actor?.sheet) {
+        setTimeout(() => {
+          this.actor?.sheet?.minimize();
+        }, 100)
+      }
     }
 
     async rollDamage(config: RollProcessConfig, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
@@ -706,8 +713,8 @@ export let MidiActivityMixin = Base => {
             otherConfig.midiOptions!.fastForward = config.midiOptions!.fastForwardDamage;
             otherConfig.midiOptions!.updateWorkflow = false; // rollFormula will try and restart the workflow
             if (this.otherActivity.ac)
-            // Undo the roll toggle since rollFormula will look at it as well
-            if (config.workflow.rollOptions?.rollToggle) dialog.configure = !dialog.configure;
+              // Undo the roll toggle since rollFormula will look at it as well
+              if (config.workflow.rollOptions?.rollToggle) dialog.configure = !dialog.configure;
             if (this.otherActivity?.hasDamage)
               otherResult = await this.otherActivity.rollDamage(otherConfig, dialog, { create: false }) as Roll[] | undefined;
             else if (this.otherActivity?.roll?.formula) {
@@ -727,7 +734,7 @@ export let MidiActivityMixin = Base => {
                 properties?.delete(this.otherActivity.actionType);
                 properties?.add(this.actionType);
                 //@ts-expect-error no dnd5e-types
-                r.options.properties = Array.from(properties); 
+                r.options.properties = Array.from(properties);
               })
             }
             // @ts-expect-error might be false from above `if`
@@ -841,7 +848,6 @@ export let MidiActivityMixin = Base => {
       //@ts-expect-error
       const DamageRoll = CONFIG.Dice.DamageRoll;
       const rollMode = safeGetGameSetting("core", "rollMode");
-      const showChatDamageCards = game.user?.isGM && configSettings.gmAttackDamageCards && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
 
       try {
         if (!config.workflow) return result;
@@ -925,12 +931,11 @@ export let MidiActivityMixin = Base => {
             [result, result2] = [result2, result];
           }
           // display roll not being used.
-          if (config.workflow.workflowOptions?.damageRollDSN !== false && !showChatDamageCards) {
+          if (config.workflow.workflowOptions?.damageRollDSN !== false) {
             let promises = result2.map(r => displayDSNForRoll(r, "damageRoll"));
             await Promise.all(promises);
           }
-          if (!showChatDamageCards)
-            await DamageRoll.toMessage(result2, messageData, { rollMode: game.settings.get("core", "rollMode") });
+          await DamageRoll.toMessage(result2, messageData, { rollMode: game.settings.get("core", "rollMode") });
           // await result2.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") });
         } else if (this.actor?.flags?.[MODULE_ID]?.damage?.advantage) {
           // To do this properly requires rerolling each term in the damage roll
@@ -938,14 +943,11 @@ export let MidiActivityMixin = Base => {
         setDamageRollMinTerms(result)
 
         if (this.actionType === "heal" && !Object.keys(GameSystemConfig.healingTypes).includes(config.workflow.defaultDamageType ?? "")) config.workflow.defaultDamageType = "healing";
-        if (config.workflow?.workflowOptions?.damageRollDSN !== false && !showChatDamageCards) {
+        if (config.workflow?.workflowOptions?.damageRollDSN !== false) {
           let promises = result.map(r => displayDSNForRoll(r, "damageRoll"));
           await Promise.all(promises);
         }
         result = await config.workflow.processDamageRollBonusFlags(result);
-        if (showChatDamageCards) {
-          DamageRoll.toMessage(result, {}, { create: true, rollMode: game.settings.get("core", "rollMode") });
-        }
         return result;
       } catch (err) {
         const message = `doDamageRoll error for item ${this?.name} ${this.uuid}`;
@@ -954,7 +956,7 @@ export let MidiActivityMixin = Base => {
       }
     }
 
-    async setupCanSeeSense(usage: {workflow?: Workflow}) {
+    async setupCanSeeSense(usage: { workflow?: Workflow }) {
       const workflow = usage.workflow;
       if (!workflow) return;
       let needPause = false;
@@ -1011,7 +1013,7 @@ export let MidiActivityMixin = Base => {
       if ((config.midiOptions?.targetsToUse?.size ?? 0) > 0 && !activityHasAreaTarget(this) && this.target?.affects.type !== "self") {
         workflow.setTargets(config.midiOptions!.targetsToUse!);
       } else {
-        if (((this.target?.affects.type ?? "") !== "") 
+        if (((this.target?.affects.type ?? "") !== "")
           || configSettings.enforceSingleWeaponTarget
           || (targetConfirmation.enabled && targetConfirmation.always)
           || (targetConfirmation.enabled && targetConfirmation.noneTargeted)
@@ -1615,23 +1617,24 @@ export let MidiActivityMixinSheet = Base => {
         { value: ROLL_MODES.SELF, label: i18n("CHAT.RollSelf") }
       ];
       context.RemoveChatButtonsOptions = Object.entries(foundry.utils.mergeObject({ "default": i18n("midi-qol.MidiSettings") }, removeButtonsOptions))
-      .map(([value, label]) => ({ value, label }));
+        .map(([value, label]) => ({ value, label }));
       context.placeholderIdentifier = context.activity.identifier;
       const midiProperties = context.activity.midiProperties;
 
       context.otherActivityOptions = this.item.system.activities
         .filter(a => a.id !== this.activity.id && a.isOtherActivityCompatible)
-        .reduce((ret, a) => { 
+        .reduce((ret, a) => {
           const identifierString = a.identifier === a.name.slugify() ? "" : ` (${a.identifier})`;
-          ret.push({ label: `${a.name}${identifierString}`, value: a.identifier, id: a.id }); 
-          return ret 
+          ret.push({ label: `${a.name}${identifierString}`, value: a.identifier, id: a.id });
+          return ret
         }, [{ label: "Auto", value: "" }, { label: "None", value: "none" }]);
       context.otherActivityOptions?.forEach(option => { option.selected = option.value === this.activity.otherActivityId || option.id === this.activity.otherActivityId });
       context.triggeredActivityOptions = this.item.system.activities
         .filter(a => a.id !== this.activity.id && a.isTriggerableActivity)
         .reduce((ret, a) => {
           const identifierString = a.identifier === a.name.slugify() ? "" : ` (${a.identifier})`;
-          ret.push({ label: `${a.name}${identifierString}`, value: a.identifier, id: a.id }); return ret }, [{ label: "None", value: "none" }]);
+          ret.push({ label: `${a.name}${identifierString}`, value: a.identifier, id: a.id }); return ret
+        }, [{ label: "None", value: "none" }]);
       context.triggeredActivityOptions?.filter(option => { option.selected = option.value === this.activity.midiProperties.triggeredActivityId || option.id === this.activity.midiProperties.triggeredActivityId });
       let activity = context.activity;
       let triggeredActivity = await context.activity.getTriggeredActivity();
@@ -1658,8 +1661,8 @@ export let MidiActivityMixinSheet = Base => {
         return { value, label: entry.label, selected: this.activity.midiProperties.ignoreTraits.has(value) }
       });
       context.AutoTargetTypeOptions = Object.entries(aoeTargetTypeOptions).map(([value, label]) => ({ value, label }));
-      const AutoCEEffectsOptions = Object.entries(autoCEEffectsOptions).map(([value, label]) => ({ value, label }));  
-      context.AutoCEEffectsOptions = [{value: "default", label: i18n("midi-qol.MidiSettings")}, ...AutoCEEffectsOptions];
+      const AutoCEEffectsOptions = Object.entries(autoCEEffectsOptions).map(([value, label]) => ({ value, label }));
+      context.AutoCEEffectsOptions = [{ value: "default", label: i18n("midi-qol.MidiSettings") }, ...AutoCEEffectsOptions];
       const defaultAction = { "default": i18n("midi-qol.MidiSettings") };
       context.AutoTargetActionOptions = Object.entries(foundry.utils.mergeObject(defaultAction, autoTargetOptions)).map(([value, label]) => ({ value, label }));
       context.hasAreaTarget = this.activity.target?.template?.type;

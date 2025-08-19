@@ -14,7 +14,9 @@
       {{ formField fields.removeChatButtons value=../source.midiProperties.removeChatButtons options=../RemoveChatButtonsOptions localize=true}}
       {{ formField fields.displayActivityName value=../source.midiProperties.displayActivityName input=@root.inputs.createCheckboxInput }}
       {{ formField fields.identifier value=../source.midiProperties.identifier placeholder=../placeholderIdentifier }}
+      {{ formField fields.autoConsume value=../source.midiProperties.autoConsume}}
       {{ formField fields.forceDialog value=../source.midiProperties.forceDialog input=@root.inputs.createCheckboxInput }}
+      {{ formField fields.forceRollDialog value=source.midiProperties.forceRollDialog input=@root.inputs.createCheckboxInput }}
       {{ formField fields.forceDamageDialog value=../source.midiProperties.forceDamageDialog input=@root.inputs.createCheckboxInput }}
       {{ formField fields.confirmTargets value=../source.midiProperties.confirmTargets options=../ConfirmTargetOptions localize=true}}
 

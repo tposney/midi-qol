@@ -6,6 +6,7 @@ import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { areMidiKeysPressed, asyncHooksCall, isAutoFastDamage } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
+import { displayDSNForRoll } from "../utils.js";
 
 export let MidiUtilityActivity: ReturnType<typeof defineMidiUtilityActivityClass>;
 export let MidiUtilitySheet: ReturnType<typeof defineMidiUtilitySheetClass>;
@@ -110,6 +111,8 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
       if (rollToggle) dialog.configure = !!!dialog.configure;
       message.create ??= false;
       let result = await super.rollFormula!(config, dialog, message) as Roll[] | undefined;
+      if (result && workflow.workflowOptions?.formulaDSN !== false) await displayDSNForRoll(result[0], "formulaD20");
+
       if (config.midiOptions.updateWorkflow !== false && workflow) {
         if (result) await workflow.setUtilityRolls(result);
         if (workflow.suspended)

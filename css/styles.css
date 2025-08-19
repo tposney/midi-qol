@@ -758,6 +758,16 @@
     padding: 7px 3px 5px 3px;
     text-align: left !important;
   }
+  .xmidi-qol-flex-container th {
+    font-family: var(--font-sans-condensed);
+    font-size: var(--font-size-11);
+  }
+  
+  .xmidi-qol-flex-container span {
+    font-family: var(--font-sans-condensed);
+    font-size: var(--font-size-12);
+    font-weight: 600;
+  }
   
   .chat-message.message.flexcol:has(.xmidi-qol-flex-container) thead > tr > th:nth-child(1)::before {
       font-family: "Font Awesome 6 Pro";

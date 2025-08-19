@@ -48,6 +48,7 @@ import {
   midiRenderDamageRoll,
   midiRenderBonusDamageRoll,
   midiRenderOtherDamageRoll,
+  midiRenderFormulaRoll,
   debouncedUpdate,
   getCachedDocument,
   clearUpdatesCache,
@@ -77,7 +78,6 @@ import {
   requestPCSave,
   addUpdatesCache,
   addUpdatesCacheFlags,
-  updatesCache,
   MidiOptions,
   getOptionalCountRemainingShortFlag,
   bonusDialog,
@@ -89,7 +89,7 @@ import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
 import { postTemplateConfirmTargets, selectTargets, templateTokens } from "./activities/activityHelpers.js";
-import { Activity, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor } from "../globals.js";
+import { Activity, ActivitySave, ActivityCheck, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
 
@@ -897,6 +897,9 @@ export class Workflow {
     if (this.activity.save || this.activity.check) return this.activity;
     if (this.otherActivity?.save || this.otherActivity?.check) return this.otherActivity;
     return undefined;
+  }
+  get saveActivityDetails(): ActivitySave | ActivityCheck | undefined {
+    return this.saveActivity?.save || this.saveActivity?.check;
   }
 
   get saveItem() {
@@ -2958,7 +2961,7 @@ export class Workflow {
         }
         possibleTriggerActivity = await possibleTriggerActivity.getTriggeredActivity();
       }
-
+      
       let triggeredActivity = await this.activity.getTriggeredActivity();
       if (shouldTrigger && triggeredActivity) {
         if (shouldTrigger) {
@@ -4667,7 +4670,7 @@ export class Workflow {
       if (!skillOrTool) {
         rollType = "check";
         // TODO: let user choose
-        rollAbility = this.saveActivity.check.ability.first();
+        rollAbility = this.saveActivity.check.ability;
       } else if (GameSystemConfig.skills[skillOrTool]) {
         rollType = "skill";
         rollAbility = this.saveActivity.getAbility?.(skillOrTool);
@@ -4866,7 +4869,7 @@ export class Workflow {
       }
       if (!skillOrTool) {
         rollType = "check";
-        rollAbility = this.saveActivity.check.ability.first();
+        rollAbility = this.saveActivity.check.ability;
         // @ts-expect-error no dnd5e-types
         rollAction = CONFIG.Actor.documentClass.prototype.rollAbilityCheck;
         flagRollType = "check";
@@ -4966,7 +4969,7 @@ export class Workflow {
           if (debugEnabled > 1) debug(`${target.actor.name} vulnerable to magic : ${saveDetails.disadvantage}`);
         }
 
-        const settingsOptions = await procAbilityAdvantage(target.actor, rollType ?? "", this.saveActivity.save?.ability?.first() ?? this.saveActivity.check?.ability?.first() ?? "", { workflow: this });
+        const settingsOptions = await procAbilityAdvantage(target.actor, rollType ?? "", this.saveActivity.save?.ability?.first() ?? this.saveActivity.check?.ability ?? "", { workflow: this });
         if (settingsOptions.advantage) saveDetails.advantage = true;
         if (settingsOptions.disadvantage) saveDetails.disadvantage = true;
         saveDetails.isConcentrationCheck = this.item.flags?.[MODULE_ID]?.isConcentrationCheck;
@@ -5906,7 +5909,7 @@ export class Workflow {
   async processDamageRollBonusFlags(damageRolls: Roll[]): Promise<Roll[]> {
     let damageBonus = "damage.all";
     const rollMode = safeGetGameSetting("core", "rollMode");
-    const hideDSN = game.user?.isGM && configSettings.gmAttackDamageCards && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
+    const hideDSN = game.user?.isGM && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
     if (this.activity) damageBonus = `damage.${this.activity.actionType}`;
     const optionalFlags = this.actor.flags?.[MODULE_ID]?.optional ?? {};
     const bonusFlags = Object.keys(optionalFlags)
@@ -6247,7 +6250,7 @@ export class Workflow {
     this.utilityRollHTML = "";
     for (let roll of this.utilityRolls) {
       foundry.utils.setProperty(roll, `options.${MODULE_ID}.rollType`, "utility");
-      this.utilityRollHTML += await midiRenderRoll(roll);
+      this.utilityRollHTML += await midiRenderFormulaRoll(roll);
     }
   }
 
@@ -7417,6 +7420,7 @@ export type WorkflowOptions = InexactPartial<{
   fastForwardSet: boolean;
   forceCompletion: boolean;
   forceTemplateTargeting: boolean;
+  formulaDSN: boolean;
   ignoreUserTargets: boolean;
   isCritical: boolean;
   isMagicSave: boolean;

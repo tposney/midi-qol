@@ -596,7 +596,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         workflow.damageList.push(damageDetails);
       }
     }
-    await timedAwaitExecuteAsGM("createReverseDamageCard", {
+    timedAwaitExecuteAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
       actorId: workflow.actor.id,
@@ -3893,11 +3893,11 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
               isValid = true;
             } else if (configSettings.ignoreSpellReactionRestriction) isValid = true;
             // @ts-expect-error no dnd5e-types
-            else if (["atwill", "innate"].includes(item.system.preparation.mode)) isValid = true;
+            else if (["atwill", "innate"].includes(item.system.method)) isValid = true;
             // @ts-expect-error no dnd5e-types
             else if (item.system.level === 0) isValid = true;
             // @ts-expect-error no dnd5e-types
-            else if (item.system.preparation?.prepared !== true && item.system.preparation?.mode === "prepared") continue;
+            else if (item.system.prepared > 0 && item.system.method === "prepared") continue;
             // @ts-expect-error no dnd5e-types
             else if (item.system.level <= maxLevel) isValid = true;
           } else {
@@ -5146,6 +5146,11 @@ export function midiRenderBonusDamageRoll(roll: Roll, options?: any) {
   options = foundry.utils.mergeObject(options ?? {}, { tooltipFormula: ["formula", "formulaadv"].includes(configSettings.rollAlternate) });
   let html = midiRenderTemplateRoll(roll, "modules/midi-qol/templates/bonus-damage-roll.html", options);
   return html;
+}
+
+export function midiRenderFormulaRoll(roll: Roll, options?: any) {
+  options = foundry.utils.mergeObject(options ?? {}, { tooltipFormula: ["formula", "formulaadv"].includes(configSettings.rollAlternate) });
+  return midiRenderTemplateRoll(roll, "modules/midi-qol/templates/roll.html", options);
 }
 
 export async function midiRenderTemplateRoll(roll: Roll | undefined, template: string, options?: any) {
@@ -6458,8 +6463,8 @@ export async function asyncGetCachedDocument(uuid: string | undefined | null): P
 }
 */
 export const updatesCache = {};
-async function _updateAction(document: foundry.abstract.Document.Any) {
-  if (!updatesCache[document.uuid]) {
+async function _updateAction(document: foundry.abstract.Document.Any, updates: ChatMessage.UpdateData) {
+  if (!updates) {
     if (debugEnabled > 0) warn(`_updateAction | No updates found for ${document.uuid}`);
     console.warn(`_updateAction | No updates found for ${document.uuid}`);
     return document;
@@ -6475,33 +6480,35 @@ async function _updateAction(document: foundry.abstract.Document.Any) {
      This creates an opportunity for changes to cached updates which can then be lost if they are cleared
      */
   const updateDelay = 0;
-  const updates = foundry.utils.deepClone(updatesCache[document.uuid]);
   if (debugEnabled)  warn("_updateAction | Starting for", updates)
+  delete updates._id
   if (updateDelay) await busyWait(updateDelay); // let other stuff happen.
   await baseDocument?.update(updates);
   // const flatUpdates = foundry.utils.flattenObject(updates);
   // const flatCache = foundry.utils.flattenObject(updatesCache[baseDocument.uuid] ?? {});
   updatesCache[baseDocument.uuid] = foundry.utils.diffObject(updates, updatesCache[baseDocument.uuid] ?? {});
-  delete updatesCache[document.uuid].rolls; // This is handled by the chat card and will be already setup as [Roll] rather than json
+  if (updatesCache[baseDocument.uuid]?.rolls) console.warn("updates cache rolls", updatesCache[baseDocument.uuid].rolls);
+  if (false && updatesCache[baseDocument.uuid]?.rolls?.[0] instanceof Roll) delete updatesCache[document.uuid].rolls; // This is handled by the chat card and will be already setup as [Roll] rather than json
   
-  //@ts-expect-error
-  if (updates.content && ui.chat.isAtBottom) ui.chat?.scrollBottom();
+  //@ ts-expect-error
+  // if (updates.content) ui.chat?.scrollBottom();
   
   if (debugEnabled > 1 && updates.content && updatesCache[baseDocument.uuid]?.content) 
     warn("_updateAction | queued content differences ", diffStringsFull(updates.content, updatesCache[baseDocument.uuid].content, {ignoreWhitespace: true, ignoreNewlines: true}));
-  if (debugEnabled) warn("_updateAction | post update updatesCache", updatesCache[baseDocument.uuid]);
+  if (debugEnabled) warn("_updateAction | post update updatesCache", updates);
 }
 
 // NOTE: Typed as a ChatMessage since that's all we use it for
 export async function debouncedUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData, immediate = false) {
   if (!document) return; // ChatCard was removed already?;
   updates = foundry.utils.expandObject(updates) as typeof updates;
-  if (foundry.utils.getProperty(updates, "flags.midi-qol.damageRolls")) debugger;
-  updatesCache[document.uuid] = foundry.utils.mergeObject((updatesCache[document.uuid] ?? {}), updates, { overwrite: true })
+  updates = foundry.utils.mergeObject((updatesCache[document.uuid] ?? {}), updates, { overwrite: true })
+  updatesCache[document.uuid] = updates;
   if (!DebounceInterval || immediate) {
-    return await _updateAction(document);
+    if (debugEnabled > 0) warn(`debouncedUpdate | immediate update for ${document.uuid}`, updates);
+    return await _updateAction(document, updates);
   }
-  return await _debouncedUpdateAction(document);
+  return await _debouncedUpdateAction(document, updates);
 }
 export function getUpdatesCache(uuid: string | undefined | null) {
   if (!uuid) return {};
@@ -6512,7 +6519,6 @@ export function addUpdatesCacheFlags(uuid: string | undefined | null, updates: a
   if (!uuid) return;
   if (prepend) updates = { [prepend]: updates };
   updates = foundry.utils.expandObject({ flags: updates });
-  if (updates._id) debugger;
   updatesCache[uuid] = foundry.utils.mergeObject(updatesCache[uuid] ?? {}, updates, { insertKeys: true, insertValue: true });
 }
 
