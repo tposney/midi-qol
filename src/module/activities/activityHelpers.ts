@@ -128,7 +128,7 @@ function itemRequiresPostTemplateConfirmation(activity: Activity): boolean {
 }
 
 export function requiresTargetConfirmation(activity: Activity, options: MidiOptions): boolean {
-  if (!activity.item) debugger;
+  // if (!activity.item) debugger;
   // fix for very silly value choice in midi properties.
   if (["none", "never"].includes(options.workflowOptions?.targetConfirmation ?? "")) return false;
   if (options.workflowOptions?.targetConfirmation === "always") return true;

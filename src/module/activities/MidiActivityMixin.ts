@@ -208,7 +208,7 @@ export let MidiActivityMixin = Base => {
       if (this.midiProperties?.automationOnly) return false;
       return super.canUse;
     }
-    
+
     getOnUseMacros({ onlyOnUseItemMacros = false } = {}) {
       const onUseMacros = new OnUseMacros();
       this.ammunitionOnUseMacros = new OnUseMacros();
@@ -599,13 +599,13 @@ export let MidiActivityMixin = Base => {
       }
       const consumption = this._prepareUsageConfig(usage);
       const autoConsume = await this._prepareUsageUpdates(consumption, { returnErrors: true });
+      // If consumption would fail _prepareUsageUpdates will return an array of errors and on success an object of updates
       if (autoConsume.length ?? 0 > 0) {
-        console.error(autoConsume);
         dialog.configure = true;
         return;
       }
-
       dialog.configure = false;
+
       if (this.hasAreaTarget && this.actor?.sheet) {
         setTimeout(() => {
           this.actor?.sheet?.minimize();

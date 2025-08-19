@@ -261,7 +261,7 @@ export class Workflow {
   }
 
   async performDebouncedUpdate(chatCard: ChatMessage.Implementation, updates: ChatMessage.UpdateData, immediate = false) {
-    if (updates._id) debugger;
+    // if (updates._id) debugger;
     // ugly hack to force updates into the cache for things that are sets
     if (SaveToChatCard) {
       this.actor = this.actor;
