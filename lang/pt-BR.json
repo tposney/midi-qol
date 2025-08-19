@@ -1001,17 +1001,21 @@
           "label": "Escolher Efeitos",
           "hint": "Escolha efeitos para aplicar."
         },
+        "autoConsume": {
+          "label": "Auto-Consumir",
+          "hint": "Consumir quaisquer recursos/espaços de magia quando usados. Se não houver recursos suficientes, a caixa de diálogo de configuração será exibida."
+        },
         "forceDialog": {
           "label": "Forçar Diálogo de Configuração (Obsoleto)",
           "hint": "Força o diálogo de configuração ao rolar ataques."
         },
-        "forceAttackDialog" : {
-          "label": "Forçar Configuração de Ataque",
-          "hint": "Força o Diálogo de Configuração de Ataque quando a atividade é usada."
+        "forceRollDialog" : {
+          "label": "Forçar Configuração de Rolagem",
+          "hint": "Força o Diálogo de Configuração de Rolagem quando a atividade é usada."
         },
         "forceDamageDialog": {
           "label": "Forçar Configuração de Dano",
-          "hint": "Força o Diálogo de Configuração de Dano quando a atividade é usada"
+          "hint": "Força o Diálogo de Configuração de Dano quando a atividade é usada e possuir rolagem de dano."
         },
         "confirmTargets": {
           "label": "Confirmação do Alvo",
