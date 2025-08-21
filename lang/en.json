@@ -926,6 +926,16 @@
     "Friendly": "Friendly",
     "notFriendly": "Not Friendly"
   },
+  "midi-qol.ConfigDialogOptions": {
+    "default": "Midi Settings",
+    "always": "Always show",
+    "never": "Never show"
+  },
+  "midi-qol.ConsumeDialogOptions": {
+    "default": "Midi Settings",
+    "always": "Always show",
+    "never": "Never show"
+  },
   "midi-qol.TriggeredActivityTargetOptions": {
     "self": "Target item owner",
     "targets": "Same targets",
@@ -1001,17 +1011,13 @@
           "label": "Choose Effects",
           "hint": "Choose effects to apply"
         },
-        "autoConsume": {
-          "label": "Auto Consume",
-          "hint": "Consume any resources/spell slots when used. If there are insufficient resources the configuration dialog will be shown"
-        },
-        "forceDialog": {
-          "label": "Force Configuration Dialog (Deprecated)",
+        "forceConsumeDialog": {
+          "label": "Force Consume Dialog",
           "hint": "Force Configuration Dialog when activity used"
         },
         "forceRollDialog": {
           "label": "Force Roll Config",
-          "hint": "Force Roll Configuration Dialog when activity used"
+          "hint": "Force Roll/Attack Configuration Dialog when activity used"
         },
         "forceDamageDialog": {
           "label": "Force Damage Config",

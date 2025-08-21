@@ -1,3 +1,20 @@
+### 13.0.17
+* Fix for trigger activities not allowing activity configuration - it is now **on** by default.
+  - You can configure the triggered activity to block the configuration / consumption dialog or to autoConsume (on the activity midi-qol tab) if preferred.
+* Fix for AoE rejecting multiple targets when Target Confirmation is set and no targets are specified in activity/item.
+* Fix for Maxwell's Manual of Malificious Maladies not triggering when midi is active.
+* Fix for automation only activities showing in the default dnd5e character sheet drop down.
+* Fix for TroubleShooter midi summary settings not being localised.
+  - fix for canUse returning false for automation only activities which can cause some problems.
+* **Breaking** Prompts to roll a skill/save/ability check will now display the token name in the roll configuration dialog if the token is an unlinked token (usually an npc). This let's you know which of the hundred or so orcs is saving (assuming they have different token names).
+* **Breaking** Forcing consumption/rolling/damage configuration dialogs has changed. The options are now choice fields:
+  - "Default" - do the midi default
+  - "Never" - never show the configuration dialog. If there is consumption that would cause the item not to be used the roll will fail. If you want to be prompted in such cases set autoConsume to true which will pop the configuration dialog if the activity use would otherwise fail.
+  - "Always" - always show the configuration dialog unless overridden by a key press (shift/alt/ctl)
+  - The previous boolean fields are now overridden by the new fields. For older activities the value will now be "blank" and will equate to use midi settings. So you will need to edit activities that had force dialog etc set.
+  - As a reminder autoConsume means if the actor has enough of the requisite consumption components (spell slots, resources, item uses etc) the roll will automatically consume them and continue otherwise the roll configuration dialog will be presented.
+* ChatCard rollDamage button now respects workflow.workflowOptions.isCritical if set.
+
 ### 13.0.16
 * Fix for Use Activity display having expanded rolls.
 * Fix for Check Activities always failing the roll.

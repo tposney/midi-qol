@@ -1206,6 +1206,22 @@ export const soundSettingsBlurb = keysToOptionsObj("SoundSettingsBlurb", [
   "4"
 ]);
 
+export const rollConfigOptions = keysToOptionsObj("ConfigDialogOptions", [
+  "default",
+  "always",
+  "never"
+]);
+export const damageConfigOptions = keysToOptionsObj("ConfigDialogOptions", [
+  "default",
+  "always",
+  "never"
+]);
+export const consumeConfigOptions = keysToOptionsObj("ConfigDialogOptions", [
+  "default",
+  "always",
+  "never"
+]);
+
 export const registerSettings = function () {
 
   // Register any custom module settings here

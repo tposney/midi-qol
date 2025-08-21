@@ -24,15 +24,16 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     super(options);
     this.position.left = TargetConfirmationDialog.xPosition;
     this.position.top = TargetConfirmationDialog.yPosition;
-    let maxTargets = Number(activity.target?.affects?.count ?? "1");
+    let maxTargets = activity.target?.affects?.count ? Number(activity.target.affects.count) : +Infinity;
     const inCombat = activity.item.parent && isInCombat(activity.item.parent);
-    const requiresTargets = configSettings.requiresTargets === "always" 
-    || (configSettings.requiresTargets === "tokens" && (canvas?.scene?.tokens.size ?? 0) > 0)
-    || (configSettings.requiresTargets === "combat" && inCombat);
+
+    const requiresTargets = configSettings.requiresTargets === "always"
+      || (configSettings.requiresTargets === "tokens" && (canvas?.scene?.tokens.size ?? 0) > 0)
+      || (configSettings.requiresTargets === "combat" && inCombat);
     // @ts-expect-error no dnd5e-types
-    if (activity.item.type === "weapon" && !maxTargets) {
+    if (activity.item.type === "weapon" && !activity.target?.affects?.count) {
       if (requiresTargets && configSettings.enforceSingleWeaponTarget && allAttackTypes.includes(activity.actionType)) {
-      maxTargets = 1;
+        maxTargets = 1;
       }
     }
     this.data = { actor, activity, user, targets: [], options, maxTargets };
@@ -73,7 +74,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
   get title() {
     return this.data.options.title ?? i18n("midi-qol.TargetConfirmation.Name");
   }
-  
+
   static get xPosition() {
     const left = 100;
     const middle = window.innerWidth / 2 - 155;
@@ -81,9 +82,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     const right = window.innerWidth - 310 - adjustment
     switch (targetConfirmation.gridPosition?.x) {
       case -1: return left;
-      case 0 : return middle;
+      case 0: return middle;
       default:
-      case 1 : return right;
+      case 1: return right;
     }
   }
 
@@ -93,15 +94,15 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     const bottom = window.innerHeight - 200;
     switch (targetConfirmation.gridPosition?.y) {
       case -1: return top;
-      case 0 : return middle;
+      case 0: return middle;
       default:
-      case 1 : return bottom;
+      case 1: return bottom;
     }
   }
 
   static override PARTS = {
-    main: {template: "modules/midi-qol/templates/targetConfirmation.hbs"},
-    footer: {template: "templates/generic/form-footer.hbs"}
+    main: { template: "modules/midi-qol/templates/targetConfirmation.hbs" },
+    footer: { template: "templates/generic/form-footer.hbs" }
   };
 
   static override DEFAULT_OPTIONS = {
@@ -141,7 +142,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         hasDetails: boolean;
         uuid: string;
       })[]
-    } = {...this.data, ...await super._prepareContext(options)};
+    } = { ...this.data, ...await super._prepareContext(options) };
     const targets = Array.from(game.user?.targets ?? []);
     context.targets = [];
     const actor = this.data.activity.actor;
@@ -152,7 +153,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         case "enemy":
           if ((token?.document?.disposition ?? 1) * target.document.disposition >= 0) continue;
           break;
-        case "ally": 
+        case "ally":
           if ((token?.document?.disposition ?? 1) * target.document.disposition < 0) continue;
           break;
         default: break;
@@ -267,7 +268,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
           // @ts-expect-error
           const doc = await fromUuid(event.currentTarget?.dataset.uuid) as Actor | null;
           //@ts-expect-error render not updated for v2 parameters
-          return doc?.sheet?.render({force: true});
+          return doc?.sheet?.render({ force: true });
         });
       }
       let imgs = this.element.getElementsByTagName("img");

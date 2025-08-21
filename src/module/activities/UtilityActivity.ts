@@ -103,8 +103,8 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
       const keys = {
         normal: areKeysPressed(config.event, "skipDialogNormal") || areKeysPressed(config.event, "skipDialogAdvantage") || areKeysPressed(config.event, "skipDialogDisadvantage")
       };
-      if (Object.values(keys).some(k => k)) dialog.configure = this.midiProperties?.forceDialog;
-      else dialog.configure ??= !config.midiOptions.fastForward || this.midiProperties?.forceDialog;
+      if (Object.values(keys).some(k => k)) dialog.configure = this.midiProperties?.forceRollDialog !== "always";
+      else dialog.configure ??= !config.midiOptions.fastForward || this.midiProperties?.forceRollDialog === "always";
       if (workflow.rollOptions?.rollToggle) dialog.configure = !!!dialog.configure;
       const rollToggle = areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle");
       if (workflow) workflow.rollOptions.rollToggle = rollToggle;

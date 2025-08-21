@@ -209,6 +209,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
 
       const saveCreate = message.create;
       message.create = false;
+      if (this.token) foundry.utils.setProperty(dialog, "options.window.subtitle", this.token.name);
       result = await wrapped(config, dialog, message);
       message.create = saveCreate;
     }
@@ -586,6 +587,8 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
         // record the configured message data for later display
         message = messageDetails;
       });
+      if (this.token) setProperty(dialog, "options.window.subtitle", this.token.name);
+
       result = await wrapped(config, dialog, message);
       message.create = saveCreate;
     }
@@ -972,11 +975,11 @@ function removeMidiProperties(wrapped, ...args) {
           }
         }
       }
-      console.error("migrating midiProperties to dnd5e.persistSourceMigration", source.name, source);
+      error("migrating midiProperties to dnd5e.persistSourceMigration", source.name, source);
       delete source.flags.midiProperties;
       source.flags.midiProperties = {};
       foundry.utils.setProperty(source, "flags.dnd5e.persistSourceMigration", true);
-      console.error("migrating midiProperties to dnd5e.persistSourceMigration", source.name, source);
+      error("migrating midiProperties to dnd5e.persistSourceMigration", source.name, source);
     }
   } catch (err) {
     TroubleShooter.recordError(err, "removeMidiProperties error");
@@ -998,6 +1001,7 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.getRollData", itemGetRollData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
+  libWrapper.register(MODULE_ID, "dnd5e.applications.actor.BaseActorSheet.prototype._prepareItem", _prepareItem, "WRAPPER");
   currentDAcalculateDamage = window?.customElements?.get("damage-application")?.prototype.calculateDamage;
   if (window?.customElements?.get("damage-application")?.prototype?.calculateDamage) {
     currentDAcalculateDamage = window?.customElements?.get("damage-application")?.prototype?.calculateDamage;
@@ -1009,6 +1013,10 @@ export function initPatching() {
     //@ts-expect-error
     window.customElements.get("damage-application").prototype.getTargetOptions = _DAgetTargetOptions;
   }
+}
+function _prepareItem(wrapped, item, ctx) {
+  wrapped(item, ctx);
+  ctx.activities = item.system.activities?.filter(a => !a.midiProperties?.automationOnly && a.canUse)?.map(this._prepareActivity.bind(this));
 }
 
 function getAttackModifiers(roll: Roll /* D20Roll */): string[] {
@@ -1586,6 +1594,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
       baseDialog = dialogData;
       message = messageData;
     });
+    if (this.token) foundry.utils.setProperty(dialog, "options.window.subtitle", this.token.name);
     result = await wrapped(config, dialog, message);
     let rollMode = message.rollMode ?? safeGetGameSetting("core", "rollMode");
     await displayDSNForRoll(result, "toolCheck", rollMode);
@@ -1670,7 +1679,7 @@ export async function doItemUse(this: Item.Implementation, wrapped, config: Acti
   if (this.pack) return;
   const { chooseActivity, ...activityConfig } = config;
   // @ts-expect-error no dnd5e-types
-  const activities = this.system.activities?.filter(a => !this.flags.dnd5e?.riders?.activity?.includes(a.id) && !a.midiProperties?.automationOnly);
+  const activities = this.system.activities?.filter(a => !this.flags.dnd5e?.riders?.activity?.includes(a.id) && !a.midiProperties?.automationOnly && !a.inProgress);
   const attackActivities = activities?.filter(a => a instanceof MidiAttackActivity);
   if (attackActivities?.length === 1) { // if there is a single attack activity and no other non-automation activities use it
     const attackActivity = attackActivities[0];

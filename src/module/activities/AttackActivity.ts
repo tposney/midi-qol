@@ -357,9 +357,20 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           }
           requiresAmmoConfirmation = ammoConfirmation.confirm;
         }
-        if (Object.values(keys).some(k => k)) dialog.configure = !!(this.midiProperties?.forceRollDialog || requiresAmmoConfirmation);
+        if (Object.values(keys).some(k => k)) dialog.configure = !!(this.midiProperties?.forceRollDialog === "always" || requiresAmmoConfirmation);
         if (config.workflow && areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle")) config.workflow.rollOptions.rollToggle = !config.workflow.rollOptions.rollToggle;
-        else dialog.configure ??= !(config.midiOptions.fastForwardAttack ?? workflow.workflowOptions.fastForwardAttack ?? false) || this.midiProperties?.forceRollDialog || requiresAmmoConfirmation;
+        else if (!dialog.configure) {
+          switch (this.midiProperties?.forceRollDialog) {
+            case "always":
+              dialog.configure = true;
+              break;
+            case "never":
+              dialog.configure = false;
+              break;
+            default:
+              dialog.configure = !(config.midiOptions.fastForwardAttack ?? workflow.workflowOptions.fastForwardAttack ?? false);
+          }
+        }
         if (keys.advantage) workflow.rollOptions.advantage = keys.advantage;
         if (keys.disadvantage) workflow.rollOptions.disadvantage = keys.disadvantage;
         config.advantage ??= !!keys.advantage || !!(config.midiOptions.advantage ?? workflow.workflowOptions.advantage);

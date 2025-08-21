@@ -69,6 +69,8 @@ declare module "fvtt-types/configuration" {
       "midi-qol.ready": () => void;
       "midi-qol.removeUndoEntry": (data?: UndoData) => void;
       "midi-qol.setup": (data: typeof globalThis.MidiQOL) => void;
+      "getHeaderControlsActivitySheet": (app: foundry.applications.api.Application /*dnd5e.applications.activity.activitySheet*/ , buttons: any[]) => void;
+
     }
   }
   interface SettingConfig {
@@ -778,13 +780,17 @@ export type CalcDamageOptions = DamageApplicationOptions & {
 export type PreSetupDamageListEntry = {
   actorId: string;
   actorUuid: string;
-  calcDamageOptions: CalcDamageOptions;
+  // calcDamageOptions: CalcDamageOptions;
   challengeModeScale?: number;
   critical: boolean;
   damageDetail: DamageDescription[];
   damageDetails: {
-    "calcDamageOptions.combinedDamage"?: CalcDamageOptions;
-    "calcDamageOptions.defaultDamage"?: CalcDamageOptions;
+    calcDamageOptions: {
+      combinedDamage?: CalcDamageOptions,
+      defaultDamage?: CalcDamageOptions,
+      otherDamage?: CalcDamageOptions,
+      bonusDamage?: CalcDamageOptions,
+    },
     bonusDamage?: DamageDescription[];
     combinedDamage: DamageDescription[];
     defaultDamage?: DamageDescription[];
@@ -811,6 +817,9 @@ export type PreSetupDamageListEntry = {
 }
 
 export type DamageListEntry = PreSetupDamageListEntry & {
+  damageSelector: string;
+  calcDamageOptions: CalcDamageOptions;
+  updateOptions: any;
   details: string[];
   healingAdjustedTotalDamage: number;
   hpDamage: number;
@@ -1012,9 +1021,9 @@ export interface Activity extends AnyMutableObject {
     triggeredActivityTargets: string;
     triggeredActivityRollAs?: string;
     autoConsume: boolean;
-    forceDialog?: boolean;
-    forceRollDialog?: boolean;
-    forceDamageDialog?: boolean;
+    forceConsumeDialog?: string;
+    forceRollDialog?: string;
+    forceDamageDialog?: string;
     confirmTargets: string;
     autoTargetType: string;
     autoTargetAction?: string;

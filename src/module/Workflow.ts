@@ -3017,7 +3017,7 @@ export class Workflow {
             foundry.utils.setProperty(usage, "midiOptions.isCritical", this.isCritical);
             foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringWorkflowId", this.id);
             foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringActivityUuid", this.activity.uuid);
-            await completeActivityUse(triggeredActivity, usage, { configure: false }, {});
+            await completeActivityUse(triggeredActivity, usage, { }, {});
           }
         }
       }
@@ -6884,9 +6884,9 @@ export class DamageOnlyWorkflow extends Workflow {
               triggeredActivityConditionText: "",
               triggeredActivityTargets: "targets",
               triggeredActivityRollAs: "self",
-              forceDialog: false,
-              forceAttackDialog: false,
-              forceDamageDialog: false,
+              forceConfigDialog: "default",
+              forceRollDialog: "default",
+              forceDamageDialog: "default",
               confirmTargets: "default",
               autoTargetType: "any",
               autoTargetAction: "default",

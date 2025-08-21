@@ -317,12 +317,12 @@ export async function applyTokenDamage(
     const fullDamage = setupDamageDetails({
       actorId: actor.id!,
       actorUuid: actor.uuid,
-      calcDamageOptions,
       critical: false,
       damageDetail: combinedDamage,
       damageDetails: {
         combinedDamage,
         rawcombinedDamage: damageDetail,
+        calcDamageOptions: {combinedDamage: calcDamageOptions}
       },
       isHit,
       rawDamageDetail: damageDetail,
@@ -405,7 +405,10 @@ export function setupDamageDetails(actorDamage: PreSetupDamageListEntry, selecto
   const oldTempHP = as.attributes.hp.temp ?? 0;
   const newTempHP = Math.floor(Math.max(0, effectiveTemp - deltaTemp, temp))
   const completeActorDamage: DamageListEntry = {
+    damageSelector: selector,
     ...actorDamage,
+    updateOptions: {},
+    calcDamageOptions: actorDamage.damageDetails.calcDamageOptions[selector] as CalcDamageOptions,
     // @ts-expect-error no dnd5e-types
     oldHP: as.attributes.hp.value,
     // @ts-expect-error no dnd5e-types
@@ -476,7 +479,39 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     damagePerActor[actor.uuid] = {
       actorId: actor.id!,
       actorUuid: actor.uuid,
-      calcDamageOptions: {
+      challengeModeScale,
+      critical: workflow.isCritical,
+      damageDetail: [],
+      damageDetails: { combinedDamage: [], rawcombinedDamage: [], defaultDamage: [], rawdefaultDamage: workflow.rawDamageDetail ?? [], otherDamage: [], rawotherDamage: workflow.rawOtherDamageDetail ?? [], bonusDamage: [], rawbonusDamage: workflow.rawBonusDamageDetail ?? [], calcDamageOptions: {} },
+      isHit: hitTargets.has(token),
+      rawDamageDetail: [],
+      saved: hasSaved,
+      sceneId: canvas.scene?.id ?? "",
+      semiSuperSaver,
+      superSaver,
+      totalDamage,
+      targetUuid: tokenDocument?.uuid,
+    };
+    if (!foundry.utils.getProperty(workflow.activity.item, `flags.${MODULE_ID}.noProvokeReaction`) && !workflow?.workflowOptions?.noProvokeReaction) {
+      if (totalDamage !== 0 && (workflow.hitTargets.has(token) || workflow.hitTargetsEC.has(token) || workflow.hasSave)) {
+        const isHealing = ("heal" === workflow.activity.actionType) || totalDamage < 0;
+        await doReactions(token, workflow.tokenUuid, workflow.damageRoll ?? workflow.bonusDamageRoll ?? workflow.otherDamageRoll ?? new Roll("0"), !isHealing ? "reactiondamage" : "reactionheal", { activity: workflow.activity, item: workflow.item, workflow, workflowOptions: { damageDetail: workflow.rawDamageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item.uuid, sourceAmmoUuid: workflow.ammunition?.uuid } });
+      }
+    }
+    const damageDetails = damagePerActor[actor.uuid].damageDetails;
+    let combinedRawDamageDetails: DamageDescription[] = [];
+    let combinedDamageDetails: DamageDescription[] = [];
+
+
+    const damageArr: [DamageDescription[] | undefined, string][] = [[workflow.damageDetail ?? [], "defaultDamage"], [(workflow.otherDamageMatches?.has(token) ?? true) ? (workflow.otherDamageDetail ?? []) : [], "otherDamage"], [workflow.bonusDamageDetail ?? [], "bonusDamage"]];
+    for (let [damages, type] of damageArr) {
+      if (!damages) {
+        const message = `processDamageRoll | ${type} damages is not defined`;
+        TroubleShooter.recordError(new Error("no valid damage"), message);
+        error(message);
+        continue;
+      }
+      let calcDamageOptions: CalcDamageOptions = {
         invertHealing: true,
         multiplier: challengeModeScale,
         midi: {
@@ -497,39 +532,8 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           // @ts-expect-error no dnd5e-types
           uncannyDodge: actor.flags?.[MODULE_ID]?.["uncanny-dodge"] && workflow.item?.hasAttack
         }
-      },
-      challengeModeScale,
-      critical: workflow.isCritical,
-      damageDetail: [],
-      damageDetails: { combinedDamage: [], rawcombinedDamage: [], defaultDamage: [], rawdefaultDamage: workflow.rawDamageDetail ?? [], otherDamage: [], rawotherDamage: workflow.rawOtherDamageDetail ?? [], bonusDamage: [], rawbonusDamage: workflow.rawBonusDamageDetail ?? [] },
-      isHit: hitTargets.has(token),
-      rawDamageDetail: [],
-      saved: hasSaved,
-      sceneId: canvas.scene?.id ?? "",
-      semiSuperSaver,
-      superSaver,
-      totalDamage,
-      targetUuid: tokenDocument?.uuid,
-    };
-    if (!foundry.utils.getProperty(workflow.activity.item, `flags.${MODULE_ID}.noProvokeReaction`) && !workflow?.workflowOptions?.noProvokeReaction) {
-      if (totalDamage !== 0 && (workflow.hitTargets.has(token) || workflow.hitTargetsEC.has(token) || workflow.hasSave)) {
-        const isHealing = ("heal" === workflow.activity.actionType) || totalDamage < 0;
-        await doReactions(token, workflow.tokenUuid, workflow.damageRoll ?? workflow.bonusDamageRoll ?? workflow.otherDamageRoll ?? new Roll("0"), !isHealing ? "reactiondamage" : "reactionheal", { activity: workflow.activity, item: workflow.item, workflow, workflowOptions: { damageDetail: workflow.rawDamageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item.uuid, sourceAmmoUuid: workflow.ammunition?.uuid } });
-      }
-    }
-    const damageDetails = damagePerActor[actor.uuid].damageDetails;
-    let combinedRawDamageDetails: DamageDescription[] = [];
-    let combinedDamageDetails: DamageDescription[] = [];
-    let calcDamageOptions: CalcDamageOptions;
-    const damageArr: [DamageDescription[] | undefined, string][] = [[workflow.damageDetail ?? [], "defaultDamage"], [(workflow.otherDamageMatches?.has(token) ?? true) ? (workflow.otherDamageDetail ?? []) : [], "otherDamage"], [workflow.bonusDamageDetail ?? [], "bonusDamage"]];
-    for (let [damages, type] of damageArr) {
-      if (!damages) {
-        const message = `processDamageRoll | ${type} damages is not defined`;
-        TroubleShooter.recordError(new Error("no valid damage"), message);
-        error(message);
-        continue;
-      }
-      calcDamageOptions = foundry.utils.duplicate(damagePerActor[actor.uuid].calcDamageOptions) as CalcDamageOptions;
+      };
+      // calcDamageOptions = foundry.utils.duplicate(damagePerActor[actor.uuid].damageDetails.calcDamageOptions[type]) as CalcDamageOptions;
       if (type === "otherDamage" && (workflow.otherActivity?.save || workflow.otherActivity?.check)) {
         const defaultSaveMultiplier = getSaveMultiplierForActivity(workflow.otherActivity);
         const saveMultiplier = hasSaved
@@ -559,11 +563,13 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       let returnDamages = token.actor.calculateDamage(damages, calcDamageOptions);
       damageDetails[type] = returnDamages;
       damageDetails[`raw${type}`] = damages;
+      damageDetails.calcDamageOptions[type] = calcDamageOptions;
       if (configSettings.singleConcentrationRoll) {
         combinedDamageDetails = combinedDamageDetails.concat(returnDamages);
         combinedRawDamageDetails = combinedRawDamageDetails.concat(damages);
       }
     }
+    damageDetails.calcDamageOptions.combinedDamage = damageDetails.calcDamageOptions.defaultDamage;
     if (configSettings.singleConcentrationRoll) {
       damageDetails["rawcombinedDamage"] = mergeDamageDetail(combinedRawDamageDetails);
       damageDetails["combinedDamage"] = combinedDamageDetails;
@@ -572,6 +578,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       damageDetails.combinedDamage = (damageDetails?.defaultDamage ?? []).concat(damageDetails.bonusDamage ?? []);
     }
   }
+
   const preDamageList = Object.values(damagePerActor);
   // Explicitly typed because it only ever gets called with this, currently
   const toCheck: ("combinedDamage" | "otherDamage")[] = ["combinedDamage"];
@@ -582,7 +589,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     preDamageList.forEach(damageEntry => {
       damageEntry.damageDetail = damageEntry.damageDetails[selector] ?? damageEntry.damageDetail;
       damageEntry.rawDamageDetail = damageEntry.damageDetails[`raw${selector}`] ?? damageEntry.rawDamageDetail;
-      damageEntry.calcDamageOptions = damageEntry.damageDetails[`calcDamageOptions.${selector}`] ?? damageEntry.calcDamageOptions;
+      // damageEntry.calcDamageOptions = damageEntry.damageDetails[`calcDamageOptions.${selector}`] ?? damageEntry.calcDamageOptions;
     });
 
     for (let token of theTargets) {
@@ -6490,8 +6497,8 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
   if (updatesCache[baseDocument.uuid]?.rolls) console.warn("updates cache rolls", updatesCache[baseDocument.uuid].rolls);
   if (false && updatesCache[baseDocument.uuid]?.rolls?.[0] instanceof Roll) delete updatesCache[document.uuid].rolls; // This is handled by the chat card and will be already setup as [Roll] rather than json
   
-  //@ ts-expect-error
-  // if (updates.content) ui.chat?.scrollBottom();
+  //@ts-expect-error
+  if (updates.content) ui.chat?.scrollBottom();
   
   if (debugEnabled > 1 && updates.content && updatesCache[baseDocument.uuid]?.content) 
     warn("_updateAction | queued content differences ", diffStringsFull(updates.content, updatesCache[baseDocument.uuid].content, {ignoreWhitespace: true, ignoreNewlines: true}));

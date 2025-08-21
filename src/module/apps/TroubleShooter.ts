@@ -464,20 +464,20 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     } else data.summary.moduleSettings["Token Magic FX"] = i18n("midi-qol.Inactive");
 
     data.summary.midiSettings = {};
-    data.summary.midiSettings["Enable Roll Automation Support (Client Setting)"] = enableWorkflow;
+    data.summary.midiSettings["Enable Roll Automation Support (Client Setting)"] = `${enableWorkflow}`;
     data.summary.midiSettings["Auto Target on Template Draw"] = autoTargetOptions[configSettings.autoTarget];
     data.summary.midiSettings["Auto Target for Ranged Targets/Spells"] = rangeTargetOptions[configSettings.rangeTarget];
     data.summary.midiSettings["Auto Apply Item Effects"] = autoEffectsOptions[configSettings.autoItemEffects];
     data.summary.midiSettings["Apply Convenient Effects"] = autoCEEffectsOptions[configSettings.autoCEEffects];
     data.summary.midiSettings["Auto Check Hits"] = autoCheckHitOptions[configSettings.autoCheckHit];
-    data.summary.midiSettings["Roll Seperate Attacks per Target"] = configSettings.attackPerTarget;
+    data.summary.midiSettings["Roll Seperate Attacks per Target"] = `${configSettings.attackPerTarget}`;
     data.summary.midiSettings["Auto Check Saves"] = autoCheckSavesOptions[configSettings.autoCheckSaves];
     data.summary.midiSettings["Auto Apply Damage to Target"] = autoApplyDamageOptions[configSettings.autoApplyDamage];
     // data.summary.midiSettings["Enable Concentration Automation"] = configSettings.concentrationAutomation;
-    data.summary.midiSettings["Expire 1Hit/1Attack/1Action on roll"] = checkMechanic("actionSpecialDurationImmediate");
+    data.summary.midiSettings["Expire 1Hit/1Attack/1Action on roll"] = `${checkMechanic("actionSpecialDurationImmediate")}`;
     data.summary.midiSettings["Inapacitated Actors can't Take Actions"] = checkMechanic("incapacitated");
     data.summary.midiSettings["Calculate Cover"] = coverCalculationOptions[configSettings.optionalRules.coverCalculation];
-    data.summary.midiSettings["Add Fake GM Dice"] = configSettings.addFakeDice;
+    data.summary.midiSettings["Add Fake GM Dice"] = `${configSettings.addFakeDice}`;
     data.summary.knownModules = {};
     let tempModules = {};
     // Find modules by id

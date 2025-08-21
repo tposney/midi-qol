@@ -4,7 +4,24 @@ import { socketlibSocket } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, Workflow } from "../Workflow.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { aoeTargetTypeOptions, autoCEEffectsOptions, autoTargetOptions, checkMechanic, checkRule, configSettings, confirmTargetOptions, ignoreTraitsOptions, removeButtonsOptions, safeGetGameSetting, targetConfirmation, triggeredActivityRollAsOptions, triggeredActivityTargetOptions } from "../settings.js";
+import {
+  aoeTargetTypeOptions,
+  autoCEEffectsOptions,
+  autoTargetOptions,
+  checkMechanic,
+  checkRule,
+  configSettings,
+  confirmTargetOptions,
+  ignoreTraitsOptions,
+  removeButtonsOptions,
+  safeGetGameSetting,
+  targetConfirmation,
+  triggeredActivityRollAsOptions,
+  triggeredActivityTargetOptions,
+  rollConfigOptions,
+  consumeConfigOptions,
+  damageConfigOptions
+} from "../settings.js";
 import { installedModules } from "../setupModules.js";
 import { saveUndoData } from "../undo.js";
 import {
@@ -115,9 +132,9 @@ export let MidiActivityMixin = Base => {
           triggeredActivityTargets: new StringField({ name: "triggeredActivityTargets", initial: "targets", required: true, blank: false }),
           triggeredActivityRollAs: new StringField({ name: "triggeredActivityRollAs", initial: "self" }),
           autoConsume: new BooleanField({ name: "autoConsume", initial: false }),
-          forceDialog: new BooleanField({ name: "forceDialog", initial: false }),
-          forceRollDialog: new BooleanField({ name: "forceRollDialog", initial: false }),
-          forceDamageDialog: new BooleanField({ name: "forceDamageDialog", initial: false }),
+          forceConsumeDialog: new StringField({ name: "forceConsumeDialog", initial: "default" }),
+          forceRollDialog: new StringField({ name: "forceRollDialog", initial: "default" }),
+          forceDamageDialog: new StringField({ name: "forceDamageDialog", initial: "default" }),
           confirmTargets: new StringField({ name: "confirmTargets", initial: "default", required: true, blank: false }),
           autoTargetType: new StringField({ name: "autoTargetType", initial: "any", required: true, blank: false }),
           autoTargetAction: new StringField({ name: "autoTargetAction", initial: "default" }),
@@ -205,7 +222,7 @@ export let MidiActivityMixin = Base => {
     }
 
     get canUse() {
-      if (this.midiProperties?.automationOnly) return false;
+      // if (this.midiProperties?.automationOnly) return false;
       return super.canUse;
     }
 
@@ -366,7 +383,7 @@ export let MidiActivityMixin = Base => {
     static #rollDamage(this: Activity, event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
-      return this.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.isCritical } }, {}, message);
+      return this.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.workflowOptions?.isCritical || workflow?.isCritical } }, {}, message);
     }
 
     static #rollDamageNoCritical(this: Activity, event, target, message) {
@@ -389,10 +406,6 @@ export let MidiActivityMixin = Base => {
     prepareData() {
       //@ts-expect-error
       if (!this.midiProperties.identifier && !this.name) this.midiProperties.identifier = i18n(this.constructor.metadata.dnd5eTitle).slugify();
-      if (this.midiProperties?.forceDialog) {
-        this.midiProperties.forceRollDialog = true;
-        this.midiProperties.forceDamageDialog = true;
-      }
       super.prepareData();
     }
 
@@ -482,7 +495,10 @@ export let MidiActivityMixin = Base => {
 
         foundry.utils.setProperty(message, "data.flags.midi-qol.messageType", "attack");
         if (usage.midiOptions?.configureDialog === false) dialog.configure = false;
-        await activity.checkAutoConsume(usage, dialog);
+        if (!await activity.checkAutoConsume(usage, dialog)) {
+          if (this.midiProperties?.forceConsumeDialog === "always") dialog.configure = true;
+          else if (this.midiProperties?.forceConsumeDialog === "never") dialog.configure = false;
+        }
         const rollToggle = areMidiKeysPressed(usage.event as AugmentedEvent, "RollToggle");
         if (rollToggle && usage.workflow) {
           foundry.utils.setProperty(usage.workflow, "rollOptions.rollToggle", true);
@@ -588,21 +604,21 @@ export let MidiActivityMixin = Base => {
       }
     }
 
-    async checkAutoConsume(usage: ActivityUseConfiguration, dialog: RollDialogConfig = {}) {
-      if (dialog.configure === true) return;
+    async checkAutoConsume(usage: ActivityUseConfiguration, dialog: RollDialogConfig = {}): Promise<boolean> {
+      if (dialog.configure === true) return false;
       if (!this.midiProperties?.autoConsume) {
-        if (autoConsumeResource(usage.workflow) === "none") return;
+        if (autoConsumeResource(usage.workflow) === "none") return false;
         //@ts-expect-error no dnd5e-types
-        if (autoConsumeResource(usage.workflow) === "spell" && this.item?.type !== "spell") return;
+        if (autoConsumeResource(usage.workflow) === "spell" && this.item?.type !== "spell") return false;
         //@ts-expect-error no dnd5e-types
-        if (autoConsumeResource(usage.workflow) === "item" && this.item?.type === "spell") return;
+        if (autoConsumeResource(usage.workflow) === "item" && this.item?.type === "spell") return false;
       }
       const consumption = this._prepareUsageConfig(usage);
       const autoConsume = await this._prepareUsageUpdates(consumption, { returnErrors: true });
       // If consumption would fail _prepareUsageUpdates will return an array of errors and on success an object of updates
       if (autoConsume.length ?? 0 > 0) {
         dialog.configure = true;
-        return;
+        return true;
       }
       dialog.configure = false;
 
@@ -611,6 +627,7 @@ export let MidiActivityMixin = Base => {
           this.actor?.sheet?.minimize();
         }, 100)
       }
+      return true;
     }
 
     async rollDamage(config: RollProcessConfig, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
@@ -657,8 +674,19 @@ export let MidiActivityMixin = Base => {
         config.isCritical ??= config.midiOptions!.isCritical;
         config.midiOptions!.fastForwardDamage ??= config.workflow.workflowOptions?.fastForwardDamage;
         if (this.hasDamage || this.hasHealing) {
-          if (Object.values(keys).some(k => k)) dialog.configure = !!(this.midiProperties?.forceDamageDialog);
-          else dialog.configure ??= !config.midiOptions?.fastForwardDamage || !!this.midiProperties?.forceDamageDialog;
+          if (Object.values(keys).some(k => k)) dialog.configure = this.midiProperties?.forceDamageDialog !== "never";
+          else if (dialog.configure === undefined) {
+            switch (this.midiProperties?.forceDamageDialog) {
+              case "always":
+                dialog.configure = true;
+                break;
+              case "never":
+                dialog.configure = false;
+                break;
+              default:
+                dialog.configure = !(config.midiOptions?.fastForwardDamage ?? config.workflow?.workflowOptions.fastForwardDamage ?? false);
+            }
+          }
           if (config.workflow && areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle")) config.workflow.rollOptions.rollToggle = !config.workflow.rollOptions.rollToggle;
           // @ts-expect-error no dnd5e-types
           if (this.item.system.properties?.has("ver") && areMidiKeysPressed(config.event ?? config.workflow.workflowOptions.event, "Versatile")) {
@@ -1621,6 +1649,15 @@ export let MidiActivityMixinSheet = Base => {
       context.placeholderIdentifier = context.activity.identifier;
       const midiProperties = context.activity.midiProperties;
 
+      context.ConsumeDialogOptions = Object.entries(consumeConfigOptions).map(([value, label]) => {
+        return { value, label, selected: midiProperties.forceConsumeDialog === value }
+      });;
+      context.RollDialogOptions = Object.entries(rollConfigOptions).map(([value, label]) => {
+        return { value, label, selected: midiProperties.forceRollDialog === value }
+      })
+      context.DamageDialogOptions = Object.entries(damageConfigOptions).map(([value, label]) => {
+        return { value, label, selected: midiProperties.forceDamageDialog === value }
+      });
       context.otherActivityOptions = this.item.system.activities
         .filter(a => a.id !== this.activity.id && a.isOtherActivityCompatible)
         .reduce((ret, a) => {
@@ -1682,22 +1719,25 @@ export let MidiActivityMixinSheet = Base => {
       }
       return context;
     }
-
-    /** @override */ // This does not seem to work for activity sheets
-    _getHeaderButtons() {
-      let buttons = super._getHeaderButtons();
-      const DIMtitle = i18n('dae.DIMEditor.Name');
-      const Editor = globalThis.DAE?.DIMEditor;
-      if (!Editor) return buttons;
-      buttons.unshift({
-        label: DIMtitle,
-        class: "dae-dimeditor",
-        icon: "fas fa-file-pen",
-        onclick: () => { new Editor({ document: this.activity }).render({ force: true }) }
-      });
-      return buttons;
-    }
   }
+}
+
+//TODO find out why this is adding the button but the button won't trigger
+function attachActivitySheetHeaderButton(app, buttons) {
+  const Editor = globalThis.DAE?.DIMEditor;
+  if (!Editor) return;
+  let activity = app.activity;
+  if (!activity.macro) return;
+  const DIMtitle = i18n('dae.DIMEditor.Name');
+
+  buttons.unshift({
+    label: DIMtitle,
+    class: 'dae-dimeditor',
+    icon: 'fas fa-file-pen',
+    tooltip: DIMtitle,
+    // style: activity.macro?.command ? 'color: #36ba36;' : "",
+    onclick: (ev) => { new Editor({ document: app.activity }).render({ force: true }); }
+  });
 }
 
 function renderActivitySheetHook(app, [elem]) {
@@ -1737,4 +1777,6 @@ export function setupMidiActivityMixin() {
   }
   //@ts-expect-error
   Hooks.on("renderActivitySheet", renderActivitySheetHook);
+  // TODO - get this working - Hooks.on("getHeaderControlsActivitySheet", attachActivitySheetHeaderButton);
+
 }

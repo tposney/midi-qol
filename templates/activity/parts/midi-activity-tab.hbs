@@ -14,10 +14,10 @@
       {{ formField fields.removeChatButtons value=../source.midiProperties.removeChatButtons options=../RemoveChatButtonsOptions localize=true}}
       {{ formField fields.displayActivityName value=../source.midiProperties.displayActivityName input=@root.inputs.createCheckboxInput }}
       {{ formField fields.identifier value=../source.midiProperties.identifier placeholder=../placeholderIdentifier }}
-      {{ formField fields.autoConsume value=../source.midiProperties.autoConsume}}
-      {{ formField fields.forceDialog value=../source.midiProperties.forceDialog input=@root.inputs.createCheckboxInput }}
-      {{ formField fields.forceRollDialog value=source.midiProperties.forceRollDialog input=@root.inputs.createCheckboxInput }}
-      {{ formField fields.forceDamageDialog value=../source.midiProperties.forceDamageDialog input=@root.inputs.createCheckboxInput }}
+      {{ formField fields.autoConsume value=../source.midiProperties.autoConsume input=@root.inputs.createCheckboxInput}}
+      {{ formField fields.forceConsumeDialog value=../source.midiProperties.forceConsumeDialog options=../ConsumeDialogOptions localize=true}}
+      {{ formField fields.forceRollDialog value=../source.midiProperties.forceRollDialog options=../RollDialogOptions localize=true}}
+      {{ formField fields.forceDamageDialog value=../source.midiProperties.forceDamageDialog options=../DamageDialogOptions localize=true}}
       {{ formField fields.confirmTargets value=../source.midiProperties.confirmTargets options=../ConfirmTargetOptions localize=true}}
 
       {{#if ../hasAreaTarget}}

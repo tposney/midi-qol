@@ -458,7 +458,7 @@ async function _canSense(data: { tokenUuid: string, targetUuid: string }) {
 }
 
 async function _gmOverTimeEffect(data: { actorUuid: string, effectUuid: string, startTurn: boolean, options: any }) {
-  const actor = fromActorUuid(data.actorUuid) as Actor.Implementation | undefined;
+  const actor = fromActorUuid(data.actorUuid);
   const effect = fromUuidSync(data.effectUuid) as ActiveEffect.Implementation | undefined;
   log("Called _gmOvertime", actor?.name, effect?.name)
   if (actor && effect) return gmOverTimeEffect(actor, effect, data.startTurn, data.options)
@@ -545,7 +545,7 @@ async function _completeItemUse(data: {
 }
 
 async function updateActor(data: { actorUuid: string, updates?: Actor.UpdateData, actorData?: Actor.UpdateData }) {
-  let actor = fromUuidSync(data.actorUuid) as Actor.Implementation | undefined;
+  let actor = fromUuidSync(data.actorUuid) as Actor.Implementation | null;
   if (!actor) return;
   if (data.actorData) {
     console.warn(`midi-qol | updateActor actorData deprecated. Call await MidiQOL.socket().executeAsGM("updateActor"({ updates }) instead`)
@@ -761,7 +761,7 @@ async function _D20Roll(params: { request: string, targetUuid: string, formula: 
   });
 }
 async function rollConcentration(data: { actorUuid: string, target: number, whisper: string[], create: boolean, rollMode: string }) {
-  const actor = fromUuidSync(data.actorUuid) as Actor.Implementation | undefined;
+  const actor = fromUuidSync(data.actorUuid) as Actor.Implementation | null;
   if (!actor) {
     error(`GMAction.rollConcentration | no actor for ${data.actorUuid}`)
     return {};
@@ -953,8 +953,8 @@ async function prepareDamageListItems(
     let { targetUuid, actorId, actorUuid, oldHP, oldVitality, newHP, newVitality, hpDamage, wasHit } = damageItem;
     if (doHits && !wasHit) continue;
     if (!doHits && wasHit) continue;
-    let tokenDocument = fromUuidSync(targetUuid) as TokenDocument.Implementation | undefined;
-    let actor = fromUuidSync(actorUuid) as Actor.Implementation | undefined;
+    let tokenDocument = fromUuidSync(targetUuid) as TokenDocument.Implementation | null;
+    let actor = fromUuidSync(actorUuid) as Actor.Implementation | null;
 
     if (!actor) {
       if (debugEnabled > 0) warn(`GMAction: reverse damage card could not find actor to update HP targetUuid ${targetUuid} actorUuid ${actorUuid}`);
@@ -1017,8 +1017,7 @@ async function prepareDamageListItems(
         if (Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, damageItem.calcDamageOptions as DamageApplicationOptions) !== false) {
           // The actor update - when no changes are made will update the passed options with a target
           promises.push(
-            // @ts-expect-error no dnd5e-types
-            actor.update(updates, foundry.utils.mergeObject(damageItem.calcDamageOptions, data.updateOptions ?? {}, { inplace: false })).then(updatedActor => {
+            actor.update(updates, foundry.utils.mergeObject(damageItem.calcDamageOptions, data.updateOptions ?? {}, { inplace: false }) as any).then(updatedActor => {
               Hooks.call("dnd5e.applyDamage", updatedActor ?? actor, amount, damageItem.calcDamageOptions as DamageApplicationOptions);
               return updatedActor;
             })
@@ -1033,7 +1032,7 @@ async function prepareDamageListItems(
       actorId,
       totalDamage: Math.abs(damageItem.totalDamage),
       damageDetail: damageItem.rawDamageDetail,
-      // updateOptions: data.updateOptions ?? {}
+      updateOptions: data.updateOptions ?? {}
     });
 
     let img = tokenDocument?.texture.src || actor.img as string;
@@ -1221,8 +1220,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       // TODO: Remove the latter after sufficient time has passed
       const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midiqol.undoDamage") as SerializedDamageListEntry[];
       const undoDamageData = recoverDamageListFromJSON(undoFlag);
-      // @ts-expect-error TODO: pretty sure `updateOptions` isn't a thing here
-      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, oldVitality, newVitality, updateOptions = {} } of undoDamageData) {
+      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, newHP, oldVitality, newVitality, calcDamageOptions, updateOptions } of undoDamageData) {
         // recoverDamageDetailFromJSON(damageDetail);
         if (!actorUuid) continue;
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
@@ -1233,15 +1231,26 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         reverseButton?.children[0].classList.add("midi-qol-disable-damage-button");
         let actor = fromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP} ${actor?.name} ${actorUuid}`);
-        const update = { "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 };
+        const amount = (oldHP ?? 0) - (newHP ?? 0);
+        const updates: Actor.UpdateData = {
+          //@ts-expect-error no dnd5e-types
+          "system.attributes.hp.temp": oldTempHP ?? 0,
+          "system.attributes.hp.value": oldHP ?? 0
+        };
         // const context = foundry.utils.mergeObject(message.flags.midi-qol.updateContext ?? {}, { dhp: (oldHP ?? 0) - (actor.system.attributes.hp.value ?? 0), damageDetail }, { inplace: false });
         const vitalityResource = checkRule("vitalityResource");
         if (typeof vitalityResource === "string" && foundry.utils.getProperty(actor ?? {}, vitalityResource.trim()) !== undefined) {
-          update[vitalityResource.trim()] = oldVitality;
+          updates[vitalityResource.trim()] = oldVitality;
           context["dvital"] = (oldVitality ?? 0) - (newVitality ?? 0);
         }
-        // @ts-expect-error no dnd5e-types
-        await actor?.update(update, updateOptions);
+        if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, newHP - oldHP, updates, calcDamageOptions as DamageApplicationOptions) !== false) {
+          // The actor update - when no changes are made will update the passed options with a target
+          await actor.update(updates, foundry.utils.mergeObject(calcDamageOptions, updateOptions ?? {}, { inplace: false }) as any)
+            .then(updatedActor => {
+              Hooks.call("dnd5e.applyDamage", updatedActor ?? actor, newHP - oldHP, calcDamageOptions as DamageApplicationOptions);
+              return updatedActor;
+            })
+        }
         ev.stopPropagation();
       }
     })();
@@ -1253,8 +1262,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       // TODO: Remove the latter after sufficient time has passed
       const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midiqol.undoDamage") as SerializedDamageListEntry[];
       const undoDamageData = recoverDamageListFromJSON(undoFlag);
-      // @ts-expect-error TODO: pretty sure `updateOptions` isn't a thing here
-      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, updateOptions = {}, newVitality } of undoDamageData) {
+      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, oldHP, calcDamageOptions, updateOptions, newVitality } of undoDamageData) {
         if (!actorUuid) continue;
         let actor = fromActorUuid(actorUuid);
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
@@ -1264,13 +1272,17 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         reverseButton?.children[0].classList.remove("midi-qol-disable-damage-button");
         reverseButton?.children[0].classList.add("midi-qol-enable-damage-button");
         log(`Setting HP to ${newTempHP} and ${newHP} ${actor?.name} ${actorUuid}`);
-        const update = { "system.attributes.hp.temp": newTempHP ?? 0, "system.attributes.hp.value": newHP ?? 0 };
+        const update = { "system.attributes.hp.temp": newTempHP ?? 0, "system.attributes.hp.value": newHP ?? 0 } as Actor.UpdateData;
+        const amount = (newHP ?? 0) - (oldHP ?? 0);
         const vitalityResource = checkRule("vitalityResource");
         if (typeof vitalityResource === "string" && foundry.utils.getProperty(actor ?? {}, vitalityResource.trim()) !== undefined) {
           update[vitalityResource.trim()] = newVitality;
         }
-        // @ts-expect-error no dnd5e-types
-        if (actor?.isOwner) await actor.update(update, updateOptions ?? {});
+        const options = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false }); 
+        if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, update, options as DamageApplicationOptions) !== false) {
+          await actor.update(update, options as any);
+          Hooks.call("dnd5e.applyDamage", actor, amount, options);
+        }
         ev.stopPropagation();
       }
     })();
@@ -1279,8 +1291,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
   // TODO: Remove the latter after sufficient time has passed
   const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midiqol.undoDamage") as SerializedDamageListEntry[];
   const undoDamageData = recoverDamageListFromJSON(undoFlag);
-  // @ts-expect-error TODO: pretty sure `updateOptions` isn't a thing here
-  undoDamageData?.forEach(({ actorUuid, oldTempHP, oldHP, newHP, newTempHP, oldVitality, newVitality, damageDetail, calcDamageOptions, updateOptions = {} }) => {
+  undoDamageData?.forEach(({ actorUuid, oldTempHP, oldHP, newHP, newTempHP, oldVitality, newVitality, damageDetail, calcDamageOptions, updateOptions }) => {
     if (!actorUuid) return;
     // recoverDamageDetailFromJSON(damageDetail);
     // ids should not have "." in the or it's id.class
@@ -1295,13 +1306,25 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       (async () => {
         let actor = fromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP} ${actor?.name} ${actorUuid}`);
-        const update = { "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 };
+        const amount = newHP - oldHP;
+        const updates: Actor.UpdateData =
+        {
+          //@ts-expect-error no dnd5e-types
+          "system.attributes.hp.temp": oldTempHP ?? 0,
+          "system.attributes.hp.value": oldHP ?? 0
+        };
         const vitalityResource = checkRule("vitalityResource");
         if (typeof vitalityResource === "string" && foundry.utils.getProperty(actor ?? {}, vitalityResource.trim()) !== undefined) {
-          update[vitalityResource.trim()] = oldVitality;
+          updates[vitalityResource.trim()] = oldVitality;
         }
-        // @ts-expect-error no dnd5e-types
-        if (actor?.isOwner) await actor.update(update, updateOptions ?? {});
+        if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, calcDamageOptions as DamageApplicationOptions) !== false) {
+          // The actor update - when no changes are made will update the passed options with a target
+          const options = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false }) as any;
+          await actor.update(updates, options).then(updatedActor => {
+            Hooks.call("dnd5e.applyDamage", actor, amount, calcDamageOptions as DamageApplicationOptions);
+            return updatedActor;
+          })
+        }
         ev.stopPropagation();
       })();
     });
@@ -1316,26 +1339,14 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       otherButton?.children[0].classList.add("midi-qol-enable-damage-button");
       let multiplierString = html.querySelector<HTMLSelectElement>(`#dmg-multiplier-${actorUuid.replaceAll(".", "")}`)?.value;
       const mults = { "-1": -1, "x1": 1, "x0.25": 0.25, "x0.5": 0.5, "x2": 2 };
-      let multiplier = 1;
+      let multiplier = mults[multiplierString ?? "x1"] ?? 1;
+
       (async () => {
-        const calcOptions = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false });
         let actor = fromActorUuid(actorUuid);
+        const options: DamageApplicationOptions = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false });
         // damageDetail.forEach(di => {if (!["healing", "none"].includes(di.type)) di.value = Math.max(0, di.value)});
-        if (mults[multiplierString ?? ""]) {
-          multiplier = mults[multiplierString ?? ""]
           // @ts-expect-error no dnd5e-types
-          await actor?.applyDamage(damageDetail, foundry.utils.mergeObject(calcOptions, { multiplier: calcOptions.multiplier * multiplier }, { inplace: false }));
-        } else {
-          log(`Setting HP to ${newTempHP} and ${newHP} ${actor?.name} ${actorUuid}`);
-          const update = { "system.attributes.hp.temp": newTempHP ?? 0, "system.attributes.hp.value": newHP ?? 0 };
-          const vitalityResource = checkRule("vitalityResource");
-          if (typeof vitalityResource === "string" && foundry.utils.getProperty(actor ?? {}, vitalityResource.trim()) !== undefined) {
-            update[vitalityResource.trim()] = newVitality;
-          }
-          // @ts-expect-error no dnd5e-types
-          if (actor?.isOwner) await actor.update(update, updateOptions ?? {});
-          ev.stopPropagation();
-        }
+          await actor?.applyDamage(damageDetail, foundry.utils.mergeObject(options, { multiplier: calcDamageOptions.multiplier * multiplier }, { inplace: false }));
       })();
     });
   })
@@ -1481,7 +1492,7 @@ export function prepareDamageListToJSON(damageList: DamageListEntry[]) {
     }
     const newDamageDetail = prepareDamageDetailToJSON(damageItem.damageDetail);
     const newRawDamageDetail = prepareDamageDetailToJSON(damageItem.rawDamageDetail);
-    const newDamageDetails = Object.fromEntries(Object.entries(damageItem.damageDetails).filter(i => !i[0].includes(".")).map(([key, value]) => [key, prepareDamageDetailToJSON(value as DamageDescription[])]));
+    const newDamageDetails = Object.fromEntries(Object.entries(damageItem.damageDetails).filter(i => i[0] !== "calcDamageOptions").map(([key, value]) => [key, prepareDamageDetailToJSON(value as DamageDescription[])]));
     const serializedEntry: SerializedDamageListEntry = {
       ...damageItem,
       calcDamageOptions: {
