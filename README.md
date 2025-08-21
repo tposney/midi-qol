@@ -792,7 +792,8 @@ Values for the optional roll bonus flags include:
 * `success`: ensures success for D20Rolls (currently makes it a critical),
 * `fail`: ensures failure for D20Rolls,
 * `replace <formula>`: replaces with a new formula, example `replace 4d20kh`,
-* `ItemMacro.<itemUUID>`: which can implement whatever logic you want and should be returning one of the above types, eg `return '1d6[fire]'`.
+* `ItemMacro.<itemUUID>`: with effect mode `Override`, which can implement whatever logic you want and should be returning one of the above types, eg `return '1d6[fire]'`.
+* `ItemMacro`: with effect mode `Custom`, linking back to the Item that applied the effect in the first place and same implementation as above.
 
 ## Enhanced traits.dr/di/dv
 * Available from the special traits actor settings, or via active effects.
