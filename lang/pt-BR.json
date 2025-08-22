@@ -926,6 +926,16 @@
     "Friendly": "Amigável",
     "notFriendly": "Não-Amigável"
   },
+  "midi-qol.ConfigDialogOptions": {
+    "default": "Configurações Midi",
+    "always": "Sempre Exibir",
+    "never": "Nunca Exibir"
+  },
+  "midi-qol.ConsumeDialogOptions": {
+    "default": "Configurações Midi",
+    "always": "Sempre Exibir",
+    "never": "Nunca Exibir"
+  },
   "midi-qol.TriggeredActivityTargetOptions": {
     "self": "Alvo Dono do Item",
     "targets": "Mesmos Alvos",
@@ -1001,17 +1011,13 @@
           "label": "Escolher Efeitos",
           "hint": "Escolha efeitos para aplicar."
         },
-        "autoConsume": {
-          "label": "Auto-Consumir",
-          "hint": "Consumir quaisquer recursos/espaços de magia quando usados. Se não houver recursos suficientes, a caixa de diálogo de configuração será exibida."
-        },
-        "forceDialog": {
-          "label": "Forçar Diálogo de Configuração (Obsoleto)",
-          "hint": "Força o diálogo de configuração ao rolar ataques."
+        "forceConsumeDialog": {
+          "label": "Forçar Diálogo de Consumo",
+          "hint": "Força o Diálogo de Configuração quando a atividade é usada."
         },
         "forceRollDialog" : {
           "label": "Forçar Configuração de Rolagem",
-          "hint": "Força o Diálogo de Configuração de Rolagem quando a atividade é usada."
+          "hint": "Força o Diálogo de Configuração de Ataque/Rolagem quando a atividade é usada."
         },
         "forceDamageDialog": {
           "label": "Forçar Configuração de Dano",
