@@ -587,7 +587,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
         // record the configured message data for later display
         message = messageDetails;
       });
-      if (this.token) setProperty(dialog, "options.window.subtitle", this.token.name);
+      if (this.token) foundry.utils.setProperty(dialog, "options.window.subtitle", this.token.name);
 
       result = await wrapped(config, dialog, message);
       message.create = saveCreate;
