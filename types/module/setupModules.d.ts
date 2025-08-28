@@ -1,7 +1,8 @@
 export declare const DAE_REQUIRED_VERSION = "13.0.4";
-export declare const REQUIRED_MODULE_VERSIONS: {
+export declare const USEFUL_MODULE_VERSIONS: {
     "about-time": string;
     anonymous: string;
+    auraeffects: string;
     "chris-premades": string;
     "condition-lab-triggler": string;
     dae: string;
@@ -9,20 +10,24 @@ export declare const REQUIRED_MODULE_VERSIONS: {
     "dfreds-convenient-effects": string;
     "dice-so-nice": string;
     "epic-rolls-5e": string;
+    "gambits-premades": string;
     levels: string;
     levelsautocover: string;
     levelsvolumetrictemplates: string;
     "lib-changelogs": string;
     "lib-wrapper": string;
     magicitems: string;
+    "midi-item-showcase-community": string;
     "monks-tokenbar": string;
     "multilevel-tokens": string;
     perceptive: string;
     "ready-set-roll-5e": string;
+    "seasons-and-stars": string;
     "simbuls-cover-calculator": string;
     socketlib: string;
     "times-up": string;
     tokencover: string;
+    "vision-5e": string;
     walledtemplates: string;
     wjmais: string;
 };

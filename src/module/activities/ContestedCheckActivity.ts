@@ -1,7 +1,7 @@
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { ReplaceDefaultActivities, autoCheckSavesOptions, configSettings } from "../settings.js";
+import { replaceDefaultActivities, autoCheckSavesOptions, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { MidiSaveActivity } from "./SaveActivity.js";
 // WIP
@@ -13,7 +13,7 @@ export function setupContestedCheckActivity() {
   //@ts-expect-error
   MidiCheckSheet = defineMidiCheckSheetClass(game.system.applications.activity.CheckSheet);
   MidiContestedCheckActivity = defineMidiContestedCheckActivityClass(GameSystemConfig.activityTypes.check.documentClass as Activity);
-  if (ReplaceDefaultActivities) {
+  if (replaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eAttack"] = GameSystemConfig.activityTypes.attack;
     GameSystemConfig.activityTypes.check = { documentClass: MidiContestedCheckActivity };
   } else {
@@ -113,6 +113,9 @@ let defineMidiContestedCheckActivityClass = <T extends Activity>(ActivityClass: 
     
     get isSelfTriggerableOnly() {
       return false;
+    }
+
+    async _triggerSubsequentActions(config, results) {
     }
 
     async rollDamage(config: RollProcessConfig, dialog: RollDialogConfig={}, message: RollMessageConfig={}) {

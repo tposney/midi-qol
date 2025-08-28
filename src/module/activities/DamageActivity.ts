@@ -2,7 +2,7 @@ import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { ReplaceDefaultActivities, configSettings } from "../settings.js";
+import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiDamageActivity: ReturnType<typeof defineMidiDamageActivityClass>;
@@ -13,7 +13,7 @@ export function setupDamageActivity() {
   //@ts-expect-error
   MidiDamageSheet = defineMidiDamageSheetClass(game.system.applications.activity.DamageSheet);
   MidiDamageActivity = defineMidiDamageActivityClass(GameSystemConfig.activityTypes.damage.documentClass as Activity);
-  if (ReplaceDefaultActivities) {
+  if (replaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eDamage"] = GameSystemConfig.activityTypes.damage;
     GameSystemConfig.activityTypes.damage = { documentClass: MidiDamageActivity };
   } else {

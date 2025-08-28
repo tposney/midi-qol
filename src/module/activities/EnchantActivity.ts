@@ -1,6 +1,6 @@
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
-import { ReplaceDefaultActivities, configSettings } from "../settings.js";
+import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiEnchantActivity: ReturnType<typeof defineMidiEnchantActivityClass>;
@@ -11,7 +11,7 @@ export function setupEnchantActivity() {
   //@ts-expect-error
   MidiEnchantSheet = defineMidiEnchantSheetClass(game.system.applications.activity.EnchantSheet);
   MidiEnchantActivity = defineMidiEnchantActivityClass(GameSystemConfig.activityTypes.enchant.documentClass as Activity);
-  if (ReplaceDefaultActivities) {
+  if (replaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eEnchant"] = GameSystemConfig.activityTypes.enchant;
     GameSystemConfig.activityTypes.enchant = { documentClass: MidiEnchantActivity };
   } else {
@@ -42,8 +42,7 @@ let defineMidiEnchantActivityClass = <T extends Activity>(ActivityClass: T) => {
 
     async _triggerSubsequentActions(config, results) {
       // for enchantment activities we do want to support the dnd5e default behaviour
-      await super._triggerSubsequentActions(config, results);;
-      await config.workflow.performState(config.workflow.WorkflowState_AllRollsComplete);
+      await super._triggerSubsequentActions(config, results);
     }
   }
 }

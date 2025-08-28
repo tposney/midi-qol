@@ -2,7 +2,7 @@ import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, log, i18n
 import { unTimedExecuteAsGM } from "../GMAction.js";
 import { AugmentedEvent, Workflow } from "../Workflow.js";
 import { defaultRollOptions } from "../patching.js";
-import { ReplaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
+import { replaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
 import { addAdvAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
@@ -20,7 +20,7 @@ export function setupAttackActivity() {
   //@ts-expect-error
   MidiAttackSheet = defineMidiAttackSheetClass(game.system.applications.activity.AttackSheet);
   MidiAttackActivity = defineMidiAttackActivityClass(GameSystemConfig.activityTypes.attack.documentClass as Activity);
-  if (ReplaceDefaultActivities) {
+  if (replaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eAttack"] = GameSystemConfig.activityTypes.attack;
     GameSystemConfig.activityTypes.attack = { documentClass: MidiAttackActivity };
   } else {
@@ -212,7 +212,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (workflow) workflow.activity = this;
       // @ts-expect-error
-      return this.rollDamage({ event, workflow, critical: { allow: true, isCritical: workflow?.isCritical } }, {}, message);
+      return this.rollDamage({ event, workflow, midiOptions: { isCritical: workflow?.workflowOptions?.isCritical || workflow?.isCritical } }, {}, message);
     }
 
     static #rollDamageNoCritical(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
@@ -375,7 +375,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         if (keys.disadvantage) workflow.rollOptions.disadvantage = keys.disadvantage;
         config.advantage ??= !!keys.advantage || !!(config.midiOptions.advantage ?? workflow.workflowOptions.advantage);
         config.disadvantage ??= !!keys.disadvantage || !!(config.midiOptions.disadvantage ?? workflow.workflowOptions.disadvantage);
-        let targetDescriptors: Array<DND5ETargetDescriptor> | undefined;
         preRollHookId = Hooks.once("dnd5e.preRollAttack", (rollConfig, dialogConfig, messageConfig) => {
           if (workflow?.aborted) return false;
           if (workflow?.rollOptions?.rollToggle) dialogConfig.configure = !dialogConfig.configure;
@@ -396,7 +395,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
             workflow.attackAdvAttribution.add(`ADV:keyPress`);
             workflow.advReminderAttackAdvAttribution.add(`ADV:keyPress`);
           }
-          targetDescriptors = foundry.utils.getProperty(messageConfig, "data.flags.dnd5e.targets") as Array<DND5ETargetDescriptor>;
+          const targetDescriptors = foundry.utils.getProperty(messageConfig, "data.flags.dnd5e.targets") as DND5ETargetDescriptor[] | undefined;
+          if (targetDescriptors && workflow) workflow.targetDescriptors = targetDescriptors as DND5ETargetDescriptor[];
           return true;
         });
         rollAttackHookId = Hooks.once("dnd5e.rollAttack", (rolls, { ammoUpdate, subject }) => {
@@ -444,8 +444,9 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         const rollMode = safeGetGameSetting("core", "rollMode");
         const showChatAttackCard = game.user?.isGM && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
         if (showChatAttackCard) {
-          // Show a chat card for attack rolls if the players are not going to see the card.
+          // Show a chat card for attack rolls if the players are not going to see the midi card.
           message.create = true;
+          foundry.utils.setProperty(message, "data.flags.midi-qol.gmHide", true); // since the gm will see the midi card hide the attack card for the author
           message.rollMode = rollMode;
         }
         config.attackMode ??= this.attackMode ?? "oneHanded";
@@ -459,7 +460,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
 
         // @ts-expect-error weirdness with how I did the types
         rolls = await super.rollAttack(config, dialog, message);
-        if (targetDescriptors) workflow.targetDescriptors = targetDescriptors;
 
         if (!rolls || rolls.length === 0) {
           // if (workflow) workflow.aborted = true;

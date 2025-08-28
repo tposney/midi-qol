@@ -1,6 +1,6 @@
 import { i18n, systemConcentrationId, error } from "../../midi-qol.js";
 import { autoApplyDamageOptions, autoCEEffectsOptions, autoCheckHitOptions, autoCheckSavesOptions, autoEffectsOptions, autoTargetOptions, CheckedAuthorsList, checkedModuleList, checkMechanic, collectSettingData, configSettings, coverCalculationOptions, enableWorkflow, exportSettingsToJSON, fetchParams, importSettingsFromJSON, rangeTargetOptions, safeGetGameSetting } from "../settings.js";
-import { REQUIRED_MODULE_VERSIONS, getModuleVersion, installedModules } from "../setupModules.js";
+import { USEFUL_MODULE_VERSIONS, getModuleVersion, installedModules } from "../setupModules.js";
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const minimumMidiVersion = "11.0.7";
@@ -408,6 +408,8 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
         "Critical Damage Maximize Dice": safeGetGameSetting(gameSystemId, "criticalDamageMaxDice"),
         "Critical Damage Modifiers": safeGetGameSetting(gameSystemId, "criticalDamageModifiers"),
         "Concentration Disabled": safeGetGameSetting(gameSystemId, "disableConcentration"),
+        "Attack Visibility": safeGetGameSetting(gameSystemId, "attackRollVisibility"),
+        "Challenge Visibility": safeGetGameSetting(gameSystemId, "challengeVisibility"),
       },
       "moduleSettings": {}
     }
@@ -718,10 +720,10 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
       moduleVersion: data.modules[key].version,
       version: data.modules[key].compatibility
     }));
-    for (let key of Object.keys(REQUIRED_MODULE_VERSIONS)) {
+    for (let key of Object.keys(USEFUL_MODULE_VERSIONS)) {
       if (game.modules.get(key)?.active) {
         const installedVersion = getModuleVersion(key);
-        const requiredVersion = REQUIRED_MODULE_VERSIONS[key];
+        const requiredVersion = USEFUL_MODULE_VERSIONS[key];
         if (foundry.utils.isNewerVersion(requiredVersion, installedVersion)) {
           data.problems.push({
             moduleId: key,

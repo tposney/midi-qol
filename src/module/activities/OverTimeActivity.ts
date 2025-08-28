@@ -1,7 +1,7 @@
 import { templates } from "handlebars";
 import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { ReplaceDefaultActivities, configSettings } from "../settings.js";
+import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { asyncHooksCall, evalActivationCondition } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet, MidiConditionField } from "./MidiActivityMixin.js";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
@@ -80,6 +80,10 @@ let defineMidiOverTimeActivityClass = <T extends Activity>(ActivityClass: T) => 
     get isTriggerableActivity() {
       return false;
     }
+
+    async _triggerSubsequentActions(config, results) {
+    }
+
     async postChatCardChecks(config: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig, options): Promise<boolean> {
       if (this.useCondition) { // reactions condition evaluation is handled elsewhere
         if (!(await evalActivationCondition(config.workflow, this.useCondition, config.workflow?.targets.first(), { async: true }))) {

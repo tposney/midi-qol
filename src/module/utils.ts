@@ -1,5 +1,5 @@
 import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface } from "../midi-qol.js";
-import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, DebounceInterval, autoRollDamageOptions, showReactionAttackRollOptions } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
@@ -611,7 +611,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       damageList: prepareDamageListToJSON(workflow.damageList),
       chatCardUuid: workflow.itemCardUuid,
       flagTags: workflow.flagTags,
-      updateOptions: { noConcentrationCheck: workflow?.workflowOptions?.noConcentrationCheck ?? false, awaitDamageApplication: false },
+      updateOptions: { noConcentrationCheck: workflow?.workflowOptions?.noConcentrationCheck ?? false, awaitDamageApplication: false},
       forceApply: false
     }).then(cardIds => {
       if (cardIds) chatCardUuids.push(...cardIds);
@@ -2484,7 +2484,7 @@ export function autoConsumeResource(workflow?: Workflow): string {
 }
 
 export function getAutoRollDamage(workflow?: Workflow): string {
-  if (workflow?.actor.type === configSettings.averageDamage || configSettings.averageDamage === "all") return "onHit";
+  if (workflow?.actor?.type === configSettings.averageDamage || configSettings.averageDamage === "all") return "onHit";
   if (workflow?.workflowOptions?.autoRollDamage) {
     const damageOptions = Object.keys(autoRollDamageOptions);
     if (damageOptions.includes(workflow.workflowOptions.autoRollDamage))
@@ -3839,17 +3839,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     if (!target) return noResult;
     if (!target.actor || !target.actor.flags) return noResult;
 
-    // TODO V4 Change no reactions if incapacitated - I think this makes sense.
     if (checkIncapacitated(target.actor, debugEnabled > 0, false)) return noResult;
-    if (checkMechanic("incapacitated")) {
-      try {
-        enableNotifications(false);
-        if (checkIncapacitated(target.actor, debugEnabled > 0, false)) return noResult;
-      } finally {
-        enableNotifications(true);
-      }
-    }
-
     let player = playerFor(getTokenDocument(target));
     const usedReaction = hasUsedReaction(target.actor);
     if (getReactionSetting(player) === "none") return noResult;
@@ -3865,7 +3855,6 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
       for (let item of items) {
         // @ts-expect-error no clue when this can happen
         const theItem: Item.Implementation = item instanceof Item ? item : item.baseItem;
-
         // @ts-expect-error no dnd5e-types
         if (!theItem.system.activities) continue;
         // @ts-expect-error no dnd5e-types
@@ -3915,8 +3904,9 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
           }
           if (!isValid) continue;
           if (reactionCondition) {
-            if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using condition ${reactionCondition}`);
             const returnvalue = await evalReactionActivationCondition(options.workflow, reactionCondition, target, { async: true, extraData: { reaction: reactionTriggerLabelFor(triggerType) } });
+            if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using condition ${reactionCondition} condition ${returnvalue}`, options.workflow?.conditionData);
+
             if (!returnvalue) continue;
           } else {
             if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using ${triggerType} filter`);
@@ -3980,17 +3970,17 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     if (["isHit", "isMissed", "isCrit", "isFumble", "isAttacked"].includes(reactionTriggerLabelFor(triggerType))) {
       switch (configSettings.showReactionAttackRoll) {
         case "all":
-          content = `${reactionFlavor} - ${rollOptions.all} ${triggeringRoll?.total ?? ""}`;
+          content = `${reactionFlavor} - ${i18n(rollOptions.all)} ${triggeringRoll?.total ?? ""}`;
           break;
         case "allCrit":
           //@ts-expect-error
           const criticalString = triggeringRoll?.isCritical ? `<span style="color: green">(${i18n("DND5E.Critical")})</span>` : "";
-          content = `${reactionFlavor} - ${rollOptions.all} ${triggeringRoll?.total ?? ""} ${criticalString}`;
+          content = `${reactionFlavor} - ${i18n(rollOptions.all)} ${triggeringRoll?.total ?? ""} ${criticalString}`;
           break;
         case "d20":
           //@ts-expect-error
           const theRoll = triggeringRoll?.terms[0]?.results ? triggeringRoll.terms[0].results[0].result : triggeringRoll?.terms[0]?.total ? triggeringRoll.terms[0].total : "";
-          content = `${reactionFlavor} ${rollOptions.d20} ${theRoll}`;
+          content = `${reactionFlavor} ${i18n(rollOptions.d20)} ${theRoll}`;
           break;
         default:
           content = reactionFlavor;
@@ -4546,7 +4536,7 @@ export function evalReactionActivationCondition(workflow: Workflow, condition: s
 export function evalActivationCondition(workflow: Workflow | undefined, condition: string | undefined | boolean, target?: TokenOrDocument, options: any = {}): boolean {
   if (condition === undefined || condition === "" || condition === true) return true;
   if (condition === false) return false;
-  createConditionData({ workflow, target, actor: workflow?.actor, extraData: options?.extraData, item: options.item });
+  const conditionData = createConditionData({ workflow, target, actor: workflow?.actor, extraData: options?.extraData, item: options.item });
   options.errorReturn ??= true;
   const returnValue = evalCondition(condition, workflow?.conditionData, options);
   return returnValue;
@@ -4913,24 +4903,34 @@ export async function setActionUsed(actor: Actor.Implementation) {
 
 export async function setReactionUsed(actor: Actor.Implementation, active: boolean = true) {
   if (!getReactionEffect()) return;
+  const id = "reaction";
   if (!active) {
-    const id = "reaction";
     await actor.effects.get(getStaticID(id))?.delete();
   } else {
     if (!["all", "displayOnly"].includes(configSettings.enforceReactions) && configSettings.enforceReactions !== actor.type) return;
-    // await actor.update({"flags.midi-qol.actions.reaction": true, "flags.midi-qol.actions.reactionCombatRound": game.combat?.round});  
-    const id = "reaction";
+    const actions = actor.getFlag(MODULE_ID, "actions"); 
+    const newCount = (actions?.reactionsUsed ?? 0) + 1;
     await actor.effects.get(getStaticID(id))?.delete();
     const effect = foundry.utils.deepClone(getReactionEffect());
+    const allReactionsUsed = newCount >= (actor.getFlag(MODULE_ID, "actions")?.reactionsMax ?? 1);
     if (!effect) return;
     effect.updateSource({
       origin: actor.uuid,
       changes: [
-        { key: 'flags.midi-qol.actions.reaction', mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "true" },
-        { key: 'flags.midi-qol.actions.reactionCombatRound', mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: String(game.combat?.round ?? false) }
+        { key: 'flags.midi-qol.actions.reaction', mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: String(allReactionsUsed) },
+        { key: 'flags.midi-qol.actions.reactionsUsed', mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: String(newCount) },
+        { key: 'flags.midi-qol.actions.reactionCombatRound', mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: String(game.combat?.round ?? false) }
       ]
     });
-    // effect.origin = actor.uuid;
+    if (actions?.reactionsReset === "eachTurn") {
+      effect.updateSource({duration: {turns: 1}})
+    }
+    if (actions?.reactionsReset === "rest") {
+      effect.updateSource({ flags: { dae: { specialDuration: ["shortRest"] } } });
+    }
+    if (actions?.reactionsReset === "never") {
+      effect.updateSource({ flags: { dae: { specialDuration: [] } } });
+    }
     await ActiveEffect.implementation.create(effect.toObject(), { parent: actor, keepId: true });
   }
 }
@@ -4938,19 +4938,33 @@ export async function setReactionUsed(actor: Actor.Implementation, active: boole
 export async function setBonusActionUsed(actor: Actor.Implementation) {
   if (debugEnabled > 0) warn("setBonusActionUsed | starting");
   if (!["all", "displayOnly"].includes(configSettings.enforceBonusActions) && configSettings.enforceBonusActions !== actor.type) return;
-  // await actor.update({ "flags.midi-qol.actions.bonus": true, "flags.midi-qol.actions.bonusActionCombatRound": game.combat?.round });
   const id = "bonusaction";
+  const actions = (actor.getFlag(MODULE_ID, "actions"));
+  const newCount = (actions?.bonusActionsUsed ?? 0) + 1;
+  const bonusActionsMax = actions?.bonusActionsMax ?? 1;
+  const allBonusActionsUsed = newCount >= bonusActionsMax;
   await actor.effects.get(getStaticID(id))?.delete();
   const effect = foundry.utils.deepClone(getBonusActionEffect());
   if (!effect) return;
   effect.updateSource({
     origin: actor.uuid,
     changes: [
-      { key: 'flags.midi-qol.actions.bonus', mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "true" },
-      { key: 'flags.midi-qol.actions.bonusActionCombatRound', mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: String(game.combat?.round ?? false) }
+      { key: 'flags.midi-qol.actions.bonus', mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: String(allBonusActionsUsed) },
+      { key: 'flags.midi-qol.actions.bonusActionsUsed', mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: String(newCount) },
+      { key: 'flags.midi-qol.actions.bonusActionCombatRound', mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: String(game.combat?.round ?? false) }
     ]
   });
+  if (actions?.bonusActionsReset === "eachTurn") {
+    effect.updateSource({ duration: { turns: 1 } })
+  }
+  if (actions?.bonusActionsReset === "rest") {
+    effect.updateSource({ flags: { dae: { specialDuration: ["shortRest"] } } });
+  }
+  if (actions?.bonusActionsReset === "never") {
+    effect.updateSource({ flags: { dae: { specialDuration: [] } } });
+  }
   effect.origin = actor.uuid;
+
   await ActiveEffect.implementation.create(effect as any, { parent: actor, keepId: true });
 }
 
@@ -4966,7 +4980,7 @@ export async function removeReactionUsed(actor: Actor.Implementation, force = fa
   }
   // safety net unset of flags - just in case.
   // @ts-expect-error types doesn't recognize `-=validKey` as a valid key
-  if (actor.flags?.[MODULE_ID]?.actions?.reaction) await actor.update({ flags: { [MODULE_ID]: { actions: { reaction: false, "-=reactionCombatRound": null } } } });
+  if (actor.flags?.[MODULE_ID]?.actions?.reaction) await actor.update({ flags: { [MODULE_ID]: { actions: { reactionUsed: 0, "-=reactionCombatRound": null } } } });
 }
 
 export function hasUsedAction(actor: Actor.Implementation) {
@@ -4974,7 +4988,17 @@ export function hasUsedAction(actor: Actor.Implementation) {
 }
 
 export function hasUsedReaction(actor: Actor.Implementation) {
-  return !!actor.getFlag(MODULE_ID, "actions")?.reaction;
+  return (actor.getFlag(MODULE_ID, "actions")?.reactionsUsed ?? 0) >= (actor.getFlag(MODULE_ID, "actions")?.reactionsMax ?? 1);
+}
+
+export function hasUsedAnyReaction(actor: Actor.Implementation) {
+  return (actor.getFlag(MODULE_ID, "actions")?.reactionsUsed ?? 0) > 0;
+}
+
+export function reactionsRemaining(actor: Actor.Implementation) {
+  const used = actor.getFlag(MODULE_ID, "actions")?.reactionsUsed ?? 0;
+  const max = actor.getFlag(MODULE_ID, "actions")?.reactionsMax ?? 1;
+  return Math.max(0, max - used);
 }
 
 export async function expirePerTurnBonusActions(
@@ -5007,16 +5031,20 @@ export async function expirePerTurnBonusActions(
 }
 
 export function hasUsedBonusAction(actor: Actor.Implementation) {
-  return actor.getFlag(MODULE_ID, "actions")?.bonus;
+  const currentUsed = actor.getFlag(MODULE_ID, "actions")?.bonusActionsUsed ?? 0;
+  const max = actor.getFlag(MODULE_ID, "actions")?.bonusActionsMax ?? 1;
+  return currentUsed >= max;
 }
-
+export function hasUsedAnyBonusAction(actor: Actor.Implementation) {
+  return (actor.getFlag(MODULE_ID, "actions")?.bonusActionsUsed ?? 0) > 0;
+}
 export async function removeBonusActionUsed(actor: Actor, force = false) {
   if (force || !installedModules.get("times-up")) { // bonus action will be expired by times-up if installed
     await actor.effects.get(getStaticID("bonusaction"))?.delete()
   }
   // Safety net flag reset just in case
   // @ts-expect-error
-  if (force) await actor.update({ flags: { [MODULE_ID]: { actions: { bonus: false, "-=bonusActionCombatRound": null } } } });
+  if (force) await actor.update({ flags: { [MODULE_ID]: { actions: { bonusActionsUsed: 0, bonus: false, "-=bonusActionCombatRound": null } } } });
 }
 
 
@@ -6456,9 +6484,6 @@ export function sumRolls(rolls: Array<Roll> | undefined = [], countHealing?: "ig
   }, 0);
 }
 
-let _debouncedUpdateAction;
-Hooks.once("init", () => { _debouncedUpdateAction = foundry.utils.debounce(_updateAction, DebounceInterval) });
-
 /* Looks like this is not needed
 const updateSemaphore = new foundry.utils.Semaphore(1);
 async function _updateActionS(document: foundry.abstract.Document.Any) {
@@ -6469,11 +6494,14 @@ export async function asyncGetCachedDocument(uuid: string | undefined | null): P
   if (DebounceInterval) return updateSemaphore.add(getCachedDocument, uuid);
 }
 */
+
+export function getThrottlingFunction(): (document: foundry.abstract.Document.Any, updates: ChatMessage.UpdateData) => Promise<void> {
+  return foundry.utils.throttle(_updateAction, debounceInterval) as (document: foundry.abstract.Document.Any, updates: ChatMessage.UpdateData) => Promise<void>;
+}
 export const updatesCache = {};
 async function _updateAction(document: foundry.abstract.Document.Any, updates: ChatMessage.UpdateData) {
   if (!updates) {
     if (debugEnabled > 0) warn(`_updateAction | No updates found for ${document.uuid}`);
-    console.warn(`_updateAction | No updates found for ${document.uuid}`);
     return document;
   }
   const baseDocument = fromUuidSync(document.uuid) as ChatMessage.Implementation;
@@ -6487,35 +6515,31 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
      This creates an opportunity for changes to cached updates which can then be lost if they are cleared
      */
   const updateDelay = 0;
-  if (debugEnabled)  warn("_updateAction | Starting for", updates)
+  if (debugEnabled)  warn("_updateAction | Starting for", Date.now(), updates)
   delete updates._id
-  if (updateDelay) await busyWait(updateDelay); // let other stuff happen.
+  if (updateDelay) {
+    await busyWait(updateDelay); // let other stuff happen.
+  }
   await baseDocument?.update(updates);
-  // const flatUpdates = foundry.utils.flattenObject(updates);
-  // const flatCache = foundry.utils.flattenObject(updatesCache[baseDocument.uuid] ?? {});
+   if (updatesCache[baseDocument.uuid] && !foundry.utils.isEmpty(updatesCache[baseDocument.uuid])) {
+   }
   updatesCache[baseDocument.uuid] = foundry.utils.diffObject(updates, updatesCache[baseDocument.uuid] ?? {});
-  if (updatesCache[baseDocument.uuid]?.rolls) console.warn("updates cache rolls", updatesCache[baseDocument.uuid].rolls);
-  if (false && updatesCache[baseDocument.uuid]?.rolls?.[0] instanceof Roll) delete updatesCache[document.uuid].rolls; // This is handled by the chat card and will be already setup as [Roll] rather than json
-  
-  //@ts-expect-error
-  if (updates.content) ui.chat?.scrollBottom();
-  
   if (debugEnabled > 1 && updates.content && updatesCache[baseDocument.uuid]?.content) 
     warn("_updateAction | queued content differences ", diffStringsFull(updates.content, updatesCache[baseDocument.uuid].content, {ignoreWhitespace: true, ignoreNewlines: true}));
-  if (debugEnabled) warn("_updateAction | post update updatesCache", updates);
+  if (debugEnabled) warn("_updateAction | post update updatesCache", Date.now(), updates);
 }
 
 // NOTE: Typed as a ChatMessage since that's all we use it for
-export async function debouncedUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData, immediate = false) {
+export async function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData, throttlingFunc: undefined | ((document: ChatMessage.Implementation, updates: ChatMessage.UpdateData) => Promise<void>) = undefined, immediate = false) {
   if (!document) return; // ChatCard was removed already?;
   updates = foundry.utils.expandObject(updates) as typeof updates;
   updates = foundry.utils.mergeObject((updatesCache[document.uuid] ?? {}), updates, { overwrite: true })
   updatesCache[document.uuid] = updates;
-  if (!DebounceInterval || immediate) {
-    if (debugEnabled > 0) warn(`debouncedUpdate | immediate update for ${document.uuid}`, updates);
+  if (!debounceInterval || immediate || !throttlingFunc) {
+    if (debugEnabled > 0) warn(`throttledU[date] | immediate update for ${document.uuid}`, updates);
     return await _updateAction(document, updates);
   }
-  return await _debouncedUpdateAction(document, updates);
+  return await throttlingFunc(document, updates);
 }
 export function getUpdatesCache(uuid: string | undefined | null) {
   if (!uuid) return {};

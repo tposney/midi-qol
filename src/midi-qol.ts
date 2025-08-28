@@ -6,7 +6,7 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, debouncedUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
@@ -17,6 +17,7 @@ import { showUndoWorkflowApp } from './module/apps/UndoWorkflow.js';
 import { TroubleShooter } from './module/apps/TroubleShooter.js';
 import { TargetConfirmationDialog } from './module/apps/TargetConfirmation.js';
 import { MidiAttackActivity, setupAttackActivity } from './module/activities/AttackActivity.js';
+import { ChatLogMidi } from './module/ChatClasses/ChatLogMidi.js';
 export function getCanvas(): foundry.canvas.Canvas | undefined {
   if (!canvas || !canvas.scene) {
     error("Canvas/Scene not ready - roll automation will not function");
@@ -132,8 +133,9 @@ Hooks.once("levelsReady", function () {
   levelsAPI = CONFIG.Levels.API;
 });
 Hooks.once("init", () => {
-  // @ts-expect-error
-  CONFIG.ChatMessage.documentClass = defineChatMessageMidiClass(CONFIG.ChatMessage.documentClass);
+  setupChatMessageMidi();
+    //@ts-expect-error
+  CONFIG.ChatMessage.documentClass = ChatMessageMidi;
   // @ts-expect-error
   CONFIG.Combat.documentClass = MidiCombat5e;
 });
@@ -172,14 +174,17 @@ function setupActivities() {
 Hooks.once('init', async function () {
   GameSystemConfig = CONFIG.DND5E;
   log('Initializing midi-qol');
+  window.customElements.define("midi-damage-application", DamageApplicationElementMidi as unknown as CustomElementConstructor);
   setupActivities();
-  // CONFIG.ui.chat = ChatLogMidi;
+  CONFIG.ui.chat = ChatLogMidi;
   // @ts-expect-error no dnd5e-types
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;
   //@ts-expect-error
   Hooks.once('dfreds-convenient-effects.ready', () => {
     setupMidiStatusEffects();
   });
+  Hooks.once("dae.ready", api => setupMidiFlags(api));
+
   addConfigOptions();
   GameSystemConfig.areaTargetTypes["emanationNoTemplate"] = {
     label: i18n("midi-qol.emanationNoTemplate"),
@@ -423,9 +428,8 @@ Hooks.on("dae.setFieldData", fieldData => {
 /* Setup module							*/
 /* ------------------------------------ */
 Hooks.once('setup', function () {
-  // Do anything after initialization but before
+  // Do anything after initialization but before ready
   setupModules();
-  setupMidiFlags();
   setupSocket();
   fetchParams();
   fetchSoundSettings();
@@ -599,17 +603,6 @@ Hooks.once('ready', function () {
   Hooks.callAll("midi-qol.ready")
 
   checkModules();
-  if (game.user?.isGM && configSettings.gmLateTargeting !== "none") {
-    ui.notifications?.notify("Late Targeting has been replaced with Target Confirmation. Please update your settings", "info", { permanent: true });
-    new TargetConfirmationConfig({}).render({ force: true });
-    configSettings.gmLateTargeting = "none";
-    game.settings.set(MODULE_ID, "ConfigSettings", configSettings)
-  }
-  if (!game.user?.isGM && game.settings.get(MODULE_ID, "LateTargeting") !== "none") {
-    ui.notifications?.notify("Late Targeting has been replaced with Target Confirmation. Please update your settings", "info", { permanent: true });
-    new TargetConfirmationConfig({}).render({ force: true });
-    game.settings.set(MODULE_ID, "LateTargeting", "none");
-  }
   readyHooks();
   readyPatching();
 
@@ -643,7 +636,7 @@ Hooks.once('ready', function () {
 
 import { setupMidiTests } from './module/tests/setupTest.js';
 import { TargetConfirmationConfig } from './module/apps/TargetConfirmationConfig.js';
-import { defineChatMessageMidiClass } from './module/ChatMessageMidi.js';
+import { setupChatMessageMidi, ChatMessageMidi } from './module/ChatClasses/ChatMessageMidi.js';
 import { MidiSaveActivity, setupSaveActivity } from './module/activities/SaveActivity.js';
 import { MidiUtilityActivity, setupUtilityActivity } from './module/activities/UtilityActivity.js';
 import { MidiSummonActivity, setupSummonActivity } from './module/activities/SummonActivity.js';
@@ -657,6 +650,7 @@ import { MidiForwardActivity, setupForwardActivity } from './module/activities/F
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';
 import { MidiCombat5e } from './module/MidiCombat5e.js';
 import { TokenOrDocument } from './globals.js';
+import { DamageApplicationElementMidi } from './module/ChatClasses/DamageApplicationElementMidi.js';
 
 // Add any additional hooks if necessary
 function setupMidiQOLApi() {
@@ -699,7 +693,7 @@ function setupMidiQOLApi() {
     createConditionData,
     createDamageDetail,
     DamageOnlyWorkflow,
-    debouncedUpdate,
+    debouncedUpdate: throttledUpdate,
     debug,
     displayDSNForRoll,
     doConcentrationCheck,
@@ -783,7 +777,12 @@ function setupMidiQOLApi() {
     createEffects,
     removeEffects,
     updateEffects,
-    get updatesCache() { return updatesCache }
+    get updatesCache() { return updatesCache },
+    ChatClasses: {
+      ChatLogMidi,
+      ChatMessageMidi,
+      DamageApplicationElementMidi
+    }
   }
   globalThis.MidiDAEEval = {
     testfunc,
@@ -877,7 +876,7 @@ export async function updateEffects(data: { actorUuid: string, updates: ActiveEf
   }
 }
 
-function setupMidiFlags() {
+function setupMidiFlags(DAEapi: any) {
   midiFlags.push(`flags.${MODULE_ID}.advantage.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.all`);
   midiFlags.push(`flags.${MODULE_ID}.disadvantage.all`);
@@ -1108,6 +1107,16 @@ function setupMidiFlags() {
       daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.damage.${it}.${dt}`);
     })
   })
+  midiFlags.push(`flags.${MODULE_ID}.actions.reactionsMax`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.actions.reactionsMax`);
+  midiFlags.push(`flags.${MODULE_ID}.actions.reactionsReset`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.actions.reactionsReset`);
+  midiFlags.push(`flags.${MODULE_ID}.actions.bonusActionsMax`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.actions.bonusActionsMax`);
+  midiFlags.push(`flags.${MODULE_ID}.actions.bonusActionsReset`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.actions.bonusActionsReset`);
+  // midiFlags.push(`flags.${MODULE_ID}.actions.reactionUsed`);
+  // daeFieldBrowserFields.push(`flags.${MODULE_ID}.actions.reactionUsed`);
 
   Object.keys(GameSystemConfig.abilities).forEach(abl => {
     midiFlags.push(`flags.${MODULE_ID}.advantage.ability.check.${abl}`);
@@ -1285,21 +1294,7 @@ function setupMidiFlags() {
   midiFlags.push(``);
   midiFlags.push(``);
   */
-  // TODO: modify this to use hook if !globalThis.DAE
-  if (installedModules.get("dae")) {
-    const initDAE = async () => {
-      for (let i = 0; i < 120; i++) {
-        if (globalThis.DAE) {
-          globalThis.DAE.addAutoFields(midiFlags);
-          return true;
-        } else {
-          await new Promise(resolve => setTimeout(resolve, 250));
-        }
-      }
-      return false;
-    };
-    initDAE().then(value => { if (!value) error(`initDae settings failed`) });
-  }
+  DAEapi.addAutoFields(midiFlags);
 }
 
 // Revisit to find out how to set execute as GM
@@ -1390,7 +1385,12 @@ export function setupMidiStatusEffects() {
         id: "bonusaction",
         _id: getStaticID("bonusaction"),
         name: i18n("midi-qol.bonusActionUsed"),
-        changes: [{ key: "flags.midi-qol.actions.bonus", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }], img: "modules/midi-qol/icons/bonus-action.svg",
+        changes: [
+          { key: "flags.midi-qol.actions.bonus", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
+          { key: "Flags.midi-qol.actions.bonusActionsUsed", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "1", priority: 20 }
+        ], 
+        img: "modules/midi-qol/icons/bonus-action.svg",
+        
         flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } }
       });
     }
@@ -1406,7 +1406,10 @@ export function setupMidiStatusEffects() {
         id: "reaction",
         _id: getStaticID("reaction"),
         name: i18n("midi-qol.reactionUsed"),
-        changes: [{ key: "flags.midi-qol.actions.reaction", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }],
+        changes: [
+          { key: "flags.midi-qol.actions.reaction", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
+          { key: "Flags.midi-qol.actions.reactionsUsed", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "1", priority: 20 }
+        ],
         img: "modules/midi-qol/icons/reaction.svg",
         // effectData: { transfer: false },
         flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } }

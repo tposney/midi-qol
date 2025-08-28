@@ -2,7 +2,7 @@ import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { ReplaceDefaultActivities, configSettings } from "../settings.js";
+import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiHealActivity: ReturnType<typeof defineMidiHealActivityClass>;
@@ -13,7 +13,7 @@ export function setupHealActivity() {
   //@ts-expect-error
   MidiHealSheet = defineMidiHealSheetClass(game.system.applications.activity.HealSheet);
   MidiHealActivity = defineMidiHealActivityClass(GameSystemConfig.activityTypes.heal.documentClass as Activity);
-  if (ReplaceDefaultActivities) {
+  if (replaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eHeal"] = GameSystemConfig.activityTypes.heal;
     GameSystemConfig.activityTypes.heal = { documentClass: MidiHealActivity };
   } else {

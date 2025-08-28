@@ -3,7 +3,7 @@ import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from
 import { debugEnabled, i18n, warn, error, GameSystemConfig } from "../../midi-qol.js";
 import { AugmentedEvent, Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { ReplaceDefaultActivities, configSettings } from "../settings.js";
+import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { areMidiKeysPressed, asyncHooksCall, isAutoFastDamage } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { displayDSNForRoll } from "../utils.js";
@@ -17,7 +17,7 @@ export function setupUtilityActivity() {
   MidiUtilitySheet = defineMidiUtilitySheetClass(game.system.applications.activity.UtilitySheet);
 
   MidiUtilityActivity = defineMidiUtilityActivityClass(GameSystemConfig.activityTypes.utility.documentClass as Activity);
-  if (ReplaceDefaultActivities) {
+  if (replaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eUtility"] = GameSystemConfig.activityTypes.utility;
     GameSystemConfig.activityTypes.utility = { documentClass: MidiUtilityActivity };
   } else {
@@ -54,6 +54,13 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
         const schema = {
           ...super.defineSchema(),
           otherActivityId: new StringField({ name: "otherActivity", initial: "none" }),
+          otherActivityAsParentType: new BooleanField({
+            name: "otherActivityAsParentType",
+            initial: true,
+            required: false,
+            label: i18n("midi-qol.SHARED.FIELDS.otherActivityAsParentType.label"),
+            hint: i18n("midi-qol.SHARED.FIELDS.otherActivityAsParentType.hint")
+          }),
         };
         return schema;
       }
@@ -72,6 +79,8 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
       return false;
     }
 
+    async _triggerSubsequentActions(config, results) {
+    }
     // @ts-expect-error weird types stuff
     async rollFormula(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) {
       if (debugEnabled > 0)

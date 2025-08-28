@@ -2,7 +2,7 @@ import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { ReplaceDefaultActivities, configSettings } from "../settings.js";
+import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { getSceneTargets } from "./activityHelpers.js";
 
@@ -14,7 +14,7 @@ export function setupSaveActivity() {
   //@ts-expect-error
   MidiSaveSheet = defineMidiSaveSheetClass(game.system.applications.activity.SaveSheet);
   MidiSaveActivity = defineMidiSaveActivityClass(GameSystemConfig.activityTypes.save.documentClass as Activity);
-  if (ReplaceDefaultActivities) {
+  if (replaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eSave"] = GameSystemConfig.activityTypes.save;
     GameSystemConfig.activityTypes.save = { documentClass: MidiSaveActivity };
   } else {
@@ -141,6 +141,9 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
       return true;
     }
 
+    async _triggerSubsequentActions(config, results) {
+    }
+    
     getDamageConfig(config: RollProcessConfig = {}) {
       const rollConfig = super.getDamageConfig(config);
 

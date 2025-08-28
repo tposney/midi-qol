@@ -50,8 +50,6 @@ export class TargetConfirmationConfig extends HandlebarsApplicationMixin(Applica
     }
     game.settings.set("midi-qol", "TargetConfirmation", newSettings);
     this.render({ force: true });
-    game.settings.set("midi-qol", "LateTargeting", "none");
-    if (game.user?.isGM) configSettings.gmLateTargeting = "none";
   }
 
   async _onRender(context, options) {

@@ -1,4 +1,4 @@
-import { criticalDamage, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, quickSettingsBlurb, autoCheckHitOptions, clickOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, checkFlankingOptions, hideRollDetailsHintLongOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions } from "../settings.js"
+import { criticalDamage, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, quickSettingsBlurb, autoCheckHitOptions, clickOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, checkFlankingOptions, hideRollDetailsHintLongOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions, safeGetGameSetting } from "../settings.js"
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, gameStats, debugEnabled, log, GameSystemConfig, ceInterface } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
@@ -209,8 +209,17 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       rollModes: CONFIG.Dice.rollModes,
     };
     context = foundry.utils.mergeObject(await super._prepareContext(options), context, { inplace: false });
-    context.concentrationDisabled = game.settings.get("dnd5e", "disableConcentration")
-
+    context.concentrationDisabled =safeGetGameSetting("dnd5e", "disableConcentration");
+    const attackRollVisibility = safeGetGameSetting("dnd5e", "attackRollVisibility") as string;
+    if (attackRollVisibility !== undefined) {
+      const choices = game.settings.settings.get("dnd5e.attackRollVisibility")?.choices;
+      context.attackRollVisibility = choices ? i18n(choices[attackRollVisibility]) : attackRollVisibility;
+    }
+    const challengeVisibility = safeGetGameSetting("dnd5e", "challengeVisibility") as string;
+    if (challengeVisibility !== undefined) {
+      const choices = game.settings.settings.get("dnd5e.challengeVisibility")?.choices;
+      context.challengeVisibility = choices ? i18n(choices[challengeVisibility]) : challengeVisibility;
+    }
     // context.tabs = this.#getTabs();
     if (debugEnabled > 0) warn("Config Panel: getData ", context)
     return context;
@@ -220,23 +229,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     super.changeTab(tab, group, options);
     this.activeTab = tab;
   }
-
-  // V12-only: It does not seem to be
-  // #getTabs() {
-  //   const tabs = {
-  //     gm: { id: "gm", group: "sheet", label: "midi-qol.Config.Tabs.gm" },
-  //     player: { id: "player", group: "sheet", label: "midi-qol.Config.Tabs.player" },
-  //     workflow: { id: "workflow", group: "sheet", label: "midi-qol.Config.Tabs.workflow" },
-  //     concentration: { id: "concentration", group: "sheet", label: "midi-qol.Config.Tabs.concentration" },
-  //     reactions: { id: "reactions", group: "sheet", label: "midi-qol.Config.Tabs.reactions" },
-  //     misc: { id: "misc", group: "sheet", label: "midi-qol.Config.Tabs.misc" },
-  //     mechanics: { id: "mechanics", group: "sheet", label: "midi-qol.Config.Tabs.mechanics" },
-  //     rules: { id: "rules", group: "sheet", label: "midi-qol.Config.Tabs.rules" },
-  //     quick: { id: "quick", group: "sheet", label: "midi-qol.Config.Tabs.quick" },
-  //   }
-  //   tabs[this.activeTab].active = true;
-  //   return tabs;
-  // }
 
   // V12-only (I think): does not seem to be
   async _preparePartContext(partId, context) {

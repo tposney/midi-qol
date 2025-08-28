@@ -1,6 +1,6 @@
 import { checkRule, configSettings, safeGetGameSetting } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget } from "./utils.js";
+import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DamageDescriptionObject, Workflow, WorkflowOptions } from "./Workflow.js";
 import { bonusCheck } from "./patching.js";
@@ -180,7 +180,7 @@ export class SaferSocket {
 async function removeActionBonusReaction(data: { actorUuid: string }) {
   const actor = fromActorUuid(data.actorUuid);
   if (!actor) return;
-  if (hasUsedReaction(actor)) await removeReactionUsed(actor);
+  if (hasUsedAnyReaction(actor)) await removeReactionUsed(actor);
   if (hasUsedBonusAction(actor)) await removeBonusActionUsed(actor);
   if (hasUsedAction(actor)) return await removeActionUsed(actor);
   return;
@@ -1018,7 +1018,7 @@ async function prepareDamageListItems(
           // The actor update - when no changes are made will update the passed options with a target
           promises.push(
             actor.update(updates, foundry.utils.mergeObject(damageItem.calcDamageOptions, data.updateOptions ?? {}, { inplace: false }) as any).then(updatedActor => {
-              Hooks.call("dnd5e.applyDamage", updatedActor ?? actor, amount, damageItem.calcDamageOptions as DamageApplicationOptions);
+              if (updatedActor) Hooks.call("dnd5e.applyDamage", updatedActor, amount, damageItem.calcDamageOptions as DamageApplicationOptions);
               return updatedActor;
             })
           )
@@ -1098,7 +1098,11 @@ async function prepareDamageListItems(
   const allPromises = Promise.all(promises).then((allPromised) => {
     if (debugEnabled > 0) warn("GMAction.prepareDamageListItems: all promises completed", allPromised);
   });
-  if (data.updateOptions?.awaitDamageApplication !== false) await allPromises;
+  const promisesStart = Date.now();
+  if (data.updateOptions?.awaitDamageApplication !== false) {
+    await allPromises;
+    console.log("GMAction.prepareDamageListItems: awaited all promises", Date.now() - promisesStart);
+  }
 }
 
 // Fetch the token, then use the tokenData.actor.id
@@ -1114,7 +1118,7 @@ async function createPlayerDamageCard(data: {
 }): Promise<string | undefined> {
   let shouldShow = true;
   let chatCardUuid: string | undefined;
-
+  if (configSettings.playerDamageCard === "none") return;
   if (configSettings.playerCardDamageDifferent) {
     shouldShow = false;
     for (let damageItem of data.damageList) {
@@ -1130,7 +1134,6 @@ async function createPlayerDamageCard(data: {
     }
   }
   if (!shouldShow) return;
-  if (configSettings.playerDamageCard === "none") return;
   let showNPC = ["npcplayerresults", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
   let playerButtons = ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
   const damageList = data.damageList;
@@ -1160,7 +1163,7 @@ async function createPlayerDamageCard(data: {
       speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: game.user?.id, actor: data.actorId },
       content: content,
       // whisper: ChatMessage.getWhisperRecipients("players").filter(u => u.active).map(u => u.id),
-      flags: { "midiqol": { "undoDamage": prepareDamageListToJSON(tokenDataList) } }
+      flags: { "midi-qol": { "undoDamage": prepareDamageListToJSON(tokenDataList), playerDamageCard: true } }
     };
 
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
@@ -1206,8 +1209,8 @@ async function createGMReverseDamageCard(
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
     if (data.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? {}, data.flagTags);
     chatCardUuid = (await ChatMessage.create(chatData))?.uuid;
-    //@ts-expect-error no fvtt-types scrollbottom
-    ui.chat?.scrollBottom();
+    //@ts- expect-error no fvtt-types scrollbottom
+    // setTimeout(() => ui.chat?.scrollBottom(), 10);
   }
   return chatCardUuid;
 }
@@ -1218,7 +1221,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
   button?.addEventListener("click", (ev) => {
     (async () => {
       // TODO: Remove the latter after sufficient time has passed
-      const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midiqol.undoDamage") as SerializedDamageListEntry[];
+      const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
       const undoDamageData = recoverDamageListFromJSON(undoFlag);
       if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, newHP, oldVitality, newVitality, calcDamageOptions, updateOptions } of undoDamageData) {
         // recoverDamageDetailFromJSON(damageDetail);
@@ -1260,7 +1263,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
   button?.addEventListener("click", (ev) => {
     (async () => {
       // TODO: Remove the latter after sufficient time has passed
-      const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midiqol.undoDamage") as SerializedDamageListEntry[];
+      const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
       const undoDamageData = recoverDamageListFromJSON(undoFlag);
       if (undoDamageData) for (let { actorUuid, newHP, newTempHP, oldHP, calcDamageOptions, updateOptions, newVitality } of undoDamageData) {
         if (!actorUuid) continue;
@@ -1289,7 +1292,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
   })
 
   // TODO: Remove the latter after sufficient time has passed
-  const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midiqol.undoDamage") as SerializedDamageListEntry[];
+  const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
   const undoDamageData = recoverDamageListFromJSON(undoFlag);
   undoDamageData?.forEach(({ actorUuid, oldTempHP, oldHP, newHP, newTempHP, oldVitality, newVitality, damageDetail, calcDamageOptions, updateOptions }) => {
     if (!actorUuid) return;

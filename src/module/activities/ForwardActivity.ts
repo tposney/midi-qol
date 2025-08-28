@@ -1,7 +1,7 @@
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { ReplaceDefaultActivities, configSettings } from "../settings.js";
+import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { asyncHooksCall } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
@@ -13,7 +13,7 @@ export function setupForwardActivity() {
   //@ts-expect-error
   MidiForwardSheet = defineMidiForwardSheetClass(game.system.applications.activity.ForwardSheet);
   MidiForwardActivity = defineMidiForwardActivityClass(GameSystemConfig.activityTypes.forward.documentClass as Activity);
-  if (ReplaceDefaultActivities) {
+  if (replaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eForward"] = GameSystemConfig.activityTypes.forward;
     GameSystemConfig.activityTypes.forward = { documentClass: MidiForwardActivity };
   } else {
@@ -73,5 +73,7 @@ let defineMidiForwardActivityClass = <T extends Activity>(ActivityClass: T) => {
       return "never";
     }
 
+    async _triggerSubsequentActions(config, results) {
+    }
   }
 }

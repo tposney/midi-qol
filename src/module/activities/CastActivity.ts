@@ -2,7 +2,7 @@ import { AnyObject } from "fvtt-types/utils";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { ReplaceDefaultActivities, configSettings } from "../settings.js";
+import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { asyncHooksCall } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
@@ -14,7 +14,7 @@ export function setupCastActivity() {
   //@ts-expect-error
   MidiCastSheet = defineMidiCastSheetClass(game.system.applications.activity.CastSheet);
   MidiCastActivity = defineMidiCastActivityClass(GameSystemConfig.activityTypes.cast.documentClass as Activity);
-  if (ReplaceDefaultActivities) {
+  if (replaceDefaultActivities) {
     // GameSystemConfig.activityTypes["dnd5eCast"] = GameSystemConfig.activityTypes.cast;
     GameSystemConfig.activityTypes.cast = { documentClass: MidiCastActivity };
   } else {
@@ -60,6 +60,8 @@ let defineMidiCastActivityClass =  <T extends Activity>(ActivityClass: T) => {
     
     get forcedTargetConfirmation() {
       return "never";
+    }
+    async _triggerSubsequentActions(config, results) {
     }
   }
 }

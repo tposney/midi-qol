@@ -1,23 +1,22 @@
-export declare let itemRollButtons: boolean;
-export declare let criticalDamage: string;
-export declare let criticalDamageGM: string;
-export declare let nsaFlag: boolean;
-export declare let coloredBorders: string;
-export declare let saveRequests: {};
-export declare let saveTimeouts: {};
-export declare let addChatDamageButtonsOld: string;
 export declare let autoFastForwardAbilityRolls: boolean;
 export declare let autoRemoveTargets: string;
-export declare let forceHideRoll: boolean;
-export declare let enableWorkflow: boolean;
+export declare let coloredBorders: string;
+export declare let criticalDamage: string;
+export declare let criticalDamageGM: string;
+export declare let debounceInterval: number;
 export declare let dragDropTargeting: boolean;
-export declare let targetConfirmation: typeof defaultTargetConfirmationSettings;
+export declare let enableWorkflow: boolean;
+export declare let forceHideRoll: boolean;
+export declare let itemRollButtons: boolean;
 export declare let midiSoundSettings: any;
 export declare let midiSoundSettingsBackup: any;
-export declare let DebounceInterval: number;
-export declare let ReplaceDefaultActivities: boolean;
-export declare let UseWeakReferences: boolean;
-export declare let SaveToChatCard: boolean;
+export declare let nsaFlag: boolean;
+export declare let replaceDefaultActivities: boolean;
+export declare let saveRequests: {};
+export declare let saveTimeouts: {};
+export declare let saveToChatCard: boolean;
+export declare let targetConfirmation: typeof defaultTargetConfirmationSettings;
+export declare let useWeakReferences: boolean;
 export declare const defaultTargetConfirmationSettings: {
     enabled: boolean;
     always: boolean;
@@ -85,7 +84,6 @@ declare class ConfigSettings {
     damageVulnerabilityMultiplier: number;
     defaultSaveMultiplier: number;
     diceSound: string;
-    displayHitResultNumeric: boolean;
     displaySaveAdvantage: boolean;
     displaySaveDC: boolean;
     doConcentrationCheck: string;
@@ -107,9 +105,7 @@ declare class ConfigSettings {
     gmConsumeResource: string;
     gmDoReactions: string;
     gmHide3dDice: boolean;
-    gmLateTargeting: string;
     gmRemoveButtons: string;
-    gmAttackDamageCards: boolean;
     hideRollDetails: string;
     ignoreSpellReactionRestriction: boolean;
     itemRollStartWorkflow: boolean;
@@ -182,7 +178,9 @@ declare class ConfigSettings {
     optionalRules: {
         actionSpecialDurationImmediate: boolean;
         activeDefence: boolean;
+        activeDefenceModifier: number;
         activeDefenceShow: string;
+        ActiveDefenceDC: boolean;
         autoRerollInitiative: boolean;
         challengeModeArmor: string;
         checkFlanking: string;
@@ -215,16 +213,17 @@ export declare function collectSettingData(): {
     configSettings: ConfigSettings;
     midiSoundSettings: any;
     itemRollButtons: boolean;
-    criticalDamage: string;
-    criticalDamageGM: string;
-    nsaFlag: boolean;
-    coloredBorders: string;
     autoFastForwardAbilityRolls: boolean;
     autoRemoveTargets: string;
-    forceHideRoll: boolean;
-    enableWorkflow: boolean;
+    coloredBorders: string;
+    criticalDamage: string;
+    criticalDamageGM: string;
+    debounceInterval: number;
     dragDropTargeting: boolean;
-    DebounceInterval: number;
+    enableWorkflow: boolean;
+    forceHideRoll: boolean;
+    nsaFlag: boolean;
+    saveToChatCard: boolean;
     targetConfirmation: {
         enabled: boolean;
         always: boolean;
@@ -243,6 +242,7 @@ export declare function collectSettingData(): {
             y: number;
         };
     };
+    useWeakReferences: boolean;
     flags: {};
 };
 export declare function exportSettingsToJSON(): void;
@@ -435,6 +435,15 @@ export declare const activationAutomationOptions: {
     [k: string]: string;
 };
 export declare const soundSettingsBlurb: {
+    [k: string]: string;
+};
+export declare const rollConfigOptions: {
+    [k: string]: string;
+};
+export declare const damageConfigOptions: {
+    [k: string]: string;
+};
+export declare const consumeConfigOptions: {
     [k: string]: string;
 };
 export declare const registerSettings: () => void;

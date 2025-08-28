@@ -1,3 +1,28 @@
+### 13.0.18
+* midi-qol now requires DAE v13.0.12 or later.
+* Fix for midi not correctly displaying dnd5e damage application buttons.
+* Fix for parenthetical damage formulas being broken - i.e. (@details.level)d6
+* Fix for reaction dialog content display not being localised.
+* Fix for ammunition consumption displaying the damage configuration dialog when not required.
+* An improvement in the midi performance degrading over time issue. It's a bit of a hack but seems to help significantly - the DOM chat log is pruned as new messages are added.
+* I've done a lot of work on the cached updates setting in midi. If you have a slow (or remote) server it is a good idea to set that to something like 150-200 (ms) which should improve performance. For local servers the benefit is about 10-20%.
+* Support for actors having more than 1 reaction/bonus action per round.
+  - There is no UI for this, you must set the reactions/bonus action maximum via an active effect.
+  - flags.midi-qol.actions.reactionsMax and flags.midi-qol.actions.bonusActionsMax can be set to the required value.
+  - These fields should be set via OVERRIDE as the default value is "undefined" and is interpreted as 1, so ADD 1 will set the field to 1 and will still be 1 reaction/bonusAction.
+  - You can make the actor unable to take reactions (or bonus actions) by setting reactionMax/bonusReactionMax to 0.
+* Support for reactions/bonus actions used being reset at different times.
+  - There is no UI for this, you must set the flags via an active effect.
+  - flags.midi-qol.actions.reactionsReset/flags.midi-qol.actions.bonusActionsReset.
+     Options are:
+      - **onTurnStart** (the default) - reactions/bonus actions used reset at the start of the actor's turn.
+      - **eachTurn** - reactions/bonus actions used reset every turn.
+      - **rest** - reactions/bonus actions used reset when a short or long rest is taken
+      - **never** - reactions/bonus actions used never reset (effect will have to be removed manually).
+* **Breaking** for module developers/macro writers. 
+  - Midi now uses a custom damage application element (midi-damage-application) instead of the default damage-application. The class definition can be accessed via MidiQOL.ChatClasses.DamageApplicationElementMidi
+  - Midi now uses a custom ChatLog, ChatLogMidi, which is functionally identical to ChatLog5e but deals with the midi custom damage element and supports pruning the DOM as messages are added.
+
 ### 13.0.17
 * Fix for trigger activities not allowing activity configuration - it is now **on** by default.
   - You can configure the triggered activity to block the configuration / consumption dialog or to autoConsume (on the activity midi-qol tab) if preferred.

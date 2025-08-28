@@ -5,26 +5,25 @@ import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { TargetConfirmationConfig } from "./apps/TargetConfirmationConfig.js";
 import { Workflow } from "./Workflow.js";
 
-export let itemRollButtons: boolean;
-export let criticalDamage: string;
-export let criticalDamageGM: string;
-export let nsaFlag: boolean;
-export let coloredBorders: string;
-export let saveRequests = {};
-export let saveTimeouts = {};
-export let addChatDamageButtonsOld: string = "none";
 export let autoFastForwardAbilityRolls: boolean;
 export let autoRemoveTargets: string;
-export let forceHideRoll: boolean;
-export let enableWorkflow: boolean;
+export let coloredBorders: string;
+export let criticalDamage: string;
+export let criticalDamageGM: string;
+export let debounceInterval: number;
 export let dragDropTargeting: boolean;
-export let targetConfirmation: typeof defaultTargetConfirmationSettings;
+export let enableWorkflow: boolean;
+export let forceHideRoll: boolean;
+export let itemRollButtons: boolean;
 export let midiSoundSettings: any = {};
 export let midiSoundSettingsBackup: any = undefined;
-export let DebounceInterval: number;
-export let ReplaceDefaultActivities: boolean = true;
-export let UseWeakReferences: boolean = false;
-export let SaveToChatCard: boolean = false;
+export let nsaFlag: boolean;
+export let replaceDefaultActivities: boolean = true;
+export let saveRequests = {};
+export let saveTimeouts = {};
+export let saveToChatCard: boolean = false;
+export let targetConfirmation: typeof defaultTargetConfirmationSettings;
+export let useWeakReferences: boolean = false;
 
 export const defaultTargetConfirmationSettings = {
   enabled: false,
@@ -120,7 +119,6 @@ class ConfigSettings {
   gmConsumeResource: string = "none";
   gmDoReactions: string = "all";
   gmHide3dDice: boolean = false;
-  gmLateTargeting: string = "none";
   gmRemoveButtons: string = "all";
   hideRollDetails: string = "none";
   ignoreSpellReactionRestriction: boolean = false;
@@ -233,6 +231,7 @@ export function checkRule(rule: keyof (typeof configSettings.optionalRules)) {
 export const checkedModuleList = [
   "about-time",
   "ActiveAuras",
+  "auraeffects",
   "autoanimations",
   "anonymous",
   "babonus",
@@ -244,15 +243,19 @@ export const checkedModuleList = [
   "df-templates",
   "dice-so-nice",
   "effectmacro",
+  "gambits-premades",
   "itemacro",
   /levels/,
   "lib-wrapper",
+  "midi-item-showcase-community",
   "multilevel-tokens",
+  "ready-set-roll-5e",
   "sequencer",
   "simbuls-cover-calculator",
   "socketlib",
   "times-up",
   "tokenmagic",
+  "vision-5e",
   "walledtemplates",
   "warpgate",
   "wjmaia",
@@ -261,7 +264,7 @@ export const checkedModuleList = [
 export const CheckedAuthorsList = [
   "hell",
   "dfreds",
-  // "theripper93", - just too many modules :)
+  "theripper93",
   "ironmonk"
 ]
 
@@ -270,18 +273,19 @@ export function collectSettingData() {
     configSettings,
     midiSoundSettings,
     itemRollButtons,
-    criticalDamage,
-    criticalDamageGM,
-    nsaFlag,
-    coloredBorders,
-    // addChatDamageButtons,
     autoFastForwardAbilityRolls,
     autoRemoveTargets,
-    forceHideRoll,
-    enableWorkflow,
+    coloredBorders,
+    criticalDamage,
+    criticalDamageGM,
+    debounceInterval,
     dragDropTargeting,
-    DebounceInterval,
+    enableWorkflow,
+    forceHideRoll,
+    nsaFlag,
+    saveToChatCard,
     targetConfirmation,
+    useWeakReferences,
     flags: {}
   };
   data.flags["exportSource"] = {
@@ -314,20 +318,25 @@ export async function importSettingsFromJSON(json) {
   }
 
   await game.settings.set("midi-qol", "ConfigSettings", removeOldValues(json.configSettings));
-  // await game.settings.set("midi-qol", "ItemRollButtons", removeOldValues(json.itemRollButtons));
-  await game.settings.set("midi-qol", "CriticalDamage", removeOldValues(json.criticalDamage));
-  await game.settings.set("midi-qol", "CriticalDamageGM", removeOldValues(json.criticalDamageGM));
-  await game.settings.set("midi-qol", "showGM", removeOldValues(json.nsaFlag));
-  await game.settings.set("midi-qol", "ColoredBorders", removeOldValues(json.coloredBorders));
+  await game.settings.set("midi-qol", "MidiSoundSettings", removeOldValues(json.midiSoundSettings) ?? {});
+  await game.settings.set("midi-qol", "TargetConfirmation", removeOldValues(json.targetConfirmation));
+
   // await game.settings.set("midi-qol", "AddChatDamageButtons", removeOldValues(json.addChatDamageButtons));
+  // await game.settings.set("midi-qol", "ItemRollButtons", removeOldValues(json.itemRollButtons));
   await game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", removeOldValues(json.autoFastForwardAbilityRolls));
   await game.settings.set("midi-qol", "AutoRemoveTargets", removeOldValues(json.autoRemoveTargets));
-  await game.settings.set("midi-qol", "ForceHideRoll", removeOldValues(json.forceHideRoll));
-  await game.settings.set("midi-qol", "EnableWorkflow", removeOldValues(json.enableWorkflow));
+  await game.settings.set("midi-qol", "ColoredBorders", removeOldValues(json.coloredBorders));
+  await game.settings.set("midi-qol", "CriticalDamage", removeOldValues(json.criticalDamage));
+  await game.settings.set("midi-qol", "CriticalDamageGM", removeOldValues(json.criticalDamageGM));
+  await game.settings.set("midi-qol", "DebounceInterval", removeOldValues(json.debounceInterval));
   await game.settings.set("midi-qol", "DragDropTarget", removeOldValues(json.dragDropTargeting));
-  await game.settings.set("midi-qol", "DebounceInterval", removeOldValues(json.DebounceInterval));
-  await game.settings.set("midi-qol", "TargetConfirmation", removeOldValues(json.targetConfirmation));
-  await game.settings.set("midi-qol", "MidiSoundSettings", removeOldValues(json.midiSoundSettings) ?? {});
+  await game.settings.set("midi-qol", "EnableWorkflow", removeOldValues(json.enableWorkflow));
+  await game.settings.set("midi-qol", "ForceHideRoll", removeOldValues(json.forceHideRoll));
+  await game.settings.set("midi-qol", "ReplaceDefaultActivities", removeOldValues(json.replaceDefaultActivities));
+  await game.settings.set("midi-qol", "SaveToChatCard", removeOldValues(json.saveToChatCard));
+  await game.settings.set("midi-qol", "showGM", removeOldValues(json.nsaFlag));
+  await game.settings.set("midi-qol", "UseWeakReferences", removeOldValues(json.useWeakReferences));
+  await game.settings.set("midi-qol", "playerControlsInvisibleTokens", removeOldValues(json.playerControlsInvisibleTokens));
   const settingsAppId = game.settings.sheet?.id;
   if (settingsAppId) foundry.applications.instances.get(settingsAppId)?.render(true);
   const exportSource = json.flags?.exportSource;
@@ -550,8 +559,7 @@ export let fetchParams = () => {
   nsaFlag = game.settings.get("midi-qol", "showGM");
   coloredBorders = game.settings.get("midi-qol", "ColoredBorders");
   itemRollButtons = false; // game.settings.get("midi-qol", "ItemRollButtons");
-  // addChatDamageButtonsOld = game.settings.get("midi-qol", "AddChatDamageButtons");
-  if (configSettings.addChatDamageButtons === undefined) configSettings.addChatDamageButtons = addChatDamageButtonsOld ?? "none";
+  if (configSettings.addChatDamageButtons === undefined) configSettings.addChatDamageButtons = "none";
 
   autoFastForwardAbilityRolls = game.settings.get("midi-qol", "AutoFastForwardAbilityRolls");
   autoRemoveTargets = game.settings.get("midi-qol", "AutoRemoveTargets");
@@ -561,12 +569,12 @@ export let fetchParams = () => {
   let debugText: string = game.settings.get("midi-qol", "Debug");
   forceHideRoll = game.settings.get("midi-qol", "ForceHideRoll");
   dragDropTargeting = game.settings.get("midi-qol", "DragDropTarget");
-  DebounceInterval = game.settings.get("midi-qol", "DebounceInterval");
-  ReplaceDefaultActivities = game.settings.get("midi-qol", "ReplaceDefaultActivities");
-  const oldWeakReferences = UseWeakReferences;
-  UseWeakReferences = game.settings.get("midi-qol", "UseWeakReferences") ?? false;
-  if (UseWeakReferences !== oldWeakReferences) Workflow.clearWorkflows();
-  SaveToChatCard = game.settings.get("midi-qol", "SaveToChatCard");
+  debounceInterval = game.settings.get("midi-qol", "DebounceInterval");
+  replaceDefaultActivities = game.settings.get("midi-qol", "ReplaceDefaultActivities");
+  const oldWeakReferences = useWeakReferences;
+  useWeakReferences = game.settings.get("midi-qol", "UseWeakReferences") ?? false;
+  if (useWeakReferences !== oldWeakReferences) Workflow.clearWorkflows();
+  saveToChatCard = game.settings.get("midi-qol", "SaveToChatCard");
   targetConfirmation = game.settings.get("midi-qol", "TargetConfirmation");
   if (configSettings.griddedGridless === undefined) configSettings.griddedGridless = false;
   if (configSettings.gridlessFudge === undefined) configSettings.gridlessFudge = 0;
@@ -697,15 +705,7 @@ const settings = [
     type: Object,
     default: {},
     config: false
-  },
-  {
-    name: "LateTargeting",
-    scope: "client",
-    default: "none",
-    type: String,
-    config: false,
-    // choices: "LateTargetingOptions",
-  },
+  }
 ];
 
 export function readySettingsSetup() {
@@ -1253,7 +1253,7 @@ export const registerSettings = function () {
       Hooks.callAll("midi-qol.StatsUpdated");
     }
   });
-
+  
   game.settings.register("midi-qol", "CriticalDamageGM", {
     name: "midi-qol.CriticalDamageGM.Name",
     // hint: "midi-qol.CriticalDamageGM.Hint",
@@ -1272,18 +1272,6 @@ export const registerSettings = function () {
     type: String,
     config: true,
     choices: criticalDamageChoices,
-    onChange: fetchParams
-  });
-
-  //@ts-expect-error - remove this in v12.5.x??
-  game.settings.register("midi-qol", "AddChatDamageButtons", {
-    name: "midi-qol.AddChatDamageButtons.Name",
-    hint: "midi-qol.AddChatDamageButtons.Hint",
-    scope: "world",
-    default: "none",
-    type: String,
-    config: false,
-    choices: addChatDamageButtonsOptions,
     onChange: fetchParams
   });
 
@@ -1364,7 +1352,7 @@ export const registerSettings = function () {
     default: 0,
     type: Number,
     config: true,
-    onChange: fetchParams
+    onChange: () => {debounceInterval = game.settings.get("midi-qol", "DebounceInterval");}
   });
 
   game.settings.register("midi-qol", "Debug", {

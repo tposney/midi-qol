@@ -55,7 +55,7 @@ export let readyHooks = async () => {
         // console.error("preUpdateChatMessage cached updates for", message.uuid, update);
         // clearUpdatesCache(message.uuid);
         // hideStuffHandler(message, $(message.content), user);
-        if (!foundry.utils.isEmpty(cachedUpdates)) {
+        if (!foundry.utils.isEmpty(cachedUpdates) && false) {
           const insertedUpdates = {};
           Object.keys(cachedUpdates).forEach(key => {
             if (cachedUpdates[key] !== undefined && foundry.utils.getProperty(update, key) === undefined) {
@@ -102,7 +102,6 @@ export let readyHooks = async () => {
     if (userId !== game.user?.id) return true;
     if (userId !== game.user?.id)
       return true;
-
     const shouldCheckTempHP = configSettings.tempHPDamageConcentrationCheck;
     // @ts-expect-error no dnd5e-types
     const relevantHpChange = changes.system?.attributes?.hp;
@@ -226,11 +225,9 @@ export async function restManager(actor: Actor.Implementation, result: { longRes
   if (result.longRest && myExpiredEffects.shortRest.length) await expireEffects(actor, myExpiredEffects.shortRest, { "expiry-reason": "midi-qol:shortRest" });
   if (!result.longRest && myExpiredEffects.shortRest.length) await expireEffects(actor, myExpiredEffects.shortRest, { "expiry-reason": "midi-qol:shortRest" });
   if (result.newDay && myExpiredEffects.newDay.length) await expireEffects(actor, myExpiredEffects.newDay, { "expiry-reason": "midi-qol:newDay" });
-  await removeReactionUsed(actor, true); // remove reaction used for a rest
-  await removeBonusActionUsed(actor, true);
+  if (foundry.utils.getProperty(actor, "flags.midi-qol.actions.reactionsReset") !== "never") await removeReactionUsed(actor, true); // remove reaction used for a rest
+  if (foundry.utils.getProperty(actor, "flags.midi-qol.actions.bonusActionsReset") !== "never")
   await removeActionUsed(actor);
-
-
 }
 
 export function initHooks() {
@@ -248,14 +245,20 @@ export function initHooks() {
     return true;
   });
 
+  const throttledScrollBottom = foundry.utils.throttle(() => {
+    //@ts-expect-error fvtt-missing scrollBottom
+    ui.chat?.scrollBottom({ waitImages: true });
+  } , 150);
+  
   Hooks.on("updateChatMessage", (message, update, options, user) => {
     hideRollUpdate(message, update, options, user);
     if (!update.content) return;
-    //@ts-expect-error fvtt-missing
-    if (message.content && (ui.chat?.isAtBottom && message.author._id !== game.user?._id)) {
-      //@ts-expect-error fvtt-missing scrollBottom
-      setTimeout(() => ui.chat?.scrollBottom({ waitImages: true }), 10);
+    const updateChatMessageStart = Date.now();
+    //@ts-expect-error fvtt-isAtBottom
+    if (message.content && (ui.chat?.isAtBottom)) {
+      throttledScrollBottom();
     }
+    if (debugEnabled > 1) debug("updateChatMessage processing time", Date.now() - updateChatMessageStart);
   });
 
 
@@ -354,7 +357,7 @@ export function initHooks() {
       }
       processActivations();
     } catch (err) {
-      const errMessage = "Activation Automation | preCreateChatMess error";
+      const errMessage = "Activation Automation | preCreateChatMessage error";
       error(errMessage, err);
       TroubleShooter.recordError(err, errMessage);
     } finally {

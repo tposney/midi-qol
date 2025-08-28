@@ -1,11 +1,20 @@
-import { GameSystemConfig, MODULE_ID, MQDamageRollTypes, debugEnabled, i18n, log, warn } from "../midi-qol.js";
-import { configSettings, safeGetGameSetting } from "./settings.js";
-import { getToken } from "./utils.js";
-import { setDamageRollMinTerms } from "./activities/activityHelpers.js";
-import { WorkflowDataFlags } from "./Workflow.js";
+import { GameSystemConfig, MODULE_ID, MQDamageRollTypes, debugEnabled, i18n, log, warn } from "../../midi-qol.js";
+import { configSettings, safeGetGameSetting } from "../settings.js";
+import { getToken } from "../utils.js";
+import { setDamageRollMinTerms } from "../activities/activityHelpers.js";
+import { WorkflowDataFlags } from "../Workflow.js";
+
+export let ChatMessageMidi: ReturnType<typeof defineChatMessageMidiClass>;
+
+export function setupChatMessageMidi() {
+  ChatMessageMidi = defineChatMessageMidiClass(globalThis.dnd5e.documents.ChatMessage5e);
+}
 
 export function defineChatMessageMidiClass(baseClass: ChatMessage.ImplementationClass) {
   return class ChatMessageMidi extends baseClass /*globalThis.dnd5e.documents.ChatMessage5e*/ {
+    static get TRAY_TYPES() {
+      return globalThis.dnd5e.documents.ChatMessage5e.TRAY_TYPES.concat(["midi-damage-application"]);
+    }
     get isRoll() {
       if (this.flags?.[MODULE_ID]?.messageType) return false // do this so that dsn won't trigger
       return super.isRoll;
@@ -269,16 +278,15 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         for (let dType of MQDamageRollTypes) {
           rolls = this.rolls.filter(r => foundry.utils.getProperty(r, "options.midi-qol.rollType") === dType);
           if (!rolls.length) continue;
-          let damageApplication = document.createElement("damage-application");
-          damageApplication.classList.add("dnd5e2");
+          let damageApplication = document.createElement("midi-damage-application");
+          //@ts-expect-error
+          damageApplication.damageType = dType;
           //@ts-expect-error
           damageApplication.damages = game.system.dice.aggregateDamageRolls(rolls, { respectProperties: true }).map(roll => ({
             value: Math.max(0, roll.total),
             type: roll.options.type,
             properties: new Set(roll.options.properties ?? [])
           }));
-          //@ts-expect-error
-          foundry.utils.setProperty(damageApplication.damages, "flags.midi-qol.damageType", dType);
 
           html.querySelector(".message-content")?.appendChild(damageApplication);
           if (!game.user?.isGM) {
@@ -367,7 +375,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     _enrichChatCard(html: HTMLElement) {
       // @ts-expect-error no dnd5e-types
       if (!this.flags?.[MODULE_ID]?.messageType) return super._enrichChatCard(html);
-      if (debugEnabled > 1) warn("Enriching chat card", this.id);
+      if (debugEnabled > 1) log("Enriching chat card", Date.now(), this.id);
       this.maskAttackRolls(html); // This has to run first to stop errors when ChatMessage5e._enrichDamageTooltip runs
 
       // @ts-expect-error no dnd5e-types
@@ -387,6 +395,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           html.querySelectorAll(".midi-attack-roll .dice-total .icons")?.forEach(el => el.remove());
         }
       }
+      if (debugEnabled > 1) log("Finished enriching chat card", Date.now(), this.id);
     }
 
     prepareDerivedData() {

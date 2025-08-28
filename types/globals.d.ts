@@ -16,6 +16,9 @@ import { MidiSounds } from "./module/midi-sounds";
 import { resolveTargetConfirmation, templateTokens } from "./module/activities/activityHelpers";
 import { showUndoWorkflowApp } from "./module/apps/UndoWorkflow";
 import { TroubleShooter } from "./module/apps/TroubleShooter";
+import { ChatLogMidi } from "./module/ChatClasses/ChatLogMidi";
+import { ChatMessageMidi } from "./module/ChatClasses/ChatMessageMidi";
+import { DamageApplicationElementMidi } from "./module/ChatClasses/DamageApplicationElementMidi";
 declare module "fvtt-types/configuration" {
     interface AssumeHookRan {
         init: never;
@@ -24,6 +27,8 @@ declare module "fvtt-types/configuration" {
         interface HookConfig {
             "dae.addSpecialDurations": (daeSpecialDurations: Record<string, string>) => void;
             "dae.setFieldData": (fieldData: Record<string, string[]>) => void;
+            "dae.ready": (api: any) => void;
+            "dae.setupComplete": (api: any) => void;
             "dnd5e.activityConsumption": (activity: Activity, usageConfig: ActivityUseConfiguration, messageConfig: RollMessageConfig, updates: unknown) => boolean | void;
             "dnd5e.applyDamage": (actor: Actor.Implementation, amount: number, options: DamageApplicationOptions) => void;
             "dnd5e.calculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;
@@ -92,11 +97,14 @@ declare module "fvtt-types/configuration" {
             "midi-qol.ready": () => void;
             "midi-qol.removeUndoEntry": (data?: UndoData) => void;
             "midi-qol.setup": (data: typeof globalThis.MidiQOL) => void;
+            "getHeaderControlsActivitySheet": (app: foundry.applications.api.Application, buttons: any[]) => void;
         }
     }
     interface SettingConfig {
         "dnd5e.disableConcentration": boolean;
         "dnd5e.metricLengthUnits": boolean;
+        "dnd5e.attackRollVisibility": string;
+        "dnd5e.challengeVisibility": string;
         "midi-qol.MidiSoundSettings": Record<string, any>;
         "midi-qol.playerControlsInvisibleTokens": boolean;
         "midi-qol.RollStats": Record<string, Stats>;
@@ -118,7 +126,6 @@ declare module "fvtt-types/configuration" {
         "midi-qol.SaveToChatCard": boolean;
         "midi-qol.PreferredGM": string;
         "midi-qol.MidiSoundSettings-backup": Record<string, any>;
-        "midi-qol.LateTargeting": string;
         "midi-qol.notificationVersion": string;
         "midi-qol.splashWarnings": boolean;
         "midi-qol.last-run-version": string;
@@ -179,8 +186,14 @@ declare module "fvtt-types/configuration" {
             "midi-qol"?: {
                 actions?: {
                     reaction?: boolean;
+                    reactionsUsed?: number;
+                    reactionsMax?: number;
+                    reactionsReset?: "eachTurn" | "onTurnStart" | "rest" | "never";
                     action?: boolean;
                     bonus?: boolean;
+                    bonusActionsUsed?: number;
+                    bonusActionsMax?: number;
+                    bonusActionsReset?: "eachTurn" | "onTurnStart" | "rest" | "never";
                     reactionCombatRound?: number;
                 };
                 acBonus?: number;
@@ -555,7 +568,7 @@ declare global {
         createDamageDetail: typeof utils.createDamageDetail;
         createEffects: typeof createEffects;
         DamageOnlyWorkflow: typeof DamageOnlyWorkflow;
-        debouncedUpdate: typeof utils.debouncedUpdate;
+        debouncedUpdate: typeof utils.throttledUpdate;
         debug: typeof debug;
         displayDSNForRoll: typeof utils.displayDSNForRoll;
         doConcentrationCheck: typeof utils.doConcentrationCheck;
@@ -601,6 +614,7 @@ declare global {
         modifyDamageBy: typeof utils.modifyDamageBy;
         moveToken: typeof moveToken;
         moveTokenAwayFromPoint: typeof moveTokenAwayFromPoint;
+        MQdefaultDamageType: string;
         MQfromActorUuid: typeof utils.fromActorUuid;
         MQfromUuid: typeof fromUuidSync;
         MQOnUseOptions: Record<string, string>;
@@ -646,6 +660,11 @@ declare global {
             TrapWorkflow: typeof TrapWorkflow;
             DummyWorkflow: typeof DummyWorkflow;
             DDBGameLogWorkflow: typeof DDBGameLogWorkflow;
+        };
+        ChatClasses: {
+            ChatLogMidi: typeof ChatLogMidi;
+            ChatMessageMidi: typeof ChatMessageMidi;
+            DamageApplicationElementMidi: typeof DamageApplicationElementMidi;
         };
         workflowClass: typeof Workflow;
     };
@@ -732,7 +751,7 @@ declare global {
             }>;
             weaponMasteries: Record<string, {
                 label: string;
-                reference: string;
+                reference?: string;
             }>;
             weaponTypes: Record<string, string>;
         };
@@ -795,13 +814,16 @@ export type CalcDamageOptions = DamageApplicationOptions & {
 export type PreSetupDamageListEntry = {
     actorId: string;
     actorUuid: string;
-    calcDamageOptions: CalcDamageOptions;
     challengeModeScale?: number;
     critical: boolean;
     damageDetail: DamageDescription[];
     damageDetails: {
-        "calcDamageOptions.combinedDamage"?: CalcDamageOptions;
-        "calcDamageOptions.defaultDamage"?: CalcDamageOptions;
+        calcDamageOptions: {
+            combinedDamage?: CalcDamageOptions;
+            defaultDamage?: CalcDamageOptions;
+            otherDamage?: CalcDamageOptions;
+            bonusDamage?: CalcDamageOptions;
+        };
         bonusDamage?: DamageDescription[];
         combinedDamage: DamageDescription[];
         defaultDamage?: DamageDescription[];
@@ -827,6 +849,9 @@ export type PreSetupDamageListEntry = {
     uncannyDodge?: boolean;
 };
 export type DamageListEntry = PreSetupDamageListEntry & {
+    damageSelector: string;
+    calcDamageOptions: CalcDamageOptions;
+    updateOptions: any;
     details: string[];
     healingAdjustedTotalDamage: number;
     hpDamage: number;
@@ -837,6 +862,23 @@ export type DamageListEntry = PreSetupDamageListEntry & {
     tempDamage: number;
     useDamageDetail: boolean;
     wasHit: boolean;
+};
+export type ActivitySave = {
+    ability: Set<string>;
+    dc: {
+        calculation: string;
+        formula: string;
+        value: number;
+    };
+};
+export type ActivityCheck = {
+    ability: string;
+    associated: Set<string>;
+    dc: {
+        calculation: string;
+        formula: string;
+        value: number;
+    };
 };
 export interface Activity extends AnyMutableObject {
     actor?: Actor.Implementation;
@@ -985,23 +1027,8 @@ export interface Activity extends AnyMutableObject {
         condition: string;
         cost?: number;
     };
-    save?: {
-        ability: Set<string>;
-        dc: {
-            calculation: string;
-            formula: string;
-            value: number;
-        };
-    };
-    check?: {
-        ability: Set<string>;
-        associated: Set<string>;
-        dc: {
-            calculation: string;
-            formula: string;
-            value: number;
-        };
-    };
+    save?: ActivitySave;
+    check?: ActivityCheck;
     getAbility?: (associated: string) => string | null;
     hasDamage: boolean;
     hasHealing: boolean;
@@ -1022,9 +1049,10 @@ export interface Activity extends AnyMutableObject {
         triggeredActivityConditionText?: string;
         triggeredActivityTargets: string;
         triggeredActivityRollAs?: string;
-        forceDialog?: boolean;
-        forceAttackDialog?: boolean;
-        forceDamageDialog?: boolean;
+        autoConsume: boolean;
+        forceConsumeDialog?: string;
+        forceRollDialog?: string;
+        forceDamageDialog?: string;
         confirmTargets: string;
         autoTargetType: string;
         autoTargetAction?: string;
@@ -1032,7 +1060,7 @@ export interface Activity extends AnyMutableObject {
         otherActivityCompatible?: boolean;
         identifier?: string;
         displayActivityName?: boolean;
-        rollMode: string;
+        rollMode: keyof CONFIG.Dice.RollModes;
         chooseEffects?: boolean;
         toggleEffect?: boolean;
         ignoreFullCover?: boolean;
@@ -1081,7 +1109,7 @@ type BasicRollConfig = {
         minimum?: number;
         advantage?: boolean;
         disadvantage?: boolean;
-        rollMode?: string;
+        rollMode?: keyof CONFIG.Dice.RollModes;
     };
 };
 export type RollProcessConfig = {
@@ -1101,7 +1129,7 @@ export type RollProcessConfig = {
     isCritical?: boolean;
     workflowOptions?: WorkflowOptions;
     skill?: string;
-    rollMode?: string;
+    rollMode?: keyof CONFIG.Dice.RollModes;
     simulate?: boolean;
     critical?: {
         allow: boolean;
@@ -1114,10 +1142,11 @@ export type RollDialogConfig = {
     options?: {
         rollType?: string;
         default?: {
-            rollMode?: string;
+            rollMode?: keyof CONFIG.Dice.RollModes;
             buildConfig?: unknown;
             rendering?: unknown;
         };
+        attackModeOptions?: string[];
         defaultButton?: string;
         advantageMode?: number;
     };
@@ -1125,7 +1154,7 @@ export type RollDialogConfig = {
 export type RollMessageConfig = {
     create?: boolean;
     document?: ChatMessage.Implementation;
-    rollMode?: string;
+    rollMode?: keyof CONFIG.Dice.RollModes;
     data?: AnyMutableObject;
     hasConsumption?: boolean;
     workflow?: Workflow;
@@ -1175,4 +1204,23 @@ export type D20RollOptions = {
     maximum?: number;
     minimum?: number;
 };
+export type DND5ETargetDescriptor = {
+    name: string;
+    img: string;
+    uuid: string;
+    ac: number | null;
+};
+export type MidiTargetDescriptor = {
+    saved?: boolean;
+    semiSuperSaver?: boolean;
+    superSaver?: boolean;
+    saveMults?: {
+        otherDamage: number;
+        defaultDamage: number;
+        bonusDamage: number;
+    };
+    itemType?: string;
+    uncannyDodge?: boolean;
+};
+export type CombinedTargetDescriptor = MidiTargetDescriptor & DND5ETargetDescriptor;
 export {};

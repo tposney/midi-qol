@@ -1,7 +1,7 @@
 import { warn, debug, log, i18n, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel } from "../midi-qol.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, UseWeakReferences, SaveToChatCard, onUseMacroOptions } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions } from "./settings.js";
 import {
   createDamageDetail,
   processDamageRoll,
@@ -49,7 +49,7 @@ import {
   midiRenderBonusDamageRoll,
   midiRenderOtherDamageRoll,
   midiRenderFormulaRoll,
-  debouncedUpdate,
+  throttledUpdate,
   getCachedDocument,
   clearUpdatesCache,
   getDamageType,
@@ -82,6 +82,7 @@ import {
   getOptionalCountRemainingShortFlag,
   bonusDialog,
   getTargetDescriptor,
+  getThrottlingFunction,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, procAbilityAdvantage } from "./patching.js";
@@ -92,6 +93,7 @@ import { postTemplateConfirmTargets, selectTargets, templateTokens } from "./act
 import { Activity, ActivitySave, ActivityCheck, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
+import { _updateAction } from "../../types/module/utils.js";
 
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event: AugmentedEvent) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
@@ -201,7 +203,7 @@ export class Workflow {
   static addWorkflow(workflow: Workflow) {
     if (Workflow.workflows.has(workflow.id)) console.warn("midi-qol | addWorkflow | Workflow already exists", workflow.id);
     if (Workflow.workflows.has(workflow.id)) Workflow.removeWorkflow(workflow.id);
-    if (UseWeakReferences) Workflow.workflows.set(workflow.id, new WeakRef(workflow));
+    if (useWeakReferences) Workflow.workflows.set(workflow.id, new WeakRef(workflow));
     else Workflow.workflows.set(workflow.id, workflow);
   }
   static getWorkflow(id?: string): Workflow | undefined {
@@ -222,7 +224,7 @@ export class Workflow {
       return workflow.deref();
     } else if (workflow) return workflow;
     const chatCard = fromUuidSync(id);
-    if (chatCard instanceof ChatMessage && SaveToChatCard) {
+    if (chatCard instanceof ChatMessage && saveToChatCard) {
       workflow = Workflow.fromChatCardUuid(id);
       if (workflow) Workflow.workflows.set(id, workflow);
       return workflow;
@@ -263,7 +265,7 @@ export class Workflow {
   async performDebouncedUpdate(chatCard: ChatMessage.Implementation, updates: ChatMessage.UpdateData, immediate = false) {
     // if (updates._id) debugger;
     // ugly hack to force updates into the cache for things that are sets
-    if (SaveToChatCard) {
+    if (saveToChatCard) {
       this.actor = this.actor;
       this.activity = this.activity;
       this.targets = this.targets;
@@ -283,7 +285,7 @@ export class Workflow {
       this.tokenCanSee = this.tokenCanSee;
       this.tokenCanSense = this.tokenCanSense;
     }
-    return await debouncedUpdate(chatCard, updates, immediate);
+    return await throttledUpdate(chatCard, updates, this.throttleChatMessageUpdates, immediate);
   }
 
   itemCardUuid: string | undefined;
@@ -291,14 +293,14 @@ export class Workflow {
   #actor: Actor.Implementation | undefined;
   get actor(): Actor.Implementation {
     if (this.#actor) return this.#actor;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#actor = fromUuidSync(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.actor)) as Actor.Implementation;
     }
     return this.#actor!;
   }
   set actor(actor: Actor.Implementation) {
     this.#actor = actor;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.actor]: actor?.uuid }, "midi-qol");
     }
   }
@@ -306,14 +308,14 @@ export class Workflow {
   #abort: boolean | undefined;
   get abort() {
     if (this.#abort !== undefined) return this.#abort;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#abort = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.abort);
     }
     return this.#abort ?? false;
   }
   set abort(abort: boolean | undefined) {
     this.#abort = abort;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { abort }, "midi-qol");
     }
   }
@@ -321,14 +323,14 @@ export class Workflow {
   #itemUseComplete: boolean | undefined;
   get itemUseComplete() {
     if (this.#itemUseComplete !== undefined) return this.#itemUseComplete;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#itemUseComplete = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.itemUseComplete);
     }
     return this.#itemUseComplete ?? false;
   }
   set itemUseComplete(itemUseComplete: boolean | undefined) {
     this.#itemUseComplete = !!itemUseComplete;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.itemUseComplete]: itemUseComplete }, "midi-qol");
     }
   }
@@ -336,7 +338,7 @@ export class Workflow {
   #token: Token.Implementation | undefined;
   get token(): Token.Implementation | undefined {
     if (this.#token) return this.#token;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const tokenUuid = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.token);
       this.#token = getToken(tokenUuid);
     }
@@ -344,7 +346,7 @@ export class Workflow {
   }
   set token(token: Token.Implementation | undefined) {
     this.#token = token;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.token]: token?.document?.uuid ?? "" }, "midi-qol");
     }
   }
@@ -352,14 +354,14 @@ export class Workflow {
   #workflowOptions: WorkflowOptions | undefined;
   get workflowOptions(): WorkflowOptions {
     if (this.#workflowOptions) return this.#workflowOptions;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#workflowOptions = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.workflowOptions);
     }
     return this.#workflowOptions ?? {};
   }
   set workflowOptions(workflowOptions: WorkflowOptions) {
     this.#workflowOptions = workflowOptions;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.workflowOptions]: workflowOptions }, "midi-qol");
     }
   }
@@ -369,7 +371,7 @@ export class Workflow {
   #activity: Activity | undefined;
   get activity(): Activity {
     if (this.#activity) return this.#activity;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       // If fetching the activity we need to redo scaling for the fetched activity.
       const activityUuid = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.activity);
       this.#activity = fromUuidSync(activityUuid) as Activity;
@@ -389,7 +391,7 @@ export class Workflow {
   }
   set activity(activity: Activity) {
     this.#activity = activity;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.activity]: activity.uuid }, "midi-qol");
     }
   }
@@ -397,7 +399,7 @@ export class Workflow {
   #item: Item.Implementation | undefined;
   get item(): Item.Implementation {
     if (this.#item) return this.#item;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const itemUuid = this.chatCard?.getFlag("dnd5e", "item")?.uuid;
       this.#item = fromUuidSync(itemUuid) as Item.Implementation;
       if (!this.#item) {
@@ -411,7 +413,7 @@ export class Workflow {
   }
   set item(item: Item.Implementation) {
     this.#item = item;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { ["dnd5e.item.uuid"]: item?.uuid });
     }
   }
@@ -422,7 +424,7 @@ export class Workflow {
   #speaker: ChatMessage.SpeakerData | undefined = undefined;
   get speaker(): ChatMessage.SpeakerData {
     if (this.#speaker) return this.#speaker;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#speaker = this.chatCard.speaker;
     }
     return this.#speaker!;
@@ -430,7 +432,7 @@ export class Workflow {
   set speaker(speaker: ChatMessage.SpeakerData) {
     // TODO do an equals check on the stored and passed speaker
     this.#speaker = speaker;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCache(this.id, { speaker });
     }
   }
@@ -454,7 +456,7 @@ export class Workflow {
   }
   set targets(targets: Set<TokenOrDocument>) {
     this.#targets = targets?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const targetDocuments = Array.from(targets ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
       const targetUpdates = targetDocuments.map(t => ({ uuid: t.uuid, name: t.name }));
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.targets]: targetUpdates }, "midi-qol");
@@ -473,7 +475,7 @@ export class Workflow {
   }
   set targetsCanSee(targetsCanSee: Set<TokenOrDocument> | undefined) {
     this.#targetsCanSee = targetsCanSee?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const targetDocuments = Array.from(targetsCanSee ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
       const targetUpdates = targetDocuments.map(t => t.uuid);
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.targetsCanSee]: targetUpdates }, "midi-qol");
@@ -491,7 +493,7 @@ export class Workflow {
   }
   set targetsCanSense(targetsCanSense: Set<TokenOrDocument> | undefined) {
     this.#targetsCanSense = targetsCanSense?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const targetDocuments = Array.from(targetsCanSense ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
       const targetUpdates = targetDocuments.map(t => t.uuid);
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.targetsCanSense]: targetUpdates }, "midi-qol");
@@ -510,7 +512,7 @@ export class Workflow {
   }
   set tokenCanSee(tokenCanSee: Set<TokenOrDocument> | undefined) {
     this.#tokenCanSee = tokenCanSee?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const targetDocuments = Array.from(tokenCanSee ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
       const targetUpdates = targetDocuments.map(t => t.uuid);
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.tokenCanSee]: targetUpdates }, "midi-qol");
@@ -529,7 +531,7 @@ export class Workflow {
   }
   set tokenCanSense(tokenCanSense: Set<TokenOrDocument> | undefined) {
     this.#tokenCanSense = tokenCanSense?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const targetDocuments = Array.from(tokenCanSense ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
       const targetUpdates = targetDocuments.map(t => t.uuid);
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.tokenCanSense]: targetUpdates }, "midi-qol");
@@ -539,14 +541,14 @@ export class Workflow {
   #templateUuid: string | undefined;
   get templateUuid(): string | undefined {
     if (this.#templateUuid) return this.#templateUuid;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#templateUuid = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.templateUuid);
     }
     return this.#templateUuid;
   }
   set templateUuid(templateUuid: string) {
     this.#templateUuid = templateUuid;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.templateUuid]: templateUuid }, "midi-qol");
     }
   }
@@ -572,7 +574,7 @@ export class Workflow {
   #AoO: boolean | undefined; // Is the attack an attack of opportunity
   get AoO() {
     if (this.#AoO !== undefined) return this.#AoO;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#AoO = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.AoO);
     }
     return this.#AoO ?? false;
@@ -616,14 +618,14 @@ export class Workflow {
   #suspended: boolean | undefined;
   get suspended() {
     if (this.#suspended !== undefined) return this.#suspended;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#suspended = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.suspended);
     }
     return this.#suspended ?? false;
   }
   set suspended(suspended: boolean) {
     this.#suspended = suspended;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.suspended]: suspended }, "midi-qol");
     }
   }
@@ -631,7 +633,7 @@ export class Workflow {
   #currentAction: WorkflowState;
   get currentAction() {
     if (this.#currentAction) return this.#currentAction;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
 
       const [className, currentActionName] = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.currentAction) ?? ["none", "none"];
       if (className !== "none") {
@@ -650,7 +652,7 @@ export class Workflow {
   }
   set currentAction(currentAction: WorkflowState) {
     this.#currentAction = currentAction;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.currentAction]: [this.constructor.name, currentAction?.name] }, "midi-qol");
     }
   }
@@ -658,14 +660,14 @@ export class Workflow {
   #isCritical: boolean | undefined;
   get isCritical() {
     if (this.#isCritical !== undefined) return this.#isCritical;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#isCritical = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.isCritical);
     }
     return this.#isCritical ?? false;
   }
   set isCritical(isCritical: boolean) {
     this.#isCritical = isCritical;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.isCritical]: isCritical }, "midi-qol");
     }
   }
@@ -673,14 +675,14 @@ export class Workflow {
   #isFumble: boolean | undefined;
   get isFumble() {
     if (this.#isFumble !== undefined) return this.#isFumble;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#isFumble = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.isFumble);
     }
     return this.#isFumble ?? false;
   }
   set isFumble(isFumble: boolean) {
     this.#isFumble = isFumble;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.isFumble]: isFumble }, "midi-qol");
     }
   }
@@ -688,14 +690,14 @@ export class Workflow {
   #d20AttackRoll: number | undefined;
   get d20AttackRoll() {
     if (this.#d20AttackRoll) return this.#d20AttackRoll;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#d20AttackRoll = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.d20AttackRoll);
     }
     return this.#d20AttackRoll ?? -1;
   }
   set d20AttackRoll(d20AttackRoll: number) {
     this.#d20AttackRoll = d20AttackRoll;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.d20AttackRoll]: d20AttackRoll }, "midi-qol");
     }
   }
@@ -712,7 +714,7 @@ export class Workflow {
   }
   set hitTargets(hitTargets: Set<TokenOrDocument> | undefined) {
     this.#hitTargets = hitTargets?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const targetDocuments = Array.from(hitTargets ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
       const hitTargetUpdates = targetDocuments.map(t => t.uuid);
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.hitTargets]: hitTargetUpdates }, "midi-qol");
@@ -731,7 +733,7 @@ export class Workflow {
   }
   set hitTargetsEC(hitTargetsEC: Set<TokenOrDocument> | undefined) {
     this.#hitTargetsEC = hitTargetsEC?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const targetDocuments = Array.from(hitTargetsEC ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
       const hitTargetUpdates = targetDocuments.map(t => t.uuid);
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.hitTargetsEC]: hitTargetUpdates }, "midi-qol");
@@ -741,7 +743,7 @@ export class Workflow {
   #attackRoll: Roll | undefined;
   get attackRoll(): Roll | undefined {
     if (this.#attackRoll) return this.#attackRoll;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const rollData = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.attackRoll);
       this.#attackRoll = rollData ? Roll.fromData(rollData) as Roll : undefined;
     }
@@ -750,7 +752,7 @@ export class Workflow {
   set attackRoll(attackRoll: Roll | undefined) {
     if (attackRoll) attackRoll.data = {};
     this.#attackRoll = attackRoll;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const attackRollData = attackRoll?.toJSON();
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.attackRoll]: attackRollData }, "midi-qol");
     }
@@ -759,14 +761,14 @@ export class Workflow {
   #diceRoll: number | undefined;
   get diceRoll() {
     if (this.#diceRoll) return this.#diceRoll;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#diceRoll = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.diceRoll);
     }
     return this.#diceRoll ?? 0;
   }
   set diceRoll(diceRoll: number) {
     this.#diceRoll = diceRoll;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.diceRoll]: diceRoll }, "midi-qol");
     }
   }
@@ -774,14 +776,14 @@ export class Workflow {
   #attackTotal: number | undefined;
   get attackTotal() {
     if (this.#attackTotal) return this.#attackTotal;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#attackTotal = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.attackTotal);
     }
     return this.#attackTotal ?? 0;
   }
   set attackTotal(attackTotal: number) {
     this.#attackTotal = attackTotal;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.attackTotal]: attackTotal }, "midi-qol");
     }
   }
@@ -791,16 +793,24 @@ export class Workflow {
   #attackRollCount: number | undefined;
   get attackRollCount() {
     if (this.#attackRollCount) return this.#attackRollCount;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#attackRollCount = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.attackRollCount);
     }
     return this.#attackRollCount ?? 0;
   }
   set attackRollCount(attackRollCount: number) {
     this.#attackRollCount = attackRollCount;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.attackRollCount]: attackRollCount }, "midi-qol");
     }
+  }
+
+  get dnd5eFlags(): any | undefined {
+    return foundry.utils.getProperty(this.chatCard, "flags.dnd5e") as any | undefined;
+  }
+  set dnd5eFlags(dnd5eFlags: any | undefined) {
+    if (this.chatCard)
+      addUpdatesCache(this.id, { "flags.dnd5e": dnd5eFlags });
   }
 
   get targetDescriptors(): Array<DND5ETargetDescriptor> | undefined {
@@ -910,7 +920,7 @@ export class Workflow {
   #rolls: Roll[] | undefined;
   get rolls(): Roll[] {
     if (this.#rolls) return this.#rolls;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#rolls = this.chatCard.rolls as Roll[];
     }
     return this.#rolls ?? [];
@@ -919,7 +929,7 @@ export class Workflow {
   #damageRolls: Roll[] | undefined;
   get damageRolls(): Roll[] {
     if (this.#damageRolls) return this.#damageRolls;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const rollData = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.damageRolls);
       this.#damageRolls = rollData ? rollData.map(r => Roll.fromData(r) as Roll) : undefined;
     }
@@ -927,7 +937,7 @@ export class Workflow {
   }
   set damageRolls(damageRolls: Roll[]) {
     this.#damageRolls = damageRolls;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.damageRolls]: damageRolls.map(r => r.toJSON()) }, "midi-qol");
     }
   }
@@ -935,7 +945,7 @@ export class Workflow {
   #bonusDamageRolls: Roll[] | undefined;
   get bonusDamageRolls(): Roll[] | undefined {
     if (this.#bonusDamageRolls) return this.#bonusDamageRolls;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const rollData = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.bonusDamageRolls);
       this.#bonusDamageRolls = rollData ? rollData.map(r => Roll.fromData(r) as Roll) : undefined;
 
@@ -944,7 +954,7 @@ export class Workflow {
   }
   set bonusDamageRolls(bonusDamageRolls: Roll[] | undefined) {
     this.#bonusDamageRolls = bonusDamageRolls;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.bonusDamageRolls]: bonusDamageRolls?.map(r => r.toJSON()) }, "midi-qol");
     }
   }
@@ -952,7 +962,7 @@ export class Workflow {
   #otherDamageRolls: Roll[] | undefined;
   get otherDamageRolls(): Roll[] | undefined {
     if (this.#otherDamageRolls) return this.#otherDamageRolls;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const rollData = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.otherDamageRolls);
       this.#otherDamageRolls = rollData ? rollData.map(r => Roll.fromData(r) as Roll) : undefined;
     }
@@ -960,7 +970,7 @@ export class Workflow {
   }
   set otherDamageRolls(otherDamageRolls: Roll[] | undefined) {
     this.#otherDamageRolls = otherDamageRolls;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.otherDamageRolls]: otherDamageRolls?.map(r => r.toJSON()) }, "midi-qol");
     }
   }
@@ -968,7 +978,7 @@ export class Workflow {
   #extraRolls: Roll[] | undefined;
   get extraRolls(): Roll[] | undefined {
     if (this.#extraRolls) return this.#extraRolls;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const rollData = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.extraRolls);
       this.#extraRolls = rollData ? rollData.map(r => Roll.fromData(r) as Roll) : undefined;
     }
@@ -976,7 +986,7 @@ export class Workflow {
   }
   set extraRolls(extraRolls: Roll[] | undefined) {
     this.#extraRolls = extraRolls;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.extraRolls]: this.#extraRolls?.map(d => d.toJSON()) }, "midi-qol");
     }
   }
@@ -984,7 +994,7 @@ export class Workflow {
   #utilityRolls: Roll[] | undefined;
   get utilityRolls(): Roll[] | undefined {
     if (this.#utilityRolls) return this.#utilityRolls;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const rollData = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.utilityRolls);
       this.#utilityRolls = rollData ? rollData.map(r => Roll.fromData(r) as Roll) : undefined;
     }
@@ -992,7 +1002,7 @@ export class Workflow {
   }
   set utilityRolls(utilityRolls: Roll[] | undefined) {
     this.#utilityRolls = utilityRolls;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.utilityRolls]: utilityRolls?.map(d => { d.data = {}; return d.toJSON() }) }, "midi-qol");
     }
   }
@@ -1000,7 +1010,7 @@ export class Workflow {
   #saveRolls: Roll[] | undefined;
   get saveRolls(): Roll[] {
     if (this.#saveRolls) return this.#saveRolls;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       //@ts-expect-error can't figure out how to tell it this exists
       const D20Roll = CONFIG.Dice.D20Roll;
       this.#saveRolls = (this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.saveRolls))?.map(d => new D20Roll(d.formula, d));
@@ -1009,7 +1019,7 @@ export class Workflow {
   }
   set saveRolls(saveRolls: Roll[]) {
     this.#saveRolls = saveRolls;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.saveRolls]: saveRolls.map(d => ({ formula: d.formula, options: d.options })) }, "midi-qol");
     }
   }
@@ -1017,14 +1027,14 @@ export class Workflow {
   #damageTotal: number | undefined;
   get damageTotal() {
     if (this.#damageTotal) return this.#damageTotal;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#damageTotal = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.damageTotal);
     }
     return this.#damageTotal ?? 0;
   }
   set damageTotal(damageTotal: number) {
     this.#damageTotal = damageTotal;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.damageTotal]: damageTotal }, "midi-qol");
     }
   }
@@ -1032,14 +1042,14 @@ export class Workflow {
   #rawDamageDetail: DamageDescription[] | undefined;
   get rawDamageDetail(): DamageDescription[] {
     if (this.#rawDamageDetail) return this.#rawDamageDetail;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#rawDamageDetail = damageDetailsFromObject(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.rawDamageDetail));
     }
     return this.#rawDamageDetail ?? [];
   }
   set rawDamageDetail(rawDamageDetail: DamageDescription[]) {
     this.#rawDamageDetail = rawDamageDetail;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.rawDamageDetail]: damageDetailToObject(rawDamageDetail) }, "midi-qol");
     }
   }
@@ -1047,14 +1057,14 @@ export class Workflow {
   #rawOtherDamageDetail: DamageDescription[] | undefined = undefined;
   get rawOtherDamageDetail(): DamageDescription[] {
     if (this.#rawOtherDamageDetail) return this.#rawOtherDamageDetail;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#rawOtherDamageDetail = damageDetailsFromObject(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.rawOtherDamageDetail));
     }
     return this.#rawOtherDamageDetail ?? [];;
   }
   set rawOtherDamageDetail(rawOtherDamageDetail: DamageDescription[]) {
     this.#rawOtherDamageDetail = rawOtherDamageDetail;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.rawOtherDamageDetail]: damageDetailToObject(rawOtherDamageDetail) }, "midi-qol");
     }
   }
@@ -1062,14 +1072,14 @@ export class Workflow {
   #rawBonusDamageDetail: DamageDescription[] | undefined = undefined;
   get rawBonusDamageDetail(): DamageDescription[] {
     if (this.#rawBonusDamageDetail) return this.#rawBonusDamageDetail;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#rawBonusDamageDetail = damageDetailsFromObject(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.rawBonusDamageDetail));
     }
     return this.#rawBonusDamageDetail ?? [];
   }
   set rawBonusDamageDetail(rawBonusDamageDetail: DamageDescription[]) {
     this.#rawBonusDamageDetail = rawBonusDamageDetail;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.rawBonusDamageDetail]: damageDetailToObject(rawBonusDamageDetail) }, "midi-qol");
     }
   }
@@ -1077,28 +1087,28 @@ export class Workflow {
   #damageDetail: DamageDescription[] | undefined = undefined;
   get damageDetail(): DamageDescription[] {
     if (this.#damageDetail) return this.#damageDetail;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#damageDetail = damageDetailsFromObject(this.chatCard?.getFlag(MODULE_ID, "damageDetail"));
     }
     return this.#damageDetail ?? [];
   }
   set damageDetail(damageDetail: DamageDescription[]) {
     this.#damageDetail = damageDetail;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { damageDetail: damageDetailToObject(damageDetail) }, "midi-qol");
     }
   }
   #otherDamageDetail: DamageDescription[] | undefined = undefined;
   get otherDamageDetail(): DamageDescription[] {
     if (this.#otherDamageDetail) return this.#otherDamageDetail;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#otherDamageDetail = damageDetailsFromObject(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.otherDamageDetail));
     }
     return this.#otherDamageDetail ?? [];;
   }
   set otherDamageDetail(otherDamageDetail: DamageDescription[]) {
     this.#otherDamageDetail = otherDamageDetail;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.otherDamageDetail]: damageDetailToObject(otherDamageDetail) }, "midi-qol");
     }
   }
@@ -1106,14 +1116,14 @@ export class Workflow {
   #bonusDamageDetail: DamageDescription[] | undefined = undefined;
   get bonusDamageDetail(): DamageDescription[] {
     if (this.#bonusDamageDetail) return this.#bonusDamageDetail;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#bonusDamageDetail = damageDetailsFromObject(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.bonusDamageDetail));
     }
     return this.#bonusDamageDetail ?? [];
   }
   set bonusDamageDetail(bonusDamageDetail: DamageDescription[]) {
     this.#bonusDamageDetail = bonusDamageDetail;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.bonusDamageDetail]: damageDetailToObject(bonusDamageDetail) }, "midi-qol");
     }
   }
@@ -1123,14 +1133,14 @@ export class Workflow {
   #damageRollCount: number | undefined;
   get damageRollCount(): number {
     if (this.#damageRollCount) return this.#damageRollCount;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#damageRollCount = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.damageRollCount);
     }
     return this.#damageRollCount ?? 0;
   }
   set damageRollCount(damageRollCount: number) {
     this.#damageRollCount = damageRollCount;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.damageRollCount]: damageRollCount }, "midi-qol");
     }
   }
@@ -1138,14 +1148,14 @@ export class Workflow {
   #defaultDamageType: string | undefined;
   get defaultDamageType(): string {
     if (this.#defaultDamageType) return this.#defaultDamageType;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#defaultDamageType = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.defaultDamageType);
     }
     return this.#defaultDamageType ?? "";
   }
   set defaultDamageType(defaultDamageType: string) {
     this.#defaultDamageType = defaultDamageType;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.defaultDamageType]: defaultDamageType }, "midi-qol");
     }
   }
@@ -1153,14 +1163,14 @@ export class Workflow {
   #effectsAlreadyExpired: string[] | undefined = undefined;
   get effectsAlreadyExpired(): string[] {
     if (this.#effectsAlreadyExpired) return this.#effectsAlreadyExpired;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#effectsAlreadyExpired = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.effectsAlreadyExpired);
     }
     return this.#effectsAlreadyExpired ?? [];
   }
   set effectsAlreadyExpired(effectsAlreadyExpired: string[]) {
     this.#effectsAlreadyExpired = effectsAlreadyExpired;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.effectsAlreadyExpired]: effectsAlreadyExpired }, "midi-qol");
     }
   }
@@ -1179,7 +1189,7 @@ export class Workflow {
   }
   set saves(saves: Set<TokenOrDocument> | undefined) {
     this.#saves = saves?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const targetDocuments = Array.from(saves ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
       const saveUpdates = targetDocuments.map(t => t.uuid);
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.saves]: saveUpdates }, "midi-qol");
@@ -1198,7 +1208,7 @@ export class Workflow {
   }
   set superSavers(superSavers: Set<TokenOrDocument> | undefined) {
     this.#superSavers = superSavers?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const targetDocuments = Array.from(superSavers ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
       const saveUpdates = targetDocuments.map(t => t.uuid);
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.superSavers]: saveUpdates }, "midi-qol");
@@ -1216,7 +1226,7 @@ export class Workflow {
   }
   set semiSuperSavers(semiSuperSavers: Set<TokenOrDocument> | undefined) {
     this.#semiSuperSavers = semiSuperSavers?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const targetDocuments = Array.from(semiSuperSavers ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
       const saveUpdates = targetDocuments.map(t => t.uuid);
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.semiSuperSavers]: saveUpdates }, "midi-qol");
@@ -1235,7 +1245,7 @@ export class Workflow {
   }
   set failedSaves(failedSaves: Set<TokenOrDocument> | undefined) {
     this.#failedSaves = failedSaves?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const targetDocuments = Array.from(failedSaves ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
       const saveUpdates = targetDocuments.map(t => t.uuid);
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.failedSaves]: saveUpdates }, "midi-qol");
@@ -1254,7 +1264,7 @@ export class Workflow {
   }
   set fumbleSaves(fumbleSaves: Set<TokenOrDocument> | undefined) {
     this.#fumbleSaves = fumbleSaves?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const targetDocuments = Array.from(fumbleSaves ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
       const saveUpdates = targetDocuments.map(t => t.uuid);
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.fumbleSaves]: saveUpdates }, "midi-qol");
@@ -1272,7 +1282,7 @@ export class Workflow {
   }
   set criticalSaves(criticalSaves: Set<TokenOrDocument> | undefined) {
     this.#criticalSaves = criticalSaves?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const targetDocuments = Array.from(criticalSaves ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
       const saveUpdates = targetDocuments.map(t => t.uuid);
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.criticalSaves]: saveUpdates }, "midi-qol");
@@ -1290,7 +1300,7 @@ export class Workflow {
   }
   set advantageSaves(advantageSaves: Set<TokenOrDocument> | undefined) {
     this.#advantageSaves = advantageSaves?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       const targetDocuments = Array.from(advantageSaves ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
       const saveUpdates = targetDocuments.map(t => t.uuid);
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.advantageSaves]: saveUpdates }, "midi-qol");
@@ -1334,7 +1344,7 @@ export class Workflow {
   }
   set ammunitionOnUseMacros(ammunitionOnUseMacros: OnUseMacros | undefined) {
     this.#ammunitionOnUseMacros = ammunitionOnUseMacros;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.ammunitionOnUseMacros]: ammunitionOnUseMacros }, "midi-qol");
     }
   }
@@ -1342,14 +1352,14 @@ export class Workflow {
   #attackAdvAttribution: Set<string> | undefined;
   get attackAdvAttribution() {
     if (this.#attackAdvAttribution) return this.#attackAdvAttribution;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#attackAdvAttribution = new Set(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.attackAdvAttribution));
     }
     return this.#attackAdvAttribution ?? new Set();
   }
   set attackAdvAttribution(attackAdvAttribution: Set<string>) {
     this.#attackAdvAttribution = attackAdvAttribution;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.attackAdvAttribution]: Array.from(attackAdvAttribution) }, "midi-qol");
     }
   }
@@ -1357,14 +1367,14 @@ export class Workflow {
   #advReminderAttackAdvAttribution: Set<string> | undefined;
   get advReminderAttackAdvAttribution() {
     if (this.#advReminderAttackAdvAttribution) return this.#advReminderAttackAdvAttribution;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#advReminderAttackAdvAttribution = new Set(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.advReminderAttackAdvAttribution));
     }
     return this.#advReminderAttackAdvAttribution ?? new Set();
   }
   set advReminderAttackAdvAttribution(advReminderAttackAdvAttribution: Set<string>) {
     this.#advReminderAttackAdvAttribution = advReminderAttackAdvAttribution;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.advReminderAttackAdvAttribution]: Array.from(advReminderAttackAdvAttribution) }, "midi-qol");
     }
   }
@@ -1372,14 +1382,14 @@ export class Workflow {
   #noOptionalRules: boolean | undefined;
   get noOptionalRules() {
     if (this.#noOptionalRules) return this.#noOptionalRules;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       this.#noOptionalRules = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.noOptionalRules);
     }
     return this.#noOptionalRules ?? false;
   }
   set noOptionalRules(noOptionalRules: boolean) {
     this.#noOptionalRules = noOptionalRules;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.noOptionalRules]: noOptionalRules }, "midi-qol");
     }
   }
@@ -1416,14 +1426,14 @@ export class Workflow {
   #needTemplate: boolean | undefined;
   get needTemplate() {
     if (this.#needTemplate) return this.#needTemplate;
-    if (this.chatCard && SaveToChatCard) {
+    if (this.chatCard && saveToChatCard) {
       this.#needTemplate = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.needTemplate);
     }
     return this.#needTemplate ?? (activityHasAreaTarget(this.activity) && !activityHasAutoPlaceTemplate(this.activity));
   }
   set needTemplate(needTemplate: boolean) {
     this.#needTemplate = needTemplate;
-    if (this.itemCardUuid && SaveToChatCard) {
+    if (this.itemCardUuid && saveToChatCard) {
       addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.needTemplate]: needTemplate }, "midi-qol");
     }
   }
@@ -1598,7 +1608,7 @@ export class Workflow {
     castLevel?: number;
   } | undefined;
 
-
+  throttleChatMessageUpdates: undefined | ((document: foundry.abstract.Document.Any, updates: ChatMessage.UpdateData) => Promise<void>);
   // TODO: type options
   constructor(
     actor: Actor.Implementation | null /* Actor5e*/,
@@ -1607,7 +1617,8 @@ export class Workflow {
     targets: Set<TokenOrDocument> | TokenOrDocument[] | null,
     options: WorkflowConstructorOptions = { chatCardUuid: undefined, storeWorkflow: true, item: undefined }
   ) {
-    if (options.chatCardUuid && SaveToChatCard) {
+    this.workflowStartTime = Date.now();
+    if (options.chatCardUuid && saveToChatCard) {
       this.itemCardUuid = options.chatCardUuid;
       this.id = options.chatCardUuid;
     } else {
@@ -1708,6 +1719,7 @@ export class Workflow {
     }
     this.itemUseComplete = false;
     this.kickStart = false;
+    this.throttleChatMessageUpdates = getThrottlingFunction();
   }
 
   public someEventKeySet() {
@@ -1736,6 +1748,7 @@ export class Workflow {
 
   static async removeItemCardConfirmRollButton(itemCardUuid: string) {
     const chatMessage = getCachedDocument(itemCardUuid) as ChatMessage.Implementation;
+    const workflow = Workflow.getWorkflow(itemCardUuid);
     let content = chatMessage?.content && foundry.utils.duplicate(chatMessage.content);
     if (!content) return;
     const confirmMissRe = /<button class="midi-qol-confirm-damage-roll-complete-miss" data-action="confirmDamageRollCompleteMiss">[^<]*?<\/button>/;
@@ -1747,20 +1760,20 @@ export class Workflow {
     const cancelRe = /<button class="midi-qol-confirm-damage-roll-cancel" data-action="confirmDamageRollCancel">[^<]*?<\/button>/;
     content = content?.replace(cancelRe, "");
     // TODO come back and make this cached.
-    return await debouncedUpdate(chatMessage, { content });
+    return await throttledUpdate(chatMessage, { content }, workflow?.throttleChatMessageUpdates, false);
   }
 
   static async removeItemCardButtons(itemCardUuid: string | undefined, { removeAllButtons = false, removeAttackButtons = true, removeDamageButtons = false, removeDnD5eButtons = false, removeConfirmButtons = false, removeAllDnd5eButtons = false, removeDnd5eSaveButtons = false, removeDnd5eTemplateButtons = false } = {}) {
     try {
+      const workflow = Workflow.getWorkflow(itemCardUuid);
       const chatMessage = getCachedDocument(itemCardUuid) as ChatMessage.Implementation;
       let content = chatMessage?.content && foundry.utils.duplicate(chatMessage.content);
       if (!content) return;
-      const workflow = Workflow.getWorkflow(itemCardUuid);
       let allowRemoveAll = !(workflow && workflow.activity?.target.affects.type === "" && workflow.targets.size === 0)
       if (removeAllButtons && allowRemoveAll) {
         const buttonRe = /<button[\s\S]*?<\/button>/gi;
         content = content.replace(buttonRe, "");
-        return debouncedUpdate(chatMessage, { content });
+        return await throttledUpdate(chatMessage, { content }, workflow?.throttleChatMessageUpdates, false);
       } else {
         if (removeAttackButtons) {
           const attackRe = /<div class="midi-qol-attack-buttons[^"]*">[\s\S]*?<\/div>/;
@@ -1800,12 +1813,7 @@ export class Workflow {
           const cancelRe = /<button class="midi-qol-confirm-damage-roll-cancel" data-action="confirmDamageRollCancel">[^<]*?<\/button>/;
           content = content?.replace(cancelRe, "");
         }
-        // TODO work out what to do if we are a damage only workflow and betters rolls is active - display update wont work.
-
-        // const otherAttackRe = /<button data-action="attack">[^<]*<\/button>/;
-
-        // Come back and make this cached.
-        return debouncedUpdate(chatMessage, { content });
+        return await throttledUpdate(chatMessage, { content }, workflow?.throttleChatMessageUpdates, true && false);
       }
     } catch (err) {
       const message = `removeItemCardButtons`;
@@ -1841,9 +1849,6 @@ export class Workflow {
         clearUpdatesCache(workflow.itemCardUuid);
       } else {
         await Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
-        // await Workflow.removeItemCardConfirmRollButton(workflow.itemCardUuid);
-        // await workflow.removeEffectsButton();
-        // TODO: Is this for sure necessary? A 1ms timeout feels like it can't possibly be accomplishing anything
         setTimeout(() => {
           const chatMessageElt = document?.querySelector(`[data-message-id="${workflow.itemCardId ?? "XXX"}"]`);
           if (chatMessageElt) chatMessageElt.querySelectorAll(".collapsible").forEach(ce => { if (!ce.classList.contains("collapsed")) ce.classList.add("collapsed") });
@@ -2015,7 +2020,7 @@ export class Workflow {
           this.suspended = true;
           // this.currentAction = this.WorkflowState_Suspend;
           if (debugEnabled > 0) warn(`${this.workflowName} ${this.nameForState(this.currentAction)} -> suspended Workflow ${this.id}`);
-          await this.performDebouncedUpdate(this.chatCard, { ["flags.midi-qol." + WorkflowDataFlags.suspended]: true });
+          // await this.performDebouncedUpdate(this.chatCard, { ["flags.midi-qol." + WorkflowDataFlags.suspended]: true });
           break;
         }
         newState = nextState;
@@ -2049,7 +2054,6 @@ export class Workflow {
 
   async WorkflowState_Start(context: WorkflowContext = {}): Promise<WorkflowState> {
     this.selfTargeted = false;
-    this.workflowStartTime = Date.now();
     if (this.targets.size === 0 && this.activity.target?.affects.type === "self") {
       this.targets = await getOrCreateTokenForActorAsSet(this.actor);
       this.hitTargets = new Set();
@@ -2925,7 +2929,7 @@ export class Workflow {
     }
     if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookId);
     if (this.activity.target?.affects.type !== "" || this.targets.size !== 0) {
-      if (configSettings.autoItemEffects === "applyRemove") await this.removeEffectsButton();
+      // moved inside RollFinished if (configSettings.autoItemEffects === "applyRemove") await this.removeEffectsButton();
     }
     // TODO see if we can delete the workflow - I think that causes problems for Crymic
     /*
@@ -2934,12 +2938,13 @@ export class Workflow {
       ui.chat?.scrollBottom();
     }, 100);
     */
+
     return this.WorkflowState_Completed;
   }
 
   async WorkflowState_Completed(context: WorkflowContext = {}): Promise<WorkflowState> {
     if (this.itemCardUuid && this.chatCard) {
-      if (this.damageList && SaveToChatCard && this.itemCardUuid) {
+      if (this.damageList && saveToChatCard && this.itemCardUuid) {
         const damageListData = prepareDamageListToJSON(this.damageList);
         // @ts-expect-error deleting something that is "required" in other contexts
         damageListData.forEach((di => delete di.damageDetails))
@@ -2949,9 +2954,11 @@ export class Workflow {
     }
     if (context.attackRoll) return this.WorkflowState_AttackRollComplete;
     if (context.damageRoll) return this.WorkflowState_ConfirmRoll;
+    if (debugEnabled > 0) warn("Workflow complete ", this.id, "elapsed time", Date.now() - (this.workflowStartTime ?? 0));
+    let shouldTrigger = false;
     if (this.activity.midiProperties?.triggeredActivityId && !this.aborted) {
       let activity = this.activity
-      let shouldTrigger = true;
+      shouldTrigger = true;
       let possibleTriggerActivity = await this.activity.getTriggeredActivity();
       while (possibleTriggerActivity) {
         if (possibleTriggerActivity.id === activity.id) {
@@ -2961,7 +2968,7 @@ export class Workflow {
         }
         possibleTriggerActivity = await possibleTriggerActivity.getTriggeredActivity();
       }
-      
+
       let triggeredActivity = await this.activity.getTriggeredActivity();
       if (shouldTrigger && triggeredActivity) {
         if (shouldTrigger) {
@@ -3017,7 +3024,7 @@ export class Workflow {
             foundry.utils.setProperty(usage, "midiOptions.isCritical", this.isCritical);
             foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringWorkflowId", this.id);
             foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringActivityUuid", this.activity.uuid);
-            await completeActivityUse(triggeredActivity, usage, { }, {});
+            await completeActivityUse(triggeredActivity, usage, {}, {});
           }
         }
       }
@@ -3063,7 +3070,7 @@ export class Workflow {
       "1Reaction",
     ];
     await this.expireTargetEffects(specialExpiries)
-    const chatMessage = this.chatCard;
+    let chatMessage = this.chatCard;
     let selfTarget = this.token ?? getOrCreateTokenForActor(this.actor);
     if (!this.hitTargetsDisplayed && this.targets?.size > 0 && chatMessage && (this.activity.effects?.length || this.otherActivity?.effects?.length)) {
       this.hitDisplayData = {};
@@ -3094,6 +3101,7 @@ export class Workflow {
         };
       }
       await this.displayHits(chatMessage.whisper.length > 0, true);
+      chatMessage = this.chatCard
     }
     let content = chatMessage?.content && foundry.utils.duplicate(chatMessage?.content);
     let contentChanged = false;
@@ -3106,9 +3114,21 @@ export class Workflow {
     }
     // Once the roll if finished cannot place template again so remove the button
     if (content) {
-      const searchRe = /<button[^>]*?data-action="placeTemplate"[\s\S]*?<\/button>/;
-      content = content.replace(searchRe, "");
-      contentChanged = true;
+      let isEmanationTargeting = activityHasAutoPlaceTemplate(this.activity) || activityHasEmanationNoTemplate(this.activity);
+      let isAoETargeting = !isEmanationTargeting && activityHasAreaTarget(this.activity);
+      if (isAoETargeting && !isEmanationTargeting) {
+        const searchRe = /<button[^>]*?data-action="placeTemplate"[\s\S]*?<\/button>/;
+        content = content.replace(searchRe, "");
+        contentChanged = true;
+      }
+    }
+    if (this.activity.target?.affects.type !== "" || this.targets.size !== 0) {
+      if (configSettings.autoItemEffects === "applyRemove" && content) {
+        const buttonRe = /<button[^>]*?data-action="midiApplyEffects"[\s\S]*?<\/button>/;
+        let content = foundry.utils.duplicate(chatMessage.content);
+        content = content?.replace(buttonRe, "");
+        contentChanged = true;
+      }
     }
     if (contentChanged) {
       const update: ChatMessage.UpdateData = {
@@ -4373,7 +4393,7 @@ export class Workflow {
     ...(this.utilityRoll ? [this.utilityRoll] : []),
     ...(this.extraRolls ?? [])];
     // const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
-    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true);
+    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true && false);
   }
 
   async displayAttackRoll(displayOptions: { GMOnlyAttackRoll?: boolean } = {}) {
@@ -4448,7 +4468,7 @@ export class Workflow {
     }
     // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
     const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
-    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true);
+    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true && false);
   }
 
   async displayDamageRolls() {
@@ -4730,7 +4750,7 @@ export class Workflow {
     let searchRe = /<div[^>]*?class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
     let replaceString = `<div class="midi-qol-saves-display"><div data-item-id="${this.item.id}">${saveContent}</div><div class="end-midi-qol-saves-display">`
     content = content.replace(searchRe, replaceString);
-    await this.performDebouncedUpdate(chatMessage, { content, flags: { "midi-qol": { type: MESSAGE_TYPES.SAVES } } }, true);
+    await this.performDebouncedUpdate(chatMessage, { content, flags: { "midi-qol": { type: MESSAGE_TYPES.SAVES } } }, true && false);
   }
   async displaySaves(whisper: boolean = false) {
     let { fullDamageText, halfDamageText, noDamageText } = this.computeSaveFlavors();
@@ -4804,7 +4824,7 @@ export class Workflow {
           },
           style: CONST.CHAT_MESSAGE_STYLES.OTHER
         };
-        await this.performDebouncedUpdate(chatMessage, update/*, true*/);
+        await this.performDebouncedUpdate(chatMessage, update as any, true && false); // TODO fix the definitions
       }
     }
   }
@@ -5628,6 +5648,7 @@ export class Workflow {
     }
     return saveDisplayFlavor;
   }
+
   monksSavingCheck(message: ChatMessage.Implementation, update: ChatMessage.UpdateData, options: ChatMessage.Database.UpdateOptions, userId: string) {
     if (!update.flags || !update.flags["monks-tokenbar"]) return true;
     const updateFlags = update.flags["monks-tokenbar"];
@@ -6770,10 +6791,10 @@ export class ActiveDefenceWorkflow extends Workflow {
           reaction = await doReactions(target, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
           //@ts-expect-error no dnd5e-types
           const acChange = target.actor.system.attributes.ac.value - savedAC;
-        rollTotal += (reaction.ac ?? 0) + acChange; // deal with bonus ac if any.
-        results[i] = await new BasicRoll(`${rollTotal}`, {}, { type: "activeDefence" }).evaluate();
+          rollTotal += (reaction.ac ?? 0) + acChange; // deal with bonus ac if any.
+          results[i] = await new BasicRoll(`${rollTotal}`, {}, { type: "activeDefence" }).evaluate();
 
-        // if (coverBonus === FULL_COVER) isHit = false; // bonusAC will only be FULL_COVER if cover bonus checking is enabled.
+          // if (coverBonus === FULL_COVER) isHit = false; // bonusAC will only be FULL_COVER if cover bonus checking is enabled.
         }
       } else if (!isHit && this.activity.attack && this.attackRoll && target !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`)) {
         const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
@@ -6793,9 +6814,9 @@ export class ActiveDefenceWorkflow extends Workflow {
       }
       isHit = this.isCritical || rollTotal < (this.activeDefenceDC ?? 0);
       this.activeDefenceRolls[getTokenDocument(target)?.uuid ?? ""] = results[i];
-      if (isHit) 
+      if (isHit)
         this.hitTargets.add(target);
-      else 
+      else
         this.hitTargets.delete(target);
       if (game.user?.isGM) log(`Active defence: ${target.name} rolled ${rollTotal} vs attack DC ${this.activeDefenceDC}`, results[i]);
       i++;
@@ -6826,7 +6847,7 @@ export class ActiveDefenceWorkflow extends Workflow {
       }
     };
     const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
-    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true);
+    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true && false);
   }
 }
 export class UserWorkflow extends Workflow {

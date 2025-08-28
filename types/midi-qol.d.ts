@@ -48,7 +48,6 @@ export declare let i18nFormat: (key: string, data?: {}) => string;
 export declare function getStaticID(id: string): string;
 export declare let setDebugLevel: (debugText: string) => void;
 export declare function busyWait(milliSeconds: number): Promise<unknown>;
-export declare let MQdefaultDamageType: string;
 export declare let midiFlags: string[];
 export declare let allAttackTypes: string[];
 export declare let gameStats: RollStats;

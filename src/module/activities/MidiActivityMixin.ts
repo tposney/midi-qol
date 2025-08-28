@@ -1,4 +1,4 @@
-import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { Activity, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn, busyWait } from "../../midi-qol.js";
 import { socketlibSocket } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, Workflow } from "../Workflow.js";
@@ -256,18 +256,17 @@ export let MidiActivityMixin = Base => {
       const baseFlags = super.messageFlags;
       // cannot change targets once the workflow has started....
       if (baseFlags.dnd5e?.targets) delete baseFlags.dnd5e.targets;
-      /*
       const targets = new Map();
-      if (this.targets) {
-        for (const token of this.targets) {
+      if (this.workflow?.targets) {
+        for (const token of this.workflow.targets) {
           const { name } = token;
           const { img, system, uuid } = token.actor ?? {};
           //@ts-expect-error no dnd5e types
           if (uuid) targets.set(uuid, { name, img, uuid, ac: system?.attributes?.ac?.value });
         }
         baseFlags.targets = Array.from(targets.values());
-        
-      } */
+ 
+      }
       return baseFlags;
     }
     async getTriggeredActivity() {
@@ -277,14 +276,6 @@ export let MidiActivityMixin = Base => {
       if (!activity) activity = this.item.system.activities.find(a => a.identifier === this.midiProperties?.triggeredActivityId);
       if (!activity) activity = await fromUuid(this.midiProperties?.triggeredActivityId);
       return activity as MidiActivityMixin | undefined;
-    }
-
-    get triggeredActivityX() {
-      // @ts-expect-error no dnd5e-types
-      let activity = this.item.system.activities.find(a => a.id === this.midiProperties?.triggeredActivityId) as MidiActivityMixin | undefined;
-      if (activity) return activity;
-      activity = fromUuidSync(this.midiProperties?.triggeredActivityId) as MidiActivityMixin | undefined;
-      return activity
     }
 
     static metadata = foundry.utils.mergeObject(
@@ -696,27 +687,35 @@ export let MidiActivityMixin = Base => {
           // If the activity damage has any choice force configuration dialog
           // if (dialog.configure) config.midiOptions.isCritical = false;
           preRollDamageHookId = Hooks.once("dnd5e.preRollDamageV2", (rollConfig, dialogConfig, messageConfig) => {
+            const targetDescriptors = foundry.utils.getProperty(messageConfig, "data.flags.dnd5e.targets") as Array<DND5ETargetDescriptor>;
+            if (targetDescriptors && config.workflow) config.workflow.targetDescriptors = targetDescriptors;
             if (keys.critical) rollConfig.isCritical = true;
             else if (keys.normal) rollConfig.isCritical = false;
             else if (!dialogConfig.configure) rollConfig.isCritical ||= rollConfig.midiOptions?.isCritical;
             if (this.damage?.parts.some(part => part.types.size > 1)) dialogConfig.configure = true;
             ///@ts-expect-error no dnd5e-types
-            else if (rollConfig.ammunition?.system.damage.base?.types.size ?? 0 > 1) dialogConfig.configure = true;
+            else if ((rollConfig.ammunition?.system.damage.base?.types.size ?? 0) > 1) dialogConfig.configure = true;
             else if ((this.healing?.types?.size ?? 0) > 1) dialogConfig.configure = true;
-
             if (dialogConfig.configure) {
               dialogConfig.options ??= {};
               if (rollConfig.isCritical || rollConfig.midiOptions?.isCritical) {
                 dialogConfig.options.defaultButton = "critical";
               } else dialogConfig.options.defaultButton = "normal";
             } return true;
+
           });
           rollDamageHookId = Hooks.once("dnd5e.rollDamageV2", rolls => {
             // @ts-expect-error no dnd5e-types
             if (rolls[0] && config.workflow && config.midiOptions?.updateWorkflow !== false) config.workflow.isCritical = rolls[0].options.isCritical;
           });
+          const rollMode = safeGetGameSetting("core", "rollMode");
           message.create ??= false;
-
+          const showChatDamageCard = game.user?.isGM && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
+          if (showChatDamageCard) {
+            // Show a chat card for damage rolls if the players are not going to see the midi card.
+            message.create = true;
+            foundry.utils.setProperty(message, "data.flags.midi-qol.gmHide", true); // since the gm will see the midi card hide the attack card for the author
+          }
           result = await super.rollDamage(config, dialog, message);
           if (!result) { // user backed out of roll 
             config.workflow.currentAction = config.workflow.WorkflowState_WaitForDamageRoll;

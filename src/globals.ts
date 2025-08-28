@@ -16,6 +16,9 @@ import { MidiSounds } from "./module/midi-sounds";
 import { resolveTargetConfirmation, templateTokens } from "./module/activities/activityHelpers";
 import { showUndoWorkflowApp } from "./module/apps/UndoWorkflow";
 import { TroubleShooter } from "./module/apps/TroubleShooter";
+import { ChatLogMidi } from "./module/ChatClasses/ChatLogMidi";
+import { ChatMessageMidi } from "./module/ChatClasses/ChatMessageMidi";
+import { DamageApplicationElementMidi } from "./module/ChatClasses/DamageApplicationElementMidi";
 
 declare module "fvtt-types/configuration" {
   interface AssumeHookRan {
@@ -25,6 +28,8 @@ declare module "fvtt-types/configuration" {
     interface HookConfig {
       "dae.addSpecialDurations": (daeSpecialDurations: Record<string, string>) => void;
       "dae.setFieldData": (fieldData: Record<string, string[]>) => void;
+      "dae.ready": (api: any) => void;
+      "dae.setupComplete": (api: any) => void;
       "dnd5e.activityConsumption": (activity: Activity, usageConfig: ActivityUseConfiguration, messageConfig: RollMessageConfig, updates: unknown) => boolean | void;
       "dnd5e.applyDamage": (actor: Actor.Implementation, amount: number, options: DamageApplicationOptions) => void;
       "dnd5e.calculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;
@@ -77,6 +82,7 @@ declare module "fvtt-types/configuration" {
     "dnd5e.disableConcentration": boolean;
     "dnd5e.metricLengthUnits": boolean;
     "dnd5e.attackRollVisibility": string;
+    "dnd5e.challengeVisibility": string;
     "midi-qol.MidiSoundSettings": Record<string, any>;
     "midi-qol.playerControlsInvisibleTokens": boolean;
     "midi-qol.RollStats": Record<string, Stats>;
@@ -98,7 +104,6 @@ declare module "fvtt-types/configuration" {
     "midi-qol.SaveToChatCard": boolean;
     "midi-qol.PreferredGM": string;
     "midi-qol.MidiSoundSettings-backup": Record<string, any>;
-    "midi-qol.LateTargeting": string;
     "midi-qol.notificationVersion": string;
     "midi-qol.splashWarnings": boolean;
     "midi-qol.last-run-version": string;
@@ -162,9 +167,16 @@ declare module "fvtt-types/configuration" {
       };
       "midi-qol"?: {
         actions?: {
-          reaction?: boolean;
+          // This really should be structured but actions.reaction is used in other modules and macros
+          reaction?: boolean,
+          reactionsUsed?: number, 
+          reactionsMax?: number;
+          reactionsReset?: "eachTurn"| "onTurnStart" | "rest" | "never"; // When reactions reset default: onTurnStart
           action?: boolean;
           bonus?: boolean;
+          bonusActionsUsed?: number;
+          bonusActionsMax?: number;
+          bonusActionsReset?: "eachTurn" | "onTurnStart" | "rest" | "never"; // When bonus actions reset default: onTurnStart
           reactionCombatRound?: number;
         };
         acBonus?: number;
@@ -533,7 +545,7 @@ declare global {
     createDamageDetail: typeof utils.createDamageDetail;
     createEffects: typeof createEffects;
     DamageOnlyWorkflow: typeof DamageOnlyWorkflow;
-    debouncedUpdate: typeof utils.debouncedUpdate;
+    debouncedUpdate: typeof utils.throttledUpdate;
     debug: typeof debug;
     displayDSNForRoll: typeof utils.displayDSNForRoll;
     doConcentrationCheck: typeof utils.doConcentrationCheck;
@@ -626,6 +638,11 @@ declare global {
       DummyWorkflow: typeof DummyWorkflow;
       DDBGameLogWorkflow: typeof DDBGameLogWorkflow;
     };
+    ChatClasses: {
+      ChatLogMidi: typeof ChatLogMidi,
+      ChatMessageMidi: typeof ChatMessageMidi,
+      DamageApplicationElementMidi: typeof DamageApplicationElementMidi
+    }
     workflowClass: typeof Workflow,
   }
   interface CONFIG {
@@ -1031,7 +1048,7 @@ export interface Activity extends AnyMutableObject {
     otherActivityCompatible?: boolean;
     identifier?: string;
     displayActivityName?: boolean;
-    rollMode: string;
+    rollMode: keyof CONFIG.Dice.RollModes;
     chooseEffects?: boolean;
     toggleEffect?: boolean;
     ignoreFullCover?: boolean;
@@ -1084,7 +1101,7 @@ type BasicRollConfig = {
     minimum?: number;
     advantage?: boolean;
     disadvantage?: boolean;
-    rollMode?: string;
+    rollMode?: keyof CONFIG.Dice.RollModes;
   }
 }
 
@@ -1105,7 +1122,7 @@ export type RollProcessConfig = {
   isCritical?: boolean;
   workflowOptions?: WorkflowOptions
   skill?: string;
-  rollMode?: string;
+  rollMode?: keyof CONFIG.Dice.RollModes;
   simulate?: boolean;
   critical?: {
     allow: boolean;
@@ -1118,7 +1135,7 @@ export type RollDialogConfig = {
   options?: {
     rollType?: string;
     default?: {
-      rollMode?: string;
+      rollMode?: keyof CONFIG.Dice.RollModes;
       buildConfig?: unknown;
       rendering?: unknown;
     };
@@ -1130,7 +1147,7 @@ export type RollDialogConfig = {
 export type RollMessageConfig = {
   create?: boolean;
   document?: ChatMessage.Implementation;
-  rollMode?: string;
+  rollMode?: keyof CONFIG.Dice.RollModes;
   data?: AnyMutableObject;
   hasConsumption?: boolean;
   workflow?: Workflow;

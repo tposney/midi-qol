@@ -1,6 +1,6 @@
 import { debug, warn, i18n, error, debugEnabled, i18nFormat, MODULE_ID, MESSAGE_TYPES } from "../midi-qol.js";
 import { DDBGameLogWorkflow, Workflow, WorkflowDataFlags } from "./Workflow.js";
-import { nsaFlag, coloredBorders, configSettings, forceHideRoll, safeGetGameSetting, SaveToChatCard } from "./settings.js";
+import { nsaFlag, coloredBorders, configSettings, forceHideRoll, safeGetGameSetting, saveToChatCard } from "./settings.js";
 import { playerFor, playerForActor, doOverTimeEffect, isInCombat, isAutoFastAttack } from "./utils.js";
 import { preferredActiveGM, socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -168,7 +168,8 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
   const messageActorOwner = messageActor?.isOwner;
   if (debugEnabled > 1) debug("hideStuffHandler message: ", message.id, message)
   // Hide rolls which are blind and not the GM if force hide is true
-  if (forceHideRoll && message.blind && !game.user?.isGM) {
+  if ((forceHideRoll && message.blind && !game.user?.isGM) 
+    || (foundry.utils.getProperty(message, "flags.midi-qol.gmHide") && game.user?.isGM)) {
     html.style.display = "none";
     return;
   }
@@ -188,7 +189,7 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
     html.querySelectorAll<HTMLButtonElement>(`[data-action="rollCheck"]`).forEach((el) => { el.disabled = false });
   }
 
-  if (!message.isAuthor && !(messageActorOwner && SaveToChatCard)) {
+  if (!message.isAuthor && !(messageActorOwner && saveToChatCard)) {
     html.querySelectorAll<HTMLDivElement>(".midi-qol-attack-buttons").forEach((el) => { el.style.display = "none" });
     html.querySelectorAll<HTMLDivElement>(".midi-qol-damage-buttons").forEach((el) => { el.style.display = "none" });
     html.querySelectorAll<HTMLButtonElement>(".midi-qol-otherDamage-button").forEach((el) => { el.style.display = "none" });
@@ -203,7 +204,7 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
   })
   if (game.user?.isGM) {
     html.querySelectorAll(".midi-qol-playerTokenName").forEach(el => el.remove());
-    if (configSettings.hidePlayerDamageCard && $(html).find(".midi-qol-player-damage-card").length) html.style.display = "none";
+    if (configSettings.hidePlayerDamageCard && foundry.utils.getProperty(message, "flags.midi-qol.playerDamageCard")) html.style.display = "none";
 
     html.querySelectorAll<HTMLDivElement>(".midi-qol-hits-display").forEach((el) => el.style.display = "");
     html.querySelectorAll<HTMLElement>(".midi-qol-target-npc-Player").forEach(el => el.style.display = "none");

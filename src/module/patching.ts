@@ -141,7 +141,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
   let postBuildSkillRollConfigHoodId: number | undefined;
   //@ts-expect-error
   let result: CONFIG.Dice.D20Roll[] = [];
-  const saveRollMode = safeGetGameSetting("core", "rollMode");
+  const saveRollMode: keyof CONFIG.Dice.RollModes = safeGetGameSetting("core", "rollMode");
   try {
     message.data ??= {};
     let skillId = config.skill;
@@ -163,7 +163,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     await procAdvantageSkill(this, skillId ?? "", config.midiOptions);
 
     let success: boolean | undefined = undefined;
-    let rollMode: string = message.rollMode ?? config.rollMode ?? safeGetGameSetting("core", "rollMode");
+    let rollMode: keyof CONFIG.Dice.RollModes = message.rollMode ?? config.rollMode ?? safeGetGameSetting("core", "rollMode");
     const blindSkillRoll = configSettings.rollSkillsBlind.includes("all") || configSettings.rollSkillsBlind.includes(skillId ?? "");
     if (blindSkillRoll && [CONST.DICE_ROLL_MODES.PUBLIC, "roll", CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode)) {
       rollMode = CONST.DICE_ROLL_MODES.BLIND;
@@ -231,8 +231,10 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
       result.forEach(r => r.options.success = success);
     }
     if (message.create !== false && result) {
-      if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true)
+      if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
+        const cls = getDocumentClass("ChatMessage");
         await result[0].toMessage(message.data, { rollMode });
+      }
     }
     if (skillId) await expireRollEffect.bind(this)("Skill", skillId, success);
 
@@ -320,6 +322,11 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
   // Remove existing critical damage
   this.terms = this.terms.filter(t => !t.options.criticalBonusDamage && !t.options.criticalFlatBonus);
   this.terms.forEach(term => {
+    if (term._number instanceof Roll) {
+      // Complex number term.
+      if (!term._number.isDeterministic) return;
+      if (!term._number._evaluated) term._number.evaluateSync();
+    }
     term.number = term.options.baseNumber ?? term.number;
     if (term.options.baseModifiers) {
       term.modifiers = foundry.utils.deepClone(term.options.baseModifiers);
@@ -514,7 +521,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
   let overtimeActorUuid: string | undefined;
   let preRollAbilityHookId: number | undefined;
   let rollAbilityHookId: number | undefined;
-  const saveRollMode = safeGetGameSetting("core", "rollMode");
+  const saveRollMode: keyof CONFIG.Dice.RollModes = safeGetGameSetting("core", "rollMode");
   let result: Roll[] | undefined;
   let type: "SavingThrow" | "AbilityCheck" = "SavingThrow";
   try {
@@ -598,7 +605,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
       result = [result];
     }
 
-    let rollMode: string = message.rollMode ?? safeGetGameSetting("core", "rollMode");
+    let rollMode: keyof CONFIG.Dice.RollModes = message.rollMode ?? (safeGetGameSetting("core", "rollMode") as keyof CONFIG.Dice.RollModes);
     if ([CONST.DICE_ROLL_MODES.PUBLIC, "roll", CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode)) {
       let blindRollSetting: boolean | undefined;
       if (rollType === "check")
@@ -608,7 +615,6 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
       if (blindRollSetting) {
         rollMode = CONST.DICE_ROLL_MODES.BLIND;
         game.settings.set("core", "rollMode", CONST.DICE_ROLL_MODES.BLIND);
-        // result.forEach(r => r.options.rollMode = CONST.DICE_ROLL_MODES.BLIND);
       }
 
     }
@@ -636,8 +642,9 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     }
 
     if (message.create !== false && result) {
-      //@ts-expect-error no dnd5e-types
-      CONFIG.Dice.D20Roll.toMessage(result, message.data, { rollMode, create: true });
+      const cls = getDocumentClass("ChatMessage");
+      const msg = cls.create(message.data, { rollMode });
+      // CONFIG.Dice.D20Roll.toMessage(result, message.data, { rollMode, create: true });
     }
     if (saveRollMode) game.settings.set("core", "rollMode", saveRollMode);
     if (abilityId) await expireRollEffect.bind(this)(rollType, abilityId, success);
@@ -1002,6 +1009,7 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
   libWrapper.register(MODULE_ID, "dnd5e.applications.actor.BaseActorSheet.prototype._prepareItem", _prepareItem, "WRAPPER");
+  /* replaced by extending DamageApplicationElement
   currentDAcalculateDamage = window?.customElements?.get("damage-application")?.prototype.calculateDamage;
   if (window?.customElements?.get("damage-application")?.prototype?.calculateDamage) {
     currentDAcalculateDamage = window?.customElements?.get("damage-application")?.prototype?.calculateDamage;
@@ -1013,6 +1021,7 @@ export function initPatching() {
     //@ts-expect-error
     window.customElements.get("damage-application").prototype.getTargetOptions = _DAgetTargetOptions;
   }
+  */
 }
 function _prepareItem(wrapped, item, ctx) {
   wrapped(item, ctx);
@@ -1601,11 +1610,13 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     result![0] = await bonusCheck(this, result![0], "check", config.ability ?? "");
     if (!result) return result;
     if (chatMessage !== false && result) {
-      const messageData: any = { rolls: result, ...message.data, rollMode };
-      //@ts-expect-error
-      CONFIG.Dice.D20Roll._prepareMessageData(result, messageData);
-      messageData.template = "modules/midi-qol/templates/roll.html";
-      await result[0].toMessage(messageData, { rollMode });
+      const cls = getDocumentClass("ChatMessage")
+      await cls.create(message.data as any, { rollMode })
+      // const messageData: any = { rolls: result, ...message.data, rollMode };
+      //@ ts-e xpect-error
+      // CONFIG.Dice.D20Roll._prepareMessageData(result, messageData);
+      // messageData.template = "modules/midi-qol/templates/roll.html";
+      // await result[0].toMessage(messageData, { rollMode });
     }
   } catch (err) {
     const message = "midi-qol | error in rollToolCheck";

@@ -3,30 +3,35 @@ import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { configSettings } from "./settings.js";
 
 export const DAE_REQUIRED_VERSION = "13.0.4";
-export const REQUIRED_MODULE_VERSIONS = {
+export const USEFUL_MODULE_VERSIONS = {
   "about-time": "0.0", 
   "anonymous": "0.0.0",
-  "chris-premades": "0.5.52",
+  "auraeffects": "1.2.5",
+  "chris-premades": "1.3.0",
   "condition-lab-triggler": "1.4",
   "dae": DAE_REQUIRED_VERSION,
   "ddb-game-log": "0.0.0",
   "dfreds-convenient-effects": "5.0.4",
   "dice-so-nice": "4.1.1", 
   "epic-rolls-5e": "3.1.1",
-  "levels": "3.0.6", 
+  "gambits-premades": "2.0.1",
+  "levels": "6.0.0", 
   "levelsautocover": "1.4",
   "levelsvolumetrictemplates": "0.0.0",
   "lib-changelogs": "0.0.0",
   "lib-wrapper": "1.3.5",
   "magicitems": "4.0.0",
+  "midi-item-showcase-community": "1.5",
   "monks-tokenbar": "1.0.55",
-  "multilevel-tokens": "1.6.0",
+  "multilevel-tokens": "13.0.0",
   "perceptive": "3.2.1",
   "ready-set-roll-5e": "3.4.3",
+  "seasons-and-stars": "0.11.0",
   "simbuls-cover-calculator":  "1.0.2",
   "socketlib": "0.0",
-  "times-up": "11.3.0",
+  "times-up": "13.0.0",
   "tokencover": "0.6.0",
+  "vision-5e": "3.0.6",
   "walledtemplates": "0.0.0",
   "wjmais": "0.0.0",
 };
@@ -35,20 +40,20 @@ export let installedModules = new Map<string, boolean>();
 export function getModuleVersion(moduleName: string): string {
   let modVer = game.modules.get(moduleName)?.version || "0.0.0";
   if (!/[0-9\.]+/.test(modVer)) {
-    console.warn(`midi-qol | module ${moduleName} has unrecognised version ${modVer} using ${REQUIRED_MODULE_VERSIONS[moduleName]} instead}`);
-    modVer = REQUIRED_MODULE_VERSIONS[moduleName];
+    console.warn(`midi-qol | module ${moduleName} has unrecognised version ${modVer} using ${USEFUL_MODULE_VERSIONS[moduleName]} instead}`);
+    modVer = USEFUL_MODULE_VERSIONS[moduleName];
   }
   return modVer;
 }
 export let setupModules = () => {
-  for (let name of Object.keys(REQUIRED_MODULE_VERSIONS)) { 
+  for (let name of Object.keys(USEFUL_MODULE_VERSIONS)) { 
     const modVer = getModuleVersion(name);
-    const neededVer = REQUIRED_MODULE_VERSIONS[name];
+    const neededVer = USEFUL_MODULE_VERSIONS[name];
     const isValidVersion = foundry.utils.isNewerVersion(modVer, neededVer) || !foundry.utils.isNewerVersion(neededVer, modVer);
     if (!installedModules.get(name)) installedModules.set(name, game.modules.get(name)?.active && isValidVersion) 
     if (!installedModules.get(name)) {
       if (game.modules.get(name)?.active) {
-        const message = `midi-qol requires ${name} to be of version ${REQUIRED_MODULE_VERSIONS[name]} or later, but it is version ${game.modules.get(name)?.version}`;
+        const message = `midi-qol requires ${name} to be of version ${USEFUL_MODULE_VERSIONS[name]} or later, but it is version ${game.modules.get(name)?.version}`;
         error(message);
         TroubleShooter.recordError(new Error(message), message);
       } else warn(`optional module ${name} not active - some features disabled`)
