@@ -868,17 +868,17 @@
   "midi-qol.WaitingForPreviousWorkflow": "Rolagem anterior de {name} não foi completada.",
   "midi-qol.ResolvePreviousWorkflow": "Escolha o que fazer com a rolagem anterior",
   "midi-qol.ConfirmTargetOptions": {
-    "default": "Configurações do Midi QOL",
+    "default": "Configurações Midi",
     "always": "Sempre",
     "never": "Nunca"
   },
   "midi-qol.SaveDamageOptions": {
-    "default": "Configurações do Midi QOL",
+    "default": "Configurações Midi",
     "fulldam": "Dano Total",
     "halfdam": "Metade do Dano",
     "nodam": "Sem Dano"
   },
-  "midi-qol.MidiSettings": "Configurações do Midi QOL",
+  "midi-qol.MidiSettings": "Configurações Midi",
   "midi-qol.ConcentrationIncapacitatedConditionCheck.Name": "Remover Concentração Se Incapacitado",
   "midi-qol.ConcentrationIncapacitatedConditionCheck.Hint": "Atordoado, Incapacitado, Inconsciente, Morto, Paralisado e Petrificado removem a Concentração.",
   "midi-qol.AutoCompleteWorkflow.Name": "Completar Workflow se Exigido",
