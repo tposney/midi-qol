@@ -177,8 +177,9 @@
 },
 "midi-qol.autoCheckHitOptions": {
     "none": "Nessuno",
-    "all": "Controllo - tutti vedono il risultato",
-    "whisper": "Controllo - solo il DM vede"
+    "all": "Check - tutti vedono il risultato",
+    "whisper": "Check - solo il DM vede risultati",
+    "gmOnly": "Check - solo il DM vede tutto"
 },
 "midi-qol.clickOptions": {
     "off": "Spento",
@@ -198,10 +199,11 @@
 },
 "midi-qol.autoCheckSavesOptions": {
     "none": "Spento",
-    "allNoRoll": "Salvataggio - Tutti vedono solo il risultato",
-    "all": "Salvataggio - Tutti vedono il risultato + il Tiro Salvezza",
-    "whisper": "Salvataggio - solo il DM vede",
-    "allShow": "Salvataggio - Tutti vedono il Risultato + i Tiri"
+    "allNoRoll": "TS - Tutti vedono solo il risultato",
+    "all": "TS - Tutti vedono il risultato + il Tiro Salvezza",
+    "whisper": "TS - solo il DM vede",
+    "allShow": "TS - Tutti vedono il Risultato + i Tiri",
+    "gmOnly": "TS - solo il DM vede tutto"
 },
 "midi-qol.rangeTargetOptions": {
     "none": "Nessuno",
@@ -551,6 +553,8 @@
 "midi-qol.NoChangelogs": "Midi-qol supporta e raccomanda i moduli ChangeLogs o Module Manager+ per mostrarti eventuali modifiche dalla tua ultima aggiornamento",
 "midi-qol.ActiveDefenceString": "Difesa Attiva",
 "midi-qol.ActiveDefence.Name": "Difesa Attiva",
+"midi-qol.ActiveDefenceModifier.Name": "Modificatore Difesa Attiva",
+"midi-qol.ActiveDefenceModifier.Hint": "La CD di difesa attiva sarà bonus di attacco + (22 - questo modificatore) e il tiro di difesa attiva sarà CA - modificatore + 1d20. <br>Il valore non è importante, scegli solo ciò che ti fa sembrare buono il tiro. <br> I valori suggeriti sono <strong>12</strong>, 10 o 0",
 "midi-qol.ActiveDefence.Hint": "Invece di far effettuare il tiro 'Per Colpire' al DM, i giocatori effettuano un tiro di difesa. Richiede LMRTFY e non funziona con migliori tiri",
 "midi-qol.ActiveDefenceDC.Name": "Mostra CD Difesa Attiva",
 "midi-qol.ActiveDefenceDC.Hint": "Se impostato, la CD di difesa attiva verrà mostrata nella scheda chat",
@@ -709,7 +713,6 @@
 },
 "midi-qol.EnforceReactions.Title": "Reazione Usata",
 "midi-qol.EnforceReactions.Content": "Hai usato la tua reazione in questo round. Vuoi procedere comunque?",
-"midi-qol.DisplayHitResultNumeric.Name": "Mostra quanto un attacco ha colpito o mancato (per bersaglio)",
 "midi-qol.EnforceBonusActions.Title": "Azione Bonus Usata",
 "midi-qol.EnforceBonusActions.Content": "Hai usato la tua azione bonus in questo round. Vuoi procedere comunque?",
 "midi-qol.SoundSettings.Name": "Configura Suoni Personalizzati Midi",
@@ -923,6 +926,16 @@
   "Friendly": "Amichevole",
   "notFriendly": "Non Amichevole"
 },
+"midi-qol.ConfigDialogOptions": {
+  "default": "Impostazioni Midi",
+  "always": "Mostra Sempre",
+  "never": "Non Mostrare"
+},
+"midi-qol.ConsumeDialogOptions": {
+  "default": "Impostazioni Midi",
+  "always": "Mostra Sempre",
+  "never": "Non Mostrare"
+},
 "midi-qol.TriggeredActivityTargetOptions": {
     "self": "Proprietario bersaglio",
     "targets": "Stessi bersagli",
@@ -998,13 +1011,13 @@
           "label": "Choose Effects",
           "hint": "Choose effects to apply"
         },
-        "forceDialog": {
-          "label": "Force Configuration Dialog",
+        "forceConsumeDialog": {
+          "label": "Force Consume Dialog",
           "hint": "Force Configuration Dialog when activity used"
         },
-        "forceAttackDialog" : {
-          "label": "Force Attack Config",
-          "hint": "Force Attack Configuration Dialog when activity used"
+        "forceRollDialog": {
+          "label": "Force Roll Config",
+          "hint": "Force Roll/Attack Configuration Dialog when activity used"
         },
         "forceDamageDialog": {
           "label": "Force Damage Config",
