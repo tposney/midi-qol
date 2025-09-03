@@ -172,7 +172,7 @@
     "midiFieldsTab": true,
     "v3DamageApplication": true,
     "useDamageDetail": false,
-    "collapsibleTargets": true,
+    "collapsibleTargets": false,
     "autoRemoveSummonedCreature": true,
     "midiPropertiesTabRole": "0"
   },

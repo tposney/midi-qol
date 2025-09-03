@@ -112,6 +112,7 @@ class ConfigSettings {
   fixStickyKeys: boolean = true;
   fumbleSound: string = "";
   ghostRolls: boolean = false;
+  gmAttackDamageCards: boolean = false;
   gmAutoAttack: boolean = false;
   gmAutoDamage: string = "none";
   gmAutoFastForwardAttack: boolean = false;
@@ -180,6 +181,7 @@ class ConfigSettings {
   undoChatColor: string = "Delete";
   undoWorkflow: boolean = false;
   useDamageDetail: boolean = true;
+  waitForDamageApplication: boolean = false;
   weaponHitSound: string = "";
   weaponUseSound: string = "";
   weaponUseSoundRanged: string = "";

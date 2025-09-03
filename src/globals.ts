@@ -621,6 +621,10 @@ declare global {
     testfunc: (...args: any[]) => void;
     tokenForActor: typeof utils.tokenForActor;
     TrapWorkflow: typeof TrapWorkflow;
+    midiPropertiesOptions: {
+      triggeredActivityTargetOptions: any;
+      triggeredActivityRollAsOptions: any;
+    }
     TroubleShooter: typeof TroubleShooter;
     typeOrRace: typeof utils.typeOrRace;
     undoMostRecentWorkflow: typeof undo.undoMostRecentWorkflow;
@@ -770,6 +774,7 @@ export type CalcDamageOptions = DamageApplicationOptions & {
   invertHealing: boolean;
   multiplier: number;
   midi: {
+    challengeModeAR?: number;
     applyDamage?: boolean; // is this used?
     criticalSave: boolean;
     fumbleSave: boolean;
@@ -799,6 +804,7 @@ export type PreSetupDamageListEntry = {
   actorUuid: string;
   // calcDamageOptions: CalcDamageOptions;
   challengeModeScale?: number;
+  challengeModeAR?: number;
   critical: boolean;
   damageDetail: DamageDescription[];
   damageDetails: {

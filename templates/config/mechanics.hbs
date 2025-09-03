@@ -75,6 +75,13 @@
     </div>
 
     <div class="form-group">
+      <label>{{localize "midi-qol.WaitForDamageApplication.Name"}}</label>
+      <input type="checkbox" name="waitForDamageApplication" data-dtype="Boolean" {{checked
+        configSettings.waitForDamageApplication}} />
+      <div class="notes midi-qol-faint">{{localize "midi-qol.WaitForDamageApplication.Hint"}}</div>
+    </div>
+
+    <div class="form-group">
       <label>{{localize "midi-qol.Incapacitated.Name"}}</label>
       <select name="optionalRules.incapacitated" data-dtype="String">
         {{selectOptions IncapacitatedOptions selected=configSettings.optionalRules.incapacitated localize=true}}

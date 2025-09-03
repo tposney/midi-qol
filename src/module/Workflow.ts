@@ -93,7 +93,6 @@ import { postTemplateConfirmTargets, selectTargets, templateTokens } from "./act
 import { Activity, ActivitySave, ActivityCheck, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
-import { _updateAction } from "../../types/module/utils.js";
 
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event: AugmentedEvent) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
@@ -262,7 +261,7 @@ export class Workflow {
     return new Workflow(null, null, null, null, { chatCardUuid });
   }
 
-  async performDebouncedUpdate(chatCard: ChatMessage.Implementation, updates: ChatMessage.UpdateData, immediate = false) {
+  async performThrottledUpdate(chatCard: ChatMessage.Implementation, updates: ChatMessage.UpdateData, immediate = false) {
     // if (updates._id) debugger;
     // ugly hack to force updates into the cache for things that are sets
     if (saveToChatCard) {
@@ -1749,8 +1748,8 @@ export class Workflow {
   static async removeItemCardConfirmRollButton(itemCardUuid: string) {
     const chatMessage = getCachedDocument(itemCardUuid) as ChatMessage.Implementation;
     const workflow = Workflow.getWorkflow(itemCardUuid);
-    let content = chatMessage?.content && foundry.utils.duplicate(chatMessage.content);
-    if (!content) return;
+    if (!chatMessage?.content) return;
+    let content = chatMessage.content;
     const confirmMissRe = /<button class="midi-qol-confirm-damage-roll-complete-miss" data-action="confirmDamageRollCompleteMiss">[^<]*?<\/button>/;
     content = content?.replace(confirmMissRe, "");
     const confirmRe = /<button class="midi-qol-confirm-damage-roll-complete" data-action="confirmDamageRollComplete">[^<]*?<\/button>/;
@@ -1766,9 +1765,9 @@ export class Workflow {
   static async removeItemCardButtons(itemCardUuid: string | undefined, { removeAllButtons = false, removeAttackButtons = true, removeDamageButtons = false, removeDnD5eButtons = false, removeConfirmButtons = false, removeAllDnd5eButtons = false, removeDnd5eSaveButtons = false, removeDnd5eTemplateButtons = false } = {}) {
     try {
       const workflow = Workflow.getWorkflow(itemCardUuid);
-      const chatMessage = getCachedDocument(itemCardUuid) as ChatMessage.Implementation;
-      let content = chatMessage?.content && foundry.utils.duplicate(chatMessage.content);
-      if (!content) return;
+      const chatMessage = workflow?.chatCard;
+      if (!chatMessage?.content) return;
+      let content = chatMessage?.content;
       let allowRemoveAll = !(workflow && workflow.activity?.target.affects.type === "" && workflow.targets.size === 0)
       if (removeAllButtons && allowRemoveAll) {
         const buttonRe = /<button[\s\S]*?<\/button>/gi;
@@ -1813,7 +1812,7 @@ export class Workflow {
           const cancelRe = /<button class="midi-qol-confirm-damage-roll-cancel" data-action="confirmDamageRollCancel">[^<]*?<\/button>/;
           content = content?.replace(cancelRe, "");
         }
-        return await throttledUpdate(chatMessage, { content }, workflow?.throttleChatMessageUpdates, true && false);
+        return await throttledUpdate(chatMessage, { content }, workflow?.throttleChatMessageUpdates);
       }
     } catch (err) {
       const message = `removeItemCardButtons`;
@@ -2115,10 +2114,9 @@ export class Workflow {
     this.targets = validTargetTokens(this.targets);
     this.hitTargets = new Set()
     this.hitTargetsEC = new Set();
-    let content = chatMessage && foundry.utils.duplicate(chatMessage.content)
     let buttonRe = /<button.*?data-action="placeTemplate"[^>]*?>[\s\S]*?<\/button>/
-    content = content?.replace(buttonRe, "");
-    await this.performDebouncedUpdate(chatMessage, { content, flags: { "midi-qol": { type: MESSAGE_TYPES.ITEM } }, style: CONST.CHAT_MESSAGE_STYLES.OTHER });
+    let content = chatMessage.content?.replace(buttonRe, "");
+    await this.performThrottledUpdate(chatMessage, { content, flags: { "midi-qol": { type: MESSAGE_TYPES.ITEM } }, style: CONST.CHAT_MESSAGE_STYLES.OTHER });
     return this.WorkflowState_AoETargetConfirmation;
   }
   async WorkflowState_AoETargetConfirmation(context: WorkflowContext = {}): Promise<WorkflowState> {
@@ -2207,7 +2205,7 @@ export class Workflow {
     if (!autoRollAttack) {
       // Not auto rolling attack so setup the buttons to display advantage/disadvantage
       const chatMessage = this.chatCard;
-      let content = chatMessage?.content && foundry.utils.duplicate(chatMessage.content)
+      let content = chatMessage?.content;
       if (content && !isFastRoll) {
         // provide a hint as to the type of roll expected.
         let searchRe = /<button data-action="attack">[^<]+<\/button>/;
@@ -2220,7 +2218,7 @@ export class Workflow {
         // if (isFastRoll && configSettings.showFastForward) attackString += ` ${i18n("midi-qol.fastForward")}`;
         let replaceString = `<button data-action="attack">${attackString}</button>`
         content = content.replace(searchRe, replaceString);
-        await this.performDebouncedUpdate(chatMessage, { content });
+        await this.performThrottledUpdate(chatMessage, { content });
       } else if (!chatMessage) {
         const message = `WaitForAttackRoll | no chat message`;
         error(message);
@@ -2377,14 +2375,13 @@ export class Workflow {
       const chatMessage = this.chatCard;
       if (chatMessage?.content) {
         // provide a hint as to the type of roll expected.
-        let content = chatMessage && foundry.utils.duplicate(chatMessage.content)
         let searchRe = /<button data-action="damage">[^<]+<\/button>/;
         const damageTypeString = (this.activity.actionType === "heal") ? i18n("DND5E.Healing") : i18n("DND5E.Damage");
         let damageString = (this.rollOptions.isCritical || this.isCritical) ? i18n("DND5E.Critical") : damageTypeString;
         if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) damageString += ` ${i18n("midi-qol.fastForward")}`;
         let replaceString = `<button data-action="damage">${damageString}</button>`
-        content = content.replace(searchRe, replaceString);
-        await this.performDebouncedUpdate(chatMessage, { content });
+        let content = chatMessage.content.replace(searchRe, replaceString);
+        await this.performThrottledUpdate(chatMessage, { content });
         setTimeout(() => {
           //@ts- expect-error v13-stubby
           // ui.chat?.scrollBottom();
@@ -2955,6 +2952,8 @@ export class Workflow {
     if (context.attackRoll) return this.WorkflowState_AttackRollComplete;
     if (context.damageRoll) return this.WorkflowState_ConfirmRoll;
     if (debugEnabled > 0) warn("Workflow complete ", this.id, "elapsed time", Date.now() - (this.workflowStartTime ?? 0));
+    console.warn("Workflow complete ", this.id, "elapsed time", Date.now() - (this.workflowStartTime ?? 0));
+
     let shouldTrigger = false;
     if (this.activity.midiProperties?.triggeredActivityId && !this.aborted) {
       let activity = this.activity
@@ -3103,7 +3102,7 @@ export class Workflow {
       await this.displayHits(chatMessage.whisper.length > 0, true);
       chatMessage = this.chatCard
     }
-    let content = chatMessage?.content && foundry.utils.duplicate(chatMessage?.content);
+    let content = chatMessage?.content;
     let contentChanged = false;
     // TODO move this to call the omnibus remove buttons function
     if (content && getRemoveAttackButtons(this.activity) && chatMessage && configSettings.confirmAttackDamage === "none") {
@@ -3125,7 +3124,6 @@ export class Workflow {
     if (this.activity.target?.affects.type !== "" || this.targets.size !== 0) {
       if (configSettings.autoItemEffects === "applyRemove" && content) {
         const buttonRe = /<button[^>]*?data-action="midiApplyEffects"[\s\S]*?<\/button>/;
-        let content = foundry.utils.duplicate(chatMessage.content);
         content = content?.replace(buttonRe, "");
         contentChanged = true;
       }
@@ -3136,12 +3134,12 @@ export class Workflow {
         timestamp: Date.now(),
         flags: { "midi-qol": { type: MESSAGE_TYPES.ITEM } },
       };
-      await this.performDebouncedUpdate(chatMessage, update);
+      await this.performThrottledUpdate(chatMessage, update);
     }
     // Add concentration data if required
     // @ts-expect-error no dnd5e-types
     let hasConcentration: boolean = this.item.requiresConcentration;
-    const template = await fromUuid(this.templateUuid) as MeasuredTemplateDocument | null;
+    const template = fromUuidSync(this.templateUuid) as MeasuredTemplateDocument | null;
     if (hasConcentration && template && this.chatCard?.getFlag("dnd5e", "use.concentrationId")) {
       let origin = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId")!);
       if (origin instanceof ActiveEffect) {
@@ -3371,6 +3369,7 @@ export class Workflow {
       const invisibleTarget = hasCondition(firstTarget.actor as Actor, "invisible");
       const tokenCanSense = this.tokenCanSense?.has(firstTarget);
       const targetCanSense = this.token && this.targetsCanSense?.has(this.token);
+
       const invisAdvantage = (checkRule("invisAdvantage") === "RAW") ? invisibleToken || !targetCanSense : !targetCanSense;
       if (invisAdvantage) {
         if (invisibleToken) {
@@ -3381,7 +3380,6 @@ export class Workflow {
           this.advReminderAttackAdvAttribution.add("ADV:Attacker not detected");
         }
         foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.invisible", { value: true, effects: ["Invisible Attacker"] });
-
         this.advantage = true;
       }
 
@@ -4362,23 +4360,21 @@ export class Workflow {
     const chatMessage = this.chatCard;
     if (chatMessage?.content) {
       const buttonRe = /<button[^>]*?data-action="midiApplyEffects"[\s\S]*?<\/button>/;
-      let content = foundry.utils.duplicate(chatMessage.content);
-      content = content?.replace(buttonRe, "");
-      await this.performDebouncedUpdate(chatMessage, { content });
+      let content = chatMessage.content.replace(buttonRe, "");
+      await this.performThrottledUpdate(chatMessage, { content });
     }
   }
   async displayUtilityRolls() {
     const chatMessage = this.chatCard;
-    let content = chatMessage && foundry.utils.duplicate(chatMessage.content);
     let newFlags = {};
-
-    if (chatMessage) { // display the attack roll
+    let content;
+    if (chatMessage?.content) { // display the attack roll
       const utilityRoll = this.utilityRoll; // will concat as needed
       //let searchRe = /<div class="midi-qol-attack-roll">.*?<\/div>/;
       let searchRe = /<div class="midi-qol-utility-roll"[\s\S]*?<div class="end-midi-qol-utility-roll">/
       const rollString = i18n("DND5E.UTILITY.Title");
       let replaceString = `<div class="midi-qol-utility-roll"><div style="text-align:center" >${rollString}</div>${this.utilityRollHTML}<div class="end-midi-qol-utility-roll">`
-      content = content.replace(searchRe, replaceString);
+      content = chatMessage.content.replace(searchRe, replaceString);
       if (debugEnabled > 0) warn("displayUtilityRoll |", this.utilityRoll)
       newFlags = {
         "midi-qol":
@@ -4393,15 +4389,15 @@ export class Workflow {
     ...(this.utilityRoll ? [this.utilityRoll] : []),
     ...(this.extraRolls ?? [])];
     // const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
-    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true && false);
+    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls });
   }
 
   async displayAttackRoll(displayOptions: { GMOnlyAttackRoll?: boolean } = {}) {
     const chatMessage = this.chatCard;
-    let content = chatMessage && foundry.utils.duplicate(chatMessage.content);
     let newFlags = {};
-
-    if (chatMessage) { // display the attack roll
+    let content;
+    if (chatMessage?.content) { // display the attack roll
+      content = chatMessage.content;
       let searchRe = /<div class="midi-qol-attack-roll"[\s\S]*?<div class="end-midi-qol-attack-roll">/
       let options = this.attackRoll?.terms[0].options;
       // @ts-expect-error no dnd5e-types
@@ -4468,18 +4464,18 @@ export class Workflow {
     }
     // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
     const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
-    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true && false);
+    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls });
   }
 
   async displayDamageRolls() {
     const chatMessage = this.chatCard;
-    if (!chatMessage) {
+    if (!chatMessage?.content) {
       const message = `midi-qol | displayDamageRolls | no chat message to display damage rolls`;
       console.warn(message);
       TroubleShooter.recordError(new Error(message), message);
       return;
     }
-    let content = (chatMessage && foundry.utils.duplicate(chatMessage.content)) ?? "";
+    let content = chatMessage.content;
     if ((getRemoveDamageButtons(this.activity) && configSettings.confirmAttackDamage === "none") || this.workflowType === "TrapWorkflow") {
       const damageRe = /<button[^>]*?data-action="damage">[\s\S]*<\/button>/
       const formulaRe = /<button[^>]*?data-action="rollFormula"[\s\S]*?\/button>/
@@ -4554,8 +4550,7 @@ export class Workflow {
       const damageButtonRe = /<button data-action="damage" style="flex:3 1 0">(\[\d*\] )*([^<]+)<\/button>/;
       content = content.replace(damageButtonRe, `<button data-action="damage" style="flex:3 1 0">$2</button>`);
     }
-
-    const result = await this.performDebouncedUpdate(chatMessage, { "content": content, flags: newFlags, rolls: this.chatRolls }, false);
+    const result = await this.performThrottledUpdate(chatMessage, { "content": content, flags: newFlags, rolls: this.chatRolls }, false);
     return result;
   }
 
@@ -4607,11 +4602,10 @@ export class Workflow {
     const hitContent = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/hits.html", templateData) || "No Targets";
     const chatMessage = this.chatCard;
 
-    if (chatMessage) {
-      let content = chatMessage && foundry.utils.duplicate(chatMessage.content);
+    if (chatMessage?.content) {
       let searchString = /<div[^>]*?class="midi-qol-hits-display">[\s\S]*?<div class="end-midi-qol-hits-display">/;
       let replaceString = `<div class="midi-qol-hits-display">${hitContent}<div class="end-midi-qol-hits-display">`
-      content = content.replace(searchString, replaceString);
+      let content = chatMessage.content.replace(searchString, replaceString);
 
       const update = {
         content,
@@ -4620,7 +4614,7 @@ export class Workflow {
         // TODO: May not be required
         style: CONST.CHAT_MESSAGE_STYLES.OTHER
       }
-      await this.performDebouncedUpdate(chatMessage, update);
+      await this.performThrottledUpdate(chatMessage, update);
     }
   }
 
@@ -4745,12 +4739,10 @@ export class Workflow {
     const chatMessage = this.chatCard;
 
     const saveContent = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/saves.html", templateData);
-    let content: string = foundry.utils.duplicate(chatMessage.content)
-
     let searchRe = /<div[^>]*?class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
     let replaceString = `<div class="midi-qol-saves-display"><div data-item-id="${this.item.id}">${saveContent}</div><div class="end-midi-qol-saves-display">`
-    content = content.replace(searchRe, replaceString);
-    await this.performDebouncedUpdate(chatMessage, { content, flags: { "midi-qol": { type: MESSAGE_TYPES.SAVES } } }, true && false);
+    let content = chatMessage.content.replace(searchRe, replaceString);
+    await this.performThrottledUpdate(chatMessage, { content, flags: { "midi-qol": { type: MESSAGE_TYPES.SAVES } } });
   }
   async displaySaves(whisper: boolean = false) {
     let { fullDamageText, halfDamageText, noDamageText } = this.computeSaveFlavors();
@@ -4763,10 +4755,9 @@ export class Workflow {
       // TODO force roll damage
     }
     let chatMessage = this.chatCard; // XXX await asyncGetCachedDocument(this.itemCardUuid);
-    if (chatMessage) {
+    if (chatMessage?.content) {
       templateData.saveDisplayFlavor = this.saveDisplayFlavor;
       const saveContent = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/saves.html", templateData);
-      let content: string = foundry.utils.duplicate(chatMessage.content)
       let searchRe: RegExp;
       let replaceString: string;
       let midiTargets = Array.from(this.targets.map(t => t.document));
@@ -4804,7 +4795,7 @@ export class Workflow {
       if (this.workflowType !== "DamageOnlyWorkflow") {
         searchRe = /<div[^>]*?class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
         replaceString = `<div class="midi-qol-saves-display"><div data-item-id="${this.item.id}">${saveContent}</div><div class="end-midi-qol-saves-display">`
-        content = content.replace(searchRe, replaceString);
+        let content = chatMessage.content.replace(searchRe, replaceString);
         const update = {
           content,
           /* rolls: this.chatRolls */
@@ -4824,7 +4815,7 @@ export class Workflow {
           },
           style: CONST.CHAT_MESSAGE_STYLES.OTHER
         };
-        await this.performDebouncedUpdate(chatMessage, update as any, true && false); // TODO fix the definitions
+        await this.performThrottledUpdate(chatMessage, update as any); // TODO fix the definitions
       }
     }
   }
@@ -4859,6 +4850,9 @@ export class Workflow {
     let rollDC = this.saveActivity?.save?.dc.value ?? this.saveActivity?.check?.dc.value;
     //@ts-expect-error 
     const D20Roll = CONFIG.Dice.D20Roll as typeof Roll;
+    //@ts-expect-error
+    const BasicRoll = CONFIG.Dice.BasicRoll as typeof Roll;
+
     this.saveDC = rollDC;
     const requestCards: Array<Promise<ChatMessage | undefined> | undefined> = [];
     let promises: Promise<Roll[] | Roll | null>[] = [];
@@ -5051,9 +5045,9 @@ export class Workflow {
           // @ts-expect-error no dnd5e-types
           (this.item.system.description.value.toLowerCase().includes(i18n("midi-qol.autoFailFriendly")?.toLowerCase())
             || this.activity.friendlySave === "friendlyFailure")) {
-          promises.push(new D20Roll("-1").evaluate());
+          promises.push(new BasicRoll("-1").evaluate());
         } else if (saveDetails.isFriendly && this.activity.friendlySave === "friendlySuccess") {
-          promises.push(new D20Roll("99").evaluate());
+          promises.push(new BasicRoll("99").evaluate());
         } else if ((!player?.isGM && playerMonksTB) || (player?.isGM && gmMonksTB)) {
           promises.push(new Promise((resolve) => {
             let requestId = target.id ?? foundry.utils.randomID();
@@ -5176,7 +5170,7 @@ export class Workflow {
                       //@ts-expect-error no dnd5e types
                       if (!tool) tool = target.actor?.items.find(i => i.type === "tool" && i.system.type.baseItem === rollTool);
                       if (!tool) { // no tool of the requested type - auto fail
-                        resolve([await new D20Roll("-1").evaluate()]);
+                        resolve([await new BasicRoll("-1").evaluate()]);
                         return;
                       } else {
                         // @ts-expect-error no dnd5e-types
@@ -5336,7 +5330,7 @@ export class Workflow {
         }[];
       }) => {
         if (rerResult.cancelled) {
-          let roll = new D20Roll("-1");
+          let roll = new BasicRoll("-1");
           roll = roll.evaluateSync({ strict: false })
           for (let uuid of rerRequest.actors) {
             const fn = this.saveRequests[uuid];
@@ -5676,9 +5670,9 @@ export class Workflow {
 
   async displayChatCardWithoutDamageDetail() {
     let chatMessage = getCachedDocument(this.itemCardUuid) as ChatMessage.Implementation | undefined;
-    let content = (chatMessage && chatMessage.content) ?? "";
     let data: ChatMessage.CreateData | undefined;
-    if (content) {
+    if (chatMessage?.content) {
+      let content = chatMessage.content;
       data = chatMessage!.toObject();
       content = data.content || "";
       let searchRe = /<div[^>]*?class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
@@ -6825,14 +6819,13 @@ export class ActiveDefenceWorkflow extends Workflow {
 
   async displayAttackRoll() {
     const chatMessage = this.chatCard;
-    let content = chatMessage && foundry.utils.duplicate(chatMessage.content);
     let newFlags = {};
     const searchRe = /<div class="midi-qol-attack-roll"[\s\S]*?<div class="end-midi-qol-attack-roll">/;
     let DCString = "DC";
     DCString = i18n("DND5E.AbbreviationDC") ?? "DC";
     const attackString = `<label class="midi-qol-active-defence-dc">${DCString} ${this.activeDefenceDC}</label> ${i18n("midi-qol.ActiveDefenceString")}`;
     const replaceString = `<div class="midi-qol-attack-roll"> <div style="text-align:center"> ${attackString} </div><div class="end-midi-qol-attack-roll">`;
-    content = content.replace(searchRe, replaceString);
+    let content = chatMessage?.content.replace(searchRe, replaceString) ?? "";
     const targetUuids = Array.from(this.targets).map(t => getTokenDocument(t)?.uuid);
     newFlags = {
       "midi-qol":
@@ -6847,7 +6840,7 @@ export class ActiveDefenceWorkflow extends Workflow {
       }
     };
     const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
-    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true && false);
+    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls });
   }
 }
 export class UserWorkflow extends Workflow {

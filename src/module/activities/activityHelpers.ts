@@ -409,7 +409,7 @@ export function isAoETargetable(targetToken: Token.Implementation, options: { se
   const selfToken = getToken(options.selfToken);
   if (["wallsBlockIgnoreIncapacitated", "alwaysIgnoreIncapacitated"].includes(autoTarget) && checkIncapacitated(targetToken.actor, false, false)) return false;
   if (["wallsBlockIgnoreDefeated", "alwaysIgnoreDefeated"].includes(autoTarget) && checkDefeated(targetToken)) return false;
-  if (targetToken === selfToken && options.ignoreSelf) return false;
+  if (targetToken.document.uuid === selfToken?.document.uuid && options.ignoreSelf) return false;
   const selfDisposition = selfToken?.document.disposition ?? 1;
   switch (options.AoETargetType) {
     case "any":
@@ -480,7 +480,12 @@ export function selectTargets(this: Workflow | Activity | undefined, templateDoc
   if (debugEnabled > 0) warn("selectTargets ", this, templateDocument, data, userId);
   const selfToken = getToken(activity?.actor);
   // TODO (Michael): HERE! RIGHT HERE!
-  const ignoreSelf = (activity?.target?.affects.special ?? "").split(";").some(spec => spec === "self");
+  const ignoreSelf = (activity?.target?.affects.special ?? "").split(";").some(spec => ["self", "-self"].includes(spec));
+  if ((activity?.target?.affects.special ?? "").split(";").some(spec => ["self"].includes(spec))) {
+    foundry.utils.logCompatibilityWarning("midi-qol | target specials includes 'self'. Use '-self' to exclude the caster",
+    {since: "midi-qol 13.0.19", until: "31.1.0"});
+  }
+
   let AoETargetType = activity ? getAoETargetType(activity) : "any";
   let targeting = getActivityAutoTargetAction(activity);
   if ((game.user?.targets.size === 0 || workflow?.workflowOptions.forceTemplateTargeting || userId !== game.user?.id || installedModules.get("levelsvolumetrictemplates")) && targeting !== "none") {

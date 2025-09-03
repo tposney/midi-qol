@@ -78,8 +78,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
   static get xPosition() {
     const left = 100;
     const middle = window.innerWidth / 2 - 155;
-    let adjustment = 10;
-    const right = window.innerWidth - 310 - adjustment
+    let adjustment = 20;
+
+    const right = window.innerWidth - adjustment - (ui.sidebar?.element.clientWidth ?? 10) - 300;
     switch (targetConfirmation.gridPosition?.x) {
       case -1: return left;
       case 0: return middle;

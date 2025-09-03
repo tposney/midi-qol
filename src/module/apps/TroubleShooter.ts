@@ -151,6 +151,11 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
                   error.timeString = `${new Date(error.timestamp).toLocaleDateString()} - ${new Date(error.timestamp).toLocaleTimeString()}`;
 
                 }
+                // Midi Settings Summary fields now all need to be a string. Older versions had booleans etc there so force them to string
+                const midiSummary = TroubleShooter.data.summary.midiSettings;
+                Object.keys(midiSummary).forEach(key => {
+                  if (typeof midiSummary[key] !== "string") midiSummary[key] = `${midiSummary[key]}`;
+                });
                 resolve(true);
               });
             }

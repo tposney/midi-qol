@@ -268,7 +268,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       }
     }
 
-    async use(this: Activity, usage: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig) {
+    async use(this: Activity, usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       if (debugEnabled > 0) warn("MidiQOL | AttackActivity | use | Called", usage, dialog, message);
       usage.midiOptions ??= {};
       // const itemAttackPerTarget = foundry.utils.getProperty(this.item, "flags.midi-qol.rollAttackPerTarget");
@@ -442,7 +442,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         message ??= {};
         message.create ??= config.midiOptions.chatMessage;
         const rollMode = safeGetGameSetting("core", "rollMode");
-        const showChatAttackCard = game.user?.isGM && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
+        const showChatAttackCard = game.user?.isGM && configSettings.gmAttackDamageCards && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
         if (showChatAttackCard) {
           // Show a chat card for attack rolls if the players are not going to see the midi card.
           message.create = true;

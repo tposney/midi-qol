@@ -109,13 +109,6 @@
     <div class="midi-qol-settings heading">{{localize "midi-qol.Saves"}}</div>
     <label><strong>DND5E {{{localize "SETTINGS.DND5E.VISIBILITY.Challenge.Name"}}}: {{challengeVisibility}}</strong></label>
     <div class="form-group">
-      <label>{{localize "midi-qol.AutoCheckHit.Name"}}</label>
-      <select name="autoCheckHit" data-dtype="String">
-        {{selectOptions autoCheckHitOptions selected=configSettings.autoCheckHit localize=true}}
-      </select>
-      <div class="notes midi-qol-faint">{{{localize "midi-qol.AutoCheckHit.Hint"}}}</div>
-    </div>
-    <div class="form-group">
       <label>{{localize "midi-qol.AutoCheckSaves.Name"}}</label>
       <select name="autoCheckSaves" data-dtype="String">
         {{selectOptions autoCheckSavesOptions selected=configSettings.autoCheckSaves localize=true}}

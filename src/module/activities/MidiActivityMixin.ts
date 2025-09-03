@@ -710,7 +710,7 @@ export let MidiActivityMixin = Base => {
           });
           const rollMode = safeGetGameSetting("core", "rollMode");
           message.create ??= false;
-          const showChatDamageCard = game.user?.isGM && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
+          const showChatDamageCard = game.user?.isGM && configSettings.gmAttackDamageCards && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
           if (showChatDamageCard) {
             // Show a chat card for damage rolls if the players are not going to see the midi card.
             message.create = true;

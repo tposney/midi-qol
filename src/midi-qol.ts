@@ -1,4 +1,4 @@
-import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, midiSoundSettings, fetchSoundSettings, midiSoundSettingsBackup, disableWorkflowAutomation, readySettingsSetup, collectSettingData, safeGetGameSetting } from './module/settings.js';
+import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, midiSoundSettings, fetchSoundSettings, midiSoundSettingsBackup, disableWorkflowAutomation, readySettingsSetup, collectSettingData, safeGetGameSetting, triggeredActivityTargetOptions, triggeredActivityRollAsOptions } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, installedModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, readyPatching, initPatching, addDiceTermModifiers } from './module/patching.js';
@@ -102,8 +102,8 @@ export async function busyWait(milliSeconds: number) {
 export let midiFlags: string[] = [];
 export let allAttackTypes: string[] = []
 export let gameStats: RollStats;
-export let overTimeEffectsToDelete: Record<string, {uuid: string}> = {};
-export let savedOverTimeEffectsToDelete: Record<string, {uuid: string}> = {}
+export let overTimeEffectsToDelete: Record<string, { uuid: string }> = {};
+export let savedOverTimeEffectsToDelete: Record<string, { uuid: string }> = {}
 export let MQItemMacroLabel: string;
 export let MQActivityMacroLabel: string;
 export let MQOnUseOptions: Record<string, string>;
@@ -134,7 +134,7 @@ Hooks.once("levelsReady", function () {
 });
 Hooks.once("init", () => {
   setupChatMessageMidi();
-    //@ts-expect-error
+  //@ts-expect-error
   CONFIG.ChatMessage.documentClass = ChatMessageMidi;
   // @ts-expect-error
   CONFIG.Combat.documentClass = MidiCombat5e;
@@ -306,7 +306,7 @@ Hooks.on("dae.modifySpecials", (specKey, specials, _characterSpec) => {
 
 //@ts-expect-error
 Hooks.on("dae.modifyBaseValues", (specKey: string, baseValues, _characterSpec) => {
-  baseValues[`flags.${MODULE_ID}.ActivityOverTime`] = [new StringField({initial: ""}), -1];
+  baseValues[`flags.${MODULE_ID}.ActivityOverTime`] = [new StringField({ initial: "" }), -1];
 });
 //@ts-expect-error
 Hooks.on("dae.addFieldMappings", (fieldMappings) => {
@@ -622,7 +622,7 @@ Hooks.once('ready', function () {
 
   Hooks.callAll("midi-qol.midiReady");
   setupMidiTests();
-  
+
   if (game.user?.isGM) { // need to improve the test
     const problems = TroubleShooter.collectTroubleShooterData().problems
     for (let problem of problems) {
@@ -762,6 +762,14 @@ function setupMidiQOLApi() {
     socket: () => { return new SaferSocket(socketlibSocket) },
     testfunc,
     tokenForActor,
+    midiPropertiesOptions: {
+      triggeredActivityTargetOptions: Object.entries(triggeredActivityTargetOptions).map(([value, label]) => {
+        return { value, label: i18n(label) }
+      }),
+      triggeredActivityRollAsOptions: Object.entries(triggeredActivityRollAsOptions).map(([value, label]) => {
+        return { value, label: i18n(label) }
+      }),
+    },
     TrapWorkflow,
     TroubleShooter,
     undoMostRecentWorkflow,
@@ -784,6 +792,10 @@ function setupMidiQOLApi() {
       DamageApplicationElementMidi
     }
   }
+  
+  //@ts-expect-error
+  game.modules.get("midi-qol").api = globalThis.MidiQOL;
+
   globalThis.MidiDAEEval = {
     testfunc,
     canSee,
@@ -834,7 +846,7 @@ export async function moveTokenAwayFromPoint(targetRef: TokenOrDocument | string
 }
 
 export async function createEffects(data: { actorUuid: string, effects: ActiveEffect.CreateData[], options: { keepId: boolean } }) {
-  const { actorUuid, effects, options={keepId: true} } = data;
+  const { actorUuid, effects, options = { keepId: true } } = data;
   if (!actorUuid) {
     error("createEffects failed. Missing actorUuid")
     return false;
@@ -1236,7 +1248,7 @@ function setupMidiFlags(DAEapi: any) {
   midiFlags.push(`flags.${MODULE_ID}.DR.temphp`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.temphp`);
 
-  midiFlags.push(`flags.${MODULE_ID}.optional.NAME.displayBonusRolls`);  
+  midiFlags.push(`flags.${MODULE_ID}.optional.NAME.displayBonusRolls`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.displayChatCard`);
   midiFlags.push(`flags.${MODULE_ID}.optional.NAME.attack.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.attack.all`);
@@ -1340,7 +1352,7 @@ export async function createMidiMacros() {
               && !foundry.utils.isNewerVersion(macroSpec.version, (macro.flags["midi-version"] ?? "0.0.0")))
               continue; // already up to date
             //@ts-expect-error
-            await macro.update({command: macroSpec.commandText, "flags.midi-version": macroSpec.version}, {} as never);
+            await macro.update({ command: macroSpec.commandText, "flags.midi-version": macroSpec.version }, {} as never);
           }
         } else {
           const macroData = {
@@ -1388,9 +1400,9 @@ export function setupMidiStatusEffects() {
         changes: [
           { key: "flags.midi-qol.actions.bonus", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
           { key: "Flags.midi-qol.actions.bonusActionsUsed", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "1", priority: 20 }
-        ], 
+        ],
         img: "modules/midi-qol/icons/bonus-action.svg",
-        
+
         flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } }
       });
     }

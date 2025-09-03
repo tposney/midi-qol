@@ -625,7 +625,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     if (rollMode !== CONST.DICE_ROLL_MODES.BLIND) rollMode = message.rollMode ?? config.rollMode ?? rollMode;
     // @ts-expect-error
     result.forEach(r => r.options.rollMode = rollMode);
-    await displayDSNForRoll(result, rollType, rollMode);
+    if (!message.create) await displayDSNForRoll(result, rollType, rollMode);
     foundry.utils.mergeObject(message.data, { "flags": config.flags ?? {} });
     if (!config.midiOptions.simulate) {
       result[0] = await bonusCheck(this, result[0], rollType, abilityId, message.data);

@@ -1,3 +1,18 @@
+### 13.0.19
+* Fix for a rare race condition that could cause damage rolls not to display.
+* Fix for player saves dice so nice dice being displayed twice when rolling a hidden roll mode.
+* Fix for gm private/self/blind rolls always triggering extra damage/attack card or extra DSN rolls.
+* Fix for players seeing "missed" color highlight when settings are to disable everything.
+* Fix for TroubleShooter not loading older troubleshooter files.
+* Target confirmation knows about whether the chat log is expanded or hidden and positions accordingly.
+* Fix for case where damage bonus not being correctly applied - thanks @thatlonelybugber.
+* Introduced a change in emanation/radius targeting. Instead of using "self" use "-self" to indicate that the caster should not be included. Use of "self" will generate a deprecation warning and will be removed eventually.
+* Updated pt.br.json and it.json - thanks @kharmans and GregoryWarn
+* New setting to control if using an item waits for damage application to complete before finishing. In mechanics tab. 
+  - Waiting for the completion adds an overhead so it defaults to false. 
+* For macro writers - the new setting to control if a workflow waits for target hit point updates to complete may impact processing, i.e if you expect updates to be completed on return from await item.use (for example).
+  - If you rely on the hp update completing when the workflow completes, you can set MidiQOL.currentConfigSettings.waitForDamageApplication=true in code and it will then wait for completion.
+
 ### 13.0.18
 * midi-qol now requires DAE v13.0.12 or later.
 * Fix for midi not correctly displaying dnd5e damage application buttons.

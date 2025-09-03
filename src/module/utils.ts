@@ -256,7 +256,7 @@ export async function applyTokenDamage(
     superSavers: new Set(),
     semiSuperSavers: new Set(),
     workflow: undefined,
-    updateOptions: {awaitDamageApplication: true},
+    updateOptions: { awaitDamageApplication: configSettings.waitForDamageApplication },
     forceApply: false,
     noConcentrationCheck: false,
   }
@@ -322,7 +322,7 @@ export async function applyTokenDamage(
       damageDetails: {
         combinedDamage,
         rawcombinedDamage: damageDetail,
-        calcDamageOptions: {combinedDamage: calcDamageOptions}
+        calcDamageOptions: { combinedDamage: calcDamageOptions }
       },
       isHit,
       rawDamageDetail: damageDetail,
@@ -460,10 +460,14 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     if (!actor) continue;
     const tokenDocument = token.document;
     let challengeModeScale = 1;
+    let challengeModeAR = 0;
     if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor") as string) && workflow.attackRoll && workflow.hitTargetsEC?.has(token)) {
       //scale the damage detail for a glancing blow - only for the first damage list? or all?
       const scale = workflow.challengeModeScale?.[tokenDocument?.uuid ?? "dummy"] ?? 1;
       challengeModeScale = scale;
+    } else if (checkRule("challengeModeArmor") === "challenge" && workflow.hitTargetsEC?.has(token)) {
+      //@ts-expect-error no dnd5e-types
+      challengeModeAR = token.actor?.system.attributes.ac.AR ?? 0;
     }
 
     const semiSuperSaver = workflow.semiSuperSavers.has(token);
@@ -480,6 +484,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       actorId: actor.id!,
       actorUuid: actor.uuid,
       challengeModeScale,
+      challengeModeAR,
       critical: workflow.isCritical,
       damageDetail: [],
       damageDetails: { combinedDamage: [], rawcombinedDamage: [], defaultDamage: [], rawdefaultDamage: workflow.rawDamageDetail ?? [], otherDamage: [], rawotherDamage: workflow.rawOtherDamageDetail ?? [], bonusDamage: [], rawbonusDamage: workflow.rawBonusDamageDetail ?? [], calcDamageOptions: {} },
@@ -515,6 +520,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         invertHealing: true,
         multiplier: challengeModeScale,
         midi: {
+          challengeModeAR,
           applyDamage: true,
           criticalSave: workflow.criticalSaves.has(token),
           fumbleSave: workflow.fumbleSaves.has(token),
@@ -533,6 +539,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           uncannyDodge: actor.flags?.[MODULE_ID]?.["uncanny-dodge"] && workflow.item?.hasAttack
         }
       };
+      
       // calcDamageOptions = foundry.utils.duplicate(damagePerActor[actor.uuid].damageDetails.calcDamageOptions[type]) as CalcDamageOptions;
       if (type === "otherDamage" && (workflow.otherActivity?.save || workflow.otherActivity?.check)) {
         const defaultSaveMultiplier = getSaveMultiplierForActivity(workflow.otherActivity);
@@ -603,7 +610,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         workflow.damageList.push(damageDetails);
       }
     }
-    timedAwaitExecuteAsGM("createReverseDamageCard", {
+    await timedAwaitExecuteAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
       actorId: workflow.actor.id,
@@ -611,7 +618,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       damageList: prepareDamageListToJSON(workflow.damageList),
       chatCardUuid: workflow.itemCardUuid,
       flagTags: workflow.flagTags,
-      updateOptions: { noConcentrationCheck: workflow?.workflowOptions?.noConcentrationCheck ?? false, awaitDamageApplication: false},
+      updateOptions: { noConcentrationCheck: workflow?.workflowOptions?.noConcentrationCheck ?? false, awaitDamageApplication: configSettings.waitForDamageApplication },
       forceApply: false
     }).then(cardIds => {
       if (cardIds) chatCardUuids.push(...cardIds);
@@ -3893,7 +3900,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
             // @ts-expect-error no dnd5e-types
             else if (item.system.level === 0) isValid = true;
             // @ts-expect-error no dnd5e-types
-            else if (item.system.prepared > 0 && item.system.method === "prepared") continue;
+            else if (item.system.prepared === 0 && item.system.method === "spell") continue;
             // @ts-expect-error no dnd5e-types
             else if (item.system.level <= maxLevel) isValid = true;
           } else {
@@ -4908,7 +4915,7 @@ export async function setReactionUsed(actor: Actor.Implementation, active: boole
     await actor.effects.get(getStaticID(id))?.delete();
   } else {
     if (!["all", "displayOnly"].includes(configSettings.enforceReactions) && configSettings.enforceReactions !== actor.type) return;
-    const actions = actor.getFlag(MODULE_ID, "actions"); 
+    const actions = actor.getFlag(MODULE_ID, "actions");
     const newCount = (actions?.reactionsUsed ?? 0) + 1;
     await actor.effects.get(getStaticID(id))?.delete();
     const effect = foundry.utils.deepClone(getReactionEffect());
@@ -4923,7 +4930,7 @@ export async function setReactionUsed(actor: Actor.Implementation, active: boole
       ]
     });
     if (actions?.reactionsReset === "eachTurn") {
-      effect.updateSource({duration: {turns: 1}})
+      effect.updateSource({ duration: { turns: 1 } })
     }
     if (actions?.reactionsReset === "rest") {
       effect.updateSource({ flags: { dae: { specialDuration: ["shortRest"] } } });
@@ -6515,17 +6522,21 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
      This creates an opportunity for changes to cached updates which can then be lost if they are cleared
      */
   const updateDelay = 0;
-  if (debugEnabled)  warn("_updateAction | Starting for", Date.now(), updates)
+  if (debugEnabled) warn("_updateAction | Starting for", Date.now(), updates)
   delete updates._id
   if (updateDelay) {
     await busyWait(updateDelay); // let other stuff happen.
   }
+  //console.warn("Doing chat update", foundry.utils.duplicate(updates));
   await baseDocument?.update(updates);
-   if (updatesCache[baseDocument.uuid] && !foundry.utils.isEmpty(updatesCache[baseDocument.uuid])) {
-   }
+  if (updateDelay) {
+    await busyWait(updateDelay); // let other stuff happen.
+  }
+  if (updatesCache[baseDocument.uuid] && !foundry.utils.isEmpty(updatesCache[baseDocument.uuid])) {
+  }
   updatesCache[baseDocument.uuid] = foundry.utils.diffObject(updates, updatesCache[baseDocument.uuid] ?? {});
-  if (debugEnabled > 1 && updates.content && updatesCache[baseDocument.uuid]?.content) 
-    warn("_updateAction | queued content differences ", diffStringsFull(updates.content, updatesCache[baseDocument.uuid].content, {ignoreWhitespace: true, ignoreNewlines: true}));
+  if (debugEnabled > 1 && updates.content && updatesCache[baseDocument.uuid]?.content)
+    warn("_updateAction | queued content differences ", diffStringsFull(updates.content, updatesCache[baseDocument.uuid].content, { ignoreWhitespace: true, ignoreNewlines: true }));
   if (debugEnabled) warn("_updateAction | post update updatesCache", Date.now(), updates);
 }
 
@@ -6533,13 +6544,13 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
 export async function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData, throttlingFunc: undefined | ((document: ChatMessage.Implementation, updates: ChatMessage.UpdateData) => Promise<void>) = undefined, immediate = false) {
   if (!document) return; // ChatCard was removed already?;
   updates = foundry.utils.expandObject(updates) as typeof updates;
-  updates = foundry.utils.mergeObject((updatesCache[document.uuid] ?? {}), updates, { overwrite: true })
+  updates = foundry.utils.mergeObject((updatesCache[document.uuid] ?? {}), updates, { inplace: false, overwrite: true })
   updatesCache[document.uuid] = updates;
   if (!debounceInterval || immediate || !throttlingFunc) {
     if (debugEnabled > 0) warn(`throttledU[date] | immediate update for ${document.uuid}`, updates);
     return await _updateAction(document, updates);
   }
-  return await throttlingFunc(document, updates);
+  return await throttlingFunc(document, foundry.utils.duplicate(updates) as ChatMessage.UpdateData);
 }
 export function getUpdatesCache(uuid: string | undefined | null) {
   if (!uuid) return {};
@@ -6569,7 +6580,7 @@ export function getCachedDocument(uuid: string | undefined | null) {
   let document = fromUuidSync(uuid) as ChatMessage.Implementation;
   let updates = document?.uuid && updatesCache[document.uuid as string];
   if (!foundry.utils.isEmpty(updates))
-  //@ts-expect-error no dnd5e-types - changes not in fvtt types
+    //@ts-expect-error no dnd5e-types - changes not in fvtt types
     document = document.clone(updates, { changes: updates, keepId: true }) as ChatMessage.Implementation;
   return document;
 }
@@ -6835,7 +6846,11 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
   const maxTargets = targetDetails.affects?.count;
   // ignoreToken set to null if special target include "self" - otherwise set to token
   // TODO (Michael): HERE! RIGHT HERE!
-  let ignoreToken = (targetDetails.affects.special ?? "").split(";").some(spec => spec === "self") ? null : tokenToUse;
+  let ignoreToken = (targetDetails.affects.special ?? "").split(";").some(spec => ["self", "-self"].includes(spec)) ? null : tokenToUse;
+  if ((targetDetails.affects.special ?? "").split(";").some(spec => ["self"].includes(spec))) {
+    foundry.utils.logCompatibilityWarning("midi-qol | target specials includes 'self'. Use '-self' to exclude the caster",
+    {since: "midi-qol 13.0.19", until: "31.1.0"});
+  }
   if (canvas.tokens?.placeables && canvas.grid) {
     const canvasTokens = canvas.tokens?.placeables;
     if (canvasTokens) for (let target of canvasTokens) {
@@ -6853,7 +6868,7 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
       inRange = inRange && (configSettings.rangeTarget === "none" || !hasWallBlockingCondition(target))
       if (inRange) {
         // if ignoreToken set don't target it.
-        if (ignoreToken === target) {
+        if (ignoreToken?.document.uuid === target.document.uuid) {
           inRange = false;
         }
         const distance = computeDistance(target, tokenToUse, { wallsBlock });
@@ -6934,9 +6949,9 @@ function getItemFromEffectOriginOLD(origin: string) {
 
 export type OpType = "equal" | "insert" | "delete" | "replace";
 
-export interface EqualOp   { type: "equal";   text: string }
-export interface InsertOp  { type: "insert";  text: string }
-export interface DeleteOp  { type: "delete";  text: string }
+export interface EqualOp { type: "equal"; text: string }
+export interface InsertOp { type: "insert"; text: string }
+export interface DeleteOp { type: "delete"; text: string }
 export interface ReplaceOp { type: "replace"; text: string; from: string }
 
 export type DiffOp = EqualOp | InsertOp | DeleteOp | ReplaceOp;

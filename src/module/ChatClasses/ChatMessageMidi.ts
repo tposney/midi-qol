@@ -308,16 +308,17 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       for (let [index, d20Roll] of this.rolls.entries()) {
         const total = totals[index];
         if (!total) continue;
-        if (!game.user?.isGM && configSettings.autoCheckHit === "whisper") {
-          if (total.classList.contains("success")) total.classList.remove("success", "failure", "critical", "fumble");
+        if (!game.user?.isGM && (["whisper", "gmOnly"].includes(configSettings.autoCheckHit) || safeGetGameSetting("dnd5e", "attackRollVisibility") === "none")) {
+          total.classList.remove("success", "failure", "critical", "fumble");
         } else if (total && configSettings.highLightCriticalAttackOnly) {
           //@ts-expect-error
           if (d20Roll?.isCritical) total.classList.add("critical");
           //@ts-expect-error
           if (d20Roll?.isFumble) total.classList.add("fumble");
-          if (total.classList.contains("success")) total.classList.remove("success", "failure");
+          total.classList.remove("success", "failure");
+          total.classList.remove("success", "failure");
         } else if (total && !configSettings.highlightSuccess) {
-          if (total.classList.contains("success")) total.classList.remove("success", "failure", "critical", "fumble");
+          total.classList.remove("success", "failure", "critical", "fumble");
         } else if (total && !configSettings.highlightSuccess) {
           //@ts-expect-error
           if (d20Roll.isCritical) total.classList.add("critical");
