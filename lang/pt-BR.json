@@ -178,7 +178,8 @@
   "midi-qol.autoCheckHitOptions": {
     "none": "Nenhum",
     "all": "Verificar (todos veem o resultado)",
-    "whisper": "Verificar (apenas Mestre vê o resultado)"
+    "whisper": "Verificar (apenas Mestre vê o resultado)",
+    "gmOnly": "Verificar (apenas Mestre vê qualquer resultado)"
   },
   "midi-qol.clickOptions": {
     "off": "Desativado",
@@ -201,7 +202,8 @@
     "allNoRoll": "Salvaguarda (todos veem resultado)",
     "all": "Salvaguarda (todos veem resultado + total salvaguarda)",
     "whisper": "Salvaguarda (apenas Mestre vê)",
-    "allShow": "Salvaguarda (todos veem resultado + rolagens)"
+    "allShow": "Salvaguarda (todos veem resultado + rolagens)",
+    "gmOnly": "Salvaguarda (apenas Mestre vê qualquer resultado)"
   },
   "midi-qol.rangeTargetOptions": {
     "none": "Nenhum",
@@ -514,7 +516,7 @@
   "midi-qol.DefaultSaveMult.Name": "Multiplicador Padrão de Salvaguarda",
   "midi-qol.DefaultSaveMult.Hint": "Se não houver outros modificadores, a salvaguarda causará esta fração do dano do ataque original. Padrão: 0.5 (metade do dano em sucesso). Você só deve mudar isso se souber como funcionam os multiplicadores.",
   "midi-qol.RequireMagical.Name": "Requer Propriedade 'Mágico'",
-  "midi-qol.RequireMagical.Hint": "Propriedade Mágica é a propriedade 'Mágico' da arma ou a propriedade 'Dano Mágico' do Midi QOL. Se habilitado, o item aplica dano mágico. Nenhum: itens além das armas causam dano mágico por padrão e armas causam dano mágico se o bônus do ataque for maior que 0. Além de Magias: apenas magias causam dano mágico por padrão. Todos: nenhum item causa dano mágico por padrão.",
+  "midi-qol.RequireMagical.Hint": "Propriedade Mágica é a propriedade 'Mágico' da arma ou a propriedade 'Dano Mágico' do Midi QOL. Se habilitado, o item aplica dano mágico. Nenhum: itens além das armas causam dano mágico por padrão e armas causam dano mágico se o item possuir a propriedade 'Mágico'. Além de Magias: apenas magias causam dano mágico por padrão. Todos: nenhum item causa dano mágico por padrão.",
   "midi-qol.RequireMagicalOptions": {
     "off": "Todos",
     "nonspell": "Além de Magias",
@@ -551,6 +553,8 @@
   "midi-qol.NoChangelogs": "Midi QOL suporta e recomenda os módulos ChangeLogs ou Module Manager+ para mostrar quaisquer alterações desde a última atualização",
   "midi-qol.ActiveDefenceString": "Active Defence",
   "midi-qol.ActiveDefence.Name": "Defesa Ativa",
+  "midi-qol.ActiveDefenceModifier.Name": "Modificador de Defesa Ativa",
+  "midi-qol.ActiveDefenceModifier.Hint": "A CD da Defesa Ativa será o bônus de ataque + (22 - este modificador) e a rolagem de Defesa Ativa será CA - modificador + 1d20. <br>O valor não importa, apenas escolha o que faz as rolagens parecerem boas para você. <br> Os valores sugeridos são <strong>12</strong>, 10 ou 0.",
   "midi-qol.ActiveDefence.Hint": "Ao invés do Mestre rolar 'Para Atingir', jogadores fazem uma rolagem de defesa.",
   "midi-qol.ActiveDefenceDC.Name": "Exibir CD da Defesa Ativa",
   "midi-qol.ActiveDefenceDC.Hint": "Se habilitado, a CD da Defesa Ativa será mostrada no cartão de chat.",
@@ -709,7 +713,6 @@
   },
   "midi-qol.EnforceReactions.Title": "Reação Usada",
   "midi-qol.EnforceReactions.Content": "Você já usou sua Reação nesta rodada. Quer continuar mesmo assim?",
-  "midi-qol.DisplayHitResultNumeric.Name": "Exibir CA do Alvo",
   "midi-qol.EnforceBonusActions.Title": "Ação Bônus Usada",
   "midi-qol.EnforceBonusActions.Content": "Você já usou sua Ação Bônus nesta rodada. Quer continuar mesmo assim?",
   "midi-qol.SoundSettings.Name": "Configurar Sons do Midi QOL",
@@ -865,17 +868,17 @@
   "midi-qol.WaitingForPreviousWorkflow": "Rolagem anterior de {name} não foi completada.",
   "midi-qol.ResolvePreviousWorkflow": "Escolha o que fazer com a rolagem anterior",
   "midi-qol.ConfirmTargetOptions": {
-    "default": "Configurações do Midi QOL",
+    "default": "Configurações Midi",
     "always": "Sempre",
     "never": "Nunca"
   },
   "midi-qol.SaveDamageOptions": {
-    "default": "Configurações do Midi QOL",
+    "default": "Configurações Midi",
     "fulldam": "Dano Total",
     "halfdam": "Metade do Dano",
     "nodam": "Sem Dano"
   },
-  "midi-qol.MidiSettings": "Configurações do Midi QOL",
+  "midi-qol.MidiSettings": "Configurações Midi",
   "midi-qol.ConcentrationIncapacitatedConditionCheck.Name": "Remover Concentração Se Incapacitado",
   "midi-qol.ConcentrationIncapacitatedConditionCheck.Hint": "Atordoado, Incapacitado, Inconsciente, Morto, Paralisado e Petrificado removem a Concentração.",
   "midi-qol.AutoCompleteWorkflow.Name": "Completar Workflow se Exigido",
@@ -922,6 +925,16 @@
     "notHostile": "Não-Hostil",
     "Friendly": "Amigável",
     "notFriendly": "Não-Amigável"
+  },
+  "midi-qol.ConfigDialogOptions": {
+    "default": "Configurações Midi",
+    "always": "Sempre Exibir",
+    "never": "Nunca Exibir"
+  },
+  "midi-qol.ConsumeDialogOptions": {
+    "default": "Configurações Midi",
+    "always": "Sempre Exibir",
+    "never": "Nunca Exibir"
   },
   "midi-qol.TriggeredActivityTargetOptions": {
     "self": "Alvo Dono do Item",
@@ -998,17 +1011,17 @@
           "label": "Escolher Efeitos",
           "hint": "Escolha efeitos para aplicar."
         },
-        "forceDialog": {
-          "label": "Forçar Diálogo de Configuração",
-          "hint": "Força o diálogo de configuração ao rolar ataques."
+        "forceConsumeDialog": {
+          "label": "Forçar Diálogo de Consumo",
+          "hint": "Força o Diálogo de Configuração quando a atividade é usada."
         },
-        "forceAttackDialog" : {
-          "label": "Forçar Configuração de Ataque",
-          "hint": "Força o Diálogo de Configuração de Ataque quando a atividade é usada."
+        "forceRollDialog" : {
+          "label": "Forçar Configuração de Rolagem",
+          "hint": "Força o Diálogo de Configuração de Ataque/Rolagem quando a atividade é usada."
         },
         "forceDamageDialog": {
           "label": "Forçar Configuração de Dano",
-          "hint": "Força o Diálogo de Configuração de Dano quando a atividade é usada"
+          "hint": "Força o Diálogo de Configuração de Dano quando a atividade é usada e possuir rolagem de dano."
         },
         "confirmTargets": {
           "label": "Confirmação do Alvo",
@@ -1172,7 +1185,7 @@
       },
       "attackRollPerTarget": {
         "label": "Rolagem de Ataque por Alvo",
-        "hint": "Faz uma jogada de ataque separada para cada alvo."
+        "hint": "Faz uma jogada de ataque separada para cada alvo. Cria um cartão de chat para cada alvo."
       },
       "fumbleThreshold": {
         "label": "Margem de Falha Crítica",
