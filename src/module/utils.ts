@@ -2595,15 +2595,19 @@ function getPlayerNPCNameHideNPCNAmes(token: TokenOrDocument) {
       case CONST.TOKEN_DISPOSITIONS.FRIENDLY:
         hideSetting = safeGetGameSetting("hide-npc-names", "hideFriendlyNames");
         if (hideSetting) return safeGetGameSetting("hide-npc-names", "friendlyNameReplacement") as string;
+        break;
       case CONST.TOKEN_DISPOSITIONS.HOSTILE:
         hideSetting = safeGetGameSetting("hide-npc-names", "hideHostileNames");
         if (hideSetting) return safeGetGameSetting("hide-npc-names", "hostileNameReplacement") as string;
+        break;
       case CONST.TOKEN_DISPOSITIONS.SECRET:
         hideSetting = safeGetGameSetting("hide-npc-names", "hideSecretNames");
         if (hideSetting) return safeGetGameSetting("hide-npc-names", "secretNameReplacement") as string;
+        break;
       case CONST.TOKEN_DISPOSITIONS.NEUTRAL:
         hideSetting = safeGetGameSetting("hide-npc-names", "hideNeutralNames");
         if (hideSetting) return safeGetGameSetting("hide-npc-names", "neutralNameReplacement") as string;
+        break;
     }
   }
   return getTokenName(token)

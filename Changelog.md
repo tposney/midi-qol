@@ -1,3 +1,7 @@
+### 13.0.20
+* Fix for duplicate DNS display when rolling saves from the chat card.
+* Fix for hiding PC names in hit/save displays when using the Hide  NPC names module.
+
 ### 13.0.19
 * Fix for a rare race condition that could cause damage rolls not to display.
 * Fix for player saves dice so nice dice being displayed twice when rolling a hidden roll mode.
