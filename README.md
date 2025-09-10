@@ -1081,6 +1081,11 @@ The field should contain ONLY the macro name, or the string "ItemMacro" or "Item
 You may specify the point at in the workflow when the macro is called.  
 The macro will be called with args[0] containing the current state information for the workflow (see below).
 There are some controls for macro writers to decide when their macro should get executed. 
+
+> [!important] Documentation
+> A flowchart for the workflow is available [**here**](docs/flowchart.md). <br>
+> The fields available in `workflow` at each pass are listed [**here**](docs/workflowfields.md).
+
 ```
     preItemRoll: Called before the item is rolled (*)
     templatePlaced: Only called once a template is placed
