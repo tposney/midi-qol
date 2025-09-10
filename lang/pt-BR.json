@@ -890,6 +890,8 @@
   "midi-qol.MidiFieldsTab.Name": "Exibir os campos do Midi QOL em uma aba separada",
   "midi-qol.UndoChatColor.Name": "Desfazer a Cor dos Cartões de Chat",
   "midi-qol.UndoChatColor.Hint": "'Deletar' significa remover o cartão de chat ou desfazer. Do contrário, os cartões desfeitos são coloridos novamente.",
+  "midi-qol.WaitForDamageApplication.Name": "Esperar Aplicação do Dano",
+  "midi-qol.WaitForDamageApplication.Hint": "Aguarde até que o cliente do Mestre aplique o dano antes de concluir o Workflow. Desabilitar proporcionará uma pequena melhoria no desempenho, mas pode interferir em alguns módulos de terceiros.",
   "DND5E.DamageApplication.Change.Absorption": "Absorção a {type}",
   "DND5E.DamageApplication.Change.Spell": "Magia Personalizada",
   "DND5E.DamageApplication.Change.Magic": "Mágico Personalizado",
