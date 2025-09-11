@@ -34,9 +34,9 @@
   "midi-qol.AddChatDamageButtons.Hint": "Adiciona botões de dano em qualquer rolagem de dano no chat. Clicar aplica o dano a todos os tokens selecionados (NÃO MARCADOS) (o mesmo que o menu suspenso).",
   "midi-qol.AddChatDamageButtonsOptions": {
     "none": "Nenhum",
-    "gm": "Adicionar Apenas p/ Mestre",
-    "pc": "Adicionar Apenas p/ Jogadores",
-    "both": "Adicionar p/ Todos"
+    "gm": "Apenas para Mestre",
+    "pc": "Apenas para Jogadores",
+    "both": "Para Todos"
   },
   "midi-qol.AutoRollDamage.Name": "Rolar Dano Automaticamente",
   "midi-qol.AutoRollDamage.Hint": "Role o dano automaticamente quando um ataque é feito. Se 'Rolar Dano Automaticamente' estiver configurado para acertos, o dano será rolado mesmo que nenhum token seja selecionado, se o ataque atingir (veja 'Verificação de Acerto') ou se acertos não forem verificados.",
@@ -85,13 +85,13 @@
   "midi-qol.AutoEffects.Name": "Aplicar Efeito de Itens",
   "midi-qol.AutoEffects.Hint": "Aplica automaticamente os efeitos ativos aos alvos quanto eles são atingidos, falharem em uma salvaguarda ou não houver uma salvaguarda. Funciona melhor com os módulos About Time e/ou Times Up.",
   "midi-qol.AutoEffectsOptions": {
-    "off": "Não aplicar efeitos",
-    "applyNoButton": "Aplicar efeitos e não mostrar botão",
-    "applyRemove": "Aplicar efeitos e remover botão",
-    "applyLeave": "Aplicar efeito e manter botão"
+    "off": "Não Aplicar",
+    "applyNoButton": "Aplicar e Não Mostrar Botão",
+    "applyRemove": "Aplicar e Remover Botão",
+    "applyLeave": "Aplicar e Manter Botão"
   },
-  "midi-qol.RangeTarget.Name": "Marcar para Magias/Ataques à Distância",
-  "midi-qol.RangeTarget.Hint": "Marca tokens automaticamente para alvos à distância se os alvos forem uma criatura/inimigo/aliado.",
+  "midi-qol.RangeTarget.Name": "Marcar para Magias/Ataques em Emanação/Raio",
+  "midi-qol.RangeTarget.Hint": "Marca tokens automaticamente para alvos de Emanação/Raio se os alvos forem uma criatura/inimigo/aliado.",
   "midi-qol.PlayerRollSaves.Name": "Avisar Jogadores para Rolarem Salvaguardas",
   "midi-qol.PlayerRollSaves.Hint": "Jogadores rolam salvaguardas. 'Nenhum' significa que o Midi QOL irá rolar a salvaguarda. Do contrário, o jogador receberá uma mensagem de sussurro no chat ou uma mensagem do módulo Monk's Token Bar.",
   "midi-qol.rollNPCSaves.Name": "Avisar Mestre para Rolar Salvaguardas (Desvinculado)",
