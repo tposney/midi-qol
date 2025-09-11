@@ -1606,7 +1606,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     if (this.token) foundry.utils.setProperty(dialog, "options.window.subtitle", this.token.name);
     result = await wrapped(config, dialog, message);
     let rollMode = message.rollMode ?? safeGetGameSetting("core", "rollMode");
-    await displayDSNForRoll(result, "toolCheck", rollMode);
+    if (chatMessage === false) await displayDSNForRoll(result, "toolCheck", rollMode);
     result![0] = await bonusCheck(this, result![0], "check", config.ability ?? "");
     if (!result) return result;
     if (chatMessage !== false && result) {

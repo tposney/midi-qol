@@ -2006,7 +2006,7 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
                 case "levelsautocover":
                   // //@ts-expect-error
                   // TODO include auto cover calcs in checking console.error(AutoCover.calculateCover(t1, t2));
-                  if (configSettings.optionalRules.wallsBlockRange === "centerLevels" && installedModules.get("levels")) {
+                  if (installedModules.get("levels")) {
                     if (coverVisible === false) continue;
                     if (coverVisible === undefined) {
                       let p1 = {
@@ -2242,6 +2242,7 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
     }
 
     const isMetric = game.settings.get("dnd5e", "metricLengthUnits") ?? false;
+    let isGridless = canvas.grid?.constructor.name === "GridlessGrid";
     const fudgeFactor = configSettings.gridlessFudge ?? 0;
 
     for (let target of targets) {
@@ -2265,8 +2266,11 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
       };
 
       const rawDistance = computeDistance(token, target, coverOptions);
-      const distance = parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor;
-
+      let distance;
+      if (isGridless && distance > 0)
+        distance = Math.max(0, parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor);
+      else 
+        distance = parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor;
       if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
         log(`${target.name} is too far ${distance} from your character you cannot hit`)
         if (checkMechanic("checkRange") === "longdisadv" && ["rwak", "rsak", "rpak"].includes(activity.actionType)) {
@@ -7123,3 +7127,8 @@ export function getTargetDescriptor(uuid: string, targetDescriptors: Array<DND5E
   if (!uuid || !targetDescriptors) return undefined;
   return targetDescriptors?.find(td => td.uuid === uuid);
 }
+
+export const throttledScrollBottom = foundry.utils.throttle(() => {
+  //@ts-expect-error fvtt-missing scrollBottom
+  ui.chat?.scrollBottom({ waitImages: true });
+} , 150);

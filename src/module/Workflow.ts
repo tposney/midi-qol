@@ -2136,7 +2136,7 @@ export class Workflow {
     }
 
     // do pre roll checks
-    if (checkMechanic("checkRange") !== "none" && (!this.AoO || ["rwak", "rsak", "rpak"].includes(this.activity.actionType ?? "")) && this.tokenUuid) {
+    if (checkMechanic("checkRange") !== "none" && (!this.AoO && ["rwak", "rsak"].includes(this.activity.actionType ?? "")) && this.tokenUuid) {
       const { result, attackingToken, range, longRange } = checkActivityRange(this.activity, getToken(this.token) ?? "invalid", this.targets);
       switch (result) {
         case "fail": return this.WorkflowState_RollFinished;
@@ -2159,20 +2159,6 @@ export class Workflow {
     if (configSettings.undoWorkflow) await saveTargetsUndoData(this);
     this.effectsAlreadyExpired = [];
 
-    const tokensToCheck: Set<Token.Implementation> = this.targets.size > 0 ? this.targets : this.token ? new Set([this.token]) : new Set();
-    // TODO (Michael): Get this working with activity-bound activation conditions, if necessary
-    // for (let token of tokensToCheck) {
-    //   for (let theItem of [this.item, this.ammunition]) {
-    //     if (!theItem) continue;
-    //     const activationCondition = theItem.getFlag(MODULE_ID, "itemCondition");
-    //     if (activationCondition) {
-    //       if (!(await evalActivationCondition(this, activationCondition, token, { async: true }))) {
-    //         ui.notifications?.warn(`midi-qol | Activation condition ${activationCondition} failed roll cancelled`)
-    //         return this.WorkflowState_Cancel;
-    //       }
-    //     }
-    //   }
-    // }
     if (await asyncHooksCall("midi-qol.targetingComplete", this) === false) {
       ui.notifications?.warn(`midi-qol | Targeting complete hook cancelled roll`);
       return this.WorkflowState_Abort;
@@ -2262,11 +2248,6 @@ export class Workflow {
       this.recordDescriptorACModifiers();
       await this.checkHits();
       await this.displayAttackRoll();
-      /* active 1
-      //@ts-expect-error
-      ui.chat?.scrollBottom();
-      */
-
       const rollMode = safeGetGameSetting("core", "rollMode");
       this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === CONST.DICE_ROLL_MODES.BLIND || rollMode === CONST.DICE_ROLL_MODES.PRIVATE;
       await asyncHooksCallAll("midi-qol.hitsChecked", this);
@@ -2382,10 +2363,6 @@ export class Workflow {
         let replaceString = `<button data-action="damage">${damageString}</button>`
         let content = chatMessage.content.replace(searchRe, replaceString);
         await this.performThrottledUpdate(chatMessage, { content });
-        setTimeout(() => {
-          //@ts- expect-error v13-stubby
-          // ui.chat?.scrollBottom();
-        }, 100);
       }
     }
     return this.WorkflowState_Suspend; // wait for a damage roll to advance the state.
@@ -2928,13 +2905,6 @@ export class Workflow {
     if (this.activity.target?.affects.type !== "" || this.targets.size !== 0) {
       // moved inside RollFinished if (configSettings.autoItemEffects === "applyRemove") await this.removeEffectsButton();
     }
-    // TODO see if we can delete the workflow - I think that causes problems for Crymic
-    /*
-    setTimeout(() => {
-      //@ts-expect-error v13 stubby
-      ui.chat?.scrollBottom();
-    }, 100);
-    */
 
     return this.WorkflowState_Completed;
   }

@@ -1209,8 +1209,6 @@ async function createGMReverseDamageCard(
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
     if (data.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? {}, data.flagTags);
     chatCardUuid = (await ChatMessage.create(chatData))?.uuid;
-    //@ts- expect-error no fvtt-types scrollbottom
-    // setTimeout(() => ui.chat?.scrollBottom(), 10);
   }
   return chatCardUuid;
 }

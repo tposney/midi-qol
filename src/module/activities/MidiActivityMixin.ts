@@ -1330,7 +1330,7 @@ export let MidiActivityMixin = Base => {
 
         let tokenToUse: foundry.canvas.placeables.Token.Implementation | undefined;
         if (speaker.token) tokenToUse = canvas.tokens?.get(speaker.token);
-        const rangeDetails = checkActivityRange(this, tokenToUse, workflow.targets, checkMechanic("checkRange") !== "none")
+        const rangeDetails = checkActivityRange(this, tokenToUse, workflow.targets, checkMechanic("checkRange") !== "none" && !isAoETargeting)
         if (checkMechanic("checkRange") !== "none" && !isAoETargeting && !isEmanationTargeting && !workflow.AoO && speaker.token) {
           if (tokenToUse && workflow.targets.size > 0) {
             if (rangeDetails.result === "fail")

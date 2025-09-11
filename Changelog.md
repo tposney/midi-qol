@@ -1,3 +1,13 @@
+### 13.0.21
+* Fix for AoE targeting getting incorrectly being failed as "target blocked by wall" when using something like a fireball.
+* Added option to target confirmation to clear all targets.
+* Slight reorganisation of targeting/walls block configuration to move walls block options to the workflow tab.
+* Fix when using levels auto cover for determining ranged attack blocked by wall.
+* Fix for duplicate DNS rolls when doing tool checks.
+* Added chatLog pruning for popped out chat log.
+* Chat log is more aggressively pruned.
+* Event listeners on chat log elements are now explicitly removed when the element is dropped from the chat log.
+
 ### 13.0.20
 * Fix for duplicate DNS display when rolling saves from the chat card.
 * Fix for hiding PC names in hit/save displays when using the Hide  NPC names module.

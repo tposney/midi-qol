@@ -90,8 +90,8 @@
     "applyRemove": "Apply Effects and remove button",
     "applyLeave": "Apply effects but leave button"
   },
-  "midi-qol.RangeTarget.Name": "Auto target for ranged target spells/attacks",
-  "midi-qol.RangeTarget.Hint": "Auto target for ranged target types if the target type is creature/enemy/ally",
+  "midi-qol.RangeTarget.Name": "Auto target for radius/emanation spells/attacks",
+  "midi-qol.RangeTarget.Hint": "Auto target for radius/emanation targets if the target type is creature/enemy/ally",
   "midi-qol.PlayerRollSaves.Name": "Prompt Players to Roll Saves",
   "midi-qol.PlayerRollSaves.Hint": "Players Roll saves. None means midi will roll the save. Otherwise, the player will get a whispered chat message or Monk's Token bar prompt.",
   "midi-qol.rollNPCSaves.Name": "Prompt GM to Roll Saves (Unlinked)",

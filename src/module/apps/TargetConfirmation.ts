@@ -122,7 +122,8 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     },
     actions: {
       roll: this.#onRoll,
-      cancel: this.#onCancel
+      cancel: this.#onCancel,
+      clearTargets: this.#onClearTargets
     }
   };
 
@@ -239,7 +240,8 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     }
     context.buttons = [
       { type: "button", icon: "fa-solid fa-dice-d20", label: "DND5E.Roll", action: "roll" },
-      { type: "button", icon: "fa-solid fa-stop", label: "Cancel", action: "cancel" }
+      { type: "button", icon: "fa-solid fa-stop", label: "Cancel", action: "cancel" },
+      { type: "hidden", icon: "fa-solid fa-check", label: "Clear", action: "clearTargets" }
     ];
     return context;
   }
@@ -256,6 +258,12 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
   static #onCancel(this: TargetConfirmationDialog) {
     this.doCallback(false);
     this.close();
+  }
+
+  static #onClearTargets(this: TargetConfirmationDialog) {
+    updateUserTargets([]);
+    this.data.targets = [];
+    this.render();
   }
 
   async _onRender(context, options) {
