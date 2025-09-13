@@ -1462,7 +1462,7 @@ export let MidiActivityMixin = Base => {
       // Are there any potential effects to apply
       let hasEffects = workflow?.workflowType === "BaseWorkflow" && this.effects.some(ae => !ae.effect?.transfer && !ae.effect?.flags?.dae?.dontApply);;
       // if target type is not blank or there are targets only set hasEffects if we are not going to remove the button later
-      if (this.target?.affects.type !== "" || workflow.targets.size !== 0)
+      if (this.target?.affects.type !== "" || workflow?.targets.size !== 0)
         hasEffects &&= !["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects);
       let dmgBtnText = (this.actionType === "heal") ? i18n("DND5E.Healing") : i18n("DND5E.Damage");
       if (workflow?.workflowOptions?.fastForwardDamage && configSettings.showFastForward) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
