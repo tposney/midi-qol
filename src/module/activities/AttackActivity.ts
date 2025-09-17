@@ -149,38 +149,62 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     static #rollAttack(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.getWorkflow(message?.uuid);
 
-      if (!message || !workflow || workflow.currentAction === workflow.WorkflowState_Abort || workflow.currentAction === workflow.WorkflowState_Completed) {
+      if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
         if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
         const attackConfig: ActivityUseConfiguration = { event, workflow };
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
         attackConfig.midiOptions.workflowOptions ??= {};
         attackConfig.midiOptions.targets = new Set(workflow?.targets);
         attackConfig.workflow = workflow;
+        if (workflow) {
+          attackConfig.midiOptions.workflowOptions ??= {};
+          attackConfig.midiOptions.workflowOptions.autoRollAttack = true;
+        }
+        attackConfig.event = event;
         // @ts-expect-error
         this.use(attackConfig, {}, {});
       } else {
+        const attackConfig: ActivityUseConfiguration = { workflow };
+        attackConfig.midiOptions = workflow?.rollOptions ?? {};
+        attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
+        workflow.advantage = undefined;
+        workflow.disadvantage = undefined;
+        attackConfig.midiOptions.advantage = undefined;
+        attackConfig.midiOptions.disadvantage = undefined;
+        workflow.attackAdvAttribution = new Set<string>();
+        workflow.advReminderAttackAdvAttribution = new Set<string>();
         workflow.activity = this;
         // @ts-expect-error
-        return this.rollAttack({ event, workflow }, {}, {});
+        return this.rollAttack({ workflow }, {}, {});
       }
     }
 
     static #rollAttackAdvantage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.getWorkflow(message?.uuid);
-      if (!message || !workflow || workflow.currentAction === workflow.WorkflowState_Abort || workflow.currentAction === workflow.WorkflowState_Completed) {
+      if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
         if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
         const attackConfig: any = { event, workflow };
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
         attackConfig.midiOptions.workflowOptions ??= {};
         attackConfig.workflow = workflow;
+        if (workflow) {
+          attackConfig.midiOptions.workflowOptions ??= {};
+          attackConfig.midiOptions.workflowOptions.advantage = true;
+          attackConfig.midiOptions.workflowOptions.disadvantage = false;
+          attackConfig.midiOptions.workflowOptions.autoRollAttack = true;
+        }
         //@ts-expect-error
         this.use(attackConfig, {}, {});
       } else {
         const attackConfig: ActivityUseConfiguration = { workflow };
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
         attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
-        attackConfig.advantage = true;
-        attackConfig.disadvantage = false;
+        workflow.advantage = true;
+        workflow.disadvantage = false;
+        attackConfig.midiOptions.advantage = true;
+        attackConfig.midiOptions.disadvantage = false;
+        workflow.attackAdvAttribution = new Set<string>();
+        workflow.advReminderAttackAdvAttribution = new Set<string>();
         workflow.activity = this;
         //@ts-expect-error
         return this.rollAttack(attackConfig, {}, {});
@@ -189,21 +213,31 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
 
     static #rollAttackDisadvantage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.getWorkflow(message?.uuid);
-      if (!message || !workflow || workflow.currentAction === workflow.WorkflowState_Abort || workflow.currentAction === workflow.WorkflowState_Completed) {
+      if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
         if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
         const attackConfig: ActivityUseConfiguration = { event, workflow };
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
         attackConfig.midiOptions.workflowOptions ??= {};
         attackConfig.workflow = workflow;
+        if (workflow) {
+          attackConfig.midiOptions.workflowOptions ??= {};
+          attackConfig.midiOptions.workflowOptions.autoRollAttack = true;
+          attackConfig.midiOptions.advantage = false;
+          attackConfig.midiOptions.disadvantage = true;
+        }
         //@ts-expect-error
         this.use(attackConfig, {}, {});
       } else {
         const attackConfig: any = { workflow };
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
         attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
-        attackConfig.advantage = false;
-        attackConfig.disadvantage = true;
+        workflow.advantage = false;
+        workflow.disadvantage = true;
+        attackConfig.midiOptions.advantage = false;
+        attackConfig.midiOptions.disadvantage = true;
         workflow.activity = this;
+        workflow.attackAdvAttribution = new Set<string>();
+        workflow.advReminderAttackAdvAttribution = new Set<string>();
         //@ts-expect-error
         return this.rollAttack(attackConfig, {}, {});
       }

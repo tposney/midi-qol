@@ -22,7 +22,7 @@ export class ChatLogMidi extends foundry.applications.sidebar.tabs.ChatLog {
   async pruneElement() {
     const scroll = this.element.querySelector(".chat-scroll .chat-log");
     const count = scroll?.children.length ?? 0;
-    const maxSize = 20; // CONFIG.ChatMessage.batchSize ?? 100
+    const maxSize = CONFIG.ChatMessage.batchSize ?? 15;
     if (count > maxSize) {
       for (let index = 0; index < count - maxSize; index++) {
         //@ts-expect-error

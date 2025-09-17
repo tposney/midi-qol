@@ -1297,7 +1297,8 @@ function setupMidiFlags(DAEapi: any) {
   }
   midiFlags.push(`flags.${MODULE_ID}.fail.disadvantage.heavy`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.disadvantage.heavy`);
-
+  midiFlags.push(`flags.${MODULE_ID}.canFlank`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.canFlank`);
   /*
   midiFlags.push(`flags.${MODULE_ID}.grants.advantage.attack.all`);
   midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.attack.all`);

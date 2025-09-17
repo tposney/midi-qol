@@ -221,6 +221,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     else result.options.rollMode = CONST.DICE_ROLL_MODES.BLIND;
     */
     await displayDSNForRoll(result, "skill", rollMode);
+    DSNMarkDiceDisplayed(result);
     if (!config.simulate) {
       result[0] = await bonusCheck(this, result[0], "skill", skillId, message.data);
       DSNMarkDiceDisplayed(result);
@@ -232,7 +233,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     }
     if (message.create !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
-        const cls = getDocumentClass("ChatMessage");
+        // const cls = getDocumentClass("ChatMessage");
         await result[0].toMessage(message.data, { rollMode });
       }
     }
@@ -625,7 +626,8 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     if (rollMode !== CONST.DICE_ROLL_MODES.BLIND) rollMode = message.rollMode ?? config.rollMode ?? rollMode;
     // @ts-expect-error
     result.forEach(r => r.options.rollMode = rollMode);
-    if (message.create === false) await displayDSNForRoll(result, rollType, rollMode);
+    await displayDSNForRoll(result, rollType, rollMode);
+    DSNMarkDiceDisplayed(result);
     foundry.utils.mergeObject(message.data, { "flags": config.flags ?? {} });
     if (!config.midiOptions.simulate) {
       result[0] = await bonusCheck(this, result[0], rollType, abilityId, message.data);
@@ -642,9 +644,10 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     }
 
     if (message.create !== false && result) {
-      const cls = getDocumentClass("ChatMessage");
-      const msg = cls.create(message.data, { rollMode });
-      // CONFIG.Dice.D20Roll.toMessage(result, message.data, { rollMode, create: true });
+      // const cls = getDocumentClass("ChatMessage");
+      // const msg = cls.create(message.data, { rollMode });
+      //@ts-expect-error
+      CONFIG.Dice.D20Roll.toMessage(result, message.data, { rollMode, create: true });
     }
     if (saveRollMode) game.settings.set("core", "rollMode", saveRollMode);
     if (abilityId) await expireRollEffect.bind(this)(rollType, abilityId, success);
@@ -1606,17 +1609,15 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     if (this.token) foundry.utils.setProperty(dialog, "options.window.subtitle", this.token.name);
     result = await wrapped(config, dialog, message);
     let rollMode = message.rollMode ?? safeGetGameSetting("core", "rollMode");
-    if (chatMessage === false) await displayDSNForRoll(result, "toolCheck", rollMode);
-    result![0] = await bonusCheck(this, result![0], "check", config.ability ?? "");
+    if (result) {
+      await displayDSNForRoll(result, "toolCheck", rollMode);
+      DSNMarkDiceDisplayed(result);
+      result![0] = await bonusCheck(this, result![0], "check", config.ability ?? "");
+      DSNMarkDiceDisplayed(result);
+    }
     if (!result) return result;
     if (chatMessage !== false && result) {
-      const cls = getDocumentClass("ChatMessage")
-      await cls.create(message.data as any, { rollMode })
-      // const messageData: any = { rolls: result, ...message.data, rollMode };
-      //@ ts-e xpect-error
-      // CONFIG.Dice.D20Roll._prepareMessageData(result, messageData);
-      // messageData.template = "modules/midi-qol/templates/roll.html";
-      // await result[0].toMessage(messageData, { rollMode });
+      await result[0].toMessage(message.data, { rollMode });
     }
   } catch (err) {
     const message = "midi-qol | error in rollToolCheck";

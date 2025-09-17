@@ -1,3 +1,15 @@
+### 13.0.22
+* Fix (hopefully) for tokens losing vision after making an attack.
+* Fixed localisation display in midi custom sounds setting for quick settings.
+* Fix for flags.midi-qol.onUseMacroName passive effects pointing to the wrong origin.
+* Fix for flags.midi-qol.onUseMacroName and ItemMacro failing to roll.
+* Fix for extra DSN dice being rolled when rolling ability saves/ability checks/skills/tool rolls when displaying before and after card.
+* Fix for broken TrapWorkflow.
+* Midi no longer uses the preRollXXXV2 hooks, just the preRollXXX hooks.
+* By popular demand the midi item/activity configuration control has been added to the header of the item sheet for tidy sheets.
+* Added flags.midi-qol.cantFlank.
+  - if the flag evaluates to false the token won't be considered for flanking/flanked checks even if it has the right disposition.
+
 ### 13.0.21
 * Fix for AoE targeting getting incorrectly being failed as "target blocked by wall" when using something like a fireball.
 * Added option to target confirmation to clear all targets.

@@ -1,7 +1,7 @@
 import { Activity, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn, busyWait } from "../../midi-qol.js";
 import { socketlibSocket } from "../GMAction.js";
-import { ActiveDefenceWorkflow, AugmentedEvent, Workflow } from "../Workflow.js";
+import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow } from "../Workflow.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import {
@@ -265,7 +265,7 @@ export let MidiActivityMixin = Base => {
           if (uuid) targets.set(uuid, { name, img, uuid, ac: system?.attributes?.ac?.value });
         }
         baseFlags.targets = Array.from(targets.values());
- 
+
       }
       return baseFlags;
     }
@@ -455,24 +455,25 @@ export let MidiActivityMixin = Base => {
         let item = this.item.clone({}, { keepId: true });
         // @ts-expect-error no dnd5e-types
         let activity = item.system.activities.get(this.id) as MidiActivityMixin;
-        if (!usage.workflow) {
-          let workflowClass = usage?.midi?.workflowClass ?? globalThis.MidiQOL.workflowClass;
-          if (game.user?.isGM && checkRule("activeDefence")) {
-            workflowClass = ActiveDefenceWorkflow;
-          }
-          if (!(workflowClass.prototype instanceof Workflow)) workflowClass = Workflow;
-          const workflowOptions = { ...usage.midiOptions, ...(usage.midiOptions?.workflowOptions ?? {}), event: usage.event, storeWorkflow: false };
-          delete workflowOptions.workflowOptions;
-          usage.workflow = new workflowClass(activity.actor ?? null, activity, ChatMessage.getSpeaker({ actor: activity.item.actor }), null, { workflowOptions });
-          usage.workflow!.sequenceId = usage.sequenceId;
-          message.workflow = usage.workflow; // TODO: remove hack to allow card config processing
+        let workflowClass = usage?.midi?.workflowClass ?? globalThis.MidiQOL.workflowClass;
+        if (game.user?.isGM && checkRule("activeDefence")) {
+          workflowClass = ActiveDefenceWorkflow;
         }
+        if (!(workflowClass.prototype instanceof Workflow)) workflowClass = Workflow;
+        const workflowOptions = { ...usage.midiOptions, ...(usage.midiOptions?.workflowOptions ?? {}), event: usage.event, storeWorkflow: false };
+        delete workflowOptions.workflowOptions;
+        if (usage.workflow)
+          usage.midiOptions.workflowOptions.autoRollAttack = true;
+        if (!(usage.workflow instanceof TrapWorkflow)) { 
+          //TODO stupidly the constructor for TrapWorkflow is not compatible with the workflow constructor - will need to clean that up
+          usage.workflow = new workflowClass(activity.actor ?? null, activity, ChatMessage.getSpeaker({ actor: activity.item.actor }), null, { workflowOptions });
+        }
+        usage.workflow!.sequenceId = usage.sequenceId;
+        message.workflow = usage.workflow; // TODO: remove hack to allow card config processing
         usage.workflow!.systemCard = message.systemCard;
         if ((activity.midiProperties?.rollMode ?? "default") !== "default") message.rollMode = activity.midiProperties!.rollMode;
         if (item.parent) await removeFlanking(item.parent);
-
         // config.midiOptions.workflowOptions.targetConfirmation ??= this.forcedTargetConfirmation;
-        // come back and see about re-rolling etc.
         if (!usage.workflow) return undefined;
 
         if (usage.midiOptions.isCritical) usage.workflow.isCritical = true;
@@ -686,7 +687,7 @@ export let MidiActivityMixin = Base => {
           if (config.workflow.rollOptions?.rollToggle) dialog.configure = !dialog.configure;
           // If the activity damage has any choice force configuration dialog
           // if (dialog.configure) config.midiOptions.isCritical = false;
-          preRollDamageHookId = Hooks.once("dnd5e.preRollDamageV2", (rollConfig, dialogConfig, messageConfig) => {
+          preRollDamageHookId = Hooks.once("dnd5e.preRollDamage", (rollConfig, dialogConfig, messageConfig) => {
             const targetDescriptors = foundry.utils.getProperty(messageConfig, "data.flags.dnd5e.targets") as Array<DND5ETargetDescriptor>;
             if (targetDescriptors && config.workflow) config.workflow.targetDescriptors = targetDescriptors;
             if (keys.critical) rollConfig.isCritical = true;
@@ -704,9 +705,10 @@ export let MidiActivityMixin = Base => {
             } return true;
 
           });
-          rollDamageHookId = Hooks.once("dnd5e.rollDamageV2", rolls => {
-            // @ts-expect-error no dnd5e-types
-            if (rolls[0] && config.workflow && config.midiOptions?.updateWorkflow !== false) config.workflow.isCritical = rolls[0].options.isCritical;
+          rollDamageHookId = Hooks.once("dnd5e.rollDamage", rolls => {
+            if (rolls[0] && config.workflow && config.midiOptions?.updateWorkflow !== false) 
+              //@ts-expect-error no dnd5e-types
+              config.workflow.isCritical = rolls[0].options.isCritical;
           });
           const rollMode = safeGetGameSetting("core", "rollMode");
           message.create ??= false;
@@ -774,8 +776,8 @@ export let MidiActivityMixin = Base => {
         TroubleShooter.recordError(err, message);
         error(message, err);
       } finally {
-        if (preRollDamageHookId) Hooks.off("dnd5e.preRollDamageV2", preRollDamageHookId);
-        if (rollDamageHookId) Hooks.off("dnd5e.rollDamageV2", rollDamageHookId);
+        if (preRollDamageHookId) Hooks.off("dnd5e.preRollDamage", preRollDamageHookId);
+        if (rollDamageHookId) Hooks.off("dnd5e.rollDamage", rollDamageHookId);
       }
       return result ?? [];
     }
@@ -986,11 +988,13 @@ export let MidiActivityMixin = Base => {
 
     async setupCanSeeSense(usage: { workflow?: Workflow }) {
       const workflow = usage.workflow;
+      const wasSightEnabled = {};
       if (!workflow) return;
       let needPause = false;
-      for (let tokenRef of workflow.targets) {
+      for (let tokenRef of workflow.targets.union(new Set([workflow.token]))) {
         const target = getToken(tokenRef);
         if (!target) continue;
+        wasSightEnabled[target.id] = target.document.sight.enabled;
         if (
           // sight not enabled but we are treating it as if it is
           (!target.document.sight.enabled && configSettings.optionalRules.invisVision)
@@ -1029,7 +1033,18 @@ export let MidiActivityMixin = Base => {
         if (tokenCanSee) workflow.tokenCanSee.add(target);
         else workflow.tokenCanSee.delete(target);
       }
+      for (let targetRef of workflow.targets) {
+        const target = getToken(targetRef);
+        if (!target) continue;
+        target.document.sight.enabled = wasSightEnabled[target.id];
+        target.initializeVisionSource();
+      }
+      if (workflow.token) {
+        workflow.token.document.sight.enabled = wasSightEnabled[workflow.token.id];
+        workflow.token.initializeVisionSource();
+      }
     }
+
     async setupTargets(config: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<boolean> {
       if (!config.workflow) {
         const errMessage = "MidiQOL | MidiActivity | setupTargets | No workflow found";

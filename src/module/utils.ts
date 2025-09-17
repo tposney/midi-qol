@@ -539,7 +539,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           uncannyDodge: actor.flags?.[MODULE_ID]?.["uncanny-dodge"] && workflow.item?.hasAttack
         }
       };
-      
+
       // calcDamageOptions = foundry.utils.duplicate(damagePerActor[actor.uuid].damageDetails.calcDamageOptions[type]) as CalcDamageOptions;
       if (type === "otherDamage" && (workflow.otherActivity?.save || workflow.otherActivity?.check)) {
         const defaultSaveMultiplier = getSaveMultiplierForActivity(workflow.otherActivity);
@@ -753,6 +753,8 @@ export function requestPCActiveDefence(player: User, actor: Actor, saveItemName:
 export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffect.ChangeData & { effect?: ActiveEffect.Implementation }, current: unknown, delta: unknown, changes: unknown) {
   if (!change.key) return true;
   if (typeof change?.key !== "string") return true;
+  // For passive effects originUuid should point to the parent item, rather than the original item.
+  const originUuid = change.effect?.transfer ? change.effect.parent?.uuid : change.effect?.origin;
   if (!change.key?.startsWith(`flags.${MODULE_ID}`) && !change.key?.startsWith("system.traits.da.")) return true;
   const deferredEvaluation = [
     `flags.${MODULE_ID}.OverTime`,
@@ -795,8 +797,7 @@ export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffe
           args[0] = `ActivityMacro.${change.effect?.origin}`;
         }
       }
-    }
-    else if (args[0].startsWith("ActivityMacro") || args[0].startsWith(MQActivityMacroLabel)) {
+    } else if (args[0].startsWith("ActivityMacro") || args[0].startsWith(MQActivityMacroLabel)) {
       const potentialUuid = args[0].split(".").slice(1).join(".");
       if (potentialUuid.includes("Activity.")) { // ActivityMacro.activityUuid
         // since it's already an activity uuid do nothing
@@ -821,13 +822,12 @@ export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffe
           }
         }
       }
-    }
-    else if (args[0] === "ItemMacro" || args[0] === MQItemMacroLabel) { // rewrite the ItemMacro if possible
+    } else if (args[0] === "ItemMacro" || args[0] === MQItemMacroLabel) { // rewrite the ItemMacro if possible
       if (change.effect?.transfer) args[0] = `ItemMacro.${change.effect.parent?.uuid}`;
       // else if (sourceId) args[0] = `ItemMacro.${sourceId}`;
       else {
-        if (change.effect?.origin?.includes("Item.")) {
-          args[0] = `ItemMacro.${change.effect.origin}`;
+        if (originUuid?.includes("Item.")) {
+          args[0] = `ItemMacro.${originUuid}`;
         } else {
           const origin = fromUuidSync(change.effect?.origin) as Item.Implementation | ActiveEffect.Implementation | undefined;
           if (origin instanceof Item) args[0] = `ItemMacro.${origin.uuid}`;
@@ -835,28 +835,28 @@ export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffe
         }
       }
     }
-    if (change.effect?.origin?.includes("Item.")) {
-      args[0] = `${args[0]}|${change.effect.origin}`;
+    if (originUuid?.includes("Item.")) {
+      args[0] = `${args[0]}|${originUuid}`;
     }
     const extraFlag = `[${args[1]}]${args[0]}`;
     const macroString = (currentFlag?.length > 0) ? [currentFlag, extraFlag].join(",") : extraFlag;
     foundry.utils.setProperty(actor, `flags.${MODULE_ID}.onUseMacroName`, macroString)
     return true;
   } else if (change.key.startsWith(`flags.${MODULE_ID}.optional.`) && (change.value.trim() === "ItemMacro" || change.value.trim() === MQItemMacroLabel)) {
-    if (change.effect?.origin?.includes("Item.")) {
-      const macroString = `ItemMacro.${change.effect.origin}`;
+    if (originUuid?.includes("Item.")) {
+      const macroString = `ItemMacro.${originUuid}`;
       foundry.utils.setProperty(actor, change.key, macroString)
     } else foundry.utils.setProperty(actor, change.key, change.value);
     return true;
-  } /*
-  TODO revisit this if going to allow item macro in flags evaluation
-  else if (change.key.startsWith(`flags.${MODULE_ID}.`) && (change.value.trim().includes("ItemMacro") || change.value.trim().includes(MQItemMacroLabel))) {
-    if (change.effect?.origin?.includes("Item.")) {
-      const macroString = `ItemMacro.${change.effect.origin}`;
-      foundry.utils.setProperty(actor, change.key, macroString)
-    } else foundry.utils.setProperty(actor, change.key, change.value);
-  } */
-  else if (deferredEvaluation.some(k => change.key.startsWith(k))) {
+    /*
+     TODO revisit this if going to allow item macro in flags evaluation
+     else if (change.key.startsWith(`flags.${MODULE_ID}.`) && (change.value.trim().includes("ItemMacro") || change.value.trim().includes(MQItemMacroLabel))) {
+       if (originUuid?.includes("Item.")) {
+         const macroString = `ItemMacro.${originUuid}`;
+         foundry.utils.setProperty(actor, change.key, macroString)
+       } else foundry.utils.setProperty(actor, change.key, change.value);
+     } */
+  } else if (deferredEvaluation.some(k => change.key.startsWith(k))) {
     if (typeof change.value !== "string") foundry.utils.setProperty(actor, change.key, change.value);
     else if (["true", "1"].includes(change.value.trim())) foundry.utils.setProperty(actor, change.key, true);
     else if (["false", "0"].includes(change.value.trim())) foundry.utils.setProperty(actor, change.key, false);
@@ -2269,7 +2269,7 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
       let distance;
       if (isGridless && distance > 0)
         distance = Math.max(0, parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor);
-      else 
+      else
         distance = parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor;
       if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
         log(`${target.name} is too far ${distance} from your character you cannot hit`)
@@ -3257,14 +3257,14 @@ async function displayBeforeAfterRolls(data: {
   //TODO match the renderRoll to the roll type
   const newRollHTML = await midiRenderRoll(newRoll);
   const originalRollHTML = await midiRenderRoll(originalRoll);
-  const chatData: any = foundry.utils.mergeObject({
+  const chatData: any = foundry.utils.mergeObject(options.messageData, {
     flavor: `${title}`,
     speaker: ChatMessage.getSpeaker({ actor: actor }),
     content: `${originalRollHTML}<br>${newRollHTML}`,
     whisper: [player?.id ?? ""],
     rolls: [originalRoll, newRoll],
     sound: CONFIG.sounds.dice,
-  }, options.messageData);
+  }, { inplace: false });
   // @ts-expect-error
   if (originalRoll.options.rollMode) ChatMessage.applyRollMode(chatData, originalRoll.options.rollMode);
   else ChatMessage.applyRollMode(chatData, rollMode as ChatMessage.PassableRollMode);
@@ -3337,7 +3337,7 @@ export async function bonusDialog(
         let item = fromUuidSync(itemUuidOrName);
         if (!item && this.actor) item = this.actor.items.getName(itemUuidOrName);
         if (!item && this instanceof Actor) item = this.items.getName(itemUuidOrName);
-        workflow = new DummyWorkflow(this.actor ?? this, undefined, ChatMessage.getSpeaker({ actor: this.actor }), [], { item });
+        workflow = new DummyWorkflow(this.actor ?? this, {}, ChatMessage.getSpeaker({ actor: this.actor }), [], { item });
       }
       const macroData = workflow.getMacroData();
       macroData.macroPass = `${button.key}.${flagSelector}`;
@@ -5269,6 +5269,11 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
       const hasFlanked = token.actor && hasCondition(token.actor, "flanked");
       if (hasFlanked) continue;
     }
+    if (token.actor?.flags?.[MODULE_ID]?.canFlank !== undefined) {
+      const conditionData = createConditionData({ actor: token.actor, token, target });
+      const tokenCanFlank = await evalCondition(token.actor.flags[MODULE_ID]?.canFlank, conditionData, undefined);
+      if (tokenCanFlank === false) continue;
+    }
     // Loop through each square covered by attacker and ally
     let maxDist = (canvas.dimensions?.distance ?? 5);
     const tokenStartX = -Math.max(0, token.document.width / 2 - 0.5);
@@ -5334,7 +5339,7 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
 }
 
 // TODO Can definitely probably clean this up
-export function computeFlankingStatus(token: Token.Implementation, target: Token.Implementation): boolean {
+export async function computeFlankingStatus(token: Token.Implementation, target: Token.Implementation): Promise<boolean> {
   if (!checkRule("checkFlanking") || checkRule("checkFlanking") === "off") return false;
   if (!canvas) return false;
   if (!token) return false;
@@ -5388,6 +5393,11 @@ export function computeFlankingStatus(token: Token.Implementation, target: Token
     const actor: any = ally.actor;
     if (checkIncapacitated(ally.actor, debugEnabled > 0, false)) continue;
     if (hasCondition(actor, "incapacitated")) continue;
+    if (ally.actor?.flags?.[MODULE_ID]?.canFlank !== undefined) {
+      const conditionData = createConditionData({ actor: ally.actor, token: ally, target });
+      const allyCanFlank = await evalCondition(ally.actor.flags[MODULE_ID]?.canFlank, conditionData, undefined);
+      if (allyCanFlank === false) continue;
+    }
     const allyStartX = -Math.max(0, ally.document.width / 2 - 0.5);
     const allyStartY = -Math.max(0, ally.document.height / 2 - 0.5);
 
@@ -5453,7 +5463,7 @@ export async function markFlanking(token?: Token.Implementation | null, target?:
   if (!checkRule("checkFlanking") || checkRule("checkFlanking") === "off") return false;
   if (["ceonly"].includes(checkRule("checkFlanking") as string)) {
     if (!token || token === target) return false;
-    needsFlanking = computeFlankingStatus(token, target);
+    needsFlanking = await computeFlankingStatus(token, target);
     if (installedModules.get("dfreds-convenient-effects")) {
       let CEFlanking = getFlankingEffect();
       if (!CEFlanking) return needsFlanking;
@@ -5466,7 +5476,7 @@ export async function markFlanking(token?: Token.Implementation | null, target?:
     }
   } else if (checkRule("checkFlanking") === "midiFlanking") {
     if (!token || token === target) return false;
-    needsFlanking = computeFlankingStatus(token, target);
+    needsFlanking = await computeFlankingStatus(token, target);
     const MidiFlanking: any = CONFIG.statusEffects.find(se => se.id === "flanking");
     if (!MidiFlanking) return false;
     let cprEffect: ActiveEffect | undefined = getCPREffect(MidiFlanking?._id as string)
@@ -5486,7 +5496,7 @@ export async function markFlanking(token?: Token.Implementation | null, target?:
     }
   } else if (checkRule("checkFlanking") === "advonly") {
     if (!token) return false;
-    needsFlanking = computeFlankingStatus(token, target);
+    needsFlanking = await computeFlankingStatus(token, target);
   } else if (["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking") as string)) {
     if (!target.actor) return false;
     if (installedModules.get("dfreds-convenient-effects")) {
@@ -6857,7 +6867,7 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
   let ignoreToken = (targetDetails.affects.special ?? "").split(";").some(spec => ["self", "-self"].includes(spec)) ? null : tokenToUse;
   if ((targetDetails.affects.special ?? "").split(";").some(spec => ["self"].includes(spec))) {
     foundry.utils.logCompatibilityWarning("midi-qol | target specials includes 'self'. Use '-self' to exclude the caster",
-    {since: "midi-qol 13.0.19", until: "31.1.0"});
+      { since: "midi-qol 13.0.19", until: "31.1.0" });
   }
   if (canvas.tokens?.placeables && canvas.grid) {
     const canvasTokens = canvas.tokens?.placeables;
@@ -7131,4 +7141,4 @@ export function getTargetDescriptor(uuid: string, targetDescriptors: Array<DND5E
 export const throttledScrollBottom = foundry.utils.throttle(() => {
   //@ts-expect-error fvtt-missing scrollBottom
   ui.chat?.scrollBottom({ waitImages: true });
-} , 150);
+}, 150);

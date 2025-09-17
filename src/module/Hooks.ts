@@ -227,7 +227,7 @@ export async function restManager(actor: Actor.Implementation, result: { longRes
   if (result.newDay && myExpiredEffects.newDay.length) await expireEffects(actor, myExpiredEffects.newDay, { "expiry-reason": "midi-qol:newDay" });
   if (foundry.utils.getProperty(actor, "flags.midi-qol.actions.reactionsReset") !== "never") await removeReactionUsed(actor, true); // remove reaction used for a rest
   if (foundry.utils.getProperty(actor, "flags.midi-qol.actions.bonusActionsReset") !== "never")
-  await removeActionUsed(actor);
+    await removeActionUsed(actor);
 }
 
 export function initHooks() {
@@ -244,7 +244,7 @@ export function initHooks() {
     processCreateDDBGLMessages(message, options, user);
     return true;
   });
-  
+
   Hooks.on("updateChatMessage", (message, update, options, user) => {
     hideRollUpdate(message, update, options, user);
     if (!update.content) return;
@@ -412,12 +412,20 @@ export function initHooks() {
     api.registerItemHeaderControls?.({
       controls: [
         {
-          icon: 'fas fa-gear',
+          icon: "fa-solid fa-gears", // TODO: better icon?
           label: "Midi-QOL",
+          position: "header",
           async onClickAction() {
             new ItemOnUseMacrosConfig({ document: this.document }).render({ force: true });
           }
         },
+        {
+          icon: "fa-solid fa-gears", // TODO: better icon?
+          label: "Midi-QOL",
+          async onClickAction() {
+            new ItemOnUseMacrosConfig({ document: this.document }).render({ force: true });
+          }
+        }
       ]
     });
   });
@@ -428,7 +436,7 @@ export function initHooks() {
       //@ts-expect-error ApplicationV2.HeaderControlsEntry not properly defined in fvtt-types
       controls.push({
         label: i18n("midi-qol.ActorOnUseMacros"),
-        icon: "fa-solid fa-wrench",
+        icon: "fa-solid fa-gears", // TODO: better icon?
         onClick: () => {
           new ActorOnUseMacrosConfig({ document: app.document }).render({ force: true });
         }
@@ -535,7 +543,7 @@ function setupMidiFlagTypes() {
 export function setupHooks() {
 }
 
-Hooks.on("dnd5e.preRollDamageV2", (rollConfig, dialogConfig, messageConfig) => {
+Hooks.on("dnd5e.preRollDamage", (rollConfig, dialogConfig, messageConfig) => {
   if (!rollConfig.subject) return true;
   // @ts-expect-error no dnd5e-types
   if (rollConfig.subject.actor && rollConfig.subject.isSpell) {
@@ -967,36 +975,36 @@ Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
   return true;
 });
 
-Hooks.on("dnd5e.preRollConcentrationV2", (rollConfig, dialogConfig, messageConfig) => {
+Hooks.on("dnd5e.preRollConcentration", (rollConfig, dialogConfig, messageConfig) => {
   if (!rollConfig.subject) return true;
   const actor = rollConfig.subject as Actor.Implementation;
   // insert advantage and disadvantage
   // insert midi bonuses.
   if (rollConfig.workflowOptions?.noConcentrationCheck) return false;
   const concAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.advantage.concentration`);
-  const concDisadvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.disadvantage.concentration`);
+  const concDisAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.disadvantage.concentration`);
   let concAdv;
-  let concDisadv;
-  if (concAdvFlag || concDisadvFlag) {
+  let concDisAdv;
+  if (concAdvFlag || concDisAdvFlag) {
     const conditionData = createConditionData({ workflow: undefined, target: undefined, actor });
     if (concAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.advantage.concentration`, conditionData)) {
       concAdv = true;
     }
-    if (concDisadvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.disadvantage.concentration`, conditionData)) {
-      concDisadv = true;
+    if (concDisAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.disadvantage.concentration`, conditionData)) {
+      concDisAdv = true;
     }
   }
 
   rollConfig.advantage ||= concAdv;
-  rollConfig.disadvantage ||= concDisadv;
+  rollConfig.disadvantage ||= concDisAdv;
 
   return true;
 })
 
-Hooks.on("dnd5e.rollConcentrationV2", (rolls, { subject }) => {
+Hooks.on("dnd5e.rollConcentration", (rolls, { subject }) => {
   if (configSettings.doConcentrationCheck === "item") return;
   if (!subject || !(subject instanceof CONFIG.Actor.documentClass)) {
-    const message = "dnd5e.rollConcentrationV2 hook called with non-actor";
+    const message = "dnd5e.rollConcentration hook called with non-actor";
     TroubleShooter.recordError(new Error(message), message);
     error(message, subject);
     return;
@@ -1048,7 +1056,7 @@ Hooks.on("dnd5e.preConfigureInitiative", (actor, rollConfig) => {
   }
 });
 
-Hooks.on("dnd5e.preRollAbilityCheckV2", (config, dialog, message) => {
+Hooks.on("dnd5e.preRollAbilityCheck", (config, dialog, message) => {
   if (autoFastForwardAbilityRolls) {
     dialog.configure = false;
   }

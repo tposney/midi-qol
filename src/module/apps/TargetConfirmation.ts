@@ -167,7 +167,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
 
       let details: string[] = [];
       if (["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(checkRule("checkFlanking") as string)) {
-        if (token && computeFlankingStatus(token, target)) details.push((i18n("midi-qol.Flanked") ?? "Flanked"));
+        if (token && await computeFlankingStatus(token, target)) details.push((i18n("midi-qol.Flanked") ?? "Flanked"));
       }
 
       let attackerToken = token;

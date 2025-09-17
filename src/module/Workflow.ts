@@ -2922,7 +2922,7 @@ export class Workflow {
     if (context.attackRoll) return this.WorkflowState_AttackRollComplete;
     if (context.damageRoll) return this.WorkflowState_ConfirmRoll;
     if (debugEnabled > 0) warn("Workflow complete ", this.id, "elapsed time", Date.now() - (this.workflowStartTime ?? 0));
-    console.warn("Workflow complete ", this.id, "elapsed time", Date.now() - (this.workflowStartTime ?? 0));
+    warn("Workflow complete ", this.id, "elapsed time", Date.now() - (this.workflowStartTime ?? 0));
 
     let shouldTrigger = false;
     if (this.activity.midiProperties?.triggeredActivityId && !this.aborted) {
@@ -6995,11 +6995,15 @@ export class TrapWorkflow extends Workflow {
   saveTargets: any;
   onUseMacroCalled: boolean | undefined;
   static get forceCreate() { return false; }
-  //
-  constructor(actor: Actor, activity, targets: Array<Token> | undefined,
+  constructor(
+    actor: Actor, 
+    activity, 
+    targets: Array<Token> | undefined,
     templateLocation: { x: number, y: number, direction?: number, removeDelay?: number } | undefined = undefined,
-    trapSound: { playlist: string, sound: string } | undefined = undefined, event: any = {}, storeWorkflow: boolean = false) {
-    super(actor, activity, ChatMessage.getSpeaker({ actor }), new Set(targets), { event, storeWorkflow: false });
+    trapSound: { playlist: string, sound: string } | undefined = undefined, 
+    event: any = {}, 
+    storeWorkflow: boolean = false) {
+    super(actor, activity, ChatMessage.getSpeaker({ actor }), new Set(targets ?? []), { event, storeWorkflow: false });
     // @ts-expect-error pain in the ass to properly type this
     if (!this.event) this.event = foundry.utils.duplicate(shiftOnlyEvent);
     if (templateLocation) this.templateLocation = templateLocation;
@@ -7012,7 +7016,7 @@ export class TrapWorkflow extends Workflow {
     return this;
   }
 
-  get workflowType() { return "TrapWorkflow" };
+  get workflowType() { return "TrapWorkflow" }
 
   async WorkflowState_Start(context: WorkflowContext = {}): Promise<WorkflowState> {
     this.saveTargets = validTargetTokens(new Set(game.user?.targets));
@@ -7382,6 +7386,11 @@ type WorkflowConstructorOptions = InexactPartial<{
   token: Token.Implementation;
   workflowOptions: WorkflowOptions
 }>;
+
+type TrapWorkflowConstructorOptions = WorkflowConstructorOptions & {
+  templateLocation: { x: number, y: number, direction?: number, removeDelay?: number };
+  trapSound: { playlist: string, sound: string };
+}
 
 // `workflowOptions`
 export type WorkflowOptions = InexactPartial<{
