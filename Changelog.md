@@ -7,7 +7,7 @@
 * Fix for broken TrapWorkflow.
 * Midi no longer uses the preRollXXXV2 hooks, just the preRollXXX hooks.
 * By popular demand the midi item/activity configuration control has been added to the header of the item sheet for tidy sheets.
-* Added flags.midi-qol.cantFlank.
+* Added flags.midi-qol.canFlank.
   - if the flag evaluates to false the token won't be considered for flanking/flanked checks even if it has the right disposition.
 
 ### 13.0.21
