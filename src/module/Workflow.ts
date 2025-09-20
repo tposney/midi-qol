@@ -3214,7 +3214,7 @@ export class Workflow {
             dae: {
               stackable: "noneName"
             },
-            dnd5e: { dependents: this.summonedCreatures.map(sc => { return { uuid: sc.document.uuid } }) }
+            dnd5e: { dependents: this.summonedCreatures.map(sc => { return { uuid: sc.uuid } }) }
           },
         }
         const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget?.id));
