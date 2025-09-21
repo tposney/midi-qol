@@ -632,13 +632,14 @@ async function registerTests() {
             //@ts-expect-error
             const hookId = Hooks.on("Item OnUseMacroTest", (pass: string) => macroPasses.push(pass));
             await completeItemUse(actor.items.getName("Item OnUseMacroTest")!, { midiOptions: { workflowOptions } });
+            warn("actual passes", macroPasses);
+            warn("expected passes", expectedPasses)
             //@ts-expect-error
             Hooks.off("OnUseMacroTest", hookId);
             for (let expectedPass of expectedPasses) {
               assert.ok(macroPasses.includes(expectedPass), `onUseMacro pass ${expectedPass}`);
             }
-            warn("actual passes", macroPasses);
-            warn("expected passes", expectedPasses)
+
           });
         });
       },

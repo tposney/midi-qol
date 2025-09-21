@@ -1,9 +1,10 @@
 import { Activity, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn, busyWait } from "../../midi-qol.js";
 import { socketlibSocket } from "../GMAction.js";
-import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow } from "../Workflow.js";
+import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFirstWorkflow } from "../Workflow.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
+import { averageDice } from "../patching.js"
 import {
   aoeTargetTypeOptions,
   autoCEEffectsOptions,
@@ -466,7 +467,9 @@ export let MidiActivityMixin = Base => {
           usage.midiOptions.workflowOptions.autoRollAttack = true;
         if (!(usage.workflow instanceof TrapWorkflow)) { 
           //TODO stupidly the constructor for TrapWorkflow is not compatible with the workflow constructor - will need to clean that up
-          usage.workflow = new workflowClass(activity.actor ?? null, activity, ChatMessage.getSpeaker({ actor: activity.item.actor }), null, { workflowOptions });
+          if (configSettings.savesBeforeDamage)
+          usage.workflow = new SavesFirstWorkflow(activity.actor ?? null, activity, ChatMessage.getSpeaker({ actor: activity.item.actor }), null, { workflowOptions });
+          else usage.workflow = new workflowClass(activity.actor ?? null, activity, ChatMessage.getSpeaker({ actor: activity.item.actor }), null, { workflowOptions });
         }
         usage.workflow!.sequenceId = usage.sequenceId;
         message.workflow = usage.workflow; // TODO: remove hack to allow card config processing
@@ -689,7 +692,18 @@ export let MidiActivityMixin = Base => {
           // if (dialog.configure) config.midiOptions.isCritical = false;
           preRollDamageHookId = Hooks.once("dnd5e.preRollDamage", (rollConfig, dialogConfig, messageConfig) => {
             const targetDescriptors = foundry.utils.getProperty(messageConfig, "data.flags.dnd5e.targets") as Array<DND5ETargetDescriptor>;
-            if (targetDescriptors && config.workflow) config.workflow.targetDescriptors = targetDescriptors;
+            // since saves might have been rolled merge the target descriptors
+            if (targetDescriptors && config.workflow) {
+              config.workflow.targetDescriptors ??= [];
+              for (let targetDetails of targetDescriptors) {
+                const existing = config.workflow.targetDescriptors.find(td => td.uuid === targetDetails.uuid);
+                if (existing) {
+                  Object.assign(existing, foundry.utils.mergeObject(existing, targetDetails));
+                } else {
+                  config.workflow.targetDescriptors.push(targetDetails);
+                }
+              }
+            }
             if (keys.critical) rollConfig.isCritical = true;
             else if (keys.normal) rollConfig.isCritical = false;
             else if (!dialogConfig.configure) rollConfig.isCritical ||= rollConfig.midiOptions?.isCritical;
@@ -897,7 +911,9 @@ export let MidiActivityMixin = Base => {
             if (!droll.options.properties) droll.options.properties = [];
             if (this.isSpell) droll.options.properties.push("spell");
             if (magicalDamage && !droll.options.properties.includes("mgc")) droll.options.properties.push("mgc");
-            droll.options.properties.push(this.actionType)
+            droll.options.properties.push(this.actionType);
+            if (droll.data.actorType === configSettings.averageDamage || configSettings.averageDamage === "all") 
+              averageDice(droll);
           })
         }
         const firstTarget = config.workflow.hitTargets.first() ?? config.workflow.targets?.first();

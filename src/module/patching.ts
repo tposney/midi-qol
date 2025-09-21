@@ -346,7 +346,7 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
     //@ts-expect-error "dnd5e"
     options.critical.powerfulCritical ??= game.settings.get("dnd5e", "criticalDamageMaxDice");
     wrapped({ critical: options.critical });
-    if (this.data.actorType === configSettings.averageDamage || configSettings.averageDamage === "all") averageDice(this);
+    // if (this.data.actorType === configSettings.averageDamage || configSettings.averageDamage === "all") averageDice(this);
     return;
   }
   this.simplify();
@@ -503,7 +503,7 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
     this.terms.pop();
   this.resetFormula();
   this.options.configured = true;
-  if (this.data.actorType === configSettings.averageDamage || configSettings.averageDamage === "all") averageDice(this);
+  // if (this.data.actorType === configSettings.averageDamage || configSettings.averageDamage === "all") averageDice(this);
 }
 
 async function doRollAbility(this: Actor.Implementation, wrapped, rollType: string, config: RollProcessConfig & { ability?: string } = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
@@ -1012,19 +1012,6 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
   libWrapper.register(MODULE_ID, "dnd5e.applications.actor.BaseActorSheet.prototype._prepareItem", _prepareItem, "WRAPPER");
-  /* replaced by extending DamageApplicationElement
-  currentDAcalculateDamage = window?.customElements?.get("damage-application")?.prototype.calculateDamage;
-  if (window?.customElements?.get("damage-application")?.prototype?.calculateDamage) {
-    currentDAcalculateDamage = window?.customElements?.get("damage-application")?.prototype?.calculateDamage;
-    //@ts-expect-error
-    window.customElements.get("damage-application").prototype.calculateDamage = _DAcalculateDamage;
-  }
-  if (window?.customElements?.get("damage-application")?.prototype?.getTargetOptions) {
-    currentDAGetTargetOptions = window.customElements.get("damage-application")?.prototype?.getTargetOptions
-    //@ts-expect-error
-    window.customElements.get("damage-application").prototype.getTargetOptions = _DAgetTargetOptions;
-  }
-  */
 }
 function _prepareItem(wrapped, item, ctx) {
   wrapped(item, ctx);
@@ -1066,102 +1053,6 @@ function _configureModifiers(this: Roll /*D20Roll*/, wrapped) {
   // @ts-expect-error no dnd5e-types
   this.d20.modifiers = getAttackModifiers(this);
 }
-
-function _DAgetTargetOptions(...args) {
-  let [uuid] = args;
-  const options = currentDAGetTargetOptions.bind(this)(...args);
-  let sourceActorUuid = foundry.utils.getProperty(this.chatMessage, "flags.midi-qol.sourceActorUuid");
-  try {
-    // const damageType = getProperty(this, `damages.flags.${MODULE_ID}.damageType`);
-    const damageType = this.damages?.flags?.[MODULE_ID]?.damageType;
-    let targetDetails;
-
-    if (damageType) {
-      const targets = this?.chatMessage?.flags?.dnd5e?.targetDetails ?? [];
-      targetDetails = targets.find(target => target.uuid === uuid);
-      if (!targetDetails) return options;
-      options.midi = foundry.utils.duplicate(targetDetails);
-      const saveMultiplier = targetDetails.saveMults?.[damageType];
-      if (targetDetails.saved) {
-        foundry.utils.setProperty(options, "midi.saveMultiplier", saveMultiplier ?? configSettings.defaultSaveMultiplier);
-      }
-      if (saveMultiplier !== undefined) {
-        if (targetDetails.superSaver && saveMultiplier === configSettings.defaultSaveMultiplier) {
-          foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : configSettings.defaultSaveMultiplier);
-        }
-        if (targetDetails.semiSuperSaver && saveMultiplier === configSettings.defaultSaveMultiplier) {
-          foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : 1);
-        }
-      }
-      if (targetDetails.uncannyDodge) {
-        foundry.utils.setProperty(options, "midi.uncannyDodge", true);
-      }
-      // Left in for backwards compatibility of previous midi versions
-      if (targetDetails.sourceActorUuid) {
-        sourceActorUuid = targetDetails.sourceActorUuid;
-      }
-    }
-  } catch (err) {
-    const message = `midi-qol | _DAgetTargetOptions failed to get target options`;
-    console.warn(message, err);
-    TroubleShooter.recordError(err, message);
-  } finally {
-    foundry.utils.setProperty(options, "midi.sourceActorUuid", sourceActorUuid);
-    return options;
-  }
-}
-
-function _DAcalculateDamage(actor: Actor.Implementation, options: DamageApplicationOptions) {
-  const { temp, total, active } = currentDAcalculateDamage.bind(this)(actor, options);
-  try {
-    active.absorption = new Set();
-    active.saved = new Set();
-    active.superSaver = new Set();
-    active.semiSuperSaver = new Set();
-    active.spell = new Set();
-    active.magic = new Set();
-    active.uncannyDodge = new Set();
-    active.nonmagic = new Set();
-    active.DR = new Set();
-    // @ts-expect-error no dnd5e-types
-    const damages = actor.calculateDamage(this.damages, options) as DamageDescription[];
-    for (const damage of damages) {
-      if (damage.active?.absorption) active.absorption.add(damage.type);
-      if (damage.active?.spell) active.spell.add(damage.type);
-      if (damage.active?.magic) active.magic.add(damage.type);
-      if (damage.active?.nonmagic) active.nonmagic.add(damage.type);
-      if (damage.active?.DR) active.DR.add(damage.type);
-      if (damage.active?.superSaver) active.superSaver.add(damage.type);
-      else if (damage.active?.semiSuperSaver) active.semiSuperSaver.add(damage.type);
-      else if (damage.active?.saved) active.saved.add(damage.type);
-
-      if (damage.active?.uncannyDodge) active.uncannyDodge.add(damage.type);
-    }
-    const union = (t: string) => {
-      if (foundry.utils.getType(options.ignore?.[t]) === "Set") active[t] = active[t].union(options.ignore?.[t]);
-    };
-    union("absorption");
-    union("spell")
-    union("magic");
-    union("nonmagic");
-    union("saved");
-    union("uncannyDodge");
-    union("DR");
-  } catch (err) {
-    const message = `midi-qol | _DAcalculateDamage failed to calculate damage`;
-    console.warn(message, err);
-    TroubleShooter.recordError(err, message);
-  }
-  return { temp, total, active };
-}
-
-// If commented out can be removed, so cant his
-// export function _onFocusIn(event) {
-//   const formElements = [
-//     HTMLInputElement, HTMLSelectElement, HTMLTextAreaElement, HTMLOptionElement, /*HTMLButtonElement*/
-//   ];
-//   if (event.target.isContentEditable || formElements.some(cls => event.target instanceof cls)) this.releaseKeys();
-// }
 
 export function actorPrepareData(this: Actor.Implementation, wrapped) {
   try {

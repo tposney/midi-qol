@@ -1177,6 +1177,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
         if (timeoutId) clearTimeout(timeoutId);
         resolve(result);
       });
+      if (saveResult instanceof Array) saveResult = saveResult[0];
       if (saveResult?.class) saveResult = JSON.parse(JSON.stringify(saveResult));
       const success = saveResult?.options?.success || saveResult?.total >= saveDC;
       if (saveResult?.options) saveResultDisplayed = true;
@@ -3253,11 +3254,11 @@ async function displayBeforeAfterRolls(data: {
   actor: Actor.Implementation
 }) {
   let { originalRoll, newRoll, rollMode, title, player, options, actor } = data;
-  if (!options) options = {};
-  //TODO match the renderRoll to the roll type
+  options ??= {};  //TODO match the renderRoll to the roll type
+  options.messageData ??= {};
   const newRollHTML = await midiRenderRoll(newRoll);
   const originalRollHTML = await midiRenderRoll(originalRoll);
-  const chatData: any = foundry.utils.mergeObject(options.messageData, {
+  const chatData: any = foundry.utils.mergeObject(options.messageData ?? {}, {
     flavor: `${title}`,
     speaker: ChatMessage.getSpeaker({ actor: actor }),
     content: `${originalRollHTML}<br>${newRollHTML}`,
@@ -4676,6 +4677,8 @@ export function createConditionData(data: {
         rollData.typeOrRace = theTargetActor ? typeOrRace(theTargetActor) : "";
         rollData.target.raceOrType = theTarget.actor ? raceOrType(theTargetActor) : "";
         rollData.target.typeOrRace = theTarget.actor ? typeOrRace(theTargetActor) : "";
+        rollData.target.items = theTargetActor?.items?.map(i => i.getRollData().item) ?? [];
+        rollData.target.equippedItems = rollData.target.items.filter(i => i.equipped) ?? [];
         rollData.target.saved = data.workflow?.saves.has(theTarget);
         rollData.target.failedSave = data.workflow?.failedSaves.has(theTarget);
         rollData.target.superSaver = data.workflow?.superSavers.has(theTarget);

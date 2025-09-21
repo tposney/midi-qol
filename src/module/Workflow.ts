@@ -1520,7 +1520,7 @@ export class Workflow {
   preSelectedTargets: Set<Token.Implementation>;
   preCreateTemplateHookId: number | undefined;
   postSummonHookId: number | undefined;
-  summonedCreatures: Token.Implementation[] | undefined;
+  summonedCreatures: TokenDocument.Implementation[] | undefined;
   kickStart: boolean | undefined;
   disadvantageSaves: Set<Token.Implementation> | undefined;
   saveResults: Roll[] | undefined; /* D20Roll */
@@ -2173,6 +2173,10 @@ export class Workflow {
     }
     return this.WorkflowState_WaitForAttackRoll;
   }
+  get postAttackRollState(): WorkflowState {
+    return this.WorkflowState_WaitForDamageRoll
+  }
+    
   async WorkflowState_WaitForAttackRoll(context: WorkflowContext = {}): Promise<WorkflowState> {
     if (context.attackRoll) {
       if (this.abort) return this.WorkflowState_Abort;
@@ -2182,7 +2186,7 @@ export class Workflow {
       this.hitTargets = new Set(this.targets);
       this.hitTargetsEC = new Set();
       if (this.activity.roll?.formula) return this.WorkflowState_WaitForUtilityRoll;
-      return this.WorkflowState_WaitForDamageRoll;
+      return this.postAttackRollState;
     }
 
     const isFastRoll = this.rollOptions.fastForwardAttack ?? this.workflowOptions.fastForwardAttack ?? isAutoFastAttack(this);
@@ -2283,9 +2287,9 @@ export class Workflow {
     if (configSettings.autoCheckHit === "none") {
       this.hitTargets = new Set();
       this.hitTargetsEC = new Set();
-      return this.WorkflowState_WaitForDamageRoll;
+      return this.postAttackRollState;
     }
-    if (getAutoRollDamage(this) === "always") return this.WorkflowState_WaitForDamageRoll;
+    if (getAutoRollDamage(this) === "always") return this.postAttackRollState;
     const noHits = this.hitTargets.size === 0 && this.hitTargetsEC.size === 0;
     const allMissed = noHits && this.targets.size !== 0;
     if (allMissed) {
@@ -2299,7 +2303,7 @@ export class Workflow {
       // if (configSettings.autoRollDamage !== "always") return this.WorkflowState_RollFinished;
       // else return this.WorkflowState_WaitForDamageRoll;
     }
-    return this.WorkflowState_WaitForDamageRoll;
+    return this.postAttackRollState;
   }
 
   _formatAttackTargets() {
@@ -3188,64 +3192,64 @@ export class Workflow {
         }
       }
     }
-    if (hasConcentration && this.summonedCreatures && configSettings.autoRemoveSummonedCreature) {
-      let origin = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "");
+    if (configSettings.autoRemoveSummonedCreature && this.summonedCreatures && this.summonedCreatures.length > 0) {
+      let origin = hasConcentration && this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "");
       if (origin) {
         // @ts-expect-error no dnd5e-types
         await origin.addDependent(...this.summonedCreatures);
-      }
-    } else if (configSettings.autoRemoveSummonedCreature && this.summonedCreatures) {
-      // need to create an effect to remove the summoned creatures
-      const activityDuration = this.activity.duration;
-      let effectData: ActiveEffect.CreateData;
-      const summonString = i18n("DND5E.ActionSumm") + ": ";
-      let effect = this.item.actor?.effects.find(ef => ef.name === (summonString + this.item.name));
-      if (effect) { // effect already applied
-        // @ts-expect-error no dnd5e-types
-        await effect.addDependent(...this.summonedCreatures);
-      } else { // add an effect which will cause the template to be deleted
-        effectData = {
-          origin: this.item.uuid, //flag the effect as associated to the spell being cast
-          disabled: false,
-          img: this.item.img,
-          name: summonString + this.item.name,
-          duration: {},
-          flags: {
-            dae: {
-              stackable: "noneName"
+      } else {
+        // need to create an effect to remove the summoned creatures
+        const activityDuration = this.activity.duration;
+        let effectData: ActiveEffect.CreateData;
+        const summonString = i18n("DND5E.ActionSumm") + ": ";
+        let effect = this.item.actor?.effects.find(ef => ef.name === (summonString + this.item.name));
+        if (effect) { // effect already applied
+          // @ts-expect-error no dnd5e-types
+          await effect.addDependent(...this.summonedCreatures);
+        } else { // add an effect which will cause the summoned creature to be deleted
+          effectData = {
+            origin: this.item.uuid, //flag the effect as associated to the spell being cast
+            disabled: false,
+            img: this.item.img,
+            name: summonString + this.item.name,
+            duration: {},
+            flags: {
+              dae: {
+                stackable: "noneName"
+              },
+              dnd5e: { dependents: this.summonedCreatures.map(sc => ({ uuid: sc.uuid })) }
             },
-            dnd5e: { dependents: this.summonedCreatures.map(sc => { return { uuid: sc.uuid } }) }
-          },
-        }
-        const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget?.id));
-        if (activityDuration?.units === "inst") {
-          // This seems wrong, however lots of dnd5e summons activities have a duration of inst - e.g. find familiar
-          effectData.duration = {
-            startRound: game.combat?.round,
-            startTurn: game.combat?.turn,
-            startTime: game.time?.worldTime
           }
-          //@ts-expect-error CONFIG.DND5E
-        } else if (CONFIG.DND5E.permanentTimePeriods[activityDuration.units]) {
-          effectData.duration = {
-            startRound: game.combat?.round,
-            startTurn: game.combat?.turn,
-            startTime: game.time?.worldTime
-          }
-        } else {
-          const convertedDuration = globalThis.DAE.convertDuration(activityDuration, inCombat);
-          if (convertedDuration?.type === "seconds") {
-            effectData.duration = { seconds: Math.max(convertedDuration.seconds, 1), startTime: game.time?.worldTime }
-          } else if (convertedDuration?.type === "turns") {
+          const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget?.id));
+          if (activityDuration?.units === "inst") {
+            // This seems wrong, however lots of dnd5e summons activities have a duration of inst - e.g. find familiar
             effectData.duration = {
-              rounds: convertedDuration.rounds,
-              turns: convertedDuration.rounds > 0 ? convertedDuration.turns : Math.max(convertedDuration.turns, 1),
               startRound: game.combat?.round,
               startTurn: game.combat?.turn,
+              startTime: game.time?.worldTime
+            }
+            //@ts-expect-error CONFIG.DND5E
+          } else if (CONFIG.DND5E.permanentTimePeriods[activityDuration.units]) {
+            effectData.duration = {
+              startRound: game.combat?.round,
+              startTurn: game.combat?.turn,
+              startTime: game.time?.worldTime
+            }
+          } else {
+            const convertedDuration = globalThis.DAE.convertDuration(activityDuration, inCombat);
+            if (convertedDuration?.type === "seconds") {
+              effectData.duration = { seconds: Math.max(convertedDuration.seconds, 1), startTime: game.time?.worldTime }
+            } else if (convertedDuration?.type === "turns") {
+              effectData.duration = {
+                rounds: convertedDuration.rounds,
+                turns: convertedDuration.rounds > 0 ? convertedDuration.turns : Math.max(convertedDuration.turns, 1),
+                startRound: game.combat?.round,
+                startTurn: game.combat?.turn,
+              }
             }
           }
+          await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
         }
-        await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
       }
     }
     await asyncHooksCallAll("midi-qol.postActiveEffects", this);
@@ -6471,6 +6475,55 @@ export class Workflow {
     return [await returnValue];
   }
 }
+export class SavesFirstWorkflow extends Workflow {
+  get postAttackRollState(): WorkflowState {
+    return this.WorkflowState_WaitForSaves;
+  }
+
+  async WorkflowState_WaitForSaves(context: WorkflowContext = {}): Promise<WorkflowState> {
+    await super.WorkflowState_WaitForSaves(context);
+    return this.WorkflowState_SavesComplete;
+  }
+
+  async WorkflowState_SavesComplete(context: WorkflowContext = {}): Promise<WorkflowState> {
+    expireMyEffects.bind(this)(["1Action", "1Spell"]);
+    if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
+      await this.callMacros(this.item, this.onUseMacros?.getMacros("postSave"), "OnUse", "postSave");
+      if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("postSave"), "OnUse", "postSave");
+    }
+    const hasDamageRoll = this.activity.hasDamage || this.otherActivity?.hasDamage || this.activity.hasHealing || this.otherActivity?.hasHealing;
+    if (!hasDamageRoll) return this.WorkflowState_AllRollsComplete;
+    if (getAutoRollDamage(this) === "always") return this.WorkflowState_WaitForDamageRoll;
+    const noHits = this.hitTargets.size === 0 && this.hitTargetsEC.size === 0;
+    const allMissed = noHits && this.targets.size !== 0;
+    if (allMissed) {
+      if (configSettings.confirmAttackDamage !== "none" && !this.workflowOptions.forceCompletion)
+        return this.WorkflowState_ConfirmRoll;
+      if (this.workflowOptions.forceCompletion || configSettings.autoCompleteWorkflow) {
+        expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"])
+        await this.expireTargetEffects(["isAttacked"]);
+        return this.WorkflowState_RollFinished;
+      }
+    }
+    return this.WorkflowState_WaitForDamageRoll;
+  }
+
+  async WorkflowState_WaitForDamageRoll(context: WorkflowContext = {}): Promise<WorkflowState> {
+    if (context.damageRoll || context.otherDamageRoll) {
+      // record the data - currently done in item handling
+      return this.WorkflowState_ConfirmRoll;
+    }
+    const hasDamageRoll = this.activity.hasDamage || this.otherActivity?.hasDamage || this.activity.hasHealing || this.otherActivity?.hasHealing;
+    if (!hasDamageRoll) return this.WorkflowState_AllRollsComplete;
+    return super.WorkflowState_WaitForDamageRoll(context);
+  }
+  
+  async WorkflowState_DamageRollComplete(context: WorkflowContext = {}): Promise<WorkflowState> {
+    await super.WorkflowState_DamageRollComplete(context);
+    return this.WorkflowState_AllRollsComplete;
+  }
+}
+
 export class ActiveDefenceWorkflow extends Workflow {
   async WorkflowState_WaitForAttackRoll(context?: WorkflowContext): Promise<WorkflowState> {
     this.workflowOptions.attackRollDSN = false;
@@ -6996,12 +7049,12 @@ export class TrapWorkflow extends Workflow {
   onUseMacroCalled: boolean | undefined;
   static get forceCreate() { return false; }
   constructor(
-    actor: Actor, 
-    activity, 
+    actor: Actor,
+    activity,
     targets: Array<Token> | undefined,
     templateLocation: { x: number, y: number, direction?: number, removeDelay?: number } | undefined = undefined,
-    trapSound: { playlist: string, sound: string } | undefined = undefined, 
-    event: any = {}, 
+    trapSound: { playlist: string, sound: string } | undefined = undefined,
+    event: any = {},
     storeWorkflow: boolean = false) {
     super(actor, activity, ChatMessage.getSpeaker({ actor }), new Set(targets ?? []), { event, storeWorkflow: false });
     // @ts-expect-error pain in the ass to properly type this

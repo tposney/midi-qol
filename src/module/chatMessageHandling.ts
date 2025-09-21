@@ -178,7 +178,7 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
   if (game.user?.isGM) shouldDisplayChallenge = "all";
   // If force hide rolls and your are not the author/target of a whisper roll hide it.
   if (forceHideRoll
-    && !game.user?.isGM
+    && !(game.user?.isGM && nsaFlag)
     && message.whisper.length > 0 && !message.whisper.includes(game.user?.id ?? "")
     && !message.isAuthor) {
     html.style.display = "none";

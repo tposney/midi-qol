@@ -1402,7 +1402,7 @@ async function rollActionSave(data: any) {
         action: "rollRequest",
         hideDC: !game.user?.isGM && !configSettings.displaySaveDC,
         format: "short",
-        icon: true
+        icon: false
       };
       if (["check", "save"].includes(request)) config.ability = ability;
       else if (request === "skill") {
@@ -1412,6 +1412,7 @@ async function rollActionSave(data: any) {
       const button = {
         //@ts-expect-error
         label: game.system?.enrichers?.createRollLabel(config) ?? `${saveDC} ${ability} ${request}`,
+        icon: "fas fa-shield-heart",
         action: ability,
         callback: async (html: any) => {
           let roll = await rollAbility({

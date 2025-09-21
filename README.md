@@ -817,7 +817,7 @@ There is a new midi effect flag, `flags.midi-qol.ActivityOverTime` (much like `f
 
  Be careful about referencing by uuid, as the activity's uuid may change if the actor/item is exported/imported to another world, compendium uuids should be fine.
 For example, you have a bleeding effect which does 1d4 necrotic damage at the start of the target's and then if successful DC 12 con save is made the effect is removed.
--	Step 1. Create a Save activity (called Bleeding Save), which has a con dc of 12, and does 1d4 necrotic damage (full damage on successful save). You want the activity to target self (since it will be rolled by the actor that has the effect applied) but otherwise it could be anything. Set overtime activity true, "turn start: and "save removes" on the midi properties tab for the activity.
+-	Step 1. Create a Save activity (called Bleeding Save), which has a con dc of 12, and does 1d4 necrotic damage (full damage on successful save). You want the activity to have target type blank, so that midi can override the target data, but otherwise it could be anything. Set overtime activity true, "turn start: and "save removes" on the midi properties tab for the activity.
 -	Step 2. On the item's attack activity specify an effect to apply, `flags.midi-qol.ActivityOvertime` and enter bleeding-save in the field (or copy and paste the Bleeding Save activity's uuid)
 
 The overtime activity's use condition will be checked before calling the overtime effect, i.e. `attributes.hp.value > 0` (no point flogging a dead horse).

@@ -1,3 +1,17 @@
+### 13.0.23
+* Fix for optional bonus damage not rolling in some circumstances.
+* Fix for before/after damage chat card not showing the new roll.
+* Fix for summoned creatures not being recorded when the summon activity was not concentration - thanks @thatlonelybugbear
+* Fix for average dice not working if fast forward damage rolls is false.
+* Fix for action save not displaying the correct dialog and not removing the effect if the save is successful.
+* Due to a recent change in midi, over time activities need to have their target type set to blank, rather than self.
+  - The Readme.md has been updated accordingly.
+* Added a new setting saves before damage in the misc tab. When set, saving throws are rolled before damage is rolled. 
+  - This means players will be making saves before they know how much damage they might take.
+  - This provides some benefits to item/module authors so that all applicable modifications to damage are known when damage is rolled.
+  - The intention is that this will become the only supported workflow in the future. 
+  - It is configurable to provide a fallback if there are any issues I have not found when enabled.
+
 ### 13.0.22
 * Fix (hopefully) for tokens losing vision after making an attack.
 * Fixed localisation display in midi custom sounds setting for quick settings.

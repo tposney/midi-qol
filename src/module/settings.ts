@@ -161,6 +161,7 @@ class ConfigSettings {
   rollChecksBlind: string[] = [];
   rollSavesBlind: string[] = [];
   rollSkillsBlind: string[] = [];
+  savesBeforeDamage: boolean = false;
   saveStatsEvery: number = 20;
   showDSN: boolean = true;
   showFastForward: boolean = false;
@@ -884,6 +885,7 @@ export const playerRollSavesOptions = keysToOptionsObj("playerRollSavesOptions",
   "nonePublic",
   "noneDialogPublic",
   "noneDialogPrivate",
+  "noneDialogSelf",
   "noneDialogBlind",
   "chat",
   "mtb",

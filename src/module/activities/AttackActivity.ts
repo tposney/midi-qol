@@ -403,7 +403,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
               dialog.configure = false;
               break;
             default:
-              dialog.configure = !(config.midiOptions.fastForwardAttack ?? workflow.workflowOptions.fastForwardAttack ?? false);
+              dialog.configure = requiresAmmoConfirmation || !(config.midiOptions.fastForwardAttack ?? workflow.workflowOptions.fastForwardAttack ?? false);
           }
         }
         if (keys.advantage) workflow.rollOptions.advantage = keys.advantage;

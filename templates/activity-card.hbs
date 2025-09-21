@@ -72,6 +72,7 @@
     <button data-action="midiApplyEffects">{{ localize "midi-qol.ApplyEffects" }}</button>
     {{/if}}
     {{#if confirmAttackDamage}}
+    {{#if hasAttackRoll}}
     <div class="midi-qol-confirm-damage-roll">
       <div class="flexrow 3">
         <button class="midi-qol-confirm-damage-roll-complete-miss"
@@ -86,82 +87,92 @@
         "Cancel"}}</button>
       {{/if}}
     </div>
-    {{/if}}
-  </div>
-  {{/if}}
-
-  {{!-- Insert dnd5e buttons on card --}}
-  {{!-- Utility Activity rollFormula - just use the dnd5e button --}}
-  {{#if buttons}}
-  <div class="midi-dnd5e-buttons">
-    <div class="card-buttons">
-      {{#each buttons}}
-      <button type="button" {{ isDisabled }} {{ dnd5e-dataset dataset }}>
-        {{{ icon }}} <span>{{{ label }}}</span>
-      </button>
-      {{/each}}
+    {{else}}
+    <div class="midi-qol-confirm-damage-roll flexrow 1">
+      <button class="midi-qol-confirm-damage-roll-complete" data-action="confirmDamageRollComplete">{{localize
+        "midi-qol.ConfirmRoll"}}</button>
+      {{#if canCancel}}
+      <button class="midi-qol-confirm-damage-roll-cancel" data-action="confirmDamageRollCancel">{{localize
+        "Cancel"}}</button>
+      {{/if}}
     </div>
-  </div>
-  <div class="end-midi-dnd5e-buttons">
-  </div>
-  {{/if}}
+    {{/if}}
+    {{/if}}
+    {{/if}}
 
-  {{!-- Midi results --}}
-  <div class="midi-results">
-    {{#if condensed}}
-    <div class="flexrow 2">
+
+    {{!-- Insert dnd5e buttons on card --}}
+    {{!-- Utility Activity rollFormula - just use the dnd5e button --}}
+    {{#if buttons}}
+    <div class="midi-dnd5e-buttons">
+      <div class="card-buttons">
+        {{#each buttons}}
+        <button type="button" {{ isDisabled }} {{ dnd5e-dataset dataset }}>
+          {{{ icon }}} <span>{{{ label }}}</span>
+        </button>
+        {{/each}}
+      </div>
+    </div>
+    <div class="end-midi-dnd5e-buttons">
+    </div>
+    {{/if}}
+
+    {{!-- Midi results --}}
+    <div class="midi-results">
+      {{#if condensed}}
+      <div class="flexrow 2">
+        <div class="midi-qol-attack-roll">
+          <div class="end-midi-qol-attack-roll"></div>
+        </div>
+        <div class="midi-qol-damage-roll">
+          <div class="end-midi-qol-damage-roll"></div>
+        </div>
+      </div>
+      <div class="midi-qol-hits-display">
+        <div class="end-midi-qol-hits-display"></div>
+      </div>
+      <div class="midi-qol-saves-display">
+        <div class="end-midi-qol-saves-display"></div>
+      </div>
+      {{else}}
       <div class="midi-qol-attack-roll">
         <div class="end-midi-qol-attack-roll"></div>
+      </div>
+      <div class="midi-qol-hits-display">
+        <div class="end-midi-qol-hits-display"></div>
       </div>
       <div class="midi-qol-damage-roll">
         <div class="end-midi-qol-damage-roll"></div>
       </div>
+      {{/if}}
+      <div class="midi-qol-other-damage-roll">
+        <div class="end-midi-qol-other-damage-roll"></div>
+      </div>
+      <div class="midi-qol-bonus-damage-roll">
+        <div class="end-midi-qol-bonus-bonus-roll"></div>
+      </div>
+      <div class="midi-qol-utility-roll">
+        <div class="end-midi-qol-utility-roll"></div>
+      </div>
+      <div class="midi-qol-saves-display">
+        <div class="end-midi-qol-saves-display"></div>
+      </div>
     </div>
-    <div class="midi-qol-hits-display">
-      <div class="end-midi-qol-hits-display"></div>
-    </div>
-    <div class="midi-qol-saves-display">
-      <div class="end-midi-qol-saves-display"></div>
-    </div>
-    {{else}}
-    <div class="midi-qol-attack-roll">
-      <div class="end-midi-qol-attack-roll"></div>
-    </div>
-    <div class="midi-qol-hits-display">
-      <div class="end-midi-qol-hits-display"></div>
-    </div>
-    <div class="midi-qol-damage-roll">
-      <div class="end-midi-qol-damage-roll"></div>
-    </div>
-    {{/if}}
-    <div class="midi-qol-other-damage-roll">
-      <div class="end-midi-qol-other-damage-roll"></div>
-    </div>
-    <div class="midi-qol-bonus-damage-roll">
-      <div class="end-midi-qol-bonus-bonus-roll"></div>
-    </div>
-    <div class="midi-qol-utility-roll">
-      <div class="end-midi-qol-utility-roll"></div>
-    </div>
-    <div class="midi-qol-saves-display">
-      <div class="end-midi-qol-saves-display"></div>
-    </div>
-  </div>
 
-  {{#each supplements}}
-  <p class="supplement">{{{ this }}}</p>
-  {{/each}}
-
-  {{!-- Item Properties --}}
-  {{#if displayProperties}}
-  {{#if properties}}
-  <ul class="card-footer pills unlist">
-    {{#each properties}}
-    <li class="pill transparent">
-      <span class="label {{{this}}}">{{ this }}</span>
-    </li>
+    {{#each supplements}}
+    <p class="supplement">{{{ this }}}</p>
     {{/each}}
-  </ul>
-  {{/if}}
-  {{/if}}
-</div>
+
+    {{!-- Item Properties --}}
+    {{#if displayProperties}}
+    {{#if properties}}
+    <ul class="card-footer pills unlist">
+      {{#each properties}}
+      <li class="pill transparent">
+        <span class="label {{{this}}}">{{ this }}</span>
+      </li>
+      {{/each}}
+    </ul>
+    {{/if}}
+    {{/if}}
+  </div>
