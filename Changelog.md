@@ -1,3 +1,7 @@
+### 13.0.25
+* Turns out the v024 change did not fix the chat log scrolling problem in all cases. 
+* Made chat log pruning a configuration option in case there are issues still. It is recommended to leave chat log pruning enabled.
+
 ### 13.0.24
 * Fix for chat log not scrolling back through messages.
 

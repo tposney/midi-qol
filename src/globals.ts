@@ -86,6 +86,7 @@ declare module "fvtt-types/configuration" {
     "dnd5e.challengeVisibility": string;
     "midi-qol.MidiSoundSettings": Record<string, any>;
     "midi-qol.playerControlsInvisibleTokens": boolean;
+    "midi-qol.pruneChatLog"
     "midi-qol.RollStats": Record<string, Stats>;
     "midi-qol.ConfigSettings": typeof configSettings;
     "midi-qol.CriticalDamage": string;

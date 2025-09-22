@@ -1,5 +1,5 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { configSettings, autoFastForwardAbilityRolls, checkRule, checkMechanic, safeGetGameSetting } from "./settings.js";
+import { configSettings, autoFastForwardAbilityRolls, checkRule, checkMechanic, safeGetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
 import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed, MidiOptions } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
@@ -1431,8 +1431,7 @@ export async function challengeConcentration(this: Actor.Implementation, wrapped
 }
 
 export let visionPatching = () => {
-  const patchVision = game.settings.get(MODULE_ID, "playerControlsInvisibleTokens")
-  if (patchVision) {
+  if (playerControlsInvisibleTokens) {
     ui.notifications?.warn("Player control vision is deprecated, use it at your own risk")
     console.warn("midi-qol | Player control vision is deprecated, use it at your own risk")
 
@@ -1442,7 +1441,7 @@ export let visionPatching = () => {
     log("Patching Token.isVisible")
     libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype.isVisible", isVisible, "WRAPPER");
   }
-  log("Vision patching - ", patchVision ? "enabled" : "disabled")
+  log("Vision patching - ", playerControlsInvisibleTokens ? "enabled" : "disabled")
 }
 
 // function _getUsageConfig(wrapped): any {

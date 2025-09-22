@@ -18,6 +18,8 @@ export let itemRollButtons: boolean;
 export let midiSoundSettings: any = {};
 export let midiSoundSettingsBackup: any = undefined;
 export let nsaFlag: boolean;
+export let playerControlsInvisibleTokens: boolean = false;
+export let pruneChatLog: boolean = true;
 export let replaceDefaultActivities: boolean = true;
 export let saveRequests = {};
 export let saveTimeouts = {};
@@ -287,6 +289,9 @@ export function collectSettingData() {
     forceHideRoll,
     nsaFlag,
     saveToChatCard,
+    playerControlsInvisibleTokens,
+    pruneChatLog,
+    replaceDefaultActivities,
     targetConfirmation,
     useWeakReferences,
     flags: {}
@@ -314,6 +319,7 @@ function removeOldValues(theObject: any) {
   return theObject;
 }
 export async function importSettingsFromJSON(json) {
+  let requiresReload = false;
   if (typeof json === "string")
     json = JSON.parse(json);
   if (json.midiSettings) { // this is a trouble shooter file
@@ -334,16 +340,34 @@ export async function importSettingsFromJSON(json) {
   await game.settings.set("midi-qol", "DebounceInterval", removeOldValues(json.debounceInterval));
   await game.settings.set("midi-qol", "DragDropTarget", removeOldValues(json.dragDropTargeting));
   await game.settings.set("midi-qol", "EnableWorkflow", removeOldValues(json.enableWorkflow));
-  await game.settings.set("midi-qol", "ForceHideRoll", removeOldValues(json.forceHideRoll));
-  await game.settings.set("midi-qol", "ReplaceDefaultActivities", removeOldValues(json.replaceDefaultActivities));
+  if (json.forceHideRoll !== undefined) {
+    if (game.settings.get("midi-qol", "ForceHideRoll") !== json.forceHideRoll) requiresReload = true;
+    await game.settings.set("midi-qol", "ForceHideRoll", removeOldValues(json.forceHideRoll));
+  }
+  if (json.replaceDefaultActivities !== undefined) {
+    if (game.settings.get("midi-qol", "ReplaceDefaultActivities") !== json.replaceDefaultActivities) requiresReload = true;
+    await game.settings.set("midi-qol", "ReplaceDefaultActivities", removeOldValues(json.replaceDefaultActivities));
+  }
   await game.settings.set("midi-qol", "SaveToChatCard", removeOldValues(json.saveToChatCard));
   await game.settings.set("midi-qol", "showGM", removeOldValues(json.nsaFlag));
   await game.settings.set("midi-qol", "UseWeakReferences", removeOldValues(json.useWeakReferences));
-  await game.settings.set("midi-qol", "playerControlsInvisibleTokens", removeOldValues(json.playerControlsInvisibleTokens));
+  if (json.playerControlsInvisibleTokens !== undefined) {
+    if (game.settings.get("midi-qol", "playerControlsInvisibleTokens") !== json.playerControlsInvisibleTokens) requiresReload = true;
+    await game.settings.set("midi-qol", "playerControlsInvisibleTokens", json.playerControlsInvisibleTokens);
+  }
+  if (json.pruneChatLog !== undefined) {
+    if (game.settings.get("midi-qol", "pruneChatLog") !== json.pruneChatLog) requiresReload = true;
+    await game.settings.set("midi-qol", "pruneChatLog", json.pruneChatLog);
+  }
+
   const settingsAppId = game.settings.sheet?.id;
   if (settingsAppId) foundry.applications.instances.get(settingsAppId)?.render(true);
   const exportSource = json.flags?.exportSource;
   ui.notifications?.notify(`Importing settings from foundry version ${exportSource?.coreVersion} dnd ${exportSource?.systemVersion} midi ${exportSource?.midiVersion}`);
+  if (requiresReload) {
+  //@ts-expect-error
+    foundry.applications.settings.SettingsConfig.reloadConfirm({ world: true });
+  }
 }
 export let fetchSoundSettings = () => {
   midiSoundSettings = game.settings.get("midi-qol", "MidiSoundSettings") ?? {};
@@ -578,6 +602,7 @@ export let fetchParams = () => {
   useWeakReferences = game.settings.get("midi-qol", "UseWeakReferences") ?? false;
   if (useWeakReferences !== oldWeakReferences) Workflow.clearWorkflows();
   saveToChatCard = game.settings.get("midi-qol", "SaveToChatCard");
+  pruneChatLog = game.settings.get("midi-qol", "pruneChatLog");
   targetConfirmation = game.settings.get("midi-qol", "TargetConfirmation");
   if (configSettings.griddedGridless === undefined) configSettings.griddedGridless = false;
   if (configSettings.gridlessFudge === undefined) configSettings.gridlessFudge = 0;
@@ -1346,6 +1371,16 @@ export const registerSettings = function () {
     default: false,
     config: true,
     type: Boolean,
+    requiresReload: true
+  });
+
+  game.settings.register("midi-qol", "pruneChatLog", {
+    name: "Prune Chat Log",
+    hint: "Automatically prune chat messages to limit those in memory.",
+    scope: "world",
+    default: true,
+    type: Boolean,
+    config: true,
     requiresReload: true
   });
 
