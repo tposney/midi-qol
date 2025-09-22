@@ -1,3 +1,6 @@
+### 13.0.24
+* Fix for chat log not scrolling back through messages.
+
 ### 13.0.23
 * Fix for optional bonus damage not rolling in some circumstances.
 * Fix for before/after damage chat card not showing the new roll.
