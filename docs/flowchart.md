@@ -1,21 +1,24 @@
 > [!tip] Navigation
 > [Go to Readme](/README.md#item-onuse-macro-actor-onuse-macro-and-damage-bonus-macro-actor-special-traits-fields) <br>
+> [Go to Flowchart (v13.0.23+)](docs/flowchart_save-before-dmg.md) <br>
 > [Go to Workflow Fields](docs/workflowfields.md)
 
-# Macro Passes for MidiQOL 
-> *(as of v12.4.64)*
+# Macro Passes for MidiQOL
+
+> *(versions 12.4.64 to 13.0.22)*
 
 This page provides information on when, where, and why a pass is called. Check the [Workflow Fields](workflowfields.md) page to see what fields are available in each pass.
 
 <!-- the links here in optional and damagebonus really need to be replaced with something that won't possibly break, like a dedicated .md or a wiki on gitlab pages -->
 The chart is arranged by `args[0].tag`, which holds a string representing a category of macro passes:
+
 - `OnUse` contains passes that run on the client rolling the item.
 - `TargetOnUse` contains passes that run on the client being targeted, if any.
 - `optional` passes are a special case called only when a macro is specified in a `flags.midi-qol.optional.NAME.*` flag ([see here](https://gitlab.com/tposney/midi-qol#optional-bonus-effects:~:text=ItemMacro.%3CitemUUID%3E,implementation%20as%20above.)). These are called on whichever client will benefit from the bonus.
 - `DamageBonus` is a tag with one pass called if one or more macros are specified in the "*Damage Bonus Macro*" field in the special traits on a character sheet, or set by an effect using flag `flags.dnd5e.DamageBonusMacro` ([see here](https://gitlab.com/tposney/midi-qol#optional-bonus-effects:~:text=your%20custom%20roll.-,Damage%20bonus%20macros,-are%20called%20after)). These are called on the client rolling the damage.
 
 <!-- provide a page detailing sockets? -->
->>> [!note] 
+>>> [!note]
 If your macro makes changes to a document when the calling client may not have permission, you will need to use sockets. Utilities are available in `MidiQOL.socket()`.
 >>>
 ```mermaid
