@@ -1,7 +1,7 @@
 {
   "name": "Dragon Slayer - Weapon",
   "type": "weapon",
-  "img": "modules/dnd-dungeon-masters-guide/assets/icons/items/dragon-slayer-greatsword.webp",
+  "img": "icons/weapons/swords/greatsword-crossguard-embossed-gold.webp",
   "system": {
     "activities": {
       "YCd17eWSMhL1ZP9b": {
@@ -280,7 +280,7 @@
     "damage": {
       "base": {
         "number": null,
-        "denomination": 0,
+        "denomination": null,
         "types": [],
         "custom": {
           "enabled": false
@@ -448,12 +448,12 @@
   "_stats": {
     "compendiumSource": "Compendium.world.fixup.Item.yKCcx7n4gZ4O7IoS",
     "duplicateSource": null,
-    "coreVersion": "13.346",
+    "coreVersion": "13.348",
     "systemId": "dnd5e",
-    "systemVersion": "4.3.6",
+    "systemVersion": "5.1.9",
     "createdTime": 1741783003985,
-    "modifiedTime": 1743048889858,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "modifiedTime": 1758889269879,
+    "lastModifiedBy": "pEOrrBXRIpR6dPVY",
     "exportSource": null
   },
   "_id": "S8Slo3MWDGp9trV9",

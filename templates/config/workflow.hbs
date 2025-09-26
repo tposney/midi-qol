@@ -59,11 +59,10 @@
     </div>
 
     <div class="form-group">
-      <label>{{localize "midi-qol.AutoEffects.Name"}}</label>
-      <select name="autoItemEffects" data-dtype="String">
-        {{selectOptions AutoEffectsOptions selected=configSettings.autoItemEffects localize=true}}
-      </select>
-      <p class="notes midi-qol-faint">{{{localize "midi-qol.AutoEffects.Hint"}}}</p>
+      <label>{{localize "midi-qol.AutoUndoTransformations.Name"}}</label>
+        <input type="checkbox" name="autoUndoTransformations" data-dtype="Boolean" {{checked
+          configSettings.autoUndoTransformations}} />
+      <p class="notes midi-qol-faint">{{{localize "midi-qol.AutoUndoTransformations.Hint"}}}</p>
     </div>
 
     {{#if hasConvenientEffects}}

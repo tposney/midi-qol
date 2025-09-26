@@ -156,6 +156,7 @@ declare module "fvtt-types/configuration" {
           baseLevel?: number;
         };
         overtimeChatCardUuids?: string[];
+        transformedActorUuids?: string[];
       };
     };
     Actor: {
@@ -362,6 +363,8 @@ declare module "fvtt-types/configuration" {
         "use.concentrationId"?: string;
         "use.spellLevel"?: number;
         "use.consumed"?: unknown;
+        "transform.uuid"?: string;
+        "transform.profile"?: string;
         targets?: unknown;
         messageType?: string;
         roll?: {
@@ -426,6 +429,7 @@ declare module "fvtt-types/configuration" {
         targetUuids?: string[];
         targetsCanSeeUuids?: string[];
         targetsCanSenseUuids?: string[];
+        transformedActors: string[];
         tokenCanSeeUuids?: string[];
         tokenCanSenseUuids?: string[];
         attackingTokenUuid?: string;

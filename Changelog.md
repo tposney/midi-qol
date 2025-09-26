@@ -1,3 +1,15 @@
+### 13.0.26
+* Fix for midi to work with actually private messages.
+* Fix for config app styling when dfreds convenient effects loaded for mechanics tab - thanks @thatlonelybugbear.
+* Fix for friendlyFail activity setting not working.
+* Fix for completeActivityUse not correctly awaiting the roll to complete before returning.
+* Added Midi Transform activity which enhances the core transform activity.
+  - When the activity is used it will transform the target according to the profile, without needing to press the transform button on the activity card.
+  - Added new setting (Workflow->special) so that if a duration is specified for the activity, or it is concentration, create an effect noting the outstanding transformations. Removing that effect, via expiry or breaking concentration reverts the transformed target(s).
+  - The transform activity can be triggered via other activities (such as Midi Save/Midi Hit) to allow transforming targets that fail a save or are hit.
+  - Added a sample item, Transform into Rat that will for the targeted token to do a save and if failed will transform them into a rat.
+  - Transforming from the chat card does not work properly - fix in next version.
+
 ### 13.0.25
 * Turns out the v024 change did not fix the chat log scrolling problem in all cases. 
 * Made chat log pruning a configuration option in case there are issues still. It is recommended to leave chat log pruning enabled.

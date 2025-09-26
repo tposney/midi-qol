@@ -1591,7 +1591,7 @@ export async function completeActivityUse(activityRef: Activity | string | undef
   foundry.utils.setProperty(usage, "midiOptions.workflowOptions.forceCompletion", true);
   let localRoll = asUser?.id === game.user?.id;
   if (localRoll) {
-    return new Promise((resolve) => {
+    return await new Promise((resolve) => {
       const maxWait = 90; // If the activity usage doesn't complete in 90 seconds then we have a problem
       let saveTargets = Array.from(game.user?.targets ?? []).map(t => { return t.id });
       if (usage.midiOptions!.ignoreUserTargets) updateUserTargets([]);

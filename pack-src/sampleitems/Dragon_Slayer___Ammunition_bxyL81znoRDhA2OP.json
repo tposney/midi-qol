@@ -1,7 +1,7 @@
 {
   "name": "Dragon Slayer - Ammunition",
   "type": "weapon",
-  "img": "modules/dnd-dungeon-masters-guide/assets/icons/items/dragon-slayer-greatsword.webp",
+  "img": "icons/skills/ranged/arrow-flying-broadhead-metal.webp",
   "system": {
     "activities": {
       "YCd17eWSMhL1ZP9b": {
@@ -303,7 +303,7 @@
     "damage": {
       "base": {
         "number": null,
-        "denomination": 0,
+        "denomination": null,
         "types": [],
         "custom": {
           "enabled": false
@@ -459,12 +459,12 @@
   "_stats": {
     "compendiumSource": "Compendium.world.fixup.Item.6rU1U6v89I0p47me",
     "duplicateSource": null,
-    "coreVersion": "13.346",
+    "coreVersion": "13.348",
     "systemId": "dnd5e",
-    "systemVersion": "4.3.6",
+    "systemVersion": "5.1.9",
     "createdTime": 1741783001914,
-    "modifiedTime": 1741783001931,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "modifiedTime": 1758889309712,
+    "lastModifiedBy": "pEOrrBXRIpR6dPVY",
     "exportSource": null
   },
   "_id": "bxyL81znoRDhA2OP",

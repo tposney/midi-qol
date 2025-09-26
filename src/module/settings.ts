@@ -75,6 +75,7 @@ class ConfigSettings {
   autoFastForward: string = "off";
   autoItemEffects: string = "off";
   autoRemoveSummonedCreature: boolean = false;
+  autoUndoTransformations: boolean = false;
   autoRemoveTemplate: boolean = true;
   autoRemoveInstantaneousTemplate: boolean = false;
   autoRollAttack: boolean = false;

@@ -182,6 +182,20 @@ export let readyHooks = async () => {
             }
           }
         }
+        let transformedActorUuids = foundry.utils.getProperty(deletedEffect, "flags.midi-qol.transformedActorUuids") as string[]; 
+        if (transformedActorUuids && transformedActorUuids.length > 0) {
+          for (let uuid of transformedActorUuids) {
+            let actor = await fromUuid(uuid) as Actor.Implementation;
+            if (actor) { 
+              try {
+              //@ts-expect-error no dnd5e-types
+              await actor.revertOriginalForm({});
+              } catch (err) { // only here to deal with tidy throwing an error
+                console.error("Error reverting actor to original form", actor, err);
+              }
+            }
+          }
+        }
         return true;
       } catch (err) {
         console.warn("Error in deleteActiveEffect", err, deletedEffect, options);

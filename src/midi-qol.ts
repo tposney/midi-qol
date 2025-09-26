@@ -62,6 +62,7 @@ export let ceInterface: {
   }) => Promise<void>
 } | undefined;
 
+export let BaseChatLogClass;
 export let debugEnabled = 0;
 // 0 = none, warnings = 1, debug = 2, all = 3
 export let debug = (...args: any[]) => { if (debugEnabled > 1) console.log("DEBUG: midi-qol | ", ...args) };
@@ -164,6 +165,8 @@ function setupActivities() {
   globalThis.MidiQOL.activityTypes["heal"] = { documentClass: MidiHealActivity };
   setupSummonActivity();
   globalThis.MidiQOL.activityTypes["summon"] = { documentClass: MidiSummonActivity };
+  setupTransformActivity();
+  globalThis.MidiQOL.activityTypes["transform"] = { documentClass: MidiTransformActivity };
   setupUtilityActivity();
   globalThis.MidiQOL.activityTypes["utility"] = { documentClass: MidiUtilityActivity };
   setupForwardActivity();
@@ -177,6 +180,8 @@ Hooks.once('init', async function () {
   window.customElements.define("midi-damage-application", DamageApplicationElementMidi as unknown as CustomElementConstructor);
   setupActivities();
   if (game.settings.get("midi-qol", "pruneChatLog"))
+    BaseChatLogClass = CONFIG.ui.chat;
+    //@ts-expect-error - lots of incorrect missing elements from the class
     CONFIG.ui.chat = ChatLogMidi;
   // @ts-expect-error no dnd5e-types
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;
@@ -649,6 +654,7 @@ import { resolveTargetConfirmation, showItemInfo, templateTokens } from './modul
 import { MidiActivityMixin, setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
 import { MidiForwardActivity, setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';
+import { MidiTransformActivity, setupTransformActivity } from './module/activities/TransformActivity.js';
 import { MidiCombat5e } from './module/MidiCombat5e.js';
 import { TokenOrDocument } from './globals.js';
 import { DamageApplicationElementMidi } from './module/ChatClasses/DamageApplicationElementMidi.js';

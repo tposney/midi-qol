@@ -1,6 +1,11 @@
+import { BaseChatLogClass } from "../../midi-qol.js";
+import { forceHideRoll } from "../settings.js";
 import { ChatMessageMidi } from "./ChatMessageMidi.js";
 
-export class ChatLogMidi extends foundry.applications.sidebar.tabs.ChatLog {
+// TODO - refactor to be a subclass of ChatLog5e.
+// - need to override onFirstRender to set up intersection observer and not call ChatLog.onFirstRender
+// - need to override updateMessage to save tray states and not call ChatLog.updateMessage
+export class ChatLogMidi extends globalThis.dnd5e.applications.ChatLog5e {
   /**
    * Record visibility of cards as they intersect the viewport.
    * @param {IntersectionObserverEntry[]} entries  The observed elements that have entered or left the viewport.
@@ -12,17 +17,17 @@ export class ChatLogMidi extends foundry.applications.sidebar.tabs.ChatLog {
   #renderingQueue = new foundry.utils.Semaphore(1);
   #overflowingDebounce = foundry.utils.debounce(this.#setOverflowing.bind(this), 100);
 
-
-
   /* -------------------------------------------- */
 
-  /** @inheritDoc */
+  /** Replace the ChatLog5e _onFirstRender behaviour */
   async _onFirstRender(context, options) {
     const scroll = this.element.querySelector(".chat-scroll");
     const log = this.element.querySelector(".chat-log");
     new MutationObserver(this.#onLogMutated.bind(this)).observe(log as Node, { childList: true });
     this.#intersections = new IntersectionObserver(this.#onCardIntersects.bind(this), { root: scroll });
-    return super._onFirstRender(context, options);
+    const grandParent = Object.getPrototypeOf(BaseChatLogClass);
+    grandParent.prototype._onFirstRender.call(this, context, options);
+    // return super._onFirstRender(context, options);
   }
 
   async pruneElement() {
@@ -31,11 +36,9 @@ export class ChatLogMidi extends foundry.applications.sidebar.tabs.ChatLog {
     const maxSize = CONFIG.ChatMessage.batchSize ?? 25;
     if (count > maxSize) {
       for (let index = 0; index < count - maxSize; index++) {
-        //@ts-expect-error
         const messageId = scroll.firstElementChild.dataset.messageId;
         const message = game.messages?.get(messageId);
         if (message) message.logged = false;
-        //@ts-expect-error
         // scroll?.removeChild(scroll.firstElementChild)
         removeElementAndListeners(scroll.firstElementChild)
         this.#lastId = messageId;
@@ -46,21 +49,23 @@ export class ChatLogMidi extends foundry.applications.sidebar.tabs.ChatLog {
   async scrollBottom({ popout = false, waitImages = false, scrollOptions = {} } = {}) {
     this.pruneElement();
     this.popout && this.popout.pruneElement();
-    //@ts-expect-error
     return super.scrollBottom({ popout, waitImages, scrollOptions });
   }
 
 
-  /* -------------------------------------------- */
+  /* replace the ChatLog5e updateMessage behaviour */
   async updateMessage(message, notify = false) {
     const card = this.element.querySelector(`.message[data-message-id="${message.id}"]`);
     //@ts-ignore
     if (card) message._trayStates = new Map([
+      //@ts-expect-error
       ...Array.from(card.querySelectorAll(".card-tray")).map(t => [t.className.replace(" collapsed", ""), t.classList.contains("collapsed")]),
-      ...Array.from(card.querySelectorAll(MidiQOL.ChatClasses.ChatMessageMidi.TRAY_TYPES.join(", "))).map(t => [t.tagName, t.open])
+      //@ts-expect-error
+      ...Array.from(card.querySelectorAll(ChatMessageMidi.TRAY_TYPES.join(", "))).map(t => [t.tagName, t.open])
     ]);
-    //@ts-expect-error
-    await super.updateMessage(message, notify);
+    const grandParent = Object.getPrototypeOf(BaseChatLogClass);
+    grandParent.prototype.updateMessage.call(this, message, notify);
+    // await super.updateMessage(message, notify);
   }
 
   /**
@@ -68,13 +73,11 @@ export class ChatLogMidi extends foundry.applications.sidebar.tabs.ChatLog {
    * @param {IntersectionObserverEntry[]} entries  The observed elements that have entered or left the viewport.
    */
   #onCardIntersects(entries) {
+    const selector = ChatMessageMidi.TRAY_TYPES.join(", ");
     for (const { isIntersecting, target } of entries) {
-      const trays = target.querySelectorAll("damage-application, effect-application, midi-damage-application");
-      trays.forEach(tray => tray.visible = isIntersecting);
+      target.querySelectorAll(selector).forEach(tray => tray.visible = isIntersecting);
     }
   }
-
-  /* -------------------------------------------- */
 
   /**
    * React to changes in the chat log.
@@ -132,7 +135,6 @@ export class ChatLogMidi extends foundry.applications.sidebar.tabs.ChatLog {
 
   #setOverflowing() {
     const scroll = this.element.querySelector(".chat-scroll");
-    //@ts-expect-error
     scroll.classList.toggle("overflowed", scroll.scrollHeight > scroll.offsetHeight);
   }
   async renderBatch(size) {

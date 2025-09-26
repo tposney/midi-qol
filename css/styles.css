@@ -198,11 +198,18 @@
 
 #midi-qol-settings #midi-config-mechanics .midi-qol-box #midi-condition-group {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 2fr 2fr 2fr;
+  gap: 0.5rem 1rem;
+  align-items: center;
+
   grid-template-areas: "label in1 in2 in3";
   column-gap: 5px;
 }
 
+#midi-condition-group label {
+  justify-self: center;
+  text-align: center;
+}
 .midi-qol-quick-config .window-content {
   overflow-y: scroll;
 }

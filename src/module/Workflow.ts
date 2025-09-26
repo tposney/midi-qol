@@ -93,6 +93,7 @@ import { postTemplateConfirmTargets, selectTargets, templateTokens } from "./act
 import { Activity, ActivitySave, ActivityCheck, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
+import { MidiTransformActivity } from "./activities/TransformActivity.js";
 
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event: AugmentedEvent) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
@@ -1521,6 +1522,7 @@ export class Workflow {
   preCreateTemplateHookId: number | undefined;
   postSummonHookId: number | undefined;
   summonedCreatures: TokenDocument.Implementation[] | undefined;
+  transformedActorUuids: string[] | undefined;
   kickStart: boolean | undefined;
   disadvantageSaves: Set<Token.Implementation> | undefined;
   saveResults: Roll[] | undefined; /* D20Roll */
@@ -2163,7 +2165,7 @@ export class Workflow {
       ui.notifications?.warn(`midi-qol | Targeting complete hook cancelled roll`);
       return this.WorkflowState_Abort;
     };
-    if (!getAutoRollAttack(this) && this.activity.attack) {
+    if ((!getAutoRollAttack(this) && this.activity.attack) || this.activity instanceof MidiTransformActivity) {
       // Not auto rolling so display targets
       const rollMode = safeGetGameSetting("core", "rollMode");
       this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === CONST.DICE_ROLL_MODES.BLIND || rollMode === CONST.DICE_ROLL_MODES.PRIVATE;
@@ -3252,6 +3254,67 @@ export class Workflow {
         }
       }
     }
+
+    if (configSettings.autoUndoTransformations && this.transformedActorUuids && this.transformedActorUuids.length > 0) {
+      let origin = hasConcentration && this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "");
+      if (origin) {
+        origin.setFlag("midi-qol", "transformedActorUuids", this.transformedActorUuids);
+      } else {
+                // need to create an effect to remove the summoned creatures
+        const activityDuration = this.activity.duration;
+        let effectData: ActiveEffect.CreateData;
+        const transformString = i18n("DND5E.TRANSFORM.Action.Transform") + ": ";
+        let effect = this.item.actor?.effects.find(ef => ef.name === (transformString + this.item.name));
+        if (effect) {
+          const transformedUuids = effect.getFlag("midi-qol", "transformedActorUuids") ?? [];
+          await effect.setFlag("midi-qol", "transformedActorUuids", [...transformedUuids, ...this.transformedActorUuids]);
+        } else { // add an effect which will cause the summoned creature to be deleted
+          effectData = {
+            origin: this.item.uuid, //flag the effect as associated to the spell being cast
+            disabled: false,
+            img: this.item.img,
+            name: transformString + this.item.name,
+            duration: {},
+            flags: {
+              dae: {
+                stackable: "noneName"
+              },
+              "midi-qol": { transformedActorUuids: this.transformedActorUuids }
+            },
+          }
+          const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget?.id));
+          if (activityDuration?.units === "inst") {
+            // This seems wrong, however lots of dnd5e summons activities have a duration of inst - e.g. find familiar
+            effectData.duration = {
+              startRound: game.combat?.round,
+              startTurn: game.combat?.turn,
+              startTime: game.time?.worldTime
+            }
+            //@ts-expect-error CONFIG.DND5E
+          } else if (CONFIG.DND5E.permanentTimePeriods[activityDuration.units]) {
+            effectData.duration = {
+              startRound: game.combat?.round,
+              startTurn: game.combat?.turn,
+              startTime: game.time?.worldTime
+            }
+          } else {
+            const convertedDuration = globalThis.DAE.convertDuration(activityDuration, inCombat);
+            if (convertedDuration?.type === "seconds") {
+              effectData.duration = { seconds: Math.max(convertedDuration.seconds, 1), startTime: game.time?.worldTime }
+            } else if (convertedDuration?.type === "turns") {
+              effectData.duration = {
+                rounds: convertedDuration.rounds,
+                turns: convertedDuration.rounds > 0 ? convertedDuration.turns : Math.max(convertedDuration.turns, 1),
+                startRound: game.combat?.round,
+                startTurn: game.combat?.turn,
+              }
+            }
+          }
+          await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+        }
+      }
+  }
+
     await asyncHooksCallAll("midi-qol.postActiveEffects", this);
     if (this.item) await asyncHooksCallAll(`midi-qol.postActiveEffects.${this.item.uuid}`, this);
     // Call onUseMacro if not already called
@@ -5018,7 +5081,7 @@ export class Workflow {
         if (saveDetails.isFriendly &&
           // @ts-expect-error no dnd5e-types
           (this.item.system.description.value.toLowerCase().includes(i18n("midi-qol.autoFailFriendly")?.toLowerCase())
-            || this.activity.friendlySave === "friendlyFailure")) {
+            || this.activity.friendlySave === "friendlyFail")) {
           promises.push(new BasicRoll("-1").evaluate());
         } else if (saveDetails.isFriendly && this.activity.friendlySave === "friendlySuccess") {
           promises.push(new BasicRoll("99").evaluate());

@@ -1,7 +1,7 @@
 {
   "name": "Wounding Weapon",
   "type": "weapon",
-  "img": "modules/dnd-dungeon-masters-guide/assets/icons/items/dragon-slayer-greatsword.webp",
+  "img": "icons/weapons/swords/sword-guard-red.webp",
   "system": {
     "activities": {
       "YCd17eWSMhL1ZP9b": {
@@ -269,7 +269,7 @@
     "damage": {
       "base": {
         "number": null,
-        "denomination": 0,
+        "denomination": null,
         "types": [],
         "custom": {
           "enabled": false
@@ -530,12 +530,12 @@
   "_stats": {
     "compendiumSource": "Compendium.world.fixup.Item.cv5XCJdJKeIjhfQp",
     "duplicateSource": null,
-    "coreVersion": "13.346",
+    "coreVersion": "13.348",
     "systemId": "dnd5e",
-    "systemVersion": "4.3.6",
+    "systemVersion": "5.1.9",
     "createdTime": 1741783018743,
-    "modifiedTime": 1741783018759,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "modifiedTime": 1758889502874,
+    "lastModifiedBy": "pEOrrBXRIpR6dPVY",
     "exportSource": null
   },
   "_id": "edNz67q1wmIV1xWu",

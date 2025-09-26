@@ -1,7 +1,7 @@
 {
   "name": "Life Stealer - Weapon",
   "type": "weapon",
-  "img": "modules/dnd-dungeon-masters-guide/assets/icons/items/dragon-slayer-greatsword.webp",
+  "img": "icons/weapons/swords/sword-guard-engraved.webp",
   "system": {
     "activities": {
       "YCd17eWSMhL1ZP9b": {
@@ -281,7 +281,7 @@
     "damage": {
       "base": {
         "number": null,
-        "denomination": 0,
+        "denomination": null,
         "types": [],
         "custom": {
           "enabled": false
@@ -455,12 +455,12 @@
   "_stats": {
     "compendiumSource": "Compendium.world.fixup.Item.pxHGwDAV8bBKn0fZ",
     "duplicateSource": null,
-    "coreVersion": "13.346",
+    "coreVersion": "13.348",
     "systemId": "dnd5e",
-    "systemVersion": "4.3.6",
+    "systemVersion": "5.1.9",
     "createdTime": 1741783013220,
-    "modifiedTime": 1741783013235,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "modifiedTime": 1758889579740,
+    "lastModifiedBy": "pEOrrBXRIpR6dPVY",
     "exportSource": null
   },
   "_id": "bun3sPWYh5CFpQex",

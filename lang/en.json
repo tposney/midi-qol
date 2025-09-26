@@ -770,6 +770,8 @@
   "midi-qol.MeasuredTemplate": "Template",
   "midi-qol.AutoRemoveTemplate.Name": "Auto remove placed template on spell expiry",
   "midi-qol.AutoRemoveSummonedCreature.Name": "Auto remove summoned creatures on item expiry/concentration removal (for dnd5e summons items)",
+  "midi-qol.AutoUndoTransformations.Name": "Auto undo transformations on effect/concentration expiry/removal",
+  "midi-qol.AutoUndoTransformations.Hint": "When transforming a target add an effect/concentration to the caster that tracks the transformations and automatically revert the target to their original form on expiry/concentration removal",
   "midi-qol.AttackPerTarget.Name": "Roll a separate attack per target",
   "midi-qol.SkillAbilityCheckAdvantage.Name": "Ability Check Advantage gives Skill Advantage",
   "midi-qol.SkillAbilityCheckAdvantage.Hint": "If an actor has advantage/disadvantage on ability checks, skills based on that ability also have advantage/disadvantage",
@@ -1310,6 +1312,13 @@
       "one": "Midi Summon",
       "other": "Midi Summons"
     }
+  },
+  "midi-qol.TRANSFORM": {
+    "Title": {
+      "one": "Midi Transform",
+      "other": "Midi Transforms"
+    },
+    "AlreadyTransformed": "{name} already Transformed"
   },
   "midi-qol.fields": {
     "use-condition-header": "Midi Activity Allow Use Condition",
