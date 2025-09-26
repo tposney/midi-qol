@@ -770,6 +770,8 @@
   "midi-qol.MeasuredTemplate": "Modelo",
   "midi-qol.AutoRemoveTemplate.Name": "Remover Modelos de Magias Expiradas",
   "midi-qol.AutoRemoveSummonedCreature.Name": "Remover Criaturas Invocadas de Itens Expirados (para itens de invocação do D&D5e)",
+  "midi-qol.AutoUndoTransformations.Name": "Desfazer Transformações Automaticamente",
+  "midi-qol.AutoUndoTransformations.Hint": "Ao transformar um alvo, adicione um efeito/concentração ao conjurador, que rastreia as transformações e reverte automaticamente o alvo à sua forma original ao expirar/remover o efeito/concentração.",
   "midi-qol.AttackPerTarget.Name": "Rolar Ataques Separados por Alvo",
   "midi-qol.SkillAbilityCheckAdvantage.Name": "Vantagem em Testes de Atributo dá Vantagem em Perícias",
   "midi-qol.SkillAbilityCheckAdvantage.Hint": "Se um ator possuir vantagem/desvantagem em testes de atributo, perícias baseadas naquele atributo também possuem vantagem/desvantagem.",
@@ -1310,6 +1312,13 @@
       "one": "Invocação Midi",
       "other": "Invocações Midi"
     }
+  },
+  "midi-qol.TRANSFORM": {
+    "Title": {
+      "one": "Transformação Midi",
+      "other": "Transformações Midi"
+    },
+    "AlreadyTransformed": "{name} já está Transformado"
   },
   "midi-qol.fields": {
     "use-condition-header": "Atividade Midi Permite Condição de Uso",
