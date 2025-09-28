@@ -1,3 +1,6 @@
+### 13.0.27
+* Fix for midi misbehaving when Chat Log pruning is disabled.
+
 ### 13.0.26
 * Fix for midi to work with actually private messages.
 * Fix for config app styling when dfreds convenient effects loaded for mechanics tab - thanks @thatlonelybugbear.

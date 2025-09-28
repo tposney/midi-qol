@@ -179,10 +179,11 @@ Hooks.once('init', async function () {
   log('Initializing midi-qol');
   window.customElements.define("midi-damage-application", DamageApplicationElementMidi as unknown as CustomElementConstructor);
   setupActivities();
-  if (game.settings.get("midi-qol", "pruneChatLog"))
+  if (game.settings.get("midi-qol", "pruneChatLog")) {
     BaseChatLogClass = CONFIG.ui.chat;
     //@ts-expect-error - lots of incorrect missing elements from the class
     CONFIG.ui.chat = ChatLogMidi;
+  }
   // @ts-expect-error no dnd5e-types
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;
   //@ts-expect-error
