@@ -4587,7 +4587,29 @@ export function raceOrType(entity: TokenOrDocument | Actor | string): string {
  * @param rollData Optional object to which damageTypes and defaultDamageType will be assigned.
  * @returns Void if `rollData` is provided; otherwise an object containing `damageTypes` and `defaultDamageType`.
  */
-export function collectDamageRollTypes(
+export function collectDamageTypes(
+  damageRolls: {
+    options?: { type?: string };
+    parts?: string[];
+  }[] = [],
+  activity?: Activity,
+  rollData?: {
+    damageTypes?: { [key: string]: boolean };
+    defaultDamageType?: { [key: string]: boolean };
+    [key: string]: any;
+  }
+): void | { damageTypes: { [key: string]: boolean }, defaultDamageType?: { [key: string]: boolean } } {
+  if (damageRolls.length) return collectDamageRollsDamageTypes(damageRolls, rollData);
+  else if (activity) return collectActivityDamageTypes(activity, rollData);
+  else if (rollData) {
+    rollData.defaultDamageType ??= {};
+    rollData.damageTypes ??= {};
+    return;
+  }
+  return { damageTypes: {}, defaultDamageType: {} };
+}
+
+function collectDamageRollsDamageTypes(
   damageRolls: {
     options?: { type?: string };
     parts?: string[];
@@ -4621,13 +4643,63 @@ export function collectDamageRollTypes(
 
   if (rollData) {
     rollData.damageTypes = damageTypes;
-    if (!rollData.defaultDamageType) {
-      rollData.defaultDamageType = defaultDamageType;
-    }
+    rollData.defaultDamageType ??= defaultDamageType;
     return;
-  } else {
-    return { damageTypes, defaultDamageType };
   }
+  return { damageTypes, defaultDamageType };
+}
+
+function collectActivityDamageTypes(
+  activity: Activity,
+  rollData?: {
+    damageTypes?: { [key: string]: boolean };
+    defaultDamageType?: { [key: string]: boolean };
+    [key: string]: any;
+  }
+): void | { damageTypes: { [key: string]: boolean }, defaultDamageType?: { [key: string]: boolean } } {
+  if (!activity || !["attack", "damage", "heal", "save"].includes(activity.type)) {
+    if (rollData) {
+      rollData.defaultDamageType ??= {};
+      rollData.damageTypes ??= {};
+      return;
+    }
+    return { defaultDamageType: {}, damageTypes: {} };
+  }
+  const returnDamageTypes = {};
+  let returnDefaultDamageType = undefined;
+
+  const partTypes = (part: any) => {
+    if (part.types.size > 1) console.debug("MidiQOL collectActivityDamageTypes: Multiple damage types available for selection; cannot properly evaluate; damageTypes will grab the first of multiple ones");
+
+    const type = part.types.first();
+    if (type) {
+      if (!returnDefaultDamageType) returnDefaultDamageType = { [type]: true };
+      returnDamageTypes[type] = true;
+    }
+    const formula = part.custom?.formula;
+    if (formula && formula !== "") {
+      const match = [...formula.matchAll(/\[([^\]]+)\]/g)].map((m) => m[1].trim().toLowerCase());
+      for (const m of match) {
+        if (!returnDefaultDamageType) returnDefaultDamageType = { [m]: true };
+        returnDamageTypes[m] = true;
+      }
+    }
+  }
+
+  const activityType = activity.type === "heal" ? "healing" : "damage";
+  if (activityType === "healing") {
+    const part = activity[activityType];
+    partTypes(part);
+  } else {
+    for (const part of activity[activityType].parts) partTypes(part);
+  }
+  if (rollData) {
+    rollData.damageTypes = returnDamageTypes;
+    rollData.defaultDamageType ??= returnDefaultDamageType;
+    return;
+  }
+  return { damageTypes: returnDamageTypes, defaultDamageType: returnDefaultDamageType ?? {} };
+
 }
 
 export function createConditionData(data: {
@@ -4649,7 +4721,7 @@ export function createConditionData(data: {
   }
   if (!item) item = data.activity?.item ?? data.workflow?.activity?.item ?? data.workflow?.item;
   let rollData: any = data.activity?.getRollData() ?? item?.getRollData() ?? actor?.getRollData() ?? {};
-  collectDamageRollTypes(data?.options?.damageRolls, rollData);
+  collectDamageTypes(data.workflow?.damageRolls ?? data.options?.damageRolls, data.workflow?.activity, rollData);
   rollData = foundry.utils.mergeObject(rollData, data.extraData ?? {});
   rollData.isAttuned = rollData.item?.attuned || rollData.item?.attunement === "";
   rollData.options = data?.options;
