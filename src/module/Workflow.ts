@@ -2703,7 +2703,8 @@ export class Workflow {
             scaling: this.chatCard?.getFlag("dnd5e", "scaling"),
             spellLevel: this.chatCard?.getFlag("dnd5e", "use.spellLevel")
           }
-        }
+        },
+        utilityRollTotal: this.utilityRoll?.total,
       }
     }
     for (let token of this.targets) {
