@@ -3705,6 +3705,8 @@ export function getOptionalCountRemaining(actor: Actor.Implementation, flag: str
   } else if (countValue === "reaction") {
     // return await hasUsedReaction(actor)
     return actor.flags?.[MODULE_ID]?.actions?.reactionCombatRound && needsReactionCheck(actor) ? 0 : 1;
+  } else if (countValue === "bonusAction") {
+    return actor.flags?.[MODULE_ID]?.actions?.bonusActionCombatRound && needsBonusActionCheck(actor) ? 0 : 1; 
   } else if (countValue === "every") return 1;
   else if (countValue.startsWith("ActivityUses.")) return getOptionalActivityUsesActivityMatch(actor, countValue, false);
   else if (countValue.startsWith("ItemUses.")) return getOptionalItemUsesItemMatch(actor, countValue, false);
@@ -3793,6 +3795,10 @@ export async function removeEffectGranting(actor: Actor.Implementation, changeKe
 
   if (count.value === "reaction" || countAlt?.value === "reaction") {
     await setReactionUsed(actor);
+  }
+
+  if (count.value === "bonusAction" || countAlt?.value === "bonusAction") {
+    await setBonusActionUsed(actor);
   }
 }
 
