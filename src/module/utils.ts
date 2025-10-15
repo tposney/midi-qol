@@ -4730,6 +4730,8 @@ export function createConditionData(data: {
   rollData.actor = {};
   rollData.actor.raceOrType = actor ? raceOrType(actor) : "";
   rollData.actor.typeOrRace = actor ? typeOrRace(actor) : "";
+  rollData.items = actor?.items?.map(i => i.getRollData().item) ?? [];
+  rollData.equippedItems = rollData.items.filter(i => i.equipped) ?? [];
   rollData.worldTime = game.time?.worldTime;
   try {
     if (data.target) {
