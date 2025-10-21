@@ -1,3 +1,11 @@
+### 13.0.28
+* Fix for not using advantage/disadvantage set in preRollAttack hook.
+* Fix for damage roll modifiers being disabled.
+* Put back auto consume label on midi-qol activity tab.
+* Fix for gridded gridless return "Attack blocked by wall" when tokens overlap.
+* Put back auto apply item effects setting in config->workflow tab.
+* Fix for dnd5e damage application trays not showing up when chat log pruning disabled.
+
 ### 13.0.27
 * Fix for midi misbehaving when Chat Log pruning is disabled.
 

@@ -9,6 +9,7 @@ export let ChatMessageMidi: ReturnType<typeof defineChatMessageMidiClass>;
 export function setupChatMessageMidi() {
   ChatMessageMidi = defineChatMessageMidiClass(globalThis.dnd5e.documents.ChatMessage5e);
   CONFIG.ChatMessage.batchSize = 25;
+  globalThis.dnd5e.documents.ChatMessage5e.TRAY_TYPES.push("midi-damage-application");
 }
 
 export function defineChatMessageMidiClass(baseClass: ChatMessage.ImplementationClass) {

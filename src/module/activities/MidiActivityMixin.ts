@@ -939,7 +939,7 @@ export let MidiActivityMixin = Base => {
         const bonusDamageFlags = firstTargetActor?.flags?.[MODULE_ID]?.grants?.bonus?.damage ?? {};
         if (bonusDamageFlags.all || bonusDamageFlags[this.actionType]) {
           const newDamageRoll = bonusDamageFlags[this.actionType] ?? bonusDamageFlags.all;
-          const bonusDamage = await new DamageRoll(`${newDamageRoll}`).roll();
+          const bonusDamage = await new DamageRoll(`${newDamageRoll}`, firstTargetActor?.getRollData()).roll();
           result[0] = addRollTo(result[0], bonusDamage);
         }
 

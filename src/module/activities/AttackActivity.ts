@@ -103,7 +103,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
   return class MidiAttackActivity extends MidiActivityMixin(ActivityClass) {
     _otherActivity: Activity | undefined;
 
-    static LOCALIZATION_PREFIXES = [ ...super.LOCALIZATION_PREFIXES, "midi-qol.ATTACK"];
+    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.ATTACK"];
 
     static defineSchema() {
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, NumberField, DocumentIdField } = foundry.data.fields;
@@ -346,7 +346,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     }
 
     // @ts-expect-error weirdness with how I handled the types
-    async rollAttack(config: RollProcessConfig={}, dialog: RollDialogConfig={}, message: RollMessageConfig={}) {
+    async rollAttack(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       let preRollHookId: number | undefined;
       let rollAttackHookId: number | undefined;
       let postAttackRollConfigurationHookId: number | undefined;
@@ -364,10 +364,14 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         if (!workflow || workflow?.aborted) return [];
         if (!returnValue) {
           // @ts-expect-error weirdness with how I handled the types
-         return super.rollAttack(config, dialog, message);
+          return super.rollAttack(config, dialog, message);
         }
 
         let requiresAmmoConfirmation = false;
+        if (configSettings.allowUseMacro && workflow.workflowOptions.noOnUseMacro !== true) {
+          await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
+          if (workflow.ammunition) await workflow.callMacros(workflow.ammunition, workflow.ammunitionOnUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
+        }
         await workflow.checkAttackAdvantage();
         // @ts-expect-error
         const areKeysPressed = game.system.utils.areKeysPressed;
@@ -408,8 +412,10 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         }
         if (keys.advantage) workflow.rollOptions.advantage = keys.advantage;
         if (keys.disadvantage) workflow.rollOptions.disadvantage = keys.disadvantage;
-        config.advantage ??= !!keys.advantage || !!(config.midiOptions.advantage ?? workflow.workflowOptions.advantage);
-        config.disadvantage ??= !!keys.disadvantage || !!(config.midiOptions.disadvantage ?? workflow.workflowOptions.disadvantage);
+        config.advantage ??= !!keys.advantage || !!(config.midiOptions.advantage ?? (workflow.advantage || workflow.workflowOptions.advantage));
+        config.disadvantage ??= !!keys.disadvantage || !!(config.midiOptions.disadvantage ?? (workflow.disadvantage || workflow.workflowOptions.disadvantage));
+        dialog.options ??= {};
+
         preRollHookId = Hooks.once("dnd5e.preRollAttack", (rollConfig, dialogConfig, messageConfig) => {
           if (workflow?.aborted) return false;
           if (workflow?.rollOptions?.rollToggle) dialogConfig.configure = !dialogConfig.configure;
@@ -421,7 +427,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
               if (workflow) workflow.aborted = true;
               return false;
             }
-          } else if (!rollConfig.attackMode && dialogConfig.options?.attackModeOptions?.length ) dialogConfig.configure = true;
+          } else if (!rollConfig.attackMode && dialogConfig.options?.attackModeOptions?.length) dialogConfig.configure = true;
           if (keys.disadvantage && workflow) {
             workflow.attackAdvAttribution.add(`DIS:keyPress`);
             workflow.advReminderAttackAdvAttribution.add(`DIS:keyPress`);

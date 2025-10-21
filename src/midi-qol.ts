@@ -184,6 +184,7 @@ Hooks.once('init', async function () {
     //@ts-expect-error - lots of incorrect missing elements from the class
     CONFIG.ui.chat = ChatLogMidi;
   }
+
   // @ts-expect-error no dnd5e-types
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;
   //@ts-expect-error
@@ -800,7 +801,7 @@ function setupMidiQOLApi() {
       DamageApplicationElementMidi
     }
   }
-  
+
   //@ts-expect-error
   game.modules.get("midi-qol").api = globalThis.MidiQOL;
 
@@ -1105,6 +1106,10 @@ function setupMidiFlags(DAEapi: any) {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.sharpShooter`);
 
   midiFlags.push(`flags.${MODULE_ID}.rollModifiers.damage.all.all`);
+  Object.keys(GameSystemConfig.damageTypes).forEach(dt => {
+    midiFlags.push(`flags.${MODULE_ID}.rollModifiers.damage.all.${dt}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.damage.all.${dt}`);
+  })
   midiFlags.push(`flags.${MODULE_ID}.rollModifiers.attack.all`);
 
   attackTypes.forEach(at => {

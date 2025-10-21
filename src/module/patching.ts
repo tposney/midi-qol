@@ -334,7 +334,7 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
     }
   });
   this.resetFormula();
-  //if (!this.configured) applyDamageModifiers(this);
+  if (!this.configured) applyDamageModifiers(this);
   let useDefaultCritical = getCriticalDamage() === "default";
   useDefaultCritical ||= (getCriticalDamage() === "explodeCharacter" && this.data.actorType !== "character");
   useDefaultCritical ||= (getCriticalDamage() === "explodeNPC" && this.data.actorType !== "npc");

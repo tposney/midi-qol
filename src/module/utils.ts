@@ -2268,7 +2268,7 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
 
       const rawDistance = computeDistance(token, target, coverOptions);
       let distance;
-      if (isGridless && distance > 0)
+      if (isGridless && rawDistance >= 0)
         distance = Math.max(0, parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor);
       else
         distance = parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor;
@@ -4672,7 +4672,7 @@ function collectActivityDamageTypes(
     return { defaultDamageType: {}, damageTypes: {} };
   }
   const returnDamageTypes = {};
-  let returnDefaultDamageType = undefined;
+  let returnDefaultDamageType: {type?: boolean} | undefined = undefined;
 
   const partTypes = (part: any) => {
     if (part.types.size > 1) console.debug("MidiQOL collectActivityDamageTypes: Multiple damage types available for selection; cannot properly evaluate; damageTypes will grab the first of multiple ones");
@@ -4695,9 +4695,7 @@ function collectActivityDamageTypes(
   const activityType = activity.type === "heal" ? "healing" : "damage";
   if (activityType === "healing") {
     const part = activity[activityType];
-    partTypes(part);
   } else {
-    for (const part of activity[activityType].parts) partTypes(part);
   }
   if (rollData) {
     rollData.damageTypes = returnDamageTypes;

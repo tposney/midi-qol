@@ -2218,10 +2218,6 @@ export class Workflow {
       }
     }
 
-    if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
-      await this.callMacros(this.item, this.onUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
-      if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
-    }
     if (this.activity.roll?.formula) return this.WorkflowState_WaitForUtilityRoll;
     if (autoRollAttack) {
       this.rollOptions.fastForwardAttack ||= isFastRoll;

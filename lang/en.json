@@ -1018,6 +1018,10 @@
           "label": "Choose Effects",
           "hint": "Choose effects to apply"
         },
+        "autoConsume": {
+          "label": "Auto Consume",
+          "hint": "Automatically consume resources when activity used"
+        },
         "forceConsumeDialog": {
           "label": "Force Consume Dialog",
           "hint": "Force Configuration Dialog when activity used"

@@ -181,6 +181,7 @@ declare module "fvtt-types/configuration" {
           bonusActionsMax?: number;
           bonusActionsReset?: "eachTurn" | "onTurnStart" | "rest" | "never"; // When bonus actions reset default: onTurnStart
           reactionCombatRound?: number;
+          bonusActionCombatRound?: number;
         };
         acBonus?: number;
         advantage?: {
@@ -1114,6 +1115,7 @@ type BasicRollConfig = {
     minimum?: number;
     advantage?: boolean;
     disadvantage?: boolean;
+    advantageMode?: number;
     rollMode?: keyof CONFIG.Dice.RollModes;
   }
 }
@@ -1128,6 +1130,7 @@ export type RollProcessConfig = {
   ammunition?: Item.Implementation;
   workflow?: Workflow;
   midiOptions?: MidiOptions;
+  advantageMode?: number;
   advantage?: boolean;
   disadvantage?: boolean;
   attackMode?: string;
