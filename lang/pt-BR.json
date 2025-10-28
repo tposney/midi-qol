@@ -337,7 +337,7 @@
     "preAttackRoll": "Antes da Rolagem de Ataque",
     "preAttackRollConfig": "Antes da Configuração do Ataque",
     "preCheckHits": "Antes da Verificação de Acerto",
-    "postAttackRoll": "Depois da da Rolagem de Ataque",
+    "postAttackRoll": "Depois da Rolagem de Ataque",
     "preDamageRoll": "Antes da Rolagem de Dano",
     "postDamageRoll": "Depois da Rolagem de Dano",
     "damageBonus": "Retornar um Bônus de Dano",
