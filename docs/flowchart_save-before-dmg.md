@@ -11,20 +11,8 @@
 This flowchart is only valid if the new setting is enabled at `MidiQOL > Workflow Settings > Misc > Roll saves before damage`. The sequence is otherwise the same as in previous versions [(see here)](docs/flowchart.md).
 >>>
 
-This page provides information on when, where, and why a pass is called. Check the [Workflow Fields](workflowfields.md) page to see what fields are available in each pass.
+::include{file=flowchart-description.md}
 
-<!-- the links here in optional and damagebonus really need to be replaced with something that won't possibly break, like a dedicated .md or a wiki on gitlab pages -->
-The chart is arranged by `args[0].tag`, which holds a string representing a category of macro passes:
-
-- `OnUse` contains passes that run on the client rolling the item.
-- `TargetOnUse` contains passes that run on the client being targeted, if any.
-- `optional` passes are a special case called only when a macro is specified in a `flags.midi-qol.optional.NAME.*` flag ([see here](https://gitlab.com/tposney/midi-qol#optional-bonus-effects:~:text=ItemMacro.%3CitemUUID%3E,implementation%20as%20above.)). These are called on whichever client will benefit from the bonus.
-- `DamageBonus` is a tag with one pass called if one or more macros are specified in the "*Damage Bonus Macro*" field in the special traits on a character sheet, or set by an effect using flag `flags.dnd5e.DamageBonusMacro` ([see here](https://gitlab.com/tposney/midi-qol#optional-bonus-effects:~:text=your%20custom%20roll.-,Damage%20bonus%20macros,-are%20called%20after)). These are called on the client rolling the damage.
-
-<!-- provide a page detailing sockets? -->
->>> [!note]
-If your macro makes changes to a document when the calling client may not have permission, you will need to use sockets. Utilities are available in `MidiQOL.socket()`.
->>>
 ```mermaid
 ---
 config:
@@ -34,38 +22,75 @@ config:
 
 flowchart TD
   subgraph target["args[0].tag = 'TargetOnUse'"]
-    isTargeted
-    isPreAttacked
-    isAttacked
-    isHit
+    isTargeted["
+      isTargeted
+      <small>Target is targeted but before item is rolled</small>
+    "]
+    isPreAttacked["
+      isPreAttacked
+      <small>Target is about to be attacked, before reactions</small>
+    "]
+    isAttacked["
+      isAttacked
+      <small>Target is attacked</small>
+    "]
+    isHit["
+      isHit
+      <small>Target of a hit</small>
+    "]
     isMissed
     isAboutToSave --> preTargetSave
-      preTargetSave -- Has Optional Macro --> optSave
+      preTargetSave["
+        preTargetSave
+        <small>Target is about to roll a saving throw</small>
+      "] -- Has Optional Macro --> optSave
       optSave -- Success --> isSaveSuccess
       optSave -- Fail --> isSaveFailure
 
     %% extra note included here because connecting these nodes as normal clutters this part of the chart
     isAboutToSave ~~~ a["`preTargetSave -> success/fail if no optional`"]:::edgeLabel
-    isSaveSuccess --> isSave
-    isSaveFailure --> isSave
-    isSave
-    preTargetDamageApplication
-    isDamaged
-    postTargetEffectApplication
+    isSaveSuccess["
+      isSaveSuccess
+      <small>Target rolled a successful save</small>
+    "] --> isSave
+    isSaveFailure["
+      isSaveFailure
+      <small>Target failed a saving throw</small>
+    "] --> isSave
+    isSave["
+      isSave
+      <small>Target rolled a save</small>
+    "]
+    preTargetDamageApplication["
+      preTargetDamageApplication
+      <small>Target is about to be damaged by an item</small>
+    "]
+    isDamaged["
+      isDamaged
+      <small>Target is damaged by an attack</small>
+    "]
+    isHealed
+    postTargetEffectApplication["
+      postTargetEffectApplication
+      <small>Target has an effect applied by a rolled item</small>
+    "]
+    eff["`Effects have been applied`"]:::edgeLabel -.-> postTargetEffectApplication
   end
 
   subgraph optAttack["args[0].tag = 'optional'"]
-    flags.midi-qol.optional.NAME.attack.*
+    direction TB
+    flags.midi-qol.optional.NAME.attack.* -- Missed -->
+    flags.midi-qol.optional.NAME.attack.fail.*
   end
   subgraph optDamage["args[0].tag = 'optional'"]
     flags.midi-qol.optional.NAME.damage.*
   end
   subgraph optSave["args[0].tag = 'optional'"]
-    %% invisible links here force verticality
-    %% only an issue in gitlab - are they using an old version of mermaid?
-    flags.midi-qol.optional.NAME.save.* ~~~ flags.midi-qol.optional.NAME.check.*
-    flags.midi-qol.optional.NAME.check.* ~~~ flags.midi-qol.optional.NAME.skill.*
-    flags.midi-qol.optional.NAME.skill.*
+    direction TB
+    flags.midi-qol.optional.NAME.save.* -- Failed --> flags.midi-qol.optional.NAME.save.fail.*
+    ~~~ flags.midi-qol.optional.NAME.check.*
+    flags.midi-qol.optional.NAME.check.* -- Failed --> flags.midi-qol.optional.NAME.check.fail.* ~~~ flags.midi-qol.optional.NAME.skill.*
+    flags.midi-qol.optional.NAME.skill.* -- Failed --> flags.midi-qol.optional.NAME.skill.fail.*
   end
 
   subgraph onuse["args[0].tag = 'OnUse'"]
@@ -73,27 +98,49 @@ flowchart TD
         preAwaitTemplate --> postAwaitTemplate
         postAwaitTemplate --> preTemplatePlaced
         preTemplatePlaced --> templatePlaced
-        templatePlaced --> postTemplatePlaced
+        templatePlaced["
+          templatePlaced
+          <small>Only called once a template is placed</small>
+        "] --> postTemplatePlaced
         postTemplatePlaced
     end
 
     subgraph attack[" "]
-        preAttackRoll --> isPreAttacked
-        isPreAttacked -- Has Optional Macro --> optAttack
+      preAttackRoll["
+        preAttackRoll
+        <small>Before Attack Roll</small>
+      "] --> isPreAttacked
+        isPreAttacked --> preAttackRollConfig
+      preAttackRollConfig["
+          preAttackRollConfig
+        <small>Before Attack Configuration</small>
+      "] -- Has Optional Macro --> optAttack
       preAttackRollComplete --> isAttacked
         isAttacked --> preCheckHits
-        preCheckHits -- Hit --> isHit
+        preCheckHits["
+          preCheckHits
+          <small>Before Check Hits</small>
+        "] -- Hit --> isHit
         preCheckHits -- Miss --> isMissed
         isHit --> postAttackRoll
         isMissed --> postAttackRoll
-      postAttackRoll --> postAttackRollComplete
+      postAttackRoll["
+          postAttackRoll
+          <small>After Attack Roll</small>
+        "] --> postAttackRollComplete
     end
 
     subgraph damage[" "]
       preWaitForDamageRoll --> preDamageRoll
-      preDamageRoll --> preDamageRollConfig
-      b["`preDamageRollConfig and optional damage will repeat for damage on an 'other damage' activity`"]:::edgeLabel ~~~ optDamage
-      preDamageRollConfig -- Has Optional Macro --> optDamage
+      preDamageRoll["
+        preDamageRoll
+        <small>Before Damage Roll</small>
+      "] --> preDamageRollConfig
+        b["`preDamageRollConfig and optional damage will repeat for damage on an 'other damage' activity`"]:::edgeLabel ~~~ optDamage
+      preDamageRollConfig["
+        preDamageRollConfig
+        <small>Before Damage Configuration</small>
+      "] -- Has Optional Macro --> optDamage
       optDamage --> postWaitForDamageRoll
       preDamageRollConfig -- No Optional Macro --> postWaitForDamageRoll
       postWaitForDamageRoll --> preConfirmRoll
@@ -102,12 +149,19 @@ flowchart TD
         preDamageRollStarted --> DamageBonus["
           DamageBonus
           <small>args[0].tag = 'DamageBonus'</small>
+          <small>Return a damage bonus</small>
         "]
         DamageBonus --> postDamageRollStarted
       postDamageRollStarted --> preDamageRollComplete
       preDamageRollComplete --> postDamageRoll
-      postDamageRoll --> postDamageRollComplete
-      preDamageApplication
+      postDamageRoll["
+        postDamageRoll
+        <small>After Damage Roll</small>
+      "] --> postDamageRollComplete
+      preDamageApplication["
+        preDamageApplication
+        <small>Before Damage Application</small>
+      "]
     end
 
     subgraph utility[" "]
@@ -118,8 +172,15 @@ flowchart TD
 
     direction TB
 
-    preTargeting --> preItemRoll
-    preItemRoll --> postNoAction
+    preTargeting["
+      preTargeting
+      <small>Called before targeting is resolved (*)</small>
+    "] --> preItemRoll
+    preItemRoll["
+      preItemRoll
+      <small>Called before the item is rolled (*)</small>
+    "] -.-> config:::edgeLabel
+    config["`Configure dialog`"] -.-> postNoAction
     postNoAction --> preStart
     preStart --> postStart
       postStart -- Has Template --> preAwaitTemplate
@@ -134,9 +195,9 @@ flowchart TD
     postPreambleComplete --> preWaitForAttackRoll
 
     preWaitForAttackRoll -- Has Attack --> preAttackRoll
+      preAttackRollConfig -- No Optional Macro --> postWaitForAttackRoll
     preWaitForAttackRoll -- No Attack --> postWaitForAttackRoll
-      flags.midi-qol.optional.NAME.attack.* --> postWaitForAttackRoll 
-      isPreAttacked -- No Optional Macro --> postWaitForAttackRoll
+      optAttack --> postWaitForAttackRoll
     postWaitForAttackRoll -- Has Attack --> preAttackRollComplete
       postAttackRollComplete --> preWaitForSaves 
 
@@ -146,40 +207,48 @@ flowchart TD
 
       postDamageRollComplete --> preAllRollsComplete
     preWaitForSaves --> preSave
-      preSave -- Has Save --> isAboutToSave
+      preSave["
+        preSave
+        <small>Before Checking Saves</small>
+      "] -- Has Save --> isAboutToSave
       isSave --> postWaitForSaves
     preSave -- No Save --> postWaitForSaves
     postWaitForSaves --> preSavesComplete
     preSavesComplete --> postSave
-    postSave --> postSavesComplete
+    postSave["
+      postSave
+      <small>After Checking Saves</small>
+    "] --> postSavesComplete
     postSavesComplete -- Has Damage --> preWaitForDamageRoll
       preAllRollsComplete -- Has Damage --> preTargetDamageApplication
-      preTargetDamageApplication -- Was Hit / Failed Save / Saved for Half --> isDamaged
-      preTargetDamageApplication -- Was Missed / Saved for 0 --> preDamageApplication 
+      preTargetDamageApplication -- Damaged --> isDamaged
+      preTargetDamageApplication -- Healed --> isHealed
+      preTargetDamageApplication -- No Damage --> preDamageApplication 
       isDamaged --> preDamageApplication
+      isHealed --> preDamageApplication
       preDamageApplication --> postAllRollsComplete
     postSavesComplete -- No Damage --> preAllRollsComplete
     preAllRollsComplete -- No Damage --> postAllRollsComplete
+      hp["`HP changes on targets have been applied`"]:::edgeLabel -.-> postAllRollsComplete
     postAllRollsComplete --> preApplyDynamicEffects
     preApplyDynamicEffects --> preActiveEffects
-      preActiveEffects --> postTargetEffectApplication
+      preActiveEffects["
+        preActiveEffects
+        <small>Before Active Effects</small>
+      "] --> postTargetEffectApplication
       postTargetEffectApplication --> postApplyDynamicEffects
     postApplyDynamicEffects --> preRollFinished
     preRollFinished --> postActiveEffects
-    postActiveEffects --> postRollFinished
+    postActiveEffects["
+      postActiveEffects
+      <small>After Active Effects</small>
+    "] --> postRollFinished
     postRollFinished --> preCleanup
     preCleanup --> postCleanup
     postCleanup --> preCompleted
-
-    %% these keep TargetOnUse to the left
-    pad:::hidden
-    pad1:::hidden
-    preCompleted ~~~ pad[" "]
-    pad1[" "] ~~~~~~~~~~ pad
   end
 
   classDef node stroke-width:2px
-  classDef hidden display:none
   classDef opt fill:#008a8f
 
   style onuse fill:#003636

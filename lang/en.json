@@ -354,7 +354,7 @@
     "preTargetSave": "Target is about to roll a saving throw",
     "isSave": "Target rolled a save",
     "isSaveSuccess": "Target rolled a successful save",
-    "isSaveFailure": "target failed a saving throw",
+    "isSaveFailure": "Target failed a saving throw",
     "preTargetDamageApplication": "Target is about to be damaged by an item",
     "postTargetEffectApplication": "Target has an effect applied by a rolled item",
     "isDamaged": "Target is damaged by an attack",
