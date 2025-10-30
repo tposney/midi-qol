@@ -725,6 +725,7 @@ This will ask the player when rolling an attack, if they want to apply the optio
 * `flags.midi-qol.optional.NAME.count`	how many uses the effect has (think lucky which has 3), if absent the bonus will be single use (bardic inspiration), turn for once per turn.   
   - **every** - you can use the optional effect on every occurrence
   - **reaction** - behaves as a reaction roll, i.e. uses up your reaction
+  - **bonusAction** - behaves as a bonus action roll, i.e uses up your bonus action
   - **a number** - how many times the effect can be used before expiring
   - **turn** - can be used once during your turn (assumes in combat).
   - **each-turn** - can be used once per turn (assumes in combat).
@@ -861,10 +862,10 @@ where specification is a comma separated list of fields.
   * `saveDC=number`
   * `saveDamage=halfdamage/nodamage/fulldamage` - default nodamage
   * `saveRemove=true/false` - remove effect on save - default true.
-  * `saveMagic=true/false` (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
-  * `actionSave=true/false`. If true midi won't roll the save but leave it to the player. For actionSaves you can specify more than one save type, e.g.
+  * `saveMagic=true/false`- (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
+  * `actionSave=roll/dialog` - if present, prompts for the roll rather than rolling automatically. `roll` will post a non-automated reminder in the chat log, while `dialog` opens an automated prompt window. Values of `0` or `false` will be treated as if this parameter is not present, and `true` or anything else will be treated as `roll`. For actionSaves you can specify more than one save type, e.g.
     * `saveAbility=dex|con`, means check dex or con saving throws, 
-    * `saveAbility=acr|ath` to allow an athletics or acrobatics roll. [See more](https://gitlab.com/tposney/midi-qol/-/tree/v11#overtime-effects-action-save).
+    * `saveAbility=acr|ath` to allow an athletics or acrobatics roll. [See more](#overtime-effects-action-save).
 
  * `damageBeforeSave=true/false` - true means the damage will be applied before the save is adjudicated (Sword of Wounding) and false means the damage will only apply if the save is failed. 
   
@@ -911,6 +912,9 @@ where specification is a comma separated list of fields.
 
 
   #### OverTime Effects: Action Save.
+
+> *`actionSave=true` is deprecated on MidiQOL versions 11.4.27.2+. Values of true will be treated as `actionSave=roll`*
+
   There are quite a lot of effects that require a target to use its action to try and save against the effect. You can add `actionSave=true` which means overtime effects won't auto roll the save, rather it waits for the actor to roll an appropriate save when it is the actor's turn (just roll the save from the character sheet). This allows you to support "the character can use its action to save against the effect". Simply add `actionSave=true` to the overtime effect definition and MidiQOL will watch for saving throws on the actors turn (rather than rolling the save automatically) and if the type matches the overtime effect it will check the roll versus the saveDC and remove the effect if the save is successful.
 
   #### OverTime effects: add/remove conditions.

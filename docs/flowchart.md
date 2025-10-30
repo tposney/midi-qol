@@ -30,6 +30,7 @@ flowchart TD
       isAttacked
       <small>Target is attacked</small>
     "]
+    optAC --> isHit & isMissed
     isHit["
       isHit
       <small>Target of a hit</small>
@@ -88,6 +89,9 @@ flowchart TD
     flags.midi-qol.optional.NAME.check.* -- Failed --> flags.midi-qol.optional.NAME.check.fail.* ~~~ flags.midi-qol.optional.NAME.skill.*
     flags.midi-qol.optional.NAME.skill.* -- Failed --> flags.midi-qol.optional.NAME.skill.fail.*
   end
+  subgraph optAC["args[0].tag = 'optional'"]
+    ac["flags.midi-qol.optional.NAME.ac"]
+  end
 
   subgraph onuse["args[0].tag = 'OnUse'"]
     subgraph template[" "]
@@ -113,11 +117,11 @@ flowchart TD
       "] -- Has Optional Macro --> optAttack
       preAttackRollComplete --> isAttacked
         isAttacked --> preCheckHits
+        preCheckHits -- Has Optional Macro --> optAC
         preCheckHits["
           preCheckHits
           <small>Before Check Hits</small>
-        "] -- Hit --> isHit
-        preCheckHits -- Miss --> isMissed
+        "] --> isHit & isMissed
         isHit --> postAttackRoll
         isMissed --> postAttackRoll
       postAttackRoll["
@@ -257,6 +261,7 @@ flowchart TD
   class optAttack opt
   class optDamage opt
   class optSave opt
+  class optAC opt
 
   %% color helper at https://www.learnui.design/tools/data-color-picker.html#single
   %% graphic design is my passion 😎
