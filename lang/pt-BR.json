@@ -2,7 +2,7 @@
   "midi-qol.ItemDeleteCheck.Name": "Verificação de Exclusão de Item",
   "midi-qol.ItemDeleteCheck.Hint": "Abre um diálogo de confirmação quando tentar deletar items da ficha de personagem.",
   "midi-qol.DamageImmunities.Name": "Aplicar Imunidades de Dano",
-  "midi-qol.DamageImmunities.Hint": "Quando usar o botões de dano do Midi QOL ou auto-aplicar dano, leva em consideração as imunidades/vulnerabilidades/resistências do alvo. Todos os tipos de dano são verificados.",
+  "midi-qol.DamageImmunities.Hint": "Quando usar o botões de dano do Midi QOL ou aplicar dano automaticamente, leva em consideração as imunidades/vulnerabilidades/resistências do alvo. Todos os tipos de dano são verificados.",
   "midi-qol.WorldKeyMappings.Name": "Configurações Geral vs Local",
   "midi-qol.WorldKeyMappings.Blurb1": "Os mapeamentos principais são definidos por cliente. Cada jogador pode ter chaves mapeadas diferentes. Para forçar todos os clientes a terem as mesmas chaves mapeadas, use um dos módulos disponíveis para forçar as configurações comuns.",
   "midi-qol.WorldKeyMappings.Blurb2": "Eu testei 'Forçar Controles de Cliente' com sucesso",
@@ -337,7 +337,7 @@
     "preAttackRoll": "Antes da Rolagem de Ataque",
     "preAttackRollConfig": "Antes da Configuração do Ataque",
     "preCheckHits": "Antes da Verificação de Acerto",
-    "postAttackRoll": "Depois da da Rolagem de Ataque",
+    "postAttackRoll": "Depois da Rolagem de Ataque",
     "preDamageRoll": "Antes da Rolagem de Dano",
     "postDamageRoll": "Depois da Rolagem de Dano",
     "damageBonus": "Retornar um Bônus de Dano",
@@ -1017,6 +1017,10 @@
         "chooseEffects": {
           "label": "Escolher Efeitos",
           "hint": "Escolha efeitos para aplicar."
+        },
+        "autoConsume": {
+          "label": "Consumir Automaticamente",
+          "hint": "Consome recursos automaticamente quando a atividade é usada."
         },
         "forceConsumeDialog": {
           "label": "Forçar Diálogo de Consumo",
