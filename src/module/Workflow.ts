@@ -3721,7 +3721,7 @@ export class Workflow {
       const wasMissed = (this.activity ? wasAttacked : true) && !this.hitTargets?.has(target) && !this.hitTargetsEC?.has(target);
       const wasDamaged = this.damageList
         && (this.hitTargets.has(target) || this.hitTargetsEC.has(target))
-        && (this.damageList.some(dl => dl.targetUuid === target.document.uuid && dl.hpDamage > 0));
+        && (this.damageList.some(dl => dl.targetUuid === target.document.uuid && (dl.hpDamage > 0 || dl.tempDamage > 0)));
 
       if (this.targets.has(target) && triggerList.includes("isTargeted")) {
         if (triggerList.includes("isTargeted")) {
@@ -5737,7 +5737,7 @@ export class Workflow {
     }
     await asyncHooksCallAll(`midi-qol.preTargetDamageApplication`, token, { item: this.item, workflow: this, damageItem: damages, ditem: damages });
 
-    if (damages.hpDamage !== 0 && (this.hitTargets.has(token) || this.hitTargetsEC.has(token) || this.otherActivity?.save || this.otherActivity?.check)) {
+    if ((damages.hpDamage !== 0 || damages.tempDamage > 0) && (this.hitTargets.has(token) || this.hitTargetsEC.has(token) || this.otherActivity?.save || this.otherActivity?.check)) {
       let healedDamaged = damages.hpDamage < 0 ? "isHealed" : "isDamaged";
       await asyncHooksCallAll(`midi-qol.${healedDamaged}`, token, { item: this.item, workflow: this, damageItem: damages, ditem: damages });
       const actorOnUseMacros = foundry.utils.getProperty(token.actor ?? {}, `flags.${MODULE_ID}.onUseMacroParts`) as OnUseMacros ?? new OnUseMacros();
