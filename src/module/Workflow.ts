@@ -2670,8 +2670,8 @@ export class Workflow {
     let hpDamage;
     let totalDamage: number | undefined;
     const doEffectsData = {
-      damageTotal: totalDamage,
-      damage: totalDamage,
+      // damageTotal: totalDamage,
+      // damage: totalDamage,
       critical: this.isCritical,
       fumble: this.isFumble,
       itemCardUuid: this.itemCardUuid,
@@ -2688,12 +2688,13 @@ export class Workflow {
       // Is this used?
       workflowOptions: this.workflowOptions,
       context: {
-        damageComponents,
-        damageTotal: totalDamage,
-        damageApplied: hpDamage,
+        // damageComponents,
+        // damageTotal: totalDamage,
+        // damageApplied: hpDamage,
         otherDamage: this.otherDamageTotal ?? 0,
         bonusDamage: this.bonusDamageTotal ?? 0,
-        itemData: this.item.toObject(),
+        itemData: this.item?.getRollData?.()?.item;
+        activity: this.activity?.getRollData?.()?.activity,
         flags: {
           dnd5e: {
             scaling: this.chatCard?.getFlag("dnd5e", "scaling"),
