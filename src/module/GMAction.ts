@@ -44,6 +44,7 @@ export let setupSocket = () => {
   socketlibSocket.register("gmOverTimeEffect", _gmOverTimeEffect);
   socketlibSocket.register("localActivityOverTimeEffect", _localActivityOverTimeEffect);
   socketlibSocket.register("monksTokenBarSaves", monksTokenBarSaves);
+  socketlibSocket.register("flashTokenBarSaves", flashTokenBarSaves);
   socketlibSocket.register("moveToken", _moveToken);
   socketlibSocket.register("moveTokenAwayFromPoint", _moveTokenAwayFromPoint);
   socketlibSocket.register("queueUndoData", queueUndoData);
@@ -99,6 +100,7 @@ export class SaferSocket {
       case "D20Roll":
       case "log":
       case "monksTokenBarSaves":
+      case "flashTokenBarSaves":
       case "moveToken":
       case "moveTokenAwayFromPoint":
       case "removeWorkflow":
@@ -870,6 +872,41 @@ function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any;
       isMagicSave: data.isMagicSave,
       options: data.midiOptions
     });
+}
+
+function flashTokenBarSaves(data: {
+  requestType: string;
+  rollKey: string;
+  actorIds: string[];
+  dc: number | undefined;
+  advantage: boolean | undefined;
+  disadvantage: boolean | undefined;
+  skipRollDialog: boolean;
+  sendAsRequest: boolean;
+  groupRollId: string;
+  workflowId: string;
+  itemCardUuid: string;
+}) {
+  if (debugEnabled > 0) debug("flashTokenBarSaves | Called with data:", data);
+
+  //@ts-expect-error FlashAPI
+  if (typeof FlashAPI !== 'undefined') {
+    if (debugEnabled > 0) debug("flashTokenBarSaves | FlashAPI found, calling requestRoll");
+    //@ts-expect-error FlashAPI
+    FlashAPI.requestRoll({
+      requestType: data.requestType,
+      rollKey: data.rollKey,
+      actorIds: data.actorIds,
+      dc: data.dc,
+      advantage: data.advantage,
+      disadvantage: data.disadvantage,
+      skipRollDialog: data.skipRollDialog,
+      sendAsRequest: data.sendAsRequest,
+      groupRollId: data.groupRollId
+    });
+  } else {
+    error("flashTokenBarSaves | FlashAPI not found! Is flash-rolls-5e module active?");
+  }
 }
 
 async function createReverseDamageCard(data: {

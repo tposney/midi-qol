@@ -457,6 +457,9 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     if (game.modules.get("monks-tokenbar")?.active) {
       data.summary.moduleSettings["Monk's Token Bar Allow Players to use"] = safeGetGameSetting("monks-tokenbar", "allow-player");
     } else data.summary.moduleSettings["Monks Token Bar"] = i18n("midi-qol.Inactive");
+    if (game.modules.get("flash-rolls-5e")?.active) {
+      data.summary.moduleSettings["Flash Token Bar Active"] = "true";
+    } else data.summary.moduleSettings["Flash Token Bar"] = i18n("midi-qol.Inactive");
     if (game.modules.get("sequencer")?.active) {
       data.summary.moduleSettings["Sequencer Enable Effects"] = safeGetGameSetting("sequencer", "effectsEnabled");
       data.summary.moduleSettings["Sequencer Enable Sounds"] = safeGetGameSetting("sequencer", "soundsEnabled")
@@ -626,6 +629,9 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
           break;
         case "monks-tokenbar":
+          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          break;
+        case "flash-rolls-5e":
           foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
           break;
         case "multilevel-tokens":
@@ -908,6 +914,16 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
         problemSummary: "You must enable the 'monks-tokenbar' module to use the 'Monk's Token Bar' option for 'Roll NPC.Player Saves'",
         problemDetail: undefined,
         fixer: "Enable the 'monks-tokenbar' module"
+      });
+    }
+    if (!installedModules.get("flash-rolls-5e")
+      && (configSettings.playerRollSaves === "ftb" || configSettings.rollNPCSaves === "ftb" || configSettings.rollNPCLinkedSaves === "ftb")) {
+      data.problems.push({
+        moduleId: "flash-rolls-5e",
+        severity: "Error",
+        problemSummary: "You must enable the 'flash-rolls-5e' module to use the 'Flash Token Bar' option for 'Roll NPC/Player Saves'",
+        problemDetail: undefined,
+        fixer: "Enable the 'flash-rolls-5e' module"
       });
     }
     if (!installedModules.get("lmrtfy") &&
