@@ -1418,7 +1418,8 @@ async function rollActionSave(data: any) {
           let roll = await rollAbility({
             targetUuid: actorUuid,
             request,
-            ability,
+            ability: config.ability,
+            skill: config.skill,
             options
           })
           resolve(roll)
