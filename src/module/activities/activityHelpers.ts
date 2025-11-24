@@ -196,7 +196,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
     }
     if (targetConfirmation.longRange && game.user?.targets && numTargets > 0 &&
       // @ts-expect-error no dnd5e-types
-      (["ft", "m"].includes(activity.item.system.range?.units) || activity.item.system.range.type === "touch")) {
+      (["ft", "m"].includes(activity.item.system.range?.units) || activity.item.system.range?.type === "touch")) {
       if (token) {
         for (let target of game.user?.targets) {
           const { result, attackingToken } = checkActivityRange(activity, token, new Set([target]))
