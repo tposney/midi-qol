@@ -682,6 +682,9 @@ async function localDoReactions(data: { tokenUuid: string; reactionActivityList:
   if (data.options.itemUuid) {
     data.options.item = fromUuidSync(data.options.itemUuid);
   }
+  if (data.options.activity && data.options.item) {
+    data.options.activity = data.options.item.system.activities.get(data.options.activity._id);
+  }
   // reactionItemUuidList can't used since magic items don't have a uuid, so must always look them up locally.
   const result = await promptReactions(data.tokenUuid, data.reactionActivityList, data.triggerTokenUuid, data.reactionFlavor, data.triggerType, data.options)
   return result;

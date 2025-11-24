@@ -6062,6 +6062,7 @@ export class Workflow {
       targetAC += bonusAC;
 
       const midiFlagsAttackBonus = targetActor.flags?.[MODULE_ID]?.grants?.attack?.bonus;
+      let reactionOptionalAC = 0;
       if (!this.isFumble) {
         if (midiFlagsAttackBonus) {
           if (midiFlagsAttackBonus?.all) {
@@ -6081,8 +6082,13 @@ export class Workflow {
             const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
             const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
             // TODO what else to do once rolled
+            if (result?.ac) { // result.ac is available if the optional ac returns a newAC total.
+              reactionOptionalAC = result.ac;
+              // @ts-expect-error no dnd5e-types
+              targetAC = reactionOptionalAC + bonusAC + descriptorMod;
+            }
             // @ts-expect-error no dnd5e-types
-            targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + bonusAC + descriptorMod;
+            else targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + bonusAC + descriptorMod;
           }
           isHit = (attackTotal + attackBonus) >= targetAC || this.isCritical;
         }
@@ -6100,7 +6106,7 @@ export class Workflow {
           if (!Workflow.getWorkflow(this.id)) // workflow has been removed - bail out
             return;
           // @ts-expect-error no dnd5e-types
-          targetAC = Number.parseInt(targetActor.system.attributes.ac.value) + bonusAC + descriptorMod;
+          targetAC = (reactionOptionalAC || Number.parseInt(targetActor.system.attributes.ac.value)) + bonusAC + descriptorMod;
           // @ts-expect-error no dnd5e-types
           if (targetEC) targetEC = targetActor.system.attributes.ac.EC + bonusAC + descriptorMod;
           if (result.ac) targetAC = result.ac + bonusAC; // deal with bonus ac if any.
@@ -6239,16 +6245,20 @@ export class Workflow {
 
       let acBonusString = "";
       let targetACString = `${targetAC}`;
-      if (attackBonus || bonusAC) {
+      if (attackBonus || bonusAC || reactionOptionalAC) {
         //@ts-expect-error no dnd5e-types
-        acBonusString = ` (${targetToken.actor?.system.attributes.ac?.value ?? 10}`;
+        const baseAC = targetToken.actor?.system.attributes.ac?.value ?? 10;
+        const optionalAC = reactionOptionalAC - baseAC;
+        acBonusString = ` (${baseAC}`;
         if (attackBonus) {
           acBonusString += `-${attackBonus}`;
           targetACString = `${targetAC - attackBonus}`;
         }
         if (bonusAC) acBonusString += `+${bonusAC}`;
+        if (reactionOptionalAC) acBonusString += `${optionalAC > 0 ? "+" : ""}${optionalAC}`;
         acBonusString += ")";
       }
+
       const acDisplay = `${targetACString}${acBonusString}`;
 
       this.hitDisplayData[targetUuid] = {
@@ -6260,7 +6270,7 @@ export class Workflow {
         attackBonus,
         ac: targetAC - attackBonus,
         acDisplay,
-        baseAc: targetAC - bonusAC,
+        baseAc: targetToken.actor?.system.attributes.ac?.value ?? 10,
         hitClass: ["hit", "critical", "isHitEC"].includes(isHitResult) ? "success" : "failure",
         acClass: (targetToken.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-ac",
         hitSymbol,
