@@ -1063,32 +1063,30 @@ These field lets you specify a macro to call during the roll.
 
 **OnUse macros** are called during the item workflow. The intention of this feature is that you can customise the behaviour of how a particular item behaves.  
 
-Midi-qol supports item based onUse macros, which are called when the item is rolled, and actor onUse macros which are called whenever any item is rolled, at various points in the workflow.
-
-The interpretation of the field settings are identical in both actor and item onUse macros. For actor based onUse macros, ItemMacro will refer to the item being rolled, which is not useful, either specify a world macro or an `ItemMacro.item` name.
+Midi-qol supports item based onUse macros, which are called when the item is rolled, and actor onUse macros which are called whenever any item is rolled, at various points in the workflow. The interpretation of the field settings are identical in both actor and item onUse macros.
 
 For actor onUse macros you can specify the macro to call by setting actor flags by hand or via active effects, 
 ```
-flags.midi-qol.onUseMacroName CUSTOM macroName,macroPass
+flags.midi-qol.onUseMacroName CUSTOM macro,macroPass
 ```
-which will call the specified macro on the specified macroPass. macroPass is taken from the list below.
-
-The field should contain ONLY the macro name, or the string "ItemMacro" or "ItemMacro.ItemName". 
-  - "ItemMacro" means it will call the item macro for the item for the workflow. 
-  - "ItemMacro.ItemName" allows you to lookup by name another item that the actor for the workflow has.  
-  - Compendium.scope.compendiumName.macroName/macroId means fetch the macro form the specified compendium, either by name or Id.
-  - function.functionName where functionName is any globally accessible function, this is bound to the workflow and the following arguments are passed
+which will call the specified `macro` on the specified `macroPass`. The `macro` to call can be identified with one of the following: 
+  - `ItemMacro`: the macro on the item from which the active effect was applied.
+  - `ItemMacro.uuid/item name`: a macro on another item, either by uuid or exact name match. Name lookups are done on the rolling actor.
+  - `ActivityMacro`: the activity macro from the first activity on the item from which the active effect was applied.
+  - `ActivityMacro.uuid/identifier/activity name`: a macro from another activity on the item from which the active effect was applied, either by uuid, identifier, or exact name match.
+  - `macro name`: a world macro by exact name match.
+  - `Compendium.scope.compendiumName.macroName/macroId`: a macro from the specified compendium, either by exact name match or Id.
+  - `function.functionName` where `functionName` is any globally accessible function, this is bound to the workflow and the following arguments are passed:
     ```js
     functionName.bind(workflow)({ speaker, actor, token, character, item, args })
     ```
 
-You may specify the point at in the workflow when the macro is called.  
-The macro will be called with args[0] containing the current state information for the workflow (see below).
+The `macroPass` specifies which point in the workflow to call the macro. Options are listed below. The macro will be called with `args[0]` containing the current state information for the workflow, or direct access to the workflow under `workflow`.
 There are some controls for macro writers to decide when their macro should get executed. 
 
 > [!important] Documentation
 > A flowchart for the workflow is available [**here**](docs/flowchart.md). <br>
-> The fields available in `workflow` at each pass are listed [**here**](docs/workflowfields.md).
+> The data available in `workflow` at each pass are listed [**here**](docs/workflowfields.md).
 
 ```
     preItemRoll: Called before the item is rolled (*)
@@ -1125,7 +1123,7 @@ There are some additional actor only onUse macro triggers that can be defined fo
     preActiveEffects
     postActiveEffects
 ```
-  - [All] is special, being called with each value of macroPass. You can differentiate via args[0].macroPass to decide which ones to act on.
+  - [All] is special, being called with each value of macroPass. You can differentiate via `args[0].macroPass` to decide which ones to act on.
 
   There are some additional **actor** onUse macro triggers (but NOT item triggers) available when the actor is the target of an attack/spell/feature use: These are called per target and the macros to be called are looked up on the  **target** of the attack, not the actor doing the attack
 
