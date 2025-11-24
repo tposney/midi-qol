@@ -689,7 +689,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     // Check Incompatible modules
     data.summary.incompatible = Object.keys(data.modules)
-      .filter(key => data.modules[key].incompatible)
+      .filter(key => data.modules[key].incompatible && game.modules.get(key)?.active)
       .map(key => ({ key, title: data.modules[key].title }));
 
     data.summary.foundryModuleIssues = foundry.utils.duplicate(game.issues?.packageCompatibilityIssues);
