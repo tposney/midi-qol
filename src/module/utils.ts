@@ -3432,6 +3432,17 @@ export async function bonusDialog(
           setRollOperatorEvaluated(tempRoll);
           if (showDiceSoNice) await displayDSNForRoll(tempRoll, rollType, rollMode);
           newRoll = addRollTo(roll!, tempRoll);
+        } else if (flagSelector === "ac") {
+          let rollOptions = foundry.utils.duplicate(roll!.options);
+          //@ts-expect-error
+          rollOptions.configured = false;
+          //@ts-expect-error D20Roll
+          newRoll = CONFIG.Dice.D20Roll.fromRoll(roll);
+          const tempRoll = new Roll(`${button.value}`, { ...((this.activity ?? this.item ?? this.actor)?.getRollData() ?? {}), ...roll!.data }, rollOptions);
+          await tempRoll.evaluate();
+          setRollOperatorEvaluated(tempRoll);
+          if (showDiceSoNice) await displayDSNForRoll(tempRoll, rollType, rollMode);
+          newRoll = addRollTo(roll!, tempRoll);
         } else {
           //@ts-expect-error
           newRoll = CONFIG.Dice.D20Roll.fromRoll(roll);
@@ -4140,7 +4151,7 @@ export async function promptReactions(
         if (!midiFlags.optional[flag].count) return true;
         return getOptionalCountRemainingShortFlag(actor, flag) > 0;
       }).map(flag => `flags.${MODULE_ID}.optional.${flag}`);
-    if (validFlags.length > 0 && triggerType === "reaction") {
+    if (validFlags.length > 0 && triggerType === "reactionattacked") {
       // @ts-expect-error no dnd5e-types
       let acRoll = await new Roll(`${actor.system.attributes.ac.value}`).roll();
       const data = {
@@ -4152,7 +4163,7 @@ export async function promptReactions(
         rollHTML: reactionFlavor,
         rollTotal: acRoll.total,
       }
-      let displayBonusRolls: boolean | undefined = validFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined);
+      let displayBonusRolls: boolean | undefined = validFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined);
       if (!displayBonusRolls) displayBonusRolls = checkMechanic("displayBonusRolls") as boolean;
       // @ts-expect-error no dnd5e-types
       const newAC = await bonusDialog.bind(data)(validFlags, "ac", displayBonusRolls !== false, `${actor.name} - ${i18n("DND5E.AC")} ${actor.system.attributes.ac.value}`, acRoll, "roll");
