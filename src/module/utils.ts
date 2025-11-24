@@ -6990,6 +6990,7 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
 }
 
 function getCPREffect(id: string): ActiveEffect.Implementation | undefined {
+  if (!game.modules.get("chris-premades")?.active || !game.settings.get("chris-premades", "effectInterface")) return null;
   let cprItem = game.items?.find(i => ((i.flags["chris-premades"]))?.effectInterface);
   return cprItem?.effects.get(id) as ActiveEffect;
 }
