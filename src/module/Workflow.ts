@@ -5895,10 +5895,13 @@ export class Workflow {
     }
     this.isCritical = this.diceRoll >= criticalThreshold;
     // const midiFumble = this.item && foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.fumbleThreshold`);
-    const midiFumble = this.activity && this.activity.fumbleThreshold;
+    const midiFumble = (this.activity && this.activity.fumbleThreshold) ?? 1; //someone could set the midi fumbleThreshold field to 0 or delete the field
     //@ts-expect-error no dnd5e-types
-    let fumbleTarget = this.attackRoll.terms[0].options.criticalFailure ?? 1;
-    if (Number.isNumeric(midiFumble)) fumbleTarget = midiFumble;
+    const attackRollFumbleTarget = this.attackRoll.options.criticalFailure;
+    const fumbleTarget = 
+      attackRollFumbleTarget === 0 || midiFumble === 0 && attackRollFumbleTarget === 1 
+        ? 0
+        : Math.max(attackRollFumbleTarget, midiFumble);
     this.isFumble = this.diceRoll <= fumbleTarget;
     this.attackTotal = this.attackRoll.total ?? 0;
     if (debugEnabled > 1) debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble);
