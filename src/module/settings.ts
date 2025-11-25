@@ -903,6 +903,7 @@ export const rollNPCSavesOptions = keysToOptionsObj("rollNPCSavesOptions", [
   "auto",
   "autoDialog",
   "mtb",
+  "ftb",
   "rer"
 ]);
 
@@ -915,6 +916,7 @@ export const playerRollSavesOptions = keysToOptionsObj("playerRollSavesOptions",
   "noneDialogBlind",
   "chat",
   "mtb",
+  "ftb",
   "rer"
 ]);
 

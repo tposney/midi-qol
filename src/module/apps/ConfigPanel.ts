@@ -116,6 +116,9 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         case "mtb":
           if (!installedModules.get("monks-tokenbar")) rollNPCSavesOptionsLocalized[key] = `${i18n(rollNPCSavesOptions[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
           break;
+        case "ftb":
+          if (!installedModules.get("flash-rolls-5e")) rollNPCSavesOptionsLocalized[key] = `${i18n(rollNPCSavesOptions[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
+          break;
         case "rer":
           if (!installedModules.get("epic-rolls-5e")) rollNPCSavesOptionsLocalized[key] = `${i18n(rollNPCSavesOptions[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
       }
@@ -126,6 +129,9 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       switch (key) {
         case "mtb":
           if (!installedModules.get("monks-tokenbar")) playerRollSavesOptionsLocalized[key] = `${i18n(playerRollSavesOptionsLocalized[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
+          break;
+        case "ftb":
+          if (!installedModules.get("flash-rolls-5e")) playerRollSavesOptionsLocalized[key] = `${i18n(playerRollSavesOptionsLocalized[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
           break;
         case "rer":
           if (!installedModules.get("epic-rolls-5e")) playerRollSavesOptionsLocalized[key] = `${i18n(playerRollSavesOptionsLocalized[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;

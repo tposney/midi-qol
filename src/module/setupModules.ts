@@ -4,7 +4,7 @@ import { configSettings } from "./settings.js";
 
 export const DAE_REQUIRED_VERSION = "13.0.4";
 export const USEFUL_MODULE_VERSIONS = {
-  "about-time": "0.0", 
+  "about-time": "0.0",
   "anonymous": "0.0.0",
   "auraeffects": "1.2.5",
   "chris-premades": "1.3.0",
@@ -12,10 +12,11 @@ export const USEFUL_MODULE_VERSIONS = {
   "dae": DAE_REQUIRED_VERSION,
   "ddb-game-log": "0.0.0",
   "dfreds-convenient-effects": "5.0.4",
-  "dice-so-nice": "4.1.1", 
+  "dice-so-nice": "4.1.1",
   "epic-rolls-5e": "3.1.1",
+  "flash-rolls-5e": "1.13.1",
   "gambits-premades": "2.0.1",
-  "levels": "6.0.0", 
+  "levels": "6.0.0",
   "levelsautocover": "1.4",
   "levelsvolumetrictemplates": "0.0.0",
   "lib-changelogs": "0.0.0",
@@ -46,11 +47,11 @@ export function getModuleVersion(moduleName: string): string {
   return modVer;
 }
 export let setupModules = () => {
-  for (let name of Object.keys(USEFUL_MODULE_VERSIONS)) { 
+  for (let name of Object.keys(USEFUL_MODULE_VERSIONS)) {
     const modVer = getModuleVersion(name);
     const neededVer = USEFUL_MODULE_VERSIONS[name];
     const isValidVersion = foundry.utils.isNewerVersion(modVer, neededVer) || !foundry.utils.isNewerVersion(neededVer, modVer);
-    if (!installedModules.get(name)) installedModules.set(name, game.modules.get(name)?.active && isValidVersion) 
+    if (!installedModules.get(name)) installedModules.set(name, game.modules.get(name)?.active && isValidVersion)
     if (!installedModules.get(name)) {
       if (game.modules.get(name)?.active) {
         const message = `midi-qol requires ${name} to be of version ${USEFUL_MODULE_VERSIONS[name]} or later, but it is version ${game.modules.get(name)?.version}`;
@@ -60,7 +61,7 @@ export let setupModules = () => {
     }
   }
   if (debugEnabled > 0) {
-    for (let module of installedModules.keys()) 
+    for (let module of installedModules.keys())
       log(`module ${module} has valid version ${installedModules.get(module)}`);
   }
 }

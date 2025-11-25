@@ -259,6 +259,7 @@
     "auto": "Auto",
     "autoDialog": "Auto roll and show roll dialog",
     "mtb": "Monks Token Bar",
+    "ftb": "Flash Token Bar",
     "rer": "Rippers Epic Rolls"
   },
   "midi-qol.playerRollSavesOptions": {
@@ -270,6 +271,7 @@
     "noneDialogBlind": "Auto roll and show roll dialog (blind roll)",
     "chat": "Chat Message",
     "mtb": "Monks Token Bar",
+    "ftb": "Flash Token Bar",
     "rer": "Rippers Epic Rolls"
   },
   "midi-qol.playerRollSavesOptionsReduced": {

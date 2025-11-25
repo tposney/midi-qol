@@ -2470,6 +2470,7 @@ export class Workflow {
       // setup to process saving throws as generated
       let hookId = Hooks.on("renderChatMessageHTML", this.processSaveRoll.bind(this));
       let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
+      let flashId = Hooks.on("updateChatMessage", this.flashSavingCheck.bind(this));
       try {
         const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
         await this.checkSaves(saveDisplay !== "allShow");
@@ -2480,6 +2481,7 @@ export class Workflow {
       } finally {
         Hooks.off("renderChatMessageHTML", hookId);
         Hooks.off("updateChatMessage", monksId);
+        Hooks.off("updateChatMessage", flashId);
       }
       if (debugEnabled > 1) debug("Check Saves: ", this.saveRequests, this.saveTimeouts, this.saves);
       if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length)
@@ -4940,11 +4942,14 @@ export class Workflow {
     }
 
     const playerMonksTB = !simulate && flagRollType !== "tool" && !!installedModules.get("monks-tokenbar") && configSettings.playerRollSaves === "mtb";
+    const playerFlashTB = !simulate && !!installedModules.get("flash-rolls-5e") && configSettings.playerRollSaves === "ftb";
     const playerEpicRolls = !simulate && !!installedModules.get("epic-rolls-5e") && configSettings.playerRollSaves === "rer"
     // TODO: kill?
     let monkRequestsPlayer: any[] = [];
+    let flashRequestsPlayer: any[] = [];
     let rerRequestsPlayer: any[] = [];
     let monkRequestsGM: any[] = [];
+    let flashRequestsGM: any[] = [];
     let rerRequestsGM: any[] = [];
     const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
     // @ts-expect-error no dnd5e-types
@@ -5051,14 +5056,17 @@ export class Workflow {
         if (simulate) promptPlayer = false;
         let GMprompt: string | boolean | undefined;
         let gmMonksTB: boolean | undefined;
+        let gmFlashTB: boolean | undefined;
         let gmRER: boolean | undefined;
         let playerRER = !player?.isGM && ["rer"].includes(configSettings.playerRollSaves);
         const playerChat = !player?.isGM && ["chat"].includes(configSettings.playerRollSaves);
         if (player?.isGM) {
           const targetDocument = getTokenDocument(target);
           const monksTBSetting = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves === "mtb" : configSettings.rollNPCSaves === "mtb"
+          const flashTBSetting = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves === "ftb" : configSettings.rollNPCSaves === "ftb"
           const epicRollsSetting = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves === "rer" : configSettings.rollNPCSaves === "rer"
           gmMonksTB = flagRollType !== "tool" && installedModules.get("monks-tokenbar") && monksTBSetting;
+          gmFlashTB = installedModules.get("flash-rolls-5e") && flashTBSetting;
           gmRER = installedModules.get("epic-rolls-5e") && epicRollsSetting;
           GMprompt = (targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves : configSettings.rollNPCSaves);
 
@@ -5066,6 +5074,7 @@ export class Workflow {
           showRollDialog = GMprompt === "autoDialog";
           if (simulate) {
             gmMonksTB = false;
+            gmFlashTB = false;
             GMprompt = false;
             gmRER = false;
             promptPlayer = false;
@@ -5112,6 +5121,34 @@ export class Workflow {
                 workflowId: this.id,
                 itemCardUuid: this.itemCardUuid
               }
+            }
+          })
+        } else if ((!player?.isGM && playerFlashTB) || (player?.isGM && gmFlashTB)) {
+          promises.push(new Promise((resolve) => {
+            let requestId = target.actor?.uuid ?? foundry.utils.randomID();
+            this.saveRequests[requestId] = resolve;
+          }));
+
+          if (isMagicSave) {
+            if (magicResistance) saveDetails.advantage = true;
+            if (magicVulnerability) saveDetails.disadvantage = true;
+          }
+          const requests = player?.isGM ? flashRequestsGM : flashRequestsPlayer;
+          requests.push({
+            actorId: target.actor?.id ?? target.id,
+            actorUuid: (target.actor as Actor).uuid,
+            token: target.id,
+            advantage: saveDetails.advantage,
+            disadvantage: saveDetails.disadvantage,
+            dc: saveDetails.rollDC,
+            showdc: configSettings.displaySaveDC,
+            isMagicSave,
+            isConcentrationCheck: saveDetails.isConcentrationCheck,
+            workflowOptions: saveDetails.workflowOptions,
+            midiOptions: {
+              itemUuid: this.saveItem?.uuid,
+              workflowId: this.id,
+              itemCardUuid: this.itemCardUuid
             }
           })
         } else if ((!player?.isGM && playerEpicRolls) || (player?.isGM && gmRER)) {
@@ -5332,6 +5369,39 @@ export class Workflow {
       if (monkRequestsGM.length > 0) {
         timedExecuteAsGM("monksTokenBarSaves", requestDataGM);
       };
+    }
+    const flashRequests = flashRequestsPlayer.concat(flashRequestsGM);
+    if (flashRequests.length > 0) {
+      // Determine Flash Token Bar requestType
+      let flashRequestType: string;
+      if (rollType === "save") {
+        flashRequestType = "savingthrow";
+      } else if (rollType === "check") {
+        flashRequestType = "ability";
+      } else if (rollType === "skill") {
+        flashRequestType = "skill";
+      } else if (rollType === "tool") {
+        flashRequestType = "tool";
+      } else {
+        flashRequestType = "savingthrow"; // default
+      }
+
+      const flashRollKey = rollAbility ?? rollSkill ?? rollTool ?? "dex";
+      const flashRequest = {
+        requestType: flashRequestType,
+        rollKey: flashRollKey,
+        actorIds: flashRequests.map(request => request.actorId),
+        dc: rollDC,
+        advantage: flashRequests.some(r => r.advantage) || undefined,
+        disadvantage: flashRequests.some(r => r.disadvantage) || undefined,
+        skipRollDialog: true,
+        sendAsRequest: true,
+        groupRollId: foundry.utils.randomID(),
+        workflowId: this.id,
+        itemCardUuid: this.itemCardUuid
+      };
+
+      timedExecuteAsGM("flashTokenBarSaves", flashRequest);
     }
     const rerRequests = rerRequestsPlayer.concat(rerRequestsGM);
     if (rerRequests.length > 0) {
@@ -5699,6 +5769,99 @@ export class Workflow {
         delete this.saveRequests[requestId];
         func(roll)
       }
+    }
+    return true;
+  }
+
+  flashSavingCheck(message: ChatMessage.Implementation, update: ChatMessage.UpdateData, options: ChatMessage.Database.UpdateOptions, userId: string) {
+    if (debugEnabled > 0) debug(`flashSavingCheck | Hook triggered for message ${message.id}`);
+
+    const flashFlags = message.flags?.["flash-rolls-5e"];
+    if (!flashFlags?.rollData) {
+      if (debugEnabled > 0) debug(`flashSavingCheck | No flash-rolls-5e rollData found`);
+      return true;
+    }
+
+    const rollData = flashFlags.rollData;
+    if (!rollData.results || !Array.isArray(rollData.results)) {
+      if (debugEnabled > 0) debug(`flashSavingCheck | No results array found`);
+      return true;
+    }
+
+    if (debugEnabled > 0) debug(`flashSavingCheck | Processing ${rollData.results.length} results`);
+
+    // Process each result in the roll data
+    for (const result of rollData.results) {
+      if (!result.rolled) continue; // Skip if not rolled yet
+      if (typeof result.total === 'undefined') continue; // Skip if no total
+
+      if (debugEnabled > 0) debug(`flashSavingCheck | Result:`, result);
+
+      // Try to find the matching request by actor UUID
+      // Flash Token Bar stores uniqueId which could be actor ID or token ID
+      let requestId: string | undefined;
+
+      // Try direct UUID match first
+      if (result.actorUuid && this.saveRequests[result.actorUuid]) {
+        requestId = result.actorUuid;
+        if (debugEnabled > 0) debug(`flashSavingCheck | Found by actorUuid: ${requestId}`);
+      }
+
+      // If no direct match, try looking up by uniqueId or actorId
+      if (!requestId) {
+        const id = result.uniqueId || result.actorId;
+        if (id) {
+          // Try as actor ID first
+          let actor = game.actors?.get(id);
+
+          // If not found, try as token ID (could be synthetic actor)
+          if (!actor) {
+            const token = canvas?.tokens?.get(id);
+            if (token?.actor) {
+              actor = token.actor;
+            }
+          }
+
+          if (actor) {
+            requestId = actor.uuid;
+            if (debugEnabled > 0) debug(`flashSavingCheck | Found by ID lookup: ${id} -> ${requestId}`);
+          }
+        }
+      }
+
+      if (!requestId) {
+        if (debugEnabled > 0) warn(`flashSavingCheck | Could not find requestId for result`, result);
+        continue;
+      }
+
+      if (!this.saveRequests[requestId]) {
+        if (debugEnabled > 0) warn(`flashSavingCheck | No pending request for ${requestId}. Available:`, Object.keys(this.saveRequests));
+        continue;
+      }
+
+      // Create a basic roll object with the result
+      let roll: Roll.Any;
+      try {
+        // Flash Token Bar stores the full roll data
+        if (result.roll) {
+          roll = Roll.fromJSON(JSON.stringify(result.roll));
+        } else {
+          // Fallback: create a simple roll with the total
+          roll = new Roll(`${result.total}`);
+          roll._evaluated = true;
+          roll._total = result.total;
+        }
+      } catch (err) {
+        // Fallback: create a simple roll with the total
+        roll = new Roll(`${result.total}`);
+        roll._evaluated = true;
+        roll._total = result.total;
+      }
+
+      const func = this.saveRequests[requestId];
+      delete this.saveRequests[requestId];
+      if (debugEnabled > 0) debug(`flashSavingCheck | Resolving save for ${requestId} with roll total ${roll.total}`);
+      func(roll);
     }
     return true;
   }
@@ -7229,6 +7392,7 @@ export class TrapWorkflow extends Workflow {
     let hookId = Hooks.on("createChatMessage", this.processSaveRoll.bind(this));
     //        let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
     let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
+    let flashId = Hooks.on("updateChatMessage", this.flashSavingCheck.bind(this));
     try {
       const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
       await this.checkSaves(saveDisplay !== "allShow");
@@ -7237,7 +7401,8 @@ export class TrapWorkflow extends Workflow {
     } finally {
       Hooks.off("createChatMessage", hookId);
       //          Hooks.off("renderChatMessage", brHookId);
-      Hooks.off("updateChatMessage", monksId)
+      Hooks.off("updateChatMessage", monksId);
+      Hooks.off("updateChatMessage", flashId);
     }
     if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length);
     const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
