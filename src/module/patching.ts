@@ -1223,7 +1223,7 @@ export async function checkWounded(actor: Actor.Implementation, update: Actor.Up
     let effect = getDeadStatus();
     let useDefeated = configSettings.markNonPlayerDefeated;
     // @ts-expect-error no dnd5e-types
-    if ((actor.type === "character" || actor.hasPlayerOwner) && !vitalityResource) {
+    if ((actor.type === "character" || actor.hasPlayerOwner || actor.system.traits?.important) && !vitalityResource) {
       effect = getUnconsciousStatus();
       useDefeated = configSettings.markPlayerDefeated;
     }
