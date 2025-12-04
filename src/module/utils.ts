@@ -843,10 +843,16 @@ export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffe
     foundry.utils.setProperty(actor, `flags.${MODULE_ID}.onUseMacroName`, macroString)
     return true;
   } else if (change.key.startsWith(`flags.${MODULE_ID}.optional.`) && (change.value.trim() === "ItemMacro" || change.value.trim() === MQItemMacroLabel)) {
+    let macroString = change.value;
     if (originUuid?.includes("Item.")) {
-      const macroString = `ItemMacro.${originUuid}`;
-      foundry.utils.setProperty(actor, change.key, macroString)
-    } else foundry.utils.setProperty(actor, change.key, change.value);
+      const itemUuid = originUuid?.includes("ActiveEffect.") ? originUuid.split(".").slice(0, -2).join(".") : originUuid;
+      macroString = `ItemMacro.${itemUuid}`;
+    } else {
+      const origin = fromUuidSync(change.effect?.origin) as Item.Implementation | ActiveEffect.Implementation | undefined;
+      if (origin instanceof Item) macroString = `ItemMacro.${origin.uuid}`;
+      else if (origin instanceof ActiveEffect) macroString = `ItemMacro.${origin.origin}`;
+    }
+    foundry.utils.setProperty(actor, change.key, macroString);
     return true;
     /*
      TODO revisit this if going to allow item macro in flags evaluation
@@ -3418,12 +3424,13 @@ export async function bonusDialog(
           //@ts-expect-error
           newRoll = await new roll.constructor(`${roll.formula} ${bonus}`, { ...((this.activity ?? this.item ?? this.actor)?.getRollData() ?? {}), ...roll.data }).roll();
           if (showDiceSoNice) await displayDSNForRoll(newRoll, rollType, rollMode);
-        } else if (flagSelector.startsWith("damage.") && foundry.utils.getProperty(this.actor ?? this, `${button.key}.criticalDamage`)) {
+        } else if (flagSelector.startsWith("damage.")) {
           //@ts-expect-error .DamageRoll
           const DamageRoll = CONFIG.Dice.DamageRoll
           let rollOptions = foundry.utils.duplicate(roll!.options);
-          //@ts-expect-error
-          rollOptions.configured = false;
+          if (foundry.utils.getProperty(this.actor ?? this, `${button.key}.criticalDamage`))
+            //@ts-expect-error
+            rollOptions.configured = false;
           // rollOptions = { critical: (this.isCritical || this.rollOptions.critical), configured: false };
           //@ts-expect-error D20Roll
           newRoll = CONFIG.Dice.D20Roll.fromRoll(roll);
