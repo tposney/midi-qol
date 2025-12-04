@@ -4788,6 +4788,11 @@ export function createConditionData(data: {
       rollData.w = data.workflow;
       rollData.workflow = data.workflow;
       rollData.activity = data.workflow.activity;
+      rollData.riderStatuses = {};
+      data.workflow.activity.applicableEffects?.forEach((effect) => {
+        Array.from(effect?.statuses).forEach((status) => (rollData.riderStatuses[status] = true));
+        effect.flags?.dnd5e?.riders?.statuses?.forEach((rider) => (rollData.riderStatuses[rider] = true));
+      });
       rollData.otherDamageActivity = data.workflow?.otherActivity;
       rollData.hasSave = data.workflow.hasSave;
       rollData.item = data.workflow.item.getRollData().item;
