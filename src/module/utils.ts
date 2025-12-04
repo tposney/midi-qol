@@ -274,16 +274,18 @@ export async function applyTokenDamage(
     const superSaver = !!options.superSavers?.has(token);
     const semiSuperSaver = !!options.semiSuperSavers?.has(token);
     let saveMultiplier = 1;
+
     if (saved) {
       saveMultiplier = getSaveMultiplierForItem(item, "defaultDamage");
     }
-    if (superSaver && getSaveMultiplierForItem(item, "defaultDamage") === configSettings.defaultSaveMultiplier) {
+/*    if (superSaver && getSaveMultiplierForItem(item, "defaultDamage") === configSettings.defaultSaveMultiplier) {
       saveMultiplier = saves.has(token) ? 0 : configSettings.defaultSaveMultiplier;
     }
+*/
+
     if (semiSuperSaver && saved) {
       saveMultiplier = 0;
     }
-
     const calcDamageOptions = {
       invertHealing: true,
       multiplier: 1,
@@ -389,7 +391,7 @@ export function setupDamageDetails(actorDamage: PreSetupDamageListEntry, selecto
     else if (d.type !== "midi-none") acc.damage += d.value;
     return acc;
   }, { damage: 0, temp: 0, healing: 0 });
-  if (damage < 0) damage = 0;
+  damage = Math.max(0, damage);
   let totalDamage = damage;
   let healingAdjustedTotalDamage = damage + healing;
   healingAdjustedTotalDamage = healingAdjustedTotalDamage < 0 ? Math.ceil(healingAdjustedTotalDamage) : Math.floor(healingAdjustedTotalDamage);
@@ -3327,7 +3329,7 @@ export async function bonusDialog(
     let specificMacro = false;
     const possibleMacro = foundry.utils.getProperty(this.actor ?? {}, `${button.key}.${flagSelector}`) ||
       foundry.utils.getProperty(this.actor ?? {}, `${button.key}.${allFlagSelector}`);
-    if (possibleMacro && (button.value.trim().startsWith("ItemMacro") || button.value.trim().startsWith("Macro") || button.value.trim().startsWith("function"))) {
+    if (possibleMacro && typeof button.value === "string" && (button.value.trim().startsWith("ItemMacro") || button.value.trim().startsWith("Macro") || button.value.trim().startsWith("function"))) {
       macroToCall = button.value;
       if (macroToCall.startsWith("Macro.")) macroToCall = macroToCall.replace("Macro.", "");
       specificMacro = true;
@@ -3453,7 +3455,7 @@ export async function bonusDialog(
         } else {
           //@ts-expect-error
           newRoll = CONFIG.Dice.D20Roll.fromRoll(roll);
-          const tempRoll = await (new Roll(button.value, { ...((this.activity ?? this.item ?? this.actor)?.getRollData() ?? {}), ...roll!.data })).roll();
+          const tempRoll = await (new Roll(`${button.value}`, { ...((this.activity ?? this.item ?? this.actor)?.getRollData() ?? {}), ...roll!.data })).roll();
           if (showDiceSoNice) await displayDSNForRoll(tempRoll, rollType, rollMode);
           newRoll = addRollTo(newRoll, tempRoll);
         }
@@ -5126,7 +5128,7 @@ export async function expirePerTurnBonusActions(
   options: { advanceTime: number; direction: number }
 ) {
   const optionalFlagRe = /flags.midi-qol.optional.[^.]+.(count|countAlt)$/;
-  for (let combatant of combat.turns) {
+  for (let combatant of (combat.turns ?? [])) { // monks combat details does not pass the combat as it should so put in a guard
     const actor = combatant.actor;
     if (!actor) continue;
     const actorAllApplicableEffects = actor.allApplicableEffects();
@@ -6821,15 +6823,14 @@ export function setRollMaxDiceTerm(roll: Roll, maxValue: number, count = 1) {
 }
 
 export function addDependent(document: foundry.abstract.Document.Any, dependent: foundry.abstract.Document.Any) {
-  //@ts-expect-error
-  if (!document.addDependent) {
-    error(`midi-addDependent | document ${document.uuid} does not have addDependent defined`);
+  if (!document?.uuid) {
+    error(`midi-addDependent | document ${document?.name} does not have an uuid`);
     return;
   }
   //@ts-expect-error
   if (game.user?.isGM || document.isOwner) {
     //@ts-expect-error
-    document.addDependent(dependent);
+    dependent.setFlag("dnd5e", "dependentOn", document.uuid);
   } else {
     return unTimedExecuteAsGM("addDependent", { documentUuid: document.uuid, dependentUuid: dependent.uuid });
   }
@@ -6856,8 +6857,8 @@ export async function addConcentrationDependent(actorRef: TokenOrDocument | Acto
     return undefined;
   }
   if (game.user?.isGM || actor.isOwner) {
-    // @ts-expect-error no dnd5e-types
-    return concentrationEffect.addDependent(dependent);
+    //@ts-expect-error dnd5e.dependentOn
+    return dependent.setFlag("dnd5e", "dependentOn", concentrationEffect.uuid)
   } else
     return unTimedExecuteAsGM("addDependent", { documentUuid: concentrationEffect.uuid, dependentUuid: dependent.uuid });
 }
@@ -7013,7 +7014,7 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
 }
 
 function getCPREffect(id: string): ActiveEffect.Implementation | undefined {
-  if (!game.modules.get("chris-premades")?.active || !game.settings.get("chris-premades", "effectInterface")) return null;
+  if (!game.modules.get("chris-premades")?.active || !game.settings.get("chris-premades", "effectInterface")) return undefined;
   let cprItem = game.items?.find(i => ((i.flags["chris-premades"]))?.effectInterface);
   return cprItem?.effects.get(id) as ActiveEffect;
 }

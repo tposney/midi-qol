@@ -1239,7 +1239,7 @@ export let MidiActivityMixin = Base => {
           workflow.itemUsesReaction = true;
         }
 
-        if (needsAOOCheck(this.actor) && this.attack && !isTurn) {
+        if (!isTurn && needsAOOCheck(this.actor) && this.attack && this.activation?.type !== "special") {
           workflow.itemUsesReaction = true;
           workflow.AoO = true;
         }
@@ -1740,8 +1740,8 @@ export let MidiActivityMixinSheet = Base => {
       return context;
     }
 
-    async _preparePartContext(partId, context) {
-      await super._preparePartContext(partId, context);
+    async _preparePartContext(partId, context, options) {
+      context = await super._preparePartContext(partId, context, options);
       context.hasDamage = this.activity.damage;
       context.isSummons = this.activity.type === "summon";
       if (partId === "midi-qol") {

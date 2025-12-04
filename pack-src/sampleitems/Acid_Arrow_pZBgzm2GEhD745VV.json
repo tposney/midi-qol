@@ -109,7 +109,7 @@
         },
         "attack": {
           "ability": "",
-          "bonus": "20",
+          "bonus": "",
           "critical": {
             "threshold": null
           },
@@ -164,7 +164,7 @@
         },
         "midiProperties": {
           "ignoreTraits": [],
-          "triggeredActivityId": "dnd5eactivity200",
+          "triggeredActivityId": "missed-damage",
           "triggeredActivityConditionText": "",
           "triggeredActivityTargets": "missedTargets",
           "triggeredActivityRollAs": "self",
@@ -190,7 +190,11 @@
           "preRemoveConditionText": "",
           "postRemoveConditionText": ""
         },
-        "useConditionReason": ""
+        "useConditionReason": "",
+        "img": "",
+        "appliedEffects": [
+          "KxbU4A3kfPPS8k6Z"
+        ]
       },
       "dnd5eactivity200": {
         "_id": "dnd5eactivity200",
@@ -442,10 +446,6 @@
       "ignoreTotalCover": false
     },
     "dnd5e": {
-      "riders": {
-        "activity": [],
-        "effect": []
-      },
       "last": {
         "dnd5eactivity000": {
           "damageType": {
@@ -457,6 +457,9 @@
             "0": "acid"
           }
         }
+      },
+      "riders": {
+        "activity": []
       }
     },
     "tidy5e-sheet": {
@@ -559,12 +562,12 @@
   "_stats": {
     "compendiumSource": "Compendium.world.fixup.Item.noYMat7CcbvgjRXH",
     "duplicateSource": null,
-    "coreVersion": "13.346",
+    "coreVersion": "13.350",
     "systemId": "dnd5e",
-    "systemVersion": "4.3.6",
+    "systemVersion": "5.1.10",
     "createdTime": 1741782999099,
-    "modifiedTime": 1741782999118,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "modifiedTime": 1762306738064,
+    "lastModifiedBy": "pEOrrBXRIpR6dPVY",
     "exportSource": null
   },
   "_id": "pZBgzm2GEhD745VV",

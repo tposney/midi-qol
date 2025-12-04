@@ -665,19 +665,17 @@ async function addConvenientEffect(options: { effectName: string, actorUuid: str
 }
 
 async function _addDependent(data: { documentUuid: string, dependentUuid: string }) {
-  const document = fromUuidSync(data.documentUuid) as foundry.abstract.Document.Any | undefined;
-  // @ts-expect-error .addDependent
-  if (!document || !document.addDependent) {
-    error("GMAction.addDependent | document not found or does not support addDependent", data.documentUuid);
-    return undefined;
+  if (foundry.utils.isNewerVersion(game.system.version, "5.1.99")) {
+    const dependent = fromUuidSync(data.dependentUuid) as foundry.abstract.Document.Any | undefined;
+    if (dependent) {
+      //@ts-expect-error dnd5e.dependentOn
+      return dependent.setFlag("dnd5e", "dependentOn", data.documentUuid);
+    }
+  } else {
+    const document = fromUuidSync(data.documentUuid) as foundry.abstract.Document.Any | undefined;
+    //@ts-expect-error .addDependent
+    if (document?.addDependent) return document.addDependent(data.dependentUuid);
   }
-  const dependent = fromUuidSync(data.dependentUuid) as foundry.abstract.Document.Any | undefined;
-  if (!dependent) {
-    error("GMAction.addDependent | dependent not found", data.dependentUuid);
-    return undefined;
-  }
-  //@ts-expect-error .addDependent
-  return document.addDependent(dependent);
 }
 
 async function localDoReactions(data: { tokenUuid: string; reactionActivityList: ReactionItemReference[], triggerTokenUuid: string, reactionFlavor: string; triggerType: string; options: any }) {
@@ -904,7 +902,7 @@ function flashTokenBarSaves(data: {
       advantage: data.advantage,
       disadvantage: data.disadvantage,
       skipRollDialog: data.skipRollDialog,
-      sendAsRequest: data.sendAsRequest,
+      sendAsRequest: false, //data.sendAsRequest,
       groupRollId: data.groupRollId
     });
   } else {
@@ -1014,6 +1012,7 @@ async function prepareDamageListItems(
         else if (d.type !== "midi-none") acc.amount += d.value;
         return acc;
       }, { amount: 0, temp: 0, healing: 0 });
+      amount = Math.max(0, amount);
       let { rawAmount, rawTemp, rawHealing } = damageItem.rawDamageDetail.reduce((acc, d) => {
         if (d.type === "temphp") acc.rawTemp += d.value;
         else if (["healing"].includes(d.type) || d.active?.absorption) acc.rawHealing += d.value;
@@ -1319,7 +1318,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         if (typeof vitalityResource === "string" && foundry.utils.getProperty(actor ?? {}, vitalityResource.trim()) !== undefined) {
           update[vitalityResource.trim()] = newVitality;
         }
-        const options = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false }); 
+        const options = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false });
         if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, update, options as DamageApplicationOptions) !== false) {
           await actor.update(update, options as any);
           Hooks.call("dnd5e.applyDamage", actor, amount, options);
@@ -1386,8 +1385,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         let actor = fromActorUuid(actorUuid);
         const options: DamageApplicationOptions = foundry.utils.mergeObject(calcDamageOptions ?? {}, updateOptions ?? {}, { inplace: false });
         // damageDetail.forEach(di => {if (!["healing", "none"].includes(di.type)) di.value = Math.max(0, di.value)});
-          // @ts-expect-error no dnd5e-types
-          await actor?.applyDamage(damageDetail, foundry.utils.mergeObject(options, { multiplier: calcDamageOptions.multiplier * multiplier }, { inplace: false }));
+        // @ts-expect-error no dnd5e-types
+        await actor?.applyDamage(damageDetail, foundry.utils.mergeObject(options, { multiplier: calcDamageOptions.multiplier * multiplier }, { inplace: false }));
       })();
     });
   })

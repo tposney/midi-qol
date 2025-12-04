@@ -109,6 +109,7 @@ export async function bonusCheck(actor: Actor.Implementation, result: Roll, cate
       else if (category.startsWith("check")) title = i18nFormat("DND5E.AbilityPromptTitle", { ability: GameSystemConfig.abilities[detail].label ?? "" });
       else if (category.startsWith("save")) title = i18nFormat("DND5E.SavePromptTitle", { ability: GameSystemConfig.abilities[detail].label ?? "" });
       else if (category.startsWith("skill")) title = i18nFormat("DND5E.SkillPromptTitle", { 
+        //@ts-expect-error no dnd5e types
         ability: GameSystemConfig.abilities[actor.system.skills[detail]?.ability]?.label ?? "",
         skill: GameSystemConfig.skills[detail].label ?? "" 
       });
@@ -117,6 +118,7 @@ export async function bonusCheck(actor: Actor.Implementation, result: Roll, cate
       else if (category.startsWith("check")) title = i18nFormat("DND5E.AbilityPromptTitle", { ability: GameSystemConfig.abilities[detail] ?? "" });
       else if (category.startsWith("save")) title = i18nFormat("DND5E.SavePromptTitle", { ability: GameSystemConfig.abilities[detail] ?? "" });
       else if (category.startsWith("skill")) title = i18nFormat("DND5E.SkillPromptTitle", { 
+        //@ts-expect-error no dnd5e types
         ability: GameSystemConfig.abilities[actor.system.skills[detail]?.ability] ?? "",
         skill: GameSystemConfig.skills[detail] ?? "" 
       });
@@ -1007,6 +1009,7 @@ function removeMidiProperties(wrapped, ...args) {
 
 export function initPatching() {
   libWrapper = globalThis.libWrapper;
+  const ChatLog = foundry.applications.sidebar.tabs.ChatLog;
   // TODO this needs more work libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.migrateData", removeMidiProperties, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
   // For new onUse macros stuff.
@@ -1018,7 +1021,34 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
   libWrapper.register(MODULE_ID, "dnd5e.applications.actor.BaseActorSheet.prototype._prepareItem", _prepareItem, "WRAPPER");
+  // setup MeasuredTemplateDocument and TokenDocument to be dependent documents
+  // very kludgy test to see if they are already patched
+  const f1 = CONFIG.MeasuredTemplate.documentClass.prototype.prepareData.toString();
+  const f2 = globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.MeasuredTemplate.documentClass).prototype.prepareData.toString();
+  if (f1 !== f2) {
+    CONFIG.MeasuredTemplate.documentClass = globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.MeasuredTemplate.documentClass);
+  }
+  const f3 = CONFIG.Token.documentClass.prototype.prepareData.toString();
+  const f4 = globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.Token.documentClass).prototype.prepareData.toString();
+  if (f3 !== f4) {
+    CONFIG.Token.documentClass = globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.Token.documentClass);
+  }
 }
+
+function dependentPrepareData(wrapped) {
+  wrapped();
+  if (this.flags?.dnd5e?.dependentOn && this.uuid) {
+    globalThis.dnd5e.registry.dependents.track(this.flags.dnd5e.dependentOn, this);
+  }
+}
+
+function dependentOnDelete(wrapped, options = {}, userId: string = "") {
+  wrapped(options, userId);
+  if (this.flags?.dnd5e?.dependentOn && this.uuid) {
+    globalThis.dnd5e.registry.dependents.untrack(this.flags.dnd5e.dependentOn, this);
+  }
+}
+
 function _prepareItem(wrapped, item, ctx) {
   wrapped(item, ctx);
   ctx.activities = item.system.activities?.filter(a => !a.midiProperties?.automationOnly && a.canUse)?.map(this._prepareActivity.bind(this));
@@ -1293,104 +1323,6 @@ export function readyPatching() {
     else
       error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
   }
-  if (true) {
-    const effectClass: any = CONFIG.ActiveEffect.documentClass;
-    const classStrings = [
-      "CONFIG.Actor.documentClass",
-      "CONFIG.Item.documentClass",
-      "CONFIG.Token.documentClass",
-      "CONFIG.MeasuredTemplate.documentClass",
-      "CONFIG.Tile.documentClass",
-      "CONFIG.AmbientLight.documentClass",
-      "CONFIG.AmbientSound.documentClass",
-      "CONFIG.Wall.documentClass",
-      "CONFIG.ActiveEffect.documentClass",
-    ];
-    const addDependent = _addDependent;
-    const getDependents = effectClass.prototype.getDependents ?? _getDependents;
-    for (let classString of classStrings) {
-      const docClass = eval(classString)
-      if (!docClass) continue;
-      if (!docClass.prototype.addDependent) libWrapper.register(MODULE_ID, `${classString}.prototype._onDelete`, _onDelete, "WRAPPER");
-      // if (!docClass.prototype.addDependent) docClass.prototype.addDependent = addDependent;
-      docClass.prototype.addDependent = addDependent; // The core version does not filter out dependents that no longer exist.
-      if (!docClass.prototype.getDependents) docClass.prototype.getDependents = getDependents;
-      if (!docClass.prototype.setDependents) docClass.prototype.setDependents = setDependents;
-      if (!docClass.prototype.removeDependent) docClass.prototype.removeDependent = removeDependent;
-      if (!docClass.prototype.clearDependents) docClass.prototype.clearDependents = clearDependents;
-      if (!docClass.prototype.deleteAllDependents) docClass.prototype.deleteAllDependents = deleteAllDependents;
-    }
-    libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._onDelete", _onDelete, "WRAPPER");
-  }
-}
-
-function removeDependent(dependent: { uuid: string }) {
-  const dependents = (this.getFlag("dnd5e", "dependents") || []).filter(dep => dep.uuid !== dependent.uuid);
-  if (dependents.length === 0) return this.unsetFlag("dnd5e", "dependents");
-  return this.setFlag("dnd5e", "dependents", dependents);
-}
-function setDependents(dependents: { uuid: string }[]) {
-  return this.setFlag("dnd5e", "dependents", dependents);
-}
-async function clearDependents() {
-  if (!this.getFlag("dnd5e", "dependents")) return;
-  return await this.unsetFlag("dnd5e", "dependents");
-}
-
-async function deleteAllDependents() {
-  if (!game.user?.isGM) return;
-  const dependents = this.getDependents();
-  await this.clearDependents();
-  for (let dep of dependents) {
-    await dep.delete();
-  }
-  return
-}
-
-/**
- * Record another effect as a dependent of this one.
- * @param {...ActiveEffect5e} dependent  One or more dependent effects.
- * @returns {Promise<ActiveEffect5e>}
- */
-async function _addDependent(...dependent) {
-  const dependents = this.getDependents().map(d => ({ uuid: d.uuid }));
-  dependents.push(...dependent.filter(dep => !dependents.some(d => d.uuid === dep.uuid)).map(d => ({ uuid: d.uuid })));
-  return this.setFlag("dnd5e", "dependents", dependents);
-}
-
-/**
- * Retrieve a list of dependent effects.
- * @returns {Document[]}
- */
-function _getDependents() {
-  return Array.from((this.getFlag("dnd5e", "dependents") || []).reduce((deps, { uuid }) => {
-    const effect = fromUuidSync(uuid) as ActiveEffect | undefined;
-    if (effect) deps.add(effect);
-    return deps;
-  }, new Set()));
-}
-
-async function _onDelete(wrapped, ...args) {
-  let [options, userId] = args;
-  if (game.user === game.users?.activeGM) {
-    if (!this.getDependents) return wrapped(...args);
-    // Special case for consumable items - don't delete effect when item deleted
-    if (this instanceof Item && this.type === "consumable") {
-      foundry.utils.setProperty(this, "flags.dnd5e.dependents", [])
-      return wrapped(...args);
-    }
-    const dependents = this.getDependents();
-    if (dependents.length > 0) {
-      for (let dep of dependents) {
-        if (fromUuidSync(dep.uuid) as any | undefined) {
-          await dep.delete(options);
-        }
-        // Since the effect will have been already deleted we can't do any updates to it.
-        foundry.utils.setProperty(this, "flags.dnd5e.dependents", [])
-      }
-    }
-  }
-  return await wrapped(options, userId);
 }
 
 function createConcentrationEffectData(this: ActiveEffect.Implementation, wrapped, activity: Activity, data: any = {}) {

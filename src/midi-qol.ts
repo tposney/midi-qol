@@ -1,6 +1,6 @@
-import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, midiSoundSettings, fetchSoundSettings, midiSoundSettingsBackup, disableWorkflowAutomation, readySettingsSetup, collectSettingData, safeGetGameSetting, triggeredActivityTargetOptions, triggeredActivityRollAsOptions } from './module/settings.js';
+import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, safeGetGameSetting, triggeredActivityTargetOptions, triggeredActivityRollAsOptions } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
-import { checkModules, installedModules, setupModules } from './module/setupModules.js';
+import { checkModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, readyPatching, initPatching, addDiceTermModifiers } from './module/patching.js';
 import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
@@ -643,7 +643,6 @@ Hooks.once('ready', function () {
 });
 
 import { setupMidiTests } from './module/tests/setupTest.js';
-import { TargetConfirmationConfig } from './module/apps/TargetConfirmationConfig.js';
 import { setupChatMessageMidi, ChatMessageMidi } from './module/ChatClasses/ChatMessageMidi.js';
 import { MidiSaveActivity, setupSaveActivity } from './module/activities/SaveActivity.js';
 import { MidiUtilityActivity, setupUtilityActivity } from './module/activities/UtilityActivity.js';

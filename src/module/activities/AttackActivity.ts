@@ -8,7 +8,6 @@ import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.j
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { Activity, ActivityUseConfiguration, DND5ETargetDescriptor, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
-import { TargetConfirmationConfig } from "../apps/TargetConfirmationConfig.js";
 
 export let MidiAttackSheet: ReturnType<typeof defineMidiAttackSheetClass>;
 export let MidiAttackActivity: ReturnType<typeof defineMidiAttackActivityClass>;
@@ -408,6 +407,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
               break;
             default:
               dialog.configure = requiresAmmoConfirmation || !(config.midiOptions.fastForwardAttack ?? workflow.workflowOptions.fastForwardAttack ?? false);
+              //@ts-expect-error no dnd5e-types
+              if (this.item?.system.properties.has("thr")) dialog.configure = true; // Let user choose the attack mode
           }
         }
         if (keys.advantage) workflow.rollOptions.advantage = keys.advantage;
@@ -571,7 +572,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
                     ...this.messageFlags,
                     messageType: "usage",
                     use: {
-                      // @ts-expect-error
                       effects: this.applicableEffects?.map(e => e.id)
                     }
                   }

@@ -182,14 +182,14 @@ export let readyHooks = async () => {
             }
           }
         }
-        let transformedActorUuids = foundry.utils.getProperty(deletedEffect, "flags.midi-qol.transformedActorUuids") as string[]; 
+        let transformedActorUuids = foundry.utils.getProperty(deletedEffect, "flags.midi-qol.transformedActorUuids") as string[];
         if (transformedActorUuids && transformedActorUuids.length > 0) {
           for (let uuid of transformedActorUuids) {
             let actor = await fromUuid(uuid) as Actor.Implementation;
-            if (actor) { 
+            if (actor) {
               try {
-              //@ts-expect-error no dnd5e-types
-              await actor.revertOriginalForm({});
+                //@ts-expect-error no dnd5e-types
+                await actor.revertOriginalForm({});
               } catch (err) { // only here to deal with tidy throwing an error
                 console.error("Error reverting actor to original form", actor, err);
               }
@@ -375,7 +375,6 @@ export function initHooks() {
     }
   });
 
-  //@ts-expect-error
   Hooks.once('tidy5e-sheet.ready', (api) => {
     //@ts-expect-error
     Hooks.on('tidy5e-sheet.getActivitiesForPlay', (parent, data) => {
@@ -420,19 +419,11 @@ export function initHooks() {
     return;
   });
 
-  //@ts-expect-error
   Hooks.once("tidy5e-sheet.ready", api => {
     if ((game.user?.role ?? CONST.USER_ROLES.PLAYER) < (configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER)) return;
+
     api.registerItemHeaderControls?.({
       controls: [
-        {
-          icon: "fa-solid fa-gears", // TODO: better icon?
-          label: "Midi-QOL",
-          position: "header",
-          async onClickAction() {
-            new ItemOnUseMacrosConfig({ document: this.document }).render({ force: true });
-          }
-        },
         {
           icon: "fa-solid fa-gears", // TODO: better icon?
           label: "Midi-QOL",
@@ -443,7 +434,6 @@ export function initHooks() {
       ]
     });
   });
-
 
   Hooks.on("getHeaderControlsActorSheetV2", (app, controls) => {
     if (configSettings.allowActorUseMacro) {
@@ -805,14 +795,20 @@ function applySavesToDamage(actor: Actor.Implementation, damages: DamageDescript
     if (mo?.semiSuperSaver && (options?.ignore?.semiSuperSaver === true || options?.ignore?.semiSuperSaver?.has(damage.type))) continue;
     if (mo?.saved && (options?.ignore?.saved === true || options?.ignore?.saved?.has(damage.type))) continue;
     if (mo?.superSaver) {
+      mo.saveMultiplier = 0.0;
       foundry.utils.setProperty(damage, "active.superSaver", true);
     } else if (mo?.semiSuperSaver && (mo.saveMultiplier ?? 1) !== 1) {
       foundry.utils.setProperty(damage, "active.semiSuperSaver", true);
     } else if (mo?.saved && (mo.saveMultiplier ?? 1) !== 1) {
       foundry.utils.setProperty(damage, "active.saved", true);
     }
-    damage.value = damage.value * (mo?.saveMultiplier ?? 1);
-    foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * (mo?.saveMultiplier ?? 1));
+    if (mo?.saved) {
+      damage.value = damage.value * (mo?.saveMultiplier ?? 1);
+      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * (mo?.saveMultiplier ?? 1));
+    } else if (mo?.superSaver) {
+      damage.value = damage.value * configSettings.defaultSaveMultiplier * (damage.active?.multiplier ?? 1);
+      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * configSettings.defaultSaveMultiplier);
+    }
   }
 }
 function applyDamageReduction(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions): boolean {
@@ -934,11 +930,9 @@ function applyDamageReduction(actor: Actor.Implementation, damages: DamageDescri
     }, { totalDamage: 0, temp: 0 });
     // const totalDamage = damages.reduce((a, b) => a + b.value, 0);
     if (!dmAll) dmAll = 0;
-    //@ts-expect-error no dnd5e types
-    if (totalDamage > 0 && totalDamage < actor.system.attributes.hp.dt) {
-      // total damage is less than the damage threshold so no damage
-      dmAll = -totalDamage;
-    } else if (Math.sign(totalDamage) !== Math.sign(dmAll + totalDamage)) {
+
+    // dnd5e now does damage threshold so need to account for that
+    if (Math.sign(totalDamage) !== Math.sign(dmAll + totalDamage)) {
       dmAll = -totalDamage;
     }
     if (dmAll) {

@@ -1,5 +1,35 @@
+### 13.0.29
+* reducing tempHP will now trigger isDamaged macros - thanks @Bacon
+* Remove duplicate header buttons for midi
+* Fix for not rolling skill checks when using monks for saves/checks.
+* Activities with activation type "special" will not set attack of opportunity/reaction status.
+* Remove spurious +20 to hit bonus in Acid Arrow
+* Fix for error being thrown in optional conditions when button value is a number.
+* Fix for flanking not being applied when choosing flanking: advantage only if there is a source of disadvantage as well.
+* Fix for super saver (rogue evasion) always doing 0 damage even when not saved.
+* Fix for editing activity sheets in dnd5e 5.2.0
+* Fix for dependency handling in 5.2.0. (Now uses dnd5e dependency handling throughout)
+  - allow templateDocuments and tokenDocuments to be dependents (not supported in dnd5e).
+* Remove midi handling of damage threshold since dnd5e now does it.
+* Added support for dnd5e's levels filter when applying active effects from an activity.
+
+* Various fixes thanks @thatlonelybugbear & @bacon
+  - 377: Bugfix - isSave macros fail to sum returned replacement rolls
+  - 376: Allow death saves for NPCs marked important
+  - 375: Optional Bonus Bugfixes
+  - 374: Add `riderStatuses` to rollData.
+  - 373: Update README.md
+  - 372: Filter disabled incompatible modules properly
+  - 371: Fix skill roll titles for actionSave overtimes
+  - 370: Rework fumbleThreshold calculations so that this.attackRoll.criticalFailure...
+  - 369: Support Flash TokenBar **Not sure this is working correctly** so use with caution
+  - 367: Cleanup for context data passed to DAE effect application
+  - 366: bugfix - socketed AC optional @ Bugbear
+  - 364: `activity.item.system.range` can be undefined
+  - 363: `getCPREffect(id)` should return `null` if CPR off
+
 ### 13.0.28
-* Fix for not using advantage/disadvantage set in preRollAttack hook.
+* Fix for not using advantage/disadvantage being set in preRollAttack hook.
 * Fix for damage roll modifiers being disabled.
 * Put back auto consume label on midi-qol activity tab.
 * Fix for gridded gridless return "Attack blocked by wall" when tokens overlap.

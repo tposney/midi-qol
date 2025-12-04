@@ -76,7 +76,7 @@ declare module "fvtt-types/configuration" {
       "midi-qol.removeUndoEntry": (data?: UndoData) => void;
       "midi-qol.setup": (data: typeof globalThis.MidiQOL) => void;
       "getHeaderControlsActivitySheet": (app: foundry.applications.api.Application /*dnd5e.applications.activity.activitySheet*/ , buttons: any[]) => void;
-
+      "tidy5e-sheet.ready": (api: any) => void;
     }
   }
   interface SettingConfig {
@@ -110,6 +110,7 @@ declare module "fvtt-types/configuration" {
     "midi-qol.splashWarnings": boolean;
     "midi-qol.last-run-version": string;
     "midi-qol.instanceId": string;
+    "chris-premades.effectInterface": boolean;
   }
   interface FlagConfig {
     ActiveEffect: {
@@ -126,6 +127,11 @@ declare module "fvtt-types/configuration" {
           type: string;
           id: string;
           uuid: string;
+        }
+        riders?: {
+          effect?: string[];
+          activity?: string[];
+          statuses?: string[];
         }
       };
       // Copied from DAE's `globals.ts` for now
@@ -477,6 +483,7 @@ declare module "fvtt-types/configuration" {
     MeasuredTemplate: {
       dnd5e?: {
         origin?: string;
+        dependentOn?: string;
       };
       "midi-qol"?: {
         itemUuid?: string;
@@ -486,6 +493,17 @@ declare module "fvtt-types/configuration" {
         itemCardUuid?: string;
       };
     };
+    MeasuredTemplateDocument: {
+      dnd5e?: {
+        origin?: string;
+        dependentOn?: ActiveEffect.Implementation | null;
+      };
+    }
+    TokenDocument: {
+      dnd5e?: {
+        dependentOn?: string;
+      };
+    }
   }
 };
 
@@ -883,7 +901,14 @@ export type ActivityCheck = {
   };
 }
 
+export interface ActivityEffectData {
+    _id: string;
+    get effect(): ActiveEffect.Implementation | undefined;
+    onSave?: boolean;
+}
+
 export interface Activity extends AnyMutableObject {
+  get applicableEffects(): ActiveEffect[] | null;
   actor?: Actor.Implementation;
   item: Item.Implementation;
   ammunitionItem?: Item.Implementation;
@@ -910,11 +935,7 @@ export interface Activity extends AnyMutableObject {
       }
     }[];
   };
-  effects: {
-    _id: string;
-    get effect(): ActiveEffect.Implementation | undefined;
-    onSave?: boolean;
-  }[];
+  effects: ActivityEffectData[];
   attack?: {
     ability: string;
     bonus: string;
