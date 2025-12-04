@@ -5589,7 +5589,7 @@ export class Workflow {
         newRolls = rollResults[target.document.uuid];
         if (newRolls[0] instanceof Roll) {
           saveRolls = newRolls;
-          saveRollTotal = newRolls.reduce((acc, r) => acc + r.total!, 0);
+          saveRollTotal = newRolls.reduce((acc, r) => acc + (r?.total ?? 0), 0);
           saved = saveRollTotal >= resultDC;
           const dterm = saveRolls[0].terms[0] as foundry.dice.terms.DiceTerm;
           const diceRoll = dterm?.results?.find(result => result.active)?.result ?? saveRollTotal;
