@@ -108,12 +108,18 @@ export async function bonusCheck(actor: Actor.Implementation, result: Roll, cate
       if (detail.startsWith("fail")) title = "Failed Save Check";
       else if (category.startsWith("check")) title = i18nFormat("DND5E.AbilityPromptTitle", { ability: GameSystemConfig.abilities[detail].label ?? "" });
       else if (category.startsWith("save")) title = i18nFormat("DND5E.SavePromptTitle", { ability: GameSystemConfig.abilities[detail].label ?? "" });
-      else if (category.startsWith("skill")) title = i18nFormat("DND5E.SkillPromptTitle", { skill: GameSystemConfig.skills[detail].label ?? "" });
+      else if (category.startsWith("skill")) title = i18nFormat("DND5E.SkillPromptTitle", { 
+        ability: GameSystemConfig.abilities[actor.system.skills[detail]?.ability]?.label ?? "",
+        skill: GameSystemConfig.skills[detail].label ?? "" 
+      });
     } else {
       if (detail.startsWith("fail")) title = "Failed Save Check";
       else if (category.startsWith("check")) title = i18nFormat("DND5E.AbilityPromptTitle", { ability: GameSystemConfig.abilities[detail] ?? "" });
       else if (category.startsWith("save")) title = i18nFormat("DND5E.SavePromptTitle", { ability: GameSystemConfig.abilities[detail] ?? "" });
-      else if (category.startsWith("skill")) title = i18nFormat("DND5E.SkillPromptTitle", { skill: GameSystemConfig.skills[detail] ?? "" });
+      else if (category.startsWith("skill")) title = i18nFormat("DND5E.SkillPromptTitle", { 
+        ability: GameSystemConfig.abilities[actor.system.skills[detail]?.ability] ?? "",
+        skill: GameSystemConfig.skills[detail] ?? "" 
+      });
     }
 
     const displayBonusRolls: boolean = !!(bonusFlags.reduce((returnValue: boolean | undefined, flag: string) => returnValue || (foundry.utils.getProperty(actor ?? {}, `${flag}.displayBonusRolls`) as boolean | undefined), undefined)
