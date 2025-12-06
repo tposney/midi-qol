@@ -476,7 +476,8 @@ export let MidiActivityMixin = Base => {
         message.workflow = usage.workflow; // TODO: remove hack to allow card config processing
         usage.workflow!.systemCard = message.systemCard;
         if ((activity.midiProperties?.rollMode ?? "default") !== "default") message.rollMode = activity.midiProperties!.rollMode;
-        if (activity.midiProperties?.skipConcentrationCheck) await this.actor.setFlag(MODULE_ID, "skipConcentrationCheck", true);
+        if (activity.midiProperties?.skipConcentrationCheck && activity.consumption.targets.some(t => t.target === "attributes.hp.value")) 
+          await this.actor.setFlag(MODULE_ID, "skipConcentrationCheck", true);
         if (item.parent) await removeFlanking(item.parent);
         // config.midiOptions.workflowOptions.targetConfirmation ??= this.forcedTargetConfirmation;
         if (!usage.workflow) return undefined;
