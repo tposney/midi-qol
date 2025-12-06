@@ -1334,6 +1334,10 @@ function createConcentrationEffectData(this: ActiveEffect.Implementation, wrappe
 }
 
 export async function challengeConcentration(this: Actor.Implementation, wrapped, { dc = 10, ability = null } = {}) {
+  if (this.getFlag(MODULE_ID, "skipConcentrationCheck")) {
+    await this.unsetFlag(MODULE_ID, "skipConcentrationCheck");
+    return;
+  }
   if (["chatOnly"].includes(configSettings.doConcentrationCheck))
     return wrapped({ dc, ability });
   // @ts-expect-error no dnd5e-types
