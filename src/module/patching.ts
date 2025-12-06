@@ -92,6 +92,7 @@ export function collectBonusFlags(actor: Actor.Implementation, category: string,
 }
 
 export async function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail = "", messageData: any = {}): Promise<Roll> {
+  detail ||= foundry.utils.getProperty(messageData, "flags.dnd5e.roll.type"); // death saves -> "death", tool checks -> "tool"
   let bonusFlags = collectBonusFlags(actor, category, detail);
   if (bonusFlags.length > 0) {
     const data = {
@@ -646,7 +647,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
         const failAbilityFlagsLength = collectBonusFlags(this, rollType, `fail.${abilityId}`).length
         if (failFlagsLength || failAbilityFlagsLength) {
           // If the roll fails and there is an flags.midi-qol.save.fail then apply the bonus
-          result[0] = await bonusCheck(this, result[0], rollType, failAbilityFlagsLength ? `fail.${abilityId}` : "fail.all");
+          result[0] = await bonusCheck(this, result[0], rollType, failAbilityFlagsLength ? `fail.${abilityId}` : "fail.all", message.data);
         }
       }
     }
@@ -1440,7 +1441,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     if (result) {
       await displayDSNForRoll(result, "toolCheck", rollMode);
       DSNMarkDiceDisplayed(result);
-      result![0] = await bonusCheck(this, result![0], "check", config.ability ?? "");
+      result![0] = await bonusCheck(this, result![0], "check", config.ability ?? "", message.data);
       DSNMarkDiceDisplayed(result);
     }
     if (!result) return result;
