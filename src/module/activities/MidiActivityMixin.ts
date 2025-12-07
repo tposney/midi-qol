@@ -540,8 +540,8 @@ export let MidiActivityMixin = Base => {
           Workflow.removeWorkflow(usage.workflow?.id);
           return false;
         }
-        if (this.actor.getFlag(MODULE_ID, "skipConcentration"))
-          await this.actor.unsetFlag(MODULE_ID, "skipConcentration");
+        if (this.actor.getFlag(MODULE_ID, "skipConcentrationCheck"))
+          await this.actor.unsetFlag(MODULE_ID, "skipConcentrationCheck");
         if (!useResults) { // activity use was aborted
           Workflow.removeWorkflow(usage.workflow?.id);
           return false;
