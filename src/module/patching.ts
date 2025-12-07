@@ -988,6 +988,7 @@ function removeMidiProperties(wrapped, ...args) {
             if (props.magicdam !== undefined) activity.midiProperties.magicDamage = props.magicdam;
             if (props.magiceffect !== undefined) activity.midiProperties.magicEffect = props.magiceffect;
             if (props.noConcentrationCheck !== undefined) activity.midiProperties.noConcentrationCheck = props.noConcentrationCheck;
+            if (props.skipConcentrationCheck !== undefined) activity.midiProperties.skipConcentrationCheck = props.skipConcentrationCheck;
             if (props.toggleEffect !== undefined) activity.midiProperties.toggleEffect = props.toggleEffect;
             if (props.ignoreTotalCover !== undefined) activity.midiProperties.ignoreFullCover = props.ignoreFullCover;
           }
