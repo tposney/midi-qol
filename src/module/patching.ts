@@ -92,7 +92,7 @@ export function collectBonusFlags(actor: Actor.Implementation, category: string,
 }
 
 export async function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail = "", messageData: any = {}): Promise<Roll> {
-  detail ||= foundry.utils.getProperty(messageData, "flags.dnd5e.roll.type"); // death saves -> "death", tool checks -> "tool"
+  detail ||= foundry.utils.getProperty(messageData, "flags.dnd5e.roll.type") as string; // death saves -> "death", tool checks -> "tool"
   let bonusFlags = collectBonusFlags(actor, category, detail);
   if (bonusFlags.length > 0) {
     const data = {

@@ -1,7 +1,7 @@
 ### 13.0.30
-* add ambientLight documents to those that can be dependents.
 * added support for simple cover 5e to calculate cover.
   - Since simple cover never returns full cover as an option you'll need to also enable line of sight checks (walls block ranged attacks) to avoid always being able to target tokens behind walls.
+* add ambientLight documents to those that can be dependents.
 
 ### 13.0.29
 * reducing tempHP will now trigger isDamaged macros - thanks @Bacon
