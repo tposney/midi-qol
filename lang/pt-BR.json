@@ -259,6 +259,7 @@
     "auto": "Automático",
     "autoDialog": "Rolar e Mostrar o Diálogo de Rolagem",
     "mtb": "Monk's Token Bar",
+    "ftb": "Flash Token Bar",
     "rer": "Ripper's Epic Rolls"
   },
   "midi-qol.playerRollSavesOptions": {
@@ -270,6 +271,7 @@
     "noneDialogBlind": "Rolar e Mostrar o Diálogo de Rolagem (Rolagem Cega)",
     "chat": "Mensagem do Chat",
     "mtb": "Monk's Token Bar",
+    "ftb": "Flash Token Bar",
     "rer": "Ripper's Epic Rolls"
   },
   "midi-qol.playerRollSavesOptionsReduced": {
@@ -476,6 +478,7 @@
   "midi-qol.CoverCalculationOptions": {
     "none": "Nenhum",
     "simbuls-cover-calculator": "Simbul's Cover Calculator",
+    "simplecover5e": "Simple Cover 5e",
     "levelsautocover": "Levels Auto Cover",
     "tokencover": "Alternative Token Cover",
     "tokenvisibility": "Alternative Token Visibility (descontinuado)"
