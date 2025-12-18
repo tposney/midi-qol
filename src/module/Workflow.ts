@@ -2471,7 +2471,8 @@ export class Workflow {
       // setup to process saving throws as generated
       let hookId = Hooks.on("renderChatMessageHTML", this.processSaveRoll.bind(this));
       let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
-      let flashId = Hooks.on("updateChatMessage", this.flashSavingCheck.bind(this));
+      //@ts-expect-error flash-rolls-5e custom hook
+      let flashId = Hooks.on("flash-rolls-5e.rollComplete", this.flashSavingCheck.bind(this));
       try {
         const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
         await this.checkSaves(saveDisplay !== "allShow");
@@ -2482,7 +2483,8 @@ export class Workflow {
       } finally {
         Hooks.off("renderChatMessageHTML", hookId);
         Hooks.off("updateChatMessage", monksId);
-        Hooks.off("updateChatMessage", flashId);
+        //@ts-expect-error flash-rolls-5e custom hook
+        Hooks.off("flash-rolls-5e.rollComplete", flashId);
       }
       if (debugEnabled > 1) debug("Check Saves: ", this.saveRequests, this.saveTimeouts, this.saves);
       if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length)
@@ -5385,7 +5387,7 @@ export class Workflow {
         disadvantage: flashRequests.some(r => r.disadvantage) || undefined,
         skipRollDialog: true,
         sendAsRequest: true,
-        groupRollId: foundry.utils.randomID(),
+        rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties!.rollMode : "roll",
         workflowId: this.id,
         itemCardUuid: this.itemCardUuid
       };
@@ -5762,101 +5764,20 @@ export class Workflow {
     return true;
   }
 
-  flashSavingCheck(message: ChatMessage.Implementation, update: ChatMessage.UpdateData, options: ChatMessage.Database.UpdateOptions, userId: string) {
-    if (debugEnabled > 0) debug(`flashSavingCheck | Hook triggered for message ${message.id}`);
+  flashSavingCheck(data: { actorUuid: string; roll: Roll.Any; total: number }) {
+    if (debugEnabled > 0) debug(`flashSavingCheck | Received roll for ${data.actorUuid}`, data);
+    if (debugEnabled > 0) debug(`flashSavingCheck | Available saveRequests keys:`, Object.keys(this.saveRequests));
 
-    const flashFlags = message.flags?.["flash-rolls-5e"];
-    if (!flashFlags?.rollData) {
-      if (debugEnabled > 0) debug(`flashSavingCheck | No flash-rolls-5e rollData found`);
-      return true;
+    const requestId = data.actorUuid;
+    if (!this.saveRequests[requestId]) {
+      if (debugEnabled > 0) debug(`flashSavingCheck | No pending request for ${requestId}`);
+      return;
     }
 
-    const rollData = flashFlags.rollData;
-    if (!rollData.results || !Array.isArray(rollData.results)) {
-      if (debugEnabled > 0) debug(`flashSavingCheck | No results array found`);
-      return true;
-    }
-
-    if (debugEnabled > 0) debug(`flashSavingCheck | Processing ${rollData.results.length} results`);
-
-    // Process each result in the roll data
-    for (const result of rollData.results) {
-      if (!result.rolled) continue; // Skip if not rolled yet
-      if (typeof result.total === 'undefined') continue; // Skip if no total
-
-      if (debugEnabled > 0) debug(`flashSavingCheck | Result:`, result);
-
-      // Try to find the matching request by actor UUID
-      // Flash Token Bar stores uniqueId which could be actor ID or token ID
-      let requestId: string | undefined;
-
-      // Try direct UUID match first
-      if (result.actorUuid && this.saveRequests[result.actorUuid]) {
-        requestId = result.actorUuid;
-        if (debugEnabled > 0) debug(`flashSavingCheck | Found by actorUuid: ${requestId}`);
-      }
-
-      // If no direct match, try looking up by uniqueId or actorId
-      if (!requestId) {
-        const id = result.uniqueId || result.actorId;
-        if (id) {
-          // Try as actor ID first
-          let actor = game.actors?.get(id) as Actor.Implementation | undefined;
-
-          // If not found, try as token ID (could be synthetic actor)
-          if (!actor) {
-            const token = canvas?.tokens?.get(id);
-            if (token?.actor) {
-              actor = token.actor as Actor.Implementation;
-            }
-          }
-
-          if (actor) {
-            requestId = actor.uuid;
-            if (debugEnabled > 0) debug(`flashSavingCheck | Found by ID lookup: ${id} -> ${requestId}`);
-          }
-        }
-      }
-
-      if (!requestId) {
-        if (debugEnabled > 0) warn(`flashSavingCheck | Could not find requestId for result`, result);
-        continue;
-      }
-
-      if (!this.saveRequests[requestId]) {
-        if (debugEnabled > 0) warn(`flashSavingCheck | No pending request for ${requestId}. Available:`, Object.keys(this.saveRequests));
-        continue;
-      }
-
-      // Create a basic roll object with the result
-      let roll: Roll.Any;
-      try {
-        // Flash Token Bar stores the full roll data
-        if (result.roll) {
-          roll = Roll.fromJSON(JSON.stringify(result.roll));
-        } else {
-          // Fallback: create a simple roll with the total
-          roll = new Roll(`${result.total}`);
-          //@ts-expect-error
-          roll._evaluated = true;
-          //@ts-expect-error
-          roll._total = result.total;
-        }
-      } catch (err) {
-        // Fallback: create a simple roll with the total
-        roll = new Roll(`${result.total}`);
-        //@ts-expect-error
-        roll._evaluated = true;
-        //@ts-expect-error
-        roll._total = result.total;
-      }
-
-      const func = this.saveRequests[requestId];
-      delete this.saveRequests[requestId];
-      if (debugEnabled > 0) debug(`flashSavingCheck | Resolving save for ${requestId} with roll total ${roll.total}`);
-      func(roll);
-    }
-    return true;
+    const func = this.saveRequests[requestId];
+    delete this.saveRequests[requestId];
+    if (debugEnabled > 0) debug(`flashSavingCheck | Resolving save for ${requestId} with roll total ${data.total}`);
+    func(data.roll);
   }
 
   async displayChatCardWithoutDamageDetail() {
@@ -7384,7 +7305,8 @@ export class TrapWorkflow extends Workflow {
     let hookId = Hooks.on("createChatMessage", this.processSaveRoll.bind(this));
     //        let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
     let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
-    let flashId = Hooks.on("updateChatMessage", this.flashSavingCheck.bind(this));
+    //@ts-expect-error flash-rolls-5e custom hook
+    let flashId = Hooks.on("flash-rolls-5e.rollComplete", this.flashSavingCheck.bind(this));
     try {
       const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
       await this.checkSaves(saveDisplay !== "allShow");
@@ -7394,7 +7316,8 @@ export class TrapWorkflow extends Workflow {
       Hooks.off("createChatMessage", hookId);
       //          Hooks.off("renderChatMessage", brHookId);
       Hooks.off("updateChatMessage", monksId);
-      Hooks.off("updateChatMessage", flashId);
+      //@ts-expect-error flash-rolls-5e custom hook
+      Hooks.off("flash-rolls-5e.rollComplete", flashId);
     }
     if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length);
     const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;

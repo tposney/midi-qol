@@ -884,7 +884,7 @@ function flashTokenBarSaves(data: {
   disadvantage: boolean | undefined;
   skipRollDialog: boolean;
   sendAsRequest: boolean;
-  groupRollId: string;
+  rollMode: string | undefined;
   workflowId: string;
   itemCardUuid: string;
 }) {
@@ -902,8 +902,9 @@ function flashTokenBarSaves(data: {
       advantage: data.advantage,
       disadvantage: data.disadvantage,
       skipRollDialog: data.skipRollDialog,
-      sendAsRequest: false, //data.sendAsRequest,
-      groupRollId: data.groupRollId
+      sendAsRequest: true,
+      rollMode: data.rollMode,
+      workflowId: data.workflowId
     });
   } else {
     error("flashTokenBarSaves | FlashAPI not found! Is flash-rolls-5e module active?");
