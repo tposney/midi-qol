@@ -110,7 +110,7 @@
     "autoFailSavesFriendly": false,
     "worldKeyMappings": false,
     "toggleOptionalRules": false,
-    "saveDROrder": "DRSavedr",
+    "saveDROrder": "DRSaveDr",
     "fumbleSound": "sounds/dice.wav",
     "criticalSound": "sounds/dice.wav",
     "diceSound": "sounds/dice.wav",
