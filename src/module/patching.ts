@@ -1033,6 +1033,11 @@ export function initPatching() {
   if (f3 !== f4) {
     CONFIG.Token.documentClass = globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.Token.documentClass);
   }
+  const f5 = CONFIG.AmbientLight.documentClass.prototype.prepareData.toString();
+  const f6 = globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.AmbientLight.documentClass).prototype.prepareData.toString();
+  if (f5 !== f6) {
+    CONFIG.AmbientLight.documentClass = globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.AmbientLight.documentClass);
+  }
 }
 
 function dependentPrepareData(wrapped) {

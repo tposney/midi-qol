@@ -278,10 +278,10 @@ export async function applyTokenDamage(
     if (saved) {
       saveMultiplier = getSaveMultiplierForItem(item, "defaultDamage");
     }
-/*    if (superSaver && getSaveMultiplierForItem(item, "defaultDamage") === configSettings.defaultSaveMultiplier) {
-      saveMultiplier = saves.has(token) ? 0 : configSettings.defaultSaveMultiplier;
-    }
-*/
+    /*    if (superSaver && getSaveMultiplierForItem(item, "defaultDamage") === configSettings.defaultSaveMultiplier) {
+          saveMultiplier = saves.has(token) ? 0 : configSettings.defaultSaveMultiplier;
+        }
+    */
 
     if (semiSuperSaver && saved) {
       saveMultiplier = 0;
@@ -2435,6 +2435,28 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
           console.log("midi-qol | ComputeCover Bonus - For token ", attacker.name, " attacking ", target.name, " cover data is ", coverBonus, coverData)
         }
         break;
+      case "simplecover5e":
+        //@ts-expect-error 
+        const api = game.modules.get("simplecover5e")?.api;
+        if (!installedModules.get("simplecover5e") || !api) coverBonus = 0;
+        else {
+          const coverLevel = api.getCover({attacker, target, scene: attacker.scene});
+          switch (coverLevel.cover) {
+            case "none":
+              coverBonus = 0;
+              break;
+            case "half":
+              coverBonus = HALF_COVER;
+              break;
+            case "threeQuarters":
+              coverBonus = THREE_QUARTERS_COVER;
+              break;
+            default:
+              coverBonus = FULL_COVER;
+          }
+        };
+        break;
+
       case "tokencover":
         if (!installedModules.get("tokencover")) coverBonus = 0;
         else {
@@ -3726,7 +3748,7 @@ export function getOptionalCountRemaining(actor: Actor.Implementation, flag: str
     // return await hasUsedReaction(actor)
     return actor.flags?.[MODULE_ID]?.actions?.reactionCombatRound && needsReactionCheck(actor) ? 0 : 1;
   } else if (countValue === "bonusAction") {
-    return actor.flags?.[MODULE_ID]?.actions?.bonusActionCombatRound && needsBonusActionCheck(actor) ? 0 : 1; 
+    return actor.flags?.[MODULE_ID]?.actions?.bonusActionCombatRound && needsBonusActionCheck(actor) ? 0 : 1;
   } else if (countValue === "every") return 1;
   else if (countValue.startsWith("ActivityUses.")) return getOptionalActivityUsesActivityMatch(actor, countValue, false);
   else if (countValue.startsWith("ItemUses.")) return getOptionalItemUsesItemMatch(actor, countValue, false);
@@ -4692,7 +4714,7 @@ function collectActivityDamageTypes(
     return { defaultDamageType: {}, damageTypes: {} };
   }
   const returnDamageTypes = {};
-  let returnDefaultDamageType: {type?: boolean} | undefined = undefined;
+  let returnDefaultDamageType: { type?: boolean } | undefined = undefined;
 
   const partTypes = (part: any) => {
     if (part.types.size > 1) console.debug("MidiQOL collectActivityDamageTypes: Multiple damage types available for selection; cannot properly evaluate; damageTypes will grab the first of multiple ones");

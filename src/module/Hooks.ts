@@ -780,6 +780,19 @@ Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
     if (configSettings.saveDROrder === "SaveDrDR" && options?.ignore !== true) {
       if (!applyDamageReduction(actor, damages, options)) return false;
     }
+    // correct for possibly excessive damage modification - due to midi dm happening before the per type dm
+    //@ts-expect-error
+    if (damages.amount < 0) {
+      for (let damage of damages) {
+        if (damage.type === "none" && damage.active?.DR) {
+          //@ts-expect-error
+          damage.value -= damages.amount;
+          //@ts-expect-error
+          damages.amount = 0;
+          break;
+        }
+      }
+    }
     if (Hooks.call("midi-qol.dnd5eCalculateDamage", actor, damages, options) === false) return false;
   } catch (err) {
     error(err);
@@ -949,25 +962,8 @@ function applyDamageReduction(actor: Actor.Implementation, damages: DamageDescri
   return true;
 }
 
-// function recalculateDamage(actor, amount, updates, options) {
-//   const hpMax = Math.floor(actor?.system?.attributes?.hp?.max ?? 0);
-//   const hpTemp = updates["system.attributes.hp.temp"] ?? 0;
-//   const startHP = actor?.system?.attributes?.hp?.value ?? 0;
-//   const updatedHP = updates["system.attributes.hp.value"] ?? startHP;
-//   // How much damage was applied to the actor's hp - after temp hp was applied
-//   const hpDamage = Math.max(0, startHP - (updates["system.attributes.hp.value"] ?? startHP));
-//   // how much temp damage applied to the new hpTemp value
-//   const newAppliedTemp = Math.min(hpTemp, hpDamage, hpMax - updatedHP);
-//   const newHpTemp = hpTemp - newAppliedTemp;
-//   const newHpValue = Math.max(0, updatedHP + newAppliedTemp);
-
-//   updates['system.attributes.hp.temp'] = newHpTemp
-//   updates['system.attributes.hp.value'] = newHpValue
-// }
-
 Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
   if (updates["system.attributes.hp.temp"]) updates["system.attributes.hp.temp"] = Math.floor(updates["system.attributes.hp.temp"]);
-  // recalculateDamage(actor, amount, updates, options);
   const vitalityResource = checkRule("vitalityResource");
   if (foundry.utils.getProperty(updates, "system.attributes.hp.value") === 0 && typeof vitalityResource === "string" && foundry.utils.getProperty(actor, vitalityResource) !== undefined) {
     // actor is reduced to zero so update vitaility resource

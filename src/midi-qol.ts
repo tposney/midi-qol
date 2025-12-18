@@ -453,6 +453,14 @@ Hooks.once('setup', function () {
   setupMidiQOLApi();
 });
 
+Hooks.once("ready", () => {
+  // can't hook off simple cover ready as it fires too early to be able to call api.setLibraryMode
+  if (configSettings.optionalRules.coverCalculation === "simplecover5e" && game.modules.get("simplecover5e")?.active) {
+    //@ts-expect-error
+    game.modules.get("simplecover5e")?.api?.setLibraryMode(true);
+  }
+})
+
 function addConfigOptions() {
 
   let config = GameSystemConfig ?? {};

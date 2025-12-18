@@ -478,6 +478,7 @@
   "midi-qol.CoverCalculationOptions": {
     "none": "None",
     "simbuls-cover-calculator": "Simbul's Cover Calculator",
+    "simplecover5e": "Simple Cover 5e",
     "levelsautocover": "Levels Auto Cover",
     "tokencover": "Alternative Token Cover",
     "tokenvisibility": "Alternative Token Visibility - deprecated"

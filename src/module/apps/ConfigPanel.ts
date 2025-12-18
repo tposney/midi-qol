@@ -85,7 +85,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     let wallsBlockRangeOptions = foundry.utils.duplicate(wallsBlockRangeOptionsNew);
     let CoverCalculationOptions = foundry.utils.duplicate(coverCalculationOptions);
-    [{ id: "levelsautocover", name: "'Levels Auto Cover'" }, { id: "simbuls-cover-calculator", name: "'Simbuls Cover Calculator'" }, { id: "tokencover", name: "Alternative Token Cover" }].forEach(module => {
+    [{ id: "levelsautocover", name: "'Levels Auto Cover'" }, { id: "simbuls-cover-calculator", name: "'Simbuls Cover Calculator'" }, { id: "simplecover5e", name: "'Simple Cover 5e'" }, { id: "tokencover", name: "'Alternative Token Cover'" }].forEach(module => {
       if (!installedModules.get(module.id)) {
         wallsBlockRangeOptions[module.id] = `${i18n(wallsBlockRangeOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
         CoverCalculationOptions[module.id] = `${i18n(CoverCalculationOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;

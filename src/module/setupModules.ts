@@ -29,6 +29,7 @@ export const USEFUL_MODULE_VERSIONS = {
   "ready-set-roll-5e": "3.4.3",
   "seasons-and-stars": "0.11.0",
   "simbuls-cover-calculator":  "1.0.2",
+  "simplecover5e": "1.2.0",
   "socketlib": "0.0",
   "times-up": "13.0.0",
   "tokencover": "0.6.0",
