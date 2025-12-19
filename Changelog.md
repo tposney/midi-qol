@@ -1,3 +1,6 @@
+### 13.0.31
+* Improved support for flash rolls saving throws - thanks @carolingian - not yet fully tested so use with caution
+
 ### 13.0.30
 * added support for simple cover 5e to calculate cover.
   - Since simple cover never returns full cover as an option you'll need to also enable line of sight checks (walls block ranged attacks) to avoid always being able to target tokens behind walls.
