@@ -20,10 +20,10 @@ It has LOTS of configuration options which can be daunting.
 ## Available versions
 
 - MidiQOL **v11.4.48** is compatible with dnd5e up to **v3.2.x** and Foundry **v12** (as all the versions mentioned below).
-- MidiQOL **v11.6.x** is compatible with dnd5e **v3.3.x**.
-- MidiQOL **12.4.27+** requires foundry 12 and is compatible with dnd5e 4.2+.
-- MidiQOL **13.0.16** requires foundry 12 and is compatible with dnd5e 4.2+.
-- MidiQOL **13.0.29+** is compatible with dnd5e 5.2.x.
+- MidiQOL **v11.6.x** is compatible with dnd5e **v3.3.x** ([manifest url](https://gitlab.com/tposney/midi-qol/raw/v11.6/package/module.json)).
+- MidiQOL **12.4.27+** requires foundry 12 and is compatible with dnd5e 4.2+ ([manifest url](https://gitlab.com/tposney/midi-qol/raw/v12dnd4/package/module.json)).
+- MidiQOL **13.0.16** requires foundry 13 and is compatible with dnd5e 5.0.4+.
+- MidiQOL **13.0.29+** is compatible with dnd5e 5.2.x ([manifest url](https://gitlab.com/tposney/midi-qol/raw/v13/package/module.json))
 
 # Bug reports
 **Important** When submitting a bug report ALWAYS include either:
