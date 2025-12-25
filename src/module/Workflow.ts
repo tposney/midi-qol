@@ -2772,7 +2772,7 @@ export class Workflow {
                 delete effectData.duration.seconds;
               }
               effectData.origin = origin ?? this.activity.uuid ?? this.activity.item.uuid;
-              const concentrationUuid = this.chatCard?.getFlag("dnd5e", "use.concentrationId");
+              const concentrationUuid = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId")??"")?.uuid;
               if (concentrationUuid) {
                 foundry.utils.setProperty(effectData, "flags.dnd5e.dependentOn", concentrationUuid);
               }
@@ -2852,7 +2852,7 @@ export class Workflow {
           }
           const effectData: ActiveEffect.CreateData = foundry.utils.mergeObject(ceEffect!.toObject(), metaData);
           effectData.origin = origin;
-          const concentrationUuid = this.chatCard?.getFlag("dnd5e", "use.concentrationId");
+          const concentrationUuid = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId")??"")?.uuid;
           if (concentrationUuid) {
             foundry.utils.setProperty(effectData, "flags.dnd5e.dependentOn", concentrationUuid);
           }
@@ -3099,7 +3099,7 @@ export class Workflow {
     // @ts-expect-error no dnd5e-types
     let hasConcentration: boolean = this.item.requiresConcentration;
     const template = fromUuidSync(this.templateUuid) as MeasuredTemplateDocument | null;
-    const concentrationUuid = this.chatCard?.getFlag("dnd5e", "use.concentrationId");
+    const concentrationUuid = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid;
     if (hasConcentration && template && concentrationUuid) {
       template.setFlag("dnd5e", "dependentOn", concentrationUuid);
     } else if (installedModules.get("dae") && activityHasAreaTarget(this.activity) && template
