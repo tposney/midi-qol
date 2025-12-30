@@ -5381,7 +5381,7 @@ export class Workflow {
       const flashRequest = {
         requestType: flashRequestType,
         rollKey: flashRollKey,
-        actorIds: flashRequests.map(request => request.actorId),
+        actorIds: flashRequests.map(request => request.token),
         dc: rollDC,
         advantage: flashRequests.some(r => r.advantage) || undefined,
         disadvantage: flashRequests.some(r => r.disadvantage) || undefined,
