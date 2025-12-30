@@ -1,5 +1,5 @@
 ### 13.0.31
-* Improved support for flash rolls saving throws - thanks @carolingian - not yet fully tested so use with caution
+* Improved support for flash rolls saving throws - thanks @carolingian - not yet fully tested so use with caution.
 
 ### 13.0.30
 * added support for simple cover 5e to calculate cover.

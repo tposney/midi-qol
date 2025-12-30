@@ -1023,22 +1023,15 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
   libWrapper.register(MODULE_ID, "dnd5e.applications.actor.BaseActorSheet.prototype._prepareItem", _prepareItem, "WRAPPER");
   // setup MeasuredTemplateDocument and TokenDocument to be dependent documents
-  // very kludgy test to see if they are already patched
-  const f1 = CONFIG.MeasuredTemplate.documentClass.prototype.prepareData.toString();
-  const f2 = globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.MeasuredTemplate.documentClass).prototype.prepareData.toString();
-  if (f1 !== f2) {
-    CONFIG.MeasuredTemplate.documentClass = globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.MeasuredTemplate.documentClass);
-  }
-  const f3 = CONFIG.Token.documentClass.prototype.prepareData.toString();
-  const f4 = globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.Token.documentClass).prototype.prepareData.toString();
-  if (f3 !== f4) {
-    CONFIG.Token.documentClass = globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.Token.documentClass);
-  }
-  const f5 = CONFIG.AmbientLight.documentClass.prototype.prepareData.toString();
-  const f6 = globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.AmbientLight.documentClass).prototype.prepareData.toString();
-  if (f5 !== f6) {
-    CONFIG.AmbientLight.documentClass = globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.AmbientLight.documentClass);
-  }
+  class MidiMeasuredTemplateDocument extends globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.MeasuredTemplate.documentClass) {};
+  //@ts-expect-error
+  CONFIG.MeasuredTemplate.documentClass = MidiMeasuredTemplateDocument;
+  class MidiTokenDocument extends globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.Token.documentClass) {};
+  //@ts-expect-error
+  CONFIG.Token.documentClass = MidiTokenDocument;
+  class MidiAmbientLightDocument extends globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.AmbientLight.documentClass) {};
+  //@ts-expect-error
+  CONFIG.AmbientLight.documentClass = MidiAmbientLightDocument;
 }
 
 function dependentPrepareData(wrapped) {
