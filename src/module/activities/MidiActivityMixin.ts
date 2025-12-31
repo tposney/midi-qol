@@ -13,7 +13,7 @@ import {
   checkRule,
   configSettings,
   confirmTargetOptions,
-  ignoreTraitsOptions,
+  getIgnoreTraitsOptions,
   removeButtonsOptions,
   safeGetGameSetting,
   targetConfirmation,
@@ -1725,8 +1725,8 @@ export let MidiActivityMixinSheet = Base => {
         context.triggeredActivityRollAsOptions = context.triggeredActivityRollAsOptions.filter(o => o.value === "self");
         // adjust target list
       }
-      context.ignoreTraitsOptions = Object.entries(ignoreTraitsOptions).map(([value, entry]) => {
-        return { value, label: entry.label, selected: this.activity.midiProperties.ignoreTraits.has(value) }
+      context.ignoreTraitsOptions = getIgnoreTraitsOptions().map((option) => {
+        return { ...option, selected: this.activity.midiProperties.ignoreTraits.has(option.value) }
       });
       context.AutoTargetTypeOptions = Object.entries(aoeTargetTypeOptions).map(([value, label]) => ({ value, label }));
       const AutoCEEffectsOptions = Object.entries(autoCEEffectsOptions).map(([value, label]) => ({ value, label }));

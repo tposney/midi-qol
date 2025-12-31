@@ -184,8 +184,8 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
       const maxValue = (maxFlags.skill && maxFlags.skill.all);
       const minFlags = this.flags?.[MODULE_ID]?.min ?? {};
       const minValue = (minFlags.skill && minFlags.skill.all);
-      config.advantage ||= config.midiOptions.advantage;
-      config.disadvantage ||= config.midiOptions.disadvantage;
+      config.advantage ??= config.midiOptions.advantage;
+      config.disadvantage ??= config.midiOptions.disadvantage;
       preRollSkillHookId = Hooks.once("dnd5e.preRollSkill", (config, dialog, message) => {
         message.data ??= {};
         if (overtimeActorUuid) message.data["flags.midi-qol.overtimeActorUuid"] = overtimeActorUuid;
@@ -572,9 +572,6 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     await procAbilityAdvantage(this, rollType, abilityId ?? "", config.midiOptions);
 
     type = rollType === "save" ? "SavingThrow" : "AbilityCheck";
-    if (overtimeActorUuid)
-      message.data["flags.midi-qol.overtimeActorUuid"] = overtimeActorUuid;
-
     let success: boolean | undefined;
     if (success === undefined) {
       const saveCreate = message.create;
@@ -583,8 +580,8 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
       const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId]));
       const minFlags = this.flags?.[MODULE_ID]?.min?.ability ?? {};
       const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId]));
-      config.advantage ||= config.midiOptions.advantage;
-      config.disadvantage ||= config.midiOptions.disadvantage;
+      config.advantage ??= config.midiOptions.advantage;
+      config.disadvantage ??= config.midiOptions.disadvantage;
       preRollAbilityHookId = Hooks.once(`dnd5e.preRoll${type}`, (config, dialog, message) => {
         if (procAutoFail(this, rollType, abilityId ?? "")) {
           // auto failing roll - replace roll with a single d20 roll with a max of 1
@@ -638,6 +635,10 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     await displayDSNForRoll(result, rollType, rollMode);
     DSNMarkDiceDisplayed(result);
     foundry.utils.mergeObject(message.data, { "flags": config.flags ?? {} });
+    // Set overtimeActorUuid AFTER message object is replaced by hook and merged
+    if (overtimeActorUuid) {
+      foundry.utils.setProperty(message.data, "flags.midi-qol.overtimeActorUuid", overtimeActorUuid);
+    }
     if (!config.midiOptions.simulate) {
       result[0] = await bonusCheck(this, result[0], rollType, abilityId, message.data);
       DSNMarkDiceDisplayed(result);
@@ -816,8 +817,8 @@ export async function procAbilityAdvantage(actor: Actor.Implementation, rollType
       }
     }
   }
-  options.advantage ||= withAdvantage;
-  options.disadvantage ||= withDisadvantage;
+  options.advantage ??= withAdvantage;
+  options.disadvantage ??= withDisadvantage;
   return options;
 }
 
@@ -984,8 +985,8 @@ function removeMidiProperties(wrapped, ...args) {
         for (let activity of Object.values(source.system.activities) as any[]) {
           if (activity.midiProperties) {      // can migrate the data
             if (props.confirmTargets !== undefined) activity.midiProperties.confirmTargets = props.confirmTargets;
-            if (props.autoFailFriendly === true && activity.friendlySave !== undefined) activity.midiProperties.friendlySave = "friendlySuccess";
-            if (props.autoSaveFriendly === true && activity.friendlySave !== undefined) activity.midiProperties.friendlySave = "friendlyFail";
+            if (props.autoFailFriendly === true && activity.friendlySave !== undefined) activity.friendlySave = "friendlyFail";
+            if (props.autoSaveFriendly === true && activity.friendlySave !== undefined) activity.friendlySave = "friendlySuccess";
             if (props.magicdam !== undefined) activity.midiProperties.magicDamage = props.magicdam;
             if (props.magiceffect !== undefined) activity.midiProperties.magicEffect = props.magiceffect;
             if (props.noConcentrationCheck !== undefined) activity.midiProperties.noConcentrationCheck = props.noConcentrationCheck;
@@ -1114,6 +1115,15 @@ export function actorPrepareData(this: Actor.Implementation, wrapped) {
 
 export function itemPrepareData(this: Item.Implementation, wrapped) {
   foundry.utils.setProperty(this, "flags.midi-qol.onUseMacroName", this._source.flags?.[MODULE_ID]?.onUseMacroName);
+  // Migrate PascalCase friendlySave values to camelCase
+  // @ts-expect-error
+  const activities = this.system?.activities;
+  if (activities) {
+    for (const activity of Object.values(activities) as any[]) {
+      if (activity.friendlySave === "FriendlyFail") activity.friendlySave = "friendlyFail";
+      else if (activity.friendlySave === "FriendlySuccess") activity.friendlySave = "friendlySuccess";
+    }
+  }
   if (debugEnabled > 0) for (let effect of this.effects) {
     for (let change of effect.changes) {
       if (change.key === "flags.midi-qol.onUseMacroName") {

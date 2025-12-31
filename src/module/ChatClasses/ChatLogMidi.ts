@@ -57,6 +57,7 @@ export class ChatLogMidi extends globalThis.dnd5e.applications.ChatLog5e {
     for (let i = targetIdx; i < lastIdx; i++) {
       const message = messages[i];
       if (!message.visible) continue;
+      if (message.logged) continue; // Skip already-rendered messages to prevent DOM duplication
       message.logged = true;
       try {
         //@ts-expect-error

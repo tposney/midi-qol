@@ -195,9 +195,9 @@ export function defineMidiCheckSheetClass(baseClass: any) {
     async _prepareEffectContext(context) {
       context = await super._prepareEffectContext(context);
       context.FriendlySaveOptions = [
-        { value: "default", label: i18n("midi-qol.SAVE.FriendlySave.Default") },
-        { value: "friendlySuccess", label: i18n("midi-qol.SAVE.FriendlySave.FriendlySuccess") },
-        { value: "friendlyFail", label: i18n("midi-qol.SAVE.FriendlySave.FriendlyFail") },
+        { value: "default", label: i18n("midi-qol.SAVE.friendlySave.default") },
+        { value: "friendlySuccess", label: i18n("midi-qol.SAVE.friendlySave.friendlySuccess") },
+        { value: "friendlyFail", label: i18n("midi-qol.SAVE.friendlySave.friendlyFail") },
       ];
       context.onSaveOptions = [
         { value: "none", label: i18n("DND5E.SAVE.FIELDS.damage.onSave.None") },

@@ -189,9 +189,9 @@ let defineMidiSaveSheetClass = (baseClass: any) => {
       await this.activity.prepareData({});
       const context = await super._prepareContext(options);
       context.FriendlySaveOptions = [
-        { value: "default", label: i18n("midi-qol.SAVE.FriendlySave.Default") },
-        { value: "friendlySuccess", label: i18n("midi-qol.SAVE.FriendlySave.FriendlySuccess") },
-        { value: "friendlyFail", label: i18n("midi-qol.SAVE.FriendlySave.FriendlyFail") },
+        { value: "default", label: i18n("midi-qol.SAVE.friendlySave.default") },
+        { value: "friendlySuccess", label: i18n("midi-qol.SAVE.friendlySave.friendlySuccess") },
+        { value: "friendlyFail", label: i18n("midi-qol.SAVE.friendlySave.friendlyFail") },
       ];
       return context;
     }

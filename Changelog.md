@@ -1,5 +1,48 @@
-### 13.0.31
+### 13.0.33
+* Midi-qol uses AI (Claude) for test and documentation generation and some bug fixes.
+
+**New Features:**
+* Expanded `ignoreTraits` to support individual damage types. You can now specify specific damage types to bypass:
+  - `idi.fire` - Ignore fire immunity only (other immunities still apply)
+  - `idr.cold` - Ignore cold resistance only
+  - `idv.lightning` - Ignore lightning vulnerability only
+  - `ida.necrotic` - Ignore necrotic absorption only
+  - The existing `idi`, `idr`, `idv`, `ida` flags still work to ignore ALL of that trait type
+  - Multiple types can be combined: setting both `idi.fire` and `idi.cold` ignores both fire and cold immunity
+
+**Bug Fixes:**
+* Fixed player damage card showing "0 Rolled" for healing. Now displays "+X Healing Rolled -> +X Healing Applied" for healing effects.
+* Fixed grants.noAdvantage/grants.noDisadvantage not working correctly for saves.
+* Fixed flanking advantage being applied when `checkFlanking` is not set to "advonly". Expects the status effect to provide advantage.
+* Fixed chat log DOM duplication when scrolling to the top after messages were deleted.
+* !382: Improve flash-rolls-5e integration for automatic saving throws (switch to flash-rolls-5e.rollComplete hook, use request.token for NPC matching) - thanks @carolingian
+* !380: Bugfix - edge cases for optional bonus check.all and save.all (tool checks and death saves now properly trigger optional bonuses) - thanks @Bacon
+
+**Translations:**
+* Updated pt-BR.json - thanks @Kharmans
+
+**Code Improvements:**
+* Refactored `checkSaves` into smaller helper methods for improved readability.
+* Expanded test coverage for saves, flanking, flanked status, and OverTime effects and moved tests to a new module.
+* Midi-qol now builds to a single .js file using esbuild bundler.
+* Source maps now show original TypeScript file structure in browser DevTools under `modules/midi-qol/src/`.
+* Replaced `eval()` dynamic class lookup with `WorkflowRegistry` object for better bundler compatibility.
+
+**Documentation:**
+* README.md revised to be current - WIP.
+* Updated MACROS.md to document `activity.use()` as the primary method for triggering workflows. Macros.md is a WIP so be warned.
+* Added FLAGS.md which documents midi flags that can be set.
+* Added `completeActivityUse` API documentation.
+* Improved OverTime effects documentation in README.md with examples.
+* Documented conditional expression evaluation including available data fields and helper functions.
+
+**Breaking Changes:**
+* Removed minor-qol backwards compatibility. `MinorQOL.doRoll`, `MinorQOL.applyTokenDamage`, and `"minor-qol.RollComplete"` hook are no longer supported. Use `activity.use()`, `MidiQOL.applyTokenDamage`, and `"midi-qol.RollComplete"` instead.
+
+### 13.0.32
 * Improved support for flash rolls saving throws - thanks @carolingian - not yet fully tested so use with caution.
+* Some cleanups from @michael and @thatlonelybugbear
+
 
 ### 13.0.30
 * added support for simple cover 5e to calculate cover.

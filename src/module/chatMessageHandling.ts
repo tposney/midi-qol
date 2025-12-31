@@ -40,7 +40,7 @@ export function checkOverTimeSaves(message: ChatMessage.Implementation, data: Ch
     actor = game.scenes?.get(message.speaker?.scene ?? "")?.tokens?.get(message.speaker.token)?.actor ?? actor;
   }
   if (!actor) return true;
-  const overtimeActorUuid = message.flags?.[MODULE_ID]?.overtimeActorUuid;
+  const overtimeActorUuid = data.flags?.[MODULE_ID]?.overtimeActorUuid;
   if (actor.uuid !== overtimeActorUuid) {
     if (overtimeActorUuid) {
       const overTimeActor = fromUuidSync(overtimeActorUuid) as Actor.Implementation | undefined;
@@ -58,7 +58,7 @@ export function checkOverTimeSaves(message: ChatMessage.Implementation, data: Ch
 
   try {
     let func = async (actor: Actor, rollFlags: any, roll: Roll) => {
-      for (let effect of actor.effects.filter(ef => ef.changes.some(change => change.key === "flags.midi-qol.OverTime"))) {
+      for (let effect of actor.effects.filter(ef => ef.changes.some(change => change.key.startsWith("flags.midi-qol.OverTime")))) {
         await doOverTimeEffect(actor, effect, true, { saveToUse: roll, rollFlags: data.flags?.dnd5e?.roll, isActionSave: true })
       }
     };

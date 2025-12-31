@@ -637,7 +637,7 @@ Hooks.once('ready', function () {
   });
 
   Hooks.callAll("midi-qol.midiReady");
-  setupMidiTests();
+  // setupMidiTests(); // Tests moved to separate midi-qol-tests module
 
   if (game.user?.isGM) { // need to improve the test
     const problems = TroubleShooter.collectTroubleShooterData().problems
@@ -650,7 +650,6 @@ Hooks.once('ready', function () {
   }
 });
 
-import { setupMidiTests } from './module/tests/setupTest.js';
 import { setupChatMessageMidi, ChatMessageMidi } from './module/ChatClasses/ChatMessageMidi.js';
 import { MidiSaveActivity, setupSaveActivity } from './module/activities/SaveActivity.js';
 import { MidiUtilityActivity, setupUtilityActivity } from './module/activities/UtilityActivity.js';

@@ -76,6 +76,7 @@ import {
   getActor,
   getRemoveAllButtons,
   requestPCSave,
+  pcSaveOptions,
   addUpdatesCache,
   addUpdatesCacheFlags,
   MidiOptions,
@@ -90,7 +91,7 @@ import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
 import { postTemplateConfirmTargets, selectTargets, templateTokens } from "./activities/activityHelpers.js";
-import { Activity, ActivitySave, ActivityCheck, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData } from "../globals.js";
+import { Activity, ActivitySave, ActivityCheck, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
 import { MidiTransformActivity } from "./activities/TransformActivity.js";
@@ -638,8 +639,8 @@ export class Workflow {
 
       const [className, currentActionName] = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.currentAction) ?? ["none", "none"];
       if (className !== "none") {
-        const actionClass = eval(className);
-        if (actionClass === Workflow || actionClass.prototype instanceof Workflow) {
+        const actionClass = WorkflowRegistry[className];
+        if (actionClass && (actionClass === Workflow || actionClass.prototype instanceof Workflow)) {
           const action = actionClass?.prototype[currentActionName];
           if (action) {
             this.#currentAction = action;
@@ -2459,6 +2460,7 @@ export class Workflow {
     }
     this.failedSaves = new Set(this.hitTargets);
     if (!this.hasSave) {
+      this.initSaveResults();  // Ensure saveResults is initialized even without a save
       return this.WorkflowState_SavesComplete;
     }
     await this.displaySaveTargets();
@@ -3340,8 +3342,8 @@ export class Workflow {
   };
 
   public async checkAttackAdvantage() {
-    const flankingStatus = await this.checkFlankingAdvantage();
-    if (flankingStatus) this.advantage = true;
+    await this.checkFlankingAdvantage();
+    if (this.flankingAdvantage) this.advantage = true;
     if (!this.needsAttackAdvantageCheck) return;
     this.needsAttackAdvantageCheck = false;
 
@@ -4860,36 +4862,473 @@ export class Workflow {
   }
 
   /**
-   * update this.saves to be a Set of successful saves from the set of tokens this.hitTargets and failed saves to be the complement
+   * Gets an auto-roll for a friendly target if applicable
+   * @param saveDetails The save details object with isFriendly flag
+   * @returns A promise that resolves to a roll if the target should auto-pass/fail, null otherwise
    */
-  async checkSaves(whisper = false, simulate = false) {
-    this.initSaveResults();
-    this.saveRolls = [];
-    this.tokenSaves = {};
-    if (debugEnabled > 1) debug(`checkSaves: whisper ${whisper}  hit targets ${this.hitTargets}`)
-    if (this.hitTargets.size <= 0 && this.hitTargetsEC.size <= 0) {
-      this.saveDisplayFlavor = `<span>${i18n("midi-qol.noSaveTargets")}</span>`
-      return;
-    }
-
-    if (!this.saveActivity) return;
-    const allHitTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
-    if (allHitTargets.size === 0) return;
-    let rollDC = this.saveActivity?.save?.dc.value ?? this.saveActivity?.check?.dc.value;
-    //@ts-expect-error 
-    const D20Roll = CONFIG.Dice.D20Roll as typeof Roll;
+  protected getFriendlyTargetRoll(
+    saveDetails: { isFriendly: boolean }
+  ): Promise<Roll> | null {
     //@ts-expect-error
     const BasicRoll = CONFIG.Dice.BasicRoll as typeof Roll;
 
-    this.saveDC = rollDC;
-    const requestCards: Array<Promise<ChatMessage | undefined> | undefined> = [];
-    let promises: Promise<Roll[] | Roll | null>[] = [];
-    let rollAction: (config?: AnyObject, dialog?: AnyObject, message?: AnyObject) => Promise<Roll[] | null>;
-    let rollType: string | undefined; // save/check/skill/tool
+    if (!saveDetails.isFriendly) return null;
+
+    // Check for auto-fail on friendly targets
+    // @ts-expect-error no dnd5e-types
+    const descriptionIncludesAutoFail = this.item.system.description?.value?.toLowerCase().includes(i18n("midi-qol.autoFailFriendly")?.toLowerCase());
+    if (descriptionIncludesAutoFail || this.activity.friendlySave === "friendlyFail") {
+      return new BasicRoll("-1").evaluate();
+    }
+
+    // Check for auto-success on friendly targets
+    if (this.activity.friendlySave === "friendlySuccess") {
+      return new BasicRoll("99").evaluate();
+    }
+
+    return null;
+  }
+
+  /**
+   * Gets the portrait image for a target token
+   * Handles player portrait preference and video thumbnail generation
+   * @param target The target token
+   * @returns Promise resolving to the image URL string
+   */
+  protected async getTargetPortraitImage(target: Token): Promise<string> {
+    const targetDocument = target.document;
+    let img = targetDocument.texture.src ?? target.actor?.img ?? "";
+
+    // @ts-expect-error no dnd5e-types
+    if (configSettings.usePlayerPortrait && target.actor?.type === "character") {
+      img = target.actor.img ?? targetDocument.texture.src ?? "";
+    }
+
+    if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
+      img = await game.video?.createThumbnail(img, { width: 100, height: 100 }) ?? "";
+    }
+
+    return img;
+  }
+
+  /**
+   * Checks if target should auto-succeed due to Sculpt Spells or Careful Spells features
+   * Sculpt Spells: Evocation wizard feature - pre-selected targets auto-succeed on saves
+   * Careful Spells: Sorcerer metamagic - pre-selected targets auto-succeed on saves
+   * @param target The target token to check
+   * @returns true if target should auto-succeed, false otherwise
+   */
+  protected checkSculptOrCarefulSpells(target: Token): boolean {
+    // Sculpt Spells: Evocation spells auto-succeed for pre-selected targets (adds to superSavers)
+    // @ts-expect-error no dnd5e-types - accessing .school property
+    const isEvocationSpell = this.activity.item?.system.school === "evo";
+    if (this.actor.flags?.[MODULE_ID]?.sculptSpells &&
+        (this.rangeTargeting || this.tempTargetConfirmation) &&
+        isEvocationSpell &&
+        this.preSelectedTargets.has(target)) {
+      this.superSavers.add(target);
+      return true;
+    }
+
+    // Careful Spells: Pre-selected targets auto-succeed
+    if (this.actor.flags?.[MODULE_ID]?.carefulSpells &&
+        (this.rangeTargeting || this.tempTargetConfirmation) &&
+        this.preSelectedTargets.has(target)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Applies concentration save bonus if applicable
+   * Only applies when item has isConcentrationCheck flag and target has concentrationSaveBonus
+   * @param target The target token
+   * @param saveRoll The original save roll
+   * @param resultDC The save DC
+   * @param isCritical Whether the roll was a critical
+   * @param isFumble Whether the roll was a fumble
+   * @returns Updated roll info or null if no bonus applies
+   */
+  protected async applyConcentrationSaveBonus(
+    target: Token,
+    saveRoll: Roll,
+    resultDC: number,
+    isCritical: boolean,
+    isFumble: boolean
+  ): Promise<{ saveRoll: Roll, saveRollTotal: number, saved: boolean } | null> {
+    if (!this.item.flags?.[MODULE_ID]?.isConcentrationCheck) return null;
+
+    const checkBonus = target.actor?.flags?.[MODULE_ID]?.concentrationSaveBonus;
+    if (!checkBonus) return null;
+
+    //@ts-expect-error
+    const D20Roll = CONFIG.Dice.D20Roll as typeof Roll;
+    const rollBonus = await new D20Roll(`${checkBonus}`, target.actor?.getRollData()).evaluate();
+    const newSaveRoll = addRollTo(saveRoll, rollBonus);
+    const newSaveRollTotal = newSaveRoll.total!;
+
+    let saved = newSaveRollTotal >= resultDC;
+    if (checkRule("criticalSaves")) {
+      saved = (isCritical || newSaveRollTotal >= resultDC) && !isFumble;
+    }
+
+    return { saveRoll: newSaveRoll, saveRollTotal: newSaveRollTotal, saved };
+  }
+
+  /**
+   * Builds and stores save display entry for a target
+   * Handles advantage/disadvantage display, cover bonus, and roll rendering
+   * @param target The target token
+   * @param saveRoll The save roll result
+   * @param saveRollTotal The total of the save roll
+   * @param saved Whether the target saved
+   * @param rollDC The save DC (or undefined if no DC)
+   * @param coverSaveBonus Cover bonus applied to the save
+   */
+  protected async buildSaveDisplayEntry(
+    target: Token,
+    saveRoll: Roll,
+    saveRollTotal: number,
+    saved: boolean,
+    rollDC: number | undefined,
+    coverSaveBonus: number
+  ): Promise<void> {
+    let adv = "";
+    if (configSettings.displaySaveAdvantage) {
+      adv = this.advantageSaves.has(target) ? `(${i18n("DND5E.Advantage")})` : "";
+      if (this.disadvantageSaves?.has(target)) adv = `(${i18n("DND5E.Disadvantage")})`;
+    }
+    if (coverSaveBonus) adv += `(+${coverSaveBonus} Cover)`;
+
+    const img = await this.getTargetPortraitImage(target);
+    const isPlayerOwned = target.actor?.hasPlayerOwner ?? false;
+
+    const rollHTML = await midiRenderRoll(saveRoll);
+    this.saveRolls.push(saveRoll);
+    const targetDocUuid = getTokenDocument(target)?.uuid ?? "none";
+    if (this.tokenSaves) this.tokenSaves[targetDocUuid] = saveRoll;
+
+    this.saveDisplayData?.push({
+      gmName: getTokenName(target),
+      playerName: getTokenPlayerName(target) ?? "",
+      img,
+      targetClass: isPlayerOwned ? "midi-qol-player-target" : "midi-qol-npc-target",
+      target,
+      saveSymbol: (rollDC === null) ? "" : (
+        ((target.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-save-symbol")
+        + " midi-qol-save-symbol "
+        + (saved ? "fa-check" : "fa-xmark")),
+      saveTotalClass: target.actor?.hasPlayerOwner ? "" : "midi-qol-npc-save-total",
+      saveToolTipClass: target.actor?.hasPlayerOwner ? "" : "midi-qol-npc-save-tooltip",
+      rollTotal: String(saveRollTotal),
+      rollDetail: "",
+      rollHTML,
+      id: target.id,
+      saveClass: (rollDC === null) ? "" : (saved ? "success" : "failure"),
+    });
+  }
+
+  /**
+   * Determines roll settings for a target's save roll
+   * @param target The target token
+   * @param flagRollType The roll type for module settings (save/check/skill/tool)
+   * @param simulate Whether this is a simulation (disables prompts and modules)
+   * @returns Object with player, roll settings, and module flags
+   */
+  protected determineTargetRollSettings(
+    target: Token,
+    flagRollType: string | undefined,
+    simulate: boolean
+  ): {
+    player: User | undefined;
+    promptPlayer: boolean;
+    showRollDialog: boolean;
+    GMprompt: string | boolean | undefined;
+    gmMonksTB: boolean | undefined;
+    gmFlashTB: boolean | undefined;
+    gmRER: boolean | undefined;
+    playerChat: boolean;
+  } {
+    let player = playerFor(target);
+    if (!player || !player.active) player = preferredActiveGM();
+
+    let promptPlayer = !player?.isGM && !(["none", "noneDialogPublic", "noneDialogPrivate", "noneDialogSelf", "noneDialogBlind"].includes(configSettings.playerRollSaves));
+    let showRollDialog = !player?.isGM && ["noneDialogPublic", "noneDialogPrivate", "noneDialogSelf", "noneDialogBlind"].includes(configSettings.playerRollSaves);
+    if (simulate) promptPlayer = false;
+
+    let GMprompt: string | boolean | undefined;
+    let gmMonksTB: boolean | undefined;
+    let gmFlashTB: boolean | undefined;
+    let gmRER: boolean | undefined;
+    const playerChat = !player?.isGM && ["chat"].includes(configSettings.playerRollSaves);
+
+    if (player?.isGM) {
+      const targetDocument = getTokenDocument(target);
+      const monksTBSetting = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves === "mtb" : configSettings.rollNPCSaves === "mtb";
+      const flashTBSetting = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves === "ftb" : configSettings.rollNPCSaves === "ftb";
+      const epicRollsSetting = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves === "rer" : configSettings.rollNPCSaves === "rer";
+      gmMonksTB = flagRollType !== "tool" && installedModules.get("monks-tokenbar") && monksTBSetting;
+      gmFlashTB = installedModules.get("flash-rolls-5e") && flashTBSetting;
+      gmRER = installedModules.get("epic-rolls-5e") && epicRollsSetting;
+      GMprompt = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves : configSettings.rollNPCSaves;
+
+      promptPlayer = !["auto", "autoDialog"].includes(GMprompt as string);
+      showRollDialog = GMprompt === "autoDialog";
+
+      if (simulate) {
+        gmMonksTB = false;
+        gmFlashTB = false;
+        GMprompt = false;
+        gmRER = false;
+        promptPlayer = false;
+        showRollDialog = false;
+      }
+    }
+
+    return { player: player ?? undefined, promptPlayer, showRollDialog, GMprompt, gmMonksTB, gmFlashTB, gmRER, playerChat };
+  }
+
+  /**
+   * Evaluates grants advantage/disadvantage flags from the caster
+   * @param conditionData Condition data for flag evaluation
+   * @param flagRollType The roll type for flag lookup (save/check/skill/tool)
+   * @param rollAbility The ability being used for the save
+   * @returns Object with advantage and disadvantage values (true, false, or undefined)
+   */
+  protected async evaluateGrantsAdvantage(
+    conditionData: ReturnType<typeof createConditionData>,
+    flagRollType: string | undefined,
+    rollAbility: string | undefined | null
+  ): Promise<{ advantage: boolean | undefined; disadvantage: boolean | undefined }> {
+    let advantage: boolean | undefined = undefined;
+    let disadvantage: boolean | undefined = undefined;
+
+    // Check grants.advantage flags
+    if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.advantage.all`, conditionData)
+      || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.advantage.${flagRollType}.all`, conditionData)
+      || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.advantage.${flagRollType}.${rollAbility}`, conditionData)) {
+      advantage = true;
+    }
+
+    // Check grants.disadvantage flags
+    if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.disadvantage.all`, conditionData)
+      || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.disadvantage.${flagRollType}.all`, conditionData)
+      || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.disadvantage.${flagRollType}.${rollAbility}`, conditionData)) {
+      disadvantage = true;
+    }
+
+    // Check grants.noAdvantage flags (overrides advantage to false)
+    if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.noAdvantage.all`, conditionData)
+      || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.noAdvantage.${flagRollType}`, conditionData)) {
+      advantage = false;
+    }
+
+    // Check grants.noDisadvantage flags (overrides disadvantage to false)
+    if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.noDisadvantage.all`, conditionData)
+      || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.noDisadvantage.${flagRollType}`, conditionData)) {
+      disadvantage = false;
+    }
+
+    return { advantage, disadvantage };
+  }
+
+  /**
+   * Checks if a target has magic resistance or vulnerability for a save
+   * @param target The target token
+   * @param conditionData Condition data for flag evaluation
+   * @param rollAbility The ability being used for the save
+   * @param isMagicSave Whether this is a magic-based save
+   * @returns Object with advantage, disadvantage, magicResistance, and magicVulnerability flags
+   */
+  protected async checkMagicResistanceAndVulnerability(
+    target: Token,
+    conditionData: ReturnType<typeof createConditionData>,
+    rollAbility: string | undefined | null,
+    isMagicSave: boolean
+  ): Promise<{
+    advantage: boolean | undefined;
+    disadvantage: boolean | undefined;
+    magicResistance: boolean;
+    magicVulnerability: boolean;
+  }> {
+    if (!isMagicSave) {
+      return { advantage: undefined, disadvantage: undefined, magicResistance: false, magicVulnerability: false };
+    }
+
+    const targetDocument = target.document;
+    let advantage: boolean | undefined = undefined;
+    let disadvantage: boolean | undefined = undefined;
+    let magicResistance = false;
+    let magicVulnerability = false;
+
+    // Check magic resistance in custom damage reduction traits
+    //@ts-expect-error no dnd5e-types
+    advantage = (targetDocument.actor?.system.traits?.dr?.custom || "").includes(i18n("midi-qol.MagicResistant").trim());
+
+    // Check magic resistance as a feature (based on the SRD name as provided by the DnD5e system)
+    // @ts-expect-error no dnd5e-types
+    advantage = advantage || target.actor?.items.find(a => a.type === "feat" && a.name === i18n("midi-qol.MagicResistanceFeat")?.trim()) !== undefined;
+
+    if (!advantage) advantage = undefined;
+
+    // Check magic resistance flags
+    if (await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.magicResistance.all`, conditionData)
+      || await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.magicResistance.${rollAbility}`, conditionData)) {
+      advantage = true;
+      magicResistance = true;
+    }
+
+    // Check magic vulnerability flags
+    if (await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.magicVulnerability.all`, conditionData)
+      || await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.magicVulnerability.${rollAbility}`, conditionData)) {
+      disadvantage = true;
+      magicVulnerability = true;
+    }
+
+    if (debugEnabled > 1) debug(`${target.actor?.name} resistant to magic : ${advantage}`);
+    if (debugEnabled > 1) debug(`${target.actor?.name} vulnerable to magic : ${disadvantage}`);
+
+    return { advantage, disadvantage, magicResistance, magicVulnerability };
+  }
+
+  /**
+   * Calculates the cover save bonus for a DEX save target
+   * @param target The target token
+   * @param template The measured template (for area effects)
+   * @param rollAbility The ability being used for the save
+   * @returns The cover bonus to add to the save
+   */
+  protected async calculateCoverSaveBonus(
+    target: Token,
+    template: foundry.canvas.placeables.MeasuredTemplate.Implementation | undefined | null,
+    rollAbility: string | undefined | null
+  ): Promise<number> {
+    if (!this.item || !this.activityHasSave || rollAbility !== "dex") {
+      return 0;
+    }
+
+    const targetDocument = target.document;
+
+    // Spell Sniper ignores cover for ranged spell attacks
+    if (this.activity.actionType === "rsak" && this.actor.flags?.dnd5e?.spellSniper) {
+      return 0;
+    }
+
+    // Area of effect with template
+    if (activityHasAreaTarget(this.activity) && template) {
+      const position = foundry.utils.duplicate(template.center);
+      const dimensions = canvas.dimensions;
+      if (template.document.t === "rect") {
+        // TODO in v12 width seems to be always 0 so this does nothing
+        position.x += (template.document.width ?? 1) / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
+        position.y += (template.document.width ?? 1) / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
+      }
+
+      if (configSettings.optionalRules.coverCalculation === "levelsautocover"
+        && installedModules.get("levelsautocover")) {
+        // TODO Fix this monstrosity
+        return computeCoverBonus({
+          center: position,
+          document: {
+            elevation: template.document.elevation,
+            disposition: targetDocument?.disposition,
+          }
+        } as unknown as Token, target, this.activity);
+      }
+
+      if (configSettings.optionalRules.coverCalculation === "simbuls-cover-calculator"
+        && installedModules.get("simbuls-cover-calculator")) {
+        // Special case for templates
+        const coverData = await globalThis.CoverCalculator.checkCoverViaCoordinates(
+          position.x, position.y, false, 'AoE', false, target);
+        if (coverData?.data.results.cover === 3) return FULL_COVER;
+        return -coverData.data.results.value;
+      }
+
+      if (configSettings.optionalRules.coverCalculation === "tokencover" && installedModules.get("tokencover")) {
+        if (this.token) return computeCoverBonus(foundry.utils.deepClone(this.token, { center: position } as any), target, this.activity);
+      }
+
+      return 0;
+    }
+
+    // Direct targeting (no template)
+    if (this.token) {
+      return computeCoverBonus(this.token, target, this.activity);
+    }
+
+    return 0;
+  }
+
+  /**
+   * Determines if a save roll is a critical success (natural 20) or fumble (natural 1)
+   * @param saveRoll The save roll to check
+   * @param fallbackTotal Fallback total if dice results can't be read
+   * @returns Object with isCritical and isFumble booleans
+   */
+  protected determineCriticalOrFumble(saveRoll: Roll | undefined, fallbackTotal: number): { isCritical: boolean; isFumble: boolean } {
+    if (!saveRoll?.terms) {
+      return { isCritical: false, isFumble: false };
+    }
+    const dterm = saveRoll.terms[0] as foundry.dice.terms.DiceTerm;
+    const diceRoll = dterm?.results?.find(result => result.active)?.result ?? fallbackTotal;
+    //@ts-expect-error no dnd5e-types
+    const isFumble = diceRoll <= (dterm.options?.fumble ?? 1);
+    //@ts-expect-error no dnd5e-types
+    const isCritical = diceRoll >= (dterm.options?.critical ?? 20);
+    return { isCritical, isFumble };
+  }
+
+  /**
+   * Updates the advantageSaves and disadvantageSaves sets based on the roll result
+   * @param target The target token
+   * @param result The roll result array
+   */
+  protected updateAdvantageTrackingFromRoll(target: Token, result: Roll[]): void {
+    // @ts-expect-error no dnd5e-types - advantageMode: 1 = advantage, -1 = disadvantage, 0 = normal
+    const advantageMode = result[0]?.options?.advantageMode;
+    if (advantageMode !== undefined) {
+      // Standard dnd5e roll with advantageMode
+      if (advantageMode === 1) this.advantageSaves.add(target);
+      else this.advantageSaves.delete(target);
+      if (advantageMode === -1) this.disadvantageSaves?.add(target);
+      else this.disadvantageSaves?.delete(target);
+    } else {
+      // Fallback for custom rolls (e.g., Better Rolls) that set terms[0].options
+      // @ts-expect-error no dnd5e-types
+      if (result[0]?.terms?.[0]?.options?.advantage) this.advantageSaves.add(target);
+      else this.advantageSaves.delete(target);
+      // @ts-expect-error no dnd5e-types
+      if (result[0]?.terms?.[0]?.options?.disadvantage) this.disadvantageSaves?.add(target);
+      else this.disadvantageSaves?.delete(target);
+    }
+    // If both advantage and disadvantage, they cancel out
+    if (this.advantageSaves.has(target) && this.disadvantageSaves?.has(target)) {
+      this.advantageSaves.delete(target);
+      this.disadvantageSaves.delete(target);
+    }
+  }
+
+  /**
+   * Determines the roll type, action, and related properties based on the save activity
+   * @returns Object containing rollAction, rollType, rollAbility, rollSkill, rollTool, and flagRollType
+   */
+  protected determineRollTypeAndAction(): {
+    rollAction: ((config?: AnyObject, dialog?: AnyObject, message?: AnyObject) => Promise<Roll[] | null>) | undefined;
+    rollType: string | undefined;
+    rollAbility: string | undefined | null;
+    rollSkill: string | undefined;
+    rollTool: string | undefined;
+    flagRollType: string | undefined;
+  } {
+    let rollAction: ((config?: AnyObject, dialog?: AnyObject, message?: AnyObject) => Promise<Roll[] | null>) | undefined;
+    let rollType: string | undefined;
+    let rollAbility: string | undefined | null;
     let rollSkill: string | undefined;
     let rollTool: string | undefined;
     let flagRollType: string | undefined;
-    let rollAbility: string | undefined | null;
+
     if (this.saveActivity?.save) {
       rollType = "save";
       flagRollType = "save";
@@ -4932,375 +5371,92 @@ export class Workflow {
       }
     }
 
-    const playerMonksTB = !simulate && flagRollType !== "tool" && !!installedModules.get("monks-tokenbar") && configSettings.playerRollSaves === "mtb";
-    const playerFlashTB = !simulate && !!installedModules.get("flash-rolls-5e") && configSettings.playerRollSaves === "ftb";
-    const playerEpicRolls = !simulate && !!installedModules.get("epic-rolls-5e") && configSettings.playerRollSaves === "rer"
-    // TODO: kill?
-    let monkRequestsPlayer: any[] = [];
-    let flashRequestsPlayer: any[] = [];
-    let rerRequestsPlayer: any[] = [];
-    let monkRequestsGM: any[] = [];
-    let flashRequestsGM: any[] = [];
-    let rerRequestsGM: any[] = [];
-    const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
-    // @ts-expect-error no dnd5e-types
-    const isMagicSave = this.item.type === "spell" || this.activity.midiProperties?.magicEffect;
+    return { rollAction, rollType, rollAbility, rollSkill, rollTool, flagRollType };
+  }
 
-    try {
-      let actorDisposition: number;
-      if (this.token && this.token.document?.disposition) actorDisposition = this.token.document.disposition;
-      else { // no token to use so make a guess
-        // @ts-expect-error no dnd5e-types
-        actorDisposition = this.actor.type === "npc" ? -1 : 1;
-      }
-
-      for (let target of allHitTargets) {
-        let showRoll = saveDisplay === "allShow";
-        if (simulate) showRoll = false;
-        if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
-          await doReactions(target, this.tokenUuid, this.attackRoll ?? new Roll(""), "reactionsave", { workflow: this, activity: this.activity, item: this.item })
-        }
-        if (!target || !target?.actor) continue;
-        const conditionData = createConditionData({ workflow: this, target, actor: target.actor });
-        const targetDocument = target.document;
-        const saveDetails: {
-          advantage: boolean | undefined,
-          disadvantage: boolean | undefined,
-          isFriendly: boolean,
-          isMagicSave: boolean,
-          isConcentrationCheck: boolean | undefined,
-          rollDC: number,
-          saveItemUuid: string,
-          workflowId: string,
-          itemCardUuid: string,
-          workflowUuid: string, // deprecated
-          workflowOptions: object,
-        } = {
-          advantage: undefined,
-          disadvantage: undefined,
-          isMagicSave: !!isMagicSave,
-          isFriendly: targetDocument?.disposition === actorDisposition,
-          isConcentrationCheck: undefined,
-          rollDC: rollDC ?? 0,
-          saveItemUuid: this.saveItem?.uuid ?? "",
+  /**
+   * Build a Monks Token Bar save request for a target
+   */
+  buildMonksTokenBarRequest(target: Token, saveDetails: AnyMutableObject, isMagicSave: boolean): AnyObject {
+    return {
+      token: target.id,
+      dc: saveDetails.rollDC,
+      showdc: configSettings.displaySaveDC,
+      advantage: saveDetails.advantage,
+      altKey: saveDetails.advantage === true,
+      disadvantage: saveDetails.disadvantage,
+      ctrlKey: saveDetails.disadvantage === true,
+      fastForward: false,
+      isMagicSave,
+      isConcentrationCheck: saveDetails.isConcentrationCheck,
+      workflowOptions: saveDetails.workflowOptions,
+      options: {
+        midiOptions: {
+          itemUuid: this.saveItem?.uuid,
           workflowId: this.id,
-          itemCardUuid: this.itemCardUuid ?? "",
-          workflowUuid: this.id, // deprecated
-          workflowOptions: this.workflowOptions,
-        };
-
-        let magicResistance = false;
-        let magicVulnerability = false;
-        // If spell, check for magic resistance
-        if (isMagicSave) {
-          // check magic resistance in custom damage reduction traits
-          //@ts-expect-error no dnd5e-types
-          saveDetails.advantage = (targetDocument.actor?.system.traits?.dr?.custom || "").includes(i18n("midi-qol.MagicResistant").trim());
-          // check magic resistance as a feature (based on the SRD name as provided by the DnD5e system)
-          // @ts-expect-error no dnd5e-types
-          saveDetails.advantage = saveDetails.advantage || target.actor?.items.find(a => a.type === "feat" && a.name === i18n("midi-qol.MagicResistanceFeat")?.trim()) !== undefined;
-          if (!saveDetails.advantage) saveDetails.advantage = undefined;
-          if (await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.magicResistance.all`, conditionData)
-            || await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.magicResistance.${rollAbility}`, conditionData)) {
-            saveDetails.advantage = true;
-            magicResistance = true;
-          }
-          if (await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.magicVulnerability.all`, conditionData)
-            || await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.magicVulnerability.${rollAbility}`, conditionData)) {
-            saveDetails.disadvantage = true;
-            magicVulnerability = true;
-          }
-          if (debugEnabled > 1) debug(`${target.actor.name} resistant to magic : ${saveDetails.advantage}`);
-          if (debugEnabled > 1) debug(`${target.actor.name} vulnerable to magic : ${saveDetails.disadvantage}`);
-        }
-
-        const settingsOptions = await procAbilityAdvantage(target.actor, rollType ?? "", this.saveActivity.save?.ability?.first() ?? this.saveActivity.check?.ability ?? "", { workflow: this });
-        if (settingsOptions.advantage) saveDetails.advantage = true;
-        if (settingsOptions.disadvantage) saveDetails.disadvantage = true;
-        saveDetails.isConcentrationCheck = this.item.flags?.[MODULE_ID]?.isConcentrationCheck;
-        // The rollAbilitycheck function eventually calls actor.rollConcentration so all the falgs are set.
-
-        // Check grants save fields
-        if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.advantage.all`, conditionData)
-          || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.advantage.${flagRollType}.all`, conditionData)
-          || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.advantage.${flagRollType}.${rollAbility}`, conditionData)) {
-          saveDetails.advantage = true;
-        }
-        if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.disadvantage.all`, conditionData)
-          || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.disadvantage.${flagRollType}.all`, conditionData)
-          || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.disadvantage.${flagRollType}.${rollAbility}`, conditionData)) {
-          saveDetails.disadvantage = true;
-        }
-        // TODO manage grants.noAdvantage/disAdvantage for the roll
-        if (await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.grants.noAdvantage.all`, conditionData)
-          || await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.grants.noAdvantage.${flagRollType}`, conditionData))
-          saveDetails.advantage = false;
-        if (await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.grants.noDisadvantage.all`, conditionData)
-          || await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.grants.noDisadvantage.${flagRollType}`, conditionData))
-          saveDetails.disadvantage = false;
-        if (saveDetails.advantage && !saveDetails.disadvantage) this.advantageSaves.add(target);
-        else if (saveDetails.disadvantage && !saveDetails.advantage) this.disadvantageSaves?.add(target);
-        let player = playerFor(target);
-        if (!player || !player.active) player = preferredActiveGM();
-        let promptPlayer = !player?.isGM && !(["none", "noneDialogPublic", "noneDialogPrivate", "noneDialogSelf", "noneDialogBlind"].includes(configSettings.playerRollSaves));
-        let showRollDialog = !player?.isGM && ["noneDialogPublic", "noneDialogPrivate", "noneDialogSelf", "noneDialogBlind"].includes(configSettings.playerRollSaves);
-        if (simulate) promptPlayer = false;
-        let GMprompt: string | boolean | undefined;
-        let gmMonksTB: boolean | undefined;
-        let gmFlashTB: boolean | undefined;
-        let gmRER: boolean | undefined;
-        let playerRER = !player?.isGM && ["rer"].includes(configSettings.playerRollSaves);
-        const playerChat = !player?.isGM && ["chat"].includes(configSettings.playerRollSaves);
-        if (player?.isGM) {
-          const targetDocument = getTokenDocument(target);
-          const monksTBSetting = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves === "mtb" : configSettings.rollNPCSaves === "mtb"
-          const flashTBSetting = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves === "ftb" : configSettings.rollNPCSaves === "ftb"
-          const epicRollsSetting = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves === "rer" : configSettings.rollNPCSaves === "rer"
-          gmMonksTB = flagRollType !== "tool" && installedModules.get("monks-tokenbar") && monksTBSetting;
-          gmFlashTB = installedModules.get("flash-rolls-5e") && flashTBSetting;
-          gmRER = installedModules.get("epic-rolls-5e") && epicRollsSetting;
-          GMprompt = (targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves : configSettings.rollNPCSaves);
-
-          promptPlayer = !["auto", "autoDialog"].includes(GMprompt);
-          showRollDialog = GMprompt === "autoDialog";
-          if (simulate) {
-            gmMonksTB = false;
-            gmFlashTB = false;
-            GMprompt = false;
-            gmRER = false;
-            promptPlayer = false;
-            showRollDialog = false;
-          }
-        }
-
-        this.saveDetails = saveDetails;
-        if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["preTargetSave"], new Set([target]));
-
-        if (saveDetails.isFriendly &&
-          // @ts-expect-error no dnd5e-types
-          (this.item.system.description.value.toLowerCase().includes(i18n("midi-qol.autoFailFriendly")?.toLowerCase())
-            || this.activity.friendlySave === "friendlyFail")) {
-          promises.push(new BasicRoll("-1").evaluate());
-        } else if (saveDetails.isFriendly && this.activity.friendlySave === "friendlySuccess") {
-          promises.push(new BasicRoll("99").evaluate());
-        } else if ((!player?.isGM && playerMonksTB) || (player?.isGM && gmMonksTB)) {
-          promises.push(new Promise((resolve) => {
-            let requestId = target.id ?? foundry.utils.randomID();
-            this.saveRequests[requestId] = resolve;
-          }));
-
-          if (isMagicSave) {
-            if (magicResistance) saveDetails.advantage = true;
-            if (magicVulnerability) saveDetails.disadvantage = true;
-          }
-          const requests = player?.isGM ? monkRequestsGM : monkRequestsPlayer;
-          requests.push({
-            token: target.id,
-            dc: saveDetails.rollDC,
-            showdc: configSettings.displaySaveDC, // TODO: improve to use dnd5e settings as well
-            advantage: saveDetails.advantage, // seems that monks ignores this again - set alt/ctrl key
-            altKey: saveDetails.advantage === true,
-            disadvantage: saveDetails.disadvantage, // seems that monks ignores this again - set alt/ctrl key
-            ctrlKey: saveDetails.disadvantage === true,
-            fastForward: false,
-            isMagicSave,
-            isConcentrationCheck: saveDetails.isConcentrationCheck,
-            workflowOptions: saveDetails.workflowOptions,
-            options: { // This does nothing as monks does not pass these through
-              midiOptions: {
-                itemUuid: this.saveItem?.uuid,
-                workflowId: this.id,
-                itemCardUuid: this.itemCardUuid
-              }
-            }
-          })
-        } else if ((!player?.isGM && playerFlashTB) || (player?.isGM && gmFlashTB)) {
-          promises.push(new Promise((resolve) => {
-            let requestId = target.actor?.uuid ?? foundry.utils.randomID();
-            this.saveRequests[requestId] = resolve;
-          }));
-
-          if (isMagicSave) {
-            if (magicResistance) saveDetails.advantage = true;
-            if (magicVulnerability) saveDetails.disadvantage = true;
-          }
-          const requests = player?.isGM ? flashRequestsGM : flashRequestsPlayer;
-          requests.push({
-            actorId: target.actor?.id ?? target.id,
-            actorUuid: (target.actor as Actor).uuid,
-            token: target.id,
-            advantage: saveDetails.advantage,
-            disadvantage: saveDetails.disadvantage,
-            dc: saveDetails.rollDC,
-            showdc: configSettings.displaySaveDC,
-            isMagicSave,
-            isConcentrationCheck: saveDetails.isConcentrationCheck,
-            workflowOptions: saveDetails.workflowOptions,
-            midiOptions: {
-              itemUuid: this.saveItem?.uuid,
-              workflowId: this.id,
-              itemCardUuid: this.itemCardUuid
-            }
-          })
-        } else if ((!player?.isGM && playerEpicRolls) || (player?.isGM && gmRER)) {
-          promises.push(new Promise((resolve) => {
-            let requestId = target.actor?.uuid ?? foundry.utils.randomID();
-            this.saveRequests[requestId] = resolve;
-          }));
-
-          if (isMagicSave) {
-            if (magicResistance) saveDetails.advantage = true;
-            if (magicVulnerability) saveDetails.disadvantage = true;
-          }
-          const requests = player?.isGM ? rerRequestsGM : rerRequestsPlayer;
-          requests.push({
-            actorUuid: (target.actor as Actor).uuid,
-            token: target.id,
-            advantage: saveDetails.advantage,
-            disadvantage: saveDetails.disadvantage,
-            dc: saveDetails.rollDC,
-            showdc: configSettings.displaySaveDC,
-            // altKey: advantage === true,
-            // ctrlKey: disadvantage === true,
-            fastForward: false,
-            isMagicSave,
-            isconcentrationCheck: saveDetails.isConcentrationCheck, // Not sure if epic rolls will pick this up
-            workflowOptions: saveDetails.workflowOptions
-          })
-        } else if ((player?.active && playerChat) || (player?.isGM && GMprompt === "none")) {
-          if (debugEnabled > 0) warn(`checkSaves | Player ${player?.name} controls actor ${(target.actor as Actor).name} - requesting ${rollAbility} ${rollType}`);
-          promises.push(new Promise((resolve) => {
-            let requestId = target?.id ?? foundry.utils.randomID();
-            const playerId = player?.id;
-            this.saveRequests[requestId] = resolve;
-            requestCards.push(requestPCSave(rollAbility ?? "", rollType, player.id!, target.actor, { flavor: this.item.name ?? "", requestId, GMprompt, isMagicSave: !!isMagicSave, magicResistance, magicVulnerability, saveDetails }));
-
-            // set a timeout for taking over the roll
-            if (configSettings.playerSaveTimeout > 0) {
-              this.saveTimeouts[requestId] = setTimeout(async () => {
-                if (this.saveRequests[requestId]) {
-                  delete this.saveRequests[requestId];
-                  delete this.saveTimeouts[requestId];
-                  let result: Roll[] | null;
-                  const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
-                  if (!game.user?.isGM && saveDisplay === "allShow") {
-                    // non-gm users don't have permission to create chat cards impersonating the GM so hand the role to a GM client
-                    result = await timedAwaitExecuteAsGM("rollAbility", {
-                      targetUuid: target.actor?.uuid ?? "",
-                      request: rollType,
-                      ability: rollAbility,
-                      skill: rollSkill,
-                      tool: rollTool,
-                      // rollDC: saveDetails.rollDC,
-                      options: { // GMAction will map this -> midiOptions
-                        messageData: { user: playerId },
-                        target: configSettings.autoCheckSaves === "whisper" ? undefined : saveDetails.rollDC,
-                        chatMessage: showRoll,
-                        mapKeys: false,
-                        rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties?.rollMode : CONST.DICE_ROLL_MODES.PUBLIC, // since it's allShow we want to display the roll to evryone whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC,
-                        advantage: saveDetails.advantage,
-                        disadvantage: saveDetails.disadvantage,
-                        fastForward: true,
-                        saveItemUuid: this.saveItem?.uuid,
-                        isConcentrationCheck: saveDetails.isConcentrationCheck,
-                        workflowOptions: saveDetails.workflowOptions,
-                        workflowId: this.id,
-                        itemCardUuid: this.itemCardUuid,
-                        itemId: this.saveActivity?.item.id
-                      }
-                    });
-                  } else {
-                    let config: AnyMutableObject = {
-                      configure: false,
-                      target: rollDC,
-                      ability: rollAbility,
-                      midiOptions: {
-                        workflowId: this.id,
-                        itemCardUuid: this.itemCardUuid,
-                        advantage: saveDetails.advantage,
-                        disadvantage: saveDetails.disadvantage,
-                        mapKeys: false,
-                        fastForward: true,
-                        saveItemUuid: this.saveItem?.uuid,
-                        isConcentrationCheck: saveDetails.isConcentrationCheck,
-                        workflowOptions: saveDetails.workflowOptions
-                      }
-                    };
-                    let dialog: AnyObject = { ability: rollAbility, skill: rollSkill, tool: rollTool };
-                    let message: AnyObject = { create: showRoll };
-                    if (rollType === "tool") {
-                      let tool = target.actor?.items.get(this.saveActivity?.item.id ?? "");
-                      //@ts-expect-error no dnd5e types
-                      if (!tool) tool = target.actor?.items.find(i => i.type === "tool" && i.system.type.baseItem === rollTool);
-                      if (!tool) { // no tool of the requested type - auto fail
-                        resolve([await new BasicRoll("-1").evaluate()]);
-                        return;
-                      } else {
-                        // @ts-expect-error no dnd5e-types
-                        config.bonus = tool.system.bonus;
-                        // @ts-expect-error no dnd5e-types
-                        config.prof = tool.system.prof;
-                        config.item = tool;
-                      }
-                    }
-                    result = await rollAction.bind(target.actor)(config, dialog, message);
-                    resolve(result);
-                  }
-                }
-              }, (configSettings.playerSaveTimeout || 1) * 1000);
-            }
-          }))
-        } else {
-          // Find a player owner for the roll if possible
-          let owner = playerFor(target);
-          if (!owner?.isGM && owner?.active) showRoll = true; // Always show player save rolls
-          if (!owner?.active) owner = preferredActiveGM();
-          // Fall back to rolling as the current user
-          if (!owner) owner = game.user;
-          let rollMode = ((this.activity.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties!.rollMode : whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC;
-          if (!owner?.isGM) {
-            if ((this.activity.midiProperties?.rollMode ?? "default") === "default") {
-              if (["noneDialogPublic", "nonePublic"].includes(configSettings.playerRollSaves)) rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
-              else if (["noneDialogPrivate", "none"].includes(configSettings.playerRollSaves)) rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
-              else if (configSettings.playerRollSaves === "noneDialogSelf") rollMode = CONST.DICE_ROLL_MODES.SELF;
-              else if (configSettings.playerRollSaves === "noneDialogBlind") rollMode = CONST.DICE_ROLL_MODES.BLIND;
-            }
-          }
-          promises.push(socketlibSocket.executeAsUser("rollAbility", owner?.id, {
-            targetUuid: (target.actor as Actor).uuid,
-            request: rollType,
-            ability: rollAbility,
-            skill: rollSkill,
-            tool: rollTool,
-            // rollDC: saveDetails.rollDC,
-            options: {
-              simulate,
-              target: saveDetails.rollDC,
-              messageData: { user: owner?.id },
-              chatMessage: showRoll,
-              rollMode,
-              mapKeys: false,
-              advantage: saveDetails.advantage,
-              disadvantage: saveDetails.disadvantage,
-              fastForward: simulate || !showRollDialog,
-              isMagicSave,
-              saveItemUuid: this.item.uuid,
-              isConcentrationCheck: saveDetails.isConcentrationCheck,
-              workflowId: this.id,
-              itemCardUuid: this.itemCardUuid,
-              itemUuid: this.itemUuid,
-              workflowOptions: saveDetails.workflowOptions,
-              itemId: this.saveActivity.item.id
-            },
-          }));
+          itemCardUuid: this.itemCardUuid
         }
       }
-    } catch (err) {
-      TroubleShooter.recordError(err);
-      console.warn(err)
-    } finally {
-    }
+    };
+  }
+
+  /**
+   * Build a Flash Rolls 5e save request for a target
+   */
+  buildFlashRollsRequest(target: Token, saveDetails: AnyMutableObject, isMagicSave: boolean): AnyObject {
+    return {
+      actorId: target.actor?.id ?? target.id,
+      actorUuid: (target.actor as Actor).uuid,
+      token: target.id,
+      advantage: saveDetails.advantage,
+      disadvantage: saveDetails.disadvantage,
+      dc: saveDetails.rollDC,
+      showdc: configSettings.displaySaveDC,
+      isMagicSave,
+      isConcentrationCheck: saveDetails.isConcentrationCheck,
+      workflowOptions: saveDetails.workflowOptions,
+      midiOptions: {
+        itemUuid: this.saveItem?.uuid,
+        workflowId: this.id,
+        itemCardUuid: this.itemCardUuid
+      }
+    };
+  }
+
+  /**
+   * Build an Epic Rolls 5e save request for a target
+   */
+  buildEpicRollsRequest(target: Token, saveDetails: AnyMutableObject, isMagicSave: boolean): AnyObject {
+    return {
+      actorUuid: (target.actor as Actor).uuid,
+      token: target.id,
+      advantage: saveDetails.advantage,
+      disadvantage: saveDetails.disadvantage,
+      dc: saveDetails.rollDC,
+      showdc: configSettings.displaySaveDC,
+      fastForward: false,
+      isMagicSave,
+      isConcentrationCheck: saveDetails.isConcentrationCheck,
+      workflowOptions: saveDetails.workflowOptions
+    };
+  }
+
+  /**
+   * Dispatch save requests to Monks Token Bar
+   */
+  dispatchMonksTokenBarSaves(
+    monkRequestsPlayer: any[],
+    monkRequestsGM: any[],
+    rollType: string,
+    rollAbility: string | undefined,
+    rollSkill: string | undefined,
+    rollDC: number | undefined,
+    whisper: boolean,
+    isMagicSave: boolean
+  ): void {
     const monkRequests = monkRequestsPlayer.concat(monkRequestsGM);
+    if (monkRequests.length === 0) return;
+
     let request: string | undefined;
     if (rollType === "save") {
       request = `save:${rollAbility}`;
@@ -5309,26 +5465,31 @@ export class Workflow {
     } else if (rollType === "skill") {
       request = `skill:${rollSkill}`;
     }
+
     if (!whisper && monkRequests.length > 0) {
       const requestData: AnyMutableObject = {
         tokenData: monkRequests,
         request,
         silent: true,
         showdc: configSettings.displaySaveDC,
-        rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties!.rollMode : whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC, // should be CONST.DICE_ROLL_MODES.PUBLIC but monks does not check it
+        rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
+          ? this.activity.midiProperties!.rollMode
+          : whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC,
         isMagicSave
       };
-      // Display dc triggers the tick/cross on monks tb
-      if (configSettings.displaySaveDC && "whisper" !== configSettings.autoCheckSaves) requestData.dc = rollDC
+      if (configSettings.displaySaveDC && "whisper" !== configSettings.autoCheckSaves) {
+        requestData.dc = rollDC;
+      }
       timedExecuteAsGM("monksTokenBarSaves", requestData);
-    } else if (monkRequestsPlayer.length > 0 || monkRequestsGM.length > 0) {
+    } else {
+      // Whisper mode - send GM and player requests separately
       const requestDataGM: AnyMutableObject = {
         tokenData: monkRequestsGM,
         request,
         silent: true,
-        rollMode: whisper ? CONST.DICE_ROLL_MODES.PRIVATE : "roll", // should be CONST.DICE_ROLL_MODES.PUBLIC but monks does not check it
+        rollMode: whisper ? CONST.DICE_ROLL_MODES.PRIVATE : "roll",
         isMagicSave,
-        options: { // This does nothing as monks does not pass through any optiosn to the roll - just here in hope
+        options: {
           workflowOptions: this.workflowOptions,
           midiOptions: {
             isConcentrationCheck: !!this.item.flags[MODULE_ID]?.isConcentrationCheck,
@@ -5338,136 +5499,825 @@ export class Workflow {
             itemCardUuid: this.itemCardUuid,
           }
         }
-      }
+      };
       const requestDataPlayer: AnyMutableObject = {
         tokenData: monkRequestsPlayer,
         request,
         silent: true,
-        rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties!.rollMode : "roll",// should be CONST.DICE_ROLL_MODES.PUBLIC but monks does not check it
+        rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
+          ? this.activity.midiProperties!.rollMode
+          : "roll",
         isMagicSave,
         saveItemUuid: this.item.uuid,
         workflowId: this.id,
         itemCardUuid: this.itemCardUuid
-      }
-      // Display dc triggers the tick/cross on monks tb
+      };
       if (configSettings.displaySaveDC && "whisper" !== configSettings.autoCheckSaves) {
-        requestDataPlayer.dc = rollDC
-        requestDataGM.dc = rollDC
+        requestDataPlayer.dc = rollDC;
+        requestDataGM.dc = rollDC;
       }
       if (monkRequestsPlayer.length > 0) {
         timedExecuteAsGM("monksTokenBarSaves", requestDataPlayer);
-      };
+      }
       if (monkRequestsGM.length > 0) {
         timedExecuteAsGM("monksTokenBarSaves", requestDataGM);
-      };
-    }
-    const flashRequests = flashRequestsPlayer.concat(flashRequestsGM);
-    if (flashRequests.length > 0) {
-      // Determine Flash Token Bar requestType
-      let flashRequestType: string;
-      if (rollType === "save") {
-        flashRequestType = "savingthrow";
-      } else if (rollType === "check") {
-        flashRequestType = "ability";
-      } else if (rollType === "skill") {
-        flashRequestType = "skill";
-      } else if (rollType === "tool") {
-        flashRequestType = "tool";
-      } else {
-        flashRequestType = "savingthrow"; // default
       }
-
-      const flashRollKey = rollAbility ?? rollSkill ?? rollTool ?? "dex";
-      const flashRequest = {
-        requestType: flashRequestType,
-        rollKey: flashRollKey,
-        actorIds: flashRequests.map(request => request.token),
-        dc: rollDC,
-        advantage: flashRequests.some(r => r.advantage) || undefined,
-        disadvantage: flashRequests.some(r => r.disadvantage) || undefined,
-        skipRollDialog: true,
-        sendAsRequest: true,
-        rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties!.rollMode : "roll",
-        workflowId: this.id,
-        itemCardUuid: this.itemCardUuid
-      };
-
-      timedExecuteAsGM("flashTokenBarSaves", flashRequest);
     }
+  }
+
+  /**
+   * Dispatch save requests to Flash Rolls 5e
+   */
+  dispatchFlashRollsSaves(
+    flashRequestsPlayer: any[],
+    flashRequestsGM: any[],
+    rollType: string,
+    rollAbility: string | undefined,
+    rollSkill: string | undefined,
+    rollTool: string | undefined,
+    rollDC: number | undefined
+  ): void {
+    const flashRequests = flashRequestsPlayer.concat(flashRequestsGM);
+    if (flashRequests.length === 0) return;
+
+    // Determine Flash Token Bar requestType
+    let flashRequestType: string;
+    if (rollType === "save") {
+      flashRequestType = "savingthrow";
+    } else if (rollType === "check") {
+      flashRequestType = "ability";
+    } else if (rollType === "skill") {
+      flashRequestType = "skill";
+    } else if (rollType === "tool") {
+      flashRequestType = "tool";
+    } else {
+      flashRequestType = "savingthrow"; // default
+    }
+
+    const flashRollKey = rollAbility ?? rollSkill ?? rollTool ?? "dex";
+    const flashRequest = {
+      requestType: flashRequestType,
+      rollKey: flashRollKey,
+      actorIds: flashRequests.map(request => request.token),
+      dc: rollDC,
+      advantage: flashRequests.some(r => r.advantage) || undefined,
+      disadvantage: flashRequests.some(r => r.disadvantage) || undefined,
+      skipRollDialog: true,
+      sendAsRequest: true,
+      rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
+        ? this.activity.midiProperties!.rollMode
+        : "roll",
+      workflowId: this.id,
+      itemCardUuid: this.itemCardUuid
+    };
+
+    timedExecuteAsGM("flashTokenBarSaves", flashRequest);
+  }
+
+  /**
+   * Dispatch save requests to Epic Rolls 5e
+   */
+  dispatchEpicRollsSaves(
+    rerRequestsPlayer: any[],
+    rerRequestsGM: any[],
+    rollType: string,
+    rollDC: number | undefined
+  ): void {
+    //@ts-expect-error
+    const BasicRoll = CONFIG.Dice.BasicRoll as typeof Roll;
     const rerRequests = rerRequestsPlayer.concat(rerRequestsGM);
-    if (rerRequests.length > 0) {
-      // rollType is save/abil/skill
-      const rerType = rollType;
-      const type = `${rerType}.${this.saveActivity.save?.ability.first() ?? this.saveActivity.check?.associated.first() ?? "dex"}`
-      const rerRequest = {
-        actors: rerRequests.map(request => request.actorUuid),
-        contestants: [],
-        type,
-        options: {
-          DC: rollDC,
-          showDC: configSettings.displaySaveDC,
-          blindRoll: configSettings.autoCheckSaves === "whisper",
-          showRollResults: false, // configSettings.autoCheckSaves === "allShow",
-          hideNames: true,
-          noMessage: true,
-          rollSettings: rerRequests.map(request => ({
-            advantage: request.advantage,
-            disadvantage: request.disadvantage,
-            uuid: request.actorUuid
-          })),
+    if (rerRequests.length === 0) return;
+
+    const rerType = rollType;
+    const type = `${rerType}.${this.saveActivity?.save?.ability.first() ?? this.saveActivity?.check?.associated.first() ?? "dex"}`;
+    const rerRequest = {
+      actors: rerRequests.map(request => request.actorUuid),
+      contestants: [],
+      type,
+      options: {
+        DC: rollDC,
+        showDC: configSettings.displaySaveDC,
+        blindRoll: configSettings.autoCheckSaves === "whisper",
+        showRollResults: false,
+        hideNames: true,
+        noMessage: true,
+        rollSettings: rerRequests.map(request => ({
+          advantage: request.advantage,
+          disadvantage: request.disadvantage,
+          uuid: request.actorUuid
+        })),
+      }
+    };
+
+    //@ts-expect-error
+    ui.EpicRolls5e.requestRoll(rerRequest).then((rerResult: {
+      cancelled: boolean;
+      results: {
+        actor: Actor.Implementation;
+        roll: unknown;
+      }[];
+    }) => {
+      if (rerResult.cancelled) {
+        let roll = new BasicRoll("-1");
+        roll = roll.evaluateSync({ strict: false });
+        for (let uuid of rerRequest.actors) {
+          const fn = this.saveRequests[uuid];
+          delete this.saveRequests[uuid];
+          fn(roll);
         }
-      };
-      //@ts-expect-error
-      ui.EpicRolls5e.requestRoll(rerRequest).then((rerResult: {
-        cancelled: boolean;
-        results: {
-          actor: Actor.Implementation;
-          roll: unknown;
-        }[];
-      }) => {
-        if (rerResult.cancelled) {
-          let roll = new BasicRoll("-1");
-          roll = roll.evaluateSync({ strict: false })
-          for (let uuid of rerRequest.actors) {
-            const fn = this.saveRequests[uuid];
-            delete this.saveRequests[uuid];
-            fn(roll)
-          }
-        } else for (let rerRoll of rerResult.results) {
+      } else {
+        for (let rerRoll of rerResult.results) {
           const actorUuid = rerRoll.actor.uuid;
           const fn = this.saveRequests[actorUuid];
           delete this.saveRequests[actorUuid];
           const roll = Roll.fromJSON(JSON.stringify(rerRoll.roll));
           fn(roll);
         }
-      })
+      }
+    });
+  }
+
+  /**
+   * Create a player chat save request with timeout handling
+   */
+  createPlayerChatSaveRequest(
+    target: Token,
+    player: User,
+    saveDetails: AnyMutableObject,
+    rollType: string,
+    rollAbility: string | undefined,
+    rollSkill: string | undefined,
+    rollTool: string | undefined,
+    rollDC: number | undefined,
+    showRoll: boolean,
+    GMprompt: string,
+    isMagicSave: boolean,
+    magicResistance: boolean,
+    magicVulnerability: boolean,
+    rollAction: Function
+  ): { promise: Promise<Roll[] | Roll | null>, requestCard: Promise<ChatMessage | undefined> | undefined } {
+    //@ts-expect-error
+    const BasicRoll = CONFIG.Dice.BasicRoll as typeof Roll;
+
+    const requestId = target?.id ?? foundry.utils.randomID();
+    const playerId = player?.id;
+    const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
+
+    const promise = new Promise<Roll[] | Roll | null>((resolve) => {
+      this.saveRequests[requestId] = resolve;
+
+      // Set a timeout for taking over the roll
+      if (configSettings.playerSaveTimeout > 0) {
+        this.saveTimeouts[requestId] = setTimeout(async () => {
+          if (this.saveRequests[requestId]) {
+            delete this.saveRequests[requestId];
+            delete this.saveTimeouts[requestId];
+            let result: Roll[] | null;
+
+            if (!game.user?.isGM && saveDisplay === "allShow") {
+              // Non-GM users don't have permission to create chat cards impersonating the GM
+              result = await timedAwaitExecuteAsGM("rollAbility", {
+                targetUuid: target.actor?.uuid ?? "",
+                request: rollType,
+                ability: rollAbility,
+                skill: rollSkill,
+                tool: rollTool,
+                options: {
+                  messageData: { user: playerId },
+                  target: configSettings.autoCheckSaves === "whisper" ? undefined : saveDetails.rollDC,
+                  chatMessage: showRoll,
+                  mapKeys: false,
+                  rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
+                    ? this.activity.midiProperties?.rollMode
+                    : CONST.DICE_ROLL_MODES.PUBLIC,
+                  advantage: saveDetails.advantage,
+                  disadvantage: saveDetails.disadvantage,
+                  fastForward: true,
+                  saveItemUuid: this.saveItem?.uuid,
+                  isConcentrationCheck: saveDetails.isConcentrationCheck,
+                  workflowOptions: saveDetails.workflowOptions,
+                  workflowId: this.id,
+                  itemCardUuid: this.itemCardUuid,
+                  itemId: this.saveActivity?.item.id
+                }
+              });
+            } else {
+              let config: AnyMutableObject = {
+                configure: false,
+                target: rollDC,
+                ability: rollAbility,
+                midiOptions: {
+                  workflowId: this.id,
+                  itemCardUuid: this.itemCardUuid,
+                  advantage: saveDetails.advantage,
+                  disadvantage: saveDetails.disadvantage,
+                  mapKeys: false,
+                  fastForward: true,
+                  saveItemUuid: this.saveItem?.uuid,
+                  isConcentrationCheck: saveDetails.isConcentrationCheck,
+                  workflowOptions: saveDetails.workflowOptions
+                }
+              };
+              let dialog: AnyObject = { ability: rollAbility, skill: rollSkill, tool: rollTool };
+              let message: AnyObject = { create: showRoll };
+              if (rollType === "tool") {
+                let tool = target.actor?.items.get(this.saveActivity?.item.id ?? "");
+                //@ts-expect-error no dnd5e types
+                if (!tool) tool = target.actor?.items.find(i => i.type === "tool" && i.system.type.baseItem === rollTool);
+                if (!tool) {
+                  // No tool of the requested type - auto fail
+                  resolve([await new BasicRoll("-1").evaluate()]);
+                  return;
+                } else {
+                  //@ts-expect-error no dnd5e-types
+                  config.bonus = tool.system.bonus;
+                  //@ts-expect-error no dnd5e-types
+                  config.prof = tool.system.prof;
+                  config.item = tool;
+                }
+              }
+              result = await rollAction.bind(target.actor)(config, dialog, message);
+              resolve(result);
+            }
+          }
+        }, (configSettings.playerSaveTimeout || 1) * 1000);
+      }
+    });
+
+    const requestCard = requestPCSave(
+      rollAbility ?? "",
+      rollType,
+      player.id!,
+      target.actor,
+      {
+        flavor: this.item.name ?? "",
+        requestId,
+        GMprompt,
+        isMagicSave: !!isMagicSave,
+        magicResistance,
+        magicVulnerability,
+        saveDetails: saveDetails as pcSaveOptions["saveDetails"]
+      }
+    );
+
+    return { promise, requestCard };
+  }
+
+  /**
+   * Create a standard socketlib save roll
+   */
+  createStandardSaveRoll(
+    target: Token,
+    saveDetails: AnyMutableObject,
+    rollType: string,
+    rollAbility: string | undefined,
+    rollSkill: string | undefined,
+    rollTool: string | undefined,
+    whisper: boolean,
+    showRoll: boolean,
+    showRollDialog: boolean,
+    simulate: boolean,
+    isMagicSave: boolean
+  ): Promise<Roll[] | Roll | null> {
+    // Find a player owner for the roll if possible
+    let owner = playerFor(target);
+    if (!owner?.isGM && owner?.active) showRoll = true; // Always show player save rolls
+    if (!owner?.active) owner = preferredActiveGM();
+    // Fall back to rolling as the current user
+    if (!owner) owner = game.user;
+
+    let rollMode = ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
+      ? this.activity.midiProperties!.rollMode
+      : whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC;
+
+    if (!owner?.isGM) {
+      if ((this.activity.midiProperties?.rollMode ?? "default") === "default") {
+        if (["noneDialogPublic", "nonePublic"].includes(configSettings.playerRollSaves)) {
+          rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
+        } else if (["noneDialogPrivate", "none"].includes(configSettings.playerRollSaves)) {
+          rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+        } else if (configSettings.playerRollSaves === "noneDialogSelf") {
+          rollMode = CONST.DICE_ROLL_MODES.SELF;
+        } else if (configSettings.playerRollSaves === "noneDialogBlind") {
+          rollMode = CONST.DICE_ROLL_MODES.BLIND;
+        }
+      }
+    }
+
+    return socketlibSocket.executeAsUser("rollAbility", owner?.id, {
+      targetUuid: (target.actor as Actor).uuid,
+      request: rollType,
+      ability: rollAbility,
+      skill: rollSkill,
+      tool: rollTool,
+      options: {
+        simulate,
+        target: saveDetails.rollDC,
+        messageData: { user: owner?.id },
+        chatMessage: showRoll,
+        rollMode,
+        mapKeys: false,
+        advantage: saveDetails.advantage,
+        disadvantage: saveDetails.disadvantage,
+        fastForward: simulate || !showRollDialog,
+        isMagicSave,
+        saveItemUuid: this.item.uuid,
+        isConcentrationCheck: saveDetails.isConcentrationCheck,
+        workflowId: this.id,
+        itemCardUuid: this.itemCardUuid,
+        itemUuid: this.itemUuid,
+        workflowOptions: saveDetails.workflowOptions,
+        itemId: this.saveActivity?.item.id
+      },
+    });
+  }
+
+  /**
+   * Queue a target's save roll to the appropriate handler based on settings
+   * Returns the promise and optionally adds to module-specific request arrays
+   */
+  queueTargetSaveRoll(options: QueueSaveRollOptions): { promise: Promise<Roll[] | Roll | null> | null, requestCard: Promise<ChatMessage | undefined> | undefined } {
+    const { target, saveDetails, rollInfo, magicInfo, displayOptions, playerInfo, moduleFlags, moduleRequests } = options;
+    const { type: rollType, ability: rollAbility, skill: rollSkill, tool: rollTool, action: rollAction } = rollInfo;
+    const { isMagicSave, magicResistance, magicVulnerability } = magicInfo;
+    const { whisper, showRoll, showRollDialog, simulate } = displayOptions;
+    const { player, GMprompt, playerChat } = playerInfo;
+    const { playerMonksTB, playerFlashTB, playerEpicRolls, gmMonksTB, gmFlashTB, gmRER } = moduleFlags;
+    // Check for friendly roll first
+    const friendlyRoll = this.getFriendlyTargetRoll(saveDetails as { isFriendly: boolean });
+    if (friendlyRoll) {
+      return { promise: friendlyRoll, requestCard: undefined };
+    }
+
+    // Apply magic resistance/vulnerability to saveDetails for module requests
+    const applyMagicModifiers = () => {
+      if (isMagicSave) {
+        if (magicResistance) saveDetails.advantage = true;
+        if (magicVulnerability) saveDetails.disadvantage = true;
+      }
     };
 
-    if (debugEnabled > 1) debug("check saves: requests are ", this.saveRequests)
-    let results = await Promise.all(promises);
-    (await Promise.all(requestCards)).forEach(chatMessage => chatMessage?.delete());
-    if (rerRequests?.length > 0) await busyWait(10);
-    delete this.saveDetails;
+    // Monks Token Bar
+    if ((!player?.isGM && playerMonksTB) || (player?.isGM && gmMonksTB)) {
+      const promise = new Promise<Roll[] | Roll | null>((resolve) => {
+        let requestId = target.id ?? foundry.utils.randomID();
+        this.saveRequests[requestId] = resolve;
+      });
+
+      applyMagicModifiers();
+      const requests = player?.isGM ? moduleRequests.monks.gm : moduleRequests.monks.player;
+      requests.push(this.buildMonksTokenBarRequest(target, saveDetails, isMagicSave));
+      return { promise, requestCard: undefined };
+    }
+
+    // Flash Rolls 5e
+    if ((!player?.isGM && playerFlashTB) || (player?.isGM && gmFlashTB)) {
+      const promise = new Promise<Roll[] | Roll | null>((resolve) => {
+        let requestId = target.actor?.uuid ?? foundry.utils.randomID();
+        this.saveRequests[requestId] = resolve;
+      });
+
+      applyMagicModifiers();
+      const requests = player?.isGM ? moduleRequests.flash.gm : moduleRequests.flash.player;
+      requests.push(this.buildFlashRollsRequest(target, saveDetails, isMagicSave));
+      return { promise, requestCard: undefined };
+    }
+
+    // Epic Rolls 5e
+    if ((!player?.isGM && playerEpicRolls) || (player?.isGM && gmRER)) {
+      const promise = new Promise<Roll[] | Roll | null>((resolve) => {
+        let requestId = target.actor?.uuid ?? foundry.utils.randomID();
+        this.saveRequests[requestId] = resolve;
+      });
+
+      applyMagicModifiers();
+      const requests = player?.isGM ? moduleRequests.epic.gm : moduleRequests.epic.player;
+      requests.push(this.buildEpicRollsRequest(target, saveDetails, isMagicSave));
+      return { promise, requestCard: undefined };
+    }
+
+    // Player Chat save request
+    if ((player?.active && playerChat) || (player?.isGM && GMprompt === "none")) {
+      if (debugEnabled > 0) {
+        warn(`checkSaves | Player ${player?.name} controls actor ${(target.actor as Actor).name} - requesting ${rollAbility} ${rollType}`);
+      }
+      const result = this.createPlayerChatSaveRequest(
+        target, player!, saveDetails, rollType, rollAbility, rollSkill, rollTool, saveDetails.rollDC as number | undefined,
+        showRoll, GMprompt, isMagicSave, magicResistance, magicVulnerability, rollAction
+      );
+      return { promise: result.promise, requestCard: result.requestCard };
+    }
+
+    // Standard socketlib roll
+    const promise = this.createStandardSaveRoll(
+      target, saveDetails, rollType, rollAbility, rollSkill, rollTool,
+      whisper, showRoll, showRollDialog, simulate, isMagicSave
+    );
+    return { promise, requestCard: undefined };
+  }
+
+  /**
+   * Process a single target's save result - determine if saved, apply bonuses, update tracking sets
+   */
+  async processTargetSaveResult(
+    target: Token,
+    result: Roll[],
+    context: ProcessTargetSaveContext
+  ): Promise<void> {
+    const { rollDC, rollAbility, rollType, template, D20Roll } = context;
+
+    let saveRollTotal = result.reduce((acc, r) => acc + r.total!, 0);
+    let saveRolls = result;
+    this.updateAdvantageTrackingFromRoll(target, result);
+    let { isFumble, isCritical } = this.determineCriticalOrFumble(saveRolls[0], saveRollTotal);
+    const coverSaveBonus = await this.calculateCoverSaveBonus(target, template, rollAbility);
+    saveRollTotal += coverSaveBonus;
+
+    // Adjust the save dc if something changed it during the roll
+    let resultDC = rollDC ?? 0;
+    // @ts-expect-error no dnd5e-types
+    if (Number.isNumeric(result[0]?.options.target)) resultDC = result[0]!.options.target;
+    let saved = saveRollTotal >= resultDC;
+
+    if (checkRule("criticalSaves")) {
+      saved = (isCritical || saveRollTotal >= resultDC) && !isFumble;
+    }
+    if (this.checkSculptOrCarefulSpells(target)) {
+      saved = true;
+    }
+
+    this.updateSaveFailSets(target, saved);
+
+    if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
+      if (saved)
+        await doReactions(target, this.tokenUuid, this.attackRoll, "reactionsavesuccess", { workflow: this, activity: this.activity, item: this.item })
+      else
+        await doReactions(target, this.tokenUuid, this.attackRoll, "reactionsavefail", { workflow: this, activity: this.activity, item: this.item })
+    }
+    if (isCritical) this.criticalSaves.add(target);
+
+    // Trigger target macros that might modify the roll
+    if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) {
+      const rollResults = await this.triggerTargetMacros(["isSave", "isSaveSuccess", "isSaveFailure"], new Set([target]), { saved }) as Record<string, Roll[]>;
+      const newRolls = rollResults[target.document.uuid];
+      if (newRolls?.[0] instanceof Roll) {
+        saveRolls = newRolls;
+        saveRollTotal = newRolls.reduce((acc, r) => acc + (r?.total ?? 0), 0);
+        saved = saveRollTotal >= resultDC;
+        ({ isFumble, isCritical } = this.determineCriticalOrFumble(saveRolls[0], saveRollTotal));
+      }
+    }
+
+    // Apply fail bonuses if the save failed
+    // @ts-expect-error no dnd5e-types
+    if (!(result[0] instanceof D20Roll)) result[0] = D20Roll.fromRoll(result[0]);
+    // @ts-expect-error no dnd5e-types
+    if (!saved && !Number.isNumeric(result[0].options.target)) {
+      const failBonusResult = await this.applyFailedSaveBonuses(target, result, saveRolls, rollType ?? "", rollAbility ?? "");
+      if (failBonusResult) {
+        saveRolls = failBonusResult.saveRolls;
+        saveRollTotal = failBonusResult.saveRollTotal;
+        saved = saveRollTotal >= resultDC;
+        ({ isFumble, isCritical } = this.determineCriticalOrFumble(saveRolls[0], saveRollTotal));
+      }
+    }
+
+    if (isFumble) this.fumbleSaves.add(target);
+    if (isCritical) this.criticalSaves.add(target);
+    if (this.checkSuperSaver(target, this.saveActivity?.save?.ability))
+      this.superSavers.add(target);
+    if (this.checkSemiSuperSaver(target, this.saveActivity?.save?.ability))
+      this.semiSuperSavers.add(target);
+
+    // Apply concentration save bonus if applicable
+    const concentrationResult = await this.applyConcentrationSaveBonus(target, saveRolls[0], resultDC, isCritical, isFumble);
+    if (concentrationResult) {
+      saveRolls[0] = concentrationResult.saveRoll;
+      saveRollTotal = concentrationResult.saveRollTotal;
+      saved = concentrationResult.saved;
+    }
+
+    this.updateSaveFailSets(target, saved);
+
+    if (game.user?.isGM) log(`Ability save/check: ${target.name} rolled ${saveRollTotal} vs ${rollAbility} DC ${rollDC}`);
+    await this.buildSaveDisplayEntry(target, saveRolls[0], saveRollTotal, saved, rollDC, coverSaveBonus);
+  }
+
+  /**
+   * Update the saves and failedSaves sets based on whether the target saved
+   */
+  updateSaveFailSets(target: Token, saved: boolean): void {
+    if (saved) {
+      this.saves.add(target);
+      this.failedSaves.delete(target);
+    } else {
+      this.saves.delete(target);
+      this.failedSaves.add(target);
+    }
+  }
+
+  /**
+   * Apply fail bonuses (flags.midi-qol.save.fail) if the save failed
+   */
+  async applyFailedSaveBonuses(
+    target: Token,
+    result: Roll[],
+    saveRolls: Roll[],
+    rollType: string,
+    rollAbility: string
+  ): Promise<{ saveRolls: Roll[], saveRollTotal: number } | null> {
+    const failFlagsLength = collectBonusFlags(target.actor!, rollType, "fail.all").length;
+    const failAbilityFlagsLength = collectBonusFlags(target.actor!, rollType, `fail.${rollAbility}`).length;
+
+    if (!failFlagsLength && !failAbilityFlagsLength) return null;
+
+    // If the roll fails and there is a flags.midi-qol.save.fail then apply the bonus
+    let owner = playerFor(target);
+    if (!owner?.active) owner = game.users?.find((u: User) => u.isGM && u.active);
+    if (!owner) return null;
+
+    let newRoll: Roll;
+    if (owner?.isGM && game.user?.isGM) {
+      newRoll = await bonusCheck(target.actor!, result[0], rollType, failAbilityFlagsLength ? `fail.${rollAbility}` : "fail.all");
+    } else {
+      newRoll = await socketlibSocket.executeAsUser("bonusCheck", owner?.id, {
+        actorUuid: (target.actor as Actor).uuid,
+        result: JSON.stringify(result[0].toJSON()),
+        rollType,
+        selector: failFlagsLength ? "fail.all" : `fail.${rollAbility}`
+      });
+    }
+
+    const updatedSaveRolls = [...saveRolls];
+    updatedSaveRolls[0] = Roll.fromJSON(JSON.stringify(newRoll)) as Roll<EmptyObject>;
+    const saveRollTotal = updatedSaveRolls.reduce((acc, r) => acc + r.total!, 0);
+
+    return { saveRolls: updatedSaveRolls, saveRollTotal };
+  }
+
+  /**
+   * Compute module integration settings for save rolls (Monks TB, Flash Rolls, Epic Rolls)
+   */
+  computeModuleIntegrationSettings(simulate: boolean, flagRollType: string): {
+    flags: ModuleIntegrationFlags;
+    requests: ModuleIntegrationRequests;
+  } {
+    const playerMonksTB = !simulate && flagRollType !== "tool" && !!installedModules.get("monks-tokenbar") && configSettings.playerRollSaves === "mtb";
+    const playerFlashTB = !simulate && !!installedModules.get("flash-rolls-5e") && configSettings.playerRollSaves === "ftb";
+    const playerEpicRolls = !simulate && !!installedModules.get("epic-rolls-5e") && configSettings.playerRollSaves === "rer";
+
+    return {
+      flags: {
+        playerMonksTB,
+        playerFlashTB,
+        playerEpicRolls,
+        gmMonksTB: false,  // Set per-target in determineTargetRollSettings
+        gmFlashTB: false,
+        gmRER: false
+      },
+      requests: {
+        monks: { player: [] as any[], gm: [] as any[] },
+        flash: { player: [] as any[], gm: [] as any[] },
+        epic: { player: [] as any[], gm: [] as any[] }
+      }
+    };
+  }
+
+  /**
+   * Build SaveDetails for a target, including magic resistance/vulnerability and advantage checks
+   */
+  async buildSaveDetailsForTarget(
+    target: Token,
+    context: {
+      rollDC: number | undefined;
+      rollType: string | undefined;
+      rollAbility: string | null | undefined;
+      flagRollType: string;
+      isMagicSave: boolean;
+      actorDisposition: number;
+    }
+  ): Promise<{
+    saveDetails: SaveDetails;
+    magicResistance: boolean;
+    magicVulnerability: boolean;
+  }> {
+    const { rollDC, rollType, rollAbility, flagRollType, isMagicSave, actorDisposition } = context;
+    const conditionData = createConditionData({ workflow: this, target, actor: target.actor! });
+    const targetDocument = target.document;
+
+    const saveDetails: SaveDetails = {
+      advantage: undefined,
+      disadvantage: undefined,
+      isMagicSave: !!isMagicSave,
+      isFriendly: targetDocument?.disposition === actorDisposition,
+      isConcentrationCheck: undefined,
+      rollDC: rollDC ?? 0,
+      saveItemUuid: this.saveItem?.uuid ?? "",
+      workflowId: this.id,
+      itemCardUuid: this.itemCardUuid ?? "",
+      workflowUuid: this.id, // deprecated
+      workflowOptions: this.workflowOptions,
+    };
+
+    // Check magic resistance and vulnerability
+    const magicCheck = await this.checkMagicResistanceAndVulnerability(target, conditionData, rollAbility, !!isMagicSave);
+    if (magicCheck.advantage !== undefined) saveDetails.advantage = magicCheck.advantage;
+    if (magicCheck.disadvantage !== undefined) saveDetails.disadvantage = magicCheck.disadvantage;
+    const { magicResistance, magicVulnerability } = magicCheck;
+
+    // Check ability advantage/disadvantage from settings
+    const settingsOptions = await procAbilityAdvantage(target.actor!, rollType ?? "", this.saveActivity!.save?.ability?.first() ?? this.saveActivity!.check?.ability ?? "", { workflow: this });
+    if (settingsOptions.advantage) saveDetails.advantage = true;
+    if (settingsOptions.disadvantage) saveDetails.disadvantage = true;
+    saveDetails.isConcentrationCheck = this.item.flags?.[MODULE_ID]?.isConcentrationCheck;
+
+    // Check grants save fields from caster
+    const grantsCheck = await this.evaluateGrantsAdvantage(conditionData, flagRollType, rollAbility);
+    if (grantsCheck.advantage === true) saveDetails.advantage = true;
+    else if (grantsCheck.advantage === false) saveDetails.advantage = false;
+    if (grantsCheck.disadvantage === true) saveDetails.disadvantage = true;
+    else if (grantsCheck.disadvantage === false) saveDetails.disadvantage = false;
+
+    // Update advantage/disadvantage tracking sets
+    if (saveDetails.advantage && !saveDetails.disadvantage) this.advantageSaves.add(target);
+    else if (saveDetails.disadvantage && !saveDetails.advantage) this.disadvantageSaves?.add(target);
+
+    return { saveDetails, magicResistance, magicVulnerability };
+  }
+
+  /**
+   * Normalize roll results to ensure they are all Roll[] arrays
+   */
+  normalizeRollResults(results: (Roll | Roll[] | null)[], D20Roll: typeof Roll): Roll[][] {
+    const normalized: Roll[][] = [];
     for (let i = 0; i < results.length; i++) {
       const currResult = results[i];
-      if (currResult instanceof Roll) results[i] = [currResult];
-      if (currResult instanceof Array)
-        for (let j = 0; j < currResult.length; j++) {
-          if (!(currResult[j] instanceof Roll)) {
-            currResult[j] = D20Roll.fromJSON(JSON.stringify(currResult[j])) as Roll<EmptyObject>;
+      if (currResult instanceof Roll) {
+        normalized[i] = [currResult];
+      } else if (currResult instanceof Array) {
+        normalized[i] = currResult.map(r => {
+          if (!(r instanceof Roll)) {
+            return D20Roll.fromJSON(JSON.stringify(r)) as Roll<EmptyObject>;
           }
-        }
+          return r;
+        });
+      } else {
+        normalized[i] = [];
+      }
     }
+    return normalized;
+  }
+
+  /**
+   * update this.saves to be a Set of successful saves from the set of tokens this.hitTargets and failed saves to be the complement
+   */
+
+  async checkSaves(whisper = false, simulate = false) {
+    this.initSaveResults();
+    this.saveRolls = [];
+    this.tokenSaves = {};
+    if (debugEnabled > 1) debug(`checkSaves: whisper ${whisper}  hit targets ${this.hitTargets}`)
+    if (this.hitTargets.size <= 0 && this.hitTargetsEC.size <= 0) {
+      this.saveDisplayFlavor = `<span>${i18n("midi-qol.noSaveTargets")}</span>`
+      return;
+    }
+
+    if (!this.saveActivity) return;
+    const allHitTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
+    if (allHitTargets.size === 0) return;
+    let rollDC = this.saveActivity?.save?.dc.value ?? this.saveActivity?.check?.dc.value;
+    //@ts-expect-error
+    const D20Roll = CONFIG.Dice.D20Roll as typeof Roll;
+
+    this.saveDC = rollDC;
+    const requestCards: Array<Promise<ChatMessage | undefined> | undefined> = [];
+    let promises: Promise<Roll[] | Roll | null>[] = [];
+    const { rollAction, rollType, rollAbility, rollSkill, rollTool, flagRollType } = this.determineRollTypeAndAction();
+    if (!rollAction) return; // No save or check configured on activity
+
+    const { flags: moduleFlags, requests: moduleRequests } = this.computeModuleIntegrationSettings(simulate, flagRollType ?? "");
+    const { playerMonksTB, playerFlashTB, playerEpicRolls } = moduleFlags;
+    const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
+    // @ts-expect-error no dnd5e-types
+    const isMagicSave = this.item.type === "spell" || this.activity.midiProperties?.magicEffect;
+
+    try {
+      let actorDisposition: number;
+      if (this.token && this.token.document?.disposition !== undefined) actorDisposition = this.token.document.disposition;
+      else { // no token to use so make a guess
+        // @ts-expect-error no dnd5e-types
+        actorDisposition = this.actor.type === "npc" ? -1 : 1;
+      }
+
+      for (let target of allHitTargets) {
+        if (!target || !target?.actor) continue;
+        let showRoll = saveDisplay === "allShow";
+        if (simulate) showRoll = false;
+        if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
+          await doReactions(target, this.tokenUuid, this.attackRoll ?? new Roll(""), "reactionsave", { workflow: this, activity: this.activity, item: this.item })
+        }
+
+        // Build save details for this target
+        const { saveDetails, magicResistance, magicVulnerability } = await this.buildSaveDetailsForTarget(target, {
+          rollDC,
+          rollType,
+          rollAbility,
+          flagRollType: flagRollType ?? "",
+          isMagicSave: !!isMagicSave,
+          actorDisposition
+        });
+
+        // Determine roll settings for this target
+        const { player, showRollDialog, GMprompt, gmMonksTB, gmFlashTB, gmRER, playerChat } =
+          this.determineTargetRollSettings(target, flagRollType, simulate);
+
+        this.saveDetails = saveDetails;
+        if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["preTargetSave"], new Set([target]));
+
+        // Queue the save roll using the appropriate handler
+        const { promise, requestCard } = this.queueTargetSaveRoll({
+          target,
+          saveDetails,
+          rollInfo: {
+            type: rollType ?? "save",
+            ability: rollAbility ?? undefined,
+            skill: rollSkill ?? undefined,
+            tool: rollTool ?? undefined,
+            action: rollAction
+          },
+          magicInfo: {
+            isMagicSave: !!isMagicSave,
+            magicResistance,
+            magicVulnerability
+          },
+          displayOptions: {
+            whisper,
+            showRoll,
+            showRollDialog,
+            simulate
+          },
+          playerInfo: {
+            player,
+            GMprompt: typeof GMprompt === "string" ? GMprompt : "none",
+            playerChat
+          },
+          moduleFlags: {
+            playerMonksTB,
+            playerFlashTB,
+            playerEpicRolls,
+            gmMonksTB: gmMonksTB ?? false,
+            gmFlashTB: gmFlashTB ?? false,
+            gmRER: gmRER ?? false
+          },
+          moduleRequests
+        });
+
+        if (promise) promises.push(promise);
+        if (requestCard) requestCards.push(requestCard);
+      }
+    } catch (err) {
+      TroubleShooter.recordError(err);
+      console.warn(err)
+    }
+
+    // Dispatch batched requests to external modules
+    this.dispatchMonksTokenBarSaves(
+      moduleRequests.monks.player, moduleRequests.monks.gm,
+      rollType ?? "save", rollAbility ?? undefined, rollSkill ?? undefined, rollDC,
+      whisper, !!isMagicSave
+    );
+    this.dispatchFlashRollsSaves(
+      moduleRequests.flash.player, moduleRequests.flash.gm,
+      rollType ?? "save", rollAbility ?? undefined, rollSkill ?? undefined, rollTool ?? undefined, rollDC
+    );
+    this.dispatchEpicRollsSaves(
+      moduleRequests.epic.player, moduleRequests.epic.gm,
+      rollType ?? "save", rollDC
+    );
+
+    if (debugEnabled > 1) debug("check saves: requests are ", this.saveRequests)
+    const rawResults = await Promise.all(promises);
+    (await Promise.all(requestCards)).forEach(chatMessage => chatMessage?.delete());
+    const epicRequests = moduleRequests.epic.player.concat(moduleRequests.epic.gm);
+    if (epicRequests?.length > 0) await busyWait(10);
+    delete this.saveDetails;
+    const results = this.normalizeRollResults(rawResults, D20Roll);
     this.saveResults = results.filter(r => !!r).flat();
-    let i = 0;
+
+    // Get template for area target saves
     let template: foundry.canvas.placeables.MeasuredTemplate.Implementation | undefined | null;
     if (activityHasAreaTarget(this.activity) && this.templateUuid) {
       const templateDocument = await fromUuid(this.templateUuid) as MeasuredTemplateDocument | null;
       template = templateDocument?.object;
     }
+
+    // Process each target's save result
+    const processContext = { rollDC, rollAbility: rollAbility ?? undefined, rollType, template, D20Roll };
+    let i = 0;
     for (let target of allHitTargets) {
-      const targetDocument = target.document;
       if (!target.actor) continue; // these were skipped when doing the rolls so they can be skipped now
+
+      // Ensure we have a valid result array
       if (!results[i]?.[0] || results[i]?.[0]?.total === undefined) {
         const message = `Token ${target.name} could not roll save/check assuming 1`;
         error(message, target);
@@ -5475,247 +6325,20 @@ export class Workflow {
         results[i] = [await new D20Roll("1").evaluate()];
       }
 
-      let tmpResult = results[i];
-      let result = tmpResult instanceof Array
+      const tmpResult = results[i];
+      const result = tmpResult instanceof Array
         ? tmpResult
         : tmpResult
           ? [tmpResult]
           : [new D20Roll("1").evaluateSync()];
-      let saveRollTotal = result.reduce((acc, r) => acc + r.total!, 0);
-      let saveRolls = result;
-      // @ts-expect-error no dnd5e-types
-      if (result[0]?.options?.advantage) this.advantageSaves.add(target);
-      else this.advantageSaves.delete(target);
-      // @ts-expect-error no dnd5e-types
-      if (result[0]?.options?.disadvantage) this.disadvantageSaves?.add(target);
-      else this.disadvantageSaves?.delete(target);
-      if (this.advantageSaves.has(target) && this.disadvantageSaves?.has(target)) {
-        this.advantageSaves.delete(target);
-        this.disadvantageSaves.delete(target);
-      }
-      let isFumble = false;
-      let isCritical = false;
-      if (saveRolls[0]?.terms) { // normal d20 roll/monks roll
-        const dterm = saveRolls[0].terms[0] as foundry.dice.terms.DiceTerm;
-        const diceRoll = dterm?.results?.find(result => result.active)?.result ?? saveRollTotal;
-        //@ts-expect-error no dnd5e-types
-        isFumble = diceRoll <= (dterm.options?.fumble ?? 1)
-        //@ts-expect-error no dnd5e-types
-        isCritical = diceRoll >= (dterm.options?.critical ?? 20);
-      }
-      let coverSaveBonus = 0;
 
-      if (this.item && this.activityHasSave && rollAbility === "dex") {
-        if (this.activity.actionType === "rsak" && this.actor.flags?.dnd5e?.spellSniper)
-          coverSaveBonus = 0;
-        else if (activityHasAreaTarget(this.activity) && template) {
-          const position = foundry.utils.duplicate(template.center);
-          const dimensions = canvas.dimensions;
-          if (template.document.t === "rect") {
-            // TODO in v12 width seems to be always 0 so this does nothing
-            position.x += (template.document.width ?? 1) / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
-            position.y += (template.document.width ?? 1) / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
-          }
-          if (configSettings.optionalRules.coverCalculation === "levelsautocover"
-            && installedModules.get("levelsautocover")) {
-            // TODO Fix this monstrosity
-            coverSaveBonus = computeCoverBonus({
-              center: position,
-              document: {
-                elevation: template.document.elevation,
-                disposition: targetDocument?.disposition,
-              }
-            } as unknown as Token, target, this.activity);
-          } else if (configSettings.optionalRules.coverCalculation === "simbuls-cover-calculator"
-            && installedModules.get("simbuls-cover-calculator")) {
-            // Special case for templaes
-            coverSaveBonus = 0;
-            const coverData = await globalThis.CoverCalculator.checkCoverViaCoordinates(
-              position.x, position.y, false, 'AoE', false, target);
-            if (coverData?.data.results.cover === 3) coverSaveBonus = FULL_COVER;
-            else coverSaveBonus = -coverData.data.results.value;
-          } if (configSettings.optionalRules.coverCalculation === "tokencover" && installedModules.get("tokencover")) {
-            if (this.token) coverSaveBonus = computeCoverBonus(foundry.utils.deepClone(this.token, { center: position } as any), target, this.activity);
-          }
-        } else if (this.token) {
-          coverSaveBonus = computeCoverBonus(this.token, target, this.activity);
-        }
-      }
-      saveRollTotal += coverSaveBonus;
-      // Adjust the save dc if something changed it during the roll
-      let resultDC = rollDC ?? 0;
-      // @ts-expect-error no dnd5e-types
-      if (Number.isNumeric(result[0]?.options.target)) resultDC = result[0]!.options.target;
-      let saved = saveRollTotal >= resultDC;
-
-      if (checkRule("criticalSaves")) { // normal d20 roll/monks roll
-        saved = (isCritical || saveRollTotal >= resultDC) && !isFumble;
-      }
-      // @ts-expect-error no dnd5e-types
-      if (this.actor.flags?.[MODULE_ID]?.sculptSpells && (this.rangeTargeting || this.tempTargetConfirmation) && this.activity.item?.system.school === "evo" && this.preSelectedTargets.has(target)) {
-        saved = true;
-        this.superSavers.add(target)
-      }
-      if (this.actor.flags?.[MODULE_ID]?.carefulSpells && (this.rangeTargeting || this.tempTargetConfirmation) && this.preSelectedTargets.has(target)) {
-        saved = true;
-      }
-      if (saved) {
-        this.saves.add(target);
-        this.failedSaves.delete(target);
-      } else {
-        this.saves.delete(target);
-        this.failedSaves.add(target);
-      }
-      if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
-        if (saved)
-          await doReactions(target, this.tokenUuid, this.attackRoll, "reactionsavesuccess", { workflow: this, activity: this.activity, item: this.item })
-        else
-          await doReactions(target, this.tokenUuid, this.attackRoll, "reactionsavefail", { workflow: this, activity: this.activity, item: this.item })
-      }
-      if (isCritical) this.criticalSaves.add(target);
-
-      let newRolls: Roll[];
-      if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) {
-        const rollResults = await this.triggerTargetMacros(["isSave", "isSaveSuccess", "isSaveFailure"], new Set([target]), { saved }) as Record<string, Roll[]>;
-        newRolls = rollResults[target.document.uuid];
-        if (newRolls[0] instanceof Roll) {
-          saveRolls = newRolls;
-          saveRollTotal = newRolls.reduce((acc, r) => acc + (r?.total ?? 0), 0);
-          saved = saveRollTotal >= resultDC;
-          const dterm = saveRolls[0].terms[0] as foundry.dice.terms.DiceTerm;
-          const diceRoll = dterm?.results?.find(result => result.active)?.result ?? saveRollTotal;
-          //@ts-expect-error no dnd5e-types
-          isFumble = diceRoll <= (dterm.options?.fumble ?? 1)
-          //@ts-expect-error no dnd5e-types
-          isCritical = diceRoll >= (dterm.options?.critical ?? 20);
-        }
-      }
-      // @ts-expect-error no dnd5e-types
-      if (!(result[0] instanceof D20Roll)) result[0] = D20Roll.fromRoll(result[0]);
-      // @ts-expect-error no dnd5e-types
-      if (!saved && !Number.isNumeric(result[0].options.target)) { // if options.target is set the saving throw roll will pick out the fail optional bonus
-        // const newRoll = await bonusCheck(target.actor, result, rollType, "fail")
-        const failFlagsLength = collectBonusFlags(target.actor, rollType ?? "", "fail.all").length;
-        const failAbilityFlagsLength = collectBonusFlags(target.actor, rollType ?? "", `fail.${rollAbility}`).length
-        if (failFlagsLength || failAbilityFlagsLength) {
-          // If the roll fails and there is an flags.midi-qol.save.fail then apply the bonus
-          let owner = playerFor(target);
-          if (!owner?.active) owner = game.users?.find((u: User) => u.isGM && u.active);
-          if (owner) {
-            let newRoll: Roll;
-            if (owner?.isGM && game.user?.isGM) {
-              newRoll = await bonusCheck(target.actor, result[0], rollType ?? "", failAbilityFlagsLength ? `fail.${rollAbility}` : "fail.all");
-            } else {
-              newRoll = await socketlibSocket.executeAsUser("bonusCheck", owner?.id, {
-                actorUuid: (target.actor as Actor).uuid,
-                result: JSON.stringify(result[0].toJSON()),
-                rollType,
-                selector: failFlagsLength ? "fail.all" : `fail.${rollAbility}`
-              });
-
-            }
-
-            saveRolls[0] = Roll.fromJSON(JSON.stringify(newRoll)) as Roll<EmptyObject>;
-            saveRollTotal = saveRolls.reduce((acc, r) => acc + r.total!, 0);
-          }
-        }
-        saved = saveRollTotal >= resultDC;
-        const dterm = saveRolls[0].terms[0] as foundry.dice.terms.DiceTerm;
-        const diceRoll = dterm?.results?.find(result => result.active)?.result ?? saveRollTotal;
-        //@ts-expect-error no dnd5e-types
-        isFumble = diceRoll <= (dterm.options?.fumble ?? 1)
-        //@ts-expect-error no dnd5e-types
-        isCritical = diceRoll >= (dterm.options?.critical ?? 20);
-      }
-      if (isFumble) this.fumbleSaves.add(target);
-      if (isCritical) this.criticalSaves.add(target);
-      if (this.checkSuperSaver(target, this.saveActivity?.save?.ability))
-        this.superSavers.add(target);
-      if (this.checkSemiSuperSaver(target, this.saveActivity?.save?.ability))
-        this.semiSuperSavers.add(target);
-
-      if (this.item.flags?.[MODULE_ID]?.isConcentrationCheck) {
-        const checkBonus = target.actor?.flags?.[MODULE_ID]?.concentrationSaveBonus;
-        if (checkBonus) {
-          const rollBonus = (await new D20Roll(`${checkBonus}`, target.actor?.getRollData()).evaluate());
-          result = [addRollTo(result[0], rollBonus)];
-          saveRolls[0] = result[0];
-          saveRollTotal = result.reduce((acc, r) => acc + r.total!, 0);
-          //TODO 
-          // rollDetail = (await new D20Roll(`${rollDetail.total} + ${rollBonus}`).evaluate());
-          saved = saveRollTotal >= resultDC;
-          if (checkRule("criticalSaves")) { // normal d20 roll/monks roll
-            saved = (isCritical || saveRollTotal >= resultDC) && !isFumble;
-          }
-        }
-      }
-
-      if (saved) {
-        this.saves.add(target);
-        this.failedSaves.delete(target);
-      } else {
-        this.saves.delete(target);
-        this.failedSaves.add(target);
-      }
-
-      if (game.user?.isGM) log(`Ability save/check: ${target.name} rolled ${saveRollTotal} vs ${rollAbility} DC ${rollDC}`);
-      let adv = "";
-      if (configSettings.displaySaveAdvantage) {
-        adv = this.advantageSaves.has(target) ? `(${i18n("DND5E.Advantage")})` : "";
-        if (this.disadvantageSaves?.has(target)) adv = `(${i18n("DND5E.Disadvantage")})`;
-      }
-      if (coverSaveBonus) adv += `(+${coverSaveBonus} Cover)`
-      let img = targetDocument.texture.src ?? target.actor.img ?? "";
-      // @ts-expect-error no dnd5e-types
-      if (configSettings.usePlayerPortrait && target.actor.type === "character") {
-        img = target.actor.img ?? targetDocument.texture.src ?? "";
-      }
-
-      if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
-        img = await game.video?.createThumbnail(img, { width: 100, height: 100 }) ?? "";
-      }
-
-      let isPlayerOwned = target.actor.hasPlayerOwner;
-      let saveStyle = "";
-      if (configSettings.highlightSuccess) {
-        if (saved) saveStyle = "color: green;";
-        else saveStyle = "color: red;";
-      }
-      const rollHTML = await midiRenderRoll(saveRolls[0]);
-      this.saveRolls.push(saveRolls[0]);
-      this.tokenSaves[getTokenDocument(target)?.uuid ?? "none"] = saveRolls[0];
-      this.saveDisplayData?.push({
-        gmName: getTokenName(target),
-        playerName: getTokenPlayerName(target) ?? "",
-        img,
-        targetClass: isPlayerOwned ? "midi-qol-player-target" : "midi-qol-npc-target",
-        target,
-        saveSymbol: (rollDC === null) ? "" : (
-          ((target.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-save-symbol")
-          + " midi-qol-save-symbol "
-          + (saved ? "fa-check" : "fa-xmark")),
-        saveTotalClass: target.actor.hasPlayerOwner ? "" : "midi-qol-npc-save-total",
-        saveToolTipClass: target.actor.hasPlayerOwner ? "" : "midi-qol-npc-save-tooltip",
-        rollTotal: String(saveRollTotal),
-        // TODO: Ever used?
-        rollDetail: "",//saveRolls[0],
-        rollHTML,
-        id: target.id,
-        // TODO: ever used?
-        // adv,
-        saveClass: (rollDC === null) ? "" : (saved ? "success" : "failure"),
-      });
+      await this.processTargetSaveResult(target, result, processContext);
       i++;
     }
-    this.saves = this.saves;
-    this.failedSaves = this.failedSaves;
-    this.superSavers = this.superSavers;
-    this.semiSuperSavers = this.semiSuperSavers;
-    this.criticalSaves = this.criticalSaves;
-    this.fumbleSaves = this.fumbleSaves;
-    this.advantageSaves = this.advantageSaves;
+
     this.saveDisplayFlavor = await this.computeSaveDisplayFlavor(rollDC, rollType ?? "", { rollAbility: rollAbility ?? "", rollSkill: rollSkill ?? "", rollTool: rollTool ?? "" });
   }
+
 
   async computeSaveDisplayFlavor(rollDC: number | undefined, rollType: string, options: { rollAbility: string, rollSkill: string, rollTool: string }): Promise<string> {
     let { rollAbility, rollSkill, rollTool } = options;
@@ -7580,6 +8203,19 @@ export class DummyWorkflow extends Workflow {
     return this;
   }
 }
+
+// Registry of workflow classes for dynamic lookup (avoids eval)
+// Using a looser type since subclasses have different constructor signatures
+export const WorkflowRegistry: Record<string, new (...args: any[]) => Workflow> = {
+  Workflow,
+  SavesFirstWorkflow,
+  ActiveDefenceWorkflow,
+  UserWorkflow,
+  DamageOnlyWorkflow,
+  TrapWorkflow,
+  DDBGameLogWorkflow,
+  DummyWorkflow,
+};
 
 // `options` arg for Workflow
 type WorkflowConstructorOptions = InexactPartial<{

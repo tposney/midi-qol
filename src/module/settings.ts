@@ -1007,7 +1007,8 @@ export const triggeredActivityRollAsOptions = keysToOptionsObj("TriggeredActivit
   "firstFailedSaveTarget"
 ]);
 
-export const ignoreTraitsOptions = {
+// Base ignore traits options (apply to all damage types)
+export const ignoreTraitsOptionsBase = {
   idi: {
     label: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idi.label",
     hint: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idi.hint"
@@ -1029,6 +1030,52 @@ export const ignoreTraitsOptions = {
     hint: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idm.hint"
   }
 };
+
+// For backwards compatibility
+export const ignoreTraitsOptions = ignoreTraitsOptionsBase;
+
+// Category labels for damage-type specific options
+export const ignoreTraitsCategoryLabels = {
+  idi: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idi.short",
+  idr: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idr.short",
+  idv: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idv.short",
+  ida: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.ida.short",
+  idm: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idm.short"
+};
+
+/**
+ * Get ignore traits options including damage-type specific options.
+ * Returns options in format: { value, label, group? }
+ * Values are either "idi" (all) or "idi.fire" (specific damage type)
+ */
+export function getIgnoreTraitsOptions(): { value: string, label: string, group?: string }[] {
+  const options: { value: string, label: string, group?: string }[] = [];
+  const damageTypes = CONFIG.DND5E?.damageTypes ?? {};
+
+  // Add base "all" options first
+  for (const [key, entry] of Object.entries(ignoreTraitsOptionsBase)) {
+    options.push({
+      value: key,
+      label: i18n(entry.label),
+      group: i18n("midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.allTypes")
+    });
+  }
+
+  // Add damage-type specific options for each category
+  for (const [category, categoryEntry] of Object.entries(ignoreTraitsOptionsBase)) {
+    const categoryLabel = i18n(ignoreTraitsCategoryLabels[category] ?? categoryEntry.label);
+    for (const [dt, dtConfig] of Object.entries(damageTypes)) {
+      const dtLabel = (dtConfig as any).label ?? dt;
+      options.push({
+        value: `${category}.${dt}`,
+        label: `${categoryLabel}: ${dtLabel}`,
+        group: categoryLabel
+      });
+    }
+  }
+
+  return options;
+}
 
 export const aoeTargetTypeOptions = keysToOptionsObj("AoETargetTypeOptions", [
   "any",

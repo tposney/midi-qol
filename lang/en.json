@@ -760,6 +760,8 @@
   "midi-qol.MacroName": "Macro Name",
   "midi-qol.DamageRolled": "Rolled",
   "midi-qol.DamageApplied": "Applied",
+  "midi-qol.HealingRolled": "Healing Rolled",
+  "midi-qol.HealingApplied": "Healing Applied",
   "midi-qol.FumbleThreshold": "Fumble Threshold",
   "midi-qol.ActionSpecialDurationImmediate.Name": "Expire 1Hit/1Attack/1Action on roll",
   "midi-qol.ActionSpecialDurationImmediate.Hint": "Don't wait for damage roll before expiring attack/hit/action special duration effects",
@@ -1098,24 +1100,30 @@
           "hint": "The activity's damage does not trigger a concentration save"
         },
         "ignoreTraits": {
+          "allTypes": "All Damage Types",
           "idi": {
             "label": "Immunity",
+            "short": "Ignore Immunity",
             "hint": "Ignore damage immunity when applying damage"
           },
           "idr": {
             "label": "Resistance",
+            "short": "Ignore Resistance",
             "hint": "Ignore damage resistance when applying damage"
           },
           "idv": {
             "label": "Vulnerability",
+            "short": "Ignore Vulnerability",
             "hint": "Ignore damage vulnerability when applying damage"
           },
           "ida": {
             "label": "Absorption",
+            "short": "Ignore Absorption",
             "hint": "Ignore damage absorption when applying damage"
           },
           "idm": {
             "label": "Modification",
+            "short": "Ignore Modification",
             "hint": "Ignore damage modification when applying damage"
           }
         },
@@ -1296,10 +1304,10 @@
     "extras": {
       "header": "Midi Save Fields"
     },
-    "FriendlySave": {
-      "Default": "Roll save",
-      "FriendlySuccess": "Friends Succeed",
-      "FriendlyFail": "Friends Fail"
+    "friendlySave": {
+      "default": "Roll save",
+      "friendlySuccess": "Friends Succeed",
+      "friendlyFail": "Friends Fail"
     },
     "FIELDS": {
       "friendlySave": {

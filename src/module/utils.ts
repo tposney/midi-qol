@@ -555,14 +555,29 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         calcDamageOptions.midi.saveMultiplier = saveMultiplier;
       }
 
-      const categories = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption", "idm": "modification" };
+      const categories: Record<string, string> = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption", "idm": "modification" };
       if (workflow?.activity) {
-        for (let key of Object.keys(categories)) {
-          const property = workflow.activity.midiProperties?.ignoreTraits.has(key);
-          if (property) {
-            if (!calcDamageOptions.ignore?.[categories[key]]) foundry.utils.setProperty(calcDamageOptions, `ignore.${categories[key]}`, new Set())
-            for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
-              calcDamageOptions.ignore![categories[key]].add(dt);
+        const ignoreTraits = workflow.activity.midiProperties?.ignoreTraits;
+        if (ignoreTraits) {
+          for (let key of Object.keys(categories)) {
+            const category = categories[key];
+            // Check for base key (e.g., "idi") - applies to all damage types
+            if (ignoreTraits.has(key)) {
+              if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
+              for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
+                calcDamageOptions.ignore![category].add(dt);
+              }
+            }
+          }
+          // Check for damage-type specific keys (e.g., "idi.fire")
+          for (const trait of ignoreTraits) {
+            if (trait.includes('.')) {
+              const [categoryKey, damageType] = trait.split('.');
+              const category = categories[categoryKey];
+              if (category && GameSystemConfig.damageTypes[damageType]) {
+                if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
+                calcDamageOptions.ignore![category].add(damageType);
+              }
             }
           }
         }
@@ -1195,7 +1210,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
       // if a match and saved then record the save success
       if (!options.rollFlags) return effect.id;
       if (options.rollFlags.type === "ability") options.rollFlags.type = "check";
-      if (!rollType.includes(options.rollFlags.type) || !saveAbility.includes(options.rollFlags.abilityId ?? options.rollFlags.skillId)) continue;
+      if (!rollType.includes(options.rollFlags.type) || !saveAbility.includes(options.rollFlags.ability ?? options.rollFlags.skillId)) continue;
       const success = options.saveToUse?.options?.success || options.saveToUse?.total >= saveDC || (checkRule("criticalSaves") && options.saveToUse.isCritical);
       if (success !== undefined) {
         const chatCardUuids = effect.getFlag(MODULE_ID, "overtimeChatCardUuids");
@@ -1205,7 +1220,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
         }
       }
       if (success) {
-        expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:actionSave" });
+        await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:actionSave" });
         return effect.id;
       } else {
         await effect.setFlag(MODULE_ID, "actionSaveSuccess", success === true);
@@ -1227,7 +1242,14 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
       let dataset;
       const chatCardUuids: string[] = [];
       for (let ability of saveAbility) {
-        dataset = { type: rollTypeString, dc: saveDC, item: effect.name, action: "rollRequest", midiOvertimeActorUuid: actor.uuid, rollMode };
+        dataset = {
+          type: rollTypeString,
+          dc: saveDC,
+          item: effect.name,
+          action: "rollRequest",
+          midiOvertimeActorUuid: actor.uuid,
+          midiRollMode: rollMode
+        };
         if (["check", "save"].includes(rollTypeString)) dataset.ability = ability;
         // dataset = { type: rollTypeString, ability, dc: saveDC, item: effect.name, action: "rollRequest", midiOvertimeActorUuid: actor.uuid };
         else if (rollTypeString === "skill") dataset.skill = ability;
@@ -1238,29 +1260,30 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
         }
 
         // const content = `${effect.name} ${i18n(messageFlavor[details.rollType])} as your action to overcome ${label}`;
+        const buttonDataset = { ...dataset, action: "rollRequest", visibility: "all" };
         const chatData = {
           user: game.user?.id,
           whisper: whisper.map(u => u.id ?? ""),
           rollMode: rollMode ?? "public",
-          content: await foundry.applications.handlebars.renderTemplate("systems/dnd5e/templates/chat/request-card.hbs", {
+          content: await foundry.applications.handlebars.renderTemplate("systems/dnd5e/templates/chat/roll-request-card.hbs", {buttons: [{
             // @ts-expect-error no dnd5e-types
-            buttonLabel: game.system.enrichers.createRollLabel({ ...dataset, format: "short", icon: true, hideDC: !owner?.isGM && !configSettings.displaySaveDC }),
+            buttonLabel: game.system.enrichers.createRollLabel({ ...dataset, format: "long", icon: true, hideDC: !owner?.isGM && !configSettings.displaySaveDC }),
             // @ts-expect-error no dnd5e-types
-            hiddenLabel: game.system.enrichers.createRollLabel({ ...dataset, format: "short", icon: true, hideDC: true }),
-            dataset
-          }),
+            hiddenLabel: game.system.enrichers.createRollLabel({ ...dataset, format: "long", icon: true, hideDC: true }),
+            dataset: buttonDataset
+          }]}),
           flavor: `Action: ${label ?? effect.name} ${i18n(messageFlavor[details.rollType])}`,
           speaker: MessageClass.getSpeaker({ actor })
         };
         const chatCard = await ChatMessage.create(chatData);
         if (chatCard) {
           chatCardUuids.push(chatCard.uuid);
-          chatCard?.setFlag(MODULE_ID, "actorUuid", actor.uuid)
+          await chatCard?.setFlag(MODULE_ID, "actorUuid", actor.uuid)
         }
       }
       foundry.utils.setProperty(effect, `flags.${MODULE_ID}.actionSaveSuccess`, undefined);
-      effect.setFlag(MODULE_ID, "overtimeChatCardUuids", chatCardUuids)
-        .then(() => effect.setFlag(MODULE_ID, "actionSaveSuccess", undefined));
+      await effect.setFlag(MODULE_ID, "overtimeChatCardUuids", chatCardUuids);
+      await effect.setFlag(MODULE_ID, "actionSaveSuccess", undefined);
 
       if (changeTurnEnd) return effect.id;
     }
@@ -1505,6 +1528,8 @@ export async function _processActivityOverTime(combat: Combat.Implementation, da
   const maxIterations = combatStart ? 1 : 200;
   while (toTest <= last && count < maxIterations) { // step through each turn from prev to current
     count += 1; // make sure we don't do an infinite loop
+    // Check if combat was deleted during processing (can happen with async operations)
+    if (!combat.id || !game.combats?.get(combat.id)) return;
     const actor = combat.turns[testTurn]?.actor;
     const endTurn = toTest < last;
     const startTurn = toTest > prev || combatStart;
@@ -1540,6 +1565,8 @@ export async function _processOverTime(combat: Combat.Implementation, data: Comb
   const maxIterations = combatStart ? 1 : 200;
   while (toTest <= last && count < maxIterations) { // step through each turn from prev to current
     count += 1; // make sure we don't do an infinite loop
+    // Check if combat was deleted during processing (can happen with async operations)
+    if (!combat.id || !game.combats?.get(combat.id)) return;
     const actor = combat.turns[testTurn]?.actor;
     const endTurn = toTest < last;
     const startTurn = toTest > prev || combatStart;

@@ -349,6 +349,9 @@ declare module "fvtt-types/configuration" {
           attack?: Record<string, string>;
           damage?: Record<string, Record<string, string>>;
         }
+        save?: {
+          fail?: Record<string, string>;
+        };
         sculptSpells?: boolean;
         semiSuperSaver?: Record<string, string>;
         sharpShooter?: string;
@@ -1258,3 +1261,79 @@ export type MidiTargetDescriptor = {
 };
 
 export type CombinedTargetDescriptor = MidiTargetDescriptor & DND5ETargetDescriptor;
+
+// Save roll queueing types - used by queueTargetSaveRoll
+export type SaveRollInfo = {
+  type: string;
+  ability: string | undefined;
+  skill: string | undefined;
+  tool: string | undefined;
+  action: Function;
+};
+
+export type MagicSaveInfo = {
+  isMagicSave: boolean;
+  magicResistance: boolean;
+  magicVulnerability: boolean;
+};
+
+export type SaveDisplayOptions = {
+  whisper: boolean;
+  showRoll: boolean;
+  showRollDialog: boolean;
+  simulate: boolean;  // Required here, unlike optional in RollProcessConfig
+};
+
+export type SavePlayerInfo = {
+  player: User | null | undefined;
+  GMprompt: string;
+  playerChat: boolean;
+};
+
+export type ModuleIntegrationFlags = {
+  playerMonksTB: boolean;
+  playerFlashTB: boolean;
+  playerEpicRolls: boolean;
+  gmMonksTB: boolean;
+  gmFlashTB: boolean;
+  gmRER: boolean;
+};
+
+export type ModuleIntegrationRequests = {
+  monks: { player: any[]; gm: any[] };
+  flash: { player: any[]; gm: any[] };
+  epic: { player: any[]; gm: any[] };
+};
+
+export type SaveDetails = {
+  advantage: boolean | undefined;
+  disadvantage: boolean | undefined;
+  isFriendly: boolean;
+  isMagicSave: boolean;
+  isConcentrationCheck: boolean | undefined;
+  rollDC: number;
+  saveItemUuid: string;
+  workflowId: string;
+  itemCardUuid: string;
+  workflowUuid: string; // deprecated - use workflowId
+  workflowOptions: object;
+};
+
+export type ProcessTargetSaveContext = {
+  rollDC: number | undefined;
+  rollAbility: string | undefined;
+  rollType: string | undefined;
+  template: foundry.canvas.placeables.MeasuredTemplate.Implementation | undefined | null;
+  D20Roll: typeof Roll;
+};
+
+export type QueueSaveRollOptions = {
+  target: Token;
+  saveDetails: SaveDetails;
+  rollInfo: SaveRollInfo;
+  magicInfo: MagicSaveInfo;
+  displayOptions: SaveDisplayOptions;
+  playerInfo: SavePlayerInfo;
+  moduleFlags: ModuleIntegrationFlags;
+  moduleRequests: ModuleIntegrationRequests;
+};

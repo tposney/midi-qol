@@ -100,9 +100,15 @@
               <div class="midi-qol-tooltip">
                 <span>
                   <div>
+                    {{#if damage.isHealing}}
+                    {{damage.absRawTotalDamage}} {{localize "midi-qol.HealingRolled"}} ->
+                    {{damage.absPlayerViewTotalDamage}}
+                    {{localize "midi-qol.HealingApplied"}}
+                    {{else}}
                     {{damage.damageItem.rawTotalDamage}} {{localize "midi-qol.DamageRolled"}} ->
                     {{damage.playerViewTotalDamage}}
                     {{localize "midi-qol.DamageApplied"}}
+                    {{/if}}
                     <span class="midi-qol-tooltiptext midi-qol-tooltip-top">
                     </span>
                   </div>

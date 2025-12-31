@@ -215,8 +215,12 @@ export let readyHooks = async () => {
     if (!update.hasOwnProperty("round")) return;
     if (!checkMechanic("autoRerollInitiative")) return;
     let combatantIds: any = combat.combatants.map(c => c.id);
-    if (combat.combatants?.size > 0) {
-      combat.rollInitiative(combatantIds, { updateTurn: true }).then(() => combat.update({ turn: 0 }));
+    if (combat.combatants?.size > 0 && combat.id) {
+      const combatId = combat.id;
+      combat.rollInitiative(combatantIds, { updateTurn: true }).then(() => {
+        // Check if combat was deleted during async operation
+        if (game.combats?.get(combatId)) combat.update({ turn: 0 });
+      });
     }
   });
 }

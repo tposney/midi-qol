@@ -32,7 +32,7 @@
   ],
   "socket": true,
   "scripts": [],
-  "esmodules": ["src/midi-qol.js"],
+  "esmodules": "{{sources}}",
   "styles": ["css/styles.css"],
   "relationships": {
     "systems": [

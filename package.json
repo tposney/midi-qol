@@ -26,6 +26,7 @@
 	},
 	"devDependencies": {
 		"@ethaks/fvtt-quench": "^0.6.0",
+		"esbuild": "^0.24.0",
 		"@foundryvtt/foundryvtt-cli": "^1.0.3",
 		"@types/jest": "^27.4.1",
 		"cross-var": "^1.1.0",

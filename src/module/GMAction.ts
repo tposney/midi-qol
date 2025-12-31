@@ -963,6 +963,10 @@ interface DamageListContextEntry {
   buttonId: string;
   iconPrefix: string;
   tooltip?: string;
+  // Healing display properties
+  isHealing: boolean;
+  absRawTotalDamage: number;
+  absPlayerViewTotalDamage: number;
 }
 async function prepareDamageListItems(
   data: {
@@ -1043,7 +1047,8 @@ async function prepareDamageListItems(
       damageItem.newHP = updates["system.attributes.hp.value"];
       damageItem.hpDamage = deltaHP;
       damageItem.tempDamage = deltaTemp;
-      damageItem.rawTotalDamage = rawAmount;
+      // Include healing in rawTotalDamage so it displays correctly (healing is negative)
+      damageItem.rawTotalDamage = rawAmount + rawHealing;
 
       if (oldVitality !== newVitality) {
         const vitalityResource = checkRule("vitalityResource");
@@ -1083,6 +1088,8 @@ async function prepareDamageListItems(
       img = await game.video!.createThumbnail(img, { width: 100, height: 100 });
     }
 
+    const playerViewTotalDamage = damageItem.hpDamage + damageItem.tempDamage;
+    const isHealing = (damageItem.rawTotalDamage ?? 0) < 0 || playerViewTotalDamage < 0;
     let listItem: DamageListContextEntry = {
       isCharacter: actor.hasPlayerOwner,
       isNpc: !actor.hasPlayerOwner,
@@ -1097,7 +1104,7 @@ async function prepareDamageListItems(
       rawTotalDamage: damageItem.rawTotalDamage,
       halfDamage: Math.abs(Math.floor(damageItem.totalDamage / 2)),
       doubleDamage: Math.abs(damageItem.totalDamage * 2),
-      playerViewTotalDamage: damageItem.hpDamage + damageItem.tempDamage,
+      playerViewTotalDamage,
       absDamage: Math.abs(damageItem.hpDamage),
       tokenName: (tokenDocument?.name && configSettings.useTokenNames) ? tokenDocument.name ?? actor.name : actor.name,
       dmgSign: damageItem.hpDamage < 0 ? "+" : "-",
@@ -1107,6 +1114,10 @@ async function prepareDamageListItems(
       buttonId: actorUuid,
       // @ts-expect-error no dnd5e-types
       iconPrefix: (data.autoApplyDamage === "yesCardNPC" && actor.type === "character") ? "*" : "",
+      // Healing display properties
+      isHealing,
+      absRawTotalDamage: Math.abs(damageItem.rawTotalDamage ?? 0),
+      absPlayerViewTotalDamage: Math.abs(playerViewTotalDamage),
     };
 
     const tooltipList = damageItem.damageDetail?.map(di => {
@@ -1162,12 +1173,16 @@ async function createPlayerDamageCard(data: {
   if (configSettings.playerCardDamageDifferent) {
     shouldShow = false;
     for (let damageItem of data.damageList) {
-      let { rawAmount, rawTemp } = damageItem.rawDamageDetail.reduce((acc, di) => {
+      let { rawAmount, rawTemp, rawHealing } = damageItem.rawDamageDetail.reduce((acc, di) => {
         if (di.type === "temphp") acc.rawTemp += di.value;
+        else if (["healing"].includes(di.type) || di.active?.absorption) acc.rawHealing += di.value;
         else if (di.type !== "midi-none") acc.rawAmount += di.value;
         return acc;
-      }, { rawAmount: 0, rawTemp: 0 });
-      if (rawAmount !== damageItem.hpDamage) {
+      }, { rawAmount: 0, rawTemp: 0, rawHealing: 0 });
+      // Match the calculation at line 1051: rawTotalDamage = rawAmount + rawHealing
+      // Healing values in rawDamageDetail are already negative after processing
+      const rawTotal = rawAmount + rawHealing;
+      if (rawTotal !== damageItem.hpDamage) {
         shouldShow = true;
         break;
       }
