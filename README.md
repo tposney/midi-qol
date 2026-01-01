@@ -14,7 +14,7 @@
 ### Join our Discord community
 <a href="https://discord.gg/Xd4NEvw5d7"><img src="https://img.shields.io/discord/915186263609454632?logo=discord" alt="chat on Discord"></a>
 
-**Midi-QOL** is a comprehensive automation module for D&D 5e in Foundry VTT that streamlines combat and spellcasting.
+**Midi-QOL** is an automation module for D&D 5e in Foundry VTT that streamlines combat and spellcasting.
 
 ## Key Features
 
@@ -613,6 +613,7 @@ When midi-qol is installed, each activity on an item gains a "Midi" tab with add
 | **Choose Effects** | When enabled, presents a dialog to select which of the item's active effects to apply (useful for items with multiple optional effects). |
 | **Toggle Effect** | If the target already has the effect, remove it instead of reapplying. Creates on/off toggle behavior for buffs. |
 | **No Concentration Save** | Damage from this activity does not trigger concentration saving throws. Useful for environmental or secondary damage effects. |
+| **Skip Concentration Check** | When the activity consumes HP (via consumption targets), skip the concentration check that would normally be triggered by the HP loss. Only appears when the activity has HP consumption configured. |
 
 ### Roll Behavior
 
@@ -791,7 +792,7 @@ Additional expiry options (requires DAE 0.2.25+):
 
 # Flags Reference
 
-For a comprehensive reference of all `flags.midi-qol.*` flags, see [FLAGS.md](FLAGS.md).
+For a reference of `flags.midi-qol.*` flags, see [FLAGS.md](FLAGS.md).
 
 ## Quick Reference
 
@@ -897,7 +898,7 @@ No world information is exported. Module list helps with debugging.
 
 ## Macro Writing
 
-See [MACROS.md](MACROS.md) for comprehensive macro documentation including:
+See [MACROS.md](MACROS.md) for macro documentation including:
 - Item roll options
 - MidiQOL API functions
 - Hooks reference

@@ -367,7 +367,7 @@ Cross-referenced the Flags Reference section against actual flag definitions in 
 `README.md`
 
 ### Changes
-Completely rewrote the Hooks Reference section from the simple 9-hook table to a comprehensive reference with 50+ hooks organized by category.
+Completely rewrote the Hooks Reference section from the simple 9-hook table to a reference with 50+ hooks organized by category.
 
 ### New Hook Categories
 
@@ -543,7 +543,7 @@ if (ignoreAllImmunity || ignoreSpecificImmunity) {
 ```
 
 ### Test Coverage
-Added comprehensive tests in `ignore-traits-tests.ts` covering:
+Added tests in `ignore-traits-tests.ts` covering:
 - Baseline tests (immunity/resistance works without ignore flags)
 - `idi` ignoring all immunities
 - `idi.fire` ignoring only fire immunity (cold immunity still applies)

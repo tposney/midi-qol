@@ -1,6 +1,33 @@
 # Midi-QOL Flags Reference
 
-This document provides a comprehensive reference for all `flags.midi-qol.*` flags that can be set via Active Effects.
+This document is a reference for `flags.midi-qol.*` flags that can be set via Active Effects.
+
+## Table of Contents
+
+- [Setting Flags via Active Effects](#setting-flags-via-active-effects)
+- [Flag Access Types](#flag-access-types)
+- [Conditional Expression Evaluation](#conditional-expression-evaluation)
+- [Absorption](#absorption)
+- [Advantage](#advantage)
+- [Disadvantage](#disadvantage)
+- [Critical Hits](#critical-hits)
+- [No Critical](#no-critical)
+- [Auto-Fail](#auto-fail)
+- [Auto-Success](#auto-success)
+- [Grants (Target Effects)](#grants-target-effects)
+- [Magic Resistance/Vulnerability](#magic-resistancevulnerability)
+- [Min/Max Rolls](#minmax-rolls)
+- [Damage Modifiers](#damage-modifiers)
+- [Range Modifiers](#range-modifiers)
+- [Save Modifiers](#save-modifiers)
+- [Optional Bonus Effects](#optional-bonus-effects)
+- [Special Flags](#special-flags)
+- [Action Tracking](#action-tracking)
+- [Item Flags](#item-flags)
+- [Native dnd5e Alternatives](#native-dnd5e-alternatives)
+- [Deprecated Flags](#deprecated-flags)
+
+---
 
 ## Setting Flags via Active Effects
 
@@ -319,29 +346,6 @@ The expression is evaluated as JavaScript, and the result determines the flag va
 | `abilities.str.mod >= 3 ? 1 : false` | True if STR mod >= 3 |
 | `classes.rogue.levels ? 2 : false` | Returns 2 if has rogue levels |
 | `hasCondition(tokenUuid, "enlarged") ? abilities.str.mod : 0` | STR mod if enlarged, else 0 |
-
----
-
-## Table of Contents
-
-- [Absorption](#absorption)
-- [Advantage](#advantage)
-- [Disadvantage](#disadvantage)
-- [Critical Hits](#critical-hits)
-- [No Critical](#no-critical)
-- [Auto-Fail](#auto-fail)
-- [Auto-Success](#auto-success)
-- [Grants (Target Effects)](#grants-target-effects)
-- [Magic Resistance/Vulnerability](#magic-resistancevulnerability)
-- [Min/Max Rolls](#minmax-rolls)
-- [Damage Modifiers](#damage-modifiers)
-- [Range Modifiers](#range-modifiers)
-- [Save Modifiers](#save-modifiers)
-- [Optional Bonus Effects](#optional-bonus-effects)
-- [Special Flags](#special-flags)
-- [Action Tracking](#action-tracking)
-- [Item Flags](#item-flags)
-- [Deprecated Flags](#deprecated-flags)
 
 ---
 

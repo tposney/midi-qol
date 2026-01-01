@@ -48,10 +48,10 @@ Use this to verify API methods and understand how dnd5e implements features. **D
 
 3. **Flanking fix**
    - Fixed flanking advantage not being applied when `checkFlanking` is set to "advonly"
-   - Added comprehensive flanking tests
+   - Added flanking tests
 
 4. **OverTime effects documentation**
-   - README.md updated with comprehensive OverTime parameter tables and examples
+   - README.md updated with OverTime parameter tables and examples
    - Added 10 new OverTime tests in midi-qol-tests module
 
 5. **saveResults initialization fix**
@@ -85,7 +85,7 @@ Use this to verify API methods and understand how dnd5e implements features. **D
 
 - `src/module/utils.ts` - MidiOptions type (lines 1708-1758), completeActivityUse, completeItemUse
 - `src/module/Workflow.ts` - WorkflowOptions type (lines 8226-8272), getMacroData (lines 4002-4124)
-- `src/module/settings.ts` - onUseMacroOptions (lines 954-983) - definitive list of macro passes
+- `src/module/settings.ts` - onUseMacroOptions (lines 954-983) - list of macro passes
 - `src/globals.ts` - Hook type declarations (lines 65-78)
 
 ## File Structure Notes

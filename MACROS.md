@@ -6,7 +6,7 @@ This document covers macro writing for midi-qol. For general module documentatio
 - [Getting Started](#getting-started)
 - [Triggering Workflows](#triggering-workflows)
 - [Item Roll Options](#item-roll-options)
-- [MidiQOL API Functions](#midiQol-api-functions)
+- [MidiQOL API Functions](#midiqol-api-functions)
 - [Hooks Reference](#hooks-reference)
 - [Workflow Types](#workflow-types)
 - [OnUse Macros](#onuse-macros)
@@ -14,6 +14,7 @@ This document covers macro writing for midi-qol. For general module documentatio
 - [Macro Data Reference](#macro-data-reference)
 - [DAE vs Midi-QOL Macros](#dae-vs-midi-qol-macros)
 - [Tips and Tricks](#tips-and-tricks)
+- [Sample Chat Logs](#sample-chat-logs)
 
 ---
 
