@@ -760,6 +760,8 @@
   "midi-qol.MacroName": "Nome da Macro",
   "midi-qol.DamageRolled": "Rolado",
   "midi-qol.DamageApplied": "Aplicado",
+  "midi-qol.HealingRolled": "Cura Rolada",
+  "midi-qol.HealingApplied": "Cura Aplicada",
   "midi-qol.FumbleThreshold": "Margem de Falha Crítica",
   "midi-qol.ActionSpecialDurationImmediate.Name": "Expirar em 1Acerto/1Ataque/1Ação",
   "midi-qol.ActionSpecialDurationImmediate.Hint": "Não espera por rolagens de dano para expirar efeitos de durações especiais com ataque/acerto/ação.",
@@ -1097,25 +1099,35 @@
           "label": "Sem Salvaguarda de Concentração",
           "hint": "O dano da atividade não aciona uma salvaguarda de concentração."
         },
+        "skipConcentrationCheck": {
+          "label": "Pular Salvaguarda de Concentração",
+          "hint": "O consumo da atividade não acionará uma salvaguarda de concentração."
+        },
         "ignoreTraits": {
+          "allTypes": "Todos Tipos de Dano",
           "idi": {
             "label": "Imunidade",
+            "short": "Ignorar Imunidade",
             "hint": "Ignora Imunidade a danos ao aplicar o dano."
           },
           "idr": {
             "label": "Resistência",
+            "short": "Ignorar Resistência",
             "hint": "Ignora Resistência a danos ao aplicar o dano."
           },
           "idv": {
             "label": "Vulnerabilidade",
+            "short": "Ignorar Vulnerabilidade",
             "hint": "Ignora Vulnerabilidade a danos ao aplicar o dano."
           },
           "ida": {
             "label": "Absorção",
+            "short": "Ignorar Absorção",
             "hint": "Ignora Absorção a danos ao aplicar o dano."
           },
           "idm": {
             "label": "Modificação",
+            "short": "Ignorar Modificação",
             "hint": "Ignora Modificação de danos ao aplicar o dano."
           }
         },
@@ -1296,10 +1308,10 @@
     "extras": {
       "header": "Campos Salvaguarda Midi"
     },
-    "FriendlySave": {
-      "Default": "Rolar Salvaguarda",
-      "FriendlySuccess": "Sucesso Aliado",
-      "FriendlyFail": "Falha Aliado"
+    "friendlySave": {
+      "default": "Rolar Salvaguarda",
+      "friendlySuccess": "Sucesso Aliado",
+      "friendlyFail": "Falha Aliado"
     },
     "FIELDS": {
       "friendlySave": {
