@@ -1333,35 +1333,39 @@ export let MidiActivityMixin = Base => {
         }
 
         // only allow attacks against at most the specified number of targets
-        let allowedTargets;
-        if (this.target?.affects.type === "creature" && this.target?.affects.count === "") //dnd5e 3.2
-          allowedTargets = 9999;
-        else
-          allowedTargets = (this.target?.affects.type === "creature" ? this.target?.affects.count : 9999) ?? 9999;
-        if (options.checkTargets && requiresTargets && configSettings.enforceSingleWeaponTarget && allAttackTypes.includes(this.actionType) && allowedTargets === 9999) {
+        const checkTargets = options.checkTargets;
+        const isCreatureTarget = this.target?.affects.type === "creature";
+        const requiresDiscreteTargets = !isEmanationTargeting && !isAoETargeting;
+
+        const allowedTargets = isCreatureTarget ? (this.target?.affects.count === "" ? 9999 : this.target?.affects.count ?? 9999) : 9999;
+
+        const enforceSingleWeaponTarget = checkTargets
+          && requiresTargets
+          && requiresDiscreteTargets
+          && configSettings.enforceSingleWeaponTarget
+          && allAttackTypes.includes(this.actionType)
+          && allowedTargets === 9999;
+        
+        if (enforceSingleWeaponTarget) {
           allowedTargets = 1;
-          if (requiresTargets && workflow.targets.size !== 1) {
+
+          if (workflow.targets.size !== 1) {
             ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
-            if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat(`midi-qol.${MODULE_ID}.wrongNumberTargets`, { allowedTargets })}`)
+            if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat(`midi-qol.${MODULE_ID}.wrongNumberTargets`, { allowedTargets })}`);
             return removeWorkflow(workflow);
           }
         }
 
-        if (options.checkTargets) {
-          if (requiresTargets && !isEmanationTargeting && !isAoETargeting && this.target?.affects.type === "creature" && workflow.targets.size === 0) {
-            ui.notifications?.warn(i18n("midi-qol.noTargets"));
-            if (debugEnabled > 0) warn(`${game.user?.name} attempted to roll with no targets selected`)
-            return removeWorkflow(workflow);
-          }
+        if (requiresTargets && isCreatureTarget && requiresDiscreteTargets && workflow.targets.size === 0) {
+          ui.notifications?.warn(i18n("midi-qol.noTargets"));
+          if (debugEnabled > 0) warn(`${game.user?.name} attempted to roll with no targets selected`);
+          return removeWorkflow(workflow);
         }
 
-        // do pre roll checks
-        if (options.checkTargets) {
-          if (requiresTargets && workflow.targets.size > allowedTargets) {
-            ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
-            if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat(`midi-qol.${MODULE_ID}.wrongNumberTargets`, { allowedTargets })}`)
-            return removeWorkflow(workflow);
-          }
+        if (requiresTargets && workflow.targets.size > allowedTargets) {
+          ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
+          if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat(`midi-qol.${MODULE_ID}.wrongNumberTargets`, { allowedTargets })}`)
+          return removeWorkflow(workflow);
         }
 
         let tokenToUse: foundry.canvas.placeables.Token.Implementation | undefined;
