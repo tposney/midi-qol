@@ -164,7 +164,7 @@ See [Configuration Reference](#configuration-reference) for all available settin
 
 | Module | Description |
 |--------|-------------|
-| [**Automated Conditions 5e**](https://foundryvtt.com/packages/automated-conditions-5e) | Automates D&D 5e status effects (Blinded, Frightened, Prone, Restrained, etc.) to dynamically influence rolls. Highlights correct roll buttons, handles range checks, extended conditions (Dodging, Hiding), and supports custom AC5e flags for complex scenarios. Compatible with Midi-QOL. |
+| [**Automated Conditions 5e**](https://foundryvtt.com/packages/automated-conditions-5e) | Automates D&D 5e status effects (Blinded, Frightened, Prone, Restrained, etc.) to dynamically influence rolls. Highlights correct roll buttons, handles range checks, extended conditions (Dodging, Hiding), and supports custom AC5e flags for complex scenarios. Compatible with Midi-QOL (check the [compatibility notes](https://github.com/thatlonelybugbear/automated-conditions-5e/wiki/Compatibility-with-MidiQOL-and-Cauldron-of-Plentiful-Resources-(CPR)) and [wiki](https://github.com/thatlonelybugbear/automated-conditions-5e/wiki)). |
 | [**Effect Macro**](https://foundryvtt.com/packages/effectmacro) | Embed macros directly into Active Effects that trigger on creation, deletion, or toggle. Provides pre-defined variables: token, scene, origin, speaker, item. Essential for complex conditional effects. |
 
 ### Content Import
