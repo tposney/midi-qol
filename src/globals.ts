@@ -1096,6 +1096,7 @@ export interface Activity extends AnyMutableObject {
     magicEffect?: boolean;
     magicDamage?: boolean;
     noConcentrationCheck?: boolean;
+    skipConcentrationCheck?: boolean;
     autoCEEffects: string;
   }
 }

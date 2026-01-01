@@ -152,6 +152,7 @@ export let MidiActivityMixin = Base => {
           magicEffect: new BooleanField({ name: "magicEffect", initial: false }),
           magicDamage: new BooleanField({ name: "magicDamage", initial: false }),
           noConcentrationCheck: new BooleanField({ name: "noConcentrationCheck", initial: false }),
+          skipConcentrationCheck: new BooleanField({ name: "skipConcentrationCheck", initial: false }),
           autoCEEffects: new StringField({ name: "autoCEEffects", initial: "default", blank: false, required: true }),
         }),
         isOverTimeFlag: new BooleanField({ name: "isOverTimeFlag", initial: false }),
@@ -475,6 +476,8 @@ export let MidiActivityMixin = Base => {
         message.workflow = usage.workflow; // TODO: remove hack to allow card config processing
         usage.workflow!.systemCard = message.systemCard;
         if ((activity.midiProperties?.rollMode ?? "default") !== "default") message.rollMode = activity.midiProperties!.rollMode;
+        if (activity.midiProperties?.skipConcentrationCheck && activity.consumption.targets.some(t => t.target === "attributes.hp.value")) 
+          await this.actor.setFlag(MODULE_ID, "skipConcentrationCheck", true);
         if (item.parent) await removeFlanking(item.parent);
         // config.midiOptions.workflowOptions.targetConfirmation ??= this.forcedTargetConfirmation;
         if (!usage.workflow) return undefined;
@@ -537,6 +540,8 @@ export let MidiActivityMixin = Base => {
           Workflow.removeWorkflow(usage.workflow?.id);
           return false;
         }
+        if (this.actor.getFlag(MODULE_ID, "skipConcentrationCheck"))
+          await this.actor.unsetFlag(MODULE_ID, "skipConcentrationCheck");
         if (!useResults) { // activity use was aborted
           Workflow.removeWorkflow(usage.workflow?.id);
           return false;

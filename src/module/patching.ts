@@ -990,6 +990,7 @@ function removeMidiProperties(wrapped, ...args) {
             if (props.magicdam !== undefined) activity.midiProperties.magicDamage = props.magicdam;
             if (props.magiceffect !== undefined) activity.midiProperties.magicEffect = props.magiceffect;
             if (props.noConcentrationCheck !== undefined) activity.midiProperties.noConcentrationCheck = props.noConcentrationCheck;
+            if (props.skipConcentrationCheck !== undefined) activity.midiProperties.skipConcentrationCheck = props.skipConcentrationCheck;
             if (props.toggleEffect !== undefined) activity.midiProperties.toggleEffect = props.toggleEffect;
             if (props.ignoreTotalCover !== undefined) activity.midiProperties.ignoreFullCover = props.ignoreFullCover;
           }
@@ -1343,6 +1344,10 @@ function createConcentrationEffectData(this: ActiveEffect.Implementation, wrappe
 }
 
 export async function challengeConcentration(this: Actor.Implementation, wrapped, { dc = 10, ability = null } = {}) {
+  if (this.getFlag(MODULE_ID, "skipConcentrationCheck")) {
+    await this.unsetFlag(MODULE_ID, "skipConcentrationCheck");
+    return;
+  }
   if (["chatOnly"].includes(configSettings.doConcentrationCheck))
     return wrapped({ dc, ability });
   // @ts-expect-error no dnd5e-types

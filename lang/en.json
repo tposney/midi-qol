@@ -1099,6 +1099,10 @@
           "label": "No Concentration Save",
           "hint": "The activity's damage does not trigger a concentration save"
         },
+        "skipConcentrationCheck": {
+          "label": "Skip Concentration Save",
+          "hint": "The activity's consumption will not trigger a concentration save"
+        },
         "ignoreTraits": {
           "allTypes": "All Damage Types",
           "idi": {
