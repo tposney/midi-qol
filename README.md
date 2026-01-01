@@ -262,7 +262,7 @@ See [Configuration Reference](#configuration-reference) for all available settin
 
 Target Confirmation displays a dialog before completing an item roll, allowing you to review and adjust your targets. The dialog shows each target with useful information like range, cover status, and flanking.
 
-**Configuration:** Access via the "Target Confirmation" button in Midi-QOL Misc settings.
+**Configuration:** Access via Configure Settings → Module Settings → midi-qol → "Target Confirmation" button.
 
 **Enable Target Confirmation** - Master toggle for the feature.
 
@@ -792,7 +792,7 @@ Additional expiry options (requires DAE 0.2.25+):
 
 # Flags Reference
 
-For a reference of `flags.midi-qol.*` flags, see [FLAGS.md](FLAGS.md).
+For a more complete reference of `flags.midi-qol.*` flags, see [FLAGS.md](FLAGS.md).
 
 ## Quick Reference
 

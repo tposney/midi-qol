@@ -901,6 +901,18 @@ No damage on save (normal damage on fail).
 
 Optional bonuses prompt the player to apply them when triggered. Replace `NAME` with your identifier.
 
+### Example - Lucky Reroll
+
+To create an effect like "Lucky" that allows rerolling one attack roll and keeping the highest, add these Active Effect changes:
+
+| Attribute Key | Change Mode | Effect Value |
+|---------------|-------------|--------------|
+| `flags.midi-qol.optional.lucky.label` | CUSTOM | `Lucky - Reroll Attack` |
+| `flags.midi-qol.optional.lucky.attack.all` | CUSTOM | `reroll-kh` |
+| `flags.midi-qol.optional.lucky.count` | CUSTOM | `1` |
+
+When the actor makes an attack roll, they'll be prompted to use "Lucky - Reroll Attack". If activated, the attack is rerolled and the highest result is kept. The `count` of 1 means this can only be used once before the effect is exhausted.
+
 ### Configuration
 
 | Flag | Access | Description |
