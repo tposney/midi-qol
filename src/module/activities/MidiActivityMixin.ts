@@ -1364,7 +1364,7 @@ export let MidiActivityMixin = Base => {
 
         if (requiresTargets && workflow.targets.size > allowedTargets) {
           ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
-          if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat(`midi-qol.${MODULE_ID}.wrongNumberTargets`, { allowedTargets })}`)
+          if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat(`midi-qol.${MODULE_ID}.wrongNumberTargets`, { allowedTargets })}`);
           return removeWorkflow(workflow);
         }
 
