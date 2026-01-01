@@ -7,7 +7,9 @@
     {{ formField fields.midiProperties.fields.chooseEffects value=source.midiProperties.chooseEffects input=@root.inputs.createCheckboxInput }}
     {{ formField fields.midiProperties.fields.toggleEffect value=source.midiProperties.toggleEffect input=@root.inputs.createCheckboxInput }}
     {{ formField fields.midiProperties.fields.noConcentrationCheck value=source.midiProperties.noConcentrationCheck input=@root.inputs.createCheckboxInput }}
-    {{ formField fields.midiProperties.fields.skipConcentrationCheck value=source.midiProperties.skipConcentrationCheck input=@root.inputs.createCheckboxInput }}
+    {{#if consumesHP}}
+      {{ formField fields.midiProperties.fields.skipConcentrationCheck value=source.midiProperties.skipConcentrationCheck input=@root.inputs.createCheckboxInput }}
+    {{/if}}
   </fieldset>
   <fieldset>
     {{#with fields.midiProperties.fields as |fields|}}

@@ -135,9 +135,9 @@
   "midi-qol.RangeTarget.Name": "Auto selec. objetivo para ataques/conjuros a distancia",
   "midi-qol.RangeTarget.Hint": "Auto selecciona objetivo para ataques a distancia si el tipo de objetivo es criatura/enemigo/aliado",
   "midi-qol.PlayerRollSaves.Name": "Pedir a los jugadores que hagan TS",
-  "midi-qol.PlayerRollSaves.Hint": "Jugadores hacen TS. Un mensaje de chat susurrado o se puede utilizar LMRTFY si está instalado.",
+  "midi-qol.PlayerRollSaves.Hint": "Jugadores hacen TS. Un mensaje de chat susurrado o se puede utilizar Monks Token Bar si está instalado.",
   "midi-qol.rollNPCSaves.Name": "Pedir al GM que haga TS (Desvinculado)",
-  "midi-qol.rollNPCSaves.Hint": "Auto significa que el módulo tirará la salvación para el PNJ, de lo contrario el GM recibirá un aviso de LMRTFY.",
+  "midi-qol.rollNPCSaves.Hint": "Auto significa que el módulo tirará la salvación para el PNJ, de lo contrario el GM recibirá un aviso de Monks Token Bar.",
   "midi-qol.PlayerSaveTimeout.Name": "Espera antes de tirar por los jugadores",
   "midi-qol.PlayerSaveTimeout.Hint": "Cuánto tiempo espera (en segundos) antes de hacer la tirada si el jugador no la hace",
   "midi-qol.MagicResistant": "magic-resistant",
@@ -258,20 +258,15 @@
   "midi-qol.rollNPCSavesOptions": {
     "none": "Mensaje de chat",
     "auto": "Auto",
-    "letme": "Let Me Roll That For You",
-    "letmeQuery": "LMRTFY + Querey",
     "mtb": "Monks Token Bar"
   },
   "midi-qol.playerRollSavesOptions": {
     "none": "Ninguno",
-    "letme": "Let Me Roll That For You",
-    "letmeQuery": "LMRTFY + Querey",
     "chat": "Mensaje de chat",
     "mtb": "Monks Token Bar"
   },
   "midi-qol.playerRollSavesOptionsReduced": {
     "none": "Ninguno",
-    "letme": "Let Me Roll That For You",
     "chat": "Mensaje en el chat"
   },
   "midi-qol.AutoRemoveTargetsOptions": {
@@ -568,7 +563,7 @@
     "1": "Empezando..."
   },
   "midi-qol._comment for translators_fullDamage": "Ambas líneas de texto a continuación son buscadas por midi en la descripción del conjuro",
-  "midi-qol.ActiveDefence.Hint": "En lugar de que el GM haga una tirada 'Para impactar', los jugadores hacen una tirada de defensa. Requiere LMRTFY y no funciona con better rolls",
+  "midi-qol.ActiveDefence.Hint": "En lugar de que el GM haga una tirada 'Para impactar', los jugadores hacen una tirada de defensa.",
   "midi-qol.GhostRolls.Name": "Para las tiradas de ataque/daño mostrar con 'tiradas fantasma de dice so nice' en lugar de ocultar la tirada (solo tarjeta combinada)",
   "midi-qol.convenientEffectsOn": "Aplicar Convenient Effect",
   "midi-qol:Debug.Hint": "'Alertas' da una visión general de la actividad, 'depuración' añade más información y 'todas' activa también CONFIG.debug.hooks",

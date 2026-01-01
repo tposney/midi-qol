@@ -115,10 +115,10 @@
   "midi-qol.RangeTarget.Name": "Ciblage auto à distance",
   "midi-qol.RangeTarget.Hint": "Cible automatiquement pour les attaques à distance en se basant en fonction de si la cible est amicale/neutre/hostile",
   "midi-qol.PlayerRollSaves.Name": "Demander le jet aux joueurs",
-  "midi-qol.PlayerRollSaves.Hint": "Les joueurs lancent les sauvegardes. Aucun signifie que les modules lancent la sauvegarde. Sinon, le joueur recevra un message chuchoté, une invite via LMRTFY ou Monk's Token bar.",
+  "midi-qol.PlayerRollSaves.Hint": "Les joueurs lancent les sauvegardes. Aucun signifie que les modules lancent la sauvegarde. Sinon, le joueur recevra un message chuchoté ou une invite via Monk's Token bar.",
   "midi-qol.rollNPCSaves.Name": "Demander au MJ de lancer les jets de sauvegardes (non lié)",
   "midi-qol.rollNPCLinkedSaves.Name": "Invite le MJ à lancer des jets de sauvegarde (lié)",
-  "midi-qol.rollNPCSaves.Hint": "Auto signifie que le module effectuera la sauvegarde pour l'Acteur. Sinon le MJ recevra une invite via LMRTFY/Monk's Token Bar.",
+  "midi-qol.rollNPCSaves.Hint": "Auto signifie que le module effectuera la sauvegarde pour l'Acteur. Sinon le MJ recevra une invite via Monk's Token Bar.",
   "midi-qol.PlayerSaveTimeout.Name": "Délais d'attente",
   "midi-qol.PlayerSaveTimeout.Hint": "Temps d'attente maximum avant d'effectuer automatiquement le jet de sauvegarde pour le joueur",
   "midi-qol.MagicResistant": "Résistant à la magie",
@@ -275,22 +275,17 @@
   "midi-qol.rollNPCSavesOptions": {
     "none": "Message du tchat",
     "auto": "Auto",
-    "letme": "Let Me Roll That For You",
-    "letmeQuery": "LMRTFY + Query",
     "mtb": "Monks Token Bar",
     "autoDialog": "Jet automatique et dialogue d'affichage du jet"
   },
   "midi-qol.playerRollSavesOptions": {
     "none": "Aucun",
-    "letme": "Let Me Roll That For You",
-    "letmeQuery": "LMRTFY + Querey",
     "chat": "Message de tchat",
     "mtb": "Monks Token Bar",
     "noneDialog": "Jet automatique et dialogue d'affichage du jet"
   },
   "midi-qol.playerRollSavesOptionsReduced": {
     "none": "Aucun",
-    "letme": "Let Me Roll That For You",
     "chat": "Message du tchat"
   },
   "midi-qol.AutoRemoveTargetsOptions": {
@@ -507,7 +502,7 @@
   "midi-qol.NoChangelogs": "Midi-qol supporte et recommande le module ChangeLogs pour vous montrer toutes les modifications depuis votre dernière mise à jour",
   "midi-qol.ActiveDefenceString": "Défense active",
   "midi-qol.ActiveDefence.Name": "Défense active",
-  "midi-qol.ActiveDefence.Hint": "Au lieu que le MJ fasse un jet de 'Pour toucher', les joueurs font un jet de défense. Nécessite LMRTFY et ne fonctionne pas avec Better Rolls",
+  "midi-qol.ActiveDefence.Hint": "Au lieu que le MJ fasse un jet de 'Pour toucher', les joueurs font un jet de défense.",
   "midi-qol.PromptDamageRoll.Name": "Dialogue amélioré pour les jets de dégâts",
   "midi-qol.PromptDamageRoll.Hint": "Lors de l'utilisation de la boîte de dialogue du jet de dégâts, affichez une boîte de dialogue améliorée qui permet de choisir les dégâts de l'objet.",
   "midi-qol.GMHide3dDice.Name": "Cachez les jets de dés 3d du MJ pour les attaques, les dégâts et les jets de sauvegarde - remplace les autres paramètres",

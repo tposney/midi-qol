@@ -1749,6 +1749,7 @@ export let MidiActivityMixinSheet = Base => {
       context = await super._preparePartContext(partId, context, options);
       context.hasDamage = this.activity.damage;
       context.isSummons = this.activity.type === "summon";
+      context.consumesHP = this.activity.consumption?.targets?.some(t => t.target === "attributes.hp.value");
       if (partId === "midi-qol") {
         context.tab = context.tabs["midi-qol"];
         return this._prepareMidiQolContext(context);

@@ -105,7 +105,7 @@ If you prefer to configure settings manually, here's a recommended full automati
 | Player Auto Fast-Forward | Player | Attack and Damage |
 | Auto Check Hits | Workflow | On |
 | Auto Check Saves | Workflow | Save - players see results |
-| Players Roll Saves | Workflow | Let Me Roll That For You |
+| Players Roll Saves | Workflow | Auto roll and show roll dialog |
 | Player Save Timeout | Workflow | 20 seconds |
 | Auto Apply Damage | Workflow | Yes + undo card |
 | Damage Immunities | Workflow | Apply + physical |

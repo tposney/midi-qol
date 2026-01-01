@@ -106,7 +106,7 @@
   "midi-qol.RangeTarget.Name": "Automatisches Zielen für Fernzielzauber/Angriffe",
   "midi-qol.RangeTarget.Hint": "Automatisches Zielen für entfernte Zieltypen, wenn der Zieltyp Kreatur/Feind/Verbündeter ist",
   "midi-qol.PlayerRollSaves.Name": "Spieler zum Würfeln von Rettungswürfen auffordern",
-  "midi-qol.PlayerRollSaves.Hint": "Spieler machen Rettungswürfe. Eine geflüsterte Nachricht oder falls installiert LMRTFY verwenden",
+  "midi-qol.PlayerRollSaves.Hint": "Spieler machen Rettungswürfe. Eine geflüsterte Nachricht oder falls installiert Monks Token Bar verwenden",
   "midi-qol.PlayerSaveTimeout.Name": "Verzögerung vor dem Würfeln für Spieler",
   "midi-qol.PlayerSaveTimeout.Hint": "Wie lange soll in Sekunden gewartet werden, bevor der Rettungswurf für Spieler übernommen wird",
   "midi-qol.MagicResistant": "magic-resistant",

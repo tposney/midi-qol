@@ -105,10 +105,10 @@
     "midi-qol.RangeTarget.Name": "범위 대상 주문/공격에 대한 자동 대상 지정",
     "midi-qol.RangeTarget.Hint": "대상 유형이 생물/적/동료일 경우 대상 유형에 대한 대상 지정을 자동으로 적용한다.",
     "midi-qol.PlayerRollSaves.Name": "플레이어에게 내성 굴림 메시지 출력",
-    "midi-qol.PlayerRollSaves.Hint": "플레이어가 내성 굴림을 한다. 귓속말 혹은 설치 되었을 경우 LMRTFY 모듈을 사용할 수 있다",
+    "midi-qol.PlayerRollSaves.Hint": "플레이어가 내성 굴림을 한다. 귓속말 혹은 Monks Token Bar를 사용할 수 있다",
     "midi-qol.rollNPCSaves.Name": "GM에게 내성굴림 출력 (비연결)",
     "midi-qol.rollNPCLinkedSaves.Name": "GM에게 내성굴림 출력 (연결)",
-    "midi-qol.rollNPCSaves.Hint": "자동(Auto)은 모듈이 NPC에 대한 내성굴림을 굴린다. 그 외는 GM이 LMRTFY 메시지를 받는다.",
+    "midi-qol.rollNPCSaves.Hint": "자동(Auto)은 모듈이 NPC에 대한 내성굴림을 굴린다. 그 외는 GM이 Monks Token Bar 메시지를 받는다.",
     "midi-qol.PlayerSaveTimeout.Name": "플레이어 굴림 대기 시간",
     "midi-qol.PlayerSaveTimeout.Hint": "플레이어가 내성 굴림을 할 때 얼마나 기다리는지에 대한 시간이다(초 단위)",
     "midi-qol.MagicResistant": "마법 저항",
@@ -244,20 +244,15 @@
     "midi-qol.rollNPCSavesOptions": {
         "none": "채팅 메시지",
         "auto": "자동",
-        "letme": "Let Me Roll That For You",
-        "letmeQuery": "LMRTFY + Query",
         "mtb": "Monks Token Bar"
     },
     "midi-qol.playerRollSavesOptions": {
         "none": "없음",
-        "letme": "Let Me Roll That For You",
-        "letmeQuery": "LMRTFY + Querey",
         "chat": "채팅 메시지",
         "mtb": "Monks Token Bar"
     },
     "midi-qol.playerRollSavesOptionsReduced": {
         "none": "없음",
-        "letme": "Let Me Roll That For You",
         "chat": "채팅 메시지"
     },
     "midi-qol.AutoRemoveTargetsOptions": {
@@ -456,7 +451,7 @@
     "midi-qol.UseMidiCrit.Hint": "아이템 시트에서 Midi-qol 치명타 임계정 필드를 활성화/비활성화 한다.",
     "midi-qol.ActiveDefenceString": "능동적 방어",
     "midi-qol.ActiveDefence.Name": "능동적 방어",
-    "midi-qol.ActiveDefence.Hint": "GM이 명중 굴림을 굴리는 대신 플레이어들이 방어 굴림을 한다. LMRTFY 모듈이 필요하며 Better rolls에서는 작동하지 않는다.",
+    "midi-qol.ActiveDefence.Hint": "GM이 명중 굴림을 굴리는 대신 플레이어들이 방어 굴림을 한다.",
     "midi-qol.PromptDamageRoll.Name": "향상된 피해 굴림 대화상자",
     "midi-qol.PromptDamageRoll.Hint": "피해 굴림시 항목 피해 선택을 지원하는 향상된 대화상자를 표시한다.",
     "midi-qol.GMHide3dDice.Name": "GM 공격/피해/내성 굴림 3D 주사위를 숨김 - 다른 설정에 덮어씌워짐",

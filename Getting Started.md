@@ -63,8 +63,8 @@ Required if you want effects to automatically be removed on expiry, either world
 ## Modules that are nice to have
 * **Convenient Effects** provides status effects (blinded, charmed, etc.) pre-configured with midi-qol flags, which can be applied to targets as a result of using an item. In addition, when using an item midi can automatically apply the Convenient Effects-defined effects for that spell. (Note that as of v12, Convenient Effects no longer alters the system's existing status effects or allows you to create new ones).
 
-* **Monks Token Bar/Let Me Roll That for You**.
-When automating saving throws both of these modules allow you to have players roll their own saving throws and midi-qol will interact with them to prompt for and record the saving throws (_Monk's Tokenbar is recommended as LMRTFY is not actively being developed anymore_).
+* **Monks Token Bar**.
+When automating saving throws this module allows you to have players roll their own saving throws and midi-qol will interact with it to prompt for and record the saving throws.
 
 * **Automated Animations** (and **D&D5e Animations**)
 This adds some nice animations to item/spell usage and is configured to work with midi-qol. Highly recommended.
@@ -97,7 +97,7 @@ The steps are:
   * Optional rules
   * Mechanics.
 
-Most setings are configured on the configuration application (the workflow button on configure settings) and is accessible only to a GM. Some settings available to all users are on the configuration settings application from the foundry sidebar.
+Most settings are configured on the configuration application (the workflow button on configure settings) and is accessible only to a GM. Some settings available to all users are on the configuration settings application from the foundry sidebar.
 
 #### Configure attack and damage rolls
 Midi has several concepts that can be confusing to first time users.

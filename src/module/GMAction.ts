@@ -1152,7 +1152,7 @@ async function prepareDamageListItems(
   const promisesStart = Date.now();
   if (data.updateOptions?.awaitDamageApplication !== false) {
     await allPromises;
-    console.log("GMAction.prepareDamageListItems: awaited all promises", Date.now() - promisesStart);
+    debug("GMAction.prepareDamageListItems: awaited all promises", Date.now() - promisesStart);
   }
 }
 
@@ -1179,9 +1179,9 @@ async function createPlayerDamageCard(data: {
         else if (di.type !== "midi-none") acc.rawAmount += di.value;
         return acc;
       }, { rawAmount: 0, rawTemp: 0, rawHealing: 0 });
-      // Match the calculation at line 1051: rawTotalDamage = rawAmount + rawHealing
-      // Healing values in rawDamageDetail are already negative after processing
-      const rawTotal = rawAmount + rawHealing;
+      // rawDamageDetail contains original positive healing values, but hpDamage is negative for healing
+      // Subtract rawHealing so the comparison works correctly for both damage and healing
+      const rawTotal = rawAmount - rawHealing;
       if (rawTotal !== damageItem.hpDamage) {
         shouldShow = true;
         break;

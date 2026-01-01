@@ -2,6 +2,7 @@
 * Midi-qol uses AI (Claude) for test and documentation generation and some bug fixes.
 
 **New Features:**
+* !381: Added option to skip concentration checks when HP is consumed for activity activation - thanks @baconnugget
 * Expanded `ignoreTraits` to support individual damage types. You can now specify specific damage types to bypass:
   - `idi.fire` - Ignore fire immunity only (other immunities still apply)
   - `idr.cold` - Ignore cold resistance only
@@ -35,6 +36,7 @@
 * Added `completeActivityUse` API documentation.
 * Improved OverTime effects documentation in README.md with examples.
 * Documented conditional expression evaluation including available data fields and helper functions.
+* Removed all LMRTFY (Let Me Roll That For You) references from documentation and translations - module is no longer actively developed.
 
 **Breaking Changes:**
 * Removed minor-qol backwards compatibility. `MinorQOL.doRoll`, `MinorQOL.applyTokenDamage`, and `"minor-qol.RollComplete"` hook are no longer supported. Use `activity.use()`, `MidiQOL.applyTokenDamage`, and `"midi-qol.RollComplete"` instead.
