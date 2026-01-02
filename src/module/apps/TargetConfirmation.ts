@@ -1,7 +1,8 @@
 import { Activity } from "../../globals.js";
-import { i18n, error, i18nFormat, allAttackTypes } from "../../midi-qol.js";
+import { i18n, error, i18nFormat } from "../../midi-qol.js";
 import { checkMechanic, checkRule, configSettings, targetConfirmation } from "../settings.js";
 import { FULL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, computeCoverBonus, computeFlankingStatus, getToken, isInCombat, isValidTarget, markFlanking, tokenForActor, updateUserTargets, getTokenName } from "../utils.js";
+import { shouldEnforceSingleTarget } from "../activities/activityHelpers.js";
 import { getTokenPlayerName } from "../utils.js";
 import { TroubleShooter } from "./TroubleShooter.js";
 import ApplicationV2 = foundry.applications.api.ApplicationV2
@@ -31,10 +32,8 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       || (configSettings.requiresTargets === "tokens" && (canvas?.scene?.tokens.size ?? 0) > 0)
       || (configSettings.requiresTargets === "combat" && inCombat);
     // @ts-expect-error no dnd5e-types
-    if (activity.item.type === "weapon" && !activity.target?.affects?.count) {
-      if (requiresTargets && configSettings.enforceSingleWeaponTarget && allAttackTypes.includes(activity.actionType)) {
-        maxTargets = 1;
-      }
+    if (activity.item.type === "weapon" && requiresTargets && shouldEnforceSingleTarget(activity)) {
+      maxTargets = 1;
     }
     this.data = { actor, activity, user, targets: [], options, maxTargets };
     const keys = {}; // TODO see if this needs to be set from the workflow event or let it get processed later

@@ -549,6 +549,7 @@ declare global {
     activityTypes: Record<string, { documentClass: ReturnType<typeof MidiActivityMixin> }> & {
       MidiActivityMixin: typeof MidiActivityMixin;
     };
+    activityHasEmanationNoTemplate: typeof utils.activityHasEmanationNoTemplate;
     actorFromUuid: typeof utils.actorFromUuid;
     addConcentrationDependent: typeof utils.addConcentrationDependent;
     addDependent: typeof utils.addDependent;

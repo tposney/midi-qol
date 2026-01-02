@@ -67,7 +67,7 @@ import {
   needsAOOCheck,
   addRollTo,
 } from "../utils.js";
-import { preTemplateTargets, removeFlanking, selectTargets, setDamageRollMinTerms } from "./activityHelpers.js";
+import { preTemplateTargets, removeFlanking, selectTargets, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
   _validateType(value: unknown) {
@@ -486,7 +486,8 @@ export let MidiActivityMixin = Base => {
         if (usage.midiOptions.isFumble) usage.workflow.isFumble = true;
         const autoCreateTemplate = activityHasAutoPlaceTemplate(activity);
         const emanationNoTemplate = activityHasEmanationNoTemplate(activity);
-        if (autoCreateTemplate || emanationNoTemplate) {
+        const isTrapWorkflow = usage.workflow instanceof TrapWorkflow;
+        if (autoCreateTemplate || emanationNoTemplate || isTrapWorkflow) {
           usage.create ??= {};
           usage.create.measuredTemplate = false;
         }
@@ -1313,7 +1314,9 @@ export let MidiActivityMixin = Base => {
         let isAoETargeting = !isEmanationTargeting && activityHasAreaTarget(this);
         let selfTarget = this.target?.affects.type === "self";
         const inCombat = this.actor && isInCombat(this.actor);
-        const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && inCombat);
+        const requiresTargets = configSettings.requiresTargets === "always"
+          || (configSettings.requiresTargets === "tokens" && (canvas?.scene?.tokens.size ?? 0) > 0)
+          || (configSettings.requiresTargets === "combat" && inCombat);
         let speaker = getSpeaker(this.actor!);
 
         const token = tokenForActor(this.actor);
@@ -1332,36 +1335,32 @@ export let MidiActivityMixin = Base => {
           return removeWorkflow(workflow);
         }
 
-        // only allow attacks against at most the specified number of targets
-        let allowedTargets;
-        if (this.target?.affects.type === "creature" && this.target?.affects.count === "") //dnd5e 3.2
-          allowedTargets = 9999;
-        else
-          allowedTargets = (this.target?.affects.type === "creature" ? this.target?.affects.count : 9999) ?? 9999;
-        if (options.checkTargets && requiresTargets && configSettings.enforceSingleWeaponTarget && allAttackTypes.includes(this.actionType) && allowedTargets === 9999) {
+        // Determine allowed number of targets
+        let allowedTargets: number;
+        const hasExplicitCount = this.target?.affects?.count && this.target.affects.count !== "";
+        if (hasExplicitCount) {
+          allowedTargets = Number(this.target.affects.count);
+        } else if (options.checkTargets && requiresTargets && shouldEnforceSingleTarget(this)) {
+          // Enforce single target for weapons when the setting is enabled
           allowedTargets = 1;
-          if (requiresTargets && workflow.targets.size !== 1) {
-            ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
-            if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat(`midi-qol.${MODULE_ID}.wrongNumberTargets`, { allowedTargets })}`)
-            return removeWorkflow(workflow);
-          }
+        } else {
+          allowedTargets = Infinity;
         }
 
-        if (options.checkTargets) {
-          if (requiresTargets && !isEmanationTargeting && !isAoETargeting && this.target?.affects.type === "creature" && workflow.targets.size === 0) {
-            ui.notifications?.warn(i18n("midi-qol.noTargets"));
-            if (debugEnabled > 0) warn(`${game.user?.name} attempted to roll with no targets selected`)
-            return removeWorkflow(workflow);
-          }
+        // Check for no targets when creature-type targeting requires them
+        const creatureTargetTypes = ["creature", "enemy", "ally", "willing"];
+        if (options.checkTargets && requiresTargets && !isEmanationTargeting && !isAoETargeting
+            && creatureTargetTypes.includes(this.target?.affects?.type) && workflow.targets.size === 0) {
+          ui.notifications?.warn(i18n("midi-qol.noTargets"));
+          if (debugEnabled > 0) warn(`${game.user?.name} attempted to roll with no targets selected`);
+          return removeWorkflow(workflow);
         }
 
-        // do pre roll checks
-        if (options.checkTargets) {
-          if (requiresTargets && workflow.targets.size > allowedTargets) {
-            ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
-            if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat(`midi-qol.${MODULE_ID}.wrongNumberTargets`, { allowedTargets })}`)
-            return removeWorkflow(workflow);
-          }
+        // Check for too many targets
+        if (options.checkTargets && requiresTargets && workflow.targets.size > allowedTargets) {
+          ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
+          if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat(`midi-qol.${MODULE_ID}.wrongNumberTargets`, { allowedTargets })}`);
+          return removeWorkflow(workflow);
         }
 
         let tokenToUse: foundry.canvas.placeables.Token.Implementation | undefined;

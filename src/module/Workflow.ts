@@ -7820,6 +7820,7 @@ export class TrapWorkflow extends Workflow {
   templateLocation: { x: number, y: number, direction?: number, removeDelay?: number } | undefined;
   saveTargets: any;
   onUseMacroCalled: boolean | undefined;
+  targetsPassedToConstructor: boolean;
   static get forceCreate() { return false; }
   constructor(
     actor: Actor,
@@ -7830,6 +7831,16 @@ export class TrapWorkflow extends Workflow {
     event: any = {},
     storeWorkflow: boolean = false) {
     super(actor, activity, ChatMessage.getSpeaker({ actor }), new Set(targets ?? []), { event, storeWorkflow: false });
+    this.targetsPassedToConstructor = targets !== undefined;
+    // Sync game.user.targets from targets passed to constructor (for non-AoE activities)
+    if (this.targetsPassedToConstructor && targets && targets.length > 0) {
+      game.user?.targets.forEach(t => t.setTarget(false, { releaseOthers: false }));
+      game.user?.targets.clear();
+      for (const t of targets) {
+        t.setTarget(true, { releaseOthers: false });
+        game.user?.targets.add(t);
+      }
+    }
     // @ts-expect-error pain in the ass to properly type this
     if (!this.event) this.event = foundry.utils.duplicate(shiftOnlyEvent);
     if (templateLocation) this.templateLocation = templateLocation;
@@ -7857,8 +7868,9 @@ export class TrapWorkflow extends Workflow {
       // Targets have already been set in activity.use
       return this.WorkflowState_TemplatePlaced;
     }
-    if (!activityHasAreaTarget(this.activity) || !this.templateLocation)
+    if (!activityHasAreaTarget(this.activity) || !this.templateLocation) {
       return this.WorkflowState_TemplatePlaced;
+    }
     //@ts-expect-error no dnd5e-types
     const TemplateClass = game.system.canvas.AbilityTemplate;
     const abilityTemplates = TemplateClass.fromActivity(this.activity);
@@ -7894,16 +7906,21 @@ export class TrapWorkflow extends Workflow {
   }
   async WorkflowState_ValidateRoll(context: WorkflowContext = {}): Promise<WorkflowState> {
     // do pre roll checks
-    return this.WorkflowState_WaitForSaves
+    return this.WorkflowState_WaitForAttackRoll
   }
   async WorkflowState_WaitForAttackRoll(context: WorkflowContext = {}): Promise<WorkflowState> {
-    if (!this.activity.attack) {
+    // Check if we're being unsuspended after attack roll completed
+    if (context.attackRoll) return this.WorkflowState_AttackRollComplete;
+
+    if (!this.activity.attack && !this.activity.hasAttack) {
+      // No attack on activity, all targets are hit
       this.hitTargets = new Set(this.targets);
       this.hitTargetsEC = new Set();
       return this.WorkflowState_WaitForSaves;
     }
-    if (debugEnabled > 0) warn("waitForAttackRoll | attack roll ", this.event)
-    this.activity.rollAttack?.({ event: this.event, workflow: this, midiOptions: { workflowOptions: this.workflowOptions } }, {}, {});
+    warn("TrapWorkflow | WaitForAttackRoll rolling attack for", this.activity.name, "hasAttack:", this.activity.hasAttack, "attack:", this.activity.attack);
+    // Don't pass event - shiftOnlyEvent doesn't have target property that D20Roll.buildPost expects
+    this.activity.rollAttack?.({ workflow: this, midiOptions: { workflowOptions: this.workflowOptions } }, {}, {});
     return this.WorkflowState_Suspend;
   }
   async WorkflowState_AttackRollComplete(context: WorkflowContext = {}): Promise<WorkflowState> {
@@ -7966,12 +7983,6 @@ export class TrapWorkflow extends Workflow {
     return this.WorkflowState_Suspend; // wait for a damage roll to advance the state.
   }
   async WorkflowState_DamageRollComplete(context: WorkflowContext = {}): Promise<WorkflowState> {
-    if (!this.activity.attack) { // no attack roll so everyone is hit
-      this.hitTargets = new Set(this.targets);
-      this.hitTargetsEC = new Set();
-      if (debugEnabled > 0) warn("damageRollComplete | for non auto target area effects spells", this)
-    }
-
     // If the item does damage, use the same damage type as the item
     /*
     let defaultDamageType = getActivityDefaultDamageType(this) ?? this.defaultDamageType

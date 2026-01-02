@@ -4,6 +4,59 @@ This document records all changes made by Claude to the midi-qol-13x codebase.
 
 ---
 
+## 2026-01-02: Fix TrapWorkflow Infinite Loop and Target Sync
+
+### Files Modified
+- `src/module/Workflow.ts`
+
+### Problem
+TrapWorkflow was experiencing multiple issues:
+1. **Infinite loop**: When `WorkflowState_WaitForAttackRoll` called `rollAttack()` and suspended, on resume it would call `rollAttack()` again instead of proceeding to `AttackRollComplete`, causing an infinite loop that exceeded 250 state transitions.
+2. **Targets not synced**: Targets passed to the TrapWorkflow constructor were not being synced to `game.user.targets`, causing targeting issues.
+3. **D20Roll.buildPost error**: The `shiftOnlyEvent` passed to `rollAttack` lacked the `target` property that `D20Roll.buildPost` expected.
+
+### Changes
+
+**WorkflowState_WaitForAttackRoll (TrapWorkflow):**
+```typescript
+async WorkflowState_WaitForAttackRoll(context: WorkflowContext = {}): Promise<WorkflowState> {
+  // Check if we're being unsuspended after attack roll completed
+  if (context.attackRoll) return this.WorkflowState_AttackRollComplete;
+
+  if (!this.activity.attack && !this.activity.hasAttack) {
+    // No attack on activity, all targets are hit
+    this.hitTargets = new Set(this.targets);
+    this.hitTargetsEC = new Set();
+    return this.WorkflowState_WaitForSaves;
+  }
+  // Don't pass event - shiftOnlyEvent doesn't have target property that D20Roll.buildPost expects
+  this.activity.rollAttack?.({ workflow: this, midiOptions: { workflowOptions: this.workflowOptions } }, {}, {});
+  return this.WorkflowState_Suspend;
+}
+```
+
+**TrapWorkflow Constructor:**
+Added `targetsPassedToConstructor` flag and sync logic:
+```typescript
+this.targetsPassedToConstructor = targets !== undefined;
+// Sync game.user.targets from targets passed to constructor (for non-AoE activities)
+if (this.targetsPassedToConstructor && targets && targets.length > 0) {
+  game.user?.targets.forEach(t => t.setTarget(false, { releaseOthers: false }));
+  game.user?.targets.clear();
+  for (const t of targets) {
+    t.setTarget(true, { releaseOthers: false });
+    game.user?.targets.add(t);
+  }
+}
+```
+
+### Result
+- TrapWorkflow no longer enters infinite loop when using activities with attacks
+- Targets passed to constructor are properly synced to `game.user.targets`
+- D20Roll.buildPost no longer errors on undefined target
+
+---
+
 ## 2025-12-31: Fix Player Damage Card Healing Display
 
 ### Files Modified

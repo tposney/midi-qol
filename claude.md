@@ -35,6 +35,19 @@ Use this to verify API methods and understand how dnd5e implements features. **D
 
 ## Significant Decisions
 
+### 13.0.35 Changes
+
+1. **TrapWorkflow infinite loop fix**
+   - Added `context.attackRoll` check in `WorkflowState_WaitForAttackRoll` to detect when resuming after attack completion
+   - Without this check, the method would keep calling `rollAttack()` on resume instead of transitioning to `AttackRollComplete`
+
+2. **TrapWorkflow target sync**
+   - Added `targetsPassedToConstructor` flag to TrapWorkflow class
+   - Constructor now syncs `game.user.targets` from targets passed to constructor for non-AoE activities
+
+3. **D20Roll.buildPost fix**
+   - TrapWorkflow no longer passes `shiftOnlyEvent` to `rollAttack` as it lacks the `target` property that `D20Roll.buildPost` expects
+
 ### 13.0.33 Changes
 
 1. **Removed minor-qol backwards compatibility**

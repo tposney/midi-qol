@@ -1,3 +1,11 @@
+### 13.0.34
+**Bug Fixes:**
+* TrapWorkflow
+  - Fixed TrapWorkflow infinite loop when using activities with attacks. The `WorkflowState_WaitForAttackRoll` now properly checks `context.attackRoll` to detect when resuming after attack completion.
+  - Fixed TrapWorkflow not syncing `game.user.targets` from targets passed to constructor. Targets are now synced immediately in the constructor for proper workflow execution.
+  - Fixed D20Roll.buildPost error in TrapWorkflow by not passing `shiftOnlyEvent` (which lacks required `target` property) to `rollAttack`.
+* !386: Updated pt-BR.json - thanks @Kharmans
+
 ### 13.0.33
 * Midi-qol uses AI (Claude) for test and documentation generation and some bug fixes.
 

@@ -4,9 +4,36 @@ import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog, TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 import { configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
-import { getFlankingEffect, CERemoveEffect, sumRolls, evalActivationCondition, computeTemplateShapeDistance, getToken, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, getSpeaker, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, getActivityAutoTargetAction, getAoETargetType, doReactions, getUnitDist, updateUserTargets, MidiOptions } from "../utils.js";
+import { getFlankingEffect, CERemoveEffect, sumRolls, evalActivationCondition, computeTemplateShapeDistance, getToken, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, getSpeaker, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, getUnitDist, updateUserTargets, MidiOptions } from "../utils.js";
+import { allAttackTypes } from "../../midi-qol.js";
 const { DialogV2 } = foundry.applications.api;
 import Token = foundry.canvas.placeables.Token;
+
+// Target types that represent discrete creatures (not areas)
+const creatureTargetTypes = ["creature", "enemy", "ally", "willing"];
+
+/**
+ * Determines if the enforceSingleWeaponTarget setting should apply to this activity.
+ * Returns false for emanation/AoE activities that naturally target multiple creatures.
+ * @param activity The activity to check
+ * @returns true if single target should be enforced
+ */
+export function shouldEnforceSingleTarget(activity: Activity): boolean {
+  if (!configSettings.enforceSingleWeaponTarget) return false;
+  if (!allAttackTypes.includes(activity.actionType)) return false;
+
+  // Don't enforce for emanation or AoE targeting - these naturally target multiple creatures
+  const isEmanationTargeting = activityHasAutoPlaceTemplate(activity) || activityHasEmanationNoTemplate(activity);
+  const isAoETargeting = !isEmanationTargeting && activityHasAreaTarget(activity);
+  if (isEmanationTargeting || isAoETargeting) return false;
+
+  // If an explicit target count is set, respect it instead of enforcing single target
+  const hasExplicitCount = activity.target?.affects?.count && activity.target.affects.count !== "";
+  if (hasExplicitCount) return false;
+
+  // Only enforce for creature-like target types
+  return creatureTargetTypes.includes(activity.target?.affects?.type);
+}
 
 export async function confirmWorkflow(existingWorkflow: Workflow): Promise<boolean> {
   const validStates = [existingWorkflow.WorkflowState_Completed, existingWorkflow.WorkflowState_Start, existingWorkflow.WorkflowState_RollFinished]
@@ -143,7 +170,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
     return true;
   let numTargets = game.user?.targets?.size ?? 0;
   // @ts-expect-error no dnd5e-types
-  if (numTargets === 0 && configSettings.enforceSingleWeaponTarget && activity.item.type === "weapon")
+  if (numTargets === 0 && activity.item.type === "weapon" && shouldEnforceSingleTarget(activity))
     numTargets = 1;
   const token = tokenForActor(activity.actor);
   if (targetConfirmation.enabled) {
