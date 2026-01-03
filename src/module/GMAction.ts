@@ -667,10 +667,11 @@ async function addConvenientEffect(options: { effectName: string, actorUuid: str
 async function _addDependent(data: { documentUuid: string, dependentUuid: string }) {
   if (foundry.utils.isNewerVersion(game.system.version, "5.1.99")) {
     const dependent = fromUuidSync(data.dependentUuid) as foundry.abstract.Document.Any | undefined;
-    if (dependent) {
-      //@ts-expect-error dnd5e.dependentOn
-      return dependent.setFlag("dnd5e", "dependentOn", data.documentUuid);
-    }
+    if (!dependent) return;
+
+    // Always use dnd5e's dependent system - dnd5e's DependentDocumentMixin handles tracking
+    //@ts-expect-error dnd5e.dependentOn
+    return dependent.setFlag("dnd5e", "dependentOn", data.documentUuid);
   } else {
     const document = fromUuidSync(data.documentUuid) as foundry.abstract.Document.Any | undefined;
     //@ts-expect-error .addDependent

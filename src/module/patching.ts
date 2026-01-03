@@ -11,10 +11,19 @@ import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, ActivityUseConfiguration, DamageApplicationOptions, DamageDescription, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
 import { AugmentedEvent } from "./Workflow.js";
+import { preferredActiveGM } from "./GMAction.js";
+import { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./MidiDependentsRegistry.js";
+
+// Re-export for backwards compatibility
+export { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./MidiDependentsRegistry.js";
 
 let libWrapper;
 
 const NumericTerm = foundry.dice.terms.NumericTerm;
+
+// Module-level Set to track actors that should skip concentration checks
+// Used instead of actor flags to avoid database writes and orphaned flags
+export const skipConcentrationActorUuids = new Set<string>();
 
 function _isVisionSource(this: Token.Implementation, wrapped) {
   const isVisionSource = wrapped();
@@ -1024,30 +1033,45 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
   libWrapper.register(MODULE_ID, "dnd5e.applications.actor.BaseActorSheet.prototype._prepareItem", _prepareItem, "WRAPPER");
-  // setup MeasuredTemplateDocument and TokenDocument to be dependent documents
-  class MidiMeasuredTemplateDocument extends globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.MeasuredTemplate.documentClass) {};
+  // Setup document classes with both dnd5e's DependentDocumentMixin (for flag-based tracking)
+  // and MidiDependentDocumentMixin (for our registry-based tracking of Actor/Item parents)
+  // This allows dnd5e.dependentOn flag to work for all parent types
+
+  // MeasuredTemplate, Token, AmbientLight need dnd5e's mixin added (not in their base class)
+  class MidiMeasuredTemplateDocument extends MidiDependentDocumentMixin(
+    globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.MeasuredTemplate.documentClass)
+  ) {};
   //@ts-expect-error
   CONFIG.MeasuredTemplate.documentClass = MidiMeasuredTemplateDocument;
-  class MidiTokenDocument extends globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.Token.documentClass) {};
+
+  class MidiTokenDocument extends MidiDependentDocumentMixin(
+    globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.Token.documentClass)
+  ) {};
   //@ts-expect-error
   CONFIG.Token.documentClass = MidiTokenDocument;
-  class MidiAmbientLightDocument extends globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.AmbientLight.documentClass) {};
+
+  class MidiAmbientLightDocument extends MidiDependentDocumentMixin(
+    globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.AmbientLight.documentClass)
+  ) {};
   //@ts-expect-error
   CONFIG.AmbientLight.documentClass = MidiAmbientLightDocument;
-}
 
-function dependentPrepareData(wrapped) {
-  wrapped();
-  if (this.flags?.dnd5e?.dependentOn && this.uuid) {
-    globalThis.dnd5e.registry.dependents.track(this.flags.dnd5e.dependentOn, this);
-  }
-}
+  // ActiveEffect, Item, Actor already have dnd5e's DependentDocumentMixin in their class hierarchy
+  // Just add MidiDependentDocumentMixin for our registry tracking
+  //@ts-expect-error - Mixin pattern type inference
+  class MidiActiveEffect extends MidiDependentDocumentMixin(CONFIG.ActiveEffect.documentClass) {};
+  //@ts-expect-error
+  CONFIG.ActiveEffect.documentClass = MidiActiveEffect;
 
-function dependentOnDelete(wrapped, options = {}, userId: string = "") {
-  wrapped(options, userId);
-  if (this.flags?.dnd5e?.dependentOn && this.uuid) {
-    globalThis.dnd5e.registry.dependents.untrack(this.flags.dnd5e.dependentOn, this);
-  }
+  //@ts-expect-error - Mixin pattern type inference
+  class MidiItem extends MidiDependentDocumentMixin(CONFIG.Item.documentClass) {};
+  //@ts-expect-error
+  CONFIG.Item.documentClass = MidiItem;
+
+  //@ts-expect-error - Mixin pattern type inference
+  class MidiActor extends MidiDependentDocumentMixin(CONFIG.Actor.documentClass) {};
+  //@ts-expect-error
+  CONFIG.Actor.documentClass = MidiActor;
 }
 
 function _prepareItem(wrapped, item, ctx) {
@@ -1344,8 +1368,8 @@ function createConcentrationEffectData(this: ActiveEffect.Implementation, wrappe
 }
 
 export async function challengeConcentration(this: Actor.Implementation, wrapped, { dc = 10, ability = null } = {}) {
-  if (this.getFlag(MODULE_ID, "skipConcentrationCheck")) {
-    await this.unsetFlag(MODULE_ID, "skipConcentrationCheck");
+  // Set.delete() returns true if the uuid was in the set (check + remove in one operation)
+  if (skipConcentrationActorUuids.delete(this.uuid)) {
     return;
   }
   if (["chatOnly"].includes(configSettings.doConcentrationCheck))
@@ -1412,14 +1436,23 @@ export let itemPatching = () => {
 export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocument, options: any, user: string) {
   if (user !== game.user?.id) return;
   if (options.undo) return;
-  let origin = fromUuidSync(templateDocument.getFlag("dnd5e", "origin")) as Item.Implementation | ActiveEffect.Implementation | Actor.Implementation | TokenDocument.Implementation | undefined;
-  if (origin instanceof Item && origin.parent instanceof Actor) {
-    origin = origin.parent.effects?.find(ef => !!ef.getFlag("dnd5e", "dependents")?.some(dep => dep.uuid === templateDocument.uuid));
+
+  // Cascade delete dependents of this template via MidiDependentsRegistry (only active GM should do this)
+  if (preferredActiveGM()?.isSelf) {
+    await MidiDependentsRegistry.deleteDependents(templateDocument.uuid);
   }
-  if (origin instanceof ActiveEffect && !options.noConcentrationCheck && configSettings.removeConcentrationEffects !== "none") {
+
+  // Check if this template was dependent on a concentration effect - if so, clean up the effect if no more dependents
+  if (options.noConcentrationCheck || configSettings.removeConcentrationEffects === "none") return;
+
+  const dependentOn = templateDocument.getFlag("dnd5e", "dependentOn");
+  if (!dependentOn) return;
+
+  const parentEffect = fromUuidSync(dependentOn);
+  if (parentEffect instanceof ActiveEffect) {
     // @ts-expect-error no dnd5e-types
-    if (origin?.getDependents()?.length === 0) {
-      await origin.delete();
+    if (parentEffect.getDependents()?.length === 0) {
+      await parentEffect.delete();
     }
   }
 };

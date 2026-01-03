@@ -35,7 +35,7 @@ Use this to verify API methods and understand how dnd5e implements features. **D
 
 ## Significant Decisions
 
-### 13.0.35 Changes
+### 13.0.34 Changes
 
 1. **TrapWorkflow infinite loop fix**
    - Added `context.attackRoll` check in `WorkflowState_WaitForAttackRoll` to detect when resuming after attack completion
@@ -47,6 +47,32 @@ Use this to verify API methods and understand how dnd5e implements features. **D
 
 3. **D20Roll.buildPost fix**
    - TrapWorkflow no longer passes `shiftOnlyEvent` to `rollAttack` as it lacks the `target` property that `D20Roll.buildPost` expects
+
+4. **Workflow.ts split into multiple files**
+   - Created `src/module/Workflow/` directory with separate files for each workflow subclass
+   - Files: types.ts, constants.ts, helpers.ts, SavesFirstWorkflow.ts, ActiveDefenceWorkflow.ts, UserWorkflow.ts, DamageOnlyWorkflow.ts, TrapWorkflow.ts, DDBGameLogWorkflow.ts, DummyWorkflow.ts, WorkflowRegistry.ts, index.ts, BaseWorkflow.ts
+   - Original Workflow.ts reduced from 8,434 to 7,465 lines
+   - All existing imports continue to work via re-exports for backwards compatibility
+
+5. **skipConcentrationCheck refactor**
+   - Changed from actor flags to module-level `Set<string>` for tracking actors that should skip concentration checks
+   - Added `skipConcentrationActorUuids` Set in patching.ts
+   - `challengeConcentration` now uses `Set.delete()` which returns true if uuid was present (check + remove in one operation)
+   - Avoids database writes - faster and no orphaned flags if interrupted
+   - Removed `skipConcentrationCheck` from Actor flag type definitions in globals.ts
+
+6. **MidiDependentsRegistry - Dependent document tracking**
+   - New file: `src/module/MidiDependentsRegistry.ts`
+   - dnd5e's `DependentsRegistry` only supports ActiveEffect as parent type
+   - Implemented hybrid approach: use `dnd5e.dependentOn` flag on all dependents, but use `MidiDependentsRegistry` for non-ActiveEffect parents
+   - Parent types handled by midi-qol: Actor, Item, Token, MeasuredTemplate, AmbientLight
+   - Parent types handled by dnd5e: ActiveEffect
+   - Dependent types supported by dnd5e: Actor, Item, ActiveEffect, Activity
+   - Dependent types added by midi-qol: Token, MeasuredTemplate, AmbientLight
+   - Delete hooks added for: deleteActor, deleteItem, deleteAmbientLight, deleteToken (deleteMeasuredTemplate already existed)
+   - `MidiDependentDocumentMixin` applied to document classes in patching.ts
+   - `MidiQOL.addDependent(parent, dependent)` helper or set `flags.dnd5e.dependentOn` directly
+   - Simplified `checkDeleteTemplate` to use `dnd5e.dependentOn` instead of old `dnd5e.dependents` array
 
 ### 13.0.33 Changes
 

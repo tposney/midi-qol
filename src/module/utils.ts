@@ -431,7 +431,7 @@ export function setupDamageDetails(actorDamage: PreSetupDamageListEntry, selecto
 
 export async function processDamageRoll(workflow: Workflow, defaultDamageType: string) {
   if (debugEnabled > 0) warn("processDamageRoll |", workflow)
-  let hitTargets = new Set([...workflow.hitTargets, ...workflow.hitTargetsEC]);
+  let hitTargets = new Set([...(workflow.hitTargets ?? []), ...(workflow.hitTargetsEC ?? [])]);
   let theTargets = new Set(workflow.targets);
   // TODO becomes activity.target.affects.type === "self"
   // if (activity.target.affects.type === "self") theTargets = await getOrCreateTokenForActorAsSet(actor) || theTargets;
@@ -6876,6 +6876,13 @@ export function addDependent(document: foundry.abstract.Document.Any, dependent:
     error(`midi-addDependent | document ${document?.name} does not have an uuid`);
     return;
   }
+  if (!dependent?.uuid) {
+    error(`midi-addDependent | dependent ${dependent?.name} does not have an uuid`);
+    return;
+  }
+
+  // Always use dnd5e's dependent system - dnd5e's DependentDocumentMixin handles tracking
+  // When the parent (Actor/Item/Effect/Template) is deleted, midi-qol's hooks handle cleanup
   //@ts-expect-error
   if (game.user?.isGM || document.isOwner) {
     //@ts-expect-error

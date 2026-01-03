@@ -1,7 +1,7 @@
 import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, safeGetGameSetting, triggeredActivityTargetOptions, triggeredActivityRollAsOptions } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, setupModules } from './module/setupModules.js';
-import { itemPatching, visionPatching, actorAbilityRollPatching, readyPatching, initPatching, addDiceTermModifiers } from './module/patching.js';
+import { itemPatching, visionPatching, actorAbilityRollPatching, readyPatching, initPatching, addDiceTermModifiers, MidiDependentsRegistry } from './module/patching.js';
 import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
@@ -743,6 +743,7 @@ function setupMidiQOLApi() {
     TargetConfirmationDialog,
     log,
     midiFlags,
+    MidiDependentsRegistry,
     midiRenderRoll,
     midiRenderAttackRoll,
     midiRenderDamageRoll,

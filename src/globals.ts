@@ -19,6 +19,7 @@ import { TroubleShooter } from "./module/apps/TroubleShooter";
 import { ChatLogMidi } from "./module/ChatClasses/ChatLogMidi";
 import { ChatMessageMidi } from "./module/ChatClasses/ChatMessageMidi";
 import { DamageApplicationElementMidi } from "./module/ChatClasses/DamageApplicationElementMidi";
+import { MidiDependentsRegistry } from "./module/MidiDependentsRegistry";
 
 declare module "fvtt-types/configuration" {
   interface AssumeHookRan {
@@ -163,6 +164,7 @@ declare module "fvtt-types/configuration" {
           castLevel?: number;
           baseLevel?: number;
         };
+        dependentOn?: string; // UUID of parent document (Actor/Item) for midi-qol dependent tracking
         overtimeChatCardUuids?: string[];
         transformedActorUuids?: string[];
       };
@@ -177,6 +179,7 @@ declare module "fvtt-types/configuration" {
         sharpShooter?: string;
       };
       "midi-qol"?: {
+        dependentOn?: string; // UUID of parent document for midi-qol dependent tracking
         actions?: {
           // This really should be structured but actions.reaction is used in other modules and macros
           reaction?: boolean,
@@ -470,6 +473,7 @@ declare module "fvtt-types/configuration" {
         }
       };
       "midi-qol"?: {
+        dependentOn?: string; // UUID of parent document for midi-qol dependent tracking
         onUseMacroParts?: OnUseMacros;
         onUseMacroName?: string;
         noProvokeReaction?: boolean;
@@ -496,6 +500,7 @@ declare module "fvtt-types/configuration" {
         activityUuid?: string;
         workflowId?: string;
         itemCardUuid?: string;
+        dependentOn?: string; // UUID of parent document (Actor/Item) for midi-qol dependent tracking
       };
     };
     MeasuredTemplateDocument: {
@@ -503,10 +508,21 @@ declare module "fvtt-types/configuration" {
         origin?: string;
         dependentOn?: ActiveEffect.Implementation | null;
       };
+      "midi-qol"?: {
+        dependentOn?: string; // UUID of parent document (Actor/Item) for midi-qol dependent tracking
+      };
     }
     TokenDocument: {
       dnd5e?: {
         dependentOn?: string;
+      };
+      "midi-qol"?: {
+        dependentOn?: string; // UUID of parent document (Actor/Item) for midi-qol dependent tracking
+      };
+    }
+    AmbientLightDocument: {
+      "midi-qol"?: {
+        dependentOn?: string; // UUID of parent document (Actor/Item) for midi-qol dependent tracking
       };
     }
   }
@@ -619,6 +635,7 @@ declare global {
     midiRenderDamageRoll: typeof utils.midiRenderDamageRoll;
     midiRenderOtherDamageRoll: typeof utils.midiRenderOtherDamageRoll;
     midiRenderRoll: typeof utils.midiRenderRoll;
+    MidiDependentsRegistry: typeof MidiDependentsRegistry;
     MidiSounds: typeof MidiSounds;
     modifyDamageBy: typeof utils.modifyDamageBy;
     moveToken: typeof moveToken;

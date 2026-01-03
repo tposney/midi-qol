@@ -4,7 +4,7 @@ import { socketlibSocket } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFirstWorkflow } from "../Workflow.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { averageDice } from "../patching.js"
+import { averageDice, skipConcentrationActorUuids } from "../patching.js"
 import {
   aoeTargetTypeOptions,
   autoCEEffectsOptions,
@@ -476,8 +476,9 @@ export let MidiActivityMixin = Base => {
         message.workflow = usage.workflow; // TODO: remove hack to allow card config processing
         usage.workflow!.systemCard = message.systemCard;
         if ((activity.midiProperties?.rollMode ?? "default") !== "default") message.rollMode = activity.midiProperties!.rollMode;
-        if (activity.midiProperties?.skipConcentrationCheck && activity.consumption.targets.some(t => t.target === "attributes.hp.value")) 
-          await this.actor.setFlag(MODULE_ID, "skipConcentrationCheck", true);
+        if (activity.midiProperties?.skipConcentrationCheck && this.actor &&
+            activity.consumption.targets.some(t => t.target === "attributes.hp.value"))
+          skipConcentrationActorUuids.add(this.actor.uuid);
         if (item.parent) await removeFlanking(item.parent);
         // config.midiOptions.workflowOptions.targetConfirmation ??= this.forcedTargetConfirmation;
         if (!usage.workflow) return undefined;
@@ -541,8 +542,8 @@ export let MidiActivityMixin = Base => {
           Workflow.removeWorkflow(usage.workflow?.id);
           return false;
         }
-        if (this.actor.getFlag(MODULE_ID, "skipConcentrationCheck"))
-          await this.actor.unsetFlag(MODULE_ID, "skipConcentrationCheck");
+        // Cleanup skipConcentrationCheck flag in case workflow was interrupted before concentration check
+        if (this.actor) skipConcentrationActorUuids.delete(this.actor.uuid);
         if (!useResults) { // activity use was aborted
           Workflow.removeWorkflow(usage.workflow?.id);
           return false;

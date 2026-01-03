@@ -1,10 +1,21 @@
 ### 13.0.34
+**New Features:**
+* Extended dependent document tracking for cascade deletion,  specifying a parent document via the `dnd5e.dependentOn` flag - when the parent is deleted, all dependents are automatically deleted. This is an extension of the core dnd5e behaviour.
+  - Parent types handled by dnd5e: ActiveEffect
+  - Parent types handled by midi-qol: Actor, Item, Token, MeasuredTemplate, AmbientLight
+  - Dependent types supported by dnd5e: Actor, Item, ActiveEffect, Activity
+  - Dependent types added by midi-qol: Token, MeasuredTemplate, AmbientLight
+  - Can use `MidiQOL.addDependent(parent, dependent)` instead of `flags.dnd5e.dependentOn`.
+
 **Bug Fixes:**
 * TrapWorkflow
   - Fixed TrapWorkflow infinite loop when using activities with attacks. The `WorkflowState_WaitForAttackRoll` now properly checks `context.attackRoll` to detect when resuming after attack completion.
   - Fixed TrapWorkflow not syncing `game.user.targets` from targets passed to constructor. Targets are now synced immediately in the constructor for proper workflow execution.
   - Fixed D20Roll.buildPost error in TrapWorkflow by not passing `shiftOnlyEvent` (which lacks required `target` property) to `rollAttack`.
 * !386: Updated pt-BR.json - thanks @Kharmans
+
+**Code Improvements:**
+* Refactored `skipConcentrationCheck` from actor flags to module-level Set for tracking actors that should skip concentration checks. Avoids database writes so is faster.
 
 ### 13.0.33
 * Midi-qol uses AI (Claude) for test and documentation generation and some bug fixes.

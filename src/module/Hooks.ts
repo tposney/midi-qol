@@ -11,6 +11,7 @@ import { installedModules } from "./setupModules.js";
 import { preActivityConsumptionHook, activityConsumptionHook } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { DamageApplicationOptions, DamageDescription } from "../globals.js";
+import { MidiDependentsRegistry } from "./MidiDependentsRegistry.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
@@ -204,6 +205,34 @@ export let readyHooks = async () => {
     }
     return changeFunc();
   })
+
+  // Handle deletion of Actors - cascade delete dependents via MidiDependentsRegistry
+  Hooks.on("deleteActor", (deletedActor: Actor.Implementation, options: any, user) => {
+    if (!preferredActiveGM()?.isSelf) return;
+    if (options.undo) return;
+    MidiDependentsRegistry.deleteDependents(deletedActor.uuid);
+  });
+
+  // Handle deletion of Items - cascade delete dependents via MidiDependentsRegistry
+  Hooks.on("deleteItem", (deletedItem: Item.Implementation, options: any, user) => {
+    if (!preferredActiveGM()?.isSelf) return;
+    if (options.undo) return;
+    MidiDependentsRegistry.deleteDependents(deletedItem.uuid);
+  });
+
+  // Handle deletion of AmbientLights - cascade delete dependents via MidiDependentsRegistry
+  Hooks.on("deleteAmbientLight", (deletedLight: any, options: any, user) => {
+    if (!preferredActiveGM()?.isSelf) return;
+    if (options.undo) return;
+    MidiDependentsRegistry.deleteDependents(deletedLight.uuid);
+  });
+
+  // Handle deletion of Tokens - cascade delete dependents via MidiDependentsRegistry
+  Hooks.on("deleteToken", (deletedToken: any, options: any, user) => {
+    if (!preferredActiveGM()?.isSelf) return;
+    if (options.undo) return;
+    MidiDependentsRegistry.deleteDependents(deletedToken.uuid);
+  });
 
   // Hooks.on("restCompleted", restManager); I think this means 1.6 is required.
   Hooks.on("dnd5e.restCompleted", restManager);

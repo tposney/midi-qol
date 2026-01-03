@@ -4,6 +4,152 @@ This document records all changes made by Claude to the midi-qol-13x codebase.
 
 ---
 
+## 2026-01-03: MidiDependentsRegistry - Dependent Document Tracking
+
+### Files Modified
+- `src/module/MidiDependentsRegistry.ts` (new file)
+- `src/module/Hooks.ts`
+- `src/module/patching.ts`
+- `src/module/utils.ts`
+- `src/midi-qol.ts`
+- `src/globals.ts`
+
+### Problem
+dnd5e's built-in `DependentsRegistry` only supports ActiveEffect as a parent type. When trying to use Actor, Item, Token, MeasuredTemplate, or AmbientLight as parents, `dnd5e.registry.dependents.get()` fails with "cannot read properties of null (reading 'pack')" because it assumes the parent is an ActiveEffect.
+
+### Solution
+Implemented a hybrid approach:
+1. Use the unified `dnd5e.dependentOn` flag on all dependent documents (user-friendly - one flag to know)
+2. Use `MidiDependentsRegistry` for tracking/retrieval when parent is Actor, Item, Token, MeasuredTemplate, or AmbientLight
+3. Let dnd5e's built-in system handle ActiveEffect parents
+
+### Implementation
+
+**MidiDependentsRegistry.ts:**
+```typescript
+export class MidiDependentsRegistry {
+  static #dependents = new Map<string, Set<string>>();
+
+  static get(document: foundry.abstract.Document.Any | string): foundry.abstract.Document.Any[] {
+    const uuid = typeof document === "string" ? document : document?.uuid;
+    if (!uuid) return [];
+    return Array.from(this.#dependents.get(uuid) ?? [])
+      .map(depUuid => fromUuidSync(depUuid, { strict: false }))
+      .filter((d): d is foundry.abstract.Document.Any => !!d);
+  }
+
+  static track(parentUuid: string, dependent: foundry.abstract.Document.Any) { ... }
+  static untrack(parentUuid: string, dependent: foundry.abstract.Document.Any) { ... }
+  static async deleteDependents(parentUuid: string): Promise<void> { ... }
+  static clear() { ... }
+}
+
+export function MidiDependentDocumentMixin<T extends new (...args: any[]) => any>(Base: T) {
+  // Reads dnd5e.dependentOn flag and tracks in MidiDependentsRegistry
+  // via prepareData() and _onDelete()
+}
+```
+
+**Hooks.ts - Delete hooks for cascade deletion:**
+```typescript
+Hooks.on("deleteActor", (deletedActor, options, user) => {
+  if (!preferredActiveGM()?.isSelf || options.undo) return;
+  MidiDependentsRegistry.deleteDependents(deletedActor.uuid);
+});
+// Similar hooks for deleteItem, deleteAmbientLight, deleteToken
+```
+
+**patching.ts - Apply mixin to document classes:**
+```typescript
+class MidiMeasuredTemplateDocument extends MidiDependentDocumentMixin(
+  globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.MeasuredTemplate.documentClass)
+) {};
+// Similar for Token, AmbientLight, ActiveEffect, Item, Actor
+```
+
+**utils.ts - addDependent helper:**
+```typescript
+export async function addDependent(parent, dependent) {
+  if (!parent?.uuid || !dependent?.setFlag) return;
+  await dependent.setFlag("dnd5e", "dependentOn", parent.uuid);
+}
+```
+
+### Parent/Dependent Support
+
+| Parent Type | Handler |
+|-------------|---------|
+| ActiveEffect | dnd5e built-in |
+| Actor, Item, Token, MeasuredTemplate, AmbientLight | MidiDependentsRegistry |
+
+| Dependent Type | Source |
+|----------------|--------|
+| Actor, Item, ActiveEffect, Activity | dnd5e built-in |
+| Token, MeasuredTemplate, AmbientLight | Added by midi-qol |
+
+### Benefits
+1. Users only need to know one flag: `dnd5e.dependentOn` - also a potential disadvantage since it might collide with future dnd5e changes.
+2. Supports all common document types as parents (not just ActiveEffect)
+3. Integrates cleanly with dnd5e's existing system
+
+---
+
+## 2026-01-03: skipConcentrationCheck Refactor
+
+### Files Modified
+- `src/module/patching.ts`
+- `src/module/activities/MidiActivityMixin.ts`
+- `src/globals.ts`
+
+### Problem
+The `skipConcentrationCheck` feature used actor flags to track which actors should skip their next concentration check. This had issues:
+1. Database writes for a transient flag (slow)
+2. Risk of orphaned flags if the workflow was interrupted
+3. More complex code
+
+### Solution
+Replaced actor flags with a module-level `Set<string>` to track actor UUIDs.
+
+### Implementation
+
+**patching.ts:**
+```typescript
+// Module-level Set to track actors that should skip concentration checks
+export const skipConcentrationActorUuids = new Set<string>();
+
+export async function challengeConcentration(this: Actor.Implementation, wrapped, { dc = 10, ability = null } = {}) {
+  // Set.delete() returns true if the uuid was in the set (check + remove in one operation)
+  if (skipConcentrationActorUuids.delete(this.uuid)) {
+    return;
+  }
+  // ... rest of function
+}
+```
+
+**MidiActivityMixin.ts:**
+```typescript
+import { skipConcentrationActorUuids } from "../patching.js";
+
+// Before activity use:
+if (activity.midiProperties?.skipConcentrationCheck && this.actor &&
+    activity.consumption.targets.some(t => t.target === "attributes.hp.value"))
+  skipConcentrationActorUuids.add(this.actor.uuid);
+
+// Cleanup in finally block:
+if (this.actor) skipConcentrationActorUuids.delete(this.actor.uuid);
+```
+
+**globals.ts:**
+- Removed `skipConcentrationCheck?: boolean` from Actor midi-qol flags type definition
+
+### Benefits
+1. No database writes - faster operation
+2. No orphaned flags possible
+3. Simpler code - `Set.delete()` returns boolean for check+remove in one operation
+4. The Set doesn't need to survive page reloads since the flag is only needed for milliseconds during activity use
+
+---
+
 ## 2026-01-02: Fix TrapWorkflow Infinite Loop and Target Sync
 
 ### Files Modified
@@ -95,6 +241,298 @@ The root cause was in `prepareDamageListItems`:
 ### Result
 - Healing now shows: "+10 Healing Rolled -> +10 Healing Applied"
 - Damage still shows: "10 Rolled -> 8 Applied"
+
+---
+
+## 2025-12-31: Expanded ignoreTraits for Individual Damage Types
+
+### Files Modified
+- `src/module/Workflow.ts`
+- `src/module/utils.ts` (if applicable)
+
+### Problem
+The existing `ignoreTraits` activity property (`idi`, `idr`, `idv`, `ida`) only supported ignoring ALL of a trait type. Users wanted the ability to bypass specific damage type immunities/resistances while leaving others intact (e.g., a fire sword that ignores fire immunity but not cold immunity).
+
+### Solution
+Extended the `ignoreTraits` parsing to support damage-type-specific suffixes:
+
+| Flag | Meaning |
+|------|---------|
+| `idi` | Ignore ALL damage immunities |
+| `idi.fire` | Ignore fire immunity only |
+| `idi.cold` | Ignore cold immunity only |
+| `idr` | Ignore ALL damage resistances |
+| `idr.fire` | Ignore fire resistance only |
+| `idv` | Ignore ALL damage vulnerabilities |
+| `idv.lightning` | Ignore lightning vulnerability only |
+| `ida` | Ignore ALL damage absorption |
+| `ida.necrotic` | Ignore necrotic absorption only |
+
+### Implementation Details
+
+The `ignoreTraits` Set on activities can now contain entries like `"idi.fire"`. The damage calculation code was updated to:
+
+1. Check for the general flag first (e.g., `idi` ignores all immunities)
+2. If not present, check for specific damage type flags (e.g., `idi.fire` for fire damage)
+3. Only bypass the trait if the appropriate flag matches the damage type being processed
+
+```typescript
+// Pseudocode for the check
+const ignoreAllImmunity = ignoreTraits.has("idi");
+const ignoreSpecificImmunity = ignoreTraits.has(`idi.${damageType}`);
+if (ignoreAllImmunity || ignoreSpecificImmunity) {
+  // Bypass immunity for this damage type
+}
+```
+
+### Test Coverage
+Added tests in `ignore-traits-tests.ts` covering:
+- Baseline tests (immunity/resistance works without ignore flags)
+- `idi` ignoring all immunities
+- `idi.fire` ignoring only fire immunity (cold immunity still applies)
+- `idr` ignoring all resistances
+- `idr.cold` ignoring only cold resistance
+- `idv` ignoring all vulnerabilities
+- `idv.lightning` ignoring only lightning vulnerability
+- `ida` ignoring all absorption
+- `ida.necrotic` ignoring only necrotic absorption
+
+---
+
+## 2025-12-28: esbuild Build System Migration
+
+### Files Modified
+- `gulpfile.js`
+- `package.json`
+- `module.json`
+
+### Changes
+Migrated from multi-file gulp-typescript output to single bundled `midi-qol.js` using esbuild.
+
+### Implementation Details
+
+**gulpfile.js:**
+- Added `const esbuild = require("esbuild")` import
+- Added `typeCheck()` function that runs TypeScript type checking via `tsc --noEmit`
+- Added `buildSourceEsbuild(minifySources, output)` function for bundling
+- Updated `buildManifest()` to accept `bundled` parameter for single-file esmodules
+- Modified all build tasks (default, dev, zip, watch, devWatch) to use new functions
+- Added source map post-processing to normalize paths
+
+**esbuild configuration:**
+```javascript
+await esbuild.build({
+  entryPoints: ["src/midi-qol.ts"],
+  bundle: true,
+  format: "esm",
+  outfile: path.join(outdir, "midi-qol.js"),
+  sourcemap: true,
+  sourcesContent: true,
+  minify: minifySources,
+  target: "es2022",
+  platform: "browser",
+  logLevel: "info",
+});
+```
+
+**Source map path normalization:**
+```javascript
+// Fix source map paths to show nicely in browser DevTools
+map.sources = map.sources.map(s => {
+  const match = s.match(/src\/(module\/|midi-qol\.ts).*$/);
+  return match ? "src/" + match[0].substring(4) : s;
+});
+```
+
+**package.json:**
+- Added `"esbuild": "^0.24.0"` to dependencies
+
+**module.json:**
+- Changed `esmodules` to use `{{sources}}` placeholder (replaced with `["midi-qol.js"]`)
+
+### Benefits
+- Build time reduced from multi-second to ~100ms
+- Single bundled file simplifies distribution
+- Source maps work correctly in browser DevTools under `modules/midi-qol/src/`
+- TypeScript type checking still runs before bundling
+
+---
+
+## 2025-12-28: WorkflowRegistry Pattern
+
+### File Modified
+`src/module/Workflow.ts`
+
+### Problem
+esbuild (and other bundlers) warn about using `eval()` for dynamic code execution. The original code used:
+```javascript
+const actionClass = eval(className);
+```
+
+### Solution
+Created a `WorkflowRegistry` object at the end of Workflow.ts:
+
+```typescript
+// Registry of workflow classes for dynamic lookup (avoids eval)
+export const WorkflowRegistry: Record<string, new (...args: any[]) => Workflow> = {
+  Workflow,
+  SavesFirstWorkflow,
+  ActiveDefenceWorkflow,
+  UserWorkflow,
+  DamageOnlyWorkflow,
+  TrapWorkflow,
+  DDBGameLogWorkflow,
+  DummyWorkflow,
+};
+```
+
+### Usage
+Changed from:
+```javascript
+const actionClass = eval(className);
+```
+To:
+```javascript
+const actionClass = WorkflowRegistry[className];
+if (actionClass && (actionClass === Workflow || actionClass.prototype instanceof Workflow)) {
+```
+
+### Type Notes
+Used `new (...args: any[]) => Workflow` instead of `typeof Workflow` because subclasses like `DamageOnlyWorkflow` have different constructor signatures.
+
+---
+
+## 2025-12-27: checkSaves Refactoring - Phase 4
+
+### Files Modified
+- `src/module/Workflow.ts`
+- `src/globals.ts`
+
+### Changes
+Major refactoring of `checkSaves` to reduce code duplication and improve type safety.
+
+### New Types Added to `globals.ts`
+
+| Type | Purpose |
+|------|---------|
+| `SaveRollInfo` | Roll type, ability, skill, tool, and action function |
+| `MagicSaveInfo` | Magic save flags (isMagicSave, resistance, vulnerability) |
+| `SaveDisplayOptions` | Display settings (whisper, showRoll, showRollDialog, simulate) |
+| `SavePlayerInfo` | Player context (player, GMprompt, playerChat) |
+| `ModuleIntegrationFlags` | Module enable flags (MonksTB, FlashTB, EpicRolls, RER) |
+| `ModuleIntegrationRequests` | Module request arrays for player/gm rolls |
+| `QueueSaveRollOptions` | Combined options type for `queueTargetSaveRoll()` |
+| `SaveDetails` | Structured type for save details object |
+| `ProcessTargetSaveContext` | Context for `processTargetSaveResult()` |
+
+### Helper Methods Extracted
+
+| Method | Purpose |
+|--------|---------|
+| `queueTargetSaveRoll(options)` | Refactored from 24+ positional parameters to structured options object |
+| `processTargetSaveResult()` | Processes a single target's save result (~90 lines extracted) |
+| `updateSaveFailSets()` | Updates saves/failedSaves sets based on save result |
+| `applyFailedSaveBonuses()` | Applies fail bonuses (flags.midi-qol.save.fail) if save failed |
+| `computeModuleIntegrationSettings()` | Returns module flags and request arrays for external modules |
+| `buildSaveDetailsForTarget()` | Builds SaveDetails including magic resistance/vulnerability checks |
+| `normalizeRollResults()` | Converts raw roll results to consistent Roll[][] arrays |
+
+### Code Cleanup
+- Removed unused `promptPlayer` variable from `determineTargetRollSettings()` destructuring
+- Removed empty `finally` block
+- Removed self-assignments at end of `checkSaves` (e.g., `this.saves = this.saves`)
+- Removed unused `BasicRoll` import in `checkSaves`
+
+### Impact
+- Reduced `checkSaves` from ~310 lines to ~130 lines
+- `queueTargetSaveRoll` now uses a single structured options parameter instead of 24+ positional parameters
+- Created reusable types in globals.ts to reduce duplication
+- Added `save.fail` flag type to Actor flags in globals.ts
+
+---
+
+## 2025-12-27: README Flags Cross-Reference Update
+
+### File Modified
+`README.md`
+
+### Changes
+Cross-referenced the Flags Reference section against actual flag definitions in the codebase (midi-qol.ts, patching.ts, Workflow.ts, utils.ts, Hooks.ts). Added missing flags and expanded documentation.
+
+### New Flag Documentation Added
+
+**Grants Flags (greatly expanded):**
+| Category | Flags Added |
+|----------|-------------|
+| Attack Modifiers | `grants.advantage.all`, `grants.noAdvantage.attack.*`, `grants.noDisadvantage.attack.*`, `grants.attack.fail.*`, `grants.attack.success.*` per attack type |
+| Critical Modifiers | `grants.critical.range`, `grants.noCritical.*` per attack type |
+| Save Modifiers | `grants.advantage.save.*`, `grants.disadvantage.save.*`, `grants.noAdvantage.save`, `grants.noDisadvantage.save` |
+| Check/Skill Modifiers | `grants.advantage.check.*`, `grants.advantage.skill.*`, `grants.disadvantage.check/skill.*` |
+| Damage Modifiers | `grants.max.damage.*`, `grants.min.damage.*`, `grants.bonus.damage.*` |
+
+**New Sections:**
+| Section | Flags Documented |
+|---------|-----------------|
+| Save Bonuses | `save.fail.all`, `save.fail.str/dex/etc` |
+| Roll Modifiers | `rollModifiers.attack.*`, `rollModifiers.damage.*` |
+| Action Tracking | `actions.reaction`, `actions.reactionsUsed`, `actions.reactionCombatRound`, `actions.reactionsReset`, `actions.bonus`, `actions.bonusActionsUsed`, `actions.bonusActionCombatRound`, `actions.bonusActionsReset` |
+| Item Flags | `onUseMacroName`, `syntheticItem` |
+
+**Special Flags expanded:**
+- `magicResistance.str/dex/etc` (ability-specific)
+- `magicVulnerability.str/dex/etc` (ability-specific)
+- `deathSaveBonus`
+- `fail.disadvantage.heavy`
+
+**OverTime Effects expanded:**
+- Added full parameter table with all supported options
+- Added example syntax
+- Parameters: turn, damageRoll, damageType, saveDC, saveAbility, rollType, saveMagic, actionSave, actionType, damageBeforeSave, label/name, chatFlavor, rollMode, applyCondition/condition
+
+**Deprecation note:**
+- `fail.critical.all` marked as deprecated (use `grants.noCritical.all`)
+
+### Impact
+- README Flags Reference now accurately reflects the full set of flags available in midi-qol
+- Added ~80 new flag entries across multiple categories
+- Improved discoverability of lesser-known flags
+
+---
+
+## 2025-12-27: README Hooks Section Update
+
+### File Modified
+`README.md`
+
+### Changes
+Completely rewrote the Hooks Reference section from the simple 9-hook table to a reference with 50+ hooks organized by category.
+
+### New Hook Categories
+
+| Category | Hooks Documented |
+|----------|------------------|
+| Workflow State Hooks | 13 main states with pre/post variants (26 hooks) |
+| Activity Hooks | 7 hooks (preTargeting, preItemRoll, preAttackRoll, etc.) |
+| Workflow Event Hooks | 12 hooks (targetingComplete, preCheckHits, healed, damaged, etc.) |
+| Damage Calculation Hooks | 2 hooks (dnd5ePreCalculateDamage, dnd5eCalculateDamage) |
+| Reaction Hooks | 1 hook (ReactionFilter) |
+| System Hooks | 9 hooks (setup, ready, midiReady, ConfigSettingsChanged, etc.) |
+| Premade Hooks | Documented `midi-qol.premades.*` pattern |
+
+### Key Improvements
+- Documented item-specific hook pattern (`.{item.uuid}`, `.{activity.uuid}`)
+- Added return value behavior (`false` to abort)
+- Documented hook arguments where they differ from workflow
+- Listed all workflow states including lesser-known ones (AoETargetConfirmation, ConfirmRoll, etc.)
+- Documented v2 API variants (preTargetingV2, preItemRollV2)
+
+### Source Files Referenced
+- `src/module/Workflow.ts` - WorkflowState_* methods and asyncHooksCall* calls
+- `src/module/utils.ts` - asyncHooksCall/asyncHooksCallAll definitions
+- `src/module/activities/MidiActivityMixin.ts` - Activity hooks
+- `src/module/activities/AttackActivity.ts` - Attack hooks
+- `src/midi-qol.ts` - System hooks
+- `src/module/Hooks.ts` - Damage calculation hooks
 
 ---
 
@@ -314,296 +752,3 @@ Continued incremental refactoring of the `checkSaves` method, extracting 2 more 
 - Further reduced `checkSaves` method by ~45 lines
 - Extracted 2 additional reusable helper methods
 - Total helper methods extracted from checkSaves: 12
-
----
-
-## 2025-12-27: checkSaves Refactoring - Phase 4
-
-### Files Modified
-- `src/module/Workflow.ts`
-- `src/globals.ts`
-
-### Changes
-Major refactoring of `checkSaves` to reduce code duplication and improve type safety.
-
-### New Types Added to `globals.ts`
-
-| Type | Purpose |
-|------|---------|
-| `SaveRollInfo` | Roll type, ability, skill, tool, and action function |
-| `MagicSaveInfo` | Magic save flags (isMagicSave, resistance, vulnerability) |
-| `SaveDisplayOptions` | Display settings (whisper, showRoll, showRollDialog, simulate) |
-| `SavePlayerInfo` | Player context (player, GMprompt, playerChat) |
-| `ModuleIntegrationFlags` | Module enable flags (MonksTB, FlashTB, EpicRolls, RER) |
-| `ModuleIntegrationRequests` | Module request arrays for player/gm rolls |
-| `QueueSaveRollOptions` | Combined options type for `queueTargetSaveRoll()` |
-| `SaveDetails` | Structured type for save details object |
-| `ProcessTargetSaveContext` | Context for `processTargetSaveResult()` |
-
-### Helper Methods Extracted
-
-| Method | Purpose |
-|--------|---------|
-| `queueTargetSaveRoll(options)` | Refactored from 24+ positional parameters to structured options object |
-| `processTargetSaveResult()` | Processes a single target's save result (~90 lines extracted) |
-| `updateSaveFailSets()` | Updates saves/failedSaves sets based on save result |
-| `applyFailedSaveBonuses()` | Applies fail bonuses (flags.midi-qol.save.fail) if save failed |
-| `computeModuleIntegrationSettings()` | Returns module flags and request arrays for external modules |
-| `buildSaveDetailsForTarget()` | Builds SaveDetails including magic resistance/vulnerability checks |
-| `normalizeRollResults()` | Converts raw roll results to consistent Roll[][] arrays |
-
-### Code Cleanup
-- Removed unused `promptPlayer` variable from `determineTargetRollSettings()` destructuring
-- Removed empty `finally` block
-- Removed self-assignments at end of `checkSaves` (e.g., `this.saves = this.saves`)
-- Removed unused `BasicRoll` import in `checkSaves`
-
-### Impact
-- Reduced `checkSaves` from ~310 lines to ~130 lines
-- `queueTargetSaveRoll` now uses a single structured options parameter instead of 24+ positional parameters
-- Created reusable types in globals.ts to reduce duplication
-- Added `save.fail` flag type to Actor flags in globals.ts
-
----
-
-## 2025-12-27: README Flags Cross-Reference Update
-
-### File Modified
-`README.md`
-
-### Changes
-Cross-referenced the Flags Reference section against actual flag definitions in the codebase (midi-qol.ts, patching.ts, Workflow.ts, utils.ts, Hooks.ts). Added missing flags and expanded documentation.
-
-### New Flag Documentation Added
-
-**Grants Flags (greatly expanded):**
-| Category | Flags Added |
-|----------|-------------|
-| Attack Modifiers | `grants.advantage.all`, `grants.noAdvantage.attack.*`, `grants.noDisadvantage.attack.*`, `grants.attack.fail.*`, `grants.attack.success.*` per attack type |
-| Critical Modifiers | `grants.critical.range`, `grants.noCritical.*` per attack type |
-| Save Modifiers | `grants.advantage.save.*`, `grants.disadvantage.save.*`, `grants.noAdvantage.save`, `grants.noDisadvantage.save` |
-| Check/Skill Modifiers | `grants.advantage.check.*`, `grants.advantage.skill.*`, `grants.disadvantage.check/skill.*` |
-| Damage Modifiers | `grants.max.damage.*`, `grants.min.damage.*`, `grants.bonus.damage.*` |
-
-**New Sections:**
-| Section | Flags Documented |
-|---------|-----------------|
-| Save Bonuses | `save.fail.all`, `save.fail.str/dex/etc` |
-| Roll Modifiers | `rollModifiers.attack.*`, `rollModifiers.damage.*` |
-| Action Tracking | `actions.reaction`, `actions.reactionsUsed`, `actions.reactionCombatRound`, `actions.reactionsReset`, `actions.bonus`, `actions.bonusActionsUsed`, `actions.bonusActionCombatRound`, `actions.bonusActionsReset` |
-| Item Flags | `onUseMacroName`, `syntheticItem` |
-
-**Special Flags expanded:**
-- `magicResistance.str/dex/etc` (ability-specific)
-- `magicVulnerability.str/dex/etc` (ability-specific)
-- `deathSaveBonus`
-- `fail.disadvantage.heavy`
-
-**OverTime Effects expanded:**
-- Added full parameter table with all supported options
-- Added example syntax
-- Parameters: turn, damageRoll, damageType, saveDC, saveAbility, rollType, saveMagic, actionSave, actionType, damageBeforeSave, label/name, chatFlavor, rollMode, applyCondition/condition
-
-**Deprecation note:**
-- `fail.critical.all` marked as deprecated (use `grants.noCritical.all`)
-
-### Impact
-- README Flags Reference now accurately reflects the full set of flags available in midi-qol
-- Added ~80 new flag entries across multiple categories
-- Improved discoverability of lesser-known flags
-
----
-
-## 2025-12-27: README Hooks Section Update
-
-### File Modified
-`README.md`
-
-### Changes
-Completely rewrote the Hooks Reference section from the simple 9-hook table to a reference with 50+ hooks organized by category.
-
-### New Hook Categories
-
-| Category | Hooks Documented |
-|----------|------------------|
-| Workflow State Hooks | 13 main states with pre/post variants (26 hooks) |
-| Activity Hooks | 7 hooks (preTargeting, preItemRoll, preAttackRoll, etc.) |
-| Workflow Event Hooks | 12 hooks (targetingComplete, preCheckHits, healed, damaged, etc.) |
-| Damage Calculation Hooks | 2 hooks (dnd5ePreCalculateDamage, dnd5eCalculateDamage) |
-| Reaction Hooks | 1 hook (ReactionFilter) |
-| System Hooks | 9 hooks (setup, ready, midiReady, ConfigSettingsChanged, etc.) |
-| Premade Hooks | Documented `midi-qol.premades.*` pattern |
-
-### Key Improvements
-- Documented item-specific hook pattern (`.{item.uuid}`, `.{activity.uuid}`)
-- Added return value behavior (`false` to abort)
-- Documented hook arguments where they differ from workflow
-- Listed all workflow states including lesser-known ones (AoETargetConfirmation, ConfirmRoll, etc.)
-- Documented v2 API variants (preTargetingV2, preItemRollV2)
-
-### Source Files Referenced
-- `src/module/Workflow.ts` - WorkflowState_* methods and asyncHooksCall* calls
-- `src/module/utils.ts` - asyncHooksCall/asyncHooksCallAll definitions
-- `src/module/activities/MidiActivityMixin.ts` - Activity hooks
-- `src/module/activities/AttackActivity.ts` - Attack hooks
-- `src/midi-qol.ts` - System hooks
-- `src/module/Hooks.ts` - Damage calculation hooks
-
----
-
-## 2025-12-28: esbuild Build System Migration
-
-### Files Modified
-- `gulpfile.js`
-- `package.json`
-- `module.json`
-
-### Changes
-Migrated from multi-file gulp-typescript output to single bundled `midi-qol.js` using esbuild.
-
-### Implementation Details
-
-**gulpfile.js:**
-- Added `const esbuild = require("esbuild")` import
-- Added `typeCheck()` function that runs TypeScript type checking via `tsc --noEmit`
-- Added `buildSourceEsbuild(minifySources, output)` function for bundling
-- Updated `buildManifest()` to accept `bundled` parameter for single-file esmodules
-- Modified all build tasks (default, dev, zip, watch, devWatch) to use new functions
-- Added source map post-processing to normalize paths
-
-**esbuild configuration:**
-```javascript
-await esbuild.build({
-  entryPoints: ["src/midi-qol.ts"],
-  bundle: true,
-  format: "esm",
-  outfile: path.join(outdir, "midi-qol.js"),
-  sourcemap: true,
-  sourcesContent: true,
-  minify: minifySources,
-  target: "es2022",
-  platform: "browser",
-  logLevel: "info",
-});
-```
-
-**Source map path normalization:**
-```javascript
-// Fix source map paths to show nicely in browser DevTools
-map.sources = map.sources.map(s => {
-  const match = s.match(/src\/(module\/|midi-qol\.ts).*$/);
-  return match ? "src/" + match[0].substring(4) : s;
-});
-```
-
-**package.json:**
-- Added `"esbuild": "^0.24.0"` to dependencies
-
-**module.json:**
-- Changed `esmodules` to use `{{sources}}` placeholder (replaced with `["midi-qol.js"]`)
-
-### Benefits
-- Build time reduced from multi-second to ~100ms
-- Single bundled file simplifies distribution
-- Source maps work correctly in browser DevTools under `modules/midi-qol/src/`
-- TypeScript type checking still runs before bundling
-
----
-
-## 2025-12-28: WorkflowRegistry Pattern
-
-### File Modified
-`src/module/Workflow.ts`
-
-### Problem
-esbuild (and other bundlers) warn about using `eval()` for dynamic code execution. The original code used:
-```javascript
-const actionClass = eval(className);
-```
-
-### Solution
-Created a `WorkflowRegistry` object at the end of Workflow.ts:
-
-```typescript
-// Registry of workflow classes for dynamic lookup (avoids eval)
-export const WorkflowRegistry: Record<string, new (...args: any[]) => Workflow> = {
-  Workflow,
-  SavesFirstWorkflow,
-  ActiveDefenceWorkflow,
-  UserWorkflow,
-  DamageOnlyWorkflow,
-  TrapWorkflow,
-  DDBGameLogWorkflow,
-  DummyWorkflow,
-};
-```
-
-### Usage
-Changed from:
-```javascript
-const actionClass = eval(className);
-```
-To:
-```javascript
-const actionClass = WorkflowRegistry[className];
-if (actionClass && (actionClass === Workflow || actionClass.prototype instanceof Workflow)) {
-```
-
-### Type Notes
-Used `new (...args: any[]) => Workflow` instead of `typeof Workflow` because subclasses like `DamageOnlyWorkflow` have different constructor signatures.
-
----
-
-## 2025-12-31: Expanded ignoreTraits for Individual Damage Types
-
-### Files Modified
-- `src/module/Workflow.ts`
-- `src/module/utils.ts` (if applicable)
-
-### Problem
-The existing `ignoreTraits` activity property (`idi`, `idr`, `idv`, `ida`) only supported ignoring ALL of a trait type. Users wanted the ability to bypass specific damage type immunities/resistances while leaving others intact (e.g., a fire sword that ignores fire immunity but not cold immunity).
-
-### Solution
-Extended the `ignoreTraits` parsing to support damage-type-specific suffixes:
-
-| Flag | Meaning |
-|------|---------|
-| `idi` | Ignore ALL damage immunities |
-| `idi.fire` | Ignore fire immunity only |
-| `idi.cold` | Ignore cold immunity only |
-| `idr` | Ignore ALL damage resistances |
-| `idr.fire` | Ignore fire resistance only |
-| `idv` | Ignore ALL damage vulnerabilities |
-| `idv.lightning` | Ignore lightning vulnerability only |
-| `ida` | Ignore ALL damage absorption |
-| `ida.necrotic` | Ignore necrotic absorption only |
-
-### Implementation Details
-
-The `ignoreTraits` Set on activities can now contain entries like `"idi.fire"`. The damage calculation code was updated to:
-
-1. Check for the general flag first (e.g., `idi` ignores all immunities)
-2. If not present, check for specific damage type flags (e.g., `idi.fire` for fire damage)
-3. Only bypass the trait if the appropriate flag matches the damage type being processed
-
-```typescript
-// Pseudocode for the check
-const ignoreAllImmunity = ignoreTraits.has("idi");
-const ignoreSpecificImmunity = ignoreTraits.has(`idi.${damageType}`);
-if (ignoreAllImmunity || ignoreSpecificImmunity) {
-  // Bypass immunity for this damage type
-}
-```
-
-### Test Coverage
-Added tests in `ignore-traits-tests.ts` covering:
-- Baseline tests (immunity/resistance works without ignore flags)
-- `idi` ignoring all immunities
-- `idi.fire` ignoring only fire immunity (cold immunity still applies)
-- `idr` ignoring all resistances
-- `idr.cold` ignoring only cold resistance
-- `idv` ignoring all vulnerabilities
-- `idv.lightning` ignoring only lightning vulnerability
-- `ida` ignoring all absorption
-- `ida.necrotic` ignoring only necrotic absorption
-
