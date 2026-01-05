@@ -207,6 +207,8 @@ Hooks.once('init', async function () {
 
   GameSystemConfig.damageTypes["none"] = { label: i18n("midi-qol.noType"), icon: `systems/${game.system?.id}/icons/svg/trait-damage-immunities.svg` };
   GameSystemConfig.damageTypes["midi-none"] = { label: i18n("midi-qol.midi-none"), icon: `systems/${game.system?.id}/icons/svg/trait-damage-immunities.svg` };
+  GameSystemConfig.damageTypes["vitality"] = { label: i18n("midi-qol.vitalityDamage"), icon: `modules/${MODULE_ID}/icons/vitality.svg` };
+  GameSystemConfig.healingTypes["vitality"] = { label: i18n("midi-qol.vitalityHealing"), icon: `modules/${MODULE_ID}/icons/vitality.svg` };
   allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
   initHooks();
 

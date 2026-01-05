@@ -975,16 +975,21 @@ interface DamageListContextEntry {
   isHealing: boolean;
   absRawTotalDamage: number;
   absPlayerViewTotalDamage: number;
+  // Direct vitality damage/healing from damage detail (not overflow)
+  vitalityDamage?: number;
+  absVitalityDamage?: number;
+  vitalityDamageIsHealing?: boolean;
 }
 
 /** Helper to calculate damage amounts from a damage detail array */
-function calculateDamageAmounts(damageDetail: DamageDescription[]): { amount: number; temp: number; healing: number } {
+function calculateDamageAmounts(damageDetail: DamageDescription[]): { amount: number; temp: number; healing: number; vitality: number } {
   return damageDetail.reduce((acc, d) => {
     if (d.type === "temphp") acc.temp += d.value;
+    else if (d.type === "vitality") acc.vitality += d.value; // Vitality damage (positive) or healing (negative)
     else if (["healing"].includes(d.type) || d.active?.absorption) acc.healing += d.value;
     else if (d.type !== "midi-none") acc.amount += d.value;
     return acc;
-  }, { amount: 0, temp: 0, healing: 0 });
+  }, { amount: 0, temp: 0, healing: 0, vitality: 0 });
 }
 
 /** Helper to update damage card display elements */
@@ -1151,10 +1156,10 @@ async function prepareDamageListItems(
     if (actor.isOwner && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
       // @ts-expect-error no dnd5e-types
       const hp = actor.system.attributes.hp;
-      let { amount, temp, healing } = calculateDamageAmounts(damageItem.damageDetail);
+      let { amount, temp, healing, vitality: vitalityDamage } = calculateDamageAmounts(damageItem.damageDetail);
       amount = Math.max(0, amount);
-      const { amount: rawAmount, healing: rawHealing } = calculateDamageAmounts(damageItem.rawDamageDetail);
-      damageItem.totalDamage = damageItem.damageDetail.reduce((acc, d) => acc + (!["temphp", "midi-none"].includes(d.type) ? d.value : 0), 0);
+      const { amount: rawAmount, healing: rawHealing, vitality: rawVitality } = calculateDamageAmounts(damageItem.rawDamageDetail);
+      damageItem.totalDamage = damageItem.damageDetail.reduce((acc, d) => acc + (!["temphp", "midi-none", "vitality"].includes(d.type) ? d.value : 0), 0);
       amount = amount + healing;
       amount = amount > 0 ? Math.floor(amount) : Math.ceil(amount);
 
@@ -1177,8 +1182,8 @@ async function prepareDamageListItems(
       damageItem.newHP = updates["system.attributes.hp.value"];
       damageItem.hpDamage = deltaHP;
       damageItem.tempDamage = deltaTemp;
-      // Include healing in rawTotalDamage so it displays correctly (healing is negative)
-      damageItem.rawTotalDamage = rawAmount + rawHealing;
+      // Include healing and vitality in rawTotalDamage so it displays correctly
+      damageItem.rawTotalDamage = rawAmount + rawHealing + rawVitality;
 
       // Handle vitality system - always record current vitality state for undo support
       const vitalityItem = getVitalityItem(actor);
@@ -1194,32 +1199,52 @@ async function prepareDamageListItems(
         // Record old vitality state for undo support
         damageItem.oldVitalitySpent = currentSpent;
         damageItem.oldVitality = maxUses - currentSpent;
-        // Default new to unchanged - only updated if there's overflow damage
+        // Default new to unchanged - only updated if there's overflow or direct vitality damage
         damageItem.newVitalitySpent = currentSpent;
         damageItem.newVitality = maxUses - currentSpent;
 
-        // Check for overflow damage when HP reaches 0
+        let newSpent = currentSpent;
+
+        // Handle direct vitality damage type (positive = damage, negative = healing)
+        if (vitalityDamage !== 0) {
+          if (vitalityDamage > 0) {
+            // Vitality damage - increase spent (reduce vitality)
+            newSpent = Math.min(maxUses, currentSpent + Math.floor(vitalityDamage));
+          } else {
+            // Vitality healing - decrease spent (restore vitality)
+            newSpent = Math.max(0, currentSpent + Math.ceil(vitalityDamage));
+          }
+        }
+
+        // Check for overflow damage when HP reaches 0 (only if not already handling direct vitality damage)
         if (updates["system.attributes.hp.value"] <= 0 && amount > 0) {
           const overflowDamage = amount - (hp.temp + hp.value);
 
           if (overflowDamage > 0) {
-            // Update item's uses.spent
-            const newSpent = Math.min(maxUses, currentSpent + overflowDamage);
+            // Add overflow damage to vitality spent
+            newSpent = Math.min(maxUses, newSpent + overflowDamage);
+          }
+        }
 
-            damageItem.newVitalitySpent = newSpent;
-            damageItem.newVitality = maxUses - newSpent;
+        // Update if vitality changed
+        if (newSpent !== currentSpent) {
+          damageItem.newVitalitySpent = newSpent;
+          damageItem.newVitality = maxUses - newSpent;
 
-            // Queue vitality item update (will be executed after actor update)
-            if (createPromises && doHits && (data.autoApplyDamage.includes("yes") || data.forceApply)) {
-              // @ts-expect-error item update for uses.spent
-              vitalityItemUpdatePromise = vitalityItem.update({ "system.uses.spent": newSpent });
-            }
+          // Queue vitality item update (will be executed after actor update)
+          if (createPromises && doHits && (data.autoApplyDamage.includes("yes") || data.forceApply)) {
+            // @ts-expect-error item update for uses.spent
+            vitalityItemUpdatePromise = vitalityItem.update({ "system.uses.spent": newSpent });
           }
         }
       }
 
       if (createPromises && doHits && (data.autoApplyDamage.includes("yes") || data.forceApply)) {
         //recover the options used when calculating the damage
+        // If midi-qol handled vitality (overflow or direct damage), mark it so the hook doesn't double-handle
+        if (vitalityItemUpdatePromise) {
+          (damageItem.calcDamageOptions as any).midiVitalityHandled = true;
+        }
         if (Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, damageItem.calcDamageOptions as DamageApplicationOptions) !== false) {
           // The actor update - when no changes are made will update the passed options with a target
           // If vitality update is pending, flag it so updateActor hook skips checkWounded (updateItem hook will handle it)
@@ -1261,6 +1286,9 @@ async function prepareDamageListItems(
 
     const playerViewTotalDamage = damageItem.hpDamage + damageItem.tempDamage;
     const isHealing = (damageItem.rawTotalDamage ?? 0) < 0 || playerViewTotalDamage < 0;
+    // Extract direct vitality damage/healing from damage detail (not overflow) - only if vitality system is enabled
+    const vitalityEnabled = !!checkRule("vitalityItem");
+    const directVitalityDamage = vitalityEnabled ? calculateDamageAmounts(damageItem.rawDamageDetail ?? damageItem.damageDetail ?? []).vitality : 0;
     let listItem: DamageListContextEntry = {
       isCharacter: actor.hasPlayerOwner,
       isNpc: !actor.hasPlayerOwner,
@@ -1296,6 +1324,10 @@ async function prepareDamageListItems(
       isHealing,
       absRawTotalDamage: Math.abs(damageItem.rawTotalDamage ?? 0),
       absPlayerViewTotalDamage: Math.abs(playerViewTotalDamage),
+      // Direct vitality damage/healing (not overflow)
+      vitalityDamage: directVitalityDamage,
+      absVitalityDamage: Math.abs(directVitalityDamage),
+      vitalityDamageIsHealing: directVitalityDamage < 0,
     };
 
     listItem.tooltip = generateDamageTooltip(damageItem);

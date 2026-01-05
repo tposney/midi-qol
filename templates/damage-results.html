@@ -6,18 +6,20 @@
   <div class="midi-qol-tooltip midi-qol-dmg-row" {{#if damage.tooltip}}data-tooltip='{{damage.tooltip}}'{{/if}}>
     <img src="{{damage.tokenImg}}" id="{{damage.tokenId}}" class="midi-qol-target-name" height="22">
     {{!-- Total damage/healing applied at start of line --}}
-    <span id="dmg-total-{{damage.displayUuid}}" class="midi-qol-dmg-total{{#if damage.noChange}} midi-qol-dmg-hidden{{/if}}{{#if damage.isHealing}} midi-qol-dmg-healing{{/if}}" data-is-healing="{{damage.isHealing}}">{{#if damage.isHealing}}+{{else}}-{{/if}}{{damage.totalDamage}}</span>
+    <span id="dmg-total-{{damage.displayUuid}}" class="midi-qol-dmg-total{{#if damage.noChange}} midi-qol-dmg-hidden{{/if}}{{#if damage.isHealing}} midi-qol-dmg-healing{{/if}}" data-is-healing="{{damage.isHealing}}">{{#if damage.totalDamage}}{{#if damage.isHealing}}+{{else}}-{{/if}}{{damage.totalDamage}}{{else}}0{{/if}}</span>
+    {{!-- Direct vitality damage/healing (not overflow) --}}
+    {{#if damage.absVitalityDamage}}<span class="midi-qol-dmg-vitality-total{{#if damage.vitalityDamageIsHealing}} midi-qol-dmg-healing{{/if}}"><i class="fas fa-heart-crack"></i>{{#if damage.vitalityDamageIsHealing}}+{{else}}-{{/if}}{{damage.absVitalityDamage}}</span>{{/if}}
     {{!-- Temp HP: blue symbol --}}
     <span id="dmg-temp-{{damage.displayUuid}}" class="midi-qol-dmg-temp{{#unless damage.tempHpChanged}} midi-qol-dmg-hidden{{/unless}}{{#if damage.tempHpIncrease}} midi-qol-dmg-healing{{/if}}" title="Temp HP">
-      <i class="fas fa-shield-alt"></i><span class="dmg-temp-old">{{damage.damageItem.oldTempHP}}</span>&rarr;<span class="dmg-temp-new">{{damage.damageItem.newTempHP}}</span>
+      <i class="fas fa-shield-alt"></i><span class="dmg-temp-old">{{damage.damageItem.oldTempHP}}</span><i class="fas fa-arrow-right midi-qol-dmg-arrow"></i><span class="dmg-temp-new">{{damage.damageItem.newTempHP}}</span>
     </span>
     {{!-- HP: red symbol --}}
     <span id="dmg-hp-{{damage.displayUuid}}" class="midi-qol-dmg-hp{{#unless damage.hpChanged}} midi-qol-dmg-hidden{{/unless}}{{#if damage.isHealing}} midi-qol-dmg-healing{{/if}}">
-      <i class="fas fa-heart"></i> <span class="dmg-hp-old">{{damage.damageItem.oldHP}}</span>&rarr;<span class="dmg-hp-new">{{damage.damageItem.newHP}}</span>
+      <i class="fas fa-heart"></i><span class="dmg-hp-old">{{damage.damageItem.oldHP}}</span><i class="fas fa-arrow-right midi-qol-dmg-arrow"></i><span class="dmg-hp-new">{{damage.damageItem.newHP}}</span>
     </span>
     {{!-- Vitality: black symbol --}}
     <span id="dmg-vitality-{{damage.displayUuid}}" class="midi-qol-dmg-vitality{{#unless damage.vitalityChanged}} midi-qol-dmg-hidden{{/unless}}{{#if damage.vitalityIncrease}} midi-qol-dmg-healing{{/if}}">
-      <i class="fas fa-heart-crack"></i><span class="dmg-vit-old">{{damage.oldVitality}}</span>&rarr;<span class="dmg-vit-new">{{damage.newVitality}}</span>
+      <i class="fas fa-heart-crack"></i><span class="dmg-vit-old">{{damage.oldVitality}}</span><i class="fas fa-arrow-right midi-qol-dmg-arrow"></i><span class="dmg-vit-new">{{damage.newVitality}}</span>
     </span>
     {{!-- No change: show (0) --}}
     <span id="dmg-nochange-{{damage.displayUuid}}" class="midi-qol-dmg-nochange{{#unless damage.noChange}} midi-qol-dmg-hidden{{/unless}}">(0)</span>

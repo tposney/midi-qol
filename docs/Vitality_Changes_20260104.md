@@ -313,6 +313,53 @@ async function setDeadStatus(actor, options) {
 
 ---
 
+## Vitality Damage and Healing Types
+
+### Overview
+
+In addition to the overflow damage system, midi-qol provides "vitality" as a dedicated damage and healing type that directly affects the vitality pool without going through HP.
+
+### Vitality Damage Type
+
+When damage of type "vitality" is dealt:
+- Directly increases `uses.spent` on the vitality item (reduces vitality)
+- Completely bypasses HP and TempHP - they are not affected
+- If the target has no vitality item configured, the damage has no effect
+- Can trigger death when vitality reaches 0 (respects `vitalityDeathRequires` setting)
+
+### Vitality Healing Type
+
+When healing of type "vitality" is applied:
+- Directly decreases `uses.spent` on the vitality item (restores vitality)
+- Does not affect HP at all
+- If the target has no vitality item configured, the healing has no effect
+- Cannot restore vitality above maximum
+
+### Mixed Damage
+
+Vitality damage can be combined with regular damage types in the same attack:
+- Each damage type is processed separately
+- Regular damage (slashing, fire, etc.) affects HP/TempHP as normal
+- Vitality damage affects the vitality pool directly
+- Example: An attack dealing 5 slashing + 3 vitality would reduce HP by 5 and vitality by 3
+- When HP damage causes overflow into vitality AND there's direct vitality damage, both are combined
+
+### Damage Card Display
+
+Direct vitality damage/healing is displayed separately from overflow damage on the damage card:
+- **At start of row**: Direct vitality damage shows as a broken heart icon (`fa-heart-crack`) with the amount (e.g., `💔-3` for 3 vitality damage, `💔+2` for 2 vitality healing)
+- **At end of row**: The vitality old→new transition shows total vitality change (including both overflow and direct damage)
+- Only direct vitality damage from the damage detail is shown at the start - overflow damage to vitality is not included in this display
+- When vitality damage is 0, no vitality indicator is shown at the start of the row
+
+### Use Cases
+
+- **Soul-draining attacks**: Deal vitality damage to weaken an enemy's life force
+- **Vitality restoration**: Create items that specifically restore vitality without healing HP
+- **Balancing encounters**: Apply vitality damage to bypass high HP pools
+
+---
+
 ## Important Notes
 
 1. **Item matching by name**: The vitality item is matched by exact name, not identifier. This avoids confusion when item names are changed.

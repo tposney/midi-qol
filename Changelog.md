@@ -1,3 +1,23 @@
+### 13.0.36
+**New Features:**
+* Added "vitality" as a new damage and healing type that directly affects the vitality pool without going through HP:
+  - Vitality damage type: Directly reduces vitality (increases `uses.spent` on the vitality item), completely bypassing HP and TempHP.
+  - Vitality healing type: Directly restores vitality (decreases `uses.spent`), without affecting HP.
+  - If the target actor has no vitality item configured, vitality damage/healing has no effect.
+  - Can be combined with regular damage types in the same attack - each type is applied separately.
+  - Vitality damage can trigger death when vitality reaches 0 (respects `vitalityDeathRequires` setting).
+  - Works with damage card undo/redo functionality.
+  - Direct vitality damage/healing is displayed at the start of the damage card row (broken heart icon with amount), separate from overflow vitality damage which shows in the old→new vitality transition.
+
+**Improvements:**
+* Damage card display improvements for cross-platform consistency:
+  - Replaced HTML arrow entity with Font Awesome icon for consistent vertical alignment across macOS and Linux.
+  - Fixed total damage display showing "-0" instead of "0" when no damage is applied.
+
+**Bug Fixes:**
+* Fixed `damageTypes.<type>` conditions not being available for optional damage bonuses (issue #1550). The damage type data was not being passed correctly during the bonus evaluation phase due to a timing issue where `workflow.damageRolls` was empty when condition evaluation occurred.
+* Fixed save DC being shown to players when "Display Saving throw DC" setting is disabled and an NPC targets a player (issue #1549).
+
 ### 13.0.35
 **New Features:**
 * Rewrote the vitality system which now uses item-based tracking via the `vitalityItem` setting.
@@ -46,7 +66,7 @@
 * Fixed Activity Visibility "Level Limit" being ignored when midi-qol is enabled (#1548). Activities now properly respect dnd5e visibility settings (level limits, attunement requirements, etc.) on both default dnd5e sheets and Tidy5e sheets.
 
 **Documentation**
-- new directory docs, which includes documentation of significant development changes.
+- new directory docs, which includes documentation of significant changes.
 
 ### 13.0.34
 **New Features:**

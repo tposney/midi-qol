@@ -1031,12 +1031,10 @@ Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
   if (updates["system.attributes.hp.temp"]) updates["system.attributes.hp.temp"] = Math.floor(updates["system.attributes.hp.temp"]);
 
   // Handle vitality overflow when HP reaches 0 (for actor.applyDamage() calls)
-  // This hook only fires for actor.applyDamage() calls, NOT for midi-qol workflows or direct sheet edits
-  // (midi-qol uses actor.update() directly, sheet edits are clamped before application)
-  // So we always need to handle vitality here, regardless of options.midi
-  // (options.midi.totalDamage is set by preCalculateDamage for ALL damage calculations)
+  // Skip if midi-qol already handled vitality (e.g., via workflow with direct vitality damage + overflow)
+  // This hook handles non-midi damage calls (actor.applyDamage()) that need vitality overflow
   const vitalityItem = getVitalityItem(actor);
-  if (amount > 0 && vitalityItem) {
+  if (amount > 0 && vitalityItem && !options.midiVitalityHandled) {
     // @ts-expect-error no dnd5e-types
     const currentHP = actor.system.attributes.hp.value ?? 0;
     // @ts-expect-error no dnd5e-types

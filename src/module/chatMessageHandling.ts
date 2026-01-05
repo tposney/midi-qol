@@ -278,6 +278,10 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
       if (!displayNPCSaves || shouldDisplayChallenge !== "all" || !configSettings.highlightSuccess) {
         html.querySelectorAll<HTMLElement>(".midi-qol-save-class.midi-qol-npc-target").forEach(el => el.classList.remove("success", "failure", "critical", "fumble"));
       }
+      // Hide save DC when displaySaveDC setting is disabled (issue #1549)
+      if (!configSettings.displaySaveDC) {
+        html.querySelectorAll(".midi-qol-saveDC").forEach(el => el.remove());
+      }
     }
 
     if (!configSettings.optionalRules.ActiveDefenceDC) {

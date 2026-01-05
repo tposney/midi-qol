@@ -4866,7 +4866,9 @@ export function createConditionData(data: {
   }
   if (!item) item = data.activity?.item ?? data.workflow?.activity?.item ?? data.workflow?.item;
   let rollData: any = data.activity?.getRollData() ?? item?.getRollData() ?? actor?.getRollData() ?? {};
-  collectDamageTypes(data.workflow?.damageRolls ?? data.options?.damageRolls, data.workflow?.activity, rollData);
+  // Use options.damageRolls as fallback when workflow.damageRolls is empty (not yet populated during bonus processing)
+  const damageRolls = data.workflow?.damageRolls?.length ? data.workflow.damageRolls : data.options?.damageRolls;
+  collectDamageTypes(damageRolls, data.workflow?.activity, rollData);
   rollData = foundry.utils.mergeObject(rollData, data.extraData ?? {});
   rollData.isAttuned = rollData.item?.attuned || rollData.item?.attunement === "";
   rollData.options = data?.options;

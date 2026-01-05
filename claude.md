@@ -42,6 +42,20 @@ Use this to verify API methods and understand how dnd5e implements features. **D
 
 ## Significant Decisions
 
+### 13.0.36 Changes
+
+1. **Vitality damage and healing types**
+   - Added "vitality" as both a damage type and healing type in `midi-qol.ts`:
+     - `GameSystemConfig.damageTypes["vitality"]` - for vitality damage
+     - `GameSystemConfig.healingTypes["vitality"]` - for vitality healing
+   - Modified `calculateDamageAmounts()` in GMAction.ts to extract vitality damage separately
+   - Vitality damage directly increases `uses.spent` on vitality item, bypassing HP/TempHP entirely
+   - Vitality healing directly decreases `uses.spent`, without affecting HP
+   - If actor has no vitality item configured, vitality damage/healing is a no-op
+   - Can be combined with regular damage types - each is applied separately
+   - Created `icons/vitality.svg` - dark heart with white lightning crack
+   - Added localization strings: `midi-qol.vitalityDamage`, `midi-qol.vitalityHealing`
+
 ### 13.0.35 Changes
 
 1. **grants.fumble and grants.noFumble flags**
