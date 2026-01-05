@@ -1115,7 +1115,8 @@ export const wallsBlockRangeOptionsNew = keysToOptionsObj("WallsBlockRangeOption
   "levelsautocover",
   "simbuls-cover-calculator",
   "tokencover",
-  "tokenvisibility"
+  "tokenvisibility",
+  "simplecover5e"
 ]);
 
 export const coverCalculationOptions = keysToOptionsObj("CoverCalculationOptions", [

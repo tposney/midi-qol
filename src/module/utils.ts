@@ -2075,6 +2075,23 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
     const coverValue = calcTokenCover(t1, t2);
     if (coverValue === 3 && wallsBlock) return -1;
     coverVisible = true;
+  } else if (installedModules.get("simplecover5e") && configSettings.optionalRules.wallsBlockRange === "simplecover5e" && wallsBlock) {
+    // Use Simple Cover 5e's LoS check - total cover (bonus === null) means no LoS
+    //@ts-expect-error
+    const simpleCoverApi = game.modules.get("simplecover5e")?.api;
+    if (simpleCoverApi) {
+      const coverResult = simpleCoverApi.getCover({
+        attacker: t1,
+        target: t2,
+        scene: t1.scene,
+        losCheck: true
+      });
+      // If total cover (no LoS), return -1 to indicate blocked
+      if (coverResult?.bonus === null || coverResult?.cover === "total") {
+        return -1;
+      }
+      coverVisible = true;
+    }
   }
 
   var x, x1, y, y1, d, r, segments: { ray: Ray }[] = [], rayDistance, distance;
@@ -2143,6 +2160,16 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
                   break;
                 case "alternative":
                 case "simbuls-cover-calculator":
+                  if (coverVisible === undefined) {
+                    let collisionCheck;
+                    collisionCheck = CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, { source: t1.document, mode: "any", type: "sight" })
+                    if (collisionCheck) continue;
+                  }
+                  break;
+
+                case "simplecover5e":
+                  // Pre-check already handled LoS via Simple Cover 5e API
+                  // If coverVisible is undefined (pre-check didn't run), fall back to basic collision check
                   if (coverVisible === undefined) {
                     let collisionCheck;
                     collisionCheck = CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, { source: t1.document, mode: "any", type: "sight" })
@@ -2535,23 +2562,49 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
         }
         break;
       case "simplecover5e":
-        //@ts-expect-error 
-        const api = game.modules.get("simplecover5e")?.api;
-        if (!installedModules.get("simplecover5e") || !api) coverBonus = 0;
+        //@ts-expect-error
+        const simpleCoverApi = game.modules.get("simplecover5e")?.api;
+        if (!installedModules.get("simplecover5e") || !simpleCoverApi) coverBonus = 0;
         else {
-          const coverLevel = api.getCover({attacker, target, scene: attacker.scene});
-          switch (coverLevel.cover) {
-            case "none":
-              coverBonus = 0;
-              break;
-            case "half":
-              coverBonus = HALF_COVER;
-              break;
-            case "threeQuarters":
-              coverBonus = THREE_QUARTERS_COVER;
-              break;
-            default:
+          // Enable LoS check when wallsBlockRange is set to simplecover5e
+          const losCheck = configSettings.optionalRules.wallsBlockRange === "simplecover5e";
+          const coverOptions: any = {
+            attacker,
+            target,
+            scene: attacker.scene,
+            losCheck   // Check LoS - blocked LoS treated as total cover
+          };
+          // Only pass activity if defined (for cover rules ignore/override logic)
+          if (activity) coverOptions.activity = activity;
+          const coverResult = simpleCoverApi.getCover(coverOptions);
+          // getCover returns null if attacker, target, or scene is missing
+          if (!coverResult) {
+            coverBonus = 0;
+            break;
+          }
+          // Use bonus value if available (new API), otherwise fall back to cover string (old API)
+          if (coverResult.bonus !== undefined) {
+            // New API: bonus is 0=none, 2=half, 5=threeQuarters, null=total
+            if (coverResult.bonus === null) {
               coverBonus = FULL_COVER;
+            } else {
+              coverBonus = coverResult.bonus;
+            }
+          } else {
+            // Fallback to original string-based cover level
+            switch (coverResult.cover) {
+              case "none":
+                coverBonus = 0;
+                break;
+              case "half":
+                coverBonus = HALF_COVER;
+                break;
+              case "threeQuarters":
+                coverBonus = THREE_QUARTERS_COVER;
+                break;
+              default:
+                coverBonus = FULL_COVER;
+            }
           }
         };
         break;

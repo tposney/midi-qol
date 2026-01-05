@@ -13,6 +13,10 @@
 * Damage card display improvements for cross-platform consistency:
   - Replaced HTML arrow entity with Font Awesome icon for consistent vertical alignment across macOS and Linux.
   - Fixed total damage display showing "-0" instead of "0" when no damage is applied.
+* Enhanced Simple Cover 5e integration (issue #1546):
+  - Now passes the activity to getCover() so cover rules (ignore/override logic based on item properties) are applied.
+  - Added "Simple Cover 5e" as a "Walls Block Range" option which enables Line of Sight checking - blocked LoS is treated as total cover.
+  - Uses the bonus value directly from the API for more accurate cover calculation.
 
 **Bug Fixes:**
 * Fixed `damageTypes.<type>` conditions not being available for optional damage bonuses (issue #1550). The damage type data was not being passed correctly during the bonus evaluation phase due to a timing issue where `workflow.damageRolls` was empty when condition evaluation occurred.

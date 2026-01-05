@@ -478,7 +478,8 @@
     "levelsautocover": "Levels Auto Cover",
     "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "tokencover": "Alternative Token Cover",
-    "tokenvisibility": "Alternative Token Visibility - deprecated"
+    "tokenvisibility": "Alternative Token Visibility - deprecated",
+    "simplecover5e": "Simple Cover 5e"
   },
   "midi-qol.NearbyAllyRanged.Name": "(House Rule) Ranged Attacks at foes near allies have disadvantage",
   "midi-qol.WallsBlockRangeOptions": {

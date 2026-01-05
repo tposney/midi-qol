@@ -604,6 +604,7 @@ declare global {
     enableWorkflow: boolean;
     evalAllConditions: typeof utils.evalAllConditions;
     evalCondition: typeof utils.evalCondition;
+    fetchParams: typeof settings.fetchParams;
     findNearby: typeof utils.findNearby;
     findNearbyCount: typeof utils.findNearbyCount;
     fromUuidSync: typeof fromUuidSync;

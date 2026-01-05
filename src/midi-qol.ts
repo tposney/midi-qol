@@ -725,6 +725,7 @@ function setupMidiQOLApi() {
     DummyWorkflow,
     chooseEffect,
     enableWorkflow,
+    fetchParams,
     findNearby,
     findNearbyCount,
     gameStats,
