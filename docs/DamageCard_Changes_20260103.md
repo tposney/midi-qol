@@ -1,118 +1,119 @@
-# Damage Card Changes
+# Damage Card Implementation
 
-This document outlines the changes made to the damage card system in midi-qol 13.0.35.
+This document describes the damage card system implementation in midi-qol 13.0.35.
 
 ## Overview
 
-The damage card has been enhanced with:
-- Real-time damage preview when changing multipliers
-- Dynamic display updates after apply/reverse operations
-- Token image interactions (click to select, right-click to open sheet)
-- Vitality display support
-- Template IDs for JavaScript-based updates
+The damage card provides a visual display of damage applied to targets with interactive controls for applying, undoing, and modifying damage. Key features include:
+
+- **Two layout styles**: Flexbox (modern) and Classic (table-based)
+- **Real-time damage preview** when changing multipliers
+- **Dynamic display updates** after apply/reverse operations
+- **Token image interactions** (click to select, right-click to open sheet)
+- **Vitality system integration** with overflow damage display
+- **Full undo/redo support** preserving original calculated damage
 
 ---
 
-## 1. Multiplier Preview System
+## Settings
+
+### Workflow Settings
+
+| Setting | Options | Description |
+|---------|---------|-------------|
+| `damageCardStyle` | "flexbox", "classic" | Layout style for damage cards |
+
+---
+
+## Layout Styles
+
+### Flexbox Layout
+- Single-line display per target with inline icons
+- Color-coded: ❤️ (red) for HP, 🛡️ (blue) for Temp HP, 💔 (black) for Vitality
+- Text displays in green when values increase (healing)
+- Fields with no change are hidden
+- Recommended when using vitality system
+
+### Classic Layout
+- Table-based layout with separate columns
+- Traditional appearance matching older midi-qol versions
+
+---
+
+## Multiplier System
+
+### Dropdown Options
+
+| Value | Label | Behavior |
+|-------|-------|----------|
+| `calc` | = | Default. Applies original calculated damage including saves/resistances |
+| `x1` | 1 | Full damage, recalculated ignoring saves but including resistances |
+| `x0.5` | ½ | Half damage |
+| `x2` | 2 | Double damage |
+| `x0.25` | ¼ | Quarter damage |
+| `-1` | + | Healing (converts damage to healing) |
 
 ### Real-time Preview
-When changing the multiplier dropdown, the damage display updates immediately to show what the new damage would be.
+
+When changing the multiplier, the damage display updates immediately to show what would be applied:
 
 ```typescript
-// In GMAction.ts - processUndoDamageCard
-const multiplierSelect = html.find("#multiplier-select");
 multiplierSelect.on("change", async (event) => {
-  const multiplierValue = $(event.target).val() as string;
-  await updateAllDamageDisplay(actorUuid, actor, currentHP, currentTempHP, multiplierValue, damageDetail);
+  const multiplierValue = event.target.value;
+  // Recalculate and update display without applying
+  await previewDamage(actor, multiplierValue, damageDetail);
 });
 ```
 
-### Multiplier Options
-- `=` (calc) - Default. Uses original calculated damage with saves/resistances applied
-- `1` - Full damage, recalculated ignoring saves
-- `½` - Half damage
-- `2` - Double damage
-- `¼` - Quarter damage
-- `+` - Healing (negative damage)
+### Multiplier Behavior
+
+- **"=" multiplier**: Directly sets stored HP/TempHP values from the original calculation. Always reverts to the exact values from when damage was first rolled, regardless of current actor state.
+- **Other multipliers**: Recalculate damage using `actor.calculateDamage()` with current actor resistances, ignoring saves. Takes into account any changes to the actor since the damage was rolled.
 
 ---
 
-## 2. Fixed "=" Case Apply Button
+## Apply and Reverse Buttons
 
-### Problem
-The "=" case was incorrectly using `actor.applyDamage()` with options, which didn't preserve the original calculated damage including saves and resistances.
+### Per-Target Buttons
+- `#apply-{actorUuid}` - Apply damage to specific target
+- `#reverse-{actorUuid}` - Undo damage for specific target
 
-### Solution
-Changed to directly setting stored HP values using `actor.update()`:
+### All-Targets Buttons (when multiple targets)
+- `#all-apply` - Apply damage to all targets
+- `#all-reverse` - Undo damage for all targets
+
+### Display Updates
+
+After apply or reverse operations, the display updates to show what the opposite operation would do:
 
 ```typescript
-// Before (incorrect)
-await actor?.applyDamage(damageDetail, applyOptions);
+// After apply: show what reverse would restore
+updateDamageCardDisplay(html, actor, actorUuid, oldHP, oldTempHP, oldVitality);
 
-// After (correct)
-const updates = {
-  "system.attributes.hp.value": newHP,
-  "system.attributes.hp.temp": newTempHP
-};
-await actor.update(updates, options);
+// After reverse: show what apply would do
+updateDamageCardDisplay(html, actor, actorUuid, newHP, newTempHP, newVitality);
 ```
 
-This matches how the reverse button works with `oldHP`/`oldTempHP`.
+### Button State
+
+Buttons toggle between enabled/disabled states after operations:
+- Apply button: enabled before apply, disabled after
+- Reverse button: disabled before apply, enabled after
 
 ---
 
-## 3. Display Updates After Apply/Reverse
+## Token Image Interactions
 
-### updateDamageDisplay Function
-After apply or reverse operations, the damage display updates to show what the opposite operation would do:
+### Click Behaviors
 
-```typescript
-function updateDamageDisplay(actor: Actor.Implementation, targetHP: number, targetTempHP: number) {
-  const currentHP = actor.system.attributes.hp.value ?? 0;
-  const currentTempHP = actor.system.attributes.hp.temp ?? 0;
-
-  // Calculate what the change would be
-  const hpChange = targetHP - currentHP;
-  const tempChange = targetTempHP - currentTempHP;
-
-  // Update display elements
-  // Shows (0) when current HP equals target HP
-}
-```
-
-### Behavior
-- **After apply**: Display shows what reverse would do (transition back to oldHP)
-- **After reverse**: Display shows what apply would do (transition to newHP)
-- **No change**: Shows (0) when current HP equals target HP
-
----
-
-## 4. Multiplier Reset After Operations
-
-Both apply and reverse buttons reset the dropdown to "calc" (=) after execution:
+| Action | Behavior |
+|--------|----------|
+| Left-click | Select the token on canvas (`token.control()`) |
+| Right-click | Open the actor's character sheet |
 
 ```typescript
-// Reset multiplier dropdown
-const multiplierSelect = html.find("#multiplier-select");
-multiplierSelect.val("calc");
-```
-
----
-
-## 5. Token Image Interactions
-
-### Click Behavior
-- **Left-click**: Select the token (`token.control()`)
-- **Right-click** (contextmenu): Open the actor sheet
-
-```typescript
-// In damage-results.hbs template
-html.find(".midi-token-image").on("click", (event) => {
-  const token = canvas.tokens?.get(tokenId);
-  token?.control();
-});
-
-html.find(".midi-token-image").on("contextmenu", (event) => {
+tokenImage.addEventListener("click", () => token?.control());
+tokenImage.addEventListener("contextmenu", (event) => {
   event.preventDefault();
   actor?.sheet?.render(true);
 });
@@ -120,62 +121,110 @@ html.find(".midi-token-image").on("contextmenu", (event) => {
 
 ---
 
-## 6. Template IDs for Dynamic Updates
+## Template Element IDs
 
-Added IDs to damage display elements to allow JavaScript-based updates without re-rendering:
+Element IDs allow JavaScript-based updates without re-rendering the entire card:
 
-### Element IDs
-- `dmg-total-{actorUuid}` - Total damage display
-- `dmg-temp-{actorUuid}` - Temp HP change display
-- `dmg-hp-{actorUuid}` - HP change display
-- `dmg-nochange-{actorUuid}` - No change indicator
-- `dmg-vitality-{actorUuid}` - Vitality change display
+### Display Elements
+| ID Pattern | Purpose |
+|------------|---------|
+| `dmg-total-{displayUuid}` | Total damage/healing display |
+| `dmg-temp-{displayUuid}` | Temp HP change display |
+| `dmg-hp-{displayUuid}` | HP change display |
+| `dmg-nochange-{displayUuid}` | No change indicator "(0)" |
+| `dmg-vitality-{displayUuid}` | Vitality change display |
+| `dmg-multiplier-{displayUuid}` | Multiplier dropdown |
 
-### CSS Classes
-- `.dmg-temp-old` - Old temp HP value
-- `.dmg-temp-new` - New temp HP value
-- `.dmg-hp-old` - Old HP value
-- `.dmg-hp-new` - New HP value
+### Value Spans
+| Class | Purpose |
+|-------|---------|
+| `.dmg-temp-old` | Old temp HP value |
+| `.dmg-temp-new` | New temp HP value |
+| `.dmg-hp-old` | Old HP value |
+| `.dmg-hp-new` | New HP value |
+| `.dmg-vit-old` | Old vitality value |
+| `.dmg-vit-new` | New vitality value |
 
 ---
 
-## 7. Vitality Display
+## Vitality Integration
 
-### Damage Card Data
+### Display Data
+
 ```typescript
 const displayData = {
   oldVitality: damageItem.oldVitality,
   newVitality: damageItem.newVitality,
-  vitalityIncrease: (damageItem.newVitality ?? 0) > (damageItem.oldVitality ?? 0),
-  vitalityChanged: (damageItem.newVitality ?? 0) !== (damageItem.oldVitality ?? 0),
-  // ...
+  vitalityIncrease: newVitality > oldVitality,
+  vitalityChanged: newVitality !== oldVitality,
 };
 ```
 
-### Tooltip
+### Overflow Damage
+
+When HP reaches 0, overflow damage is displayed as vitality reduction:
+- Vitality icon: 💔 (`fa-heart-crack`)
+- Shows: `oldVitality → newVitality`
+- Text color: black for damage, green for recovery
+
+### Healing via "+" Multiplier
+
+When vitality is enabled and the "+" multiplier is selected:
+1. Healing restores vitality first (reduces `uses.spent`)
+2. Remaining healing applies to HP
+3. Display updates to show both vitality and HP changes
+
+---
+
+## Undo/Redo Data Structure
+
+### undoDamage Flag
+
+Stored on the chat message for undo/redo support:
+
 ```typescript
-if ((damageItem.newVitality ?? 0) !== (damageItem.oldVitality ?? 0)) {
-  toolTipHeader.push(`Vitality: ${damageItem.oldVitality} -> ${damageItem.newVitality}`);
+interface SerializedDamageListEntry {
+  actorUuid: string;
+  oldHP: number;
+  newHP: number;
+  oldTempHP: number;
+  newTempHP: number;
+  oldVitality?: number;
+  newVitality?: number;
+  oldVitalitySpent?: number;
+  newVitalitySpent?: number;
+  calcDamageOptions: object;
+  updateOptions: object;
 }
 ```
 
----
+### State Preservation
 
-## 8. Key Files Modified
-
-- `src/module/GMAction.ts` - Main damage application and undo/redo logic
-- `templates/damage-results.hbs` - Damage card template
-- `templates/damage-results-multi.hbs` - Multi-target damage card template
-- `src/module/Hooks.ts` - Token image click handlers
+- **"=" multiplier**: Uses stored `newHP`/`newTempHP` values directly
+- **Vitality**: Always recorded when actor has vitality item, even if unchanged
+- **Reverse**: Restores `oldHP`/`oldTempHP`/`oldVitalitySpent`
+- **Apply**: Applies `newHP`/`newTempHP`/`newVitalitySpent`
 
 ---
 
-## 9. Implementation Notes
+## Files
 
-1. **updateAllDamageDisplay vs updateDamageDisplay**:
-   - `updateAllDamageDisplay` - Updates all damage displays for an actor across all messages
-   - `updateDamageDisplay` - Updates a single damage display element
+| File | Purpose |
+|------|---------|
+| `src/module/GMAction.ts` | Damage application, undo/redo logic, display updates |
+| `templates/damage-results.html` | Flexbox layout template |
+| `templates/damage-results-classic.html` | Classic table layout template |
 
-2. **Multiplier recalculation**: When changing multiplier from "=" to another value, damage is recalculated using `actor.calculateDamage()` ignoring saves. Only "=" preserves the original calculated damage.
+---
 
-3. **State preservation**: The undoDamage flag stores all necessary state (oldHP, newHP, oldTempHP, newTempHP, vitality values) for proper undo/redo functionality.
+## Implementation Notes
+
+1. **Display UUID**: Actor UUIDs contain periods which are invalid in CSS selectors. The `displayUuid` replaces periods with empty strings for use in element IDs.
+
+2. **Multiplier reset**: After apply/reverse operations, the multiplier dropdown resets to "=" (calc).
+
+3. **Player damage cards**: A separate player-visible damage card can be created without undo buttons. These are identified by the `playerDamageCard` flag.
+
+4. **Damage recalculation**: Non-"=" multipliers use `actor.calculateDamage()` which respects current resistances but ignores saves. This allows correcting for incorrect save results.
+
+5. **Vitality lookup**: Vitality items are always looked up by name using `getVitalityItem(actor)` rather than stored UUIDs, ensuring undo/redo works even if the item is replaced.

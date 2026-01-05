@@ -1278,7 +1278,20 @@ export async function checkWounded(actor: Actor.Implementation, update: Actor.Up
   if (hpUpdate === undefined && !hasVitality) return;
   // @ts-expect-error no dnd5e-types
   const attributes = actor.system.attributes;
-  const needsBeaten = hasVitality ? (vitalityUpdate ?? 0) <= 0 : attributes.hp.value <= 0;
+  // Check vitalityDeathRequires setting: "vitalityOnly" = dead when vitality=0, "vitalityAndHP" = dead when both are 0
+  const deathRequires = configSettings.optionalRules.vitalityDeathRequires || "vitalityOnly";
+  let needsBeaten: boolean;
+  if (hasVitality) {
+    if (deathRequires === "vitalityOnly") {
+      // Dead when vitality reaches 0, regardless of HP
+      needsBeaten = (vitalityUpdate ?? 0) <= 0;
+    } else {
+      // Dead only when both vitality and HP are 0
+      needsBeaten = (vitalityUpdate ?? 0) <= 0 && attributes.hp.value <= 0;
+    }
+  } else {
+    needsBeaten = attributes.hp.value <= 0;
+  }
   if (configSettings.addWounded > 0 && configSettings.addWoundedStyle !== "none") {
     const needsWounded = attributes.hp.pct < configSettings.addWounded && !needsBeaten;
     const woundedStatus = getWoundedStatus();

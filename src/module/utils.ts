@@ -1916,9 +1916,20 @@ export function checkIncapacitated(actorRef?: Actor.Implementation | TokenOrDocu
   // Check vitality system
   const vitality = getVitalityValue(actor as Actor.Implementation);
   if (vitality !== undefined) {
+    // Check vitalityDeathRequires setting: "vitalityOnly" = dead when vitality=0, "vitalityAndHP" = dead when both are 0
+    const deathRequires = configSettings.optionalRules.vitalityDeathRequires || "vitalityOnly";
     // @ts-expect-error no dnd5e-types
-    if (vitality <= 0 && actor?.system.attributes?.hp?.value <= 0) {
-      status = "dead";
+    const hpValue = actor?.system.attributes?.hp?.value ?? 0;
+    if (deathRequires === "vitalityOnly") {
+      // Dead when vitality reaches 0, regardless of HP
+      if (vitality <= 0) {
+        status = "dead";
+      }
+    } else {
+      // Dead only when both vitality and HP are 0
+      if (vitality <= 0 && hpValue <= 0) {
+        status = "dead";
+      }
     }
   } else {
     // No vitality system - just check HP

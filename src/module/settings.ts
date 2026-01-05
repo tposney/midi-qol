@@ -218,6 +218,7 @@ class ConfigSettings {
     removeHiddenInvis: true,
     vitalityItem: "", // Item name for vitality pool feature
     vitalityDeadCondition: "dead", // Condition to apply when vitality reaches 0
+    vitalityDeathRequires: "vitalityOnly", // "vitalityOnly" = dead when vitality=0, "vitalityAndHP" = dead when vitality=0 AND HP=0
     wallsBlockRange: "center",
   };
 }
@@ -497,6 +498,7 @@ export let fetchParams = () => {
   if (!configSettings.optionalRules.coverCalculation) configSettings.optionalRules.coverCalculation = "none";
   if (configSettings.optionalRules.displayBonusRolls === undefined) configSettings.optionalRules.displayBonusRolls = true;
   if (!configSettings.optionalRules.vitalityDeadCondition) configSettings.optionalRules.vitalityDeadCondition = "dead";
+  if (!configSettings.optionalRules.vitalityDeathRequires) configSettings.optionalRules.vitalityDeathRequires = "vitalityOnly";
 
   //@ts-expect-error legacy boolean value
   if (configSettings.optionalRules.checkFlanking === false) configSettings.optionalRules.checkFlanking = "off";

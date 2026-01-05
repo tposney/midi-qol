@@ -148,6 +148,10 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       statusEffectList = statusEffectList.concat(ceInterface.findEffects().map(ae => ({ id: `z${ae.flags["dfreds-convenient-effects"].ceEffectId}`, name: `${ae.name} (CE)` })));
     }
     let StatusEffectOptions = statusEffectList.reduce((acc, { id, name }) => { acc[id] = name; return acc }, { "none": "None" });
+    const vitalityDeathRequiresOptions = {
+      "vitalityOnly": "midi-qol.VitalityDeathRequires.VitalityOnly",
+      "vitalityAndHP": "midi-qol.VitalityDeathRequires.VitalityAndHP"
+    };
     let context: any = {
       QuickSettingsBlurb: quickSettingsBlurb,
       configSettings,
@@ -208,6 +212,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       RollChecksBlindOptions: foundry.utils.mergeObject({ "all": "All" }, Object.keys(GameSystemConfig.abilities).reduce((acc, s) => { acc[s] = GameSystemConfig.abilities[s].label; return acc }, {})),
       midiPropertiesTabOptions: CONST.USER_ROLE_NAMES,
       StatusEffectOptions,
+      vitalityDeathRequiresOptions,
       SaveDROrderOptions: saveDROrderOptions,
       ColorOptions: colorList.reduce((acc, c) => { acc[c] = c; return acc }, { "Delete": "Delete" }),
       DoConcentrationCheckOptions: doConcentrationCheckOptions,

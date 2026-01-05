@@ -1191,7 +1191,10 @@ async function prepareDamageListItems(
         // @ts-expect-error uses exists on items with uses
         const maxUses = vitalityItem.system.uses?.max ?? 0;
 
-        // Default to unchanged - only updated if there's overflow damage
+        // Record old vitality state for undo support
+        damageItem.oldVitalitySpent = currentSpent;
+        damageItem.oldVitality = maxUses - currentSpent;
+        // Default new to unchanged - only updated if there's overflow damage
         damageItem.newVitalitySpent = currentSpent;
         damageItem.newVitality = maxUses - currentSpent;
 
@@ -1431,7 +1434,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       // TODO: Remove the latter after sufficient time has passed
       const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
       const undoDamageData = recoverDamageListFromJSON(undoFlag);
-      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, newHP, newTempHP, calcDamageOptions, updateOptions } of undoDamageData) {
+      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, newHP, newTempHP, newVitality, calcDamageOptions, updateOptions } of undoDamageData) {
         if (!actorUuid) continue;
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
         applyButton?.children[0].classList.add("midi-qol-enable-damage-button");
@@ -1448,7 +1451,6 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           "system.attributes.hp.temp": oldTempHP ?? 0,
           "system.attributes.hp.value": oldHP ?? 0
         };
-        // const context = foundry.utils.mergeObject(message.flags.midi-qol.updateContext ?? {}, { dhp: (oldHP ?? 0) - (actor.system.attributes.hp.value ?? 0), damageDetail }, { inplace: false });
         // Handle vitality undo - only if actor still has a vitality item
         const undoItem = undoDamageData.find(d => d.actorUuid === actorUuid);
         const vitalityItem = getVitalityItem(actor);
@@ -1466,8 +1468,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           await actor.update(updates, mergedOptions)
             .then(updatedActor => {
               Hooks.call("dnd5e.applyDamage", updatedActor ?? actor, newHP - oldHP, calcDamageOptions as DamageApplicationOptions);
-              // Update display to show what apply would do (transition to newHP)
-              updateDamageCardDisplay(html, actor, actorUuid, newHP ?? 0, newTempHP ?? 0);
+              // Update display to show what apply would do (transition to newHP/newVitality)
+              updateDamageCardDisplay(html, actor, actorUuid, newHP ?? 0, newTempHP ?? 0, newVitality);
               return updatedActor;
             })
         }
@@ -1482,7 +1484,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       // TODO: Remove the latter after sufficient time has passed
       const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
       const undoDamageData = recoverDamageListFromJSON(undoFlag);
-      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, oldHP, oldTempHP, calcDamageOptions, updateOptions } of undoDamageData) {
+      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, oldHP, oldTempHP, oldVitality, calcDamageOptions, updateOptions } of undoDamageData) {
         if (!actorUuid) continue;
         let actor = fromActorUuid(actorUuid);
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
@@ -1509,8 +1511,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, update, options as DamageApplicationOptions) !== false) {
           await actor.update(update, options).then(updatedActor => {
             Hooks.call("dnd5e.applyDamage", actor, amount, options);
-            // Update display to show what reverse would do (transition back to oldHP)
-            updateDamageCardDisplay(html, actor, actorUuid, oldHP ?? 0, oldTempHP ?? 0);
+            // Update display to show what reverse would do (transition back to oldHP/oldVitality)
+            updateDamageCardDisplay(html, actor, actorUuid, oldHP ?? 0, oldTempHP ?? 0, oldVitality);
             return updatedActor;
           });
         }
@@ -1640,11 +1642,32 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           const maxUses = vitalityItem?.system.uses?.max ?? 0;
           let newSpent = currentSpent;
           if (vitalityItem && totalMultipliedDamage > 0) {
+            // Damage case - overflow to vitality
             const tempAbsorbed = Math.min(preApplyTempHP, totalMultipliedDamage);
             const hpAbsorbed = Math.min(preApplyHP, totalMultipliedDamage - tempAbsorbed);
             const overflowDamage = totalMultipliedDamage - tempAbsorbed - hpAbsorbed;
             if (overflowDamage > 0) {
               newSpent = Math.min(maxUses, currentSpent + overflowDamage);
+            }
+          } else if (vitalityItem && totalMultipliedDamage < 0) {
+            // Healing case - restore vitality first, then HP
+            const healingAmount = Math.abs(totalMultipliedDamage);
+            const vitalityMissing = currentSpent; // currentSpent is how much vitality is missing
+            const vitalityRestored = Math.min(vitalityMissing, healingAmount);
+
+            if (vitalityRestored > 0) {
+              newSpent = currentSpent - vitalityRestored;
+
+              // Adjust the multiplier to reduce healing applied to HP
+              const remainingHealing = healingAmount - vitalityRestored;
+              if (remainingHealing > 0) {
+                // Scale down the multiplier proportionally
+                const scaleFactor = remainingHealing / healingAmount;
+                applyOptions.multiplier = (applyOptions.multiplier ?? 1) * scaleFactor;
+              } else {
+                // All healing went to vitality, no HP healing needed
+                applyOptions.multiplier = 0;
+              }
             }
           }
 
@@ -1724,8 +1747,11 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       }
 
       if (isHealing) {
-        // Healing
-        newHP = Math.min(maxHP, currentHP - totalDamage);
+        // Healing - first restore vitality, then HP
+        // Note: totalDamage is negative for healing, so we use Math.abs
+        let healingRemaining = Math.abs(totalDamage);
+        // Vitality restoration is handled below in the vitality display section
+        newHP = Math.min(maxHP, currentHP + healingRemaining);
       } else {
         // Damage - first absorb with temp HP, then HP
         let remainingDamage = totalDamage;
@@ -1799,12 +1825,21 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
 
       // Update vitality display if actor has vitality
       const vitalitySpan = html.querySelector<HTMLSpanElement>(`#dmg-vitality-${displayUuid}`);
+      // @ts-expect-error uses exists on items with uses
+      const maxVitality = vitalityItem?.system.uses?.max ?? 0;
       if (vitalitySpan && vitalityItem) {
-        // Calculate overflow damage to vitality (only if HP reaches 0)
         let newVitality = currentVitality;
-        if (newHP <= 0 && totalDamage > 0) {
-          // Calculate how much damage overflows into vitality
-          // Overflow = total damage - (tempHP absorbed + HP absorbed)
+        if (isHealing) {
+          // Healing - first restore vitality, then HP
+          const healingAmount = Math.abs(totalDamage);
+          const vitalityMissing = maxVitality - currentVitality;
+          const vitalityRestored = Math.min(vitalityMissing, healingAmount);
+          newVitality = currentVitality + vitalityRestored;
+          // Recalculate newHP with remaining healing after vitality restoration
+          const remainingHealing = healingAmount - vitalityRestored;
+          newHP = Math.min(maxHP, currentHP + remainingHealing);
+        } else if (newHP <= 0 && totalDamage > 0) {
+          // Damage - calculate overflow to vitality (only if HP reaches 0)
           const tempAbsorbed = Math.min(currentTempHP, totalDamage);
           const hpAbsorbed = Math.min(currentHP, totalDamage - tempAbsorbed);
           const overflowDamage = totalDamage - tempAbsorbed - hpAbsorbed;
@@ -1823,6 +1858,14 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         const vitNew = vitalitySpan.querySelector<HTMLSpanElement>(".dmg-vit-new");
         if (vitOld) vitOld.textContent = String(Math.trunc(currentVitality));
         if (vitNew) vitNew.textContent = String(Math.trunc(newVitality));
+
+        // Update HP display with corrected value after vitality restoration
+        if (isHealing && hpSpan) {
+          const hpNew = hpSpan.querySelector<HTMLSpanElement>(".dmg-hp-new");
+          if (hpNew) hpNew.textContent = String(Math.trunc(newHP));
+          const hpChangedAfterVitality = newHP !== currentHP;
+          hpSpan.classList.toggle("midi-qol-dmg-hidden", !hpChangedAfterVitality);
+        }
       } else if (vitalitySpan) {
         // No vitality item - hide the display
         vitalitySpan.classList.add("midi-qol-dmg-hidden");
