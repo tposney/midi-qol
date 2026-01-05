@@ -2,6 +2,376 @@
 
 This document records all changes made by Claude to the midi-qol-13x codebase.
 
+See also:
+- `docs/Critical_Fumble_Attribution_20260104.md` - Critical/fumble attribution system documentation
+- `docs/Vitality_Changes_20260104.md` - Vitality system implementation and fixes
+- `docs/DamageCard_Changes_20260103.md` - Damage card enhancements
+- `docs/CheckSaves_Changes_20260101.md` - checkSaves refactoring details
+
+---
+
+## 2026-01-04: Critical/Fumble Flags and Attribution Tracking
+
+### Files Modified
+- `src/module/Workflow.ts`
+- `src/module/utils.ts`
+- `lang/en.json`
+- `Changelog.md`
+- `FLAGS.md`
+
+### New Flags Added
+
+**grants.fumble** - Forces attacks against target to fumble
+- `flags.midi-qol.grants.fumble.all` - All attack types
+- `flags.midi-qol.grants.fumble.{attackType}` - Specific attack type (mwak, rwak, msak, rsak)
+
+**grants.noFumble** - Prevents attacks against target from fumbling
+- `flags.midi-qol.grants.noFumble.all` - All attack types
+- `flags.midi-qol.grants.noFumble.{attackType}` - Specific attack type
+
+### Multi-Target Behavior
+
+Updated `grants.critical`, `grants.noCritical`, `grants.fumble`, and `grants.noFumble` to have consistent multi-target behavior:
+
+| Flag Type | Multi-Target Behavior |
+|-----------|----------------------|
+| `grants.critical` | If ANY target has flag, attack crits |
+| `grants.noCritical` | ALL targets must have flag to prevent crit |
+| `grants.fumble` | If ANY target has flag, attack fumbles |
+| `grants.noFumble` | ALL targets must have flag to prevent fumble |
+
+### Attack Attribution Tracking
+
+Added attribution tracking for critical and fumble flags to `workflow.attackAdvAttribution`. This extends the existing `ADV:`/`DIS:` attribution system.
+
+**New Attribution Prefixes:**
+
+| Prefix | Meaning | Example |
+|--------|---------|---------|
+| `CRIT:` | Critical hit forced | `CRIT:critical.all`, `CRIT:grants.critical.mwak Target1` |
+| `NOCRIT:` | Critical hit prevented | `NOCRIT:noCritical.all`, `NOCRIT:grants.noCritical Target1, Target2` |
+| `FUMBLE:` | Fumble forced | `FUMBLE:grants.fumble.all Target1` |
+| `NOFUMBLE:` | Fumble prevented | `NOFUMBLE:grants.noFumble Target1, Target2` |
+
+**Attribution Sources:**
+
+Actor flags (on attacker):
+- `CRIT:critical.all` - Actor's `flags.midi-qol.critical.all`
+- `CRIT:critical.{attackType}` - Actor's `flags.midi-qol.critical.{attackType}`
+- `NOCRIT:noCritical.all` - Actor's `flags.midi-qol.noCritical.all`
+- `NOCRIT:noCritical.{attackType}` - Actor's `flags.midi-qol.noCritical.{attackType}`
+
+Target grants flags:
+- `CRIT:grants.critical.range {targetName}` - Target grants crit within range
+- `CRIT:grants.critical.all {targetName}` - Target's `grants.critical.all`
+- `CRIT:grants.critical.{attackType} {targetName}` - Target's `grants.critical.{attackType}`
+- `NOCRIT:grants.noCritical {targetNames}` - All targets have `grants.noCritical`
+- `FUMBLE:grants.fumble.all {targetName}` - Target's `grants.fumble.all`
+- `FUMBLE:grants.fumble.{actionType} {targetName}` - Target's `grants.fumble.{actionType}`
+- `NOFUMBLE:grants.noFumble {targetNames}` - All targets have `grants.noFumble`
+
+Activity.use options (in MidiActivityMixin.ts):
+- `CRIT:activity.use` - When `midiOptions.isCritical` is passed to `activity.use()`
+- `FUMBLE:activity.use` - When `midiOptions.isFumble` is passed to `activity.use()`
+
+### Implementation Details
+
+**processCriticalFlags() changes:**
+```typescript
+// Actor critical flags now add attribution
+if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.critical.all`, conditionData)) {
+  this.critFlagSet = true;
+  this.attackAdvAttribution.add(`CRIT:critical.all`);
+}
+
+// Target grants.critical adds target name
+if (await evalAllConditionsAsync(target?.actor, `flags.${MODULE_ID}.grants.critical.all`, conditionData)) {
+  this.critFlagSet = true;
+  this.attackAdvAttribution.add(`CRIT:grants.critical.all ${targetName}`);
+}
+
+// grants.noCritical lists all target names when ALL have the flag
+if (allTargetsGrantNoCrit && this.hitTargets.size > 0) {
+  this.noCritFlagSet = true;
+  this.attackAdvAttribution.add(`NOCRIT:grants.noCritical ${noCritTargets.join(", ")}`);
+}
+```
+
+**processAttackRoll() fumble flag changes:**
+```typescript
+// grants.fumble adds target name
+if (await evalAllConditionsAsync(target?.actor, `flags.${MODULE_ID}.grants.fumble.all`, conditionData)) {
+  this.isFumble = true;
+  this.attackAdvAttribution.add(`FUMBLE:grants.fumble.all ${targetName}`);
+  break;
+}
+
+// grants.noFumble lists all target names when ALL have the flag
+if (allTargetsGrantNoFumble && this.targets.size > 0) {
+  this.isFumble = false;
+  this.attackAdvAttribution.add(`NOFUMBLE:grants.noFumble ${noFumbleTargets.join(", ")}`);
+}
+```
+
+### Natural Crit/Fumble Attribution
+
+Added attribution for natural critical hits and fumbles showing the roll vs threshold:
+
+```typescript
+// In processAttackRoll()
+this.isCritical = this.diceRoll >= criticalThreshold;
+if (this.isCritical) {
+  this.attackAdvAttribution.add(`CRIT:${game.i18n.localize("DND5E.Roll")} >= ${criticalThreshold}`);
+}
+
+this.isFumble = this.diceRoll <= fumbleTarget;
+if (this.isFumble) {
+  this.attackAdvAttribution.add(`FUMBLE:${game.i18n.localize("DND5E.Roll")} <= ${fumbleTarget}`);
+}
+```
+
+Example output: `CRIT:Roll >= 20`, `FUMBLE:Roll <= 1`
+
+### Localized Attribution Prefixes
+
+Updated `addAdvAttribution()` in `utils.ts` to localize the attribution prefixes:
+
+**New localization keys added to `lang/en.json`:**
+- `midi-qol.AttribADV` = "ADV"
+- `midi-qol.AttribDIS` = "DIS"
+- `midi-qol.AttribCRIT` = "CRIT"
+- `midi-qol.AttribNOCRIT` = "NOCRIT"
+- `midi-qol.AttribFUMBLE` = "FUMBLE"
+- `midi-qol.AttribNOFUMBLE` = "NOFUMBLE"
+
+```typescript
+// In addAdvAttribution() - utils.ts
+const prefixMap: Record<string, string> = {
+  "ADV:": `${game.i18n.localize("midi-qol.AttribADV")}:`,
+  "DIS:": `${game.i18n.localize("midi-qol.AttribDIS")}:`,
+  "CRIT:": `${game.i18n.localize("midi-qol.AttribCRIT")}:`,
+  "NOCRIT:": `${game.i18n.localize("midi-qol.AttribNOCRIT")}:`,
+  "FUMBLE:": `${game.i18n.localize("midi-qol.AttribFUMBLE")}:`,
+  "NOFUMBLE:": `${game.i18n.localize("midi-qol.AttribNOFUMBLE")}:`
+};
+// Each attribution string has its prefix replaced with the localized version
+```
+
+### Attack Roll HTML Regeneration
+
+The `attackRollHTML` is generated in `setAttackRoll()` before critical/fumble attribution is added. To display the attribution in the tooltip, the HTML must be regenerated after flags are processed:
+
+```typescript
+// In processCriticalFlags() - after adding CRIT/NOCRIT attribution
+if (this.attackRoll && (this.critFlagSet || this.noCritFlagSet) && ["formulaadv", "adv"].includes(configSettings.rollAlternate)) {
+  addAdvAttribution(this.attackRoll, this.attackAdvAttribution);
+  this.attackRollHTML = await midiRenderAttackRoll(this.attackRoll);
+}
+
+// In processAttackRoll() - after adding natural crit/fumble and grants.fumble/noFumble attribution
+if ((this.isCritical || this.isFumble || fumbleAttributionAdded) && ["formulaadv", "adv"].includes(configSettings.rollAlternate)) {
+  addAdvAttribution(this.attackRoll, this.attackAdvAttribution);
+  this.attackRollHTML = await midiRenderAttackRoll(this.attackRoll);
+}
+```
+
+---
+
+## 2026-01-04: Vitality System Fixes
+
+### Files Modified
+- `src/module/Hooks.ts`
+- `src/module/patching.ts`
+- `src/module/GMAction.ts`
+- `src/globals.ts`
+
+### Key Fixes
+
+**1. Vitality state always recorded for undo support**
+
+Previously, `vitalityItemUuid`, `oldVitalitySpent`, and `newVitalitySpent` were only recorded when there was overflow damage. This meant undoing damage that didn't cause overflow wouldn't restore vitality to its value at the time of the attack.
+
+Now, when an actor has a vitality item, the current vitality state is always recorded:
+
+```typescript
+// Before: Only recorded when overflow damage occurred
+if (updates["system.attributes.hp.value"] <= 0 && amount > 0 && vitalityItem) {
+  if (overflowDamage > 0) {
+    damageItem.vitalityItemUuid = vitalityItem.uuid;
+    damageItem.oldVitalitySpent = currentSpent;
+    // ... only set when overflow
+  }
+}
+
+// After: Always record when vitality item exists
+if (vitalityItem) {
+  damageItem.vitalityItemUuid = vitalityItem.uuid;
+  damageItem.oldVitalitySpent = currentSpent;
+  damageItem.oldVitality = maxUses - currentSpent;
+
+  // Check for overflow and set new values accordingly
+  if (overflowDamage > 0) {
+    damageItem.newVitalitySpent = newSpent;
+    damageItem.newVitality = maxUses - newSpent;
+  } else {
+    // No change - but still record for undo
+    damageItem.newVitalitySpent = currentSpent;
+    damageItem.newVitality = maxUses - currentSpent;
+  }
+}
+```
+
+**2. options.midi is set for ALL damage (not just midi workflows)**
+
+The `dnd5e.preCalculateDamage` hook unconditionally sets `options.midi.totalDamage` for ALL damage calculations. The original check `!options.midi` to detect non-midi damage didn't work.
+
+**Key insight**: midi-qol uses `actor.update()` directly in GMAction.ts, NOT `actor.applyDamage()`. Therefore, the `dnd5e.preApplyDamage` hook only fires for non-midi damage (character sheet, token HUD). The vitality handling should always run, not check `!options.midi`.
+
+```typescript
+// Before (incorrect)
+if (!options.midi && amount > 0) { ... }
+
+// After (correct)
+if (amount > 0 && vitalityItem) { ... }
+```
+
+**2. Dead status must use CONFIG.statusEffects, not getDeadStatus()**
+
+When vitality reaches 0, always apply the "dead" status regardless of midi settings.
+
+```typescript
+// WRONG - uses midi settings which might return unconscious
+const effect = getDeadStatus();
+
+// CORRECT - always use actual dead status
+const effect = CONFIG.statusEffects.find(se => se.id === "dead");
+```
+
+**3. Race condition prevention with midiVitalityUpdatePending flag**
+
+Multiple async hooks were calling `toggleStatusEffect` concurrently, causing "already exists" errors.
+
+Solution:
+- Added `midiVitalityUpdatePending` flag to damage options
+- `updateActor` hook skips `checkWounded` when this flag is set
+- Only `updateItem` hook calls `checkWounded` for vitality actors when vitality changes
+
+**4. setDeadStatus removes conflicting statuses**
+
+Before applying dead status, remove unconscious/incapacitated/prone to avoid "already exists" errors from rider status conflicts:
+
+```typescript
+if (makeDead) {
+  const conflictingStatuses = ["unconscious", "incapacitated", "prone"];
+  for (const statusId of conflictingStatuses) {
+    if (actor.statuses.has(statusId)) {
+      await actor.toggleStatusEffect(statusId, { active: false });
+    }
+  }
+}
+```
+
+---
+
+## 2026-01-04: Damage Card Multiplier Preview and Interactions
+
+### Files Modified
+- `src/module/GMAction.ts`
+- `templates/damage-results.html`
+- `templates/damage-results-player.html`
+- `templates/config/rules.hbs`
+- `lang/en.json`
+- `Changelog.md`
+
+### Changes
+
+**GMAction.ts:**
+
+1. Added multiplier dropdown preview - changing the dropdown updates the card display in real-time:
+   - "=" (calc) shows original calculated damage including saves/resistances
+   - Other multipliers (1, ½, 2, ¼, +) recalculate damage ignoring saves
+   - Uses `actor.calculateDamage()` to preview without applying
+
+2. Fixed "=" case apply button to directly set stored HP values:
+```typescript
+// For "=" case, directly apply the stored HP values (like reverse does with old values)
+const updates: Actor.UpdateData = {
+  "system.attributes.hp.temp": newTempHP ?? 0,
+  "system.attributes.hp.value": newHP ?? 0
+};
+await actor.update(updates, options);
+```
+
+3. Added `updateDamageDisplay()` helper function to update card after apply/reverse:
+   - After apply: shows what reverse would do (transition back to oldHP)
+   - After reverse: shows what apply would do (transition to newHP)
+   - Shows (0) when no change between current and target HP
+
+4. Added multiplier reset to "=" after apply or reverse button clicked
+
+5. Added token image interactions:
+   - Click: select token (`token.control()`)
+   - Right-click (contextmenu): open actor sheet (`actor.sheet.render(true)`)
+
+**Templates (damage-results.html, damage-results-player.html):**
+
+1. Added IDs to display elements for dynamic updates:
+   - `id="dmg-total-{{damage.displayUuid}}"` - total damage display
+   - `id="dmg-temp-{{damage.displayUuid}}"` - temp HP with `.dmg-temp-old`/`.dmg-temp-new` spans
+   - `id="dmg-hp-{{damage.displayUuid}}"` - HP with `.dmg-hp-old`/`.dmg-hp-new` spans
+   - `id="dmg-nochange-{{damage.displayUuid}}"` - (0) display
+   - `id="dmg-vitality-{{damage.displayUuid}}"` - vitality display
+
+2. Added "=" (calc) option as default in multiplier dropdown:
+```html
+<select id="dmg-multiplier-{{damage.displayUuid}}">
+  <option value="calc" selected>=</option>
+  <option value="x1">1</option>
+  <option value="x0.5">½</option>
+  ...
+</select>
+```
+
+**config/rules.hbs:**
+
+1. Fixed vitality setting binding from `vitalityResource` to `vitalityItem`
+
+**lang/en.json:**
+
+1. Updated vitality hint with example: item name "Vitality Pool" → identifier "vitality-pool"
+
+### Result
+- Damage card now provides live preview when changing multiplier
+- "=" preserves original calculated damage with saves
+- Other multipliers provide absolute damage without saves
+- Token images are interactive (click to select, right-click for sheet)
+- Display updates after apply/reverse to show current state
+- Multiplier resets to "=" after operations
+
+**GMAction.ts - Vitality dead status fix:**
+
+1. Fixed dead/defeated status not being applied when vitality is exhausted
+2. Problem: `checkWounded` is called from `updateActor` hook when HP changes, but vitality item update happens after the actor update, so the vitality value was stale
+3. Solution: Call `checkWounded` again after the vitality item update completes:
+```typescript
+if (vitalityItemUpdatePromise) {
+  await vitalityItemUpdatePromise;
+  // Re-check wounded/dead status after vitality update
+  if (updatedActor) {
+    const { checkWounded } = await import("./patching.js");
+    await checkWounded(updatedActor, updates, data.updateOptions ?? {}, game.user?.id ?? "");
+  }
+}
+```
+
+**Hooks.ts - Vitality overflow for direct HP changes:**
+
+1. Added vitality overflow handling to `dnd5e.preApplyDamage` hook
+2. This ensures vitality is reduced when HP is changed directly from actor sheet or token HUD
+3. Skips if `options.midi` is set (already handled in GMAction.ts)
+4. Uses setTimeout to queue vitality item update after actor update completes
+5. Calls `checkWounded` after vitality update to apply dead status if needed
+
 ---
 
 ## 2026-01-03: MidiDependentsRegistry - Dependent Document Tracking

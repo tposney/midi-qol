@@ -1,6 +1,6 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { configSettings, autoFastForwardAbilityRolls, checkRule, checkMechanic, safeGetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed, MidiOptions } from "./utils.js";
+import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -1076,7 +1076,11 @@ export function initPatching() {
 
 function _prepareItem(wrapped, item, ctx) {
   wrapped(item, ctx);
-  ctx.activities = item.system.activities?.filter(a => !a.midiProperties?.automationOnly && a.canUse)?.map(this._prepareActivity.bind(this));
+  // Filter from ctx.activities to preserve dnd5e's visibility filtering (including level limits)
+  // Fixes issue #1548: Activity Visibility "Level Limit" ignored when midi-qol is enabled
+  if (ctx.activities) {
+    ctx.activities = ctx.activities.filter(a => !a.midiProperties?.automationOnly);
+  }
 }
 
 function getAttackModifiers(roll: Roll /* D20Roll */): string[] {
@@ -1252,15 +1256,29 @@ export async function zeroHPExpiry(actor: Actor.Implementation, update: Actor.Up
   if (expiredEffects.length > 0) await expireEffects(actor, expiredEffects, { "expiry-reason": "midi-qol:zeroHP" })
 }
 
-export async function checkWounded(actor: Actor.Implementation, update: Actor.UpdateData, options: Actor.Database.UpdateOptions, user: string) {
+export async function checkWounded(actor: Actor.Implementation, update: Actor.UpdateData, options: Actor.Database.UpdateOptions, user: string, vitalityValue?: number) {
   const hpUpdate = foundry.utils.getProperty(update, "system.attributes.hp.value");
-  const vitalityResource = checkRule("vitalityResource") as string;
-  let vitalityUpdate = (vitalityResource && foundry.utils.getProperty(update, vitalityResource.trim())) as number;
-  // return wrapped(update,options,user);
-  if (hpUpdate === undefined && (!vitalityResource || vitalityUpdate === undefined)) return;
+
+  // Check for vitality system
+  const vitalityItem = getVitalityItem(actor);
+  const hasVitality = !!vitalityItem;
+
+  // Use provided vitality value if given, otherwise look up from the item
+  let vitalityUpdate: number | undefined;
+  if (vitalityValue !== undefined) {
+    vitalityUpdate = vitalityValue;
+  } else if (vitalityItem) {
+    // @ts-expect-error uses exists on items with uses
+    const maxUses = vitalityItem.system.uses?.max ?? 0;
+    // @ts-expect-error uses exists on items with uses
+    const spentUses = vitalityItem.system.uses?.spent ?? 0;
+    vitalityUpdate = maxUses - spentUses;
+  }
+
+  if (hpUpdate === undefined && !hasVitality) return;
   // @ts-expect-error no dnd5e-types
   const attributes = actor.system.attributes;
-  const needsBeaten = vitalityResource ? vitalityUpdate <= 0 : attributes.hp.value <= 0;
+  const needsBeaten = hasVitality ? (vitalityUpdate ?? 0) <= 0 : attributes.hp.value <= 0;
   if (configSettings.addWounded > 0 && configSettings.addWoundedStyle !== "none") {
     const needsWounded = attributes.hp.pct < configSettings.addWounded && !needsBeaten;
     const woundedStatus = getWoundedStatus();
@@ -1289,11 +1307,25 @@ export async function checkWounded(actor: Actor.Implementation, update: Actor.Up
       }
     }
   }
-  if (configSettings.addDead !== "none") {
+  // When vitality reaches 0, apply the configured vitality dead condition
+  if (hasVitality && needsBeaten) {
+    // For vitality death, use the configured vitalityDeadCondition (defaults to "dead")
+    const effect = getVitalityDeadStatus();
+    if (effect) {
+      await setDeadStatus(actor, { effect, useDefeated: configSettings.markNonPlayerDefeated, makeDead: true });
+    }
+  } else if (hasVitality && !needsBeaten) {
+    // Vitality > 0, remove the vitality dead condition if present
+    const effect = getVitalityDeadStatus();
+    if (effect) {
+      await setDeadStatus(actor, { effect, useDefeated: configSettings.markNonPlayerDefeated, makeDead: false });
+    }
+  } else if (configSettings.addDead !== "none") {
+    // No vitality system - use normal midi settings
     let effect = getDeadStatus();
     let useDefeated = configSettings.markNonPlayerDefeated;
     // @ts-expect-error no dnd5e-types
-    if ((actor.type === "character" || actor.hasPlayerOwner || actor.system.traits?.important) && !vitalityResource) {
+    if (actor.type === "character" || actor.hasPlayerOwner || actor.system.traits?.important) {
       effect = getUnconsciousStatus();
       useDefeated = configSettings.markPlayerDefeated;
     }
@@ -1309,6 +1341,23 @@ export async function checkWounded(actor: Actor.Implementation, update: Actor.Up
 async function setDeadStatus(actor: Actor.Implementation, options: { effect: CONFIG.StatusEffect | ActiveEffect.Implementation; useDefeated: boolean; makeDead: boolean; overlay?: boolean; }) {
   let { effect, useDefeated, makeDead } = options;
   if (!effect) return;
+
+  // When applying dead status, first remove unconscious and its rider statuses
+  // dnd5e automatically applies unconscious when HP reaches 0, but we want dead instead
+  // Unconscious has incapacitated and prone as riders, which conflict with dead's riders
+  if (makeDead) {
+    const conflictingStatuses = ["unconscious", "incapacitated", "prone"];
+    for (const statusId of conflictingStatuses) {
+      if (actor.statuses.has(statusId)) {
+        try {
+          await actor.toggleStatusEffect(statusId, { active: false });
+        } catch (err) {
+          // Ignore errors when removing statuses
+        }
+      }
+    }
+  }
+
   if (effect && installedModules.get("dfreds-convenient-effects") && effect instanceof ActiveEffect && isConvenientEffect(effect)) {
     const isBeaten = actor.effects.find(ef => ef.name === effect?.name) !== undefined;
     if ((makeDead !== isBeaten)) {
@@ -1327,7 +1376,15 @@ async function setDeadStatus(actor: Actor.Implementation, options: { effect: CON
     // V12 uses an actor
     const isBeaten = actor.effects.find(ef => ef.name === (i18n(effect?.name ?? ""))) !== undefined;
     if (isBeaten !== makeDead) {
-      await actor.toggleStatusEffect(effect.id!, { overlay: (configSettings.addDead === "overlay") || options.overlay, active: makeDead });
+      try {
+        await actor.toggleStatusEffect(effect.id!, { overlay: (configSettings.addDead === "overlay") || options.overlay, active: makeDead });
+      } catch (err: any) {
+        // Ignore "already exists" errors from dnd5e's rider status effects (e.g., dead adds incapacitated which adds prone,
+        // and if prone is also a direct rider of dead, it would try to add prone twice)
+        if (!err?.message?.includes("already exists")) {
+          throw err;
+        }
+      }
       if (useDefeated) {
         const combatants = game.combat?.getCombatantsByActor(actor) ?? [];
         for (let combatant of combatants) await combatant.update({ defeated: makeDead }, {});
@@ -1566,7 +1623,13 @@ export async function doItemUse(this: Item.Implementation, wrapped, config: Acti
   if (this.pack) return;
   const { chooseActivity, ...activityConfig } = config;
   // @ts-expect-error no dnd5e-types
-  const activities = this.system.activities?.filter(a => !this.flags.dnd5e?.riders?.activity?.includes(a.id) && !a.midiProperties?.automationOnly && !a.inProgress);
+  // Filter usable activities: exclude riders, automationOnly, inProgress, and activities that fail visibility checks (canUse)
+  const activities = this.system.activities?.filter(a =>
+    a.canUse !== false &&
+    !this.flags.dnd5e?.riders?.activity?.includes(a.id) &&
+    !a.midiProperties?.automationOnly &&
+    !a.inProgress
+  );
   const attackActivities = activities?.filter(a => a instanceof MidiAttackActivity);
   if (attackActivities?.length === 1) { // if there is a single attack activity and no other non-automation activities use it
     const attackActivity = attackActivities[0];

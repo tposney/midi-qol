@@ -26,8 +26,10 @@ _prepareActivityContext(...args) { return super._prepareActivityContext(...args)
         `<img src="systems/dnd5e/icons/svg/mouse-left.svg" alt="${i18n("DND5E.Controls.LeftClick")}">`
       );
     }
+    // Filter usable activities: exclude riders, automationOnly, and activities that fail visibility checks (canUse)
     const activities = this.item.system.activities
-      .filter(a => !this.item.getFlag("dnd5e", "riders.activity")?.includes(a.id))
+      .filter(a => a.canUse !== false)
+      .filter(a => !this.item.flags.dnd5e?.riders?.activity?.includes(a.id))
       .filter(a => !a.midiProperties?.automationOnly)
       .map(this._prepareActivityContext.bind(this))
       .sort((a, b) => a.sort - b.sort);

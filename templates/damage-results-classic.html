@@ -1,0 +1,105 @@
+<div>
+  <div class="xmidi-qol-flex-container" style="padding:0px; border:0px">
+    <div class="flexrow">
+      <table>
+        <thead style="line-height: 16px; vertical-align: middle;">
+          <th style="text-align:center;">{{damageApplied}}</th>
+          <th style="text-align:center">{{localize "midi-qol.DamageCardMultHeader"}}</th>
+          <th style="text-align:center">{{localize "midi-qol.DamageCardApplyHeader"}}</th>
+          <th style="text-align:center">{{localize "midi-qol.DamageCardUndoHeader"}}</th>
+        </thead>
+
+        <tbody>
+          {{#each damageList as |damage iid|}}
+          <tr>
+            <td style="line-height: 22px">
+              <div class="midi-qol-tooltip" {{#if damage.tooltip}}data-tooltip='{{damage.tooltip}}' {{/if}}>
+                <div style="text-align: left;">
+                  {{iconPrefix}}
+                  <img src="{{damage.tokenImg}}" id="{{damage.tokenId}}" class="midi-qol-target-name" height="25"
+                    style="border:0px">
+
+
+                  </img>
+                </div>
+              </div>
+              {{#if damage.tempDamage}}
+              <div class="midi-qol-tooltip"
+                data-tooltip='{{damage.damageItem.oldHP}}[{{damage.damageItem.oldTempHP}}]{{damage.dmgSign}}{{damage.hpDamage}}[{{damage.tempDamage}}]({{{damage.rawTotalDamage}}})={{damage.damageItem.newHP}}[{{damage.damageItem.newTempHP}}]'>
+                <span>
+                  {{damage.damageItem.oldHP}}[{{damage.damageItem.oldTempHP}}]{{damage.dmgSign}}{{damage.absDamage}}[{{damage.tempDamage}}]={{damage.damageItem.newHP}}[{{damage.damageItem.newTempHP}}]
+                </span>
+              </div>
+              {{else}}
+              <div class="midi-qol-tooltip"
+                data-tooltip='{{damage.damageItem.oldHP}}{{damage.dmgSign}}{{abshpDamage}}[{{damage.rawTotalDamage}}]={{damage.damageItem.newHP}}'>
+                <span>
+                  {{damage.damageItem.oldHP}}{{damage.dmgSign}}{{damage.abshpDamage}}({{damage.rawTotalDamage}})={{damage.damageItem.newHP}}
+                </span>
+              </div>
+              {{/if}}
+            </td>
+
+            <td style="text-align:center;">
+              <select id="dmg-multiplier-{{damage.displayUuid}}" title="Choose the multiplier for the damage."">
+                <option value="x1">x1</option>
+                <option value="x0.5">x1/2</option>
+                <option value="x2">x2</option>
+                <option value="x0.25">x1/4</option>
+                <option value="-1">{{localize "midi-qol.DamageCardHeal"}}</option>
+              </select>
+            </td>
+            <td style="text-align:center">
+              <button id="apply-{{damage.displayUuid}}" style="
+          width: 22px;
+          height: 22px;
+          font-size: 10px;
+          line-height: 1px;
+        " aria-label="Click to update {{totalDamage}} x Multiplier accordingly to multiplier.">
+                {{#if ../damageWasApplied}}
+                <i aria-hidden="true" class="fas fa-check midi-qol-disable-damage-button"
+                  title="Click to update {{totalDamage}} accordingly to multiplier."></i>
+                {{else}}
+                <i aria-hidden="true" class="fas fa-check midi-qol-enable-damage-button"
+                  title="Click to update {{totalDamage}} accordingly to multiplier."></i>
+                {{/if}}
+              </button>
+            </td>
+            <td style="text-align:center">
+              <button id="reverse-{{damage.displayUuid}}" aria-label="Click to undo damage." style="
+          width: 22px;
+          height: 22px;
+          font-size: 10px;
+          line-height: 1px;
+        ">
+                {{#if ../damageWasApplied}}
+                <i aria-hidden="true" class="fas fa-arrow-rotate-left midi-qol-enable-damage-button"
+                  title="Click to undo damage"></i>
+                {{else}}
+                <i aria-hidden="true" class="fas fa-arrow-rotate-left midi-qol-disable-damage-button"
+                  title="Click to undo damage"></i>
+                {{/if}}
+              </button>
+            </td>
+          </tr>
+          {{/each}}
+          {{#if needsButtonAll}}
+          <tr>
+            <td style="text-align:left"><strong>{{localize "midi-qol.DamageCardAll"}}</strong></td>
+            <td></td>
+            <td style="text-align:center" title="Apply the calculated damage to all tokens">
+              <button id="all-apply" style="width:22px;height:22px;font-size:10px;line-height:1px">
+                <i class="fas fa-check"></i>
+              </button>
+            </td>
+            <td style="text-align:center" title="Reverts damage from all tokens">
+              <button id="all-reverse" style="width:22px;height:22px;font-size:10px;line-height:1px">
+                <i class="fas fa-arrow-rotate-left"></i></button>
+            </td>
+          </tr>
+          {{/if}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

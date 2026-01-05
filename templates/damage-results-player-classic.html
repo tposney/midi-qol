@@ -1,0 +1,118 @@
+<div>
+  <div class="xmidi-qol-flex-container midi-qol-player-damage-card" style="padding:0px; border:0px">
+    <div class="flexrow">
+      <table>
+        {{#if playerButtons}}
+        <thead style="line-height: 16px; vertical-align: middle;">
+          <th style="text-align:center;">{{damageApplied}}</th>
+          <th colspan="3" style="text-align:center">{{localize "midi-qol.DamageCardApplyHeader"}}</th>
+        </thead>
+        {{/if}}
+
+        <tbody>
+          {{#each damageList as |damage iid|}}
+          {{#if isCharacter}}
+          <tr>
+            <td style="line-height: 22px">
+              <div class="midi-qol-tooltip">
+                <div style="text-align: left;">
+                  {{iconPrefix}}
+                  <img src="{{damage.tokenImg}}" id="{{damage.tokenId}}" class="midi-qol-target-name" height="25"
+                    style="border:0px">
+                  <div class="midi-qol-tooltiptext" style="text-align: left;">
+                    {{#if damage.tooltip}}
+                    <div>{{{damage.tooltip}}}</div>
+                    {{/if}}
+                  </div>
+                  </img>
+                </div>
+              </div>
+              <div class="midi-qol-tooltip">
+                <span>
+                  {{#if damage.tempDamage}}
+                  {{damage.damageItem.oldHP}}[{{damage.damageItem.oldTempHP}}]{{damage.dmgSign}}{{damage.absDamage}}[{{damage.tempDamage}}]={{damage.damageItem.newHP}}[{{damage.damageItem.newTempHP}}]
+                  <span class="midi-qol-tooltiptext midi-qol-tooltip-top">
+                    {{damage.damageItem.oldHP}}[{{damage.damageItem.oldTempHP}}]{{damage.dmgSign}}{{damage.abshpDamage}}[{{damage.tempDamage}}]={{damage.damageItem.newHP}}[{{damage.damageItem.newTempHP}}]
+                  </span>
+                  {{else}}
+                  {{damage.damageItem.oldHP}}{{damage.dmgSign}}{{damage.abshpDamage}}({{damage.totalDamage}})={{damage.damageItem.newHP}}
+                  <span class="midi-qol-tooltiptext midi-qol-tooltip-top">
+                    {{damage.damageItem.oldHP}}{{damage.dmgSign}}{{abshpDamage}}[{{damage.totalDamage}}]={{damage.damageItem.newHP}}
+                  </span>
+                  {{/if}}
+                </span>
+              </div>
+            </td>
+
+            {{#if ../playerButtons}}
+            <td style="text-align:center;">
+
+              <select id="dmg-multiplier-{{damage.displayUuid}}" title="Choose the multiplier for the damage."">
+                <option value=" calc" selected>{{localize "midi-qol.DamageCardCalc"}}</option>
+                <option value="x1">x1</option>
+                <option value="x0.5">x1/2</option>
+                <option value="x2">x2</option>
+                <option value="x0.25">x1/4</option>
+                <option value="-1">{{localize "midi-qol.DamageCardHeal"}}</option>
+              </select>
+            </td>
+            <td style="text-align:center">
+              <button id="apply-{{damage.displayUuid}}" style="
+          width: 22px;
+          height: 22px;
+          font-size: 10px;
+          line-height: 1px;
+        " aria-label="Click to update {{totalDamage}} x Multiplier accordingly to multiplier.">
+                <i aria-hidden="true" class="fas fa-check"
+                  title="Click to update {{totalDamage}} accordingly to multiplier."></i>
+              </button>
+            </td>
+            <td style="text-align:center">
+              <button id="reverse-{{damage.displayUuid}}" aria-label="Click to undo damage." style="
+          width: 22px;
+          height: 22px;
+          font-size: 10px;
+          line-height: 1px;
+        ">
+                <i aria-hidden="true" class="fas fa-arrow-rotate-left" title="Click to undo damage"></i>
+              </button>
+            </td>
+            {{/if}}
+          </tr>
+          {{else}}
+          <tr>
+            <td colspan="4" style="line-height: 22px">
+              <div class="midi-qol-tooltip">
+                <div style="text-align: left;">
+                  {{iconPrefix}}
+                  <img src="{{damage.tokenImg}}" id="{{damage.tokenId}}" class="midi-qol-target-name" height="25"
+                    style="border:0px">
+                  {{#if ../showImmun}}
+                  <div class="midi-qol-tooltiptext" style="text-align: left;">
+                    {{#if damage.tooltip}}
+                    <div>{{{damage.tooltip}}}</div>
+                    {{/if}}
+                  </div>
+                  {{/if}}
+                  </img>
+                </div>
+              </div>
+              <div class="midi-qol-tooltip">
+                <span>
+                  <div>
+                    {{damage.damageItem.rawTotalDamage}} {{localize "midi-qol.DamageRolled"}} ->
+                    {{damage.playerViewTotalDamage}}
+                    {{localize "midi-qol.DamageApplied"}}
+                    <span class="midi-qol-tooltiptext midi-qol-tooltip-top">
+                    </span>
+                  </div>
+              </div>
+            </td>
+          </tr>
+          {{/if}}
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

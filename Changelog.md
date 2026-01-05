@@ -1,3 +1,46 @@
+### 13.0.35
+**New Features:**
+* Rewrote the vitality system which now uses item-based tracking via the `vitalityItem` setting.
+  - Create a feature on the actor whose identifier matches the setting. Set the item uses to the max vitality for the actor.
+  - The vitality item's `uses.max` represents the actor's total vitality pool.
+  - The vitality item's `uses.spent` value tracks vitality loss from overflow damage.
+  - Vitality is automatically reduced when damage exceeds HP+TempHP, bringing HP to 0.
+  - When `uses.spent` equals `uses.max` (all vitality exhausted), the character is dead.
+  - Supports undo/redo operations from the damage card.
+  - New `vitalityDeadCondition` setting allows choosing which condition to apply when vitality reaches 0 (defaults to "dead"). Supports all standard conditions and Convenient Effects.
+  - Vitality cannot be changed by setting the hp on the actor sheet or the token hud. Manual changes can only be performed by updating the vitality item, rolling an attack or calling actor.applyDamage().
+* New damage card style option in Workflow settings: Choose between "Flexbox layout" - a flexbox-based design with inline HP/TempHP/Vitality display, or "Classic (table)" - the original table-based layout.
+  - The Flexbox layout card shows each target on a single line with color-coded icons: ❤️ (`fa-heart`, red) for HP, 🛡️ (`fa-shield-alt`, blue) for Temp HP, 💔 (`fa-heart-crack`, black) for Vitality.
+  - Text displays in green when values increase (healing), black when reduced.
+  - Fields with no change are hidden; when nothing changes, displays "HP → HP (0)".
+  * Damage card multiplier dropdown now previews damage applied to the current actor hp/temphp when changed.
+    - "=" (default) applies the original calculated damage including saves/resistances.
+    - Other multipliers (1, ½, 2, ¼, +) recalculate damage ignoring saves but includes resistances.
+    - Display updates after apply/reverse to show current HP state.
+    - Multiplier resets to "=" after apply or reverse.
+    - When the card is first displayed it shows what damage is applied. If the manual apply buttons are used the display updates to show what using the undo damage button will do.
+    - As am example if an actor was incorrectly treated as having failed a save, choose undo damage, then select 1/2 and apply the damage.
+  * If you are using vitality you should use the Flexbox layout card
+  * Token image interactions on damage card: click to select token, right-click to open actor sheet.
+* Added `flags.midi-qol.grants.fumble` and `flags.midi-qol.grants.noFumble` target flags:
+  - `grants.fumble.all` / `grants.fumble.{attackType}` - Forces attacks against the target to fumble. For multi-target attacks, if ANY target has this flag, the attack fumbles.
+  - `grants.noFumble.all` / `grants.noFumble.{attackType}` - Prevents attacks against the target from fumbling. For multi-target attacks, ALL targets must have this flag to prevent the fumble.
+* Added attack attribution tracking for critical and fumble flags. The `workflow.attackAdvAttribution` set now includes:
+  - `CRIT:` prefixed entries for critical flags (e.g., `CRIT:critical.all`, `CRIT:grants.critical.all {targetName}`)
+  - `NOCRIT:` prefixed entries for noCritical flags (e.g., `NOCRIT:noCritical.mwak`, `NOCRIT:grants.noCritical {targetNames}`)
+  - `FUMBLE:` prefixed entries for fumble flags (e.g., `FUMBLE:grants.fumble.all {targetName}`)
+  - `NOFUMBLE:` prefixed entries for noFumble flags (e.g., `NOFUMBLE:grants.noFumble {targetNames}`)
+  - Natural crit/fumble attribution shows the threshold (e.g., `CRIT:Roll >= 20`, `FUMBLE:Roll <= 1`)
+  - `CRIT:activity.use` / `FUMBLE:activity.use` when `midiOptions.isCritical` or `midiOptions.isFumble` is passed to `activity.use()`
+  * Attribution prefixes (ADV, DIS, CRIT, NOCRIT, FUMBLE, NOFUMBLE) are now localized. Translators can provide localized versions via the `midi-qol.AttribADV`, `midi-qol.AttribDIS`, `midi-qol.AttribCRIT`, `midi-qol.AttribNOCRIT`, `midi-qol.AttribFUMBLE`, and `midi-qol.AttribNOFUMBLE` localization keys.
+
+**Deprecation:**
+* Removed the deprecated `vitalityResource` setting. Users should migrate to the new `vitalityItem` setting which provides better item-based tracking and integration with the damage card display.
+
+**Bug Fixes:**
+* Levels Volumetric Templates: Now pre-filters tokens for incapacitated/defeated status before passing to VolumetricTemplates, matching the behavior when not using volumetric templates.
+* Fixed Activity Visibility "Level Limit" being ignored when midi-qol is enabled (#1548). Activities now properly respect dnd5e visibility settings (level limits, attunement requirements, etc.) on both default dnd5e sheets and Tidy5e sheets.
+
 ### 13.0.34
 **New Features:**
 * Extended dependent document tracking for cascade deletion,  specifying a parent document via the `dnd5e.dependentOn` flag - when the parent is deleted, all dependents are automatically deleted. This is an extension of the core dnd5e behaviour.
@@ -12,6 +55,7 @@
   - Fixed TrapWorkflow infinite loop when using activities with attacks. The `WorkflowState_WaitForAttackRoll` now properly checks `context.attackRoll` to detect when resuming after attack completion.
   - Fixed TrapWorkflow not syncing `game.user.targets` from targets passed to constructor. Targets are now synced immediately in the constructor for proper workflow execution.
   - Fixed D20Roll.buildPost error in TrapWorkflow by not passing `shiftOnlyEvent` (which lacks required `target` property) to `rollAttack`.
+* !385: Fixed targeting logic for "Weapon's attack single target" setting with activities that have emanation shapes (like Steel Wind Strike) - thanks @thatlonelybugbear
 * !386: Updated pt-BR.json - thanks @Kharmans
 
 **Code Improvements:**

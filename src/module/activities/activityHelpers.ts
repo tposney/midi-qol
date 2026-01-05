@@ -525,8 +525,13 @@ export function selectTargets(this: Workflow | Activity | undefined, templateDoc
       }
       templateTokens(mTemplate, selfToken, ignoreSelf, AoETargetType, getActivityAutoTargetAction(activity));
     } else if (mTemplate) {
+      // Filter tokens before passing to VolumetricTemplates (same as midiATRefreshFunc does)
+      const autoTarget = getActivityAutoTargetAction(activity);
+      const tokensToCheck = canvas.tokens?.placeables?.filter(tk =>
+        isAoETargetable(tk, { selfToken, ignoreSelf, AoETargetType, autoTarget })
+      );
       //@ts-expect-error
-      VolumetricTemplates.compute3Dtemplate(mTemplate, canvas.tokens?.placeables);
+      VolumetricTemplates.compute3Dtemplate(mTemplate, tokensToCheck);
     }
     workflow?.setTargets?.(new Set(game.user?.targets));
   }

@@ -2,6 +2,13 @@
 
 **Important**: Read this file at the start of each session to recover context and follow established conventions.
 
+**When to update this file**: After fixing a non-obvious bug or making a design decision that:
+- Required multiple attempts to get right
+- Has implications for future development (e.g., "always use X, never use Y")
+- Involves subtle interactions between systems (dnd5e + midi-qol + Foundry)
+
+Document the **what** and **why** so the same mistake isn't repeated in future sessions.
+
 ## Project Context
 
 midi-qol is a Foundry VTT module that enhances the dnd5e system with automated attack rolls, damage application, saving throws, and workflow management.
@@ -34,6 +41,64 @@ Use this to verify API methods and understand how dnd5e implements features. **D
   - `activities.contents` - array of all activities
 
 ## Significant Decisions
+
+### 13.0.35 Changes
+
+1. **grants.fumble and grants.noFumble flags**
+   - Added `flags.midi-qol.grants.fumble.all` and `flags.midi-qol.grants.fumble.{attackType}` to force fumbles on attacks against a target
+   - Added `flags.midi-qol.grants.noFumble.all` and `flags.midi-qol.grants.noFumble.{attackType}` to prevent fumbles on attacks against a target
+   - Follows the same pattern as `grants.critical` and `grants.noCritical`
+   - Processed in `processAttackRoll()` in Workflow.ts
+
+2. **Vitality death status - MUST use CONFIG.statusEffects, NOT getDeadStatus()**
+   - When vitality reaches 0, always apply the "dead" status regardless of midi settings
+   - **WRONG**: `getDeadStatus()` - returns status based on `configSettings.midiDeadCondition`, may return unconscious or other status
+   - **CORRECT**: `CONFIG.statusEffects.find(se => se.id === "dead")` - always returns the actual dead status
+   - The `setDeadStatus` function removes conflicting statuses (unconscious, incapacitated, prone) before applying dead
+   - This prevents "already exists" errors since dnd5e's dead status has these as riders
+   - Race conditions in concurrent toggleStatusEffect calls were fixed by:
+     - Adding `midiVitalityUpdatePending` flag to damage options
+     - Having updateActor hook skip checkWounded when this flag is set
+     - Only updateItem hook calls checkWounded for vitality actors
+
+2. **options.midi is set for ALL damage, not just midi workflows**
+   - The `dnd5e.preCalculateDamage` hook unconditionally sets `options.midi.totalDamage` for ALL damage calculations
+   - This means checking `!options.midi` to detect "non-midi damage" doesn't work
+   - **Key insight**: midi-qol uses `actor.update()` directly in GMAction.ts, NOT `actor.applyDamage()`
+   - Therefore, the `dnd5e.preApplyDamage` hook only fires for non-midi damage (character sheet, token HUD, etc.)
+   - The vitality handling in `preApplyDamage` should NOT check `!options.midi` - it should always run
+
+3. **Damage card multiplier preview**
+   - Added real-time preview when changing multiplier dropdown
+   - "=" (calc) option as default - uses original calculated damage with saves/resistances
+   - Other multipliers (1, ½, 2, ¼, +) recalculate damage ignoring saves
+   - Uses `actor.calculateDamage()` for preview without applying
+
+4. **Fixed "=" case apply button**
+   - Changed from `actor.applyDamage()` with options to directly setting stored HP values
+   - Now uses `actor.update()` with `newHP` and `newTempHP` from stored damage data
+   - Matches how reverse button works with `oldHP`/`oldTempHP`
+
+5. **Damage card display updates after apply/reverse**
+   - Added `updateDamageDisplay()` helper function in `processUndoDamageCard`
+   - After apply: display shows what reverse would do (transition back to oldHP)
+   - After reverse: display shows what apply would do (transition to newHP)
+   - Shows (0) when current HP equals target HP
+
+6. **Multiplier resets to "=" after operations**
+   - Both apply and reverse buttons reset the dropdown to "calc" after execution
+
+7. **Token image interactions on damage card**
+   - Click: select token (`token.control()`)
+   - Right-click (contextmenu): open actor sheet
+
+8. **Template IDs for dynamic updates**
+   - Added IDs to damage display elements: `dmg-total-`, `dmg-temp-`, `dmg-hp-`, `dmg-nochange-`, `dmg-vitality-`
+   - Added span classes `.dmg-temp-old`, `.dmg-temp-new`, `.dmg-hp-old`, `.dmg-hp-new` for updating values
+
+9. **Vitality config fix**
+   - Fixed `rules.hbs` binding from `vitalityResource` to `vitalityItem`
+   - Updated hint in `en.json` with example identifier format
 
 ### 13.0.34 Changes
 
@@ -150,6 +215,17 @@ Key test actors (must exist in test world):
 - `target1Name` ("Orc1"), `target2Name` ("Orc2"), `target3Name` ("Skeleton1") - Test targets
 
 **Target distances**: `target1Name` (Orc1) is 20 feet away from actor1. Use `target2Name` (Orc2) for short-range weapon tests (5ft range weapons like Longsword).
+
+**Vitality system testing notes**:
+- Actor needs BOTH vitality > 0 AND HP > 0 to be alive
+- To revive an actor, restore vitality FIRST (so HP update doesn't see vitality=0), then restore HP
+- Status cleanup: Always clean up prone/dead/defeated in finally blocks (prone is added as rider of dead but not removed when dead is removed)
+
+**dnd5e activity cloning behavior** (important for tests that modify activity properties):
+- When `activity.use()` is called, dnd5e clones the item: `let item = this.item.clone({}, { keepId: true })`
+- The `this.item` reference in an activity points to the activity's stored item, NOT the updated database version
+- After calling `item.update()` to modify activity properties (like `fumbleThreshold`), you MUST get a fresh item reference via `fromUuid(item.uuid)` before calling `completeItemUse()` or `activity.use()`
+- The test helpers `completeItemUseNoFumble()` and `completeActivityUseNoFumble()` handle this automatically
 
 ## Build Commands
 

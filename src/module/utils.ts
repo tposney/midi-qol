@@ -1806,7 +1806,12 @@ export async function completeItemUse(itemRef: Item.Implementation | string, con
     if (selected) return completeActivityUse(selected, activityConfig, dialog, message);
   }
   // @ts-expect-error no dnd5e-types
-  const activities = item.system.activities?.filter(a => !item.getFlag("dnd5e", "riders.activity")?.includes(a.id) && !a.midiProperties?.automationOnly);
+  // Filter usable activities: exclude riders, automationOnly, and activities that fail visibility checks (canUse)
+  const activities = item.system.activities?.filter(a =>
+    a.canUse !== false &&
+    !item.flags.dnd5e?.riders?.activity?.includes(a.id) &&
+    !a.midiProperties?.automationOnly
+  );
   if (activities.length === 0) {
     //@ts-expect-error no dnd5e-types
     return item.displayCard(message);
@@ -1839,6 +1844,60 @@ export function untargetAllTokens(combat: Combat.Implementation) {
   }
 }
 
+/**
+ * Get the vitality item for an actor (a feature with uses that serves as a vitality pool)
+ * @param actor The actor to get the vitality item for
+ * @returns The vitality item if found, undefined otherwise
+ */
+export function getVitalityItem(actor: Actor.Implementation | null | undefined): Item.Implementation | undefined {
+  if (!actor) return undefined;
+  const itemName = checkRule("vitalityItem");
+  if (typeof itemName !== "string" || !itemName) return undefined;
+  return actor.items.getName(itemName) ?? undefined;
+}
+
+/**
+ * Get the current vitality value for an actor
+ * @param actor The actor to get vitality for
+ * @returns The current vitality value, or undefined if no vitality system is configured
+ */
+export function getVitalityValue(actor: Actor.Implementation | null | undefined): number | undefined {
+  if (!actor) return undefined;
+
+  const vitalityItem = getVitalityItem(actor);
+  if (vitalityItem) {
+    // @ts-expect-error uses exists on items with uses
+    return vitalityItem.system.uses?.value ?? 0;
+  }
+
+  return undefined;
+}
+
+/**
+ * Get the maximum vitality value for an actor
+ * @param actor The actor to get max vitality for
+ * @returns The maximum vitality value, or undefined if no vitality system is configured
+ */
+export function getVitalityMax(actor: Actor.Implementation | null | undefined): number | undefined {
+  if (!actor) return undefined;
+
+  const vitalityItem = getVitalityItem(actor);
+  if (vitalityItem) {
+    // @ts-expect-error uses exists on items with uses
+    return vitalityItem.system.uses?.max ?? 0;
+  }
+
+  return undefined;
+}
+
+/**
+ * Check if the actor has a vitality system configured
+ */
+export function hasVitalitySystem(actor: Actor.Implementation | null | undefined): boolean {
+  if (!actor) return false;
+  return !!getVitalityItem(actor);
+}
+
 export function checkDefeated(actorRef: Actor.Implementation | TokenOrDocument | string): 0 | 1 {
   const actor = getActor(actorRef);
   if (!actor) return 0;
@@ -1853,14 +1912,16 @@ export function checkIncapacitated(actorRef?: Actor.Implementation | TokenOrDocu
   let status: string | false = false;
   // @ts-expect-error no dnd5e-types
   if (actor.system.traits?.ci?.value?.has("incapacitated")) return false;
-  const vitalityResource = checkRule("vitalityResource");
-  if (typeof vitalityResource === "string" && foundry.utils.getProperty(actor, vitalityResource.trim()) !== undefined) {
-    const vitality = foundry.utils.getProperty(actor, vitalityResource.trim()) ?? 0;
+
+  // Check vitality system
+  const vitality = getVitalityValue(actor as Actor.Implementation);
+  if (vitality !== undefined) {
     // @ts-expect-error no dnd5e-types
     if (vitality <= 0 && actor?.system.attributes?.hp?.value <= 0) {
       status = "dead";
     }
   } else {
+    // No vitality system - just check HP
     // @ts-expect-error no dnd5e-types
     if (!actor.system?.attributes?.hp?.value) {
       (debug("No hp attribute for ", actor));
@@ -5040,6 +5101,13 @@ export function getDeadStatus() {
   return ceInterface.findEffect({ effectId: configSettings.midiDeadCondition?.replace("zce-", "ce-") });
 }
 
+export function getVitalityDeadStatus() {
+  const conditionId = configSettings.optionalRules.vitalityDeadCondition || "dead";
+  let condition = CONFIG.statusEffects.find(efData => efData.id === conditionId);
+  if (condition || !ceInterface) return condition;
+  return ceInterface.findEffect({ effectId: conditionId?.replace("zce-", "ce-") });
+}
+
 export function ConvenientEffectsHasEffect(effectName: string, actor: Actor.Implementation, ignoreInactive: boolean = true) {
   if (ignoreInactive) {
     return CEHasEffectApplied({ effectName, uuid: actor.uuid })
@@ -5309,7 +5377,25 @@ export function addAdvAttribution(roll: Roll, advAttribution: Set<string>) {
   // <section class="tooltip-part">
   let advHtml: string = "";
   if (advAttribution && advAttribution.size > 0) {
-    advHtml = Array.from(advAttribution).reduce((prev, s) => prev += `${s}<br>`, "");
+    // Localize the attribution prefixes
+    const prefixMap: Record<string, string> = {
+      "ADV:": `${game.i18n.localize("midi-qol.AttribADV")}:`,
+      "DIS:": `${game.i18n.localize("midi-qol.AttribDIS")}:`,
+      "CRIT:": `${game.i18n.localize("midi-qol.AttribCRIT")}:`,
+      "NOCRIT:": `${game.i18n.localize("midi-qol.AttribNOCRIT")}:`,
+      "FUMBLE:": `${game.i18n.localize("midi-qol.AttribFUMBLE")}:`,
+      "NOFUMBLE:": `${game.i18n.localize("midi-qol.AttribNOFUMBLE")}:`
+    };
+    advHtml = Array.from(advAttribution).reduce((prev, s) => {
+      let localized = s;
+      for (const [prefix, localizedPrefix] of Object.entries(prefixMap)) {
+        if (s.startsWith(prefix)) {
+          localized = localizedPrefix + s.slice(prefix.length);
+          break;
+        }
+      }
+      return prev + `${localized}<br>`;
+    }, "");
     foundry.utils.setProperty(roll, "options.advTooltip", advHtml);
   }
 }

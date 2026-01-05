@@ -12,81 +12,6 @@
   font-size: 12px
 }
 
-.dice-total.dmgBtn-mqol {
-  transition: color 0.2s ease-in-out 0.7s;
-}
-
-.dice-total.dmgBtn-mqol:hover {
-  color: transparent;
-  transition: color 0.2s ease-in-out 0s;
-}
-
-.dmgBtn-container-mqol {
-  position: absolute;
-  left: 0;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  align-items: center;
-  z-index: 1;
-}
-
-.dmgBtn-container-mqol button {
-  height: 100% !important;
-  margin: 1px !important;
-  padding: 0;
-}
-
-.dmgBtn-container-mqol button>i {
-  font-weight: bold;
-  margin: 0;
-}
-
-.dmgBtn-container-mqol .dice-total-full-button {
-  margin-left: 0 !important;
-}
-
-.dmgBtn-container-mqol .dice-total-half-button,
-.dmgBtn-container-mqol .dice-total-double-button,
-.dmgBtn-container-mqol .dice-quarter-button {
-  font-size: 0.8em !important;
-}
-
-.dmgBtn-container-mqol .dice-total-double-button {
-  font-size: 0.8em !important;
-  margin-right: 10px !important;
-}
-
-.dmgBtn-container-mqol .dice-total-full-healing-button {
-  margin-right: 0 !important;
-  margin-left: 10px !important;
-}
-
-.column-button-container-mqol {
-  text-align: left;
-  left: 0;
-  right: 0;
-  top: -5px;
-  bottom: 4px;
-  padding: 0 1px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 1;
-  flex-direction: column;
-}
-
-.dmgBtn-container-mqol {
-  display: flex !important;
-  opacity: 0;
-  transition: opacity 0.2s ease-in-out 0.7s;
-}
-
-.dmgBtn-container-mqol:hover {
-  opacity: 1;
-  transition: opacity 0.2s ease-in-out 0s;
-}
-
 .midi-qol-enable-damage-button {
   color: green
 }
@@ -95,22 +20,9 @@
   color: red
 }
 
-.xdice-total-full-damage-button,
-.xdice-total-half-damage-button,
-.xdice-total-double-damage-button,
-.xdice-total-full-damage-healing-button {
-  width: 20%;
-  height: 80%;
-  font-size: 24px;
-  line-height: 8px;
-  background-color: 0xffffff;
-  color: white;
-}
-
 .midi-qol-flex-container {
   display: flex;
   flex-wrap: wrap;
-  align-items: left;
   align-items: center;
   font-size: 14px;
   line-height: 16px;
@@ -304,54 +216,6 @@
   border: 2px groove #c9c7b8;
 }
 
-
-/* ----------------------------------------- */
-/* On Use Macros
-/* ----------------------------------------- */
-.column-dialog .column-dialog-buttons {
-  display: flex;
-  flex-direction: column;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  justify-content: left;
-}
-
-.column-dialog .column-dialog-buttons>* {
-  flex: 1;
-}
-
-.column-dialog .column-dialog-buttons>.flex0 {
-  display: block;
-  flex: 0;
-}
-
-.column-dialog .column-dialog-buttons>.flex1 {
-  flex: 1;
-}
-
-.column-dialog .column-dialog-buttons>.flex2 {
-  flex: 2;
-}
-
-.column-dialog .column-dialog-buttons>.flex3 {
-  flex: 3;
-}
-
-.column-dialog .column-dialog-buttons button {
-  background: rgba(0, 0, 0, 0.1);
-  border: 2px groove var(--color-border-light-highlight);
-  margin: 0 5px 0 0;
-}
-
-.column-dialog .column-dialog-buttons button:last-child {
-  margin-right: 0;
-}
-
-.column-dialog .column-dialog-buttons button.default {
-  background: rgba(0, 0, 0, 0.05);
-  border: 2px groove var(--color-border-light-secondary);
-}
-
 .active-effect-sheet.midi-qol .effect-controls {
   flex: 0;
   margin: 0 8px 0 5px;
@@ -396,7 +260,7 @@
   display: grid;
   grid-template-columns: auto auto auto;
   gap: 10px;
-  width: 300;
+  width: 300px;
   /* You can adjust the width as needed */
 }
 
@@ -957,4 +821,149 @@ section.midi-qol.tab {
     display: grid;
     grid-template-columns: 2fr 1fr 2fr var(--input-height);
   }
+}
+
+/* ----------------------------------------- */
+/* Damage Card Flexbox Styles
+/* ----------------------------------------- */
+
+/* Main container */
+.midi-qol-damage-card {
+  padding: 2px 0;
+}
+
+/* Header row with "Damage Applied" text */
+.midi-qol-dmg-header {
+  font-size: 0.9em;
+  padding: 2px 4px;
+  border-bottom: 1px solid rgba(128,128,128,0.3);
+  margin-bottom: 2px;
+}
+
+/* Each damage entry row */
+.midi-qol-dmg-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  flex-wrap: wrap;
+}
+
+/* Token image in damage card */
+.midi-qol-damage-card .midi-qol-target-name {
+  border: 0;
+  border-radius: 2px;
+}
+
+/* Total damage/healing display */
+.midi-qol-dmg-total {
+  font-size: 0.9em;
+  font-weight: bold;
+}
+
+/* Temp HP display */
+.midi-qol-dmg-temp {
+  font-size: 0.85em;
+}
+
+.midi-qol-dmg-temp .fa-shield-alt {
+  font-size: 0.7em;
+  color: #4488cc;
+}
+
+/* HP display */
+.midi-qol-dmg-hp {
+  font-size: 0.9em;
+}
+
+.midi-qol-dmg-hp .fa-heart {
+  font-size: 0.75em;
+  color: #cc4444;
+}
+
+/* Vitality display */
+.midi-qol-dmg-vitality {
+  font-size: 0.85em;
+}
+
+.midi-qol-dmg-vitality .fa-heart-crack {
+  font-size: 0.7em;
+  color: #000;
+}
+
+/* No change indicator */
+.midi-qol-dmg-nochange {
+  font-size: 0.9em;
+  opacity: 0.7;
+}
+
+/* Healing color (used on multiple elements) */
+.midi-qol-dmg-healing {
+  color: #22aa44;
+}
+
+/* Hidden state for dynamic visibility */
+.midi-qol-dmg-hidden {
+  display: none;
+}
+
+/* Button controls container */
+.midi-qol-dmg-controls {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Multiplier dropdown */
+.midi-qol-dmg-multiplier {
+  width: 32px;
+  padding: 0;
+  font-size: 0.8em;
+  height: 20px;
+}
+
+/* Button pair wrapper */
+.midi-qol-dmg-btn-pair {
+  display: inline-flex;
+}
+
+/* Apply/reverse buttons base */
+.midi-qol-dmg-btn {
+  width: 20px;
+  height: 20px;
+  font-size: 9px;
+  padding: 0;
+  margin: 0;
+}
+
+.midi-qol-dmg-btn-apply {
+  border-radius: 3px 0 0 3px;
+}
+
+.midi-qol-dmg-btn-reverse {
+  border-radius: 0 3px 3px 0;
+}
+
+/* "All" row */
+.midi-qol-dmg-all-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  background: rgba(128,128,128,0.08);
+  margin-top: 2px;
+}
+
+.midi-qol-dmg-all-row strong {
+  font-size: 0.9em;
+}
+
+/* Player card specific - simple text display */
+.midi-qol-dmg-text {
+  font-size: 0.9em;
+}
+
+.midi-qol-dmg-text.midi-qol-dmg-healing {
+  color: #22aa44;
 }

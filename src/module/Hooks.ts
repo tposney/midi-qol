@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, log, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastAttack, isAutoFastDamage, throttledScrollBottom } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastAttack, isAutoFastDamage, throttledScrollBottom, getVitalityItem } from "./utils.js";
 import { autoFastForwardAbilityRolls, checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -77,15 +77,17 @@ export let readyHooks = async () => {
 
   // Handle updates to the characters HP
   // Handle concentration checks
-  Hooks.on("updateActor", async (actor, update, options, user) => {
+  Hooks.on("updateActor", async (actor, update, options: any, user) => {
     if (user !== game.user?.id) return;
     const hpUpdate = foundry.utils.getProperty(update, "system.attributes.hp.value");
     const temphpUpdate = foundry.utils.getProperty(update, "system.attributes.hp.temp");
-    const vitalityResource = checkRule("vitalityResource");
-    const vitalityUpdate = typeof vitalityResource === "string" ? foundry.utils.getProperty(update, vitalityResource) : undefined;
-    if (hpUpdate !== undefined || temphpUpdate !== undefined || vitalityUpdate !== undefined) {
+    if (hpUpdate !== undefined || temphpUpdate !== undefined) {
       const hpUpdateFunc = async () => {
-        await checkWounded(actor, update, options, user);
+        // Skip checkWounded if a vitality update is pending - the updateItem hook will handle it
+        // This prevents race conditions with concurrent toggleStatusEffect calls
+        if (!options.midiVitalityUpdatePending) {
+          await checkWounded(actor, update, options, user);
+        }
         await zeroHPExpiry(actor, update, options, user);
       }
       await hpUpdateFunc();
@@ -98,11 +100,35 @@ export let readyHooks = async () => {
     }
   });
 
+  // Handle vitality item updates - check wounded/dead status when vitality changes
+  Hooks.on("updateItem", async (item, update, options, userId) => {
+    if (userId !== game.user?.id) return;
+    // Check if this is a vitality item update (uses.spent changed)
+    const spentUpdate = foundry.utils.getProperty(update, "system.uses.spent") as number | undefined;
+    if (spentUpdate === undefined) return;
+
+    const actor = item.actor;
+    if (!actor) return;
+
+    // Check if this item is the vitality item for the actor
+    const vitalityItem = getVitalityItem(actor);
+    if (!vitalityItem || vitalityItem.id !== item.id) return;
+
+    // Calculate new vitality value
+    // @ts-expect-error uses exists on items with uses
+    const maxUses = item.system.uses?.max ?? 0;
+    const newVitality = maxUses - spentUpdate;
+
+    // Re-check wounded/dead status with the new vitality value
+    await checkWounded(actor, {}, {} as any, userId, newVitality);
+  });
+
   //TODO: if/when options are passed to dnd5e.damageActor can use that hook instead and not do any calculations.
+  // Note: Vitality overflow for direct HP edits is NOT handled because the value is clamped before application.
+  // Vitality is only affected through damage application (GMAction.ts or actor.applyDamage()) which has explicit damage amounts.
   Hooks.on("preUpdateActor", (actor, changes, options: any, userId) => {
     if (userId !== game.user?.id) return true;
-    if (userId !== game.user?.id)
-      return true;
+
     const shouldCheckTempHP = configSettings.tempHPDamageConcentrationCheck;
     // @ts-expect-error no dnd5e-types
     const relevantHpChange = changes.system?.attributes?.hp;
@@ -412,7 +438,13 @@ export function initHooks() {
     //@ts-expect-error
     Hooks.on('tidy5e-sheet.getActivitiesForPlay', (parent, data) => {
       if (data.activities && data.activities instanceof Array) {
-        data.activities = data.activities.filter(activity => !activity?.midiProperties?.automationOnly && !parent.getFlag("dnd5e", "riders.activity")?.includes(activity.id));
+        // Filter out automationOnly activities and rider activities
+        // Also filter by canUse to preserve dnd5e visibility settings (level limits, etc.) - fixes #1548
+        data.activities = data.activities.filter(activity =>
+          activity?.canUse !== false &&
+          !activity?.midiProperties?.automationOnly &&
+          !parent.flags.dnd5e?.riders?.activity?.includes(activity.id)
+        );
       }
     });
     api.config.itemSummary.registerCommands([
@@ -997,14 +1029,46 @@ function applyDamageReduction(actor: Actor.Implementation, damages: DamageDescri
 
 Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
   if (updates["system.attributes.hp.temp"]) updates["system.attributes.hp.temp"] = Math.floor(updates["system.attributes.hp.temp"]);
-  const vitalityResource = checkRule("vitalityResource");
-  if (foundry.utils.getProperty(updates, "system.attributes.hp.value") === 0 && typeof vitalityResource === "string" && foundry.utils.getProperty(actor, vitalityResource) !== undefined) {
-    // actor is reduced to zero so update vitaility resource
+
+  // Handle vitality overflow when HP reaches 0 (for actor.applyDamage() calls)
+  // This hook only fires for actor.applyDamage() calls, NOT for midi-qol workflows or direct sheet edits
+  // (midi-qol uses actor.update() directly, sheet edits are clamped before application)
+  // So we always need to handle vitality here, regardless of options.midi
+  // (options.midi.totalDamage is set by preCalculateDamage for ALL damage calculations)
+  const vitalityItem = getVitalityItem(actor);
+  if (amount > 0 && vitalityItem) {
     // @ts-expect-error no dnd5e-types
-    const hp = actor.system.attributes.hp;
-    const vitalityDamage = amount - (hp.temp + hp.value);
-    updates[vitalityResource] = Math.max(0, foundry.utils.getProperty(actor, vitalityResource) as number - vitalityDamage);
+    const currentHP = actor.system.attributes.hp.value ?? 0;
+    // @ts-expect-error no dnd5e-types
+    const currentTempHP = actor.system.attributes.hp.temp ?? 0;
+    const totalHP = currentTempHP + currentHP;
+
+    // Check if damage exceeds total HP (causes overflow into vitality)
+    if (amount > totalHP) {
+      const overflowDamage = amount - totalHP;
+
+      // @ts-expect-error uses exists on items with uses
+      const currentSpent = vitalityItem.system.uses?.spent ?? 0;
+      // @ts-expect-error uses exists on items with uses
+      const maxUses = vitalityItem.system.uses?.max ?? 0;
+      const newSpent = Math.min(maxUses, currentSpent + overflowDamage);
+
+      // Mark that vitality was handled to prevent double-counting in preUpdateActor
+      options.midiVitalityHandled = true;
+      // Flag that vitality update is pending so updateActor hook skips checkWounded
+      options.midiVitalityUpdatePending = true;
+
+      // Queue vitality item update (will execute after actor update)
+      // Use setTimeout to ensure it happens after the actor update completes
+      // Note: checkWounded is called by the updateItem hook when vitality changes,
+      // so we don't need to call it explicitly here
+      setTimeout(async () => {
+        // @ts-expect-error item update for uses.spent
+        await vitalityItem.update({ "system.uses.spent": newSpent });
+      }, 100);
+    }
   }
+
   if (options.midi) {
     foundry.utils.setProperty(options, "midi.amount", amount);
     foundry.utils.setProperty(options, "midi.updates", updates);

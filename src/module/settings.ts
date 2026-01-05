@@ -66,6 +66,7 @@ class ConfigSettings {
   allowActorUseMacro: boolean = false;
   attackPerTarget: boolean = false;
   autoApplyDamage: string = "none";
+  damageCardStyle: string = "flexbox";
   playerDamageCard: string = "none";
   playerCardDamageDifferent: boolean = false;
   hidePlayerDamageCard: boolean = true;
@@ -215,7 +216,8 @@ class ConfigSettings {
     nearbyFoe: 5,
     optionalCritRule: -1,
     removeHiddenInvis: true,
-    vitalityResource: "",
+    vitalityItem: "", // Item name for vitality pool feature
+    vitalityDeadCondition: "dead", // Condition to apply when vitality reaches 0
     wallsBlockRange: "center",
   };
 }
@@ -494,6 +496,7 @@ export let fetchParams = () => {
   if (configSettings.optionalRules.checkFlanking === true) configSettings.optionalRules.checkFlanking = "ceadv";
   if (!configSettings.optionalRules.coverCalculation) configSettings.optionalRules.coverCalculation = "none";
   if (configSettings.optionalRules.displayBonusRolls === undefined) configSettings.optionalRules.displayBonusRolls = true;
+  if (!configSettings.optionalRules.vitalityDeadCondition) configSettings.optionalRules.vitalityDeadCondition = "dead";
 
   //@ts-expect-error legacy boolean value
   if (configSettings.optionalRules.checkFlanking === false) configSettings.optionalRules.checkFlanking = "off";
@@ -867,6 +870,11 @@ export const autoApplyDamageOptions = keysToOptionsObj("autoApplyDamageOptions",
   "yesCard",
   "yesCardMisses",
   "yesCardNPC"
+]);
+
+export const damageCardStyleOptions = keysToOptionsObj("damageCardStyleOptions", [
+  "flexbox",
+  "classic"
 ]);
 
 export const playerDamageCardOptions = keysToOptionsObj("playerDamageCardOptions", [

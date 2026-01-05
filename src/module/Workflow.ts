@@ -84,6 +84,7 @@ import {
   bonusDialog,
   getTargetDescriptor,
   getThrottlingFunction,
+  addAdvAttribution,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, procAbilityAdvantage } from "./patching.js";
@@ -3544,42 +3545,82 @@ export class Workflow {
     if (criticalFlags || noCriticalFlags) {
 
       conditionData ??= createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
-      if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.critical.all`, conditionData)
-        || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.critical.${attackType}`, conditionData)) {
+      if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.critical.all`, conditionData)) {
         this.critFlagSet = true;
+        this.attackAdvAttribution.add(`CRIT:critical.all`);
       }
-      if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.noCritical.all`, conditionData)
-        || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.noCritical.${attackType}`, conditionData)) {
+      if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.critical.${attackType}`, conditionData)) {
+        this.critFlagSet = true;
+        this.attackAdvAttribution.add(`CRIT:critical.${attackType}`);
+      }
+      if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.noCritical.all`, conditionData)) {
         this.noCritFlagSet = true;
+        this.attackAdvAttribution.add(`NOCRIT:noCritical.all`);
+      }
+      if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.noCritical.${attackType}`, conditionData)) {
+        this.noCritFlagSet = true;
+        this.attackAdvAttribution.add(`NOCRIT:noCritical.${attackType}`);
       }
     }
 
     // check target critical/noCritical
-    if (this.hitTargets.size === 1) {
-      const grants = firstTarget?.actor?.flags[MODULE_ID]?.grants?.critical ?? {};
-      const fails = firstTarget?.actor?.flags[MODULE_ID]?.fail?.critical ?? {};
-      if (grants || fails) {
-        if (Number.isNumeric(grants.range) && computeDistance(firstTarget, this.token, { wallsBlock: false }) <= Number(grants.range)) {
-          this.critFlagSet = true;
+    // For multiple targets: crit if ANY target grants crit, no crit if ALL targets grant noCrit
+    if (this.hitTargets.size >= 1) {
+      // grants.critical - check if ANY target has this flag
+      for (const target of this.hitTargets) {
+        const targetName = target?.name ?? target?.actor?.name ?? "";
+        const grants = target?.actor?.flags[MODULE_ID]?.grants?.critical ?? {};
+        const fails = target?.actor?.flags[MODULE_ID]?.fail?.critical ?? {};
+        if (grants || fails) {
+          if (Number.isNumeric(grants.range) && computeDistance(target, this.token, { wallsBlock: false }) <= Number(grants.range)) {
+            this.critFlagSet = true;
+            this.attackAdvAttribution.add(`CRIT:grants.critical.range ${targetName}`);
+          }
+          const conditionData = createConditionData({ workflow: this, target, actor: this.actor });
+          if (await evalAllConditionsAsync(target?.actor, `flags.${MODULE_ID}.grants.critical.all`, conditionData)) {
+            this.critFlagSet = true;
+            this.attackAdvAttribution.add(`CRIT:grants.critical.all ${targetName}`);
+          }
+          if (await evalAllConditionsAsync(target?.actor, `flags.${MODULE_ID}.grants.critical.${attackType}`, conditionData)) {
+            this.critFlagSet = true;
+            this.attackAdvAttribution.add(`CRIT:grants.critical.${attackType} ${targetName}`);
+          }
+          if (await evalAllConditionsAsync(target?.actor, `flags.${MODULE_ID}.fail.critical.all`, conditionData)
+            || await evalAllConditionsAsync(target?.actor, `flags.${MODULE_ID}.fail.critical.${attackType}`, conditionData)) {
+            console.warn(`midi-qol | processCriticalFlags | ${(target?.actor as Actor).name} flags.${MODULE_ID}.fail.critical is deprecated use flags.${MODULE_ID}.grants.noCritical.all/.attackType instead`);
+            this.noCritFlagSet = true;
+          }
         }
-        const conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
-        if (await evalAllConditionsAsync(firstTarget?.actor, `flags.${MODULE_ID}.grants.critical.all`, conditionData)
-          || await evalAllConditionsAsync(firstTarget?.actor, `flags.${MODULE_ID}.grants.critical.${attackType}`, conditionData)) {
-          this.critFlagSet = true;
+        if (this.critFlagSet) break; // Found a target that grants crit, no need to check more
+      }
+
+      // grants.noCritical - check if ALL targets have this flag
+      let allTargetsGrantNoCrit = true;
+      const noCritTargets: string[] = [];
+      for (const target of this.hitTargets) {
+        const targetName = target?.name ?? target?.actor?.name ?? "";
+        const conditionData = createConditionData({ workflow: this, target, actor: this.actor });
+        const hasNoCritAll = await evalAllConditionsAsync(target?.actor, `flags.${MODULE_ID}.grants.noCritical.all`, conditionData);
+        const hasNoCritType = await evalAllConditionsAsync(target?.actor, `flags.${MODULE_ID}.grants.noCritical.${attackType}`, conditionData);
+        if (!hasNoCritAll && !hasNoCritType) {
+          allTargetsGrantNoCrit = false;
+          break;
         }
-        if (await evalAllConditionsAsync(firstTarget?.actor, `flags.${MODULE_ID}.fail.critical.all`, conditionData)
-          || await evalAllConditionsAsync(firstTarget?.actor, `flags.${MODULE_ID}.fail.critical.${attackType}`, conditionData)) {
-          console.warn(`midi-qol | processCriticalFlags | ${(firstTarget?.actor as Actor).name} flags.${MODULE_ID}.fail.critical is dprecated user flags.${MODULE_ID}.grants.noCritical.all/.attackType instead`);
-          this.noCritFlagSet = true;
-        }
-        if (await evalAllConditionsAsync(firstTarget?.actor, `flags.${MODULE_ID}.grants.noCritical.all`, conditionData)
-          || await evalAllConditionsAsync(firstTarget?.actor, `flags.${MODULE_ID}.grants.noCritical.${attackType}`, conditionData)) {
-          this.noCritFlagSet = true;
-        }
+        noCritTargets.push(targetName);
+      }
+      if (allTargetsGrantNoCrit && this.hitTargets.size > 0) {
+        this.noCritFlagSet = true;
+        this.attackAdvAttribution.add(`NOCRIT:grants.noCritical ${noCritTargets.join(", ")}`);
       }
     }
     this.isCritical = this.isCritical || this.critFlagSet;
     if (this.noCritFlagSet) this.isCritical = false;
+
+    // Update roll tooltip with critical/noCritical attribution and regenerate HTML only if needed
+    if (this.attackRoll && (this.critFlagSet || this.noCritFlagSet) && ["formulaadv", "adv"].includes(configSettings.rollAlternate)) {
+      addAdvAttribution(this.attackRoll, this.attackAdvAttribution);
+      this.attackRollHTML = await midiRenderAttackRoll(this.attackRoll);
+    }
   }
 
   async checkAbilityAdvantage() {
@@ -6595,16 +6636,82 @@ export class Workflow {
       criticalThreshold = Math.min(criticalThreshold, targetCrit);
     }
     this.isCritical = this.diceRoll >= criticalThreshold;
+    // Add natural crit attribution
+    if (this.isCritical) {
+      this.attackAdvAttribution.add(`CRIT:${game.i18n.localize("DND5E.Roll")} >= ${criticalThreshold}`);
+    }
+
     const midiFumble: number = (this.activity?.fumbleThreshold as number) ?? 1; //someone could set the midi fumbleThreshold field to 0 or delete the field
     //@ts-expect-error no dnd5e-types
     const attackRollFumbleTarget = this.attackRoll.options.criticalFailure;
-    const fumbleTarget = 
-      attackRollFumbleTarget === 0 || midiFumble === 0 && attackRollFumbleTarget === 1 
+    const fumbleTarget =
+      attackRollFumbleTarget === 0 || midiFumble === 0 && attackRollFumbleTarget === 1
         ? 0
         : Math.max(attackRollFumbleTarget, midiFumble);
     this.isFumble = this.diceRoll <= fumbleTarget;
+    // Add natural fumble attribution
+    if (this.isFumble) {
+      this.attackAdvAttribution.add(`FUMBLE:${game.i18n.localize("DND5E.Roll")} <= ${fumbleTarget}`);
+    }
+
+    // Check target grants.fumble and grants.noFumble flags
+    // For multiple targets: fumble if ANY target grants fumble, no fumble if ALL targets grant noFumble
+    let fumbleAttributionAdded = false;
+    if (this.targets.size >= 1) {
+      const actionType = this.activity?.actionType;
+
+      // grants.fumble forces a fumble - check if ANY target has this flag
+      if (!this.isFumble) {
+        for (const target of this.targets) {
+          const targetName = target?.name ?? target?.actor?.name ?? "";
+          const conditionData = createConditionData({ workflow: this, target, actor: this.actor });
+          if (await evalAllConditionsAsync(target?.actor, `flags.${MODULE_ID}.grants.fumble.all`, conditionData)) {
+            this.isFumble = true;
+            this.attackAdvAttribution.add(`FUMBLE:grants.fumble.all ${targetName}`);
+            fumbleAttributionAdded = true;
+            break;
+          }
+          if (actionType && await evalAllConditionsAsync(target?.actor, `flags.${MODULE_ID}.grants.fumble.${actionType}`, conditionData)) {
+            this.isFumble = true;
+            this.attackAdvAttribution.add(`FUMBLE:grants.fumble.${actionType} ${targetName}`);
+            fumbleAttributionAdded = true;
+            break;
+          }
+        }
+      }
+
+      // grants.noFumble prevents a fumble - check if ALL targets have this flag
+      if (this.isFumble) {
+        let allTargetsGrantNoFumble = true;
+        const noFumbleTargets: string[] = [];
+        for (const target of this.targets) {
+          const targetName = target?.name ?? target?.actor?.name ?? "";
+          const conditionData = createConditionData({ workflow: this, target, actor: this.actor });
+          const hasNoFumbleAll = await evalAllConditionsAsync(target?.actor, `flags.${MODULE_ID}.grants.noFumble.all`, conditionData);
+          const hasNoFumbleType = actionType && await evalAllConditionsAsync(target?.actor, `flags.${MODULE_ID}.grants.noFumble.${actionType}`, conditionData);
+          if (!hasNoFumbleAll && !hasNoFumbleType) {
+            allTargetsGrantNoFumble = false;
+            break;
+          }
+          noFumbleTargets.push(targetName);
+        }
+        if (allTargetsGrantNoFumble && this.targets.size > 0) {
+          this.isFumble = false;
+          this.attackAdvAttribution.add(`NOFUMBLE:grants.noFumble ${noFumbleTargets.join(", ")}`);
+          fumbleAttributionAdded = true;
+        }
+      }
+    }
+
     this.attackTotal = this.attackRoll.total ?? 0;
     if (debugEnabled > 1) debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble);
+
+    // Update roll tooltip with crit/fumble attribution and regenerate HTML only if needed
+    // Regenerate if: natural crit/fumble occurred, or flag-based fumble attribution was added
+    if ((this.isCritical || this.isFumble || fumbleAttributionAdded) && ["formulaadv", "adv"].includes(configSettings.rollAlternate)) {
+      addAdvAttribution(this.attackRoll, this.attackAdvAttribution);
+      this.attackRollHTML = await midiRenderAttackRoll(this.attackRoll);
+    }
   }
 
   async processAttackRollBonusFlags() {

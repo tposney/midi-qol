@@ -604,6 +604,8 @@ Flags applied to a target that affect incoming attacks/rolls against them. All g
 
 *Attack types: mwak, rwak, msak, rsak.*
 
+**Multi-target behavior:** For attacks targeting multiple targets, if ANY target has `grants.critical`, the attack becomes a critical hit.
+
 ### Grant No Critical
 
 | Flag | Access | Description |
@@ -612,6 +614,30 @@ Flags applied to a target that affect incoming attacks/rolls against them. All g
 | `flags.midi-qol.grants.noCritical.{attackType}` | Evaluated | Specific attack type cannot crit |
 
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
+
+**Multi-target behavior:** For attacks targeting multiple targets, ALL targets must have `grants.noCritical` for the critical hit to be prevented.
+
+### Grant Fumble
+
+Force attacks against target to be fumbles (critical failures). For multi-target attacks, if ANY target has this flag, the attack fumbles.
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.grants.fumble.all` | Evaluated | Attacks against target auto-fumble |
+| `flags.midi-qol.grants.fumble.{attackType}` | Evaluated | Specific attack type auto-fumbles |
+
+*Attack types: mwak, rwak, msak, rsak.*
+
+### Grant No Fumble
+
+Prevent attacks against target from being fumbles. For multi-target attacks, ALL targets must have this flag to prevent the fumble.
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.grants.noFumble.all` | Evaluated | Attacks against target cannot fumble |
+| `flags.midi-qol.grants.noFumble.{attackType}` | Evaluated | Specific attack type cannot fumble |
+
+*Attack types: mwak, rwak, msak, rsak.*
 
 ### Grant Attack Bonus/Penalty
 

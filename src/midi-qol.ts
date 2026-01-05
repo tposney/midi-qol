@@ -6,7 +6,7 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
@@ -144,6 +144,10 @@ Hooks.once("init", () => {
 // @ts-expect-error it'll get populated don't worry
 globalThis.MidiQOL ??= {}
 globalThis.MidiQOL.checkIncapacitated = checkIncapacitated;
+globalThis.MidiQOL.getVitalityItem = getVitalityItem;
+globalThis.MidiQOL.getVitalityValue = getVitalityValue;
+globalThis.MidiQOL.getVitalityMax = getVitalityMax;
+globalThis.MidiQOL.hasVitalitySystem = hasVitalitySystem;
 
 function setupActivities() {
   // @ts-expect-error it'll get populated don't worry
@@ -733,9 +737,13 @@ function setupMidiQOLApi() {
     getTokenForActorAsSet: getOrCreateTokenForActorAsSet,
     getTraitMult,
     getUndoQueue,
+    getVitalityItem,
+    getVitalityMax,
+    getVitalityValue,
     hasCondition,
     hasUsedBonusAction,
     hasUsedReaction,
+    hasVitalitySystem,
     humanoid,
     incapacitatedConditions: ["incapacitated", "Convenient Effect: Incapacitated", "stunned", "Convenient Effect: Stunned", "paralyzed", "paralysis", "Convenient Effect: Paralyzed", "unconscious", "Convenient Effect: Unconscious", "dead", "Convenient Effect: Dead", "petrified", "Convenient Effect: Petrified"],
     InvisibleDisadvantageVisionModes,
@@ -972,6 +980,10 @@ function setupMidiFlags(DAEapi: any) {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.critical.all`);
   midiFlags.push(`flags.${MODULE_ID}.grants.noCritical.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noCritical.all`);
+  midiFlags.push(`flags.${MODULE_ID}.grants.noFumble.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noFumble.all`);
+  midiFlags.push(`flags.${MODULE_ID}.grants.fumble.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fumble.all`);
   midiFlags.push(`flags.${MODULE_ID}.grants.critical.range`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.critical.range`);
   midiFlags.push(`flags.${MODULE_ID}.grants.criticalThreshold`);
@@ -1048,6 +1060,10 @@ function setupMidiFlags(DAEapi: any) {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.critical.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.noCritical.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noCritical.${at}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.noFumble.${at}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noFumble.${at}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.fumble.${at}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fumble.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.fail.critical.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.critical.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.attack.bonus.${at}`);

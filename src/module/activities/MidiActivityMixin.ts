@@ -483,8 +483,14 @@ export let MidiActivityMixin = Base => {
         // config.midiOptions.workflowOptions.targetConfirmation ??= this.forcedTargetConfirmation;
         if (!usage.workflow) return undefined;
 
-        if (usage.midiOptions.isCritical) usage.workflow.isCritical = true;
-        if (usage.midiOptions.isFumble) usage.workflow.isFumble = true;
+        if (usage.midiOptions.isCritical) {
+          usage.workflow.isCritical = true;
+          usage.workflow.attackAdvAttribution.add("CRIT:activity.use");
+        }
+        if (usage.midiOptions.isFumble) {
+          usage.workflow.isFumble = true;
+          usage.workflow.attackAdvAttribution.add("FUMBLE:activity.use");
+        }
         const autoCreateTemplate = activityHasAutoPlaceTemplate(activity);
         const emanationNoTemplate = activityHasEmanationNoTemplate(activity);
         const isTrapWorkflow = usage.workflow instanceof TrapWorkflow;

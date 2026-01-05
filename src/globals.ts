@@ -295,6 +295,8 @@ declare module "fvtt-types/configuration" {
             attack?: Record<string, string>;
           };
           noCritical?: Record<string, string>;
+          fumble?: Record<string, string>;
+          noFumble?: Record<string, string>;
           noDisadvantage?: {
             attack?: Record<string, string>;
           };
@@ -617,9 +619,13 @@ declare global {
     getTokenPlayerNameForUser: typeof utils.getTokenPlayerNameForUser;
     getTraitMult: typeof utils.getTraitMult;
     getUndoQueue: typeof undo.getUndoQueue,
+    getVitalityItem: typeof utils.getVitalityItem,
+    getVitalityMax: typeof utils.getVitalityMax,
+    getVitalityValue: typeof utils.getVitalityValue,
     hasCondition: typeof utils.hasCondition,
     hasUsedBonusAction: typeof utils.hasUsedBonusAction,
     hasUsedReaction: typeof utils.hasUsedReaction,
+    hasVitalitySystem: typeof utils.hasVitalitySystem,
     humanoid: string[];
     incapacitatedConditions: string[];
     InvisibleDisadvantageVisionModes: string[];
@@ -816,6 +822,8 @@ export type DamageApplicationOptions = {
     uncannyDodge?: boolean;
   };
   midiIgnoreComputed?: boolean;
+  midiVitalityHandled?: boolean;
+  midiVitalityUpdatePending?: boolean;
 }
 
 
@@ -877,6 +885,9 @@ export type PreSetupDamageListEntry = {
   isNpc?: boolean;
   newVitality?: number;
   oldVitality?: number;
+  // vitalityItem fields (for items with uses as vitality pool)
+  oldVitalitySpent?: number;
+  newVitalitySpent?: number;
   rawDamageDetail: DamageDescription[];
   rawTotalDamage?: number;
   saved: boolean;
