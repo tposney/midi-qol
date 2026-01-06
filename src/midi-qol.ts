@@ -1,4 +1,4 @@
-import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, safeGetGameSetting, triggeredActivityTargetOptions, triggeredActivityRollAsOptions } from './module/settings.js';
+import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, safeGetGameSetting, shouldDisplaySaveDC, triggeredActivityTargetOptions, triggeredActivityRollAsOptions } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, readyPatching, initPatching, addDiceTermModifiers, MidiDependentsRegistry } from './module/patching.js';
@@ -781,6 +781,8 @@ function setupMidiQOLApi() {
     removeReactionUsed,
     resolveTargetConfirmation,
     safeGetGameSetting,
+    //@ts-expect-error newly added export
+    shouldDisplaySaveDC,
     selectTargetsForTemplate: templateTokens,
     setBonusActionUsed,
     setReactionUsed,

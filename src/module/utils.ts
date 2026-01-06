@@ -1,5 +1,5 @@
 import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface } from "../midi-qol.js";
-import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
@@ -718,7 +718,7 @@ export function requestPCSave(ability: string, rollType: string | undefined, pla
     let abilityDetails = GameSystemConfig.abilities[ability];
     if (!abilityDetails) abilityDetails = { ...GameSystemConfig.tools[ability], label: "" };
     if (abilityDetails?.label) abilityString = abilityDetails.label;
-    let content = ` ${actorName} ${configSettings.displaySaveDC ? "DC " + options.saveDetails.rollDC : ""} ${abilityString} ${i18n("midi-qol.saving-throw")}`;
+    let content = ` ${actorName} ${shouldDisplaySaveDC() ? "DC " + options.saveDetails.rollDC : ""} ${abilityString} ${i18n("midi-qol.saving-throw")}`;
     if (options.saveDetails.advantage && !options.saveDetails.disadvantage) content = content + ` (${i18n("DND5E.Advantage")}) - ${options.flavor})`;
     else if (!options.saveDetails.advantage && options.saveDetails.disadvantage) content = content + ` (${i18n("DND5E.Disadvantage")}) - ${options.flavor})`;
     else content + ` - ${options.flavor})`;
@@ -1267,7 +1267,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
           rollMode: rollMode ?? "public",
           content: await foundry.applications.handlebars.renderTemplate("systems/dnd5e/templates/chat/roll-request-card.hbs", {buttons: [{
             // @ts-expect-error no dnd5e-types
-            buttonLabel: game.system.enrichers.createRollLabel({ ...dataset, format: "long", icon: true, hideDC: !owner?.isGM && !configSettings.displaySaveDC }),
+            buttonLabel: game.system.enrichers.createRollLabel({ ...dataset, format: "long", icon: true, hideDC: !owner?.isGM && !shouldDisplaySaveDC() }),
             // @ts-expect-error no dnd5e-types
             hiddenLabel: game.system.enrichers.createRollLabel({ ...dataset, format: "long", icon: true, hideDC: true }),
             dataset: buttonDataset

@@ -609,8 +609,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
             });
           };
           break;
-        case "lmrtfy":
-          break;
         case "midi-qol":
           foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
           break;
@@ -924,16 +922,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
         problemSummary: "You must enable the 'flash-rolls-5e' module to use the 'Flash Token Bar' option for 'Roll NPC/Player Saves'",
         problemDetail: undefined,
         fixer: "Enable the 'flash-rolls-5e' module"
-      });
-    }
-    if (!installedModules.get("lmrtfy") &&
-      (configSettings.playerRollSaves === "lmrtfy" || configSettings.rollNPCSaves === "lmrtfy" || configSettings.rollNPCLinkedSaves === "lmrtfy")) {
-      data.problems.push({
-        moduleId: "lmrtfy",
-        severity: "Error",
-        problemSummary: "You must enable the 'lmrtfy' module to use the 'LMRTFY' option for Rolling NPC/Player saves",
-        problemDetail: undefined,
-        fixer: "Enable the 'lmrtfy' module"
       });
     }
   }

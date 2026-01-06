@@ -142,20 +142,19 @@
   <!-- Saves-->
   <div class="midi-qol-box">
     <div class="midi-qol-settings heading">{{localize "midi-qol.Saves"}}</div>
-    <label><strong>DND5E {{{localize "SETTINGS.DND5E.VISIBILITY.Challenge.Name"}}}:
-        {{challengeVisibility}}</strong></label>
+    <div class="form-group">
+      <label>DND5E {{{localize "SETTINGS.DND5E.VISIBILITY.Challenge.Name"}}}</label>
+      <select name="dnd5eChallengeVisibility" data-dtype="String">
+        {{selectOptions challengeVisibilityOptions selected=challengeVisibilityValue localize=true}}
+      </select>
+      <div class="notes midi-qol-faint">{{{localize "SETTINGS.DND5E.VISIBILITY.Challenge.Hint"}}}</div>
+    </div>
     <div class="form-group">
       <label>{{localize "midi-qol.AutoCheckSaves.Name"}}</label>
       <select name="autoCheckSaves" data-dtype="String">
         {{selectOptions autoCheckSavesOptions selected=configSettings.autoCheckSaves localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{localize "midi-qol.AutoCheckSaves.Hint"}}</div>
-    </div>
-
-    <div class="form-group">
-      <label>{{localize "midi-qol.DisplaySaveDC.Name"}}</label>
-      <input type="checkbox" name="displaySaveDC" data-dtype="Boolean" {{checked configSettings.displaySaveDC}} />
-      <div class="notes midi-qol-faint">{{{localize "midi-qol.DisplaySaveDC.Hint"}}}</div>
     </div>
 
     <div class="form-group">

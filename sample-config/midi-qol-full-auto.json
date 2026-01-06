@@ -22,7 +22,6 @@
     "autoCheckHit": "all",
     "autoCheckSaves": "all",
     "hideRollDetails": "none",
-    "displaySaveDC": true,
     "checkSaveText": true,
     "autoRollDamage": "onHit",
     "autoApplyDamage": "yesCard",

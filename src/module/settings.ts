@@ -103,7 +103,6 @@ class ConfigSettings {
   defaultSaveMultiplier: number = 0.5;
   diceSound: string = "";
   displaySaveAdvantage: boolean = true;
-  displaySaveDC: boolean = true;
   doConcentrationCheck: string = "chat";
   griddedGridless: boolean = false;
   gridlessFudge: number | undefined = 0;
@@ -648,6 +647,57 @@ export let fetchParams = () => {
       game.settings.set("midi-qol", "ConfigSettings", configSettings)
     });
   }
+
+  // Migration: displaySaveDC -> dnd5e challengeVisibility
+  //@ts-expect-error legacy property that's been removed from ConfigSettings
+  if (configSettings.displaySaveDC !== undefined && game.user === game.users?.activeGM) {
+    Hooks.once("ready", async () => {
+      //@ts-expect-error legacy property
+      const oldMidiDisplaySaveDC = configSettings.displaySaveDC;
+      const currentDnd5eVisibility = safeGetGameSetting("dnd5e", "challengeVisibility") as string;
+
+      // Determine most restrictive: if midi was false (hide DC) OR dnd5e is "none", result is "none"
+      let newVisibility = currentDnd5eVisibility;
+      if (oldMidiDisplaySaveDC === false || currentDnd5eVisibility === "none") {
+        newVisibility = "none";
+      }
+
+      // Check if we need to change the dnd5e setting
+      const needsChange = newVisibility !== currentDnd5eVisibility;
+
+      // Build the chat message content
+      let messageContent = `<h3>Midi-QOL Settings Migration</h3>`;
+      messageContent += `<p>The <strong>Display Saving Throw DC</strong> setting has been migrated to use the dnd5e <strong>Challenge Visibility</strong> setting.</p>`;
+      messageContent += `<ul>`;
+      messageContent += `<li>Old midi-qol displaySaveDC: <strong>${oldMidiDisplaySaveDC ? "Show DC" : "Hide DC"}</strong></li>`;
+      messageContent += `<li>Previous dnd5e challengeVisibility: <strong>${currentDnd5eVisibility}</strong></li>`;
+      if (needsChange) {
+        messageContent += `<li>Updated dnd5e challengeVisibility to: <strong>${newVisibility}</strong> (most restrictive)</li>`;
+      } else {
+        messageContent += `<li>dnd5e challengeVisibility unchanged: <strong>${newVisibility}</strong></li>`;
+      }
+      messageContent += `</ul>`;
+      messageContent += `<p><em>You can now control this setting from the dnd5e settings or from the midi-qol config panel under Workflow → Saves.</em></p>`;
+
+      // Apply the change if needed
+      if (needsChange) {
+        await game.settings.set("dnd5e", "challengeVisibility", newVisibility);
+      }
+
+      // Remove the old setting and save
+      //@ts-expect-error legacy property
+      delete configSettings.displaySaveDC;
+      await game.settings.set("midi-qol", "ConfigSettings", configSettings);
+
+      // Send chat message to GM
+      ChatMessage.create({
+        content: messageContent,
+        whisper: ChatMessage.getWhisperRecipients("GM"),
+        speaker: { alias: "Midi-QOL" }
+      });
+    });
+  }
+
   Hooks.callAll("midi-qol.ConfigSettingsChanged");
 }
 
@@ -1537,4 +1587,19 @@ export function safeGetGameSetting(moduleName: string, settingName: string): any
     //@ts-expect-error
     return game.settings.get(moduleName, settingName);
   else return undefined;
+}
+
+/**
+ * Helper to check if save DCs should be displayed, based on dnd5e's challengeVisibility setting.
+ * Replaces the deprecated midi-qol displaySaveDC setting.
+ * @param actor Optional actor to check ownership for "player" visibility setting.
+ *              When visibility is "player", DC is only shown if the actor has player ownership.
+ * @returns true if DCs should be shown, false if hidden
+ */
+export function shouldDisplaySaveDC(actor?: Actor): boolean {
+  const visibility = safeGetGameSetting("dnd5e", "challengeVisibility");
+  if (visibility === "none") return false;
+  if (visibility === "all") return true;
+  // "player" - only show DC if actor is player-owned (or no actor specified for backwards compat)
+  return !actor || (actor as any).hasPlayerOwner;
 }

@@ -20,7 +20,18 @@
 
 **Bug Fixes:**
 * Fixed `damageTypes.<type>` conditions not being available for optional damage bonuses (issue #1550). The damage type data was not being passed correctly during the bonus evaluation phase due to a timing issue where `workflow.damageRolls` was empty when condition evaluation occurred.
-* Fixed save DC being shown to players when "Display Saving throw DC" setting is disabled and an NPC targets a player (issue #1549).
+* Issue #1549 (save rolls showing success/failure when DC should be hidden) resolved as part of the DC display refactoring above - the target DC is no longer passed to dnd5e when visibility settings would hide it from the player.
+
+**Breaking Changes:**
+Since this change affects what players see please check your settings and the displayed cards before game time since I might have screwed up.
+* Removed the midi-qol "Display Saving Throw DC" (`displaySaveDC`) setting in favor of the dnd5e `challengeVisibility` setting:
+  - The dnd5e setting is now configurable directly from the midi-qol config panel (Workflow → Saves → "DND5E Challenge Visibility").
+  - Options: "All" (show DC to everyone), "Player" (show DC only for player-initiated saves), "None" (hide DC from players).
+  - GM always sees DCs regardless of this setting.
+  - Migration: On first load, existing `displaySaveDC` settings are automatically migrated to the dnd5e setting using the most restrictive value. A chat message is sent to the GM with migration details.
+  - New helper function `MidiQOL.shouldDisplaySaveDC(actor?)` returns `true` if DCs should be shown based on the dnd5e setting. When "Player" visibility is set, passing an actor checks `hasPlayerOwner` to determine visibility.
+  - Integration modules (Monk's Token Bar, Epic Rolls, Flash Rolls) now receive the display dc setting.
+  - See `docs/Display_Save_DC_20260106.md` for full documentation of the visibility logic.
 
 ### 13.0.35
 **New Features:**

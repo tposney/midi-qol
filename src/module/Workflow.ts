@@ -1,7 +1,7 @@
 import { warn, debug, log, i18n, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel } from "../midi-qol.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions, shouldDisplaySaveDC } from "./settings.js";
 import {
   createDamageDetail,
   processDamageRoll,
@@ -5422,7 +5422,7 @@ export class Workflow {
     return {
       token: target.id,
       dc: saveDetails.rollDC,
-      showdc: configSettings.displaySaveDC,
+      showdc: shouldDisplaySaveDC(this.actor),
       advantage: saveDetails.advantage,
       altKey: saveDetails.advantage === true,
       disadvantage: saveDetails.disadvantage,
@@ -5452,7 +5452,7 @@ export class Workflow {
       advantage: saveDetails.advantage,
       disadvantage: saveDetails.disadvantage,
       dc: saveDetails.rollDC,
-      showdc: configSettings.displaySaveDC,
+      showdc: shouldDisplaySaveDC(this.actor),
       isMagicSave,
       isConcentrationCheck: saveDetails.isConcentrationCheck,
       workflowOptions: saveDetails.workflowOptions,
@@ -5474,7 +5474,7 @@ export class Workflow {
       advantage: saveDetails.advantage,
       disadvantage: saveDetails.disadvantage,
       dc: saveDetails.rollDC,
-      showdc: configSettings.displaySaveDC,
+      showdc: shouldDisplaySaveDC(this.actor),
       fastForward: false,
       isMagicSave,
       isConcentrationCheck: saveDetails.isConcentrationCheck,
@@ -5512,13 +5512,13 @@ export class Workflow {
         tokenData: monkRequests,
         request,
         silent: true,
-        showdc: configSettings.displaySaveDC,
+        showdc: shouldDisplaySaveDC(this.actor),
         rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
           ? this.activity.midiProperties!.rollMode
           : whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC,
         isMagicSave
       };
-      if (configSettings.displaySaveDC && "whisper" !== configSettings.autoCheckSaves) {
+      if (shouldDisplaySaveDC(this.actor) && "whisper" !== configSettings.autoCheckSaves) {
         requestData.dc = rollDC;
       }
       timedExecuteAsGM("monksTokenBarSaves", requestData);
@@ -5553,7 +5553,7 @@ export class Workflow {
         workflowId: this.id,
         itemCardUuid: this.itemCardUuid
       };
-      if (configSettings.displaySaveDC && "whisper" !== configSettings.autoCheckSaves) {
+      if (shouldDisplaySaveDC(this.actor) && "whisper" !== configSettings.autoCheckSaves) {
         requestDataPlayer.dc = rollDC;
         requestDataGM.dc = rollDC;
       }
@@ -5637,7 +5637,7 @@ export class Workflow {
       type,
       options: {
         DC: rollDC,
-        showDC: configSettings.displaySaveDC,
+        showDC: shouldDisplaySaveDC(this.actor),
         blindRoll: configSettings.autoCheckSaves === "whisper",
         showRollResults: false,
         hideNames: true,
@@ -5715,6 +5715,8 @@ export class Workflow {
             delete this.saveTimeouts[requestId];
             let result: Roll[] | null;
 
+            // Only pass target DC if player should see success/failure (based on autoCheckSaves and visibility)
+            const showTargetDC = configSettings.autoCheckSaves !== "whisper" && shouldDisplaySaveDC(this.actor);
             if (!game.user?.isGM && saveDisplay === "allShow") {
               // Non-GM users don't have permission to create chat cards impersonating the GM
               result = await timedAwaitExecuteAsGM("rollAbility", {
@@ -5725,7 +5727,7 @@ export class Workflow {
                 tool: rollTool,
                 options: {
                   messageData: { user: playerId },
-                  target: configSettings.autoCheckSaves === "whisper" ? undefined : saveDetails.rollDC,
+                  target: showTargetDC ? saveDetails.rollDC : undefined,
                   chatMessage: showRoll,
                   mapKeys: false,
                   rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
@@ -5745,7 +5747,7 @@ export class Workflow {
             } else {
               let config: AnyMutableObject = {
                 configure: false,
-                target: rollDC,
+                target: showTargetDC ? rollDC : undefined,
                 ability: rollAbility,
                 midiOptions: {
                   workflowId: this.id,
@@ -5845,6 +5847,9 @@ export class Workflow {
       }
     }
 
+    // Only pass target DC if player should see success/failure (based on autoCheckSaves and visibility)
+    // GM always sees DC, non-GM only when visibility allows and not whisper mode
+    const showTargetDC = owner?.isGM || (configSettings.autoCheckSaves !== "whisper" && shouldDisplaySaveDC(this.actor));
     return socketlibSocket.executeAsUser("rollAbility", owner?.id, {
       targetUuid: (target.actor as Actor).uuid,
       request: rollType,
@@ -5853,7 +5858,7 @@ export class Workflow {
       tool: rollTool,
       options: {
         simulate,
-        target: saveDetails.rollDC,
+        target: showTargetDC ? saveDetails.rollDC : undefined,
         messageData: { user: owner?.id },
         chatMessage: showRoll,
         rollMode,

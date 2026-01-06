@@ -212,8 +212,6 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
       html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => {
         el.classList.remove("success", "failure", "critical", "fumble");
       });
-    }
-    if (!configSettings.highlightSuccess) {
       html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("success", "failure", "critical", "fumble"));
     }
   } else {
@@ -249,10 +247,14 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
     if (configSettings.autoCheckSaves === "gmOnly") {
       html.querySelectorAll<HTMLElement>(".midi-qol-saves-display").forEach(el => el.style.display = "none");
     } else {
-      const displayNPCSaves = safeGetGameSetting("dnd5e", "challengeVisibility") === "all";
-      const displayPlayerSaves = safeGetGameSetting("dnd5e", "challengeVisibility") !== "none";
+      // Non-GM branch: shouldDisplayChallenge has the raw setting value ("all", "player", or "none")
+      // dcHidden: DC not shown because visibility="player" and NPC caster
+      const dcHidden = shouldDisplayChallenge === "player" && !(messageActor as any)?.hasPlayerOwner;
+      // Show NPC saves when: visibility is "all", OR visibility is "player" AND caster is player-owned (DC shown)
+      const displayNPCSaves = shouldDisplayChallenge === "all" || (shouldDisplayChallenge === "player" && !dcHidden);
+      const displayPlayerSaves = shouldDisplayChallenge !== "none";
       const autoCheckSaves = configSettings.autoCheckSaves;
-      // hide tool tips from non-gm
+      // Hide save details from non-GM based on visibility settings
       if (!displayPlayerSaves || autoCheckSaves === "whisper" || message.blind) {
         html.querySelectorAll(".midi-qol-save-total").forEach(el => el.remove());
         html.querySelectorAll(".midi-qol-save-tooltip").forEach(el => el.remove());
@@ -260,10 +262,13 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
         html.querySelectorAll(".midi-qol-saveDC").forEach(el => el.remove());
       }
       if (!displayNPCSaves || autoCheckSaves === "whisper" || message.blind) {
-        html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-symbol").forEach(el => el.remove());
+        // When dcHidden, keep NPC save symbol (check/X) visible so players see pass/fail
+        if (!dcHidden) {
+          html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-symbol").forEach(el => el.remove());
+        }
         html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-tooltip").forEach(el => el.remove());
         html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-total").forEach(el => el.remove())
-        if (!displayNPCSaves && message.author?.isGM) { // only show dc for player initiated saves
+        if (!displayNPCSaves && !messageActor?.hasPlayerOwner) { // only show dc for player initiated saves
           html.querySelectorAll(".midi-qol-saveDC").forEach(el => el.remove());
         }
       } else if (!["allShow"].includes(autoCheckSaves)) {
@@ -272,15 +277,14 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
             html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-total").forEach(el => el.remove());
           }
       }
+      // Hide ALL highlights when: highlighting disabled, visibility is "none", autoCheckSaves is whisper/none
       if (!configSettings.highlightSuccess || !["all", "player"].includes(shouldDisplayChallenge) || ["whisper", "none"].includes(autoCheckSaves)) {
         html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("success", "failure", "critical", "fumble"));
-      } 
-      if (!displayNPCSaves || shouldDisplayChallenge !== "all" || !configSettings.highlightSuccess) {
-        html.querySelectorAll<HTMLElement>(".midi-qol-save-class.midi-qol-npc-target").forEach(el => el.classList.remove("success", "failure", "critical", "fumble"));
       }
-      // Hide save DC when displaySaveDC setting is disabled (issue #1549)
-      if (!configSettings.displaySaveDC) {
-        html.querySelectorAll(".midi-qol-saveDC").forEach(el => el.remove());
+      // Hide NPC highlights when: NPC saves not displayed AND DC not hidden, or highlighting disabled
+      // Keep highlights when: displayNPCSaves (full visibility) OR dcHidden (show pass/fail only)
+      if ((!displayNPCSaves && !dcHidden) || !configSettings.highlightSuccess) {
+        html.querySelectorAll<HTMLElement>(".midi-qol-save-class.midi-qol-npc-target").forEach(el => el.classList.remove("success", "failure", "critical", "fumble"));
       }
     }
 

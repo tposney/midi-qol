@@ -230,7 +230,8 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     const challengeVisibility = safeGetGameSetting("dnd5e", "challengeVisibility") as string;
     if (challengeVisibility !== undefined) {
       const choices = game.settings.settings.get("dnd5e.challengeVisibility")?.choices;
-      context.challengeVisibility = choices ? i18n(choices[challengeVisibility]) : challengeVisibility;
+      context.challengeVisibilityOptions = choices;
+      context.challengeVisibilityValue = challengeVisibility;
     }
     // context.tabs = this.#getTabs();
     if (debugEnabled > 0) warn("Config Panel: getData ", context)
@@ -362,6 +363,12 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       needReload = true;
     }
     if (configSettings.activityNamePrefix !== realData.activityNamePrefix) needReload = true;
+
+    // Handle dnd5e challengeVisibility setting separately
+    if (realData.dnd5eChallengeVisibility !== undefined) {
+      await game.settings.set("dnd5e", "challengeVisibility", realData.dnd5eChallengeVisibility);
+      delete realData.dnd5eChallengeVisibility;
+    }
 
     let newSettings = foundry.utils.mergeObject(configSettings, realData, { overwrite: true, inplace: false });
     if (game.user?.can("SETTINGS_MODIFY")) {
@@ -666,7 +673,6 @@ let quickSettingsDetails: any = {
     shortDescription: "Secret Squirrel",
     configSettings: {
       hideRollDetails: "all",
-      displaySaveDC: false,
       displaySaveAdvantage: false,
       hideNPCNames: "Unknown Creature",
       showReactionAttackRoll: "none",
@@ -677,7 +683,8 @@ let quickSettingsDetails: any = {
     codeChecks: (current, settings) => {
       if (current.autoCheckHit !== "none") settings.autoCheckHit = "whisper";
       if (current.autoCheckSaves !== "none") settings.autoCheckSaves = "whisper";
-      if (!installedModules.get("anonymous")) ui.notifications?.warn("'Anonymous' is recommended to hide creature names for normal dnd5e rolls")
+      if (!installedModules.get("anonymous")) ui.notifications?.warn("'Anonymous' is recommended to hide creature names for normal dnd5e rolls");
+      game.settings.set("dnd5e", "challengeVisibility", "none");
     }
   },
   FullDisclosure: {
@@ -685,7 +692,6 @@ let quickSettingsDetails: any = {
     shortDescription: "Full Disclosure",
     configSettings: {
       hideRollDetails: "none",
-      displaySaveDC: true,
       displaySaveAdvantage: true,
       showReactionAttackRoll: "all",
       hideNPCNames: "",
@@ -696,6 +702,7 @@ let quickSettingsDetails: any = {
     codeChecks: (current, settings) => {
       if (current.autoCheckHit !== "none") settings.autoCheckHit = "all";
       if (current.autoCheckSaves !== "none") settings.autoCheckSaves = "allShow";
+      game.settings.set("dnd5e", "challengeVisibility", "all");
     }
   }
 }

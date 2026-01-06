@@ -1,4 +1,4 @@
-import { checkRule, configSettings, safeGetGameSetting } from "./settings.js";
+import { checkRule, configSettings, safeGetGameSetting, shouldDisplaySaveDC } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
@@ -1984,7 +1984,7 @@ async function rollActionSave(data: any) {
         type: request,
         dc: saveDC,
         action: "rollRequest",
-        hideDC: !game.user?.isGM && !configSettings.displaySaveDC,
+        hideDC: !game.user?.isGM && !shouldDisplaySaveDC(),
         format: "short",
         icon: false
       };

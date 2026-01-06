@@ -98,7 +98,7 @@ If you prefer to configure settings manually, here's a recommended full automati
 | Auto Target on Template | Workflow | Walls Block |
 | GM Auto Roll Attack | GM | Checked |
 | GM Auto Fast-Forward Attack | GM | Checked |
-| GM Auto Roll Damage | GM | Attack Hits |
+| GM Auto Roll Damage | GM | Always |
 | GM Auto Fast-Forward Damage | GM | Checked |
 | Player Auto Roll Attack | Player | Checked |
 | Player Auto Roll Damage | Player | Attack Hits |
@@ -106,7 +106,7 @@ If you prefer to configure settings manually, here's a recommended full automati
 | Auto Check Hits | Workflow | On |
 | Auto Check Saves | Workflow | Save - players see results |
 | Players Roll Saves | Workflow | Auto roll and show roll dialog |
-| Player Save Timeout | Workflow | 20 seconds |
+| Player Save Timeout | Workflow | 30 seconds |
 | Auto Apply Damage | Workflow | Yes + undo card |
 | Damage Immunities | Workflow | Apply + physical |
 | Auto Apply Item Effects | Workflow | Checked |
@@ -319,7 +319,7 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 | Setting | Description |
 |---------|-------------|
 | Auto Check Saves | Automatic save checking (None/No Roll/All See/All Show/Whisper/GM Only) |
-| Display Save DC | Show save DC to players |
+| DND5E Challenge Visibility | Show save DC to players (All/Player/None) - uses dnd5e setting. "Player" shows DC only for player-owned actor saves. |
 | Display Save Advantage | Show advantage/disadvantage status |
 | Default Save Multiplier | Damage multiplier on save (default 0.5) |
 | Player Roll Saves | How players roll saves (None/None+Dialog/Chat/Monks TB/Flash Rolls/Epic Rolls) |
@@ -340,6 +340,7 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 | Setting | Description |
 |---------|-------------|
 | Auto Apply Damage | Auto apply damage to hit targets (No/Yes/Yes+Card options) |
+| Damage Card Style | Flexbox (inline HP/TempHP/Vitality display) or Classic (table layout). Use Flexbox if using vitality. |
 | Add Chat Damage Buttons | Enable dnd5e damage tray on chat messages (None/GM/PC/Both) |
 | Player Damage Card | Show a simpler damage card to players (not shown to GM) |
 | Player Card Damage Different | Show player damage card if rolled damage differs from applied damage |
@@ -455,7 +456,9 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 | Active Defence DC | Show active defence DC in chat card |
 | Active Defence Show | Roll visibility mode for active defence |
 | Challenge Mode Armor | Alternative armor class rules (see README) |
-| Vitality Resource | Resource for vitality pool house rule (damage at 0 HP goes here) |
+| Vitality Item | Name of a feature item on the actor to track vitality (overflow damage at 0 HP reduces vitality). Item uses.max = max vitality, uses.spent = vitality lost. |
+| Vitality Dead Condition | Condition to apply when vitality reaches 0 (default: dead) |
+| Vitality Death Requires | When actor is dead: "Vitality of 0" or "Vitality of 0 AND HP of 0" |
 | Enable DDB Game Log | Accept rolls from ddb-game-log to trigger midi workflows |
 
 ## Custom Sounds
