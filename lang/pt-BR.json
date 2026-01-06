@@ -381,6 +381,8 @@
   "midi-qol.AutoFastForwardDamage.Name": "Avanço Rápido Automático p/ Dano",
   "midi-qol.midi-none": "Sem Dano",
   "midi-qol.noType": "Sem Tipo",
+  "midi-qol.vitalityDamage": "Vitalidade",
+  "midi-qol.vitalityHealing": "Vitalidade",
   "midi-qol.ItemList": "Escolha items que exibirão detalhes em cartões de itens",
   "midi-qol.DisplayItems": "Mostrar Detalhes",
   "midi-qol.fastForward": "(fast)",
@@ -476,7 +478,8 @@
     "levelsautocover": "Levels Auto Cover",
     "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "tokencover": "Alternative Token Cover",
-    "tokenvisibility": "Alternative Token Visibility (descontinuado)"
+    "tokenvisibility": "Alternative Token Visibility (descontinuado)",
+    "simplecover5e": "Simple Cover 5e"
   },
   "midi-qol.NearbyAllyRanged.Name": "(Regra da Casa) Ataques à distância contra inimigos próximos de aliados têm desvantagem",
   "midi-qol.WallsBlockRangeOptions": {
