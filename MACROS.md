@@ -1,6 +1,7 @@
 # Midi-QOL Macro Writing Guide
 
-This document covers macro writing for midi-qol. For general module documentation, see [README.md](README.md).
+> [!tip] Navigation
+> This document covers macro writing for midi-qol. For general module documentation, see [README.md](README.md).
 
 ## Table of Contents
 - [Getting Started](#getting-started)
@@ -15,6 +16,14 @@ This document covers macro writing for midi-qol. For general module documentatio
 - [DAE vs Midi-QOL Macros](#dae-vs-midi-qol-macros)
 - [Tips and Tricks](#tips-and-tricks)
 - [Sample Chat Logs](#sample-chat-logs)
+
+## Other Pages
+
+- [Flags](/FLAGS.md)
+- [Flowchart](/docs/flowchart.md)
+- [Getting Started](/Getting%20Started.md)
+- [Readme](/README.md)
+- [Workflow Fields](/docs/workflowfields.md)
 
 ---
 
@@ -449,7 +458,7 @@ flags.midi-qol.onUseMacroName CUSTOM macro,macroPass
 
 ### Macro Passes
 
-> **Documentation:** A flowchart is available at [docs/flowchart.md](docs/flowchart.md).
+> [!important] **Documentation:** A flowchart is available at [docs/flowchart.md](docs/flowchart.md).
 > Data available at each pass: [docs/workflowfields.md](docs/workflowfields.md).
 
 **Item/Actor passes:**
@@ -503,7 +512,8 @@ The workflow calls `pre{StateName}` and `post{StateName}` macros when transition
 | `preCompleted` | `postCompleted` | Workflow completed |
 | `preRollFinished` | `postRollFinished` | Roll finished (final state) |
 
-**Note:** Returning `false` from a pre-state macro or setting `workflow.aborted = true` will abort the workflow.
+> [!note]
+> Returning `false` from a pre-state macro or setting `workflow.aborted = true` will abort the workflow.
 
 **Corresponding Hooks:**
 

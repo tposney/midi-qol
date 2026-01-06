@@ -50,6 +50,14 @@ Midi-QOL is highly configurable with quick-start presets for common play styles,
 - [For Developers](#for-developers)
 - [Changelog & Credits](#changelog--credits)
 
+## Other Pages
+
+- [Flags](/FLAGS.md)
+- [Flowchart](/docs/flowchart.md)
+- [Getting Started](/Getting%20Started.md)
+- [Macros](/MACROS.md)
+- [Workflow Fields](/docs/workflowfields.md)
+
 ---
 
 # Quick Start
@@ -111,7 +119,8 @@ If you prefer to configure settings manually, here's a recommended full automati
 | Damage Immunities | Workflow | Apply + physical |
 | Auto Apply Item Effects | Workflow | Checked |
 
-See [Configuration Reference](#configuration-reference) for all available settings.
+> [!tip] Navigation
+> See [Configuration Reference](#configuration-reference) for all available settings.
 
 ---
 
@@ -792,7 +801,8 @@ Additional expiry options (requires DAE 0.2.25+):
 
 # Flags Reference
 
-For a more complete reference of `flags.midi-qol.*` flags, see [FLAGS.md](FLAGS.md).
+> [!tip] Navigation
+> For a more complete reference of `flags.midi-qol.*` flags, see [FLAGS.md](FLAGS.md).
 
 ## Quick Reference
 
@@ -828,7 +838,8 @@ Set via active effects using **CUSTOM** or **OVERRIDE** mode.
 | `flags.midi-qol.concentrationSaveBonus` | Add to concentration saves |
 | `flags.midi-qol.deathSaveBonus` | Add to death saves |
 
-See [FLAGS.md](FLAGS.md) for complete documentation of all flags.
+> [!tip] Navigation 
+> See [FLAGS.md](FLAGS.md) for complete documentation of all flags.
 
 ---
 
@@ -898,7 +909,8 @@ No world information is exported. Module list helps with debugging.
 
 ## Macro Writing
 
-See [MACROS.md](MACROS.md) for macro documentation including:
+> [!tip] Navigation
+> See [MACROS.md](MACROS.md) for macro documentation including:
 - Item roll options
 - MidiQOL API functions
 - Hooks reference
@@ -993,7 +1005,8 @@ Additional states: `AwaitTemplate`, `TemplatePlaced`, `AoETargetConfirmation`, `
 
 All workflow state hooks also have `midi-qol.premades.{pre|post}{StateName}` variants for use by premade effect libraries.
 
-See [MACROS.md](MACROS.md) for detailed hook usage examples.
+> [!tip] Navigation
+> See [MACROS.md](MACROS.md#hooks-reference) for detailed hook usage examples.
 
 ## Enhanced Traits
 
@@ -1111,7 +1124,8 @@ turn=start, saveDC=14, saveAbility=str|dex, rollType=check, actionSave=dialog, s
 - The `itemName` parameter can reference items by UUID or by name (searches actor items first, then world items)
 - For activity-based overtime effects (recommended for v13+), see the Over Time Effects section in Activity configuration
 
-See [docs/workflowfields.md](docs/workflowfields.md) for available workflow data in conditions.
+> [!tip] Navigation
+> See [docs/workflowfields.md](docs/workflowfields.md) for available workflow data in conditions.
 
 ---
 
