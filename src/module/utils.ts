@@ -3768,9 +3768,9 @@ export function getOptionalCountRemaining(actor: Actor.Implementation, flag: str
     let usedFlag = flag.replace(".count", ".used");
     // check for the flag
     if (foundry.utils.getProperty(actor, usedFlag) === game.combat.uuid) return 0;
-  } else if (["turn"].includes(countValue) && game.combat?.turn) {
+  } else if (["turn"].includes(countValue) && game.combat) {
     let usedFlag = flag.replace(".count", ".used");
-    if (foundry.utils.getProperty(actor, usedFlag) === game.combat.uuid || game.combat?.turns[game.combat?.turn]?.actor !== actor) return 0;
+    if (foundry.utils.getProperty(actor, usedFlag) === game.combat.uuid || game.combat?.turns[game.combat?.turn]?.actor?.uuid !== actor?.uuid) return 0;
   } else if (countValue === "reaction") {
     // return await hasUsedReaction(actor)
     return actor.flags?.[MODULE_ID]?.actions?.reactionCombatRound && needsReactionCheck(actor) ? 0 : 1;
