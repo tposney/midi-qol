@@ -1,5 +1,6 @@
 > [!tip] Navigation
-> [Go to Readme](/README.md#item-onuse-macro-actor-onuse-macro-and-damage-bonus-macro-actor-special-traits-fields) <br>
+> [Go to Readme](/README.md#table-of-contents) <br>
+> [Go to Macro Guide](/MACROS.md#table-of-contents) <br>
 > [Go to Flowchart (v12.4.64 to v13.0.22)](docs/flowchart.md) <br>
 > [Go to Workflow Fields](docs/workflowfields.md)
 

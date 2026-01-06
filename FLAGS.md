@@ -27,6 +27,14 @@ This document is a reference for `flags.midi-qol.*` flags that can be set via Ac
 - [Native dnd5e Alternatives](#native-dnd5e-alternatives)
 - [Deprecated Flags](#deprecated-flags)
 
+## Other Pages
+
+- [Flowchart](/docs/flowchart.md)
+- [Getting Started](/Getting%20Started.md)
+- [Macros](/MACROS.md)
+- [Readme](/README.md)
+- [Workflow Fields](/docs/workflowfields.md)
+
 ---
 
 ## Setting Flags via Active Effects
@@ -101,18 +109,6 @@ The final stored value includes the origin item UUID appended with `|`:
 
 Multiple onUseMacroName effects are concatenated with commas.
 
-#### ItemMacro in Optional Bonus Flags
-
-When using `ItemMacro` as the value for optional bonus flags (e.g., `flags.midi-qol.optional.NAME.attack.all`), it is automatically rewritten:
-
-| Input Value | Rewritten To |
-|-------------|--------------|
-| `ItemMacro` (origin is Item) | `ItemMacro.{originItemUuid}` |
-| `ItemMacro` (origin is ActiveEffect) | `ItemMacro.{effectOriginUuid}` |
-| `ItemMacro` (origin includes ActiveEffect) | `ItemMacro.{parentItemUuid}` (strips ActiveEffect from path) |
-
-This allows effects to reference their source item's macro without hardcoding UUIDs.
-
 ## Flag Access Types
 
 Flags are accessed in two ways:
@@ -151,7 +147,8 @@ item.level >= 3
 details.cr >= 10
 ```
 
-**Note:** The `@` syntax uses `Roll.replaceFormulaData()` for substitution, while direct access uses the sandbox proxy. Both produce the same result.
+> [!note]
+> The `@` syntax uses `Roll.replaceFormulaData()` for substitution, while direct access uses the sandbox proxy. Both produce the same result.
 
 ### Available Data in Expressions
 
@@ -730,7 +727,8 @@ Advantage or disadvantage on saves against magical effects. All magic resistance
 
 Set minimum or maximum values for the d20 roll (not total). All min/max flags are **Direct** (numeric value).
 
-> **Note:** Some flags are mapped to system fields (deprecated).
+> [!note]
+> Some flags are mapped to system fields (deprecated).
 
 ### Maximum Roll
 
@@ -950,6 +948,9 @@ When the actor makes an attack roll, they'll be prompted to use "Lucky - Reroll 
 | `flags.midi-qol.optional.NAME.force` | Evaluated | Condition to force activation |
 | `flags.midi-qol.optional.NAME.macroToCall` | Direct | Macro to execute |
 
+> [!important] Documentation
+> Guides on the data available for activation and force conditions are available in the [Conditional Expression Evaluation](#conditional-expression-evaluation) section, or in the [MidiQOL Discord](https://discord.com/channels/915186263609454632/1218903432392347658).
+
 **Count Format Options:**
 | Value | Description |
 |-------|-------------|
@@ -960,8 +961,15 @@ When the actor makes an attack roll, they'll be prompted to use "Lucky - Reroll 
 | `reaction` | Tied to reaction usage |
 | `bonusAction` | Tied to bonus action usage |
 | `every` | Always available (unlimited) |
-| `ItemUses.{itemName}` | Linked to an item's uses (e.g., `ItemUses.Bardic Inspiration`) |
-| `ActivityUses.{activityName}` | Linked to an activity's uses |
+| `ItemUses.identifier.{itemIdentifier}` | Linked to an item's uses (e.g., `ItemUses.identifier.bardic-inspiration`) |
+| `ItemUses.partialNameMatch.{itemName}` | (e.g., `ItemUses.Insp`) |
+| `ItemUses.exactNameMatch.{itemName}` | (e.g., `ItemUses.exactNameMatch.Bardic Inspiration`) |
+| `ItemUses.{itemName}` | Backwards compatibility only (e.g., `ItemUses.Bardic Inspiration`) |
+| `ActivityUses.identifier.{itemIdentifier}.{activityIdentifier}` | Linked to an activity's uses (e.g., `ActivityUses.identifier.bardic-inspiration.sing-song`) |
+| `ActivityUses.id.{itemID}.{activityID}` | (e.g., `ActivityUses.id.iLKpfoGF7rGpvNWD.NegUUOdFH35S3xNi`) |
+| `ActivityUses.partialNameMatch.{itemName}.{activityName}` | (e.g., `ActivityUses.partialNameMatch.Insp.Song`) |
+| `ActivityUses.exactNameMatch.{itemName}.{activityName}` | (e.g., `ActivityUses.exactNameMatch.Bardic Inspiration.Sing Song`) |
+| `ActivityUses.{itemName}.{activityName}` | (e.g., `ActivityUses.Bardic Inspiration.Sing Song`) |
 | `@{path}` | Reference to actor data (e.g., `@resources.primary.value`) |
 
 **Bonus Value Options:**
@@ -981,9 +989,23 @@ The value set for optional bonus flags determines what happens when the bonus is
 | `replace {formula}` | Replace roll entirely with new formula (e.g., `replace 10 + @abilities.dex.mod`) |
 | `success` | Force the roll to succeed (sets result to 99) |
 | `fail` | Force the roll to fail (sets result to -1) |
-| `ItemMacro.{name}` | Call an item macro (e.g., `ItemMacro.Lucky`) |
+| `ItemMacro` | Call the item macro from the item that applied the effect |
+| `ItemMacro.{name}` | Call the item macro from the specified item (e.g., `ItemMacro.Lucky`) |
+| `ItemMacro.{itemUuid}` | Call the item macro from the specified item |
 | `Macro.{name}` | Call a world/compendium macro |
 | `function.{name}` | Call a registered function |
+
+#### ItemMacro in Optional Bonus Flags
+
+When using `ItemMacro` as the value for optional bonus flags (e.g., `flags.midi-qol.optional.NAME.attack.all`), it is automatically rewritten:
+
+| Input Value | Rewritten To |
+|-------------|--------------|
+| `ItemMacro` (origin is Item) | `ItemMacro.{originItemUuid}` |
+| `ItemMacro` (origin is ActiveEffect) | `ItemMacro.{effectOriginUuid}` |
+| `ItemMacro` (origin includes ActiveEffect) | `ItemMacro.{parentItemUuid}` (strips ActiveEffect from path) |
+
+This allows effects to reference their source item's macro without hardcoding UUIDs.
 
 **Examples:**
 - `flags.midi-qol.optional.lucky.attack.all CUSTOM reroll-kh` - Lucky feat reroll, keep highest
@@ -1104,7 +1126,8 @@ Only prompt when save fails.
 |------|--------|-------------|
 | `flags.midi-qol.OverTime` | Direct | Configure effects that trigger on turn start/end (string format) |
 
-See [README.md](README.md#overtime-effects) for OverTime syntax and parameters.
+> [!tip] Navigation
+> See the README for OverTime syntax and parameters. ([Activity Overtimes](/README.md#over-time-effects-activity-tab) or [Legacy Overtimes](/README.md#overtime-effects-flag-based))
 
 ---
 
@@ -1212,7 +1235,8 @@ All `flags.midi-qol.DR.*` flags are deprecated. Use `system.traits.dm.*` fields 
 
 *Attack types: mwak, rwak, msak, rsak.*
 
-See [Damage Modification (system.traits.dm)](#damage-modification-systemtraitsdm) for full documentation.
+> [!tip] Navigation
+> See [Damage Modification (system.traits.dm)](#damage-modification-systemtraitsdm) for full documentation.
 
 ### Critical Failure Flags
 
