@@ -114,7 +114,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
   public static exportTroubleShooterData() {
     const data = TroubleShooter.collectTroubleShooterData();
     const filename = "fvtt-midi-qol-troubleshooter.json"
-    saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
+    foundry.utils.saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
   }
   public static async importTroubleShooterDataFromJSONDialog() {
     const content = await foundry.applications.handlebars.renderTemplate("templates/apps/import-data.hbs",
@@ -137,7 +137,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
             callback: event => {
               const form = (event.currentTarget as HTMLElement | null)?.querySelector("form");
               if (!form?.data.files.length) return ui.notifications?.error("You did not upload a data file!");
-              readTextFromFile(form.data.files[0]).then(json => {
+              foundry.utils.readTextFromFile(form.data.files[0]).then(json => {
                 const jsonData = JSON.parse(json);
                 if (foundry.utils.isNewerVersion(minimumMidiVersion, jsonData.midiVersion ?? "0.0.0")) {
                   ui.notifications?.error("Trouble Shooter Data is too old to use");
