@@ -76,4 +76,8 @@ export function checkModules() { // this really should happen in TroubleShooter
   if (game.user?.isGM && !installedModules.get("socketlib")) {
     ui.notifications?.error("midi-qol.NoSocketLib", {permanent: true, localize: true});
   }
+  // Warn about deprecated built-in chat log pruning
+  if (game.user?.isGM && configSettings.pruneChatLog && !game.modules.get("chatlog-prune")?.active) {
+    ui.notifications?.warn("midi-qol.chatlogPruneDeprecated", { localize: true });
+  }
 }

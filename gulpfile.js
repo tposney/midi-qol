@@ -118,6 +118,7 @@ function buildSourceEsbuild(minifySources = false, output = null) {
       sourcemap: true,
       sourcesContent: true,
       minify: minifySources,
+      keepNames: true, // Preserve class/function names for debugging (workflow logging)
       target: "es2022",
       platform: "browser",
       logLevel: "info",
@@ -254,6 +255,111 @@ exports.step_compressDistribution = compressDistribution();
  */
 exports.clean = pdel([DIST, BUNDLE]);
 exports.devClean = pdel([DEV_DIST()]);
+
+/**
+ * Extract packs: packs/ -> pack-src/ (LevelDB to JSON)
+ */
+exports.extractPacks = gulp.series(
+  pdel(["pack-src/sampleitems"]),
+  async () => {
+    if (!foundryvttCli) foundryvttCli = await import("@foundryvtt/foundryvtt-cli");
+    await foundryvttCli.extractPack("packs/sampleitems", "pack-src/sampleitems");
+    plog("Extracted packs/sampleitems to pack-src/sampleitems");
+  }
+);
+
+/**
+ * Generate a random Foundry-style ID (16 alphanumeric characters)
+ */
+function generateFoundryId() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let id = "";
+  for (let i = 0; i < 16; i++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return id;
+}
+
+/**
+ * Process pack-src JSON files to ensure they have _id and _key
+ * Also handles embedded documents (effects, activities)
+ */
+async function ensurePackIds(packSrcDir) {
+  const files = fs.readdirSync(packSrcDir).filter(f => f.endsWith(".json"));
+  let modified = 0;
+
+  for (const file of files) {
+    const filePath = path.join(packSrcDir, file);
+    const content = fs.readFileSync(filePath, "utf8");
+    const item = JSON.parse(content);
+    let changed = false;
+
+    // Generate _id if missing
+    if (!item._id) {
+      item._id = generateFoundryId();
+      changed = true;
+      console.log(`Generated _id for ${file}: ${item._id}`);
+    }
+
+    // Generate or fix _key if missing/wrong
+    const isFolder = item.type === "Folder" || (item.sorting !== undefined && !item.system);
+    const expectedKey = isFolder ? `!folders!${item._id}` : `!items!${item._id}`;
+    if (!item._key || item._key !== expectedKey) {
+      item._key = expectedKey;
+      changed = true;
+      console.log(`Set _key for ${file}: ${item._key}`);
+    }
+
+    // Handle embedded effects
+    if (Array.isArray(item.effects)) {
+      for (const effect of item.effects) {
+        if (!effect._id) {
+          effect._id = generateFoundryId();
+          changed = true;
+        }
+        const effectKey = `!items.effects!${item._id}.${effect._id}`;
+        if (!effect._key || effect._key !== effectKey) {
+          effect._key = effectKey;
+          changed = true;
+        }
+      }
+    }
+
+    // Handle embedded activities (dnd5e 5.x)
+    if (item.system?.activities && typeof item.system.activities === "object") {
+      for (const [actId, activity] of Object.entries(item.system.activities)) {
+        if (activity && typeof activity === "object") {
+          if (!activity._id) {
+            activity._id = actId; // Use the key as ID if missing
+            changed = true;
+          }
+        }
+      }
+    }
+
+    if (changed) {
+      fs.writeFileSync(filePath, JSON.stringify(item, null, 2));
+      modified++;
+    }
+  }
+
+  if (modified > 0) {
+    console.log(`Updated ${modified} file(s) with generated IDs`);
+  }
+}
+
+/**
+ * Compile packs: pack-src/ -> packs/ (JSON to LevelDB)
+ */
+exports.compilePacks = gulp.series(
+  pdel(["packs/sampleitems"]),
+  async () => {
+    await ensurePackIds("pack-src/sampleitems");
+    if (!foundryvttCli) foundryvttCli = await import("@foundryvtt/foundryvtt-cli");
+    await foundryvttCli.compilePack("pack-src/sampleitems", "packs/sampleitems");
+    plog("Compiled pack-src/sampleitems to packs/sampleitems");
+  }
+);
 /**
  * Default Build operation (uses esbuild for single bundled file, with type checking)
  */
@@ -299,7 +405,7 @@ exports.zip = gulp.series(
   pdel([DIST]),
   typeCheck(),
   gulp.parallel(
-    buildSourceEsbuild(true, DIST),
+    buildSourceEsbuild(false, DIST), // Don't minify - preserves private field names for debugging
     buildManifest(null, true),
     outputLanguages(),
     outputTemplates(),

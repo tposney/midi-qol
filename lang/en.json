@@ -553,6 +553,7 @@
   "midi-qol.UsePlayerPortrait.Hint": "For Actors of type character use the actor portrait instead of the token image in midi-qol chat cards",
   "midi-qol.DistanceIncludesHeight.Name": "Include height difference in distance calculations",
   "midi-qol.NoSocketLib": "Midi-qol requires socketlib installed and enabled",
+  "midi-qol.chatlogPruneDeprecated": "Midi-qol's built-in chat log pruning is deprecated. Please install and activate the 'chatlog-prune' module. This feature will be removed in midi-qol v14.",
   "midi-qol.confirm": "Confirmation Dialog",
   "midi-qol.ExportConfig": "Export midi-qol settings to json file",
   "midi-qol.ImportConfig": "Import midi-qol settings from json file",

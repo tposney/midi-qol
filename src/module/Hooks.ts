@@ -1003,7 +1003,7 @@ function applyDamageReduction(actor: Actor.Implementation, damages: DamageDescri
     }
     let { totalDamage, temp } = damages.reduce((acc, d) => {
       if (d.type === "temphp") acc.temp += d.value;
-      else if (d.type !== "midi-none") acc.totalDamage += d.value;
+      else if (!["midi-none", "vitality"].includes(d.type)) acc.totalDamage += d.value; // Exclude vitality from HP damage
       return acc;
     }, { totalDamage: 0, temp: 0 });
     // const totalDamage = damages.reduce((a, b) => a + b.value, 0);

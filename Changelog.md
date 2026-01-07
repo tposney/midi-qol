@@ -1,3 +1,18 @@
+### 13.0.37
+**Bug Fixes:**
+* Fixed chat log popout not displaying existing messages when opened. The main sidebar and popout now track rendered messages independently, allowing both to function correctly without interfering with each other.
+* Disabled minification in esbuild to preserve private field names (e.g., `#actor`, `#abort`) for debugging. Previously, minification was mangling these to `#a`, `#b`, etc., making workflow data unreadable when logged in macros.
+* Fixes for some incorrect damage display in the reverse damage card when applying vitality damage.
+
+**Code Improvements**
+* The sample items compendium is now build from the pack-src directory. So suggesting changes to the sample items compendium can now simply attach the item json to the suggestion.
+
+**Community Contributions:**
+* MR !387: Fixed `game.combat?.turn` conditional always being false when turn is 0 or there's only one combatant. This affected optional uses remaining checks. Thanks thatlonelybugbear.
+* MR !390: Fixed deprecation warnings in TroubleShooter. Thanks thatlonelybugbear.
+* MR !391: Documentation improvements across FLAGS.md, MACROS.md, README.md, and workflow docs. Thanks Bacon.
+* MR !392: Updated Brazilian Portuguese (pt-BR) translation. Thanks Kharmans.
+
 ### 13.0.36
 **New Features:**
 * Added "vitality" as a new damage and healing type that directly affects the vitality pool without going through HP:
@@ -20,7 +35,7 @@
 
 **Bug Fixes:**
 * Fixed `damageTypes.<type>` conditions not being available for optional damage bonuses (issue #1550). The damage type data was not being passed correctly during the bonus evaluation phase due to a timing issue where `workflow.damageRolls` was empty when condition evaluation occurred.
-* Issue #1549 (save rolls showing success/failure when DC should be hidden) resolved as part of the DC display refactoring above - the target DC is no longer passed to dnd5e when visibility settings would hide it from the player.
+* Issue #1549 (save rolls showing success/failure when DC should be hidden) resolved as part of the DC display refactoring below - the target DC is no longer passed to dnd5e when visibility settings would hide it from the player.
 
 **Breaking Changes:**
 Since this change affects what players see please check your settings and the displayed cards before game time since I might have screwed up.
@@ -31,7 +46,7 @@ Since this change affects what players see please check your settings and the di
   - Migration: On first load, existing `displaySaveDC` settings are automatically migrated to the dnd5e setting using the most restrictive value. A chat message is sent to the GM with migration details.
   - New helper function `MidiQOL.shouldDisplaySaveDC(actor?)` returns `true` if DCs should be shown based on the dnd5e setting. When "Player" visibility is set, passing an actor checks `hasPlayerOwner` to determine visibility.
   - Integration modules (Monk's Token Bar, Epic Rolls, Flash Rolls) now receive the display dc setting.
-  - See `docs/Display_Save_DC_20260106.md` for full documentation of the visibility logic.
+  - See `docs/Display_Save_DC_20260106.md` for documentation of the visibility logic.
 
 ### 13.0.35
 **New Features:**

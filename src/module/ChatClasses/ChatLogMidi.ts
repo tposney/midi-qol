@@ -1,38 +1,52 @@
-import { BaseChatLogClass } from "../../midi-qol.js";
-import { forceHideRoll } from "../settings.js";
-import { ChatMessageMidi } from "./ChatMessageMidi.js";
-
-// TODO - refactor to be a subclass of ChatLog5e.
-// - need to override onFirstRender to set up intersection observer and not call ChatLog.onFirstRender
-// - need to override updateMessage to save tray states and not call ChatLog.updateMessage
 export class ChatLogMidi extends globalThis.dnd5e.applications.ChatLog5e {
-  #lastId;
+  #lastId: string | undefined;
   #renderingBatch = false;
   #renderingQueue = new foundry.utils.Semaphore(1);
   #overflowingDebounce = foundry.utils.debounce(this.#setOverflowing.bind(this), 100);
+  #pruneDebounce = foundry.utils.debounce(this.#doPrune.bind(this), 100);
+  #renderedIds = new Set<string>(); // Track rendered messages per-instance
 
-  async pruneElement() {
-    const scroll = this.element.querySelector(".chat-scroll .chat-log");
+  #doPrune() {
+    const scroll = this.element?.querySelector(".chat-scroll .chat-log");
     const count = scroll?.children.length ?? 0;
     const maxSize = CONFIG.ChatMessage.batchSize ?? 25;
     if (count >= maxSize * 2) {
       for (let index = 0; index < count - maxSize; index++) {
-        const messageId = scroll.firstElementChild.dataset.messageId;
-        const message = game.messages?.get(messageId);
-        if (message) message.logged = false;
-        removeElementAndListeners(scroll.firstElementChild)
+        const firstChild = scroll?.firstElementChild;
+        const messageId = firstChild?.dataset?.messageId;
+        // Update per-instance tracking
+        if (messageId) this.#renderedIds.delete(messageId);
+        // Only main sidebar updates message.logged for compatibility
+        if (!this.isPopout && messageId) {
+          const message = game.messages?.get(messageId);
+          if (message) message.logged = false;
+        }
+        firstChild?.remove();
         this.#lastId = messageId;
       }
     }
   }
 
+  async pruneElement() {
+    this.#pruneDebounce();
+  }
+
   async scrollBottom({ popout = false, waitImages = false, scrollOptions = {} } = {}) {
     if (!this.rendered) return;
+    // Each instance prunes its own DOM independently
     this.pruneElement();
     return super.scrollBottom({ popout, waitImages, scrollOptions });
   }
 
-  async #doRenderBatch(size) {
+  /** @inheritDoc */
+  async close(options = {}) {
+    // Clear per-instance state so reopening renders fresh
+    this.#renderedIds.clear();
+    this.#lastId = undefined;
+    return super.close(options);
+  }
+
+  async #doRenderBatch(size: number) {
     if (!this.rendered) {
       this.#renderingBatch = false;
       return;
@@ -40,7 +54,7 @@ export class ChatLogMidi extends globalThis.dnd5e.applications.ChatLog5e {
 
     const messages = game.messages?.contents;
     if (!messages) return;
-    const log = this.element.querySelector(".chat-log");
+    const log = this.element?.querySelector(".chat-log");
     if (!log) return;
 
     // Get the index of the last rendered chat message
@@ -53,17 +67,21 @@ export class ChatLogMidi extends globalThis.dnd5e.applications.ChatLog5e {
 
     // Get the next batch to render
     const targetIdx = Math.max(lastIdx - size, 0);
-    const elements = [];
+    const elements: HTMLElement[] = [];
     for (let i = targetIdx; i < lastIdx; i++) {
       const message = messages[i];
       if (!message.visible) continue;
-      if (message.logged) continue; // Skip already-rendered messages to prevent DOM duplication
-      message.logged = true;
+      // Use per-instance tracking to prevent duplicate rendering
+      // This allows main log and popout to render independently
+      if (this.#renderedIds.has(message.id!)) continue;
+      this.#renderedIds.add(message.id!);
+      // Update message.logged for main sidebar only (for compatibility with core/other modules)
+      if (!this.isPopout) message.logged = true;
       try {
-        //@ts-expect-error
+        //@ts-expect-error renderMessage exists on constructor
         elements.push(await this.constructor.renderMessage(message));
       } catch (err) {
-        Hooks.onError("ChatLog##doRenderBatch", err as Error, {
+        Hooks.onError("ChatLog#doRenderBatch", err as Error, {
           msg: `Chat message ${message.id} failed to render`,
           log: "error"
         });
@@ -78,48 +96,13 @@ export class ChatLogMidi extends globalThis.dnd5e.applications.ChatLog5e {
   }
 
   #setOverflowing() {
-    const scroll = this.element.querySelector(".chat-scroll");
-    scroll.classList.toggle("overflowed", scroll.scrollHeight > scroll.offsetHeight);
+    const scroll = this.element?.querySelector(".chat-scroll");
+    scroll?.classList.toggle("overflowed", scroll.scrollHeight > scroll.offsetHeight);
   }
-  async renderBatch(size) {
+
+  async renderBatch(size: number) {
     if (this.#renderingBatch) return;
     this.#renderingBatch = true;
     return this.#renderingQueue.add(this.#doRenderBatch.bind(this), size);
-  }
-}
-
-
-const origAdd = EventTarget.prototype.addEventListener;
-const origRemove = EventTarget.prototype.removeEventListener;
-
-EventTarget.prototype.addEventListener = function (type, fn, opts) {
-  if (this) {
-    if (!this._listeners) this._listeners = [];
-    this._listeners.push({ type, fn, opts });
-  }
-  return origAdd.call(this, type, fn, opts);
-};
-
-EventTarget.prototype.removeEventListener = function (type, fn, opts) {
-  if (this) {
-    if (this._listeners) {
-      this._listeners = this._listeners.filter(
-        l => l.type !== type || l.fn !== fn || l.opts !== opts
-      );
-    }
-  }
-  return origRemove.call(this, type, fn, opts);
-};
-
-function removeElementAndListeners(el) {
-  if (!el) return;
-  if (el._listeners) {
-    for (const { type, fn, opts } of el._listeners) {
-      el.removeEventListener(type, fn, opts);
-    }
-    el._listeners = [];
-  }
-  if (el.parentNode) {
-    el.parentNode.removeChild(el);
   }
 }

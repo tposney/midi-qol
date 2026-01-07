@@ -388,7 +388,7 @@ export function setupDamageDetails(actorDamage: PreSetupDamageListEntry, selecto
   let { damage, temp, healing } = (mergedDetails).reduce((acc, d) => {
     if (d.type === "temphp") acc.temp += d.value;
     else if (d.type === "healing") acc.healing += d.value;
-    else if (d.type !== "midi-none") acc.damage += d.value;
+    else if (!["midi-none", "vitality"].includes(d.type)) acc.damage += d.value; // Exclude vitality from HP damage
     return acc;
   }, { damage: 0, temp: 0, healing: 0 });
   damage = Math.max(0, damage);

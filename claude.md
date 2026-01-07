@@ -22,11 +22,27 @@ When working on midi-qol, you can examine the dnd5e system codebase at:
 ```
 Use this to verify API methods and understand how dnd5e implements features. **Do not assume methods exist** - always verify against the actual codebase.
 
+### External Documentation
+- **Chris-Premades API**: `/home/timp/Documents/ChrisPremades-API-2026-01-06.md` - Comprehensive documentation of the chris-premades module API (classes, utilities, macros, constants)
+- **Chris-Premades GitHub**: `https://github.com/chrisk123999/chris-premades` (branch: master) - Source code for chris-premades module
+- **Note**: "CPR" and "Cauldron of Plentiful Resources" both refer to the chris-premades module
+
 ## User Instructions
 
-### Git Operations
-- **Never auto-push or auto-commit changes** - always wait for the user to review and approve before committing or pushing
-- The user will handle git operations manually when ready
+### Git Operations (midi-qol-13x and midi-qol-tests)
+- **Do not automatically commit or push changes** to midi-qol-13x or midi-qol-tests
+- The user wants to review diffs before committing and pushing to GitLab
+- Make file changes but leave git operations to the user
+
+### Documentation Files
+- **Always include a datestamp in the filename** when creating documentation files
+- Format: `DocumentName-YYYY-MM-DD.md` (e.g., `ChatLog-2026-01-06.md`)
+- This applies to files in the `docs/` directory and any other documentation created
+
+### Related Modules
+- **chatlog-prune**: Standalone chat log pruning module at `/home/timp/foundry-data/foundryalpha/Data/modulesrc/chatlog-prune/`
+- **Keep ChatLogPrune and ChatLogMidi in sync**: When modifying `src/module/ChatClasses/ChatLogMidi.ts`, also update `chatlog-prune/src/ChatLogPrune.ts` (and vice versa) unless the change would cause a loss of functionality in one module
+- midi-qol's built-in chat log pruning is deprecated (since 13.0.37) and will be removed in v14 - users should install chatlog-prune instead
 
 ### External API Usage
 - **Before writing any code that calls dnd5e or Foundry methods**, first search the midi-qol codebase to find existing usage of similar functionality
@@ -222,6 +238,50 @@ The project uses the Quench testing framework for Foundry VTT. Tests are in a se
 - Build: `cd midi-qol-tests && npm run build`
 
 The module accesses midi-qol via `globalThis.MidiQOL` and registers Quench test batches.
+
+### Quench Test World
+
+Pre-configured world for running midi-qol automated tests.
+
+**Live world location:**
+```
+/home/timp/foundry-data/foundryv13/Data/worlds/quench-test
+```
+- This is the actual world you run tests in
+- Contains test actors, items, token placements, and world settings
+- Has its own git repo connected to `git@gitlab.com:tposney/quench-test-world.git`
+- **Note**: Foundry overwrites some world.json fields when played
+
+**Distributable package project:**
+```
+/home/timp/foundry-data/foundryalpha/Data/modulesrc/quench-test-install
+```
+- GitLab: https://gitlab.com/tposney/quench-test-install
+- Builds a distributable world package from the live quench-test world
+- Generates proper `world.json` with installable fields (manifest, download URLs)
+- Creates zip file for releases
+
+**Building and releasing quench-test-install:**
+```bash
+cd /home/timp/foundry-data/foundryalpha/Data/modulesrc/quench-test-install
+
+# 1. Update version in package.json
+# 2. Build the distribution
+node build.js
+
+# 3. Release (commits, tags, pushes, creates GitLab release with zip)
+node build.js release
+```
+
+The release command reads version from `package.json` and automates:
+- Git commit and tag creation
+- Push to GitLab
+- Create GitLab release with zip file attached (requires `glab` CLI)
+
+**Manifest URL for installation:**
+```
+https://gitlab.com/tposney/quench-test-install/-/raw/main/dist/quench-test/world.json
+```
 
 Key test actors (must exist in test world):
 - `actor1Name` ("actor1") - Primary test actor

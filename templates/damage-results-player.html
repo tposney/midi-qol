@@ -10,7 +10,9 @@
     <img src="{{damage.tokenImg}}" id="{{damage.tokenId}}" class="midi-qol-target-name" height="22">
     {{#if damage.tooltip}}<div class="midi-qol-tooltiptext"><div>{{{damage.tooltip}}}</div></div>{{/if}}
     {{!-- Total damage/healing applied at start of line --}}
-    <span id="dmg-total-{{damage.displayUuid}}" class="midi-qol-dmg-total{{#if damage.noChange}} midi-qol-dmg-hidden{{/if}}{{#if damage.isHealing}} midi-qol-dmg-healing{{/if}}" data-is-healing="{{damage.isHealing}}">{{#if damage.isHealing}}+{{else}}-{{/if}}{{damage.totalDamage}}</span>
+    <span id="dmg-total-{{damage.displayUuid}}" class="midi-qol-dmg-total{{#if damage.noChange}} midi-qol-dmg-hidden{{/if}}{{#if damage.isHealing}} midi-qol-dmg-healing{{/if}}" data-hp-total="{{damage.totalDamage}}"><span class="dmg-total-sign">{{#if damage.isHealing}}+{{else}}-{{/if}}</span><span class="dmg-total-value">{{#if damage.totalDamage}}{{damage.totalDamage}}{{else}}0{{/if}}</span></span>
+    {{!-- Direct vitality damage/healing (not overflow) --}}
+    {{#if damage.absVitalityDamage}}<span id="dmg-vit-direct-{{damage.displayUuid}}" class="midi-qol-dmg-vitality-total{{#if damage.vitalityDamageIsHealing}} midi-qol-dmg-healing{{/if}}" data-vit-amount="{{damage.absVitalityDamage}}"><i class="fas fa-heart-crack"></i><span class="dmg-vit-sign">{{#if damage.vitalityDamageIsHealing}}+{{else}}-{{/if}}</span><span class="dmg-vit-value">{{damage.absVitalityDamage}}</span></span>{{/if}}
     {{!-- Temp HP: blue symbol --}}
     <span id="dmg-temp-{{damage.displayUuid}}" class="midi-qol-dmg-temp{{#unless damage.tempHpChanged}} midi-qol-dmg-hidden{{/unless}}{{#if damage.tempHpIncrease}} midi-qol-dmg-healing{{/if}}" title="Temp HP">
       <i class="fas fa-shield-alt"></i><span class="dmg-temp-old">{{damage.damageItem.oldTempHP}}</span>&rarr;<span class="dmg-temp-new">{{damage.damageItem.newTempHP}}</span>

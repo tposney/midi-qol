@@ -301,7 +301,8 @@
         "target": {
           "prompt": false
         },
-        "appliedEffects": []
+        "appliedEffects": [],
+        "_id": "dnd5eactivity000"
       },
       "Rl6CXHuDSLjA44wM": {
         "type": "damage",

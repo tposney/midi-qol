@@ -993,67 +993,110 @@ function calculateDamageAmounts(damageDetail: DamageDescription[]): { amount: nu
 }
 
 /** Helper to update damage card display elements */
+/**
+ * Update damage card display using stored original values.
+ * @param html - The chat message HTML element
+ * @param actorUuid - The actor's UUID
+ * @param undoEntry - The stored damage data
+ * @param showUndoMode - If true, show what undo would do (healing to restore); if false, show original damage
+ */
 function updateDamageCardDisplay(
   html: HTMLElement,
-  actor: Actor.Implementation | null,
   actorUuid: string,
-  targetHP: number,
-  targetTempHP: number,
-  targetVitality?: number
+  undoEntry: DamageListEntry,
+  showUndoMode: boolean
 ): void {
-  if (!actor) return;
   const displayUuid = actorUuid.replaceAll(".", "");
-  // @ts-expect-error no dnd5e types
-  const currentHP = actor.system.attributes.hp.value ?? 0;
-  // @ts-expect-error no dnd5e types
-  const currentTempHP = actor.system.attributes.hp.temp ?? 0;
+  const { oldHP, newHP, oldTempHP, newTempHP, oldVitality, newVitality } = undoEntry;
+
+  // In undo mode, we're showing what undo would do (restore to old state = healing)
+  // In apply mode, we're showing the original damage
+  const isHealing = showUndoMode;
+
+  // For undo mode, use CURRENT actor values as "from" (not stored newHP)
+  // This handles multiple damage applications with multipliers
+  let fromHP: number, toHP: number, fromTempHP: number, toTempHP: number;
+  let fromVitality: number | undefined, toVitality: number | undefined;
+
+  if (showUndoMode) {
+    // Undo mode: restore from current state to original old values
+    const actor = fromActorUuid(actorUuid);
+    // @ts-expect-error no dnd5e types
+    fromHP = actor?.system.attributes.hp.value ?? newHP ?? 0;
+    // @ts-expect-error no dnd5e types
+    fromTempHP = actor?.system.attributes.hp.temp ?? newTempHP ?? 0;
+    toHP = oldHP ?? 0;
+    toTempHP = oldTempHP ?? 0;
+
+    // Get current vitality from actor
+    const vitalityItem = getVitalityItem(actor);
+    if (vitalityItem && oldVitality !== undefined) {
+      // @ts-expect-error uses exists on items with uses
+      const currentSpent = vitalityItem.system.uses?.spent ?? 0;
+      // @ts-expect-error uses exists on items with uses
+      const maxUses = vitalityItem.system.uses?.max ?? 0;
+      fromVitality = maxUses - currentSpent;
+      toVitality = oldVitality;
+    }
+  } else {
+    // Apply mode: apply damage from old values to new values
+    fromHP = oldHP ?? 0;
+    toHP = newHP ?? 0;
+    fromTempHP = oldTempHP ?? 0;
+    toTempHP = newTempHP ?? 0;
+    fromVitality = oldVitality;
+    toVitality = newVitality;
+  }
+
+  // Calculate the actual changes from stored values
+  const hpDelta = Math.abs((toHP ?? 0) - (fromHP ?? 0));
+  const tempHpDelta = Math.abs((toTempHP ?? 0) - (fromTempHP ?? 0));
+  const vitalityDelta = Math.abs((toVitality ?? 0) - (fromVitality ?? 0));
+
+  // Total damage = HP change + TempHP change
+  const totalDamage = hpDelta + tempHpDelta;
+
+  const hpChanged = hpDelta > 0;
+  const tempHpChanged = tempHpDelta > 0;
+  const vitalityChanged = vitalityDelta > 0;
+  const noChange = !hpChanged && !tempHpChanged && !vitalityChanged;
 
   const totalSpan = html.querySelector<HTMLSpanElement>(`#dmg-total-${displayUuid}`);
   const tempSpan = html.querySelector<HTMLSpanElement>(`#dmg-temp-${displayUuid}`);
   const hpSpan = html.querySelector<HTMLSpanElement>(`#dmg-hp-${displayUuid}`);
   const noChangeSpan = html.querySelector<HTMLSpanElement>(`#dmg-nochange-${displayUuid}`);
   const vitalitySpan = html.querySelector<HTMLSpanElement>(`#dmg-vitality-${displayUuid}`);
+  const directVitalitySpan = html.querySelector<HTMLSpanElement>(`#dmg-vit-direct-${displayUuid}`);
 
-  const hpDiff = targetHP - currentHP;
-  const tempDiff = targetTempHP - currentTempHP;
-  const isHealing = hpDiff > 0;
-  const hpChanged = hpDiff !== 0;
-  const tempHpChanged = tempDiff !== 0;
-
-  // Get current vitality if actor has vitality system
-  const vitalityItem = getVitalityItem(actor);
-  let currentVitality: number | undefined;
-  if (vitalityItem) {
-    // @ts-expect-error uses exists on items with uses
-    const currentSpent = vitalityItem.system.uses?.spent ?? 0;
-    // @ts-expect-error uses exists on items with uses
-    const maxUses = vitalityItem.system.uses?.max ?? 0;
-    currentVitality = maxUses - currentSpent;
+  // Update total damage display - sum of HP and TempHP changes
+  if (totalSpan) {
+    const hasDamage = totalDamage > 0;
+    totalSpan.classList.toggle("midi-qol-dmg-hidden", !hasDamage && noChange);
+    totalSpan.classList.toggle("midi-qol-dmg-healing", isHealing);
+    const signSpan = totalSpan.querySelector<HTMLSpanElement>(".dmg-total-sign");
+    if (signSpan) signSpan.textContent = isHealing ? "+" : "-";
+    const valueSpan = totalSpan.querySelector<HTMLSpanElement>(".dmg-total-value");
+    if (valueSpan) valueSpan.textContent = String(Math.trunc(totalDamage));
   }
 
-  const vitalityChanged = targetVitality !== undefined && currentVitality !== undefined && targetVitality !== currentVitality;
-  const vitalityDiff = (vitalityChanged && currentVitality !== undefined && targetVitality !== undefined)
-    ? (targetVitality - currentVitality) : 0;
-
-  // Total damage/healing includes HP change + temp HP change + vitality change
-  const totalDamage = Math.abs(hpDiff) + Math.abs(tempDiff) + Math.abs(vitalityDiff);
-  const noChange = !hpChanged && !tempHpChanged && !vitalityChanged;
-
-  // Update total damage display
-  if (totalSpan) {
-    totalSpan.classList.toggle("midi-qol-dmg-hidden", noChange);
-    totalSpan.classList.toggle("midi-qol-dmg-healing", isHealing);
-    totalSpan.textContent = `${isHealing ? "+" : "-"}${totalDamage}`;
+  // Update direct vitality damage display - actual vitality change
+  if (directVitalitySpan) {
+    directVitalitySpan.classList.toggle("midi-qol-dmg-hidden", !vitalityChanged);
+    directVitalitySpan.classList.toggle("midi-qol-dmg-healing", isHealing);
+    const signSpan = directVitalitySpan.querySelector<HTMLSpanElement>(".dmg-vit-sign");
+    if (signSpan) signSpan.textContent = isHealing ? "+" : "-";
+    const valueSpan = directVitalitySpan.querySelector<HTMLSpanElement>(".dmg-vit-value");
+    if (valueSpan) valueSpan.textContent = String(Math.trunc(vitalityDelta));
   }
 
   // Update temp HP display
   if (tempSpan) {
     tempSpan.classList.toggle("midi-qol-dmg-hidden", !tempHpChanged);
-    tempSpan.classList.toggle("midi-qol-dmg-healing", targetTempHP > currentTempHP);
+    tempSpan.classList.toggle("midi-qol-dmg-healing", (toTempHP ?? 0) > (fromTempHP ?? 0));
     const tempOld = tempSpan.querySelector<HTMLSpanElement>(".dmg-temp-old");
     const tempNew = tempSpan.querySelector<HTMLSpanElement>(".dmg-temp-new");
-    if (tempOld) tempOld.textContent = String(Math.trunc(currentTempHP));
-    if (tempNew) tempNew.textContent = String(Math.trunc(targetTempHP));
+    if (tempOld) tempOld.textContent = String(Math.trunc(fromTempHP ?? 0));
+    if (tempNew) tempNew.textContent = String(Math.trunc(toTempHP ?? 0));
   }
 
   // Update HP display
@@ -1062,20 +1105,19 @@ function updateDamageCardDisplay(
     hpSpan.classList.toggle("midi-qol-dmg-healing", isHealing);
     const hpOld = hpSpan.querySelector<HTMLSpanElement>(".dmg-hp-old");
     const hpNew = hpSpan.querySelector<HTMLSpanElement>(".dmg-hp-new");
-    if (hpOld) hpOld.textContent = String(Math.trunc(currentHP));
-    if (hpNew) hpNew.textContent = String(Math.trunc(targetHP));
+    if (hpOld) hpOld.textContent = String(Math.trunc(fromHP ?? 0));
+    if (hpNew) hpNew.textContent = String(Math.trunc(toHP ?? 0));
   }
 
-  // Update vitality display
+  // Update vitality transition display
   if (vitalitySpan) {
-    if (vitalityChanged && currentVitality !== undefined && targetVitality !== undefined) {
-      const vitalityIncrease = targetVitality > currentVitality;
+    if (vitalityChanged && fromVitality !== undefined && toVitality !== undefined) {
       vitalitySpan.classList.remove("midi-qol-dmg-hidden");
-      vitalitySpan.classList.toggle("midi-qol-dmg-healing", vitalityIncrease);
+      vitalitySpan.classList.toggle("midi-qol-dmg-healing", toVitality > fromVitality);
       const vitOld = vitalitySpan.querySelector<HTMLSpanElement>(".dmg-vit-old");
       const vitNew = vitalitySpan.querySelector<HTMLSpanElement>(".dmg-vit-new");
-      if (vitOld) vitOld.textContent = String(Math.trunc(currentVitality));
-      if (vitNew) vitNew.textContent = String(Math.trunc(targetVitality));
+      if (vitOld) vitOld.textContent = String(Math.trunc(fromVitality));
+      if (vitNew) vitNew.textContent = String(Math.trunc(toVitality));
     } else {
       vitalitySpan.classList.add("midi-qol-dmg-hidden");
     }
@@ -1500,8 +1542,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           await actor.update(updates, mergedOptions)
             .then(updatedActor => {
               Hooks.call("dnd5e.applyDamage", updatedActor ?? actor, newHP - oldHP, calcDamageOptions as DamageApplicationOptions);
-              // Update display to show what apply would do (transition to newHP/newVitality)
-              updateDamageCardDisplay(html, actor, actorUuid, newHP ?? 0, newTempHP ?? 0, newVitality);
+              // Update display to show what apply would do (original damage display)
+              if (undoItem) updateDamageCardDisplay(html, actorUuid, undoItem, false);
               return updatedActor;
             })
         }
@@ -1543,8 +1585,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, update, options as DamageApplicationOptions) !== false) {
           await actor.update(update, options).then(updatedActor => {
             Hooks.call("dnd5e.applyDamage", actor, amount, options);
-            // Update display to show what reverse would do (transition back to oldHP/oldVitality)
-            updateDamageCardDisplay(html, actor, actorUuid, oldHP ?? 0, oldTempHP ?? 0, oldVitality);
+            // Update display to show what undo would do (undo mode)
+            if (applyItem) updateDamageCardDisplay(html, actorUuid, applyItem, true);
             return updatedActor;
           });
         }
@@ -1594,8 +1636,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           if (vitalityUpdated) options.midiVitalityUpdatePending = true;
           await actor.update(updates, options).then(updatedActor => {
             Hooks.call("dnd5e.applyDamage", actor, amount, calcDamageOptions as DamageApplicationOptions);
-            // Update display to show what apply would do (transition to newHP/newVitality)
-            updateDamageCardDisplay(html, actor, actorUuid, newHP ?? 0, newTempHP ?? 0, newVitality);
+            // Update display to show what apply would do (original damage display)
+            updateDamageCardDisplay(html, actorUuid, undoEntry, false);
             return updatedActor;
           })
         }
@@ -1639,8 +1681,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           if (actor?.isOwner && Hooks.call("dnd5e.preApplyDamage", actor, amount, updates, calcDamageOptions as DamageApplicationOptions) !== false) {
             await actor.update(updates, options).then(updatedActor => {
               Hooks.call("dnd5e.applyDamage", actor, amount, calcDamageOptions as DamageApplicationOptions);
-              // Update display to show what reverse would do (transition back to oldHP/oldVitality)
-              updateDamageCardDisplay(html, actor, actorUuid, oldHP ?? 0, oldTempHP ?? 0, oldVitality);
+              // Update display to show what undo would do (undo mode)
+              updateDamageCardDisplay(html, actorUuid, undoEntry, true);
               return updatedActor;
             });
           }
@@ -1655,67 +1697,91 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           // @ts-expect-error no dnd5e types
           const preApplyTempHP = actor?.system.attributes.hp.temp ?? 0;
 
-          // Calculate the multiplied damage
+          // Separate vitality damage from HP damage
+          // Filter out vitality from damageDetail for HP application
+          const hpDamageDetail = damageDetail?.filter(d => d.type !== "vitality") ?? [];
+
+          // Calculate the multiplied HP damage (excluding vitality)
           // @ts-expect-error no dnd5e-types
-          const calculatedDamages: DamageDescription[] = foundry.utils.deepClone(actor?.calculateDamage(damageDetail, applyOptions) ?? []);
-          let totalMultipliedDamage = 0;
+          const calculatedDamages: DamageDescription[] = foundry.utils.deepClone(actor?.calculateDamage(hpDamageDetail, applyOptions) ?? []);
+          let totalMultipliedHpDamage = 0;
           for (const dmg of calculatedDamages) {
-            if (dmg.type !== "temphp" && !["midi-none", "none"].includes(dmg.type)) {
-              totalMultipliedDamage += dmg.value;
+            if (dmg.type !== "temphp" && !["midi-none", "none", "vitality"].includes(dmg.type)) {
+              totalMultipliedHpDamage += dmg.value;
             }
           }
-          totalMultipliedDamage = Math.trunc(totalMultipliedDamage);
+          totalMultipliedHpDamage = Math.trunc(totalMultipliedHpDamage);
 
-          // Calculate overflow to vitality
+          // Calculate multiplied direct vitality damage separately
+          const multiplier = mults[multiplierString ?? "x1"] ?? 1;
+          let multipliedVitalityDamage = 0;
+          for (const d of damageDetail ?? []) {
+            if (d.type === "vitality") {
+              multipliedVitalityDamage += d.value * multiplier;
+            }
+          }
+          multipliedVitalityDamage = Math.trunc(multipliedVitalityDamage);
+
+          // Calculate vitality changes
           const vitalityItem = getVitalityItem(actor);
           // @ts-expect-error uses exists on items with uses
           const currentSpent = vitalityItem?.system.uses?.spent ?? 0;
           // @ts-expect-error uses exists on items with uses
           const maxUses = vitalityItem?.system.uses?.max ?? 0;
           let newSpent = currentSpent;
-          if (vitalityItem && totalMultipliedDamage > 0) {
-            // Damage case - overflow to vitality
-            const tempAbsorbed = Math.min(preApplyTempHP, totalMultipliedDamage);
-            const hpAbsorbed = Math.min(preApplyHP, totalMultipliedDamage - tempAbsorbed);
-            const overflowDamage = totalMultipliedDamage - tempAbsorbed - hpAbsorbed;
-            if (overflowDamage > 0) {
-              newSpent = Math.min(maxUses, currentSpent + overflowDamage);
+
+          if (vitalityItem) {
+            // First apply direct vitality damage (positive = damage, negative = healing)
+            if (multipliedVitalityDamage > 0) {
+              newSpent = Math.min(maxUses, currentSpent + multipliedVitalityDamage);
+            } else if (multipliedVitalityDamage < 0) {
+              newSpent = Math.max(0, currentSpent + multipliedVitalityDamage);
             }
-          } else if (vitalityItem && totalMultipliedDamage < 0) {
-            // Healing case - restore vitality first, then HP
-            const healingAmount = Math.abs(totalMultipliedDamage);
-            const vitalityMissing = currentSpent; // currentSpent is how much vitality is missing
-            const vitalityRestored = Math.min(vitalityMissing, healingAmount);
 
-            if (vitalityRestored > 0) {
-              newSpent = currentSpent - vitalityRestored;
+            // Then calculate overflow from HP damage
+            if (totalMultipliedHpDamage > 0) {
+              const tempAbsorbed = Math.min(preApplyTempHP, totalMultipliedHpDamage);
+              const hpAbsorbed = Math.min(preApplyHP, totalMultipliedHpDamage - tempAbsorbed);
+              const overflowDamage = totalMultipliedHpDamage - tempAbsorbed - hpAbsorbed;
+              if (overflowDamage > 0) {
+                newSpent = Math.min(maxUses, newSpent + overflowDamage);
+              }
+            } else if (totalMultipliedHpDamage < 0) {
+              // Healing case - restore vitality first, then HP
+              const healingAmount = Math.abs(totalMultipliedHpDamage);
+              const vitalityMissing = newSpent; // newSpent is how much vitality is missing after direct vitality damage
+              const vitalityRestored = Math.min(vitalityMissing, healingAmount);
 
-              // Adjust the multiplier to reduce healing applied to HP
-              const remainingHealing = healingAmount - vitalityRestored;
-              if (remainingHealing > 0) {
-                // Scale down the multiplier proportionally
-                const scaleFactor = remainingHealing / healingAmount;
-                applyOptions.multiplier = (applyOptions.multiplier ?? 1) * scaleFactor;
-              } else {
-                // All healing went to vitality, no HP healing needed
-                applyOptions.multiplier = 0;
+              if (vitalityRestored > 0) {
+                newSpent = newSpent - vitalityRestored;
+
+                // Adjust the multiplier to reduce healing applied to HP
+                const remainingHealing = healingAmount - vitalityRestored;
+                if (remainingHealing > 0) {
+                  // Scale down the multiplier proportionally
+                  const scaleFactor = remainingHealing / healingAmount;
+                  applyOptions.multiplier = (applyOptions.multiplier ?? 1) * scaleFactor;
+                } else {
+                  // All healing went to vitality, no HP healing needed
+                  applyOptions.multiplier = 0;
+                }
               }
             }
           }
 
-          // Apply damage with flag to prevent hook from also updating vitality
+          // Apply HP damage (excluding vitality) with flag to prevent hook from also updating vitality
           applyOptions.midiVitalityHandled = true;
           // @ts-expect-error no dnd5e-types
-          await actor?.applyDamage(damageDetail, applyOptions);
+          await actor?.applyDamage(hpDamageDetail, applyOptions);
 
-          // Now update vitality if there was overflow
+          // Now update vitality if there was any change
           if (vitalityItem && newSpent !== currentSpent) {
             // @ts-expect-error item update for uses.spent
             await vitalityItem.update({ "system.uses.spent": newSpent });
           }
 
-          // Update display to show what reverse would do (transition back to oldHP/oldVitality)
-          updateDamageCardDisplay(html, actor, actorUuid, oldHP ?? 0, oldTempHP ?? 0, oldVitality);
+          // Update display to show what undo would do (undo mode)
+          updateDamageCardDisplay(html, actorUuid, undoEntry, true);
         }
       })();
     });
@@ -1755,11 +1821,15 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       const calculatedDamages: DamageDescription[] = foundry.utils.deepClone(actor.calculateDamage(damageDetail, options));
 
       // Sum up the damage values and truncate towards 0 (matching how damage is actually applied)
+      // Exclude vitality from HP total - it's shown separately
       let totalDamage = 0;
       let tempHpDamage = 0;
+      let multipliedVitalityDamage = 0;
       for (const dmg of calculatedDamages) {
         if (dmg.type === "temphp") {
           tempHpDamage += dmg.value;
+        } else if (dmg.type === "vitality") {
+          multipliedVitalityDamage += dmg.value;
         } else if (!["midi-none", "none"].includes(dmg.type)) {
           totalDamage += dmg.value;
         }
@@ -1767,6 +1837,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       // Truncate towards 0 to match actual damage application
       totalDamage = Math.trunc(totalDamage);
       tempHpDamage = Math.trunc(tempHpDamage);
+      multipliedVitalityDamage = Math.trunc(multipliedVitalityDamage);
 
       // Calculate new HP/temp HP values
       let newTempHP = currentTempHP;
@@ -1857,16 +1928,25 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
 
       // Update vitality display if actor has vitality
       const vitalitySpan = html.querySelector<HTMLSpanElement>(`#dmg-vitality-${displayUuid}`);
+      const directVitalitySpan = html.querySelector<HTMLSpanElement>(`#dmg-vit-direct-${displayUuid}`);
       // @ts-expect-error uses exists on items with uses
       const maxVitality = vitalityItem?.system.uses?.max ?? 0;
-      if (vitalitySpan && vitalityItem) {
+      if (vitalityItem) {
         let newVitality = currentVitality;
+
+        // Apply direct vitality damage first (positive = damage, negative = healing)
+        if (multipliedVitalityDamage > 0) {
+          newVitality = Math.max(0, currentVitality - multipliedVitalityDamage);
+        } else if (multipliedVitalityDamage < 0) {
+          newVitality = Math.min(maxVitality, currentVitality - multipliedVitalityDamage);
+        }
+
         if (isHealing) {
           // Healing - first restore vitality, then HP
           const healingAmount = Math.abs(totalDamage);
-          const vitalityMissing = maxVitality - currentVitality;
+          const vitalityMissing = maxVitality - newVitality;
           const vitalityRestored = Math.min(vitalityMissing, healingAmount);
-          newVitality = currentVitality + vitalityRestored;
+          newVitality = newVitality + vitalityRestored;
           // Recalculate newHP with remaining healing after vitality restoration
           const remainingHealing = healingAmount - vitalityRestored;
           newHP = Math.min(maxHP, currentHP + remainingHealing);
@@ -1876,20 +1956,35 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           const hpAbsorbed = Math.min(currentHP, totalDamage - tempAbsorbed);
           const overflowDamage = totalDamage - tempAbsorbed - hpAbsorbed;
           if (overflowDamage > 0) {
-            newVitality = Math.max(0, currentVitality - overflowDamage);
+            newVitality = Math.max(0, newVitality - overflowDamage);
           }
         }
 
         const vitalityChanged = newVitality !== currentVitality;
         const vitalityIncrease = newVitality > currentVitality;
 
-        vitalitySpan.classList.toggle("midi-qol-dmg-hidden", !vitalityChanged);
-        vitalitySpan.classList.toggle("midi-qol-dmg-healing", vitalityIncrease);
+        // Update direct vitality damage display (shows multiplied vitality damage)
+        if (directVitalitySpan) {
+          const hasDirectVitality = multipliedVitalityDamage !== 0;
+          const directVitalityIsHealing = multipliedVitalityDamage < 0;
+          directVitalitySpan.classList.toggle("midi-qol-dmg-hidden", !hasDirectVitality);
+          directVitalitySpan.classList.toggle("midi-qol-dmg-healing", directVitalityIsHealing);
+          const signSpan = directVitalitySpan.querySelector<HTMLSpanElement>(".dmg-vit-sign");
+          if (signSpan) signSpan.textContent = directVitalityIsHealing ? "+" : "-";
+          const valueSpan = directVitalitySpan.querySelector<HTMLSpanElement>(".dmg-vit-value");
+          if (valueSpan) valueSpan.textContent = String(Math.abs(multipliedVitalityDamage));
+        }
 
-        const vitOld = vitalitySpan.querySelector<HTMLSpanElement>(".dmg-vit-old");
-        const vitNew = vitalitySpan.querySelector<HTMLSpanElement>(".dmg-vit-new");
-        if (vitOld) vitOld.textContent = String(Math.trunc(currentVitality));
-        if (vitNew) vitNew.textContent = String(Math.trunc(newVitality));
+        // Update vitality transition display (old → new)
+        if (vitalitySpan) {
+          vitalitySpan.classList.toggle("midi-qol-dmg-hidden", !vitalityChanged);
+          vitalitySpan.classList.toggle("midi-qol-dmg-healing", vitalityIncrease);
+
+          const vitOld = vitalitySpan.querySelector<HTMLSpanElement>(".dmg-vit-old");
+          const vitNew = vitalitySpan.querySelector<HTMLSpanElement>(".dmg-vit-new");
+          if (vitOld) vitOld.textContent = String(Math.trunc(currentVitality));
+          if (vitNew) vitNew.textContent = String(Math.trunc(newVitality));
+        }
 
         // Update HP display with corrected value after vitality restoration
         if (isHealing && hpSpan) {
@@ -1898,9 +1993,10 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           const hpChangedAfterVitality = newHP !== currentHP;
           hpSpan.classList.toggle("midi-qol-dmg-hidden", !hpChangedAfterVitality);
         }
-      } else if (vitalitySpan) {
-        // No vitality item - hide the display
-        vitalitySpan.classList.add("midi-qol-dmg-hidden");
+      } else {
+        // No vitality item - hide the displays
+        if (vitalitySpan) vitalitySpan.classList.add("midi-qol-dmg-hidden");
+        if (directVitalitySpan) directVitalitySpan.classList.add("midi-qol-dmg-hidden");
       }
     });
 
