@@ -1,4 +1,22 @@
 ### 13.0.37
+**New Features:**
+* Enhanced overtime effects with save/fail count thresholds and optional effect application:
+  - Format: `saveCount=N[-+]effectSpec` or `failCount=N[-+]effectSpec`
+  - The `-` or `+` after the number is required and specifies what happens when the count is reached:
+    - `-` (minus): Remove the overtime effect
+    - `+` (plus): Make the overtime effect permanent (no more saves will be rolled, but the remove condition - if present - will still be checked).
+  - `effectSpec` (optional): If specified, this effect/status is always **added** to the actor or the macro is called when the count is reached
+  - Effect specs can be: `statusId` (e.g., `petrified`), `statusId|overlay`, `effectUuid`, `function.name`, or `Macro.name`
+  - Examples:
+    - `saveCount=3-`: Remove effect after 3 successful saves
+    - `failCount=2+`: Make effect permanent after 2 failed saves
+    - `failCount=2-petrified`: After 2 fails, add petrified status AND remove the overtime effect
+    - `failCount=2+petrified|overlay`: After 2 fails, add petrified (with overlay) AND make overtime effect permanent
+    - `saveCount=2-prone`: After 2 saves, add prone status AND remove the overtime effect
+
+**Deprecations:**
+* `saveRemove=true` is deprecated. Use `saveCount=1-` instead. `saveRemove` will be removed in midi 14.
+
 **Bug Fixes:**
 * Fixed chat log popout not displaying existing messages when opened. The main sidebar and popout now track rendered messages independently, allowing both to function correctly without interfering with each other.
 * Disabled minification in esbuild to preserve private field names (e.g., `#actor`, `#abort`) for debugging. Previously, minification was mangling these to `#a`, `#b`, etc., making workflow data unreadable when logged in macros.

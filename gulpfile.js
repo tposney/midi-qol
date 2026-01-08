@@ -92,8 +92,9 @@ exports.step_buildSourceMin = buildSource(false, false, true);
  */
 function typeCheck() {
   return () => {
+    const tsProject = ts.createProject("tsconfig.json", { noEmit: true });
     return gulp.src(SOURCE + GLOB)
-      .pipe(ts.createProject("tsconfig.json", { noEmit: true })())
+      .pipe(tsProject(ts.reporter.defaultReporter()))
       .on("error", (error) => {
         console.error("TypeScript type check failed");
       });

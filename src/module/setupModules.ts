@@ -1,6 +1,6 @@
 import { error, warn, log, debugEnabled, i18n } from "../midi-qol.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
-import { configSettings } from "./settings.js";
+import { configSettings, pruneChatLog } from "./settings.js";
 
 export const DAE_REQUIRED_VERSION = "13.0.4";
 export const USEFUL_MODULE_VERSIONS = {
@@ -77,7 +77,7 @@ export function checkModules() { // this really should happen in TroubleShooter
     ui.notifications?.error("midi-qol.NoSocketLib", {permanent: true, localize: true});
   }
   // Warn about deprecated built-in chat log pruning
-  if (game.user?.isGM && configSettings.pruneChatLog && !game.modules.get("chatlog-prune")?.active) {
+  if (game.user?.isGM && pruneChatLog && !game.modules.get("chatlog-prune")?.active) {
     ui.notifications?.warn("midi-qol.chatlogPruneDeprecated", { localize: true });
   }
 }

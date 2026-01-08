@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, log, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastAttack, isAutoFastDamage, throttledScrollBottom, getVitalityItem } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastAttack, isAutoFastDamage, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro } from "./utils.js";
 import { autoFastForwardAbilityRolls, checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -10,7 +10,7 @@ import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
 import { installedModules } from "./setupModules.js";
 import { preActivityConsumptionHook, activityConsumptionHook } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
-import { DamageApplicationOptions, DamageDescription } from "../globals.js";
+import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
 import { MidiDependentsRegistry } from "./MidiDependentsRegistry.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
@@ -356,13 +356,232 @@ export function initHooks() {
     clearUpdatesCache(message.uuid);
   });
 
+  // Helper to apply a replacement effect - supports status effect IDs, effect UUIDs, and macro specifications
+  // Syntax: "statusId" or "effectUuid" or "statusId|overlay" or "effectUuid|overlay"
+  // Macro syntax: "function.functionName", "Macro.macroName", "ItemMacro", "ItemMacro.itemNameOrUuid",
+  //               "ActivityMacro", "ActivityMacro.uuid"
+  async function applyReplacementEffect(actor: Actor.Implementation, effectSpec: string, effect?: ActiveEffect.Implementation): Promise<void> {
+    // Parse the effect spec for optional parameters using | as separator
+    const parts = effectSpec.split("|");
+    const effectIdOrUuid = parts[0].trim();
+    let overlay = false;
+
+    // Parse optional parameters (e.g., "overlay" or "overlay=true")
+    for (let i = 1; i < parts.length; i++) {
+      const param = parts[i].trim().toLowerCase();
+      if (param === "overlay" || param === "overlay=true") {
+        overlay = true;
+      } else if (param === "overlay=false") {
+        overlay = false;
+      }
+    }
+
+    // Check if it's a macro specification
+    if (effectIdOrUuid.startsWith("function.") || effectIdOrUuid.startsWith("Macro.") ||
+        effectIdOrUuid.startsWith("ItemMacro") || effectIdOrUuid.startsWith("ActivityMacro")) {
+      // Execute macro with actor context
+      await executeMacroSpec(effectIdOrUuid, actor, effect);
+    } else {
+      // Check if it's a status effect ID (from CONFIG.statusEffects)
+      const statusEffect = CONFIG.statusEffects.find(se => se.id === effectIdOrUuid);
+      if (statusEffect) {
+        // Apply as status effect using toggleStatusEffect
+        await actor.toggleStatusEffect(effectIdOrUuid, { active: true, overlay });
+      } else {
+        // Assume it's an effect UUID - fetch and apply
+        const sourceEffect = await fromUuid(effectIdOrUuid) as ActiveEffect.Implementation | undefined;
+        if (sourceEffect) {
+          const effectData = sourceEffect.toObject();
+          if (overlay) {
+            foundry.utils.setProperty(effectData, "flags.core.overlay", true);
+          }
+          await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+        }
+      }
+    }
+  }
+
+  // Helper to execute a macro specification for replacement effects
+  // Supports: "function.functionName", "Macro.macroName", "ItemMacro", "ItemMacro.itemNameOrUuid",
+  //           "ActivityMacro", "ActivityMacro.uuid"
+  async function executeMacroSpec(macroSpec: string, actor: Actor.Implementation, effect?: ActiveEffect.Implementation): Promise<any> {
+    let macro: Macro.Implementation | undefined;
+    let macroData: Macro.CreateData | undefined;
+    let macroItem: Item.Implementation | undefined;
+    let macroActivity: Activity | undefined;
+
+    // Get the origin item/activity from the effect if available
+    let originItem: Item.Implementation | undefined;
+    let originActivity: Activity | undefined;
+    if (effect?.origin) {
+      const origin = await fromUuid(effect.origin);
+      if (origin instanceof Item) {
+        originItem = origin;
+        // @ts-expect-error no dnd5e-types
+        originActivity = origin.system.activities?.contents[0];
+      } else if ((origin as any)?.item) {
+        // It's an activity
+        originActivity = origin as unknown as Activity;
+        originItem = (origin as any).item;
+      }
+    }
+
+    try {
+      if (macroSpec.startsWith("function.")) {
+        // Create a script macro that calls the named function
+        const funcName = macroSpec.replace("function.", "").trim();
+        macroData = {
+          name: "replacement effect function call",
+          type: "script",
+          command: `return await ${funcName}({ speaker, actor, token, character, item, args, scope })`
+        };
+        macroItem = originItem;
+      } else if (macroSpec.startsWith("Macro.")) {
+        // Get macro by name from game.macros
+        const macroName = macroSpec.replace("Macro.", "").trim();
+        macro = game.macros?.getName(macroName);
+        if (!macro) {
+          // Try as UUID
+          const macroEntity = await fromUuid(macroName);
+          if (macroEntity instanceof Macro) macro = macroEntity;
+        }
+        if (!macro) {
+          warn(`applyReplacementEffect | Could not find macro ${macroName}`);
+          return;
+        }
+        if (macro.type === "chat") {
+          macro.execute();
+          return;
+        }
+        macroItem = originItem;
+      } else if (macroSpec.startsWith("ItemMacro")) {
+        // Use helper function to resolve ItemMacro
+        const resolved = await resolveItemMacro(macroSpec, { actor, originItem });
+        if (!resolved) {
+          warn(`applyReplacementEffect | Could not resolve ItemMacro: ${macroSpec}`);
+          return;
+        }
+        macroItem = resolved.item;
+        macroData = resolved.macroData;
+      } else if (macroSpec.startsWith("ActivityMacro")) {
+        // Use helper function to resolve ActivityMacro
+        const resolved = await resolveActivityMacro(macroSpec, { originItem, originActivity });
+        if (!resolved) {
+          warn(`applyReplacementEffect | Could not resolve ActivityMacro: ${macroSpec}`);
+          return;
+        }
+        macroItem = resolved.item;
+        macroActivity = resolved.activity;
+        macro = resolved.macro;
+      }
+
+      // Create macro if we have macroData but no macro
+      if (macroData && !macro) {
+        const OWNER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER;
+        macroData.ownership = { default: OWNER };
+        macroData.author = game.user?.id;
+        macro = new CONFIG.Macro.documentClass(macroData);
+      }
+
+      if (!macro?.command) return;
+
+      // Build execution context
+      const token = tokenForActor(actor);
+      const speaker = ChatMessage.getSpeaker({ actor, token: token?.document });
+      const args = [{ actor, token, effect, item: macroItem, activity: macroActivity, reason: "replacementEffect" }];
+
+      const scope: Macro.UnknownScope = {};
+      scope.actor = actor;
+      scope.token = token;
+      scope.effect = effect;
+      scope.item = macroItem;
+      scope.activity = macroActivity;
+      scope.args = args;
+
+      return macro.execute(scope);
+    } catch (err) {
+      TroubleShooter.recordError(err, "executeMacroSpec: Error evaluating macro");
+      error("Error evaluating replacement effect macro", err);
+    }
+  }
+
   Hooks.on("midi-qol.RollComplete", async (workflow) => {
     const activityUuid = workflow.activity.uuid ?? "";
 
     if (savedOverTimeEffectsToDelete[activityUuid]) {
-      if (workflow.saves.size === 1 || !workflow.hasSave) {
-        let effect = fromUuidSync(savedOverTimeEffectsToDelete[activityUuid].uuid) as ActiveEffect.Implementation | undefined;
-        if (effect) expireEffects(effect.parent as Actor.Implementation, [effect], { "expiry-reason": "midi-qol:overTime" });
+      const effectData = savedOverTimeEffectsToDelete[activityUuid];
+      let effect = fromUuidSync(effectData.uuid) as ActiveEffect.Implementation | undefined;
+
+      if (effect) {
+        const saved = workflow.saves.size === 1;
+        const failed = workflow.failedSaves.size === 1;
+        const { saveCount, saveCountAction, failCount, failCountAction } = effectData;
+        const actor = effect.parent as Actor.Implementation;
+
+        if (saved || !workflow.hasSave) {
+          // Handle saveCount - need multiple saves to trigger action
+          if (saved && saveCount !== undefined) {
+            let savesRemaining = foundry.utils.getProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`) as number | undefined;
+            // Initialize if not set
+            if (savesRemaining === undefined) savesRemaining = saveCount;
+            savesRemaining -= 1;
+
+            if (savesRemaining <= 0) {
+              // Required saves reached - apply action
+              // Action format: [-+]effectSpec (e.g., "-", "+", "-petrified", "+prone")
+              const action = saveCountAction ?? "-"; // Default: remove
+              const isRemove = action.startsWith("-");
+              const effectSpec = action.length > 1 ? action.slice(1) : undefined;
+
+              // Apply effectSpec if specified (always added to actor)
+              if (effectSpec) await applyReplacementEffect(actor, effectSpec, effect);
+
+              // Then handle the mode
+              if (isRemove) {
+                expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:saveCount" });
+              } else {
+                await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.permanent`, true);
+                await effect.update({ flags: effect.flags });
+              }
+            } else {
+              // Decrement counter on effect
+              await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`, savesRemaining);
+              await effect.update({ flags: effect.flags });
+            }
+          } else {
+            // No saveCount or no save - original behavior (single save removes)
+            expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime" });
+          }
+        } else if (failed && failCount !== undefined) {
+          // Handle failCount - multiple fails trigger action
+          let failsRemaining = foundry.utils.getProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`) as number | undefined;
+          // Initialize if not set
+          if (failsRemaining === undefined) failsRemaining = failCount;
+          failsRemaining -= 1;
+
+          if (failsRemaining <= 0) {
+            // Required fails reached - apply action
+            // Action format: [-+]effectSpec (e.g., "-", "+", "-petrified", "+prone")
+            const action = failCountAction ?? "+"; // Default: permanent
+            const isRemove = action.startsWith("-");
+            const effectSpec = action.length > 1 ? action.slice(1) : undefined;
+
+            // Apply effectSpec if specified (always added to actor)
+            if (effectSpec) await applyReplacementEffect(actor, effectSpec, effect);
+
+            // Then handle the mode
+            if (isRemove) {
+              expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:failCount" });
+            } else {
+              await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.permanent`, true);
+              await effect.update({ flags: effect.flags });
+            }
+          } else {
+            // Decrement counter on effect
+            await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`, failsRemaining);
+            await effect.update({ flags: effect.flags });
+          }
+        }
       }
       delete savedOverTimeEffectsToDelete[activityUuid];
     }

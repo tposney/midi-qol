@@ -22,6 +22,14 @@ When working on midi-qol, you can examine the dnd5e system codebase at:
 ```
 Use this to verify API methods and understand how dnd5e implements features. **Do not assume methods exist** - always verify against the actual codebase.
 
+### Foundry VTT Source Code Reference
+For Foundry VTT core API methods, search the local source code at:
+```
+/home/timp/foundryv13/resources/app/client-esm
+/home/timp/foundryv13/resources/app/common
+```
+**Important**: Always use v13 API. Do NOT fetch from `foundryvtt.com/api/v12/` - only use v13 documentation or local source code.
+
 ### External Documentation
 - **Chris-Premades API**: `/home/timp/Documents/ChrisPremades-API-2026-01-06.md` - Comprehensive documentation of the chris-premades module API (classes, utilities, macros, constants)
 - **Chris-Premades GitHub**: `https://github.com/chrisk123999/chris-premades` (branch: master) - Source code for chris-premades module
@@ -238,6 +246,19 @@ The project uses the Quench testing framework for Foundry VTT. Tests are in a se
 - Build: `cd midi-qol-tests && npm run build`
 
 The module accesses midi-qol via `globalThis.MidiQOL` and registers Quench test batches.
+
+### Test Writing Requirements
+
+**Every test must start with `await testMessage()`:**
+```typescript
+it("6.1 overtime run and removed on combat update", async function () {
+  await testMessage("6.1", "test overtime effect run and removed on combat update");
+  this.timeout(20000);
+  // ... rest of test
+});
+```
+
+The `testMessage()` function logs the test name and description to the console and chat for visibility. Always call it as the first line of every test before `this.timeout()`.
 
 ### Quench Test World
 

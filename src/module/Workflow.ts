@@ -85,6 +85,8 @@ import {
   getTargetDescriptor,
   getThrottlingFunction,
   addAdvAttribution,
+  resolveItemMacro,
+  resolveActivityMacro,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, procAbilityAdvantage } from "./patching.js";
@@ -4262,43 +4264,34 @@ export class Workflow {
             command: `return await ${func.replace("function.", "").trim()}({ speaker, actor, token, character, item, rolledItem, macroItem, args, scope, workflow })`
           };
         } else if (name.startsWith(MQItemMacroLabel) || name.startsWith("ItemMacro")) {
-          // ItemMacro
-          // ItemMacro.ItemName
-          // ItemMacro.uuid
-          if (name === MQItemMacroLabel || name === "ItemMacro") { // TODO this should not occur so remove it
-            if (!macroItem) return {};
-            itemMacroData = macroItem.flags?.dae?.macro ?? macroItem.flags?.itemacro?.macro;
-            macroData.sourceItemUuid = macroItem?.uuid;
-          } else {
-            const parts = name.split(".");
-            const itemNameOrUuid = parts.slice(1).join(".");
-            macroItem = await fromUuid(itemNameOrUuid) as Item.Implementation | undefined;
-            // @ts-expect-error this can't happen, right? It's not one of the 3 options commented above
-            if (macroItem instanceof ActiveEffect && macroItem.parent instanceof Item)
-              // @ts-expect-error see above
-              macroItem = macroItem.parent;
-            // @ts-expect-error see above
-            else if (macroItem?.item) macroItem = macroItem.item;
-            // Not a valid uuid, therefore ItemMacro.ItemName
-            if (!macroItem) macroItem = actorToUse.items.find(i => i.name === itemNameOrUuid && !!(i.flags?.dae?.macro ?? i.flags?.itemacro?.macro))
-            if (!macroItem && actorToUse instanceof Actor && uuid) {
-              let itemId: string;
-              if (uuid.includes("Activity."))
-                itemId = uuid.split(".").slice(-3)[0];
-              else if (uuid.includes("ActiveEffect."))
-                itemId = uuid.split(".").slice(-3)[0];
-              else
-                itemId = uuid.split(".").slice(-1)[0];
-              const itemData = actorToUse.effects.find(effect => effect.flags?.dae?.itemData?._id === itemId)?.flags?.dae?.itemData;
-              if (itemData) macroItem = itemData;
-            } else if (!macroItem) {
+          // ItemMacro, ItemMacro.ItemName, ItemMacro.uuid
+          const resolved = await resolveItemMacro(name, { actor: actorToUse, originItem: macroItem as Item.Implementation });
+          if (resolved) {
+            macroItem = resolved.item;
+            itemMacroData = resolved.macroData;
+          } else if (actorToUse instanceof Actor && uuid) {
+            // DAE itemData fallback - look for item data stored in effect flags
+            let itemId: string;
+            if (uuid.includes("Activity."))
+              itemId = uuid.split(".").slice(-3)[0];
+            else if (uuid.includes("ActiveEffect."))
+              itemId = uuid.split(".").slice(-3)[0];
+            else
+              itemId = uuid.split(".").slice(-1)[0];
+            const itemData = actorToUse.effects.find(effect => effect.flags?.dae?.itemData?._id === itemId)?.flags?.dae?.itemData;
+            if (itemData) {
+              macroItem = itemData;
+              itemMacroData = macroItem?.flags?.dae?.macro ?? macroItem?.flags?.itemacro?.macro;
+            } else {
               console.warn("midi-qol | callMacro | No item for", name);
               return {};
             }
-            itemMacroData = macroItem?.flags?.dae?.macro ?? macroItem?.flags?.itemacro?.macro;
-            // @ts-expect-error doesn't think uuid will be there if it's data
-            macroData.sourceItemUuid = macroItem?.uuid;
+          } else {
+            console.warn("midi-qol | callMacro | No item for", name);
+            return {};
           }
+          // @ts-expect-error doesn't think uuid will be there if it's data
+          macroData.sourceItemUuid = macroItem?.uuid;
         } else if (name.startsWith(MQActivityMacroLabel) || name.startsWith("ActivityMacro")) {
           // ActivityMacro
           // ActivityMacro.uuid
@@ -4314,50 +4307,14 @@ export class Workflow {
             if (!macroActivity || (activityId !== macroActivity?.id)) return {};
             macro = macroActivity.macro;
           } else {
-            const parts = name.split(".");
-            const activitySpec = parts.slice(1).join(".");
-            let itemToUse = macroItem;
-            macroItem = item;
-            if (!macro) {
-              const activityOrItem: any = (activitySpec) ? await fromUuid(activitySpec) : macroActivity;
-              if (activityOrItem instanceof Item)
-                itemToUse = activityOrItem;
-              else itemToUse = activityOrItem?.item ?? macroItem;
-              // ActivityMacro.name or ActivityMacro.uuid where not found by fromUuid
-              if (activityOrItem?.macro.command) {
-                macro = activityOrItem.macro;
-                macroActivity = activityOrItem
-              }
-              const itemId = parts.at(-1);
-              if (!macro?.command) {
-                // @ts-expect-error no dnd5e-types
-                macroActivity = itemToUse?.system.activities?.find(activity => activity.identifier === itemId);
-                if (macroActivity?.macro.command)
-                  macro = macroActivity.macro;
-              }
-              if (!macro?.command) {
-                // @ts-expect-error no dnd5e-types
-                macroActivity = itemToUse?.system.activities?.find(activity => activity._id === itemId);
-                if (macroActivity?.macro.command)
-                  macro = macroActivity.macro;
-              }
-              if (!macro?.command) {
-                // @ts-expect-error no dnd5e-types
-                macroActivity = itemToUse?.system.activities?.find(activity => activity.name === itemId);
-                if (macroActivity?.macro.command) macro = macroActivity.macro;
-              }
-              if (!macro?.command && activityOrItem instanceof Item) {
-                // @ts-expect-error no dnd5e-types
-                macroActivity ??= itemToUse?.system.activities?.contents[0];
-                if (macroActivity?.macro) macro = macroActivity.macro;
-              }
-              else if (!macro?.command) {
-                macroActivity ??= activityOrItem;
-                macro = macroActivity?.macro;
-              }
+            // ActivityMacro.uuid, ActivityMacro.identifier, ActivityMacro.name
+            const resolved = await resolveActivityMacro(name, { originItem: macroItem as Item.Implementation, originActivity: macroActivity });
+            if (resolved) {
+              macroItem = resolved.item;
+              macroActivity = resolved.activity;
+              macro = resolved.macro;
+              macroData.sourceItemUuid = resolved.item?.uuid;
             }
-            macroData.sourceItemUuid = itemToUse?.uuid;
-            macroItem = itemToUse;
           }
         } else { // get a world/compendium macro.
           if (name.startsWith("Macro.")) name = name.replace("Macro.", "");
@@ -6643,9 +6600,8 @@ export class Workflow {
     this.isCritical = this.diceRoll >= criticalThreshold;
     // Add natural crit attribution
     if (this.isCritical) {
-      this.attackAdvAttribution.add(`CRIT:${game.i18n.localize("DND5E.Roll")} >= ${criticalThreshold}`);
+      this.attackAdvAttribution.add(`CRIT:${i18n("DND5E.Roll")} >= ${criticalThreshold}`);
     }
-
     const midiFumble: number = (this.activity?.fumbleThreshold as number) ?? 1; //someone could set the midi fumbleThreshold field to 0 or delete the field
     //@ts-expect-error no dnd5e-types
     const attackRollFumbleTarget = this.attackRoll.options.criticalFailure;
@@ -6656,7 +6612,7 @@ export class Workflow {
     this.isFumble = this.diceRoll <= fumbleTarget;
     // Add natural fumble attribution
     if (this.isFumble) {
-      this.attackAdvAttribution.add(`FUMBLE:${game.i18n.localize("DND5E.Roll")} <= ${fumbleTarget}`);
+      this.attackAdvAttribution.add(`FUMBLE:${i18n("DND5E.Roll")} <= ${fumbleTarget}`);
     }
 
     // Check target grants.fumble and grants.noFumble flags

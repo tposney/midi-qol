@@ -1055,7 +1055,48 @@ turn=start/end, damageRoll=formula, damageType=type, saveDC=number, saveAbility=
 | `saveAbility` | Ability for save: str/dex/con/int/wis/cha. Use `\|` for choices (e.g., `con\|wis`) | - |
 | `rollType` | Type of roll: `save`, `check`, or `skill` | `save` (if saveAbility set) |
 | `saveMagic` | `true/false` - Treat as magical for magic resistance | `false` |
-| `saveRemove` | `true/false` - Successful save removes the effect | `true` |
+| `saveRemove` | `true/false` - Successful save removes the effect (deprecated: use `saveCount=1-`) | `true` |
+
+#### Save/Fail Count Parameters
+
+Control effect removal or permanence based on cumulative save successes or failures:
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `saveCount` | `N[-+]effectSpec` - Action after N successful saves | - |
+| `failCount` | `N[-+]effectSpec` - Action after N failed saves | - |
+
+**Syntax:** `saveCount=N[-+]effectSpec` or `failCount=N[-+]effectSpec`
+
+- **N** - Number of saves/fails required to trigger the action
+- **-** (minus) - Remove the overtime effect when count is reached
+- **+** (plus) - Make the overtime effect permanent (no more saves rolled)
+- **effectSpec** (optional) - Effect/status to add to the actor when count is reached
+
+**Effect Spec Options:**
+- `statusId` - Apply a status effect (e.g., `petrified`, `prone`, `stunned`)
+- `statusId|overlay` - Apply status as token overlay
+- `effectUuid` - Apply effect by Active Effect UUID
+- `function.functionName` - Call a global function
+- `Macro.macroName` - Execute a world macro by name
+- `ItemMacro` - Execute the macro from the item that created this effect
+- `ItemMacro.itemNameOrUuid` - Execute a specific item's macro
+- `ActivityMacro` - Execute the macro from the activity that created this effect
+- `ActivityMacro.uuid` - Execute a specific activity's macro
+
+**Examples:**
+```
+saveCount=3-           # Remove effect after 3 successful saves
+failCount=2+           # Make permanent after 2 failed saves (no more saves)
+failCount=3-petrified  # After 3 fails: add petrified AND remove effect
+failCount=3+stunned    # After 3 fails: add stunned AND make permanent
+saveCount=2-prone      # After 2 saves: add prone AND remove effect
+```
+
+**Notes:**
+- When `saveCount` or `failCount` is specified, `saveRemove=true` is ignored
+- The effectSpec is always **added** to the actor (it doesn't replace the overtime effect)
+- Use `removeCondition` alongside permanent effects to allow later removal
 
 #### Action Save Parameters
 
@@ -1082,43 +1123,71 @@ When `actionSave=roll`: A chat card is created at turn start; player clicks to r
 |-----------|-------------|---------|
 | `removeCondition` | Condition expression - if true, effect is removed | - |
 | `itemName` | UUID or name of item to use as template for the overtime roll | - |
-| `macro` | Macro to call during overtime processing | - |
+| `macro` | Macro to call during overtime processing (see Macro Options below) | - |
 | `killAnim` | `true/false` - Suppress Sequencer animations | `false` |
 | `allowIncapacitated` | `true/false` - Process even if target is incapacitated | `true` |
 | `fastForwardDamage` | `true/false` - Skip damage dialog | - |
 | `fastForwardAttack` | `true/false` - Skip attack dialog | - |
 
+**Macro Options:**
+
+The `macro` parameter supports the following formats:
+- `function.functionName` - Call a global function (e.g., `function.MidiQOL.doOverTimeDamage`)
+- `ItemMacro` - Execute the macro from the item that created this effect
+- `ItemMacro.itemNameOrUuid` - Execute a specific item's macro by name or UUID
+- `ActivityMacro` - Execute the macro from the activity that created this effect
+- `ActivityMacro.uuid` - Execute a specific activity's macro by UUID
+- `Macro.macroName` - Execute a world macro by name
+
 #### Examples
 
 **Simple Burning (damage each turn, save ends):**
 ```
-turn=end, damageRoll=1d6, damageType=fire, saveDC=12, saveAbility=dex, label="Burning"
+turn=end, damageRoll=1d6, damageType=fire, saveDC=12, saveAbility=dex, saveCount=1-, label="Burning"
 ```
 
 **Poison (damage + save, half damage on save):**
 ```
-turn=start, damageRoll=2d6, damageType=poison, saveDC=14, saveAbility=con, saveDamage=halfdamage, label="Poisoned"
+turn=start, damageRoll=2d6, damageType=poison, saveDC=14, saveAbility=con, saveDamage=halfdamage, saveCount=1-, label="Poisoned"
 ```
 
-**Regeneration (healing, no save):**
+**Regeneration (healing, no save, only when damaged):**
 ```
-turn=start, damageRoll=2d6, damageType=healing, label="Regeneration"
+turn=start, damageRoll=2d6, damageType=healing, applyCondition=@attributes.hp.value < @attributes.hp.max, label="Regeneration"
 ```
 
 **Hold Person (action to save, end of turn save):**
 ```
-turn=end, saveDC=@attributes.spelldc, saveAbility=wis, saveRemove=true, actionSave=roll, label="Hold Person"
+turn=end, saveDC=@attributes.spelldc, saveAbility=wis, saveCount=1-, actionSave=roll, label="Hold Person"
 ```
 
 **Damage with Condition (only if below max HP):**
 ```
-turn=start, damageRoll=1d6, damageType=necrotic, condition=@attributes.hp.value < @attributes.hp.max, label="Lingering Wound"
+turn=start, damageRoll=1d6, damageType=necrotic, applyCondition=@attributes.hp.value < @attributes.hp.max, label="Lingering Wound"
 ```
 
 **Grapple Escape (action save, STR or DEX choice):**
 ```
-turn=start, saveDC=14, saveAbility=str|dex, rollType=check, actionSave=dialog, saveRemove=true, label="Grappled"
+turn=start, saveDC=14, saveAbility=str|dex, rollType=check, actionSave=dialog, saveCount=1-, label="Grappled"
 ```
+
+**Flesh to Stone (fail 2 saves = petrified):**
+```
+turn=end, saveDC=@attributes.spelldc, saveAbility=con, saveCount=2-, failCount=3-petrified, label="Flesh to Stone"
+```
+*After 2 failed saves, target becomes petrified and the effect ends. After 3 successful saves, the effect simply ends.*
+
+**Contagion (fail 3 saves = permanent disease):**
+```
+turn=end, saveDC=@attributes.spelldc, saveAbility=con, saveCount=3-, failCount=3+, damageRoll=2d6, damageType=poison, label="Contagion"
+```
+*After 3 failed saves, the disease becomes permanent (no more saves). After 3 successful saves, the effect ends.*
+
+**Progressive Curse (permanent with removeCondition escape):**
+```
+turn=end, saveDC=15, saveAbility=wis, failCount=2+, removeCondition=@attributes.hp.value < 2, label="Creeping Curse"
+```
+*After 2 failed saves, becomes permanent. Can only be removed if HP drops below 2 (or by other means like Remove Curse).*
 
 #### Notes
 
