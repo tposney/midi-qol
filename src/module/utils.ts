@@ -1208,6 +1208,28 @@ export async function resolveActivityMacro(
   return { item, activity, macro };
 }
 
+/**
+ * Resolves DAE itemData stored in effect flags.
+ * DAE stores item data in effect flags when transferring effects, allowing
+ * ItemMacro resolution even when the original item is not on the actor.
+ *
+ * @param actor - The actor to search for effects with itemData
+ * @param uuid - The UUID to extract the item ID from
+ * @returns The stored item data, or undefined if not found
+ */
+export function resolveDAEItemData(
+  actor: Actor.Implementation,
+  uuid: string
+): Item.InitializedData | undefined {
+  let itemId: string;
+  if (uuid.includes("Activity.") || uuid.includes("ActiveEffect.")) {
+    itemId = uuid.split(".").slice(-3)[0];
+  } else {
+    itemId = uuid.split(".").slice(-1)[0];
+  }
+  return actor.effects.find(e => e.flags?.dae?.itemData?._id === itemId)?.flags?.dae?.itemData as Item.InitializedData | undefined;
+}
+
 export interface OvertimeDetails {
   turn: "start" | "end";
   label: string;

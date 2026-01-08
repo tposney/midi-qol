@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, log, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastAttack, isAutoFastDamage, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastAttack, isAutoFastDamage, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData } from "./utils.js";
 import { autoFastForwardAbilityRolls, checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -457,12 +457,21 @@ export function initHooks() {
       } else if (macroSpec.startsWith("ItemMacro")) {
         // Use helper function to resolve ItemMacro
         const resolved = await resolveItemMacro(macroSpec, { actor, originItem });
-        if (!resolved) {
+        if (resolved) {
+          macroItem = resolved.item;
+          macroData = resolved.macroData;
+        } else if (effect?.origin) {
+          // DAE itemData fallback - look for item data stored in effect flags
+          const itemData = resolveDAEItemData(actor, effect.origin);
+          if (itemData) {
+            macroItem = itemData as unknown as Item.Implementation;
+            macroData = itemData.flags?.dae?.macro ?? itemData.flags?.itemacro?.macro;
+          }
+        }
+        if (!macroData) {
           warn(`applyReplacementEffect | Could not resolve ItemMacro: ${macroSpec}`);
           return;
         }
-        macroItem = resolved.item;
-        macroData = resolved.macroData;
       } else if (macroSpec.startsWith("ActivityMacro")) {
         // Use helper function to resolve ActivityMacro
         const resolved = await resolveActivityMacro(macroSpec, { originItem, originActivity });

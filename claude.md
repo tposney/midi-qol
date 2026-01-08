@@ -66,6 +66,42 @@ For Foundry VTT core API methods, search the local source code at:
 
 ## Significant Decisions
 
+### 13.0.38 Changes
+
+1. **Macro calling refactor - callMacro split into helper methods**
+   - Refactored the 160+ line `callMacro` method in Workflow.ts into focused helper methods
+   - New interfaces added to Workflow.ts:
+     - `ResolvedMacro` - Result of macro resolution (macro, macroData, item, activity, sourceItemUuid)
+     - `CallMacroContext` - Context for macro call (name, uuid, macroItem, macroActivity, actorToUse)
+   - New private helper methods in Workflow class:
+     - `parseCallMacroContext()` - Parses macro name and extracts context (actor, item, activity)
+     - `resolveFunctionMacro()` - Handles `function.` prefixed macros
+     - `resolveItemMacroCall()` - Resolves ItemMacro using helper + DAE fallback
+     - `resolveActivityMacroCall()` - Resolves ActivityMacro using helper
+     - `resolveWorldMacro()` - Resolves world/compendium macros by name or UUID
+     - `executeMacroWithScope()` - Creates Macro instance from data and executes with proper scope
+   - Main `callMacro` now has clear 3-phase structure: context parsing, macro resolution, execution
+
+2. **New macro resolution helpers in utils.ts**
+   - `resolveItemMacro(macroSpec, context)` - Resolves "ItemMacro", "ItemMacro.name", "ItemMacro.uuid"
+     - Returns `{ item, macroData }` or undefined
+     - Searches: originItem → actor items by UUID → actor items by name (with macro)
+   - `resolveActivityMacro(macroSpec, context)` - Resolves "ActivityMacro", "ActivityMacro.uuid", "ActivityMacro-id"
+     - Returns `{ item, activity, macro }` or undefined
+     - Searches: originActivity → item activities by UUID/name/identifier
+   - `resolveDAEItemData(actor, uuid)` - Extracts DAE itemData from actor effects
+     - Used as fallback when origin item is deleted but effect has stored itemData
+     - Searches actor.effects for matching `flags.dae.itemData._id`
+
+3. **DAE fallback added to Hooks.ts executeMacroSpec**
+   - Added `resolveDAEItemData` fallback to ItemMacro resolution in replacement effect handling
+   - If `resolveItemMacro` fails and effect has origin, searches DAE itemData for macro
+
+4. **Macro tests merged into group 4**
+   - Macro resolution helper tests merged from group 34 into group 4 (04-onuse-macro-tests.ts)
+   - Group 4 renamed from "OnUse Macro Tests" to "Macro Tests"
+   - Tests 4.3-4.17 cover: resolveItemMacro, resolveActivityMacro, workflow integration, macroData passing
+
 ### 13.0.36 Changes
 
 1. **Vitality damage and healing types**

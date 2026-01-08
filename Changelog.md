@@ -10,9 +10,10 @@
   - Examples:
     - `saveCount=3-`: Remove effect after 3 successful saves
     - `failCount=2+`: Make effect permanent after 2 failed saves
-    - `failCount=2-petrified`: After 2 fails, add petrified status AND remove the overtime effect
-    - `failCount=2+petrified|overlay`: After 2 fails, add petrified (with overlay) AND make overtime effect permanent
-    - `saveCount=2-prone`: After 2 saves, add prone status AND remove the overtime effect
+      `saveCount=2-prone`: After 2 saves, you throw off the overtime effect, but the strain was so great you collapse to the ground prone.
+
+    - `failCount=2-petrified|overlay`: After 2 fails, add petrified (with overlay).
+    - `saveCount=2+prone`: After 2 saves, add prone status AND keep the overtime effect
 
 **Deprecations:**
 * `saveRemove=true` is deprecated. Use `saveCount=1-` instead. `saveRemove` will be removed in midi 14.

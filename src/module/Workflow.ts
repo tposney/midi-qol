@@ -87,6 +87,7 @@ import {
   addAdvAttribution,
   resolveItemMacro,
   resolveActivityMacro,
+  resolveDAEItemData,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, procAbilityAdvantage } from "./patching.js";
@@ -99,6 +100,29 @@ import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-t
 import Token = foundry.canvas.placeables.Token;
 import { MidiTransformActivity } from "./activities/TransformActivity.js";
 import { MidiAttackActivity } from "./activities/AttackActivity.js";
+
+/**
+ * Result of resolving a macro specification in callMacro.
+ * Either macro (for world/compendium macros) or macroData (for item/function macros) will be set.
+ */
+interface ResolvedMacro {
+  macro?: Macro.Implementation;
+  macroData?: Macro.CreateData;
+  item?: Item.Implementation | Item.InitializedData;
+  activity?: Activity;
+  sourceItemUuid?: string;
+}
+
+/**
+ * Context for macro resolution, parsed from the macro name and options.
+ */
+interface CallMacroContext {
+  name: string;
+  uuid?: string;
+  macroItem?: Item.Implementation | Item.InitializedData;
+  macroActivity?: Activity;
+  actorToUse: Actor.Implementation;
+}
 
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event: AugmentedEvent) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
@@ -4214,173 +4238,264 @@ export class Workflow {
   }
 
 
+  /**
+   * Parse the macro name and resolve context from UUID if provided.
+   */
+  private async parseCallMacroContext(
+    macroName: string,
+    item: Item.Implementation | undefined,
+    options: AnyObject
+  ): Promise<CallMacroContext | undefined> {
+    const [name, uuid] = macroName?.trim().split("|") ?? [];
+    if (!name) return undefined;
+
+    let macroItem: Item.Implementation | Item.InitializedData | undefined = item;
+    let macroActivity: Activity | undefined = this.activity;
+    const actorToUse = (options.actor as Actor.Implementation | undefined) ?? this.actor;
+
+    // Resolve entity from UUID if provided
+    if (uuid?.length > 0) {
+      const macroEntity = await fromUuid(uuid) as any;
+      if (macroEntity) {
+        if (macroEntity instanceof ActiveEffect) {
+          if (macroEntity.parent instanceof Item) macroItem = macroEntity.parent;
+        } else if (macroEntity instanceof Item) {
+          macroItem = macroEntity;
+        } else if (macroEntity.item) { // Activity
+          macroActivity = macroEntity;
+          macroItem = macroEntity.item;
+        }
+      }
+    }
+
+    // Handle otherActivityOnly option
+    if (options.otherActivityOnly) {
+      if (!this.activity.otherActivity) return undefined;
+      if (name !== "ActivityMacro" && !name.startsWith("ActivityMacro-")) return undefined;
+      macroActivity = this.activity.otherActivity;
+      macroItem = this.item;
+    }
+
+    return { name, uuid, macroItem, macroActivity, actorToUse };
+  }
+
+  /**
+   * Resolve a function.* macro specification.
+   */
+  private resolveFunctionMacro(name: string): ResolvedMacro {
+    const func = name.replace("function.", "").trim();
+    return {
+      macroData: {
+        name: "function call",
+        type: "script",
+        command: `return await ${func}({ speaker, actor, token, character, item, rolledItem, macroItem, args, scope, workflow })`
+      }
+    };
+  }
+
+  /**
+   * Resolve an ItemMacro specification, with DAE itemData fallback.
+   */
+  private async resolveItemMacroCall(
+    name: string,
+    uuid: string | undefined,
+    macroItem: Item.Implementation | Item.InitializedData | undefined,
+    actorToUse: Actor.Implementation
+  ): Promise<ResolvedMacro | undefined> {
+    // Try standard resolution first
+    const resolved = await resolveItemMacro(name, { actor: actorToUse, originItem: macroItem as Item.Implementation });
+    if (resolved) {
+      return {
+        item: resolved.item,
+        macroData: resolved.macroData,
+        sourceItemUuid: resolved.item?.uuid
+      };
+    }
+
+    // DAE itemData fallback - look for item data stored in effect flags
+    if (actorToUse instanceof Actor && uuid) {
+      const itemData = resolveDAEItemData(actorToUse, uuid);
+      if (itemData) {
+        return {
+          item: itemData,
+          macroData: itemData?.flags?.dae?.macro ?? itemData?.flags?.itemacro?.macro,
+          // @ts-expect-error uuid may not be on data
+          sourceItemUuid: itemData?.uuid
+        };
+      }
+    }
+
+    console.warn("midi-qol | callMacro | No item for", name);
+    return undefined;
+  }
+
+  /**
+   * Resolve an ActivityMacro specification.
+   */
+  private async resolveActivityMacroCall(
+    name: string,
+    macroItem: Item.Implementation | Item.InitializedData | undefined,
+    macroActivity: Activity | undefined
+  ): Promise<ResolvedMacro | undefined> {
+    // Workflow-specific guard: ActivityMacro-id must match current activity
+    if (name.startsWith("ActivityMacro-")) {
+      const activityId = name.split("-").slice(1).join("-");
+      if (!macroActivity || activityId !== macroActivity?.id) return undefined;
+    }
+
+    const resolved = await resolveActivityMacro(name, {
+      originItem: macroItem as Item.Implementation,
+      originActivity: macroActivity
+    });
+
+    if (resolved) {
+      return {
+        item: resolved.item,
+        activity: resolved.activity,
+        macro: resolved.macro,
+        sourceItemUuid: resolved.item?.uuid
+      };
+    }
+    return undefined;
+  }
+
+  /**
+   * Resolve a world or compendium macro.
+   */
+  private async resolveWorldMacro(name: string): Promise<ResolvedMacro | undefined> {
+    const macroName = name.startsWith("Macro.") ? name.slice(6) : name;
+    let macro = game.macros?.getName(macroName);
+
+    if (!macro) {
+      const doc = await fromUuid(macroName);
+      if (doc instanceof Item) {
+        return {
+          item: doc,
+          macroData: doc.flags?.dae?.macro ?? doc.flags?.itemacro?.macro,
+          sourceItemUuid: doc.uuid
+        };
+      } else if (doc instanceof Macro) {
+        macro = doc as unknown as typeof macro;
+      }
+    }
+
+    if (macro?.type === "chat") {
+      macro.execute();
+      return undefined; // Chat macros handle themselves
+    }
+
+    return macro ? { macro } : undefined;
+  }
+
+  /**
+   * Create a Macro instance from macro data and execute it with the given scope.
+   * @param resolved - The resolved macro specification
+   * @param workflowContext - Workflow context data passed to macro as args[0] and midiData
+   * @param options - Call options
+   * @param rolledItem - The item that was rolled to trigger this macro
+   */
+  private executeMacroWithScope(
+    resolved: ResolvedMacro,
+    workflowContext: MidiMacroData,
+    options: AnyObject,
+    rolledItem: Item.Implementation | undefined
+  ): Promise<any> | void | undefined {
+    const macro = this.createMacroFromResolved(resolved);
+    if (!macro?.command) return undefined;
+
+    const actorToUse = (options.actor as Actor.Implementation | undefined) ?? this.actor;
+    const scope: Macro.UnknownScope = {
+      workflow: this,
+      rolledActivity: this.activity,
+      macroActivity: resolved.activity,
+      item: rolledItem,
+      rolledItem: rolledItem,
+      macroItem: resolved.item ?? rolledItem,
+      args: [workflowContext],
+      options: options,
+      actor: actorToUse,
+      token: tokenForActor(actorToUse),
+      midiData: workflowContext
+    };
+
+    return macro.execute(scope);
+  }
+
+  /**
+   * Create a Macro document from resolved macro data.
+   */
+  private createMacroFromResolved(resolved: ResolvedMacro): Macro.Implementation | undefined {
+    if (resolved.macro) return resolved.macro;
+
+    const macroData = resolved.macroData;
+    if (!macroData?.command) {
+      if (debugEnabled > 0) warn(`callMacro | could not find item macro command`);
+      return undefined;
+    }
+
+    const data = foundry.utils.mergeObject(
+      { name: "midi generated macro", type: "script", command: "" },
+      macroData
+    );
+    data.ownership = { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER };
+    data.author = game.user?.id;
+    return new CONFIG.Macro.documentClass(data);
+  }
+
+  /**
+   * Call a macro by name, resolving the macro type and executing it.
+   */
   async callMacro(
     item: Item.Implementation | undefined,
     macroName: string,
     macroData: MidiMacroData,
     options: AnyObject
   ): Promise<any> {
-    let [name, uuid] = macroName?.trim().split("|");
-    let macroItem: Item.Implementation | Item.InitializedData | undefined = item;
-    let macroActivity: Activity | undefined = this.activity;
-    let macroEntity: ActiveEffect.Implementation | Item.Implementation | Activity | null | undefined;
-    if (uuid?.length > 0) {
-      macroEntity = await fromUuid(uuid) as any;
-    }
-    if (macroEntity) {
-      if (macroEntity instanceof ActiveEffect) {
-        if (macroEntity.parent instanceof Item) macroItem = macroEntity.parent;
-      } else if (macroEntity instanceof Item) {
-        macroItem = macroEntity
-      } else if (macroEntity.item) { // it points to an activity
-        macroActivity = macroEntity;
-        macroItem = macroEntity.item;
-      }
-    }
-    if (options.otherActivityOnly) {
-      if (!this.activity.otherActivity || (name !== "ActivityMacro") && !name.startsWith("ActivityMacro-")) return;
-      macroActivity = this.activity.otherActivity;
-      macroItem = this.item;
-    } else
-      macroActivity = this.activity;
-    let macro: Macro.Implementation | undefined;
-    let itemMacroData: Macro.CreateData | undefined;
-    const actorToUse = (options.actor as Actor.Implementation | undefined) ?? this.actor;
-    const rolledItem = item;
-
     try {
-      // @ts-expect-error pretty sure this can't happen, maybe a relic from early activity implementations?
-      if (macroItem?.macro && ["ItemMacro", MQItemMacroLabel].includes(name)) {
-        // @ts-expect-error as above
-        macro = macroItem.macro;
+      // Phase 1: Parse and resolve context
+      const context = await this.parseCallMacroContext(macroName, item, options);
+      if (!context) return undefined;
+
+      const { name, uuid, macroItem, macroActivity, actorToUse } = context;
+      let resolved: ResolvedMacro | undefined;
+
+      // Phase 2: Resolve macro based on type
+      if (name.startsWith("function.")) {
+        resolved = this.resolveFunctionMacro(name);
+      } else if (name.startsWith(MQItemMacroLabel) || name.startsWith("ItemMacro")) {
+        resolved = await this.resolveItemMacroCall(name, uuid, macroItem, actorToUse);
+      } else if (name.startsWith(MQActivityMacroLabel) || name.startsWith("ActivityMacro")) {
+        resolved = await this.resolveActivityMacroCall(name, macroItem, macroActivity);
       } else {
-        if (!name) return undefined;
-        if (name.startsWith("function.")) {
-          macroActivity = undefined;
-          let [func, uuid] = name.split("|");
-          itemMacroData = {
-            name: "function call",
-            type: "script",
-            command: `return await ${func.replace("function.", "").trim()}({ speaker, actor, token, character, item, rolledItem, macroItem, args, scope, workflow })`
-          };
-        } else if (name.startsWith(MQItemMacroLabel) || name.startsWith("ItemMacro")) {
-          // ItemMacro, ItemMacro.ItemName, ItemMacro.uuid
-          const resolved = await resolveItemMacro(name, { actor: actorToUse, originItem: macroItem as Item.Implementation });
-          if (resolved) {
-            macroItem = resolved.item;
-            itemMacroData = resolved.macroData;
-          } else if (actorToUse instanceof Actor && uuid) {
-            // DAE itemData fallback - look for item data stored in effect flags
-            let itemId: string;
-            if (uuid.includes("Activity."))
-              itemId = uuid.split(".").slice(-3)[0];
-            else if (uuid.includes("ActiveEffect."))
-              itemId = uuid.split(".").slice(-3)[0];
-            else
-              itemId = uuid.split(".").slice(-1)[0];
-            const itemData = actorToUse.effects.find(effect => effect.flags?.dae?.itemData?._id === itemId)?.flags?.dae?.itemData;
-            if (itemData) {
-              macroItem = itemData;
-              itemMacroData = macroItem?.flags?.dae?.macro ?? macroItem?.flags?.itemacro?.macro;
-            } else {
-              console.warn("midi-qol | callMacro | No item for", name);
-              return {};
-            }
-          } else {
-            console.warn("midi-qol | callMacro | No item for", name);
-            return {};
-          }
-          // @ts-expect-error doesn't think uuid will be there if it's data
-          macroData.sourceItemUuid = macroItem?.uuid;
-        } else if (name.startsWith(MQActivityMacroLabel) || name.startsWith("ActivityMacro")) {
-          // ActivityMacro
-          // ActivityMacro.uuid
-          // ActivityMacro.identifier
-          // ActivityMacro.ActivityName
-          if (name === MQActivityMacroLabel || name === "ActivityMacro") {
-            if (!macroActivity) return {};
-            macro = macroActivity.macro;
-          } else if (name.startsWith("ActivityMacro-")) {
-            // SPECIAL: ActivityMacro-id - this is programmatically set with the new app
-            const activityId = name.split("-").slice(1).join("-");
-            // Don't call if current activity isn't the specified one
-            if (!macroActivity || (activityId !== macroActivity?.id)) return {};
-            macro = macroActivity.macro;
-          } else {
-            // ActivityMacro.uuid, ActivityMacro.identifier, ActivityMacro.name
-            const resolved = await resolveActivityMacro(name, { originItem: macroItem as Item.Implementation, originActivity: macroActivity });
-            if (resolved) {
-              macroItem = resolved.item;
-              macroActivity = resolved.activity;
-              macro = resolved.macro;
-              macroData.sourceItemUuid = resolved.item?.uuid;
-            }
-          }
-        } else { // get a world/compendium macro.
-          if (name.startsWith("Macro.")) name = name.replace("Macro.", "");
-          macro = game.macros?.getName(name)
-          if (!macro) {
-            const itemOrMacro = await fromUuid(name);
-            if (itemOrMacro instanceof Item) {
-              macroData.sourceItemUuid = itemOrMacro.uuid;
-              itemMacroData = itemOrMacro.flags?.dae?.macro ?? itemOrMacro.flags?.itemacro?.macro;
-            } else if (itemOrMacro instanceof Macro) macro = itemOrMacro;
-          }
-
-          if (macro?.type === "chat") {
-            macro.execute(); // use the core foundry processing for chat macros
-            return {}
-          }
-        }
-
-        if (!itemMacroData && !macro) {
-          const message = `Could not find item/macro ${name}`;
+        // World/compendium macro - show error if not found
+        resolved = await this.resolveWorldMacro(name);
+        if (!resolved) {
+          const message = `Could not find macro ${name}`;
           TroubleShooter.recordError(new Error(message), message);
-          ui.notifications?.error(`midi-qol | Could not find macro ${name} does not exist`);
+          ui.notifications?.error(`midi-qol | ${message}`);
           return undefined;
         }
+      }
 
-        if (itemMacroData) {
-          if (!itemMacroData?.command) {
-            if (debugEnabled > 0) warn(`callMacro | could not find item macro ${name}`);
-            return {};
-          }
-        }
+      // ItemMacro/ActivityMacro may return undefined for expected reasons
+      // (e.g., ActivityMacro-id not matching current activity)
+      if (!resolved) return undefined;
+
+      // Update macroData with source info
+      if (resolved.sourceItemUuid) {
+        macroData.sourceItemUuid = resolved.sourceItemUuid;
       }
       macroData.speaker = this.speaker;
       macroData.actor = actorToUse;
-      if (!macro) {
-        itemMacroData = foundry.utils.mergeObject({ name: "midi generated macro", type: "script", command: "" }, itemMacroData);
-        const OWNER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER;
-        itemMacroData.ownership = { default: OWNER };
-        itemMacroData.author = game.user?.id;
-        macro = new CONFIG.Macro.documentClass(itemMacroData);
-      }
-      if (!macro?.command) return undefined;
-      const speaker = this.speaker;
-      const actor = actorToUse;
-      const token = tokenForActor(actorToUse)
-      const args = [macroData];
 
-      const scope: Macro.UnknownScope = {};
-      scope.workflow = this;
-      scope.rolledActivity = this.activity;
-      scope.macroActivity = macroActivity;
-      scope.item = rolledItem;
-      scope.rolledItem = rolledItem;
-      scope.macroItem = macroItem ?? rolledItem;
-      scope.args = args;
-      scope.options = options;
-      scope.actor = actor;
-      scope.token = token;
-      scope.midiData = macroData;
-      return macro.execute(scope);
+      // Phase 3: Execute
+      return this.executeMacroWithScope(resolved, macroData, options, item);
     } catch (err) {
       TroubleShooter.recordError(err, "callMacro: Error evaluating macro");
       ui.notifications?.error(`There was an error running your macro. See the console(F12) for details`);
-      error("Error evaluating macro ", err)
+      error("Error evaluating macro ", err);
+      return {};
     }
-    return {};
   }
 
   async removeEffectsButton() {
@@ -6916,7 +7031,7 @@ export class Workflow {
       if (midiFlagsActorFail) {
         const conditionData = createConditionData({ workflow: this, target: this.token, actor: this.actor });
         if (await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.fail.all`, conditionData)
-          || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.fail.attack`, conditionData)
+          || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.fail.attack.all`, conditionData)
           || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.fail.attack.${this.activity.actionType}`, conditionData)) {
           isHit = false;
           isHitEC = false;

@@ -10,7 +10,7 @@ See also:
 
 ---
 
-## 2026-01-07: Overtime Effects requiredSaveCount and requiredFailCount
+## 2026-01-07: Overtime Effects saveCount and failCount
 
 ### Files Modified
 - `src/midi-qol.ts`
@@ -19,180 +19,105 @@ See also:
 
 ### New Overtime Parameters
 
-Added two new parameters for overtime effects that allow multiple saves before effect removal or permanence:
+Added save/fail count thresholds for overtime effects that control removal or permanence based on cumulative saves:
 
-| Parameter | Description |
-|-----------|-------------|
-| `requiredSaveCount=N` | Effect is removed only after N successful saves (not just the first save) |
-| `requiredFailCount=N` | Effect becomes permanent (no more saves) after N failed saves |
+| Parameter | Format | Description |
+|-----------|--------|-------------|
+| `saveCount` | `saveCount=N[-+]effectSpec` | Effect removed (`-`) or made permanent (`+`) after N successful saves |
+| `failCount` | `failCount=N[-+]effectSpec` | Effect removed (`-`) or made permanent (`+`) after N failed saves |
 
-### Implementation Details
+The `-` or `+` after the count is **required** and specifies the action when count is reached:
+- `-` (minus): Remove the overtime effect
+- `+` (plus): Make the overtime effect permanent (no more saves rolled, but remove conditions still checked)
 
-**Type Definition (midi-qol.ts:107):**
-```typescript
-export let savedOverTimeEffectsToDelete: Record<string, {
-  uuid: string;
-  requiredSaveCount?: number;
-  requiredFailCount?: number
-}> = {}
-```
+The optional `effectSpec` specifies an effect/status/macro to apply when the count is reached.
 
-**Parameter Parsing (utils.ts:1309-1315):**
-```typescript
-const requiredSaveCount = details.requiredSaveCount ? Number(details.requiredSaveCount) : undefined;
-const requiredFailCount = details.requiredFailCount ? Number(details.requiredFailCount) : undefined;
-
-// Check if effect has been made permanent (no more saves)
-const isPermanent = foundry.utils.getProperty(effect, `flags.${MODULE_ID}.overtime.permanent`) === true;
-```
-
-**Permanent Effect Skip (utils.ts:1360-1409):**
-- When an effect is marked permanent, save/check/skill activities are skipped entirely
-- The effect still processes damage rolls if configured
-
-**Count Tracking in savedOverTimeEffectsToDelete (utils.ts:1460-1466):**
-```typescript
-savedOverTimeEffectsToDelete[ownedItem.system.activities.contents[0].uuid] = {
-  uuid: effect.uuid,
-  requiredSaveCount,
-  requiredFailCount
-};
-```
-
-**RollComplete Hook Handler (Hooks.ts:359-420):**
-```typescript
-if (saved || !workflow.hasSave) {
-  if (saved && requiredSaveCount !== undefined) {
-    let savesRemaining = foundry.utils.getProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`) as number | undefined;
-    if (savesRemaining === undefined) savesRemaining = requiredSaveCount;
-    savesRemaining -= 1;
-
-    if (savesRemaining <= 0) {
-      expireEffects(effect.parent, [effect], { "expiry-reason": "midi-qol:overTime:saveCount" });
-    } else {
-      await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`, savesRemaining);
-      await effect.update({ flags: effect.flags });
-    }
-  } else {
-    expireEffects(effect.parent, [effect], { "expiry-reason": "midi-qol:overTime" });
-  }
-} else if (failed && requiredFailCount !== undefined) {
-  let failsRemaining = foundry.utils.getProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`) as number | undefined;
-  if (failsRemaining === undefined) failsRemaining = requiredFailCount;
-  failsRemaining -= 1;
-
-  if (failsRemaining <= 0) {
-    await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.permanent`, true);
-    await effect.update({ flags: effect.flags });
-  } else {
-    await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`, failsRemaining);
-    await effect.update({ flags: effect.flags });
-  }
-}
-```
-
-### Flags Used
-
-| Flag | Purpose |
-|------|---------|
-| `flags.midi-qol.overtime.savesRemaining` | Tracks remaining successful saves needed to remove effect |
-| `flags.midi-qol.overtime.failsRemaining` | Tracks remaining failed saves before effect becomes permanent |
-| `flags.midi-qol.overtime.permanent` | When true, effect no longer prompts for saves |
-
-### Usage Examples
-
-**Effect removed after 2 successful saves:**
-```
-turn=end, saveDC=15, saveAbility=con, requiredSaveCount=2
-```
-
-**Effect becomes permanent after 3 failed saves:**
-```
-turn=end, saveDC=15, saveAbility=con, requiredFailCount=3
-```
-
-**Combined - requires 2 saves to remove, but becomes permanent after 3 failures:**
-```
-turn=end, saveDC=15, saveAbility=con, requiredSaveCount=2, requiredFailCount=3
-```
-
-### Test Coverage
-Added tests 6.18 and 6.19 in midi-qol-tests for:
-- `requiredSaveCount=2` - verifies effect persists after first save, removed after second
-- `requiredFailCount=2` - verifies effect becomes permanent after 2 failed saves, no more saves prompted
-
-### Replacement Effects (saveCountEffect / failCountEffect)
-
-Added support for applying replacement effects when save/fail counts are reached:
-
-| Parameter | Description |
-|-----------|-------------|
-| `saveCountEffect` | Effect/status/macro to apply when save count is reached |
-| `failCountEffect` | Effect/status/macro to apply when fail count is reached |
-| `saveCountReplace` | If `true`: apply saveCountEffect. If `false` (default): original behavior (just remove effect) |
-| `failCountReplace` | If `true`: apply failCountEffect. If `false` (default): original behavior (make permanent) |
-
-**Type Definition (midi-qol.ts):**
-```typescript
-export let savedOverTimeEffectsToDelete: Record<string, {
-  uuid: string;
-  requiredSaveCount?: number;
-  requiredFailCount?: number;
-  saveCountEffect?: string;
-  failCountEffect?: string;
-  saveCountReplace?: boolean;  // true = apply replacement, false (default) = original behavior
-  failCountReplace?: boolean;  // true = apply replacement, false (default) = original behavior
-}> = {}
-```
-
-**Value syntax:**
-```
-effectSpec[|overlay]
-```
+### Effect Spec Formats
 
 | Format | Description |
 |--------|-------------|
-| `petrified` | Status effect ID from `CONFIG.statusEffects` |
-| `petrified\|overlay` | Status effect with overlay (large icon covering token) |
-| `Actor.abc.ActiveEffect.xyz` | Effect UUID |
-| `Actor.abc.ActiveEffect.xyz\|overlay` | Effect UUID with overlay |
-| `function.myFunction` | Calls a global function `myFunction` with actor context |
-| `Macro.MacroName` | Executes a world macro by name |
+| `statusId` | Status effect ID (e.g., `petrified`, `prone`) |
+| `statusId\|overlay` | Status effect with overlay (large icon covering token) |
+| `effectUuid` | Active effect UUID to apply |
+| `function.name` | Call a global function |
+| `Macro.name` | Execute a world macro by name |
+| `ItemMacro.name` | Execute an item macro |
+| `ActivityMacro` | Execute the activity's macro |
+
+### Usage Examples
+
+```
+# Remove effect after 3 successful saves
+saveCount=3-
+
+# Effect remains until you fail a save (Divine Protection / Lucky Charm)
+failCount=1-
+
+# Make effect permanent after 2 failed saves
+failCount=2+
+
+# After 2 fails, add petrified status AND remove the overtime effect
+failCount=2-petrified
+
+# After 2 fails, add petrified (with overlay) AND make overtime effect permanent
+failCount=2+petrified|overlay
+
+# After 2 saves, add prone status AND remove the overtime effect
+saveCount=2-prone
+
+# After 3 fails, call a macro
+failCount=3-Macro.FleshToStonePermanent
+
+# Flesh to Stone spell implementation
+turn=end, saveDC=@spell.dc, saveAbility=con, failCount=3-petrified|overlay
+```
+
+### Implementation Details
+
+**Parsing (utils.ts gmOverTime):**
+- Parses `saveCount=N[-+]effectSpec` and `failCount=N[-+]effectSpec` format
+- Tracks cumulative counts on effect flags: `flags.midi-qol.overtime.savesRemaining` and `failsRemaining`
+- When effect is marked permanent (`flags.midi-qol.overtime.permanent`), save activities are skipped
+
+**RollComplete Hook Handler (Hooks.ts):**
+- On successful save: decrements `savesRemaining`, triggers action when reaches 0
+- On failed save: decrements `failsRemaining`, triggers action when reaches 0
+- Actions: remove effect (`-`), make permanent (`+`), apply effectSpec if present
+
+**Macro Resolution Helpers (utils.ts):**
+Refactored macro resolution into reusable helpers used by both overtime effects and workflow macros:
+
+| Helper | Purpose |
+|--------|---------|
+| `resolveItemMacro(macroSpec, context)` | Resolves `ItemMacro`, `ItemMacro.name`, `ItemMacro.uuid` to `{ item, macroData }` |
+| `resolveActivityMacro(macroSpec, context)` | Resolves `ActivityMacro`, `ActivityMacro.uuid`, `ActivityMacro-id` to `{ item, activity, macro }` |
+| `resolveDAEItemData(actor, uuid)` | Extracts DAE itemData from actor effects when origin item is deleted |
+
+**executeMacroSpec (Hooks.ts):**
+- Uses `resolveItemMacro` for `ItemMacro.*` effectSpecs with DAE fallback
+- Uses `resolveActivityMacro` for `ActivityMacro.*` effectSpecs
+- Handles `function.name`, `Macro.name`, and status effect specs
 
 **Macro Context:**
-When using `function.` or `Macro.` specs, the macro receives:
+When using `function.`, `Macro.`, `ItemMacro.`, or `ActivityMacro` specs:
 ```typescript
 scope = {
-  actor: Actor.Implementation,     // The affected actor
-  token: Token,                    // The actor's token (if available)
-  effect: ActiveEffect,            // The overtime effect being processed
+  actor: Actor.Implementation,
+  token: Token,
+  effect: ActiveEffect,
   args: [{ actor, token, effect, reason: "replacementEffect" }]
 }
 ```
 
-**Example - Flesh to Stone spell (with overlay):**
-```
-turn=end, saveDC=@spell.dc, saveAbility=con, requiredFailCount=3, failCountEffect=petrified|overlay
-```
-This applies the "petrified" status effect as a large overlay after 3 failed saves.
-
-**Example - Skip replacement effect (use original behavior):**
-```
-turn=end, saveDC=15, saveAbility=con, requiredFailCount=3, failCountEffect=petrified, failCountReplace=false
-```
-After 3 failed saves, the effect becomes permanent (original behavior) - the petrified replacement is NOT applied.
-
-**Example - Call a macro on fail count reached:**
-```
-turn=end, saveDC=15, saveAbility=con, requiredFailCount=3, failCountEffect=Macro.FleshToStonePermanent
-```
-After 3 failed saves, executes the "FleshToStonePermanent" macro.
+### Deprecation
+- `saveRemove=true` is deprecated - use `saveCount=1-` instead
 
 ### Test Coverage
-- Test 6.18: `requiredSaveCount=2` - effect removed after 2 saves
-- Test 6.19: `requiredFailCount=2` - effect becomes permanent after 2 fails
-- Test 6.20: Combined `requiredSaveCount=2, requiredFailCount=3` - saves win if reached first
-- Test 6.21: Petrification - restrained replaced by petrified (with overlay) after 2 failed saves
+- Test 6.18: `saveCount=2-` - effect removed after 2 saves
+- Test 6.19: `failCount=2+` - effect becomes permanent after 2 fails
+- Test 6.20: Combined save/fail counts
+- Test 6.21: Petrification with overlay after failed saves
+- Tests 4.3-4.17: Macro resolution helpers and workflow integration
 
 ---
 
