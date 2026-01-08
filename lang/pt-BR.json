@@ -553,6 +553,7 @@
   "midi-qol.UsePlayerPortrait.Hint": "Para atores de Jogadores, usar a imagem ao invés do token nos cartões de chat do Midi QOL.",
   "midi-qol.DistanceIncludesHeight.Name": "Incluir Diferença de Altura em Cálculos de Alcance",
   "midi-qol.NoSocketLib": "Midi QOL requer o módulo socketlib instalado e habilitado",
+  "midi-qol.chatlogPruneDeprecated": "A função de limpeza de registros de chat integrada do Midi QoL está obsoleta. Instale e ative o módulo 'chatlog-prune'. Este recurso será removido na versão 14 do Midi QoL.",
   "midi-qol.confirm": "Diálogo de Confirmação",
   "midi-qol.ExportConfig": "Exportar as Configurações do Midi QOL para Um Arquivo Json",
   "midi-qol.ImportConfig": "Importar as Configurações do Midi QOL de Um Arquivo Json",
