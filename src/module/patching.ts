@@ -243,6 +243,17 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     if (!config.simulate) {
       result[0] = await bonusCheck(this, result[0], "skill", skillId, message.data);
       DSNMarkDiceDisplayed(result);
+      // Check for skill fail bonuses if the roll fails against target
+      // @ts-expect-error no dnd5e-types
+      if (Number.isNumeric(result[0].options.target) && result[0].isSuccess === false) {
+        const failFlagsLength = collectBonusFlags(this, "skill", "fail.all").length;
+        const failSkillFlagsLength = collectBonusFlags(this, "skill", `fail.${skillId}`).length;
+        if (failFlagsLength || failSkillFlagsLength) {
+          // If the roll fails and there is a flags.midi-qol.optional.NAME.skill.fail flag, apply the bonus
+          result[0] = await bonusCheck(this, result[0], "skill", failSkillFlagsLength ? `fail.${skillId}` : "fail.all", message.data);
+          DSNMarkDiceDisplayed(result);
+        }
+      }
     }
     if (config.target !== undefined && success === undefined) {
       const resultTotal = result.reduce((acc, r) => acc + r.total, 0);

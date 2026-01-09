@@ -47,6 +47,11 @@ For Foundry VTT core API methods, search the local source code at:
 - Format: `DocumentName-YYYY-MM-DD.md` (e.g., `ChatLog-2026-01-06.md`)
 - This applies to files in the `docs/` directory and any other documentation created
 
+### Changelog Separation
+- **Test changes go in midi-qol-tests CHANGELOG.md only**, not in midi-qol's Changelog.md
+- midi-qol's Changelog.md documents changes to midi-qol itself (features, fixes, API changes)
+- midi-qol-tests has its own CHANGELOG.md at `/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-tests/CHANGELOG.md`
+
 ### Related Modules
 - **chatlog-prune**: Standalone chat log pruning module at `/home/timp/foundry-data/foundryalpha/Data/modulesrc/chatlog-prune/`
 - **Keep ChatLogPrune and ChatLogMidi in sync**: When modifying `src/module/ChatClasses/ChatLogMidi.ts`, also update `chatlog-prune/src/ChatLogPrune.ts` (and vice versa) unless the change would cause a loss of functionality in one module
@@ -284,6 +289,15 @@ The project uses the Quench testing framework for Foundry VTT. Tests are in a se
 The module accesses midi-qol via `globalThis.MidiQOL` and registers Quench test batches.
 
 ### Test Writing Requirements
+
+**CRITICAL: Never remove tests without explicit user consent.** When renumbering, refactoring, or reorganizing tests, preserve all existing tests. Only the user can authorize test removal.
+
+**New test batches must follow the naming convention:**
+- Batch ID: `quench.midi-qol.{camelCaseName}` (no number in the ID)
+- displayName: `"{number}. {Title} Tests"` (e.g., `"28. Optional Bonus Flags Tests"`)
+- Do NOT include "Midi" or "midi-qol" in displayName (exception: `flags.midi-qol` references are OK)
+- Use `globalThis.quench.registerBatch(` (not just `quench.registerBatch`)
+- Export function: `register{Number}{PascalCaseName}Tests` (e.g., `register28OptionalBonusTests`)
 
 **Every test must start with `await testMessage()`:**
 ```typescript

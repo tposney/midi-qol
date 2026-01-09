@@ -18,10 +18,14 @@
 **Deprecations:**
 * `saveRemove=true` is deprecated. Use `saveCount=1-` instead. `saveRemove` will be removed in midi 14.
 
+**Improvements:**
+* Damage card HP status header now updates dynamically when apply/reverse buttons are clicked. Shows "HP Updated", "HP Not Updated", or "HP Updated (X/Y)" for partial updates when some targets have damage applied and others don't.
+
 **Bug Fixes:**
 * Fixed chat log popout not displaying existing messages when opened. The main sidebar and popout now track rendered messages independently, allowing both to function correctly without interfering with each other.
 * Disabled minification in esbuild to preserve private field names (e.g., `#actor`, `#abort`) for debugging. Previously, minification was mangling these to `#a`, `#b`, etc., making workflow data unreadable when logged in macros.
 * Fixes for some incorrect damage display in the reverse damage card when applying vitality damage.
+* Fixed `flags.midi-qol.optional.NAME.skill.fail.all` and `flags.midi-qol.optional.NAME.skill.fail.{skillId}` not triggering on failed skill checks. Skill rolls now correctly check for fail bonuses after the initial roll fails against a target DC.
 
 **Code Improvements**
 * The sample items compendium is now build from the pack-src directory. So suggesting changes to the sample items compendium can now simply attach the item json to the suggestion.

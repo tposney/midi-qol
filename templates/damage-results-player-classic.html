@@ -4,15 +4,15 @@
       <table>
         {{#if playerButtons}}
         <thead style="line-height: 16px; vertical-align: middle;">
-          <th style="text-align:center;">{{damageApplied}}</th>
+          <th id="midi-qol-dmg-header" style="text-align:center;">{{damageApplied}}</th>
           <th colspan="3" style="text-align:center">{{localize "midi-qol.DamageCardApplyHeader"}}</th>
         </thead>
         {{/if}}
 
         <tbody>
           {{#each damageList as |damage iid|}}
-          {{#if isCharacter}}
-          <tr>
+          {{#if damage.isCharacter}}
+          <tr class="midi-qol-dmg-row-classic" data-hp-applied="{{#if ../damageWasApplied}}true{{else}}false{{/if}}" data-actor-uuid="{{damage.displayUuid}}">
             <td style="line-height: 22px">
               <div class="midi-qol-tooltip">
                 <div style="text-align: left;">
@@ -29,7 +29,7 @@
               </div>
               <div class="midi-qol-tooltip">
                 <span>
-                  {{#if damage.tempDamage}}
+                  {{#if damage.tempHpChanged}}
                   {{damage.damageItem.oldHP}}[{{damage.damageItem.oldTempHP}}]{{damage.dmgSign}}{{damage.absDamage}}[{{damage.tempDamage}}]={{damage.damageItem.newHP}}[{{damage.damageItem.newTempHP}}]
                   <span class="midi-qol-tooltiptext midi-qol-tooltip-top">
                     {{damage.damageItem.oldHP}}[{{damage.damageItem.oldTempHP}}]{{damage.dmgSign}}{{damage.abshpDamage}}[{{damage.tempDamage}}]={{damage.damageItem.newHP}}[{{damage.damageItem.newTempHP}}]
@@ -37,7 +37,7 @@
                   {{else}}
                   {{damage.damageItem.oldHP}}{{damage.dmgSign}}{{damage.abshpDamage}}({{damage.totalDamage}})={{damage.damageItem.newHP}}
                   <span class="midi-qol-tooltiptext midi-qol-tooltip-top">
-                    {{damage.damageItem.oldHP}}{{damage.dmgSign}}{{abshpDamage}}[{{damage.totalDamage}}]={{damage.damageItem.newHP}}
+                    {{damage.damageItem.oldHP}}{{damage.dmgSign}}{{damage.abshpDamage}}[{{damage.totalDamage}}]={{damage.damageItem.newHP}}
                   </span>
                   {{/if}}
                 </span>
@@ -47,8 +47,8 @@
             {{#if ../playerButtons}}
             <td style="text-align:center;">
 
-              <select id="dmg-multiplier-{{damage.displayUuid}}" title="Choose the multiplier for the damage."">
-                <option value=" calc" selected>{{localize "midi-qol.DamageCardCalc"}}</option>
+              <select id="dmg-multiplier-{{damage.displayUuid}}" title="Choose the multiplier for the damage.">
+                <option value="calc" selected>{{localize "midi-qol.DamageCardCalc"}}</option>
                 <option value="x1">x1</option>
                 <option value="x0.5">x1/2</option>
                 <option value="x2">x2</option>

@@ -10,6 +10,21 @@ See also:
 
 ---
 
+## 2026-01-09: Sample Items Compendium Build from pack-src
+
+### Files Modified
+- `gulpfile.js`
+
+### Change
+The sample items compendium is now built from the `pack-src` directory during release. Changes to sample items should be made by editing the JSON files in `pack-src/midi-sample-items/`.
+
+### Implementation
+- Added `buildPacks()` function that uses Foundry's `CompendiumPack.createDB()` to compile JSON files from `pack-src/` into LevelDB packs
+- The `zip` and `release` tasks now call `buildPacks()` before packaging
+- Each subdirectory in `pack-src/` becomes a compendium pack (e.g., `pack-src/midi-sample-items/` → `packs/midi-sample-items`)
+
+---
+
 ## 2026-01-07: Overtime Effects saveCount and failCount
 
 ### Files Modified

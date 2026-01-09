@@ -832,6 +832,18 @@ section.midi-qol.tab {
   padding: 2px 0;
 }
 
+/* Hide message header for player damage cards (matches classic style) */
+.chat-message.message.flexcol:has(.midi-qol-player-damage-card) .message-header {
+  display: none;
+}
+
+/* Style the player damage card message container */
+:is(.chat-popout, #chat-log, .chat-log) .message:has(.midi-qol-player-damage-card) {
+  padding: 0;
+  border: none;
+  border-left: 0.2rem solid var(--user-color);
+}
+
 /* Header row with "Damage Applied" text */
 .midi-qol-dmg-header {
   font-size: 0.9em;

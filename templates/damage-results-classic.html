@@ -3,7 +3,7 @@
     <div class="flexrow">
       <table>
         <thead style="line-height: 16px; vertical-align: middle;">
-          <th style="text-align:center;">{{damageApplied}}</th>
+          <th id="midi-qol-dmg-header" style="text-align:center;">{{damageApplied}}</th>
           <th style="text-align:center">{{localize "midi-qol.DamageCardMultHeader"}}</th>
           <th style="text-align:center">{{localize "midi-qol.DamageCardApplyHeader"}}</th>
           <th style="text-align:center">{{localize "midi-qol.DamageCardUndoHeader"}}</th>
@@ -11,7 +11,7 @@
 
         <tbody>
           {{#each damageList as |damage iid|}}
-          <tr>
+          <tr class="midi-qol-dmg-row-classic" data-hp-applied="{{#if ../damageWasApplied}}true{{else}}false{{/if}}" data-actor-uuid="{{damage.displayUuid}}">
             <td style="line-height: 22px">
               <div class="midi-qol-tooltip" {{#if damage.tooltip}}data-tooltip='{{damage.tooltip}}' {{/if}}>
                 <div style="text-align: left;">
@@ -23,7 +23,7 @@
                   </img>
                 </div>
               </div>
-              {{#if damage.tempDamage}}
+              {{#if damage.tempHpChanged}}
               <div class="midi-qol-tooltip"
                 data-tooltip='{{damage.damageItem.oldHP}}[{{damage.damageItem.oldTempHP}}]{{damage.dmgSign}}{{damage.hpDamage}}[{{damage.tempDamage}}]({{{damage.rawTotalDamage}}})={{damage.damageItem.newHP}}[{{damage.damageItem.newTempHP}}]'>
                 <span>
@@ -32,7 +32,7 @@
               </div>
               {{else}}
               <div class="midi-qol-tooltip"
-                data-tooltip='{{damage.damageItem.oldHP}}{{damage.dmgSign}}{{abshpDamage}}[{{damage.rawTotalDamage}}]={{damage.damageItem.newHP}}'>
+                data-tooltip='{{damage.damageItem.oldHP}}{{damage.dmgSign}}{{damage.abshpDamage}}[{{damage.rawTotalDamage}}]={{damage.damageItem.newHP}}'>
                 <span>
                   {{damage.damageItem.oldHP}}{{damage.dmgSign}}{{damage.abshpDamage}}({{damage.rawTotalDamage}})={{damage.damageItem.newHP}}
                 </span>
@@ -41,7 +41,7 @@
             </td>
 
             <td style="text-align:center;">
-              <select id="dmg-multiplier-{{damage.displayUuid}}" title="Choose the multiplier for the damage."">
+              <select id="dmg-multiplier-{{damage.displayUuid}}" title="Choose the multiplier for the damage.">
                 <option value="x1">x1</option>
                 <option value="x0.5">x1/2</option>
                 <option value="x2">x2</option>

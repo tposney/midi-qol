@@ -6,7 +6,7 @@
 ![](https://img.shields.io/badge/Foundry-v13-informational)
 ![](https://img.shields.io/badge/Dnd5e-v3.3.1-informational)
 ![](https://img.shields.io/badge/Dnd5e-v4.4.2-informational)
-![](https://img.shields.io/badge/Dnd5e-v5.2.4-informational)
+![](https://img.shields.io/badge/Dnd5e-v5.2.4+-informational)
 ![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2Fmidi-qol&colorB=4aa94a)
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/tposney)
@@ -133,8 +133,7 @@ If you prefer to configure settings manually, here's a recommended full automati
 | v11.4.48 | v12 | up to v3.2.x | - |
 | v11.6.x | v12 | v3.3.x | [manifest](https://gitlab.com/tposney/midi-qol/raw/v11.6/package/module.json) |
 | v12.4.27+ | v12 | v4.2+ | [manifest](https://gitlab.com/tposney/midi-qol/raw/v12dnd4/package/module.json) |
-| v13.0.16+ | v13 | v5.0.4+ | - |
-| v13.0.29+ | v13 | v5.2.x | [manifest](https://gitlab.com/tposney/midi-qol/raw/v13/package/module.json) |
+| v13.0.37+ | v13 | v5.2.4+ | [manifest](https://gitlab.com/tposney/midi-qol/raw/v13/package/module.json) |
 
 ## Required Modules
 

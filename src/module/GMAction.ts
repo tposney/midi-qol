@@ -1129,6 +1129,49 @@ function updateDamageCardDisplay(
   }
 }
 
+/**
+ * Helper to update the HP status header based on the state of all damage rows.
+ * Shows "HP Updated", "HP Not Updated", or "HP Partially Updated (X/Y)" based on applied states.
+ * Also updates the data-hp-applied attribute on individual rows.
+ */
+function updateHPStatusHeader(html: HTMLElement, actorUuid?: string, applied?: boolean): void {
+  // If actorUuid is provided, update that specific row's data attribute
+  if (actorUuid) {
+    const displayUuid = actorUuid.replaceAll(".", "");
+    // Support both flexbox (.midi-qol-dmg-row) and classic (.midi-qol-dmg-row-classic) templates
+    const row = html.querySelector<HTMLElement>(`.midi-qol-dmg-row[data-actor-uuid="${displayUuid}"], .midi-qol-dmg-row-classic[data-actor-uuid="${displayUuid}"]`);
+    if (row) {
+      row.dataset.hpApplied = applied ? "true" : "false";
+    }
+  }
+
+  // Count how many rows have HP applied (support both flexbox and classic templates)
+  const allRows = html.querySelectorAll<HTMLElement>(".midi-qol-dmg-row[data-actor-uuid], .midi-qol-dmg-row-classic[data-actor-uuid]");
+  if (allRows.length === 0) return;
+
+  let appliedCount = 0;
+  let totalCount = 0;
+  allRows.forEach(row => {
+    if (row.dataset.actorUuid) {
+      totalCount++;
+      if (row.dataset.hpApplied === "true") appliedCount++;
+    }
+  });
+
+  // Update the header text
+  const header = html.querySelector<HTMLElement>("#midi-qol-dmg-header");
+  if (header) {
+    if (appliedCount === 0) {
+      header.textContent = i18n("midi-qol.HPNotUpdated");
+    } else if (appliedCount === totalCount) {
+      header.textContent = i18n("midi-qol.HPUpdated");
+    } else {
+      // Partial update - show count
+      header.textContent = `${i18n("midi-qol.HPUpdated")} (${appliedCount}/${totalCount})`;
+    }
+  }
+}
+
 /** Helper to generate tooltip HTML for a damage item */
 function generateDamageTooltip(damageItem: DamageListEntry): string {
   const tooltipList = damageItem.damageDetail?.map(di => {
@@ -1341,7 +1384,7 @@ async function prepareDamageListItems(
       tokenImg: img,
       hpDamage,
       abshpDamage: Math.abs(damageItem.hpDamage),
-      tempDamage: damageItem.newTempHP - damageItem.oldTempHP,
+      tempDamage: (damageItem.newTempHP ?? 0) - (damageItem.oldTempHP ?? 0),
       totalDamage: Math.abs(Math.trunc(damageItem.totalDamage)),
       rawTotalDamage: damageItem.rawTotalDamage,
       halfDamage: Math.abs(Math.floor(damageItem.totalDamage / 2)),
@@ -1544,6 +1587,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
               Hooks.call("dnd5e.applyDamage", updatedActor ?? actor, newHP - oldHP, calcDamageOptions as DamageApplicationOptions);
               // Update display to show what apply would do (original damage display)
               if (undoItem) updateDamageCardDisplay(html, actorUuid, undoItem, false);
+              // Update HP status for this target (reversed = not applied)
+              updateHPStatusHeader(html, actorUuid, false);
               return updatedActor;
             })
         }
@@ -1587,6 +1632,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
             Hooks.call("dnd5e.applyDamage", actor, amount, options);
             // Update display to show what undo would do (undo mode)
             if (applyItem) updateDamageCardDisplay(html, actorUuid, applyItem, true);
+            // Update HP status for this target (applied = true)
+            updateHPStatusHeader(html, actorUuid, true);
             return updatedActor;
           });
         }
@@ -1638,6 +1685,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
             Hooks.call("dnd5e.applyDamage", actor, amount, calcDamageOptions as DamageApplicationOptions);
             // Update display to show what apply would do (original damage display)
             updateDamageCardDisplay(html, actorUuid, undoEntry, false);
+            // Update HP status for this target (reversed = not applied)
+            updateHPStatusHeader(html, actorUuid, false);
             return updatedActor;
           })
         }
@@ -1683,6 +1732,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
               Hooks.call("dnd5e.applyDamage", actor, amount, calcDamageOptions as DamageApplicationOptions);
               // Update display to show what undo would do (undo mode)
               updateDamageCardDisplay(html, actorUuid, undoEntry, true);
+              // Update HP status for this target (applied = true)
+              updateHPStatusHeader(html, actorUuid, true);
               return updatedActor;
             });
           }
@@ -1782,6 +1833,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
 
           // Update display to show what undo would do (undo mode)
           updateDamageCardDisplay(html, actorUuid, undoEntry, true);
+          // Update HP status for this target (applied = true)
+          updateHPStatusHeader(html, actorUuid, true);
         }
       })();
     });

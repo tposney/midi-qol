@@ -3991,6 +3991,7 @@ export async function bonusDialog(
         newRoll.terms[0].results.forEach(res => res.result = -1);
         //@ts-expect-error
         newRoll._total = -1;
+        break;
       default:
         if (typeof button.value === "string" && button.value.startsWith("replace ")) {
           const rollParts = button.value.split(" ");
