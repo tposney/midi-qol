@@ -6409,10 +6409,10 @@ export function tokenForActor(actor: Actor.Implementation | string | undefined |
 
 export async function doConcentrationCheck(actor: Actor.Implementation, saveDC: number) {
   // actually activity uuids
-  const concentratingItemNames = Array.from(actor.concentration.items).map((item) => item.name);
-  if (!concentratingItemNames.length) concentratingItemNames.push("No item");
+  const concentratingOnItemNames = Array.from(actor.concentration.items).map((item) => item.name);
+  if (!concentratingOnItemNames.length) concentratingOnItemNames.push("No item");
 
-  const itemDisplayName = `${concentrationCheckItemDisplayName}: ${concentratingItemNames.join(", ")}`;
+  const itemDisplayName = `${concentrationCheckItemDisplayName}: ${concentratingOnItemNames.join(", ")}`;
   const itemData: Item.CreateData = {
     name: itemDisplayName,
     // @ts-expect-error no dnd5e-types
