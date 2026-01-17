@@ -50,6 +50,8 @@ If you have macros that depend on being called when the roll is complete:
 - `"midi-qol.RollComplete"`
 - `"midi-qol.RollComplete.ItemUuid"` (where ItemUuid is the uuid of the item doing the roll)
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Triggering Workflows
@@ -178,6 +180,8 @@ Additional workflow processing options for `itemRoll(options)`:
 | `autoFastDamage` | boolean | Force enable/disable fastForward of the damage roll |
 
 Leaving these blank means configured workflow options from the midi-qol configuration panel will apply.
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -357,6 +361,8 @@ Creates a dialog of items that can be called by clicking on the icon.
 | `triggerType` | string | Not relevant |
 | `options` | object | Additional configuration |
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Hooks Reference
@@ -391,6 +397,8 @@ All workflow hooks also fire with item/activity UUID suffix:
 |------|---------|-------------|
 | `midi-qol.dnd5ePreCalculateDamage` | boolean | Before damage calculation. Return false to abort. |
 | `midi-qol.dnd5eCalculateDamage` | void | After damage calculation |
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -432,6 +440,8 @@ For calling workflow functions without a full workflow:
 | `async simulateAttack(token)` | Simulate attack roll, sets `workflow.expectedSaveRoll` |
 | `async simulateSaves([tokens])` | Simulate saves, returns `workflow.saveResults` |
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## OnUse Macros
@@ -458,7 +468,8 @@ flags.midi-qol.onUseMacroName CUSTOM macro,macroPass
 
 ### Macro Passes
 
-> [!important] **Documentation:** A flowchart is available at [docs/flowchart.md](docs/flowchart.md).
+> [!important] Documentation
+> A flowchart is available at [docs/flowchart.md](docs/flowchart.md). <br>
 > Data available at each pass: [docs/workflowfields.md](docs/workflowfields.md).
 
 **Item/Actor passes:**
@@ -560,6 +571,8 @@ workflow.someProperty = value;
 const damageRoll = await new Roll("1d10").evaluate();
 workflow.setDamageRoll(damageRoll);
 ```
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -759,6 +772,8 @@ The combo card has special divs for adding data:
 <div class="midi-qol-saves-display"></div>
 ```
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## DAE vs Midi-QOL Macros
@@ -791,6 +806,8 @@ macro.execute CUSTOM myWorldMacro @targetUuid @actorUuid @attributes.hp.value ##
 theTargetUuid=@targetUuid
 ```
 Populates `scope.theTargetUuid` and `theTargetUuid`.
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -877,8 +894,12 @@ const workflow = await MidiQOL.completeActivityUse(activity, {
 }, { configure: false }, { create: true });
 ```
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Sample Chat Logs
 
 ![No Combo Card](pictures/nocombo.png) ![Combo Card](pictures/combo.png)
+
+> [!tip] [Jump to Top](#table-of-contents)

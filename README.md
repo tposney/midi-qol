@@ -120,7 +120,8 @@ If you prefer to configure settings manually, here's a recommended full automati
 | Auto Apply Item Effects | Workflow | Checked |
 
 > [!tip] Navigation
-> See [Configuration Reference](#configuration-reference) for all available settings.
+> See [Configuration Reference](#configuration-reference) for all available settings. <br>
+> [Jump to Top](#table-of-contents)
 
 ---
 
@@ -219,6 +220,8 @@ If you prefer to configure settings manually, here's a recommended full automati
 | Convenient Effects | Matches effects by name; toggle per-item |
 | Levels | Uses wall collision for distance/LOS |
 | DDB Game Log | Triggers workflow from D&D Beyond rolls |
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -469,6 +472,8 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 | Vitality Death Requires | When actor is dead: "Vitality of 0" or "Vitality of 0 AND HP of 0" |
 | Enable DDB Game Log | Accept rolls from ddb-game-log to trigger midi workflows |
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ## Custom Sounds
 
 Midi-QOL provides a flexible system for playing sounds during workflow events. Enable with "Use Custom Sounds" in the Misc settings tab. Many of the supporting modules that provide visual effects also apply sound effects, so if using those you will not want midi custom sounds.
@@ -605,6 +610,8 @@ Actor Type: any
     any:
       rwak: { playlistName: "Midi Item Tracks", soundName: "bowshot" }
 ```
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -799,6 +806,8 @@ Additional expiry options (requires DAE 0.2.25+):
 | "half damage on save" | Save = half damage (if check spell text enabled) |
 | "auto fail friendly" | Friendly tokens auto-fail saves |
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 # Flags Reference
@@ -841,7 +850,8 @@ Set via active effects using **CUSTOM** or **OVERRIDE** mode.
 | `flags.midi-qol.deathSaveBonus` | Add to death saves |
 
 > [!tip] Navigation 
-> See [FLAGS.md](FLAGS.md) for complete documentation of all flags.
+> See [FLAGS.md](FLAGS.md) for complete documentation of all flags. <br>
+> [Jump to Top](#table-of-contents)
 
 ---
 
@@ -875,6 +885,8 @@ Alternative AC system with Evasion Class (EC) and Armor Resistance (AR):
 - Roll >= EC and <= AC: Glancing blow (damage reduced by AR)
 - Roll > AC: Full hit
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 # Troubleshooting & FAQ
@@ -904,6 +916,8 @@ If using Convenient Effects + DAE effects on same item, you'll get both. Choose 
 - OR exported midi-qol settings (from Misc tab)
 
 No world information is exported. Module list helps with debugging.
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -1196,7 +1210,8 @@ turn=end, saveDC=15, saveAbility=wis, failCount=2+, removeCondition=@attributes.
 - For activity-based overtime effects (recommended for v13+), see the Over Time Effects section in Activity configuration
 
 > [!tip] Navigation
-> See [docs/workflowfields.md](docs/workflowfields.md) for available workflow data in conditions.
+> See [docs/workflowfields.md](docs/workflowfields.md) for available workflow data in conditions. <br>
+> [Jump to Top](#table-of-contents)
 
 ---
 

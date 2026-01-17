@@ -121,6 +121,8 @@ Flags are accessed in two ways:
 
 Each section below indicates the access type for its flags.
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ## Conditional Expression Evaluation
 
 Flags marked as **Evaluated** can contain conditional expressions. These expressions are evaluated at runtime using `evalCondition()`.
@@ -344,6 +346,8 @@ The expression is evaluated as JavaScript, and the result determines the flag va
 | `classes.rogue.levels ? 2 : false` | Returns 2 if has rogue levels |
 | `hasCondition(tokenUuid, "enlarged") ? abilities.str.mod : 0` | STR mod if enlarged, else 0 |
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Absorption
@@ -430,6 +434,8 @@ Grant advantage on various roll types. All advantage flags are **Evaluated** (co
 | `flags.midi-qol.advantage.concentration` | Evaluated | Advantage on concentration checks |
 | `flags.midi-qol.advantage.deathSave` | Evaluated | Advantage on death saving throws. **Native alternative:** `system.attributes.death.roll.mode = 1` |
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Disadvantage
@@ -501,6 +507,8 @@ Grant disadvantage on various roll types. All disadvantage flags are **Evaluated
 | `flags.midi-qol.disadvantage.concentration` | Evaluated | Disadvantage on concentration checks |
 | `flags.midi-qol.disadvantage.deathSave` | Evaluated | Disadvantage on death saves. **Native alternative:** `system.attributes.death.roll.mode = -1` |
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Critical Hits
@@ -526,6 +534,8 @@ Prevent attacks from being critical hits. All noCritical flags are **Evaluated**
 | `flags.midi-qol.noCritical.{attackType}` | Evaluated | Specific attack type cannot crit |
 
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -596,6 +606,8 @@ Force automatic failure on rolls. All fail flags are **Evaluated** (conditional 
 
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Auto-Success
@@ -646,6 +658,8 @@ Force automatic success on rolls. All success flags are **Evaluated** (condition
 | Flag | Access | Description |
 |------|--------|-------------|
 | `flags.midi-qol.success.deathSave` | Evaluated | Succeed all death saving throws |
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -818,6 +832,8 @@ These flags are set on the **source actor** (caster) and suppress advantage/disa
 
 **Example use case:** A creature whose gaze attack prevents targets from having advantage on the save, regardless of other effects they have.
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Magic Resistance/Vulnerability
@@ -844,6 +860,8 @@ Advantage or disadvantage on saves against magical effects. All magic resistance
 | `flags.midi-qol.magicVulnerability.all.{ability}` | Evaluated | Disadvantage on specific ability saves vs magic |
 
 *Abilities: str, dex, con, int, wis, cha.*
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -886,6 +904,8 @@ Set minimum or maximum values for the d20 roll (not total). All min/max flags ar
 
 *Abilities: str, dex, con, int, wis, cha.*
 *Tools: alchemist, bagpipes, brewer, calligrapher, card, carpenter, cartographer, chess, cobbler, cook, dice, disg, drum, dulcimer, flute, forg, glassblower, herb, horn, jeweler, leatherworker, lute, lyre, mason, navg, painter, panflute, pois, potter, shawm, smith, thief, tinker, viol, weaver, woodcarver.*
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -975,6 +995,8 @@ system.traits.dm.midi.non-magical-physical ADD -3
 system.traits.dm.amount.cold ADD -5
 ```
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Range Modifiers
@@ -1009,6 +1031,8 @@ Modify item range values. Range flags are **Evaluated** (expression with roll da
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
 
 **Example for blinded:** `flags.midi-qol.range.all ADD 5 - item.range.value` (sets range to 5)
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -1046,6 +1070,8 @@ No damage on save (normal damage on fail).
 | `flags.midi-qol.save.fail.{ability}` | Evaluated | Bonus applied when specific save fails |
 
 *Abilities: str, dex, con, int, wis, cha.*
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -1228,6 +1254,8 @@ Only prompt when save fails.
 | `flags.midi-qol.optional.NAME.displayBonusRolls` | Direct | Override display setting for this bonus (true/false) |
 | `flags.midi-qol.optional.NAME.rollMode` | Direct | Roll mode for this bonus (publicroll, gmroll, blindroll, selfroll) |
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Special Flags
@@ -1259,6 +1287,8 @@ Only prompt when save fails.
 > [!tip] Navigation
 > See the README for OverTime syntax and parameters. ([Activity Overtimes](/README.md#over-time-effects-activity-tab) or [Legacy Overtimes](/README.md#overtime-effects-flag-based))
 
+> [!tip] [Jump to Top](#table-of-contents)
+
 ---
 
 ## Action Tracking
@@ -1282,6 +1312,8 @@ Track action economy usage. All action tracking flags are **Direct** (boolean/nu
 | `flags.midi-qol.actions.bonusActionsUsed` | Direct | Number of bonus actions used |
 | `flags.midi-qol.actions.bonusActionCombatRound` | Direct | Round bonus action was used |
 | `flags.midi-qol.actions.bonusActionsReset` | Direct | When bonus actions reset ("never" to prevent) |
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -1337,6 +1369,8 @@ Key: flags.midi-qol.advantage.deathSave
 Mode: Custom
 Value: 1[isRaging]
 ```
+
+> [!tip] [Jump to Top](#table-of-contents)
 
 ---
 
@@ -1395,3 +1429,5 @@ These flags have been renamed to clearer equivalents.
 | Deprecated Flag | Access | Mapped To |
 |-----------------|--------|-----------|
 | `flags.midi-qol.sharpShooter` | Evaluated | `flags.dnd5e.sharpShooter` |
+
+> [!tip] [Jump to Top](#table-of-contents)
