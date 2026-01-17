@@ -20,6 +20,11 @@ const defaultTimeout = 30;
 export type ReactionItemReference = { itemName: string, itemId: string, actionName: string, img: string, id: string, uuid: string } | String;
 export type ReactionItem = { itemName: string, itemId: string, actionName: string, img: string, id: string, uuid: string, baseItem: Item } | Activity;
 
+// Helper to create full flag path from a short flag name
+export function midiFlag(flag: string): string {
+  return `flags.${MODULE_ID}.${flag}`;
+}
+
 export function getDamageType(flavorString: string = ''): string | undefined {
   if (flavorString === '') return "none";
   if (GameSystemConfig.damageTypes[flavorString] !== undefined) {
@@ -2151,8 +2156,8 @@ export type MidiOptions = {
   fastForwardDamage?: boolean;
   fastForwardHeal?: boolean;
   fastForwardSet?: boolean;
-  fromMars5eChatCard?: boolean;
   fumble?: boolean | number;
+  ignorePreComputedAdvantage?: boolean;
   ignoreUserTargets?: boolean;
   isConcentrationCheck?: boolean;
   isCritical?: boolean;
@@ -2184,6 +2189,7 @@ export type MidiOptions = {
   triggeredActivity?: boolean;
   updateWorkflow?: boolean;
   workflow?: Workflow;
+  workflowId?: string;
   workflowOptions?: WorkflowOptions;
 };
 type SerializedMidiOptions = Omit<MidiOptions, "targetsToUse" | "rollAs" | "asUser"> & {
@@ -4477,6 +4483,8 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
         const theItem: Item.Implementation = item instanceof Item ? item : item.baseItem;
         // @ts-expect-error no dnd5e-types
         if (!theItem.system.activities) continue;
+        // If the spell is a proxy for a cast ativity skip
+        if (!!item.getFlag("dnd5e", "cachedFor")) continue;
         // @ts-expect-error no dnd5e-types
         for (let activity of theItem.system.activities) {
           // @ts-expect-error no dnd5e-types
@@ -4486,43 +4494,37 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
           if (activationType !== "reaction") {
             console.warn(`midi-qol | itemReaction | item ${item.name} ${activity.name} has a reaction type of ${activity.activation.type} which is deprecated - please update to reaction and reaction conditions`)
           }
+          // Item uses a reaction and actor has used a reaction.
           if ((activity.activation?.value ?? 1) > 0 && usedReaction) continue; // TODO can't specify 0 cost reactions in dnd5e 4.x - have to find another way
           // @ts-expect-error no dnd5e-types
           if (!item.system.attuned && item.system.attunement === "required") continue;
           let reactionCondition = activity.reactionCondition;
-          let isValid = false;
-          // cast activities will get picked up by the spells they create on the actor
-          if (activity instanceof (GameSystemConfig.activityTypes.cast.documentClass as Function)) continue;
+          // For cast activities, also check the spell's reaction condition from the activity that will be used
+          if (activity.type === "cast" && activity.cachedSpell) {
+            const spell = activity.cachedSpell;
+            // Get the first usable activity - this is what spell.use() will use
+            const spellActivity = spell.system?.activities?.filter((a: any) => a.canUse)?.[0];
+            reactionCondition = `(${reactionCondition ?? "true"}) && (${spellActivity.reactionCondition ?? "true"})`;
+          }
           // @ts-expect-error no dnd5e-types
           if (item.type === "spell") {
+            if (configSettings.ignoreSpellReactionRestriction) {
+              // Skip all validation for spells when this setting is enabled
+              reactions.push(activity);
+              continue;
+            }
+            // Filter out unprepared spells
             // @ts-expect-error no dnd5e-types
-            if (item.system.linkedActivity && ["weapon", "consumable", "equipment", "loot", "feat"].includes(item.system.linkedActivity.item.type)) {
-              // @ts-expect-error no dnd5e-types
-              if (item.system.linkedActivity.item.type === "weapon" && !item.system.linkedActivity.item.system.magicAvailable) continue;
-              // @ts-expect-error no dnd5e-types
-              if (["weapon", "consumable", "equipment", "loot"].includes(item.system.linkedActivity.item.type)
-                // @ts-expect-error no dnd5e-types
-                && !theItem.system.linkedActivity.item.system.equipped) continue;
-              const config = activity._prepareUsageConfig({ create: false });
-              const canUse = await activity._prepareUsageUpdates(config, { returnErrors: true });
-              if (canUse instanceof Array) continue; // insufficent uses available
-              isValid = true;
-            } else if (configSettings.ignoreSpellReactionRestriction) isValid = true;
+            if (item.system.prepared === 0 && item.system.method === "spell") continue;
+            // Filter spells that can't be cast due to no available slots of required level
             // @ts-expect-error no dnd5e-types
-            else if (["atwill", "innate"].includes(item.system.method)) isValid = true;
-            // @ts-expect-error no dnd5e-types
-            else if (item.system.level === 0) isValid = true;
-            // @ts-expect-error no dnd5e-types
-            else if (item.system.prepared === 0 && item.system.method === "spell") continue;
-            // @ts-expect-error no dnd5e-types
-            else if (item.system.level <= maxLevel) isValid = true;
-          } else {
-            const config = activity._prepareUsageConfig({ create: false });
-            const canUse = await activity._prepareUsageUpdates(config, { returnErrors: true });
-            if (canUse instanceof Array) continue; // insufficent uses available
-            isValid = true;
+            if (item.system.level > 0 && !["atwill", "innate"].includes(item.system.method) && item.system.level > maxLevel) continue;
           }
-          if (!isValid) continue;
+
+          // Use dnd5e's consumption checks for all items/spells
+          const config = activity._prepareUsageConfig({ create: false });
+          const canUse = await activity._prepareUsageUpdates(config, { returnErrors: true });
+          if (canUse instanceof Array) continue; // insufficient uses available
           if (reactionCondition) {
             const returnvalue = await evalReactionActivationCondition(options.workflow, reactionCondition, target, { async: true, extraData: { reaction: reactionTriggerLabelFor(triggerType) } });
             if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using condition ${reactionCondition} condition ${returnvalue}`, options.workflow?.conditionData);
@@ -5497,21 +5499,95 @@ export function evalAllConditions(
   }
   return returnValue;
 }
+
+/**
+ * Check magic resistance and vulnerability for an actor
+ * @param actor The actor to check
+ * @param rollAbility The ability being used for the save (optional, for ability-specific flags)
+ * @param conditionData Condition data for flag evaluation (optional, will be created if not provided)
+ * @returns Object with advantage, disadvantage, magicResistance, and magicVulnerability flags
+ */
+export async function checkMagicResistanceAndVulnerability(
+  actor: Actor.Implementation | undefined | null,
+  rollAbility?: string | null,
+  conditionData?: ReturnType<typeof createConditionData>
+): Promise<{
+  advantage: boolean | undefined;
+  disadvantage: boolean | undefined;
+  magicResistance: boolean;
+  magicVulnerability: boolean;
+}> {
+  if (!actor) {
+    return { advantage: undefined, disadvantage: undefined, magicResistance: false, magicVulnerability: false };
+  }
+
+  // Create condition data if not provided
+  const effectiveConditionData = conditionData ?? createConditionData({ actor, workflow: undefined, target: actor });
+
+  let advantage: boolean | undefined = undefined;
+  let disadvantage: boolean | undefined = undefined;
+  let magicResistance = false;
+  let magicVulnerability = false;
+
+  const mrCustom = (i18n("midi-qol.MagicResistant") ?? "Magic Resistant").trim();
+  const mvCustom = (i18n("midi-qol.MagicVulnerable") ?? "Magic Vulnerable").trim();
+
+  // Check magic resistance in custom damage reduction traits
+  //@ts-expect-error no dnd5e-types
+  if ((actor.system?.traits?.dr?.custom || "").includes(mrCustom)) {
+    advantage = true;
+  }
+
+  // Check magic resistance as a feature (based on the SRD name as provided by the DnD5e system)
+  // @ts-expect-error no dnd5e-types
+  if (actor.items?.find(a => a.type === "feat" && a.name === i18n("midi-qol.MagicResistanceFeat")?.trim())) {
+    advantage = true;
+  }
+
+  // Check magic vulnerability in custom damage vulnerability traits
+  //@ts-expect-error no dnd5e-types
+  if ((actor.system?.traits?.dv?.custom || "").includes(mvCustom)) {
+    disadvantage = true;
+  }
+
+  // Check magic resistance flags
+  if (await evalAllConditionsAsync(actor, midiFlag(`magicResistance.all`), effectiveConditionData)
+    || (rollAbility && await evalAllConditionsAsync(actor, midiFlag(`magicResistance.${rollAbility}`), effectiveConditionData))) {
+    advantage = true;
+    magicResistance = true;
+  }
+
+  // Check magic vulnerability flags
+  if (await evalAllConditionsAsync(actor, midiFlag(`magicVulnerability.all`), effectiveConditionData)
+    || (rollAbility && await evalAllConditionsAsync(actor, midiFlag(`magicVulnerability.${rollAbility}`), effectiveConditionData))) {
+    disadvantage = true;
+    magicVulnerability = true;
+  }
+
+  if (!advantage) advantage = undefined;
+  if (!disadvantage) disadvantage = undefined;
+
+  if (debugEnabled > 1) debug(`${actor.name} resistant to magic : ${advantage}`);
+  if (debugEnabled > 1) debug(`${actor.name} vulnerable to magic : ${disadvantage}`);
+
+  return { advantage, disadvantage, magicResistance, magicVulnerability };
+}
+
 export function evalCondition(condition: string | number | boolean | undefined, conditionData: any, options: any = { errorReturn: false, async: false }): any | Promise<any> {
   if (typeof condition === "number" || typeof condition === "boolean") return condition;
-  if (condition === undefined || condition === "" || typeof condition !== "string") return options.errorReturn ?? false;
+  if (condition === undefined || condition === "" || typeof condition !== "string") return options?.errorReturn;
   let returnValue;
   try {
     if (condition.includes("@")) {
       condition = Roll.replaceFormulaData(condition, conditionData, { missing: "0" });
     }
 
-    if (options.async) returnValue = asyncMySafeEval(condition, conditionData, options.errorReturn);
-    else returnValue = mySafeEval(condition, conditionData, options.errorReturn ?? false);
+    if (options?.async) returnValue = asyncMySafeEval(condition, conditionData, options?.errorReturn);
+    else returnValue = mySafeEval(condition, conditionData, options?.errorReturn ?? false);
     if (debugEnabled > 0) warn("evalCondition ", returnValue, condition, conditionData);
 
   } catch (err) {
-    returnValue = options.errorReturn ?? false;
+    returnValue = options?.errorReturn ?? false;
     const message = `midi-qol | evalCondition | activation condition (${condition}) error, actorUuid: ${conditionData.actorUuid} itemUuid: ${conditionData.item?.uuid} targetUuid: ${conditionData.targetUuid}`;
     TroubleShooter.recordError(err, message);
     console.warn(message, err, conditionData);
@@ -6409,6 +6485,7 @@ export function tokenForActor(actor: Actor.Implementation | string | undefined |
 
 export async function doConcentrationCheck(actor: Actor.Implementation, saveDC: number) {
   // actually activity uuids
+  //@ts-expect-error no dnd5e-types
   const concentratingOnItemNames = Array.from(actor.concentration.items).map((item) => item.name);
   if (!concentratingOnItemNames.length) concentratingOnItemNames.push("No item");
 
@@ -7520,6 +7597,129 @@ export function getDefaultDamageType(item: Item.Implementation): string {
 
 export function activityHasAreaTarget(activity?: Activity): boolean {
   return (activity?.target?.template.type ?? "") in GameSystemConfig.areaTargetTypes
+}
+
+export interface ConvertedDuration {
+  type: "turns" | "seconds" | "none";
+  seconds: number | undefined;
+  rounds: number | undefined;
+  turns: number | undefined;
+}
+
+/**
+ * Converts activity/item duration to effect duration format.
+ * Returns seconds for world time tracking, or rounds/turns for combat tracking.
+ *
+ * @param durationData - Duration with units and value
+ * @param inCombat - Whether the actor is currently in combat
+ * @param maxRoundsForTurns - Maximum rounds before switching to seconds (default 10)
+ * @returns Converted duration with type, seconds, rounds, and turns
+ */
+export function convertDuration(
+  durationData: { units: string; value: number } | undefined,
+  inCombat: boolean,
+  maxRoundsForTurns: number = 10
+): ConvertedDuration {
+  const timesUpActive = installedModules.get("times-up");
+  const useTurns = inCombat && timesUpActive;
+  const roundTime = CONFIG.time.roundTime ?? 6;
+
+  // No duration or invalid - return minimal duration
+  if (!durationData?.units) {
+    return useTurns
+      ? { type: "turns", seconds: 0, rounds: 0, turns: 1 }
+      : { type: "seconds", seconds: 1, rounds: 0, turns: 0 };
+  }
+
+  const { units, value } = durationData;
+
+  // Handle special/permanent duration types - no expiry
+  if (["spec", "perm", "disp", "dstr"].includes(units)) {
+    return { type: "none", seconds: undefined, rounds: undefined, turns: undefined };
+  }
+
+  // Handle instantaneous - minimal duration
+  if (units === "inst") {
+    return useTurns
+      ? { type: "turns", seconds: 0, rounds: 0, turns: 1 }
+      : { type: "seconds", seconds: 1, rounds: 0, turns: 0 };
+  }
+
+  // Handle turn-based durations
+  if (["turn", "turns"].includes(units)) {
+    return {
+      type: useTurns ? "turns" : "seconds",
+      seconds: roundTime,
+      rounds: 0,
+      turns: value
+    };
+  }
+
+  if (["round", "rounds"].includes(units)) {
+    return {
+      type: useTurns ? "turns" : "seconds",
+      seconds: value * roundTime,
+      rounds: value,
+      turns: 0
+    };
+  }
+
+  // Convert time-based durations to seconds using the calendar
+  const calendar = game.time?.calendar;
+  const secondsPerMinute = calendar?.days?.secondsPerMinute ?? 60;
+  const minutesPerHour = calendar?.days?.minutesPerHour ?? 60;
+  const hoursPerDay = calendar?.days?.hoursPerDay ?? 24;
+  const daysPerWeek = calendar?.days?.values?.length ?? 7;
+
+  const secondsPerHour = secondsPerMinute * minutesPerHour;
+  const secondsPerDay = secondsPerHour * hoursPerDay;
+
+  let seconds: number;
+
+  switch (units) {
+    case "second":
+    case "seconds":
+      seconds = value;
+      break;
+    case "minute":
+    case "minutes":
+      seconds = value * secondsPerMinute;
+      break;
+    case "hour":
+    case "hours":
+      seconds = value * secondsPerHour;
+      break;
+    case "day":
+    case "days":
+      seconds = value * secondsPerDay;
+      break;
+    case "week":
+    case "weeks":
+      seconds = value * secondsPerDay * daysPerWeek;
+      break;
+    case "month":
+    case "months":
+      // Approximate - use 30 days per month
+      seconds = value * secondsPerDay * 30;
+      break;
+    case "year":
+    case "years":
+      // Approximate - use 365 days per year
+      seconds = value * secondsPerDay * 365;
+      break;
+    default:
+      warn(`midi-qol | convertDuration | Unknown duration unit: ${units}`);
+      return { type: "none", seconds: undefined, rounds: undefined, turns: undefined };
+  }
+
+  const rounds = Math.floor(seconds / roundTime);
+
+  // Use turns for short durations in combat, seconds for longer durations
+  if (useTurns && rounds <= maxRoundsForTurns) {
+    return { type: "turns", seconds, rounds, turns: 0 };
+  }
+
+  return { type: "seconds", seconds, rounds, turns: 0 };
 }
 
 export function getSaveRollModeFor(abilityId: string) {

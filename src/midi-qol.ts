@@ -18,6 +18,7 @@ import { TroubleShooter } from './module/apps/TroubleShooter.js';
 import { TargetConfirmationDialog } from './module/apps/TargetConfirmation.js';
 import { MidiAttackActivity, setupAttackActivity } from './module/activities/AttackActivity.js';
 import { ChatLogMidi } from './module/ChatClasses/ChatLogMidi.js';
+
 export function getCanvas(): foundry.canvas.Canvas | undefined {
   if (!canvas || !canvas.scene) {
     error("Canvas/Scene not ready - roll automation will not function");
@@ -958,6 +959,8 @@ function setupMidiFlags(DAEapi: any) {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noCritical.all`);
   midiFlags.push(`flags.${MODULE_ID}.fail.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.all`);
+  midiFlags.push(`flags.${MODULE_ID}.success.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.all`);
   midiFlags.push(`flags.${MODULE_ID}.fail.attack.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.attack.all`);
   midiFlags.push(`flags.${MODULE_ID}.success.attack.all`);
@@ -980,14 +983,36 @@ function setupMidiFlags(DAEapi: any) {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.check.all`);
   midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.skill.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.skill.all`);
-  midiFlags.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.all`);
-  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.all`);
+  // Deprecated: use grants.noAdvantage.attack.all instead
+  // midiFlags.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.all`);
+  // daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.all`);
   midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.all`);
-  midiFlags.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.all`);
-  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.all`);
+  // Deprecated: use grants.noDisadvantage.attack.all instead
+  // midiFlags.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.all`);
+  // daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.all`);
   midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.all`);
+  midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.save.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.save.all`);
+  midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.save.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.save.all`);
+  midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.check.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.check.all`);
+  midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.check.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.check.all`);
+  midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.skill.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.skill.all`);
+  midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.skill.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.skill.all`);
+  midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.tool.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.tool.all`);
+  midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.tool.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.tool.all`);
+  midiFlags.push(`flags.${MODULE_ID}.grants.advantage.tool.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.tool.all`);
+  midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.tool.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.tool.all`);
   midiFlags.push(`flags.${MODULE_ID}.neverTarget`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.neverTarget`);
   midiFlags.push(`flags.${MODULE_ID}.grants.attack.success.all`);
@@ -1016,6 +1041,10 @@ function setupMidiFlags(DAEapi: any) {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.concentration`);
   midiFlags.push(`flags.${MODULE_ID}.disadvantage.concentration`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.concentration`);
+  midiFlags.push(`flags.${MODULE_ID}.initiativeAdv`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.initiativeAdv`);
+  midiFlags.push(`flags.${MODULE_ID}.initiativeDisadv`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.initiativeDisadv`);
   midiFlags.push(`flags.${MODULE_ID}.ignoreNearbyFoes`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.ignoreNearbyFoes`);
   midiFlags.push(`flags.${MODULE_ID}.`);
@@ -1045,16 +1074,18 @@ function setupMidiFlags(DAEapi: any) {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.long.all`);
   let attackTypes = allAttackTypes.concat(["save", "check", "skill", "tool"])
   attackTypes.forEach(at => {
-    midiFlags.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.${at}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.${at}`);
+    // Deprecated: use grants.noAdvantage.attack.${at} instead
+    // midiFlags.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.${at}`);
+    // daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.${at}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.${at}`);
+    // Deprecated: use grants.noDisadvantage.attack.${at} instead
+    // midiFlags.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.${at}`);
+    // daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.${at}`);
   });
   attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
   attackTypes.forEach(at => {
@@ -1090,6 +1121,8 @@ function setupMidiFlags(DAEapi: any) {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.attack.bonus.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.attack.success.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.attack.success.${at}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.attack.fail.${at}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.attack.fail.${at}`);
     if (at !== "heal") midiFlags.push(`flags.${MODULE_ID}.DR.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.advantage.damage.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.damage.${at}`);
@@ -1130,6 +1163,12 @@ function setupMidiFlags(DAEapi: any) {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.ability.check.all`);
   midiFlags.push(`flags.${MODULE_ID}.fail.ability.save.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.ability.save.all`);
+  midiFlags.push(`flags.${MODULE_ID}.success.ability.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.ability.all`);
+  midiFlags.push(`flags.${MODULE_ID}.success.ability.check.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.ability.check.all`);
+  midiFlags.push(`flags.${MODULE_ID}.success.ability.save.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.ability.save.all`);
   midiFlags.push(`flags.${MODULE_ID}.superSaver.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.superSaver.all`);
   midiFlags.push(`flags.${MODULE_ID}.semiSuperSaver.all`);
@@ -1204,6 +1243,10 @@ function setupMidiFlags(DAEapi: any) {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.ability.check.${abl}`);
     midiFlags.push(`flags.${MODULE_ID}.fail.ability.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.ability.save.${abl}`);
+    midiFlags.push(`flags.${MODULE_ID}.success.ability.check.${abl}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.ability.check.${abl}`);
+    midiFlags.push(`flags.${MODULE_ID}.success.ability.save.${abl}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.ability.save.${abl}`);
     midiFlags.push(`flags.${MODULE_ID}.superSaver.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.superSaver.${abl}`);
     midiFlags.push(`flags.${MODULE_ID}.semiSuperSaver.${abl}`);
@@ -1240,6 +1283,22 @@ function setupMidiFlags(DAEapi: any) {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.check.${abl}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.skill.${abl}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.save.${abl}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.save.${abl}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.save.${abl}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.save.${abl}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.check.${abl}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.check.${abl}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.check.${abl}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.check.${abl}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.skill.${abl}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.skill.${abl}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${abl}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${abl}`);
+    midiFlags.push(`flags.${MODULE_ID}.advantage.skill.${abl}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.skill.${abl}`);
+    midiFlags.push(`flags.${MODULE_ID}.disadvantage.skill.${abl}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.skill.${abl}`);
   })
 
   midiFlags.push(`flags.${MODULE_ID}.advantage.skill.all`);
@@ -1248,6 +1307,8 @@ function setupMidiFlags(DAEapi: any) {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.skill.all`);
   midiFlags.push(`flags.${MODULE_ID}.fail.skill.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.skill.all`);
+  midiFlags.push(`flags.${MODULE_ID}.success.skill.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.skill.all`);
   midiFlags.push(`flags.${MODULE_ID}.max.skill.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.skill.all`);
   midiFlags.push(`flags.${MODULE_ID}.min.skill.all`);
@@ -1259,6 +1320,8 @@ function setupMidiFlags(DAEapi: any) {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.skill.${skill}`);
     midiFlags.push(`flags.${MODULE_ID}.fail.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.skill.${skill}`);
+    midiFlags.push(`flags.${MODULE_ID}.success.skill.${skill}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.skill.${skill}`);
     // midiFlags.push(`flags.${MODULE_ID}.max.skill.${skill}`); replaced by core
     // midiFlags.push(`flags.${MODULE_ID}.min.skill.${skill}`); replaced by core
     midiFlags.push(`flags.${MODULE_ID}.optional.NAME.skill.${skill}`);
@@ -1270,6 +1333,36 @@ function setupMidiFlags(DAEapi: any) {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.deathSave`);
   midiFlags.push(`flags.${MODULE_ID}.deathSaveBonus`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.deathSaveBonus`);
+  midiFlags.push(`flags.${MODULE_ID}.fail.deathSave`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.deathSave`);
+  midiFlags.push(`flags.${MODULE_ID}.success.deathSave`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.deathSave`);
+  midiFlags.push(`flags.${MODULE_ID}.advantage.tool.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.tool.all`);
+  midiFlags.push(`flags.${MODULE_ID}.disadvantage.tool.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.tool.all`);
+  midiFlags.push(`flags.${MODULE_ID}.fail.tool.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.tool.all`);
+  midiFlags.push(`flags.${MODULE_ID}.success.tool.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.tool.all`);
+  midiFlags.push(`flags.${MODULE_ID}.max.tool.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.tool.all`);
+  midiFlags.push(`flags.${MODULE_ID}.min.tool.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.tool.all`);
+  Object.keys(GameSystemConfig.tools).forEach(tool => {
+    midiFlags.push(`flags.${MODULE_ID}.advantage.tool.${tool}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.tool.${tool}`);
+    midiFlags.push(`flags.${MODULE_ID}.disadvantage.tool.${tool}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.tool.${tool}`);
+    midiFlags.push(`flags.${MODULE_ID}.fail.tool.${tool}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.tool.${tool}`);
+    midiFlags.push(`flags.${MODULE_ID}.success.tool.${tool}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.tool.${tool}`);
+    midiFlags.push(`flags.${MODULE_ID}.max.tool.${tool}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.tool.${tool}`);
+    midiFlags.push(`flags.${MODULE_ID}.min.tool.${tool}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.tool.${tool}`);
+  });
   // fix for translations
   ["vocal", "somatic", "material"].forEach(comp => {
     midiFlags.push(`flags.${MODULE_ID}.fail.spell.${comp.toLowerCase()}`);

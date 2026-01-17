@@ -406,8 +406,22 @@ Grant advantage on various roll types. All advantage flags are **Evaluated** (co
 |------|--------|-------------|
 | `flags.midi-qol.advantage.skill.all` | Evaluated | Advantage on all skill checks |
 | `flags.midi-qol.advantage.skill.{skill}` | Evaluated | Advantage on specific skill checks |
+| `flags.midi-qol.advantage.skill.{ability}` | Evaluated | Advantage on all skills using specific ability (e.g., `advantage.skill.dex` for all DEX-based skills) |
 
 *Skills: acr, ani, arc, ath, dec, his, ins, itm, inv, med, nat, prc, per, prf, rel, slt, ste, sur.*
+*Abilities: str, dex, con, int, wis, cha.*
+
+> [!note]
+> Ability check advantage/disadvantage flags also apply to skills that use that ability. For example, `advantage.ability.check.dex` grants advantage on Acrobatics, Sleight of Hand, and Stealth checks (all DEX-based skills).
+
+### Tool Checks
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.advantage.tool.all` | Evaluated | Advantage on all tool checks |
+| `flags.midi-qol.advantage.tool.{tool}` | Evaluated | Advantage on specific tool checks |
+
+*Tools: alchemist, bagpipes, brewer, calligrapher, card, carpenter, cartographer, chess, cobbler, cook, dice, disg, drum, dulcimer, flute, forg, glassblower, herb, horn, jeweler, leatherworker, lute, lyre, mason, navg, painter, panflute, pois, potter, shawm, smith, thief, tinker, viol, weaver, woodcarver.*
 
 ### Special Advantage
 
@@ -463,8 +477,22 @@ Grant disadvantage on various roll types. All disadvantage flags are **Evaluated
 |------|--------|-------------|
 | `flags.midi-qol.disadvantage.skill.all` | Evaluated | Disadvantage on all skill checks |
 | `flags.midi-qol.disadvantage.skill.{skill}` | Evaluated | Disadvantage on specific skill |
+| `flags.midi-qol.disadvantage.skill.{ability}` | Evaluated | Disadvantage on all skills using specific ability (e.g., `disadvantage.skill.dex` for all DEX-based skills) |
 
 *Skills: acr, ani, arc, ath, dec, his, ins, itm, inv, med, nat, prc, per, prf, rel, slt, ste, sur.*
+*Abilities: str, dex, con, int, wis, cha.*
+
+> [!note]
+> Ability check advantage/disadvantage flags also apply to skills that use that ability. For example, `disadvantage.ability.check.str` imposes disadvantage on Athletics checks (a STR-based skill).
+
+### Tool Checks
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.disadvantage.tool.all` | Evaluated | Disadvantage on all tool checks |
+| `flags.midi-qol.disadvantage.tool.{tool}` | Evaluated | Disadvantage on specific tool checks |
+
+*Tools: alchemist, bagpipes, brewer, calligrapher, card, carpenter, cartographer, chess, cobbler, cook, dice, disg, drum, dulcimer, flute, forg, glassblower, herb, horn, jeweler, leatherworker, lute, lyre, mason, navg, painter, panflute, pois, potter, shawm, smith, thief, tinker, viol, weaver, woodcarver.*
 
 ### Special Disadvantage
 
@@ -536,6 +564,21 @@ Force automatic failure on rolls. All fail flags are **Evaluated** (conditional 
 
 *Skills: acr, ani, arc, ath, dec, his, ins, itm, inv, med, nat, prc, per, prf, rel, slt, ste, sur.*
 
+### Tool Checks
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.fail.tool.all` | Evaluated | Fail all tool checks |
+| `flags.midi-qol.fail.tool.{tool}` | Evaluated | Fail specific tool check |
+
+*Tools: alchemist, bagpipes, brewer, calligrapher, card, carpenter, cartographer, chess, cobbler, cook, dice, disg, drum, dulcimer, flute, forg, glassblower, herb, horn, jeweler, leatherworker, lute, lyre, mason, navg, painter, panflute, pois, potter, shawm, smith, thief, tinker, viol, weaver, woodcarver.*
+
+### Death Saves
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.fail.deathSave` | Evaluated | Fail all death saving throws |
+
 ### Spellcasting
 
 | Flag | Access | Description |
@@ -557,7 +600,9 @@ Force automatic failure on rolls. All fail flags are **Evaluated** (conditional 
 
 ## Auto-Success
 
-Force automatic success on attacks. All success flags are **Evaluated** (conditional expression).
+Force automatic success on rolls. All success flags are **Evaluated** (conditional expression).
+
+### Attack Rolls
 
 | Flag | Access | Description |
 |------|--------|-------------|
@@ -565,6 +610,42 @@ Force automatic success on attacks. All success flags are **Evaluated** (conditi
 | `flags.midi-qol.success.attack.{attackType}` | Evaluated | Specific attack type auto-succeeds |
 
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
+
+### Ability Rolls
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.success.ability.all` | Evaluated | Succeed all ability-based rolls (saves and checks) |
+| `flags.midi-qol.success.ability.save.all` | Evaluated | Succeed all saving throws |
+| `flags.midi-qol.success.ability.save.{ability}` | Evaluated | Succeed specific ability saves |
+| `flags.midi-qol.success.ability.check.all` | Evaluated | Succeed all ability checks |
+| `flags.midi-qol.success.ability.check.{ability}` | Evaluated | Succeed specific ability checks |
+
+*Abilities: str, dex, con, int, wis, cha.*
+
+### Skills
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.success.skill.all` | Evaluated | Succeed all skill checks |
+| `flags.midi-qol.success.skill.{skill}` | Evaluated | Succeed specific skill |
+
+*Skills: acr, ani, arc, ath, dec, his, ins, itm, inv, med, nat, prc, per, prf, rel, slt, ste, sur.*
+
+### Tool Checks
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.success.tool.all` | Evaluated | Succeed all tool checks |
+| `flags.midi-qol.success.tool.{tool}` | Evaluated | Succeed specific tool check |
+
+*Tools: alchemist, bagpipes, brewer, calligrapher, card, carpenter, cartographer, chess, cobbler, cook, dice, disg, drum, dulcimer, flute, forg, glassblower, herb, horn, jeweler, leatherworker, lute, lyre, mason, navg, painter, panflute, pois, potter, shawm, smith, thief, tinker, viol, weaver, woodcarver.*
+
+### Death Saves
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.success.deathSave` | Evaluated | Succeed all death saving throws |
 
 ---
 
@@ -652,6 +733,7 @@ Prevent attacks against target from being fumbles. For multi-target attacks, ALL
 | `flags.midi-qol.grants.attack.success.all` | Evaluated | Attacks auto-succeed |
 | `flags.midi-qol.grants.attack.success.{attackType}` | Evaluated | Specific attack type auto-succeeds |
 | `flags.midi-qol.grants.attack.fail.all` | Evaluated | Attacks auto-fail |
+| `flags.midi-qol.grants.attack.fail.{attackType}` | Evaluated | Specific attack type auto-fails |
 
 *Attack types: mwak, rwak, msak, rsak.*
 
@@ -679,20 +761,62 @@ Prevent attacks against target from being fumbles. For multi-target attacks, ALL
 
 ### Grant Save/Check Advantage
 
+These flags are set on the **source actor** (caster/attacker) and affect targets forced to make saves or checks.
+
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.grants.advantage.save.all` | Evaluated | Target has advantage on all saves |
-| `flags.midi-qol.grants.advantage.save.{ability}` | Evaluated | Advantage on specific ability saves |
-| `flags.midi-qol.grants.disadvantage.save.all` | Evaluated | Target has disadvantage on all saves |
-| `flags.midi-qol.grants.disadvantage.save.{ability}` | Evaluated | Disadvantage on specific ability saves |
-| `flags.midi-qol.grants.advantage.check.all` | Evaluated | Target has advantage on all checks |
+| `flags.midi-qol.grants.advantage.save.all` | Evaluated | Targets have advantage on all saves forced by this actor |
+| `flags.midi-qol.grants.advantage.save.{ability}` | Evaluated | Targets have advantage on specific ability saves |
+| `flags.midi-qol.grants.disadvantage.save.all` | Evaluated | Targets have disadvantage on all saves forced by this actor |
+| `flags.midi-qol.grants.disadvantage.save.{ability}` | Evaluated | Targets have disadvantage on specific ability saves |
+| `flags.midi-qol.grants.advantage.check.all` | Evaluated | Target has advantage on all ability checks |
 | `flags.midi-qol.grants.advantage.check.{ability}` | Evaluated | Advantage on specific ability checks |
-| `flags.midi-qol.grants.disadvantage.check.all` | Evaluated | Target has disadvantage on all checks |
-| `flags.midi-qol.grants.advantage.skill.all` | Evaluated | Target has advantage on all skills |
+| `flags.midi-qol.grants.disadvantage.check.all` | Evaluated | Target has disadvantage on all ability checks |
+| `flags.midi-qol.grants.disadvantage.check.{ability}` | Evaluated | Disadvantage on specific ability checks |
+| `flags.midi-qol.grants.advantage.skill.all` | Evaluated | Target has advantage on all skill checks |
+| `flags.midi-qol.grants.advantage.skill.{skill}` | Evaluated | Advantage on specific skill checks |
 | `flags.midi-qol.grants.advantage.skill.{ability}` | Evaluated | Advantage on skills using specific ability |
-| `flags.midi-qol.grants.disadvantage.skill.all` | Evaluated | Target has disadvantage on all skills |
+| `flags.midi-qol.grants.disadvantage.skill.all` | Evaluated | Target has disadvantage on all skill checks |
+| `flags.midi-qol.grants.disadvantage.skill.{skill}` | Evaluated | Disadvantage on specific skill checks |
+| `flags.midi-qol.grants.disadvantage.skill.{ability}` | Evaluated | Disadvantage on skills using specific ability |
+| `flags.midi-qol.grants.advantage.tool.all` | Evaluated | Target has advantage on all tool checks |
+| `flags.midi-qol.grants.advantage.tool.{toolId}` | Evaluated | Advantage on specific tool checks |
+| `flags.midi-qol.grants.disadvantage.tool.all` | Evaluated | Target has disadvantage on all tool checks |
+| `flags.midi-qol.grants.disadvantage.tool.{toolId}` | Evaluated | Disadvantage on specific tool checks |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Skills: acr, ani, arc, ath, dec, his, ins, itm, inv, med, nat, prc, per, prf, rel, slt, ste, sur.*
+
+### Grant No Advantage/Disadvantage on Saves, Checks, Skills, Tools
+
+These flags are set on the **source actor** (caster) and suppress advantage/disadvantage on rolls forced by this actor, even if targets would normally have it from other sources.
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.grants.noAdvantage.all` | Evaluated | Suppress all advantage on rolls forced by this actor |
+| `flags.midi-qol.grants.noAdvantage.save.all` | Evaluated | Suppress advantage on all saves forced by this actor |
+| `flags.midi-qol.grants.noAdvantage.save.{ability}` | Evaluated | Suppress advantage on specific ability saves |
+| `flags.midi-qol.grants.noAdvantage.check.all` | Evaluated | Suppress advantage on all ability checks forced by this actor |
+| `flags.midi-qol.grants.noAdvantage.check.{ability}` | Evaluated | Suppress advantage on specific ability checks |
+| `flags.midi-qol.grants.noAdvantage.skill.all` | Evaluated | Suppress advantage on all skill checks forced by this actor |
+| `flags.midi-qol.grants.noAdvantage.skill.{ability}` | Evaluated | Suppress advantage on skills using specific ability |
+| `flags.midi-qol.grants.noAdvantage.skill.{skillId}` | Evaluated | Suppress advantage on specific skill checks |
+| `flags.midi-qol.grants.noAdvantage.tool.all` | Evaluated | Suppress advantage on all tool checks forced by this actor |
+| `flags.midi-qol.grants.noAdvantage.tool.{toolId}` | Evaluated | Suppress advantage on specific tool checks |
+| `flags.midi-qol.grants.noDisadvantage.all` | Evaluated | Suppress all disadvantage on rolls forced by this actor |
+| `flags.midi-qol.grants.noDisadvantage.save.all` | Evaluated | Suppress disadvantage on all saves forced by this actor |
+| `flags.midi-qol.grants.noDisadvantage.save.{ability}` | Evaluated | Suppress disadvantage on specific ability saves |
+| `flags.midi-qol.grants.noDisadvantage.check.all` | Evaluated | Suppress disadvantage on all ability checks forced by this actor |
+| `flags.midi-qol.grants.noDisadvantage.check.{ability}` | Evaluated | Suppress disadvantage on specific ability checks |
+| `flags.midi-qol.grants.noDisadvantage.skill.all` | Evaluated | Suppress disadvantage on all skill checks forced by this actor |
+| `flags.midi-qol.grants.noDisadvantage.skill.{ability}` | Evaluated | Suppress disadvantage on skills using specific ability |
+| `flags.midi-qol.grants.noDisadvantage.skill.{skillId}` | Evaluated | Suppress disadvantage on specific skill checks |
+| `flags.midi-qol.grants.noDisadvantage.tool.all` | Evaluated | Suppress disadvantage on all tool checks forced by this actor |
+| `flags.midi-qol.grants.noDisadvantage.tool.{toolId}` | Evaluated | Suppress disadvantage on specific tool checks |
+
+*Abilities: str, dex, con, int, wis, cha.*
+
+**Example use case:** A creature whose gaze attack prevents targets from having advantage on the save, regardless of other effects they have.
 
 ---
 
@@ -741,8 +865,11 @@ Set minimum or maximum values for the d20 roll (not total). All min/max flags ar
 | `flags.midi-qol.max.ability.check.{ability}` | Direct | Maximum for specific ability checks |
 | `flags.midi-qol.max.skill.all` | Direct | Maximum d20 roll for all skills |
 | `flags.midi-qol.max.skill.{skill}` | Direct | Maximum for specific skill. **Mapped to:** `system.skills.{skill}.roll.max` |
+| `flags.midi-qol.max.tool.all` | Direct | Maximum d20 roll for all tool checks |
+| `flags.midi-qol.max.tool.{tool}` | Direct | Maximum for specific tool check |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Tools: alchemist, bagpipes, brewer, calligrapher, card, carpenter, cartographer, chess, cobbler, cook, dice, disg, drum, dulcimer, flute, forg, glassblower, herb, horn, jeweler, leatherworker, lute, lyre, mason, navg, painter, panflute, pois, potter, shawm, smith, thief, tinker, viol, weaver, woodcarver.*
 
 ### Minimum Roll
 
@@ -754,8 +881,11 @@ Set minimum or maximum values for the d20 roll (not total). All min/max flags ar
 | `flags.midi-qol.min.ability.check.all` | Direct | Minimum d20 roll for all checks |
 | `flags.midi-qol.min.ability.check.{ability}` | Direct | Minimum for specific ability checks |
 | `flags.midi-qol.min.skill.{skill}` | Direct | Minimum for specific skill. **Mapped to:** `system.skills.{skill}.roll.min` |
+| `flags.midi-qol.min.tool.all` | Direct | Minimum d20 roll for all tool checks |
+| `flags.midi-qol.min.tool.{tool}` | Direct | Minimum for specific tool check |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Tools: alchemist, bagpipes, brewer, calligrapher, card, carpenter, cartographer, chess, cobbler, cook, dice, disg, drum, dulcimer, flute, forg, glassblower, herb, horn, jeweler, leatherworker, lute, lyre, mason, navg, painter, panflute, pois, potter, shawm, smith, thief, tinker, viol, weaver, woodcarver.*
 
 ---
 
@@ -1258,7 +1388,7 @@ These flags have been renamed to clearer equivalents.
 | `flags.midi-qol.grants.fail.disadvantage.attack.all` | Evaluated | `flags.midi-qol.grants.noDisadvantage.attack.all` |
 | `flags.midi-qol.grants.fail.disadvantage.attack.{type}` | Evaluated | `flags.midi-qol.grants.noDisadvantage.attack.{type}` |
 
-*Types: mwak, rwak, msak, rsak, save, check, skill, tool.*
+*Types: mwak, rwak, msak, rsak.*
 
 ### Other Deprecated
 

@@ -1379,6 +1379,9 @@
   "midi-qol.NoAmmunitionAvailable": "There is no ammunition in your inventory.",
   "midi-qol.NoAmmunitionSelected": "You must select the ammunition to use.",
   "midi-qol.TwoHandedShieldWarning": "Cannot use two-handed or off-hand attack with a shield equipped",
+  "midi-qol.otherActivityConsumptionFailed": "{actorName}: {itemName} ({activityName}) - insufficient resources for other activity",
+  "midi-qol.RefundOtherActivityResource": "Refund Other Resource",
+  "midi-qol.ConsumeOtherActivityResource": "Consume Other Resource",
   "dae.MidiQOL.fieldData": {
     "flags.midi-qol.absorption.acid": {
       "name": "Absorption Acid",
@@ -1784,6 +1787,70 @@
       "name": "Advantage (Survival)",
       "description": "Advantage on Survival checks."
     },
+    "flags.midi-qol.advantage.skill.str": {
+      "name": "Advantage (STR Skills)",
+      "description": "Advantage on all Strength-based skill checks."
+    },
+    "flags.midi-qol.advantage.skill.dex": {
+      "name": "Advantage (DEX Skills)",
+      "description": "Advantage on all Dexterity-based skill checks."
+    },
+    "flags.midi-qol.advantage.skill.con": {
+      "name": "Advantage (CON Skills)",
+      "description": "Advantage on all Constitution-based skill checks."
+    },
+    "flags.midi-qol.advantage.skill.int": {
+      "name": "Advantage (INT Skills)",
+      "description": "Advantage on all Intelligence-based skill checks."
+    },
+    "flags.midi-qol.advantage.skill.wis": {
+      "name": "Advantage (WIS Skills)",
+      "description": "Advantage on all Wisdom-based skill checks."
+    },
+    "flags.midi-qol.advantage.skill.cha": {
+      "name": "Advantage (CHA Skills)",
+      "description": "Advantage on all Charisma-based skill checks."
+    },
+    "flags.midi-qol.advantage.tool.all": {
+      "name": "Advantage (All Tool Checks)",
+      "description": "Advantage on all tool checks."
+    },
+    "flags.midi-qol.advantage.tool.alchemist": { "name": "Advantage (Alchemist's Supplies)", "description": "Advantage on Alchemist's Supplies checks." },
+    "flags.midi-qol.advantage.tool.bagpipes": { "name": "Advantage (Bagpipes)", "description": "Advantage on Bagpipes checks." },
+    "flags.midi-qol.advantage.tool.brewer": { "name": "Advantage (Brewer's Supplies)", "description": "Advantage on Brewer's Supplies checks." },
+    "flags.midi-qol.advantage.tool.calligrapher": { "name": "Advantage (Calligrapher's Supplies)", "description": "Advantage on Calligrapher's Supplies checks." },
+    "flags.midi-qol.advantage.tool.card": { "name": "Advantage (Playing Card Set)", "description": "Advantage on Playing Card Set checks." },
+    "flags.midi-qol.advantage.tool.carpenter": { "name": "Advantage (Carpenter's Tools)", "description": "Advantage on Carpenter's Tools checks." },
+    "flags.midi-qol.advantage.tool.cartographer": { "name": "Advantage (Cartographer's Tools)", "description": "Advantage on Cartographer's Tools checks." },
+    "flags.midi-qol.advantage.tool.chess": { "name": "Advantage (Chess Set)", "description": "Advantage on Chess Set checks." },
+    "flags.midi-qol.advantage.tool.cobbler": { "name": "Advantage (Cobbler's Tools)", "description": "Advantage on Cobbler's Tools checks." },
+    "flags.midi-qol.advantage.tool.cook": { "name": "Advantage (Cook's Utensils)", "description": "Advantage on Cook's Utensils checks." },
+    "flags.midi-qol.advantage.tool.dice": { "name": "Advantage (Dice Set)", "description": "Advantage on Dice Set checks." },
+    "flags.midi-qol.advantage.tool.disg": { "name": "Advantage (Disguise Kit)", "description": "Advantage on Disguise Kit checks." },
+    "flags.midi-qol.advantage.tool.drum": { "name": "Advantage (Drum)", "description": "Advantage on Drum checks." },
+    "flags.midi-qol.advantage.tool.dulcimer": { "name": "Advantage (Dulcimer)", "description": "Advantage on Dulcimer checks." },
+    "flags.midi-qol.advantage.tool.flute": { "name": "Advantage (Flute)", "description": "Advantage on Flute checks." },
+    "flags.midi-qol.advantage.tool.forg": { "name": "Advantage (Forgery Kit)", "description": "Advantage on Forgery Kit checks." },
+    "flags.midi-qol.advantage.tool.glassblower": { "name": "Advantage (Glassblower's Tools)", "description": "Advantage on Glassblower's Tools checks." },
+    "flags.midi-qol.advantage.tool.herb": { "name": "Advantage (Herbalism Kit)", "description": "Advantage on Herbalism Kit checks." },
+    "flags.midi-qol.advantage.tool.horn": { "name": "Advantage (Horn)", "description": "Advantage on Horn checks." },
+    "flags.midi-qol.advantage.tool.jeweler": { "name": "Advantage (Jeweler's Tools)", "description": "Advantage on Jeweler's Tools checks." },
+    "flags.midi-qol.advantage.tool.leatherworker": { "name": "Advantage (Leatherworker's Tools)", "description": "Advantage on Leatherworker's Tools checks." },
+    "flags.midi-qol.advantage.tool.lute": { "name": "Advantage (Lute)", "description": "Advantage on Lute checks." },
+    "flags.midi-qol.advantage.tool.lyre": { "name": "Advantage (Lyre)", "description": "Advantage on Lyre checks." },
+    "flags.midi-qol.advantage.tool.mason": { "name": "Advantage (Mason's Tools)", "description": "Advantage on Mason's Tools checks." },
+    "flags.midi-qol.advantage.tool.navg": { "name": "Advantage (Navigator's Tools)", "description": "Advantage on Navigator's Tools checks." },
+    "flags.midi-qol.advantage.tool.painter": { "name": "Advantage (Painter's Supplies)", "description": "Advantage on Painter's Supplies checks." },
+    "flags.midi-qol.advantage.tool.panflute": { "name": "Advantage (Pan Flute)", "description": "Advantage on Pan Flute checks." },
+    "flags.midi-qol.advantage.tool.pois": { "name": "Advantage (Poisoner's Kit)", "description": "Advantage on Poisoner's Kit checks." },
+    "flags.midi-qol.advantage.tool.potter": { "name": "Advantage (Potter's Tools)", "description": "Advantage on Potter's Tools checks." },
+    "flags.midi-qol.advantage.tool.shawm": { "name": "Advantage (Shawm)", "description": "Advantage on Shawm checks." },
+    "flags.midi-qol.advantage.tool.smith": { "name": "Advantage (Smith's Tools)", "description": "Advantage on Smith's Tools checks." },
+    "flags.midi-qol.advantage.tool.thief": { "name": "Advantage (Thieves' Tools)", "description": "Advantage on Thieves' Tools checks." },
+    "flags.midi-qol.advantage.tool.tinker": { "name": "Advantage (Tinker's Tools)", "description": "Advantage on Tinker's Tools checks." },
+    "flags.midi-qol.advantage.tool.viol": { "name": "Advantage (Viol)", "description": "Advantage on Viol checks." },
+    "flags.midi-qol.advantage.tool.weaver": { "name": "Advantage (Weaver's Tools)", "description": "Advantage on Weaver's Tools checks." },
+    "flags.midi-qol.advantage.tool.woodcarver": { "name": "Advantage (Woodcarver's Tools)", "description": "Advantage on Woodcarver's Tools checks." },
     "flags.midi-qol.carefulSpells": {
       "name": "Careful Spells",
       "description": "Pre-selected targets of save spells automatically succeed."
@@ -2040,6 +2107,70 @@
       "name": "Disadvantage (Survival)",
       "description": ""
     },
+    "flags.midi-qol.disadvantage.skill.str": {
+      "name": "Disadvantage (STR Skills)",
+      "description": "Disadvantage on all Strength-based skill checks."
+    },
+    "flags.midi-qol.disadvantage.skill.dex": {
+      "name": "Disadvantage (DEX Skills)",
+      "description": "Disadvantage on all Dexterity-based skill checks."
+    },
+    "flags.midi-qol.disadvantage.skill.con": {
+      "name": "Disadvantage (CON Skills)",
+      "description": "Disadvantage on all Constitution-based skill checks."
+    },
+    "flags.midi-qol.disadvantage.skill.int": {
+      "name": "Disadvantage (INT Skills)",
+      "description": "Disadvantage on all Intelligence-based skill checks."
+    },
+    "flags.midi-qol.disadvantage.skill.wis": {
+      "name": "Disadvantage (WIS Skills)",
+      "description": "Disadvantage on all Wisdom-based skill checks."
+    },
+    "flags.midi-qol.disadvantage.skill.cha": {
+      "name": "Disadvantage (CHA Skills)",
+      "description": "Disadvantage on all Charisma-based skill checks."
+    },
+    "flags.midi-qol.disadvantage.tool.all": {
+      "name": "Disadvantage (All Tool Checks)",
+      "description": "Disadvantage on all tool checks."
+    },
+    "flags.midi-qol.disadvantage.tool.alchemist": { "name": "Disadvantage (Alchemist's Supplies)", "description": "Disadvantage on Alchemist's Supplies checks." },
+    "flags.midi-qol.disadvantage.tool.bagpipes": { "name": "Disadvantage (Bagpipes)", "description": "Disadvantage on Bagpipes checks." },
+    "flags.midi-qol.disadvantage.tool.brewer": { "name": "Disadvantage (Brewer's Supplies)", "description": "Disadvantage on Brewer's Supplies checks." },
+    "flags.midi-qol.disadvantage.tool.calligrapher": { "name": "Disadvantage (Calligrapher's Supplies)", "description": "Disadvantage on Calligrapher's Supplies checks." },
+    "flags.midi-qol.disadvantage.tool.card": { "name": "Disadvantage (Playing Card Set)", "description": "Disadvantage on Playing Card Set checks." },
+    "flags.midi-qol.disadvantage.tool.carpenter": { "name": "Disadvantage (Carpenter's Tools)", "description": "Disadvantage on Carpenter's Tools checks." },
+    "flags.midi-qol.disadvantage.tool.cartographer": { "name": "Disadvantage (Cartographer's Tools)", "description": "Disadvantage on Cartographer's Tools checks." },
+    "flags.midi-qol.disadvantage.tool.chess": { "name": "Disadvantage (Chess Set)", "description": "Disadvantage on Chess Set checks." },
+    "flags.midi-qol.disadvantage.tool.cobbler": { "name": "Disadvantage (Cobbler's Tools)", "description": "Disadvantage on Cobbler's Tools checks." },
+    "flags.midi-qol.disadvantage.tool.cook": { "name": "Disadvantage (Cook's Utensils)", "description": "Disadvantage on Cook's Utensils checks." },
+    "flags.midi-qol.disadvantage.tool.dice": { "name": "Disadvantage (Dice Set)", "description": "Disadvantage on Dice Set checks." },
+    "flags.midi-qol.disadvantage.tool.disg": { "name": "Disadvantage (Disguise Kit)", "description": "Disadvantage on Disguise Kit checks." },
+    "flags.midi-qol.disadvantage.tool.drum": { "name": "Disadvantage (Drum)", "description": "Disadvantage on Drum checks." },
+    "flags.midi-qol.disadvantage.tool.dulcimer": { "name": "Disadvantage (Dulcimer)", "description": "Disadvantage on Dulcimer checks." },
+    "flags.midi-qol.disadvantage.tool.flute": { "name": "Disadvantage (Flute)", "description": "Disadvantage on Flute checks." },
+    "flags.midi-qol.disadvantage.tool.forg": { "name": "Disadvantage (Forgery Kit)", "description": "Disadvantage on Forgery Kit checks." },
+    "flags.midi-qol.disadvantage.tool.glassblower": { "name": "Disadvantage (Glassblower's Tools)", "description": "Disadvantage on Glassblower's Tools checks." },
+    "flags.midi-qol.disadvantage.tool.herb": { "name": "Disadvantage (Herbalism Kit)", "description": "Disadvantage on Herbalism Kit checks." },
+    "flags.midi-qol.disadvantage.tool.horn": { "name": "Disadvantage (Horn)", "description": "Disadvantage on Horn checks." },
+    "flags.midi-qol.disadvantage.tool.jeweler": { "name": "Disadvantage (Jeweler's Tools)", "description": "Disadvantage on Jeweler's Tools checks." },
+    "flags.midi-qol.disadvantage.tool.leatherworker": { "name": "Disadvantage (Leatherworker's Tools)", "description": "Disadvantage on Leatherworker's Tools checks." },
+    "flags.midi-qol.disadvantage.tool.lute": { "name": "Disadvantage (Lute)", "description": "Disadvantage on Lute checks." },
+    "flags.midi-qol.disadvantage.tool.lyre": { "name": "Disadvantage (Lyre)", "description": "Disadvantage on Lyre checks." },
+    "flags.midi-qol.disadvantage.tool.mason": { "name": "Disadvantage (Mason's Tools)", "description": "Disadvantage on Mason's Tools checks." },
+    "flags.midi-qol.disadvantage.tool.navg": { "name": "Disadvantage (Navigator's Tools)", "description": "Disadvantage on Navigator's Tools checks." },
+    "flags.midi-qol.disadvantage.tool.painter": { "name": "Disadvantage (Painter's Supplies)", "description": "Disadvantage on Painter's Supplies checks." },
+    "flags.midi-qol.disadvantage.tool.panflute": { "name": "Disadvantage (Pan Flute)", "description": "Disadvantage on Pan Flute checks." },
+    "flags.midi-qol.disadvantage.tool.pois": { "name": "Disadvantage (Poisoner's Kit)", "description": "Disadvantage on Poisoner's Kit checks." },
+    "flags.midi-qol.disadvantage.tool.potter": { "name": "Disadvantage (Potter's Tools)", "description": "Disadvantage on Potter's Tools checks." },
+    "flags.midi-qol.disadvantage.tool.shawm": { "name": "Disadvantage (Shawm)", "description": "Disadvantage on Shawm checks." },
+    "flags.midi-qol.disadvantage.tool.smith": { "name": "Disadvantage (Smith's Tools)", "description": "Disadvantage on Smith's Tools checks." },
+    "flags.midi-qol.disadvantage.tool.thief": { "name": "Disadvantage (Thieves' Tools)", "description": "Disadvantage on Thieves' Tools checks." },
+    "flags.midi-qol.disadvantage.tool.tinker": { "name": "Disadvantage (Tinker's Tools)", "description": "Disadvantage on Tinker's Tools checks." },
+    "flags.midi-qol.disadvantage.tool.viol": { "name": "Disadvantage (Viol)", "description": "Disadvantage on Viol checks." },
+    "flags.midi-qol.disadvantage.tool.weaver": { "name": "Disadvantage (Weaver's Tools)", "description": "Disadvantage on Weaver's Tools checks." },
+    "flags.midi-qol.disadvantage.tool.woodcarver": { "name": "Disadvantage (Woodcarver's Tools)", "description": "Disadvantage on Woodcarver's Tools checks." },
     "flags.midi-qol.fail.ability.all": {
       "name": "Fail (All Abilities)",
       "description": ""
@@ -2178,79 +2309,79 @@
     },
     "flags.midi-qol.fail.skill.acr": {
       "name": "Fail (Acrobatics)",
-      "description": ""
+      "description": "Acrobatics checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.all": {
       "name": "Fail (All Skills)",
-      "description": ""
+      "description": "All skill checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.ani": {
       "name": "Fail (Animal Handling)",
-      "description": ""
+      "description": "Animal Handling checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.arc": {
       "name": "Fail (Arcana)",
-      "description": ""
+      "description": "Arcana checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.ath": {
       "name": "Fail (Athletics)",
-      "description": ""
+      "description": "Athletics checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.dec": {
       "name": "Fail (Deception)",
-      "description": ""
+      "description": "Deception checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.his": {
       "name": "Fail (History)",
-      "description": ""
+      "description": "History checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.ins": {
       "name": "Fail (Insight)",
-      "description": ""
+      "description": "Insight checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.inv": {
       "name": "Fail (Investigation)",
-      "description": ""
+      "description": "Investigation checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.itm": {
       "name": "Fail (Intimidation)",
-      "description": ""
+      "description": "Intimidation checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.med": {
       "name": "Fail (Medicine)",
-      "description": ""
+      "description": "Medicine checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.nat": {
       "name": "Fail (Nature)",
-      "description": ""
+      "description": "Nature checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.per": {
       "name": "Fail (Persuasion)",
-      "description": ""
+      "description": "Persuasion checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.prc": {
       "name": "Fail (Perception)",
-      "description": ""
+      "description": "Perception checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.prf": {
       "name": "Fail (Performance)",
-      "description": ""
+      "description": "Performance checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.rel": {
       "name": "Fail (Religion)",
-      "description": ""
+      "description": "Religion checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.slt": {
       "name": "Fail (Sleight of Hand)",
-      "description": ""
+      "description": "Sleight of Hand checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.ste": {
       "name": "Fail (Stealth)",
-      "description": ""
+      "description": "Stealth checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.skill.sur": {
       "name": "Fail (Survival)",
-      "description": ""
+      "description": "Survival checks automatically fail (d20 capped at 1)."
     },
     "flags.midi-qol.fail.spell.material": {
       "name": "Fail (Material Component)",
@@ -2264,6 +2395,50 @@
       "name": "Fail (Vocal Component)",
       "description": ""
     },
+    "flags.midi-qol.fail.deathSave": {
+      "name": "Fail (Death Save)",
+      "description": "Automatically fail death saving throws."
+    },
+    "flags.midi-qol.fail.tool.all": {
+      "name": "Fail (All Tool Checks)",
+      "description": "Automatically fail all tool checks."
+    },
+    "flags.midi-qol.fail.tool.alchemist": { "name": "Fail (Alchemist's Supplies)", "description": "Automatically fail Alchemist's Supplies checks." },
+    "flags.midi-qol.fail.tool.bagpipes": { "name": "Fail (Bagpipes)", "description": "Automatically fail Bagpipes checks." },
+    "flags.midi-qol.fail.tool.brewer": { "name": "Fail (Brewer's Supplies)", "description": "Automatically fail Brewer's Supplies checks." },
+    "flags.midi-qol.fail.tool.calligrapher": { "name": "Fail (Calligrapher's Supplies)", "description": "Automatically fail Calligrapher's Supplies checks." },
+    "flags.midi-qol.fail.tool.card": { "name": "Fail (Playing Card Set)", "description": "Automatically fail Playing Card Set checks." },
+    "flags.midi-qol.fail.tool.carpenter": { "name": "Fail (Carpenter's Tools)", "description": "Automatically fail Carpenter's Tools checks." },
+    "flags.midi-qol.fail.tool.cartographer": { "name": "Fail (Cartographer's Tools)", "description": "Automatically fail Cartographer's Tools checks." },
+    "flags.midi-qol.fail.tool.chess": { "name": "Fail (Chess Set)", "description": "Automatically fail Chess Set checks." },
+    "flags.midi-qol.fail.tool.cobbler": { "name": "Fail (Cobbler's Tools)", "description": "Automatically fail Cobbler's Tools checks." },
+    "flags.midi-qol.fail.tool.cook": { "name": "Fail (Cook's Utensils)", "description": "Automatically fail Cook's Utensils checks." },
+    "flags.midi-qol.fail.tool.dice": { "name": "Fail (Dice Set)", "description": "Automatically fail Dice Set checks." },
+    "flags.midi-qol.fail.tool.disg": { "name": "Fail (Disguise Kit)", "description": "Automatically fail Disguise Kit checks." },
+    "flags.midi-qol.fail.tool.drum": { "name": "Fail (Drum)", "description": "Automatically fail Drum checks." },
+    "flags.midi-qol.fail.tool.dulcimer": { "name": "Fail (Dulcimer)", "description": "Automatically fail Dulcimer checks." },
+    "flags.midi-qol.fail.tool.flute": { "name": "Fail (Flute)", "description": "Automatically fail Flute checks." },
+    "flags.midi-qol.fail.tool.forg": { "name": "Fail (Forgery Kit)", "description": "Automatically fail Forgery Kit checks." },
+    "flags.midi-qol.fail.tool.glassblower": { "name": "Fail (Glassblower's Tools)", "description": "Automatically fail Glassblower's Tools checks." },
+    "flags.midi-qol.fail.tool.herb": { "name": "Fail (Herbalism Kit)", "description": "Automatically fail Herbalism Kit checks." },
+    "flags.midi-qol.fail.tool.horn": { "name": "Fail (Horn)", "description": "Automatically fail Horn checks." },
+    "flags.midi-qol.fail.tool.jeweler": { "name": "Fail (Jeweler's Tools)", "description": "Automatically fail Jeweler's Tools checks." },
+    "flags.midi-qol.fail.tool.leatherworker": { "name": "Fail (Leatherworker's Tools)", "description": "Automatically fail Leatherworker's Tools checks." },
+    "flags.midi-qol.fail.tool.lute": { "name": "Fail (Lute)", "description": "Automatically fail Lute checks." },
+    "flags.midi-qol.fail.tool.lyre": { "name": "Fail (Lyre)", "description": "Automatically fail Lyre checks." },
+    "flags.midi-qol.fail.tool.mason": { "name": "Fail (Mason's Tools)", "description": "Automatically fail Mason's Tools checks." },
+    "flags.midi-qol.fail.tool.navg": { "name": "Fail (Navigator's Tools)", "description": "Automatically fail Navigator's Tools checks." },
+    "flags.midi-qol.fail.tool.painter": { "name": "Fail (Painter's Supplies)", "description": "Automatically fail Painter's Supplies checks." },
+    "flags.midi-qol.fail.tool.panflute": { "name": "Fail (Pan Flute)", "description": "Automatically fail Pan Flute checks." },
+    "flags.midi-qol.fail.tool.pois": { "name": "Fail (Poisoner's Kit)", "description": "Automatically fail Poisoner's Kit checks." },
+    "flags.midi-qol.fail.tool.potter": { "name": "Fail (Potter's Tools)", "description": "Automatically fail Potter's Tools checks." },
+    "flags.midi-qol.fail.tool.shawm": { "name": "Fail (Shawm)", "description": "Automatically fail Shawm checks." },
+    "flags.midi-qol.fail.tool.smith": { "name": "Fail (Smith's Tools)", "description": "Automatically fail Smith's Tools checks." },
+    "flags.midi-qol.fail.tool.thief": { "name": "Fail (Thieves' Tools)", "description": "Automatically fail Thieves' Tools checks." },
+    "flags.midi-qol.fail.tool.tinker": { "name": "Fail (Tinker's Tools)", "description": "Automatically fail Tinker's Tools checks." },
+    "flags.midi-qol.fail.tool.viol": { "name": "Fail (Viol)", "description": "Automatically fail Viol checks." },
+    "flags.midi-qol.fail.tool.weaver": { "name": "Fail (Weaver's Tools)", "description": "Automatically fail Weaver's Tools checks." },
+    "flags.midi-qol.fail.tool.woodcarver": { "name": "Fail (Woodcarver's Tools)", "description": "Automatically fail Woodcarver's Tools checks." },
     "flags.midi-qol.grants.advantage.attack.all": {
       "name": "Grants Advantage (All Attacks)",
       "description": ""
@@ -2386,79 +2561,111 @@
     },
     "flags.midi-qol.grants.attack.bonus.all": {
       "name": "Grants Attack Bonus (All)",
-      "description": ""
+      "description": "Adds a bonus to all attack rolls made against this actor. Set to a number or roll expression."
     },
     "flags.midi-qol.grants.attack.bonus.heal": {
       "name": "Grants Attack Bonus (Heal)",
-      "description": ""
+      "description": "Adds a bonus to healing attack rolls made against this actor. Set to a number or roll expression."
     },
     "flags.midi-qol.grants.attack.bonus.msak": {
       "name": "Grants Attack Bonus (Melee Spell Attack)",
-      "description": ""
+      "description": "Adds a bonus to melee spell attack rolls made against this actor. Set to a number or roll expression."
     },
     "flags.midi-qol.grants.attack.bonus.mwak": {
       "name": "Grants Attack Bonus (Melee Weapon Attack)",
-      "description": ""
+      "description": "Adds a bonus to melee weapon attack rolls made against this actor. Set to a number or roll expression."
     },
     "flags.midi-qol.grants.attack.bonus.other": {
       "name": "Grants Attack Bonus (Other)",
-      "description": ""
+      "description": "Adds a bonus to other attack rolls made against this actor. Set to a number or roll expression."
     },
     "flags.midi-qol.grants.attack.bonus.rsak": {
       "name": "Grants Attack Bonus (Ranged Spell Attack)",
-      "description": ""
+      "description": "Adds a bonus to ranged spell attack rolls made against this actor. Set to a number or roll expression."
     },
     "flags.midi-qol.grants.attack.bonus.rwak": {
       "name": "Grants Attack Bonus (Ranged Weapon Attack)",
-      "description": ""
+      "description": "Adds a bonus to ranged weapon attack rolls made against this actor. Set to a number or roll expression."
     },
     "flags.midi-qol.grants.attack.bonus.save": {
       "name": "Grants Attack Bonus (Save)",
-      "description": ""
+      "description": "Adds a bonus to save-based attack rolls made against this actor. Set to a number or roll expression."
     },
     "flags.midi-qol.grants.attack.bonus.util": {
       "name": "Grants Attack Bonus (Utility)",
-      "description": ""
+      "description": "Adds a bonus to utility attack rolls made against this actor. Set to a number or roll expression."
     },
     "flags.midi-qol.grants.attack.fail.all": {
       "name": "Grants Attack Fail (All)",
-      "description": ""
+      "description": "All attacks against this actor automatically miss. Set to 1 or a condition expression."
+    },
+    "flags.midi-qol.grants.attack.fail.heal": {
+      "name": "Grants Attack Fail (Heal)",
+      "description": "Healing attacks against this actor automatically miss. Set to 1 or a condition expression."
+    },
+    "flags.midi-qol.grants.attack.fail.msak": {
+      "name": "Grants Attack Fail (Melee Spell Attack)",
+      "description": "Melee spell attacks against this actor automatically miss. Set to 1 or a condition expression."
+    },
+    "flags.midi-qol.grants.attack.fail.mwak": {
+      "name": "Grants Attack Fail (Melee Weapon Attack)",
+      "description": "Melee weapon attacks against this actor automatically miss. Set to 1 or a condition expression."
+    },
+    "flags.midi-qol.grants.attack.fail.other": {
+      "name": "Grants Attack Fail (Other)",
+      "description": "Other attacks against this actor automatically miss. Set to 1 or a condition expression."
+    },
+    "flags.midi-qol.grants.attack.fail.rsak": {
+      "name": "Grants Attack Fail (Ranged Spell Attack)",
+      "description": "Ranged spell attacks against this actor automatically miss. Set to 1 or a condition expression."
+    },
+    "flags.midi-qol.grants.attack.fail.rwak": {
+      "name": "Grants Attack Fail (Ranged Weapon Attack)",
+      "description": "Ranged weapon attacks against this actor automatically miss. Set to 1 or a condition expression."
+    },
+    "flags.midi-qol.grants.attack.fail.save": {
+      "name": "Grants Attack Fail (Save)",
+      "description": "Save-based attacks against this actor automatically miss. Set to 1 or a condition expression."
+    },
+    "flags.midi-qol.grants.attack.fail.util": {
+      "name": "Grants Attack Fail (Utility)",
+      "description": "Utility attacks against this actor automatically miss. Set to 1 or a condition expression."
     },
     "flags.midi-qol.grants.attack.success.all": {
       "name": "Grants Attack Success (All)",
-      "description": ""
+      "description": "All attacks against this actor automatically hit. Set to 1 or a condition expression."
     },
     "flags.midi-qol.grants.attack.success.heal": {
       "name": "Grants Attack Success (Heal)",
-      "description": ""
+      "description": "Healing attacks against this actor automatically hit. Set to 1 or a condition expression."
     },
     "flags.midi-qol.grants.attack.success.msak": {
       "name": "Grants Attack Success (Melee Spell Attack)",
-      "description": ""
+      "description": "Melee spell attacks against this actor automatically hit. Set to 1 or a condition expression."
     },
     "flags.midi-qol.grants.attack.success.mwak": {
       "name": "Grants Attack Success (Melee Weapon Attack)",
-      "description": ""
+      "description": "Melee weapon attacks against this actor automatically hit. Set to 1 or a condition expression."
     },
     "flags.midi-qol.grants.attack.success.other": {
       "name": "Grants Attack Success (Other)",
-      "description": ""
+      "description": "Other attacks against this actor automatically hit. Set to 1 or a condition expression."
     },
     "flags.midi-qol.grants.attack.success.rsak": {
       "name": "Grants Attack Success (Ranged Spell Attack)",
-      "description": ""
+      "description": "Ranged spell attacks against this actor automatically hit. Set to 1 or a condition expression."
     },
     "flags.midi-qol.grants.attack.success.rwak": {
       "name": "Grants Attack Success (Ranged Weapon Attack)",
-      "description": ""
+      "description": "Ranged weapon attacks against this actor automatically hit. Set to 1 or a condition expression."
     },
     "flags.midi-qol.grants.attack.success.save": {
       "name": "Grants Attack Success (Save)",
-      "description": ""
+      "description": "Save-based attacks against this actor automatically hit. Set to 1 or a condition expression."
     },
     "flags.midi-qol.grants.attack.success.util": {
       "name": "Grants Attack Success (Utility)",
-      "description": ""
+      "description": "Utility attacks against this actor automatically hit. Set to 1 or a condition expression."
     },
     "flags.midi-qol.grants.critical.all": {
       "name": "Grants Critical Hit (All)",
@@ -2624,11 +2831,19 @@
       "name": "Grants Disadvantage (Wisdom Skills)",
       "description": ""
     },
+    "flags.midi-qol.grants.advantage.tool.all": {
+      "name": "Grants Advantage (All Tools)",
+      "description": "Tool checks forced by this actor will have advantage"
+    },
+    "flags.midi-qol.grants.disadvantage.tool.all": {
+      "name": "Grants Disadvantage (All Tools)",
+      "description": "Tool checks forced by this actor will have disadvantage"
+    },
     "flags.midi-qol.grants.fail.advantage.attack.all": {
       "name": "Grants Fail Advantage (All Attacks)",
       "description": ""
     },
-    "flags.midi-qol.noAdvantage.attack.all": {
+    "flags.midi-qol.grants.noAdvantage.attack.all": {
       "name": "Grants No Advantage (All Attacks)",
       "description": "Any attack against the target will not have advantage"
     },
@@ -2652,18 +2867,6 @@
       "name": "Grants No Advantage (Ranged Weapon Attack)",
       "description": "Any Ranged Weapon attack against the target will not have advantage"
     },
-    "flags.midi-qol.grants.noAdvantage.attack.save": {
-      "name": "Grants No Advantage (Save)",
-      "description": "No saving throw forced by the actor will have advantage"
-    },
-    "flags.midi-qol.grants.noAdvantage.attack.check": {
-      "name": "Grants No Advantage (Check)",
-      "description": "No ability check forced by the actor will have advantage"
-    },
-    "flags.midi-qol.grants.noAdvantage.attack.skill": {
-      "name": "Grants No Advantage (Skill)",
-      "description": "No Skill roll forced by the actor will have advantage"
-    },
     "flags.midi-qol.grants.fail.advantage.attack.msak": {
       "name": "Grants No Advantage (Melee Spell Attack)",
       "description": "Any Melee Spell Attack against the target will not have advantage"
@@ -2679,18 +2882,6 @@
     "flags.midi-qol.grants.fail.advantage.attack.rwak": {
       "name": "Grants No Advantage (Ranged Weapon Attack)",
       "description": "Any Ranged Weapon attack against the target will not have advantage"
-    },
-    "flags.midi-qol.grants.fail.advantage.attack.save": {
-      "name": "Grants No Advantage (Save)",
-      "description": "Any saving throw forced by actor will not have advantage"
-    },
-    "flags.midi-qol.grants.fail.advantage.attack.check": {
-      "name": "Grants No Advantage (Check)",
-      "description": "Any ability check forced by the attacker will not have advantage"
-    },
-    "flags.midi-qol.grants.fail.advantage.attack.skill": {
-      "name": "Grants No Advantage (Skill)",
-      "description": "Any skill roll forced by the attacker will not have sadvantage"
     },
     "flags.midi-qol.grants.fail.disadvantage.attack.all": {
       "name": "Grants No Disadvantage (All Attacks)",
@@ -2712,7 +2903,7 @@
       "name": "Grants Fail Disadvantage (Melee Weapon Attack)",
       "description": "Any Melee Weapon attack against the target will not have disadvantage"
     },
-    "flags.midi-qol.grants.NoDisadvantage.attack.mwak": {
+    "flags.midi-qol.grants.noDisadvantage.attack.mwak": {
       "name": "Grants No Disadvantage (Melee Weapon Attack)",
       "description": "Any Melee Weapon attack against the target will not have disadvantage"
     },
@@ -2720,7 +2911,7 @@
       "name": "Grants No Disadvantage (Ranged Spell Attack)",
       "description": "Any Ranged Spell attack against the target will not have disadvantage"
     },
-    "flags.midi-qol.grants.NoDisadvantage.attack.rsak": {
+    "flags.midi-qol.grants.noDisadvantage.attack.rsak": {
       "name": "Grants No Disadvantage (Ranged Spell Attack)",
       "description": "Any Ranged Spell attack against the target will not have disadvantage"
     },
@@ -2732,29 +2923,181 @@
       "name": "Grants No Disadvantage (Ranged Weapon Attack)",
       "description": "Any Ranged Weapon attack against the target will not have disadvantage"
     },
-    "flags.midi-qol.grants.fail.disadvantage.attack.save": {
-      "name": "Grants No Disadvantage (Save)",
-      "description": "Any save forced by the actor will not have disadvantage"
+    "flags.midi-qol.grants.noAdvantage.save.all": {
+      "name": "Grants No Advantage (All Saves)",
+      "description": "Saving throws forced by this actor will not have advantage"
     },
-    "flags.midi-qol.grants.noDisadvantage.attack.save": {
-      "name": "Grants No Disadvantage (Save)",
-      "description": "Any save forced by the actor will not have disadvantage"
+    "flags.midi-qol.grants.noAdvantage.save.str": {
+      "name": "Grants No Advantage (STR Saves)",
+      "description": "Strength saves forced by this actor will not have advantage"
     },
-    "flags.midi-qol.grants.fail.disadvantage.attack.check": {
-      "name": "Grants No Disadvantage (Check)",
-      "description": "Any ability check forced by the actor will not have disadvantage"
+    "flags.midi-qol.grants.noAdvantage.save.dex": {
+      "name": "Grants No Advantage (DEX Saves)",
+      "description": "Dexterity saves forced by this actor will not have advantage"
     },
-    "flags.midi-qol.grants.noDisadvantage.attack.check": {
-      "name": "Grants Fail Disadvantage (Utility)",
-      "description": "Any ability check forced by the actor will not have disadvantage"
+    "flags.midi-qol.grants.noAdvantage.save.con": {
+      "name": "Grants No Advantage (CON Saves)",
+      "description": "Constitution saves forced by this actor will not have advantage"
     },
-    "flags.midi-qol.grants.fail.disadvantage.attack.skill": {
-      "name": "Grants No Disadvantage (skill)",
-      "description": ""
+    "flags.midi-qol.grants.noAdvantage.save.int": {
+      "name": "Grants No Advantage (INT Saves)",
+      "description": "Intelligence saves forced by this actor will not have advantage"
     },
-    "flags.midi-qol.grants.noDisadvantage.attack.skill": {
-      "name": "Grants No Disadvantage (skill)",
-      "description": "Any skill roll forced by the attacker will not have disadvantage"
+    "flags.midi-qol.grants.noAdvantage.save.wis": {
+      "name": "Grants No Advantage (WIS Saves)",
+      "description": "Wisdom saves forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.save.cha": {
+      "name": "Grants No Advantage (CHA Saves)",
+      "description": "Charisma saves forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.save.all": {
+      "name": "Grants No Disadvantage (All Saves)",
+      "description": "Saving throws forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.save.str": {
+      "name": "Grants No Disadvantage (STR Saves)",
+      "description": "Strength saves forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.save.dex": {
+      "name": "Grants No Disadvantage (DEX Saves)",
+      "description": "Dexterity saves forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.save.con": {
+      "name": "Grants No Disadvantage (CON Saves)",
+      "description": "Constitution saves forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.save.int": {
+      "name": "Grants No Disadvantage (INT Saves)",
+      "description": "Intelligence saves forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.save.wis": {
+      "name": "Grants No Disadvantage (WIS Saves)",
+      "description": "Wisdom saves forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.save.cha": {
+      "name": "Grants No Disadvantage (CHA Saves)",
+      "description": "Charisma saves forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.check.all": {
+      "name": "Grants No Advantage (All Checks)",
+      "description": "Ability checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.check.str": {
+      "name": "Grants No Advantage (STR Checks)",
+      "description": "Strength checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.check.dex": {
+      "name": "Grants No Advantage (DEX Checks)",
+      "description": "Dexterity checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.check.con": {
+      "name": "Grants No Advantage (CON Checks)",
+      "description": "Constitution checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.check.int": {
+      "name": "Grants No Advantage (INT Checks)",
+      "description": "Intelligence checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.check.wis": {
+      "name": "Grants No Advantage (WIS Checks)",
+      "description": "Wisdom checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.check.cha": {
+      "name": "Grants No Advantage (CHA Checks)",
+      "description": "Charisma checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.check.all": {
+      "name": "Grants No Disadvantage (All Checks)",
+      "description": "Ability checks forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.check.str": {
+      "name": "Grants No Disadvantage (STR Checks)",
+      "description": "Strength checks forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.check.dex": {
+      "name": "Grants No Disadvantage (DEX Checks)",
+      "description": "Dexterity checks forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.check.con": {
+      "name": "Grants No Disadvantage (CON Checks)",
+      "description": "Constitution checks forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.check.int": {
+      "name": "Grants No Disadvantage (INT Checks)",
+      "description": "Intelligence checks forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.check.wis": {
+      "name": "Grants No Disadvantage (WIS Checks)",
+      "description": "Wisdom checks forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.check.cha": {
+      "name": "Grants No Disadvantage (CHA Checks)",
+      "description": "Charisma checks forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.skill.all": {
+      "name": "Grants No Advantage (All Skills)",
+      "description": "Skill checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.skill.str": {
+      "name": "Grants No Advantage (STR Skills)",
+      "description": "Strength-based skill checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.skill.dex": {
+      "name": "Grants No Advantage (DEX Skills)",
+      "description": "Dexterity-based skill checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.skill.con": {
+      "name": "Grants No Advantage (CON Skills)",
+      "description": "Constitution-based skill checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.skill.int": {
+      "name": "Grants No Advantage (INT Skills)",
+      "description": "Intelligence-based skill checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.skill.wis": {
+      "name": "Grants No Advantage (WIS Skills)",
+      "description": "Wisdom-based skill checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.skill.cha": {
+      "name": "Grants No Advantage (CHA Skills)",
+      "description": "Charisma-based skill checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.skill.all": {
+      "name": "Grants No Disadvantage (All Skills)",
+      "description": "Skill checks forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.skill.str": {
+      "name": "Grants No Disadvantage (STR Skills)",
+      "description": "Strength-based skill checks forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.skill.dex": {
+      "name": "Grants No Disadvantage (DEX Skills)",
+      "description": "Dexterity-based skill checks forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.skill.con": {
+      "name": "Grants No Disadvantage (CON Skills)",
+      "description": "Constitution-based skill checks forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.skill.int": {
+      "name": "Grants No Disadvantage (INT Skills)",
+      "description": "Intelligence-based skill checks forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.skill.wis": {
+      "name": "Grants No Disadvantage (WIS Skills)",
+      "description": "Wisdom-based skill checks forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.skill.cha": {
+      "name": "Grants No Disadvantage (CHA Skills)",
+      "description": "Charisma-based skill checks forced by this actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.noAdvantage.tool.all": {
+      "name": "Grants No Advantage (All Tools)",
+      "description": "Tool checks forced by this actor will not have advantage"
+    },
+    "flags.midi-qol.grants.noDisadvantage.tool.all": {
+      "name": "Grants No Disadvantage (All Tools)",
+      "description": "Tool checks forced by this actor will not have disadvantage"
     },
     "flags.midi-qol.grants.max.damage.all": {
       "name": "Grants Max Damage (All)",
@@ -2863,6 +3206,14 @@
     "flags.midi-qol.inMotion": {
       "name": "In Motion",
       "description": ""
+    },
+    "flags.dnd5e.initiativeAdv": {
+      "name": "Initiative Advantage",
+      "description": "Advantage on initiative rolls."
+    },
+    "flags.dnd5e.initiativeDisadv": {
+      "name": "Initiative Disadvantage",
+      "description": "Disadvantage on initiative rolls."
     },
     "flags.midi-qol.long.all": {
       "name": "Long Range (All)",
@@ -3068,6 +3419,46 @@
       "name": "Max Skill (All)",
       "description": "Maximum rollable number on the main d20 for all skill checks."
     },
+    "flags.midi-qol.max.tool.all": {
+      "name": "Max Tool Check (All)",
+      "description": "Maximum rollable number on the main d20 for all tool checks."
+    },
+    "flags.midi-qol.max.tool.alchemist": { "name": "Max (Alchemist's Supplies)", "description": "Maximum d20 roll for Alchemist's Supplies checks." },
+    "flags.midi-qol.max.tool.bagpipes": { "name": "Max (Bagpipes)", "description": "Maximum d20 roll for Bagpipes checks." },
+    "flags.midi-qol.max.tool.brewer": { "name": "Max (Brewer's Supplies)", "description": "Maximum d20 roll for Brewer's Supplies checks." },
+    "flags.midi-qol.max.tool.calligrapher": { "name": "Max (Calligrapher's Supplies)", "description": "Maximum d20 roll for Calligrapher's Supplies checks." },
+    "flags.midi-qol.max.tool.card": { "name": "Max (Playing Card Set)", "description": "Maximum d20 roll for Playing Card Set checks." },
+    "flags.midi-qol.max.tool.carpenter": { "name": "Max (Carpenter's Tools)", "description": "Maximum d20 roll for Carpenter's Tools checks." },
+    "flags.midi-qol.max.tool.cartographer": { "name": "Max (Cartographer's Tools)", "description": "Maximum d20 roll for Cartographer's Tools checks." },
+    "flags.midi-qol.max.tool.chess": { "name": "Max (Chess Set)", "description": "Maximum d20 roll for Chess Set checks." },
+    "flags.midi-qol.max.tool.cobbler": { "name": "Max (Cobbler's Tools)", "description": "Maximum d20 roll for Cobbler's Tools checks." },
+    "flags.midi-qol.max.tool.cook": { "name": "Max (Cook's Utensils)", "description": "Maximum d20 roll for Cook's Utensils checks." },
+    "flags.midi-qol.max.tool.dice": { "name": "Max (Dice Set)", "description": "Maximum d20 roll for Dice Set checks." },
+    "flags.midi-qol.max.tool.disg": { "name": "Max (Disguise Kit)", "description": "Maximum d20 roll for Disguise Kit checks." },
+    "flags.midi-qol.max.tool.drum": { "name": "Max (Drum)", "description": "Maximum d20 roll for Drum checks." },
+    "flags.midi-qol.max.tool.dulcimer": { "name": "Max (Dulcimer)", "description": "Maximum d20 roll for Dulcimer checks." },
+    "flags.midi-qol.max.tool.flute": { "name": "Max (Flute)", "description": "Maximum d20 roll for Flute checks." },
+    "flags.midi-qol.max.tool.forg": { "name": "Max (Forgery Kit)", "description": "Maximum d20 roll for Forgery Kit checks." },
+    "flags.midi-qol.max.tool.glassblower": { "name": "Max (Glassblower's Tools)", "description": "Maximum d20 roll for Glassblower's Tools checks." },
+    "flags.midi-qol.max.tool.herb": { "name": "Max (Herbalism Kit)", "description": "Maximum d20 roll for Herbalism Kit checks." },
+    "flags.midi-qol.max.tool.horn": { "name": "Max (Horn)", "description": "Maximum d20 roll for Horn checks." },
+    "flags.midi-qol.max.tool.jeweler": { "name": "Max (Jeweler's Tools)", "description": "Maximum d20 roll for Jeweler's Tools checks." },
+    "flags.midi-qol.max.tool.leatherworker": { "name": "Max (Leatherworker's Tools)", "description": "Maximum d20 roll for Leatherworker's Tools checks." },
+    "flags.midi-qol.max.tool.lute": { "name": "Max (Lute)", "description": "Maximum d20 roll for Lute checks." },
+    "flags.midi-qol.max.tool.lyre": { "name": "Max (Lyre)", "description": "Maximum d20 roll for Lyre checks." },
+    "flags.midi-qol.max.tool.mason": { "name": "Max (Mason's Tools)", "description": "Maximum d20 roll for Mason's Tools checks." },
+    "flags.midi-qol.max.tool.navg": { "name": "Max (Navigator's Tools)", "description": "Maximum d20 roll for Navigator's Tools checks." },
+    "flags.midi-qol.max.tool.painter": { "name": "Max (Painter's Supplies)", "description": "Maximum d20 roll for Painter's Supplies checks." },
+    "flags.midi-qol.max.tool.panflute": { "name": "Max (Pan Flute)", "description": "Maximum d20 roll for Pan Flute checks." },
+    "flags.midi-qol.max.tool.pois": { "name": "Max (Poisoner's Kit)", "description": "Maximum d20 roll for Poisoner's Kit checks." },
+    "flags.midi-qol.max.tool.potter": { "name": "Max (Potter's Tools)", "description": "Maximum d20 roll for Potter's Tools checks." },
+    "flags.midi-qol.max.tool.shawm": { "name": "Max (Shawm)", "description": "Maximum d20 roll for Shawm checks." },
+    "flags.midi-qol.max.tool.smith": { "name": "Max (Smith's Tools)", "description": "Maximum d20 roll for Smith's Tools checks." },
+    "flags.midi-qol.max.tool.thief": { "name": "Max (Thieves' Tools)", "description": "Maximum d20 roll for Thieves' Tools checks." },
+    "flags.midi-qol.max.tool.tinker": { "name": "Max (Tinker's Tools)", "description": "Maximum d20 roll for Tinker's Tools checks." },
+    "flags.midi-qol.max.tool.viol": { "name": "Max (Viol)", "description": "Maximum d20 roll for Viol checks." },
+    "flags.midi-qol.max.tool.weaver": { "name": "Max (Weaver's Tools)", "description": "Maximum d20 roll for Weaver's Tools checks." },
+    "flags.midi-qol.max.tool.woodcarver": { "name": "Max (Woodcarver's Tools)", "description": "Maximum d20 roll for Woodcarver's Tools checks." },
     "flags.midi-qol.min.ability.check.all": {
       "name": "Min Ability Check (All)",
       "description": "Minimum rollable number on the main d20 for all ability checks."
@@ -3164,6 +3555,46 @@
       "name": "Min Damage (Utility)",
       "description": ""
     },
+    "flags.midi-qol.min.tool.all": {
+      "name": "Min Tool Check (All)",
+      "description": "Minimum rollable number on the main d20 for all tool checks."
+    },
+    "flags.midi-qol.min.tool.alchemist": { "name": "Min (Alchemist's Supplies)", "description": "Minimum d20 roll for Alchemist's Supplies checks." },
+    "flags.midi-qol.min.tool.bagpipes": { "name": "Min (Bagpipes)", "description": "Minimum d20 roll for Bagpipes checks." },
+    "flags.midi-qol.min.tool.brewer": { "name": "Min (Brewer's Supplies)", "description": "Minimum d20 roll for Brewer's Supplies checks." },
+    "flags.midi-qol.min.tool.calligrapher": { "name": "Min (Calligrapher's Supplies)", "description": "Minimum d20 roll for Calligrapher's Supplies checks." },
+    "flags.midi-qol.min.tool.card": { "name": "Min (Playing Card Set)", "description": "Minimum d20 roll for Playing Card Set checks." },
+    "flags.midi-qol.min.tool.carpenter": { "name": "Min (Carpenter's Tools)", "description": "Minimum d20 roll for Carpenter's Tools checks." },
+    "flags.midi-qol.min.tool.cartographer": { "name": "Min (Cartographer's Tools)", "description": "Minimum d20 roll for Cartographer's Tools checks." },
+    "flags.midi-qol.min.tool.chess": { "name": "Min (Chess Set)", "description": "Minimum d20 roll for Chess Set checks." },
+    "flags.midi-qol.min.tool.cobbler": { "name": "Min (Cobbler's Tools)", "description": "Minimum d20 roll for Cobbler's Tools checks." },
+    "flags.midi-qol.min.tool.cook": { "name": "Min (Cook's Utensils)", "description": "Minimum d20 roll for Cook's Utensils checks." },
+    "flags.midi-qol.min.tool.dice": { "name": "Min (Dice Set)", "description": "Minimum d20 roll for Dice Set checks." },
+    "flags.midi-qol.min.tool.disg": { "name": "Min (Disguise Kit)", "description": "Minimum d20 roll for Disguise Kit checks." },
+    "flags.midi-qol.min.tool.drum": { "name": "Min (Drum)", "description": "Minimum d20 roll for Drum checks." },
+    "flags.midi-qol.min.tool.dulcimer": { "name": "Min (Dulcimer)", "description": "Minimum d20 roll for Dulcimer checks." },
+    "flags.midi-qol.min.tool.flute": { "name": "Min (Flute)", "description": "Minimum d20 roll for Flute checks." },
+    "flags.midi-qol.min.tool.forg": { "name": "Min (Forgery Kit)", "description": "Minimum d20 roll for Forgery Kit checks." },
+    "flags.midi-qol.min.tool.glassblower": { "name": "Min (Glassblower's Tools)", "description": "Minimum d20 roll for Glassblower's Tools checks." },
+    "flags.midi-qol.min.tool.herb": { "name": "Min (Herbalism Kit)", "description": "Minimum d20 roll for Herbalism Kit checks." },
+    "flags.midi-qol.min.tool.horn": { "name": "Min (Horn)", "description": "Minimum d20 roll for Horn checks." },
+    "flags.midi-qol.min.tool.jeweler": { "name": "Min (Jeweler's Tools)", "description": "Minimum d20 roll for Jeweler's Tools checks." },
+    "flags.midi-qol.min.tool.leatherworker": { "name": "Min (Leatherworker's Tools)", "description": "Minimum d20 roll for Leatherworker's Tools checks." },
+    "flags.midi-qol.min.tool.lute": { "name": "Min (Lute)", "description": "Minimum d20 roll for Lute checks." },
+    "flags.midi-qol.min.tool.lyre": { "name": "Min (Lyre)", "description": "Minimum d20 roll for Lyre checks." },
+    "flags.midi-qol.min.tool.mason": { "name": "Min (Mason's Tools)", "description": "Minimum d20 roll for Mason's Tools checks." },
+    "flags.midi-qol.min.tool.navg": { "name": "Min (Navigator's Tools)", "description": "Minimum d20 roll for Navigator's Tools checks." },
+    "flags.midi-qol.min.tool.painter": { "name": "Min (Painter's Supplies)", "description": "Minimum d20 roll for Painter's Supplies checks." },
+    "flags.midi-qol.min.tool.panflute": { "name": "Min (Pan Flute)", "description": "Minimum d20 roll for Pan Flute checks." },
+    "flags.midi-qol.min.tool.pois": { "name": "Min (Poisoner's Kit)", "description": "Minimum d20 roll for Poisoner's Kit checks." },
+    "flags.midi-qol.min.tool.potter": { "name": "Min (Potter's Tools)", "description": "Minimum d20 roll for Potter's Tools checks." },
+    "flags.midi-qol.min.tool.shawm": { "name": "Min (Shawm)", "description": "Minimum d20 roll for Shawm checks." },
+    "flags.midi-qol.min.tool.smith": { "name": "Min (Smith's Tools)", "description": "Minimum d20 roll for Smith's Tools checks." },
+    "flags.midi-qol.min.tool.thief": { "name": "Min (Thieves' Tools)", "description": "Minimum d20 roll for Thieves' Tools checks." },
+    "flags.midi-qol.min.tool.tinker": { "name": "Min (Tinker's Tools)", "description": "Minimum d20 roll for Tinker's Tools checks." },
+    "flags.midi-qol.min.tool.viol": { "name": "Min (Viol)", "description": "Minimum d20 roll for Viol checks." },
+    "flags.midi-qol.min.tool.weaver": { "name": "Min (Weaver's Tools)", "description": "Minimum d20 roll for Weaver's Tools checks." },
+    "flags.midi-qol.min.tool.woodcarver": { "name": "Min (Woodcarver's Tools)", "description": "Minimum d20 roll for Woodcarver's Tools checks." },
     "flags.midi-qol.neverTarget": {
       "name": "Never Target",
       "description": ""
@@ -3650,40 +4081,224 @@
     },
     "flags.midi-qol.success.attack.all": {
       "name": "Success (All Attacks)",
-      "description": ""
+      "description": "All attack rolls made by this actor automatically hit."
     },
     "flags.midi-qol.success.attack.heal": {
       "name": "Success (Heal)",
-      "description": ""
+      "description": "Healing attack rolls made by this actor automatically hit."
     },
     "flags.midi-qol.success.attack.msak": {
       "name": "Success (Melee Spell Attack)",
-      "description": ""
+      "description": "Melee spell attack rolls made by this actor automatically hit."
     },
     "flags.midi-qol.success.attack.mwak": {
       "name": "Success (Melee Weapon Attack)",
-      "description": ""
+      "description": "Melee weapon attack rolls made by this actor automatically hit."
     },
     "flags.midi-qol.success.attack.other": {
       "name": "Success (Other)",
-      "description": ""
+      "description": "Other attack rolls made by this actor automatically hit."
     },
     "flags.midi-qol.success.attack.rsak": {
       "name": "Success (Ranged Spell Attack)",
-      "description": ""
+      "description": "Ranged spell attack rolls made by this actor automatically hit."
     },
     "flags.midi-qol.success.attack.rwak": {
       "name": "Success (Ranged Weapon Attack)",
-      "description": ""
+      "description": "Ranged weapon attack rolls made by this actor automatically hit."
     },
     "flags.midi-qol.success.attack.save": {
       "name": "Success (Save)",
-      "description": ""
+      "description": "Save-based attack rolls made by this actor automatically hit."
     },
     "flags.midi-qol.success.attack.util": {
       "name": "Success (Utility)",
-      "description": ""
+      "description": "Utility attack rolls made by this actor automatically hit."
     },
+    "flags.midi-qol.success.all": {
+      "name": "Success (All Rolls)",
+      "description": "All d20 rolls made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.all": {
+      "name": "Success (All Ability Rolls)",
+      "description": "All ability checks and saving throws made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.check.all": {
+      "name": "Success (All Ability Checks)",
+      "description": "All ability checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.check.cha": {
+      "name": "Success (Charisma Check)",
+      "description": "Charisma checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.check.con": {
+      "name": "Success (Constitution Check)",
+      "description": "Constitution checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.check.dex": {
+      "name": "Success (Dexterity Check)",
+      "description": "Dexterity checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.check.int": {
+      "name": "Success (Intelligence Check)",
+      "description": "Intelligence checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.check.str": {
+      "name": "Success (Strength Check)",
+      "description": "Strength checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.check.wis": {
+      "name": "Success (Wisdom Check)",
+      "description": "Wisdom checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.save.all": {
+      "name": "Success (All Saving Throws)",
+      "description": "All saving throws made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.save.cha": {
+      "name": "Success (Charisma Save)",
+      "description": "Charisma saving throws made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.save.con": {
+      "name": "Success (Constitution Save)",
+      "description": "Constitution saving throws made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.save.dex": {
+      "name": "Success (Dexterity Save)",
+      "description": "Dexterity saving throws made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.save.int": {
+      "name": "Success (Intelligence Save)",
+      "description": "Intelligence saving throws made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.save.str": {
+      "name": "Success (Strength Save)",
+      "description": "Strength saving throws made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.ability.save.wis": {
+      "name": "Success (Wisdom Save)",
+      "description": "Wisdom saving throws made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.all": {
+      "name": "Success (All Skills)",
+      "description": "All skill checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.acr": {
+      "name": "Success (Acrobatics)",
+      "description": "Acrobatics checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.ani": {
+      "name": "Success (Animal Handling)",
+      "description": "Animal Handling checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.arc": {
+      "name": "Success (Arcana)",
+      "description": "Arcana checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.ath": {
+      "name": "Success (Athletics)",
+      "description": "Athletics checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.dec": {
+      "name": "Success (Deception)",
+      "description": "Deception checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.his": {
+      "name": "Success (History)",
+      "description": "History checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.ins": {
+      "name": "Success (Insight)",
+      "description": "Insight checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.inv": {
+      "name": "Success (Investigation)",
+      "description": "Investigation checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.itm": {
+      "name": "Success (Intimidation)",
+      "description": "Intimidation checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.med": {
+      "name": "Success (Medicine)",
+      "description": "Medicine checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.nat": {
+      "name": "Success (Nature)",
+      "description": "Nature checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.per": {
+      "name": "Success (Persuasion)",
+      "description": "Persuasion checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.prc": {
+      "name": "Success (Perception)",
+      "description": "Perception checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.prf": {
+      "name": "Success (Performance)",
+      "description": "Performance checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.rel": {
+      "name": "Success (Religion)",
+      "description": "Religion checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.slt": {
+      "name": "Success (Sleight of Hand)",
+      "description": "Sleight of Hand checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.ste": {
+      "name": "Success (Stealth)",
+      "description": "Stealth checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.skill.sur": {
+      "name": "Success (Survival)",
+      "description": "Survival checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.deathSave": {
+      "name": "Success (Death Saves)",
+      "description": "Death saving throws made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.tool.all": {
+      "name": "Success (All Tool Checks)",
+      "description": "All tool checks made by this actor automatically succeed."
+    },
+    "flags.midi-qol.success.tool.alchemist": { "name": "Success (Alchemist's Supplies)", "description": "Alchemist's Supplies checks automatically succeed." },
+    "flags.midi-qol.success.tool.bagpipes": { "name": "Success (Bagpipes)", "description": "Bagpipes checks automatically succeed." },
+    "flags.midi-qol.success.tool.brewer": { "name": "Success (Brewer's Supplies)", "description": "Brewer's Supplies checks automatically succeed." },
+    "flags.midi-qol.success.tool.calligrapher": { "name": "Success (Calligrapher's Supplies)", "description": "Calligrapher's Supplies checks automatically succeed." },
+    "flags.midi-qol.success.tool.card": { "name": "Success (Playing Card Set)", "description": "Playing Card Set checks automatically succeed." },
+    "flags.midi-qol.success.tool.carpenter": { "name": "Success (Carpenter's Tools)", "description": "Carpenter's Tools checks automatically succeed." },
+    "flags.midi-qol.success.tool.cartographer": { "name": "Success (Cartographer's Tools)", "description": "Cartographer's Tools checks automatically succeed." },
+    "flags.midi-qol.success.tool.chess": { "name": "Success (Chess Set)", "description": "Chess Set checks automatically succeed." },
+    "flags.midi-qol.success.tool.cobbler": { "name": "Success (Cobbler's Tools)", "description": "Cobbler's Tools checks automatically succeed." },
+    "flags.midi-qol.success.tool.cook": { "name": "Success (Cook's Utensils)", "description": "Cook's Utensils checks automatically succeed." },
+    "flags.midi-qol.success.tool.dice": { "name": "Success (Dice Set)", "description": "Dice Set checks automatically succeed." },
+    "flags.midi-qol.success.tool.disg": { "name": "Success (Disguise Kit)", "description": "Disguise Kit checks automatically succeed." },
+    "flags.midi-qol.success.tool.drum": { "name": "Success (Drum)", "description": "Drum checks automatically succeed." },
+    "flags.midi-qol.success.tool.dulcimer": { "name": "Success (Dulcimer)", "description": "Dulcimer checks automatically succeed." },
+    "flags.midi-qol.success.tool.flute": { "name": "Success (Flute)", "description": "Flute checks automatically succeed." },
+    "flags.midi-qol.success.tool.forg": { "name": "Success (Forgery Kit)", "description": "Forgery Kit checks automatically succeed." },
+    "flags.midi-qol.success.tool.glassblower": { "name": "Success (Glassblower's Tools)", "description": "Glassblower's Tools checks automatically succeed." },
+    "flags.midi-qol.success.tool.herb": { "name": "Success (Herbalism Kit)", "description": "Herbalism Kit checks automatically succeed." },
+    "flags.midi-qol.success.tool.horn": { "name": "Success (Horn)", "description": "Horn checks automatically succeed." },
+    "flags.midi-qol.success.tool.jeweler": { "name": "Success (Jeweler's Tools)", "description": "Jeweler's Tools checks automatically succeed." },
+    "flags.midi-qol.success.tool.leatherworker": { "name": "Success (Leatherworker's Tools)", "description": "Leatherworker's Tools checks automatically succeed." },
+    "flags.midi-qol.success.tool.lute": { "name": "Success (Lute)", "description": "Lute checks automatically succeed." },
+    "flags.midi-qol.success.tool.lyre": { "name": "Success (Lyre)", "description": "Lyre checks automatically succeed." },
+    "flags.midi-qol.success.tool.mason": { "name": "Success (Mason's Tools)", "description": "Mason's Tools checks automatically succeed." },
+    "flags.midi-qol.success.tool.navg": { "name": "Success (Navigator's Tools)", "description": "Navigator's Tools checks automatically succeed." },
+    "flags.midi-qol.success.tool.painter": { "name": "Success (Painter's Supplies)", "description": "Painter's Supplies checks automatically succeed." },
+    "flags.midi-qol.success.tool.panflute": { "name": "Success (Pan Flute)", "description": "Pan Flute checks automatically succeed." },
+    "flags.midi-qol.success.tool.pois": { "name": "Success (Poisoner's Kit)", "description": "Poisoner's Kit checks automatically succeed." },
+    "flags.midi-qol.success.tool.potter": { "name": "Success (Potter's Tools)", "description": "Potter's Tools checks automatically succeed." },
+    "flags.midi-qol.success.tool.shawm": { "name": "Success (Shawm)", "description": "Shawm checks automatically succeed." },
+    "flags.midi-qol.success.tool.smith": { "name": "Success (Smith's Tools)", "description": "Smith's Tools checks automatically succeed." },
+    "flags.midi-qol.success.tool.thief": { "name": "Success (Thieves' Tools)", "description": "Thieves' Tools checks automatically succeed." },
+    "flags.midi-qol.success.tool.tinker": { "name": "Success (Tinker's Tools)", "description": "Tinker's Tools checks automatically succeed." },
+    "flags.midi-qol.success.tool.viol": { "name": "Success (Viol)", "description": "Viol checks automatically succeed." },
+    "flags.midi-qol.success.tool.weaver": { "name": "Success (Weaver's Tools)", "description": "Weaver's Tools checks automatically succeed." },
+    "flags.midi-qol.success.tool.woodcarver": { "name": "Success (Woodcarver's Tools)", "description": "Woodcarver's Tools checks automatically succeed." },
     "flags.midi-qol.superSaver.all": {
       "name": "Super Saver (All)",
       "description": "No damage on save, half damage on fail."

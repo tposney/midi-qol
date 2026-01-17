@@ -378,7 +378,7 @@ export function initHooks() {
 
     // Check if it's a macro specification
     if (effectIdOrUuid.startsWith("function.") || effectIdOrUuid.startsWith("Macro.") ||
-        effectIdOrUuid.startsWith("ItemMacro") || effectIdOrUuid.startsWith("ActivityMacro")) {
+      effectIdOrUuid.startsWith("ItemMacro") || effectIdOrUuid.startsWith("ActivityMacro")) {
       // Execute macro with actor context
       await executeMacroSpec(effectIdOrUuid, actor, effect);
     } else {
@@ -1305,25 +1305,33 @@ Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
 Hooks.on("dnd5e.preRollConcentration", (rollConfig, dialogConfig, messageConfig) => {
   if (!rollConfig.subject) return true;
   const actor = rollConfig.subject as Actor.Implementation;
-  // insert advantage and disadvantage
-  // insert midi bonuses.
   if (rollConfig.workflowOptions?.noConcentrationCheck) return false;
+
   const concAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.advantage.concentration`);
   const concDisAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.disadvantage.concentration`);
-  let concAdv;
-  let concDisAdv;
+
   if (concAdvFlag || concDisAdvFlag) {
     const conditionData = createConditionData({ workflow: undefined, target: undefined, actor });
-    if (concAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.advantage.concentration`, conditionData)) {
-      concAdv = true;
-    }
-    if (concDisAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.disadvantage.concentration`, conditionData)) {
-      concDisAdv = true;
+
+    let advantageCount = (concAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.advantage.concentration`, conditionData)) ? 1 : 0;
+    let disadvantageCount = (concDisAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.disadvantage.concentration`, conditionData)) ? 1 : 0;
+
+    // Combine midi-qol flags with dnd5e's native roll mode
+    const { advantage, disadvantage } = globalThis.dnd5e.dataModels.fields.AdvantageModeField.combineFields(
+      actor.system,
+      ["attributes.concentration.roll.mode"],
+      {
+        advantages: { count: advantageCount, suppressed: false },
+        disadvantages: { count: disadvantageCount, suppressed: false }
+      }
+    );
+
+    // Update the roll options
+    if (rollConfig.rolls?.[0]?.options) {
+      rollConfig.rolls[0].options.advantage = advantage;
+      rollConfig.rolls[0].options.disadvantage = disadvantage;
     }
   }
-
-  rollConfig.advantage ||= concAdv;
-  rollConfig.disadvantage ||= concDisAdv;
 
   return true;
 })

@@ -293,6 +293,8 @@ export let MidiActivityMixin = Base => {
           confirmDamageRollCompleteHit: MidiActivityMixin.#confirmDamageRollCompleteHit,
           confirmDamageRollCompleteMiss: MidiActivityMixin.#confirmDamageRollCompleteMiss,
           midiApplyEffects: MidiActivityMixin.#applyEffects,
+          refundOtherActivity: MidiActivityMixin.#refundOtherActivity,
+          consumeOtherActivity: MidiActivityMixin.#consumeOtherActivity,
         }
       },
     }, { inplace: false, insertValues: true, insertKeys: true });
@@ -370,6 +372,65 @@ export let MidiActivityMixin = Base => {
         if (typeof result === "string") ui.notifications?.warn(result);
       } else {
         await Workflow.removeItemCardButtons(message.uuid, { removeConfirmButtons: true });
+      }
+    }
+
+    static async #refundOtherActivity(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+      // Get the other activity from the associated activity on the message
+      //@ts-expect-error no dnd5e types
+      const activity = message.getAssociatedActivity?.() as MidiActivityMixin | undefined;
+      const otherActivity = activity?.otherActivity;
+      if (!otherActivity) return;
+
+      // Get the consumed data from the chat message flag (mirrors dnd5e structure)
+      const consumed = message.getFlag(MODULE_ID, "use.consumed");
+      if (!consumed || foundry.utils.isEmpty(consumed)) return;
+
+      // Call dnd5e's refund method
+      await otherActivity.refund(consumed);
+
+      // Remove the consumed flag - button visibility is handled by shouldHideChatButton
+      await message.unsetFlag(MODULE_ID, "use.consumed");
+    }
+
+    static async #consumeOtherActivity(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+      // Get the other activity from the associated activity on the message
+      //@ts-expect-error no dnd5e types
+      const activity = message.getAssociatedActivity?.() as MidiActivityMixin | undefined;
+      const otherActivity = activity?.otherActivity;
+      if (!otherActivity) return;
+
+      // Prepare usage config for consumption
+      const otherUsageConfig = otherActivity._prepareUsageConfig({
+        consume: { resources: true, spellSlot: false, action: false }
+      });
+
+      // Check if consumption would succeed
+      const consumptionCheck = await otherActivity._prepareUsageUpdates(otherUsageConfig, { returnErrors: true });
+      if (Array.isArray(consumptionCheck) && consumptionCheck.length > 0) {
+        // Consumption would fail - show warning
+        ui.notifications?.warn(i18nFormat("midi-qol.otherActivityConsumptionFailed", {
+          actorName: otherActivity.actor?.name ?? "Unknown",
+          itemName: otherActivity.item?.name ?? "Unknown",
+          activityName: otherActivity.name ?? "Unknown"
+        }));
+        return;
+      }
+
+      // Consume resources
+      const messageConfig: any = { data: {} };
+      const consumeResult = await otherActivity.consume(otherUsageConfig, messageConfig);
+      if (consumeResult === false) {
+        // Consumption was cancelled by a hook
+        return;
+      }
+
+      // Get consumed delta data from messageConfig (not return value)
+      const consumed = messageConfig.data?.flags?.dnd5e?.use?.consumed;
+
+      // Set the consumed flag - button visibility is handled by shouldHideChatButton
+      if (consumed) {
+        await message.setFlag(MODULE_ID, "use.consumed", consumed);
       }
     }
 
@@ -563,13 +624,7 @@ export let MidiActivityMixin = Base => {
         usage.workflow.item = usage.workflow!.activity?.item;
         activity = usage.workflow!.activity! as MidiActivityMixin;
         Workflow.addWorkflow(usage.workflow);
-        if (usage.workflow.templateUuid) { // A template was placed check to see if there is a concentration effect to add it to
-          const concentrationEffect = usage.workflow!.actor?.effects.get(usage.workflow!.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "");
-          if (concentrationEffect) {
-            // @ts-expect-error no dnd5e-types
-            concentrationEffect.addDependent(fromUuidSync(usage.workflow.templateUuid));
-          }
-        }
+        // Template cleanup is now handled by setupTemplateCleanup in unSuspend
         if (await activity.postChatCardChecks(usage, dialog, message) !== true) return;
         await activity.setupCanSeeSense(usage)
         // if (autoCreateTemplate || emanationNoTemplate) if (!await activity.setupTargets(usage, dialog, message)) return;
@@ -612,15 +667,52 @@ export let MidiActivityMixin = Base => {
       }
     }
 
+    /**
+     * Check if this activity has consumption configured.
+     * @returns true if this activity has consumption targets configured
+     */
+    hasConsumption(): boolean {
+      return (this.consumption?.targets?.length ?? 0) > 0;
+    }
+
+    /**
+     * Determines whether this activity should auto-consume resources without showing a dialog.
+     * @param workflow - The workflow for getting auto-consume settings
+     * @returns true if consumption should be automatic, false if a dialog should be shown
+     */
+    shouldAutoConsume(workflow?: Workflow): boolean {
+      const forceConsumeDialog = this.midiProperties?.forceConsumeDialog ?? "default";
+
+      // Check activity-level overrides first
+      if (forceConsumeDialog === "always") {
+        return false;
+      }
+      if (forceConsumeDialog === "never" || this.midiProperties?.autoConsume) {
+        return true;
+      }
+
+      // Use global setting
+      const autoConsumeSetting = autoConsumeResource(workflow);
+      // @ts-expect-error no dnd5e-types
+      const isSpell = this.item?.type === "spell";
+
+      if (autoConsumeSetting === "none") {
+        return false;
+      }
+      if (autoConsumeSetting === "spell" && !isSpell) {
+        return false;
+      }
+      if (autoConsumeSetting === "item" && isSpell) {
+        return false;
+      }
+      // "both" means auto-consume
+      return true;
+    }
+
     async checkAutoConsume(usage: ActivityUseConfiguration, dialog: RollDialogConfig = {}): Promise<boolean> {
       if (dialog.configure === true) return false;
-      if (!this.midiProperties?.autoConsume) {
-        if (autoConsumeResource(usage.workflow) === "none") return false;
-        //@ts-expect-error no dnd5e-types
-        if (autoConsumeResource(usage.workflow) === "spell" && this.item?.type !== "spell") return false;
-        //@ts-expect-error no dnd5e-types
-        if (autoConsumeResource(usage.workflow) === "item" && this.item?.type === "spell") return false;
-      }
+      if (!this.shouldAutoConsume(usage.workflow)) return false;
+
       const consumption = this._prepareUsageConfig(usage);
       const autoConsume = await this._prepareUsageUpdates(consumption, { returnErrors: true });
       // If consumption would fail _prepareUsageUpdates will return an array of errors and on success an object of updates
@@ -755,46 +847,9 @@ export let MidiActivityMixin = Base => {
           if (config.workflow && config.midiOptions?.updateWorkflow !== false) await config.workflow.setDamageRolls(result);
         }
         if (this.otherActivity && config.workflow.otherActivity !== this && config.midiOptions?.updateWorkflow !== false) {
-          let shouldRollOther = true;
-          if (this.otherCondition && config.workflow) {
-            shouldRollOther = false;
-            for (let token of config.workflow.hitTargets) {
-              shouldRollOther ||= await evalActivationCondition(config.workflow, this.otherCondition, token, { async: true })
-              if (shouldRollOther) break;
-            }
-          }
-          if (shouldRollOther && (this.otherActivity.hasDamage || this.otherActivity.hasHealing || this.otherActivity.roll?.formula)) {
-            // Check conditions & flags
-            const otherConfig = foundry.utils.deepClone(config);
-            otherConfig.midiOptions!.fastForward = config.midiOptions!.fastForwardDamage;
-            otherConfig.midiOptions!.updateWorkflow = false; // rollFormula will try and restart the workflow
-            if (this.otherActivity.ac)
-              // Undo the roll toggle since rollFormula will look at it as well
-              if (config.workflow.rollOptions?.rollToggle) dialog.configure = !dialog.configure;
-            if (this.otherActivity?.hasDamage)
-              otherResult = await this.otherActivity.rollDamage(otherConfig, dialog, { create: false }) as Roll[] | undefined;
-            else if (this.otherActivity?.roll?.formula) {
-              otherResult = await this.otherActivity.rollFormula!(otherConfig, dialog, { create: false }) as Roll[] | undefined;
-              if (otherResult) {
-                if (!(otherResult instanceof Array)) otherResult = [otherResult];
-                otherResult = otherResult.map(roll =>
-                  //@ts-expect-error
-                  new game.system.dice.DamageRoll(roll.formula, {}, {})
-                );
-              }
-            }
-            if (otherResult && this.otherActivityAsParentType) {
-              otherResult.forEach(r => {
-                //@ts-expect-error no dnd5e-types
-                const properties = new Set(r.options.properties ?? []);
-                properties?.delete(this.otherActivity.actionType);
-                properties?.add(this.actionType);
-                //@ts-expect-error no dnd5e-types
-                r.options.properties = Array.from(properties);
-              })
-            }
-            // @ts-expect-error might be false from above `if`
-            if (otherResult && config.midiOptions!.updateWorkflow !== false && config.workflow) await config.workflow.setOtherDamageRolls(otherResult);
+          // Check if we need to defer rolling until after consumption is confirmed
+          if (!this.deferOtherDamage(config, dialog)) {
+            otherResult = await this.rollOtherDamage(config, dialog);
           }
         }
         if (config.midiOptions?.updateWorkflow !== false && config.workflow.suspended) config.workflow.unSuspend.bind(config.workflow)({ damageRoll: result?.[0], otherDamageRoll: otherResult?.[0] });
@@ -809,6 +864,119 @@ export let MidiActivityMixin = Base => {
       return result ?? [];
     }
 
+    /**
+     * Check if other activity damage should be deferred until after consumption is confirmed.
+     * If deferral is needed, stores the config and dialog for later rolling.
+     * Only defers if we're actually checking hits or saves - otherwise consume immediately.
+     * @param config - The roll process configuration
+     * @param dialog - The roll dialog configuration
+     * @returns true if damage was deferred, false if it should be rolled immediately
+     */
+    deferOtherDamage(config: RollProcessConfig, dialog: RollDialogConfig): boolean {
+      if (!this.otherActivity || !config.workflow) return false;
+
+      if (!this.otherActivity.hasConsumption()) return false;
+
+      // Only defer if we're checking hits or saves - otherwise consume immediately
+      const checkingHits = this.attack && configSettings.autoCheckHit !== "none";
+      const checkingSaves = (this.otherActivity.save || this.otherActivity.check) && configSettings.autoCheckSaves !== "none";
+
+      if (!checkingHits && !checkingSaves) {
+        // Not checking hits or saves - consume immediately, don't defer
+        return false;
+      }
+
+      // Store info needed to roll other activity damage later
+      // No need to deep clone config - rollOtherDamage clones it before modification
+      // Shallow clone dialog since rollOtherDamage may mutate dialog.configure
+      config.workflow.otherDamageConfig = config;
+      config.workflow.otherDamageDialog = { ...dialog };
+      return true; // Deferred - don't roll now
+    }
+
+    /**
+     * Roll damage for the other activity referenced by this activity.
+     * @param config - The roll process configuration
+     * @param dialog - The roll dialog configuration
+     * @returns The damage rolls from the other activity, or undefined if not rolled
+     */
+    async rollOtherDamage(
+      config: RollProcessConfig,
+      dialog: RollDialogConfig
+    ): Promise<Roll[] | undefined> {
+      if (!this.otherActivity || !config.workflow) return undefined;
+      // Check if other activity has something to roll
+      if (!(this.otherActivity.hasDamage || this.otherActivity.hasHealing || this.otherActivity.roll?.formula)) {
+        return undefined;
+      }
+
+      // Check other condition against hit targets
+      if (this.otherCondition) {
+        let shouldRollOther = false;
+        for (const token of config.workflow.hitTargets) {
+          shouldRollOther ||= await evalActivationCondition(config.workflow, this.otherCondition, token, { async: true });
+          if (shouldRollOther) break;
+        }
+        if (!shouldRollOther) return undefined;
+      }
+
+      let otherResult: Roll[] | undefined;
+      const otherConfig = {
+        ...config,
+        midiOptions: {
+          ...config.midiOptions,
+          fastForward: config.midiOptions?.fastForwardDamage,
+          updateWorkflow: false // rollFormula will try and restart the workflow
+        }
+      };
+
+      // Undo the roll toggle since rollFormula will look at it as well
+      if (this.otherActivity.ac && config.workflow.rollOptions?.rollToggle) {
+        dialog.configure = !dialog.configure;
+      }
+
+      // Apply scaling to the other activity's item if specified
+      // Scaling is stored on the chat card by checkOtherActivityConsumption
+      let otherActivity = this.otherActivity;
+      const scaling = config.workflow?.chatCard?.getFlag(MODULE_ID, "use.otherScaling");
+      if (scaling) {
+        const item = otherActivity.item.clone({ flags: { dnd5e: { scaling } } }, { keepId: true });
+        otherActivity = item.system.activities.get(otherActivity.id);
+      }
+
+      // Roll damage or formula
+      if (otherActivity?.hasDamage) {
+        otherResult = await otherActivity.rollDamage(otherConfig, dialog, { create: false }) as Roll[] | undefined;
+      } else if (otherActivity?.roll?.formula) {
+        otherResult = await otherActivity.rollFormula!(otherConfig, dialog, { create: false }) as Roll[] | undefined;
+        if (otherResult) {
+          if (!(otherResult instanceof Array)) otherResult = [otherResult];
+          otherResult = otherResult.map(roll =>
+            //@ts-expect-error
+            new game.system.dice.DamageRoll(roll.formula, {}, {})
+          );
+        }
+      }
+
+      // Apply parent activity type to damage properties if configured
+      if (otherResult && this.otherActivityAsParentType) {
+        otherResult.forEach(r => {
+          //@ts-expect-error no dnd5e-types
+          const properties = new Set(r.options.properties ?? []);
+          properties?.delete(this.otherActivity.actionType);
+          properties?.add(this.actionType);
+          //@ts-expect-error no dnd5e-types
+          r.options.properties = Array.from(properties);
+        });
+      }
+
+      // Update workflow with other damage rolls
+      if (otherResult && config.midiOptions?.updateWorkflow !== false) {
+        await config.workflow.setOtherDamageRolls(otherResult);
+      }
+
+      return otherResult;
+    }
 
     configureDamageRoll(config: RollProcessConfig): void {
       try {
@@ -1391,9 +1559,10 @@ export let MidiActivityMixin = Base => {
         if (configSettings.undoWorkflow) await saveUndoData(workflow);
 
         // if showing a full card we don't want to auto roll attacks or damage.
-        const consume = this.consume;
-        if (consume?.type === "ammo") {
-          workflow.ammunition = this.actor?.items.get(consume.target);
+        // Check if activity consumes ammunition
+        const ammoConsumption = this.consumption?.targets?.find(t => t.type === "ammo");
+        if (ammoConsumption?.target) {
+          workflow.ammunition = this.actor?.items.get(ammoConsumption.target);
         }
         // Need concentration removal to complete before allowing workflow to continue so have workflow wait for item use to complete
       } catch (err) {
@@ -1411,7 +1580,37 @@ export let MidiActivityMixin = Base => {
       if (autoCreateTemplate || emanationNoTemplate) {
         buttons = buttons.filter(b => b.dataset?.action !== "placeTemplate")
       }
+
+      // Add other activity consumption buttons (mirroring dnd5e pattern)
+      if (this.otherActivity?.hasConsumption()) {
+        buttons.push({
+          label: i18n("midi-qol.ConsumeOtherActivityResource"),
+          icon: '<i class="fa-solid fa-cubes-stacked" inert></i>',
+          dataset: { action: "consumeOtherActivity" }
+        }, {
+          label: i18n("midi-qol.RefundOtherActivityResource"),
+          icon: '<i class="fa-solid fa-clock-rotate-left" inert></i>',
+          dataset: { action: "refundOtherActivity" }
+        });
+      }
+
       return buttons;
+    }
+
+    /**
+     * Determine whether a chat button should be hidden based on current state.
+     * Mirrors dnd5e's shouldHideChatButton pattern.
+     */
+    shouldHideChatButton(button: HTMLButtonElement, message: ChatMessage.Implementation): boolean {
+      const consumed = message.getFlag(MODULE_ID, "use.consumed");
+      switch (button.dataset.action) {
+        // Show consume button only when rolled but didn't consume (empty object {})
+        // Hide if: cancelled (false), not checked (undefined), or already consumed (non-empty object)
+        case "consumeOtherActivity": return !(consumed && foundry.utils.isEmpty(consumed));
+        // Show refund button only when actually consumed (non-empty object)
+        case "refundOtherActivity": return !consumed || foundry.utils.isEmpty(consumed);
+      }
+      return super.shouldHideChatButton?.(button, message) ?? false;
     }
 
     async _placeEmanationTemplate(workflow: Workflow) {
@@ -1532,7 +1731,7 @@ export let MidiActivityMixin = Base => {
         Attack: i18n("DND5E.Attack"),
         OtherFormula: i18n("DND5E.OtherFormula"),
         displayProperties: configSettings.displayProperties,
-        canCancel: configSettings.undoWorkflow // TODO enable this when more testing done.
+        canCancel: configSettings.undoWorkflow, // TODO enable this when more testing done.
       };
       const rollSaveOptions = new Set();
       rollSaveOptions.add(configSettings.rollNPCLinkedSaves);

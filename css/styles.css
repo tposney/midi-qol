@@ -561,13 +561,13 @@
     padding-bottom: 0.4rem;
   }
   
-  .midi-qol-attack-buttons button, 
+  .midi-qol-attack-buttons button,
   .midi-qol-damage-buttons button,
   .dnd5e2 .midi-buttons button {
       height: 1.75rem;
     margin: 0;
   }
-  
+
   /* Midi Attack and Damage results */
   .midi-qol-attack-roll, .midi-qol-damage-roll {
       white-space: nowrap;
