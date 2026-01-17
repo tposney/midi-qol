@@ -1,7 +1,7 @@
 > [!tip] Navigation
 > [Go to Readme](/README.md#table-of-contents) <br>
 > [Go to Macro Guide](/MACROS.md#table-of-contents) <br>
-> [Go to Flowchart (v12.4.64 to v13.0.22)](docs/flowchart.md) <br>
+> [Go to Flowchart (Default - Damage Before Saves)](docs/flowchart.md) <br>
 > [Go to Workflow Fields](docs/workflowfields.md)
 
 # Macro Passes for MidiQOL
@@ -40,8 +40,8 @@ flowchart TD
       isHit
       <small>Target of a hit</small>
     "]
-    isMissed
-    isAboutToSave --> preTargetSave
+    isAboutToSave -.-> saveTarget:::edgeLabel
+    saveTarget["`Save Target Shown On Card`"] -.-> preTargetSave
       preTargetSave["
         preTargetSave
         <small>Target is about to roll a saving throw</small>
@@ -63,6 +63,7 @@ flowchart TD
       isSave
       <small>Target rolled a save</small>
     "]
+    isSave-.-> saveResult["`Save Result Shown On Card`"]:::edgeLabel
     preTargetDamageApplication["
       preTargetDamageApplication
       <small>Target is about to be damaged by an item</small>
@@ -123,6 +124,7 @@ flowchart TD
       preAttackRollComplete --> isAttacked
         isAttacked --> preCheckHits
         preCheckHits -- Has Optional Macro --> optAC
+        preCheckHits -.-> showAttack["`Attack Roll Shown On Card`"]:::edgeLabel
         preCheckHits["
           preCheckHits
           <small>Before Check Hits</small>
@@ -162,7 +164,8 @@ flowchart TD
       postDamageRoll["
         postDamageRoll
         <small>After Damage Roll</small>
-      "] --> postDamageRollComplete
+      "] -.-> showDamage:::edgeLabel
+      showDamage["`Damage Roll Shown On Card`"] -.-> postDamageRollComplete
       preDamageApplication["
         preDamageApplication
         <small>Before Damage Application</small>
@@ -180,12 +183,14 @@ flowchart TD
     preTargeting["
       preTargeting
       <small>Called before targeting is resolved (*)</small>
-    "] --> preItemRoll
+    "] -.-> confirm:::edgeLabel
+    confirm["`Target Confirmation`"] -.-> preItemRoll
     preItemRoll["
       preItemRoll
       <small>Called before the item is rolled (*)</small>
     "] -.-> config:::edgeLabel
-    config["`Configure dialog`"] -.-> postNoAction
+    config["`Configure dialog`"] -.-> consume:::edgeLabel
+    consume["`Item Use Consumption Targets Updated`"] -.-> postNoAction
     postNoAction --> preStart
     preStart --> postStart
       postStart -- Has Template --> preAwaitTemplate
@@ -231,10 +236,10 @@ flowchart TD
       preTargetDamageApplication -- No Damage --> preDamageApplication 
       isDamaged --> preDamageApplication
       isHealed --> preDamageApplication
-      preDamageApplication --> postAllRollsComplete
+      preDamageApplication --> hp:::edgeLabel
+      hp["`Target HP Updated`"] -.-> postAllRollsComplete
     postSavesComplete -- No Damage --> preAllRollsComplete
     preAllRollsComplete -- No Damage --> postAllRollsComplete
-      hp["`HP changes on targets have been applied`"]:::edgeLabel -.-> postAllRollsComplete
     postAllRollsComplete --> preApplyDynamicEffects
     preApplyDynamicEffects --> preActiveEffects
       preActiveEffects["
