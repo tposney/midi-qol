@@ -3921,66 +3921,103 @@ export class Workflow {
         }
       }
     }
+    // Process target grants flags (if target has any)
     const grants = firstTargetDocument.actor?.flags[MODULE_ID]?.grants;
-    if (!grants) return;
-    if (!["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(actionType)) return;
-    const attackAdvantage = grants.advantage?.attack || {};
-    let grantsAdvantage;
-    const conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
-    if (grants.advantage?.all && await evalCondition(grants.advantage.all, conditionData, { errorReturn: false, async: true })) {
-      grantsAdvantage = true;
-      this.attackAdvAttribution.add(`ADV:grants.advantage.all ${firstTargetDocument.name}`);
-    }
-    if (attackAdvantage.all && await evalCondition(attackAdvantage.all, conditionData, { errorReturn: false, async: true })) {
-      grantsAdvantage = true;
-      this.attackAdvAttribution.add(`ADV:grants.advantage.attack.all ${firstTargetDocument.name}`);
-    }
-    if (attackAdvantage[actionType] && await evalCondition(attackAdvantage[actionType], conditionData, { errorReturn: false, async: true })) {
-      grantsAdvantage = true;
-      this.attackAdvAttribution.add(`ADV:grants.attack.${actionType} ${firstTargetDocument.name}`);
+    if (grants && ["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(actionType)) {
+      const attackAdvantage = grants.advantage?.attack || {};
+      let grantsAdvantage;
+      const conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
+      if (grants.advantage?.all && await evalCondition(grants.advantage.all, conditionData, { errorReturn: false, async: true })) {
+        grantsAdvantage = true;
+        this.attackAdvAttribution.add(`ADV:grants.advantage.all ${firstTargetDocument.name}`);
+      }
+      if (attackAdvantage.all && await evalCondition(attackAdvantage.all, conditionData, { errorReturn: false, async: true })) {
+        grantsAdvantage = true;
+        this.attackAdvAttribution.add(`ADV:grants.advantage.attack.all ${firstTargetDocument.name}`);
+      }
+      if (attackAdvantage[actionType] && await evalCondition(attackAdvantage[actionType], conditionData, { errorReturn: false, async: true })) {
+        grantsAdvantage = true;
+        this.attackAdvAttribution.add(`ADV:grants.attack.${actionType} ${firstTargetDocument.name}`);
+      }
+
+      if (grants.noAdvantage?.attack?.all && await evalCondition(grants.noAdvantage.attack.all, conditionData, { errorReturn: false, async: true })) {
+        grantsAdvantage = false;
+        this.advantage = false;
+        this.noAdvantage = true;
+        this.attackAdvAttribution.add(`ADV:None grants.noAdvantage ${firstTargetDocument.name}`);
+      }
+      if (grants.noAdvantage?.attack && grants.noAdvantage.attack[actionType] && await evalCondition(grants.noAdvantage.attack[actionType], conditionData, { errorReturn: false, async: true })) {
+        grantsAdvantage = false;
+        this.advantage = false;
+        this.noAdvantage = true;
+        this.attackAdvAttribution.add(`ADV:None grants.noAdvantage${actionType} ${firstTargetDocument.name}`);
+      }
+
+      const attackDisadvantage = grants.disadvantage?.attack || {};
+      let grantsDisadvantage;
+      if (grants.disadvantage?.all && await evalCondition(grants.disadvantage.all, conditionData, { errorReturn: false, async: true })) {
+        grantsDisadvantage = true;
+        this.attackAdvAttribution.add(`DIS:grants.disadvantage.all ${firstTargetDocument.name}`);
+      }
+      if (attackDisadvantage.all && await evalCondition(attackDisadvantage.all, conditionData, { errorReturn: false, async: true })) {
+        grantsDisadvantage = true;
+        this.attackAdvAttribution.add(`DIS:grants.attack.all ${firstTargetDocument.name}`);
+      }
+      if (attackDisadvantage[actionType] && await evalCondition(attackDisadvantage[actionType], conditionData, { errorReturn: false, async: true })) {
+        grantsDisadvantage = true;
+        this.attackAdvAttribution.add(`DIS:grants.attack.${actionType} ${firstTargetDocument.name}`);
+      }
+      if (grants.noDisadvantage?.attack?.all && await evalCondition(grants.noDisadvantage.attack.all, conditionData, { errorReturn: false, async: true })) {
+        grantsDisadvantage = false;
+        this.disadvantage = false;
+        this.noDisadvantage = true;
+        this.attackAdvAttribution.add(`DIS:None grants.noDisadvantage.all ${firstTargetDocument.name}`);
+      }
+      if (grants.noDisadvantage?.attack && grants.noDisadvantage.attack[actionType] && await evalCondition(grants.noDisadvantage.attack[actionType], conditionData, { errorReturn: false, async: true })) {
+        grantsDisadvantage = false;
+        this.disadvantage = false;
+        this.noDisadvantage = true;
+        this.attackAdvAttribution.add(`DIS:None grants.noDisadvantage${actionType} ${firstTargetDocument.name}`);
+      }
+      this.advantage = this.advantage || grantsAdvantage;
+      this.disadvantage = this.disadvantage || grantsDisadvantage;
     }
 
-    if (grants.noAdvantage?.attack?.all && await evalCondition(grants.noAdvantage.attack.all, conditionData, { errorReturn: false, async: true })) {
-      grantsAdvantage = false;
-      this.advantage = false;
-      this.noAdvantage = true;
-      this.attackAdvAttribution.add(`ADV:None grants.noAdvantage ${firstTargetDocument.name}`);
-    }
-    if (grants.noAdvantage?.attack && grants.noAdvantage.attack[actionType] && await evalCondition(grants.noAdvantage.attack[actionType], conditionData, { errorReturn: false, async: true })) {
-      grantsAdvantage = false;
-      this.advantage = false;
-      this.noAdvantage = true;
-      this.attackAdvAttribution.add(`ADV:None grants.noAdvantage${actionType} ${firstTargetDocument.name}`);
-    }
+    // Final check: Actor noAdvantage/noDisadvantage flags (must be checked AFTER all advantage sources)
+    const midiFlags = this.actor?.flags?.[MODULE_ID] ?? {};
+    const noAdvantage = midiFlags.noAdvantage;
+    const noDisadvantage = midiFlags.noDisadvantage;
+    if (noAdvantage?.attack || noDisadvantage?.attack) {
+      const actType = this.activity?.actionType ?? "";
+      const finalConditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
 
-    const attackDisadvantage = grants.disadvantage?.attack || {};
-    let grantsDisadvantage;
-    if (grants.disadvantage?.all && await evalCondition(grants.disadvantage.all, conditionData, { errorReturn: false, async: true })) {
-      grantsDisadvantage = true;
-      this.attackAdvAttribution.add(`DIS:grants.disadvantage.all ${firstTargetDocument.name}`);
+      // Check actor noAdvantage flags - prevents advantage on attacks
+      if (noAdvantage?.attack) {
+        if (noAdvantage.attack.all && await evalAllConditionsAsync(this.actor, midiFlag(`noAdvantage.attack.all`), finalConditionData)) {
+          this.advantage = false;
+          this.noAdvantage = true;
+          this.attackAdvAttribution.add(`ADV:None noAdvantage.attack.all`);
+        }
+        if (noAdvantage.attack[actType] && await evalAllConditionsAsync(this.actor, midiFlag(`noAdvantage.attack.${actType}`), finalConditionData)) {
+          this.advantage = false;
+          this.noAdvantage = true;
+          this.attackAdvAttribution.add(`ADV:None noAdvantage.attack.${actType}`);
+        }
+      }
+      // Check actor noDisadvantage flags - prevents disadvantage on attacks
+      if (noDisadvantage?.attack) {
+        if (noDisadvantage.attack.all && await evalAllConditionsAsync(this.actor, midiFlag(`noDisadvantage.attack.all`), finalConditionData)) {
+          this.disadvantage = false;
+          this.noDisadvantage = true;
+          this.attackAdvAttribution.add(`DIS:None noDisadvantage.attack.all`);
+        }
+        if (noDisadvantage.attack[actType] && await evalAllConditionsAsync(this.actor, midiFlag(`noDisadvantage.attack.${actType}`), finalConditionData)) {
+          this.disadvantage = false;
+          this.noDisadvantage = true;
+          this.attackAdvAttribution.add(`DIS:None noDisadvantage.attack.${actType}`);
+        }
+      }
     }
-    if (attackDisadvantage.all && await evalCondition(attackDisadvantage.all, conditionData, { errorReturn: false, async: true })) {
-      grantsDisadvantage = true;
-      this.attackAdvAttribution.add(`DIS:grants.attack.all ${firstTargetDocument.name}`);
-    }
-    if (attackDisadvantage[actionType] && await evalCondition(attackDisadvantage[actionType], conditionData, { errorReturn: false, async: true })) {
-      grantsDisadvantage = true;
-      this.attackAdvAttribution.add(`DIS:grants.attack.${actionType} ${firstTargetDocument.name}`);
-    }
-    if (grants.noDisadvantage?.attack?.all && await evalCondition(grants.noDisadvantage.attack.all, conditionData, { errorReturn: false, async: true })) {
-      grantsDisadvantage = false;
-      this.disadvantage = false;
-      this.noDisadvantage = true;
-      this.attackAdvAttribution.add(`DIS:None grants.noDisadvantage.all ${firstTargetDocument.name}`);
-    }
-    if (grants.noDisadvantage?.attack && grants.noDisadvantage.attack[actionType] && await evalCondition(grants.noDisadvantage.attack[actionType], conditionData, { errorReturn: false, async: true })) {
-      grantsDisadvantage = false;
-      this.disadvantage = false;
-      this.noDisadvantage = true;
-      this.attackAdvAttribution.add(`DIS:None grants.noDisadvantage${actionType} ${firstTargetDocument.name}`);
-    }
-    this.advantage = this.advantage || grantsAdvantage;
-    this.disadvantage = this.disadvantage || grantsDisadvantage;
   }
 
   async triggerTargetMacros(triggerList: string[], targets: Set<Token.Implementation> = this.targets, options: { saved?: boolean } = {}) {
@@ -5875,8 +5912,6 @@ export class Workflow {
     showRoll: boolean,
     GMprompt: string,
     isMagicSave: boolean,
-    magicResistance: boolean,
-    magicVulnerability: boolean,
     rollAction: Function
   ): { promise: Promise<Roll[] | Roll | null>, requestCard: Promise<ChatMessage | undefined> | undefined } {
     //@ts-expect-error
@@ -5981,8 +6016,6 @@ export class Workflow {
         requestId,
         GMprompt,
         isMagicSave: !!isMagicSave,
-        magicResistance,
-        magicVulnerability,
         saveDetails: saveDetails as pcSaveOptions["saveDetails"]
       }
     );
@@ -6068,9 +6101,8 @@ export class Workflow {
    * Returns the promise and optionally adds to module-specific request arrays
    */
   queueTargetSaveRoll(options: QueueSaveRollOptions): { promise: Promise<Roll[] | Roll | null> | null, requestCard: Promise<ChatMessage | undefined> | undefined } {
-    const { target, saveDetails, rollInfo, magicInfo, displayOptions, playerInfo, moduleFlags, moduleRequests } = options;
+    const { target, saveDetails, rollInfo, isMagicSave, displayOptions, playerInfo, moduleFlags, moduleRequests } = options;
     const { type: rollType, ability: rollAbility, skill: rollSkill, tool: rollTool, action: rollAction } = rollInfo;
-    const { isMagicSave, magicResistance, magicVulnerability } = magicInfo;
     const { whisper, showRoll, showRollDialog, simulate } = displayOptions;
     const { player, GMprompt, playerChat } = playerInfo;
     const { playerMonksTB, playerFlashTB, playerEpicRolls, gmMonksTB, gmFlashTB, gmRER } = moduleFlags;
@@ -6080,14 +6112,6 @@ export class Workflow {
       return { promise: friendlyRoll, requestCard: undefined };
     }
 
-    // Apply magic resistance/vulnerability to saveDetails for module requests
-    const applyMagicModifiers = () => {
-      if (isMagicSave) {
-        if (magicResistance) saveDetails.advantage = true;
-        if (magicVulnerability) saveDetails.disadvantage = true;
-      }
-    };
-
     // Monks Token Bar
     if ((!player?.isGM && playerMonksTB) || (player?.isGM && gmMonksTB)) {
       const promise = new Promise<Roll[] | Roll | null>((resolve) => {
@@ -6095,7 +6119,6 @@ export class Workflow {
         this.saveRequests[requestId] = resolve;
       });
 
-      applyMagicModifiers();
       const requests = player?.isGM ? moduleRequests.monks.gm : moduleRequests.monks.player;
       requests.push(this.buildMonksTokenBarRequest(target, saveDetails, isMagicSave));
       return { promise, requestCard: undefined };
@@ -6108,7 +6131,6 @@ export class Workflow {
         this.saveRequests[requestId] = resolve;
       });
 
-      applyMagicModifiers();
       const requests = player?.isGM ? moduleRequests.flash.gm : moduleRequests.flash.player;
       requests.push(this.buildFlashRollsRequest(target, saveDetails, isMagicSave));
       return { promise, requestCard: undefined };
@@ -6121,7 +6143,6 @@ export class Workflow {
         this.saveRequests[requestId] = resolve;
       });
 
-      applyMagicModifiers();
       const requests = player?.isGM ? moduleRequests.epic.gm : moduleRequests.epic.player;
       requests.push(this.buildEpicRollsRequest(target, saveDetails, isMagicSave));
       return { promise, requestCard: undefined };
@@ -6134,7 +6155,7 @@ export class Workflow {
       }
       const result = this.createPlayerChatSaveRequest(
         target, player!, saveDetails, rollType, rollAbility, rollSkill, rollTool, saveDetails.rollDC as number | undefined,
-        showRoll, GMprompt, isMagicSave, magicResistance, magicVulnerability, rollAction
+        showRoll, GMprompt, isMagicSave, rollAction
       );
       return { promise: result.promise, requestCard: result.requestCard };
     }
@@ -6327,11 +6348,7 @@ export class Workflow {
       isMagicSave: boolean;
       actorDisposition: number;
     }
-  ): Promise<{
-    saveDetails: SaveDetails;
-    magicResistance: boolean;
-    magicVulnerability: boolean;
-  }> {
+  ): Promise<SaveDetails> {
     const { rollDC, rollType, isMagicSave, actorDisposition } = context;
     const targetDocument = target.document;
 
@@ -6350,7 +6367,7 @@ export class Workflow {
     };
 
     // Check ability advantage/disadvantage from settings, source grants flags, and magic resistance/vulnerability
-    // computeAbilityAdvantage handles magic resistance check and returns magicResistance/magicVulnerability flags
+    // computeAbilityAdvantage handles magic resistance check internally
     const abilityAdvantage = await computeAbilityAdvantage(
       target.actor!,
       rollType ?? "",
@@ -6359,14 +6376,13 @@ export class Workflow {
     );
     saveDetails.advantage = abilityAdvantage.advantage;
     saveDetails.disadvantage = abilityAdvantage.disadvantage;
-    const { magicResistance, magicVulnerability } = abilityAdvantage;
     saveDetails.isConcentrationCheck = this.item.flags?.[MODULE_ID]?.isConcentrationCheck;
 
     // Update advantage/disadvantage tracking sets
     if (saveDetails.advantage && !saveDetails.disadvantage) this.advantageSaves.add(target);
     else if (saveDetails.disadvantage && !saveDetails.advantage) this.disadvantageSaves?.add(target);
 
-    return { saveDetails, magicResistance, magicVulnerability };
+    return saveDetails;
   }
 
   /**
@@ -6442,7 +6458,7 @@ export class Workflow {
         }
 
         // Build save details for this target
-        const { saveDetails, magicResistance, magicVulnerability } = await this.buildSaveDetailsForTarget(target, {
+        const saveDetails = await this.buildSaveDetailsForTarget(target, {
           rollDC,
           rollType,
           rollAbility,
@@ -6469,11 +6485,7 @@ export class Workflow {
             tool: rollTool ?? undefined,
             action: rollAction
           },
-          magicInfo: {
-            isMagicSave: !!isMagicSave,
-            magicResistance,
-            magicVulnerability
-          },
+          isMagicSave: !!isMagicSave,
           displayOptions: {
             whisper,
             showRoll,
@@ -6818,29 +6830,90 @@ export class Workflow {
       if (isNaN(targetCrit) || !Number.isNumeric(targetCrit)) targetCrit = criticalThreshold;
       criticalThreshold = Math.min(criticalThreshold, targetCrit);
     }
+
+    // Check actor critical.all/critical.{actionType} flags - set threshold to 1 to force critical
+    const actionType = this.activity?.actionType;
+    const criticalFlags = foundry.utils.getProperty(this.actor, midiFlag(`critical`)) ?? {};
+    if (criticalFlags) {
+      const firstTarget = this.targets.first();
+      const conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
+      if (await evalAllConditionsAsync(this.actor, midiFlag(`critical.all`), conditionData)) {
+        criticalThreshold = 1;
+        this.attackAdvAttribution.add(`CRIT:critical.all`);
+      } else if (actionType && await evalAllConditionsAsync(this.actor, midiFlag(`critical.${actionType}`), conditionData)) {
+        criticalThreshold = 1;
+        this.attackAdvAttribution.add(`CRIT:critical.${actionType}`);
+      }
+    }
+
     this.isCritical = this.diceRoll >= criticalThreshold;
     // Add natural crit attribution
     if (this.isCritical) {
       this.attackAdvAttribution.add(`CRIT:${i18n("DND5E.Roll")} >= ${criticalThreshold}`);
     }
+
+    // Check actor noCritical flags - can override critical after threshold determination
+    const noCriticalFlags = foundry.utils.getProperty(this.actor, midiFlag(`noCritical`)) ?? {};
+    if (noCriticalFlags) {
+      const firstTarget = this.targets.first();
+      const conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
+      if (await evalAllConditionsAsync(this.actor, midiFlag(`noCritical.all`), conditionData)) {
+        this.isCritical = false;
+        this.attackAdvAttribution.add(`NOCRIT:noCritical.all`);
+      }
+      if (actionType && await evalAllConditionsAsync(this.actor, midiFlag(`noCritical.${actionType}`), conditionData)) {
+        this.isCritical = false;
+        this.attackAdvAttribution.add(`NOCRIT:noCritical.${actionType}`);
+      }
+    }
+
     const midiFumble: number = (this.activity?.fumbleThreshold as number) ?? 1; //someone could set the midi fumbleThreshold field to 0 or delete the field
     //@ts-expect-error no dnd5e-types
     const attackRollFumbleTarget = this.attackRoll.options.criticalFailure;
-    const fumbleTarget =
+    let fumbleTarget =
       attackRollFumbleTarget === 0 || midiFumble === 0 && attackRollFumbleTarget === 1
         ? 0
         : Math.max(attackRollFumbleTarget, midiFumble);
+
+    // Check actor fumble.all/fumble.{actionType} flags - set threshold to 20 to force fumble
+    const fumbleFlags = foundry.utils.getProperty(this.actor, midiFlag(`fumble`)) ?? {};
+    if (fumbleFlags) {
+      const firstTarget = this.targets.first();
+      const conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
+      if (await evalAllConditionsAsync(this.actor, midiFlag(`fumble.all`), conditionData)) {
+        fumbleTarget = 20;
+        this.attackAdvAttribution.add(`FUMBLE:fumble.all`);
+      } else if (actionType && await evalAllConditionsAsync(this.actor, midiFlag(`fumble.${actionType}`), conditionData)) {
+        fumbleTarget = 20;
+        this.attackAdvAttribution.add(`FUMBLE:fumble.${actionType}`);
+      }
+    }
+
     this.isFumble = this.diceRoll <= fumbleTarget;
     // Add natural fumble attribution
     if (this.isFumble) {
       this.attackAdvAttribution.add(`FUMBLE:${i18n("DND5E.Roll")} <= ${fumbleTarget}`);
     }
 
+    // Check actor noFumble flags - can override fumble after threshold determination
+    const noFumbleFlags = foundry.utils.getProperty(this.actor, midiFlag(`noFumble`)) ?? {};
+    if (noFumbleFlags) {
+      const firstTarget = this.targets.first();
+      const conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
+      if (await evalAllConditionsAsync(this.actor, midiFlag(`noFumble.all`), conditionData)) {
+        this.isFumble = false;
+        this.attackAdvAttribution.add(`NOFUMBLE:noFumble.all`);
+      }
+      if (actionType && await evalAllConditionsAsync(this.actor, midiFlag(`noFumble.${actionType}`), conditionData)) {
+        this.isFumble = false;
+        this.attackAdvAttribution.add(`NOFUMBLE:noFumble.${actionType}`);
+      }
+    }
+
     // Check target grants.fumble and grants.noFumble flags
     // For multiple targets: fumble if ANY target grants fumble, no fumble if ALL targets grant noFumble
     let fumbleAttributionAdded = false;
     if (this.targets.size >= 1) {
-      const actionType = this.activity?.actionType;
 
       // grants.fumble forces a fumble - check if ANY target has this flag
       if (!this.isFumble) {

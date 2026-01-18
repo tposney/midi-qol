@@ -699,8 +699,6 @@ export interface pcSaveOptions {
   requestId: string,
   GMprompt,
   isMagicSave: boolean,
-  magicResistance: boolean,
-  magicVulnerability: boolean,
   saveDetails: {
     advantage: boolean | undefined,
     disadvantage: boolean | undefined,
@@ -2181,6 +2179,11 @@ export type MidiOptions = {
   saveItem?: Item.Implementation;
   saveItemUuid?: string;
   simulate?: boolean;
+  // sourceActor/sourceToken: Who grants advantage/disadvantage (explicit, not derived from workflow.actor)
+  // For saves/checks: typically workflow.actor (caster)
+  // For attacks: would be target.actor (defender)
+  sourceActor?: Actor.Implementation;
+  sourceToken?: Token.Implementation;
   spellLevel?: number;
   target?: number;
   targets?: Set<foundry.canvas.placeables.Token.Implementation>;

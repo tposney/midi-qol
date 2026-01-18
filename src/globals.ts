@@ -9,6 +9,7 @@ import { checkRule, configSettings, targetConfirmation } from "./module/settings
 import { SaferSocket, SerializedDamageListEntry } from "./module/GMAction";
 import { MidiActivityMixin } from "./module/activities/MidiActivityMixin";
 import * as undo from "./module/undo";
+import * as patching from "./module/patching";
 import { ConfigPanel } from "./module/apps/ConfigPanel";
 import { createEffects, debug, log, moveToken, moveTokenAwayFromPoint, removeEffects, updateEffects, warn } from "./midi-qol";
 import { TargetConfirmationDialog } from "./module/apps/TargetConfirmation";
@@ -348,11 +349,36 @@ declare module "fvtt-types/configuration" {
         };
         neverTarget?: boolean;
         noAdvantage?: {
-          attack?: {
+          ability?: {
             all?: string;
+            check?: Record<string, string>;
+            save?: Record<string, string>;
           };
+          all?: string;
+          attack?: Record<string, string>;
+          concentration?: string;
+          deathSave?: string;
+          initiative?: string;
+          skill?: Record<string, string>;
+          tool?: Record<string, string>;
+        };
+        noDisadvantage?: {
+          ability?: {
+            all?: string;
+            check?: Record<string, string>;
+            save?: Record<string, string>;
+          };
+          all?: string;
+          attack?: Record<string, string>;
+          concentration?: string;
+          deathSave?: string;
+          initiative?: string;
+          skill?: Record<string, string>;
+          tool?: Record<string, string>;
         };
         noCritical?: Record<string, string>;
+        noFumble?: Record<string, string>;
+        fumble?: Record<string, string>;
         onUseMacroName?: string;
         onUseMacroParts?: OnUseMacros;
         optional?: Record<string, any>;
@@ -610,8 +636,11 @@ declare global {
     collectSettingData: typeof settings.collectSettingData;
     completeActivityUse: typeof utils.completeActivityUse;
     completeItemUse: typeof utils.completeItemUse;
+    computeAbilityAdvantage: typeof patching.computeAbilityAdvantage;
     computeCoverBonus: typeof utils.computeCoverBonus;
     computeDistance: typeof utils.computeDistance;
+    computeSkillAdvantage: typeof patching.computeSkillAdvantage;
+    computeToolAdvantage: typeof patching.computeToolAdvantage;
     ConfigPanel: typeof ConfigPanel;
     configSettings: () => typeof configSettings;
     contestedRoll: typeof utils.contestedRoll;
@@ -1338,11 +1367,6 @@ export type SaveRollInfo = {
   action: Function;
 };
 
-export type MagicSaveInfo = {
-  isMagicSave: boolean;
-  magicResistance: boolean;
-  magicVulnerability: boolean;
-};
 
 export type SaveDisplayOptions = {
   whisper: boolean;
@@ -1438,7 +1462,7 @@ export type QueueSaveRollOptions = {
   target: Token;
   saveDetails: SaveDetails;
   rollInfo: SaveRollInfo;
-  magicInfo: MagicSaveInfo;
+  isMagicSave: boolean;
   displayOptions: SaveDisplayOptions;
   playerInfo: SavePlayerInfo;
   moduleFlags: ModuleIntegrationFlags;

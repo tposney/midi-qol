@@ -749,11 +749,18 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
     const advantageFlags: AdvantageFlags = {
       advantageFlags: ["advantage.all", "advantage.deathSave"],
       disadvantageFlags: ["disadvantage.all", "disadvantage.deathSave"],
+      // Actor noAdvantage/noDisadvantage flags (prevent actor's own advantage/disadvantage)
+      noAdvantageFlags: ["noAdvantage.all", "noAdvantage.deathSave"],
+      noDisadvantageFlags: ["noDisadvantage.all", "noDisadvantage.deathSave"],
       systemRollModeFields: ["attributes.death.roll.mode"]
     };
 
     // Process advantage/disadvantage flags using centralized helper
-    const result = await computeAdvantageFlags(this, advantageFlags, config.midiOptions);
+    // For death saves, source actor is the caster (if any workflow exists)
+    const result = await computeAdvantageFlags(this, advantageFlags, {
+      ...config.midiOptions,
+      sourceActor: config.midiOptions.workflow?.actor
+    });
     config.advantage = result.advantage;
     config.disadvantage = result.disadvantage;
   }
@@ -866,16 +873,36 @@ export interface AdvantageFlags {
   advantageFlags: string[];
   disadvantageFlags: string[];
   systemRollModeFields: string[];
+  // Actor noAdvantage/noDisadvantage flags (prevent advantage/disadvantage on actor's own rolls)
+  noAdvantageFlags?: string[];
+  noDisadvantageFlags?: string[];
   // Source actor grants flags (checked on workflow.actor, e.g., caster)
   sourceAdvantageFlags?: string[];
   sourceDisadvantageFlags?: string[];
   sourceNoAdvantageFlags?: string[];
   sourceNoDisadvantageFlags?: string[];
+  // Track deprecated flags for warning generation
+  deprecatedFlags?: Set<string>;
 }
 
 // Helper to get flag path with midi-qol prefix
 function midiFlag(flag: string): string {
   return `flags.midi-qol.${flag}`;
+}
+
+// Helper to emit deprecation warning for deprecated midi-qol flags
+function emitDeprecatedFlagWarning(flag: string): void {
+  // Map deprecated flag to new flag name
+  const newFlag = flag
+    .replace("advantage.ability.save.", "advantage.save.")
+    .replace("advantage.ability.check.", "advantage.check.")
+    .replace("disadvantage.ability.save.", "disadvantage.save.")
+    .replace("disadvantage.ability.check.", "disadvantage.check.");
+
+  foundry.utils.logCompatibilityWarning(
+    `midi-qol | The flag "flags.midi-qol.${flag}" is deprecated. Use "flags.midi-qol.${newFlag}" instead.`,
+    { since: "13.0.38", until: "14", once: true }
+  );
 }
 
 // Centralized function for processing advantage/disadvantage flags
@@ -895,6 +922,10 @@ async function computeAdvantageFlags(actor: Actor.Implementation, flags: Advanta
   // Check actor's advantage flags
   for (const flag of flags.advantageFlags) {
     if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
+      // Emit deprecation warning if this is a deprecated flag
+      if (flags.deprecatedFlags?.has(flag)) {
+        emitDeprecatedFlagWarning(flag);
+      }
       advantageCount++;
       break;
     }
@@ -903,21 +934,48 @@ async function computeAdvantageFlags(actor: Actor.Implementation, flags: Advanta
   // Check actor's disadvantage flags
   for (const flag of flags.disadvantageFlags) {
     if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
+      // Emit deprecation warning if this is a deprecated flag
+      if (flags.deprecatedFlags?.has(flag)) {
+        emitDeprecatedFlagWarning(flag);
+      }
       disadvantageCount++;
       break;
     }
   }
 
   // Check source actor grants flags (e.g., caster granting advantage/disadvantage on saves)
-  const sourceActor = options.workflow?.actor;
+  // Use explicit sourceActor if provided, otherwise fall back to workflow.actor for backward compatibility
+  const sourceActor = options.sourceActor ?? options.workflow?.actor;
+  const sourceToken = options.sourceToken ?? (sourceActor ? tokenForActor(sourceActor) : undefined);
   let advantageSuppressed = false;
   let disadvantageSuppressed = false;
+
+  // Check actor's noAdvantage flags (actor prevents their own advantage)
+  if (flags.noAdvantageFlags?.length) {
+    for (const flag of flags.noAdvantageFlags) {
+      if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
+        advantageSuppressed = true;
+        break;
+      }
+    }
+  }
+
+  // Check actor's noDisadvantage flags (actor prevents their own disadvantage)
+  if (flags.noDisadvantageFlags?.length) {
+    for (const flag of flags.noDisadvantageFlags) {
+      if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
+        disadvantageSuppressed = true;
+        break;
+      }
+    }
+  }
 
   if (sourceActor) {
     const sourceConditionData = createConditionData({
       workflow: options.workflow,
       target: tokenForActor(actor),
       actor: sourceActor,
+      token: sourceToken,
       item: options.item ?? options.itemUuid ?? options.saveItem ?? options.saveItemUuid
     });
 
@@ -1068,20 +1126,46 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
   }
 
   // Build advantage/disadvantage flags to check
+  // Using new consistent naming: advantage.save.all, advantage.check.all (matches attack/skill/tool pattern)
+  // Also include deprecated flags (advantage.ability.save.*, advantage.ability.check.*) for backwards compatibility
   const abilityFlags: AdvantageFlags = {
     advantageFlags: [
       "advantage.all",
       "advantage.ability.all",
+      `advantage.${rollType}.all`,
+      `advantage.${rollType}.${abilityId}`,
+      // Deprecated flags - will emit warning when used
       `advantage.ability.${rollType}.all`,
       `advantage.ability.${rollType}.${abilityId}`
     ],
     disadvantageFlags: [
       "disadvantage.all",
       "disadvantage.ability.all",
+      `disadvantage.${rollType}.all`,
+      `disadvantage.${rollType}.${abilityId}`,
+      // Deprecated flags - will emit warning when used
       `disadvantage.ability.${rollType}.all`,
       `disadvantage.ability.${rollType}.${abilityId}`
     ],
-    systemRollModeFields: [`abilities.${abilityId}.${rollType}.roll.mode`]
+    // Actor noAdvantage/noDisadvantage flags (prevent actor's own advantage/disadvantage)
+    noAdvantageFlags: [
+      "noAdvantage.all",
+      `noAdvantage.${rollType}.all`,
+      `noAdvantage.${rollType}.${abilityId}`
+    ],
+    noDisadvantageFlags: [
+      "noDisadvantage.all",
+      `noDisadvantage.${rollType}.all`,
+      `noDisadvantage.${rollType}.${abilityId}`
+    ],
+    systemRollModeFields: [`abilities.${abilityId}.${rollType}.roll.mode`],
+    // Track which flags are deprecated for warning generation
+    deprecatedFlags: new Set([
+      `advantage.ability.${rollType}.all`,
+      `advantage.ability.${rollType}.${abilityId}`,
+      `disadvantage.ability.${rollType}.all`,
+      `disadvantage.ability.${rollType}.${abilityId}`
+    ])
   };
 
   // Add source actor grants flags for saves and checks
@@ -1092,7 +1176,11 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
     abilityFlags.sourceNoDisadvantageFlags = ["grants.noDisadvantage.all", `grants.noDisadvantage.${rollType}.all`, `grants.noDisadvantage.${rollType}.${abilityId}`];
   }
 
-  const result = await computeAdvantageFlags(actor, abilityFlags, effectiveOptions);
+  // For saves/checks, source actor is the caster (workflow.actor)
+  const result = await computeAdvantageFlags(actor, abilityFlags, {
+    ...effectiveOptions,
+    sourceActor: effectiveOptions.workflow?.actor
+  });
   return { ...result, magicResistance, magicVulnerability };
 }
 
@@ -1112,6 +1200,17 @@ export async function computeSkillAdvantage(actor: Actor.Implementation, skillId
       "disadvantage.skill.all",
       `disadvantage.skill.${skillId}`
     ],
+    // Actor noAdvantage/noDisadvantage flags (prevent actor's own advantage/disadvantage)
+    noAdvantageFlags: [
+      "noAdvantage.all",
+      "noAdvantage.skill.all",
+      `noAdvantage.skill.${skillId}`
+    ],
+    noDisadvantageFlags: [
+      "noDisadvantage.all",
+      "noDisadvantage.skill.all",
+      `noDisadvantage.skill.${skillId}`
+    ],
     systemRollModeFields: [`skills.${skillId}.roll.mode`],
     // Source grants flags for skills (checked on workflow.actor, e.g., caster)
     sourceAdvantageFlags: ["grants.advantage.all", "grants.advantage.skill.all", `grants.advantage.skill.${skillId}`],
@@ -1125,6 +1224,9 @@ export async function computeSkillAdvantage(actor: Actor.Implementation, skillId
     // Add skill flags for the ability (e.g., advantage.skill.dex for all dex-based skills)
     skillFlags.advantageFlags.push(`advantage.skill.${abilityId}`);
     skillFlags.disadvantageFlags.push(`disadvantage.skill.${abilityId}`);
+    // Add noAdvantage/noDisadvantage for ability-based skill
+    skillFlags.noAdvantageFlags?.push(`noAdvantage.skill.${abilityId}`);
+    skillFlags.noDisadvantageFlags?.push(`noDisadvantage.skill.${abilityId}`);
     // Add source grants for ability-based skill
     skillFlags.sourceAdvantageFlags?.push(`grants.advantage.skill.${abilityId}`);
     skillFlags.sourceDisadvantageFlags?.push(`grants.disadvantage.skill.${abilityId}`);
@@ -1133,12 +1235,27 @@ export async function computeSkillAdvantage(actor: Actor.Implementation, skillId
 
     // If skillAbilityCheckAdvantage is enabled, also check ability check flags
     if (configSettings.skillAbilityCheckAdvantage) {
-      skillFlags.advantageFlags.push("advantage.ability.all", "advantage.ability.check.all", `advantage.ability.check.${abilityId}`);
-      skillFlags.disadvantageFlags.push("disadvantage.ability.all", "disadvantage.ability.check.all", `disadvantage.ability.check.${abilityId}`);
+      // New flag names (preferred)
+      skillFlags.advantageFlags.push("advantage.ability.all", "advantage.check.all", `advantage.check.${abilityId}`);
+      skillFlags.disadvantageFlags.push("disadvantage.ability.all", "disadvantage.check.all", `disadvantage.check.${abilityId}`);
+      // Deprecated flag names (for backwards compatibility)
+      skillFlags.advantageFlags.push("advantage.ability.check.all", `advantage.ability.check.${abilityId}`);
+      skillFlags.disadvantageFlags.push("disadvantage.ability.check.all", `disadvantage.ability.check.${abilityId}`);
+      // Track deprecated flags for warning generation
+      skillFlags.deprecatedFlags = new Set([
+        "advantage.ability.check.all",
+        `advantage.ability.check.${abilityId}`,
+        "disadvantage.ability.check.all",
+        `disadvantage.ability.check.${abilityId}`
+      ]);
     }
   }
 
-  return computeAdvantageFlags(actor, skillFlags, options);
+  // For skills, source actor is the caster (workflow.actor) if any
+  return computeAdvantageFlags(actor, skillFlags, {
+    ...options,
+    sourceActor: options.workflow?.actor
+  });
 }
 
 export async function computeToolAdvantage(actor: Actor.Implementation, toolId: string, abilityId: string, options: MidiOptions): Promise<{ advantage: boolean, disadvantage: boolean }> {
@@ -1154,6 +1271,17 @@ export async function computeToolAdvantage(actor: Actor.Implementation, toolId: 
       "disadvantage.tool.all",
       `disadvantage.tool.${toolId}`
     ],
+    // Actor noAdvantage/noDisadvantage flags (prevent actor's own advantage/disadvantage)
+    noAdvantageFlags: [
+      "noAdvantage.all",
+      "noAdvantage.tool.all",
+      `noAdvantage.tool.${toolId}`
+    ],
+    noDisadvantageFlags: [
+      "noDisadvantage.all",
+      "noDisadvantage.tool.all",
+      `noDisadvantage.tool.${toolId}`
+    ],
     systemRollModeFields: [], // dnd5e doesn't have native tool roll modes
     // Source grants flags for tools (checked on workflow.actor, e.g., caster)
     sourceAdvantageFlags: ["grants.advantage.all", "grants.advantage.tool.all", `grants.advantage.tool.${toolId}`],
@@ -1164,11 +1292,29 @@ export async function computeToolAdvantage(actor: Actor.Implementation, toolId: 
 
   // If the tool has an associated ability, also check ability check flags
   if (abilityId) {
-    toolFlags.advantageFlags.push("advantage.ability.all", "advantage.ability.check.all", `advantage.ability.check.${abilityId}`);
-    toolFlags.disadvantageFlags.push("disadvantage.ability.all", "disadvantage.ability.check.all", `disadvantage.ability.check.${abilityId}`);
+    // New flag names (preferred)
+    toolFlags.advantageFlags.push("advantage.ability.all", "advantage.check.all", `advantage.check.${abilityId}`);
+    toolFlags.disadvantageFlags.push("disadvantage.ability.all", "disadvantage.check.all", `disadvantage.check.${abilityId}`);
+    // Add noAdvantage/noDisadvantage for ability-based check
+    toolFlags.noAdvantageFlags?.push(`noAdvantage.check.all`, `noAdvantage.check.${abilityId}`);
+    toolFlags.noDisadvantageFlags?.push(`noDisadvantage.check.all`, `noDisadvantage.check.${abilityId}`);
+    // Deprecated flag names (for backwards compatibility)
+    toolFlags.advantageFlags.push("advantage.ability.check.all", `advantage.ability.check.${abilityId}`);
+    toolFlags.disadvantageFlags.push("disadvantage.ability.check.all", `disadvantage.ability.check.${abilityId}`);
+    // Track deprecated flags for warning generation
+    toolFlags.deprecatedFlags = new Set([
+      "advantage.ability.check.all",
+      `advantage.ability.check.${abilityId}`,
+      "disadvantage.ability.check.all",
+      `disadvantage.ability.check.${abilityId}`
+    ]);
   }
 
-  return computeAdvantageFlags(actor, toolFlags, options);
+  // For tools, source actor is the caster (workflow.actor) if any
+  return computeAdvantageFlags(actor, toolFlags, {
+    ...options,
+    sourceActor: options.workflow?.actor
+  });
 }
 
 let debouncedATRefresh = foundry.utils.debounce(_midiATIRefresh, 30);

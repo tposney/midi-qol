@@ -5,19 +5,27 @@
 * Fix for suspended activity not restarting on reload.
 * Fix for recovering rolls from saved workflow data saved in ChatMessages.
 * Fix so that dnd5e roll.mode changes will be reflected in the default button for saves/ability checks etc.
+* Fix for actor `noAdvantage.attack`/`noDisadvantage.attack` flags not being checked when the target had no grants flags.
 
 * **Breaking** For reaction spells granted by an item the spell would only get presented as an option if it appeared in the actor's spell book, which means the granting item would have to check the show in spellbook option and be marked as magical and attuned/attunement not required.
-  - Midi now examines the activities on the source item and uses that to select reaction spells as ordinary spells in the spellbook.
-  - As a bonus you are able to specify cast activities that allow non-reaction spells to be cast as a reaction or have additional condtions.
+  - Midi now examines the activities on the source item and uses that to select reaction spells as well as ordinary spells in the spellbook.
+  - As a bonus you are able to specify cast activities that allow non-reaction spells to be cast as a reaction or have additional conditions.
   - If the activity consumption is completely spent the activity wont be presented as a reaction option
-  - both the cast activity's condition and the spell's condition must be true for the reaction to be available.
+  - both the cast activity's use condition and the spell's use condition must be true for the reaction to be available.
 
+* **Breaking** For naming consistency the flags.midi-qol.advantage.ability.save/check.xxx have been renamed to flags.midi-qol.advantage.save.check.xxxx, and similarly for flags.midi-qol.disadvantage.
+  - Backwards compatibility will be supported until midi-qol v14.
+  - Backwards compatibility via mid-qol field mappings. This means that dae will rewrite the old flags with the new when applying active effect changes and log a compatibility warning.
+  - Midi still recognises the flags (in case they are directly set by code rather than an active effect) and will log a warning, use the flag, but not rewrite the flag.
+  
 **Community Contributions:**
 * MR !393: Updated Portuguese (Brazil) translation. Thanks Kharmans.
 * MR !394: Fixed concentration checks not showing item names. Reworked logic to use `actor.concentration.items` Set instead of `effect.flags.dnd5e.itemUuid` which may be undefined. Thanks thatlonelybugbear.
 
 **New Features:**
-* Per-tool constraint flags: Added per-tool flags for fail/success/min/max modifiers on tool checks. Previously only `fail.tool.all`, `success.tool.all`, etc. existed. Now you can target specific tools:
+* Significant rework for advantage/disadvantage processing for saves/checks/skills etc. The result of the midi flag advantage flags should now be fully passed through to other roller modules, such as MTB, Epic Rolls and flash rolls.
+
+* Per-tool modifier flags: Added per-tool flags for fail/success/min/max modifiers on tool checks. Previously only `fail.tool.all`, `success.tool.all`, etc. existed. Now you can target specific tools:
   - `flags.midi-qol.fail.tool.{toolId}` - Auto-fail specific tool checks
   - `flags.midi-qol.success.tool.{toolId}` - Auto-succeed specific tool checks
   - `flags.midi-qol.max.tool.{toolId}` - Maximum d20 roll for specific tool checks
@@ -29,7 +37,23 @@
   - `flags.midi-qol.disadvantage.tool.all` - Disadvantage on all tool checks
   - `flags.midi-qol.disadvantage.tool.{toolId}` - Disadvantage on specific tool checks
   - Tool checks also inherit ability check advantage/disadvantage if the tool uses an ability
+
+* Actor-side noAdvantage/noDisadvantage flags: Added flags to prevent advantage/disadvantage on the actor's own rolls. These suppress advantage/disadvantage even when other sources would grant it:
+  - `flags.midi-qol.noAdvantage.all` / `noDisadvantage.all` - Prevent on all rolls
+  - `flags.midi-qol.noAdvantage.attack.{all|attackType}` - Prevent on attacks
+  - `flags.midi-qol.noAdvantage.save.{all|ability}` - Prevent on saves
+  - `flags.midi-qol.noAdvantage.check.{all|ability}` - Prevent on ability checks
+  - `flags.midi-qol.noAdvantage.skill.{all|skill|ability}` - Prevent on skills
+  - `flags.midi-qol.noAdvantage.tool.{all|toolId}` - Prevent on tool checks
+  - `flags.midi-qol.noAdvantage.concentration` / `deathSave` / `initiative` - Prevent on special rolls
+  - Same pattern for `noDisadvantage.*`
   - FLAGS.md updated
+
+* With these additional flags and a bit of fancy footwork, you can automate Protection from Good and Evil via flags
+  | Attribute Key | Change Mode | Effect Value |
+  |---------------|-------------|--------------|
+  | `flags.midi-qol.grants.disadvantage.attack.all` | CUSTOM | `["aberration","celestial","elemental","fey","fiend","undead"].includes(actor.raceOrType)` |
+  | `flags.midi-qol.advantage.save.all` | CUSTOM | `["aberration","celestial","elemental","fey","fiend","undead"].includes(actor.raceOrType)` |
 
 * Auto fail/auto success processing allows non roll expressions in success/failure flags.
 

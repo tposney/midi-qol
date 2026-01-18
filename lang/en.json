@@ -1448,60 +1448,60 @@
       "description": "Advantage on all saves, ability checks and skills."
     },
     "flags.midi-qol.advantage.ability.check.all": {
-      "name": "Advantage All Ability Checks",
-      "description": "Advantage on all ability checks and skills."
+      "name": "Advantage All Ability Checks (Deprecated)",
+      "description": "Deprecated - use advantage.check.all instead. Advantage on all ability checks and skills."
     },
     "flags.midi-qol.advantage.ability.check.cha": {
-      "name": "Advantage Charisma Checks",
-      "description": "Advantage on Charisma checks."
+      "name": "Advantage Charisma Checks (Deprecated)",
+      "description": "Deprecated - use advantage.check.cha instead. Advantage on Charisma checks."
     },
     "flags.midi-qol.advantage.ability.check.con": {
-      "name": "Advantage Constitution Checks",
-      "description": "Advantage on Constitution checks."
+      "name": "Advantage Constitution Checks (Deprecated)",
+      "description": "Deprecated - use advantage.check.con instead. Advantage on Constitution checks."
     },
     "flags.midi-qol.advantage.ability.check.dex": {
-      "name": "Advantage Dexterity Checks",
-      "description": "Advantage on Dexterity checks."
+      "name": "Advantage Dexterity Checks (Deprecated)",
+      "description": "Deprecated - use advantage.check.dex instead. Advantage on Dexterity checks."
     },
     "flags.midi-qol.advantage.ability.check.int": {
-      "name": "Advantage Intelligence Checks",
-      "description": "Advantage on Intelligence checks."
+      "name": "Advantage Intelligence Checks (Deprecated)",
+      "description": "Deprecated - use advantage.check.int instead. Advantage on Intelligence checks."
     },
     "flags.midi-qol.advantage.ability.check.str": {
-      "name": "Advantage Strength Checks",
-      "description": "Advantage on Strength checks."
+      "name": "Advantage Strength Checks (Deprecated)",
+      "description": "Deprecated - use advantage.check.str instead. Advantage on Strength checks."
     },
     "flags.midi-qol.advantage.ability.check.wis": {
-      "name": "Advantage Wisdom Checks",
-      "description": "Advantage on Wisdom checks."
+      "name": "Advantage Wisdom Checks (Deprecated)",
+      "description": "Deprecated - use advantage.check.wis instead. Advantage on Wisdom checks."
     },
     "flags.midi-qol.advantage.ability.save.all": {
-      "name": "Advantage All Saves",
-      "description": "Advantage on all saves."
+      "name": "Advantage All Saves (Deprecated)",
+      "description": "Deprecated - use advantage.save.all instead. Advantage on all saves."
     },
     "flags.midi-qol.advantage.ability.save.cha": {
-      "name": "Advantage Charisma Saves",
-      "description": "Advantage on Charisma saves."
+      "name": "Advantage Charisma Saves (Deprecated)",
+      "description": "Deprecated - use advantage.save.cha instead. Advantage on Charisma saves."
     },
     "flags.midi-qol.advantage.ability.save.con": {
-      "name": "Advantage Constitution Saves",
-      "description": "Advantage on Constitution saves."
+      "name": "Advantage Constitution Saves (Deprecated)",
+      "description": "Deprecated - use advantage.save.con instead. Advantage on Constitution saves."
     },
     "flags.midi-qol.advantage.ability.save.dex": {
-      "name": "Advantage Dexterity Saves",
-      "description": "Advantage on Dexterity saves."
+      "name": "Advantage Dexterity Saves (Deprecated)",
+      "description": "Deprecated - use advantage.save.dex instead. Advantage on Dexterity saves."
     },
     "flags.midi-qol.advantage.ability.save.int": {
-      "name": "Advantage Intelligence Saves",
-      "description": "Advantage on Intelligence saves."
+      "name": "Advantage Intelligence Saves (Deprecated)",
+      "description": "Deprecated - use advantage.save.int instead. Advantage on Intelligence saves."
     },
     "flags.midi-qol.advantage.ability.save.str": {
-      "name": "Advantage Strength Saves",
-      "description": "Advantage on Strength saves."
+      "name": "Advantage Strength Saves (Deprecated)",
+      "description": "Deprecated - use advantage.save.str instead. Advantage on Strength saves."
     },
     "flags.midi-qol.advantage.ability.save.wis": {
-      "name": "Advantage Wisdom Saves",
-      "description": "Advantage on Wisdom saves."
+      "name": "Advantage Wisdom Saves (Deprecated)",
+      "description": "Deprecated - use advantage.save.wis instead. Advantage on Wisdom saves."
     },
     "flags.midi-qol.advantage.all": {
       "name": "Advantage All",
@@ -1711,6 +1711,62 @@
       "name": "Advantage (Death Save)",
       "description": "Advantage on death saving throws."
     },
+    "flags.midi-qol.advantage.check.all": {
+      "name": "Advantage (All Ability Checks)",
+      "description": "Advantage on all ability checks and skills."
+    },
+    "flags.midi-qol.advantage.check.cha": {
+      "name": "Advantage (Charisma Checks)",
+      "description": "Advantage on Charisma checks."
+    },
+    "flags.midi-qol.advantage.check.con": {
+      "name": "Advantage (Constitution Checks)",
+      "description": "Advantage on Constitution checks."
+    },
+    "flags.midi-qol.advantage.check.dex": {
+      "name": "Advantage (Dexterity Checks)",
+      "description": "Advantage on Dexterity checks."
+    },
+    "flags.midi-qol.advantage.check.int": {
+      "name": "Advantage (Intelligence Checks)",
+      "description": "Advantage on Intelligence checks."
+    },
+    "flags.midi-qol.advantage.check.str": {
+      "name": "Advantage (Strength Checks)",
+      "description": "Advantage on Strength checks."
+    },
+    "flags.midi-qol.advantage.check.wis": {
+      "name": "Advantage (Wisdom Checks)",
+      "description": "Advantage on Wisdom checks."
+    },
+    "flags.midi-qol.advantage.save.all": {
+      "name": "Advantage (All Saves)",
+      "description": "Advantage on all saving throws."
+    },
+    "flags.midi-qol.advantage.save.cha": {
+      "name": "Advantage (Charisma Saves)",
+      "description": "Advantage on Charisma saving throws."
+    },
+    "flags.midi-qol.advantage.save.con": {
+      "name": "Advantage (Constitution Saves)",
+      "description": "Advantage on Constitution saving throws."
+    },
+    "flags.midi-qol.advantage.save.dex": {
+      "name": "Advantage (Dexterity Saves)",
+      "description": "Advantage on Dexterity saving throws."
+    },
+    "flags.midi-qol.advantage.save.int": {
+      "name": "Advantage (Intelligence Saves)",
+      "description": "Advantage on Intelligence saving throws."
+    },
+    "flags.midi-qol.advantage.save.str": {
+      "name": "Advantage (Strength Saves)",
+      "description": "Advantage on Strength saving throws."
+    },
+    "flags.midi-qol.advantage.save.wis": {
+      "name": "Advantage (Wisdom Saves)",
+      "description": "Advantage on Wisdom saving throws."
+    },
     "flags.midi-qol.advantage.skill.acr": {
       "name": "Advantage (Acrobatics)",
       "description": "Advantage on Acrobatics checks."
@@ -1908,60 +1964,60 @@
       "description": ""
     },
     "flags.midi-qol.disadvantage.ability.check.all": {
-      "name": "Disadvantage (All Ability Checks)",
-      "description": ""
+      "name": "Disadvantage All Ability Checks (Deprecated)",
+      "description": "Deprecated - use disadvantage.check.all instead. Disadvantage on all ability checks."
     },
     "flags.midi-qol.disadvantage.ability.check.cha": {
-      "name": "Disadvantage (Charisma Checks)",
-      "description": ""
+      "name": "Disadvantage Charisma Checks (Deprecated)",
+      "description": "Deprecated - use disadvantage.check.cha instead. Disadvantage on Charisma checks."
     },
     "flags.midi-qol.disadvantage.ability.check.con": {
-      "name": "Disadvantage (Constitution Checks)",
-      "description": ""
+      "name": "Disadvantage Constitution Checks (Deprecated)",
+      "description": "Deprecated - use disadvantage.check.con instead. Disadvantage on Constitution checks."
     },
     "flags.midi-qol.disadvantage.ability.check.dex": {
-      "name": "Disadvantage (Dexterity Checks)",
-      "description": ""
+      "name": "Disadvantage Dexterity Checks (Deprecated)",
+      "description": "Deprecated - use disadvantage.check.dex instead. Disadvantage on Dexterity checks."
     },
     "flags.midi-qol.disadvantage.ability.check.int": {
-      "name": "Disadvantage (Intelligence Checks)",
-      "description": ""
+      "name": "Disadvantage Intelligence Checks (Deprecated)",
+      "description": "Deprecated - use disadvantage.check.int instead. Disadvantage on Intelligence checks."
     },
     "flags.midi-qol.disadvantage.ability.check.str": {
-      "name": "Disadvantage (Strength Checks)",
-      "description": ""
+      "name": "Disadvantage Strength Checks (Deprecated)",
+      "description": "Deprecated - use disadvantage.check.str instead. Disadvantage on Strength checks."
     },
     "flags.midi-qol.disadvantage.ability.check.wis": {
-      "name": "Disadvantage (Wisdom Checks)",
-      "description": ""
+      "name": "Disadvantage Wisdom Checks (Deprecated)",
+      "description": "Deprecated - use disadvantage.check.wis instead. Disadvantage on Wisdom checks."
     },
     "flags.midi-qol.disadvantage.ability.save.all": {
-      "name": "Disadvantage (All Saves)",
-      "description": ""
+      "name": "Disadvantage All Saves (Deprecated)",
+      "description": "Deprecated - use disadvantage.save.all instead. Disadvantage on all saves."
     },
     "flags.midi-qol.disadvantage.ability.save.cha": {
-      "name": "Disadvantage (Charisma Saves)",
-      "description": ""
+      "name": "Disadvantage Charisma Saves (Deprecated)",
+      "description": "Deprecated - use disadvantage.save.cha instead. Disadvantage on Charisma saves."
     },
     "flags.midi-qol.disadvantage.ability.save.con": {
-      "name": "Disadvantage (Constitution Saves)",
-      "description": ""
+      "name": "Disadvantage Constitution Saves (Deprecated)",
+      "description": "Deprecated - use disadvantage.save.con instead. Disadvantage on Constitution saves."
     },
     "flags.midi-qol.disadvantage.ability.save.dex": {
-      "name": "Disadvantage (Dexterity Saves)",
-      "description": ""
+      "name": "Disadvantage Dexterity Saves (Deprecated)",
+      "description": "Deprecated - use disadvantage.save.dex instead. Disadvantage on Dexterity saves."
     },
     "flags.midi-qol.disadvantage.ability.save.int": {
-      "name": "Disadvantage (Intelligence Saves)",
-      "description": ""
+      "name": "Disadvantage Intelligence Saves (Deprecated)",
+      "description": "Deprecated - use disadvantage.save.int instead. Disadvantage on Intelligence saves."
     },
     "flags.midi-qol.disadvantage.ability.save.str": {
-      "name": "Disadvantage (Strength Saves)",
-      "description": ""
+      "name": "Disadvantage Strength Saves (Deprecated)",
+      "description": "Deprecated - use disadvantage.save.str instead. Disadvantage on Strength saves."
     },
     "flags.midi-qol.disadvantage.ability.save.wis": {
-      "name": "Disadvantage (Wisdom Saves)",
-      "description": ""
+      "name": "Disadvantage Wisdom Saves (Deprecated)",
+      "description": "Deprecated - use disadvantage.save.wis instead. Disadvantage on Wisdom saves."
     },
     "flags.midi-qol.disadvantage.all": {
       "name": "Disadvantage All",
@@ -2023,6 +2079,326 @@
       "name": "Disadvantage (Wisdom Attacks)",
       "description": ""
     },
+    "flags.midi-qol.noAdvantage.attack.all": {
+      "name": "No Advantage (All Attacks)",
+      "description": "Prevents advantage on all attack rolls."
+    },
+    "flags.midi-qol.noAdvantage.attack.mwak": {
+      "name": "No Advantage (Melee Weapon)",
+      "description": "Prevents advantage on melee weapon attack rolls."
+    },
+    "flags.midi-qol.noAdvantage.attack.rwak": {
+      "name": "No Advantage (Ranged Weapon)",
+      "description": "Prevents advantage on ranged weapon attack rolls."
+    },
+    "flags.midi-qol.noAdvantage.attack.msak": {
+      "name": "No Advantage (Melee Spell)",
+      "description": "Prevents advantage on melee spell attack rolls."
+    },
+    "flags.midi-qol.noAdvantage.attack.rsak": {
+      "name": "No Advantage (Ranged Spell)",
+      "description": "Prevents advantage on ranged spell attack rolls."
+    },
+    "flags.midi-qol.noDisadvantage.attack.all": {
+      "name": "No Disadvantage (All Attacks)",
+      "description": "Prevents disadvantage on all attack rolls."
+    },
+    "flags.midi-qol.noDisadvantage.attack.mwak": {
+      "name": "No Disadvantage (Melee Weapon)",
+      "description": "Prevents disadvantage on melee weapon attack rolls."
+    },
+    "flags.midi-qol.noDisadvantage.attack.rwak": {
+      "name": "No Disadvantage (Ranged Weapon)",
+      "description": "Prevents disadvantage on ranged weapon attack rolls."
+    },
+    "flags.midi-qol.noDisadvantage.attack.msak": {
+      "name": "No Disadvantage (Melee Spell)",
+      "description": "Prevents disadvantage on melee spell attack rolls."
+    },
+    "flags.midi-qol.noDisadvantage.attack.rsak": {
+      "name": "No Disadvantage (Ranged Spell)",
+      "description": "Prevents disadvantage on ranged spell attack rolls."
+    },
+    "flags.midi-qol.noAdvantage.all": {
+      "name": "No Advantage (All Rolls)",
+      "description": "Prevents advantage on all rolls."
+    },
+    "flags.midi-qol.noDisadvantage.all": {
+      "name": "No Disadvantage (All Rolls)",
+      "description": "Prevents disadvantage on all rolls."
+    },
+    "flags.midi-qol.noAdvantage.concentration": {
+      "name": "No Advantage (Concentration)",
+      "description": "Prevents advantage on concentration saves."
+    },
+    "flags.midi-qol.noDisadvantage.concentration": {
+      "name": "No Disadvantage (Concentration)",
+      "description": "Prevents disadvantage on concentration saves."
+    },
+    "flags.midi-qol.noAdvantage.deathSave": {
+      "name": "No Advantage (Death Save)",
+      "description": "Prevents advantage on death saving throws."
+    },
+    "flags.midi-qol.noDisadvantage.deathSave": {
+      "name": "No Disadvantage (Death Save)",
+      "description": "Prevents disadvantage on death saving throws."
+    },
+    "flags.midi-qol.initiativeNoAdv": {
+      "name": "No Advantage (Initiative)",
+      "description": "Prevents advantage on initiative rolls."
+    },
+    "flags.midi-qol.initiativeNoDisadv": {
+      "name": "No Disadvantage (Initiative)",
+      "description": "Prevents disadvantage on initiative rolls."
+    },
+    "flags.midi-qol.noAdvantage.save.all": {
+      "name": "No Advantage (All Saves)",
+      "description": "Prevents advantage on all saving throws."
+    },
+    "flags.midi-qol.noAdvantage.save.str": {
+      "name": "No Advantage (Strength Saves)",
+      "description": "Prevents advantage on Strength saving throws."
+    },
+    "flags.midi-qol.noAdvantage.save.dex": {
+      "name": "No Advantage (Dexterity Saves)",
+      "description": "Prevents advantage on Dexterity saving throws."
+    },
+    "flags.midi-qol.noAdvantage.save.con": {
+      "name": "No Advantage (Constitution Saves)",
+      "description": "Prevents advantage on Constitution saving throws."
+    },
+    "flags.midi-qol.noAdvantage.save.int": {
+      "name": "No Advantage (Intelligence Saves)",
+      "description": "Prevents advantage on Intelligence saving throws."
+    },
+    "flags.midi-qol.noAdvantage.save.wis": {
+      "name": "No Advantage (Wisdom Saves)",
+      "description": "Prevents advantage on Wisdom saving throws."
+    },
+    "flags.midi-qol.noAdvantage.save.cha": {
+      "name": "No Advantage (Charisma Saves)",
+      "description": "Prevents advantage on Charisma saving throws."
+    },
+    "flags.midi-qol.noDisadvantage.save.all": {
+      "name": "No Disadvantage (All Saves)",
+      "description": "Prevents disadvantage on all saving throws."
+    },
+    "flags.midi-qol.noDisadvantage.save.str": {
+      "name": "No Disadvantage (Strength Saves)",
+      "description": "Prevents disadvantage on Strength saving throws."
+    },
+    "flags.midi-qol.noDisadvantage.save.dex": {
+      "name": "No Disadvantage (Dexterity Saves)",
+      "description": "Prevents disadvantage on Dexterity saving throws."
+    },
+    "flags.midi-qol.noDisadvantage.save.con": {
+      "name": "No Disadvantage (Constitution Saves)",
+      "description": "Prevents disadvantage on Constitution saving throws."
+    },
+    "flags.midi-qol.noDisadvantage.save.int": {
+      "name": "No Disadvantage (Intelligence Saves)",
+      "description": "Prevents disadvantage on Intelligence saving throws."
+    },
+    "flags.midi-qol.noDisadvantage.save.wis": {
+      "name": "No Disadvantage (Wisdom Saves)",
+      "description": "Prevents disadvantage on Wisdom saving throws."
+    },
+    "flags.midi-qol.noDisadvantage.save.cha": {
+      "name": "No Disadvantage (Charisma Saves)",
+      "description": "Prevents disadvantage on Charisma saving throws."
+    },
+    "flags.midi-qol.noAdvantage.check.all": {
+      "name": "No Advantage (All Checks)",
+      "description": "Prevents advantage on all ability checks."
+    },
+    "flags.midi-qol.noAdvantage.check.str": {
+      "name": "No Advantage (Strength Checks)",
+      "description": "Prevents advantage on Strength ability checks."
+    },
+    "flags.midi-qol.noAdvantage.check.dex": {
+      "name": "No Advantage (Dexterity Checks)",
+      "description": "Prevents advantage on Dexterity ability checks."
+    },
+    "flags.midi-qol.noAdvantage.check.con": {
+      "name": "No Advantage (Constitution Checks)",
+      "description": "Prevents advantage on Constitution ability checks."
+    },
+    "flags.midi-qol.noAdvantage.check.int": {
+      "name": "No Advantage (Intelligence Checks)",
+      "description": "Prevents advantage on Intelligence ability checks."
+    },
+    "flags.midi-qol.noAdvantage.check.wis": {
+      "name": "No Advantage (Wisdom Checks)",
+      "description": "Prevents advantage on Wisdom ability checks."
+    },
+    "flags.midi-qol.noAdvantage.check.cha": {
+      "name": "No Advantage (Charisma Checks)",
+      "description": "Prevents advantage on Charisma ability checks."
+    },
+    "flags.midi-qol.noDisadvantage.check.all": {
+      "name": "No Disadvantage (All Checks)",
+      "description": "Prevents disadvantage on all ability checks."
+    },
+    "flags.midi-qol.noDisadvantage.check.str": {
+      "name": "No Disadvantage (Strength Checks)",
+      "description": "Prevents disadvantage on Strength ability checks."
+    },
+    "flags.midi-qol.noDisadvantage.check.dex": {
+      "name": "No Disadvantage (Dexterity Checks)",
+      "description": "Prevents disadvantage on Dexterity ability checks."
+    },
+    "flags.midi-qol.noDisadvantage.check.con": {
+      "name": "No Disadvantage (Constitution Checks)",
+      "description": "Prevents disadvantage on Constitution ability checks."
+    },
+    "flags.midi-qol.noDisadvantage.check.int": {
+      "name": "No Disadvantage (Intelligence Checks)",
+      "description": "Prevents disadvantage on Intelligence ability checks."
+    },
+    "flags.midi-qol.noDisadvantage.check.wis": {
+      "name": "No Disadvantage (Wisdom Checks)",
+      "description": "Prevents disadvantage on Wisdom ability checks."
+    },
+    "flags.midi-qol.noDisadvantage.check.cha": {
+      "name": "No Disadvantage (Charisma Checks)",
+      "description": "Prevents disadvantage on Charisma ability checks."
+    },
+    "flags.midi-qol.noAdvantage.skill.all": {
+      "name": "No Advantage (All Skills)",
+      "description": "Prevents advantage on all skill checks."
+    },
+    "flags.midi-qol.noAdvantage.skill.str": { "name": "No Advantage (STR Skills)", "description": "Prevents advantage on Strength-based skill checks." },
+    "flags.midi-qol.noAdvantage.skill.dex": { "name": "No Advantage (DEX Skills)", "description": "Prevents advantage on Dexterity-based skill checks." },
+    "flags.midi-qol.noAdvantage.skill.con": { "name": "No Advantage (CON Skills)", "description": "Prevents advantage on Constitution-based skill checks." },
+    "flags.midi-qol.noAdvantage.skill.int": { "name": "No Advantage (INT Skills)", "description": "Prevents advantage on Intelligence-based skill checks." },
+    "flags.midi-qol.noAdvantage.skill.wis": { "name": "No Advantage (WIS Skills)", "description": "Prevents advantage on Wisdom-based skill checks." },
+    "flags.midi-qol.noAdvantage.skill.cha": { "name": "No Advantage (CHA Skills)", "description": "Prevents advantage on Charisma-based skill checks." },
+    "flags.midi-qol.noAdvantage.skill.acr": { "name": "No Advantage (Acrobatics)", "description": "Prevents advantage on Acrobatics checks." },
+    "flags.midi-qol.noAdvantage.skill.ani": { "name": "No Advantage (Animal Handling)", "description": "Prevents advantage on Animal Handling checks." },
+    "flags.midi-qol.noAdvantage.skill.arc": { "name": "No Advantage (Arcana)", "description": "Prevents advantage on Arcana checks." },
+    "flags.midi-qol.noAdvantage.skill.ath": { "name": "No Advantage (Athletics)", "description": "Prevents advantage on Athletics checks." },
+    "flags.midi-qol.noAdvantage.skill.dec": { "name": "No Advantage (Deception)", "description": "Prevents advantage on Deception checks." },
+    "flags.midi-qol.noAdvantage.skill.his": { "name": "No Advantage (History)", "description": "Prevents advantage on History checks." },
+    "flags.midi-qol.noAdvantage.skill.ins": { "name": "No Advantage (Insight)", "description": "Prevents advantage on Insight checks." },
+    "flags.midi-qol.noAdvantage.skill.inv": { "name": "No Advantage (Investigation)", "description": "Prevents advantage on Investigation checks." },
+    "flags.midi-qol.noAdvantage.skill.itm": { "name": "No Advantage (Intimidation)", "description": "Prevents advantage on Intimidation checks." },
+    "flags.midi-qol.noAdvantage.skill.med": { "name": "No Advantage (Medicine)", "description": "Prevents advantage on Medicine checks." },
+    "flags.midi-qol.noAdvantage.skill.nat": { "name": "No Advantage (Nature)", "description": "Prevents advantage on Nature checks." },
+    "flags.midi-qol.noAdvantage.skill.per": { "name": "No Advantage (Persuasion)", "description": "Prevents advantage on Persuasion checks." },
+    "flags.midi-qol.noAdvantage.skill.prc": { "name": "No Advantage (Perception)", "description": "Prevents advantage on Perception checks." },
+    "flags.midi-qol.noAdvantage.skill.prf": { "name": "No Advantage (Performance)", "description": "Prevents advantage on Performance checks." },
+    "flags.midi-qol.noAdvantage.skill.rel": { "name": "No Advantage (Religion)", "description": "Prevents advantage on Religion checks." },
+    "flags.midi-qol.noAdvantage.skill.slt": { "name": "No Advantage (Sleight of Hand)", "description": "Prevents advantage on Sleight of Hand checks." },
+    "flags.midi-qol.noAdvantage.skill.ste": { "name": "No Advantage (Stealth)", "description": "Prevents advantage on Stealth checks." },
+    "flags.midi-qol.noAdvantage.skill.sur": { "name": "No Advantage (Survival)", "description": "Prevents advantage on Survival checks." },
+    "flags.midi-qol.noDisadvantage.skill.all": {
+      "name": "No Disadvantage (All Skills)",
+      "description": "Prevents disadvantage on all skill checks."
+    },
+    "flags.midi-qol.noDisadvantage.skill.str": { "name": "No Disadvantage (STR Skills)", "description": "Prevents disadvantage on Strength-based skill checks." },
+    "flags.midi-qol.noDisadvantage.skill.dex": { "name": "No Disadvantage (DEX Skills)", "description": "Prevents disadvantage on Dexterity-based skill checks." },
+    "flags.midi-qol.noDisadvantage.skill.con": { "name": "No Disadvantage (CON Skills)", "description": "Prevents disadvantage on Constitution-based skill checks." },
+    "flags.midi-qol.noDisadvantage.skill.int": { "name": "No Disadvantage (INT Skills)", "description": "Prevents disadvantage on Intelligence-based skill checks." },
+    "flags.midi-qol.noDisadvantage.skill.wis": { "name": "No Disadvantage (WIS Skills)", "description": "Prevents disadvantage on Wisdom-based skill checks." },
+    "flags.midi-qol.noDisadvantage.skill.cha": { "name": "No Disadvantage (CHA Skills)", "description": "Prevents disadvantage on Charisma-based skill checks." },
+    "flags.midi-qol.noDisadvantage.skill.acr": { "name": "No Disadvantage (Acrobatics)", "description": "Prevents disadvantage on Acrobatics checks." },
+    "flags.midi-qol.noDisadvantage.skill.ani": { "name": "No Disadvantage (Animal Handling)", "description": "Prevents disadvantage on Animal Handling checks." },
+    "flags.midi-qol.noDisadvantage.skill.arc": { "name": "No Disadvantage (Arcana)", "description": "Prevents disadvantage on Arcana checks." },
+    "flags.midi-qol.noDisadvantage.skill.ath": { "name": "No Disadvantage (Athletics)", "description": "Prevents disadvantage on Athletics checks." },
+    "flags.midi-qol.noDisadvantage.skill.dec": { "name": "No Disadvantage (Deception)", "description": "Prevents disadvantage on Deception checks." },
+    "flags.midi-qol.noDisadvantage.skill.his": { "name": "No Disadvantage (History)", "description": "Prevents disadvantage on History checks." },
+    "flags.midi-qol.noDisadvantage.skill.ins": { "name": "No Disadvantage (Insight)", "description": "Prevents disadvantage on Insight checks." },
+    "flags.midi-qol.noDisadvantage.skill.inv": { "name": "No Disadvantage (Investigation)", "description": "Prevents disadvantage on Investigation checks." },
+    "flags.midi-qol.noDisadvantage.skill.itm": { "name": "No Disadvantage (Intimidation)", "description": "Prevents disadvantage on Intimidation checks." },
+    "flags.midi-qol.noDisadvantage.skill.med": { "name": "No Disadvantage (Medicine)", "description": "Prevents disadvantage on Medicine checks." },
+    "flags.midi-qol.noDisadvantage.skill.nat": { "name": "No Disadvantage (Nature)", "description": "Prevents disadvantage on Nature checks." },
+    "flags.midi-qol.noDisadvantage.skill.per": { "name": "No Disadvantage (Persuasion)", "description": "Prevents disadvantage on Persuasion checks." },
+    "flags.midi-qol.noDisadvantage.skill.prc": { "name": "No Disadvantage (Perception)", "description": "Prevents disadvantage on Perception checks." },
+    "flags.midi-qol.noDisadvantage.skill.prf": { "name": "No Disadvantage (Performance)", "description": "Prevents disadvantage on Performance checks." },
+    "flags.midi-qol.noDisadvantage.skill.rel": { "name": "No Disadvantage (Religion)", "description": "Prevents disadvantage on Religion checks." },
+    "flags.midi-qol.noDisadvantage.skill.slt": { "name": "No Disadvantage (Sleight of Hand)", "description": "Prevents disadvantage on Sleight of Hand checks." },
+    "flags.midi-qol.noDisadvantage.skill.ste": { "name": "No Disadvantage (Stealth)", "description": "Prevents disadvantage on Stealth checks." },
+    "flags.midi-qol.noDisadvantage.skill.sur": { "name": "No Disadvantage (Survival)", "description": "Prevents disadvantage on Survival checks." },
+    "flags.midi-qol.noAdvantage.tool.all": {
+      "name": "No Advantage (All Tools)",
+      "description": "Prevents advantage on all tool checks."
+    },
+    "flags.midi-qol.noAdvantage.tool.alchemist": { "name": "No Advantage (Alchemist's Supplies)", "description": "Prevents advantage on Alchemist's Supplies checks." },
+    "flags.midi-qol.noAdvantage.tool.bagpipes": { "name": "No Advantage (Bagpipes)", "description": "Prevents advantage on Bagpipes checks." },
+    "flags.midi-qol.noAdvantage.tool.brewer": { "name": "No Advantage (Brewer's Supplies)", "description": "Prevents advantage on Brewer's Supplies checks." },
+    "flags.midi-qol.noAdvantage.tool.calligrapher": { "name": "No Advantage (Calligrapher's Supplies)", "description": "Prevents advantage on Calligrapher's Supplies checks." },
+    "flags.midi-qol.noAdvantage.tool.card": { "name": "No Advantage (Playing Card Set)", "description": "Prevents advantage on Playing Card Set checks." },
+    "flags.midi-qol.noAdvantage.tool.carpenter": { "name": "No Advantage (Carpenter's Tools)", "description": "Prevents advantage on Carpenter's Tools checks." },
+    "flags.midi-qol.noAdvantage.tool.cartographer": { "name": "No Advantage (Cartographer's Tools)", "description": "Prevents advantage on Cartographer's Tools checks." },
+    "flags.midi-qol.noAdvantage.tool.chess": { "name": "No Advantage (Chess Set)", "description": "Prevents advantage on Chess Set checks." },
+    "flags.midi-qol.noAdvantage.tool.cobbler": { "name": "No Advantage (Cobbler's Tools)", "description": "Prevents advantage on Cobbler's Tools checks." },
+    "flags.midi-qol.noAdvantage.tool.cook": { "name": "No Advantage (Cook's Utensils)", "description": "Prevents advantage on Cook's Utensils checks." },
+    "flags.midi-qol.noAdvantage.tool.dice": { "name": "No Advantage (Dice Set)", "description": "Prevents advantage on Dice Set checks." },
+    "flags.midi-qol.noAdvantage.tool.disg": { "name": "No Advantage (Disguise Kit)", "description": "Prevents advantage on Disguise Kit checks." },
+    "flags.midi-qol.noAdvantage.tool.drum": { "name": "No Advantage (Drum)", "description": "Prevents advantage on Drum checks." },
+    "flags.midi-qol.noAdvantage.tool.dulcimer": { "name": "No Advantage (Dulcimer)", "description": "Prevents advantage on Dulcimer checks." },
+    "flags.midi-qol.noAdvantage.tool.flute": { "name": "No Advantage (Flute)", "description": "Prevents advantage on Flute checks." },
+    "flags.midi-qol.noAdvantage.tool.forg": { "name": "No Advantage (Forgery Kit)", "description": "Prevents advantage on Forgery Kit checks." },
+    "flags.midi-qol.noAdvantage.tool.glassblower": { "name": "No Advantage (Glassblower's Tools)", "description": "Prevents advantage on Glassblower's Tools checks." },
+    "flags.midi-qol.noAdvantage.tool.herb": { "name": "No Advantage (Herbalism Kit)", "description": "Prevents advantage on Herbalism Kit checks." },
+    "flags.midi-qol.noAdvantage.tool.horn": { "name": "No Advantage (Horn)", "description": "Prevents advantage on Horn checks." },
+    "flags.midi-qol.noAdvantage.tool.jeweler": { "name": "No Advantage (Jeweler's Tools)", "description": "Prevents advantage on Jeweler's Tools checks." },
+    "flags.midi-qol.noAdvantage.tool.leatherworker": { "name": "No Advantage (Leatherworker's Tools)", "description": "Prevents advantage on Leatherworker's Tools checks." },
+    "flags.midi-qol.noAdvantage.tool.lute": { "name": "No Advantage (Lute)", "description": "Prevents advantage on Lute checks." },
+    "flags.midi-qol.noAdvantage.tool.lyre": { "name": "No Advantage (Lyre)", "description": "Prevents advantage on Lyre checks." },
+    "flags.midi-qol.noAdvantage.tool.mason": { "name": "No Advantage (Mason's Tools)", "description": "Prevents advantage on Mason's Tools checks." },
+    "flags.midi-qol.noAdvantage.tool.navg": { "name": "No Advantage (Navigator's Tools)", "description": "Prevents advantage on Navigator's Tools checks." },
+    "flags.midi-qol.noAdvantage.tool.painter": { "name": "No Advantage (Painter's Supplies)", "description": "Prevents advantage on Painter's Supplies checks." },
+    "flags.midi-qol.noAdvantage.tool.panflute": { "name": "No Advantage (Pan Flute)", "description": "Prevents advantage on Pan Flute checks." },
+    "flags.midi-qol.noAdvantage.tool.pois": { "name": "No Advantage (Poisoner's Kit)", "description": "Prevents advantage on Poisoner's Kit checks." },
+    "flags.midi-qol.noAdvantage.tool.potter": { "name": "No Advantage (Potter's Tools)", "description": "Prevents advantage on Potter's Tools checks." },
+    "flags.midi-qol.noAdvantage.tool.shawm": { "name": "No Advantage (Shawm)", "description": "Prevents advantage on Shawm checks." },
+    "flags.midi-qol.noAdvantage.tool.smith": { "name": "No Advantage (Smith's Tools)", "description": "Prevents advantage on Smith's Tools checks." },
+    "flags.midi-qol.noAdvantage.tool.thief": { "name": "No Advantage (Thieves' Tools)", "description": "Prevents advantage on Thieves' Tools checks." },
+    "flags.midi-qol.noAdvantage.tool.tinker": { "name": "No Advantage (Tinker's Tools)", "description": "Prevents advantage on Tinker's Tools checks." },
+    "flags.midi-qol.noAdvantage.tool.viol": { "name": "No Advantage (Viol)", "description": "Prevents advantage on Viol checks." },
+    "flags.midi-qol.noAdvantage.tool.weaver": { "name": "No Advantage (Weaver's Tools)", "description": "Prevents advantage on Weaver's Tools checks." },
+    "flags.midi-qol.noAdvantage.tool.woodcarver": { "name": "No Advantage (Woodcarver's Tools)", "description": "Prevents advantage on Woodcarver's Tools checks." },
+    "flags.midi-qol.noDisadvantage.tool.all": {
+      "name": "No Disadvantage (All Tools)",
+      "description": "Prevents disadvantage on all tool checks."
+    },
+    "flags.midi-qol.noDisadvantage.tool.alchemist": { "name": "No Disadvantage (Alchemist's Supplies)", "description": "Prevents disadvantage on Alchemist's Supplies checks." },
+    "flags.midi-qol.noDisadvantage.tool.bagpipes": { "name": "No Disadvantage (Bagpipes)", "description": "Prevents disadvantage on Bagpipes checks." },
+    "flags.midi-qol.noDisadvantage.tool.brewer": { "name": "No Disadvantage (Brewer's Supplies)", "description": "Prevents disadvantage on Brewer's Supplies checks." },
+    "flags.midi-qol.noDisadvantage.tool.calligrapher": { "name": "No Disadvantage (Calligrapher's Supplies)", "description": "Prevents disadvantage on Calligrapher's Supplies checks." },
+    "flags.midi-qol.noDisadvantage.tool.card": { "name": "No Disadvantage (Playing Card Set)", "description": "Prevents disadvantage on Playing Card Set checks." },
+    "flags.midi-qol.noDisadvantage.tool.carpenter": { "name": "No Disadvantage (Carpenter's Tools)", "description": "Prevents disadvantage on Carpenter's Tools checks." },
+    "flags.midi-qol.noDisadvantage.tool.cartographer": { "name": "No Disadvantage (Cartographer's Tools)", "description": "Prevents disadvantage on Cartographer's Tools checks." },
+    "flags.midi-qol.noDisadvantage.tool.chess": { "name": "No Disadvantage (Chess Set)", "description": "Prevents disadvantage on Chess Set checks." },
+    "flags.midi-qol.noDisadvantage.tool.cobbler": { "name": "No Disadvantage (Cobbler's Tools)", "description": "Prevents disadvantage on Cobbler's Tools checks." },
+    "flags.midi-qol.noDisadvantage.tool.cook": { "name": "No Disadvantage (Cook's Utensils)", "description": "Prevents disadvantage on Cook's Utensils checks." },
+    "flags.midi-qol.noDisadvantage.tool.dice": { "name": "No Disadvantage (Dice Set)", "description": "Prevents disadvantage on Dice Set checks." },
+    "flags.midi-qol.noDisadvantage.tool.disg": { "name": "No Disadvantage (Disguise Kit)", "description": "Prevents disadvantage on Disguise Kit checks." },
+    "flags.midi-qol.noDisadvantage.tool.drum": { "name": "No Disadvantage (Drum)", "description": "Prevents disadvantage on Drum checks." },
+    "flags.midi-qol.noDisadvantage.tool.dulcimer": { "name": "No Disadvantage (Dulcimer)", "description": "Prevents disadvantage on Dulcimer checks." },
+    "flags.midi-qol.noDisadvantage.tool.flute": { "name": "No Disadvantage (Flute)", "description": "Prevents disadvantage on Flute checks." },
+    "flags.midi-qol.noDisadvantage.tool.forg": { "name": "No Disadvantage (Forgery Kit)", "description": "Prevents disadvantage on Forgery Kit checks." },
+    "flags.midi-qol.noDisadvantage.tool.glassblower": { "name": "No Disadvantage (Glassblower's Tools)", "description": "Prevents disadvantage on Glassblower's Tools checks." },
+    "flags.midi-qol.noDisadvantage.tool.herb": { "name": "No Disadvantage (Herbalism Kit)", "description": "Prevents disadvantage on Herbalism Kit checks." },
+    "flags.midi-qol.noDisadvantage.tool.horn": { "name": "No Disadvantage (Horn)", "description": "Prevents disadvantage on Horn checks." },
+    "flags.midi-qol.noDisadvantage.tool.jeweler": { "name": "No Disadvantage (Jeweler's Tools)", "description": "Prevents disadvantage on Jeweler's Tools checks." },
+    "flags.midi-qol.noDisadvantage.tool.leatherworker": { "name": "No Disadvantage (Leatherworker's Tools)", "description": "Prevents disadvantage on Leatherworker's Tools checks." },
+    "flags.midi-qol.noDisadvantage.tool.lute": { "name": "No Disadvantage (Lute)", "description": "Prevents disadvantage on Lute checks." },
+    "flags.midi-qol.noDisadvantage.tool.lyre": { "name": "No Disadvantage (Lyre)", "description": "Prevents disadvantage on Lyre checks." },
+    "flags.midi-qol.noDisadvantage.tool.mason": { "name": "No Disadvantage (Mason's Tools)", "description": "Prevents disadvantage on Mason's Tools checks." },
+    "flags.midi-qol.noDisadvantage.tool.navg": { "name": "No Disadvantage (Navigator's Tools)", "description": "Prevents disadvantage on Navigator's Tools checks." },
+    "flags.midi-qol.noDisadvantage.tool.painter": { "name": "No Disadvantage (Painter's Supplies)", "description": "Prevents disadvantage on Painter's Supplies checks." },
+    "flags.midi-qol.noDisadvantage.tool.panflute": { "name": "No Disadvantage (Pan Flute)", "description": "Prevents disadvantage on Pan Flute checks." },
+    "flags.midi-qol.noDisadvantage.tool.pois": { "name": "No Disadvantage (Poisoner's Kit)", "description": "Prevents disadvantage on Poisoner's Kit checks." },
+    "flags.midi-qol.noDisadvantage.tool.potter": { "name": "No Disadvantage (Potter's Tools)", "description": "Prevents disadvantage on Potter's Tools checks." },
+    "flags.midi-qol.noDisadvantage.tool.shawm": { "name": "No Disadvantage (Shawm)", "description": "Prevents disadvantage on Shawm checks." },
+    "flags.midi-qol.noDisadvantage.tool.smith": { "name": "No Disadvantage (Smith's Tools)", "description": "Prevents disadvantage on Smith's Tools checks." },
+    "flags.midi-qol.noDisadvantage.tool.thief": { "name": "No Disadvantage (Thieves' Tools)", "description": "Prevents disadvantage on Thieves' Tools checks." },
+    "flags.midi-qol.noDisadvantage.tool.tinker": { "name": "No Disadvantage (Tinker's Tools)", "description": "Prevents disadvantage on Tinker's Tools checks." },
+    "flags.midi-qol.noDisadvantage.tool.viol": { "name": "No Disadvantage (Viol)", "description": "Prevents disadvantage on Viol checks." },
+    "flags.midi-qol.noDisadvantage.tool.weaver": { "name": "No Disadvantage (Weaver's Tools)", "description": "Prevents disadvantage on Weaver's Tools checks." },
+    "flags.midi-qol.noDisadvantage.tool.woodcarver": { "name": "No Disadvantage (Woodcarver's Tools)", "description": "Prevents disadvantage on Woodcarver's Tools checks." },
     "flags.midi-qol.disadvantage.concentration": {
       "name": "Disadvantage (Concentration)",
       "description": ""
@@ -2030,6 +2406,62 @@
     "flags.midi-qol.disadvantage.deathSave": {
       "name": "Disadvantage (Death Save)",
       "description": ""
+    },
+    "flags.midi-qol.disadvantage.check.all": {
+      "name": "Disadvantage (All Ability Checks)",
+      "description": "Disadvantage on all ability checks."
+    },
+    "flags.midi-qol.disadvantage.check.cha": {
+      "name": "Disadvantage (Charisma Checks)",
+      "description": "Disadvantage on Charisma checks."
+    },
+    "flags.midi-qol.disadvantage.check.con": {
+      "name": "Disadvantage (Constitution Checks)",
+      "description": "Disadvantage on Constitution checks."
+    },
+    "flags.midi-qol.disadvantage.check.dex": {
+      "name": "Disadvantage (Dexterity Checks)",
+      "description": "Disadvantage on Dexterity checks."
+    },
+    "flags.midi-qol.disadvantage.check.int": {
+      "name": "Disadvantage (Intelligence Checks)",
+      "description": "Disadvantage on Intelligence checks."
+    },
+    "flags.midi-qol.disadvantage.check.str": {
+      "name": "Disadvantage (Strength Checks)",
+      "description": "Disadvantage on Strength checks."
+    },
+    "flags.midi-qol.disadvantage.check.wis": {
+      "name": "Disadvantage (Wisdom Checks)",
+      "description": "Disadvantage on Wisdom checks."
+    },
+    "flags.midi-qol.disadvantage.save.all": {
+      "name": "Disadvantage (All Saves)",
+      "description": "Disadvantage on all saving throws."
+    },
+    "flags.midi-qol.disadvantage.save.cha": {
+      "name": "Disadvantage (Charisma Saves)",
+      "description": "Disadvantage on Charisma saving throws."
+    },
+    "flags.midi-qol.disadvantage.save.con": {
+      "name": "Disadvantage (Constitution Saves)",
+      "description": "Disadvantage on Constitution saving throws."
+    },
+    "flags.midi-qol.disadvantage.save.dex": {
+      "name": "Disadvantage (Dexterity Saves)",
+      "description": "Disadvantage on Dexterity saving throws."
+    },
+    "flags.midi-qol.disadvantage.save.int": {
+      "name": "Disadvantage (Intelligence Saves)",
+      "description": "Disadvantage on Intelligence saving throws."
+    },
+    "flags.midi-qol.disadvantage.save.str": {
+      "name": "Disadvantage (Strength Saves)",
+      "description": "Disadvantage on Strength saving throws."
+    },
+    "flags.midi-qol.disadvantage.save.wis": {
+      "name": "Disadvantage (Wisdom Saves)",
+      "description": "Disadvantage on Wisdom saving throws."
     },
     "flags.midi-qol.disadvantage.skill.acr": {
       "name": "Disadvantage (Acrobatics)",

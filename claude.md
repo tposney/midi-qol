@@ -71,6 +71,7 @@ For Foundry VTT core API methods, search the local source code at:
 - If a method is already being called in the midi-qol code tree, you can assume it has been verified and is correct
 - If no existing usage is found, search the dnd5e system source at `/home/timp/foundry-data/foundryv13/Data/systems/dnd5e`
 - Never imagine or assume that methods exist - always verify against actual source code
+- **When the user questions whether a method exists, ALWAYS verify before responding** - do not make assumptions about Foundry/dnd5e class inheritance or method availability. Check the actual source code or find existing verified usage in the codebase. If you cannot verify, acknowledge uncertainty rather than guessing. (Standard JavaScript/TypeScript types like Map, Set, Array can be trusted without verification.)
 - Example: `item.system.activities.getByIdentifier()` does not exist - the correct methods are:
   - `activities.get(id)` - get by activity ID
   - `activities.getByType(type)` - get activities by type (returns array)
