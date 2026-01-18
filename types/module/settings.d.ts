@@ -11,6 +11,8 @@ export declare let itemRollButtons: boolean;
 export declare let midiSoundSettings: any;
 export declare let midiSoundSettingsBackup: any;
 export declare let nsaFlag: boolean;
+export declare let playerControlsInvisibleTokens: boolean;
+export declare let pruneChatLog: boolean;
 export declare let replaceDefaultActivities: boolean;
 export declare let saveRequests: {};
 export declare let saveTimeouts: {};
@@ -50,6 +52,7 @@ declare class ConfigSettings {
     allowActorUseMacro: boolean;
     attackPerTarget: boolean;
     autoApplyDamage: string;
+    damageCardStyle: string;
     playerDamageCard: string;
     playerCardDamageDifferent: boolean;
     hidePlayerDamageCard: boolean;
@@ -59,6 +62,7 @@ declare class ConfigSettings {
     autoFastForward: string;
     autoItemEffects: string;
     autoRemoveSummonedCreature: boolean;
+    autoUndoTransformations: boolean;
     autoRemoveTemplate: boolean;
     autoRemoveInstantaneousTemplate: boolean;
     autoRollAttack: boolean;
@@ -85,7 +89,6 @@ declare class ConfigSettings {
     defaultSaveMultiplier: number;
     diceSound: string;
     displaySaveAdvantage: boolean;
-    displaySaveDC: boolean;
     doConcentrationCheck: string;
     griddedGridless: boolean;
     gridlessFudge: number | undefined;
@@ -98,6 +101,7 @@ declare class ConfigSettings {
     fixStickyKeys: boolean;
     fumbleSound: string;
     ghostRolls: boolean;
+    gmAttackDamageCards: boolean;
     gmAutoAttack: boolean;
     gmAutoDamage: string;
     gmAutoFastForwardAttack: boolean;
@@ -151,6 +155,7 @@ declare class ConfigSettings {
     rollChecksBlind: string[];
     rollSavesBlind: string[];
     rollSkillsBlind: string[];
+    savesBeforeDamage: boolean;
     saveStatsEvery: number;
     showDSN: boolean;
     showFastForward: boolean;
@@ -171,6 +176,7 @@ declare class ConfigSettings {
     undoChatColor: string;
     undoWorkflow: boolean;
     useDamageDetail: boolean;
+    waitForDamageApplication: boolean;
     weaponHitSound: string;
     weaponUseSound: string;
     weaponUseSoundRanged: string;
@@ -200,7 +206,9 @@ declare class ConfigSettings {
         nearbyFoe: number;
         optionalCritRule: number;
         removeHiddenInvis: boolean;
-        vitalityResource: string;
+        vitalityItem: string;
+        vitalityDeadCondition: string;
+        vitalityDeathRequires: string;
         wallsBlockRange: string;
     };
 }
@@ -224,6 +232,9 @@ export declare function collectSettingData(): {
     forceHideRoll: boolean;
     nsaFlag: boolean;
     saveToChatCard: boolean;
+    playerControlsInvisibleTokens: boolean;
+    pruneChatLog: boolean;
+    replaceDefaultActivities: boolean;
     targetConfirmation: {
         enabled: boolean;
         always: boolean;
@@ -286,6 +297,9 @@ export declare const rangeTargetOptions: {
 export declare const autoApplyDamageOptions: {
     [k: string]: string;
 };
+export declare const damageCardStyleOptions: {
+    [k: string]: string;
+};
 export declare const playerDamageCardOptions: {
     [k: string]: string;
 };
@@ -328,6 +342,28 @@ export declare const triggeredActivityTargetOptions: {
 export declare const triggeredActivityRollAsOptions: {
     [k: string]: string;
 };
+export declare const ignoreTraitsOptionsBase: {
+    idi: {
+        label: string;
+        hint: string;
+    };
+    idr: {
+        label: string;
+        hint: string;
+    };
+    idv: {
+        label: string;
+        hint: string;
+    };
+    ida: {
+        label: string;
+        hint: string;
+    };
+    idm: {
+        label: string;
+        hint: string;
+    };
+};
 export declare const ignoreTraitsOptions: {
     idi: {
         label: string;
@@ -350,6 +386,23 @@ export declare const ignoreTraitsOptions: {
         hint: string;
     };
 };
+export declare const ignoreTraitsCategoryLabels: {
+    idi: string;
+    idr: string;
+    idv: string;
+    ida: string;
+    idm: string;
+};
+/**
+ * Get ignore traits options including damage-type specific options.
+ * Returns options in format: { value, label, group? }
+ * Values are either "idi" (all) or "idi.fire" (specific damage type)
+ */
+export declare function getIgnoreTraitsOptions(): {
+    value: string;
+    label: string;
+    group?: string;
+}[];
 export declare const aoeTargetTypeOptions: {
     [k: string]: string;
 };
@@ -449,4 +502,12 @@ export declare const consumeConfigOptions: {
 export declare const registerSettings: () => void;
 export declare function disableWorkflowAutomation(): void;
 export declare function safeGetGameSetting(moduleName: string, settingName: string): any | undefined;
+/**
+ * Helper to check if save DCs should be displayed, based on dnd5e's challengeVisibility setting.
+ * Replaces the deprecated midi-qol displaySaveDC setting.
+ * @param actor Optional actor to check ownership for "player" visibility setting.
+ *              When visibility is "player", DC is only shown if the actor has player ownership.
+ * @returns true if DCs should be shown, false if hidden
+ */
+export declare function shouldDisplaySaveDC(actor?: Actor): boolean;
 export {};

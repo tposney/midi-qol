@@ -378,7 +378,7 @@ export function initHooks() {
 
     // Check if it's a macro specification
     if (effectIdOrUuid.startsWith("function.") || effectIdOrUuid.startsWith("Macro.") ||
-        effectIdOrUuid.startsWith("ItemMacro") || effectIdOrUuid.startsWith("ActivityMacro")) {
+      effectIdOrUuid.startsWith("ItemMacro") || effectIdOrUuid.startsWith("ActivityMacro")) {
       // Execute macro with actor context
       await executeMacroSpec(effectIdOrUuid, actor, effect);
     } else {
@@ -1305,25 +1305,43 @@ Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
 Hooks.on("dnd5e.preRollConcentration", (rollConfig, dialogConfig, messageConfig) => {
   if (!rollConfig.subject) return true;
   const actor = rollConfig.subject as Actor.Implementation;
-  // insert advantage and disadvantage
-  // insert midi bonuses.
   if (rollConfig.workflowOptions?.noConcentrationCheck) return false;
+
   const concAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.advantage.concentration`);
   const concDisAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.disadvantage.concentration`);
-  let concAdv;
-  let concDisAdv;
-  if (concAdvFlag || concDisAdvFlag) {
+  const concNoAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.noAdvantage.concentration`);
+  const concNoDisAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.noDisadvantage.concentration`);
+  const noAdvAllFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.noAdvantage.all`);
+  const noDisAdvAllFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.noDisadvantage.all`);
+
+  if (concAdvFlag || concDisAdvFlag || concNoAdvFlag || concNoDisAdvFlag || noAdvAllFlag || noDisAdvAllFlag) {
     const conditionData = createConditionData({ workflow: undefined, target: undefined, actor });
-    if (concAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.advantage.concentration`, conditionData)) {
-      concAdv = true;
-    }
-    if (concDisAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.disadvantage.concentration`, conditionData)) {
-      concDisAdv = true;
+
+    let advantageCount = (concAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.advantage.concentration`, conditionData)) ? 1 : 0;
+    let disadvantageCount = (concDisAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.disadvantage.concentration`, conditionData)) ? 1 : 0;
+
+    // Check noAdvantage/noDisadvantage flags
+    const advantageSuppressed = (noAdvAllFlag && evalAllConditions(actor, `flags.${MODULE_ID}.noAdvantage.all`, conditionData))
+      || (concNoAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.noAdvantage.concentration`, conditionData));
+    const disadvantageSuppressed = (noDisAdvAllFlag && evalAllConditions(actor, `flags.${MODULE_ID}.noDisadvantage.all`, conditionData))
+      || (concNoDisAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.noDisadvantage.concentration`, conditionData));
+
+    // Combine midi-qol flags with dnd5e's native roll mode
+    const { advantage, disadvantage } = globalThis.dnd5e.dataModels.fields.AdvantageModeField.combineFields(
+      actor.system,
+      (advantageSuppressed || disadvantageSuppressed) ? [] : ["attributes.concentration.roll.mode"],
+      {
+        advantages: { count: advantageCount, suppressed: advantageSuppressed },
+        disadvantages: { count: disadvantageCount, suppressed: disadvantageSuppressed }
+      }
+    );
+
+    // Update the roll options
+    if (rollConfig.rolls?.[0]?.options) {
+      rollConfig.rolls[0].options.advantage = advantageSuppressed ? false : advantage;
+      rollConfig.rolls[0].options.disadvantage = disadvantageSuppressed ? false : disadvantage;
     }
   }
-
-  rollConfig.advantage ||= concAdv;
-  rollConfig.disadvantage ||= concDisAdv;
 
   return true;
 })
@@ -1364,18 +1382,37 @@ Hooks.on("dnd5e.preConfigureInitiative", (actor, rollConfig) => {
   //@ts-expect-error no dnd5e-types
   const init: string = actor.system.attributes.init.value ?? "dex";
   const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: actor });
+
+  // Check for advantage
   if (evalAllConditions(actor, "flags.midi-qol.advantage.all", conditionData)
     || evalAllConditions(actor, "flags.midi-qol.advantage.ability.check.all", conditionData)
     || evalAllConditions(actor, `flags.midi-qol.advantage.ability.check.${init}`, conditionData)
     || evalAllConditions(actor, `flags.${game.system?.id}.initiativeAdv`, conditionData)) {
     options.advantage ||= true;
   }
+
+  // Check for disadvantage
   if (evalAllConditions(actor, "flags.midi-qol.disadvantage.all", conditionData)
     || evalAllConditions(actor, "flags.midi-qol.disadvantage.ability.check.all", conditionData)
     || evalAllConditions(actor, `flags.midi-qol.disadvantage.ability.check.${init}`, conditionData)
     || evalAllConditions(actor, `flags.${game.system?.id}.initiativeDisadv`, conditionData)) {
     options.disadvantage ||= true;
   }
+
+  // Check for noAdvantage (prevents advantage)
+  if (evalAllConditions(actor, "flags.midi-qol.noAdvantage.all", conditionData)
+    || evalAllConditions(actor, "flags.midi-qol.noAdvantage.initiative", conditionData)
+    || evalAllConditions(actor, `flags.${game.system?.id}.initiativeNoAdv`, conditionData)) {
+    options.advantage = false;
+  }
+
+  // Check for noDisadvantage (prevents disadvantage)
+  if (evalAllConditions(actor, "flags.midi-qol.noDisadvantage.all", conditionData)
+    || evalAllConditions(actor, "flags.midi-qol.noDisadvantage.initiative", conditionData)
+    || evalAllConditions(actor, `flags.${game.system?.id}.initiativeNoDisadv`, conditionData)) {
+    options.disadvantage = false;
+  }
+
   if (foundry.utils.getProperty(actor, `flags.${game.system?.id}.initiativeHalfProficiency`) && !parts.includes("@prof")) {
     parts.push("@prof");
     // @ts-expect-error

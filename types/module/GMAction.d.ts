@@ -23,7 +23,7 @@ export declare function preferredActiveGM(): User | null;
 export declare function unTimedExecuteAsGM(toDo: string, ...args: any[]): Promise<any>;
 export declare function timedAwaitExecuteAsGM(toDo: string, data: any): Promise<any>;
 export declare function initGMActionSetup(): void;
-export declare let processUndoDamageCard: (message: ChatMessage.Implementation, html: HTMLElement, data: any) => boolean;
+export declare let processUndoDamageCard: (message: ChatMessage.Implementation, html: HTMLElement, _data: unknown) => boolean;
 export interface SerializedDamageListEntry extends Omit<DamageListEntry, "calcDamageOptions" | "damageDetail" | "rawDamageDetail" | "damageDetails"> {
     damageDetail: DamageDescriptionObject[];
     damageDetails: {

@@ -41,6 +41,7 @@ For Foundry VTT core API methods, search the local source code at:
 - **Do not automatically commit or push changes** to midi-qol-13x or midi-qol-tests
 - The user wants to review diffs before committing and pushing to GitLab
 - Make file changes but leave git operations to the user
+- **NEVER run `git checkout` without explicit user approval** - this can destroy uncommitted work that took days to create
 
 ### Documentation Files
 - **Always include a datestamp in the filename** when creating documentation files
@@ -57,12 +58,20 @@ For Foundry VTT core API methods, search the local source code at:
 - **Keep ChatLogPrune and ChatLogMidi in sync**: When modifying `src/module/ChatClasses/ChatLogMidi.ts`, also update `chatlog-prune/src/ChatLogPrune.ts` (and vice versa) unless the change would cause a loss of functionality in one module
 - midi-qol's built-in chat log pruning is deprecated (since 13.0.37) and will be removed in v14 - users should install chatlog-prune instead
 
+### TypeScript Typing
+- **Avoid using `as any` casts** - always check `globals.ts` first for existing types
+- Adding properties to existing types in `globals.ts` is fine (e.g., new flag keys, new properties on existing interfaces)
+- **Query the user before creating entirely new types** in `globals.ts`
+- Common types defined in globals.ts: `ActivityUseConfiguration`, `RollProcessConfig`, `RollDialogConfig`, flag types for ChatMessage/Item/Actor
+- For new flag keys, add them to the appropriate flag type definition in globals.ts (e.g., `"use.otherScaling"?: number | false;` in the midi-qol flags)
+
 ### External API Usage
 - **Before writing any code that calls dnd5e or Foundry methods**, first search the midi-qol codebase to find existing usage of similar functionality
 - Do not write the call first and verify later - search first, then write
 - If a method is already being called in the midi-qol code tree, you can assume it has been verified and is correct
 - If no existing usage is found, search the dnd5e system source at `/home/timp/foundry-data/foundryv13/Data/systems/dnd5e`
 - Never imagine or assume that methods exist - always verify against actual source code
+- **When the user questions whether a method exists, ALWAYS verify before responding** - do not make assumptions about Foundry/dnd5e class inheritance or method availability. Check the actual source code or find existing verified usage in the codebase. If you cannot verify, acknowledge uncertainty rather than guessing. (Standard JavaScript/TypeScript types like Map, Set, Array can be trusted without verification.)
 - Example: `item.system.activities.getByIdentifier()` does not exist - the correct methods are:
   - `activities.get(id)` - get by activity ID
   - `activities.getByType(type)` - get activities by type (returns array)

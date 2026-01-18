@@ -259,7 +259,7 @@
       "_id": "YORAdBBkqyYwsqFa",
       "changes": [
         {
-          "key": "flags.midi-qol.advantage.ability.save.all",
+          "key": "flags.midi-qol.advantage.save.all",
           "mode": 0,
           "value": "item.type === \"spell\" || item.flags?.midiProperties?.magiceffect",
           "priority": 20

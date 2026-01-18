@@ -1,5 +1,7 @@
 import { MidiOptions } from "./utils.js";
 import { ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
+export { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./MidiDependentsRegistry.js";
+export declare const skipConcentrationActorUuids: Set<string>;
 export interface Options {
     advantage: boolean | undefined;
     disadvantage: boolean | undefined;
@@ -36,8 +38,42 @@ export declare function deathSaveHook(rolls: Roll[], { chatString, subject: acto
 }): void;
 export declare function procAutoFail(actor: Actor.Implementation, rollType: string, abilityId: string): boolean;
 export declare function procAutoFailSkill(actor: Actor.Implementation, skillId?: string): boolean;
-export declare function procAbilityAdvantage(actor: Actor.Implementation, rollType: string, abilityId: string, options: MidiOptions): Promise<MidiOptions>;
-export declare function procAdvantageSkill(actor: Actor.Implementation, skillId: string, options: MidiOptions): Promise<MidiOptions>;
+export interface RollModifierFlags {
+    failFlags: string[];
+    successFlags: string[];
+    maxFlags: string[];
+    minFlags: string[];
+}
+export interface RollModifierResult {
+    autoFail: boolean;
+    autoSuccess: boolean;
+    max: number | undefined;
+    min: number | undefined;
+}
+export interface AdvantageFlags {
+    advantageFlags: string[];
+    disadvantageFlags: string[];
+    systemRollModeFields: string[];
+    sourceAdvantageFlags?: string[];
+    sourceDisadvantageFlags?: string[];
+    sourceNoAdvantageFlags?: string[];
+    sourceNoDisadvantageFlags?: string[];
+    deprecatedFlags?: Set<string>;
+}
+export declare function computeAbilityAdvantage(actor: Actor.Implementation, rollType: string, abilityId: string, options: MidiOptions): Promise<{
+    advantage: boolean;
+    disadvantage: boolean;
+    magicResistance: boolean;
+    magicVulnerability: boolean;
+}>;
+export declare function computeSkillAdvantage(actor: Actor.Implementation, skillId: string, options: MidiOptions): Promise<{
+    advantage: boolean;
+    disadvantage: boolean;
+}>;
+export declare function computeToolAdvantage(actor: Actor.Implementation, toolId: string, abilityId: string, options: MidiOptions): Promise<{
+    advantage: boolean;
+    disadvantage: boolean;
+}>;
 export declare function _prepareDerivedData(this: Actor.Implementation, wrapped: any, ...args: any[]): void;
 export declare function initPatching(): void;
 export declare function actorPrepareData(this: Actor.Implementation, wrapped: any): void;
@@ -52,7 +88,7 @@ export declare function getItemEffectsToDelete(args: {
     options: any;
 }): string[];
 export declare function zeroHPExpiry(actor: Actor.Implementation, update: Actor.UpdateData, options: Actor.Database.UpdateOptions, user: string): Promise<void>;
-export declare function checkWounded(actor: Actor.Implementation, update: Actor.UpdateData, options: Actor.Database.UpdateOptions, user: string): Promise<void>;
+export declare function checkWounded(actor: Actor.Implementation, update: Actor.UpdateData, options: Actor.Database.UpdateOptions, user: string, vitalityValue?: number): Promise<void>;
 export declare function readyPatching(): void;
 export declare function challengeConcentration(this: Actor.Implementation, wrapped: any, { dc, ability }?: {
     dc?: number | undefined;
@@ -64,6 +100,7 @@ export declare function checkDeleteTemplate(templateDocument: MeasuredTemplateDo
 export declare let actorAbilityRollPatching: () => void;
 export declare function rollToolCheck(this: Actor.Implementation, wrapped: any, config?: RollProcessConfig & {
     ability?: string;
+    tool?: string;
 }, dialog?: RollDialogConfig, message?: RollMessageConfig): Promise<Roll<import("fvtt-types/utils").EmptyObject>[] | undefined>;
 export declare function createRollResultFromCustomRoll(customRoll: any): Promise<Roll.Evaluated<Roll<import("fvtt-types/utils").EmptyObject>>>;
 export declare function _preDeleteCombat(this: Combat.Implementation, wrapped: any, ...args: any[]): Promise<any>;

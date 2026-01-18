@@ -19,6 +19,7 @@ import { TroubleShooter } from "./module/apps/TroubleShooter";
 import { ChatLogMidi } from "./module/ChatClasses/ChatLogMidi";
 import { ChatMessageMidi } from "./module/ChatClasses/ChatMessageMidi";
 import { DamageApplicationElementMidi } from "./module/ChatClasses/DamageApplicationElementMidi";
+import { MidiDependentsRegistry } from "./module/MidiDependentsRegistry";
 declare module "fvtt-types/configuration" {
     interface AssumeHookRan {
         init: never;
@@ -35,9 +36,14 @@ declare module "fvtt-types/configuration" {
             "dnd5e.postAbilityCheckRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
             "dnd5e.postAttackRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
             "dnd5e.postBuildSkillRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
+            "dnd5e.postBuildAbilityCheckRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
+            "dnd5e.postBuildSavingThrowRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
+            "dnd5e.postBuildDeathSaveRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
+            "dnd5e.postBuildToolRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
             "dnd5e.postSavingThrowRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
             "dnd5e.postSkillRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
-            "dnd5e.postSummon": (activity: Activity, profile: unknown, tokens: foundry.canvas.placeables.Token.Implementation[], options: unknown) => void;
+            "dnd5e.postSummon": (activity: Activity, profile: unknown, tokens: TokenDocument.Implementation[], options: unknown) => void;
+            "dnd5e.postUseActivity": (activity: Activity, usageConfig: ActivityUseConfiguration, results: unknown) => boolean;
             "dnd5e.postUseLinkedSpell": (activity: Activity, usageConfig: ActivityUseConfiguration, results: unknown) => void;
             "dnd5e.preActivityConsumption": (activity: Activity, usageConfig: ActivityUseConfiguration, messageConfig: RollMessageConfig) => boolean | void;
             "dnd5e.preApplyDamage": (actor: Actor.Implementation, amount: number, updates: Actor.UpdateData, options: DamageApplicationOptions) => boolean | void;
@@ -49,12 +55,14 @@ declare module "fvtt-types/configuration" {
             }) => void;
             "dnd5e.preCreateActivityTemplate": (activity: Activity, templateData: MeasuredTemplateDocument.CreateData) => boolean | void;
             "dnd5e.preRollAbilityCheck": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
-            "dnd5e.preRollAbilityCheckV2": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
             "dnd5e.preRollAttack": (rollConfig: RollProcessConfig & {
                 attackMode: string;
             }, dialogConfig: RollDialogConfig, messageConfig: RollMessageConfig) => boolean | void;
-            "dnd5e.preRollConcentrationV2": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
-            "dnd5e.preRollDamageV2": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
+            "dnd5e.preRollAttackV2": (rollConfig: RollProcessConfig & {
+                attackMode: string;
+            }, dialogConfig: RollDialogConfig, messageConfig: RollMessageConfig) => boolean | void;
+            "dnd5e.preRollConcentration": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
+            "dnd5e.preRollDamage": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
             "dnd5e.preRollDeathSave": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
             "dnd5e.preRollSavingThrow": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
             "dnd5e.preRollSkill": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
@@ -72,10 +80,10 @@ declare module "fvtt-types/configuration" {
                     quantity: number;
                 } | null;
             }) => void;
-            "dnd5e.rollConcentrationV2": (rolls: Roll[], data: {
+            "dnd5e.rollConcentration": (rolls: Roll[], data: {
                 subject?: Actor.Implementation;
             }) => void;
-            "dnd5e.rollDamageV2": (rolls: Roll[], data?: {
+            "dnd5e.rollDamage": (rolls: Roll[], data?: {
                 subject?: Activity;
             }) => void;
             "dnd5e.rollDeathSave": (rolls: Roll[], data: {
@@ -98,6 +106,8 @@ declare module "fvtt-types/configuration" {
             "midi-qol.removeUndoEntry": (data?: UndoData) => void;
             "midi-qol.setup": (data: typeof globalThis.MidiQOL) => void;
             "getHeaderControlsActivitySheet": (app: foundry.applications.api.Application, buttons: any[]) => void;
+            "tidy5e-sheet.ready": (api: any) => void;
+            "simplecover5eReady": () => void;
         }
     }
     interface SettingConfig {
@@ -107,6 +117,7 @@ declare module "fvtt-types/configuration" {
         "dnd5e.challengeVisibility": string;
         "midi-qol.MidiSoundSettings": Record<string, any>;
         "midi-qol.playerControlsInvisibleTokens": boolean;
+        "midi-qol.pruneChatLog": any;
         "midi-qol.RollStats": Record<string, Stats>;
         "midi-qol.ConfigSettings": typeof configSettings;
         "midi-qol.CriticalDamage": string;
@@ -130,6 +141,7 @@ declare module "fvtt-types/configuration" {
         "midi-qol.splashWarnings": boolean;
         "midi-qol.last-run-version": string;
         "midi-qol.instanceId": string;
+        "chris-premades.effectInterface": boolean;
     }
     interface FlagConfig {
         ActiveEffect: {
@@ -146,6 +158,11 @@ declare module "fvtt-types/configuration" {
                     type: string;
                     id: string;
                     uuid: string;
+                };
+                riders?: {
+                    effect?: string[];
+                    activity?: string[];
+                    statuses?: string[];
                 };
             };
             dae?: {
@@ -174,7 +191,9 @@ declare module "fvtt-types/configuration" {
                     castLevel?: number;
                     baseLevel?: number;
                 };
+                dependentOn?: string;
                 overtimeChatCardUuids?: string[];
+                transformedActorUuids?: string[];
             };
         };
         Actor: {
@@ -184,6 +203,7 @@ declare module "fvtt-types/configuration" {
                 sharpShooter?: string;
             };
             "midi-qol"?: {
+                dependentOn?: string;
                 actions?: {
                     reaction?: boolean;
                     reactionsUsed?: number;
@@ -195,6 +215,7 @@ declare module "fvtt-types/configuration" {
                     bonusActionsMax?: number;
                     bonusActionsReset?: "eachTurn" | "onTurnStart" | "rest" | "never";
                     reactionCombatRound?: number;
+                    bonusActionCombatRound?: number;
                 };
                 acBonus?: number;
                 advantage?: {
@@ -209,6 +230,7 @@ declare module "fvtt-types/configuration" {
                     deathSave?: string;
                     skill?: Record<string, string>;
                 };
+                canFlank: string;
                 carefulSpells?: boolean;
                 concentrationSaveBonus?: number;
                 critical?: Record<string, string>;
@@ -239,6 +261,7 @@ declare module "fvtt-types/configuration" {
                     all?: string;
                     attack?: Record<string, string>;
                     critical?: Record<string, string>;
+                    deathSave?: string;
                     disadvantage?: {
                         heavy?: boolean;
                     };
@@ -250,6 +273,7 @@ declare module "fvtt-types/configuration" {
                         somatic?: string;
                         material?: string;
                     };
+                    tool?: Record<string, string>;
                 };
                 grants?: {
                     advantage?: {
@@ -296,6 +320,8 @@ declare module "fvtt-types/configuration" {
                         attack?: Record<string, string>;
                     };
                     noCritical?: Record<string, string>;
+                    fumble?: Record<string, string>;
+                    noFumble?: Record<string, string>;
                     noDisadvantage?: {
                         attack?: Record<string, string>;
                     };
@@ -303,6 +329,8 @@ declare module "fvtt-types/configuration" {
                 ignoreCover?: boolean;
                 ignoreNearbyFoes?: boolean;
                 ignoreWalls?: boolean;
+                initiativeAdv?: string;
+                initiativeDisadv?: string;
                 inMotion?: boolean;
                 long?: Record<string, string>;
                 magicResistance?: {
@@ -324,9 +352,11 @@ declare module "fvtt-types/configuration" {
                         save?: Record<string, string>;
                     };
                     damage?: Record<string, string>;
+                    deathSave?: string;
                     skill?: {
                         all?: string;
                     };
+                    tool?: Record<string, string>;
                 };
                 min?: {
                     ability?: {
@@ -335,9 +365,11 @@ declare module "fvtt-types/configuration" {
                         save?: Record<string, string>;
                     };
                     damage?: Record<string, string>;
+                    deathSave?: string;
                     skill?: {
                         all?: string;
                     };
+                    tool?: Record<string, string>;
                 };
                 neverTarget?: boolean;
                 noAdvantage?: {
@@ -359,12 +391,23 @@ declare module "fvtt-types/configuration" {
                     attack?: Record<string, string>;
                     damage?: Record<string, Record<string, string>>;
                 };
+                save?: {
+                    fail?: Record<string, string>;
+                };
                 sculptSpells?: boolean;
                 semiSuperSaver?: Record<string, string>;
                 sharpShooter?: string;
                 success?: {
+                    ability?: {
+                        all?: string;
+                        check?: Record<string, string>;
+                        save?: Record<string, string>;
+                    };
                     all?: boolean;
                     attack?: Record<string, string>;
+                    deathSave?: string;
+                    skill?: Record<string, string>;
+                    tool?: Record<string, string>;
                 };
                 superSaver?: Record<string, string>;
                 uncannyDodge?: boolean;
@@ -382,6 +425,8 @@ declare module "fvtt-types/configuration" {
                 "use.concentrationId"?: string;
                 "use.spellLevel"?: number;
                 "use.consumed"?: unknown;
+                "transform.uuid"?: string;
+                "transform.profile"?: string;
                 targets?: unknown;
                 messageType?: string;
                 roll?: {
@@ -443,15 +488,21 @@ declare module "fvtt-types/configuration" {
                 semiSuperSaverUuids?: string[];
                 superSaverUuids?: string[];
                 suspended?: boolean;
-                targetUuids?: string[];
+                targets?: {
+                    uuid: string;
+                    name: string;
+                }[];
                 targetsCanSeeUuids?: string[];
                 targetsCanSenseUuids?: string[];
+                transformedActors: string[];
                 tokenCanSeeUuids?: string[];
                 tokenCanSenseUuids?: string[];
                 attackingTokenUuid?: string;
                 templateUuid?: string;
                 workflowOptions?: WorkflowOptions;
                 undoDamage?: SerializedDamageListEntry[];
+                "use.consumed"?: any;
+                "use.otherScaling"?: number | false;
                 utilityRolls?: Roll.Data[];
                 aborted?: boolean;
                 type?: number;
@@ -460,6 +511,7 @@ declare module "fvtt-types/configuration" {
                 roll?: unknown[];
                 syntheticItem?: boolean;
                 isHit?: boolean;
+                otherActivityConsumed?: object;
             };
         };
         Item: {
@@ -469,11 +521,13 @@ declare module "fvtt-types/configuration" {
                     base?: number;
                     value?: number;
                 };
+                cachedFor?: Item;
                 riders?: {
                     activity?: string[];
                 };
             };
             "midi-qol"?: {
+                dependentOn?: string;
                 onUseMacroParts?: OnUseMacros;
                 onUseMacroName?: string;
                 noProvokeReaction?: boolean;
@@ -492,6 +546,7 @@ declare module "fvtt-types/configuration" {
         MeasuredTemplate: {
             dnd5e?: {
                 origin?: string;
+                dependentOn?: string;
             };
             "midi-qol"?: {
                 itemUuid?: string;
@@ -499,6 +554,29 @@ declare module "fvtt-types/configuration" {
                 activityUuid?: string;
                 workflowId?: string;
                 itemCardUuid?: string;
+                dependentOn?: string;
+            };
+        };
+        MeasuredTemplateDocument: {
+            dnd5e?: {
+                origin?: string;
+                dependentOn?: ActiveEffect.Implementation | null;
+            };
+            "midi-qol"?: {
+                dependentOn?: string;
+            };
+        };
+        TokenDocument: {
+            dnd5e?: {
+                dependentOn?: string;
+            };
+            "midi-qol"?: {
+                dependentOn?: string;
+            };
+        };
+        AmbientLightDocument: {
+            "midi-qol"?: {
+                dependentOn?: string;
             };
         };
     }
@@ -541,6 +619,7 @@ declare global {
         }> & {
             MidiActivityMixin: typeof MidiActivityMixin;
         };
+        activityHasEmanationNoTemplate: typeof utils.activityHasEmanationNoTemplate;
         actorFromUuid: typeof utils.actorFromUuid;
         addConcentrationDependent: typeof utils.addConcentrationDependent;
         addDependent: typeof utils.addDependent;
@@ -577,6 +656,7 @@ declare global {
         enableWorkflow: boolean;
         evalAllConditions: typeof utils.evalAllConditions;
         evalCondition: typeof utils.evalCondition;
+        fetchParams: typeof settings.fetchParams;
         findNearby: typeof utils.findNearby;
         findNearbyCount: typeof utils.findNearbyCount;
         fromUuidSync: typeof fromUuidSync;
@@ -592,9 +672,13 @@ declare global {
         getTokenPlayerNameForUser: typeof utils.getTokenPlayerNameForUser;
         getTraitMult: typeof utils.getTraitMult;
         getUndoQueue: typeof undo.getUndoQueue;
+        getVitalityItem: typeof utils.getVitalityItem;
+        getVitalityMax: typeof utils.getVitalityMax;
+        getVitalityValue: typeof utils.getVitalityValue;
         hasCondition: typeof utils.hasCondition;
         hasUsedBonusAction: typeof utils.hasUsedBonusAction;
         hasUsedReaction: typeof utils.hasUsedReaction;
+        hasVitalitySystem: typeof utils.hasVitalitySystem;
         humanoid: string[];
         incapacitatedConditions: string[];
         InvisibleDisadvantageVisionModes: string[];
@@ -610,6 +694,7 @@ declare global {
         midiRenderDamageRoll: typeof utils.midiRenderDamageRoll;
         midiRenderOtherDamageRoll: typeof utils.midiRenderOtherDamageRoll;
         midiRenderRoll: typeof utils.midiRenderRoll;
+        MidiDependentsRegistry: typeof MidiDependentsRegistry;
         MidiSounds: typeof MidiSounds;
         modifyDamageBy: typeof utils.modifyDamageBy;
         moveToken: typeof moveToken;
@@ -644,6 +729,10 @@ declare global {
         testfunc: (...args: any[]) => void;
         tokenForActor: typeof utils.tokenForActor;
         TrapWorkflow: typeof TrapWorkflow;
+        midiPropertiesOptions: {
+            triggeredActivityTargetOptions: any;
+            triggeredActivityRollAsOptions: any;
+        };
         TroubleShooter: typeof TroubleShooter;
         typeOrRace: typeof utils.typeOrRace;
         undoMostRecentWorkflow: typeof undo.undoMostRecentWorkflow;
@@ -783,11 +872,14 @@ export type DamageApplicationOptions = {
         uncannyDodge?: boolean;
     };
     midiIgnoreComputed?: boolean;
+    midiVitalityHandled?: boolean;
+    midiVitalityUpdatePending?: boolean;
 };
 export type CalcDamageOptions = DamageApplicationOptions & {
     invertHealing: boolean;
     multiplier: number;
     midi: {
+        challengeModeAR?: number;
         applyDamage?: boolean;
         criticalSave: boolean;
         fumbleSave: boolean;
@@ -815,6 +907,7 @@ export type PreSetupDamageListEntry = {
     actorId: string;
     actorUuid: string;
     challengeModeScale?: number;
+    challengeModeAR?: number;
     critical: boolean;
     damageDetail: DamageDescription[];
     damageDetails: {
@@ -838,6 +931,8 @@ export type PreSetupDamageListEntry = {
     isNpc?: boolean;
     newVitality?: number;
     oldVitality?: number;
+    oldVitalitySpent?: number;
+    newVitalitySpent?: number;
     rawDamageDetail: DamageDescription[];
     rawTotalDamage?: number;
     saved: boolean;
@@ -880,7 +975,13 @@ export type ActivityCheck = {
         value: number;
     };
 };
+export interface ActivityEffectData {
+    _id: string;
+    get effect(): ActiveEffect.Implementation | undefined;
+    onSave?: boolean;
+}
 export interface Activity extends AnyMutableObject {
+    get applicableEffects(): ActiveEffect[] | null;
     actor?: Actor.Implementation;
     item: Item.Implementation;
     ammunitionItem?: Item.Implementation;
@@ -907,11 +1008,7 @@ export interface Activity extends AnyMutableObject {
             };
         }[];
     };
-    effects: {
-        _id: string;
-        get effect(): ActiveEffect.Implementation | undefined;
-        onSave?: boolean;
-    }[];
+    effects: ActivityEffectData[];
     attack?: {
         ability: string;
         bonus: string;
@@ -993,6 +1090,12 @@ export interface Activity extends AnyMutableObject {
     rollAttack?: (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => Promise<Roll[] | null>;
     rollDamage: (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => Promise<Roll[] | void>;
     rollFormula?: (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => Promise<Roll[] | void>;
+    canScale?: boolean;
+    _prepareUsageConfig: (config: object) => object;
+    _prepareUsageUpdates: (config: object, options?: {
+        returnErrors?: boolean;
+    }) => Promise<any>;
+    consume: (usageConfig: object, messageConfig: object) => Promise<object | false>;
     roll?: {
         formula?: string;
     };
@@ -1071,6 +1174,10 @@ export interface Activity extends AnyMutableObject {
         skipConcentrationCheck?: boolean;
         autoCEEffects: string;
     };
+    hasConsumption: () => boolean;
+    shouldAutoConsume: (workflow?: Workflow) => boolean;
+    deferOtherDamage: (config: RollProcessConfig, dialog: RollDialogConfig) => boolean;
+    rollOtherDamage: (config: RollProcessConfig, dialog: RollDialogConfig) => Promise<Roll[] | undefined>;
 }
 export type DamageDescription = {
     value: number;
@@ -1110,6 +1217,7 @@ type BasicRollConfig = {
         minimum?: number;
         advantage?: boolean;
         disadvantage?: boolean;
+        advantageMode?: number;
         rollMode?: keyof CONFIG.Dice.RollModes;
     };
 };
@@ -1123,6 +1231,7 @@ export type RollProcessConfig = {
     ammunition?: Item.Implementation;
     workflow?: Workflow;
     midiOptions?: MidiOptions;
+    advantageMode?: number;
     advantage?: boolean;
     disadvantage?: boolean;
     attackMode?: string;
@@ -1136,6 +1245,7 @@ export type RollProcessConfig = {
         allow: boolean;
     };
     flags?: unknown;
+    scaling?: number | false;
 };
 export type RollDialogConfig = {
     configure?: boolean;
@@ -1224,4 +1334,110 @@ export type MidiTargetDescriptor = {
     uncannyDodge?: boolean;
 };
 export type CombinedTargetDescriptor = MidiTargetDescriptor & DND5ETargetDescriptor;
+export type SaveRollInfo = {
+    type: string;
+    ability: string | undefined;
+    skill: string | undefined;
+    tool: string | undefined;
+    action: Function;
+};
+export type SaveDisplayOptions = {
+    whisper: boolean;
+    showRoll: boolean;
+    showRollDialog: boolean;
+    simulate: boolean;
+};
+export type SavePlayerInfo = {
+    player: User | null | undefined;
+    GMprompt: string;
+    playerChat: boolean;
+};
+export type ModuleIntegrationFlags = {
+    playerMonksTB: boolean;
+    playerFlashTB: boolean;
+    playerEpicRolls: boolean;
+    gmMonksTB: boolean;
+    gmFlashTB: boolean;
+    gmRER: boolean;
+};
+export type SaveRollRequest = {
+    token: string;
+    dc: number;
+    showdc: boolean;
+    advantage: boolean | undefined;
+    disadvantage: boolean | undefined;
+    isMagicSave: boolean;
+    isConcentrationCheck: boolean | undefined;
+    workflowOptions: object;
+};
+export type MonksTokenBarRequest = SaveRollRequest & {
+    altKey: boolean;
+    ctrlKey: boolean;
+    shiftKey: boolean;
+    fastForward: boolean;
+    options: {
+        midiOptions: {
+            itemUuid: string | undefined;
+            workflowId: string;
+            itemCardUuid: string | undefined;
+        };
+    };
+};
+export type FlashRollsRequest = SaveRollRequest & {
+    actorId: string;
+    actorUuid: string;
+    midiOptions: {
+        itemUuid: string | undefined;
+        workflowId: string;
+        itemCardUuid: string | undefined;
+    };
+};
+export type EpicRollsRequest = SaveRollRequest & {
+    actorUuid: string;
+    fastForward: boolean;
+};
+export type ModuleIntegrationRequests = {
+    monks: {
+        player: MonksTokenBarRequest[];
+        gm: MonksTokenBarRequest[];
+    };
+    flash: {
+        player: FlashRollsRequest[];
+        gm: FlashRollsRequest[];
+    };
+    epic: {
+        player: EpicRollsRequest[];
+        gm: EpicRollsRequest[];
+    };
+};
+export type SaveDetails = {
+    advantage: boolean | undefined;
+    disadvantage: boolean | undefined;
+    isFriendly: boolean;
+    isMagicSave: boolean;
+    isConcentrationCheck: boolean | undefined;
+    rollDC: number;
+    saveItemUuid: string;
+    workflowId: string;
+    itemCardUuid: string;
+    workflowUuid: string;
+    workflowOptions: object;
+};
+export type ProcessTargetSaveContext = {
+    rollDC: number | undefined;
+    rollAbility: string | undefined;
+    rollType: string | undefined;
+    template: foundry.canvas.placeables.MeasuredTemplate.Implementation | undefined | null;
+    D20Roll: typeof Roll;
+};
+export type QueueSaveRollOptions = {
+    target: Token;
+    saveDetails: SaveDetails;
+    rollInfo: SaveRollInfo;
+    isMagicSave: boolean;
+    displayOptions: SaveDisplayOptions;
+    playerInfo: SavePlayerInfo;
+    moduleFlags: ModuleIntegrationFlags;
+    moduleRequests: ModuleIntegrationRequests;
+};
 export {};

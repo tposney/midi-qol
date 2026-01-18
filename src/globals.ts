@@ -9,6 +9,7 @@ import { checkRule, configSettings, targetConfirmation } from "./module/settings
 import { SaferSocket, SerializedDamageListEntry } from "./module/GMAction";
 import { MidiActivityMixin } from "./module/activities/MidiActivityMixin";
 import * as undo from "./module/undo";
+import * as patching from "./module/patching";
 import { ConfigPanel } from "./module/apps/ConfigPanel";
 import { createEffects, debug, log, moveToken, moveTokenAwayFromPoint, removeEffects, updateEffects, warn } from "./midi-qol";
 import { TargetConfirmationDialog } from "./module/apps/TargetConfirmation";
@@ -37,6 +38,10 @@ declare module "fvtt-types/configuration" {
       "dnd5e.postAbilityCheckRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postAttackRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postBuildSkillRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
+      "dnd5e.postBuildAbilityCheckRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
+      "dnd5e.postBuildSavingThrowRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
+      "dnd5e.postBuildDeathSaveRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
+      "dnd5e.postBuildToolRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
       "dnd5e.postSavingThrowRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postSkillRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       // According to dnd5e createdTokens is a Token[], but it is actually a TokenDocument[]
@@ -238,6 +243,7 @@ declare module "fvtt-types/configuration" {
           all?: string;
           attack?: Record<string, string>;
           critical?: Record<string, string>;
+          deathSave?: string;
           disadvantage?: {
             heavy?: boolean;
           };
@@ -249,6 +255,7 @@ declare module "fvtt-types/configuration" {
             somatic?: string;
             material?: string;
           };
+          tool?: Record<string, string>;
         };
         grants?: {
           advantage?: {
@@ -304,6 +311,8 @@ declare module "fvtt-types/configuration" {
         ignoreCover?: boolean;
         ignoreNearbyFoes?: boolean;
         ignoreWalls?: boolean;
+        initiativeAdv?: string;
+        initiativeDisadv?: string;
         inMotion?: boolean;
         long?: Record<string, string>;
         magicResistance?: {
@@ -319,9 +328,11 @@ declare module "fvtt-types/configuration" {
             save?: Record<string, string>;
           }
           damage?: Record<string, string>;
+          deathSave?: string;
           skill?: {
             all?: string;
           };
+          tool?: Record<string, string>;
         };
         min?: {
           ability?: {
@@ -330,17 +341,44 @@ declare module "fvtt-types/configuration" {
             save?: Record<string, string>;
           }
           damage?: Record<string, string>;
+          deathSave?: string;
           skill?: {
             all?: string;
-          }
+          };
+          tool?: Record<string, string>;
         };
         neverTarget?: boolean;
         noAdvantage?: {
-          attack?: {
+          ability?: {
             all?: string;
+            check?: Record<string, string>;
+            save?: Record<string, string>;
           };
+          all?: string;
+          attack?: Record<string, string>;
+          concentration?: string;
+          deathSave?: string;
+          initiative?: string;
+          skill?: Record<string, string>;
+          tool?: Record<string, string>;
+        };
+        noDisadvantage?: {
+          ability?: {
+            all?: string;
+            check?: Record<string, string>;
+            save?: Record<string, string>;
+          };
+          all?: string;
+          attack?: Record<string, string>;
+          concentration?: string;
+          deathSave?: string;
+          initiative?: string;
+          skill?: Record<string, string>;
+          tool?: Record<string, string>;
         };
         noCritical?: Record<string, string>;
+        noFumble?: Record<string, string>;
+        fumble?: Record<string, string>;
         onUseMacroName?: string;
         onUseMacroParts?: OnUseMacros;
         optional?: Record<string, any>;
@@ -361,8 +399,16 @@ declare module "fvtt-types/configuration" {
         semiSuperSaver?: Record<string, string>;
         sharpShooter?: string;
         success?: {
+          ability?: {
+            all?: string;
+            check?: Record<string, string>;
+            save?: Record<string, string>;
+          };
           all?: boolean;
           attack?: Record<string, string>;
+          deathSave?: string;
+          skill?: Record<string, string>;
+          tool?: Record<string, string>;
         };
         superSaver?: Record<string, string>;
         uncannyDodge?: boolean;
@@ -443,7 +489,7 @@ declare module "fvtt-types/configuration" {
         semiSuperSaverUuids?: string[];
         superSaverUuids?: string[];
         suspended?: boolean;
-        targetUuids?: string[];
+        targets?: { uuid: string; name: string }[];
         targetsCanSeeUuids?: string[];
         targetsCanSenseUuids?: string[];
         transformedActors: string[];
@@ -453,6 +499,8 @@ declare module "fvtt-types/configuration" {
         templateUuid?: string;
         workflowOptions?: WorkflowOptions;
         undoDamage?: SerializedDamageListEntry[];
+        "use.consumed"?: any;
+        "use.otherScaling"?: number | false;
         utilityRolls?: Roll.Data[];
         aborted?: boolean;
         type?: number;
@@ -461,6 +509,7 @@ declare module "fvtt-types/configuration" {
         roll?: unknown[];
         syntheticItem?: boolean;
         isHit?: boolean;
+        otherActivityConsumed?: object;
       };
     };
     Item: {
@@ -470,6 +519,7 @@ declare module "fvtt-types/configuration" {
           base?: number;
           value?: number;
         };
+        cachedFor?: Item;
         riders?: {
           activity?: string[];
         }
@@ -586,8 +636,11 @@ declare global {
     collectSettingData: typeof settings.collectSettingData;
     completeActivityUse: typeof utils.completeActivityUse;
     completeItemUse: typeof utils.completeItemUse;
+    computeAbilityAdvantage: typeof patching.computeAbilityAdvantage;
     computeCoverBonus: typeof utils.computeCoverBonus;
     computeDistance: typeof utils.computeDistance;
+    computeSkillAdvantage: typeof patching.computeSkillAdvantage;
+    computeToolAdvantage: typeof patching.computeToolAdvantage;
     ConfigPanel: typeof ConfigPanel;
     configSettings: () => typeof configSettings;
     contestedRoll: typeof utils.contestedRoll;
@@ -1053,6 +1106,12 @@ export interface Activity extends AnyMutableObject {
   rollAttack?: (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => Promise<Roll[] | null>;
   rollDamage: (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => Promise<Roll[] | void>;
   rollFormula?: (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => Promise<Roll[] | void>;
+  // Consumption and scaling methods/properties
+  canScale?: boolean;
+  _prepareUsageConfig: (config: object) => object;
+  _prepareUsageUpdates: (config: object, options?: { returnErrors?: boolean }) => Promise<any>;
+  // consume() method for consuming activity resources - returns consumed delta data or false if cancelled
+  consume: (usageConfig: object, messageConfig: object) => Promise<object | false>;
   roll?: {
     formula?: string;
   };
@@ -1129,6 +1188,11 @@ export interface Activity extends AnyMutableObject {
     skipConcentrationCheck?: boolean;
     autoCEEffects: string;
   }
+  // Midi mixin methods
+  hasConsumption: () => boolean;
+  shouldAutoConsume: (workflow?: Workflow) => boolean;
+  deferOtherDamage: (config: RollProcessConfig, dialog: RollDialogConfig) => boolean;
+  rollOtherDamage: (config: RollProcessConfig, dialog: RollDialogConfig) => Promise<Roll[] | undefined>;
 }
 
 // 5e definitions, with midi special sauce(?)
@@ -1201,6 +1265,7 @@ export type RollProcessConfig = {
     allow: boolean;
   }
   flags?: unknown;
+  scaling?: number | false;
 };
 export type RollDialogConfig = {
   configure?: boolean;
@@ -1302,11 +1367,6 @@ export type SaveRollInfo = {
   action: Function;
 };
 
-export type MagicSaveInfo = {
-  isMagicSave: boolean;
-  magicResistance: boolean;
-  magicVulnerability: boolean;
-};
 
 export type SaveDisplayOptions = {
   whisper: boolean;
@@ -1330,10 +1390,50 @@ export type ModuleIntegrationFlags = {
   gmRER: boolean;
 };
 
+export type SaveRollRequest = {
+  token: string;
+  dc: number;
+  showdc: boolean;
+  advantage: boolean | undefined;
+  disadvantage: boolean | undefined;
+  isMagicSave: boolean;
+  isConcentrationCheck: boolean | undefined;
+  workflowOptions: object;
+};
+
+export type MonksTokenBarRequest = SaveRollRequest & {
+  altKey: boolean;
+  ctrlKey: boolean;
+  shiftKey: boolean;
+  fastForward: boolean;
+  options: {
+    midiOptions: {
+      itemUuid: string | undefined;
+      workflowId: string;
+      itemCardUuid: string | undefined;
+    };
+  };
+};
+
+export type FlashRollsRequest = SaveRollRequest & {
+  actorId: string;
+  actorUuid: string;
+  midiOptions: {
+    itemUuid: string | undefined;
+    workflowId: string;
+    itemCardUuid: string | undefined;
+  };
+};
+
+export type EpicRollsRequest = SaveRollRequest & {
+  actorUuid: string;
+  fastForward: boolean;
+};
+
 export type ModuleIntegrationRequests = {
-  monks: { player: any[]; gm: any[] };
-  flash: { player: any[]; gm: any[] };
-  epic: { player: any[]; gm: any[] };
+  monks: { player: MonksTokenBarRequest[]; gm: MonksTokenBarRequest[] };
+  flash: { player: FlashRollsRequest[]; gm: FlashRollsRequest[] };
+  epic: { player: EpicRollsRequest[]; gm: EpicRollsRequest[] };
 };
 
 export type SaveDetails = {
@@ -1362,7 +1462,7 @@ export type QueueSaveRollOptions = {
   target: Token;
   saveDetails: SaveDetails;
   rollInfo: SaveRollInfo;
-  magicInfo: MagicSaveInfo;
+  isMagicSave: boolean;
   displayOptions: SaveDisplayOptions;
   playerInfo: SavePlayerInfo;
   moduleFlags: ModuleIntegrationFlags;

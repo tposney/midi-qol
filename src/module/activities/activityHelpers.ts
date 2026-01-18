@@ -537,6 +537,8 @@ export function selectTargets(this: Workflow | Activity | undefined, templateDoc
   }
   if (workflow) {
     workflow.templateUuid = templateDocument?.uuid;
+    // Set up template cleanup mechanism immediately
+    workflow.setupTemplateCleanup(templateDocument);
   }
   if (targeting === "none") { // this is no good
     //@ts-expect-error also no good - if needed, should try to migrate to midi-qol.targeted

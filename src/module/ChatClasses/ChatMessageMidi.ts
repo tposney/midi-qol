@@ -87,7 +87,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (!canvas?.ready) return;
       // @ts-expect-error no dnd5e-types
       if (!this.flags?.[MODULE_ID]) return super.selectTargets(li, type);
-      let targetUuids: string[] = this.getFlag(MODULE_ID, "targetUuids") || [];
+      const targetData = this.getFlag(MODULE_ID, "targets") || [];
+      const targetUuids: string[] = targetData.map(t => t.uuid);
       let hitTargetUuids: string[] = this.getFlag(MODULE_ID, "hitTargetUuids") || [];
       let uuids: string[];
       if (type === "hit") uuids = hitTargetUuids

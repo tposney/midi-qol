@@ -35,6 +35,7 @@ export declare let ceInterface: {
         origin?: string | null;
     }) => Promise<void>;
 } | undefined;
+export declare let BaseChatLogClass: any;
 export declare let debugEnabled: number;
 export declare let debug: (...args: any[]) => void;
 export declare let log: (...args: any[]) => void;
@@ -56,6 +57,10 @@ export declare let overTimeEffectsToDelete: Record<string, {
 }>;
 export declare let savedOverTimeEffectsToDelete: Record<string, {
     uuid: string;
+    saveCount?: number;
+    saveCountAction?: string;
+    failCount?: number;
+    failCountAction?: string;
 }>;
 export declare let MQItemMacroLabel: string;
 export declare let MQActivityMacroLabel: string;

@@ -1,6 +1,12 @@
-export declare class ChatLogMidi extends foundry.applications.sidebar.tabs.ChatLog {
+export declare class ChatLogMidi extends globalThis.dnd5e.applications.ChatLog5e {
     #private;
+    pruneElement(): Promise<void>;
+    scrollBottom({ popout, waitImages, scrollOptions }?: {
+        popout?: boolean | undefined;
+        waitImages?: boolean | undefined;
+        scrollOptions?: {} | undefined;
+    }): Promise<any>;
     /** @inheritDoc */
-    _onFirstRender(context: any, options: any): Promise<void>;
-    updateMessage(message: any, notify?: boolean): Promise<void>;
+    close(options?: {}): Promise<any>;
+    renderBatch(size: number): Promise<void>;
 }

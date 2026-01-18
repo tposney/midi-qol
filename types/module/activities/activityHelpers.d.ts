@@ -3,6 +3,13 @@ import { Workflow } from "../Workflow.js";
 import { TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 import { MidiOptions } from "../utils.js";
 import Token = foundry.canvas.placeables.Token;
+/**
+ * Determines if the enforceSingleWeaponTarget setting should apply to this activity.
+ * Returns false for emanation/AoE activities that naturally target multiple creatures.
+ * @param activity The activity to check
+ * @returns true if single target should be enforced
+ */
+export declare function shouldEnforceSingleTarget(activity: Activity): boolean;
 export declare function confirmWorkflow(existingWorkflow: Workflow): Promise<boolean>;
 export declare function removeFlanking(actor: Actor.Implementation): Promise<void>;
 export declare function setDamageRollMinTerms(rolls?: Roll[]): void;

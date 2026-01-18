@@ -10,6 +10,7 @@ export declare const USEFUL_MODULE_VERSIONS: {
     "dfreds-convenient-effects": string;
     "dice-so-nice": string;
     "epic-rolls-5e": string;
+    "flash-rolls-5e": string;
     "gambits-premades": string;
     levels: string;
     levelsautocover: string;
@@ -24,6 +25,7 @@ export declare const USEFUL_MODULE_VERSIONS: {
     "ready-set-roll-5e": string;
     "seasons-and-stars": string;
     "simbuls-cover-calculator": string;
+    simplecover5e: string;
     socketlib: string;
     "times-up": string;
     tokencover: string;
