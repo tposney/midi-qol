@@ -448,6 +448,12 @@ For calling workflow functions without a full workflow:
 
 Called during item workflow to customize behavior. Supports both item-based and actor-based macros.
 
+> [!note] Settings
+> A fresh installation of MidiQOL comes with all settings disabled. In order to run macros, you must enable one or both of the following (both recommended):
+> - `Settings > MidiQOL > Workflow Settings > Misc Tab` [(see here)](README.md#misc-tab)
+>   - Add actor on use macro to sheet
+>   - Add item on use macro to sheet
+
 ### Specifying Macros
 
 For actor onUse macros, set via active effects:

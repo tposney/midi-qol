@@ -606,8 +606,6 @@ Force automatic failure on rolls. All fail flags are **Evaluated** (conditional 
 
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
 
-> [!tip] [Jump to Top](#table-of-contents)
-
 ---
 
 ## Auto-Success
