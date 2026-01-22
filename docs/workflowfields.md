@@ -1,8 +1,8 @@
 > [!tip] Navigation
 > [Go to Readme](/README.md#table-of-contents) <br>
 > [Go to Macro Guide](/MACROS.md#table-of-contents) <br>
-> [Go to Flowchart (v12.4.64 to v13.0.22)](docs/flowchart.md) <br>
-> [Go to Flowchart (v13.0.23+)](docs/flowchart_save-before-dmg.md)
+> [Go to Flowchart (Default - Damage Before Saves)](docs/flowchart.md) <br>
+> [Go to Flowchart (Saves Before Damage)](docs/flowchart_save-before-dmg.md)
 
 # Workflow Fields
 

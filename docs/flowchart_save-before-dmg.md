@@ -190,7 +190,8 @@ flowchart TD
       <small>Called before the item is rolled (*)</small>
     "] -.-> config:::edgeLabel
     config["`Configure dialog`"] -.-> consume:::edgeLabel
-    consume["`Item Use Consumption Targets Updated`"] -.-> postNoAction
+    consume["`Item Use Consumption Targets Updated`"] -.-> card:::edgeLabel
+    card["`Chat Card Created`"] -.-> postNoAction
     postNoAction --> preStart
     preStart --> postStart
       postStart -- Has Template --> preAwaitTemplate
