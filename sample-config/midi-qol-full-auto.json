@@ -32,7 +32,6 @@
     "playerSaveTimeout": 30,
     "rollNPCSaves": "auto",
     "preRollChecks": false,
-    "mergeCard": true,
     "mergeCardCondensed": false,
     "hideNPCNames": "",
     "useTokenNames": true,

@@ -1019,6 +1019,19 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     this.checkMidiSaveSettings(data);
     this.checkNoActorTokens(data);
     this.checkConcentrationStatusEffects(data);
+    this.checkChatLogPrune(data);
+  }
+
+  public static checkChatLogPrune(data: TroubleShooterData) {
+    if (!(game.modules.get("chatlog-prune")?.active)) {
+      data.problems.push({
+        moduleId: "chatlog-prune",
+        severity: "Warn",
+        problemSummary: "Chat Log Prune is not active. Long sessions may experience performance issues as chat messages accumulate.",
+        problemDetail: undefined,
+        fixer: "Install and activate chatlog-prune"
+      });
+    }
   }
 
   public static checkAutoAnimations(data: TroubleShooterData) {

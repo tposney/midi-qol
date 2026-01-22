@@ -5,8 +5,11 @@ import { configSettings, pruneChatLog } from "./settings.js";
 export const DAE_REQUIRED_VERSION = "13.0.4";
 export const USEFUL_MODULE_VERSIONS = {
   "about-time": "0.0",
+  "ActiveAuras": "0.4.13",
   "anonymous": "0.0.0",
-  "auraeffects": "1.2.5",
+  "auraeffects": "1.3.4",
+  "autoanimations": "3.2.991",
+  "chatlog-prune": "1.0.1",
   "chris-premades": "1.3.0",
   "condition-lab-triggler": "1.4",
   "dae": DAE_REQUIRED_VERSION,

@@ -82,22 +82,18 @@
       <p class="notes midi-qol-faint">{{{localize "midi-qol.AutoCEEffects.Hint"}}}</p>
     </div>
     {{/if}}
-
-    {{#if false}}
-    <div class="form-group">
-      <label>{{localize "midi-qol.ItemRollStartWorkflow.Name"}}</label>
-      <input type="checkbox" name="itemRollStartWorkflow" data-dtype="Boolean" {{checked
-        configSettings.itemRollStartWorkflow}} />
-      <div class="notes midi-qol-faint">{{{localize "midi-qol.ItemRollStartWorkflow.Hint"}}}</div>
-    </div>
-    {{/if}}
   </div>
 
   <!-- Hits-->
   <div class="midi-qol-box">
     <div class="midi-qol-settings heading">{{localize "midi-qol.Hits"}}</div>
-    <label><strong>DND5E {{{localize "SETTINGS.DND5E.VISIBILITY.Attack.Name"}}}:
-        {{attackRollVisibility}}</strong></label>
+    <div class="form-group">
+      <label>DND5E {{{localize "SETTINGS.DND5E.VISIBILITY.Attack.Name"}}}</label>
+      <select name="dnd5eAttackRollVisibility" data-dtype="String">
+        {{selectOptions attackRollVisibilityOptions selected=attackRollVisibilityValue localize=true}}
+      </select>
+      <div class="notes midi-qol-faint">{{{localize "SETTINGS.DND5E.VISIBILITY.Attack.Hint"}}}</div>
+    </div>
     <div class="form-group">
       <label>{{localize "midi-qol.AutoCheckHit.Name"}}</label>
       <select name="autoCheckHit" data-dtype="String">

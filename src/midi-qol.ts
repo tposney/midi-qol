@@ -1,4 +1,4 @@
-import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, safeGetGameSetting, shouldDisplaySaveDC, triggeredActivityTargetOptions, triggeredActivityRollAsOptions } from './module/settings.js';
+import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, exportSettingsToJSON, importSettingsFromJSON, safeGetGameSetting, shouldDisplaySaveDC, triggeredActivityTargetOptions, triggeredActivityRollAsOptions, resetConfigSettingsToDefaults } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, readyPatching, initPatching, addDiceTermModifiers, MidiDependentsRegistry, computeAbilityAdvantage, computeSkillAdvantage, computeToolAdvantage } from './module/patching.js';
@@ -673,8 +673,6 @@ Hooks.once('ready', function () {
   });
 
   Hooks.callAll("midi-qol.midiReady");
-  // setupMidiTests(); // Tests moved to separate midi-qol-tests module
-
   if (game.user?.isGM) { // need to improve the test
     const problems = TroubleShooter.collectTroubleShooterData().problems
     for (let problem of problems) {
@@ -744,6 +742,9 @@ function setupMidiQOLApi() {
     configSettings: () => { return configSettings },
     get currentConfigSettings() { return configSettings },
     collectSettingData,
+    exportSettingsToJSON,
+    importSettingsFromJSON,
+    resetConfigSettingsToDefaults,
     contestedRoll,
     createConditionData,
     createDamageDetail,
@@ -814,7 +815,6 @@ function setupMidiQOLApi() {
     removeReactionUsed,
     resolveTargetConfirmation,
     safeGetGameSetting,
-    //@ts-expect-error newly added export
     shouldDisplaySaveDC,
     selectTargetsForTemplate: templateTokens,
     setBonusActionUsed,

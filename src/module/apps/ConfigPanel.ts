@@ -1,4 +1,4 @@
-import { criticalDamage, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, quickSettingsBlurb, autoCheckHitOptions, clickOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, damageCardStyleOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, checkFlankingOptions, hideRollDetailsHintLongOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions, safeGetGameSetting } from "../settings.js"
+import { criticalDamage, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, quickSettingsBlurb, autoCheckHitOptions, clickOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, damageCardStyleOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, checkFlankingOptions, hideRollDetailsHintLongOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions, safeGetGameSetting, resetConfigSettingsToDefaults } from "../settings.js"
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, gameStats, debugEnabled, log, GameSystemConfig, ceInterface } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
@@ -225,7 +225,8 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     const attackRollVisibility = safeGetGameSetting("dnd5e", "attackRollVisibility") as string;
     if (attackRollVisibility !== undefined) {
       const choices = game.settings.settings.get("dnd5e.attackRollVisibility")?.choices;
-      context.attackRollVisibility = choices ? i18n(choices[attackRollVisibility]) : attackRollVisibility;
+      context.attackRollVisibilityOptions = choices;
+      context.attackRollVisibilityValue = attackRollVisibility;
     }
     const challengeVisibility = safeGetGameSetting("dnd5e", "challengeVisibility") as string;
     if (challengeVisibility !== undefined) {
@@ -363,6 +364,12 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       needReload = true;
     }
     if (configSettings.activityNamePrefix !== realData.activityNamePrefix) needReload = true;
+
+    // Handle dnd5e attackRollVisibility setting separately
+    if (realData.dnd5eAttackRollVisibility !== undefined) {
+      await game.settings.set("dnd5e", "attackRollVisibility", realData.dnd5eAttackRollVisibility);
+      delete realData.dnd5eAttackRollVisibility;
+    }
 
     // Handle dnd5e challengeVisibility setting separately
     if (realData.dnd5eChallengeVisibility !== undefined) {
@@ -710,6 +717,7 @@ let quickSettingsDetails: any = {
 export async function applySettings(key: string) {
   let settingsToApply = {};
   const config = quickSettingsDetails[key];
+
   if (config.configSettings) {
     settingsToApply = foundry.utils.duplicate(config.configSettings);
     if (config.codeChecks) config.codeChecks(configSettings, settingsToApply)

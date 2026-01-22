@@ -2062,7 +2062,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       const hasOurElements = parent.querySelector(`#dmg-total-${actorUuid.replaceAll(".", "")}`);
       if (!hasOurElements) return;
 
-      // Single click to select token
+      // Single click to select token and pan to it
       img.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopImmediatePropagation();
@@ -2070,6 +2070,9 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         const token = canvas.tokens?.get(tokenId);
         if (token) {
           token.control({ releaseOthers: !ev.shiftKey });
+          // Pan to the token center
+          const center = token.center;
+          canvas.animatePan({ x: center.x, y: center.y });
         }
       }, { capture: true });
 

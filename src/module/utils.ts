@@ -627,7 +627,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       const preDamageDetails = damagePerActor[actor.uuid];
       const damageDetails = setupDamageDetails(preDamageDetails, selector, actor);
       if (damageDetails) {
-        await workflow?.callDamageHooks(damageDetails, token);
+        await workflow?.callDamageHooksAndMacros(damageDetails, token);
         damageDetails.damageDetails[selector] = damageDetails.damageDetail;
         workflow.damageList.push(damageDetails);
       }

@@ -1,6 +1,20 @@
 import { warn, debugEnabled } from "../midi-qol.js";
 
 /**
+ * Change event types for the registry
+ */
+export type RegistryChangeType = "track" | "untrack" | "clear" | "deleteDependents";
+
+/**
+ * Change event data passed to the hook
+ */
+export interface RegistryChangeEvent {
+  type: RegistryChangeType;
+  parentUuid?: string;
+  dependentUuid?: string;
+}
+
+/**
  * Registry for midi-qol dependent documents.
  *
  * This registry tracks documents that depend on Actors, Items, or other non-ActiveEffect parents.
@@ -34,9 +48,15 @@ export class MidiDependentsRegistry {
    */
   static track(parentUuid: string, dependent: foundry.abstract.Document.Any) {
     if (!parentUuid || !dependent?.uuid) return;
-    if (!this.#dependents.has(parentUuid)) this.#dependents.set(parentUuid, new Set());
-    this.#dependents.get(parentUuid)!.add(dependent.uuid);
+
+    const isNewParent = !this.#dependents.has(parentUuid);
+    if (isNewParent) this.#dependents.set(parentUuid, new Set());
+    const dependentSet = this.#dependents.get(parentUuid)!;
+    const isNewDependent = !dependentSet.has(dependent.uuid);
+    if (!isNewDependent) return; // Already tracking this dependent
+    dependentSet.add(dependent.uuid);
     if (debugEnabled > 1) warn(`MidiDependentsRegistry | Tracking ${dependent.uuid} as dependent on ${parentUuid}`);
+    Hooks.callAll("midi-qol.dependentsRegistryChanged", { type: "track", parentUuid, dependentUuid: dependent.uuid } as RegistryChangeEvent);
   }
 
   /**
@@ -46,8 +66,13 @@ export class MidiDependentsRegistry {
    */
   static untrack(parentUuid: string, dependent: foundry.abstract.Document.Any) {
     if (!parentUuid || !dependent?.uuid) return;
-    this.#dependents.get(parentUuid)?.delete(dependent.uuid);
-    if (debugEnabled > 1) warn(`MidiDependentsRegistry | Untracking ${dependent.uuid} from ${parentUuid}`);
+    const dependentSet = this.#dependents.get(parentUuid);
+    if (!dependentSet?.has(dependent.uuid)) return; // Not tracking this dependent
+    dependentSet.delete(dependent.uuid);
+    // Clean up empty parent entries
+    if (dependentSet.size === 0) this.#dependents.delete(parentUuid);
+    if (debugEnabled > 1) warn(`MidiDependentsRegistry | Un-tracking ${dependent.uuid} from ${parentUuid}`);
+    Hooks.callAll("midi-qol.dependentsRegistryChanged", { type: "untrack", parentUuid, dependentUuid: dependent.uuid } as RegistryChangeEvent);
   }
 
   /**
@@ -73,6 +98,7 @@ export class MidiDependentsRegistry {
 
     // Clean up the registry entry
     this.#dependents.delete(parentUuid);
+    Hooks.callAll("midi-qol.dependentsRegistryChanged", { type: "deleteDependents", parentUuid } as RegistryChangeEvent);
   }
 
   /**
@@ -80,7 +106,30 @@ export class MidiDependentsRegistry {
    * Useful for cleanup on world/scene change.
    */
   static clear() {
+    if (this.#dependents.size === 0) return; // Nothing to clear
     this.#dependents.clear();
+    Hooks.callAll("midi-qol.dependentsRegistryChanged", { type: "clear" } as RegistryChangeEvent);
+  }
+
+  /**
+   * Get all parent-dependent relationships in the registry.
+   * @returns Array of {parentUuid, dependentUuids} objects
+   */
+  static getAll(): Array<{ parentUuid: string; dependentUuids: string[] }> {
+    const entries: Array<{ parentUuid: string; dependentUuids: string[] }> = [];
+    for (const [parentUuid, dependentSet] of this.#dependents.entries()) {
+      if (dependentSet.size > 0) {
+        entries.push({ parentUuid, dependentUuids: Array.from(dependentSet) });
+      }
+    }
+    return entries;
+  }
+
+  /**
+   * Check if registry has any entries.
+   */
+  static get size(): number {
+    return this.#dependents.size;
   }
 }
 
@@ -103,10 +152,48 @@ export function MidiDependentDocumentMixin<T extends new (...args: any[]) => any
     /** @inheritDoc */
     prepareData() {
       super.prepareData();
-      // Read dnd5e.dependentOn flag (the unified flag for all parent types)
+      // Only track during initialization (game.ready === false) when loading from database
+      // After game is ready, _onCreate() handles tracking for newly created documents
+      if (game.ready) return;
       const dependentOn = (this as any).flags?.dnd5e?.dependentOn;
       if (dependentOn && (this as any).uuid) {
         MidiDependentsRegistry.track(dependentOn, this as any);
+      }
+    }
+
+    /** @inheritDoc */
+    _onCreate(data: object, options: object, userId: string) {
+      super._onCreate(data, options, userId);
+      // Track newly created documents if they have the flag set at creation
+      const dependentOn = (this as any).flags?.dnd5e?.dependentOn;
+      if (dependentOn && (this as any).uuid) {
+        MidiDependentsRegistry.track(dependentOn, this as any);
+      }
+    }
+
+    /** @inheritDoc */
+    _onUpdate(changed: object, options: object, userId: string) {
+      super._onUpdate(changed, options, userId);
+      // Handle dependentOn flag being added, changed, or removed
+      // At this point: `this` has OLD values, `changed` has NEW values
+      const dnd5eFlags = (changed as any).flags?.dnd5e;
+      if (!dnd5eFlags) return;
+      if (!("dependentOn" in dnd5eFlags || "-=dependentOn" in dnd5eFlags)) return;
+
+      const uuid = (this as any).uuid;
+      if (!uuid) return;
+
+      const oldParent = (this as any).flags?.dnd5e?.dependentOn;
+      const newParent = "-=dependentOn" in dnd5eFlags ? null : dnd5eFlags.dependentOn;
+
+      // Untrack from old parent if it changed
+      if (oldParent && oldParent !== newParent) {
+        MidiDependentsRegistry.untrack(oldParent, this as any);
+      }
+
+      // Track to new parent
+      if (newParent) {
+        MidiDependentsRegistry.track(newParent, this as any);
       }
     }
 

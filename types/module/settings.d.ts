@@ -93,7 +93,6 @@ declare class ConfigSettings {
     griddedGridless: boolean;
     gridlessFudge: number | undefined;
     doReactions: string;
-    effectActivation: boolean;
     enableDDBGL: boolean;
     enforceReactions: string;
     enforceBonusActions: string;
@@ -112,7 +111,6 @@ declare class ConfigSettings {
     gmRemoveButtons: string;
     hideRollDetails: string;
     ignoreSpellReactionRestriction: boolean;
-    itemRollStartWorkflow: boolean;
     itemTypeList: string[] | undefined;
     itemUseSound: string;
     keepRollStats: boolean;
@@ -258,6 +256,7 @@ export declare function collectSettingData(): {
 };
 export declare function exportSettingsToJSON(): void;
 export declare function importSettingsFromJSON(json: any): Promise<void>;
+export declare function resetConfigSettingsToDefaults(): Promise<void>;
 export declare let fetchSoundSettings: () => void;
 export declare let fetchParams: () => void;
 export declare function readySettingsSetup(): void;

@@ -33,7 +33,6 @@
     "rollNPCSaves": "none",
     "rollNPCLinkedSaves": "none",
     "preRollChecks": false,
-    "mergeCard": true,
     "mergeCardCondensed": true,
     "hideNPCNames": "",
     "useTokenNames": true,

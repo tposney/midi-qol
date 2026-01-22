@@ -1,3 +1,19 @@
+### 13.0.39
+**Bug Fixes**
+* Fix for isDamaged macros being called twice when apply damage is set to none.
+* Fix for passing wrong item/activity data to function. macro calls.
+* Attack Roll Visibility (dnd5e setting) now editable directly from midi config 
+panel.
+
+**New Features**
+* TroubleShooter now warns if chatlog-prune module is not active.
+* New Dependents Manager app on the main settings list- view/manage document dependencies with search, collapsible sections, and delete options.
+* Added reset all settings to defaults option in quick settings.
+
+**Others**
+* Default value changes: `autoCompleteWorkflow` now true, `collapsibleTargets` now false.
+* Removed deprecated settings: `effectActivation`, `itemRollStartWorkflow`.
+
 ### 13.0.38
 **Bug Fixes**
 * Fix for AoE templates not being cleaned up properly when a workflow is aborted. Template cleanup is now set up when the template is placed rather than waiting until the workflow completes.

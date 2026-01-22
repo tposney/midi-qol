@@ -168,24 +168,13 @@
   }
 }
 
-/* Show full damage tooltip */
-/*
-.message-content:has(.xmidi-qol-flex-container) {
-  overflow: visible;
-  table {
-    overflow: visible;
-  }
-}
-*/
-* ----------------------------------------- */
-
+/* ----------------------------------------- */
 /* Dialog Window
 /* ----------------------------------------- */
 .midi-qol .dialog .dialog-content .dialog-buttons {
   display: flex;
   flex-direction: column;
   flex-wrap: wrap;
-  justify-content: flex-start;
   justify-content: space-around;
 }
 
@@ -199,11 +188,7 @@
   margin-right: 0;
 }
 
-.midi-qol.dialog.reaction .dialog-buttons button:last-child {
-  margin-right: 5px;
-}
-
-.midi-qol.dialog.optional .dialog-buttons button:last-child {
+.midi-qol.dialog:is(.reaction, .optional) .dialog-buttons button:last-child {
   margin-right: 5px;
 }
 
@@ -261,7 +246,6 @@
   grid-template-columns: auto auto auto;
   gap: 10px;
   width: 300px;
-  /* You can adjust the width as needed */
 }
 
 .midi-qol .grid-item {
@@ -291,6 +275,9 @@
   scrollbar-width: thin;
 }
 
+/* ----------------------------------------- */
+/* Dice Result Tooltips
+/* ----------------------------------------- */
 .dice-result .dice-tooltip .dice .total {
   flex: 50%;
   max-width: 62.66px;
@@ -304,105 +291,122 @@
   white-space: normal;
 }
 
-.dice-result .midi-dice-tooltip {
-  flex: auto;
-  order: unset;
-  display: block;
-  overflow: hidden;
-  transition: all 250ms ease;
+.dice-result .dice-tooltip .tooltip-part {
+  padding: 0;
 }
 
-.dice-result .midi-dice-tooltip .tooltip-part {
-  border-bottom: 1px solid var(--color-border-light-1);
-  padding: 0.125rem 0;
+.dice-result .dice-tooltip .tooltip-part .dice {
+  margin: 0.2rem 0;
 }
 
-.dice-result .midi-dice-tooltip .tooltip-part:last-child {
-  border: none;
-  padding-bottom: 0;
-}
-
-.dice-result .midi-dice-tooltip .tooltip-part.constant {
-  padding-right: 6px;
-  min-height: 40px;
-  display: grid;
-}
-
-.dice-result .midi-dice-tooltip .dice {
-  display: flex;
-  align-items: center;
-}
-
-.dice-result .midi-dice-tooltip .dice .dice-rolls {
-  flex: 1;
-  margin: 5px 0 5px 10px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1px;
-}
-
-.dice-result .midi-dice-tooltip .dice .dice-rolls .roll {
-  position: unset;
-  float: unset;
-  margin: 0;
-}
-
-.dice-result .midi-dice-tooltip .dice .dice-rolls .constant {
-  font-family: var(--font-primary);
-  font-weight: bold;
-  font-size: var(--font-size-18);
-  margin-left: 0.25rem;
-}
-
-.dice-result .midi-dice-tooltip .dice .dice-rolls .constant .sign {
-  font-weight: normal;
-  color: var(--color-text-light-6);
-  margin-right: 2px;
-}
-
-.dice-result .midi-dice-tooltip .dice .total {
-  flex-basis: 25%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
-}
-
-.dice-result .midi-dice-tooltip .dice .total>img {
-  top: 6px;
-  position: absolute;
-  width: 32px;
-  border: none;
-  opacity: 0.1;
-}
-
-.dice-result .midi-dice-tooltip .dice .total .label {
-  font-family: var(--dnd5e-font-roboto-condensed);
-  font-size: var(--font-size-10);
-  color: var(--color-text-dark-5);
-  text-transform: uppercase;
-  text-align: center;
-}
-
-.dice-result .midi-dice-tooltip .dice .total .value {
-  font-family: var(--font-primary);
-  font-weight: bold;
-  font-size: var(--font-size-20);
-}
-
-.dice-result .midi-dice-tooltip .dice .total .sign {
-  color: var(--color-text-light-6);
-  font-weight: normal;
-  margin-right: 2px;
+.dice-result .dice-tooltip-collapser {
+  margin-top: 0.1rem;
 }
 
 .dice-result .dice-total {
   font-weight: bold;
   font-size: var(--font-size-20);
   padding: 0.125rem;
-  margin-top: 0.25rem;
+  margin-top: 0;
   font-family: var(--font-primary);
   position: relative;
+}
+
+.dice-roll .dice-result {
+  margin-bottom: 0.2rem;
+}
+
+/* Midi dice tooltip - nested for consolidation */
+.dice-result .midi-dice-tooltip {
+  flex: auto;
+  order: unset;
+  display: block;
+  overflow: hidden;
+  transition: all 250ms ease;
+
+  .tooltip-part {
+    border-bottom: 1px solid var(--color-border-light-1);
+    padding: 0.125rem 0;
+
+    &:last-child {
+      border: none;
+      padding-bottom: 0;
+    }
+
+    &.constant {
+      padding-right: 6px;
+      min-height: 40px;
+      display: grid;
+    }
+  }
+
+  .dice {
+    display: flex;
+    align-items: center;
+
+    .dice-rolls {
+      flex: 1;
+      margin: 5px 0 5px 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1px;
+
+      .roll {
+        position: unset;
+        float: unset;
+        margin: 0;
+      }
+
+      .constant {
+        font-family: var(--font-primary);
+        font-weight: bold;
+        font-size: var(--font-size-18);
+        margin-left: 0.25rem;
+
+        .sign {
+          font-weight: normal;
+          color: var(--color-text-light-6);
+          margin-right: 2px;
+        }
+      }
+    }
+
+    .total {
+      flex-basis: 25%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+
+      > img {
+        top: 6px;
+        position: absolute;
+        width: 32px;
+        border: none;
+        opacity: 0.1;
+      }
+
+      .label {
+        font-family: var(--dnd5e-font-roboto-condensed);
+        font-size: var(--font-size-10);
+        color: var(--color-text-dark-5);
+        text-transform: uppercase;
+        text-align: center;
+      }
+
+      .value {
+        font-family: var(--font-primary);
+        font-weight: bold;
+        font-size: var(--font-size-20);
+      }
+
+      .sign {
+        color: var(--color-text-light-6);
+        font-weight: normal;
+        margin-right: 2px;
+      }
+    }
+  }
 }
 
 .midi-bonus-damage-flavor {
@@ -427,8 +431,7 @@
 .dnd5e2.chat-card.midi-chat-card {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  /* Effects Tray */
+  gap: 0;
 }
 
 .dnd5e.chat-card.midi-chat-card .card-buttons {
@@ -436,6 +439,7 @@
   height: 18px;
   line-height: 14px;
 }
+
 .dnd5e.chat-card.midi-chat-card.card-buttons button {
   color: red;
   font-size: var(--font-size-12);
@@ -451,219 +455,207 @@
   border: 1px solid var(--dnd5e-border-light);
 }
 
-:is(.chat-popout, #chat-log, .chat-log) .midi-results .midi-qol.target>img {
-  width: 22px !important;
-  height: 22px !important;
-  object-fit: cover;
-  object-position: top;
-  margin: 0px 0 !important;
-  border-radius: 100%;
-  border: 1px solid var(--dnd5e-color-gold) !important;
-  box-shadow: 0 0 2px var(--dnd5e-shadow-45) !important;
-  background: var(--dnd5e-color-light-gray);
-}
-
-/* CHAT - DND5E 3 AND MIDI */
+/* ----------------------------------------- */
+/* CHAT - DND5E 3 AND MIDI
+/* ----------------------------------------- */
 
 :root {
-
   --dnd5e-color-failure-background: rgb(245,221,221);
   --dnd5e-color-success-background: rgb(204,215,197);
-    
-  }
-  
-  /* Chat message borders */
-  
-  :is(.chat-popout, #chat-log, .chat-log) .message {
-    border-width: 0;	
+}
+
+/* Chat log consolidated styles */
+:is(.chat-popout, #chat-log, .chat-log) {
+  .message {
+    border-width: 0;
     border-left: 0.2rem solid;
     border-color: var(--user-color);
   }
-  
-  /* Fix chat message corners */
-  
-  :is(.chat-popout, #chat-log, .chat-log) .message.whisper::before {
-      border-radius: 6px !important;
-  }
-  
-  /* Condensed Item description */
-  
-  .dnd5e2.chat-card .description {
-      padding: 0.4rem;
-    margin-bottom: 0.4rem;
-  }
-  
-  .dnd5e2.chat-card .description:not(:has(p),.collapsed) .details { 
-    margin-top: 0.4rem; /* fix for badly imported details */
-  }
-  
-  /* Chat card spacing */
-  
-  .dnd5e2.chat-card.midi-chat-card {
-      gap: 0;
-  }
-  
-  /* Condensed hits, misses and saves evaluation */
-  
-  :is(.chat-popout, #chat-log, .chat-log) .midi-results {
-      gap: 0.15rem;
-    margin-bottom: 0.25rem;
-  }
-  
-  :is(.chat-popout, #chat-log, .chat-log) .midi-results .target {
-    padding: 0.2rem 0.3rem;
-  }
-  
-  :is(.chat-popout, #chat-log, .chat-log) .midi-results .target .name-stacked {
-    min-height: auto;
-  }
-  
-  :is(.chat-popout, #chat-log, .chat-log) .midi-results .target .name-stacked .title {
-    font-size: var(--font-size-14);
-    margin-bottom: 0.1rem;
-  }
-  
-  :is(.chat-popout, #chat-log, .chat-log) .midi-results .target.failure,
-  .midi-results .target.failure  {
-      border-color: rgba(110,0,0,0.4);
-    background-color: var(--dnd5e-color-failure-background);
-  }
-  
-  :is(.chat-popout, #chat-log, .chat-log) .midi-results .target.success,
-  .midi-results .target.success  {
-      border-color: rgba(0,108,0,0.4);
-    background-color: var(--dnd5e-color-success-background);
-  }
-  
-  .midi-qol-tooltiptext.midi-qol-save-tooltip {
-    width: 65%;
-  }
-  
-  .midi-qol-saves-display {
-    padding-top: 0.2rem;
-    font-size: 12px;
-  }
-  
-  /* Condensed footer pills */
-  .card-footer.pills.unlist li.pill.pill-sm {
-      font-size: 9px;
-    padding: 0.2rem 0.3rem;
-  }
-  .card-footer.pills.unlist {
-      gap: 0.2rem;
-    margin-top: 0.1rem;
-  }
-  
-  /* Midi Attack and Damage buttons */
-  
-  .dnd5e2.chat-card .card-buttons.midi-buttons:has(button) {
-      gap: 0.2rem;
-    padding-bottom: 0.4rem;
-  }
-  
-  .midi-qol-attack-buttons button,
-  .midi-qol-damage-buttons button,
-  .dnd5e2 .midi-buttons button {
-      height: 1.75rem;
-    margin: 0;
+
+  .message.whisper::before {
+    border-radius: 0px;
   }
 
-  /* Midi Attack and Damage results */
-  .midi-qol-attack-roll, .midi-qol-damage-roll {
-      white-space: nowrap;
+  .midi-results {
+    gap: 0.15rem;
+    margin-bottom: 0.25rem;
+
+    .midi-qol.target > img {
+      width: 22px !important;
+      height: 22px !important;
+      object-fit: cover;
+      object-position: top;
+      margin: 0px 0 !important;
+      border-radius: 100%;
+      border: 1px solid var(--dnd5e-color-gold) !important;
+      box-shadow: 0 0 2px var(--dnd5e-shadow-45) !important;
+      background: var(--dnd5e-color-light-gray);
+    }
+
+    .target {
+      padding: 0.2rem 0.3rem;
+
+      .name-stacked {
+        min-height: auto;
+
+        .title {
+          font-size: var(--font-size-14);
+          margin-bottom: 0.1rem;
+        }
+      }
+
+      &.failure {
+        border-color: rgba(110,0,0,0.4);
+        background-color: var(--dnd5e-color-failure-background);
+      }
+
+      &.success {
+        border-color: rgba(0,108,0,0.4);
+        background-color: var(--dnd5e-color-success-background);
+      }
+    }
+
+    .flexrow {
+      gap: 0.15rem;
+    }
   }
-  
-  .midi-results .flexrow {
-      gap: 0.15rem; 
-  }
-  
-  
-  .dice-result .dice-tooltip .tooltip-part {
-      padding: 0;
-  }
-  
-  .dice-result .dice-tooltip .tooltip-part .dice {
-    margin: 0.2rem 0;
-  }
-  
-  .dice-result .dice-total {
-    margin-top: 0;
-  }
-  
-  .dice-result .dice-tooltip-collapser {
-    margin-top: 0.1rem;
-  }
-  
-  .midi-qol-attack-roll > div:nth-child(1), .midi-qol-damage-roll > div:nth-child(1), .midi-qol-other-damage-roll > div:nth-child(1), .midi-qol-utility-roll > div:nth-child(1){
-    text-transform: uppercase;
-    font-size: 10px;
-    font-weight: bold;
-  }
-  
-  .dice-roll .dice-result {
-      margin-bottom: 0.2rem;
-  }
-  
-  /* Midi Damage application card (tested with DnD5E damage application OFF)  */
-  
-  :is(.chat-popout, #chat-log, .chat-log) .message:has(.xmidi-qol-flex-container) {
-      padding: 0 ;
+
+  .message:has(.midi-qol-player-damage-card) {
+    padding: 0;
     border: none;
     border-left: 0.2rem solid var(--user-color);
   }
-  
-  /* Hides the header  */
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) .message-header {
-      display: none; 
+}
+
+/* Additional target styling for non-chat-log contexts */
+.midi-results .target.failure {
+  border-color: rgba(110,0,0,0.4);
+  background-color: var(--dnd5e-color-failure-background);
+}
+
+.midi-results .target.success {
+  border-color: rgba(0,108,0,0.4);
+  background-color: var(--dnd5e-color-success-background);
+}
+
+.midi-qol-tooltiptext.midi-qol-save-tooltip {
+  width: 65%;
+}
+
+.midi-qol-saves-display {
+  padding-top: 0.2rem;
+  font-size: 12px;
+}
+
+/* Condensed Item description */
+.dnd5e2.chat-card .description {
+  padding: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.dnd5e2.chat-card .description:not(:has(p),.collapsed) .details {
+  margin-top: 0.4rem;
+}
+
+/* Condensed footer pills */
+.card-footer.pills.unlist {
+  gap: 0.2rem;
+  margin-top: 0.1rem;
+
+  li.pill.pill-sm {
+    font-size: 9px;
+    padding: 0.2rem 0.3rem;
   }
-  
+}
+
+/* Midi Attack and Damage buttons */
+.dnd5e2.chat-card .card-buttons.midi-buttons:has(button) {
+  gap: 0.2rem;
+  padding-bottom: 0.4rem;
+}
+
+.midi-qol-attack-buttons button,
+.midi-qol-damage-buttons button,
+.dnd5e2 .midi-buttons button {
+  height: 1.75rem;
+  margin: 0;
+}
+
+/* Midi Attack and Damage results */
+.midi-qol-attack-roll,
+.midi-qol-damage-roll {
+  white-space: nowrap;
+}
+
+.midi-qol-attack-roll > div:nth-child(1),
+.midi-qol-damage-roll > div:nth-child(1),
+.midi-qol-other-damage-roll > div:nth-child(1),
+.midi-qol-utility-roll > div:nth-child(1) {
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.midi-qol-tooltiptext {
+  width: max-content;
+  font-size: 14px;
+  bottom: 100%;
+}
+
+/* ----------------------------------------- */
+/* xmidi-qol-flex-container (Damage Application Card)
+/* ----------------------------------------- */
+.chat-message.message.flexcol:has(.xmidi-qol-flex-container) {
+  /* Hides the header */
+  .message-header {
+    display: none;
+  }
+
   /* Table Adjustments */
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) table {
-      margin: 0;
+  table {
+    margin: 0;
     border: none;
+
+    tbody tr {
+      border-bottom: 1px solid rgba(150, 150, 200, 0.2);
+      background-color: rgba(255, 255, 255, 0.1);
+
+      &:hover {
+        background-color: rgba(150, 150, 200, 0.2);
+      }
+    }
   }
-  
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) th {
+
+  th {
     line-height: normal;
     padding: 7px 3px 5px 3px;
     text-align: left !important;
   }
-  .xmidi-qol-flex-container th {
-    font-family: var(--font-sans-condensed);
-    font-size: var(--font-size-11);
-  }
-  
-  .xmidi-qol-flex-container span {
-    font-family: var(--font-sans-condensed);
-    font-size: var(--font-size-12);
-    font-weight: 600;
-  }
-  
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) thead > tr > th:nth-child(1)::before {
-      font-family: "Font Awesome 6 Pro";
-    content: "\f7a9";
-    margin-right: 3px;
-    color: var(--color-text-light-7);
-  }
-  
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) td {
+
+  td {
     font-size: 13px;
     line-height: normal;
     padding: 0.15rem;
   }
-  
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) th:last-child, 
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) td:last-child {
+
+  th:last-child,
+  td:last-child {
     padding-right: 0.5rem;
   }
-  
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) th:first-child,
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) td:first-child {
+
+  th:first-child,
+  td:first-child {
     padding-left: 8px;
     width: 100%;
   }
-  
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) thead {
+
+  /* Attempt to fix alignment in the damage display */
+  td:first-child {
+    display: flex;
+    align-items: center;
+  }
+
+  thead {
     background: rgba(0, 0, 0, 0.05);
     font-size: 10px;
     color: var(--color-text-dark-secondary);
@@ -671,39 +663,41 @@
     text-transform: uppercase;
     border: none;
     text-wrap: nowrap;
-    
+
+    > tr > th:nth-child(1)::before {
+      font-family: "Font Awesome 6 Pro";
+      content: "\f7a9";
+      margin-right: 3px;
+      color: var(--color-text-light-7);
+    }
   }
-  
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) tfoot td {
+
+  tfoot td {
     padding-top: 5px;
     padding-bottom: 7px;
+
+    &:first-child {
+      position: relative;
+      top: 0.25rem;
+      left: 0.25rem;
+    }
   }
-  
-  :is(.chat-popout, #chat-log, .chat-log) .message.whisper::before {
-      border-radius: 0px;
-  }
-  
-  .midi-qol-tooltiptext {
-      width: max-content;
-      font-size: 14px;
-      bottom: 100%;
-  }
-  
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) table > tbody > tr > td:nth-child(1) > div:nth-child(1) > div:nth-child(1) {
+
+  table > tbody > tr > td:nth-child(1) > div:nth-child(1) > div:nth-child(1) {
     min-width: 32px;
   }
-  
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container):has(button) table > tbody > tr > td:nth-child(1) > div:nth-child(2) > span > div {
+
+  &:has(button) table > tbody > tr > td:nth-child(1) > div:nth-child(2) > span > div {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
     font-size: 12px;
     max-width: 95px;
   }
-  
+
   /* Select and buttons */
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) select,
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) button {
+  select,
+  button {
     border-radius: 3px;
     border: 1px solid var(--color-border-light-2);
     background: rgba(255, 255, 255, 0.4);
@@ -712,44 +706,40 @@
     padding: 0 4px 0 2px;
     font-size: 12px;
   }
-  
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) button {
+
+  button {
     padding: 0 5px 0 9px;
   }
-  
-  /* row colors */
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) table tbody tr:nth-child(even) {
-      background-color: rgba(255, 255, 255, 0.1);
-  }
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) table tbody tr:nth-child(odd) {
-      background-color: rgba(255, 255, 255, 0.1);
-  }
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) table tbody tr:hover {
-      background-color: rgba(150, 150, 200, 0.2);
-  }
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) table tbody tr {
-      border-bottom: 1px solid rgba(150, 150, 200, 0.2);
-  }
-  
-  /* Attempt to fix alignment in the damage display. Might break with DnD5e damage application as Midi outputs text differently with it on */
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) td:first-child {
-      display: flex;
-      align-items: center;
-  }
+
   /* Attempt to fix the image too */
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) .midi-qol-target-name {
-      width: 30px;
-      height: 30px;
-      margin-right: 0.25rem;
-      vertical-align: middle;
+  .midi-qol-target-name {
+    width: 30px;
+    height: 30px;
+    margin-right: 0.25rem;
+    vertical-align: middle;
   }
-  
-  /* Hacky way to improve "All" positioning */
-  .chat-message.message.flexcol:has(.xmidi-qol-flex-container) tfoot td:first-child {
-      position: relative;
-    top: 0.25rem;
-    left: 0.25rem;
+}
+
+/* xmidi-qol-flex-container table header/span styles */
+.xmidi-qol-flex-container {
+  th {
+    font-family: var(--font-sans-condensed);
+    font-size: var(--font-size-11);
   }
+
+  span {
+    font-family: var(--font-sans-condensed);
+    font-size: var(--font-size-12);
+    font-weight: 600;
+  }
+}
+
+/* Message container for xmidi-qol-flex-container */
+:is(.chat-popout, #chat-log, .chat-log) .message:has(.xmidi-qol-flex-container) {
+  padding: 0;
+  border: none;
+  border-left: 0.2rem solid var(--user-color);
+}
 
 /* Item sheet midi tab */
 section.midi-qol.tab {
@@ -774,14 +764,14 @@ section.midi-qol.tab {
   .midi-properties {
     display: grid;
     grid-template-columns: 1fr 1fr;
+
+    label.checkbox {
+      align-items: baseline;
+    }
   }
 
   .form-group {
     margin-bottom: 5px;
-  }
-
-  .midi-properties label.checkbox {
-    align-items: baseline;
   }
 
   .midi-activation-conditions h3 {
@@ -832,16 +822,9 @@ section.midi-qol.tab {
   padding: 2px 0;
 }
 
-/* Hide message header for player damage cards (matches classic style) */
+/* Hide message header for player damage cards */
 .chat-message.message.flexcol:has(.midi-qol-player-damage-card) .message-header {
   display: none;
-}
-
-/* Style the player damage card message container */
-:is(.chat-popout, #chat-log, .chat-log) .message:has(.midi-qol-player-damage-card) {
-  padding: 0;
-  border: none;
-  border-left: 0.2rem solid var(--user-color);
 }
 
 /* Header row with "Damage Applied" text */
@@ -879,48 +862,43 @@ section.midi-qol.tab {
   font-size: 1.05em;
   font-weight: bold;
   margin-left: 4px;
+
+  .fa-heart-crack {
+    font-size: 13px;
+    color: #000;
+    margin-right: 1px;
+  }
 }
 
-.midi-qol-dmg-vitality-total .fa-heart-crack {
-  font-size: 13px;
-  color: #000;
-  margin-right: 1px;
-}
-
-/* Temp HP display */
-.midi-qol-dmg-temp {
+/* Consolidated damage display elements */
+.midi-qol-dmg-temp,
+.midi-qol-dmg-hp,
+.midi-qol-dmg-vitality,
+.midi-qol-dmg-nochange {
   font-size: 1.05em;
+}
+
+.midi-qol-dmg-nochange {
+  opacity: 0.7;
+}
+
+/* Damage card icons - consolidated */
+.midi-qol-dmg-temp .fa-shield-alt,
+.midi-qol-dmg-hp .fa-heart,
+.midi-qol-dmg-vitality .fa-heart-crack {
+  font-size: 14px;
 }
 
 .midi-qol-dmg-temp .fa-shield-alt {
-  font-size: 14px;
   color: #4488cc;
 }
 
-/* HP display */
-.midi-qol-dmg-hp {
-  font-size: 1.05em;
-}
-
 .midi-qol-dmg-hp .fa-heart {
-  font-size: 14px;
   color: #cc4444;
 }
 
-/* Vitality display */
-.midi-qol-dmg-vitality {
-  font-size: 1.05em;
-}
-
 .midi-qol-dmg-vitality .fa-heart-crack {
-  font-size: 14px;
   color: #000;
-}
-
-/* No change indicator */
-.midi-qol-dmg-nochange {
-  font-size: 1.05em;
-  opacity: 0.7;
 }
 
 /* Arrow icon between old and new values */
@@ -987,17 +965,17 @@ section.midi-qol.tab {
   padding: 2px 4px;
   background: rgba(128,128,128,0.08);
   margin-top: 2px;
-}
 
-.midi-qol-dmg-all-row strong {
-  font-size: 0.9em;
+  strong {
+    font-size: 0.9em;
+  }
 }
 
 /* Player card specific - simple text display */
 .midi-qol-dmg-text {
   font-size: 0.9em;
-}
 
-.midi-qol-dmg-text.midi-qol-dmg-healing {
-  color: #22aa44;
+  &.midi-qol-dmg-healing {
+    color: #22aa44;
+  }
 }

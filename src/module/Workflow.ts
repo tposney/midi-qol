@@ -4068,15 +4068,16 @@ export class Workflow {
           { actor: target.actor, token: target })
         );
       }
+      // 13.0.39 isDamaged Hook is always called inside processDamageRoll, so don't do it here
       // If auto applying damage can do a better test when damage application has been calculdated
-      if (wasDamaged && triggerList.includes("isDamaged") && !configSettings.autoApplyDamage.toLocaleLowerCase().includes("yes")) {
-        result.push(...await this.callMacros(this.item,
-          actorOnUseMacros?.getMacros("isDamaged"),
-          "TargetOnUse",
-          "isDamaged",
-          { actor: target.actor, token: target })
-        );
-      }
+      // if (wasDamaged && triggerList.includes("isDamaged") && !configSettings.autoApplyDamage.toLocaleLowerCase().includes("yes")) {
+      //  result.push(...await this.callMacros(this.item,
+      //    actorOnUseMacros?.getMacros("isDamaged"),
+      //    "TargetOnUse",
+      //    "isDamaged",
+      //    { actor: target.actor, token: target })
+      //  );
+      // }
       if (wasHit && triggerList.includes("isHit")) {
         result.push(...await this.callMacros(this.item,
           actorOnUseMacros?.getMacros("isHit"),
@@ -4529,9 +4530,11 @@ export class Workflow {
   /**
    * Resolve a function.* macro specification.
    */
-  private resolveFunctionMacro(name: string): ResolvedMacro {
+  private resolveFunctionMacro(name: string, context: CallMacroContext): ResolvedMacro {
     const func = name.replace("function.", "").trim();
-    return {
+return {
+      item: context.macroItem,
+      activity: context.macroActivity,
       macroData: {
         name: "function call",
         type: "script",
@@ -4543,12 +4546,9 @@ export class Workflow {
   /**
    * Resolve an ItemMacro specification, with DAE itemData fallback.
    */
-  private async resolveItemMacroCall(
-    name: string,
-    uuid: string | undefined,
-    macroItem: Item.Implementation | Item.InitializedData | undefined,
-    actorToUse: Actor.Implementation
-  ): Promise<ResolvedMacro | undefined> {
+  private async resolveItemMacroCall(name: string, context: CallMacroContext): Promise<ResolvedMacro | undefined> {
+    const { uuid, macroItem, actorToUse } = context;
+
     // Try standard resolution first
     const resolved = await resolveItemMacro(name, { actor: actorToUse, originItem: macroItem as Item.Implementation });
     if (resolved) {
@@ -4579,11 +4579,9 @@ export class Workflow {
   /**
    * Resolve an ActivityMacro specification.
    */
-  private async resolveActivityMacroCall(
-    name: string,
-    macroItem: Item.Implementation | Item.InitializedData | undefined,
-    macroActivity: Activity | undefined
-  ): Promise<ResolvedMacro | undefined> {
+  private async resolveActivityMacroCall(name: string, context: CallMacroContext): Promise<ResolvedMacro | undefined> {
+    const { macroItem, macroActivity } = context;
+
     // Workflow-specific guard: ActivityMacro-id must match current activity
     if (name.startsWith("ActivityMacro-")) {
       const activityId = name.split("-").slice(1).join("-");
@@ -4609,7 +4607,7 @@ export class Workflow {
   /**
    * Resolve a world or compendium macro.
    */
-  private async resolveWorldMacro(name: string): Promise<ResolvedMacro | undefined> {
+  private async resolveWorldMacro(name: string, context: CallMacroContext): Promise<ResolvedMacro | undefined> {
     const macroName = name.startsWith("Macro.") ? name.slice(6) : name;
     let macro = game.macros?.getName(macroName);
 
@@ -4631,7 +4629,7 @@ export class Workflow {
       return undefined; // Chat macros handle themselves
     }
 
-    return macro ? { macro } : undefined;
+    return macro ? { item: context.macroItem, activity: context.macroActivity, macro } : undefined;
   }
 
   /**
@@ -4703,19 +4701,19 @@ export class Workflow {
       const context = await this.parseCallMacroContext(macroName, item, options);
       if (!context) return undefined;
 
-      const { name, uuid, macroItem, macroActivity, actorToUse } = context;
+      const { name, actorToUse } = context;
       let resolved: ResolvedMacro | undefined;
 
       // Phase 2: Resolve macro based on type
       if (name.startsWith("function.")) {
-        resolved = this.resolveFunctionMacro(name);
+        resolved = this.resolveFunctionMacro(name, context);
       } else if (name.startsWith(MQItemMacroLabel) || name.startsWith("ItemMacro")) {
-        resolved = await this.resolveItemMacroCall(name, uuid, macroItem, actorToUse);
+        resolved = await this.resolveItemMacroCall(name, context);
       } else if (name.startsWith(MQActivityMacroLabel) || name.startsWith("ActivityMacro")) {
-        resolved = await this.resolveActivityMacroCall(name, macroItem, macroActivity);
+        resolved = await this.resolveActivityMacroCall(name, context);
       } else {
         // World/compendium macro - show error if not found
-        resolved = await this.resolveWorldMacro(name);
+        resolved = await this.resolveWorldMacro(name, context);
         if (!resolved) {
           const message = `Could not find macro ${name}`;
           TroubleShooter.recordError(new Error(message), message);
@@ -6667,7 +6665,7 @@ export class Workflow {
     }
   }
 
-  async callDamageHooks(damages: DamageListEntry, token: Token.Implementation) {
+  async callDamageHooksAndMacros(damages: DamageListEntry, token: Token.Implementation) {
     this.damageItem = damages;
     if (configSettings.allowUseMacro && !this.workflowOptions?.noTargetOnUseMacro && this.item.flags) {
       await this.triggerTargetMacros(["preTargetDamageApplication"], new Set([token]));

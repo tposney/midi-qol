@@ -1,9 +1,87 @@
 import { debug, setDebugLevel, i18n, debugEnabled, error, gameStats } from "../midi-qol.js";
 import { ConfigPanel } from "./apps/ConfigPanel.js"
+import { DependentsExplorer } from "./apps/DependentsExplorer.js";
 import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { TargetConfirmationConfig } from "./apps/TargetConfirmationConfig.js";
 import { Workflow } from "./Workflow.js";
+
+// Dummy FormApplication that launches the setup wizard via hook
+class LaunchWizardSubmenu extends FormApplication {
+  constructor(object = {}, options = {}) {
+    super(object, options);
+  }
+  static get defaultOptions() {
+    return foundry.utils.mergeObject(super.defaultOptions, {
+      id: "midi-qol-launch-wizard",
+      classes: ["midi-qol"],
+      title: "Launch Setup Wizard",
+      width: 0,
+      height: 0
+    });
+  }
+  async _render(force?: boolean, options?: any) {
+    // Don't render anything - just trigger the wizard and close
+    Hooks.call("midi-qol-setup-wizard.launch");
+    this.close();
+  }
+  getData() { return {}; }
+  protected _updateObject(event: Event, formData?: object): Promise<unknown> { return Promise.resolve(); }
+}
+
+// Dummy FormApplication that launches the DependentsExplorer
+class LaunchDependentsExplorer extends FormApplication {
+  constructor(object = {}, options = {}) {
+    super(object, options);
+  }
+  static get defaultOptions() {
+    return foundry.utils.mergeObject(super.defaultOptions, {
+      id: "midi-qol-launch-dependents-explorer",
+      classes: ["midi-qol"],
+      title: "Dependents Explorer",
+      width: 0,
+      height: 0
+    });
+  }
+  async _render(force?: boolean, options?: any) {
+    // Don't render anything - just open the DependentsExplorer and close this
+    new DependentsExplorer().render(true);
+    this.close();
+  }
+  getData() { return {}; }
+  protected _updateObject(event: Event, formData?: object): Promise<unknown> { return Promise.resolve(); }
+}
+
+// Dummy FormApplication that shows reset confirmation dialog
+class ResetSettingsSubmenu extends FormApplication {
+  constructor(object = {}, options = {}) {
+    super(object, options);
+  }
+  static get defaultOptions() {
+    return foundry.utils.mergeObject(super.defaultOptions, {
+      id: "midi-qol-reset-settings",
+      classes: ["midi-qol"],
+      title: "Reset Settings",
+      width: 0,
+      height: 0
+    });
+  }
+  async _render(force?: boolean, options?: any) {
+    // Don't render anything - show confirmation dialog and close
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: i18n("midi-qol.ResetDefaults.Title") },
+      content: `<p>${i18n("midi-qol.ResetDefaults.Content")}</p>`,
+      yes: { label: i18n("midi-qol.ResetDefaults.Confirm") },
+      no: { label: i18n("Cancel") }
+    });
+    if (confirmed) {
+      await resetConfigSettingsToDefaults();
+    }
+    this.close();
+  }
+  getData() { return {}; }
+  protected _updateObject(event: Event, formData?: object): Promise<unknown> { return Promise.resolve(); }
+}
 
 export let autoFastForwardAbilityRolls: boolean;
 export let autoRemoveTargets: string;
@@ -62,8 +140,8 @@ class ConfigSettings {
   midiWoundedCondition: string = "none";
   midiDeadCondition: string = "none";
   midiUnconsciousCondition: string = "none";
-  allowUseMacro: boolean = false;
-  allowActorUseMacro: boolean = false;
+  allowUseMacro: boolean = true;
+  allowActorUseMacro: boolean = true;
   attackPerTarget: boolean = false;
   autoApplyDamage: string = "none";
   damageCardStyle: string = "flexbox";
@@ -81,14 +159,14 @@ class ConfigSettings {
   autoRemoveInstantaneousTemplate: boolean = false;
   autoRollAttack: boolean = false;
   autoRollDamage: string = "none";
-  autoCompleteWorkflow = false;
+  autoCompleteWorkflow = true;
   saveDROrder = "DRSaveDr";
   autoTarget: string = "none";
   averageDamage: string = "none";
   checkSaveText: boolean = false;
   checkTwoHanded: boolean = false;
   chooseAmmunition: boolean = true;
-  collapsibleTargets: boolean = true;
+  collapsibleTargets: boolean = false;
   concentrationAutomation: boolean = false;
   confirmAmmunition: boolean = false;
   gmConfirmAmmunition: boolean = false;
@@ -107,7 +185,6 @@ class ConfigSettings {
   griddedGridless: boolean = false;
   gridlessFudge: number | undefined = 0;
   doReactions: string = "all";
-  effectActivation: boolean = false;
   enableDDBGL: boolean = false;
   enforceReactions = "none";
   enforceBonusActions = "none";
@@ -126,7 +203,6 @@ class ConfigSettings {
   gmRemoveButtons: string = "all";
   hideRollDetails: string = "none";
   ignoreSpellReactionRestriction: boolean = false;
-  itemRollStartWorkflow: boolean = false;
   itemTypeList: string[] | undefined = undefined;
   itemUseSound: string = "";
   keepRollStats: boolean = false;
@@ -185,7 +261,7 @@ class ConfigSettings {
   undoChatColor: string = "Delete";
   undoWorkflow: boolean = false;
   useDamageDetail: boolean = true;
-  waitForDamageApplication: boolean = false;
+  waitForDamageApplication: boolean = true;
   weaponHitSound: string = "";
   weaponUseSound: string = "";
   weaponUseSoundRanged: string = "";
@@ -236,6 +312,47 @@ export function checkRule(rule: keyof (typeof configSettings.optionalRules)) {
   return rulesEnabled && configSettings.optionalRules[rule];
 }
 
+/**
+ * Reset all midi-qol settings to their default values.
+ * This resets ConfigSettings, all game.settings (except tracking/stats settings),
+ * and ensures EnableWorkflow is set to true.
+ * @returns Promise that resolves when settings have been saved
+ */
+export async function resetConfigSettingsToDefaults(): Promise<void> {
+  // Reset ConfigSettings to defaults
+  const defaultSettings = new ConfigSettings();
+  await game.settings.set("midi-qol", "ConfigSettings", defaultSettings);
+  configSettings = defaultSettings;
+
+  // Reset world-scoped game.settings to defaults
+  // Note: EnableWorkflow is explicitly set to true as requested
+  await game.settings.set("midi-qol", "EnableWorkflow", true);
+  // PreferredGM is intentionally not reset - user preference
+  await game.settings.set("midi-qol", "ReplaceDefaultActivities", true);
+  await game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", false);
+  await game.settings.set("midi-qol", "showGM", false);
+  await game.settings.set("midi-qol", "ForceHideRoll", true);
+  await game.settings.set("midi-qol", "DragDropTarget", false);
+  // RollStats is intentionally not reset - statistics data
+  await game.settings.set("midi-qol", "CriticalDamageGM", "none");
+  await game.settings.set("midi-qol", "CriticalDamage", "default");
+  await game.settings.set("midi-qol", "ColoredBorders", "None");
+  await game.settings.set("midi-qol", "AutoRemoveTargets", "dead");
+  await game.settings.set("midi-qol", "TargetConfirmation", defaultTargetConfirmationSettings);
+  await game.settings.set("midi-qol", "playerControlsInvisibleTokens", false);
+  await game.settings.set("midi-qol", "pruneChatLog", true);
+  await game.settings.set("midi-qol", "DebounceInterval", 0);
+  await game.settings.set("midi-qol", "Debug", "None");
+  await game.settings.set("midi-qol", "SaveToChatCard", false);
+  await game.settings.set("midi-qol", "UseWeakReferences", false);
+  await game.settings.set("midi-qol", "splashWarnings", true);
+  // notificationVersion, last-run-version, instanceId are intentionally not reset - tracking data
+  // MidiSoundSettings is intentionally not reset - separate configuration
+
+  Hooks.callAll("midi-qol.ConfigSettingsChanged");
+  ui.notifications?.info("midi-qol | Settings reset to defaults");
+}
+
 export const checkedModuleList = [
   "about-time",
   "ActiveAuras",
@@ -277,8 +394,14 @@ export const CheckedAuthorsList = [
 ]
 
 export function collectSettingData() {
+  // Create a copy of configSettings without deprecated properties
+  const cleanConfigSettings = { ...configSettings };
+  // Remove deprecated properties that have been migrated
+  //@ts-expect-error deprecated property
+  delete cleanConfigSettings.displaySaveDC;
+
   let data = {
-    configSettings,
+    configSettings: cleanConfigSettings,
     midiSoundSettings,
     itemRollButtons,
     autoFastForwardAbilityRolls,
@@ -321,6 +444,61 @@ function removeOldValues(theObject: any) {
   });
   return theObject;
 }
+
+/**
+ * Migrates the deprecated displaySaveDC setting to dnd5e challengeVisibility.
+ * Modifies the configSettings object in place, removing the deprecated field.
+ * @param configSettingsToMigrate - The configSettings object to migrate (will be modified)
+ * @param source - The source of the migration: "startup" for world load, "import" for settings import
+ */
+async function migrateDisplaySaveDC(configSettingsToMigrate: any, source: "startup" | "import" = "startup") {
+  const oldMidiDisplaySaveDC = configSettingsToMigrate.displaySaveDC;
+  const currentDnd5eVisibility = safeGetGameSetting("dnd5e", "challengeVisibility") as string;
+
+  // Determine most restrictive: if midi was false (hide DC) OR dnd5e is "none", result is "none"
+  let newVisibility = currentDnd5eVisibility;
+  if (oldMidiDisplaySaveDC === false || currentDnd5eVisibility === "none") {
+    newVisibility = "none";
+  }
+
+  // Check if we need to change the dnd5e setting
+  const needsChange = newVisibility !== currentDnd5eVisibility;
+
+  // Apply the change if needed
+  if (needsChange) {
+    await game.settings.set("dnd5e", "challengeVisibility", newVisibility);
+  }
+
+  // Remove the deprecated field
+  delete configSettingsToMigrate.displaySaveDC;
+
+  // Show migration chat message if GM
+  if (game.user === game.users?.activeGM) {
+    const sourceText = source === "import"
+      ? "The imported settings contained"
+      : "Your midi-qol settings contained";
+
+    let messageContent = `<h3>Midi-QOL Settings Migration</h3>`;
+    messageContent += `<p>${sourceText} the deprecated <strong>Display Saving Throw DC</strong> setting. It has been migrated to use the dnd5e <strong>Challenge Visibility</strong> setting.</p>`;
+    messageContent += `<ul>`;
+    messageContent += `<li>Old displaySaveDC: <strong>${oldMidiDisplaySaveDC ? "Show DC" : "Hide DC"}</strong></li>`;
+    messageContent += `<li>Previous dnd5e challengeVisibility: <strong>${currentDnd5eVisibility}</strong></li>`;
+    if (needsChange) {
+      messageContent += `<li>Updated dnd5e challengeVisibility to: <strong>${newVisibility}</strong> (most restrictive)</li>`;
+    } else {
+      messageContent += `<li>dnd5e challengeVisibility unchanged: <strong>${newVisibility}</strong></li>`;
+    }
+    messageContent += `</ul>`;
+    messageContent += `<p><em>You can control this setting from the dnd5e settings or from the midi-qol config panel under Workflow → Saves.</em></p>`;
+
+    ChatMessage.create({
+      content: messageContent,
+      whisper: ChatMessage.getWhisperRecipients("GM"),
+      speaker: { alias: "Midi-QOL" }
+    });
+  }
+}
+
 export async function importSettingsFromJSON(json) {
   let requiresReload = false;
   if (typeof json === "string")
@@ -329,7 +507,13 @@ export async function importSettingsFromJSON(json) {
     json = json.midiSettings;
   }
 
-  await game.settings.set("midi-qol", "ConfigSettings", removeOldValues(json.configSettings));
+  // Handle migration of deprecated displaySaveDC field
+  const importedConfigSettings = removeOldValues(json.configSettings);
+  if (importedConfigSettings.displaySaveDC !== undefined) {
+    await migrateDisplaySaveDC(importedConfigSettings, "import");
+  }
+
+  await game.settings.set("midi-qol", "ConfigSettings", importedConfigSettings);
   await game.settings.set("midi-qol", "MidiSoundSettings", removeOldValues(json.midiSoundSettings) ?? {});
   await game.settings.set("midi-qol", "TargetConfirmation", removeOldValues(json.targetConfirmation));
 
@@ -525,7 +709,6 @@ export let fetchParams = () => {
     else
       configSettings.optionalRules.nearbyFoe = 0;
   }
-  configSettings.itemRollStartWorkflow = false;
   const itemList = Object.keys(CONFIG.Item.typeLabels);
   if (!configSettings.itemTypeList && itemList.length > 0) {
     configSettings.itemTypeList = itemList;
@@ -652,145 +835,13 @@ export let fetchParams = () => {
   //@ts-expect-error legacy property that's been removed from ConfigSettings
   if (configSettings.displaySaveDC !== undefined && game.user === game.users?.activeGM) {
     Hooks.once("ready", async () => {
-      //@ts-expect-error legacy property
-      const oldMidiDisplaySaveDC = configSettings.displaySaveDC;
-      const currentDnd5eVisibility = safeGetGameSetting("dnd5e", "challengeVisibility") as string;
-
-      // Determine most restrictive: if midi was false (hide DC) OR dnd5e is "none", result is "none"
-      let newVisibility = currentDnd5eVisibility;
-      if (oldMidiDisplaySaveDC === false || currentDnd5eVisibility === "none") {
-        newVisibility = "none";
-      }
-
-      // Check if we need to change the dnd5e setting
-      const needsChange = newVisibility !== currentDnd5eVisibility;
-
-      // Build the chat message content
-      let messageContent = `<h3>Midi-QOL Settings Migration</h3>`;
-      messageContent += `<p>The <strong>Display Saving Throw DC</strong> setting has been migrated to use the dnd5e <strong>Challenge Visibility</strong> setting.</p>`;
-      messageContent += `<ul>`;
-      messageContent += `<li>Old midi-qol displaySaveDC: <strong>${oldMidiDisplaySaveDC ? "Show DC" : "Hide DC"}</strong></li>`;
-      messageContent += `<li>Previous dnd5e challengeVisibility: <strong>${currentDnd5eVisibility}</strong></li>`;
-      if (needsChange) {
-        messageContent += `<li>Updated dnd5e challengeVisibility to: <strong>${newVisibility}</strong> (most restrictive)</li>`;
-      } else {
-        messageContent += `<li>dnd5e challengeVisibility unchanged: <strong>${newVisibility}</strong></li>`;
-      }
-      messageContent += `</ul>`;
-      messageContent += `<p><em>You can now control this setting from the dnd5e settings or from the midi-qol config panel under Workflow → Saves.</em></p>`;
-
-      // Apply the change if needed
-      if (needsChange) {
-        await game.settings.set("dnd5e", "challengeVisibility", newVisibility);
-      }
-
-      // Remove the old setting and save
-      //@ts-expect-error legacy property
-      delete configSettings.displaySaveDC;
+      await migrateDisplaySaveDC(configSettings, "startup");
       await game.settings.set("midi-qol", "ConfigSettings", configSettings);
-
-      // Send chat message to GM
-      ChatMessage.create({
-        content: messageContent,
-        whisper: ChatMessage.getWhisperRecipients("GM"),
-        speaker: { alias: "Midi-QOL" }
-      });
     });
   }
 
   Hooks.callAll("midi-qol.ConfigSettingsChanged");
 }
-
-const settings = [
-  {
-    name: "EnableWorkflow",
-    scope: "client",
-    default: true,
-    config: true,
-    type: Boolean,
-    onChange: fetchParams
-  },
-  {
-    name: "PreferredGM",
-    scope: "world",
-    default: "",
-    config: true,
-    type: String,
-  },
-  {
-    name: "ReplaceDefaultActivities",
-    scope: "world",
-    default: true,
-    config: true,
-    type: Boolean,
-    requiresReload: true,
-  },
-  {
-    name: "AutoFastForwardAbilityRolls",
-    scope: "world",
-    default: false,
-    type: Boolean,
-    config: true,
-    onChange: fetchParams
-  },
-  /*
-  {
-    name: "ItemRollButtons",
-    scope: "world",
-    default: true,
-    type: Boolean,
-    onChange: fetchParams
-  },
-  */
-  {
-    name: "showGM",
-    scope: "world",
-    default: false,
-    type: Boolean,
-    choices: [],
-    onChange: fetchParams
-  },
-  {
-    name: "ForceHideRoll",
-    scope: "client",
-    default: true,
-    type: Boolean,
-    choices: [],
-    config: true,
-    onChange: fetchParams, requiresReload: true
-  },
-  {
-    name: "DragDropTarget",
-    scope: "world",
-    default: false,
-    type: Boolean,
-    onChange: fetchParams,
-    config: true
-  },
-  {
-    name: "ConfigSettings",
-    scope: "world",
-    type: Object,
-    default: configSettings,
-    onChange: fetchParams,
-    config: false
-  },
-  {
-    name: "MidiSoundSettings",
-    scope: "world",
-    type: Object,
-    default: midiSoundSettings,
-    onChange: fetchSoundSettings,
-    config: false
-  },
-  {
-    name: "MidiSoundSettings-backup",
-    scope: "world",
-    type: Object,
-    default: {},
-    config: false
-  }
-];
 
 export function readySettingsSetup() {
   game.settings.register("midi-qol", "PreferredGM", {
@@ -1365,23 +1416,32 @@ export const consumeConfigOptions = keysToOptionsObj("ConfigDialogOptions", [
 
 export const registerSettings = function () {
 
-  // Register any custom module settings here
-  settings.forEach((setting, i) => {
-    let MODULE = "midi-qol"
-    let options = {
-      name: i18n(`${MODULE}.${setting.name}.Name`),
-      hint: i18n(`${MODULE}.${setting.name}.Hint`),
-      scope: setting.scope,
-      config: (setting.config === undefined) ? true : setting.config,
-      default: setting.default,
-      type: setting.type,
-      choices: {},
-      onChange: setting.onChange,
-      requiresReload: setting.requiresReload
-    };
-    if (setting.choices) options.choices = setting.choices;
-    // @ts-expect-error
-    game.settings.register("midi-qol", setting.name, options);
+  // ========================================
+  // Hidden settings (config: false) - registered first
+  // ========================================
+
+  game.settings.register("midi-qol", "ConfigSettings", {
+    scope: "world",
+    // @ts-expect-error Object type is valid for Foundry settings
+    type: Object,
+    default: configSettings,
+    onChange: fetchParams,
+    config: false
+  });
+
+  game.settings.register("midi-qol", "MidiSoundSettings", {
+    scope: "world",
+    type: Object,
+    default: midiSoundSettings,
+    onChange: fetchSoundSettings,
+    config: false
+  });
+
+  game.settings.register("midi-qol", "MidiSoundSettings-backup", {
+    scope: "world",
+    type: Object,
+    default: {},
+    config: false
   });
 
   game.settings.register("midi-qol", "RollStats", {
@@ -1394,7 +1454,115 @@ export const registerSettings = function () {
       Hooks.callAll("midi-qol.StatsUpdated");
     }
   });
-  
+
+  game.settings.register("midi-qol", "TargetConfirmation", {
+    scope: "client",
+    type: Object,
+    default: defaultTargetConfirmationSettings,
+    config: false,
+    onChange: fetchParams
+  });
+
+  game.settings.register("midi-qol", "showGM", {
+    scope: "world",
+    default: false,
+    type: Boolean,
+    config: false,
+    onChange: fetchParams
+  });
+
+  game.settings.register("midi-qol", "notificationVersion", {
+    scope: "world",
+    default: "0.0.0",
+    type: String,
+    config: false
+  });
+
+  game.settings.register("midi-qol", "splashWarnings", {
+    scope: "world",
+    type: Boolean,
+    config: false,
+    default: true
+  });
+
+  game.settings.register("midi-qol", "last-run-version", {
+    type: String,
+    config: false,
+    default: "0.0.0",
+    requiresReload: true
+  });
+
+  game.settings.register("midi-qol", "instanceId", {
+    type: String,
+    config: false,
+    default: "",
+    requiresReload: true
+  });
+
+  // ========================================
+  // Visible settings (config: true)
+  // ========================================
+
+  game.settings.register("midi-qol", "EnableWorkflow", {
+    name: i18n("midi-qol.EnableWorkflow.Name"),
+    hint: i18n("midi-qol.EnableWorkflow.Hint"),
+    scope: "client",
+    default: true,
+    config: true,
+    type: Boolean,
+    onChange: fetchParams
+  });
+
+  game.settings.register("midi-qol", "PreferredGM", {
+    name: i18n("midi-qol.PreferredGM.Name"),
+    hint: i18n("midi-qol.PreferredGM.Hint"),
+    scope: "world",
+    default: "",
+    config: true,
+    type: String
+  });
+
+  game.settings.register("midi-qol", "ReplaceDefaultActivities", {
+    name: i18n("midi-qol.ReplaceDefaultActivities.Name"),
+    hint: i18n("midi-qol.ReplaceDefaultActivities.Hint"),
+    scope: "world",
+    default: true,
+    config: true,
+    type: Boolean,
+    requiresReload: true
+  });
+
+  game.settings.register("midi-qol", "AutoFastForwardAbilityRolls", {
+    name: i18n("midi-qol.AutoFastForwardAbilityRolls.Name"),
+    hint: i18n("midi-qol.AutoFastForwardAbilityRolls.Hint"),
+    scope: "world",
+    default: false,
+    type: Boolean,
+    config: true,
+    onChange: fetchParams
+  });
+
+  game.settings.register("midi-qol", "ForceHideRoll", {
+    name: i18n("midi-qol.ForceHideRoll.Name"),
+    hint: i18n("midi-qol.ForceHideRoll.Hint"),
+    scope: "client",
+    default: true,
+    type: Boolean,
+    config: true,
+    onChange: fetchParams,
+    requiresReload: true
+  });
+
+  game.settings.register("midi-qol", "DragDropTarget", {
+    name: i18n("midi-qol.DragDropTarget.Name"),
+    hint: i18n("midi-qol.DragDropTarget.Hint"),
+    scope: "world",
+    default: false,
+    type: Boolean,
+    onChange: fetchParams,
+    config: true
+  });
+
   game.settings.register("midi-qol", "CriticalDamageGM", {
     name: "midi-qol.CriticalDamageGM.Name",
     // hint: "midi-qol.CriticalDamageGM.Hint",
@@ -1428,17 +1596,6 @@ export const registerSettings = function () {
       onChange: fetchParams
     });
 
-  game.settings.register("midi-qol", "TargetConfirmation",
-    {
-      name: "midi-qol.TargetConfirmation.Name",
-      hint: "midi-qol.TargetConfirmation.Hint",
-      scope: "client",
-      type: Object,
-      default: defaultTargetConfirmationSettings,
-      config: false,
-      onChange: fetchParams
-    });
-
   game.settings.register("midi-qol", "AutoRemoveTargets", {
     name: "midi-qol.AutoRemoveTargets.Name",
     hint: "midi-qol.AutoRemoveTargets.Hint",
@@ -1457,6 +1614,27 @@ export const registerSettings = function () {
     type: ConfigPanel as any,
     restricted: true
   });
+
+  game.settings.registerMenu("midi-qol", "resetSettings", {
+    name: i18n("midi-qol.ResetDefaults.Name"),
+    label: "midi-qol.ResetDefaults.Button",
+    hint: i18n("midi-qol.ResetDefaults.Hint"),
+    icon: "fas fa-triangle-exclamation",
+    type: ResetSettingsSubmenu,
+    restricted: true
+  });
+
+  // Register wizard launcher if the wizard module is installed and active
+  if (game.modules.get("midi-qol-setup-wizard")?.active) {
+    game.settings.registerMenu("midi-qol", "launchSetupWizard", {
+      name: i18n("midi-qol.LaunchSetupWizard.Name"),
+      label: "midi-qol.LaunchSetupWizard.Label",
+      hint: i18n("midi-qol.LaunchSetupWizard.Hint"),
+      icon: "fas fa-magic",
+      type: LaunchWizardSubmenu,
+      restricted: true
+    });
+  }
 
   game.settings.registerMenu("midi-qol", "TargetConfirmationConfig", {
     name: i18n("midi-qol.TargetConfirmationConfig.Name"),
@@ -1516,6 +1694,7 @@ export const registerSettings = function () {
     choices: debugOptions,
     onChange: fetchParams
   });
+
   game.settings.register("midi-qol", "SaveToChatCard", {
     name: "Save to Chat Card",
     hint: "save the workflow state to the chat card - so that it can be restored on reload",
@@ -1535,23 +1714,14 @@ export const registerSettings = function () {
     onChange: fetchParams
   });
 
-  game.settings.register("midi-qol", "notificationVersion", {
-    name: "",
-    hint: "",
-    scope: "world",
-    default: "0.0.0",
-    type: String,
-    config: false,
+  game.settings.registerMenu("midi-qol", "dependentsExplorer", {
+    name: i18n("midi-qol.DependentsExplorer.Name"),
+    label: "midi-qol.DependentsExplorer.Label",
+    icon: "fas fa-sitemap",
+    hint: i18n("midi-qol.DependentsExplorer.Hint"),
+    type: LaunchDependentsExplorer,
+    restricted: true
   });
-
-  game.settings.register("midi-qol", "splashWarnings", {
-    name: "",
-    hint: "",
-    scope: "world",
-    type: Boolean,
-    config: false,
-    default: true
-  })
 
   game.settings.registerMenu("midi-qol", "troubleShooter", {
     name: i18n("midi-qol.TroubleShooter.Name"),
@@ -1561,19 +1731,6 @@ export const registerSettings = function () {
     // icon: "fas fa-dice-d20",
     type: TroubleShooter,
     restricted: false
-  });
-
-  game.settings.register("midi-qol", "last-run-version", {
-    type: String,
-    config: false,
-    default: "0.0.0",
-    requiresReload: true
-  });
-  game.settings.register("midi-qol", "instanceId", {
-    type: String,
-    config: false,
-    default: "",
-    requiresReload: true
   });
 }
 

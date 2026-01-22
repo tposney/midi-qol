@@ -1,6 +1,4 @@
 {
-  "midi-qol.ItemDeleteCheck.Name": "Verificação de Exclusão de Item",
-  "midi-qol.ItemDeleteCheck.Hint": "Abre um diálogo de confirmação quando tentar deletar items da ficha de personagem.",
   "midi-qol.DamageImmunities.Name": "Aplicar Imunidades de Dano",
   "midi-qol.DamageImmunities.Hint": "Quando usar o botões de dano do Midi QOL ou aplicar dano automaticamente, leva em consideração as imunidades/vulnerabilidades/resistências do alvo. Todos os tipos de dano são verificados.",
   "midi-qol.WorldKeyMappings.Name": "Configurações Geral vs Local",
@@ -128,8 +126,6 @@
     "maxBaseRollCrit": "Crítico Base Máximo",
     "bestOfTwo": "Vantagem Rolagem de Dano"
   },
-  "midi-qol.MergeCard.Name": "Cartão Mesclado",
-  "midi-qol.MergeCard.Hint": "Mescla Ataques, Acertos, Dano e Salvaguardas em um único cartão de chat.",
   "midi-qol.MergeCardCondensed.Name": "Condensar Rolagens de Ataque/Dano",
   "midi-qol.MergeCardCondensed.Hint": "Conserva um pouco de espaço no log de chat fazendo as rolagens de ataque e dano menores.",
   "midi-qol.DisplayItemProperties.Name": "Exibir Propriedades de Itens",

@@ -15,6 +15,13 @@ midi-qol is a Foundry VTT module that enhances the dnd5e system with automated a
 
 ## Key Resources
 
+### midi-qol Source Code
+The midi-qol source code is at:
+```
+/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-13x/src
+```
+**IMPORTANT**: Do NOT search in `/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol/src` - that is an obsolete v12 codebase. Always use `midi-qol-13x` for v13 development.
+
 ### dnd5e Codebase Reference
 When working on midi-qol, you can examine the dnd5e system codebase at:
 ```
@@ -29,6 +36,13 @@ For Foundry VTT core API methods, search the local source code at:
 /home/timp/foundryv13/resources/app/common
 ```
 **Important**: Always use v13 API. Do NOT fetch from `foundryvtt.com/api/v12/` - only use v13 documentation or local source code.
+
+### Third-Party Modules
+Installed 3rd party modules (chris-premades, dae, times-up, etc.) are located at:
+```
+/home/timp/foundry-data/foundryv13/Data/modules
+```
+Use this directory to examine how other modules implement features or handle specific spells/effects.
 
 ### External Documentation
 - **Chris-Premades API**: `/home/timp/Documents/ChrisPremades-API-2026-01-06.md` - Comprehensive documentation of the chris-premades module API (classes, utilities, macros, constants)
@@ -57,6 +71,9 @@ For Foundry VTT core API methods, search the local source code at:
 - **chatlog-prune**: Standalone chat log pruning module at `/home/timp/foundry-data/foundryalpha/Data/modulesrc/chatlog-prune/`
 - **Keep ChatLogPrune and ChatLogMidi in sync**: When modifying `src/module/ChatClasses/ChatLogMidi.ts`, also update `chatlog-prune/src/ChatLogPrune.ts` (and vice versa) unless the change would cause a loss of functionality in one module
 - midi-qol's built-in chat log pruning is deprecated (since 13.0.37) and will be removed in v14 - users should install chatlog-prune instead
+- **midi-qol-setup-wizard**: Step-by-step configuration wizard for midi-qol at `/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-setup-wizard/`
+  - Key files: `scripts/wizard.js` (main wizard UI), `scripts/wizard-steps.js` (step definitions and presets), `scripts/setting-definitions.js` (setting UI definitions), `scripts/module-definitions.js` (module lists for compatibility)
+  - Launched via hook `Hooks.call("midi-qol-setup-wizard.launch")` from midi-qol's settings
 
 ### TypeScript Typing
 - **Avoid using `as any` casts** - always check `globals.ts` first for existing types
@@ -64,6 +81,11 @@ For Foundry VTT core API methods, search the local source code at:
 - **Query the user before creating entirely new types** in `globals.ts`
 - Common types defined in globals.ts: `ActivityUseConfiguration`, `RollProcessConfig`, `RollDialogConfig`, flag types for ChatMessage/Item/Actor
 - For new flag keys, add them to the appropriate flag type definition in globals.ts (e.g., `"use.otherScaling"?: number | false;` in the midi-qol flags)
+
+### CSS Class Usage
+- **Never invent CSS class names** - always verify classes exist in the actual templates/stylesheets before using them
+- Search the codebase with `grep` to confirm a CSS class exists before writing selectors that depend on it
+- This applies to tour selectors, querySelector calls, and any DOM manipulation
 
 ### External API Usage
 - **Before writing any code that calls dnd5e or Foundry methods**, first search the midi-qol codebase to find existing usage of similar functionality

@@ -20,7 +20,7 @@ import { TroubleShooter } from "./module/apps/TroubleShooter";
 import { ChatLogMidi } from "./module/ChatClasses/ChatLogMidi";
 import { ChatMessageMidi } from "./module/ChatClasses/ChatMessageMidi";
 import { DamageApplicationElementMidi } from "./module/ChatClasses/DamageApplicationElementMidi";
-import { MidiDependentsRegistry } from "./module/MidiDependentsRegistry";
+import { MidiDependentsRegistry, RegistryChangeEvent } from "./module/MidiDependentsRegistry";
 
 declare module "fvtt-types/configuration" {
   interface AssumeHookRan {
@@ -82,6 +82,8 @@ declare module "fvtt-types/configuration" {
       "midi-qol.ready": () => void;
       "midi-qol.removeUndoEntry": (data?: UndoData) => void;
       "midi-qol.setup": (data: typeof globalThis.MidiQOL) => void;
+      "midi-qol.dependentsRegistryChanged": (event: RegistryChangeEvent) => void;
+      "midi-qol-setup-wizard.launch": () => void;
       "getHeaderControlsActivitySheet": (app: foundry.applications.api.Application /*dnd5e.applications.activity.activitySheet*/ , buttons: any[]) => void;
       "tidy5e-sheet.ready": (api: any) => void;
       "simplecover5eReady": () => void;
@@ -634,6 +636,9 @@ declare global {
     checkRule: typeof checkRule;
     chooseEffect: typeof utils.chooseEffect;
     collectSettingData: typeof settings.collectSettingData;
+    exportSettingsToJSON: typeof settings.exportSettingsToJSON;
+    importSettingsFromJSON: typeof settings.importSettingsFromJSON;
+    resetConfigSettingsToDefaults: typeof settings.resetConfigSettingsToDefaults;
     completeActivityUse: typeof utils.completeActivityUse;
     completeItemUse: typeof utils.completeItemUse;
     computeAbilityAdvantage: typeof patching.computeAbilityAdvantage;
@@ -719,6 +724,7 @@ declare global {
     removeReactionUsed: typeof utils.removeReactionUsed;
     resolveTargetConfirmation: typeof resolveTargetConfirmation;
     safeGetGameSetting: typeof settings.safeGetGameSetting;
+    shouldDisplaySaveDC: typeof settings.shouldDisplaySaveDC;
     selectTargetsForTemplate: typeof templateTokens;
     setBonusActionUsed: typeof utils.setBonusActionUsed;
     setReactionUsed: typeof utils.setReactionUsed;
