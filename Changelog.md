@@ -1,3 +1,8 @@
+### 13.0.40
+**Bug Fixes**
+* Fix for save roll dialog visibility not respecting midi-qol settings (e.g., GM "auto" vs "autoDialog") when `autoFastForwardAbilityRolls` is disabled. The `fastForward` option is now properly merged into the roll configuration.
+* Improved handling of saves rolled via third-party modules (Flash Rolls, Monks TokenBar, Epic Rolls). Midi-qol now respects each module's own fast forward setting: `bypass-roll-dialog` for Monks TokenBar, `skipRollDialog` for Flash Rolls. Epic Rolls uses midi's `autoFastForwardAbilityRolls` setting.
+
 ### 13.0.39
 **Bug Fixes**
 * Fix for isDamaged macros being called twice when apply damage is set to none.
@@ -8,7 +13,7 @@ panel.
 **New Features**
 * TroubleShooter now warns if chatlog-prune module is not active.
 * New Dependents Manager app on the main settings list- view/manage document dependencies with search, collapsible sections, and delete options.
-* Added reset all settings to defaults option in quick settings.
+* Added reset all settings to defaults option on main settings.
 
 **Others**
 * Default value changes: `autoCompleteWorkflow` now true, `collapsibleTargets` now false.

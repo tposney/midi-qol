@@ -452,8 +452,6 @@ export class Workflow {
     }
   }
 
-  event: AugmentedEvent | undefined;
-
   // This value is not stored in flags
   #speaker: ChatMessage.SpeakerData | undefined = undefined;
   get speaker(): ChatMessage.SpeakerData {
@@ -1713,7 +1711,6 @@ export class Workflow {
 
     // this.spellLevel = item?.level || 0;
 
-    this.event = options?.event;
     this.saveRequests = {};
     this.defenceRequests = {};
     this.saveTimeouts = {};
@@ -1758,11 +1755,13 @@ export class Workflow {
   }
 
   public someEventKeySet() {
-    return this.event?.shiftKey || this.event?.altKey || this.event?.ctrlKey || this.event?.metaKey;
+    const event = this.rollOptions.event as AugmentedEvent | undefined;
+    return event?.shiftKey || event?.altKey || event?.ctrlKey || event?.metaKey;
   }
 
   public someAutoRollEventKeySet() {
-    return this.event?.altKey || this.event?.ctrlKey || this.event?.metaKey;
+    const event = this.rollOptions.event as AugmentedEvent | undefined;
+    return event?.altKey || event?.ctrlKey || event?.metaKey;
   }
 
   setTemplateFlags(
@@ -2355,7 +2354,7 @@ export class Workflow {
     if (this.activity.roll?.formula) return this.WorkflowState_WaitForUtilityRoll;
     if (autoRollAttack) {
       this.rollOptions.fastForwardAttack ||= isFastRoll;
-      this.activity.rollAttack!({ event: this.event as Event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {});
+      this.activity.rollAttack!({ event: this.rollOptions.event as Event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {});
     }
     return this.WorkflowState_Suspend;
   }
@@ -2476,7 +2475,7 @@ export class Workflow {
     // if (this.noAutoDamage) return; // we are emulating the standard card specially.
 
     if (this.shouldRollDamage) {
-      if (debugEnabled > 0) warn("waitForDamageRoll | rolling damage ", this.event, configSettings.autoRollAttack, configSettings.autoFastForward)
+      if (debugEnabled > 0) warn("waitForDamageRoll | rolling damage ", this.rollOptions.event, configSettings.autoRollAttack, configSettings.autoFastForward)
       const storedData = this.chatCard?.getFlag("dnd5e", "item")?.data;
       if (storedData) { // If magic items is being used it fiddles the roll to include the item data
         this.item = new CONFIG.Item.documentClass(storedData, { parent: this.actor })
@@ -2559,7 +2558,7 @@ export class Workflow {
   async WorkflowState_WaitForUtilityRoll(context: WorkflowContext = {}): Promise<WorkflowState> {
     if (!this.activity.roll?.formula || context.utilityRolls) return this.WorkflowState_UtilityRollComplete;
     if (getAutoRollDamage(this) !== "none") {
-      const rolls = await this.activity.rollFormula!({ event: this.event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, { create: false });
+      const rolls = await this.activity.rollFormula!({ event: this.rollOptions.event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, { create: false });
       if (!rolls || this.abort) {
         return this.WorkflowState_Abort;
       }
@@ -3253,7 +3252,7 @@ export class Workflow {
       if (shouldTrigger && triggeredActivity) {
         if (shouldTrigger) {
           let usage: { midiOptions: MidiOptions } = { midiOptions: {} };
-          usage.midiOptions.event = this.event;
+          usage.midiOptions.event = this.rollOptions.event;
           usage.midiOptions.workflowOptions = this.workflowOptions;
           usage.midiOptions.rollOptions = this.rollOptions;
           usage.midiOptions.isTriggered = true;
@@ -4397,7 +4396,7 @@ export class Workflow {
       damageTotal: this.damageTotal,
       diceRoll: this.diceRoll,
       disadvantage: this.disadvantage,
-      event: this.event,
+      event: this.rollOptions.event,
       failedSaves,
       failedSaveUuids,
       fumbleSaves,
@@ -5633,18 +5632,17 @@ return {
    * Build a Monks Token Bar save request for a target
    */
   buildMonksTokenBarRequest(target: Token, saveDetails: AnyMutableObject, isMagicSave: boolean): MonksTokenBarRequest {
+    // Monks TokenBar's getTokenEntries copies advantage/disadvantage to keys object,
+    // then parseKeys sets altKey/ctrlKey from those. We don't set altKey/ctrlKey/shiftKey
+    // directly as they would redundantly trigger fast-forward in _rollAbility.
+    // Note: fastForward=true would skip the chat card roll button entirely (auto-roll all tokens).
+    // We don't pass it - let Monks use its own bypass-roll-dialog setting instead.
     return {
       token: target.id ?? "",
       dc: saveDetails.rollDC as number,
       showdc: shouldDisplaySaveDC(this.actor),
       advantage: saveDetails.advantage as boolean | undefined,
-      altKey: saveDetails.advantage === true,
       disadvantage: saveDetails.disadvantage as boolean | undefined,
-      ctrlKey: saveDetails.disadvantage === true,
-      // Use autoFastForwardAbilityRolls to control fast forward for MTB
-      // shiftKey signals to MTB to skip the roll dialog
-      fastForward: autoFastForwardAbilityRolls,
-      shiftKey: autoFastForwardAbilityRolls,
       isMagicSave,
       isConcentrationCheck: saveDetails.isConcentrationCheck as boolean | undefined,
       workflowOptions: saveDetails.workflowOptions as object,
@@ -5662,6 +5660,7 @@ return {
    * Build a Flash Rolls 5e save request for a target
    */
   buildFlashRollsRequest(target: Token, saveDetails: AnyMutableObject, isMagicSave: boolean): FlashRollsRequest {
+    // Note: Flash Rolls does not use a fastForward parameter - it uses its own skipRollDialog setting
     return {
       actorId: target.actor?.id ?? target.id ?? "",
       actorUuid: (target.actor as Actor).uuid,
@@ -5685,6 +5684,7 @@ return {
    * Build an Epic Rolls 5e save request for a target
    */
   buildEpicRollsRequest(target: Token, saveDetails: AnyMutableObject, isMagicSave: boolean): EpicRollsRequest {
+    // Note: Epic Rolls does not use a fastForward parameter - it has internal autoRoll logic for GM only
     return {
       actorUuid: (target.actor as Actor).uuid,
       token: target.id ?? "",
@@ -5692,7 +5692,6 @@ return {
       disadvantage: saveDetails.disadvantage as boolean | undefined,
       dc: saveDetails.rollDC as number,
       showdc: shouldDisplaySaveDC(this.actor),
-      fastForward: false,
       isMagicSave,
       isConcentrationCheck: saveDetails.isConcentrationCheck as boolean | undefined,
       workflowOptions: saveDetails.workflowOptions as object
@@ -6119,6 +6118,7 @@ return {
 
       const requests = player?.isGM ? moduleRequests.monks.gm : moduleRequests.monks.player;
       requests.push(this.buildMonksTokenBarRequest(target, saveDetails, isMagicSave));
+      console.error("Monks requests are ", requests)
       return { promise, requestCard: undefined };
     }
 
@@ -8202,7 +8202,7 @@ export class TrapWorkflow extends Workflow {
       }
     }
     // @ts-expect-error pain in the ass to properly type this
-    if (!this.event) this.event = foundry.utils.duplicate(shiftOnlyEvent);
+    if (!this.rollOptions.event) this.rollOptions.event = foundry.utils.duplicate(shiftOnlyEvent);
     if (templateLocation) this.templateLocation = templateLocation;
     this.rollOptions.fastForward = true;
     this.kickStart = false;
@@ -8336,7 +8336,7 @@ export class TrapWorkflow extends Workflow {
       // fumble means no trap damage/effects
       return this.WorkflowState_RollFinished;
     }
-    if (debugEnabled > 1) debug("TrapWorkflow: Rolling damage ", this.event, this.spellLevel, this.workflowOptions.versatile, this.targets, this.hitTargets);
+    if (debugEnabled > 1) debug("TrapWorkflow: Rolling damage ", this.rollOptions.event, this.spellLevel, this.workflowOptions.versatile, this.targets, this.hitTargets);
     this.rollOptions.fastForward = true;
     this.rollOptions.spellLevel = this.spellLevel;
     this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {});

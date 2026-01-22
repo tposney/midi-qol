@@ -54,6 +54,8 @@ interface TypeSection {
 
 /** Throttle delay for rendering after registry changes */
 const RENDER_THROTTLE_MS = 100;
+/** Debounce delay for search input */
+const SEARCH_DEBOUNCE_MS = 300;
 
 export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2) {
   #searchFilter: string = "";
@@ -64,6 +66,8 @@ export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2
   #cacheValid: boolean = false;
   // Throttled render to batch rapid UI updates
   #throttledRender = foundry.utils.throttle(() => this.render({ force: true }), RENDER_THROTTLE_MS);
+  // Debounced search render to avoid cursor issues
+  #debouncedSearchRender = foundry.utils.debounce(() => this.#renderSearchResults(), SEARCH_DEBOUNCE_MS);
 
   static override DEFAULT_OPTIONS = {
     id: "midi-qol-dependents-explorer",
@@ -383,7 +387,6 @@ export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2
     const searchInput = this.element.querySelector('input[name="search-filter"]') as HTMLInputElement;
     if (searchInput) {
       searchInput.addEventListener("input", this.#onSearchInput.bind(this));
-      searchInput.focus();
     }
   }
 
@@ -400,12 +403,31 @@ export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2
   #onSearchInput(event: Event) {
     const input = event.target as HTMLInputElement;
     this.#searchFilter = input.value;
-    this.render({ force: true });
+    // Debounce the render to avoid cursor position issues
+    this.#debouncedSearchRender();
+  }
+
+  #renderSearchResults() {
+    // Store cursor position before render
+    const searchInput = this.element.querySelector('input[name="search-filter"]') as HTMLInputElement;
+    const cursorPosition = searchInput?.selectionStart ?? this.#searchFilter.length;
+
+    this.render({ force: true }).then(() => {
+      // Restore cursor position after render
+      const newSearchInput = this.element.querySelector('input[name="search-filter"]') as HTMLInputElement;
+      if (newSearchInput) {
+        newSearchInput.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    });
   }
 
   static #onClearFilter(this: DependentsExplorer, event: Event, target: HTMLElement) {
     this.#searchFilter = "";
-    this.render({ force: true });
+    this.render({ force: true }).then(() => {
+      // Focus the search input after clearing
+      const searchInput = this.element.querySelector('input[name="search-filter"]') as HTMLInputElement;
+      searchInput?.focus();
+    });
   }
 
   static #onToggleSection(this: DependentsExplorer, event: Event, target: HTMLElement) {

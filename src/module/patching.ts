@@ -288,17 +288,144 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
   }
 }
 
+/**
+ * Extracts pre-computed advantage/disadvantage from roll config.
+ * Different modules store advantage in different locations:
+ *
+ * | Source                  | Module              | Location                              |
+ * |-------------------------|---------------------|---------------------------------------|
+ * | direct                  | Flash Rolls, GMAction| config.advantage/disadvantage        |
+ * | event                   | Monks TokenBar      | config.event.advantage/disadvantage   |
+ * | rolls                   | Epic Rolls          | config.rolls[0].options.adv/disadv    |
+ * | midiOptions             | midi-qol internal   | config.midiOptions.advantage/disadv   |
+ *
+ * "External" modules are those that don't provide midiOptions.workflowId:
+ * - Monks TokenBar, Epic Rolls, Flash Rolls → external (override their fastForward)
+ * - GMAction, character sheet rolls → internal (use midi-qol's normal flow)
+ */
+type AdvantageSourceType = 'monks-tokenbar' | 'epic-rolls-5e' | 'flash-rolls-5e' | 'midi-qol' | 'none';
+
+interface AdvantageSourceInfo {
+  advantage: boolean | undefined;
+  disadvantage: boolean | undefined;
+  hasPreComputed: boolean;      // true if any source provided advantage/disadvantage
+  isExternalModule: boolean;    // true if from external module (no workflowId)
+  sourceType: AdvantageSourceType;  // module name that provided the advantage/disadvantage
+  hasEvent: boolean;            // true if config.event exists (for shift key checking)
+}
+
+function getAdvantageSourceInfo(config: RollProcessConfig): AdvantageSourceInfo {
+  // Source 1: Direct on config (Flash Rolls sets this, midi-qol GMAction also sets this)
+  const directAdvantage = config.advantage;
+  const directDisadvantage = config.disadvantage;
+  const hasDirect = directAdvantage !== undefined || directDisadvantage !== undefined;
+
+  // Source 2: Event object (Monks TokenBar sets event.advantage/event.disadvantage)
+  // @ts-expect-error event may have advantage/disadvantage properties
+  const eventAdvantage = config.event?.advantage;
+  // @ts-expect-error event may have advantage/disadvantage properties
+  const eventDisadvantage = config.event?.disadvantage;
+  const hasEventAdvantage = eventAdvantage !== undefined || eventDisadvantage !== undefined;
+
+  // Source 3: rolls[0].options (Epic Rolls)
+  const rollsAdvantage = config.rolls?.[0]?.options?.advantage;
+  const rollsDisadvantage = config.rolls?.[0]?.options?.disadvantage;
+  const hasRolls = rollsAdvantage !== undefined || rollsDisadvantage !== undefined;
+
+  // Source 4: midiOptions (midi-qol internal)
+  const midiAdvantage = config.midiOptions?.advantage;
+  const midiDisadvantage = config.midiOptions?.disadvantage;
+  const hasMidiOptions = midiAdvantage !== undefined || midiDisadvantage !== undefined;
+
+  // Combine all sources (first defined value wins)
+  const advantage = directAdvantage ?? eventAdvantage ?? rollsAdvantage ?? midiAdvantage;
+  const disadvantage = directDisadvantage ?? eventDisadvantage ?? rollsDisadvantage ?? midiDisadvantage;
+
+  // Determine if this is from an external module
+  // External = has pre-computed advantage but NO workflowId (not from midi-qol's workflow)
+  const hasWorkflowId = !!config.midiOptions?.workflowId;
+  const hasExternalSource = hasEventAdvantage || hasRolls || (hasDirect && !hasWorkflowId);
+
+  // Determine which module provided the advantage/disadvantage based on how it was passed
+  let sourceType: AdvantageSourceType = 'none';
+  if (hasEventAdvantage) {
+    sourceType = 'monks-tokenbar';  // Monks TokenBar passes event.advantage/disadvantage
+  } else if (hasRolls) {
+    sourceType = 'epic-rolls-5e';   // Epic Rolls passes rolls[0].options.advantage/disadvantage
+  } else if (hasDirect && !hasWorkflowId) {
+    sourceType = 'flash-rolls-5e';  // Flash Rolls sets config.advantage/disadvantage directly (no workflowId)
+  } else if (hasDirect || hasMidiOptions) {
+    sourceType = 'midi-qol';        // midi-qol internal (GMAction, character sheet, etc.)
+  }
+
+  // Check if event object exists (for shift key detection)
+  // Monks TokenBar passes the event, Epic Rolls nulls it when fast-forwarding, Flash Rolls doesn't pass it
+  const hasEvent = !!config.event;
+
+  return {
+    advantage,
+    disadvantage,
+    hasPreComputed: hasDirect || hasEventAdvantage || hasRolls || hasMidiOptions,
+    isExternalModule: hasExternalSource,
+    sourceType,
+    hasEvent
+  };
+}
+
+function getExternalModuleFastForward(sourceInfo: AdvantageSourceInfo): boolean {
+  // Get the appropriate fast forward setting based on which external module is the source
+  switch (sourceInfo.sourceType) {
+    case 'monks-tokenbar':
+      if (installedModules.get("monks-tokenbar")) {
+        return safeGetGameSetting("monks-tokenbar", "bypass-roll-dialog") as boolean ?? false;
+      }
+      break;
+    case 'flash-rolls-5e':
+      if (installedModules.get("flash-rolls-5e")) {
+        return safeGetGameSetting("flash-rolls-5e", "skipRollDialog") as boolean ?? false;
+      }
+      break;
+    case 'midi-qol':
+    case 'epic-rolls-5e':
+    case 'none':
+    default:
+      return autoFastForwardAbilityRolls;
+  }
+  // Default to midi's autoFastForwardAbilityRolls
+  return autoFastForwardAbilityRolls;
+  
+}
+
 function setRollDialogOptions(dialog: RollDialogConfig, config: RollProcessConfig) {
   dialog.options ??= {};
   //@ts-expect-error
   const ADV_MODE = CONFIG.Dice.D20Roll.ADV_MODE;
-  if (config.midiOptions?.fastForward) dialog.configure = false;
-  if (dialog.configure === undefined && autoFastForwardAbilityRolls) dialog.configure = false;
-  if (areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle")) dialog.configure = !dialog.configure;
 
+  const sourceInfo = getAdvantageSourceInfo(config);
+
+  // Determine dialog visibility (whether to show the roll configuration dialog)
+  if (sourceInfo.isExternalModule) {
+    // External module (Flash Rolls, Monks TokenBar, Epic Rolls): use the module's own fast forward setting
+    // Shift key toggle is handled below for modules that pass the event (Monks TokenBar)
+    const moduleFastForward = getExternalModuleFastForward(sourceInfo);
+    dialog.configure = !moduleFastForward;
+  } else {
+    // Standard midi-qol flow (character sheet rolls, checkSaves, etc.)
+    if (config.midiOptions?.fastForward) dialog.configure = false;
+    if (dialog.configure === undefined && autoFastForwardAbilityRolls) dialog.configure = false;
+  }
+
+  // Shift key toggle - only works if event is available
+  // This handles: character sheet rolls, Monks TokenBar (has event),
+  // but NOT Flash Rolls or Epic Rolls (no event when fast-forwarding)
+  if (areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle")) {
+    dialog.configure = !dialog.configure;
+  }
+
+  // Set advantage mode for the dialog (use source info + rolls[0].options for dnd5e native)
   const rollOptions = config.rolls?.[0]?.options;
-  const hasAdvantage = config.advantage || rollOptions?.advantage; // include dnd5e native roll modes
-  const hasDisadvantage = config.disadvantage || rollOptions?.disadvantage; // include dnd5e native roll modes
+  const hasAdvantage = sourceInfo.advantage || rollOptions?.advantage;
+  const hasDisadvantage = sourceInfo.disadvantage || rollOptions?.disadvantage;
 
   if (hasAdvantage && !hasDisadvantage) {
     dialog.options.advantageMode = ADV_MODE.ADVANTAGE;
@@ -312,23 +439,22 @@ function setRollDialogOptions(dialog: RollDialogConfig, config: RollProcessConfi
   }
 }
 
-// Returns true if precomputed advantage/disadvantage was applied, false if neither was set
+/**
+ * Applies pre-computed advantage/disadvantage to config if found.
+ * Returns true if pre-computed values were found (caller should skip computing from flags).
+ */
 function applyPreComputedAdvantage(config: RollProcessConfig): boolean {
-  // @ts-expect-error event may have advantage/disadvantage properties
-  const eventAdvantage = config.event?.advantage;
-  // @ts-expect-error event may have advantage/disadvantage properties
-  const eventDisadvantage = config.event?.disadvantage;
-  const rollsAdvantage = config.rolls?.[0]?.options?.advantage;
-  const rollsDisadvantage = config.rolls?.[0]?.options?.disadvantage;
+  const sourceInfo = getAdvantageSourceInfo(config);
 
-  const advantage = eventAdvantage || rollsAdvantage || config.midiOptions?.advantage;
-  const disadvantage = eventDisadvantage || rollsDisadvantage || config.midiOptions?.disadvantage;
+  if (!sourceInfo.hasPreComputed) {
+    return false;
+  }
 
-  // Conditionally assign to config if not already set
-  config.advantage ||= advantage;
-  config.disadvantage ||= disadvantage;
+  // Apply to config if not already set
+  config.advantage ??= sourceInfo.advantage;
+  config.disadvantage ??= sourceInfo.disadvantage;
 
-  return advantage !== undefined || disadvantage !== undefined;
+  return true;
 }
 
 function multiply(modifier: string) {
@@ -640,7 +766,8 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
       const workflow = config.midiOptions?.workflow;
       const midiOptions = config.midiOptions;
       preRollAbilityHookId = Hooks.once(`dnd5e.preRoll${type}`, (configData, dialogData, _message) => {
-        configData.midiOptions ??= midiOptions;
+        // Merge midiOptions to ensure fastForward and other values are preserved even if dnd5e creates an empty midiOptions object
+        configData.midiOptions = foundry.utils.mergeObject(configData.midiOptions ?? {}, midiOptions ?? {}) as MidiOptions;
         abilityModifiers = applyRollModifiers(this, abilityModifierFlags, configData, dialogData, { workflow });
         if (abilityModifiers.autoFail) {
           success = false;

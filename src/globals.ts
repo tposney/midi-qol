@@ -1408,10 +1408,6 @@ export type SaveRollRequest = {
 };
 
 export type MonksTokenBarRequest = SaveRollRequest & {
-  altKey: boolean;
-  ctrlKey: boolean;
-  shiftKey: boolean;
-  fastForward: boolean;
   options: {
     midiOptions: {
       itemUuid: string | undefined;
@@ -1433,7 +1429,6 @@ export type FlashRollsRequest = SaveRollRequest & {
 
 export type EpicRollsRequest = SaveRollRequest & {
   actorUuid: string;
-  fastForward: boolean;
 };
 
 export type ModuleIntegrationRequests = {
