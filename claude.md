@@ -422,3 +422,31 @@ Build process:
 cd /home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-tests
 npm run build      # Build test module
 ```
+
+## Planned Refactors
+
+### Advantage Refactor
+
+**Goal**: Migrate attack advantage/disadvantage processing in `checkAttackAdvantage()` and `checkTargetAdvantage()` (Workflow.ts:3581-4020) to use the centralized `computeAdvantageFlags()` pattern from patching.ts.
+
+**Current State**: ~15 separate `evalAllConditionsAsync`/`evalCondition` calls checking:
+- Actor flags: `advantage/disadvantage.all`, `.attack.all`, `.attack.{actType}`, `.attack.{ability}`
+- Actor suppression: `noAdvantage/noDisadvantage.attack.all`, `.attack.{actType}`
+- Target grants: `grants.advantage/disadvantage.all`, `.attack.all`, `.attack.{actType}`
+- Target suppression: `grants.noAdvantage/noDisadvantage.attack.all`, `.attack.{actType}`
+
+**Proposed Solution**:
+1. Create `buildAttackAdvantageFlags(actType, abilityId)` that returns an `AdvantageFlags` config
+2. Call `computeAdvantageFlags(actor, flags, { sourceActor: target })` - target is "source" because it grants adv/dis
+3. Keep special rules separate (flanking, visibility, nearby foe, heavy weapon) - these are geometric/rule-based, not flag-based
+4. Extend `computeAdvantageFlags` to return attribution info for the attack card display
+
+**Benefits**:
+- Single source of truth for flag processing
+- Consistent advantage counting and suppression logic
+- ~180 lines reduced to ~20 lines
+- Same pattern as saves, death saves, ability checks
+
+**Files to modify**:
+- `patching.ts`: Export `computeAdvantageFlags`, add attribution tracking to return value
+- `Workflow.ts`: Refactor `checkAttackAdvantage()`, remove flag-based logic from `checkTargetAdvantage()`

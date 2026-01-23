@@ -789,7 +789,7 @@ export let MidiActivityMixin = Base => {
           }
           if (config.workflow && areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle")) config.workflow.rollOptions.rollToggle = !config.workflow.rollOptions.rollToggle;
           // @ts-expect-error no dnd5e-types
-          if (this.item.system.properties?.has("ver") && areMidiKeysPressed(config.event ?? config.workflow.workflowOptions.event, "Versatile")) {
+          if (this.item.system.properties?.has("ver") && areMidiKeysPressed(config.event ?? config.workflow.rollOptions.event, "Versatile")) {
             config.workflow.attackMode = "twoHanded";
           }
           if (config.workflow.rollOptions?.rollToggle) dialog.configure = !dialog.configure;

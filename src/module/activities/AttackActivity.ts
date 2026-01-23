@@ -3,7 +3,7 @@ import { unTimedExecuteAsGM } from "../GMAction.js";
 import { AugmentedEvent, Workflow } from "../Workflow.js";
 import { defaultRollOptions } from "../patching.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
-import { addAdvAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker } from "../utils.js";
+import { addAdvAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastAttack } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
@@ -12,6 +12,18 @@ import { Activity, ActivityUseConfiguration, DND5ETargetDescriptor, RollDialogCo
 export let MidiAttackSheet: ReturnType<typeof defineMidiAttackSheetClass>;
 export let MidiAttackActivity: ReturnType<typeof defineMidiAttackActivityClass>;
 // export let MidiAttackActivityData;
+
+/**
+ * Get the effective forceRollDialog setting for an activity.
+ * Returns "always" | "never" | "default"
+ */
+function getEffectiveForceRollDialog(activity: any): "always" | "never" | "default" {
+  const activitySetting = activity.midiProperties?.forceRollDialog;
+  if (activitySetting === "always" || activitySetting === "never") {
+    return activitySetting;
+  }
+  return "default";
+}
 
 export function setupAttackActivity() {
   if (debugEnabled > 0) warn("MidiQOL | AttackActivity | setupAttackActivity | Called");
@@ -372,16 +384,18 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           if (workflow.ammunition) await workflow.callMacros(workflow.ammunition, workflow.ammunitionOnUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
         }
         await workflow.checkAttackAdvantage();
+        // Ensure config.event is set for dnd5e key handling
+        config.event ??= workflow.rollOptions.event;
         // @ts-expect-error
         const areKeysPressed = game.system.utils.areKeysPressed;
         const keys = {
-          normal: areKeysPressed(config.event ?? workflow.workflowOptions.event, "skipDialogNormal"),
-          advantage: areKeysPressed(config.event ?? workflow.workflowOptions.event, "skipDialogAdvantage"),
-          disadvantage: areKeysPressed(config.event ?? workflow.workflowOptions.event, "skipDialogDisadvantage")
+          normal: areKeysPressed(config.event, "skipDialogNormal"),
+          advantage: areKeysPressed(config.event, "skipDialogAdvantage"),
+          disadvantage: areKeysPressed(config.event, "skipDialogDisadvantage")
         };
 
         // @ts-expect-error no dnd5e-types
-        if (this.item.system.properties?.has("ver") && areMidiKeysPressed(config.event ?? workflow.workflowOptions.event, "Versatile")) {
+        if (this.item.system.properties?.has("ver") && areMidiKeysPressed(config.event, "Versatile")) {
           workflow.attackMode = "twoHanded";
         }
         // @ts-expect-error no dnd5e-types
@@ -395,26 +409,41 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           }
           requiresAmmoConfirmation = ammoConfirmation.confirm;
         }
-        if (Object.values(keys).some(k => k)) dialog.configure = !!(this.midiProperties?.forceRollDialog === "always" || requiresAmmoConfirmation);
-        if (config.workflow && areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle")) config.workflow.rollOptions.rollToggle = !config.workflow.rollOptions.rollToggle;
-        else if (!dialog.configure) {
-          switch (this.midiProperties?.forceRollDialog) {
-            case "always":
-              dialog.configure = true;
-              break;
-            case "never":
-              dialog.configure = false;
-              break;
-            default:
-              dialog.configure = requiresAmmoConfirmation || !(config.midiOptions.fastForwardAttack ?? workflow.workflowOptions.fastForwardAttack ?? false);
-              //@ts-expect-error no dnd5e-types
-              if (this.item?.system.properties.has("thr")) dialog.configure = true; // Let user choose the attack mode
-          }
+        const effectiveForceRollDialog = getEffectiveForceRollDialog(this);
+
+        // Handle RollToggle key separately
+        if (config.workflow && areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle")) {
+          config.workflow.rollOptions.rollToggle = !config.workflow.rollOptions.rollToggle;
         }
-        if (keys.advantage) workflow.rollOptions.advantage = keys.advantage;
-        if (keys.disadvantage) workflow.rollOptions.disadvantage = keys.disadvantage;
-        config.advantage ??= !!keys.advantage || !!(config.midiOptions.advantage ?? (workflow.advantage || workflow.workflowOptions.advantage));
-        config.disadvantage ??= !!keys.disadvantage || !!(config.midiOptions.disadvantage ?? (workflow.disadvantage || workflow.workflowOptions.disadvantage));
+
+        // Determine dialog.configure based on forceRollDialog setting and shift key
+        // Alt/Ctrl (advantage/disadvantage) are handled by dnd5e, only shift key skips dialog
+        if (keys.normal) {
+          // Shift key pressed - skip dialog unless forceRollDialog="always" or requiresAmmoConfirmation
+          dialog.configure = effectiveForceRollDialog === "always" || requiresAmmoConfirmation;
+        } else if (effectiveForceRollDialog === "always") {
+          dialog.configure = true;
+        } else if (effectiveForceRollDialog === "never") {
+          dialog.configure = false;
+        } else {
+          // "default" - use fast forward settings
+          dialog.configure = !isAutoFastAttack(workflow);
+        }
+
+        // Ammo confirmation always requires dialog
+        if (requiresAmmoConfirmation) {
+          dialog.configure = true;
+        }
+
+        // Thrown weapons always require dialog to choose attack mode
+        //@ts-expect-error no dnd5e-types
+        if (this.item?.system.properties.has("thr")) {
+          dialog.configure = true;
+        }
+        // Key-based advantage/disadvantage is handled by dnd5e via config.event
+        // Midi only sets config.advantage/disadvantage from its computed sources (flanking, flags, etc.)
+        config.advantage ??= !!(config.midiOptions.advantage ?? (workflow.advantage || workflow.workflowOptions.advantage));
+        config.disadvantage ??= !!(config.midiOptions.disadvantage ?? (workflow.disadvantage || workflow.workflowOptions.disadvantage));
         dialog.options ??= {};
 
         preRollHookId = Hooks.once("dnd5e.preRollAttack", (rollConfig, dialogConfig, messageConfig) => {
@@ -430,12 +459,14 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
             }
           } else if (!rollConfig.attackMode && dialogConfig.options?.attackModeOptions?.length) dialogConfig.configure = true;
           if (keys.disadvantage && workflow) {
-            workflow.attackAdvAttribution.add(`DIS:keyPress`);
-            workflow.advReminderAttackAdvAttribution.add(`DIS:keyPress`);
+            const label = keys.normal ? `DIS:forcedKeyPress` : `DIS:keyPress`;
+            workflow.attackAdvAttribution.add(label);
+            workflow.advReminderAttackAdvAttribution.add(label);
           }
           if (keys.advantage && workflow) {
-            workflow.attackAdvAttribution.add(`ADV:keyPress`);
-            workflow.advReminderAttackAdvAttribution.add(`ADV:keyPress`);
+            const label = keys.normal ? `ADV:forcedKeyPress` : `ADV:keyPress`;
+            workflow.attackAdvAttribution.add(label);
+            workflow.advReminderAttackAdvAttribution.add(label);
           }
           const targetDescriptors = foundry.utils.getProperty(messageConfig, "data.flags.dnd5e.targets") as DND5ETargetDescriptor[] | undefined;
           if (targetDescriptors && workflow) workflow.targetDescriptors = targetDescriptors as DND5ETargetDescriptor[];
@@ -627,16 +658,14 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         || workflow.workflowOptions.advantage
         || workflow.advantage
         || workflow.rollOptions.advantage
-        || workflow.workflowOptions?.advantage
         || workflow.flankingAdvantage;
       if (workflow.noAdvantage) advantage = false;
-      // Attribute advantage
       if (workflow.rollOptions.advantage) {
-        workflow.attackAdvAttribution.add(`ADV:keyPress`);
-        workflow.advReminderAttackAdvAttribution.add(`ADV:keyPress`);
+        workflow.attackAdvAttribution.add(`ADV:rollOptions`);
+        workflow.advReminderAttackAdvAttribution.add(`ADV:rollOptions`);
       }
       if (workflow.workflowOptions?.advantage)
-        workflow.attackAdvAttribution.add(`ADD:workflowOptions`);
+        workflow.attackAdvAttribution.add(`ADV:workflowOptions`);
       if (workflow.flankingAdvantage) {
         workflow.attackAdvAttribution.add(`ADV:flanking`);
         workflow.advReminderAttackAdvAttribution.add(`ADV:Flanking`);
@@ -645,12 +674,11 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       let disadvantage = config.midiOptions.disadvantage
         || workflow.workflowOptions.disadvantage
         || workflow.disadvantage
-        || workflow.rollOptions.disadvantage
-        || workflow.workflowOptions?.disadvantage;
+        || workflow.rollOptions.disadvantage;
       if (workflow.noDisadvantage) disadvantage = false;
       if (workflow.rollOptions.disadvantage) {
-        workflow.attackAdvAttribution.add(`DIS:keyPress`);
-        workflow.advReminderAttackAdvAttribution.add(`DIS:keyPress`);
+        workflow.attackAdvAttribution.add(`DIS:rollOptions`);
+        workflow.advReminderAttackAdvAttribution.add(`DIS:rollOptions`);
       }
       if (workflow.workflowOptions?.disadvantage)
         workflow.attackAdvAttribution.add(`DIS:workflowOptions`);

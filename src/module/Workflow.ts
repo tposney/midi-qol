@@ -1723,6 +1723,7 @@ export class Workflow {
     if (options.rollOptions) this.rollOptions = options.rollOptions;
     else this.rollOptions = {};
     if (options.event) this.rollOptions.event = options.event;
+    else if (options.workflowOptions?.event) this.rollOptions.event = options.workflowOptions.event;
     this.workflowOptions = foundry.utils.mergeObject(defaultRollOptions, {
       autoRollAttack: getAutoRollAttack(this),
       autoRollDamage: getAutoRollDamage(this),
