@@ -1,5 +1,5 @@
 import { i18n } from "../../midi-qol.js";
-import { MidiDependentsRegistry, RegistryChangeEvent } from "../MidiDependentsRegistry.js";
+import { MidiDependentsRegistry, RegistryChangeEvent } from "../lib/MidiDependentsRegistry.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 
@@ -10,7 +10,7 @@ interface DependentInfo {
   displayType: string;
   icon: string;
   exists: boolean;
-  isTransfer?: boolean;
+  hasItemParent?: boolean;
   // Owner info for Items and ActiveEffects
   ownerUuid?: string;
   ownerName?: string;
@@ -29,7 +29,7 @@ interface DependentEntry {
   parentType: string;
   parentIcon: string;
   parentExists: boolean;
-  isTransfer?: boolean;
+  hasItemParent?: boolean;
   // Owner info for Items and ActiveEffects (the Actor/Item they belong to)
   ownerUuid?: string;
   ownerName?: string;
@@ -60,7 +60,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2) {
   #searchFilter: string = "";
   #collapsedSections: Set<string> = new Set();
-  #hookId: number | null = null;
+  #hookIds: Map<string, number> = new Map();
   // Cache of processed entries by parent UUID for incremental updates
   #entriesCache: Map<string, DependentEntry> = new Map();
   #cacheValid: boolean = false;
@@ -198,9 +198,59 @@ export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2
     await super._onFirstRender(context, options);
 
     // Register hook to listen for registry changes
-    this.#hookId = Hooks.on("midi-qol.dependentsRegistryChanged", (event: RegistryChangeEvent) => {
+    this.#hookIds.set("registryChanged", Hooks.on("midi-qol.dependentsRegistryChanged", (event: RegistryChangeEvent) => {
       this.#handleRegistryChange(event);
-    });
+    }));
+
+    // Register hooks to listen for document updates (for display changes like counters)
+    this.#hookIds.set("updateItem", Hooks.on("updateItem", (doc: any) => {
+      this.#handleDocumentUpdate(doc.uuid);
+    }));
+    this.#hookIds.set("updateActiveEffect", Hooks.on("updateActiveEffect", (doc: any) => {
+      this.#handleDocumentUpdate(doc.uuid);
+    }));
+    this.#hookIds.set("updateActor", Hooks.on("updateActor", (doc: any) => {
+      this.#handleDocumentUpdate(doc.uuid);
+    }));
+  }
+
+  #handleDocumentUpdate(uuid: string) {
+    if (!this.#cacheValid) return;
+    if (!this.#isDocumentInCache(uuid)) return;
+    this.#refreshDocumentInCache(uuid);
+    this.#throttledRender();
+  }
+
+  #isDocumentInCache(uuid: string): boolean {
+    // Check if document is a parent
+    if (this.#entriesCache.has(uuid)) return true;
+    // Check if document is a dependent
+    for (const entry of this.#entriesCache.values()) {
+      if (entry.dependents.some(d => d.uuid === uuid)) return true;
+    }
+    return false;
+  }
+
+  #refreshDocumentInCache(uuid: string) {
+    // If it's a parent, rebuild the parent entry
+    if (this.#entriesCache.has(uuid)) {
+      const entry = this.#entriesCache.get(uuid)!;
+      const dependentUuids = entry.dependents.map(d => d.uuid);
+      const newEntry = this.#buildParentEntry(uuid, dependentUuids);
+      if (newEntry) {
+        this.#entriesCache.set(uuid, newEntry);
+      }
+    }
+    // If it's a dependent, rebuild that dependent's info in all entries that contain it
+    for (const [parentUuid, entry] of this.#entriesCache.entries()) {
+      const depIndex = entry.dependents.findIndex(d => d.uuid === uuid);
+      if (depIndex !== -1) {
+        const newDepInfo = this.#buildDependentInfo(uuid);
+        if (newDepInfo) {
+          entry.dependents[depIndex] = newDepInfo;
+        }
+      }
+    }
   }
 
   #handleRegistryChange(event: RegistryChangeEvent) {
@@ -293,12 +343,12 @@ export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2
 
     return {
       uuid,
-      name: doc?.name ?? i18n("midi-qol.DependentsExplorer.Unknown"),
+      name: doc?.name ?? doc?.documentName ?? i18n("midi-qol.DependentsExplorer.Unknown"),
       type: docType,
       displayType: this.#getDisplayType(docType),
       icon: this.#getDocumentIcon(doc),
       exists: !!doc,
-      isTransfer: docType === "ActiveEffect" && doc?.transfer === true,
+      hasItemParent: doc?.parent instanceof Item,
       ownerUuid: depOwnerUuid,
       ownerName: depOwnerName,
       ownerIcon: depOwnerIcon,
@@ -325,7 +375,7 @@ export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2
   #buildParentEntry(parentUuid: string, dependentUuids: string[]): DependentEntry | null {
     const parentDoc = fromUuidSync(parentUuid, { strict: false }) as any;
     const parentExists = !!parentDoc;
-    const parentName = parentDoc?.name ?? i18n("midi-qol.DependentsExplorer.Unknown");
+    const parentName = parentDoc?.name ?? parentDoc?.documentName ?? i18n("midi-qol.DependentsExplorer.Unknown");
     const parentType = parentDoc?.documentName ?? "Unknown";
 
     const dependents: DependentInfo[] = dependentUuids
@@ -367,7 +417,7 @@ export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2
       parentType,
       parentIcon: this.#getDocumentIcon(parentDoc),
       parentExists,
-      isTransfer: parentType === "ActiveEffect" && parentDoc?.transfer === true,
+      hasItemParent: parentDoc?.parent instanceof Item,
       ownerUuid,
       ownerName,
       ownerIcon,
@@ -393,11 +443,16 @@ export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2
   async _onClose(options: any): Promise<void> {
     await super._onClose(options);
 
-    // Unregister the hook when the app is closed
-    if (this.#hookId !== null) {
-      Hooks.off("midi-qol.dependentsRegistryChanged", this.#hookId);
-      this.#hookId = null;
+    // Unregister all hooks when the app is closed
+    for (const [hookName, hookId] of this.#hookIds.entries()) {
+      if (hookName === "registryChanged") {
+        Hooks.off("midi-qol.dependentsRegistryChanged", hookId);
+      } else {
+        // @ts-expect-error Dynamic hook names not in HookConfig
+        Hooks.off(hookName, hookId);
+      }
     }
+    this.#hookIds.clear();
   }
 
   #onSearchInput(event: Event) {
@@ -453,21 +508,26 @@ export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2
     }
 
     const docType = doc.documentName;
-    const needsConfirm = docType === "Actor" || docType === "Item";
+    const isItemEffect = docType === "ActiveEffect" && doc.parent instanceof Item;
+    const needsConfirm = docType === "Actor" || docType === "Item" || isItemEffect;
 
     if (needsConfirm) {
+      const confirmMessage = isItemEffect
+        ? i18n("midi-qol.DependentsExplorer.ConfirmDeleteItemEffect").replace("{name}", doc.name)
+        : i18n("midi-qol.DependentsExplorer.ConfirmDeleteParent").replace("{name}", doc.name).replace("{type}", docType);
       const confirmed = await DialogV2.confirm({
         window: { title: i18n("midi-qol.DependentsExplorer.ConfirmDelete") },
-        content: i18n("midi-qol.DependentsExplorer.ConfirmDeleteParent").replace("{name}", doc.name).replace("{type}", docType),
+        content: confirmMessage,
         yes: { label: i18n("midi-qol.DependentsExplorer.Delete") },
         no: { label: i18n("midi-qol.DependentsExplorer.Cancel") }
       });
       if (!confirmed) return;
     }
 
+    const docName = doc.name;
     try {
       await doc.delete();
-      ui.notifications?.info(i18n("midi-qol.DependentsExplorer.Deleted").replace("{name}", doc.name));
+      ui.notifications?.info(i18n("midi-qol.DependentsExplorer.Deleted").replace("{name}", docName));
       this.render({ force: true });
     } catch (err) {
       console.error("DependentsExplorer | Failed to delete document:", err);
@@ -486,21 +546,26 @@ export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2
     }
 
     const docType = doc.documentName;
-    const needsConfirm = docType === "Actor" || docType === "Item";
+    const isItemEffect = docType === "ActiveEffect" && doc.parent instanceof Item;
+    const needsConfirm = docType === "Actor" || docType === "Item" || isItemEffect;
 
     if (needsConfirm) {
+      const confirmMessage = isItemEffect
+        ? i18n("midi-qol.DependentsExplorer.ConfirmDeleteItemEffect").replace("{name}", doc.name)
+        : i18n("midi-qol.DependentsExplorer.ConfirmDeleteDependent").replace("{name}", doc.name).replace("{type}", docType);
       const confirmed = await DialogV2.confirm({
         window: { title: i18n("midi-qol.DependentsExplorer.ConfirmDelete") },
-        content: i18n("midi-qol.DependentsExplorer.ConfirmDeleteDependent").replace("{name}", doc.name).replace("{type}", docType),
+        content: confirmMessage,
         yes: { label: i18n("midi-qol.DependentsExplorer.Delete") },
         no: { label: i18n("midi-qol.DependentsExplorer.Cancel") }
       });
       if (!confirmed) return;
     }
 
+    const docName = doc.name;
     try {
       await doc.delete();
-      ui.notifications?.info(i18n("midi-qol.DependentsExplorer.Deleted").replace("{name}", doc.name));
+      ui.notifications?.info(i18n("midi-qol.DependentsExplorer.Deleted").replace("{name}", docName));
       this.render({ force: true });
     } catch (err) {
       console.error("DependentsExplorer | Failed to delete document:", err);

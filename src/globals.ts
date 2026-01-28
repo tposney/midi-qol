@@ -1,6 +1,6 @@
 import { AnyMutableObject, AnyObject, InexactPartial } from "fvtt-types/utils";
 import { OnUseMacros } from "./module/apps/Item";
-import { DamageDescriptionObject, DamageOnlyWorkflow, DDBGameLogWorkflow, DummyWorkflow, TrapWorkflow, UndoData, UserWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./module/Workflow";
+import { AttributionEntry, AttributionMap, AugmentedEvent, DamageDescriptionObject, DamageOnlyWorkflow, DDBGameLogWorkflow, DummyWorkflow, TrapWorkflow, UndoData, UserWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./module/Workflow";
 import { MidiOptions } from "./module/utils";
 import * as utils from "./module/utils";
 import * as settings from "./module/settings";
@@ -20,7 +20,8 @@ import { TroubleShooter } from "./module/apps/TroubleShooter";
 import { ChatLogMidi } from "./module/ChatClasses/ChatLogMidi";
 import { ChatMessageMidi } from "./module/ChatClasses/ChatMessageMidi";
 import { DamageApplicationElementMidi } from "./module/ChatClasses/DamageApplicationElementMidi";
-import { MidiDependentsRegistry, RegistryChangeEvent } from "./module/MidiDependentsRegistry";
+import { MidiDependentsRegistry, RegistryChangeEvent } from "./module/lib/MidiDependentsRegistry";
+import { RollModifierTracker } from "./module/lib/RollModifierTracker";
 
 declare module "fvtt-types/configuration" {
   interface AssumeHookRan {
@@ -446,6 +447,8 @@ declare module "fvtt-types/configuration" {
         ammunitionOnUseMacros?: OnUseMacros;
         AoO?: boolean;
         attackAdvAttribution?: string[];
+        /** Structured attack attribution map: type -> source -> displayName */
+        attackAttribution?: AttributionMap;
         attackTotal?: number;
         attackRoll?: Roll.Data;
         attackRollCount?: number;
@@ -488,6 +491,8 @@ declare module "fvtt-types/configuration" {
           options: Roll.Options;
         }[];
         saveUuids?: string[];
+        /** Structured save attribution map: targetUuid -> type -> source -> displayName */
+        saveAttribution?: Record<string, AttributionMap>;
         semiSuperSaverUuids?: string[];
         superSaverUuids?: string[];
         suspended?: boolean;
@@ -625,6 +630,7 @@ declare global {
     addDependent: typeof utils.addDependent;
     addRollTo: typeof utils.addRollTo;
     addUndoChatMessage: typeof undo.addUndoChatMessage;
+    RollModifierTracker: typeof RollModifierTracker;
     applyTokenDamage: typeof utils.applyTokenDamage;
     canSee: typeof utils.canSee;
     canSense: typeof utils.canSense;
@@ -1109,9 +1115,9 @@ export interface Activity extends AnyMutableObject {
   };
   refund: (consumed: unknown) => Promise<void>;
   getRollData: () => AnyMutableObject;
-  rollAttack?: (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => Promise<Roll[] | null>;
-  rollDamage: (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => Promise<Roll[] | void>;
-  rollFormula?: (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => Promise<Roll[] | void>;
+  rollAttack?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | null>;
+  rollDamage(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
+  rollFormula?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
   // Consumption and scaling methods/properties
   canScale?: boolean;
   _prepareUsageConfig: (config: object) => object;
@@ -1250,7 +1256,7 @@ type BasicRollConfig = {
 export type RollProcessConfig = {
   rolls?: BasicRollConfig[];
   evaluate?: boolean;
-  event?: Event;
+  event?: AugmentedEvent;
   hookNames?: string[];
   subject?: foundry.abstract.Document.Any;
   target?: number;
@@ -1440,6 +1446,7 @@ export type ModuleIntegrationRequests = {
 export type SaveDetails = {
   advantage: boolean | undefined;
   disadvantage: boolean | undefined;
+  modifierTracker: RollModifierTracker | undefined;  // RollModifierTracker with attribution tracking
   isFriendly: boolean;
   isMagicSave: boolean;
   isConcentrationCheck: boolean | undefined;

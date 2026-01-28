@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, log, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastAttack, isAutoFastDamage, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastAttack, isAutoFastDamage, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData } from "./utils.js";
 import { autoFastForwardAbilityRolls, checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -11,7 +11,7 @@ import { installedModules } from "./setupModules.js";
 import { preActivityConsumptionHook, activityConsumptionHook } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
-import { MidiDependentsRegistry } from "./MidiDependentsRegistry.js";
+import { MidiDependentsRegistry } from "./lib/MidiDependentsRegistry.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
@@ -603,6 +603,7 @@ export function initHooks() {
   });
 
   setupMidiFlagTypes();
+
   Hooks.on("applyActiveEffect", midiCustomEffect);
   // Hooks.on("preCreateActiveEffect", checkImmunity); Disabled in lieu of having effect marked suppressed
   Hooks.on("preUpdateItem", preUpdateItemActorOnUseMacro);
@@ -677,6 +678,15 @@ export function initHooks() {
     });
     api.config.itemSummary.registerCommands([
       {
+        label: i18n("midi-qol.buttons.showChatInfo"),
+        enabled: (params) => true,
+        iconClass: 'fas fa-info-circle',
+        execute: (params) => {
+          if (debugEnabled > 1) log('displayCard', params.item);
+          params.item.displayCard();
+        },
+      },
+      {
         label: i18n("midi-qol.buttons.roll"),
         enabled: (params) => ["weapon", "spell", "power", "feat", "tool", "consumable"].includes(params.item.type),
         iconClass: 'fas fa-dice-d20',
@@ -688,24 +698,41 @@ export function initHooks() {
       },
       {
         label: i18n("midi-qol.buttons.attack"),
-        enabled: (params) => ["weapon", "feat"].includes(params.item.type) && params.item.system.activities.some(a => a.type === "attack")
-          && params.item.system.activities.find(a => a.type === "attack"),
+        enabled: (params) => params.item.system.activities?.some(a => a.hasAttack),
         iconClass: 'fas fa-dice-d20',
         execute: (params) => {
           if (debugEnabled > 1) log('rollAttack', params.item);
-          const activity = params.item.system.activities.find(a => a.type === "attack");
-          if (activity) activity.rollAttack({ event: params.event }, {}, { create: true })
+          const activity = params.item.system.activities.find(a => a.hasAttack);
+          if (!activity) return;
+          let configure = !isAutoFastAttack();
+          if (areMidiKeysPressed(params.event, "RollToggle")) configure = !configure;
+          activity.rollAttack({ event: params.event }, { configure }, { create: true })
         }
       },
       {
         label: i18n("midi-qol.buttons.damage"),
-        enabled: (params) => ["weapon", "feat", "save", "check", "damage"].includes(params.item.type)
-          && params.item.system.activities?.find(a => a.damage?.parts?.length),
+        enabled: (params) => params.item.system.activities?.some(a => a.hasDamage),
         iconClass: 'fas fa-dice-d20',
         execute: (params) => {
           if (debugEnabled > 1) log('rollDamage', params.item);
-          const activity = params.item.system.activities.find(a => a.damage?.parts?.length);
-          if (activity) activity.rollDamage({ event: params.event }, {}, { create: true })
+          const activity = params.item.system.activities.find(a => a.hasDamage);
+          if (!activity) return;
+          let configure = !isAutoFastDamage();
+          if (areMidiKeysPressed(params.event, "RollToggle")) configure = !configure;
+          activity.rollDamage({ event: params.event }, { configure }, { create: true })
+        }
+      },
+      {
+        label: i18n("midi-qol.buttons.versatileDamage"),
+        enabled: (params) => params.item.isVersatile && params.item.system.activities?.some(a => a.hasDamage),
+        iconClass: 'fas fa-hand-fist',
+        execute: (params) => {
+          if (debugEnabled > 1) log('rollVersatileDamage', params.item);
+          const activity = params.item.system.activities.find(a => a.hasDamage);
+          if (!activity) return;
+          let configure = !isAutoFastDamage();
+          if (areMidiKeysPressed(params.event, "RollToggle")) configure = !configure;
+          activity.rollDamage({ event: params.event, versatile: true }, { configure }, { create: true })
         }
       }
     ]);

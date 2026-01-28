@@ -481,11 +481,11 @@ export let MidiActivityMixin = Base => {
 
     }
 
-    async useAs(actor: Actor.Implementation | null | undefined, config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
+    async useAs(actor: Actor.Implementation | null | undefined, usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       // itemData._id = this.item._id;
-      actor = getActor(config.midiOptions?.rollAs);
-      if (config.midiOptions?.rollAs) delete config.midiOptions.rollAs;
-      if (!actor || actor === this.actor || this.selfOnlyTriggerActivity) return this.use(config, dialog, message);
+      actor = getActor(usage.midiOptions?.rollAs);
+      if (usage.midiOptions?.rollAs) delete usage.midiOptions.rollAs;
+      if (!actor || actor === this.actor || this.selfOnlyTriggerActivity) return this.use(usage, dialog, message);
       const itemData = this.item.toObject();
       // @ts-expect-error
       delete itemData._id;
@@ -496,7 +496,7 @@ export let MidiActivityMixin = Base => {
       item.prepareFinalAttributes(); // Since actor prepareData is not being called need to do this here
       // @ts-expect-error no dnd5e-types
       const activity = item.system.activities.get(this.id);
-      return activity.use(config, dialog, message);
+      return activity.use(usage, dialog, message);
     }
 
     async use(usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
@@ -523,7 +523,7 @@ export let MidiActivityMixin = Base => {
           workflowClass = ActiveDefenceWorkflow;
         }
         if (!(workflowClass.prototype instanceof Workflow)) workflowClass = Workflow;
-        const workflowOptions = { ...usage.midiOptions, ...(usage.midiOptions?.workflowOptions ?? {}), event: usage.event, storeWorkflow: false };
+        const workflowOptions = { ...usage.midiOptions, ...(usage.midiOptions?.workflowOptions ?? {}), event: usage.event as AugmentedEvent | undefined, storeWorkflow: false };
         delete workflowOptions.workflowOptions;
         if (usage.workflow)
           usage.midiOptions.workflowOptions.autoRollAttack = true;
@@ -546,11 +546,11 @@ export let MidiActivityMixin = Base => {
 
         if (usage.midiOptions.isCritical) {
           usage.workflow.isCritical = true;
-          usage.workflow.attackAdvAttribution.add("CRIT:activity.use");
+          usage.workflow.attackRollModifierTracker.addAttribution("CRIT", "activity.use", i18n("midi-qol.ActivityUse"));
         }
         if (usage.midiOptions.isFumble) {
           usage.workflow.isFumble = true;
-          usage.workflow.attackAdvAttribution.add("FUMBLE:activity.use");
+          usage.workflow.attackRollModifierTracker.addAttribution("FUMBLE", "activity.use", i18n("midi-qol.ActivityUse"));
         }
         const autoCreateTemplate = activityHasAutoPlaceTemplate(activity);
         const emanationNoTemplate = activityHasEmanationNoTemplate(activity);
@@ -738,7 +738,6 @@ export let MidiActivityMixin = Base => {
       if (config.workflow.currentAction === config.workflow.WorkflowState_Abort || config.workflow.currentAction === config.workflow.WorkflowState_Completed)
         return this.use(config, dialog, {});
       // TODO: This is odd. `midiOptions` should have `workflowOptions` _in_ it, not be assigned it
-      // @ts-expect-error
       config.midiOptions ??= config.workflow.workflowOptions ?? {};
       if (debugEnabled > 0) {
         warn("MidiActivity | rollDamage | Called", config, dialog, message);
@@ -787,9 +786,9 @@ export let MidiActivityMixin = Base => {
                 dialog.configure = !(config.midiOptions?.fastForwardDamage ?? config.workflow?.workflowOptions.fastForwardDamage ?? false);
             }
           }
-          if (config.workflow && areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle")) config.workflow.rollOptions.rollToggle = !config.workflow.rollOptions.rollToggle;
-          // @ts-expect-error no dnd5e-types
-          if (this.item.system.properties?.has("ver") && areMidiKeysPressed(config.event ?? config.workflow.rollOptions.event, "Versatile")) {
+          if (config.workflow && areMidiKeysPressed(config.event, "RollToggle")) config.workflow.rollOptions.rollToggle = !config.workflow.rollOptions.rollToggle;
+          //@ts-expect-error no dnd5e-types
+          if (this.item.isVersatile && areMidiKeysPressed(config.event ?? config.workflow.rollOptions.event, "Versatile")) {
             config.workflow.attackMode = "twoHanded";
           }
           if (config.workflow.rollOptions?.rollToggle) dialog.configure = !dialog.configure;

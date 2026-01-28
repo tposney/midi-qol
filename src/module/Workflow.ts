@@ -86,14 +86,16 @@ import {
   bonusDialog,
   getTargetDescriptor,
   getThrottlingFunction,
-  addAdvAttribution,
+  addAttribution,
+  attributionMapToArray,
+  renderAttributionTooltip,
   resolveItemMacro,
   resolveActivityMacro,
   resolveDAEItemData,
   midiFlag,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
-import { bonusCheck, collectBonusFlags, defaultRollOptions, computeAbilityAdvantage } from "./patching.js";
+import { bonusCheck, collectBonusFlags, defaultRollOptions, computeAbilityAdvantage, computeRollModifiers, RollModifierFlags } from "./patching.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
@@ -102,7 +104,8 @@ import { Activity, ActivitySave, ActivityCheck, ActivityUseConfiguration, Damage
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
 import { MidiTransformActivity } from "./activities/TransformActivity.js";
-import { MidiAttackActivity } from "./activities/AttackActivity.js";
+import { MidiAttackActivity, computeAttackAdvantage } from "./activities/AttackActivity.js";
+import { RollModifierTracker, AdvantageAttributionType, RollModifierTrackerOptions } from "./lib/RollModifierTracker.js";
 
 /**
  * Result of resolving a macro specification in callMacro.
@@ -112,7 +115,7 @@ interface ResolvedMacro {
   macro?: Macro.Implementation;
   macroData?: Macro.CreateData;
   item?: Item.Implementation | Item.InitializedData;
-  activity?: Activity;
+  macroActivity?: Activity;
   sourceItemUuid?: string;
 }
 
@@ -130,6 +133,31 @@ interface CallMacroContext {
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event: AugmentedEvent) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 
+/**
+ * Attribution type for advantage/disadvantage/critical/fumble sources.
+ */
+export type AttributionType = 'ADV' | 'DIS' | 'NOADV' | 'NODIS' | 'CRIT' | 'NOCRIT' | 'FUMBLE' | 'NOFUMBLE';
+
+/**
+ * Attribution map: type -> source -> displayName
+ * O(1) lookup and natural deduplication via object keys.
+ * Stored in ChatMessage flags for persistence.
+ */
+export type AttributionMap = Partial<Record<AttributionType, Record<string, string>>>;
+
+/**
+ * Structured attribution entry for display purposes.
+ * Converted from AttributionMap for iteration/rendering.
+ */
+export interface AttributionEntry {
+  /** The type of attribution (ADV, DIS, CRIT, etc.) */
+  type: AttributionType;
+  /** Source identifier (e.g., "invisible", "flanking", "magicResistance") */
+  source: string;
+  /** Human-readable display name for tooltips */
+  displayName: string;
+}
+
 export enum WorkflowDataFlags {
   activity = "activityUuid",
   actor = "sourceActorUuid",
@@ -138,6 +166,8 @@ export enum WorkflowDataFlags {
   ammunitionOnUseMacros = "ammunitionOnUseMacros",
   AoO = "AoO",
   attackAdvAttribution = "attackAdvAttribution",
+  /** Structured attack attribution - array of AttributionEntry */
+  attackAttribution = "attackAttribution",
   attackTotal = "attackTotal", // Cannot change
   attackRoll = "attackRoll", // Cannot change
   attackRollCount = "attackRollCount",
@@ -176,6 +206,8 @@ export enum WorkflowDataFlags {
   saveDisplayData = "saveDisplayData",
   saveRolls = "saveRolls",
   saves = "saveUuids",
+  /** Structured save attribution - keyed by target UUID */
+  saveAttribution = "saveAttribution",
   semiSuperSavers = "semiSuperSaverUuids",
   superSavers = "superSaverUuids",
   suspended = "suspended",
@@ -837,6 +869,118 @@ export class Workflow {
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────
+  // Attack Advantage Mode - tracks advantage/disadvantage with counts and suppression
+  // ─────────────────────────────────────────────────────────────────
+
+  // Legacy Sets owned by Workflow, passed to RollModifierTracker as references
+  #attackAdvAttribution: Set<string> = new Set();
+  #advReminderAttackAdvAttribution: Set<string> = new Set();
+  #attackRollModifierTracker: RollModifierTracker = new RollModifierTracker({
+    legacyAttribution: this.#attackAdvAttribution,
+    advReminderAttribution: this.#advReminderAttackAdvAttribution
+  });
+
+  /**
+   * Get the RollModifierTracker instance for attack rolls.
+   * Use this for granular control over advantage/disadvantage tracking.
+   */
+  get attackRollModifierTracker(): RollModifierTracker {
+    return this.#attackRollModifierTracker;
+  }
+
+  /**
+   * Backward compatibility getter for advantage.
+   * Returns true if there's effective advantage, false if suppressed, undefined if no sources.
+   */
+  get advantage(): boolean | undefined {
+    return this.#attackRollModifierTracker.hasAdvantage;
+  }
+
+  /**
+   * Backward compatibility setter for advantage.
+   * - `true`: adds one source of advantage
+   * - `false`: clears all advantage sources (preserves suppression)
+   * - `undefined`: resets the entire advantage mode state
+   */
+  set advantage(value: boolean | undefined) {
+    if (value === true) {
+      this.#attackRollModifierTracker.addAdvantage();
+    } else if (value === undefined) {
+      this.#attackRollModifierTracker.reset({
+        legacyAttribution: this.#attackAdvAttribution,
+        advReminderAttribution: this.#advReminderAttackAdvAttribution
+      });
+    } else if (value === false) {
+      this.#attackRollModifierTracker.clearAdvantage();
+    }
+  }
+
+  /**
+   * Backward compatibility getter for disadvantage.
+   * Returns true if there's effective disadvantage, false if suppressed, undefined if no sources.
+   */
+  get disadvantage(): boolean | undefined {
+    return this.#attackRollModifierTracker.hasDisadvantage;
+  }
+
+  /**
+   * Backward compatibility setter for disadvantage.
+   * - `true`: adds one source of disadvantage
+   * - `false`: clears all disadvantage sources (preserves suppression)
+   * - `undefined`: resets the entire advantage mode state
+   */
+  set disadvantage(value: boolean | undefined) {
+    if (value === true) {
+      this.#attackRollModifierTracker.addDisadvantage();
+    } else if (value === undefined) {
+      this.#attackRollModifierTracker.reset({
+        legacyAttribution: this.#attackAdvAttribution,
+        advReminderAttribution: this.#advReminderAttackAdvAttribution
+      });
+    } else if (value === false) {
+      this.#attackRollModifierTracker.clearDisadvantage();
+    }
+  }
+
+  /**
+   * Backward compatibility getter for noAdvantage.
+   * Returns true if advantage is suppressed.
+   */
+  get noAdvantage(): boolean {
+    return this.#attackRollModifierTracker.advantageSuppressed;
+  }
+
+  /**
+   * Backward compatibility setter for noAdvantage.
+   * - `true`: suppresses all advantage sources
+   * - `false`/`undefined`: does nothing (suppression cannot be undone without reset)
+   */
+  set noAdvantage(value: boolean | undefined) {
+    if (value === true) {
+      this.#attackRollModifierTracker.suppressAdvantage();
+    }
+  }
+
+  /**
+   * Backward compatibility getter for noDisadvantage.
+   * Returns true if disadvantage is suppressed.
+   */
+  get noDisadvantage(): boolean {
+    return this.#attackRollModifierTracker.disadvantageSuppressed;
+  }
+
+  /**
+   * Backward compatibility setter for noDisadvantage.
+   * - `true`: suppresses all disadvantage sources
+   * - `false`/`undefined`: does nothing (suppression cannot be undone without reset)
+   */
+  set noDisadvantage(value: boolean | undefined) {
+    if (value === true) {
+      this.#attackRollModifierTracker.suppressDisadvantage();
+    }
+  }
+
   get dnd5eFlags(): any | undefined {
     return foundry.utils.getProperty(this.chatCard, "flags.dnd5e") as AnyObject | undefined;
   }
@@ -893,6 +1037,8 @@ export class Workflow {
     rollHTML: string;
     id: string;
     adv?: boolean;
+    modifierTracker?: RollModifierTracker;  // Full RollModifierTracker for attribution tracking
+    attributionTooltip?: string;  // HTML-escaped attribution tooltip for data-tooltip-html attribute
     saveClass: string;
   }[] | undefined;
 
@@ -1380,33 +1526,96 @@ export class Workflow {
     }
   }
 
-  #attackAdvAttribution: Set<string> | undefined;
-  get attackAdvAttribution() {
-    if (this.#attackAdvAttribution) return this.#attackAdvAttribution;
-    if (this.itemCardUuid && saveToChatCard) {
-      this.#attackAdvAttribution = new Set(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.attackAdvAttribution));
-    }
-    return this.#attackAdvAttribution ?? new Set();
+  // Legacy Set - owned by Workflow, updated by RollModifierTracker via reference
+  get attackAdvAttribution(): Set<string> {
+    return this.#attackAdvAttribution;
   }
   set attackAdvAttribution(attackAdvAttribution: Set<string>) {
-    this.#attackAdvAttribution = attackAdvAttribution;
-    if (this.itemCardUuid && saveToChatCard) {
-      addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.attackAdvAttribution]: Array.from(attackAdvAttribution) }, "midi-qol");
+    // Only reset if a different Set is being assigned (e.g., workflow.attackAdvAttribution = new Set())
+    // Skip reset when same reference is passed (e.g., from performThrottledUpdate) to preserve advantage state
+    // STOPGAP: This reference check is necessary because performThrottledUpdate triggers the setter
+    // with the same Set to persist workflow state to the chat card. Once Workflow is refactored to
+    // be a document persisted to the database with a proper schema, this workaround can be removed.
+    if (attackAdvAttribution !== this.#attackAdvAttribution) {
+      this.#attackAdvAttribution = attackAdvAttribution;
+      this.#attackRollModifierTracker.reset({
+        legacyAttribution: this.#attackAdvAttribution,
+        advReminderAttribution: this.#advReminderAttackAdvAttribution
+      });
     }
   }
 
-  #advReminderAttackAdvAttribution: Set<string> | undefined;
-  get advReminderAttackAdvAttribution() {
-    if (this.#advReminderAttackAdvAttribution) return this.#advReminderAttackAdvAttribution;
-    if (this.itemCardUuid && saveToChatCard) {
-      this.#advReminderAttackAdvAttribution = new Set(this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.advReminderAttackAdvAttribution));
+  // Structured attack attribution - delegates to attackRollModifierTracker
+  // Uses AttributionMap: type -> source -> displayName for O(1) lookups
+  get attackAttribution(): AttributionMap {
+    return this.#attackRollModifierTracker.attribution as AttributionMap;
+  }
+  set attackAttribution(attackAttribution: AttributionMap) {
+    // Clear existing and rebuild - pass references to keep legacy Sets in sync
+    this.#attackRollModifierTracker.reset({
+      legacyAttribution: this.#attackAdvAttribution,
+      advReminderAttribution: this.#advReminderAttackAdvAttribution
+    });
+    for (const [type, sources] of Object.entries(attackAttribution)) {
+      for (const [source, displayName] of Object.entries(sources ?? {})) {
+        this.#attackRollModifierTracker.addAttribution(type as AttributionType, source, displayName);
+      }
     }
-    return this.#advReminderAttackAdvAttribution ?? new Set();
+    // Persist to chat card
+    if (this.itemCardUuid && saveToChatCard) {
+      addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.attackAttribution]: attackAttribution }, "midi-qol");
+    }
+  }
+
+  // Structured save attribution - keyed by target UUID
+  // Uses AttributionMap per target for O(1) lookups
+  #saveAttribution: Record<string, AttributionMap> | undefined;
+  get saveAttribution(): Record<string, AttributionMap> {
+    if (this.#saveAttribution) return this.#saveAttribution;
+    if (this.itemCardUuid && saveToChatCard) {
+      this.#saveAttribution = this.chatCard?.getFlag(MODULE_ID, WorkflowDataFlags.saveAttribution) as Record<string, AttributionMap> | undefined;
+    }
+    return this.#saveAttribution ?? {};
+  }
+  set saveAttribution(saveAttribution: Record<string, AttributionMap>) {
+    this.#saveAttribution = saveAttribution;
+    if (this.itemCardUuid && saveToChatCard) {
+      addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.saveAttribution]: saveAttribution }, "midi-qol");
+    }
+  }
+
+  /**
+   * Add a structured attribution for a target's saving throw.
+   * O(1) operation - uses object property assignment for deduplication.
+   * @param targetUuid - The UUID of the target
+   * @param type - Attribution type (ADV, DIS, etc.)
+   * @param source - Source identifier
+   * @param displayName - Human-readable display name
+   */
+  addSaveAttribution(targetUuid: string, type: AttributionType, source: string, displayName: string): void {
+    const current = this.#saveAttribution ?? {};
+    current[targetUuid] ??= {};
+    current[targetUuid][type] ??= {};
+    current[targetUuid][type]![source] = displayName;
+    this.saveAttribution = current;
+  }
+
+  // Legacy Set for adv-reminder module - owned by Workflow, updated by RollModifierTracker via reference
+  get advReminderAttackAdvAttribution(): Set<string> {
+    return this.#advReminderAttackAdvAttribution;
   }
   set advReminderAttackAdvAttribution(advReminderAttackAdvAttribution: Set<string>) {
-    this.#advReminderAttackAdvAttribution = advReminderAttackAdvAttribution;
-    if (this.itemCardUuid && saveToChatCard) {
-      addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.advReminderAttackAdvAttribution]: Array.from(advReminderAttackAdvAttribution) }, "midi-qol");
+    // Only reset if a different Set is being assigned (e.g., workflow.advReminderAttackAdvAttribution = new Set())
+    // Skip reset when same reference is passed (e.g., from performThrottledUpdate) to preserve advantage state
+    // STOPGAP: This reference check is necessary because performThrottledUpdate triggers the setter
+    // with the same Set to persist workflow state to the chat card. Once Workflow is refactored to
+    // be a document persisted to the database with a proper schema, this workaround can be removed.
+    if (advReminderAttackAdvAttribution !== this.#advReminderAttackAdvAttribution) {
+      this.#advReminderAttackAdvAttribution = advReminderAttackAdvAttribution;
+      this.#attackRollModifierTracker.reset({
+        legacyAttribution: this.#attackAdvAttribution,
+        advReminderAttribution: this.#advReminderAttackAdvAttribution
+      });
     }
   }
 
@@ -1542,8 +1751,6 @@ export class Workflow {
   systemCard: boolean | undefined;
   aborted: boolean = false;
   workflowName: string | undefined;
-  advantage: boolean | undefined;
-  disadvantage: boolean | undefined;
   forceApplyEffects: boolean;
   onUseCalled: boolean;
   attackRolled: boolean;
@@ -1585,8 +1792,6 @@ export class Workflow {
   // TODO: Type this
   conditionData: any | undefined;
   flankingAdvantage: boolean | undefined;
-  noAdvantage: boolean | undefined;
-  noDisadvantage: boolean | undefined;
   bonusDamageHTML: string | undefined;
   otherDamageList: DamageListEntry[] | undefined;
   macroPass: string | undefined;
@@ -1597,6 +1802,7 @@ export class Workflow {
   otherDamageRollHTML: string | undefined;
   saveTargetsDisplayed: boolean | undefined;
   tokenSaves: Record<string, Roll> | undefined;
+  targetSaveDetails: Map<string, SaveDetails> | undefined;  // Per-target SaveDetails for attribution tracking
   saveDC: number | undefined;
   saveDetails: {
     advantage: boolean | undefined,
@@ -2093,6 +2299,34 @@ export class Workflow {
   }
 
   /**
+   * Render the attribution tooltip HTML for display.
+   * Converts the attackAttribution map to an array and renders the attribution-tooltip template.
+   * @returns The rendered HTML string, or empty string if no attributions
+   */
+  async renderAttributionTooltip(): Promise<string> {
+    if (!this.attackAttribution || Object.keys(this.attackAttribution).length === 0) {
+      return "";
+    }
+
+    const entries = attributionMapToArray(this.attackAttribution);
+    if (entries.length === 0) return "";
+
+    // Add localized type names to each entry
+    const localizedEntries = entries.map(entry => ({
+      ...entry,
+      localizedType: i18n(`midi-qol.Attrib${entry.type}`)
+    }));
+
+    const templateData = {
+      attributions: localizedEntries,
+      title: this.advantage && !this.disadvantage ? i18n("DND5E.Advantage") :
+             this.disadvantage && !this.advantage ? i18n("DND5E.Disadvantage") : ""
+    };
+
+    return await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/attribution-tooltip.html", templateData);
+  }
+
+  /**
    *
    * @param newState the state to execute
    * @param context context to be passed to the state call. Typically the data that caused the an unsuspend to fire, but can be others
@@ -2276,9 +2510,7 @@ export class Workflow {
       const { result, attackingToken, range, longRange } = checkActivityRange(this.activity, getToken(this.token) ?? "invalid", this.targets);
       switch (result) {
         case "fail": return this.WorkflowState_RollFinished;
-        case "dis": this.disadvantage = true;
-          this.attackAdvAttribution.add("DIS:range");
-          this.advReminderAttackAdvAttribution.add("DIS:Long Range");
+        case "dis": this.attackRollModifierTracker.addDisadvantage('range', 'Long Range');
       }
       if (attackingToken && this.token !== attackingToken) {
         // changed the attacking token so update the canSee data
@@ -2334,15 +2566,17 @@ export class Workflow {
       let content = chatMessage?.content;
       if (content && !isFastRoll) {
         // provide a hint as to the type of roll expected.
-        let searchRe = /<button data-action="attack">[^<]+<\/button>/;
-        searchRe = /<div class="midi-attack-buttons".*<\/div>/;
+        // Match the rollAttack button with span inside: <button ... data-action="rollAttack"><span>Attack</span></button>
+        const searchRe = /(<button[^>]*data-action="rollAttack"[^>]*>)<span>[^<]*<\/span>(<\/button>)/;
 
         const hasAdvantage = this.advantage && !this.disadvantage;
         const hasDisadvantage = this.disadvantage && !this.advantage;
         let attackString = hasAdvantage ? i18n("DND5E.Advantage") : hasDisadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
         // `isFastRoll` is guaranteed falsy at this point
         // if (isFastRoll && configSettings.showFastForward) attackString += ` ${i18n("midi-qol.fastForward")}`;
-        let replaceString = `<button data-action="attack">${attackString}</button>`
+
+        // Preserve the button tag, just replace the span content
+        let replaceString = `$1<span>${attackString}</span>$2`;
         content = content.replace(searchRe, replaceString);
         await this.performThrottledUpdate(chatMessage, { content });
       } else if (!chatMessage) {
@@ -2355,7 +2589,7 @@ export class Workflow {
     if (this.activity.roll?.formula) return this.WorkflowState_WaitForUtilityRoll;
     if (autoRollAttack) {
       this.rollOptions.fastForwardAttack ||= isFastRoll;
-      this.activity.rollAttack!({ event: this.rollOptions.event as Event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {});
+      this.activity.rollAttack!({ event: this.rollOptions.event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {});
     }
     return this.WorkflowState_Suspend;
   }
@@ -2492,11 +2726,13 @@ export class Workflow {
       const chatMessage = this.chatCard;
       if (chatMessage?.content) {
         // provide a hint as to the type of roll expected.
-        let searchRe = /<button data-action="damage">[^<]+<\/button>/;
+        // Match rollDamage button with optional span: <button data-action="rollDamage">text</button> or <button data-action="rollDamage"><span>text</span></button>
+        const searchRe = /(<button[^>]*data-action="rollDamage"[^>]*>)(?:<span>)?[^<]*(?:<\/span>)?(<\/button>)/;
         const damageTypeString = (this.activity.actionType === "heal") ? i18n("DND5E.Healing") : i18n("DND5E.Damage");
         let damageString = (this.rollOptions.isCritical || this.isCritical) ? i18n("DND5E.Critical") : damageTypeString;
         if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) damageString += ` ${i18n("midi-qol.fastForward")}`;
-        let replaceString = `<button data-action="damage">${damageString}</button>`
+        // Preserve button tag, replace content with span for consistency
+        let replaceString = `$1<span>${damageString}</span>$2`;
         let content = chatMessage.content.replace(searchRe, replaceString);
         await this.performThrottledUpdate(chatMessage, { content });
       }
@@ -2834,7 +3070,8 @@ export class Workflow {
         await this.displayDamageRolls();
       }
     } catch (err) {
-      console.error("midi-qol | rollDeferredOtherDamage error", err);
+      TroubleShooter.recordError(err, "midi-qol | rollDeferredOtherDamage error");
+      error("rollDeferredOtherDamage error", err);
     }
 
     // Clear stored config
@@ -3387,8 +3624,8 @@ export class Workflow {
     let contentChanged = false;
     // TODO move this to call the omnibus remove buttons function
     if (content && getRemoveAttackButtons(this.activity) && chatMessage && configSettings.confirmAttackDamage === "none") {
-      let searchRe = /<button[^>]*? data-action="attack"[\s\S]*?<\/button>/;
-      // searchRe = /<div class="midi-attack-buttons".*<\/div>/
+      // Match rollAttack button from activity-card.hbs
+      let searchRe = /<button[^>]*?data-action="rollAttack"[\s\S]*?<\/button>/;
       content = content.replace(searchRe, "");
       contentChanged = true;
     }
@@ -3579,56 +3816,50 @@ export class Workflow {
   };
 
   public async checkAttackAdvantage() {
+    // Add workflowOptions and rollOptions attribution first (before flag-based checks)
+    if (this.workflowOptions?.advantage) {
+      this.attackRollModifierTracker.addAdvantage("workflowOptions", i18n("midi-qol.WorkflowOptions"));
+    }
+    if (this.workflowOptions?.disadvantage) {
+      this.attackRollModifierTracker.addDisadvantage("workflowOptions", i18n("midi-qol.WorkflowOptions"));
+    }
+    if (this.rollOptions?.advantage) {
+      this.attackRollModifierTracker.addAdvantage("rollOptions", i18n("midi-qol.RollOptions"));
+    }
+    if (this.rollOptions?.disadvantage) {
+      this.attackRollModifierTracker.addDisadvantage("rollOptions", i18n("midi-qol.RollOptions"));
+    }
+
     await this.checkFlankingAdvantage();
-    if (this.flankingAdvantage) this.advantage = true;
+    if (this.flankingAdvantage) this.attackRollModifierTracker.addAdvantage('flanking', i18n("midi-qol.Flanking"));
     if (!this.needsAttackAdvantageCheck) return;
     this.needsAttackAdvantageCheck = false;
 
     // This should never happen
     if (!this.actor) return;
 
-    const midiFlags = this.actor.flags[MODULE_ID];
-    const advantage = midiFlags?.advantage;
-    const disadvantage = midiFlags?.disadvantage;
     const actType = this.activity.actionType || "none";
     const firstTarget = this.targets.first();
 
-    let conditionData;
-    if (advantage || disadvantage) {
-      conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
-
-      if (advantage) {
-        if (advantage.all && await evalAllConditionsAsync(this.actor, midiFlag(`advantage.all`), conditionData)) {
-          this.advantage = true;
-          this.attackAdvAttribution.add(`ADV:all ${(foundry.utils.getProperty(this.actor, "flags.midi.evaluated.advantage.all") as any).effects.join(", ")}`);
-          // foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.all", true);
-        }
-        if (await evalAllConditionsAsync(this.actor, midiFlag(`advantage.attack.all`), conditionData)) {
-          this.attackAdvAttribution.add(`ADV:attack.all ${(foundry.utils.getProperty(this.actor, "flags.midi.evaluated.advantage.attack.all") as any).effects.join(", ")}`);
-          this.advantage = true;
-        }
-        if (advantage.attack && advantage.attack[actType] && await evalAllConditionsAsync(this.actor, midiFlag(`advantage.attack.${actType}`), conditionData)) {
-          this.attackAdvAttribution.add(`ADV:attack.${actType} ${(foundry.utils.getProperty(this.actor, `flags.midi.evaluated.advantage.attack.${actType}`) as any).effects.join(", ")}`);
-          this.advantage = true;
-        }
-      }
-      if (disadvantage) {
-        const withDisadvantage = disadvantage.all || disadvantage.attack?.all || (disadvantage.attack && disadvantage.attack[actType]);
-        if (disadvantage.all && await evalAllConditionsAsync(this.actor, midiFlag(`disadvantage.all`), conditionData)) {
-          this.attackAdvAttribution.add(`DIS:all ${(foundry.utils.getProperty(this.actor, "flags.midi.evaluated.disadvantage.all") as any)?.effects.join(", ")}`);
-          this.disadvantage = true;
-        }
-        if (disadvantage.attack?.all && await evalAllConditionsAsync(this.actor, midiFlag(`disadvantage.attack.all`), conditionData)) {
-          this.attackAdvAttribution.add(`DIS:attack.all ${(foundry.utils.getProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.all") as any)?.effects.join(", ")}`);
-          this.disadvantage = true;
-        }
-        if (disadvantage.attack && disadvantage.attack[actType] && await evalAllConditionsAsync(this.actor, midiFlag(`disadvantage.attack.${actType}`), conditionData)) {
-          this.attackAdvAttribution.add(`DIS:attack.${actType} ${(foundry.utils.getProperty(this.actor, `flags.midi.evaluated.disadvantage.attack.${actType}`) as any).effects.join(", ")}`);
-          this.disadvantage = true;
-        }
-      }
-      await this.checkAbilityAdvantage();
+    // Determine ability for weapon attacks (mwak/rwak use str/dex)
+    let attackAbility: string | undefined;
+    if (["mwak", "rwak"].includes(actType)) {
+      // @ts-expect-error no dnd5e-types
+      attackAbility = this.item?.abilityMod ?? "";
+      // @ts-expect-error no dnd5e-types
+      if (!attackAbility) attackAbility = this.activity.item?.system.properties?.has("fin") ? "dex" : "str";
     }
+
+    // Use computeAttackAdvantage for flag-based checks (actor flags + target grants)
+    await computeAttackAdvantage(
+      this.actor,
+      actType,
+      { workflow: this, item: this.item },
+      attackAbility,
+      this.attackRollModifierTracker
+    );
+
+    let conditionData;
     // TODO Hidden should check the target to see if they notice them?
     if (checkRule("invisAdvantage") && checkRule("invisAdvantage") !== "none" && firstTarget) {
       // if we are using a proxy token to attack use that for hidden invisible
@@ -3640,14 +3871,11 @@ export class Workflow {
       const invisAdvantage = (checkRule("invisAdvantage") === "RAW") ? invisibleToken || !targetCanSense : !targetCanSense;
       if (invisAdvantage) {
         if (invisibleToken) {
-          this.attackAdvAttribution.add("ADV:Attacker invisible");
-          this.advReminderAttackAdvAttribution.add("ADV:Attacker Invisible");
+          this.attackRollModifierTracker.addAdvantage('Attacker invisible', 'Attacker invisible');
         } else if (!targetCanSense) {
-          this.attackAdvAttribution.add("ADV:Attacker not detected");
-          this.advReminderAttackAdvAttribution.add("ADV:Attacker not detected");
+          this.attackRollModifierTracker.addAdvantage('Attacker not detected', 'Attacker not detected');
         }
         foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.invisible", { value: true, effects: ["Invisible Attacker"] });
-        this.advantage = true;
       }
 
       const invisDisadvantage = (checkRule("invisAdvantage") === "RAW") ? invisibleTarget || !tokenCanSense : !tokenCanSense;
@@ -3655,16 +3883,13 @@ export class Workflow {
         // Attacker can't see target so disadvantage
         log(`Disadvantage given to ${this.actor.name} due to invisible target`, invisibleTarget, tokenCanSense);
         if (invisibleTarget) {
-          this.attackAdvAttribution.add("DIS:invisible foe");
-          this.advReminderAttackAdvAttribution.add("DIS:Invisible Foe");
+          this.attackRollModifierTracker.addDisadvantage('invisible foe', 'Invisible foe');
           foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.invisible", { value: true, effects: ["Invisible Defender"] });
         }
         if (!tokenCanSense) {
-          this.attackAdvAttribution.add("DIS:Defender not detected");
-          this.advReminderAttackAdvAttribution.add("DIS:Defender not detected");
+          this.attackRollModifierTracker.addDisadvantage('Defender not detected', 'Defender not detected');
           foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.invisible", { value: true, effects: ["Defender not detected"] });
         }
-        this.disadvantage = true;
       }
     }
 
@@ -3676,16 +3901,12 @@ export class Workflow {
         const tokenSpotted = await perceptiveApi?.isSpottedby(this.token, firstTarget, { LOS: false, Range: true, Effects: true, Hidden: false, canbeSpotted: true }) ?? true;
         const targetSpotted = await perceptiveApi?.isSpottedby(firstTarget, this.token, { LOS: false, Range: true, Effects: true, Hidden: false, canbeSpotted: true }) ?? true;
         if (!tokenSpotted) {
-          this.attackAdvAttribution.add("ADV:Attacker hidden");
-          this.advReminderAttackAdvAttribution.add("ADV:Hidden");
+          this.attackRollModifierTracker.addAdvantage('Attacker hidden', 'Attacker hidden');
           foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.hidden", { value: true, effects: ["Hidden Attacker"] });
-          this.advantage = true;
         }
         if (!targetSpotted) {
-          this.attackAdvAttribution.add("DIS:hidden foe");
-          this.advReminderAttackAdvAttribution.add("DIS:Hidden Foe");
+          this.attackRollModifierTracker.addDisadvantage('Hidden foe', 'Hidden foe');
           foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.hidden", { value: true, effects: ["Hidden Defender"] });
-          this.disadvantage = true;
         }
       }
 
@@ -3693,16 +3914,12 @@ export class Workflow {
         const hiddenToken = this.token ? hasCondition(this.token.actor as Actor, "hidden") : false;
         const hiddenTarget = hasCondition(firstTarget.actor as Actor, "hidden");
         if (hiddenToken) {
-          this.attackAdvAttribution.add("ADV:Attacker hidden");
-          this.advReminderAttackAdvAttribution.add("ADV:Hidden");
+          this.attackRollModifierTracker.addAdvantage('Attacker hidden', 'Attacker hidden');
           foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.hidden", { value: true, effects: ["Hidden Attacker"] });
-          this.advantage = true;
         }
         if (hiddenTarget) {
-          this.attackAdvAttribution.add("DIS:Target hidden");
-          this.advReminderAttackAdvAttribution.add("DIS:Hidden Foe");
+          this.attackRollModifierTracker.addDisadvantage('Target hidden', 'Target hidden');
           foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.hidden", { value: true, effects: ["Hidden Defender"] });
-          this.disadvantage = true;
         }
       }
     }
@@ -3726,10 +3943,8 @@ export class Workflow {
           }
           if (nearbyFoe) {
             if (debugEnabled > 0) warn(`checkAttackAdvantage | Ranged attack by ${this.actor.name} at disadvantage due to nearby foe`);
-            this.attackAdvAttribution.add("DIS:nearbyFoe");
-            this.advReminderAttackAdvAttribution.add("DIS:Nearby foe");
+            this.attackRollModifierTracker.addDisadvantage('nearbyFoe', 'Nearby foe');
             foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.nearbyFoe", { value: true, effects: ["Nearby Foe"] });
-            this.disadvantage = true;
           }
         }
       }
@@ -3745,16 +3960,12 @@ export class Workflow {
           if ((this.activity.actionType === "mwak" && this.actor.system.abilities?.str.value < 13) ||
             // @ts-expect-error no dnd5e-types
             (this.activity.actionType === "rwak" && this.actor.system.abilities?.dex.value < 13)) {
-            this.disadvantage = true;
-            this.attackAdvAttribution.add("DIS:heavy weapon");
-            this.advReminderAttackAdvAttribution.add("DIS:Heavy Weapon");
+            this.attackRollModifierTracker.addDisadvantage('heavy weapon', 'Heavy weapon');
           }
         } else if (safeGetGameSetting("dnd5e", "rulesVersion") === "legacy") {
           // @ts-expect-error no dnd5e-types
           if (["tiny", "sm"].includes(this.actor.system.traits?.size)) {
-            this.disadvantage = true;
-            this.attackAdvAttribution.add("DIS:small");
-            this.advReminderAttackAdvAttribution.add("DIS:Small");
+            this.attackRollModifierTracker.addDisadvantage('small', 'Small creature');
           }
         }
       }
@@ -3783,19 +3994,19 @@ export class Workflow {
       conditionData ??= createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
       if (await evalAllConditionsAsync(this.actor, midiFlag(`critical.all`), conditionData)) {
         this.critFlagSet = true;
-        this.attackAdvAttribution.add(`CRIT:critical.all`);
+        this.attackRollModifierTracker.addAttribution('CRIT', 'critical.all', 'critical.all');
       }
       if (await evalAllConditionsAsync(this.actor, midiFlag(`critical.${attackType}`), conditionData)) {
         this.critFlagSet = true;
-        this.attackAdvAttribution.add(`CRIT:critical.${attackType}`);
+        this.attackRollModifierTracker.addAttribution('CRIT', `critical.${attackType}`, `critical.${attackType}`);
       }
       if (await evalAllConditionsAsync(this.actor, midiFlag(`noCritical.all`), conditionData)) {
         this.noCritFlagSet = true;
-        this.attackAdvAttribution.add(`NOCRIT:noCritical.all`);
+        this.attackRollModifierTracker.addAttribution('NOCRIT', 'noCritical.all', 'noCritical.all');
       }
       if (await evalAllConditionsAsync(this.actor, midiFlag(`noCritical.${attackType}`), conditionData)) {
         this.noCritFlagSet = true;
-        this.attackAdvAttribution.add(`NOCRIT:noCritical.${attackType}`);
+        this.attackRollModifierTracker.addAttribution('NOCRIT', `noCritical.${attackType}`, `noCritical.${attackType}`);
       }
     }
 
@@ -3810,16 +4021,16 @@ export class Workflow {
         if (grants || fails) {
           if (Number.isNumeric(grants.range) && computeDistance(target, this.token, { wallsBlock: false }) <= Number(grants.range)) {
             this.critFlagSet = true;
-            this.attackAdvAttribution.add(`CRIT:grants.critical.range ${targetName}`);
+            this.attackRollModifierTracker.addAttribution('CRIT', 'grants.critical.range', `grants.critical.range ${targetName}`);
           }
           const conditionData = createConditionData({ workflow: this, target, actor: this.actor });
           if (await evalAllConditionsAsync(target?.actor, midiFlag(`grants.critical.all`), conditionData)) {
             this.critFlagSet = true;
-            this.attackAdvAttribution.add(`CRIT:grants.critical.all ${targetName}`);
+            this.attackRollModifierTracker.addAttribution('CRIT', 'grants.critical.all', `grants.critical.all ${targetName}`);
           }
           if (await evalAllConditionsAsync(target?.actor, midiFlag(`grants.critical.${attackType}`), conditionData)) {
             this.critFlagSet = true;
-            this.attackAdvAttribution.add(`CRIT:grants.critical.${attackType} ${targetName}`);
+            this.attackRollModifierTracker.addAttribution('CRIT', `grants.critical.${attackType}`, `grants.critical.${attackType} ${targetName}`);
           }
           if (await evalAllConditionsAsync(target?.actor, midiFlag(`fail.critical.all`), conditionData)
             || await evalAllConditionsAsync(target?.actor, midiFlag(`fail.critical.${attackType}`), conditionData)) {
@@ -3846,36 +4057,16 @@ export class Workflow {
       }
       if (allTargetsGrantNoCrit && this.hitTargets.size > 0) {
         this.noCritFlagSet = true;
-        this.attackAdvAttribution.add(`NOCRIT:grants.noCritical ${noCritTargets.join(", ")}`);
+        this.attackRollModifierTracker.addAttribution('NOCRIT', 'grants.noCritical', `grants.noCritical ${noCritTargets.join(", ")}`);
       }
     }
     this.isCritical = this.isCritical || this.critFlagSet;
     if (this.noCritFlagSet) this.isCritical = false;
 
-    // Update roll tooltip with critical/noCritical attribution and regenerate HTML only if needed
-    if (this.attackRoll && (this.critFlagSet || this.noCritFlagSet) && ["formulaadv", "adv"].includes(configSettings.rollAlternate)) {
-      addAdvAttribution(this.attackRoll, this.attackAdvAttribution);
+    // Update roll with attribution and regenerate HTML if crit/noCrit flags changed
+    if (this.attackRoll && (this.critFlagSet || this.noCritFlagSet)) {
+      addAttribution(this.attackRoll, this.attackAttribution);
       this.attackRollHTML = await midiRenderAttackRoll(this.attackRoll);
-    }
-  }
-
-  async checkAbilityAdvantage() {
-    if (!["mwak", "rwak"].includes(this.activity.actionType ?? "")) return;
-    // @ts-expect-error no dnd5e-types
-    let ability: string = this.item.abilityMod ?? "";
-    // @ts-expect-error no dnd5e-types
-    if ("" === ability) ability = this.activity.item?.system.properties?.has("fin") ? "dex" : "str";
-    if (this.actor.flags?.[MODULE_ID]?.advantage?.attack?.[ability]) {
-      if (await evalAllConditionsAsync(this.actor, midiFlag(`advantage.attack.${ability}`), this.conditionData)) {
-        this.advantage = true;
-        this.attackAdvAttribution.add(`ADV:attack.${ability} ${(foundry.utils.getProperty(this.actor, `flags.midi.evaluated.advantage.attack.${ability}`) as any).effects.join(", ")}`);
-      }
-    }
-    if (this.actor.flags?.[MODULE_ID]?.disadvantage?.attack?.[ability]) {
-      if (await evalAllConditionsAsync(this.actor, midiFlag(`disadvantage.attack.${ability}`), this.conditionData)) {
-        this.disadvantage = true;
-        this.attackAdvAttribution.add(`DIS:attack.${ability} ${(foundry.utils.getProperty(this.actor, `flags.midi.evaluated.disadvantage.attack.${ability}`) as any).effects.join(", ")}`);
-      }
     }
   }
 
@@ -3891,130 +4082,36 @@ export class Workflow {
 
     const needsFlanking = await markFlanking(token, target);
     if (needsFlanking && this.actor) {
-      // this.attackAdvAttribution.add(`ADV:flanking`);
       foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.flanking", { value: true, effects: ["Flanking"] });
-      // this.advReminderAttackAdvAttribution.add("ADV:flanking");
     }
-    if (["advonly"].includes(checkRule("checkFlanking") as string)) this.flankingAdvantage = needsFlanking;
+    if (["advonly"].includes(checkRule("checkFlanking") as string)) {
+      this.flankingAdvantage = needsFlanking;
+      // Attribution is added in checkAttackAdvantage() after this call
+    }
     return needsFlanking;
   }
 
   async checkTargetAdvantage() {
+    // Note: Target grants flags and actor noAdvantage/noDisadvantage flags
+    // are now handled by computeAttackAdvantage in checkAttackAdvantage()
+    // This method only handles special rules that require game logic
+
     if (!this.item) return;
     if (!this.targets?.size) return;
     const actionType = this.activity.actionType ?? "";
     const firstTargetDocument = getTokenDocument(this.targets.first());
     const firstTarget = getToken(firstTargetDocument);
     if (!firstTargetDocument || !firstTarget) return;
+
+    // Check nearby ally disadvantage for ranged attacks
     if ((checkRule("nearbyAllyRanged") as number) > 0 && ["rwak", "rsak", "rpak"].includes(actionType)) {
       if ((firstTargetDocument.width ?? 1) * (firstTargetDocument.height ?? 1) < Number(checkRule("nearbyAllyRanged"))) {
         const nearbyAlly = checkNearby(-1, firstTarget, (canvas.dimensions?.distance ?? 5)); // targets near a friend that is not too big
         // TODO include thrown weapons in check
         if (nearbyAlly) {
           if (debugEnabled > 0) warn("checkTargetAdvantage | ranged attack with disadvantage because target is near a friend");
-        }
-        this.disadvantage = this.disadvantage || nearbyAlly;
-        if (nearbyAlly && this.actor) {
-          this.attackAdvAttribution.add(`DIS:nearbyAlly`);
-          this.advReminderAttackAdvAttribution.add("DIS:Nearby Ally");
+          this.attackRollModifierTracker.addDisadvantage('nearbyAlly', 'Nearby Ally');
           foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.nearbyAlly", { value: true, effects: ["Nearby Ally"] });
-        }
-      }
-    }
-    // Process target grants flags (if target has any)
-    const grants = firstTargetDocument.actor?.flags[MODULE_ID]?.grants;
-    if (grants && ["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(actionType)) {
-      const attackAdvantage = grants.advantage?.attack || {};
-      let grantsAdvantage;
-      const conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
-      if (grants.advantage?.all && await evalCondition(grants.advantage.all, conditionData, { errorReturn: false, async: true })) {
-        grantsAdvantage = true;
-        this.attackAdvAttribution.add(`ADV:grants.advantage.all ${firstTargetDocument.name}`);
-      }
-      if (attackAdvantage.all && await evalCondition(attackAdvantage.all, conditionData, { errorReturn: false, async: true })) {
-        grantsAdvantage = true;
-        this.attackAdvAttribution.add(`ADV:grants.advantage.attack.all ${firstTargetDocument.name}`);
-      }
-      if (attackAdvantage[actionType] && await evalCondition(attackAdvantage[actionType], conditionData, { errorReturn: false, async: true })) {
-        grantsAdvantage = true;
-        this.attackAdvAttribution.add(`ADV:grants.attack.${actionType} ${firstTargetDocument.name}`);
-      }
-
-      if (grants.noAdvantage?.attack?.all && await evalCondition(grants.noAdvantage.attack.all, conditionData, { errorReturn: false, async: true })) {
-        grantsAdvantage = false;
-        this.advantage = false;
-        this.noAdvantage = true;
-        this.attackAdvAttribution.add(`ADV:None grants.noAdvantage ${firstTargetDocument.name}`);
-      }
-      if (grants.noAdvantage?.attack && grants.noAdvantage.attack[actionType] && await evalCondition(grants.noAdvantage.attack[actionType], conditionData, { errorReturn: false, async: true })) {
-        grantsAdvantage = false;
-        this.advantage = false;
-        this.noAdvantage = true;
-        this.attackAdvAttribution.add(`ADV:None grants.noAdvantage${actionType} ${firstTargetDocument.name}`);
-      }
-
-      const attackDisadvantage = grants.disadvantage?.attack || {};
-      let grantsDisadvantage;
-      if (grants.disadvantage?.all && await evalCondition(grants.disadvantage.all, conditionData, { errorReturn: false, async: true })) {
-        grantsDisadvantage = true;
-        this.attackAdvAttribution.add(`DIS:grants.disadvantage.all ${firstTargetDocument.name}`);
-      }
-      if (attackDisadvantage.all && await evalCondition(attackDisadvantage.all, conditionData, { errorReturn: false, async: true })) {
-        grantsDisadvantage = true;
-        this.attackAdvAttribution.add(`DIS:grants.attack.all ${firstTargetDocument.name}`);
-      }
-      if (attackDisadvantage[actionType] && await evalCondition(attackDisadvantage[actionType], conditionData, { errorReturn: false, async: true })) {
-        grantsDisadvantage = true;
-        this.attackAdvAttribution.add(`DIS:grants.attack.${actionType} ${firstTargetDocument.name}`);
-      }
-      if (grants.noDisadvantage?.attack?.all && await evalCondition(grants.noDisadvantage.attack.all, conditionData, { errorReturn: false, async: true })) {
-        grantsDisadvantage = false;
-        this.disadvantage = false;
-        this.noDisadvantage = true;
-        this.attackAdvAttribution.add(`DIS:None grants.noDisadvantage.all ${firstTargetDocument.name}`);
-      }
-      if (grants.noDisadvantage?.attack && grants.noDisadvantage.attack[actionType] && await evalCondition(grants.noDisadvantage.attack[actionType], conditionData, { errorReturn: false, async: true })) {
-        grantsDisadvantage = false;
-        this.disadvantage = false;
-        this.noDisadvantage = true;
-        this.attackAdvAttribution.add(`DIS:None grants.noDisadvantage${actionType} ${firstTargetDocument.name}`);
-      }
-      this.advantage = this.advantage || grantsAdvantage;
-      this.disadvantage = this.disadvantage || grantsDisadvantage;
-    }
-
-    // Final check: Actor noAdvantage/noDisadvantage flags (must be checked AFTER all advantage sources)
-    const midiFlags = this.actor?.flags?.[MODULE_ID] ?? {};
-    const noAdvantage = midiFlags.noAdvantage;
-    const noDisadvantage = midiFlags.noDisadvantage;
-    if (noAdvantage?.attack || noDisadvantage?.attack) {
-      const actType = this.activity?.actionType ?? "";
-      const finalConditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
-
-      // Check actor noAdvantage flags - prevents advantage on attacks
-      if (noAdvantage?.attack) {
-        if (noAdvantage.attack.all && await evalAllConditionsAsync(this.actor, midiFlag(`noAdvantage.attack.all`), finalConditionData)) {
-          this.advantage = false;
-          this.noAdvantage = true;
-          this.attackAdvAttribution.add(`ADV:None noAdvantage.attack.all`);
-        }
-        if (noAdvantage.attack[actType] && await evalAllConditionsAsync(this.actor, midiFlag(`noAdvantage.attack.${actType}`), finalConditionData)) {
-          this.advantage = false;
-          this.noAdvantage = true;
-          this.attackAdvAttribution.add(`ADV:None noAdvantage.attack.${actType}`);
-        }
-      }
-      // Check actor noDisadvantage flags - prevents disadvantage on attacks
-      if (noDisadvantage?.attack) {
-        if (noDisadvantage.attack.all && await evalAllConditionsAsync(this.actor, midiFlag(`noDisadvantage.attack.all`), finalConditionData)) {
-          this.disadvantage = false;
-          this.noDisadvantage = true;
-          this.attackAdvAttribution.add(`DIS:None noDisadvantage.attack.all`);
-        }
-        if (noDisadvantage.attack[actType] && await evalAllConditionsAsync(this.actor, midiFlag(`noDisadvantage.attack.${actType}`), finalConditionData)) {
-          this.disadvantage = false;
-          this.noDisadvantage = true;
-          this.attackAdvAttribution.add(`DIS:None noDisadvantage.attack.${actType}`);
         }
       }
     }
@@ -4534,7 +4631,7 @@ export class Workflow {
     const func = name.replace("function.", "").trim();
 return {
       item: context.macroItem,
-      activity: context.macroActivity,
+      macroActivity: context.macroActivity,
       macroData: {
         name: "function call",
         type: "script",
@@ -4554,6 +4651,7 @@ return {
     if (resolved) {
       return {
         item: resolved.item,
+        macroActivity: context.macroActivity,
         macroData: resolved.macroData,
         sourceItemUuid: resolved.item?.uuid
       };
@@ -4565,6 +4663,7 @@ return {
       if (itemData) {
         return {
           item: itemData,
+          macroActivity: context.macroActivity,
           macroData: itemData?.flags?.dae?.macro ?? itemData?.flags?.itemacro?.macro,
           // @ts-expect-error uuid may not be on data
           sourceItemUuid: itemData?.uuid
@@ -4596,7 +4695,7 @@ return {
     if (resolved) {
       return {
         item: resolved.item,
-        activity: resolved.activity,
+        macroActivity: resolved.activity,
         macro: resolved.macro,
         sourceItemUuid: resolved.item?.uuid
       };
@@ -4616,6 +4715,7 @@ return {
       if (doc instanceof Item) {
         return {
           item: doc,
+          macroActivity: context.macroActivity,
           macroData: doc.flags?.dae?.macro ?? doc.flags?.itemacro?.macro,
           sourceItemUuid: doc.uuid
         };
@@ -4629,7 +4729,7 @@ return {
       return undefined; // Chat macros handle themselves
     }
 
-    return macro ? { item: context.macroItem, activity: context.macroActivity, macro } : undefined;
+    return macro ? { item: context.macroItem, macroActivity: context.macroActivity, macro } : undefined;
   }
 
   /**
@@ -4652,7 +4752,7 @@ return {
     const scope: Macro.UnknownScope = {
       workflow: this,
       rolledActivity: this.activity,
-      macroActivity: resolved.activity,
+      macroActivity: resolved.macroActivity,
       item: rolledItem,
       rolledItem: rolledItem,
       macroItem: resolved.item ?? rolledItem,
@@ -4781,37 +4881,45 @@ return {
   }
 
   async displayAttackRoll(displayOptions: { GMOnlyAttackRoll?: boolean } = {}) {
+    // @ts-expect-error CONFIG.Dice.D20Roll not typed
+    const ADV_MODE: { DISADVANTAGE, NORMAL, ADVANTAGE } = CONFIG.Dice.D20Roll.ADV_MODE;
+
     const chatMessage = this.chatCard;
     let newFlags = {};
     let content;
     if (chatMessage?.content) { // display the attack roll
       content = chatMessage.content;
       let searchRe = /<div class="midi-qol-attack-roll"[\s\S]*?<div class="end-midi-qol-attack-roll">/
-      let options = this.attackRoll?.terms[0].options;
-      // @ts-expect-error no dnd5e-types
-      const advantageMode = this.attackRoll?.options?.advantageMode;
-      if (advantageMode !== undefined) {
-        this.advantage = advantageMode === 1;
-        this.disadvantage = advantageMode === -1;
+      // Determine attack label based on attackRollModifierTracker.mode
+      let attackString: string;
+      const mode = this.attackRollModifierTracker.mode;
+      if (mode === ADV_MODE.ADVANTAGE) {
+        attackString = i18n("DND5E.Advantage");
+      } else if (mode === ADV_MODE.DISADVANTAGE) {
+        attackString = i18n("DND5E.Disadvantage");
       } else {
-        // @ts-expect-error no dnd5e-types
-        this.advantage = options.advantage;
-        // @ts-expect-error no dnd5e-types
-        this.disadvantage = options.disadvantage;
+        attackString = i18n("DND5E.Attack");
       }
-      // const attackString = this.advantage ? i18n(`DND5E.Advantage`) : this.disadvantage ? i18n(`DND5E.Disadvantage`) : i18n(`DND5E.Attack`)
-
-      let attackString = this.advantage ? i18n("DND5E.Advantage") : this.disadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
       if (configSettings.addFakeDice) // addFakeDice => roll 2d20 always - don't show advantage/disadvantage or players will know the 2nd d20 is fake
         attackString = i18n("DND5E.Attack");
 
-      let replaceString = `<div class="midi-qol-attack-roll"><div style="text-align:center" >${attackString}</div>${this.attackRollHTML}<div class="end-midi-qol-attack-roll">`
+      // Add attribution info icon if there's any attribution data
+      let attributionIcon = "";
+      if (Object.keys(this.attackAttribution).length > 0) {
+        const tooltipContent = await this.renderAttributionTooltip();
+        if (tooltipContent) {
+          attributionIcon = ` <span class="midi-attribution-info" data-tooltip-html="${foundry.utils.escapeHTML(tooltipContent)}" data-tooltip-direction="DOWN"><i class="fas fa-info-circle"></i></span>`;
+        }
+      }
+
+      let replaceString = `<div class="midi-qol-attack-roll"><div style="text-align:center" >${attackString}${attributionIcon}</div>${this.attackRollHTML}<div class="end-midi-qol-attack-roll">`
 
       content = content.replace(searchRe, replaceString);
       if (this.attackRollCount > 1) {
-        const attackButtonRe = /<button data-action="attack" style="flex:3 1 0">(\[\d*\] )*([^<]+)<\/button>/;
-        const match = content.match(attackButtonRe);
-        content = content.replace(attackButtonRe, `<button data-action="attack" style="flex:3 1 0">[${this.attackRollCount}] $2</button>`);
+        // Match rollAttack button - handles both multi mode (no span) and single mode (with span)
+        // Also handles optional style attribute with flexible spacing
+        const attackButtonRe = /(<button[^>]*data-action="rollAttack"[^>]*>)(?:<span>)?(\[\d*\] )*([^<]+)(?:<\/span>)?(<\/button>)/;
+        content = content.replace(attackButtonRe, `$1<span>[${this.attackRollCount}] $3</span>$4`);
         const confirmButtonRe = /<button class="midi-qol-confirm-damage-roll-complete" data-action="confirm-damage-roll-complete">(\[[\d ]*\])*([^<]+)<\/button>/;
         content = content.replace(confirmButtonRe, `<button class="midi-qol-confirm-damage-roll-complete" data-action="confirm-damage-roll-complete">[${this.attackRollCount} ${this.damageRollCount + 1}] $2</button>`);
       }
@@ -4865,8 +4973,9 @@ return {
     }
     let content = chatMessage.content;
     if ((getRemoveDamageButtons(this.activity) && configSettings.confirmAttackDamage === "none") || this.workflowType === "TrapWorkflow") {
-      const damageRe = /<button[^>]*?data-action="damage">[\s\S]*<\/button>/
-      const formulaRe = /<button[^>]*?data-action="rollFormula"[\s\S]*?\/button>/
+      // Match rollDamage button from activity-card.hbs
+      const damageRe = /<button[^>]*?data-action="rollDamage"[\s\S]*?<\/button>/
+      const formulaRe = /<button[^>]*?data-action="rollFormula"[\s\S]*?<\/button>/
       content = content?.replace(damageRe, "<div></div>")
       content = content?.replace(formulaRe, "")
     }
@@ -4930,13 +5039,15 @@ return {
     }
 
     if (this.damageRollCount > 1) {
-      const damageButtonRe = /<button data-action="damage" style="flex:3 1 0">(\[\d*\] )*([^<]+)<\/button>/;
-      content = content.replace(damageButtonRe, `<button data-action="damage" style="flex:3 1 0">[${this.damageRollCount}] $2</button>`);
+      // Match rollDamage button - handles both multi mode (no span) and single mode (with span)
+      const damageButtonRe = /(<button[^>]*data-action="rollDamage"[^>]*>)(?:<span>)?(\[\d*\] )*([^<]+)(?:<\/span>)?(<\/button>)/;
+      content = content.replace(damageButtonRe, `$1<span>[${this.damageRollCount}] $3</span>$4`);
       const confirmButtonRe = /<button class="midi-qol-confirm-damage-roll-complete" data-action="confirm-damage-roll-complete">(\[[\d ]*\])*([^<]+)<\/button>/;
       content = content.replace(confirmButtonRe, `<button class="midi-qol-confirm-damage-roll-complete" data-action="confirm-damage-roll-complete">[${this.attackRollCount} ${Math.max(this.damageRollCount, 1)}] $2</button>`);
     } else {
-      const damageButtonRe = /<button data-action="damage" style="flex:3 1 0">(\[\d*\] )*([^<]+)<\/button>/;
-      content = content.replace(damageButtonRe, `<button data-action="damage" style="flex:3 1 0">$2</button>`);
+      // Match rollDamage button - handles both multi mode (no span) and single mode (with span)
+      const damageButtonRe = /(<button[^>]*data-action="rollDamage"[^>]*>)(?:<span>)?(\[\d*\] )*([^<]+)(?:<\/span>)?(<\/button>)/;
+      content = content.replace(damageButtonRe, `$1<span>$3</span>$4`);
     }
     const result = await this.performThrottledUpdate(chatMessage, { "content": content, flags: newFlags, rolls: this.chatRolls }, false);
     return result;
@@ -5044,7 +5155,7 @@ return {
     return { fullDamageText, halfDamageText, noDamageText };
   }
   //TODO refactor this with displaysaves
-  async displaySaveTargets(whisper = false) {
+  async displaySaveTargets(_whisper = false) {
     this.saveTargetsDisplayed = true;
     this.saveDisplayData = [];
     let rollType: string = "";
@@ -5061,8 +5172,6 @@ return {
       }
       else rollAbility = this.saveActivity.save.ability;
     } else if (this.saveActivity?.check) {
-      // @ts-expect-error no dnd5e-types
-      const isSkillOrTool = this.saveActivity.check.associated.size > 0 || this.item.type === "tool";
       let skillOrTool = this.saveActivity.check.associated.first();
       // @ts-expect-error no dnd5e-types
       if (!skillOrTool && this.item.type === "tool") {
@@ -5132,7 +5241,7 @@ return {
     let content = chatMessage.content.replace(searchRe, replaceString);
     await this.performThrottledUpdate(chatMessage, { content, flags: { "midi-qol": { type: MESSAGE_TYPES.SAVES } } });
   }
-  async displaySaves(whisper: boolean = false) {
+  async displaySaves(_whisper: boolean = false) {
     let { fullDamageText, halfDamageText, noDamageText } = this.computeSaveFlavors();
     let templateData = {
       fullDamageText,
@@ -5367,6 +5476,18 @@ return {
     const targetDocUuid = getTokenDocument(target)?.uuid ?? "none";
     if (this.tokenSaves) this.tokenSaves[targetDocUuid] = saveRoll;
 
+    // Retrieve the per-target saveDetails for attribution tracking
+    const saveDetails = this.targetSaveDetails?.get(targetDocUuid);
+
+    // Render attribution tooltip if there's a modifierTracker with attribution
+    let attributionTooltip = "";
+    if (saveDetails?.modifierTracker) {
+      const advMode = saveDetails.modifierTracker;
+      const title = advMode.hasAdvantage && !advMode.hasDisadvantage ? i18n("DND5E.Advantage") :
+                    advMode.hasDisadvantage && !advMode.hasAdvantage ? i18n("DND5E.Disadvantage") : "";
+      attributionTooltip = await renderAttributionTooltip(advMode.attribution, title);
+    }
+
     this.saveDisplayData?.push({
       gmName: getTokenName(target),
       playerName: getTokenPlayerName(target) ?? "",
@@ -5383,6 +5504,8 @@ return {
       rollDetail: "",
       rollHTML,
       id: target.id,
+      modifierTracker: saveDetails?.modifierTracker,  // Store per-target modifierTracker for attribution
+      attributionTooltip: attributionTooltip ? foundry.utils.escapeHTML(attributionTooltip) : "",  // Escaped for data-tooltip-html
       saveClass: (rollDC === null) ? "" : (saved ? "success" : "failure"),
     });
   }
@@ -5595,8 +5718,6 @@ return {
       // @ts-expect-error no dnd5e-types
       rollAction = CONFIG.Actor.documentClass.prototype.rollSavingThrow;
     } else if (this.saveActivity?.check) {
-      // @ts-expect-error no dnd5e-types
-      const isSkillOrTool = this.saveActivity.check.associated.size > 0 || this.item.type === "tool";
       let skillOrTool = this.saveActivity.check.associated.first();
       // @ts-expect-error no dnd5e-types
       if (!skillOrTool && this.item.type === "tool") {
@@ -6119,7 +6240,6 @@ return {
 
       const requests = player?.isGM ? moduleRequests.monks.gm : moduleRequests.monks.player;
       requests.push(this.buildMonksTokenBarRequest(target, saveDetails, isMagicSave));
-      console.error("Monks requests are ", requests)
       return { promise, requestCard: undefined };
     }
 
@@ -6354,6 +6474,7 @@ return {
     const saveDetails: SaveDetails = {
       advantage: undefined,
       disadvantage: undefined,
+      modifierTracker: undefined,
       isMagicSave: !!isMagicSave,
       isFriendly: targetDocument?.disposition === actorDisposition,
       isConcentrationCheck: undefined,
@@ -6367,15 +6488,41 @@ return {
 
     // Check ability advantage/disadvantage from settings, source grants flags, and magic resistance/vulnerability
     // computeAbilityAdvantage handles magic resistance check internally
+    const abilityId = this.saveActivity!.save?.ability?.first() ?? this.saveActivity!.check?.ability ?? "";
     const abilityAdvantage = await computeAbilityAdvantage(
       target.actor!,
       rollType ?? "",
-      this.saveActivity!.save?.ability?.first() ?? this.saveActivity!.check?.ability ?? "",
+      abilityId,
       { workflow: this, isMagicSave: !!isMagicSave }
     );
-    saveDetails.advantage = abilityAdvantage.advantage;
-    saveDetails.disadvantage = abilityAdvantage.disadvantage;
+    // Store the RollModifierTracker for potential attribution display
+    saveDetails.modifierTracker = abilityAdvantage.tracker;
+    saveDetails.advantage = abilityAdvantage.tracker.hasAdvantage;
+    saveDetails.disadvantage = abilityAdvantage.tracker.hasDisadvantage;
     saveDetails.isConcentrationCheck = this.item.flags?.[MODULE_ID]?.isConcentrationCheck;
+
+    // Check for auto fail/success/min/max and add to attribution
+    // Compute roll modifiers to populate the tracker's autoFail/autoSuccess/min/max state
+    if ((rollType === "save" || rollType === "check") && saveDetails.modifierTracker) {
+      const modifierFlags: RollModifierFlags = {
+        failFlags: ["fail.all", "fail.ability.all", `fail.ability.${rollType}.all`, `fail.ability.${rollType}.${abilityId}`],
+        successFlags: ["success.all", "success.ability.all", `success.ability.${rollType}.all`, `success.ability.${rollType}.${abilityId}`],
+        maxFlags: [`max.ability.${rollType}.all`, `max.ability.${rollType}.${abilityId}`],
+        minFlags: [`min.ability.${rollType}.all`, `min.ability.${rollType}.${abilityId}`]
+      };
+      computeRollModifiers(target.actor!, modifierFlags, saveDetails.modifierTracker, { workflow: this });
+    }
+
+    // Check for friendly target auto-fail/success from activity settings
+    if (saveDetails.isFriendly && saveDetails.modifierTracker) {
+      // @ts-expect-error no dnd5e-types
+      const descriptionIncludesAutoFail = this.item.system.description?.value?.toLowerCase().includes(i18n("midi-qol.autoFailFriendly")?.toLowerCase());
+      if (descriptionIncludesAutoFail || this.activity.friendlySave === "friendlyFail") {
+        saveDetails.modifierTracker.addAttribution('FAIL', "friendlyFail", i18n("midi-qol.FriendlyAutoFail"));
+      } else if (this.activity.friendlySave === "friendlySuccess") {
+        saveDetails.modifierTracker.addAttribution('SUCCESS', "friendlySuccess", i18n("midi-qol.FriendlyAutoSuccess"));
+      }
+    }
 
     // Update advantage/disadvantage tracking sets
     if (saveDetails.advantage && !saveDetails.disadvantage) this.advantageSaves.add(target);
@@ -6415,6 +6562,7 @@ return {
     this.initSaveResults();
     this.saveRolls = [];
     this.tokenSaves = {};
+    this.targetSaveDetails = new Map();
     if (debugEnabled > 1) debug(`checkSaves: whisper ${whisper}  hit targets ${this.hitTargets}`)
     if (this.hitTargets.size <= 0 && this.hitTargetsEC.size <= 0) {
       this.saveDisplayFlavor = `<span>${i18n("midi-qol.noSaveTargets")}</span>`
@@ -6471,6 +6619,9 @@ return {
           this.determineTargetRollSettings(target, flagRollType, simulate);
 
         this.saveDetails = saveDetails;
+        // Store per-target saveDetails for later retrieval during result processing
+        const targetDocUuid = getTokenDocument(target)?.uuid;
+        if (targetDocUuid) this.targetSaveDetails?.set(targetDocUuid, saveDetails);
         if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["preTargetSave"], new Set([target]));
 
         // Queue the save roll using the appropriate handler
@@ -6535,7 +6686,7 @@ return {
     (await Promise.all(requestCards)).forEach(chatMessage => chatMessage?.delete());
     const epicRequests = moduleRequests.epic.player.concat(moduleRequests.epic.gm);
     if (epicRequests?.length > 0) await busyWait(10);
-    delete this.saveDetails;
+    // Keep saveDetails for the last target (used for attribution tracking)
     const results = this.normalizeRollResults(rawResults, D20Roll);
     this.saveResults = results.filter(r => !!r).flat();
 
@@ -6597,9 +6748,8 @@ return {
     return saveDisplayFlavor;
   }
 
-  monksSavingCheck(message: ChatMessage.Implementation, update: ChatMessage.UpdateData, options: ChatMessage.Database.UpdateOptions, userId: string) {
+  monksSavingCheck(message: ChatMessage.Implementation, update: ChatMessage.UpdateData, _options: ChatMessage.Database.UpdateOptions, _userId: string) {
     if (!update.flags || !update.flags["monks-tokenbar"]) return true;
-    const updateFlags = update.flags["monks-tokenbar"];
     const mflags = message.flags["monks-tokenbar"];
     for (let key of Object.keys(mflags)) {
       if (!key.startsWith("token")) continue;
@@ -6706,7 +6856,7 @@ return {
 
   }
 
-  processDefenceRoll(message: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) {
+  processDefenceRoll(message: ChatMessage.Implementation, _html: HTMLElement, _data: ChatMessage.MessageData) {
     if (!this.defenceRequests) return true;
     const requestId = message?.speakerActor?.uuid;
     if (debugEnabled > 0) warn("processDefenceRoll |", requestId, this.saveRequests)
@@ -6724,11 +6874,10 @@ return {
     return true;
   }
 
-  processSaveRoll(message: ChatMessage.Implementation, html: HTMLElement | ChatMessage.Database.CreateOptions, dataOrUserId: ChatMessage.MessageData | string) {
+  processSaveRoll(message: ChatMessage.Implementation, _html: HTMLElement | ChatMessage.Database.CreateOptions, _dataOrUserId: ChatMessage.MessageData | string) {
     if (!this.saveRequests) return {};
     const ddbglFlags = message.flags && message.flags["ddb-game-log"];
     const isDDBGL = ddbglFlags?.cls === "save" && !ddbglFlags?.pending;
-    const midiFlags = message.flags && message.flags[MODULE_ID];
     const isRoll = message.flags?.dnd5e?.messageType === "roll";
     let requestId = message?.speaker?.token;
     if (!requestId && isDDBGL) requestId = message?.speaker?.actor;
@@ -6838,17 +6987,17 @@ return {
       const conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
       if (await evalAllConditionsAsync(this.actor, midiFlag(`critical.all`), conditionData)) {
         criticalThreshold = 1;
-        this.attackAdvAttribution.add(`CRIT:critical.all`);
+        this.attackRollModifierTracker.addAttribution('CRIT', 'critical.all', 'critical.all');
       } else if (actionType && await evalAllConditionsAsync(this.actor, midiFlag(`critical.${actionType}`), conditionData)) {
         criticalThreshold = 1;
-        this.attackAdvAttribution.add(`CRIT:critical.${actionType}`);
+        this.attackRollModifierTracker.addAttribution('CRIT', `critical.${actionType}`, `critical.${actionType}`);
       }
     }
 
     this.isCritical = this.diceRoll >= criticalThreshold;
     // Add natural crit attribution
     if (this.isCritical) {
-      this.attackAdvAttribution.add(`CRIT:${i18n("DND5E.Roll")} >= ${criticalThreshold}`);
+      this.attackRollModifierTracker.addAttribution('CRIT', 'naturalCrit', `${i18n("DND5E.Roll")} >= ${criticalThreshold}`);
     }
 
     // Check actor noCritical flags - can override critical after threshold determination
@@ -6858,11 +7007,11 @@ return {
       const conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
       if (await evalAllConditionsAsync(this.actor, midiFlag(`noCritical.all`), conditionData)) {
         this.isCritical = false;
-        this.attackAdvAttribution.add(`NOCRIT:noCritical.all`);
+        this.attackRollModifierTracker.addAttribution('NOCRIT', 'noCritical.all', 'noCritical.all');
       }
       if (actionType && await evalAllConditionsAsync(this.actor, midiFlag(`noCritical.${actionType}`), conditionData)) {
         this.isCritical = false;
-        this.attackAdvAttribution.add(`NOCRIT:noCritical.${actionType}`);
+        this.attackRollModifierTracker.addAttribution('NOCRIT', `noCritical.${actionType}`, `noCritical.${actionType}`);
       }
     }
 
@@ -6881,17 +7030,17 @@ return {
       const conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
       if (await evalAllConditionsAsync(this.actor, midiFlag(`fumble.all`), conditionData)) {
         fumbleTarget = 20;
-        this.attackAdvAttribution.add(`FUMBLE:fumble.all`);
+        this.attackRollModifierTracker.addAttribution('FUMBLE', 'fumble.all', 'fumble.all');
       } else if (actionType && await evalAllConditionsAsync(this.actor, midiFlag(`fumble.${actionType}`), conditionData)) {
         fumbleTarget = 20;
-        this.attackAdvAttribution.add(`FUMBLE:fumble.${actionType}`);
+        this.attackRollModifierTracker.addAttribution('FUMBLE', `fumble.${actionType}`, `fumble.${actionType}`);
       }
     }
 
     this.isFumble = this.diceRoll <= fumbleTarget;
     // Add natural fumble attribution
     if (this.isFumble) {
-      this.attackAdvAttribution.add(`FUMBLE:${i18n("DND5E.Roll")} <= ${fumbleTarget}`);
+      this.attackRollModifierTracker.addAttribution('FUMBLE', 'naturalFumble', `${i18n("DND5E.Roll")} <= ${fumbleTarget}`);
     }
 
     // Check actor noFumble flags - can override fumble after threshold determination
@@ -6901,11 +7050,11 @@ return {
       const conditionData = createConditionData({ workflow: this, target: firstTarget, actor: this.actor });
       if (await evalAllConditionsAsync(this.actor, midiFlag(`noFumble.all`), conditionData)) {
         this.isFumble = false;
-        this.attackAdvAttribution.add(`NOFUMBLE:noFumble.all`);
+        this.attackRollModifierTracker.addAttribution('NOFUMBLE', 'noFumble.all', 'noFumble.all');
       }
       if (actionType && await evalAllConditionsAsync(this.actor, midiFlag(`noFumble.${actionType}`), conditionData)) {
         this.isFumble = false;
-        this.attackAdvAttribution.add(`NOFUMBLE:noFumble.${actionType}`);
+        this.attackRollModifierTracker.addAttribution('NOFUMBLE', `noFumble.${actionType}`, `noFumble.${actionType}`);
       }
     }
 
@@ -6921,13 +7070,13 @@ return {
           const conditionData = createConditionData({ workflow: this, target, actor: this.actor });
           if (await evalAllConditionsAsync(target?.actor, midiFlag(`grants.fumble.all`), conditionData)) {
             this.isFumble = true;
-            this.attackAdvAttribution.add(`FUMBLE:grants.fumble.all ${targetName}`);
+            this.attackRollModifierTracker.addAttribution('FUMBLE', 'grants.fumble.all', `grants.fumble.all ${targetName}`);
             fumbleAttributionAdded = true;
             break;
           }
           if (actionType && await evalAllConditionsAsync(target?.actor, midiFlag(`grants.fumble.${actionType}`), conditionData)) {
             this.isFumble = true;
-            this.attackAdvAttribution.add(`FUMBLE:grants.fumble.${actionType} ${targetName}`);
+            this.attackRollModifierTracker.addAttribution('FUMBLE', `grants.fumble.${actionType}`, `grants.fumble.${actionType} ${targetName}`);
             fumbleAttributionAdded = true;
             break;
           }
@@ -6951,7 +7100,7 @@ return {
         }
         if (allTargetsGrantNoFumble && this.targets.size > 0) {
           this.isFumble = false;
-          this.attackAdvAttribution.add(`NOFUMBLE:grants.noFumble ${noFumbleTargets.join(", ")}`);
+          this.attackRollModifierTracker.addAttribution('NOFUMBLE', 'grants.noFumble', `grants.noFumble ${noFumbleTargets.join(", ")}`);
           fumbleAttributionAdded = true;
         }
       }
@@ -6960,10 +7109,9 @@ return {
     this.attackTotal = this.attackRoll.total ?? 0;
     if (debugEnabled > 1) debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble);
 
-    // Update roll tooltip with crit/fumble attribution and regenerate HTML only if needed
-    // Regenerate if: natural crit/fumble occurred, or flag-based fumble attribution was added
-    if ((this.isCritical || this.isFumble || fumbleAttributionAdded) && ["formulaadv", "adv"].includes(configSettings.rollAlternate)) {
-      addAdvAttribution(this.attackRoll, this.attackAdvAttribution);
+    // Update roll with attribution and regenerate HTML if crit/fumble occurred
+    if (this.isCritical || this.isFumble || fumbleAttributionAdded) {
+      addAttribution(this.attackRoll, this.attackAttribution);
       this.attackRollHTML = await midiRenderAttackRoll(this.attackRoll);
     }
   }
@@ -7530,8 +7678,7 @@ return {
         warn(`chooseEffect | no effects found for ${this.item.name}`);
       return [];
     }
-    let origin = effects[0].uuid; // item?.uuid;
-    let returnValue: Promise<ActiveEffect.Implementation> = new Promise((resolve, reject) => {
+    let returnValue: Promise<ActiveEffect.Implementation> = new Promise((resolve, _reject) => {
       const callback = async function () {
         resolve(this);
       };
@@ -7781,12 +7928,12 @@ export class ActiveDefenceWorkflow extends Workflow {
     } catch (err) {
       TroubleShooter.recordError(err, "activeDefence");
     } finally {
-      Hooks.off("renderChatMessage", hookId);
+      Hooks.off("renderChatMessageHTML", hookId);
     }
   }
 
   //@ts-expect-error no dnd5e types
-  async checkActiveAttacks(whisper = false, roll: CONFIG.Dice.D20Roll, coverBonus = 0) {
+  async checkActiveAttacks(whisper = false, roll: CONFIG.Dice.D20Roll, _coverBonus = 0) {
     //@ts-expect-error
     const BasicRoll = CONFIG.Dice.BasicRoll;
     if (debugEnabled > 1) debug(`active defence : whisper ${whisper}  hit targets ${this.targets}`)
@@ -7795,15 +7942,14 @@ export class ActiveDefenceWorkflow extends Workflow {
     }
     //@ts-expect-error no dnd5e types
     const D20Roll = CONFIG.Dice.D20Roll;
+
     const criticalTarget = 20 - (roll.options.criticalFailure ?? 1) + 1;
     const fumbleTarget = 20 - (roll.options.criticalSuccess ?? 20) + 1;
     let advantageMode = roll?.options?.advantageMode ?? D20Roll.NORMAL;
     let promises: Promise<any>[] = [];
-    const allTargetDescriptors = this.targetDescriptors;
     for (let target of this.targets) {
       if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
       const targetActor = target.actor;
-      let advantage: boolean | undefined = undefined;
       const targetActorSystem = target.actor.system;
       const midiFlagsAttackBonus = targetActor.flags?.[MODULE_ID]?.grants?.attack?.bonus;
 
@@ -7983,7 +8129,6 @@ export class ActiveDefenceWorkflow extends Workflow {
     const attackString = `<label class="midi-qol-active-defence-dc">${DCString} ${this.activeDefenceDC}</label> ${i18n("midi-qol.ActiveDefenceString")}`;
     const replaceString = `<div class="midi-qol-attack-roll"> <div style="text-align:center"> ${attackString} </div><div class="end-midi-qol-attack-roll">`;
     let content = chatMessage?.content.replace(searchRe, replaceString) ?? "";
-    const targetUuids = Array.from(this.targets).map(t => getTokenDocument(t)?.uuid);
     newFlags = {
       "midi-qol":
       {
@@ -8185,12 +8330,12 @@ export class TrapWorkflow extends Workflow {
   static get forceCreate() { return false; }
   constructor(
     actor: Actor,
-    activity,
+    activity: Activity,
     targets: Array<Token> | undefined,
     templateLocation: { x: number, y: number, direction?: number, removeDelay?: number } | undefined = undefined,
-    trapSound: { playlist: string, sound: string } | undefined = undefined,
+    _trapSound: { playlist: string, sound: string } | undefined = undefined,
     event: any = {},
-    storeWorkflow: boolean = false) {
+    _storeWorkflow: boolean = false) {
     super(actor, activity, ChatMessage.getSpeaker({ actor }), new Set(targets ?? []), { event, storeWorkflow: false });
     this.targetsPassedToConstructor = targets !== undefined;
     // Sync game.user.targets from targets passed to constructor (for non-AoE activities)
@@ -8202,10 +8347,12 @@ export class TrapWorkflow extends Workflow {
         game.user?.targets.add(t);
       }
     }
-    // @ts-expect-error pain in the ass to properly type this
-    if (!this.rollOptions.event) this.rollOptions.event = foundry.utils.duplicate(shiftOnlyEvent);
     if (templateLocation) this.templateLocation = templateLocation;
-    this.rollOptions.fastForward = true;
+    // Use fastForwardAttack/fastForwardDamage instead of shiftOnlyEvent to skip dialogs
+    // Clear any event passed to constructor - it lacks target property that dnd5e's buildPost expects
+    this.rollOptions.event = undefined;
+    this.rollOptions.fastForwardAttack = true;
+    this.rollOptions.fastForwardDamage = true;
     this.kickStart = false;
     this.suspended = false;
     // @ts-expect-error no dnd5e-types
@@ -8280,7 +8427,7 @@ export class TrapWorkflow extends Workflow {
       return this.WorkflowState_WaitForSaves;
     }
     warn("TrapWorkflow | WaitForAttackRoll rolling attack for", this.activity.name, "hasAttack:", this.activity.hasAttack, "attack:", this.activity.attack);
-    // Don't pass event - shiftOnlyEvent doesn't have target property that D20Roll.buildPost expects
+    // TrapWorkflow has no event - dialog skipping is controlled via rollOptions.fastForwardAttack
     this.activity.rollAttack?.({ workflow: this, midiOptions: { workflowOptions: this.workflowOptions } }, {}, {});
     return this.WorkflowState_Suspend;
   }
@@ -8304,7 +8451,6 @@ export class TrapWorkflow extends Workflow {
       return this.WorkflowState_WaitForDamageRoll;
     }
     let hookId = Hooks.on("createChatMessage", this.processSaveRoll.bind(this));
-    //        let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
     let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
     //@ts-expect-error flash-rolls-5e custom hook
     let flashId = Hooks.on("flash-rolls-5e.rollComplete", this.flashSavingCheck.bind(this));
@@ -8315,7 +8461,6 @@ export class TrapWorkflow extends Workflow {
       TroubleShooter.recordError(err, "checkSaves");
     } finally {
       Hooks.off("createChatMessage", hookId);
-      //          Hooks.off("renderChatMessage", brHookId);
       Hooks.off("updateChatMessage", monksId);
       //@ts-expect-error flash-rolls-5e custom hook
       Hooks.off("flash-rolls-5e.rollComplete", flashId);
@@ -8552,8 +8697,7 @@ export class DummyWorkflow extends Workflow {
   }
   async simulateAttack(target: Token.Implementation) {
     this.targets = new Set([target]);
-    this.advantage = false;
-    this.disadvantage = false;
+    this.attackRollModifierTracker.reset(); // Clear any previous advantage/disadvantage state
     await this.checkAttackAdvantage();
     // Block updates to quantity
     //@ts-expect-error
@@ -8620,7 +8764,7 @@ export type WorkflowOptions = InexactPartial<{
   chatMessage: boolean;
   damageRollDSN: boolean;
   disadvantage: boolean;
-  event: Event;
+  event: AugmentedEvent;
   fastForward: boolean;
   fastForwardAbility: boolean;
   fastForwardAttack: boolean;

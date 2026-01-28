@@ -402,28 +402,6 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (debugEnabled > 1) log("Finished enriching chat card", Date.now(), this.id);
     }
 
-    prepareDerivedData() {
-      const attackRoll = this.flags?.[MODULE_ID]?.[WorkflowDataFlags.attackRoll];
-      if (attackRoll)
-        foundry.utils.setProperty(this, "flags.midi-qol." + WorkflowDataFlags.attackRoll, Roll.fromData(attackRoll));
-      const damageRolls = this.flags?.[MODULE_ID]?.[WorkflowDataFlags.damageRolls];
-      if (damageRolls)
-        foundry.utils.setProperty(this, "flags.midi-qol." + WorkflowDataFlags.damageRolls, damageRolls.map(d => Roll.fromData(d)));
-      const otherDamageRolls = this.flags?.[MODULE_ID]?.[WorkflowDataFlags.otherDamageRolls];
-      if (otherDamageRolls)
-        foundry.utils.setProperty(this, "flags.midi-qol." + WorkflowDataFlags.otherDamageRolls, otherDamageRolls.map(d => Roll.fromData(d)));
-      const bonusDamageRolls = this.flags?.[MODULE_ID]?.[WorkflowDataFlags.bonusDamageRolls];
-      if (bonusDamageRolls)
-        foundry.utils.setProperty(this, "flags.midi-qol." + WorkflowDataFlags.bonusDamageRolls, bonusDamageRolls.map(d => Roll.fromData(d)));
-      const utilityRolls = this.flags?.[MODULE_ID]?.[WorkflowDataFlags.utilityRolls];
-      if (utilityRolls)
-        foundry.utils.setProperty(this, "flags.midi-qol." + WorkflowDataFlags.utilityRolls, utilityRolls.map(d => Roll.fromData(d)));
-      const extraRolls = this.flags?.[MODULE_ID]?.[WorkflowDataFlags.extraRolls];
-      if (extraRolls)
-        foundry.utils.setProperty(this, "flags.midi-qol." + WorkflowDataFlags.extraRolls, extraRolls.map(d => Roll.fromData(d)));
-      super.prepareDerivedData();
-    }
-
     noDiceClicks(event) {
       event.stopImmediatePropagation();
       return;

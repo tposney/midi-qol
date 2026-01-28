@@ -539,7 +539,9 @@
 }
 
 .midi-qol-tooltiptext.midi-qol-save-tooltip {
-  width: 65%;
+  width: max-content;
+  min-width: 200px;
+  right: 0;
 }
 
 .midi-qol-saves-display {
@@ -978,4 +980,144 @@ section.midi-qol.tab {
   &.midi-qol-dmg-healing {
     color: #22aa44;
   }
+}
+
+/* ----------------------------------------- */
+/* Advantage/Disadvantage Indicator
+/* ----------------------------------------- */
+/* Attribution info icon - shows tooltip with advantage/disadvantage sources */
+.midi-attribution-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.3em;
+  font-size: 0.75em;
+  cursor: help;
+  vertical-align: middle;
+  color: var(--color-text-light-6, #888);
+  opacity: 0.7;
+}
+
+.midi-attribution-info:hover {
+  opacity: 1;
+  color: var(--color-text-light-highlight, #fff);
+}
+
+/* Attribution tooltip content styling */
+.midi-attribution-tooltip {
+  padding: 0.25rem;
+  font-size: 0.875rem;
+  min-width: 150px;
+}
+
+.midi-attribution-tooltip .attribution-header {
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--color-border-light-1);
+}
+
+.midi-attribution-tooltip .attribution-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.midi-attribution-tooltip .attribution-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.125rem 0;
+}
+
+.midi-attribution-tooltip .attribution-type {
+  font-weight: bold;
+  min-width: 3em;
+}
+
+.midi-attribution-tooltip .attribution-type-ADV,
+.midi-attribution-tooltip .attribution-type-SUCCESS {
+  color: #22aa44;
+}
+
+.midi-attribution-tooltip .attribution-type-DIS,
+.midi-attribution-tooltip .attribution-type-FAIL {
+  color: #cc4444;
+}
+
+.midi-attribution-tooltip .attribution-type-NOADV,
+.midi-attribution-tooltip .attribution-type-NODIS {
+  color: #888888;
+}
+
+.midi-attribution-tooltip .attribution-type-MIN {
+  color: #22aa44;
+}
+
+.midi-attribution-tooltip .attribution-type-MAX {
+  color: #cc4444;
+}
+
+.midi-attribution-tooltip .attribution-type-CRIT {
+  color: #ffaa00;
+}
+
+.midi-attribution-tooltip .attribution-type-NOCRIT {
+  color: #aa8800;
+}
+
+.midi-attribution-tooltip .attribution-type-FUMBLE {
+  color: #8844aa;
+}
+
+.midi-attribution-tooltip .attribution-type-NOFUMBLE {
+  color: #664488;
+}
+
+/* ----------------------------------------- */
+/* Sheet QOL Buttons                         */
+/* ----------------------------------------- */
+/* Layout for buttons injected into actor sheets */
+
+/* Info icon in item row - visible but unobtrusive */
+.midi-info-icon {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.25rem;
+  font-size: var(--font-size-11);
+  color: var(--color-text-dark-secondary);
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.1s, color 0.1s;
+}
+
+.midi-info-icon:hover {
+  opacity: 1;
+  color: var(--dnd5e-color-gold);
+}
+
+/* Activity buttons - absolute positioned to not affect layout */
+.midi-activity-buttons {
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 0.125rem;
+  align-items: center;
+}
+
+.midi-activity-buttons button {
+  padding: 0.125rem 0.25rem;
+  font-size: var(--font-size-10);
+  line-height: 1;
+  min-width: 1.5rem;
+}
+
+.midi-activity-buttons dnd5e-icon {
+  --icon-size: 18px;
+  --icon-fill: currentColor;
+  display: block;
+  width: 18px;
+  height: 18px;
 }

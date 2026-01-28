@@ -1,131 +1,220 @@
-import { i18n, debug, log, warn, debugEnabled } from "../midi-qol.js";
-import { Workflow } from "./Workflow.js";
-import { showItemInfo } from "./activities/activityHelpers.js";
+import { i18n, debug, debugEnabled } from "../midi-qol.js";
+import { configSettings } from "./settings.js";
+import { areMidiKeysPressed, isAutoFastAttack, isAutoFastDamage } from "./utils.js";
 
-// TODO: All this
-const knownSheets = {
-  BetterNPCActor5eSheet: ".item .rollable",
-  ActorSheet5eCharacter: ".item-list .item-name",
-  BetterNPCActor5eSheetDark: ".item .rollable",
-  ActorSheet5eCharacter2: ".item .item-image",
-  ActorSheet5eCharacterDark: ".item .item-image",
-  DarkSheet: ".item .item-image",
-  ActorNPC5EDark: ".item .item-image",
-  DynamicActorSheet5e: ".item .item-image",
-  ActorSheet5eNPC: ".item .item-image",
-  DNDBeyondCharacterSheet5e: ".item .item-name .item-image",
-  // Tidy5eSheet: ".item .item-image",
-  // Tidy5eNPC: ".item .item-image",
-  MonsterBlock5e: ".item .item-name",
-  //  Sky5eSheet: ".item .item-image",
-};
+/**
+ * Supported dnd5e v13 actor sheet classes (ApplicationV2-based)
+ */
+const SUPPORTED_SHEETS = [
+  "CharacterActorSheet",
+  "NPCActorSheet"
+];
+
+/**
+ * Set up hooks for injecting midi-qol buttons into actor sheets
+ */
 export function setupSheetQol() {
-  for (let sheetName of Object.keys(knownSheets)) {
-    //@ts-expect-error
-    Hooks.on("render" + sheetName, enableSheetQOL);
+  for (const sheetName of SUPPORTED_SHEETS) {
+    const hookName = `render${sheetName}`;
+    if (debugEnabled > 0) debug("Registering sheetQOL hook:", hookName);
+    // @ts-expect-error Dynamic hook names not in HookConfig
+    Hooks.on(hookName, injectMidiButtons);
   }
-  // Hooks.on("renderedAlt5eSheet", enableSheetQOL);
-  // Hooks.on("renderedTidy5eSheet", enableSheetQOL);
 }
-let enableSheetQOL = (app, html, data) => {
-  if (["Tidy5eSheet", "Tidy5eNPC"].includes(app.constructor.name)) {
-  } else {
-    // WIP addItemSheetButtons(app, html, data);
-  }
-  return true;
-};
 
-function addItemSheetButtons(app, html, data, triggeringElement = "", buttonContainer = "") {
-  // Setting default element selectors
-  let alreadyExpandedElement = ".item.expanded";
-  if (triggeringElement === "")
-    triggeringElement = ".item .collapsible";
-  if (buttonContainer === "")
-    buttonContainer = ".wrapper .item-summary";
-  html[0].querySelectorAll(triggeringElement)?.forEach((element) => {
-      addItemRowButtonForTarget(app, data, element, buttonContainer);
+/**
+ * Main function to inject midi buttons into the actor sheet
+ * ApplicationV2 signature: (app, html, context, options)
+ */
+function injectMidiButtons(app: any, html: HTMLElement, context?: object, options?: object) {
+  // Check if feature is enabled
+  if (!configSettings.addSheetButtons) return;
+
+  // Handle both jQuery and native element (ApplicationV2 uses native)
+  const element = html instanceof HTMLElement ? html : html[0];
+  if (!element) return;
+
+  if (debugEnabled > 0) debug("injectMidiButtons called for", app.constructor.name);
+
+  // Find all item rows in the inventory and inject info icon
+  element.querySelectorAll(".item.collapsible > .item-row").forEach(itemRow => {
+    const itemElement = itemRow.closest(".item") as HTMLElement;
+    const itemId = itemElement?.dataset.itemId;
+    const item = app.document?.items?.get(itemId) ?? app.actor?.items?.get(itemId);
+    if (!item) return;
+
+    // Inject info icon after item name
+    injectInfoIcon(itemRow as HTMLElement, item);
   });
+
+  // Find all expanded item wrappers for activity buttons
+  element.querySelectorAll(".item.collapsible .item-description .wrapper").forEach(wrapper => {
+    const itemElement = wrapper.closest(".item") as HTMLElement;
+    const itemId = itemElement?.dataset.itemId;
+    const item = app.document?.items?.get(itemId) ?? app.actor?.items?.get(itemId);
+    if (!item) return;
+
+    // Inject activity-level buttons (Attack, Damage) to each activity row
+    wrapper.querySelectorAll(".activity-row").forEach(activityRow => {
+      const activityId = (activityRow as HTMLElement).dataset.activityId;
+      const activity = item.system.activities?.get(activityId);
+      if (!activity) return;
+
+      injectActivityButtons(activityRow as HTMLElement, item, activity);
+    });
+  });
+
+  // Attach event handlers
+  attachMidiButtonHandlers(element, app);
 }
 
-function addItemRowButtonForTarget(app, data, element, buttonContainer: string) {
-  let item = app.object.items.get(element.dataset.itemId);
-  addItemRowButton(element, item, app, data, element, buttonContainer);
+/**
+ * Inject info icon into the item row between the item icon and item name
+ */
+function injectInfoIcon(itemRow: HTMLElement, item: any) {
+  // Check if already injected
+  if (itemRow.querySelector(".midi-info-icon")) return;
+
+  // Find the item-name element
+  const itemName = itemRow.querySelector(".item-name");
+  if (!itemName) return;
+
+  // Add a small info icon after the item image, before the name
+  const infoHtml = `<a class="midi-info-icon" data-midi-action="info" data-item-id="${item.id}" data-tooltip="${i18n("midi-qol.buttons.showChatInfo")}"><i class="fas fa-info-circle"></i></a>`;
+
+  // Insert after the item-image, before name-stacked
+  const itemImage = itemName.querySelector(".item-image");
+  if (itemImage) {
+    itemImage.insertAdjacentHTML("afterend", infoHtml);
+  } else {
+    // Fallback: prepend to item-name
+    itemName.insertAdjacentHTML("afterbegin", infoHtml);
+  }
 }
 
-function addItemRowButton(target, item, app, data, html, buttonContainer) {
-  // let li = $(target).parents(".item");
-  // let item = app.object.items.get(target.attr("data-item-id"));
-  if (!item)
-    return;
-  let actor = app.object;
-  item.getChatData().then(chatData => {
-    let targetHTML = $(target);
-    let buttonTarget = html.find(buttonContainer);
-    if (buttonTarget.length > 0)
-      return; // already added buttons
-    let buttonsWereAdded = false;
-    // Create the buttons
-    let buttons = $(`<div class="item-buttons"></div>`);
-    switch (item.type) {
-      case "weapon":
-      case "spell":
-      case "power":
-      case "feat":
-        buttons.append(`<span class="tag"><button data-action="basicRoll">${i18n("midi-qol.buttons.roll")}</button></span>`);
-        if (item.hasAttack)
-          buttons.append(`<span class="tag"><button data-action="attack">${i18n("midi-qol.buttons.attack")}</button></span>`);
-        if (item.hasDamage)
-          buttons.append(`<span class="tag"><button data-action="damage">${i18n("midi-qol.buttons.damage")}</button></span>`);
-        if (item.system.properties?.has("ver"))
-          buttons.append(`<span class="tag"><button data-action="versatileDamage">${i18n("midi-qol.buttons.versatileDamage")}</button></span>`);
-        buttonsWereAdded = true;
-        break;
-      case "consumable":
-        if (chatData.hasCharges)
-          buttons.append(`<span class="tag"><button data-action="consume">${i18n("midi-qol.buttons.itemUse")} ${item.name}</button></span>`);
-        buttonsWereAdded = true;
-        break;
-      case "tool":
-        buttons.append(`<span class="tag"><button data-action="toolCheck" data-ability="${chatData.ability.value}">${i18n("midi-qol.buttons.itemUse")} ${item.name}</button></span>`);
-        buttonsWereAdded = true;
-        break;
+/**
+ * Inject activity-level buttons (Attack, Damage) into an activity row
+ */
+function injectActivityButtons(activityRow: HTMLElement, item: any, activity: any) {
+  // Check if buttons already injected
+  if (activityRow.querySelector(".midi-activity-buttons")) return;
+
+  const buttons: string[] = [];
+  const itemId = item.id;
+  const activityId = activity.id;
+
+  if (activity.hasAttack) {
+    buttons.push(`
+      <button type="button" data-midi-action="attack" data-item-id="${itemId}" data-activity-id="${activityId}"
+              data-tooltip="${i18n("midi-qol.buttons.attack")}">
+        <dnd5e-icon src="systems/dnd5e/icons/svg/activity/attack.svg"></dnd5e-icon>
+      </button>
+    `);
+  }
+
+  if (activity.hasDamage) {
+    buttons.push(`
+      <button type="button" data-midi-action="damage" data-item-id="${itemId}" data-activity-id="${activityId}"
+              data-tooltip="${i18n("midi-qol.buttons.damage")}">
+        <dnd5e-icon src="systems/dnd5e/icons/svg/activity/damage.svg"></dnd5e-icon>
+      </button>
+    `);
+
+    // Add versatile button if item has versatile property (dnd5e getter)
+    if (item.isVersatile) {
+      buttons.push(`
+        <button type="button" data-midi-action="versatile" data-item-id="${itemId}" data-activity-id="${activityId}"
+                data-tooltip="${i18n("midi-qol.buttons.versatileDamage")}">
+          <i class="fas fa-hand-fist"></i>
+        </button>
+      `);
     }
-    buttons.append(`<span class="tag"><button data-action="info">${i18n("midi-qol.buttons.info")}</button></span>`);
-    buttonsWereAdded = true;
-    buttons.append(`<br><header style="margin-top:6px"></header>`);
-    if (buttonsWereAdded) {
-      // adding the buttons to the sheet
-      targetHTML.find(buttonContainer).prepend(buttons);
-      buttons.find("button").click({ app, data, html }, async (ev) => {
-        ev.preventDefault();
-        ev.stopPropagation();
-        if (debugEnabled > 1) debug("roll handler ", ev.target.dataset.action);
-        // let event = { shiftKey: ev.shiftKey == true, ctrlKey: ev.ctrlKey === true, metaKey: ev.metaKey === true, altKey: ev.altKey === true };
-        // If speed rolls are off
-        switch (ev.target.dataset.action) {
-          case "attack":
-            await item.rollAttack({ event: ev, versatile: false, resetAdvantage: true, systemCard: true });
-            break;
-          case "damage":
-            await item.rollDamage({ event: ev, versatile: false, systemCard: true });
-            break;
-          case "versatileDamage":
-            await item.rollDamage({ event: ev, versatile: true, systemCard: true });
-            break;
-          case "consume":
-            await item.use({ event: ev, systemCard: true }, {});
-            break;
-          case "toolCheck":
-            await item.rollToolCheck({ event: ev, systemCard: true });
-            break;
-          case "basicRoll":
-            Workflow.removeWorkflow(item.uuid);
-            item.use({}, { event: ev, configureDialog: true, systemCard: true });
-            break;
-          case "info":
-            await showItemInfo.bind(item)();
-        }
-      })
-    }
+  }
+
+  // Add use button if activity has a rollable formula
+  if (activity.roll?.formula) {
+    buttons.push(`
+      <button type="button" data-midi-action="use" data-item-id="${itemId}" data-activity-id="${activityId}"
+              data-tooltip="${i18n("midi-qol.buttons.itemUse")}">
+        <dnd5e-icon src="systems/dnd5e/icons/svg/activity/utility.svg"></dnd5e-icon>
+      </button>
+    `);
+  }
+
+  if (buttons.length === 0) return;
+
+  const buttonsHtml = `<div class="midi-activity-buttons">${buttons.join("")}</div>`;
+
+  // Append to end of activity row (after columns)
+  activityRow.insertAdjacentHTML("beforeend", buttonsHtml);
+}
+
+
+/**
+ * Attach click handlers to all midi buttons
+ */
+function attachMidiButtonHandlers(html: HTMLElement, app: any) {
+  // Only attach to buttons that don't already have handlers
+  html.querySelectorAll("[data-midi-action]:not([data-midi-handled])").forEach(button => {
+    button.setAttribute("data-midi-handled", "true");
+
+    button.addEventListener("click", async (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const btn = event.currentTarget as HTMLElement;
+      const action = btn.dataset.midiAction;
+      const itemId = btn.dataset.itemId;
+      const activityId = btn.dataset.activityId;
+
+      const actor = app.document ?? app.actor;
+      const item = actor?.items?.get(itemId);
+      if (!item) return;
+
+      if (debugEnabled > 1) debug("midi sheet button handler", action, item.name, activityId);
+
+      const activity = activityId ? item.system.activities?.get(activityId) : null;
+
+      switch (action) {
+        case "info":
+          // Show item info card using dnd5e's displayCard
+          await item.displayCard();
+          break;
+
+        case "attack":
+          // Roll attack - respect midi auto fast forward and roll toggle settings
+          if (activity?.rollAttack) {
+            let configure = !isAutoFastAttack();
+            if (areMidiKeysPressed(event as any, "RollToggle")) configure = !configure;
+            await activity.rollAttack({ event }, { configure }, { create: true });
+          }
+          break;
+
+        case "damage":
+          // Roll damage - respect midi auto fast forward and roll toggle settings
+          if (activity?.rollDamage) {
+            let configure = !isAutoFastDamage();
+            if (areMidiKeysPressed(event as any, "RollToggle")) configure = !configure;
+            await activity.rollDamage({ event, versatile: false }, { configure }, { create: true });
+          }
+          break;
+
+        case "versatile":
+          // Roll versatile damage - respect midi auto fast forward and roll toggle settings
+          if (activity?.rollDamage) {
+            let configure = !isAutoFastDamage();
+            if (areMidiKeysPressed(event as any, "RollToggle")) configure = !configure;
+            await activity.rollDamage({ event, versatile: true }, { configure }, { create: true });
+          }
+          break;
+
+        case "use":
+          // Use the activity (triggers full workflow including formula roll)
+          if (activity?.use) {
+            await activity.use({ event }, {}, {});
+          }
+          break;
+      }
+    });
   });
 }

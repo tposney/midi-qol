@@ -1,4 +1,5 @@
-import { warn, debugEnabled } from "../midi-qol.js";
+import { warn, debugEnabled, error, debug, log } from "../../midi-qol.js";
+import { TroubleShooter } from "../apps/TroubleShooter.js";
 
 /**
  * Change event types for the registry
@@ -55,7 +56,7 @@ export class MidiDependentsRegistry {
     const isNewDependent = !dependentSet.has(dependent.uuid);
     if (!isNewDependent) return; // Already tracking this dependent
     dependentSet.add(dependent.uuid);
-    if (debugEnabled > 1) warn(`MidiDependentsRegistry | Tracking ${dependent.uuid} as dependent on ${parentUuid}`);
+    if (debugEnabled > 0) log(`MidiDependentsRegistry | TRACK: ${(dependent as any).name} (${dependent.uuid}) depends on ${parentUuid}`);
     Hooks.callAll("midi-qol.dependentsRegistryChanged", { type: "track", parentUuid, dependentUuid: dependent.uuid } as RegistryChangeEvent);
   }
 
@@ -71,7 +72,7 @@ export class MidiDependentsRegistry {
     dependentSet.delete(dependent.uuid);
     // Clean up empty parent entries
     if (dependentSet.size === 0) this.#dependents.delete(parentUuid);
-    if (debugEnabled > 1) warn(`MidiDependentsRegistry | Un-tracking ${dependent.uuid} from ${parentUuid}`);
+    if (debugEnabled > 0) log(`MidiDependentsRegistry | UNTRACK: ${(dependent as any).name} (${dependent.uuid}) no longer depends on ${parentUuid}`);
     Hooks.callAll("midi-qol.dependentsRegistryChanged", { type: "untrack", parentUuid, dependentUuid: dependent.uuid } as RegistryChangeEvent);
   }
 
@@ -84,7 +85,7 @@ export class MidiDependentsRegistry {
     const dependents = this.get(parentUuid);
     if (dependents.length === 0) return;
 
-    if (debugEnabled > 0) warn(`MidiDependentsRegistry | Deleting ${dependents.length} dependents of ${parentUuid}`);
+    if (debugEnabled > 0) log(`MidiDependentsRegistry | Deleting ${dependents.length} dependents of ${parentUuid}`);
 
     for (const dependent of dependents) {
       try {
@@ -155,55 +156,89 @@ export function MidiDependentDocumentMixin<T extends new (...args: any[]) => any
       // Only track during initialization (game.ready === false) when loading from database
       // After game is ready, _onCreate() handles tracking for newly created documents
       if (game.ready) return;
-      const dependentOn = (this as any).flags?.dnd5e?.dependentOn;
-      if (dependentOn && (this as any).uuid) {
-        MidiDependentsRegistry.track(dependentOn, this as any);
+      try {
+        const dependentOn = (this as any).flags?.dnd5e?.dependentOn;
+        if (dependentOn && (this as any).uuid) {
+          MidiDependentsRegistry.track(dependentOn, this as any);
+        }
+      } catch (err) {
+        const message = `MidiDependentsRegistry.prepareData`;
+        TroubleShooter.recordError(err, message);
+        error(message, err);
       }
     }
 
     /** @inheritDoc */
     _onCreate(data: object, options: object, userId: string) {
-      super._onCreate(data, options, userId);
-      // Track newly created documents if they have the flag set at creation
-      const dependentOn = (this as any).flags?.dnd5e?.dependentOn;
-      if (dependentOn && (this as any).uuid) {
-        MidiDependentsRegistry.track(dependentOn, this as any);
+      const returnValue = super._onCreate(data, options, userId);
+      try {
+        // Track newly created documents if they have the flag set at creation
+        const dependentOn = (this as any).flags?.dnd5e?.dependentOn;
+        if (dependentOn && (this as any).uuid) {
+          MidiDependentsRegistry.track(dependentOn, this as any);
+        }
+      } catch (err) {
+        const message = `MidiDependentsRegistry._onCreate`;
+        TroubleShooter.recordError(err, message);
+        error(message, err);
       }
+      return returnValue;
+    }
+
+    /** @inheritDoc */
+    async _preUpdate(changed: object, options: object, user: User) {
+      const allowed = await super._preUpdate(changed, options, user);
+      try {
+        // Check if dependentOn flag is being changed/deleted
+        // TODO: Confirm that -= is still the right way for deletions
+        const dnd5eFlags = (changed as any).flags?.dnd5e;
+        if (!dnd5eFlags) return true;
+        if (!("dependentOn" in dnd5eFlags || "-=dependentOn" in dnd5eFlags)) return true;
+
+        const oldParent = (this as any).flags?.dnd5e?.dependentOn;
+        if (oldParent && (this as any).uuid) {
+          MidiDependentsRegistry.untrack(oldParent, this as any);
+        }
+      } catch (err) {
+        const message = `MidiDependentsRegistry._preUpdate`;
+        TroubleShooter.recordError(err, message);
+        error(message, err);
+      }
+      return allowed;
     }
 
     /** @inheritDoc */
     _onUpdate(changed: object, options: object, userId: string) {
       super._onUpdate(changed, options, userId);
-      // Handle dependentOn flag being added, changed, or removed
-      // At this point: `this` has OLD values, `changed` has NEW values
-      const dnd5eFlags = (changed as any).flags?.dnd5e;
-      if (!dnd5eFlags) return;
-      if (!("dependentOn" in dnd5eFlags || "-=dependentOn" in dnd5eFlags)) return;
+      try {
+        // Handle dependentOn flag being added or changed
+        const dnd5eFlags = (changed as any).flags?.dnd5e;
+        if (!dnd5eFlags || !("dependentOn" in dnd5eFlags)) return;
 
-      const uuid = (this as any).uuid;
-      if (!uuid) return;
-
-      const oldParent = (this as any).flags?.dnd5e?.dependentOn;
-      const newParent = "-=dependentOn" in dnd5eFlags ? null : dnd5eFlags.dependentOn;
-
-      // Untrack from old parent if it changed
-      if (oldParent && oldParent !== newParent) {
-        MidiDependentsRegistry.untrack(oldParent, this as any);
-      }
-
-      // Track to new parent
-      if (newParent) {
-        MidiDependentsRegistry.track(newParent, this as any);
+        const newParent = (this as any).flags?.dnd5e?.dependentOn;
+        if (newParent && (this as any).uuid) {
+          MidiDependentsRegistry.track(newParent, this as any);
+        }
+      } catch (err) {
+        const message = `MidiDependentsRegistry._onUpdate`;
+        TroubleShooter.recordError(err, message);
+        error(message, err);
       }
     }
 
     /** @inheritDoc */
     _onDelete(options: object, userId: string) {
       super._onDelete(options, userId);
-      // Read dnd5e.dependentOn flag
-      const dependentOn = (this as any).flags?.dnd5e?.dependentOn;
-      if (dependentOn && (this as any).uuid) {
-        MidiDependentsRegistry.untrack(dependentOn, this as any);
+      try {
+        // Read dnd5e.dependentOn flag
+        const dependentOn = (this as any).flags?.dnd5e?.dependentOn;
+        if (dependentOn && (this as any).uuid) {
+          MidiDependentsRegistry.untrack(dependentOn, this as any);
+        }
+      } catch (err) {
+        const message = `MidiDependentsRegistry._onDelete`;
+        TroubleShooter.recordError(err, message);
+        error(message, err);
       }
     }
   }

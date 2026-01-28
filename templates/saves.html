@@ -11,20 +11,22 @@
   <li class="midi-qol midi-qol-save-class target midi-qol-target-select {{save.targetClass}} {{save.saveClass}}" data-id="{{save.target.id}}">
     <i class="fas {{save.saveSymbol}}"></i>
     <img src="{{save.img}}" style="background-color: var(--dnd5e-background-10); width: 30px; height: 30px;" />
-    <div class="midi-qol-target-name " id="{{save.target.id}}" data-uuid="{{save.target.document.uuid}}">
-      <div class="name-stacked midi-qol-tooltip" style="width:170px">
+    <div class="midi-qol-target-name" style="flex-grow: 1;" id="{{save.target.id}}" data-uuid="{{save.target.document.uuid}}" {{#if save.attributionTooltip}}data-tooltip-html="{{{save.attributionTooltip}}}" data-tooltip-direction="UP"{{/if}}>
+      <div class="name-stacked" style="width:170px">
         <span class="midi-qol-gmTokenName midi-qol-target-name title" id="save.target.id">
           {{{save.gmName}}}
         </span>
         <span class="midi-qol-playerTokenName midi-qol-target-name title" style="text-align: right" id="save.target.id">
           {{save.playerName}}
         </span>
-        <div class="midi-qol-tooltiptext midi-qol-save-tooltip {{save.saveToolTipClass}}" style="text-align: left;">
-          {{{save.rollHTML}}}
-        </div>
       </div>
     </div>
-    <div class="{{saveTotalClass}}" style="font-weight: bold;">{{save.rollTotal}}</div>
+    <div class="{{save.saveTotalClass}} midi-qol-tooltip" style="font-weight: bold;">
+      {{save.rollTotal}}
+      <div class="midi-qol-tooltiptext midi-qol-save-tooltip {{save.saveToolTipClass}}" style="text-align: left;">
+        {{{save.rollHTML}}}
+      </div>
+    </div>
   </li>
   {{/each}}
 </ul>

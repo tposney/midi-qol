@@ -25,10 +25,9 @@
           {{#unless collapsed}}
             <div class="section-content">
               {{#each entries}}
-                <div class="dependent-entry {{#unless parentExists}}missing{{/unless}}">
+                <div class="dependent-entry {{#unless parentExists}}missing{{/unless}} {{#if hasItemParent}}item-effect{{/if}}">
                   <div class="parent-row">
                     <div class="parent-info">
-                      {{#if isTransfer}}<i class="fas fa-exchange-alt transfer-icon" title="{{localize 'midi-qol.DependentsExplorer.Transfer'}}"></i>{{/if}}
                       <i class="{{parentIcon}}"></i>
                       {{#if parentExists}}
                         <a class="document-link" data-action="openDocument" data-uuid="{{parentUuid}}">
@@ -64,10 +63,9 @@
                   </div>
                   <div class="dependents-sublist">
                     {{#each dependents}}
-                      <div class="dependent-row {{#unless exists}}missing{{/unless}} {{#if isTransfer}}transfer{{/if}}">
+                      <div class="dependent-row {{#unless exists}}missing{{/unless}} {{#if hasItemParent}}item-effect{{/if}}">
                         <div class="dependent-info">
-                          <i class="fas fa-arrow-right indent-arrow"></i>
-                          {{#if isTransfer}}<i class="fas fa-exchange-alt transfer-icon" title="{{localize 'midi-qol.DependentsExplorer.Transfer'}}"></i>{{/if}}
+                          <i class="fas fa-turn-up indent-arrow"></i>
                           <i class="{{icon}}"></i>
                           {{#if exists}}
                             <a class="document-link" data-action="openDocument" data-uuid="{{uuid}}">
@@ -180,9 +178,7 @@
   }
 
   .type-section {
-    border: 1px solid var(--color-border-light-tertiary);
-    border-radius: 3px;
-    background: var(--color-cool-4);
+    background: transparent;
   }
 
   .section-header {
@@ -194,12 +190,10 @@
     font-weight: bold;
     font-size: 0.9rem;
     background: var(--color-cool-5);
-    border-radius: 3px 3px 0 0;
-    user-select: none;
-  }
-
-  .type-section.collapsed .section-header {
+    border: 1px solid var(--color-border-light-tertiary);
     border-radius: 3px;
+    user-select: none;
+    margin-bottom: 0.25rem;
   }
 
   .section-header:hover {
@@ -230,15 +224,24 @@
   }
 
   .dependent-entry {
-    padding: 0.15rem 0;
+    padding: 0.35rem;
+    border: 1px solid var(--color-border-light-tertiary);
+    border-radius: 3px;
+    background: var(--color-cool-4);
+    margin-bottom: 0.25rem;
   }
 
   .dependent-entry.missing {
     opacity: 0.7;
   }
 
-  .dependent-row.transfer {
-    color: var(--color-level-info);
+  .dependent-entry:last-child {
+    margin-bottom: 0;
+  }
+
+  .dependent-entry.item-effect > .parent-row,
+  .dependent-row.item-effect {
+    color: orange;
   }
 
   .parent-row, .dependent-row {
@@ -251,9 +254,7 @@
 
   .parent-row {
     font-weight: bold;
-    border-bottom: 1px solid var(--color-border-light-tertiary);
     margin-bottom: 0.15rem;
-    padding-bottom: 0.2rem;
   }
 
   .parent-info, .dependent-info {
@@ -278,12 +279,9 @@
 
   .indent-arrow {
     color: var(--color-text-dark-secondary);
-    font-size: 0.7rem;
-  }
-
-  .transfer-icon {
-    color: var(--color-text-dark-secondary);
-    font-size: 0.7rem;
+    font-size: 0.75rem;
+    margin-right: 0.25rem;
+    transform: scaleX(-1);
   }
 
   .dependents-sublist {

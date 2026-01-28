@@ -10,12 +10,16 @@ import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
 import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, ActivityUseConfiguration, DamageApplicationOptions, DamageDescription, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
-import { AugmentedEvent, Workflow } from "./Workflow.js";
+import { Workflow } from "./Workflow.js";
 import { preferredActiveGM } from "./GMAction.js";
-import { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./MidiDependentsRegistry.js";
+import { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./lib/MidiDependentsRegistry.js";
+import { RollModifierTracker, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, RollModifierResult, AdvantageFlags } from "./lib/RollModifierTracker.js";
 
 // Re-export for backwards compatibility
-export { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./MidiDependentsRegistry.js";
+export { RollModifierTracker, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, RollModifierResult, AdvantageFlags } from "./lib/RollModifierTracker.js";
+
+// Re-export for backwards compatibility
+export { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./lib/MidiDependentsRegistry.js";
 
 let libWrapper;
 
@@ -184,9 +188,9 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
       if (!config.midiOptions.workflow && config.midiOptions.workflowId) {
         config.midiOptions.workflow = Workflow.getWorkflow(config.midiOptions.workflowId);
       }
-      const skillResult = await computeSkillAdvantage(this, skillId ?? "", config.midiOptions);
-      config.advantage = skillResult.advantage;
-      config.disadvantage = skillResult.disadvantage;
+      const skillRollModifierTracker = await computeSkillAdvantage(this, skillId ?? "", config.midiOptions);
+      config.advantage = skillRollModifierTracker.hasAdvantage;
+      config.disadvantage = skillRollModifierTracker.hasDisadvantage;
     }
 
     let success: boolean | undefined = undefined;
@@ -216,11 +220,13 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
       let skillModifiers: RollModifierResult;
       const workflow = config.midiOptions?.workflow;
       const midiOptions = config.midiOptions;
+      const rollModifierTracker = new RollModifierTracker();
       preRollSkillHookId = Hooks.once("dnd5e.preRollSkill", (configData, dialogData, messageData) => {
         configData.midiOptions ??= midiOptions;
         messageData.data ??= {};
         if (overtimeActorUuid) messageData.data["flags.midi-qol.overtimeActorUuid"] = overtimeActorUuid;
-        skillModifiers = applyRollModifiers(this, skillModifierFlags, configData, dialogData, { workflow });
+        computeRollModifiers(this, skillModifierFlags, rollModifierTracker, { workflow });
+        skillModifiers = applyRollModifiers(rollModifierTracker, configData, dialogData);
         if (skillModifiers.autoFail) {
           success = false;
         }
@@ -418,7 +424,7 @@ function setRollDialogOptions(dialog: RollDialogConfig, config: RollProcessConfi
   // Shift key toggle - only works if event is available
   // This handles: character sheet rolls, Monks TokenBar (has event),
   // but NOT Flash Rolls or Epic Rolls (no event when fast-forwarding)
-  if (areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle")) {
+  if (areMidiKeysPressed(config.event, "RollToggle")) {
     dialog.configure = !dialog.configure;
   }
 
@@ -744,8 +750,8 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
         config.midiOptions.workflow = Workflow.getWorkflow(config.midiOptions.workflowId);
       }
       const abilityResult = await computeAbilityAdvantage(this, rollType, abilityId ?? "", config.midiOptions);
-      config.advantage = abilityResult.advantage;
-      config.disadvantage = abilityResult.disadvantage;
+      config.advantage = abilityResult.tracker.hasAdvantage;
+      config.disadvantage = abilityResult.tracker.hasDisadvantage;
     }
 
     type = rollType === "save" ? "SavingThrow" : "AbilityCheck";
@@ -765,10 +771,13 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
 
       const workflow = config.midiOptions?.workflow;
       const midiOptions = config.midiOptions;
+      const rollModifierTracker = new RollModifierTracker();
       preRollAbilityHookId = Hooks.once(`dnd5e.preRoll${type}`, (configData, dialogData, _message) => {
         // Merge midiOptions to ensure fastForward and other values are preserved even if dnd5e creates an empty midiOptions object
-        configData.midiOptions = foundry.utils.mergeObject(configData.midiOptions ?? {}, midiOptions ?? {}) as MidiOptions;
-        abilityModifiers = applyRollModifiers(this, abilityModifierFlags, configData, dialogData, { workflow });
+        // Use shallow merge to avoid stack overflow from circular references in workflow
+        configData.midiOptions = { ...(configData.midiOptions ?? {}), ...(midiOptions ?? {}) };
+        computeRollModifiers(this, abilityModifierFlags, rollModifierTracker, { workflow });
+        abilityModifiers = applyRollModifiers(rollModifierTracker, configData, dialogData);
         if (abilityModifiers.autoFail) {
           success = false;
         }
@@ -884,12 +893,12 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
 
     // Process advantage/disadvantage flags using centralized helper
     // For death saves, source actor is the caster (if any workflow exists)
-    const result = await computeAdvantageFlags(this, advantageFlags, {
+    const tracker = await computeAdvantageFlags(this, advantageFlags, {
       ...config.midiOptions,
       sourceActor: config.midiOptions.workflow?.actor
     });
-    config.advantage = result.advantage;
-    config.disadvantage = result.disadvantage;
+    config.advantage = tracker.hasAdvantage;
+    config.disadvantage = tracker.hasDisadvantage;
   }
 
   let advantage = config.advantage;
@@ -917,6 +926,7 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
   const blindSaveRoll = configSettings.rollSavesBlind.includes("all") || configSettings.rollSavesBlind.includes("death");
   const actor = this;
 
+  const rollModifierTracker = new RollModifierTracker();
   const preRollHookId = Hooks.once("dnd5e.preRollDeathSave", (configData, dialogData, messageData) => {
     // Apply roll modifiers (auto-fail/auto-success) for death saves
     const modifierFlags: RollModifierFlags = {
@@ -925,7 +935,8 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
       maxFlags: [],
       minFlags: []
     };
-    const modifiers = applyRollModifiers(actor, modifierFlags, configData, dialogData, { failValue: 2, successValue: 19 });
+    computeRollModifiers(actor, modifierFlags, rollModifierTracker);
+    const modifiers = applyRollModifiers(rollModifierTracker, configData, dialogData, { failValue: 2, successValue: 19 });
     const { autoFail, autoSuccess } = modifiers;
 
     for (let roll of configData.rolls ?? []) {
@@ -981,263 +992,10 @@ export function procAutoFailSkill(actor: Actor.Implementation, skillId?: string)
   return false;
 }
 
-export interface RollModifierFlags {
-  failFlags: string[];
-  successFlags: string[];
-  maxFlags: string[];
-  minFlags: string[];
-}
+export async function computeAbilityAdvantage(actor: Actor.Implementation, rollType: string, abilityId: string, options: MidiOptions, tracker?: RollModifierTracker): Promise<{ tracker: RollModifierTracker, magicResistance: boolean, magicVulnerability: boolean }> {
+  // Create RollModifierTracker if not provided (will be discarded by caller if they don't need attribution)
+  tracker = tracker ?? new RollModifierTracker();
 
-export interface RollModifierResult {
-  autoFail: boolean;
-  autoSuccess: boolean;
-  max: number | undefined;
-  min: number | undefined;
-}
-
-// Interface for advantage/disadvantage flag configuration
-export interface AdvantageFlags {
-  advantageFlags: string[];
-  disadvantageFlags: string[];
-  systemRollModeFields: string[];
-  // Actor noAdvantage/noDisadvantage flags (prevent advantage/disadvantage on actor's own rolls)
-  noAdvantageFlags?: string[];
-  noDisadvantageFlags?: string[];
-  // Source actor grants flags (checked on workflow.actor, e.g., caster)
-  sourceAdvantageFlags?: string[];
-  sourceDisadvantageFlags?: string[];
-  sourceNoAdvantageFlags?: string[];
-  sourceNoDisadvantageFlags?: string[];
-  // Track deprecated flags for warning generation
-  deprecatedFlags?: Set<string>;
-}
-
-// Helper to get flag path with midi-qol prefix
-function midiFlag(flag: string): string {
-  return `flags.midi-qol.${flag}`;
-}
-
-// Helper to emit deprecation warning for deprecated midi-qol flags
-function emitDeprecatedFlagWarning(flag: string): void {
-  // Map deprecated flag to new flag name
-  const newFlag = flag
-    .replace("advantage.ability.save.", "advantage.save.")
-    .replace("advantage.ability.check.", "advantage.check.")
-    .replace("disadvantage.ability.save.", "disadvantage.save.")
-    .replace("disadvantage.ability.check.", "disadvantage.check.");
-
-  foundry.utils.logCompatibilityWarning(
-    `midi-qol | The flag "flags.midi-qol.${flag}" is deprecated. Use "flags.midi-qol.${newFlag}" instead.`,
-    { since: "13.0.38", until: "14", once: true }
-  );
-}
-
-// Centralized function for processing advantage/disadvantage flags
-// Handles both actor flags and source actor grants flags
-// Returns { advantage, disadvantage } without modifying the passed options
-async function computeAdvantageFlags(actor: Actor.Implementation, flags: AdvantageFlags, options: MidiOptions): Promise<{ advantage: boolean, disadvantage: boolean }> {
-  let advantageCount = options.advantage ? 1 : 0;
-  let disadvantageCount = options.disadvantage ? 1 : 0;
-
-  const conditionData = createConditionData({
-    workflow: options.workflow,
-    target: tokenForActor(actor),
-    actor,
-    item: options.item ?? options.itemUuid ?? options.saveItem ?? options.saveItemUuid
-  });
-
-  // Check actor's advantage flags
-  for (const flag of flags.advantageFlags) {
-    if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-      // Emit deprecation warning if this is a deprecated flag
-      if (flags.deprecatedFlags?.has(flag)) {
-        emitDeprecatedFlagWarning(flag);
-      }
-      advantageCount++;
-      break;
-    }
-  }
-
-  // Check actor's disadvantage flags
-  for (const flag of flags.disadvantageFlags) {
-    if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-      // Emit deprecation warning if this is a deprecated flag
-      if (flags.deprecatedFlags?.has(flag)) {
-        emitDeprecatedFlagWarning(flag);
-      }
-      disadvantageCount++;
-      break;
-    }
-  }
-
-  // Check source actor grants flags (e.g., caster granting advantage/disadvantage on saves)
-  // Use explicit sourceActor if provided, otherwise fall back to workflow.actor for backward compatibility
-  const sourceActor = options.sourceActor ?? options.workflow?.actor;
-  const sourceToken = options.sourceToken ?? (sourceActor ? tokenForActor(sourceActor) : undefined);
-  let advantageSuppressed = false;
-  let disadvantageSuppressed = false;
-
-  // Check actor's noAdvantage flags (actor prevents their own advantage)
-  if (flags.noAdvantageFlags?.length) {
-    for (const flag of flags.noAdvantageFlags) {
-      if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-        advantageSuppressed = true;
-        break;
-      }
-    }
-  }
-
-  // Check actor's noDisadvantage flags (actor prevents their own disadvantage)
-  if (flags.noDisadvantageFlags?.length) {
-    for (const flag of flags.noDisadvantageFlags) {
-      if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-        disadvantageSuppressed = true;
-        break;
-      }
-    }
-  }
-
-  if (sourceActor) {
-    const sourceConditionData = createConditionData({
-      workflow: options.workflow,
-      target: tokenForActor(actor),
-      actor: sourceActor,
-      token: sourceToken,
-      item: options.item ?? options.itemUuid ?? options.saveItem ?? options.saveItemUuid
-    });
-
-    // Source grants advantage
-    if (flags.sourceAdvantageFlags?.length) {
-      for (const flag of flags.sourceAdvantageFlags) {
-        if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          advantageCount++;
-          break;
-        }
-      }
-    }
-
-    // Source grants disadvantage
-    if (flags.sourceDisadvantageFlags?.length) {
-      for (const flag of flags.sourceDisadvantageFlags) {
-        if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          disadvantageCount++;
-          break;
-        }
-      }
-    }
-
-    // Source suppresses advantage (grants.noAdvantage)
-    if (flags.sourceNoAdvantageFlags?.length) {
-      for (const flag of flags.sourceNoAdvantageFlags) {
-        if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          advantageSuppressed = true;
-          break;
-        }
-      }
-    }
-
-    // Source suppresses disadvantage (grants.noDisadvantage)
-    if (flags.sourceNoDisadvantageFlags?.length) {
-      for (const flag of flags.sourceNoDisadvantageFlags) {
-        if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          disadvantageSuppressed = true;
-          break;
-        }
-      }
-    }
-  }
-
-  // Don't use system roll mode fields if advantage/disadvantage is suppressed
-  const effectiveSystemFields = (advantageSuppressed || disadvantageSuppressed) ? [] : flags.systemRollModeFields;
-
-  // Combine midi-qol counts with dnd5e's native roll mode using AdvantageModeField
-  const { advantage: withAdvantage, disadvantage: withDisadvantage } = globalThis.dnd5e.dataModels.fields.AdvantageModeField.combineFields(
-    actor.system,
-    effectiveSystemFields,
-    {
-      advantages: { count: advantageCount, suppressed: advantageSuppressed },
-      disadvantages: { count: disadvantageCount, suppressed: disadvantageSuppressed }
-    }
-  );
-
-  return {
-    advantage: advantageSuppressed ? false : withAdvantage,
-    disadvantage: disadvantageSuppressed ? false : withDisadvantage
-  };
-}
-
-// Evaluate roll modifier flags and apply them to the roll config
-// Returns the modifier results so callers can check autoFail/autoSuccess
-function applyRollModifiers(
-  actor: Actor.Implementation,
-  flags: RollModifierFlags,
-  config: RollProcessConfig,
-  dialog: RollDialogConfig,
-  options?: { workflow?: any, failValue?: number, successValue?: number }
-): RollModifierResult {
-  const failValue = options?.failValue ?? 1;
-  const successValue = options?.successValue ?? 99;
-  const conditionData = createConditionData({ workflow: options?.workflow, actor, target: tokenForActor(actor) });
-
-  // Evaluate modifiers from flags using condition evaluation
-  const autoFail = flags.failFlags.some(flag => {
-    return !!evalAllConditions(actor, midiFlag(flag), conditionData, false);
-  });
-  const autoSuccess = flags.successFlags.some(flag => {
-    return !!evalAllConditions(actor, midiFlag(flag), conditionData, false);
-  });
-
-  let max: number | undefined = Infinity;
-  for (const flag of flags.maxFlags) {
-    const value = evalAllConditions(actor, midiFlag(flag), conditionData, Infinity);
-    if (typeof value !== "boolean" && Number.isNumeric(value)) {
-      max = Math.min(max, Number(value));
-    }
-  }
-
-  let min: number | undefined = -Infinity;
-  for (const flag of flags.minFlags) {
-    const value = evalAllConditions(actor, midiFlag(flag), conditionData, -Infinity);
-    if (typeof value !== "boolean" && Number.isNumeric(value)) {
-      min = Math.max(min, Number(value));
-    }
-  }
-
-  const modifiers = { autoFail, autoSuccess, max, min };
-
-  // Apply modifiers to roll config
-  // dnd5e's roll setup code uses mergeConfigs(baseConfig, config.rolls?.shift()) to build the final roll config
-  // So we need to ensure config.rolls[0].options contains our modifiers for them to be merged in
-  config.rolls ??= [];
-  if (!config.rolls.length) {
-    config.rolls.push({ options: {} });
-  }
-
-  if (autoFail) {
-    dialog.configure = false;
-    // For auto-fail: replace with a simple d20 roll capped at failValue
-    config.rolls = [{ options: { maximum: failValue }, parts: [] }];
-  } else if (autoSuccess) {
-    dialog.configure = false;
-    // For auto-success: replace with a simple d20 roll with minimum successValue
-    config.rolls = [{ options: { minimum: successValue }, parts: [] }];
-  } else {
-    // Apply max/min modifiers to each roll
-    for (const roll of config.rolls) {
-      roll.options ??= {};
-      if (max !== undefined) {
-        roll.options.maximum = Math.min(roll.options.maximum ?? Infinity, max);
-      }
-      if (min !== undefined) {
-        roll.options.minimum = Math.max(roll.options.minimum ?? -Infinity, min);
-      }
-    }
-  }
-
-  return modifiers;
-}
-
-export async function computeAbilityAdvantage(actor: Actor.Implementation, rollType: string, abilityId: string, options: MidiOptions): Promise<{ advantage: boolean, disadvantage: boolean, magicResistance: boolean, magicVulnerability: boolean }> {
   // Create a copy of relevant options to avoid modifying the original
   const effectiveOptions = { ...options };
   let magicResistance = false;
@@ -1246,8 +1004,12 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
   // Check magic resistance/vulnerability for magic saves first using centralized function
   if (rollType === "save" && options.isMagicSave) {
     const magicCheck = await checkMagicResistanceAndVulnerability(actor, abilityId);
-    if (magicCheck.advantage) effectiveOptions.advantage = true;
-    if (magicCheck.disadvantage) effectiveOptions.disadvantage = true;
+    if (magicCheck.advantage) {
+      tracker.addAdvantage("magicResistance", "Magic Resistance");
+    }
+    if (magicCheck.disadvantage) {
+      tracker.addDisadvantage("magicVulnerability", "Magic Vulnerability");
+    }
     magicResistance = magicCheck.magicResistance;
     magicVulnerability = magicCheck.magicVulnerability;
   }
@@ -1304,14 +1066,15 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
   }
 
   // For saves/checks, source actor is the caster (workflow.actor)
-  const result = await computeAdvantageFlags(actor, abilityFlags, {
+  // Pass tracker to be populated with attribution
+  await computeAdvantageFlags(actor, abilityFlags, {
     ...effectiveOptions,
     sourceActor: effectiveOptions.workflow?.actor
-  });
-  return { ...result, magicResistance, magicVulnerability };
+  }, tracker);
+  return { tracker: tracker, magicResistance, magicVulnerability };
 }
 
-export async function computeSkillAdvantage(actor: Actor.Implementation, skillId: string, options: MidiOptions): Promise<{ advantage: boolean, disadvantage: boolean }> {
+export async function computeSkillAdvantage(actor: Actor.Implementation, skillId: string, options: MidiOptions, tracker?: RollModifierTracker): Promise<RollModifierTracker> {
   // @ts-expect-error no dnd5e-types
   const abilityId = actor.system?.skills?.[skillId]?.ability ?? "";
 
@@ -1379,13 +1142,16 @@ export async function computeSkillAdvantage(actor: Actor.Implementation, skillId
   }
 
   // For skills, source actor is the caster (workflow.actor) if any
-  return computeAdvantageFlags(actor, skillFlags, {
+  // Create RollModifierTracker if not provided
+  tracker ??= new RollModifierTracker();
+  await computeAdvantageFlags(actor, skillFlags, {
     ...options,
     sourceActor: options.workflow?.actor
-  });
+  }, tracker);
+  return tracker;
 }
 
-export async function computeToolAdvantage(actor: Actor.Implementation, toolId: string, abilityId: string, options: MidiOptions): Promise<{ advantage: boolean, disadvantage: boolean }> {
+export async function computeToolAdvantage(actor: Actor.Implementation, toolId: string, abilityId: string, options: MidiOptions, tracker?: RollModifierTracker): Promise<RollModifierTracker> {
   // Build tool advantage/disadvantage flags
   const toolFlags: AdvantageFlags = {
     advantageFlags: [
@@ -1438,10 +1204,13 @@ export async function computeToolAdvantage(actor: Actor.Implementation, toolId: 
   }
 
   // For tools, source actor is the caster (workflow.actor) if any
-  return computeAdvantageFlags(actor, toolFlags, {
+  // Create RollModifierTracker if not provided
+  tracker ??= new RollModifierTracker();
+  await computeAdvantageFlags(actor, toolFlags, {
     ...options,
     sourceActor: options.workflow?.actor
-  });
+  }, tracker);
+  return tracker;
 }
 
 let debouncedATRefresh = foundry.utils.debounce(_midiATIRefresh, 30);
@@ -1577,6 +1346,7 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
   libWrapper.register(MODULE_ID, "dnd5e.applications.actor.BaseActorSheet.prototype._prepareItem", _prepareItem, "WRAPPER");
+
   // Setup document classes with both dnd5e's DependentDocumentMixin (for flag-based tracking)
   // and MidiDependentDocumentMixin (for our registry-based tracking of Actor/Item parents)
   // This allows dnd5e.dependentOn flag to work for all parent types
@@ -2101,9 +1871,9 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
       if (!config.midiOptions.workflow && config.midiOptions.workflowId) {
         config.midiOptions.workflow = Workflow.getWorkflow(config.midiOptions.workflowId);
       }
-      const toolResult = await computeToolAdvantage(this, config.tool ?? "", config.ability ?? "", config.midiOptions);
-      config.advantage = toolResult.advantage;
-      config.disadvantage = toolResult.disadvantage;
+      const toolRollModifierTracker = await computeToolAdvantage(this, config.tool ?? "", config.ability ?? "", config.midiOptions);
+      config.advantage = toolRollModifierTracker.hasAdvantage;
+      config.disadvantage = toolRollModifierTracker.hasDisadvantage;
     }
 
     // Build roll modifier flags for tool checks
@@ -2131,11 +1901,13 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     let toolModifiers: RollModifierResult | undefined;
     const workflow = config.midiOptions?.workflow;
     const midiOptions = config.midiOptions;
+    const rollModifierTracker = new RollModifierTracker();
 
     preRollHookId = Hooks.once("dnd5e.preRollTool", (configData, dialogData, messageData) => {
       configData.midiOptions ??= midiOptions;
       // Apply roll modifiers (auto-fail, min, max)
-      toolModifiers = applyRollModifiers(this, toolModifierFlags, configData, dialogData, { workflow });
+      computeRollModifiers(this, toolModifierFlags, rollModifierTracker, { workflow });
+      toolModifiers = applyRollModifiers(rollModifierTracker, configData, dialogData);
       setRollDialogOptions(dialogData, configData);
       message = messageData;
     });

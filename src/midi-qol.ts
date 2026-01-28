@@ -17,6 +17,7 @@ import { showUndoWorkflowApp } from './module/apps/UndoWorkflow.js';
 import { TroubleShooter } from './module/apps/TroubleShooter.js';
 import { TargetConfirmationDialog } from './module/apps/TargetConfirmation.js';
 import { MidiAttackActivity, setupAttackActivity } from './module/activities/AttackActivity.js';
+import { RollModifierTracker } from './module/lib/RollModifierTracker.js';
 import { ChatLogMidi } from './module/ChatClasses/ChatLogMidi.js';
 
 export function getCanvas(): foundry.canvas.Canvas | undefined {
@@ -722,6 +723,7 @@ function setupMidiQOLApi() {
     addConcentrationDependent,
     addRollTo,
     addUndoChatMessage,
+    RollModifierTracker,
     applyTokenDamage,
     canSee,
     canSense,

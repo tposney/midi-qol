@@ -919,6 +919,7 @@ async function createReverseDamageCard(data: {
   sender: string,
   charName: string,
   actorId: string,
+  actorUuid?: string,
   forceApply: boolean,
   updateOptions: any,
 }): Promise<string[]> {
@@ -1437,6 +1438,7 @@ async function createPlayerDamageCard(data: {
   sender: string;
   charName: string;
   actorId: string;
+  actorUuid?: string;
   forceApply: boolean;
   updateOptions: any;
 }): Promise<string | undefined> {
@@ -1489,7 +1491,7 @@ async function createPlayerDamageCard(data: {
       speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: game.user?.id, actor: data.actorId },
       content: content,
       // whisper: ChatMessage.getWhisperRecipients("players").filter(u => u.active).map(u => u.id),
-      flags: { "midi-qol": { "undoDamage": prepareDamageListToJSON(tokenDataList), playerDamageCard: true } }
+      flags: { "midi-qol": { "undoDamage": prepareDamageListToJSON(tokenDataList), playerDamageCard: true, actorUuid: data.actorUuid } }
     };
 
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
@@ -1507,6 +1509,7 @@ async function createGMReverseDamageCard(
     flagTags: any,
     forceApply: boolean,
     updateOptions: any,
+    actorUuid?: string,
   },
   doHits: boolean = true
 ): Promise<string | undefined> {
@@ -1533,7 +1536,7 @@ async function createGMReverseDamageCard(
       speaker: { scene: getCanvas()?.scene?.id, alias: game.user?.name },
       content: content,
       whisper: ChatMessage.getWhisperRecipients("GM").filter(u => (u as User).active).map(u => u.id),
-      flags: { [MODULE_ID]: { "undoDamage": prepareDamageListToJSON(tokenDataList) } }
+      flags: { [MODULE_ID]: { "undoDamage": prepareDamageListToJSON(tokenDataList), actorUuid: data.actorUuid } }
     };
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
     if (data.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? {}, data.flagTags);

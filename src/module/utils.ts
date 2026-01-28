@@ -1,7 +1,7 @@
 import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC } from "./settings.js";
 import { log } from "../midi-qol.js";
-import { AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
+import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { concentrationCheckItemDisplayName, midiFlagTypes } from "./Hooks.js";
@@ -351,6 +351,7 @@ export async function applyTokenDamage(
     autoApplyDamage: configSettings.autoApplyDamage,
     sender: game.user?.name,
     actorId: workflow?.actor?.id,
+    actorUuid: workflow?.actor?.uuid,
     charName: workflow?.token?.name ?? workflow?.actor?.name ?? game.user?.name,
     damageList: prepareDamageListToJSON(Object.values(allDamages)),
     chatCardUuid: workflow?.itemCardUuid,
@@ -526,6 +527,14 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       let calcDamageOptions: CalcDamageOptions = {
         invertHealing: true,
         multiplier: challengeModeScale,
+        // Always initialize ignore to ensure dnd5e calculateDamage processes traits correctly
+        ignore: {
+          immunity: new Set<string>(),
+          resistance: new Set<string>(),
+          vulnerability: new Set<string>(),
+          modification: new Set<string>(),
+          absorption: new Set<string>(),
+        },
         midi: {
           challengeModeAR,
           applyDamage: true,
@@ -636,6 +645,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
       actorId: workflow.actor.id,
+      actorUuid: workflow.actor.uuid,
       charName: workflow.token?.name ?? workflow.actor.name ?? game.user?.name,
       damageList: prepareDamageListToJSON(workflow.damageList),
       chatCardUuid: workflow.itemCardUuid,
@@ -2173,7 +2183,6 @@ export type MidiOptions = {
     checkReaction?: boolean;
     none?: boolean;
   };
-  resetAdvantage?: boolean;
   rollAs?: Actor.Implementation | null;
   rollOptions?: WorkflowRollOptions;
   saveItem?: Item.Implementation;
@@ -4507,7 +4516,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
             const spell = activity.cachedSpell;
             // Get the first usable activity - this is what spell.use() will use
             const spellActivity = spell.system?.activities?.filter((a: any) => a.canUse)?.[0];
-            reactionCondition = `(${reactionCondition ?? "true"}) && (${spellActivity.reactionCondition ?? "true"})`;
+            reactionCondition = `(${reactionCondition || "true"}) && (${spellActivity.reactionCondition || "true"})`;
           }
           // @ts-expect-error no dnd5e-types
           if (item.type === "spell") {
@@ -5317,6 +5326,7 @@ export function createConditionData(data: {
   extraData?: any,
   activity?: Activity,
   tokenUuid?: string,
+  targetUuid?: string,
   options?: any | undefined,
   token?: TokenOrDocument // pretty sure this never actually gets passed but eh
 }) {
@@ -5352,7 +5362,7 @@ export function createConditionData(data: {
           get system() { return theTargetActor?.system },
           ...theTargetActor?.getRollData()
         };
-        rollData.targetUuid = theTarget.document.uuid
+        rollData.targetUuid = data.targetUuid ?? theTarget.document.uuid
         rollData.targetId = theTarget.id;
         rollData.targetActorUuid = theTargetActor?.uuid;
         rollData.targetActorId = theTargetActor?.id;
@@ -5922,6 +5932,80 @@ function hookCall(entry: Hooks.HookedFunction, args: any[]) {
   }
 }
 
+/**
+ * Localization map for attribution types
+ */
+const attributionTypeLocalization: Record<string, string> = {
+  "ADV": "midi-qol.AttribADV",
+  "DIS": "midi-qol.AttribDIS",
+  "NOADV": "midi-qol.AttribNOADV",
+  "NODIS": "midi-qol.AttribNODIS",
+  "CRIT": "midi-qol.AttribCRIT",
+  "NOCRIT": "midi-qol.AttribNOCRIT",
+  "FUMBLE": "midi-qol.AttribFUMBLE",
+  "NOFUMBLE": "midi-qol.AttribNOFUMBLE",
+  "SUCCESS": "midi-qol.AttribSUCCESS",
+  "FAIL": "midi-qol.AttribFAIL",
+  "MIN": "midi-qol.AttribMIN",
+  "MAX": "midi-qol.AttribMAX"
+};
+
+/**
+ * Convert an AttributionMap to an array of AttributionEntry for display.
+ * @param map - The attribution map (type -> source -> displayName)
+ * @returns Array of AttributionEntry objects
+ */
+export function attributionMapToArray(map: AttributionMap): AttributionEntry[] {
+  const entries: AttributionEntry[] = [];
+  for (const [type, sources] of Object.entries(map)) {
+    if (sources) {
+      for (const [source, displayName] of Object.entries(sources)) {
+        entries.push({ type: type as AttributionType, source, displayName });
+      }
+    }
+  }
+  return entries;
+}
+
+/**
+ * Add structured attribution to a roll for tooltip display.
+ * @param roll - The roll to add attribution to
+ * @param attributions - AttributionMap (type -> source -> displayName)
+ */
+export function addAttribution(roll: Roll, attributions: AttributionMap) {
+  if (attributions && Object.keys(attributions).length > 0) {
+    // Convert map to array and store on roll options for tooltip rendering
+    const entries = attributionMapToArray(attributions);
+    foundry.utils.setProperty(roll, "options.attributions", entries);
+  }
+}
+
+/**
+ * Render an attribution tooltip HTML from an AttributionMap.
+ * @param attributions - The attribution map (type -> source -> displayName)
+ * @param title - Optional title for the tooltip (e.g., "Advantage" or "Disadvantage")
+ * @returns Promise resolving to the rendered HTML string
+ */
+export async function renderAttributionTooltip(attributions: AttributionMap, title?: string): Promise<string> {
+  const entries = attributionMapToArray(attributions);
+  if (entries.length === 0) return "";
+
+  const localizedEntries = entries.map(attr => ({
+    ...attr,
+    localizedType: i18n(attributionTypeLocalization[attr.type] ?? attr.type)
+  }));
+
+  return foundry.applications.handlebars.renderTemplate(
+    "modules/midi-qol/templates/attribution-tooltip.html",
+    { attributions: localizedEntries, title }
+  );
+}
+
+/**
+ * Legacy function for backwards compatibility.
+ * Converts Set-based attribution to structured format and adds to roll.
+ * @deprecated Use addAttribution with AttributionEntry[] instead
+ */
 export function addAdvAttribution(roll: Roll, advAttribution: Set<string>) {
   // <section class="tooltip-part">
   let advHtml: string = "";
@@ -5951,11 +6035,19 @@ export function addAdvAttribution(roll: Roll, advAttribution: Set<string>) {
 
 function getTooltip(roll: Roll, options: any = {}) {
   const parts = roll.dice?.map(d => d.getTooltipData()) ?? [];
-  // parts.tooltipFormula = options?.tooltipFormula ?? false;
-  // parts.formula = roll.formula;
+
+  // Prepare structured attributions with localized type names
+  // @ts-expect-error options.attributions
+  const rawAttributions: AttributionEntry[] = roll.options?.attributions ?? [];
+  const attributions = rawAttributions.map(attr => ({
+    ...attr,
+    localizedType: i18n(attributionTypeLocalization[attr.type] ?? attr.type)
+  }));
+
   const templateData = {
     // @ts-expect-error
     advTooltip: roll.options?.advTooltip,
+    attributions,
     tooltipFormula: options?.tooltipFormula ?? false,
     formula: roll.formula,
     parts
@@ -5995,6 +6087,29 @@ export function midiRenderFormulaRoll(roll: Roll, options?: any) {
 
 export async function midiRenderTemplateRoll(roll: Roll | undefined, template: string, options?: any) {
   if (!roll) return "";
+  // @ts-expect-error no dnd5e-types - advantageMode: 1 = advantage, -1 = disadvantage, 0 = normal
+  const advantageMode = roll.options?.advantageMode;
+  let advantageModeStr: string | undefined;
+  if (advantageMode === 1) advantageModeStr = "advantage";
+  else if (advantageMode === -1) advantageModeStr = "disadvantage";
+
+  // Generate attribution tooltip content if there are attributions
+  let attributionTooltip = "";
+  // @ts-expect-error options.attributions
+  const rawAttributions: AttributionEntry[] = roll.options?.attributions ?? [];
+  if (rawAttributions.length > 0) {
+    const attributions = rawAttributions.map(attr => ({
+      ...attr,
+      localizedType: i18n(attributionTypeLocalization[attr.type] ?? attr.type)
+    }));
+    const title = advantageModeStr === "advantage" ? i18n("DND5E.Advantage") :
+                  advantageModeStr === "disadvantage" ? i18n("DND5E.Disadvantage") : "";
+    attributionTooltip = await foundry.applications.handlebars.renderTemplate(
+      "modules/midi-qol/templates/attribution-tooltip.html",
+      { attributions, title }
+    );
+  }
+
   const chatData = {
     formula: roll.formula,
     user: game.user?.id,
@@ -6002,7 +6117,9 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
     tooltipFormula: options?.tooltipFormula ?? false,
     // @ts-expect-error no dnd5e-types
     flavor: options?.flavor ?? roll.options?.flavor,
-    total: (roll.total !== undefined) ? Math.round((roll.total) * 100) / 100 : "???"
+    total: (roll.total !== undefined) ? Math.round((roll.total) * 100) / 100 : "???",
+    advantageMode: advantageModeStr,
+    attributionTooltip
   };
   return foundry.applications.handlebars.renderTemplate(template, chatData);
 }
@@ -7737,7 +7854,7 @@ export function getCheckRollModeFor(abilityId: string) {
   return configSettings.autoCheckSaves !== "allShow" ? "gmroll" : "public";
 }
 
-export function areMidiKeysPressed(event: AugmentedEvent, action: string) {
+export function areMidiKeysPressed(event: AugmentedEvent | undefined, action: string) {
   if (!event) return false;
   const activeModifiers = {};
   const KeyBoardManager = game.keyboard;

@@ -105,6 +105,26 @@ export let saveToChatCard: boolean = false;
 export let targetConfirmation: typeof defaultTargetConfirmationSettings;
 export let useWeakReferences: boolean = false;
 
+/**
+ * Syncs the chatlog-prune module's "enabled" setting with midi-qol's pruneChatLog setting.
+ * Only runs if chatlog-prune module is active.
+ */
+export function syncChatlogPruneSetting(enabled: boolean): void {
+  const chatlogPruneModule = game.modules.get("chatlog-prune");
+  if (!chatlogPruneModule?.active) return;
+
+  try {
+    // @ts-expect-error chatlog-prune is an external module
+    const currentSetting = game.settings.get("chatlog-prune", "enabled");
+    if (currentSetting !== enabled) {
+      // @ts-expect-error chatlog-prune is an external module
+      game.settings.set("chatlog-prune", "enabled", enabled);
+    }
+  } catch (err) {
+    console.warn("midi-qol | Failed to sync chatlog-prune enabled setting:", err);
+  }
+}
+
 export const defaultTargetConfirmationSettings = {
   enabled: false,
   always: false,
@@ -208,6 +228,7 @@ class ConfigSettings {
   keepRollStats: boolean = false;
   keyMapping = defaultKeyMapping;
   mergeCardCondensed: boolean = false;
+  addSheetButtons: boolean = true;
   mergeCardMulti: boolean = false;
   mergeCardMultiDamage: boolean = false;
   displayProperties: boolean = true;
@@ -1671,7 +1692,11 @@ export const registerSettings = function () {
     default: true,
     type: Boolean,
     config: true,
-    requiresReload: true
+    requiresReload: true,
+    onChange: (value: boolean) => {
+      pruneChatLog = value;
+      syncChatlogPruneSetting(value);
+    }
   });
 
   game.settings.register("midi-qol", "DebounceInterval", {
@@ -1721,6 +1746,20 @@ export const registerSettings = function () {
     hint: i18n("midi-qol.DependentsExplorer.Hint"),
     type: LaunchDependentsExplorer,
     restricted: true
+  });
+
+  // Hide the Dependents Explorer button for non-GM clients
+  Hooks.on("renderSettingsConfig", (app, html) => {
+    if (game.user?.isGM) return;
+    const element = html instanceof HTMLElement ? html : html[0];
+    if (!element) return;
+    const menuButton = element.querySelector('[data-key="midi-qol.dependentsExplorer"]');
+    if (menuButton) {
+      const formGroup = menuButton.closest(".form-group");
+      if (formGroup) {
+        (formGroup as HTMLElement).style.display = "none";
+      }
+    }
   });
 
   game.settings.registerMenu("midi-qol", "troubleShooter", {

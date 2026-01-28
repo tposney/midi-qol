@@ -1,0 +1,13 @@
+<div class="midi-attribution-tooltip">
+  {{#if title}}
+  <div class="attribution-header">{{title}}</div>
+  {{/if}}
+  <ul class="attribution-list">
+    {{#each attributions}}
+    <li class="attribution-item">
+      <span class="attribution-type attribution-type-{{type}}">{{localizedType}}</span>
+      <span class="attribution-source">{{displayName}}</span>
+    </li>
+    {{/each}}
+  </ul>
+</div>

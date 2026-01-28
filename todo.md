@@ -107,3 +107,35 @@ Investigate adding auto-completion support for midi-qol functions in the Foundry
 - Look at how other modules might have implemented similar functionality
 - Consider what functions/methods should be included in the completion list
 - Explore providing parameter hints and documentation in the completions
+
+---
+
+## Workflow as Persisted Document
+
+Investigate making Workflow a Foundry Document (DataModel) that can be persisted to the database, with its lifecycle tied to the associated chat card.
+
+### Current State
+
+- Workflow is a plain TypeScript class, not a DataModel
+- Workflow state is partially saved to chat card flags for recovery
+- Workflow instances are stored in a static Map (`Workflow.workflows`)
+- When the page reloads, workflows must be reconstructed from chat card flags
+
+### Benefits of Document-based Workflow
+
+- **Persistence**: Full workflow state automatically persisted to database
+- **Lifecycle Management**: Workflow deleted when chat card is deleted (no orphaned data)
+- **Schema Validation**: Use Foundry's field types (including `AdvantageModeField` for advantage tracking)
+- **Active Effects Integration**: Could potentially allow effects to target workflow fields directly
+- **Undo/History**: Better integration with Foundry's document update system
+- **Multi-user Sync**: Automatic synchronization across connected clients
+
+### Investigation Needed
+
+- Determine the best document type to use (embedded document on ChatMessage? Custom document type?)
+- Evaluate performance implications of persisting workflow state on every change. Possibly throttle updates.
+- Design schema that captures all necessary workflow state
+- Handle migration of existing workflows/chat cards?
+- Consider what state should be persisted vs. computed on demand
+- Investigate how deletion cascade would work (chat card deletion → workflow deletion)
+- Look at how dnd5e's roll configurations use DataModel patterns

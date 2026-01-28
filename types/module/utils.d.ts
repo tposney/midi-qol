@@ -310,11 +310,12 @@ export declare function createConditionData(data: {
     extraData?: any;
     activity?: any;
     tokenUuid?: string | undefined;
+    targetUuid?: string | undefined;
     options?: any | undefined;
 }): any;
 export declare function evalAllConditionsAsync(actorRef: Token | TokenDocument | Actor | string, flag: string, conditionData: any, errorReturn?: any): Promise<any>;
 export declare function evalAllConditions(actorRef: Token | TokenDocument | Actor | string, flag: string, conditionData: any, errorReturn?: any): any;
-export declare function evalCondition(condition: string, conditionData: any, options?: any): any | Promise<any>;
+export declare function evalCondition(condition: string | number | boolean | undefined, conditionData: any, options?: any): any | Promise<any>;
 export declare function computeTemplateShapeDistance(templateDocument: MeasuredTemplateDocument): {
     shape: string;
     distance: number;
