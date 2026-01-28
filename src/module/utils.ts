@@ -5981,6 +5981,18 @@ export function addAttribution(roll: Roll, attributions: AttributionMap) {
 }
 
 /**
+ * Get the localized title for an advantage mode (Advantage/Disadvantage/Normal).
+ * @param hasAdvantage - Whether there is effective advantage
+ * @param hasDisadvantage - Whether there is effective disadvantage
+ * @returns Localized title string
+ */
+export function getAdvantageModeTitle(hasAdvantage: boolean | undefined, hasDisadvantage: boolean | undefined): string {
+  if (hasAdvantage && !hasDisadvantage) return i18n("DND5E.Advantage");
+  if (hasDisadvantage && !hasAdvantage) return i18n("DND5E.Disadvantage");
+  return i18n("DND5E.Normal");
+}
+
+/**
  * Render an attribution tooltip HTML from an AttributionMap.
  * @param attributions - The attribution map (type -> source -> displayName)
  * @param title - Optional title for the tooltip (e.g., "Advantage" or "Disadvantage")
@@ -5988,13 +6000,13 @@ export function addAttribution(roll: Roll, attributions: AttributionMap) {
  */
 export async function renderAttributionTooltip(attributions: AttributionMap, title?: string): Promise<string> {
   const entries = attributionMapToArray(attributions);
-  if (entries.length === 0) return "";
 
   const localizedEntries = entries.map(attr => ({
     ...attr,
     localizedType: i18n(attributionTypeLocalization[attr.type] ?? attr.type)
   }));
 
+  // Always render the tooltip, even if empty (will show title or "Normal" state)
   return foundry.applications.handlebars.renderTemplate(
     "modules/midi-qol/templates/attribution-tooltip.html",
     { attributions: localizedEntries, title }

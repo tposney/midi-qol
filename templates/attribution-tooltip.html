@@ -2,6 +2,7 @@
   {{#if title}}
   <div class="attribution-header">{{title}}</div>
   {{/if}}
+  {{#if attributions.length}}
   <ul class="attribution-list">
     {{#each attributions}}
     <li class="attribution-item">
@@ -10,4 +11,5 @@
     </li>
     {{/each}}
   </ul>
+  {{/if}}
 </div>

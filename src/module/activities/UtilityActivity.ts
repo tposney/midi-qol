@@ -81,6 +81,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
 
     async _triggerSubsequentActions(config, results) {
     }
+    
     async rollFormula(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) {
       if (debugEnabled > 0)
         warn("UtilityActivity | rollFormula | Called", config, dialog, message);

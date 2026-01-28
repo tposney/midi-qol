@@ -12,6 +12,9 @@ export type AdvantageAttributionType = 'ADV' | 'DIS' | 'NOADV' | 'NODIS' | 'CRIT
 /** Attribution map: type -> source -> displayName */
 export type AdvantageAttributionMap = Partial<Record<AdvantageAttributionType, Record<string, string>>>;
 
+/** Callback type for adding attributions */
+type AttributionCallback = (type: AdvantageAttributionType, source: string, displayName: string) => void;
+
 /** Options for RollModifierTracker constructor/reset */
 export interface RollModifierTrackerOptions {
   /** Legacy Set format: "${type}:${source}" - reference to external Set */
@@ -25,6 +28,13 @@ export interface RollModifierFlags {
   successFlags: string[];
   maxFlags: string[];
   minFlags: string[];
+}
+
+export interface CriticalModifierFlags {
+  criticalFlags: string[];
+  noCriticalFlags: string[];
+  fumbleFlags: string[];
+  noFumbleFlags: string[];
 }
 
 export interface RollModifierResult {
@@ -70,22 +80,403 @@ function emitDeprecatedFlagWarning(flag: string): void {
   );
 }
 
+// ─────────────────────────────────────────────────────────────────
+// AdvantageDisadvantageTracker Class
+// ─────────────────────────────────────────────────────────────────
+
+type AdvantageType = 'ADV' | 'DIS';
+type SuppressionType = 'NOADV' | 'NODIS';
+
+/**
+ * Tracks a single advantage or disadvantage state with attribution.
+ */
+export class AdvantageDisadvantageTracker {
+  #active = false;
+  #suppressed = false;
+  #override = false;
+
+  readonly #type: AdvantageType;
+  readonly #suppressionType: SuppressionType;
+  readonly #addAttribution: AttributionCallback;
+
+  constructor(type: AdvantageType, addAttribution: AttributionCallback) {
+    this.#type = type;
+    this.#suppressionType = type === 'ADV' ? 'NOADV' : 'NODIS';
+    this.#addAttribution = addAttribution;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // State Inspection
+  // ─────────────────────────────────────────────────────────────────
+
+  /** Get complete state snapshot */
+  get get(): Readonly<{ active: boolean; suppressed: boolean; override: boolean }> {
+    return { active: this.#active, suppressed: this.#suppressed, override: this.#override };
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Query Methods
+  // ─────────────────────────────────────────────────────────────────
+
+  /** Whether at least one source has been added */
+  get isAdded(): boolean { return this.#active; }
+
+  /** Whether suppressed by a blocking flag */
+  get isSuppressed(): boolean { return this.#suppressed; }
+
+  /** Whether override is set (bypasses suppression) */
+  get hasOverride(): boolean { return this.#override; }
+
+  /**
+   * Computed final state.
+   * Returns true if active and not suppressed (or if override is set).
+   * Returns undefined if not active or if suppressed.
+   */
+  get isActive(): true | undefined {
+    if (this.#override) return this.#active || undefined;
+    if (this.#suppressed) return undefined;
+    return this.#active || undefined;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Mutation Methods
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Add a source of advantage/disadvantage.
+   * @param source - Optional source identifier for attribution
+   * @param displayName - Optional human-readable display name
+   */
+  add(source?: string, displayName?: string): void {
+    this.#active = true;
+    if (source !== undefined) {
+      this.#addAttribution(this.#type, source, displayName ?? source);
+    }
+  }
+
+  /**
+   * Clear active state.
+   * Preserves suppression state.
+   */
+  clear(): void {
+    this.#active = false;
+  }
+
+  /**
+   * Suppress this modifier.
+   * When suppressed, isActive returns undefined.
+   * @param source - Optional source identifier for attribution
+   * @param displayName - Optional human-readable display name
+   */
+  suppress(source?: string, displayName?: string): void {
+    this.#suppressed = true;
+    if (source !== undefined) {
+      this.#addAttribution(this.#suppressionType, source, displayName ?? source);
+    }
+  }
+
+  /**
+   * Force this modifier, bypassing suppression.
+   * @param source - Optional source identifier for attribution
+   * @param displayName - Optional human-readable display name
+   */
+  setOverride(source?: string, displayName?: string): void {
+    this.#active = true;
+    this.#override = true;
+    if (source !== undefined) {
+      this.#addAttribution(this.#type, source, displayName ?? source);
+    }
+  }
+
+  /**
+   * Clear override state.
+   */
+  clearOverride(): void {
+    this.#override = false;
+  }
+
+  /**
+   * Reset all state to initial values.
+   */
+  reset(): void {
+    this.#active = false;
+    this.#suppressed = false;
+    this.#override = false;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// CriticalFumbleTracker Class
+// ─────────────────────────────────────────────────────────────────
+
+type CritType = 'CRIT' | 'FUMBLE';
+type NoCritType = 'NOCRIT' | 'NOFUMBLE';
+
+/**
+ * Tracks critical or fumble state with attribution.
+ */
+export class CriticalFumbleTracker {
+  #natural = false;
+  #forced = false;
+  #suppressed = false;
+  #override: boolean | undefined = undefined;
+
+  readonly #type: CritType;
+  readonly #noType: NoCritType;
+  readonly #addAttribution: AttributionCallback;
+
+  constructor(type: CritType, addAttribution: AttributionCallback) {
+    this.#type = type;
+    this.#noType = type === 'CRIT' ? 'NOCRIT' : 'NOFUMBLE';
+    this.#addAttribution = addAttribution;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // State Inspection
+  // ─────────────────────────────────────────────────────────────────
+
+  /** Get complete state snapshot */
+  get get(): Readonly<{ natural: boolean; forced: boolean; suppressed: boolean; override: boolean | undefined }> {
+    return {
+      natural: this.#natural,
+      forced: this.#forced,
+      suppressed: this.#suppressed,
+      override: this.#override
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Query Methods
+  // ─────────────────────────────────────────────────────────────────
+
+  /** Whether natural crit/fumble occurred from dice */
+  get isNatural(): boolean { return this.#natural; }
+
+  /** Whether forced by a flag */
+  get isForced(): boolean { return this.#forced; }
+
+  /** Whether suppressed by a blocking flag */
+  get isSuppressed(): boolean { return this.#suppressed; }
+
+  /** Whether override is set */
+  get hasOverride(): boolean { return this.#override !== undefined; }
+
+  /** Get override value (undefined if not set) */
+  get overrideValue(): boolean | undefined { return this.#override; }
+
+  /**
+   * Computed final state.
+   * Priority: override > suppressed > (natural || forced)
+   */
+  get isActive(): boolean {
+    if (this.#override !== undefined) return this.#override;
+    if (this.#suppressed) return false;
+    return this.#natural || this.#forced;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Mutation Methods
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Set natural crit/fumble from dice roll.
+   * @param source - Source identifier for attribution
+   * @param displayName - Human-readable display name
+   */
+  setNatural(source: string, displayName?: string): void {
+    this.#natural = true;
+    this.#addAttribution(this.#type, source, displayName ?? source);
+  }
+
+  /**
+   * Force crit/fumble from a flag.
+   * @param source - Source identifier for attribution
+   * @param displayName - Human-readable display name
+   */
+  force(source: string, displayName?: string): void {
+    this.#forced = true;
+    this.#addAttribution(this.#type, source, displayName ?? source);
+  }
+
+  /**
+   * Suppress (prevent) crit/fumble.
+   * @param source - Source identifier for attribution
+   * @param displayName - Human-readable display name
+   */
+  suppress(source: string, displayName?: string): void {
+    this.#suppressed = true;
+    this.#addAttribution(this.#noType, source, displayName ?? source);
+  }
+
+  /**
+   * Override crit/fumble state absolutely.
+   * @param value - true to force, false to prevent
+   * @param source - Source identifier for attribution
+   * @param displayName - Human-readable display name
+   */
+  setOverride(value: boolean, source: string, displayName?: string): void {
+    this.#override = value;
+    this.#addAttribution(value ? this.#type : this.#noType, source, displayName ?? source);
+  }
+
+  /**
+   * Reset all state to initial values.
+   */
+  reset(): void {
+    this.#natural = false;
+    this.#forced = false;
+    this.#suppressed = false;
+    this.#override = undefined;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// RollValueTracker Class
+// ─────────────────────────────────────────────────────────────────
+
+/**
+ * Tracks roll value modifiers: auto-fail, auto-success, min, max.
+ */
+export class RollValueTracker {
+  #autoFail = false;
+  #autoSuccess = false;
+  #min = -Infinity;
+  #max = Infinity;
+
+  readonly #addAttribution: AttributionCallback;
+
+  constructor(addAttribution: AttributionCallback) {
+    this.#addAttribution = addAttribution;
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // State Inspection
+  // ─────────────────────────────────────────────────────────────────
+
+  /** Get complete state snapshot */
+  get get(): Readonly<{ willFail: boolean; willSucceed: boolean; minValue: number; maxValue: number }> {
+    return {
+      willFail: this.#autoFail,
+      willSucceed: this.#autoSuccess,
+      minValue: this.#min,
+      maxValue: this.#max
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Query Methods
+  // ─────────────────────────────────────────────────────────────────
+
+  get willFail(): boolean { return this.#autoFail; }
+  get willSucceed(): boolean { return this.#autoSuccess; }
+  get minValue(): number { return this.#min; }
+  get maxValue(): number { return this.#max; }
+  get hasMin(): boolean { return this.#min > -Infinity; }
+  get hasMax(): boolean { return this.#max < Infinity; }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Mutation Methods
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Set auto-fail for this roll.
+   * @param source - Source identifier for attribution
+   * @param displayName - Human-readable display name
+   */
+  fail(source: string, displayName?: string): void {
+    this.#autoFail = true;
+    this.#addAttribution('FAIL', source, displayName ?? source);
+  }
+
+  /**
+   * Set auto-success for this roll.
+   * @param source - Source identifier for attribution
+   * @param displayName - Human-readable display name
+   */
+  succeed(source: string, displayName?: string): void {
+    this.#autoSuccess = true;
+    this.#addAttribution('SUCCESS', source, displayName ?? source);
+  }
+
+  /**
+   * Set minimum roll value (only if higher than current).
+   * @param value - Minimum roll value
+   * @param source - Source identifier for attribution
+   * @param displayName - Human-readable display name
+   */
+  min(value: number, source: string, displayName?: string): void {
+    if (value > this.#min) {
+      this.#min = value;
+      this.#addAttribution('MIN', source, displayName ?? `${source} (${value})`);
+    }
+  }
+
+  /**
+   * Force set minimum roll value, ignoring current value.
+   * @param value - Minimum roll value
+   * @param source - Source identifier for attribution
+   * @param displayName - Human-readable display name
+   */
+  forceMin(value: number, source: string, displayName?: string): void {
+    this.#min = value;
+    this.#addAttribution('MIN', source, displayName ?? `${source} (${value})`);
+  }
+
+  /**
+   * Set maximum roll value (only if lower than current).
+   * @param value - Maximum roll value
+   * @param source - Source identifier for attribution
+   * @param displayName - Human-readable display name
+   */
+  max(value: number, source: string, displayName?: string): void {
+    if (value < this.#max) {
+      this.#max = value;
+      this.#addAttribution('MAX', source, displayName ?? `${source} (${value})`);
+    }
+  }
+
+  /**
+   * Force set maximum roll value, ignoring current value.
+   * @param value - Maximum roll value
+   * @param source - Source identifier for attribution
+   * @param displayName - Human-readable display name
+   */
+  forceMax(value: number, source: string, displayName?: string): void {
+    this.#max = value;
+    this.#addAttribution('MAX', source, displayName ?? `${source} (${value})`);
+  }
+
+  /**
+   * Reset all state to initial values.
+   */
+  reset(): void {
+    this.#autoFail = false;
+    this.#autoSuccess = false;
+    this.#min = -Infinity;
+    this.#max = Infinity;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// RollModifierTracker Class
+// ─────────────────────────────────────────────────────────────────
+
 export class RollModifierTracker {
 
   // ─────────────────────────────────────────────────────────────────
-  // Private State
+  // Sub-trackers
   // ─────────────────────────────────────────────────────────────────
 
-  #advantage: true | undefined = undefined;
-  #disadvantage: true | undefined = undefined;
-  #advantageSuppressed: boolean = false;
-  #disadvantageSuppressed: boolean = false;
-  #advantageOverride: boolean = false;
-  #disadvantageOverride: boolean = false;
-  #autoFail: boolean = false;
-  #autoSuccess: boolean = false;
-  #min: number = -Infinity;
-  #max: number = Infinity;
+  readonly advantage: AdvantageDisadvantageTracker;
+  readonly disadvantage: AdvantageDisadvantageTracker;
+  readonly critical: CriticalFumbleTracker;
+  readonly fumble: CriticalFumbleTracker;
+  readonly modifiers: RollValueTracker;
+
+  // ─────────────────────────────────────────────────────────────────
+  // Attribution
+  // ─────────────────────────────────────────────────────────────────
+
   #attribution: AdvantageAttributionMap = {};
   /** Legacy Set format: "${type}:${source}" - reference to external Set */
   #legacyAttribution: Set<string>;
@@ -95,6 +486,14 @@ export class RollModifierTracker {
   constructor(options?: RollModifierTrackerOptions) {
     this.#legacyAttribution = options?.legacyAttribution ?? new Set();
     this.#advReminderAttribution = options?.advReminderAttribution ?? new Set();
+
+    // Create sub-trackers with bound attribution method
+    const addAttr = this.addAttribution.bind(this);
+    this.advantage = new AdvantageDisadvantageTracker('ADV', addAttr);
+    this.disadvantage = new AdvantageDisadvantageTracker('DIS', addAttr);
+    this.critical = new CriticalFumbleTracker('CRIT', addAttr);
+    this.fumble = new CriticalFumbleTracker('FUMBLE', addAttr);
+    this.modifiers = new RollValueTracker(addAttr);
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -108,352 +507,68 @@ export class RollModifierTracker {
    * @param displayName - Human-readable display name
    */
   addAttribution(type: AdvantageAttributionType, source: string, displayName: string): void {
-    // Structured attribution
     this.#attribution[type] ??= {};
     this.#attribution[type]![source] = displayName;
-    // Legacy Set formats for backward compatibility
     this.#legacyAttribution.add(`${type}:${source}`);
     this.#advReminderAttribution.add(`${type}:${source}`);
   }
 
-  /**
-   * Get the attribution map.
-   */
+  /** Get the attribution map */
   get attribution(): AdvantageAttributionMap {
     return this.#attribution;
   }
 
-  /**
-   * Get legacy Set format: "${type}:${displayName}"
-   */
+  /** Get legacy Set format: "${type}:${displayName}" */
   get legacyAttribution(): Set<string> {
     return this.#legacyAttribution;
   }
 
-  /**
-   * Get legacy Set format for adv-reminder: "${type}:${source}"
-   */
+  /** Get legacy Set format for adv-reminder: "${type}:${source}" */
   get advReminderAttribution(): Set<string> {
     return this.#advReminderAttribution;
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // Advantage Methods
+  // Combined Mode
   // ─────────────────────────────────────────────────────────────────
 
   /**
-   * Add a source of advantage.
-   * @param source - Optional source identifier for attribution
-   * @param displayName - Optional human-readable display name
+   * Get the combined advantage/disadvantage mode.
+   * @returns ADV_MODE.ADVANTAGE, ADV_MODE.DISADVANTAGE, or ADV_MODE.NORMAL
    */
-  addAdvantage(source?: string, displayName?: string): void {
-    this.#advantage = true;
-    if (source !== undefined) {
-      this.addAttribution('ADV', source, displayName ?? source);
-    }
-  }
-
-  /**
-   * Clear advantage.
-   * Preserves suppression state.
-   */
-  clearAdvantage(): void {
-    this.#advantage = undefined;
-  }
-
-  /**
-   * Suppress advantage.
-   * When suppressed, hasAdvantage returns undefined (helps with dnd5e key processing).
-   * @param source - Optional source identifier for attribution
-   * @param displayName - Optional human-readable display name
-   */
-  suppressAdvantage(source?: string, displayName?: string): void {
-    this.#advantageSuppressed = true;
-    if (source !== undefined) {
-      this.addAttribution('NOADV', source, displayName ?? source);
-    }
-  }
-
-  /**
-   * Check if advantage is suppressed.
-   */
-  get advantageSuppressed(): boolean {
-    return this.#advantageSuppressed;
-  }
-
-  /**
-   * Check if there's effective advantage.
-   * Returns true if advantage has been added and is not suppressed (or if override is set).
-   * Returns undefined if never assigned or if suppressed.
-   */
-  get hasAdvantage(): true | undefined {
-    // Override bypasses suppression
-    if (this.#advantageOverride) return this.#advantage;
-    if (this.#advantageSuppressed) return undefined;
-    return this.#advantage;
-  }
-
-  // ─────────────────────────────────────────────────────────────────
-  // Disadvantage Methods
-  // ─────────────────────────────────────────────────────────────────
-
-  /**
-   * Add a source of disadvantage.
-   * @param source - Optional source identifier for attribution
-   * @param displayName - Optional human-readable display name
-   */
-  addDisadvantage(source?: string, displayName?: string): void {
-    this.#disadvantage = true;
-    if (source !== undefined) {
-      this.addAttribution('DIS', source, displayName ?? source);
-    }
-  }
-
-  /**
-   * Clear disadvantage.
-   * Preserves suppression state.
-   */
-  clearDisadvantage(): void {
-    this.#disadvantage = undefined;
-  }
-
-  /**
-   * Suppress disadvantage.
-   * When suppressed, hasDisadvantage returns undefined (helps with dnd5e key processing).
-   * @param source - Optional source identifier for attribution
-   * @param displayName - Optional human-readable display name
-   */
-  suppressDisadvantage(source?: string, displayName?: string): void {
-    this.#disadvantageSuppressed = true;
-    if (source !== undefined) {
-      this.addAttribution('NODIS', source, displayName ?? source);
-    }
-  }
-
-  /**
-   * Check if disadvantage is suppressed.
-   */
-  get disadvantageSuppressed(): boolean {
-    return this.#disadvantageSuppressed;
-  }
-
-  /**
-   * Check if there's effective disadvantage.
-   * Returns true if disadvantage has been added and is not suppressed (or if override is set).
-   * Returns undefined if never assigned or if suppressed.
-   */
-  get hasDisadvantage(): true | undefined {
-    // Override bypasses suppression
-    if (this.#disadvantageOverride) return this.#disadvantage;
-    if (this.#disadvantageSuppressed) return undefined;
-    return this.#disadvantage;
-  }
-
-  // ─────────────────────────────────────────────────────────────────
-  // Override Methods
-  // ─────────────────────────────────────────────────────────────────
-
-  /**
-   * Force advantage, bypassing suppression.
-   * Sets advantage to true and marks it as an override.
-   * @param source - Optional source identifier for attribution
-   * @param displayName - Optional human-readable display name
-   */
-  setAdvantageOverride(source?: string, displayName?: string): void {
-    this.#advantage = true;
-    this.#advantageOverride = true;
-    if (source !== undefined) {
-      this.addAttribution('ADV', source, displayName ?? source);
-    }
-  }
-
-
-  /**
-   * Force disadvantage, bypassing suppression.
-   * Sets disadvantage to true and marks it as an override.
-   * @param source - Optional source identifier for attribution
-   * @param displayName - Optional human-readable display name
-   */
-  setDisadvantageOverride(source?: string, displayName?: string): void {
-    this.#disadvantage = true;
-    this.#disadvantageOverride = true;
-    if (source !== undefined) {
-      this.addAttribution('DIS', source, displayName ?? source);
-    }
-  }
-
-  /**
-   * Force a specific mode, ignoring suppression.
-   * @param mode -1 = disadvantage, 0 = normal, 1 = advantage
-   */
-  setOverride(mode: -1 | 0 | 1): void {
+  get advantageMode(): number {
     // @ts-expect-error CONFIG.Dice.D20Roll not typed
-    const ADV_MODE: { DISADVANTAGE, NORMAL, ADVANTAGE } = CONFIG.Dice.D20Roll.ADV_MODE;
-
-    if (mode === ADV_MODE.ADVANTAGE) {
-      this.setAdvantageOverride();
-    } else if (mode === ADV_MODE.DISADVANTAGE) {
-      this.setDisadvantageOverride();
-    }
-    // mode === 0 (NORMAL) clears both overrides
-    if (mode === ADV_MODE.NORMAL) {
-      this.#advantageOverride = false;
-      this.#disadvantageOverride = false;
-    }
-  }
-
-  /**
-   * Check if advantage override is active.
-   */
-  get advantageOverride(): boolean {
-    return this.#advantageOverride;
-  }
-
-  /**
-   * Check if disadvantage override is active.
-   */
-  get disadvantageOverride(): boolean {
-    return this.#disadvantageOverride;
-  }
-
-  /**
-   * Check if any override is active.
-   */
-  get hasOverride(): boolean {
-    return this.#advantageOverride || this.#disadvantageOverride;
-  }
-
-  get mode(): number {
-    // @ts-expect-error CONFIG.Dice.D20Roll not typed
-    const ADV_MODE: { DISADVANTAGE, NORMAL, ADVANTAGE } = CONFIG.Dice.D20Roll.ADV_MODE;
-    if (this.#advantageOverride && !this.#disadvantageOverride) return ADV_MODE.ADVANTAGE;
-    if (this.#disadvantageOverride && !this.#advantageOverride) return ADV_MODE.DISADVANTAGE;
-    if (this.#advantageOverride && this.#disadvantageOverride) return ADV_MODE.NORMAL;
-    if (this.hasAdvantage && !this.hasDisadvantage) return ADV_MODE.ADVANTAGE;
-    if (this.hasDisadvantage && !this.hasAdvantage) return ADV_MODE.DISADVANTAGE;
+    const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
+    if (this.advantage.hasOverride && !this.disadvantage.hasOverride) return ADV_MODE.ADVANTAGE;
+    if (this.disadvantage.hasOverride && !this.advantage.hasOverride) return ADV_MODE.DISADVANTAGE;
+    if (this.advantage.hasOverride && this.disadvantage.hasOverride) return ADV_MODE.NORMAL;
+    if (this.advantage.isActive && !this.disadvantage.isActive) return ADV_MODE.ADVANTAGE;
+    if (this.disadvantage.isActive && !this.advantage.isActive) return ADV_MODE.DISADVANTAGE;
     return ADV_MODE.NORMAL;
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // Auto-Fail/Success Methods
+  // Convenience Getters (delegate to sub-trackers)
   // ─────────────────────────────────────────────────────────────────
 
-  /**
-   * Set auto-fail for this roll.
-   * @param source - Source identifier for attribution
-   * @param displayName - Human-readable display name
-   */
-  setAutoFail(source: string, displayName?: string): void {
-    this.#autoFail = true;
-    this.addAttribution('FAIL', source, displayName ?? source);
+  /** Check if there's effective advantage */
+  get hasAdvantage(): true | undefined {
+    return this.advantage.isActive;
   }
 
-  /**
-   * Check if auto-fail is set.
-   */
-  get autoFail(): boolean {
-    return this.#autoFail;
+  /** Check if there's effective disadvantage */
+  get hasDisadvantage(): true | undefined {
+    return this.disadvantage.isActive;
   }
 
-  /**
-   * Set auto-success for this roll.
-   * @param source - Source identifier for attribution
-   * @param displayName - Human-readable display name
-   */
-  setAutoSuccess(source: string, displayName?: string): void {
-    this.#autoSuccess = true;
-    this.addAttribution('SUCCESS', source, displayName ?? source);
+  /** Computed final critical state */
+  get isCritical(): boolean {
+    return this.critical.isActive;
   }
 
-  /**
-   * Check if auto-success is set.
-   */
-  get autoSuccess(): boolean {
-    return this.#autoSuccess;
-  }
-
-  // ─────────────────────────────────────────────────────────────────
-  // Min/Max Methods
-  // ─────────────────────────────────────────────────────────────────
-
-  /**
-   * Set minimum roll value.
-   * Only updates if newMin is higher than current min.
-   * @param value - Minimum roll value
-   * @param source - Source identifier for attribution
-   * @param displayName - Human-readable display name
-   */
-  setMin(value: number, source: string, displayName?: string): void {
-    if (value > this.#min) {
-      this.#min = value;
-      this.addAttribution('MIN', source, displayName ?? `${source} (${value})`);
-    }
-  }
-
-  /**
-   * Get minimum roll value.
-   * Returns -Infinity if not set.
-   */
-  get min(): number {
-    return this.#min;
-  }
-
-  /**
-   * Check if a minimum is set.
-   */
-  get hasMin(): boolean {
-    return this.#min > -Infinity;
-  }
-
-  /**
-   * Force set minimum roll value, ignoring current value.
-   * @param value - Minimum roll value
-   * @param source - Source identifier for attribution
-   * @param displayName - Human-readable display name
-   */
-  overrideMin(value: number, source: string, displayName?: string): void {
-    this.#min = value;
-    this.addAttribution('MIN', source, displayName ?? `${source} (${value})`);
-  }
-
-  /**
-   * Set maximum roll value.
-   * Only updates if newMax is lower than current max.
-   * @param value - Maximum roll value
-   * @param source - Source identifier for attribution
-   * @param displayName - Human-readable display name
-   */
-  setMax(value: number, source: string, displayName?: string): void {
-    if (value < this.#max) {
-      this.#max = value;
-      this.addAttribution('MAX', source, displayName ?? `${source} (${value})`);
-    }
-  }
-
-  /**
-   * Get maximum roll value.
-   * Returns Infinity if not set.
-   */
-  get max(): number {
-    return this.#max;
-  }
-
-  /**
-   * Force set maximum roll value, ignoring current value.
-   * @param value - Maximum roll value
-   * @param source - Source identifier for attribution
-   * @param displayName - Human-readable display name
-   */
-  overrideMax(value: number, source: string, displayName?: string): void {
-    this.#max = value;
-    this.addAttribution('MAX', source, displayName ?? `${source} (${value})`);
-  }
-
-  /**
-   * Check if a maximum is set.
-   */
-  get hasMax(): boolean {
-    return this.#max < Infinity;
+  /** Computed final fumble state */
+  get isFumble(): boolean {
+    return this.fumble.isActive;
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -465,17 +580,13 @@ export class RollModifierTracker {
    * @param options - Optional new references for legacy Sets
    */
   reset(options?: RollModifierTrackerOptions): void {
-    this.#advantage = undefined;
-    this.#disadvantage = undefined;
-    this.#advantageSuppressed = false;
-    this.#disadvantageSuppressed = false;
-    this.#advantageOverride = false;
-    this.#disadvantageOverride = false;
-    this.#autoFail = false;
-    this.#autoSuccess = false;
-    this.#min = -Infinity;
-    this.#max = Infinity;
+    this.advantage.reset();
+    this.disadvantage.reset();
+    this.critical.reset();
+    this.fumble.reset();
+    this.modifiers.reset();
     this.#attribution = {};
+
     // Handle legacy attribution Set
     if (options?.legacyAttribution) {
       if (options.legacyAttribution !== this.#legacyAttribution) {
@@ -485,6 +596,7 @@ export class RollModifierTracker {
     } else {
       this.#legacyAttribution.clear();
     }
+
     // Handle advReminder attribution Set
     if (options?.advReminderAttribution) {
       if (options.advReminderAttribution !== this.#advReminderAttribution) {
@@ -495,6 +607,7 @@ export class RollModifierTracker {
       this.#advReminderAttribution.clear();
     }
   }
+
   processKeys(config: RollProcessConfig = {}) {
     if (!config?.event) return;
     //@ts-expect-error - game.system.utils not typed
@@ -505,11 +618,11 @@ export class RollModifierTracker {
       advantage: areKeysPressed(config.event, "skipDialogAdvantage"),
       disadvantage: areKeysPressed(config.event, "skipDialogDisadvantage")
     };
+
     // Special case handling so that shift+alt+ctl will force a normal roll
     if (keys.advantage && keys.disadvantage && keys.normal) {
-      console.error("Overriding advantage/disadvantage");
-      this.setAdvantageOverride("forcedKeyPress", i18n("midi-qol.ForcedKeyPress"));
-      this.setDisadvantageOverride("forcedKeyPress", i18n("midi-qol.ForcedKeyPress"));
+      this.advantage.setOverride("forcedKeyPress", i18n("midi-qol.ForcedKeyPress"));
+      this.disadvantage.setOverride("forcedKeyPress", i18n("midi-qol.ForcedKeyPress"));
       config.advantage = false;
       config.disadvantage = false;
       config.event = undefined;
@@ -517,19 +630,18 @@ export class RollModifierTracker {
       if (keys.disadvantage) {
         const source = keys.normal ? "forcedKeyPress" : "keyPress";
         if (keys.normal)
-          this.setDisadvantageOverride(source, i18n("midi-qol.KeyPress"));
+          this.disadvantage.setOverride(source, i18n("midi-qol.KeyPress"));
         else
-          this.addDisadvantage(source, i18n("midi-qol.KeyPress"));
+          this.disadvantage.add(source, i18n("midi-qol.KeyPress"));
       }
       if (keys.advantage) {
         const source = keys.normal ? "forcedKeyPress" : "keyPress";
         if (keys.normal)
-          this.setAdvantageOverride(source, i18n("midi-qol.ForcedKeyPress"));
+          this.advantage.setOverride(source, i18n("midi-qol.ForcedKeyPress"));
         else
-          this.addAdvantage(source, i18n("midi-qol.KeyPress"));
+          this.advantage.add(source, i18n("midi-qol.KeyPress"));
       }
     }
-
   }
 }
 
@@ -548,10 +660,10 @@ export async function computeAdvantageFlags(
 
   // Seed with any pre-existing advantage/disadvantage from options
   if (options.advantage) {
-    tracker.addAdvantage("options", "Options");
+    tracker.advantage.add("options", "Options");
   }
   if (options.disadvantage) {
-    tracker.addDisadvantage("options", "Options");
+    tracker.disadvantage.add("options", "Options");
   }
 
   const conditionData = createConditionData({
@@ -568,7 +680,7 @@ export async function computeAdvantageFlags(
         emitDeprecatedFlagWarning(flag);
       }
       const source = flag.replace(/^advantage\./, '');
-      tracker.addAdvantage(source, flag);
+      tracker.advantage.add(source, flag);
       break;
     }
   }
@@ -580,7 +692,7 @@ export async function computeAdvantageFlags(
         emitDeprecatedFlagWarning(flag);
       }
       const source = flag.replace(/^disadvantage\./, '');
-      tracker.addDisadvantage(source, flag);
+      tracker.disadvantage.add(source, flag);
       break;
     }
   }
@@ -593,7 +705,7 @@ export async function computeAdvantageFlags(
   if (flags.noAdvantageFlags?.length) {
     for (const flag of flags.noAdvantageFlags) {
       if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-        tracker.suppressAdvantage(flag, flag);
+        tracker.advantage.suppress(flag, flag);
         break;
       }
     }
@@ -603,7 +715,7 @@ export async function computeAdvantageFlags(
   if (flags.noDisadvantageFlags?.length) {
     for (const flag of flags.noDisadvantageFlags) {
       if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-        tracker.suppressDisadvantage(flag, flag);
+        tracker.disadvantage.suppress(flag, flag);
         break;
       }
     }
@@ -623,7 +735,7 @@ export async function computeAdvantageFlags(
     if (flags.sourceAdvantageFlags?.length) {
       for (const flag of flags.sourceAdvantageFlags) {
         if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.addAdvantage(`${flag} ${sourceName}`, `${flag} ${sourceName}`);
+          tracker.advantage.add(`${flag} ${sourceName}`, `${flag} ${sourceName}`);
           break;
         }
       }
@@ -632,7 +744,7 @@ export async function computeAdvantageFlags(
     if (flags.sourceDisadvantageFlags?.length) {
       for (const flag of flags.sourceDisadvantageFlags) {
         if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.addDisadvantage(`${flag} ${sourceName}`, `${flag} ${sourceName}`);
+          tracker.disadvantage.add(`${flag} ${sourceName}`, `${flag} ${sourceName}`);
           break;
         }
       }
@@ -641,7 +753,7 @@ export async function computeAdvantageFlags(
     if (flags.sourceNoAdvantageFlags?.length) {
       for (const flag of flags.sourceNoAdvantageFlags) {
         if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.suppressAdvantage(`${flag} ${sourceName}`, `${flag} ${sourceName}`);
+          tracker.advantage.suppress(`${flag} ${sourceName}`, `${flag} ${sourceName}`);
           break;
         }
       }
@@ -650,7 +762,7 @@ export async function computeAdvantageFlags(
     if (flags.sourceNoDisadvantageFlags?.length) {
       for (const flag of flags.sourceNoDisadvantageFlags) {
         if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.suppressDisadvantage(`${flag} ${sourceName}`, `${flag} ${sourceName}`);
+          tracker.disadvantage.suppress(`${flag} ${sourceName}`, `${flag} ${sourceName}`);
           break;
         }
       }
@@ -662,9 +774,9 @@ export async function computeAdvantageFlags(
     for (const field of flags.systemRollModeFields) {
       const rollMode = foundry.utils.getProperty(actor.system, field);
       if (rollMode === 1) {
-        tracker.addAdvantage("system.rollMode", "System Roll Mode");
+        tracker.advantage.add("system.rollMode", "System Roll Mode");
       } else if (rollMode === -1) {
-        tracker.addDisadvantage("system.rollMode", "System Roll Mode");
+        tracker.disadvantage.add("system.rollMode", "System Roll Mode");
       }
     }
   }
@@ -692,7 +804,7 @@ export function computeRollModifiers(
   // Evaluate auto-fail flags
   for (const flag of flags.failFlags) {
     if (evalAllConditions(actor, midiFlag(flag), conditionData, false)) {
-      tracker.setAutoFail(flag, flag);
+      tracker.modifiers.fail(flag, flag);
       break;
     }
   }
@@ -700,7 +812,7 @@ export function computeRollModifiers(
   // Evaluate auto-success flags
   for (const flag of flags.successFlags) {
     if (evalAllConditions(actor, midiFlag(flag), conditionData, false)) {
-      tracker.setAutoSuccess(flag, flag);
+      tracker.modifiers.succeed(flag, flag);
       break;
     }
   }
@@ -710,7 +822,7 @@ export function computeRollModifiers(
     const value = evalAllConditions(actor, midiFlag(flag), conditionData, Infinity);
     if (typeof value !== "boolean" && Number.isNumeric(value)) {
       const numValue = Number(value);
-      tracker.setMax(numValue, flag);
+      tracker.modifiers.max(numValue, flag);
     }
   }
 
@@ -719,7 +831,7 @@ export function computeRollModifiers(
     const value = evalAllConditions(actor, midiFlag(flag), conditionData, -Infinity);
     if (typeof value !== "boolean" && Number.isNumeric(value)) {
       const numValue = Number(value);
-      tracker.setMin(numValue, flag);
+      tracker.modifiers.min(numValue, flag);
     }
   }
 }
@@ -744,12 +856,12 @@ export function applyRollModifiers(
   const successValue = options?.successValue ?? 99;
 
   // Get values from tracker
-  const autoFail = tracker.autoFail;
-  const autoSuccess = tracker.autoSuccess;
-  const max = tracker.max;
-  const min = tracker.min;
+  const autoFail = tracker.modifiers.willFail;
+  const autoSuccess = tracker.modifiers.willSucceed;
+  const max = tracker.modifiers.maxValue;
+  const min = tracker.modifiers.minValue;
 
-  const modifiers: RollModifierResult = {
+  const result: RollModifierResult = {
     autoFail,
     autoSuccess,
     max: max === Infinity ? undefined : max,
@@ -780,5 +892,111 @@ export function applyRollModifiers(
     }
   }
 
-  return modifiers;
+  return result;
+}
+
+/**
+ * Evaluate critical/fumble modifier flags and populate the tracker.
+ * Handles actor flags for critical/noCritical/fumble/noFumble.
+ *
+ * @param actor - The actor to evaluate flags for
+ * @param flags - The flags to evaluate
+ * @param tracker - The RollModifierTracker to populate
+ * @param options - Additional options including workflow for condition evaluation
+ */
+export async function computeCriticalModifiers(
+  actor: Actor.Implementation,
+  flags: CriticalModifierFlags,
+  tracker: RollModifierTracker,
+  options?: { workflow?: any, actionType?: string }
+): Promise<void> {
+  const conditionData = createConditionData({ workflow: options?.workflow, actor, target: tokenForActor(actor) });
+
+  // Evaluate critical flags - force critical
+  for (const flag of flags.criticalFlags) {
+    if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
+      tracker.critical.force(flag, flag);
+      break;
+    }
+  }
+
+  // Evaluate noCritical flags - suppress critical
+  for (const flag of flags.noCriticalFlags) {
+    if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
+      tracker.critical.suppress(flag, flag);
+      break;
+    }
+  }
+
+  // Evaluate fumble flags - force fumble
+  for (const flag of flags.fumbleFlags) {
+    if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
+      tracker.fumble.force(flag, flag);
+      break;
+    }
+  }
+
+  // Evaluate noFumble flags - suppress fumble
+  for (const flag of flags.noFumbleFlags) {
+    if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
+      tracker.fumble.suppress(flag, flag);
+      break;
+    }
+  }
+}
+
+/**
+ * Evaluate target grants critical/fumble flags and populate the tracker.
+ * Handles grants.critical, grants.noCritical, grants.fumble, grants.noFumble.
+ *
+ * @param targetActor - The target actor to evaluate grants flags on
+ * @param targetName - Display name for attribution
+ * @param flags - The grants flags to evaluate
+ * @param tracker - The RollModifierTracker to populate
+ * @param options - Additional options including workflow and source actor for condition evaluation
+ */
+export async function computeTargetCriticalModifiers(
+  targetActor: Actor.Implementation,
+  targetName: string,
+  flags: CriticalModifierFlags,
+  tracker: RollModifierTracker,
+  options?: { workflow?: any, sourceActor?: Actor.Implementation }
+): Promise<void> {
+  const conditionData = createConditionData({
+    workflow: options?.workflow,
+    actor: options?.sourceActor,
+    target: tokenForActor(targetActor)
+  });
+
+  // Evaluate grants.critical flags
+  for (const flag of flags.criticalFlags) {
+    if (await evalAllConditionsAsync(targetActor, midiFlag(flag), conditionData, false)) {
+      tracker.critical.force(flag, `${flag} ${targetName}`);
+      break;
+    }
+  }
+
+  // Evaluate grants.noCritical flags
+  for (const flag of flags.noCriticalFlags) {
+    if (await evalAllConditionsAsync(targetActor, midiFlag(flag), conditionData, false)) {
+      tracker.critical.suppress(flag, `${flag} ${targetName}`);
+      break;
+    }
+  }
+
+  // Evaluate grants.fumble flags
+  for (const flag of flags.fumbleFlags) {
+    if (await evalAllConditionsAsync(targetActor, midiFlag(flag), conditionData, false)) {
+      tracker.fumble.force(flag, `${flag} ${targetName}`);
+      break;
+    }
+  }
+
+  // Evaluate grants.noFumble flags
+  for (const flag of flags.noFumbleFlags) {
+    if (await evalAllConditionsAsync(targetActor, midiFlag(flag), conditionData, false)) {
+      tracker.fumble.suppress(flag, `${flag} ${targetName}`);
+      break;
+    }
+  }
 }

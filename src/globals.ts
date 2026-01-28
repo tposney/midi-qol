@@ -1444,6 +1444,7 @@ export type ModuleIntegrationRequests = {
 };
 
 export type SaveDetails = {
+  actorUuid: string;  // UUID of the actor making the save - for reliable tracker lookup
   advantage: boolean | undefined;
   disadvantage: boolean | undefined;
   modifierTracker: RollModifierTracker | undefined;  // RollModifierTracker with attribution tracking

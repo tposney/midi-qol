@@ -193,8 +193,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     }
 
     static #rollAttackAdvantage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      // @ts-expect-error CONFIG.Dice.D20Roll not typed
-      const ADV_MODE: { DISADVANTAGE, NORMAL, ADVANTAGE } = CONFIG.Dice.D20Roll.ADV_MODE;
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
         if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
@@ -215,7 +213,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
         attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
         // Force advantage mode via override (user explicitly chose advantage)
-        workflow.attackRollModifierTracker.setOverride(ADV_MODE.ADVANTAGE);
+        workflow.attackRollModifierTracker.advantage.setOverride();
         attackConfig.midiOptions.advantage = true;
         attackConfig.midiOptions.disadvantage = false;
         workflow.attackAdvAttribution = new Set<string>();
@@ -227,8 +225,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     }
 
     static #rollAttackDisadvantage(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      // @ts-expect-error CONFIG.Dice.D20Roll not typed
-      const ADV_MODE: { DISADVANTAGE, NORMAL, ADVANTAGE } = CONFIG.Dice.D20Roll.ADV_MODE;
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (!message || !workflow || (workflow.currentAction && [workflow.WorkflowState_Abort, workflow.WorkflowState_Completed].includes(workflow.currentAction))) {
         if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
@@ -249,7 +245,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
         attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
         // Force disadvantage mode via override (user explicitly chose disadvantage)
-        workflow.attackRollModifierTracker.setOverride(ADV_MODE.DISADVANTAGE);
+        workflow.attackRollModifierTracker.disadvantage.setOverride();
         attackConfig.midiOptions.advantage = false;
         attackConfig.midiOptions.disadvantage = true;
         workflow.activity = this;

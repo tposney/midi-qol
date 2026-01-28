@@ -769,9 +769,25 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
       // Get modifiers once, use in both hooks
       let abilityModifiers: RollModifierResult | undefined;
 
-      const workflow = config.midiOptions?.workflow;
+      // Try to get workflow from config, falling back to workflowId lookup
+      let workflow = config.midiOptions?.workflow;
+      if (!workflow && config.midiOptions?.workflowId) {
+        workflow = Workflow.getWorkflow(config.midiOptions.workflowId);
+      }
       const midiOptions = config.midiOptions;
-      const rollModifierTracker = new RollModifierTracker();
+      // Try to find existing tracker from workflow's targetSaveDetails by matching actorUuid
+      // This allows hooks called before the roll (e.g., preTargetSave) to modify the tracker
+      let rollModifierTracker: RollModifierTracker | undefined;
+      if (workflow?.targetSaveDetails) {
+        for (const saveDetails of workflow.targetSaveDetails.values()) {
+          if (saveDetails.actorUuid === this.uuid) {
+            rollModifierTracker = saveDetails.modifierTracker;
+            break;
+          }
+        }
+      }
+      // Fall back to creating a new tracker if not found
+      rollModifierTracker ??= new RollModifierTracker();
       preRollAbilityHookId = Hooks.once(`dnd5e.preRoll${type}`, (configData, dialogData, _message) => {
         // Merge midiOptions to ensure fastForward and other values are preserved even if dnd5e creates an empty midiOptions object
         // Use shallow merge to avoid stack overflow from circular references in workflow
@@ -1005,10 +1021,10 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
   if (rollType === "save" && options.isMagicSave) {
     const magicCheck = await checkMagicResistanceAndVulnerability(actor, abilityId);
     if (magicCheck.advantage) {
-      tracker.addAdvantage("magicResistance", "Magic Resistance");
+      tracker.advantage.add("magicResistance", "Magic Resistance");
     }
     if (magicCheck.disadvantage) {
-      tracker.addDisadvantage("magicVulnerability", "Magic Vulnerability");
+      tracker.disadvantage.add("magicVulnerability", "Magic Vulnerability");
     }
     magicResistance = magicCheck.magicResistance;
     magicVulnerability = magicCheck.magicVulnerability;

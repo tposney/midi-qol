@@ -1,10 +1,12 @@
 ### 13.0.40
+* This release includes breaking changes for advantage and disadvantage processing, so don't update just before game time.
+
 **Bug Fixes**
 * Fix for save roll dialog visibility not respecting midi-qol settings (e.g., GM "auto" vs "autoDialog") when `autoFastForwardAbilityRolls` is disabled. The `fastForward` option is now properly merged into the roll configuration.
 * Attack rolls now respect the dnd5e alt/ctl/shift keys. 
   - With alt/ctl **always** adding advantage/disadvantage to the roll in addition to whatever flags were set, but respecting the midi auto fast forward roll setting. 
   - Shift/Shift-alt/Shift-ctl, now skip the configure dialog (mostly, force configuration dialog setting and ammo consumption required still force the dialog to be shown) and **override** adv/disadvantage - ignoring any flags that may have been set.
-  - Note that the dnd5e code processes the shift/alt/ctrl behaviour, except in the one case of alt+ctl+shift which forces the roll to be a normal roll without advantage/disadvantage.
+  - Midi follows dnd5es shift/alt/ctrl behaviour, except in the one case of alt+ctl+shift which forces the roll to be a normal roll without advantage/disadvantage.
 * Improved handling of saves rolled via third-party modules (Flash Rolls, Monks TokenBar, Epic Rolls). Midi-qol now respects each module's own fast forward setting: `bypass-roll-dialog` for Monks TokenBar, `skipRollDialog` for Flash Rolls. Epic Rolls has no specific setting so uses midi's `autoFastForwardAbilityRolls` setting.
 * Fix for empty reaction conditions throwing an error.
 * Fix for an error in processing dependents when a dependent was changed - thanks @Elwin.
@@ -12,20 +14,39 @@
 * Fix for macroActivity not being correctly set when calling macros.
 
 **New Features**
-* First pass of refactoring attack advantage processing. This is a WIP and more changes will be coming.
-  - Pending feedback, the existing advantage/disadvantage tooltip will remain
-* First pass of redoing advantage/disadvantage/critical/fumble attribution for attack rolls. 
-  - Displays adv/dis/grants.advantage, fumble/critical flags, keyPress advantage, auto fail/success/min/max modifiers.
-  - The new attribution is visible by hovering over the info icon next to the Advantage/Disadvantage in the chat card.
-  - The state of the tracked attribution/modifiers applied, is available in workflow.attackRollModifierTracker
-* First pass of adding attribution for saving throws. 
-  - The attribution is available as a tooltip when hovering over the targets name in the save card.
-  - The dice roll tooltip is now tied to the save total on the save card.
 * Reinstated the midi-qol info/attack/damage buttons for core dnd5e sheet. The buttons simply roll an attack or damage roll to chat, without doing any workflow creation. 
   - The buttons are added per activity which have attack/damage/versatile damage.
   - Useful when you just want a player to make an attack/damage roll.
   - Added an info button for each item that rolls the item description to chat.
   - Added a setting to enable/disable the extra buttons in the misc settings.
+* Refactor of advantage/disadvantage/critical/fumble attribution for attack rolls. 
+  - Displays adv/dis/grants.advantage, fumble/critical flags, keyPress advantage, auto fail/success/min/max modifiers.
+  - The new attribution is visible by hovering over the info icon next to the Advantage/Disadvantage in the chat card.
+* Added attribution for saving throws. 
+  - The attribution is available as a tooltip when hovering over the targets name in the save card.
+  - The dice roll tooltip is now tied to the save total on the save card.
+
+**For developers**
+* A significant refactor to advantage/disadvantage/critical/fumble handling via `RollModifierTracker`.
+  - **Breaking** Some changes in the way midiOptions.advantage/workflowOptions.advantage and rollOptions.advantage are treated. I think they are the same but I don't have enough test cases to be sure.
+  - Going forwards I would expect that most of the changes you want to make to advantage are best served via the tracker interface.
+  - **Breaking** Macros/Hooks that want to influence attack roll modifiers should use `workflow.attackRollModifierTracker` or `workflow.tracker` with the new sub-tracker API, or update actor flags before the checking of advantage/disadvantage is complete.
+  - The tracker uses sub-trackers: `advantage`, `disadvantage`, `critical`, `fumble`, `modifiers`.
+  - **API Summary**
+    - `tracker.advantage.add(source, displayName)` - Add advantage source
+    - `tracker.disadvantage.add(source, displayName)` - Add disadvantage source
+    - `tracker.advantage.suppress(source, displayName)` - Suppress advantage
+    - `tracker.critical.force(source, displayName)` - Force critical hit
+    - `tracker.critical.suppress(source, displayName)` - Prevent critical
+    - `tracker.fumble.suppress(source, displayName)` - Prevent fumble
+    - `tracker.modifiers.fail(source, displayName)` - Auto-fail the roll
+    - Query computed state: `tracker.hasAdvantage`, `tracker.hasDisadvantage`, `tracker.isCritical`, `tracker.isFumble`, `tracker.advantageMode`
+    - Query sub-tracker state: `tracker.advantage.isActive`, `tracker.advantage.isSuppressed`, `tracker.critical.isForced`, `tracker.critical.isNatural`, etc.
+    - Get full state snapshot: `tracker.advantage.get` returns `{ active, suppressed, override }`, `tracker.critical.get` returns `{ natural, forced, suppressed, override }`
+  - **Backwards Compatible:** Workflow getters/setters (`workflow.advantage`, `workflow.disadvantage`, `workflow.isCritical`, `workflow.isFumble`, `workflow.noAdvantage`, `workflow.noDisadvantage`) continue to work and delegate to the tracker.
+  - See `docs/RollModifierTracker.md` for full API documentation and examples.
+  - The same tracker model is used to track advantage etc on saving throws and the same roll modifiers are available.
+  * Whilst I have done a lot of testing on this I am sure there will be breaking changes that I had not noticed.
 
 ### 13.0.39
 **Bug Fixes**
