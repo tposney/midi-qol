@@ -1,3 +1,6 @@
+### 13.0.42
+Remove spurious console.error debug for rollAbility
+
 ### 13.0.41
 **Bug Fixes**
 * Fix for not respecting no prompt options in player saves.
