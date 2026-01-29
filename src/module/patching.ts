@@ -200,7 +200,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
       rollMode = CONST.DICE_ROLL_MODES.BLIND;
       game.settings.set("core", "rollMode", CONST.DICE_ROLL_MODES.BLIND);
     }
-    if (config.midiOptions.fastForward) dialog.configure = false;
+    if (dialog.configure === undefined && config.midiOptions.fastForward) dialog.configure = false;
     if (success === undefined) {
       // @ts-expect-error no dnd5e-types
       const abilityId = this.system.skills[skillId]?.ability;
@@ -230,7 +230,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
         if (skillModifiers.autoFail) {
           success = false;
         }
-        setRollDialogOptions(dialogData, configData);
+        setRollDialogOptions(configData, dialogData);
       });
       rollSkillHookId = Hooks.once("dnd5e.postSkillRollConfiguration", (rolls, config, dialog, messageDetails) => {
         // record message configuration details for later display
@@ -348,17 +348,21 @@ function getAdvantageSourceInfo(config: RollProcessConfig): AdvantageSourceInfo 
   const disadvantage = directDisadvantage ?? eventDisadvantage ?? rollsDisadvantage ?? midiDisadvantage;
 
   // Determine if this is from an external module
-  // External = has pre-computed advantage but NO workflowId (not from midi-qol's workflow)
+  // External = has pre-computed advantage, NO workflowId, AND the matching module is active
   const hasWorkflowId = !!config.midiOptions?.workflowId;
-  const hasExternalSource = hasEventAdvantage || hasRolls || (hasDirect && !hasWorkflowId);
+  const hasExternalSource =
+    (hasEventAdvantage && !!installedModules.get("monks-tokenbar"))
+    || (hasRolls && !hasWorkflowId && !!installedModules.get("epic-rolls-5e"))
+    || (hasDirect && !hasWorkflowId && !!installedModules.get("flash-rolls-5e"));
 
   // Determine which module provided the advantage/disadvantage based on how it was passed
+  // Only match a specific module if it is actually active
   let sourceType: AdvantageSourceType = 'none';
-  if (hasEventAdvantage) {
+  if (hasEventAdvantage && installedModules.get("monks-tokenbar")) {
     sourceType = 'monks-tokenbar';  // Monks TokenBar passes event.advantage/disadvantage
-  } else if (hasRolls) {
+  } else if (hasRolls && !hasWorkflowId && installedModules.get("epic-rolls-5e")) {
     sourceType = 'epic-rolls-5e';   // Epic Rolls passes rolls[0].options.advantage/disadvantage
-  } else if (hasDirect && !hasWorkflowId) {
+  } else if (hasDirect && !hasWorkflowId && installedModules.get("flash-rolls-5e")) {
     sourceType = 'flash-rolls-5e';  // Flash Rolls sets config.advantage/disadvantage directly (no workflowId)
   } else if (hasDirect || hasMidiOptions) {
     sourceType = 'midi-qol';        // midi-qol internal (GMAction, character sheet, etc.)
@@ -402,7 +406,7 @@ function getExternalModuleFastForward(sourceInfo: AdvantageSourceInfo): boolean 
   
 }
 
-function setRollDialogOptions(dialog: RollDialogConfig, config: RollProcessConfig) {
+function setRollDialogOptions(config: RollProcessConfig, dialog: RollDialogConfig) {
   dialog.options ??= {};
   //@ts-expect-error
   const ADV_MODE = CONFIG.Dice.D20Roll.ADV_MODE;
@@ -410,7 +414,15 @@ function setRollDialogOptions(dialog: RollDialogConfig, config: RollProcessConfi
   const sourceInfo = getAdvantageSourceInfo(config);
 
   // Determine dialog visibility (whether to show the roll configuration dialog)
-  if (sourceInfo.isExternalModule) {
+  // If dialog.configure was explicitly set by the caller (a boolean, not undefined),
+  // respect that value. This allows macros/code to pass configure: false to skip the
+  // dialog or configure: true to force it, regardless of module settings.
+  // Without this check, midi-qol's own advantage computation (setting config.advantage/
+  // config.disadvantage) can cause getAdvantageSourceInfo to misidentify the roll as
+  // coming from an external module (e.g. Flash Rolls), overriding the caller's intent.
+  if (dialog.configure !== undefined) {
+    // Caller explicitly set dialog.configure — preserve it
+  } else if (sourceInfo.isExternalModule) {
     // External module (Flash Rolls, Monks TokenBar, Epic Rolls): use the module's own fast forward setting
     // Shift key toggle is handled below for modules that pass the event (Monks TokenBar)
     const moduleFastForward = getExternalModuleFastForward(sourceInfo);
@@ -418,7 +430,7 @@ function setRollDialogOptions(dialog: RollDialogConfig, config: RollProcessConfi
   } else {
     // Standard midi-qol flow (character sheet rolls, checkSaves, etc.)
     if (config.midiOptions?.fastForward) dialog.configure = false;
-    if (dialog.configure === undefined && autoFastForwardAbilityRolls) dialog.configure = false;
+    if (autoFastForwardAbilityRolls) dialog.configure = false;
   }
 
   // Shift key toggle - only works if event is available
@@ -797,7 +809,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
         if (abilityModifiers.autoFail) {
           success = false;
         }
-        setRollDialogOptions(dialogData, configData);
+        setRollDialogOptions(configData, dialogData);
       });
 
       rollAbilityHookId = Hooks.once(`dnd5e.post${type}RollConfiguration`, (rolls, configData, dialogData, messageDetails) => {
@@ -962,7 +974,7 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
       if (!autoFail && !autoSuccess && configData.midiOptions?.parts?.length) roll.parts = [...(roll.parts ?? []), ...configData.midiOptions.parts];
       if (blindSaveRoll) roll.options.rollMode = CONST.DICE_ROLL_MODES.BLIND;
     }
-    setRollDialogOptions(dialogData, configData);
+    setRollDialogOptions(configData, dialogData);
     if (blindSaveRoll) messageData.rollMode = CONST.DICE_ROLL_MODES.BLIND;
   });
 
@@ -1874,7 +1886,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     config.midiOptions ??= {};
     const chatMessage = message.create;
     message.create = false;
-    if (autoFastForwardAbilityRolls) dialog.configure = false;
+    if (dialog.configure === undefined && autoFastForwardAbilityRolls) dialog.configure = false;
 
     let hasPreComputedAdvantage = false;
     if (!config.midiOptions.ignorePreComputedAdvantage) {
@@ -1924,7 +1936,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
       // Apply roll modifiers (auto-fail, min, max)
       computeRollModifiers(this, toolModifierFlags, rollModifierTracker, { workflow });
       toolModifiers = applyRollModifiers(rollModifierTracker, configData, dialogData);
-      setRollDialogOptions(dialogData, configData);
+      setRollDialogOptions(configData, dialogData);
       message = messageData;
     });
 

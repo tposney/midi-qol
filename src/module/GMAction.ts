@@ -787,6 +787,7 @@ async function rollAbility(data: {
     create?: boolean;
     rollMode?: string;
     itemId: string;
+    workflowId?: string;
   };
   advantage?: boolean;
   disadvantage?: boolean;
@@ -811,6 +812,7 @@ async function rollAbility(data: {
   if (data.tool) config.tool = data.tool
   if (data.proficiency) config.prof = data.proficiency;
   let dialog: AnyMutableObject = { configure: !data.options?.fastForward };
+  console.error(`GMAction.rollAbility | ${actor.name} request=${data.request} fastForward=${data.options?.fastForward} dialog.configure=${dialog.configure} midiOptions.workflowId=${data.options?.workflowId}`);
   let message: AnyMutableObject = { create: data.options?.chatMessage ?? data.options?.create, rollMode: data.options?.rollMode };
   if (data.request === "tool") {
     const requestedTool = data.tool;

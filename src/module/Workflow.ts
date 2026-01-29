@@ -6102,7 +6102,6 @@ return {
               });
             } else {
               let config: AnyMutableObject = {
-                configure: false,
                 target: showTargetDC ? rollDC : undefined,
                 ability: rollAbility,
                 midiOptions: {
@@ -6118,7 +6117,7 @@ return {
                   workflowOptions: saveDetails.workflowOptions
                 }
               };
-              let dialog: AnyObject = { ability: rollAbility, skill: rollSkill, tool: rollTool };
+              let dialog: AnyObject = { configure: false, ability: rollAbility, skill: rollSkill, tool: rollTool };
               let message: AnyObject = { create: showRoll };
               if (rollType === "tool") {
                 let tool = target.actor?.items.get(this.saveActivity?.item.id ?? "");

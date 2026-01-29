@@ -19,6 +19,11 @@ import { TargetConfirmationDialog } from './module/apps/TargetConfirmation.js';
 import { MidiAttackActivity, setupAttackActivity } from './module/activities/AttackActivity.js';
 import { RollModifierTracker } from './module/lib/RollModifierTracker.js';
 import { ChatLogMidi } from './module/ChatClasses/ChatLogMidi.js';
+import { injectMidiCompletions } from './module/lib/midiCompletions.js';
+
+// Register macro-autocomplete hook handler at module load time so it's
+// ready before macro-autocomplete fires "macro-autocomplete.ready" in its ready hook.
+injectMidiCompletions();
 
 export function getCanvas(): foundry.canvas.Canvas | undefined {
   if (!canvas || !canvas.scene) {
@@ -658,6 +663,9 @@ Hooks.once('ready', function () {
   checkModules();
   readyHooks();
   readyPatching();
+  // injectMidiCompletions() moved to module load time (top-level) so the
+  // Hooks.on("macro-autocomplete.ready") handler is registered before
+  // macro-autocomplete fires it during its own ready hook.
 
   // @ts-expect-error no types for CE
   ceInterface = game.modules.get("dfreds-convenient-effects")?.api;

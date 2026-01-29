@@ -1,3 +1,11 @@
+### 13.0.41
+**Bug Fixes**
+* Fix for not respecting no prompt options in player saves.
+* Fixed a couple of cases where midi was not correctly detecting the module causing the roll and doing strange things with fastforward.
+
+**New Features**
+* Midi support for the new macro-autocomplete module. All of the midi scope passed to the macro is available for auto completion. This module is not publicly available yet and is in closed beta.
+
 ### 13.0.40
 * This release includes breaking changes for advantage and disadvantage processing, so don't update just before game time.
 
