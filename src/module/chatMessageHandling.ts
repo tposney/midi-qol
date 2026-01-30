@@ -1,5 +1,5 @@
 import { debug, warn, i18n, error, debugEnabled, i18nFormat, MODULE_ID, MESSAGE_TYPES } from "../midi-qol.js";
-import { DDBGameLogWorkflow, Workflow, WorkflowDataFlags } from "./Workflow.js";
+import { DDBGameLogWorkflow, Workflow } from "./Workflow.js";
 import { nsaFlag, coloredBorders, configSettings, forceHideRoll, safeGetGameSetting, saveToChatCard } from "./settings.js";
 import { playerFor, playerForActor, doOverTimeEffect, isInCombat, isAutoFastAttack } from "./utils.js";
 import { preferredActiveGM, socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
@@ -164,7 +164,7 @@ export let hideRollUpdate = (message: ChatMessage.Implementation, data: ChatMess
 };
 
 export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
-  const messageActor = (fromUuidSync(message.flags?.[MODULE_ID]?.[WorkflowDataFlags.actor]) as Actor.Implementation ?? message.speakerActor);
+  const messageActor = (fromUuidSync(message.flags?.[MODULE_ID]?.["sourceActorUuid"]) as Actor.Implementation ?? message.speakerActor);
   const messageActorOwner = messageActor?.isOwner;
   if (debugEnabled > 1) debug("hideStuffHandler message: ", message.id, message)
   // Hide rolls which are blind and not the GM if force hide is true

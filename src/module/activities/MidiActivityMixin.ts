@@ -464,11 +464,8 @@ export let MidiActivityMixin = Base => {
     }
 
     async _onChatAction(event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      const scaling = message.getFlag("dnd5e", "scaling") ?? 0;
+      // dnd5e's #onChatAction already provides a scaled `this` — no need to clone here.
       const existingItem = this.workflow?.item ?? this.item;
-      // const item = scaling ? this.item.clone({ flags: { dnd5e: { scaling } } }, { keepId: true }) : this.item;
-      const item = scaling ? existingItem.clone({ flags: { dnd5e: { scaling } } }, { keepId: true }) : existingItem;
-      // let activity = this.otherActivity;
       // @ts-expect-error no dnd5e-types
       const activity = this.workflow?.activity ?? existingItem.system.activities.get(this.id);
       const action = target.dataset.action ?? "";
@@ -478,7 +475,6 @@ export let MidiActivityMixin = Base => {
         if (activity) handler = activity?.metadata.usage?.actions?.[action];
       }
       if (handler) await handler.call(activity, event, target, message);
-
     }
 
     async useAs(actor: Actor.Implementation | null | undefined, usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
@@ -652,13 +648,7 @@ export let MidiActivityMixin = Base => {
             itemUuid: activity.item.uuid
           };
         }
-        const scaling = useResults.message?.getFlag && (useResults.message?.getFlag("dnd5e", "scaling") ?? 0);
-        if (scaling) {
-          const item = activity.item.clone({ flags: { dnd5e: { scaling } } }, { keepId: true });
-          // @ts-expect-error no dnd5e-types
-          activity = item.system.activities.get(activity.id);
-        }
-        activity.midiOptions = usage.midiOptions;
+        // Scaling is now handled by the workflow's activity getter (reads from chat card flags).
         await usage.workflow.performState((usage.workflow as Workflow).WorkflowState_Start, {});
         return useResults;
       } finally {
@@ -1229,6 +1219,11 @@ export let MidiActivityMixin = Base => {
         if (tokenCanSee) workflow.tokenCanSee.add(target);
         else workflow.tokenCanSee.delete(target);
       }
+      // Trigger setters to persist the mutated sets
+      workflow.targetsCanSense = workflow.targetsCanSense;
+      workflow.tokenCanSense = workflow.tokenCanSense;
+      workflow.targetsCanSee = workflow.targetsCanSee;
+      workflow.tokenCanSee = workflow.tokenCanSee;
       for (let targetRef of workflow.targets) {
         const target = getToken(targetRef);
         if (!target) continue;

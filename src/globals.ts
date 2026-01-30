@@ -443,17 +443,13 @@ declare module "fvtt-types/configuration" {
         actorUuid?: string;
         sourceActorUuid?: string;
         advantageSaveUuids?: string[];
-        advReminderAttackAdvAttribution?: string[];
         ammunitionOnUseMacros?: OnUseMacros;
         AoO?: boolean;
-        attackAdvAttribution?: string[];
-        /** Structured attack attribution map: type -> source -> displayName */
-        attackAttribution?: AttributionMap;
         attackTotal?: number;
-        attackRoll?: Roll.Data;
+        attackRollData?: Roll.Data;
         attackRollCount?: number;
         bonusDamageDetail?: DamageDescriptionObject[];
-        bonusDamageRolls?: Roll.Data[];
+        bonusDamageRollsData?: Roll.Data[];
         bonusDamageTotal?: number;
         concentrationRolled?: boolean;
         criticalSaveUuids?: string[];
@@ -462,12 +458,12 @@ declare module "fvtt-types/configuration" {
         damageDetail?: DamageDescriptionObject[];
         damageList?: DamageListEntry[];
         damageRollCount?: number;
-        damageRolls?: Roll.Data[];
+        damageRollsData?: Roll.Data[];
         damageTotal?: number;
         defaultDamageType?: string;
         diceRoll?: number;
         effectsAlreadyExpired?: string[];
-        extraRolls?: Roll.Data[];
+        extraRollsData?: Roll.Data[];
         failedSaveUuids?: string[];
         fumbleSaveUuids?: string[];
         hitTargetUuids?: string[];
@@ -480,16 +476,13 @@ declare module "fvtt-types/configuration" {
         noOptionalRules?: boolean;
         OnUseMacros?: OnUseMacros;
         otherDamageDetail: DamageDescriptionObject[];
-        otherDamageRolls?: Roll.Data[];
+        otherDamageRollsData?: Roll.Data[];
         otherDamageTotal?: number;
         rawBonusDamageDetail?: DamageDescriptionObject[];
         rawDamageDetail?: DamageDescriptionObject[];
         rawOtherDamageDetail?: DamageDescriptionObject[];
         saveDisplayData?: unknown;
-        saveRolls?: {
-          formula: string;
-          options: Roll.Options;
-        }[];
+        saveRollsData?: Roll.Data[];
         saveUuids?: string[];
         /** Structured save attribution map: targetUuid -> type -> source -> displayName */
         saveAttribution?: Record<string, AttributionMap>;
@@ -508,7 +501,7 @@ declare module "fvtt-types/configuration" {
         undoDamage?: SerializedDamageListEntry[];
         "use.consumed"?: any;
         "use.otherScaling"?: number | false;
-        utilityRolls?: Roll.Data[];
+        utilityRollsData?: Roll.Data[];
         aborted?: boolean;
         type?: number;
         overtimeActorUuid?: string;

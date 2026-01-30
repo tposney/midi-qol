@@ -184,8 +184,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         workflow.disadvantage = undefined;
         attackConfig.midiOptions.advantage = undefined;
         attackConfig.midiOptions.disadvantage = undefined;
-        workflow.attackAdvAttribution = new Set<string>();
-        workflow.advReminderAttackAdvAttribution = new Set<string>();
         workflow.activity = this;
         // @ts-expect-error
         return this.rollAttack({ workflow }, {}, {});
@@ -216,8 +214,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         workflow.attackRollModifierTracker.advantage.setOverride();
         attackConfig.midiOptions.advantage = true;
         attackConfig.midiOptions.disadvantage = false;
-        workflow.attackAdvAttribution = new Set<string>();
-        workflow.advReminderAttackAdvAttribution = new Set<string>();
         workflow.activity = this;
         //@ts-expect-error
         return this.rollAttack(attackConfig, {}, {});
@@ -249,8 +245,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         attackConfig.midiOptions.advantage = false;
         attackConfig.midiOptions.disadvantage = true;
         workflow.activity = this;
-        workflow.attackAdvAttribution = new Set<string>();
-        workflow.advReminderAttackAdvAttribution = new Set<string>();
         //@ts-expect-error
         return this.rollAttack(attackConfig, {}, {});
       }

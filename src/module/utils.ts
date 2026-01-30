@@ -7464,8 +7464,6 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
   if (updateDelay) {
     await busyWait(updateDelay); // let other stuff happen.
   }
-  if (updatesCache[baseDocument.uuid] && !foundry.utils.isEmpty(updatesCache[baseDocument.uuid])) {
-  }
   updatesCache[baseDocument.uuid] = foundry.utils.diffObject(updates, updatesCache[baseDocument.uuid] ?? {});
   if (debugEnabled > 1 && updates.content && updatesCache[baseDocument.uuid]?.content)
     warn("_updateAction | queued content differences ", diffStringsFull(updates.content, updatesCache[baseDocument.uuid].content, { ignoreWhitespace: true, ignoreNewlines: true }));
@@ -7480,7 +7478,7 @@ export async function throttledUpdate(document: ChatMessage.Implementation, upda
   updatesCache[document.uuid] = updates;
   if (!debounceInterval || immediate || !throttlingFunc) {
     if (debugEnabled > 0) warn(`throttledU[date] | immediate update for ${document.uuid}`, updates);
-    return await _updateAction(document, updates);
+    return await _updateAction(document, foundry.utils.duplicate(updates) as ChatMessage.UpdateData);
   }
   return await throttlingFunc(document, foundry.utils.duplicate(updates) as ChatMessage.UpdateData);
 }

@@ -15,14 +15,6 @@ export type AdvantageAttributionMap = Partial<Record<AdvantageAttributionType, R
 /** Callback type for adding attributions */
 type AttributionCallback = (type: AdvantageAttributionType, source: string, displayName: string) => void;
 
-/** Options for RollModifierTracker constructor/reset */
-export interface RollModifierTrackerOptions {
-  /** Legacy Set format: "${type}:${source}" - reference to external Set */
-  legacyAttribution?: Set<string>;
-  /** Legacy Set format for adv-reminder: "${type}:${source}" - reference to external Set */
-  advReminderAttribution?: Set<string>;
-}
-
 export interface RollModifierFlags {
   failFlags: string[];
   successFlags: string[];
@@ -478,14 +470,12 @@ export class RollModifierTracker {
   // ─────────────────────────────────────────────────────────────────
 
   #attribution: AdvantageAttributionMap = {};
-  /** Legacy Set format: "${type}:${source}" - reference to external Set */
-  #legacyAttribution: Set<string>;
-  /** Legacy Set format for adv-reminder: "${type}:${source}" - reference to external Set */
-  #advReminderAttribution: Set<string>;
+  /** Legacy Set format: "${type}:${source}" */
+  #legacyAttribution: Set<string> = new Set();
+  /** Legacy Set format for adv-reminder: "${type}:${source}" */
+  #advReminderAttribution: Set<string> = new Set();
 
-  constructor(options?: RollModifierTrackerOptions) {
-    this.#legacyAttribution = options?.legacyAttribution ?? new Set();
-    this.#advReminderAttribution = options?.advReminderAttribution ?? new Set();
+  constructor() {
 
     // Create sub-trackers with bound attribution method
     const addAttr = this.addAttribution.bind(this);
@@ -577,35 +567,16 @@ export class RollModifierTracker {
 
   /**
    * Reset all state to initial values.
-   * @param options - Optional new references for legacy Sets
    */
-  reset(options?: RollModifierTrackerOptions): void {
+  reset(): void {
     this.advantage.reset();
     this.disadvantage.reset();
     this.critical.reset();
     this.fumble.reset();
     this.modifiers.reset();
     this.#attribution = {};
-
-    // Handle legacy attribution Set
-    if (options?.legacyAttribution) {
-      if (options.legacyAttribution !== this.#legacyAttribution) {
-        this.#legacyAttribution.clear();
-        this.#legacyAttribution = options.legacyAttribution;
-      }
-    } else {
-      this.#legacyAttribution.clear();
-    }
-
-    // Handle advReminder attribution Set
-    if (options?.advReminderAttribution) {
-      if (options.advReminderAttribution !== this.#advReminderAttribution) {
-        this.#advReminderAttribution.clear();
-        this.#advReminderAttribution = options.advReminderAttribution;
-      }
-    } else {
-      this.#advReminderAttribution.clear();
-    }
+    this.#legacyAttribution.clear();
+    this.#advReminderAttribution.clear();
   }
 
   processKeys(config: RollProcessConfig = {}) {
