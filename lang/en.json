@@ -460,10 +460,11 @@
   "midi-qol.OptionalRules.Name": "Optional Game Rules",
   "midi-qol.OptionalRules.Hint": "DND5E Game rules that you may wish to enable. Generally, don't work with better rolls.",
   "midi-qol.InvisAdvantage.Name": "Unseen/Invisible attackers have advantage/disadvantage on attacks",
-  "midi-qol.InvisAdvantage.Hint": "<strong>Rules as written</strong> Invisible attackers have advantage on attacks. Disadvantage if the target is invisible",
+  "midi-qol.InvisAdvantage.Hint": "<strong>RAW (2014)</strong> Invisible condition always grants adv/disadv; other senses (blindsight, tremorsense) negate unseen adv/disadv. <strong>RAW (2024)</strong> Only grants adv/disadv if the other creature cannot <em>see</em> you — blindsight/truesight negate, but tremorsense does not.",
   "midi-qol.InvisAdvantageOptions": {
     "none": "Do not apply",
-    "RAW": "Rules as written",
+    "RAW2014": "RAW (2014)",
+    "RAW2024": "RAW (2024)",
     "vision": "Use Token Vision"
   },
   "midi-qol.InvisVision.Name": "Force vision when checking",

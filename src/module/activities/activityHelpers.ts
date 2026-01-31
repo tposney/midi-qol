@@ -114,7 +114,6 @@ export async function doActivityReactions(activity: Activity, workflow: Workflow
           targetToken.actor?.reset();
           workflow.actor.reset();
           // targetToken.actor?.prepareData(); // allow for any items applied to the actor - like shield spell
-          workflow.needsAttackAdvantageCheck = true; // Toggle this on in case
         }
         resolve(result);
       }));

@@ -75,6 +75,7 @@ declare module "fvtt-types/configuration" {
       "midi-qol.dnd5eCalculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => void;
       "midi-qol.preItemRoll": (workflow: Workflow) => Promise<void | boolean>;
       "midi-qol.preAttackRoll": (workflow: Workflow) => Promise<void | boolean>;
+      "midi-qol.preAttackRollConfig": (workflow: Workflow) => Promise<void | boolean>;
       "midi-qol.AttackRollComplete": (workflow: Workflow) => Promise<void | boolean>;
       "midi-qol.DamageRollComplete": (workflow: Workflow) => Promise<void | boolean>;
       "midi-qol.StatsUpdated": () => void;
@@ -446,10 +447,10 @@ declare module "fvtt-types/configuration" {
         ammunitionOnUseMacros?: OnUseMacros;
         AoO?: boolean;
         attackTotal?: number;
-        attackRollData?: Roll.Data;
+        attackRoll?: Roll.Data | Roll;
         attackRollCount?: number;
         bonusDamageDetail?: DamageDescriptionObject[];
-        bonusDamageRollsData?: Roll.Data[];
+        bonusDamageRolls?: Roll.Data[] | Roll[];
         bonusDamageTotal?: number;
         concentrationRolled?: boolean;
         criticalSaveUuids?: string[];
@@ -458,12 +459,11 @@ declare module "fvtt-types/configuration" {
         damageDetail?: DamageDescriptionObject[];
         damageList?: DamageListEntry[];
         damageRollCount?: number;
-        damageRollsData?: Roll.Data[];
+        damageRolls?: Roll.Data[] | Roll[];
         damageTotal?: number;
         defaultDamageType?: string;
         diceRoll?: number;
         effectsAlreadyExpired?: string[];
-        extraRollsData?: Roll.Data[];
         failedSaveUuids?: string[];
         fumbleSaveUuids?: string[];
         hitTargetUuids?: string[];
@@ -476,13 +476,12 @@ declare module "fvtt-types/configuration" {
         noOptionalRules?: boolean;
         OnUseMacros?: OnUseMacros;
         otherDamageDetail: DamageDescriptionObject[];
-        otherDamageRollsData?: Roll.Data[];
+        otherDamageRolls?: Roll.Data[] | Roll[];
         otherDamageTotal?: number;
         rawBonusDamageDetail?: DamageDescriptionObject[];
         rawDamageDetail?: DamageDescriptionObject[];
         rawOtherDamageDetail?: DamageDescriptionObject[];
         saveDisplayData?: unknown;
-        saveRollsData?: Roll.Data[];
         saveUuids?: string[];
         /** Structured save attribution map: targetUuid -> type -> source -> displayName */
         saveAttribution?: Record<string, AttributionMap>;
@@ -499,9 +498,9 @@ declare module "fvtt-types/configuration" {
         templateUuid?: string;
         workflowOptions?: WorkflowOptions;
         undoDamage?: SerializedDamageListEntry[];
+        utilityRolls?: Roll.Data[] | Roll[];
         "use.consumed"?: any;
         "use.otherScaling"?: number | false;
-        utilityRollsData?: Roll.Data[];
         aborted?: boolean;
         type?: number;
         overtimeActorUuid?: string;

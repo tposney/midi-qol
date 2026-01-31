@@ -15,49 +15,24 @@ export function setupChatMessageMidi() {
 export function defineChatMessageMidiClass(baseClass: ChatMessage.ImplementationClass) {
   return class ChatMessageMidi extends baseClass /*globalThis.dnd5e.documents.ChatMessage5e*/ {
 
-    // Deserialized roll properties (populated in prepareDerivedData)
-    declare midiAttackRoll: Roll | undefined;
-    declare midiDamageRolls: Roll[];
-    declare midiBonusDamageRolls: Roll[];
-    declare midiOtherDamageRolls: Roll[];
-    declare midiExtraRolls: Roll[];
-    declare midiUtilityRolls: Roll[];
-    declare midiSaveRolls: Roll[];
-
     prepareDerivedData() {
       super.prepareDerivedData();
+
+      // Deserialize roll flags in-place from JSON to Roll instances (same pattern as Foundry core's ChatMessage.rolls)
       const midiFlags = this.flags?.[MODULE_ID];
-      if (!midiFlags) {
-        this.midiAttackRoll = undefined;
-        this.midiDamageRolls = [];
-        this.midiBonusDamageRolls = [];
-        this.midiOtherDamageRolls = [];
-        this.midiExtraRolls = [];
-        this.midiUtilityRolls = [];
-        this.midiSaveRolls = [];
-        return;
+      if (!midiFlags) return;
+
+      const attackData = midiFlags.attackRoll;
+      if (attackData && !(attackData instanceof Roll)) {
+        midiFlags.attackRoll = Roll.fromData(attackData) as Roll;
       }
 
-      // Deserialize roll flags into Roll instances (same pattern as Foundry core's rolls)
-      const attackData = midiFlags.attackRollData;
-      this.midiAttackRoll = attackData
-        ? (attackData instanceof Roll ? attackData : Roll.fromData(attackData) as Roll)
-        : undefined;
-
-      const rollArrayFields = [
-        ["midiDamageRolls", "damageRollsData"],
-        ["midiBonusDamageRolls", "bonusDamageRollsData"],
-        ["midiOtherDamageRolls", "otherDamageRollsData"],
-        ["midiExtraRolls", "extraRollsData"],
-        ["midiUtilityRolls", "utilityRollsData"],
-        ["midiSaveRolls", "saveRollsData"],
-      ] as const; // [property, flagKey]
-
-      for (const [prop, flagKey] of rollArrayFields) {
-        const data = midiFlags[flagKey];
-        this[prop] = data?.length
-          ? data.map((r: any) => r instanceof Roll ? r : Roll.fromData(r) as Roll)
-          : [];
+      for (const field of ["damageRolls", "bonusDamageRolls", "otherDamageRolls",
+        "utilityRolls"] as const) {
+        const data = midiFlags[field];
+        if (data?.length) {
+          midiFlags[field] = data.map((r: any) => r instanceof Roll ? r : Roll.fromData(r));
+        }
       }
     }
 

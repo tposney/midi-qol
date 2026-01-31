@@ -305,7 +305,7 @@ class ConfigSettings {
     DRAllPerDamageDetail: true,
     hiddenAdvantage: "none",
     incapacitated: "nothing",
-    invisAdvantage: "RAW",
+    invisAdvantage: "RAW2024",
     invisVision: false,
     maxDRValue: false,
     nearbyAllyRanged: 0,
@@ -682,7 +682,7 @@ export let fetchParams = () => {
     criticalSaves: false,
     distanceIncludesHeight: false,
     incapacitated: "nothing",
-    invisAdvantage: "RAW",
+    invisAdvantage: "RAW2024",
     hiddenAdvantage: "none",
     maxDRValue: false,
     DRAllPerDamageDetail: true,
@@ -711,7 +711,9 @@ export let fetchParams = () => {
   if (!configSettings.optionalRules.checkRange) configSettings.optionalRules.checkRange = "none";
   if (!configSettings.optionalRules.invisAdvantage) configSettings.optionalRules.invisAdvantage = "none";
   //@ts-expect-error legacy boolean value
-  if (configSettings.optionalRules.invisAdvantage === true) configSettings.optionalRules.invisAdvantage = "RAW";
+  if (configSettings.optionalRules.invisAdvantage === true) configSettings.optionalRules.invisAdvantage = "RAW2014";
+  // Migrate old "RAW" to "RAW2014"
+  if (configSettings.optionalRules.invisAdvantage === "RAW") configSettings.optionalRules.invisAdvantage = "RAW2014";
   if (!configSettings.optionalRules.hiddenAdvantage) configSettings.optionalRules.hiddenAdvantage = "none";
   //@ts-expect-error legacy nonexistent value
   if (configSettings.optionalRules.activeDefenceShowGM === true) {
@@ -1376,7 +1378,8 @@ export const checkRangeOptions = keysToOptionsObj("CheckRangeOptions", [
 
 export const invisAdvantageOptions = keysToOptionsObj("InvisAdvantageOptions", [
   "none",
-  "RAW",
+  "RAW2014",
+  "RAW2024",
   "vision"
 ]);
 

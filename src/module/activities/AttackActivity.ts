@@ -210,10 +210,9 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         const attackConfig: ActivityUseConfiguration = { workflow };
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
         attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
-        // Force advantage mode via override (user explicitly chose advantage)
-        workflow.attackRollModifierTracker.advantage.setOverride();
-        attackConfig.midiOptions.advantage = true;
-        attackConfig.midiOptions.disadvantage = false;
+        // User explicitly chose advantage — set workflowOptions so checkAttackAdvantage processes it
+        attackConfig.midiOptions.workflowOptions.advantage = true;
+        attackConfig.midiOptions.workflowOptions.disadvantage = false;
         workflow.activity = this;
         //@ts-expect-error
         return this.rollAttack(attackConfig, {}, {});
@@ -240,10 +239,9 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         const attackConfig: any = { workflow };
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
         attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
-        // Force disadvantage mode via override (user explicitly chose disadvantage)
-        workflow.attackRollModifierTracker.disadvantage.setOverride();
-        attackConfig.midiOptions.advantage = false;
-        attackConfig.midiOptions.disadvantage = true;
+        // User explicitly chose disadvantage — set workflowOptions so checkAttackAdvantage processes it
+        attackConfig.midiOptions.workflowOptions.advantage = false;
+        attackConfig.midiOptions.workflowOptions.disadvantage = true;
         workflow.activity = this;
         //@ts-expect-error
         return this.rollAttack(attackConfig, {}, {});
@@ -372,15 +370,12 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           return super.rollAttack?.(config, dialog, message) ?? [];
 
         if (!workflow || workflow?.aborted) return [];
-
         if (configSettings.allowUseMacro && workflow.workflowOptions.noOnUseMacro !== true) {
           await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
           if (workflow.ammunition) await workflow.callMacros(workflow.ammunition, workflow.ammunitionOnUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
         }
         // Ensure config.event is set for dnd5e key handling
         config.event ??= workflow.rollOptions.event;
-        await workflow.checkAttackAdvantage();
-        workflow.attackRollModifierTracker.processKeys(config);
 
         let requiresAmmoConfirmation = false;
         // @ts-expect-error no dnd5e-types
@@ -506,11 +501,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         if (config.event && areMidiKeysPressed(config.event, "Versatile") && this.item.isVersatile) {
           config.attackMode = "twoHanded";
         }
-        // workflowOptions and rollOptions are handled in checkAttackAdvantage()
-        // Applied here so that other macros/etc can influence the attack roll.
-        if (workflow.attackRollModifierTracker.hasAdvantage) config.advantage ??= true;
-        if (workflow.attackRollModifierTracker.hasDisadvantage) config.disadvantage ??= true;
-
         // @ts-expect-error weirdness with how I did the types
         rolls = await super.rollAttack(config, dialog, message);
 
@@ -565,7 +555,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       config.midiOptions ??= {};
 
       if (debugEnabled > 1) debug("Entering configure attack roll", config.event, workflow, config.rollOptions);
-
+      await workflow.checkAttackAdvantage();
       if (workflow.workflowType === "BaseWorkflow") {
         if (workflow.attackRoll && workflow.currentAction === workflow.WorkflowState_Completed) {
           // This should not happen anymore
@@ -624,16 +614,28 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         console.warn("midi-qol | attack roll blocked by preAttackRoll hook");
         return false;
       }
+      await workflow.checkAttackAdvantage();
+      // Process keyboard modifiers (ctrl/alt for advantage/disadvantage) after flag processing
+      workflow.attackRollModifierTracker.processKeys(config);
+      if (await asyncHooksCall("midi-qol.preAttackRollConfig", workflow) === false
+        || await asyncHooksCall(`midi-qol.preAttackRollConfig.${this.item.uuid}`, workflow) === false
+        || await asyncHooksCall(`midi-qol.preAttackRollConfig.${this.uuid}`, workflow) === false) {
+        console.warn("midi-qol | attack roll blocked by preAttackRollConfig hook");
+        return false;
+      }
       if (configSettings.allowUseMacro && workflow.workflowOptions?.noOnUseMacro !== true) {
         await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("preAttackRollConfig"), "OnUse", "preAttackRollConfig");
         if (workflow.ammunition) await workflow.callMacros(workflow.ammunition, workflow.ammunitionOnUseMacros?.getMacros("preAttackRollConfig"), "OnUse", "preAttackRollConfig");
       }
 
+      // Set config advantage/disadvantage from tracker (after all hooks/macros have had a chance to modify)
+      if (workflow.attackRollModifierTracker.hasAdvantage) config.advantage = true;
+      if (workflow.attackRollModifierTracker.hasDisadvantage) config.disadvantage = true;
+
       workflow.attackRollCount += 1;
       if (workflow.attackRollCount > 1) workflow.damageRollCount = 0;
 
       // create an options object to pass to the roll.
-      // advantage/disadvantage are already set (in config)
       config.midiOptions = foundry.utils.mergeObject(config.midiOptions, {
         chatMessage: (["TrapWorkflow", "Workflow"].includes(workflow.workflowType)) ? false : config.midiOptions.chatMessage,
         fastForward: workflow.workflowOptions?.fastForwardAttack ?? workflow.rollOptions.fastForwardAttack ?? config.midiOptions.fastForward,

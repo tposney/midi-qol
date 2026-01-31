@@ -308,8 +308,8 @@ export class Workflow {
   }
 
   /**
-   * Persist roll data to the chat card flags unconditionally (regardless of saveToChatCard),
-   * so that ChatMessageMidi.prepareDerivedData() can always deserialize them.
+   * Persist roll data to the chat card flags unconditionally (regardless of saveToChatCard).
+   * ChatMessageMidi.prepareDerivedData() deserializes these flags into Roll instances.
    */
   private forcePersistFields(updates: Record<string, unknown>): void {
     if (this.itemCardUuid) {
@@ -763,16 +763,14 @@ export class Workflow {
   #attackRoll: Roll | undefined;
   get attackRoll(): Roll | undefined {
     if (this.#attackRoll) return this.#attackRoll;
-    const rollData = this.midiFlags?.attackRollData;
-    if (rollData) {
-      this.#attackRoll = rollData instanceof Roll ? rollData : Roll.fromData(rollData as unknown as Roll.Data) as Roll;
-    }
+    const chatRoll = this.midiFlags?.attackRoll;
+    if (chatRoll) this.#attackRoll = chatRoll;
     return this.#attackRoll;
   }
   set attackRoll(attackRoll: Roll | undefined) {
     if (attackRoll) attackRoll.data = {};
     this.#attackRoll = attackRoll;
-    this.forcePersistFields({ attackRollData: attackRoll?.toJSON() ?? null });
+    this.forcePersistFields({ attackRoll: attackRoll?.toJSON() ?? null });
   }
 
   #diceRoll: number | undefined;
@@ -1038,86 +1036,54 @@ export class Workflow {
   #damageRolls: Roll[] | undefined;
   get damageRolls(): Roll[] {
     if (this.#damageRolls) return this.#damageRolls;
-    const rollData = this.midiFlags?.damageRollsData;
-    if (rollData?.length) {
-      this.#damageRolls = rollData.map(r => r instanceof Roll ? r : Roll.fromData(r as unknown as Roll.Data) as Roll);
-    }
+    const chatRolls = this.midiFlags?.damageRolls;
+    if (chatRolls?.length) this.#damageRolls = chatRolls;
     return this.#damageRolls ?? [];
   }
   set damageRolls(damageRolls: Roll[]) {
     this.#damageRolls = damageRolls;
-    this.forcePersistFields({ damageRollsData: damageRolls.map(r => r.toJSON()) });
+    this.forcePersistFields({ damageRolls: damageRolls.map(r => r.toJSON()) });
   }
 
   #bonusDamageRolls: Roll[] | undefined;
   get bonusDamageRolls(): Roll[] | undefined {
     if (this.#bonusDamageRolls) return this.#bonusDamageRolls;
-    const rollData = this.midiFlags?.bonusDamageRollsData;
-    if (rollData?.length) {
-      this.#bonusDamageRolls = rollData.map(r => r instanceof Roll ? r : Roll.fromData(r as unknown as Roll.Data) as Roll);
-    }
+    const chatRolls = this.midiFlags?.bonusDamageRolls;
+    if (chatRolls?.length) this.#bonusDamageRolls = chatRolls;
     return this.#bonusDamageRolls;
   }
   set bonusDamageRolls(bonusDamageRolls: Roll[] | undefined) {
     this.#bonusDamageRolls = bonusDamageRolls;
-    this.forcePersistFields({ bonusDamageRollsData: bonusDamageRolls?.map(r => r.toJSON()) ?? [] });
+    this.forcePersistFields({ bonusDamageRolls: bonusDamageRolls?.map(r => r.toJSON()) ?? [] });
   }
 
   #otherDamageRolls: Roll[] | undefined;
   get otherDamageRolls(): Roll[] | undefined {
     if (this.#otherDamageRolls) return this.#otherDamageRolls;
-    const rollData = this.midiFlags?.otherDamageRollsData;
-    if (rollData?.length) {
-      this.#otherDamageRolls = rollData.map(r => r instanceof Roll ? r : Roll.fromData(r as unknown as Roll.Data) as Roll);
-    }
+    const chatRolls = this.midiFlags?.otherDamageRolls;
+    if (chatRolls?.length) this.#otherDamageRolls = chatRolls;
     return this.#otherDamageRolls;
   }
   set otherDamageRolls(otherDamageRolls: Roll[] | undefined) {
     this.#otherDamageRolls = otherDamageRolls;
-    this.forcePersistFields({ otherDamageRollsData: otherDamageRolls?.map(r => r.toJSON()) ?? [] });
+    this.forcePersistFields({ otherDamageRolls: otherDamageRolls?.map(r => r.toJSON()) ?? [] });
   }
 
-  #extraRolls: Roll[] | undefined;
-  get extraRolls(): Roll[] | undefined {
-    if (this.#extraRolls) return this.#extraRolls;
-    const rollData = this.midiFlags?.extraRollsData;
-    if (rollData?.length) {
-      this.#extraRolls = rollData.map(r => r instanceof Roll ? r : Roll.fromData(r as unknown as Roll.Data) as Roll);
-    }
-    return this.#extraRolls ?? [];
-  }
-  set extraRolls(extraRolls: Roll[] | undefined) {
-    this.#extraRolls = extraRolls;
-    this.forcePersistFields({ extraRollsData: extraRolls?.map(d => d.toJSON()) ?? [] });
-  }
+
 
   #utilityRolls: Roll[] | undefined;
   get utilityRolls(): Roll[] | undefined {
     if (this.#utilityRolls) return this.#utilityRolls;
-    const rollData = this.midiFlags?.utilityRollsData;
-    if (rollData?.length) {
-      this.#utilityRolls = rollData.map(r => r instanceof Roll ? r : Roll.fromData(r as unknown as Roll.Data) as Roll);
-    }
+    const chatRolls = this.midiFlags?.utilityRolls;
+    if (chatRolls?.length) this.#utilityRolls = chatRolls;
     return this.#utilityRolls ?? [];
   }
   set utilityRolls(utilityRolls: Roll[] | undefined) {
     this.#utilityRolls = utilityRolls;
-    this.forcePersistFields({ utilityRollsData: utilityRolls?.map(d => { d.data = {}; return d.toJSON() }) ?? [] });
+    this.forcePersistFields({ utilityRolls: utilityRolls?.map(d => { d.data = {}; return d.toJSON() }) ?? [] });
   }
 
-  #saveRolls: Roll[] | undefined;
-  get saveRolls(): Roll[] {
-    if (this.#saveRolls) return this.#saveRolls;
-    const rollData = this.midiFlags?.saveRollsData;
-    if (rollData?.length) {
-      this.#saveRolls = rollData.map(r => r instanceof Roll ? r : Roll.fromData(r as unknown as Roll.Data) as Roll);
-    }
-    return this.#saveRolls ?? [];
-  }
-  set saveRolls(saveRolls: Roll[]) {
-    this.#saveRolls = saveRolls;
-    this.forcePersistFields({ saveRollsData: saveRolls.map(r => r.toJSON()) });
-  }
+
 
   #damageTotal: number | undefined;
   get damageTotal() {
@@ -1577,7 +1543,7 @@ export class Workflow {
   forceApplyEffects: boolean;
   onUseCalled: boolean;
   attackRolled: boolean;
-  needsAttackAdvantageCheck: boolean;
+  longRangeAttack: boolean | undefined;
   preSelectedTargets: Set<Token.Implementation>;
   preCreateTemplateHookId: number | undefined;
   postSummonHookId: number | undefined;
@@ -1729,7 +1695,6 @@ export class Workflow {
       this.rawOtherDamageDetail = [];
       this.effectsAlreadyExpired = [];
       this.workflowOptions = options?.workflowOptions ?? {};
-      this.extraRolls = [];
       if (this.speaker.scene) this.speaker.scene = canvas.scene?.id ?? "";
     }
 
@@ -1758,7 +1723,6 @@ export class Workflow {
       foundry.utils.mergeObject(this.workflowOptions, options.workflowOptions, { overwrite: true });
     if (this.activity.midiProperties?.noConcentrationCheck) this.workflowOptions.noConcentrationCheck = true;
 
-    this.needsAttackAdvantageCheck = true;
     this.defaultDamageType = getActivityDefaultDamageType(this) ?? MidiQOL.MQdefaultDamageType;
     MidiQOL.MQdefaultDamageType = this.defaultDamageType; // Set the default damage type for the module.
     if (this.activity.actionType === "heal" && !Object.keys(GameSystemConfig.healingTypes).includes(this.defaultDamageType ?? "")) this.defaultDamageType = "healing";
@@ -2310,7 +2274,7 @@ export class Workflow {
       const { result, attackingToken, range, longRange } = checkActivityRange(this.activity, getToken(this.token) ?? "invalid", this.targets);
       switch (result) {
         case "fail": return this.WorkflowState_RollFinished;
-        case "dis": this.attackRollModifierTracker.disadvantage.add('range', 'Long Range');
+        case "dis": this.longRangeAttack = true;
       }
       if (attackingToken && this.token !== attackingToken) {
         // changed the attacking token so update the canSee data
@@ -2409,7 +2373,6 @@ export class Workflow {
     }
 
     await this.processAttackRoll();
-    this.needsAttackAdvantageCheck = true;
 
     if (configSettings.autoCheckHit !== "none") {
       //@ts-e xpect-error
@@ -3616,6 +3579,9 @@ export class Workflow {
   };
 
   public async checkAttackAdvantage() {
+    // Reset tracker so it can be safely re-called (e.g. after preAttackRoll hooks modify flags)
+    this.attackRollModifierTracker.reset();
+
     // Add workflowOptions and rollOptions attribution first (before flag-based checks)
     if (this.workflowOptions?.advantage) {
       this.attackRollModifierTracker.advantage.add("workflowOptions", i18n("midi-qol.WorkflowOptions"));
@@ -3630,10 +3596,13 @@ export class Workflow {
       this.attackRollModifierTracker.disadvantage.add("rollOptions", i18n("midi-qol.RollOptions"));
     }
 
+    // Long range disadvantage (set in WorkflowState_ValidateRoll)
+    if (this.longRangeAttack) {
+      this.attackRollModifierTracker.disadvantage.add('range', 'Long Range');
+    }
+
     await this.checkFlankingAdvantage();
     if (this.flankingAdvantage) this.attackRollModifierTracker.advantage.add('flanking', i18n("midi-qol.Flanking"));
-    if (!this.needsAttackAdvantageCheck) return;
-    this.needsAttackAdvantageCheck = false;
 
     // This should never happen
     if (!this.actor) return;
@@ -3665,28 +3634,34 @@ export class Workflow {
       // if we are using a proxy token to attack use that for hidden invisible
       const invisibleToken = this.token ? hasCondition(this.token.actor as Actor, "invisible") : false;
       const invisibleTarget = hasCondition(firstTarget.actor as Actor, "invisible");
-      const tokenCanSense = this.tokenCanSense?.has(firstTarget);
-      const targetCanSense = this.token && this.targetsCanSense?.has(this.token);
 
-      const invisAdvantage = (checkRule("invisAdvantage") === "RAW") ? invisibleToken || !targetCanSense : !targetCanSense;
+      // RAW 2014: Invisible condition explicitly grants adv/disadv; canSense used for non-invisible "unseen" cases
+      // RAW 2024: Only "can you see the creature?" matters (blindsight/truesight = can see; tremorsense = cannot see)
+      const isRAW2014 = checkRule("invisAdvantage") === "RAW2014";
+      const tokenCanPerceive = isRAW2014 ? this.tokenCanSense?.has(firstTarget) : this.tokenCanSee?.has(firstTarget);
+      const targetCanPerceive = isRAW2014
+        ? (this.token && this.targetsCanSense?.has(this.token))
+        : (this.token && this.targetsCanSee?.has(this.token));
+
+      const invisAdvantage = isRAW2014 ? invisibleToken || !targetCanPerceive : !targetCanPerceive;
       if (invisAdvantage) {
         if (invisibleToken) {
           this.attackRollModifierTracker.advantage.add('Attacker invisible', 'Attacker invisible');
-        } else if (!targetCanSense) {
+        } else if (!targetCanPerceive) {
           this.attackRollModifierTracker.advantage.add('Attacker not detected', 'Attacker not detected');
         }
         foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.invisible", { value: true, effects: ["Invisible Attacker"] });
       }
 
-      const invisDisadvantage = (checkRule("invisAdvantage") === "RAW") ? invisibleTarget || !tokenCanSense : !tokenCanSense;
+      const invisDisadvantage = isRAW2014 ? invisibleTarget || !tokenCanPerceive : !tokenCanPerceive;
       if (invisDisadvantage) {
         // Attacker can't see target so disadvantage
-        log(`Disadvantage given to ${this.actor.name} due to invisible target`, invisibleTarget, tokenCanSense);
+        log(`Disadvantage given to ${this.actor.name} due to invisible target`, invisibleTarget, tokenCanPerceive);
         if (invisibleTarget) {
           this.attackRollModifierTracker.disadvantage.add('invisible foe', 'Invisible foe');
           foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.invisible", { value: true, effects: ["Invisible Defender"] });
         }
-        if (!tokenCanSense) {
+        if (!tokenCanPerceive) {
           this.attackRollModifierTracker.disadvantage.add('Defender not detected', 'Defender not detected');
           foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.invisible", { value: true, effects: ["Defender not detected"] });
         }
@@ -4663,9 +4638,7 @@ return {
     }
     // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
     const rolls = [...(this.attackRoll ? [this.attackRoll] : []),
-    ...(this.utilityRoll ? [this.utilityRoll] : []),
-    ...(this.extraRolls ?? [])];
-    // const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
+    ...(this.utilityRoll ? [this.utilityRoll] : [])];
     await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls });
   }
 
@@ -4748,7 +4721,7 @@ return {
       }
     }
     // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
-    const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
+    const rolls = [...(this.attackRoll ? [this.attackRoll] : [])];
     await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls });
   }
 
@@ -5112,7 +5085,6 @@ return {
     if (this.damageRolls) messageRolls.push(...this.damageRolls);
     if (this.bonusDamageRolls) messageRolls.push(...this.bonusDamageRolls);
     if (this.otherDamageRolls) messageRolls.push(...this.otherDamageRolls);
-    if (this.saveRolls) messageRolls.push(...this.saveRolls);
     return messageRolls;
   }
 
@@ -5260,7 +5232,6 @@ return {
     const isPlayerOwned = target.actor?.hasPlayerOwner ?? false;
 
     const rollHTML = await midiRenderRoll(saveRoll);
-    this.saveRolls.push(saveRoll);
     const targetDocUuid = getTokenDocument(target)?.uuid ?? "none";
     if (this.tokenSaves) this.tokenSaves[targetDocUuid] = saveRoll;
 
@@ -6348,7 +6319,6 @@ return {
 
   async checkSaves(whisper = false, simulate = false) {
     this.initSaveResults();
-    this.saveRolls = [];
     this.tokenSaves = {};
     this.targetSaveDetails = new Map();
     if (debugEnabled > 1) debug(`checkSaves: whisper ${whisper}  hit targets ${this.hitTargets}`)
@@ -7891,7 +7861,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         hitECTargetUuids: Array.from(this.hitTargetsEC).map(t => getTokenDocument(t)?.uuid),
       }
     };
-    const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
+    const rolls = [...(this.attackRoll ? [this.attackRoll] : [])];
     await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls });
   }
 }
@@ -8447,8 +8417,7 @@ export class DummyWorkflow extends Workflow {
   }
   async simulateAttack(target: Token.Implementation) {
     this.targets = new Set([target]);
-    this.attackRollModifierTracker.reset(); // Clear any previous advantage/disadvantage state
-    await this.checkAttackAdvantage();
+    await this.checkAttackAdvantage(); // resets tracker internally
     // Block updates to quantity
     //@ts-expect-error
     const hookId = Hooks.on("dnd5e.rollAttack", (item, roll, ammoUpdate) => {

@@ -369,6 +369,7 @@ The passed workflow is "live" so changes will affect subsequent actions. `preAtt
 | `midi-qol.preTargeting` | boolean | Before targeting. Return false to abort. |
 | `midi-qol.preItemRoll` | boolean | Before item roll. Return false to abort. |
 | `midi-qol.preAttackRoll` | boolean | Before attack roll. Return false to abort. |
+| `midi-qol.preAttackRollConfig` | boolean | Before attack roll configuration (after advantage/disadvantage). Return false to abort. |
 | `midi-qol.preCheckHits` | void | Before checking hits |
 | `midi-qol.hitsChecked` | void | After hits have been checked |
 | `midi-qol.AttackRollComplete` | void | After attack roll complete |
@@ -385,6 +386,8 @@ The passed workflow is "live" so changes will affect subsequent actions. `preAtt
 All workflow hooks also fire with item/activity UUID suffix:
 - `midi-qol.preAttackRoll.{item.uuid}`
 - `midi-qol.preAttackRoll.{activity.uuid}`
+- `midi-qol.preAttackRollConfig.{item.uuid}`
+- `midi-qol.preAttackRollConfig.{activity.uuid}`
 
 **Damage Calculation Hooks:**
 | Hook | Returns | Description |
