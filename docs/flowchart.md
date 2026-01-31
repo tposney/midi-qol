@@ -42,7 +42,7 @@ flowchart TD
     "]
     isMissed
     isAboutToSave -.-> saveTarget:::edgeLabel
-    saveTarget["`Save Target Shown On Card`"] -.-> preTargetSave
+    saveTarget["<p style='width:200px; text-wrap:balance;'>Save Target Shown On Card</p>"] -.-> preTargetSave
       preTargetSave["
         preTargetSave
         <small>Target is about to roll a saving throw</small>
@@ -51,7 +51,7 @@ flowchart TD
       optSave -- Fail --> isSaveFailure
 
     %% extra note included here because connecting these nodes as normal clutters this part of the chart
-    isAboutToSave ~~~ a["`preTargetSave -> success/fail if no optional`"]:::edgeLabel
+    isAboutToSave ~~~ a["<p style='width:200px; text-wrap:balance;'>preTargetSave -> success/fail if no optional</p>"]:::edgeLabel
     isSaveSuccess["
       isSaveSuccess
       <small>Target rolled a successful save</small>
@@ -64,7 +64,7 @@ flowchart TD
       isSave
       <small>Target rolled a save</small>
     "]
-    isSave-.-> saveResult["`Save Result Shown On Card`"]:::edgeLabel
+    isSave-.-> saveResult["<p style='width:200px; text-wrap:balance;'>Save Result Shown On Card</p>"]:::edgeLabel
     preTargetDamageApplication["
       preTargetDamageApplication
       <small>Target is about to be damaged by an item</small>
@@ -78,7 +78,7 @@ flowchart TD
       postTargetEffectApplication
       <small>Target has an effect applied by a rolled item</small>
     "]
-    eff["`Effects have been applied`"]:::edgeLabel -.-> postTargetEffectApplication
+    eff["<p style='width:200px; text-wrap:balance;'>Effects have been applied</p>"]:::edgeLabel -.-> postTargetEffectApplication
   end
 
   subgraph optAttack["args[0].tag = 'optional'"]
@@ -125,7 +125,7 @@ flowchart TD
       preAttackRollComplete --> isAttacked
         isAttacked --> preCheckHits
         preCheckHits -- Has Optional Macro --> optAC
-        preCheckHits -.-> showAttack["`Attack Roll Shown On Card`"]:::edgeLabel
+        preCheckHits -.-> showAttack["<p style='width:200px; text-wrap:balance;'>Attack Roll Shown On Card</p>"]:::edgeLabel
         preCheckHits["
           preCheckHits
           <small>Before Check Hits</small>
@@ -160,7 +160,7 @@ flowchart TD
         postDamageRoll
         <small>After Damage Roll</small>
       "] -.-> showDamage:::edgeLabel
-      showDamage["`Damage Roll Shown On Card`"] -.-> postDamageRollComplete
+      showDamage["<p style='width:200px; text-wrap:balance;'>Damage Roll Shown On Card</p>"] -.-> postDamageRollComplete
       preDamageApplication["
         preDamageApplication
         <small>Before Damage Application</small>
@@ -179,14 +179,14 @@ flowchart TD
       preTargeting
       <small>Called before targeting is resolved (*)</small>
     "] -.-> confirm:::edgeLabel
-    confirm["`Target Confirmation`"] -.-> preItemRoll
+    confirm["<p style='width:200px; text-wrap:balance;'>Target Confirmation</p>"] -.-> preItemRoll
     preItemRoll["
       preItemRoll
       <small>Called before the item is rolled (*)</small>
     "] -.-> config:::edgeLabel
-    config["`Configure Dialog`"] -.-> consume:::edgeLabel
-    consume["`Item Use Consumption Targets Updated`"] -.-> card:::edgeLabel
-    card["`Chat Card Created`"] -.-> postNoAction
+    config["<p style='width:200px; text-wrap:balance;'>Configure Dialog</p>"] -.-> consume:::edgeLabel
+    consume["<p style='width:200px; text-wrap:balance;'>Item Use Consumption Targets Updated</p>"] -.-> card:::edgeLabel
+    card["<p style='width:200px; text-wrap:balance;'>Chat Card Created</p>"] -.-> postNoAction
     postNoAction --> preStart
     preStart --> postStart
       postStart -- Has Template --> preAwaitTemplate
@@ -213,7 +213,7 @@ flowchart TD
   
     preWaitForDamageRoll -- Has Damage --> preDamageRoll
       preDamageRollConfig -- Has Optional Macro --> optDamage
-      b["`preDamageRollConfig and optional damage will repeat for damage on an 'other damage' activity`"]:::edgeLabel ~~~ optDamage
+      b["<p style='width:200px; text-wrap:balance;'>preDamageRollConfig and optional damage will repeat for damage on an 'other damage' activity</p>"]:::edgeLabel ~~~ optDamage
       optDamage --> postWaitForDamageRoll
       preDamageRollConfig -- No Optional Macro --> postWaitForDamageRoll 
     preWaitForDamageRoll -- No Damage --> postWaitForDamageRoll
@@ -241,7 +241,7 @@ flowchart TD
       isDamaged --> preDamageApplication
       isHealed --> preDamageApplication
       preDamageApplication -.-> hp:::edgeLabel
-      hp["`Target HP Updated`"] -.-> postAllRollsComplete
+      hp["<p style='width:200px; text-wrap:balance;'>Target HP Updated</p>"] -.-> postAllRollsComplete
     preAllRollsComplete -- No Damage --> postAllRollsComplete
     postAllRollsComplete --> preApplyDynamicEffects
     preApplyDynamicEffects --> preActiveEffects
