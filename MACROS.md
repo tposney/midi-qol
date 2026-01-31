@@ -472,6 +472,16 @@ flags.midi-qol.onUseMacroName CUSTOM macro,macroPass
 | `Compendium.scope.name.macroName/Id` | Compendium macro |
 | `function.functionName` | Global function (bound to workflow) |
 
+For item onUse macros, set via the menu on an item:
+
+![Item On Use Menu](pictures/item_onuse.png)
+
+1) Three dots icon in the header bar of an item
+2) Midi-qol
+3) Add a macro call
+4) Choose to use the item macro, an activity macro, or a world macro
+5) Choose a macro pass (see below)
+
 ### Macro Passes
 
 > [!important] Documentation
