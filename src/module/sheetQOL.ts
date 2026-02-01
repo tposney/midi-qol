@@ -1,6 +1,6 @@
 import { i18n, debug, debugEnabled } from "../midi-qol.js";
 import { configSettings } from "./settings.js";
-import { areMidiKeysPressed, isAutoFastAttack, isAutoFastDamage } from "./utils.js";
+import { areMidiKeysPressed, isAutoFastForward } from "./utils.js";
 
 /**
  * Supported dnd5e v13 actor sheet classes (ApplicationV2-based)
@@ -184,7 +184,7 @@ function attachMidiButtonHandlers(html: HTMLElement, app: any) {
         case "attack":
           // Roll attack - respect midi auto fast forward and roll toggle settings
           if (activity?.rollAttack) {
-            let configure = !isAutoFastAttack();
+            let configure = !isAutoFastForward("attack");
             if (areMidiKeysPressed(event as any, "RollToggle")) configure = !configure;
             await activity.rollAttack({ event }, { configure }, { create: true });
           }
@@ -193,7 +193,7 @@ function attachMidiButtonHandlers(html: HTMLElement, app: any) {
         case "damage":
           // Roll damage - respect midi auto fast forward and roll toggle settings
           if (activity?.rollDamage) {
-            let configure = !isAutoFastDamage();
+            let configure = !isAutoFastForward("damage");
             if (areMidiKeysPressed(event as any, "RollToggle")) configure = !configure;
             await activity.rollDamage({ event, versatile: false }, { configure }, { create: true });
           }
@@ -202,7 +202,7 @@ function attachMidiButtonHandlers(html: HTMLElement, app: any) {
         case "versatile":
           // Roll versatile damage - respect midi auto fast forward and roll toggle settings
           if (activity?.rollDamage) {
-            let configure = !isAutoFastDamage();
+            let configure = !isAutoFastForward("damage");
             if (areMidiKeysPressed(event as any, "RollToggle")) configure = !configure;
             await activity.rollDamage({ event, versatile: true }, { configure }, { create: true });
           }

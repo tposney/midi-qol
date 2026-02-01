@@ -212,6 +212,12 @@
     "damage": "Damage Rolls Only",
     "all": "Attack and Damage"
   },
+  "midi-qol.fastForwardOptions.attack": "Attack Rolls",
+  "midi-qol.fastForwardOptions.damage": "Damage Rolls",
+  "midi-qol.fastForwardOptions.check": "Ability Checks",
+  "midi-qol.fastForwardOptions.save": "Saving Throws",
+  "midi-qol.fastForwardOptions.skill": "Skill Rolls",
+  "midi-qol.fastForwardOptions.tool": "Tool Rolls",
   "midi-qol.autoTargetOptions": {
     "none": "None",
     "always": "Always",

@@ -395,7 +395,14 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         html.querySelectorAll(".midi-attack-roll .dice-formula")?.forEach(el => el.remove());
         html.querySelectorAll(".midi-attack-roll .dice-tooltip")?.forEach(el => el.remove());
         html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
+        html.querySelectorAll(".midi-attribution-info")?.forEach(el => el.remove());
       }
+    }
+
+    maskSaveAttribution(html: HTMLElement) {
+      if (game.user?.isGM) return;
+      if (["all", "allShow"].includes(configSettings.autoCheckSaves)) return;
+      html.querySelectorAll(".midi-qol-target-name[data-tooltip-html]")?.forEach(el => el.removeAttribute("data-tooltip-html"));
     }
 
     _enrichChatCard(html: HTMLElement) {
@@ -403,6 +410,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (!this.flags?.[MODULE_ID]?.messageType) return super._enrichChatCard(html);
       if (debugEnabled > 1) log("Enriching chat card", Date.now(), this.id);
       this.maskAttackRolls(html); // This has to run first to stop errors when ChatMessage5e._enrichDamageTooltip runs
+      this.maskSaveAttribution(html);
 
       // @ts-expect-error no dnd5e-types
       super._enrichChatCard(html);

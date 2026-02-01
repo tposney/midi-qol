@@ -1,9 +1,8 @@
 {
   "configSettings": {
     "gmAutoAttack": true,
-    "gmAutoFastForwardAttack": true,
+    "gmAutoFastForward": ["attack", "damage", "check", "save", "skill", "tool"],
     "gmAutoDamage": "always",
-    "gmAutoFastForwardDamage": true,
     "showItemDetails": "all",
     "itemTypeList": [
       "weapon",
@@ -17,7 +16,7 @@
       "backpack"
     ],
     "autoRollAttack": true,
-    "autoFastForward": "all",
+    "autoFastForward": ["attack", "damage", "check", "save", "skill", "tool"],
     "autoTarget": "wallsBlockIgnoreDefeated",
     "autoCheckHit": "all",
     "autoCheckSaves": "all",
@@ -185,7 +184,7 @@
   "nsaFlag": true,
   "coloredBorders": "None",
   "addChatDamageButtons": "none",
-  "autoFastForwardAbilityRolls": true,
+  "autoFastForwardAbilityRolls": false,
   "autoRemoveTargets": "none",
   "forceHideRoll": true,
   "enableWorkflow": true,

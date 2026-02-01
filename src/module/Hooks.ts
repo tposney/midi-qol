@@ -1,8 +1,8 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, log, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastAttack, isAutoFastDamage, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData } from "./utils.js";
-import { autoFastForwardAbilityRolls, checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData } from "./utils.js";
+import { checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { Workflow } from "./Workflow.js";
@@ -703,7 +703,7 @@ export function initHooks() {
           if (debugEnabled > 1) log('rollAttack', params.item);
           const activity = params.item.system.activities.find(a => a.hasAttack);
           if (!activity) return;
-          let configure = !isAutoFastAttack();
+          let configure = !isAutoFastForward("attack");
           if (areMidiKeysPressed(params.event, "RollToggle")) configure = !configure;
           activity.rollAttack({ event: params.event }, { configure }, { create: true })
         }
@@ -716,7 +716,7 @@ export function initHooks() {
           if (debugEnabled > 1) log('rollDamage', params.item);
           const activity = params.item.system.activities.find(a => a.hasDamage);
           if (!activity) return;
-          let configure = !isAutoFastDamage();
+          let configure = !isAutoFastForward("damage");
           if (areMidiKeysPressed(params.event, "RollToggle")) configure = !configure;
           activity.rollDamage({ event: params.event }, { configure }, { create: true })
         }
@@ -729,7 +729,7 @@ export function initHooks() {
           if (debugEnabled > 1) log('rollVersatileDamage', params.item);
           const activity = params.item.system.activities.find(a => a.hasDamage);
           if (!activity) return;
-          let configure = !isAutoFastDamage();
+          let configure = !isAutoFastForward("damage");
           if (areMidiKeysPressed(params.event, "RollToggle")) configure = !configure;
           activity.rollDamage({ event: params.event, versatile: true }, { configure }, { create: true })
         }
@@ -1446,8 +1446,4 @@ Hooks.on("dnd5e.preConfigureInitiative", (actor, rollConfig) => {
   }
 });
 
-Hooks.on("dnd5e.preRollAbilityCheck", (config, dialog, message) => {
-  if (autoFastForwardAbilityRolls) {
-    dialog.configure = false;
-  }
-});
+

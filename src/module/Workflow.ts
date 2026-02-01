@@ -1,14 +1,14 @@
 import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel } from "../midi-qol.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { configSettings, autoRemoveTargets, autoFastForwardAbilityRolls, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions, shouldDisplaySaveDC } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions, shouldDisplaySaveDC } from "./settings.js";
 import {
   createDamageDetail,
   processDamageRoll,
   untargetDeadTokens,
   checkIncapacitated,
   getAutoRollDamage,
-  isAutoFastAttack,
+  isAutoFastForward,
   getAutoRollAttack,
   getRemoveDamageButtons,
   getRemoveAttackButtons,
@@ -71,7 +71,6 @@ import {
   getAoETargetType,
   getActivityAutoTargetAction,
   activityHasEmanationNoTemplate,
-  isAutoFastDamage,
   completeActivityUse,
   getActor,
   getConcentrationEffect,
@@ -1753,8 +1752,8 @@ export class Workflow {
     this.workflowOptions = foundry.utils.mergeObject(defaultRollOptions, {
       autoRollAttack: getAutoRollAttack(this),
       autoRollDamage: getAutoRollDamage(this),
-      fastForwardAttack: isAutoFastAttack(this),
-      fastForwardDamage: isAutoFastDamage(this)
+      fastForwardAttack: isAutoFastForward("attack", { workflow: this }),
+      fastForwardDamage: isAutoFastForward("damage", { workflow: this })
     }, { inplace: false });
     if (options.workflowOptions)
       foundry.utils.mergeObject(this.workflowOptions, options.workflowOptions, { overwrite: true });
@@ -2358,7 +2357,7 @@ export class Workflow {
       return this.postAttackRollState;
     }
 
-    const isFastRoll = this.rollOptions.fastForwardAttack ?? this.workflowOptions.fastForwardAttack ?? isAutoFastAttack(this);
+    const isFastRoll = this.rollOptions.fastForwardAttack ?? this.workflowOptions.fastForwardAttack ?? isAutoFastForward("attack", { workflow: this });
     this.rollOptions.fastForwardAttack ||= isFastRoll;
     const autoRollAttack = this.rollOptions.autoRollAttack ?? getAutoRollAttack(this);
     if (!autoRollAttack) {
@@ -2519,7 +2518,7 @@ export class Workflow {
       this.rollOptions.spellLevel = this.spellLevel;
       this.rollOptions.isCritical = this.isCritical;
       this.rollOptions.isFumble = this.isFumble;
-      this.rollOptions.fastForwardDamage = isAutoFastDamage(this);
+      this.rollOptions.fastForwardDamage = isAutoFastForward("damage", { workflow: this });
       this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, { create: false });
       return this.WorkflowState_Suspend;
     } else {

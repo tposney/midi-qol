@@ -83,7 +83,8 @@ class ResetSettingsSubmenu extends FormApplication {
   protected _updateObject(event: Event, formData?: object): Promise<unknown> { return Promise.resolve(); }
 }
 
-export let autoFastForwardAbilityRolls: boolean;
+let fastForwardMigrationDone = false;
+/** @deprecated Removed in favor of granular configSettings.autoFastForward[] and configSettings.gmAutoFastForward[] arrays */
 export let autoRemoveTargets: string;
 export let coloredBorders: string;
 export let criticalDamage: string;
@@ -171,7 +172,7 @@ class ConfigSettings {
   autoCEEffects: string = "none";
   autoCheckHit: string = "none";
   autoCheckSaves: string = "none";
-  autoFastForward: string = "off";
+  autoFastForward: string[] = [];
   autoItemEffects: string = "off";
   autoRemoveSummonedCreature: boolean = false;
   autoUndoTransformations: boolean = false;
@@ -215,8 +216,7 @@ class ConfigSettings {
   gmAttackDamageCards: boolean = false;
   gmAutoAttack: boolean = false;
   gmAutoDamage: string = "none";
-  gmAutoFastForwardAttack: boolean = false;
-  gmAutoFastForwardDamage: boolean = false;
+  gmAutoFastForward: string[] = [];
   gmConsumeResource: string = "none";
   gmDoReactions: string = "all";
   gmHide3dDice: boolean = false;
@@ -350,7 +350,6 @@ export async function resetConfigSettingsToDefaults(): Promise<void> {
   await game.settings.set("midi-qol", "EnableWorkflow", true);
   // PreferredGM is intentionally not reset - user preference
   await game.settings.set("midi-qol", "ReplaceDefaultActivities", true);
-  await game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", false);
   await game.settings.set("midi-qol", "showGM", false);
   await game.settings.set("midi-qol", "ForceHideRoll", true);
   await game.settings.set("midi-qol", "DragDropTarget", false);
@@ -425,7 +424,6 @@ export function collectSettingData() {
     configSettings: cleanConfigSettings,
     midiSoundSettings,
     itemRollButtons,
-    autoFastForwardAbilityRolls,
     autoRemoveTargets,
     coloredBorders,
     criticalDamage,
@@ -540,7 +538,17 @@ export async function importSettingsFromJSON(json) {
 
   // await game.settings.set("midi-qol", "AddChatDamageButtons", removeOldValues(json.addChatDamageButtons));
   // await game.settings.set("midi-qol", "ItemRollButtons", removeOldValues(json.itemRollButtons));
-  await game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", removeOldValues(json.autoFastForwardAbilityRolls));
+  // Migrate imported old fast-forward settings into new array format
+  if (json.autoFastForwardAbilityRolls) {
+    const cs = importedConfigSettings;
+    if (!Array.isArray(cs.autoFastForward)) cs.autoFastForward = [];
+    if (!Array.isArray(cs.gmAutoFastForward)) cs.gmAutoFastForward = [];
+    for (const rollType of ["check", "save", "skill", "tool"]) {
+      if (!cs.autoFastForward.includes(rollType)) cs.autoFastForward.push(rollType);
+      if (!cs.gmAutoFastForward.includes(rollType)) cs.gmAutoFastForward.push(rollType);
+    }
+    await game.settings.set("midi-qol", "ConfigSettings", cs);
+  }
   await game.settings.set("midi-qol", "AutoRemoveTargets", removeOldValues(json.autoRemoveTargets));
   await game.settings.set("midi-qol", "ColoredBorders", removeOldValues(json.coloredBorders));
   await game.settings.set("midi-qol", "CriticalDamage", removeOldValues(json.criticalDamage));
@@ -799,7 +807,63 @@ export let fetchParams = () => {
   itemRollButtons = false; // game.settings.get("midi-qol", "ItemRollButtons");
   if (configSettings.addChatDamageButtons === undefined) configSettings.addChatDamageButtons = "none";
 
-  autoFastForwardAbilityRolls = game.settings.get("midi-qol", "AutoFastForwardAbilityRolls");
+  // Migrate old fast-forward settings to new granular arrays
+  if (!fastForwardMigrationDone) {
+    let needsFastForwardMigration = false;
+    const oldFastForwardPlayer = typeof configSettings.autoFastForward === "string" ? configSettings.autoFastForward : undefined;
+    //@ts-expect-error checking for old boolean format
+    const oldGmFfAttack: boolean | undefined = typeof configSettings.gmAutoFastForwardAttack === "boolean" ? configSettings.gmAutoFastForwardAttack : undefined;
+    //@ts-expect-error checking for old boolean format
+    const oldGmFfDamage: boolean | undefined = typeof configSettings.gmAutoFastForwardDamage === "boolean" ? configSettings.gmAutoFastForwardDamage : undefined;
+    let oldAbilityRolls: boolean | undefined;
+
+    if (typeof configSettings.autoFastForward === "string") {
+      const oldValue = configSettings.autoFastForward as unknown as string;
+      const newValue: string[] = [];
+      if (oldValue === "attack" || oldValue === "all") newValue.push("attack");
+      if (oldValue === "damage" || oldValue === "all") newValue.push("damage");
+      configSettings.autoFastForward = newValue;
+      needsFastForwardMigration = true;
+    }
+    if (oldGmFfAttack !== undefined || oldGmFfDamage !== undefined) {
+      const newGmValue: string[] = [];
+      if (oldGmFfAttack) newGmValue.push("attack");
+      if (oldGmFfDamage) newGmValue.push("damage");
+      configSettings.gmAutoFastForward = newGmValue;
+      //@ts-expect-error cleanup old properties
+      delete configSettings.gmAutoFastForwardAttack;
+      //@ts-expect-error cleanup old properties
+      delete configSettings.gmAutoFastForwardDamage;
+      needsFastForwardMigration = true;
+    }
+    // Migrate standalone AutoFastForwardAbilityRolls setting into the arrays
+    try {
+      oldAbilityRolls = game.settings.get("midi-qol", "AutoFastForwardAbilityRolls") as boolean;
+      if (oldAbilityRolls) {
+        for (const rollType of ["check", "save", "skill", "tool"]) {
+          if (!configSettings.autoFastForward.includes(rollType)) configSettings.autoFastForward.push(rollType);
+          if (!configSettings.gmAutoFastForward.includes(rollType)) configSettings.gmAutoFastForward.push(rollType);
+        }
+        needsFastForwardMigration = true;
+        // Reset the old setting so migration only runs once
+        game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", false);
+      }
+    } catch (e) {
+      // Setting may not be registered yet or already removed - that's fine
+    }
+    if (needsFastForwardMigration) {
+      console.warn("midi-qol | Migrated fast-forward settings to granular arrays:",
+        `\n  Player autoFastForward: "${oldFastForwardPlayer ?? "(already migrated)"}" → [${configSettings.autoFastForward.join(", ")}]`,
+        `\n  GM gmAutoFastForwardAttack: ${oldGmFfAttack ?? "(already migrated)"}, gmAutoFastForwardDamage: ${oldGmFfDamage ?? "(already migrated)"} → gmAutoFastForward: [${configSettings.gmAutoFastForward.join(", ")}]`,
+        `\n  AutoFastForwardAbilityRolls: ${oldAbilityRolls ?? false}`
+      );
+      game.settings.set("midi-qol", "ConfigSettings", configSettings);
+    }
+    fastForwardMigrationDone = true;
+  }
+  if (!Array.isArray(configSettings.autoFastForward)) configSettings.autoFastForward = [];
+  if (!Array.isArray(configSettings.gmAutoFastForward)) configSettings.gmAutoFastForward = [];
+
   autoRemoveTargets = game.settings.get("midi-qol", "AutoRemoveTargets");
   if (autoRemoveTargets === "allGM") {
     autoRemoveTargets = game.user?.isGM ? "all" : "dead";
@@ -1556,14 +1620,14 @@ export const registerSettings = function () {
     requiresReload: true
   });
 
+  // Deprecated: kept for one version cycle to allow migration of old value into configSettings arrays
   game.settings.register("midi-qol", "AutoFastForwardAbilityRolls", {
     name: i18n("midi-qol.AutoFastForwardAbilityRolls.Name"),
     hint: i18n("midi-qol.AutoFastForwardAbilityRolls.Hint"),
     scope: "world",
     default: false,
     type: Boolean,
-    config: true,
-    onChange: fetchParams
+    config: false,
   });
 
   game.settings.register("midi-qol", "ForceHideRoll", {

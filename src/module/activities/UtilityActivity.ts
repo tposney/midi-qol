@@ -4,7 +4,7 @@ import { debugEnabled, i18n, warn, error, GameSystemConfig } from "../../midi-qo
 import { AugmentedEvent, Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
-import { areMidiKeysPressed, asyncHooksCall, isAutoFastDamage } from "../utils.js";
+import { areMidiKeysPressed, asyncHooksCall, isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { displayDSNForRoll } from "../utils.js";
 
@@ -96,7 +96,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
         return;
       }
       config.midiOptions ??= {};
-      config.midiOptions.fastForward ??= isAutoFastDamage(workflow)
+      config.midiOptions.fastForward ??= isAutoFastForward("damage", { workflow })
       if (debugEnabled > 0) {
         warn("MidiUtilityActivity | rollFormula | Called", config, dialog, message);
       }

@@ -5,7 +5,7 @@ import { computeRollModifiers, applyRollModifiers, RollModifierFlags } from "../
 import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags } from "../lib/RollModifierTracker.js";
 import { MidiOptions } from "../utils.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
-import { addAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastAttack } from "../utils.js";
+import { addAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
@@ -402,7 +402,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           dialog.configure = false;
         } else {
           // "default" - use fast forward settings
-          dialog.configure = !isAutoFastAttack(workflow);
+          dialog.configure = !isAutoFastForward("attack", { workflow });
         }
 
         // Ammo confirmation always requires dialog
@@ -410,9 +410,9 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           dialog.configure = true;
         }
 
-        // Thrown weapons always require dialog to choose attack mode. TODO This should test the existing roll mode etc
+        // Thrown weapons normally require dialog to choose attack mode, but respect forceRollDialog="never"
         //@ts-expect-error no dnd5e-types
-        if (this.item?.system.properties.has("thr")) {
+        if (this.item?.system.properties.has("thr") && effectiveForceRollDialog !== "never") {
           dialog.configure = true;
         }
 
@@ -434,11 +434,12 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           if (targetDescriptors && workflow) workflow.targetDescriptors = targetDescriptors as DND5ETargetDescriptor[];
 
           // Apply roll modifiers (auto-fail/success, min/max) for attack rolls
+          const actType = this.actionType;
           const attackModifierFlags: RollModifierFlags = {
-            failFlags: ["fail.all", "fail.attack.all"],
-            successFlags: ["success.all", "success.attack.all"],
-            maxFlags: ["max.attack.all"],
-            minFlags: ["min.attack.all"]
+            failFlags: ["fail.all", "fail.attack.all", `fail.attack.${actType}`],
+            successFlags: ["success.all", "success.attack.all", `success.attack.${actType}`],
+            maxFlags: ["max.attack.all", `max.attack.${actType}`],
+            minFlags: ["min.attack.all", `min.attack.${actType}`]
           };
           if (workflow?.attackRollModifierTracker) {
             computeRollModifiers(this.actor!, attackModifierFlags, workflow.attackRollModifierTracker, { workflow });

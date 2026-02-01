@@ -1,4 +1,4 @@
-import { criticalDamage, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, quickSettingsBlurb, autoCheckHitOptions, clickOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, damageCardStyleOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, checkFlankingOptions, hideRollDetailsHintLongOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions, safeGetGameSetting, resetConfigSettingsToDefaults } from "../settings.js"
+import { criticalDamage, nsaFlag, coloredBorders, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, quickSettingsBlurb, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, damageCardStyleOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, checkFlankingOptions, hideRollDetailsHintLongOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions, safeGetGameSetting, resetConfigSettingsToDefaults } from "../settings.js"
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, gameStats, debugEnabled, log, GameSystemConfig, ceInterface } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
@@ -158,7 +158,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       quickSettings: true,
       quickSettingsOptions,
       autoCheckHitOptions,
-      clickOptions,
       autoTargetOptions,
       rangeTargetOptions,
       requiresTargetsOptions,
@@ -189,7 +188,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       hideRollDetailsHint: hideRollDetailsHintLongOptions,
       nsaFlag,
       coloredBorders,
-      playerRollSavesOptions: (autoFastForwardAbilityRolls && false) ? playerRollSavesOptionsReduced : playerRollSavesOptionsLocalized,
+      playerRollSavesOptions: playerRollSavesOptionsLocalized,
       rollNPCSavesOptions: rollNPCSavesOptionsLocalized,
       customSoundsPlaylistOptions: game.playlists?.contents.reduce((acc, e) => { acc[e.id] = e.name; return acc }, {}) || {},
       customSoundOptions: game.playlists?.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) => { acc[s.id ?? ""] = s.name; return acc }, { "none": "" }),
@@ -219,6 +218,14 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       AddChatDamageButtonsOptions: addChatDamageButtonsOptions,
       ActivationAutomationOptions: activationAutomationOptions,
       rollModes: CONFIG.Dice.rollModes,
+      fastForwardOptions: {
+        attack: i18n("midi-qol.fastForwardOptions.attack"),
+        damage: i18n("midi-qol.fastForwardOptions.damage"),
+        check: i18n("midi-qol.fastForwardOptions.check"),
+        save: i18n("midi-qol.fastForwardOptions.save"),
+        skill: i18n("midi-qol.fastForwardOptions.skill"),
+        tool: i18n("midi-qol.fastForwardOptions.tool"),
+      },
     };
     context = foundry.utils.mergeObject(await super._prepareContext(options), context, { inplace: false });
     context.concentrationDisabled =safeGetGameSetting("dnd5e", "disableConcentration");
@@ -500,8 +507,7 @@ let quickSettingsDetails: any = {
     configSettings: {
       gmAutoAttack: true,
       gmAutoDamage: "onHit",
-      gmAutoFastForwardAttack: true,
-      gmAutoFastForwardDamage: true,
+      gmAutoFastForward: ["attack", "damage"],
       gmRemoveButtons: "all",
       gmTargetConfirmation: "none",
       autoItemEffects: "applyRemove",
@@ -514,8 +520,7 @@ let quickSettingsDetails: any = {
     configSettings: {
       gmAutoAttack: false,
       gmAutoDamage: "none",
-      gmAutoFastForwardAttack: false,
-      gmAutoFastForwardDamage: false,
+      gmAutoFastForward: [],
       gmRemoveButtons: "none",
       gmTargetConfirmation: "none"
     },
@@ -536,7 +541,7 @@ let quickSettingsDetails: any = {
     configSettings: {
       autoRollAttack: true,
       autoRollDamage: "onHit",
-      autoFastForward: "all",
+      autoFastForward: ["attack", "damage"],
       removeButtons: "all",
       targetConfirmation: "none"
     },
@@ -547,7 +552,7 @@ let quickSettingsDetails: any = {
     configSettings: {
       autoRollAttack: false,
       autoRollDamage: "none",
-      autoFastForward: "none",
+      autoFastForward: [],
       removeButtons: "none",
       targetConfirmation: "none"
     },

@@ -1,7 +1,7 @@
 import { debug, warn, i18n, error, debugEnabled, i18nFormat, MODULE_ID, MESSAGE_TYPES } from "../midi-qol.js";
 import { DDBGameLogWorkflow, Workflow } from "./Workflow.js";
 import { nsaFlag, coloredBorders, configSettings, forceHideRoll, safeGetGameSetting, saveToChatCard } from "./settings.js";
-import { playerFor, playerForActor, doOverTimeEffect, isInCombat, isAutoFastAttack } from "./utils.js";
+import { playerFor, playerForActor, doOverTimeEffect, isInCombat, isAutoFastForward } from "./utils.js";
 import { preferredActiveGM, socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiSaveActivity } from "./activities/SaveActivity.js";

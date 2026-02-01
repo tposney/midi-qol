@@ -3080,18 +3080,19 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
     return 0;
   }
 }
-export function isAutoFastAttack(workflow?: Workflow): boolean {
-  if (workflow?.rollOptions?.fastForwardAttack !== undefined) return workflow.rollOptions.fastForwardAttack
-  if (workflow?.workflowOptions?.autoFastAttack !== undefined) return workflow.workflowOptions.autoFastAttack;
-  if (workflow?.workflowType === "DummyWorkflow") return !!workflow.rollOptions.fastForward;
-  return game.user?.isGM ? configSettings.gmAutoFastForwardAttack : ["all", "attack"].includes(configSettings.autoFastForward);
-}
+export type FastForwardRollType = "attack" | "damage" | "check" | "save" | "skill" | "tool";
 
-export function isAutoFastDamage(workflow?: Workflow): boolean {
-  if (workflow?.rollOptions?.fastForwardDamage !== undefined) return workflow.rollOptions.fastForwardDamage;
-  if (workflow?.workflowOptions?.fastForwardDamage !== undefined) return workflow.workflowOptions.fastForwardDamage;
-  if (workflow?.workflowType === "DummyWorkflow") return !!workflow.rollOptions.fastForwardDamage;
-  return game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward)
+export function isAutoFastForward(rollType: FastForwardRollType, { workflow, user }: { workflow?: Workflow, user?: User } = {}): boolean {
+  if (rollType === "attack") {
+    if (workflow?.rollOptions?.fastForwardAttack !== undefined) return workflow.rollOptions.fastForwardAttack;
+    if (workflow?.workflowOptions?.autoFastAttack !== undefined) return workflow.workflowOptions.autoFastAttack;
+    if (workflow?.workflowType === "DummyWorkflow") return !!workflow.rollOptions.fastForward;
+  } else if (rollType === "damage") {
+    if (workflow?.rollOptions?.fastForwardDamage !== undefined) return workflow.rollOptions.fastForwardDamage;
+    if (workflow?.workflowOptions?.fastForwardDamage !== undefined) return workflow.workflowOptions.fastForwardDamage;
+    if (workflow?.workflowType === "DummyWorkflow") return !!workflow.rollOptions.fastForwardDamage;
+  }
+  return (user ?? game.user)?.isGM ? configSettings.gmAutoFastForward.includes(rollType) : configSettings.autoFastForward.includes(rollType);
 }
 
 export function autoConsumeResource(workflow?: Workflow): string {

@@ -2,6 +2,13 @@
   data-group="{{tab.group}}" data-tab="{{tab.id}}">
   <div class="midi-qol-box">
     <div class="form-group">
+      <label>{{localize "midi-qol.AutoFastForward.Name"}}</label>
+      <multi-select name="autoFastForward">
+        {{selectOptions fastForwardOptions selected=configSettings.autoFastForward}}
+      </multi-select>
+    </div>
+
+    <div class="form-group">
       <label>{{localize "midi-qol.AutoAttack.Name"}}</label>
       <input type="checkbox" name="autoRollAttack" data-dtype="Boolean" {{checked configSettings.autoRollAttack}} />
     </div>
@@ -26,18 +33,11 @@
       <input type="checkbox" name="playerRequireAmmunition" data-dtype="Boolean" {{checked
         configSettings.playerRequireAmmunition}} />
     </div>
-    
+
     <div class="form-group">
       <label>{{localize "midi-qol.AutoDamage.Name"}}</label>
       <select name="autoRollDamage" data-dtype="String">
         {{selectOptions autoRollDamageOptions selected=configSettings.autoRollDamage localize=true}}
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label>{{localize "midi-qol.AutoFastForward.Name"}}</label>
-      <select name="autoFastForward" data-dtype="String">
-        {{selectOptions clickOptions selected=configSettings.autoFastForward localize=true}}
       </select>
     </div>
 
