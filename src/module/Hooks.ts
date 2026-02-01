@@ -516,7 +516,6 @@ export function initHooks() {
 
   Hooks.on("midi-qol.RollComplete", async (workflow) => {
     const activityUuid = workflow.activity.uuid ?? "";
-
     if (savedOverTimeEffectsToDelete[activityUuid]) {
       const effectData = savedOverTimeEffectsToDelete[activityUuid];
       let effect = fromUuidSync(effectData.uuid) as ActiveEffect.Implementation | undefined;

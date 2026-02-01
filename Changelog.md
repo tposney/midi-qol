@@ -1,7 +1,18 @@
+### 13.0.42
+**New Features**
+* New RAW (2024) invisibility advantage/disadvantage mode that only relies on being able to see the target.
+
+**Bug Fixes**
+* Fix for checkAttackAdvantage not being called before calling preAttackRoll Hooks/macros.
+  - checkAttackAdvantage is called again after the hooks/macros return. This means changes to actors advantage flags will be respected as they were prior to 13.0.40.
+  - changes made to workflow.tracker.advantage etc will be overwritten.
+  - if you want to make changes to the tracker that will be respected do so in the preAttckConfig Macro/Hooks.
+  - I added a preAttackConfig Hook call as well for the above.
+
 ### 13.0.41
 **Bug Fixes**
 * Fix for not respecting no prompt options in player saves.
-* Fixed a couple of cases where midi was not correctly detecting the module causing the roll and doing strange things with fastforward.
+* Fixed a couple of cases where midi was not correctly detecting the module causing the roll and doing strange things with fast forward.
 
 **New Features**
 * Midi support for the new macro-autocomplete module. All of the midi scope passed to the macro is available for auto completion. This module is not publicly available yet and is in closed beta.

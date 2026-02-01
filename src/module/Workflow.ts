@@ -105,7 +105,7 @@ import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-t
 import Token = foundry.canvas.placeables.Token;
 import { MidiTransformActivity } from "./activities/TransformActivity.js";
 import { MidiAttackActivity, computeAttackAdvantage } from "./activities/AttackActivity.js";
-import { RollModifierTracker, AdvantageAttributionType, CriticalModifierFlags, computeCriticalModifiers, computeTargetCriticalModifiers } from "./lib/RollModifierTracker.js";
+import { RollModifierTracker, AdvantageAttributionType, CriticalModifierFlags, computeCriticalModifiers, computeTargetCriticalModifiers, getFlagDisplayName } from "./lib/RollModifierTracker.js";
 
 /**
  * Result of resolving a macro specification in callMacro.
@@ -760,6 +760,24 @@ export class Workflow {
     this.persistFields({ hitECTargetUuids: targetDocuments.map(t => t.uuid) });
   }
 
+  #otherDamageMatches: Set<Token.Implementation> | undefined;
+  get otherDamageMatches(): Set<Token.Implementation> | undefined {
+    if (this.#otherDamageMatches !== undefined) return this.#otherDamageMatches;
+    const uuids = this.midiFlags?.otherDamageMatchUuids;
+    if (uuids) {
+      this.#otherDamageMatches = new Set(
+        uuids.map((uuid: string) => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter((t: Token.Implementation | undefined): t is Token.Implementation => !!t)
+      );
+      return this.#otherDamageMatches;
+    }
+    return undefined;
+  }
+  set otherDamageMatches(matches: Set<Token.Implementation> | undefined) {
+    this.#otherDamageMatches = matches;
+    const uuids = matches ? Array.from(matches).map(t => getTokenDocument(t)?.uuid).filter((u): u is string => !!u) : [];
+    this.persistFields({ otherDamageMatchUuids: uuids });
+  }
+
   #attackRoll: Roll | undefined;
   get attackRoll(): Roll | undefined {
     if (this.#attackRoll) return this.#attackRoll;
@@ -810,18 +828,38 @@ export class Workflow {
   // ─────────────────────────────────────────────────────────────────
 
   #attackRollModifierTracker: RollModifierTracker = new RollModifierTracker();
+  #attackRollModifierTrackerRestored = false;
 
   /**
    * Get the RollModifierTracker instance for attack rolls.
    * Use this for granular control over advantage/disadvantage tracking.
+   * On first access, restores from chat card flags if available.
    */
   get attackRollModifierTracker(): RollModifierTracker {
+    if (!this.#attackRollModifierTrackerRestored && this.itemCardUuid && saveToChatCard) {
+      const data = this.midiFlags?.attackRollModifierTrackerData;
+      if (data) {
+        this.#attackRollModifierTracker.restore(data);
+        // Full tracker restore supersedes the boolean-only isCritical/isFumble restore
+        this.#isCriticalRestored = true;
+        this.#isFumbleRestored = true;
+      }
+      this.#attackRollModifierTrackerRestored = true;
+    }
     return this.#attackRollModifierTracker;
   }
 
   /** Alias for attackRollModifierTracker */
   get tracker(): RollModifierTracker {
-    return this.#attackRollModifierTracker;
+    return this.attackRollModifierTracker;
+  }
+
+  /**
+   * Persist the attack roll modifier tracker state to chat card flags.
+   * Called after processAttackRoll and checkHits when the tracker state is finalized.
+   */
+  private persistAttackTracker(): void {
+    this.persistFields({ attackRollModifierTrackerData: this.#attackRollModifierTracker.toJSON() });
   }
 
   /**
@@ -1560,7 +1598,6 @@ export class Workflow {
   tempTargetConfirmation: boolean | undefined;
   whisperAttackCard: boolean | undefined;
   effectTargets: Set<Token.Implementation> | undefined;
-  otherDamageMatches: Set<Token.Implementation> | undefined;
   // Deferred other activity damage rolling - stored when consumption needs to be checked first
   otherDamageConfig: RollProcessConfig | undefined;
   otherDamageDialog: RollDialogConfig | undefined;
@@ -2681,19 +2718,19 @@ export class Workflow {
         const ammoCondition = null; // this.ammunition?.getFlag(MODULE_ID, "otherCondition");
         if (otherCondition) {
           if (await evalActivationCondition(this, otherCondition, token, { async: true, errorReturn: false }))
-            this.otherDamageMatches.add(token);
+            this.otherDamageMatches = this.otherDamageMatches!.add(token);
         }
         else if (ammoCondition) { // TODO work out what this means with activities
           if (await evalActivationCondition(this, ammoCondition, token, { async: true, errorReturn: false }))
-            this.otherDamageMatches.add(token);
+            this.otherDamageMatches = this.otherDamageMatches!.add(token);
         }
         else {
-          this.otherDamageMatches.add(token);
+          this.otherDamageMatches = this.otherDamageMatches!.add(token);
         }
       }
 
       // Process consumption for other activity if it will be applied
-      if (this.otherDamageMatches.size > 0) {
+      if (this.otherDamageMatches!.size > 0) {
         await this.checkOtherActivityConsumption();
       }
     }
@@ -3774,7 +3811,7 @@ export class Workflow {
 
         // Special case: grants.critical.range
         if (Number.isNumeric(grants.range) && computeDistance(target, this.token, { wallsBlock: false }) <= Number(grants.range)) {
-          this.attackRollModifierTracker.critical.force('grants.critical.range', `grants.critical.range ${targetName}`);
+          this.attackRollModifierTracker.critical.force('grants.critical.range', `${getFlagDisplayName('grants.critical.range')} (${targetName})`);
         }
 
         if (grants || fails) {
@@ -3782,17 +3819,17 @@ export class Workflow {
 
           // Check grants.critical.all and grants.critical.{attackType}
           if (await evalAllConditionsAsync(target.actor, midiFlag(`grants.critical.all`), conditionData)) {
-            this.attackRollModifierTracker.critical.force('grants.critical.all', `grants.critical.all ${targetName}`);
+            this.attackRollModifierTracker.critical.force('grants.critical.all', `${getFlagDisplayName('grants.critical.all')} (${targetName})`);
           }
           if (attackType && await evalAllConditionsAsync(target.actor, midiFlag(`grants.critical.${attackType}`), conditionData)) {
-            this.attackRollModifierTracker.critical.force(`grants.critical.${attackType}`, `grants.critical.${attackType} ${targetName}`);
+            this.attackRollModifierTracker.critical.force(`grants.critical.${attackType}`, `${getFlagDisplayName(`grants.critical.${attackType}`)} (${targetName})`);
           }
 
           // Deprecated fail.critical flags
           if (await evalAllConditionsAsync(target.actor, midiFlag(`fail.critical.all`), conditionData)
             || (attackType && await evalAllConditionsAsync(target.actor, midiFlag(`fail.critical.${attackType}`), conditionData))) {
             console.warn(`midi-qol | processCriticalFlags | ${target.actor.name} flags.${MODULE_ID}.fail.critical is deprecated use flags.${MODULE_ID}.grants.noCritical.all/.attackType instead`);
-            this.attackRollModifierTracker.critical.suppress('fail.critical', `fail.critical ${targetName}`);
+            this.attackRollModifierTracker.critical.suppress('fail.critical', `${getFlagDisplayName('fail.critical')} (${targetName})`);
           }
         }
         if (this.attackRollModifierTracker.critical.isForced) break; // Found a target that grants crit, no need to check more
@@ -3801,6 +3838,7 @@ export class Workflow {
       // grants.noCritical - check if ALL targets have this flag
       let allTargetsGrantNoCrit = true;
       const noCritTargets: string[] = [];
+      let noCritFlag = "grants.noCritical.all";
       for (const target of this.hitTargets) {
         if (!target?.actor) {
           allTargetsGrantNoCrit = false;
@@ -3814,10 +3852,11 @@ export class Workflow {
           allTargetsGrantNoCrit = false;
           break;
         }
+        if (hasNoCritType) noCritFlag = `grants.noCritical.${attackType}`;
         noCritTargets.push(targetName);
       }
       if (allTargetsGrantNoCrit && this.hitTargets.size > 0) {
-        this.attackRollModifierTracker.critical.suppress('grants.noCritical', `grants.noCritical ${noCritTargets.join(", ")}`);
+        this.attackRollModifierTracker.critical.suppress(noCritFlag, `${getFlagDisplayName(noCritFlag)} (${noCritTargets.join(", ")})`);
       }
     }
 
@@ -6722,10 +6761,22 @@ return {
     if (terms[0] instanceof foundry.dice.terms.NumericTerm) {
       this.diceRoll = Number(terms[0].total);
     } else {
-      this.diceRoll = Number(terms[0].total)
-      //TODO find out why this is using results - seems it should just be the total
-      // this.diceRoll = terms[0].results.find(d => d.active).result;
+      this.diceRoll = Number(terms[0].total);
     }
+
+    // For natural critical/fumble detection, use the actual die face when auto-success/fail
+    // is active (min99/max1 from success.attack/fail.attack flags), since those just force
+    // hit/miss without implying a natural crit/fumble. Regular min/max modifiers (e.g. min20
+    // from min.attack.all) should use terms[0].total which includes the modifier adjustment.
+    let critFumbleDiceRoll = this.diceRoll;
+    if (this.attackRollModifierTracker.modifiers.willSucceed || this.attackRollModifierTracker.modifiers.willFail) {
+      if (!(terms[0] instanceof foundry.dice.terms.NumericTerm)) {
+        const dterm = terms[0] as foundry.dice.terms.DiceTerm;
+        const activeResult = dterm.results?.find(d => d.active);
+        if (activeResult) critFumbleDiceRoll = Number(activeResult.result);
+      }
+    }
+
     // @ts-expect-error no dnd5e-types
     let criticalThreshold = this.attackRoll.options.criticalSuccess ?? 20;
     if (this.targets.size > 0) {
@@ -6740,7 +6791,7 @@ return {
     }
 
     // Determine natural critical/fumble from thresholds
-    const naturalCritical = this.diceRoll >= criticalThreshold;
+    const naturalCritical = critFumbleDiceRoll >= criticalThreshold;
     if (naturalCritical) {
       this.attackRollModifierTracker.critical.setNatural('naturalCrit', `${i18n("DND5E.Roll")} >= ${criticalThreshold}`);
     }
@@ -6753,7 +6804,7 @@ return {
         ? 0
         : Math.max(attackRollFumbleTarget, midiFumble);
 
-    const naturalFumble = this.diceRoll <= fumbleTarget;
+    const naturalFumble = critFumbleDiceRoll <= fumbleTarget;
     if (naturalFumble) {
       this.attackRollModifierTracker.fumble.setNatural('naturalFumble', `${i18n("DND5E.Roll")} <= ${fumbleTarget}`);
     }
@@ -6793,6 +6844,7 @@ return {
       if (naturalFumble || this.attackRollModifierTracker.fumble.isForced) {
         let allTargetsGrantNoFumble = true;
         const noFumbleTargets: string[] = [];
+        let noFumbleFlag = "grants.noFumble.all";
         for (const target of this.targets) {
           if (!target?.actor) {
             allTargetsGrantNoFumble = false;
@@ -6806,10 +6858,11 @@ return {
             allTargetsGrantNoFumble = false;
             break;
           }
+          if (hasNoFumbleType) noFumbleFlag = `grants.noFumble.${actionType}`;
           noFumbleTargets.push(targetName);
         }
         if (allTargetsGrantNoFumble && this.targets.size > 0) {
-          this.attackRollModifierTracker.fumble.suppress('grants.noFumble', `grants.noFumble ${noFumbleTargets.join(", ")}`);
+          this.attackRollModifierTracker.fumble.suppress(noFumbleFlag, `${getFlagDisplayName(noFumbleFlag)} (${noFumbleTargets.join(", ")})`);
         }
       }
     }
@@ -6820,6 +6873,7 @@ return {
 
     // Persist to chat card (triggers via setter which uses override, but we want to persist computed state)
     this.persistFields({ isCritical: this.isCritical, isFumble: this.isFumble });
+    this.persistAttackTracker();
 
     this.attackTotal = this.attackRoll.total ?? 0;
     if (debugEnabled > 1) debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble);
@@ -7074,23 +7128,33 @@ return {
       const midiFlagsActorFail = this.actor.flags?.[MODULE_ID]?.fail;
       if (midiFlagsActorFail) {
         const conditionData = createConditionData({ workflow: this, target: this.token, actor: this.actor });
-        if (await evalAllConditionsAsync(this.actor, midiFlag(`fail.all`), conditionData)
-          || await evalAllConditionsAsync(this.actor, midiFlag(`fail.attack.all`), conditionData)
-          || await evalAllConditionsAsync(this.actor, midiFlag(`fail.attack.${this.activity.actionType}`), conditionData)) {
+        let failFlag: string | undefined;
+        if (await evalAllConditionsAsync(this.actor, midiFlag(`fail.attack.${this.activity.actionType}`), conditionData))
+          failFlag = `fail.attack.${this.activity.actionType}`;
+        else if (await evalAllConditionsAsync(this.actor, midiFlag(`fail.attack.all`), conditionData))
+          failFlag = "fail.attack.all";
+        else if (await evalAllConditionsAsync(this.actor, midiFlag(`fail.all`), conditionData))
+          failFlag = "fail.all";
+        if (failFlag) {
           isHit = false;
           isHitEC = false;
-          this.attackRollModifierTracker.critical.setOverride(false, "fail.attack", i18n("midi-qol.FailAttack"));
+          this.attackRollModifierTracker.critical.setOverride(false, failFlag, getFlagDisplayName(failFlag));
         }
       }
       const midiFlagsActorSuccess = this.actor.flags?.[MODULE_ID]?.success;
       if (midiFlagsActorSuccess) {
         const conditionData = createConditionData({ workflow: this, target: this.token, actor: this.actor });
-        if (await evalAllConditionsAsync(this.actor, midiFlag(`success.all`), conditionData)
-          || await evalAllConditionsAsync(this.actor, midiFlag(`success.attack.all`), conditionData)
-          || await evalAllConditionsAsync(this.actor, midiFlag(`success.attack.${this.activity.actionType}`), conditionData)) {
+        let successFlag: string | undefined;
+        if (await evalAllConditionsAsync(this.actor, midiFlag(`success.attack.${this.activity.actionType}`), conditionData))
+          successFlag = `success.attack.${this.activity.actionType}`;
+        else if (await evalAllConditionsAsync(this.actor, midiFlag(`success.attack.all`), conditionData))
+          successFlag = "success.attack.all";
+        else if (await evalAllConditionsAsync(this.actor, midiFlag(`success.all`), conditionData))
+          successFlag = "success.all";
+        if (successFlag) {
           isHit = true;
           isHitEC = false;
-          this.attackRollModifierTracker.fumble.setOverride(false, "success.attack", i18n("midi-qol.SuccessAttack"));
+          this.attackRollModifierTracker.fumble.setOverride(false, successFlag, getFlagDisplayName(successFlag));
         }
       }
 
@@ -7100,17 +7164,25 @@ return {
       if (midiFlagsGrantsAttackSuccess || midiFlagsGrantsAttackFail) {
         conditionData = createConditionData({ workflow: this, target: this.token, actor: this.actor });
 
-        if (await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.success.all`), conditionData)
-          || await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.success.${this.activity.actionType}`), conditionData)) {
+        let grantsSuccessFlag: string | undefined;
+        if (await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.success.${this.activity.actionType}`), conditionData))
+          grantsSuccessFlag = `grants.attack.success.${this.activity.actionType}`;
+        else if (await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.success.all`), conditionData))
+          grantsSuccessFlag = "grants.attack.success.all";
+        if (grantsSuccessFlag) {
           isHit = true;
           isHitEC = false;
-          this.attackRollModifierTracker.fumble.setOverride(false, "grants.attack.success", i18n("midi-qol.GrantsAttackSuccess"));
+          this.attackRollModifierTracker.fumble.setOverride(false, grantsSuccessFlag, getFlagDisplayName(grantsSuccessFlag));
         }
-        if (await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.fail.all`), conditionData)
-          || await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.fail.${this.activity.actionType}`), conditionData)) {
+        let grantsFailFlag: string | undefined;
+        if (await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.fail.${this.activity.actionType}`), conditionData))
+          grantsFailFlag = `grants.attack.fail.${this.activity.actionType}`;
+        else if (await evalAllConditionsAsync(targetActor, midiFlag(`grants.attack.fail.all`), conditionData))
+          grantsFailFlag = "grants.attack.fail.all";
+        if (grantsFailFlag) {
           isHit = false;
           isHitEC = false;
-          this.attackRollModifierTracker.critical.setOverride(false, "grants.attack.fail", i18n("midi-qol.GrantsAttackFail"));
+          this.attackRollModifierTracker.critical.setOverride(false, grantsFailFlag, getFlagDisplayName(grantsFailFlag));
         }
       }
 
@@ -7219,6 +7291,7 @@ return {
     if (configSettings.allowUseMacro && !options.noTargetOnUseMacro) await this.triggerTargetMacros(["isMissed"], this.targets.difference(this.hitTargets).difference(this.hitTargetsEC));
     this.hitTargets = this.hitTargets; // force update
     this.hitTargetsEC = this.hitTargetsEC; // force update
+    this.persistAttackTracker();
   }
 
   async setAttackRoll(roll: Roll) {

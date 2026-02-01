@@ -1883,7 +1883,8 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
         }
         if (remove) {
           // @ts-expect-error no dnd5e-types
-          overTimeEffectsToDelete[ownedItem.system.activities.contents[0].uuid] = { uuid: effect.uuid }
+          const otKey = ownedItem.system.activities.contents[0].uuid;
+          overTimeEffectsToDelete[otKey] = { uuid: effect.uuid }
         }
       }
       try {
@@ -7540,7 +7541,9 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
     else if (effect.parent instanceof Item) // this should be enchantments
       effectsToDelete.push(effect);
   }
-  if (actorEffectsToDelete.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", actorEffectsToDelete, options);
+  if (actorEffectsToDelete.length > 0) {
+    await actor.deleteEmbeddedDocuments("ActiveEffect", actorEffectsToDelete, options);
+  }
   if (effectsToDisable.length > 0) {
     for (let effect of effectsToDisable) {
       await effect.update({ "disabled": true }, options)
