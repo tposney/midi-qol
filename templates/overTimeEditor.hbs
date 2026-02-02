@@ -1,0 +1,234 @@
+<section class="midi-qol overtime-editor">
+  <div class="overtime-editor-scroll">
+    {{!-- Timing & Identity --}}
+    <fieldset>
+        <legend>{{localize "midi-qol.OverTimeEditor.TimingSection"}}</legend>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.Label"}}</label>
+            <input type="text" name="label" value="{{details.label}}" />
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.Turn"}}</label>
+            <select name="turn">
+                {{selectOptions turnOptions selected=details.turn localize=true}}
+            </select>
+        </div>
+    </fieldset>
+
+    {{!-- Save/Check Configuration --}}
+    <fieldset>
+        <legend>{{localize "midi-qol.OverTimeEditor.RollSection"}}</legend>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.RollType"}}</label>
+            <select name="rollType">
+                {{selectOptions rollTypeOptions selected=details.rollType localize=true}}
+            </select>
+        </div>
+        {{#if isSaveRoll}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.SaveAbility"}}</label>
+            <multi-select name="saveAbility">
+                {{selectOptions abilitySelectOptions selected=selectedAbilities}}
+            </multi-select>
+        </div>
+        {{else if isCheckRoll}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.CheckAbility"}}</label>
+            <select name="saveAbility">
+                {{selectOptions abilitySelectOptions selected=selectedAbility}}
+            </select>
+        </div>
+        {{else if isSkillRoll}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.SkillSelect"}}</label>
+            <multi-select name="saveAbility">
+                {{selectOptions skillSelectOptions selected=selectedAbilities}}
+            </multi-select>
+        </div>
+        {{/if}}
+        {{#if isSaveType}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.SaveDC"}}</label>
+            <input type="text" name="saveDC" value="{{details.saveDCRaw}}" placeholder="-1" />
+            <div class="notes midi-qol-faint">{{localize "midi-qol.OverTimeEditor.SaveDCHint"}}</div>
+        </div>
+        {{/if}}
+        {{#if isSaveRoll}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.SaveMagic"}}</label>
+            <input type="checkbox" name="saveMagic" {{checked details.saveMagic}} />
+        </div>
+        {{/if}}
+    </fieldset>
+
+    {{!-- Damage --}}
+    <fieldset>
+        <legend>{{localize "midi-qol.OverTimeEditor.DamageSection"}}</legend>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.DamageRoll"}}</label>
+            <input type="text" name="damageRoll" value="{{details.damageRoll}}" placeholder="2d6" />
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.DamageType"}}</label>
+            <select name="damageType">
+                {{selectOptions damageTypeOptions selected=details.damageType localize=false}}
+            </select>
+        </div>
+        {{#if isSaveType}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.DamageBeforeSave"}}</label>
+            <input type="checkbox" name="damageBeforeSave" {{checked details.damageBeforeSave}} />
+        </div>
+        {{#if showSaveDamage}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.SaveDamage"}}</label>
+            <select name="saveDamage">
+                {{selectOptions saveDamageOptions selected=details.saveDamage localize=true}}
+            </select>
+        </div>
+        {{/if}}
+        {{/if}}
+    </fieldset>
+
+    {{!-- Save/Fail Counts --}}
+    {{#if isSaveType}}
+    <fieldset>
+        <legend>{{localize "midi-qol.OverTimeEditor.CountSection"}}</legend>
+
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.SaveCountEnabled"}}</label>
+            <input type="checkbox" name="saveCountEnabled" {{checked saveCountEnabled}} />
+        </div>
+        {{#if saveCountEnabled}}
+        <div class="form-group overtime-count-row">
+            <label>{{localize "midi-qol.OverTimeEditor.SaveCount"}}</label>
+            <input type="number" name="saveCountNum" value="{{saveCountNum}}" min="1" class="overtime-count-input" />
+            <select name="saveCountMode" class="overtime-count-select">
+                {{selectOptions countModeOptions selected=saveCountMode localize=true}}
+            </select>
+            <label class="overtime-inline-check">
+                <input type="checkbox" name="saveCountConsecutive" {{checked saveCountConsecutive}} />
+                {{localize "midi-qol.OverTimeEditor.Consecutive"}}
+            </label>
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.CountEffectSpec"}}</label>
+            <input type="text" name="saveCountEffectSpec" value="{{saveCountEffectSpec}}" placeholder="{{localize "midi-qol.OverTimeEditor.CountEffectSpecHint"}}" />
+        </div>
+        {{/if}}
+
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.FailCountEnabled"}}</label>
+            <input type="checkbox" name="failCountEnabled" {{checked failCountEnabled}} />
+        </div>
+        {{#if failCountEnabled}}
+        <div class="form-group overtime-count-row">
+            <label>{{localize "midi-qol.OverTimeEditor.FailCount"}}</label>
+            <input type="number" name="failCountNum" value="{{failCountNum}}" min="1" class="overtime-count-input" />
+            <select name="failCountMode" class="overtime-count-select">
+                {{selectOptions countModeOptions selected=failCountMode localize=true}}
+            </select>
+            <label class="overtime-inline-check">
+                <input type="checkbox" name="failCountConsecutive" {{checked failCountConsecutive}} />
+                {{localize "midi-qol.OverTimeEditor.Consecutive"}}
+            </label>
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.CountEffectSpec"}}</label>
+            <input type="text" name="failCountEffectSpec" value="{{failCountEffectSpec}}" placeholder="{{localize "midi-qol.OverTimeEditor.CountEffectSpecHint"}}" />
+        </div>
+        {{/if}}
+    </fieldset>
+    {{/if}}
+
+    {{!-- Action Save --}}
+    {{#if isSaveType}}
+    <fieldset>
+        <legend>{{localize "midi-qol.OverTimeEditor.ActionSaveSection"}}</legend>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.ActionSave"}}</label>
+            <select name="actionSave">
+                {{selectOptions actionSaveOptions selected=details.actionSave localize=true}}
+            </select>
+        </div>
+    </fieldset>
+    {{/if}}
+
+    {{!-- Conditions --}}
+    <fieldset>
+        <legend>{{localize "midi-qol.OverTimeEditor.ConditionsSection"}}</legend>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.ApplyCondition"}}</label>
+            <textarea name="applyCondition" rows="1">{{details.applyCondition}}</textarea>
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.RemoveCondition"}}</label>
+            <textarea name="removeCondition" rows="1">{{details.removeCondition}}</textarea>
+        </div>
+    </fieldset>
+
+    {{!-- Advanced --}}
+    <fieldset>
+        <legend>{{localize "midi-qol.OverTimeEditor.AdvancedSection"}}</legend>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.ItemName"}}</label>
+            <input type="text" name="itemName" value="{{details.itemName}}" placeholder="UUID or name" />
+        </div>
+        {{#if details.itemName}}
+        <div class="overtime-checkbox-row">
+            <label class="overtime-inline-check">
+                <input type="checkbox" name="autoRollAttack" {{checked details.autoRollAttack}} />
+                {{localize "midi-qol.OverTimeEditor.AutoRollAttack"}}
+            </label>
+            <label class="overtime-inline-check">
+                <input type="checkbox" name="fastForwardAttack" {{checked details.fastForwardAttack}} />
+                {{localize "midi-qol.OverTimeEditor.FastForwardAttack"}}
+            </label>
+        </div>
+        {{/if}}
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.Macro"}}</label>
+            <input type="text" name="macro" value="{{details.macro}}" placeholder="function., ItemMacro, Macro." />
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.ChatFlavor"}}</label>
+            <input type="text" name="chatFlavor" value="{{details.chatFlavor}}" />
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.RollMode"}}</label>
+            <select name="rollMode">
+                {{selectOptions rollModeOptions selected=details.rollMode localize=true}}
+            </select>
+        </div>
+        <div class="overtime-checkbox-row">
+            <label class="overtime-inline-check">
+                <input type="checkbox" name="autoRollDamage" {{checked details.autoRollDamage}} />
+                {{localize "midi-qol.OverTimeEditor.AutoRollDamage"}}
+            </label>
+            <label class="overtime-inline-check">
+                <input type="checkbox" name="fastForwardDamage" {{checked details.fastForwardDamage}} />
+                {{localize "midi-qol.OverTimeEditor.FastForwardDamage"}}
+            </label>
+        </div>
+        <div class="overtime-checkbox-row">
+            <label class="overtime-inline-check">
+                <input type="checkbox" name="allowIncapacitated" {{checked details.allowIncapacitated}} />
+                {{localize "midi-qol.OverTimeEditor.AllowIncapacitated"}}
+            </label>
+            <label class="overtime-inline-check">
+                <input type="checkbox" name="killAnim" {{checked details.killAnim}} />
+                {{localize "midi-qol.OverTimeEditor.KillAnim"}}
+            </label>
+        </div>
+    </fieldset>
+  </div>
+
+    <footer class="sheet-footer flexrow">
+        <button type="button" data-action="save">
+            <i class="fas fa-save"></i> {{localize "midi-qol.OverTimeEditor.Save"}}
+        </button>
+        <button type="button" data-action="cancel">
+            <i class="fas fa-times"></i> {{localize "midi-qol.OverTimeEditor.Cancel"}}
+        </button>
+    </footer>
+</section>

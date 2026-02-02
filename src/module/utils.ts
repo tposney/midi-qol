@@ -1706,6 +1706,62 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
 }
 
 /**
+ * Serialize overtime form data back to a comma-separated OverTime spec string.
+ * Only emits fields that differ from defaults, keeping the string concise.
+ */
+export function serializeOvertimeDetails(data: Record<string, any>): string {
+  const parts: string[] = [];
+
+  if (data.turn && data.turn !== "start") parts.push(`turn=${data.turn}`);
+  else parts.push(`turn=start`);
+
+  if (data.label) parts.push(`label=${data.label}`);
+
+  // Roll configuration
+  if (data.rollType && data.rollType !== "save") parts.push(`rollType=${data.rollType}`);
+  if (data.saveAbility) parts.push(`saveAbility=${data.saveAbility}`);
+  if (data.saveDC !== undefined && data.saveDC !== "" && data.saveDC !== "-1") parts.push(`saveDC=${data.saveDC}`);
+  if (data.saveMagic) parts.push(`saveMagic=true`);
+
+  // Damage
+  if (data.damageRoll) parts.push(`damageRoll=${data.damageRoll}`);
+  if (data.damageType) parts.push(`damageType=${data.damageType}`);
+  if (data.damageBeforeSave) parts.push(`damageBeforeSave=true`);
+  if (data.saveDamage && data.saveDamage !== "nodamage") parts.push(`saveDamage=${data.saveDamage}`);
+
+  // Count thresholds
+  if (data.saveCountEnabled && data.saveCountNum) {
+    const countStr = `${data.saveCountNum}${data.saveCountConsecutive ? "c" : ""}${data.saveCountMode === "remove" ? "-" : "+"}${data.saveCountEffectSpec || ""}`;
+    parts.push(`saveCount=${countStr}`);
+  }
+  if (data.failCountEnabled && data.failCountNum) {
+    const countStr = `${data.failCountNum}${data.failCountConsecutive ? "c" : ""}${data.failCountMode === "remove" ? "-" : "+"}${data.failCountEffectSpec || ""}`;
+    parts.push(`failCount=${countStr}`);
+  }
+
+  // Action save
+  if (data.actionSave && data.actionSave !== "none") parts.push(`actionSave=${data.actionSave}`);
+
+  // Conditions
+  if (data.applyCondition) parts.push(`applyCondition=${data.applyCondition}`);
+  if (data.removeCondition) parts.push(`removeCondition=${data.removeCondition}`);
+
+  // Advanced options — only emit non-defaults
+  if (data.macro) parts.push(`macro=${data.macro}`);
+  if (data.itemName) parts.push(`itemName=${data.itemName}`);
+  if (data.chatFlavor) parts.push(`chatFlavor=${data.chatFlavor}`);
+  if (data.rollMode && data.rollMode !== "default") parts.push(`rollMode=${data.rollMode}`);
+  if (data.fastForwardDamage) parts.push(`fastForwardDamage=true`);
+  if (data.fastForwardAttack) parts.push(`fastForwardAttack=true`);
+  if (data.autoRollAttack) parts.push(`autoRollAttack=true`);
+  if (data.autoRollDamage) parts.push(`autoRollDamage=true`);
+  if (data.allowIncapacitated) parts.push(`allowIncapacitated=true`);
+  if (data.killAnim) parts.push(`killAnim=true`);
+
+  return parts.join(", ");
+}
+
+/**
  * Build activity data for save/check/skill rolls
  */
 export function buildRollActivityData(details: OvertimeDetails): Record<string, any> {

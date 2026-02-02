@@ -20,6 +20,7 @@ import { MidiAttackActivity, setupAttackActivity } from './module/activities/Att
 import { RollModifierTracker } from './module/lib/RollModifierTracker.js';
 import { ChatLogMidi } from './module/ChatClasses/ChatLogMidi.js';
 import { injectMidiCompletions } from './module/lib/midiCompletions.js';
+import { OverTimeEditor } from './module/apps/OverTimeEditor.js';
 
 // Register macro-autocomplete hook handler at module load time so it's
 // ready before macro-autocomplete fires "macro-autocomplete.ready" in its ready hook.
@@ -1510,6 +1511,26 @@ function setupMidiFlags(DAEapi: any) {
   midiFlags.push(``);
   */
   DAEapi.addAutoFields(midiFlags);
+
+  // Register pluggable OverTime editor with DAE's field editor API
+  if (DAEapi.registerFieldEditor) {
+    DAEapi.registerFieldEditor({
+      keyMatch: `flags.${MODULE_ID}.OverTime`,
+      editor: async (currentValue: string, context: any) => {
+        return new Promise<string | null>((resolve) => {
+          new OverTimeEditor({
+            value: currentValue,
+            effect: context.effect,
+            parent: context.parent,
+            onSubmit: (newValue: string) => resolve(newValue),
+            onCancel: () => resolve(null),
+          }).render({ force: true });
+        });
+      },
+      icon: "fas fa-clock",
+      tooltip: i18n("midi-qol.OverTimeEditor.Tooltip"),
+    });
+  }
 }
 
 // Revisit to find out how to set execute as GM

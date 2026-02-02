@@ -1121,3 +1121,87 @@ section.midi-qol.tab {
   width: 18px;
   height: 18px;
 }
+
+/* OverTime Editor */
+.overtime-editor {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+
+.overtime-editor-scroll {
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 0.25rem;
+}
+
+.overtime-editor fieldset {
+  border: 1px solid var(--color-border-light-tertiary, #ccc);
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.overtime-editor fieldset legend {
+  font-weight: bold;
+  padding: 0 0.25rem;
+}
+
+.overtime-ability-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+}
+
+.overtime-ability-option {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+}
+
+.overtime-ability-option input[type="checkbox"] {
+  margin: 0;
+}
+
+.overtime-editor input[type="checkbox"] {
+  accent-color: var(--dnd5e-color-gold, #c9a46c);
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+  outline: 1px solid var(--color-border-light-tertiary, #888);
+  outline-offset: -1px;
+  border-radius: 3px;
+}
+
+.overtime-count-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.overtime-count-input {
+  width: 4rem;
+}
+
+.overtime-count-select {
+  width: 10rem;
+}
+
+.overtime-inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+}
+
+.overtime-inline-check input[type="checkbox"] {
+  margin: 0;
+}
+
+.overtime-checkbox-row {
+  display: flex;
+  gap: 1rem;
+  padding: 0.125rem 0;
+}
