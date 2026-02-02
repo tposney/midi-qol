@@ -1,4 +1,4 @@
-### 13.0.42
+### 13.0.43
 **New Features**
 * **Breaking** Auto fast forwarding rolls (skipping dialog) is now specified the same way for players and GMs. There is a new multi select that lets you choose which rolls will be fastforwarded by default for both the player and the gm. Midi attempts to migrate your existing settings, but you should check.
   - I know a skill roll is a type of ability check, but having a separate setting gives you more control, so you need to set skill separately from ability roll.
@@ -6,6 +6,7 @@
 * Midi-qol tab property, force config dialog, now overrides the thrown weapon property check.
 
 **Bug Fixes**
+* Advantage Attribution now follows the same visibility rules as the attack roll formula. If players are not allowed to see the formula, they can't see the attack advantage attribution.
 * Fix for checkAttackAdvantage not being called before calling preAttackRoll Hooks/macros.
   - checkAttackAdvantage is called again after the hooks/macros return. This means changes to actors advantage flags will be respected as they were prior to 13.0.40.
   - changes made to workflow.tracker.advantage etc will be overwritten.
@@ -18,6 +19,9 @@
   - This feeds through to better/different explanatory text in the dae field browser.
   - Unless there is any major push back I plan to remove the legacy attribution in a soon to be forthcoming release.
 * I've reworked the chat card persistence for workflows and some of the fields may have moved. If you are in the habit of checking the Chat Card for midi persisted fields you will need to review that code.
+
+### 13.0.42
+* Just remove some spurious debug left in the code.
 
 ### 13.0.41
 **Bug Fixes**

@@ -113,10 +113,12 @@ export let gameStats: RollStats;
 export let overTimeEffectsToDelete: Record<string, { uuid: string }> = {};
 export let savedOverTimeEffectsToDelete: Record<string, {
   uuid: string;
-  saveCount?: number;        // Number of saves required
-  saveCountAction?: string;  // "-" = remove (default), "+" = permanent, or effectSpec
-  failCount?: number;        // Number of fails required
-  failCountAction?: string;  // "+" = permanent (default), "-" = remove, or effectSpec
+  saveCount?: number;         // Number of saves required
+  saveCountAction?: string;   // "-" = remove (default), "+" = permanent, or effectSpec (prefixed with "c" if consecutive)
+  saveConsecutive?: boolean;  // If true, counter resets on a failed save
+  failCount?: number;         // Number of fails required
+  failCountAction?: string;   // "+" = permanent (default), "-" = remove, or effectSpec (prefixed with "c" if consecutive)
+  failConsecutive?: boolean;  // If true, counter resets on a successful save
 }> = {}
 export let MQItemMacroLabel: string;
 export let MQActivityMacroLabel: string;

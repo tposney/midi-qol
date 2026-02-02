@@ -523,7 +523,8 @@ export function initHooks() {
       if (effect) {
         const saved = workflow.saves.size === 1;
         const failed = workflow.failedSaves.size === 1;
-        const { saveCount, saveCountAction, failCount, failCountAction } = effectData;
+        const { saveCount, saveCountAction, saveConsecutive,
+                failCount, failCountAction, failConsecutive } = effectData;
         const actor = effect.parent as Actor.Implementation;
 
         if (saved || !workflow.hasSave) {
@@ -536,8 +537,8 @@ export function initHooks() {
 
             if (savesRemaining <= 0) {
               // Required saves reached - apply action
-              // Action format: [-+]effectSpec (e.g., "-", "+", "-petrified", "+prone")
-              const action = saveCountAction ?? "-"; // Default: remove
+              // Action format: [c][-+]effectSpec (e.g., "-", "+", "c-petrified", "c+prone")
+              const action = (saveCountAction ?? "-").replace(/^c/, ""); // Strip consecutive flag
               const isRemove = action.startsWith("-");
               const effectSpec = action.length > 1 ? action.slice(1) : undefined;
 
@@ -553,6 +554,10 @@ export function initHooks() {
               }
             } else {
               // Decrement counter on effect
+              // If failCount is consecutive, a save resets the fail streak
+              if (failConsecutive && failCount !== undefined) {
+                foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`, failCount);
+              }
               await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`, savesRemaining);
               await effect.update({ flags: effect.flags });
             }
@@ -562,6 +567,11 @@ export function initHooks() {
           }
         } else if (failed && failCount !== undefined) {
           // Handle failCount - multiple fails trigger action
+          // If saveCount is consecutive, a failure resets the save streak
+          if (saveConsecutive && saveCount !== undefined) {
+            foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`, saveCount);
+          }
+
           let failsRemaining = foundry.utils.getProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`) as number | undefined;
           // Initialize if not set
           if (failsRemaining === undefined) failsRemaining = failCount;
@@ -569,8 +579,7 @@ export function initHooks() {
 
           if (failsRemaining <= 0) {
             // Required fails reached - apply action
-            // Action format: [-+]effectSpec (e.g., "-", "+", "-petrified", "+prone")
-            const action = failCountAction ?? "+"; // Default: permanent
+            const action = (failCountAction ?? "+").replace(/^c/, ""); // Strip consecutive flag
             const isRemove = action.startsWith("-");
             const effectSpec = action.length > 1 ? action.slice(1) : undefined;
 
@@ -589,6 +598,10 @@ export function initHooks() {
             await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`, failsRemaining);
             await effect.update({ flags: effect.flags });
           }
+        } else if (failed && saveConsecutive && saveCount !== undefined) {
+          // Failed but no failCount to process — still need to reset consecutive save streak
+          foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`, saveCount);
+          await effect.update({ flags: effect.flags });
         }
       }
       delete savedOverTimeEffectsToDelete[activityUuid];

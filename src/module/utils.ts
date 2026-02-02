@@ -1090,6 +1090,7 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
 export interface CountAction {
   count: number;
   mode: "remove" | "permanent";
+  consecutive: boolean;  // If true, counter resets on opposite result
   effectSpec?: string;  // If specified, this effect/status is added to the actor when count is reached
 }
 
@@ -1291,12 +1292,23 @@ function parseBool(value: string | undefined, defaultValue: boolean): boolean {
  * @param defaultMode - Default mode if no action specified ("remove" for saves, "permanent" for fails)
  */
 export function parseCountAction(value: string, defaultMode: "remove" | "permanent"): CountAction {
-  // Format: n[-+]effectSpec where - or + is required
+  // Format: n[c][-+]effectSpec where - or + is required, c = consecutive
   // - means remove, + means permanent
+  // c means counter resets on opposite result
   // effectSpec (if present) is always added to the actor when count is reached
-  // Examples: 2-, 2+, 2-petrified, 2+prone
-  const minusIndex = value.indexOf("-");
-  const plusIndex = value.indexOf("+");
+  // Examples: 2-, 2+, 2c-, 3c+prone, 2-petrified
+
+  // Strip consecutive flag if present (letter 'c' immediately after digits)
+  let consecutive = false;
+  let working = value;
+  const digitEnd = working.search(/\D/);
+  if (digitEnd > 0 && working[digitEnd] === "c") {
+    consecutive = true;
+    working = working.substring(0, digitEnd) + working.substring(digitEnd + 1);
+  }
+
+  const minusIndex = working.indexOf("-");
+  const plusIndex = working.indexOf("+");
 
   // Determine which action indicator comes first (after digits)
   let actionIndex = -1;
@@ -1311,13 +1323,13 @@ export function parseCountAction(value: string, defaultMode: "remove" | "permane
 
   // If no action indicator found, use default mode
   if (actionIndex === -1) {
-    return { count: Number(value), mode: defaultMode };
+    return { count: Number(working), mode: defaultMode, consecutive };
   }
 
-  const count = Number(value.substring(0, actionIndex));
-  const effectSpec = value.substring(actionIndex + 1) || undefined; // Everything after - or +
+  const count = Number(working.substring(0, actionIndex));
+  const effectSpec = working.substring(actionIndex + 1) || undefined; // Everything after - or +
 
-  return { count, mode, effectSpec };
+  return { count, mode, effectSpec, consecutive };
 }
 
 /**
@@ -1325,7 +1337,7 @@ export function parseCountAction(value: string, defaultMode: "remove" | "permane
  * Format: [-+]effectSpec (e.g., "-", "+", "-petrified", "+prone")
  */
 export function countActionToString(action: CountAction): string {
-  const base = action.mode === "remove" ? "-" : "+";
+  const base = (action.consecutive ? "c" : "") + (action.mode === "remove" ? "-" : "+");
   return action.effectSpec ? `${base}${action.effectSpec}` : base;
 }
 
@@ -1639,10 +1651,10 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
   else if (raw.saveRemove !== undefined) {
     // saveRemove=true is equivalent to saveCount=1:- (remove after 1 save)
     if (raw.saveRemove === "true" || raw.saveRemove === "1") {
-      saveCount = { count: 1, mode: "remove" };
+      saveCount = { count: 1, mode: "remove", consecutive: false };
     } else if (raw.saveRemove === "false" || raw.saveRemove === "0") {
       // saveRemove=false means don't remove on save - use "permanent" mode with count 0
-      saveCount = { count: 0, mode: "permanent" };
+      saveCount = { count: 0, mode: "permanent", consecutive: false };
     } else {
       // Otherwise parse as count action (e.g., "2", "3:-", etc.)
       saveCount = parseCountAction(raw.saveRemove, "remove");
@@ -1650,7 +1662,7 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
   }
   // Default: remove on first save if no damage on save (only when neither saveCount nor saveRemove specified)
   if (saveCount === undefined && raw.saveDamage === "nodamage" && saveDC > -1) {
-    saveCount = { count: 1, mode: "remove" };
+    saveCount = { count: 1, mode: "remove", consecutive: false };
   }
 
   // Handle failCount parameter
@@ -1864,8 +1876,10 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
           uuid: effect.uuid,
           saveCount: saveCount?.count,
           saveCountAction: saveCount ? countActionToString(saveCount) : undefined,
+          saveConsecutive: saveCount?.consecutive ?? false,
           failCount: failCount?.count,
           failCountAction: failCount ? countActionToString(failCount) : undefined,
+          failConsecutive: failCount?.consecutive ?? false,
         };
       }
 
