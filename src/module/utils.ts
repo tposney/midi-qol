@@ -4010,6 +4010,22 @@ export async function bonusDialog(
         //@ts-expect-error
         newRoll._total = -1;
         break;
+      case "critical":
+        foundry.utils.setProperty(newRoll, "options", foundry.utils.duplicate(roll!.options));
+        //@ts-expect-error
+        if (newRoll.options.rollType === "damage") {
+          foundry.utils.setProperty(newRoll, "options.isCritical", true);
+          foundry.utils.setProperty(newRoll, "options.configured", false);
+          newRoll = await newRoll.reroll();
+        } else {
+          const term = newRoll.terms[0] as foundry.dice.terms.Die;
+          const result = term?.results?.find(r => r.active)?.result ?? newRoll.total;
+          foundry.utils.setProperty(term, "options.critical", result);
+          foundry.utils.setProperty(term, "options.criticalSuccess", result);
+          foundry.utils.setProperty(newRoll, "options.criticalSuccess", result);
+        }
+        if (this instanceof Workflow) this.tracker.critical.force(`${button.key}.${flagSelector}`, "Optional bonus");
+        break;
       default:
         if (typeof button.value === "string" && button.value.startsWith("replace ")) {
           const rollParts = button.value.split(" ");

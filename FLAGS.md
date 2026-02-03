@@ -1290,11 +1290,17 @@ The value set for optional bonus flags determines what happens when the bonus is
 | `replace {formula}` | Replace roll entirely with new formula (e.g., `replace 10 + @abilities.dex.mod`) |
 | `success` | Force the roll to succeed (sets result to 99) |
 | `fail` | Force the roll to fail (sets result to -1) |
+| `critical` | Treat the roll as critical (intended for attacks, see note below) |
 | `ItemMacro` | Call the item macro from the item that applied the effect |
 | `ItemMacro.{name}` | Call the item macro from the specified item (e.g., `ItemMacro.Lucky`) |
 | `ItemMacro.{itemUuid}` | Call the item macro from the specified item |
 | `Macro.{name}` | Call a world/compendium macro |
 | `function.{name}` | Call a registered function |
+
+> [!note] Optional Critical
+> The `critical` value will have no effect on checks, saves, or skills unless the following setting is enabled: <br><br>
+> `Settings > MidiQOL > Workflow Settings > Rules Tab` [(see here)](README.md#rules-tab-optional-rules) <br>
+> (House Rule) Critical/Fumble always succeed/fail for saving throws
 
 #### ItemMacro in Optional Bonus Flags
 
