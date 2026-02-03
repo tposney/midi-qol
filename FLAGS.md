@@ -158,7 +158,7 @@ details.cr >= 10
 
 ### Available Data in Expressions
 
-You can see a full list of the data available to these expressions by typing `MidiQOL.logEvaluationData = true` in the console. When an expression is evaluated, both the data and the result will be printed. This setting remains active until the client is reloaded
+In v13.0.43 and later, you can see a full list of the data available to these expressions by typing `MidiQOL.logEvaluationData = true` in the console. When an expression is evaluated, both the data and the result will be printed. This setting remains active until the client is reloaded
 
 **Actor Data (from `actor.getRollData()`):**
 | Path | Description |
