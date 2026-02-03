@@ -5117,13 +5117,15 @@ async function asyncMySafeEval(expression: string, sandbox: AnyMutableObject, on
     const sandboxProxy = new Proxy(sandbox, {
       has: () => true, // Include everything
       get: (t, k) => k === Symbol.unscopables ? undefined : (t[k as string] ?? Math[k]),
-      set: () => { error("midi-qol | asnycMySafeEval | You may not set properties of the sandbox environment"); return false } // No-op
+      set: () => { error("midi-qol | asyncMySafeEval | You may not set properties of the sandbox environment"); return false } // No-op
     });
+    if (MidiQOL.logEvaluationData) console.log('MidiQOL asyncMySafeEval', { expression, sandboxProxy });
     result = await evl.call(null, sandboxProxy);
+    if (MidiQOL.logEvaluationData) console.log('MidiQOL asyncMySafeEval', { result });
   } catch (err) {
     // @ts-expect-error sandbox confuses
     const message = `midi-qol | asyncMySafeEval | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
-    console.warn(message, err)
+    console.warn(message, err);
     TroubleShooter.recordError(err, message);
     result = onErrorReturn;
   }
@@ -5166,10 +5168,12 @@ function mySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn
       get: (t, k) => k === Symbol.unscopables ? undefined : (t[k as string] ?? Math[k]),
       set: () => { error("mySafeEval | You may not set properties of the sandbox environment"); return false } // No-op
     });
+    if (MidiQOL.logEvaluationData) console.log('MidiQOL mySafeEval', { expression, sandboxProxy });
     result = evl(sandboxProxy);
+    if (MidiQOL.logEvaluationData) console.log('MidiQOL mySafeEval', { result });
   } catch (err) {
     // @ts-expect-error sandbox confuses
-    const message = `midi-qol | asyncMySafeEval | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
+    const message = `midi-qol | mySafeEval | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
     console.warn(message, err)
     TroubleShooter.recordError(err, message);
     result = onErrorReturn;
