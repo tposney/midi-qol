@@ -1,9 +1,8 @@
 {
   "configSettings": {
     "gmAutoAttack": false,
-    "gmAutoFastForwardAttack": false,
+    "gmAutoFastForward": [],
     "gmAutoDamage": "none",
-    "gmAutoFastForwardDamage": false,
     "showItemDetails": "all",
     "itemTypeList": [
       "weapon",
@@ -17,7 +16,7 @@
       "backpack"
     ],
     "autoRollAttack": false,
-    "autoFastForward": "off",
+    "autoFastForward": [],
     "autoTarget": "wallsBlockIgnoreDefeated",
     "autoCheckHit": "none",
     "autoCheckSaves": "none",
@@ -33,7 +32,6 @@
     "rollNPCSaves": "none",
     "rollNPCLinkedSaves": "none",
     "preRollChecks": false,
-    "mergeCard": true,
     "mergeCardCondensed": true,
     "hideNPCNames": "",
     "useTokenNames": true,
@@ -170,7 +168,10 @@
     "concentrationIncapacitatedConditionCheck": false,
     "mergeCardMulti": false,
     "autoCompleteWorkflow": false,
-    "useCustomSounds": false
+    "useCustomSounds": false,
+    "criticalDamage": "default",
+    "criticalDamageGM": "default",
+    "coloredBorders": "none"
   },
   "midiSoundSettings": {
     "any": {},

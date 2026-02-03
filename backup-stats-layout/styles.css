@@ -1,0 +1,1517 @@
+.dnd5e.sheet .item-buttons button {
+  font-size: 10px;
+  line-height: 12px;
+  margin: 0;
+}
+
+.dnd5e.sheet .item-buttons span {
+  padding: 0;
+}
+
+.local-qol-flavor-text {
+  font-size: 12px
+}
+
+.midi-qol-enable-damage-button {
+  color: green
+}
+
+.midi-qol-disable-damage-button {
+  color: red
+}
+
+.midi-qol-flex-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 14px;
+  line-height: 16px;
+}
+
+.midi-qol-bigger-text {
+  font-size: 14px;
+  line-height: 16px;
+}
+
+.midi-qol-flex-container>div {
+  margin: 2px;
+}
+
+/*
+.midi-qol-target-name:hover {
+  text-shadow: 0 0 4px red;
+}
+*/
+
+.midi-qol-gmonly {
+  display: none;
+}
+
+.midi-qol-box {
+  border: 2px groove var(--color-fieldset-border);
+  padding: 3px;
+  border-radius: 4px;
+}
+
+.midi-qol-nobox {
+  padding: 5px;
+  border-top: 2px groove var(--color-fieldset-border);
+}
+
+.midi-qol-faint {
+  color: #606060;
+}
+
+.application .midi-qol-faint {
+  color: var(--color-form-hint);
+}
+
+.midi-qol-very-faint {
+  color: #A0A0A0;
+}
+
+#midi-qol-settings div.form-group select {
+  width: auto;
+}
+
+#midi-qol-settings .form-group {
+  display: grid;
+  grid-template-areas: "label input" "hint hint";
+  grid-template-columns: 1fr;
+}
+
+#midi-qol-settings .form-group :nth-child(3) {
+  grid-area: hint;
+}
+
+#midi-qol-settings .form-group:not(:nth-of-type(1)) {
+  margin-top: 5px;
+}
+
+#midi-qol-settings .form-group>input[type="number"] {
+  margin-right: 5px;
+  text-align: center;
+  width: 40px;
+}
+
+#midi-qol-settings .form-group>select {
+  margin-right: 5px;
+}
+
+#midi-qol-settings .heading {
+  text-align: left;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+#midi-qol-settings #midi-config-mechanics .form-group>div.flexrow>select {
+  max-width: 200px;
+}
+
+#midi-qol-settings #midi-config-mechanics .midi-qol-box #midi-condition-group {
+  display: grid;
+  grid-template-columns: 2fr 2fr 2fr;
+  gap: 0.5rem 1rem;
+  align-items: center;
+
+  grid-template-areas: "label in1 in2 in3";
+  column-gap: 5px;
+}
+
+#midi-condition-group label {
+  justify-self: center;
+  text-align: center;
+}
+.midi-qol-quick-config .window-content {
+  overflow-y: scroll;
+}
+
+#midi-qol-item-selector .item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#midi-qol-sound-config table {
+  margin: 0;
+}
+
+.midi-qol-tooltip {
+  position: relative;
+  display: inline-block;
+  border: 0px;
+  padding: 0px;
+}
+
+.midi-qol-tooltip .midi-qol-tooltiptext {
+  visibility: hidden;
+  width: max-content;
+  background-color: var(--dnd5e-color-card);
+  text-align: center;
+  border-radius: 6px;
+  padding: 3px;
+
+  /* Position the tooltip */
+  position: absolute;
+  z-index: 2;
+}
+
+.midi-qol-tooltip:hover .midi-qol-tooltiptext {
+  visibility: visible;
+}
+
+/* Show full damage tooltip */
+.message-content:has(.midi-qol-tooltiptext) {
+  overflow: visible;
+  table {
+    overflow: visible;
+  }
+}
+
+/* ----------------------------------------- */
+/* Dialog Window
+/* ----------------------------------------- */
+.midi-qol .dialog .dialog-content .dialog-buttons {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  justify-content: space-around;
+}
+
+.midi-qol .dialog .dialog-buttons button {
+  background: rgba(0, 0, 0, 0.1);
+  border: 2px groove #f0f0e0;
+  margin: 0 5px 0 0;
+}
+
+.midi-qol.dialog:not(.reaction, .optional) .dialog-buttons button:last-child {
+  margin-right: 0;
+}
+
+.midi-qol.dialog:is(.reaction, .optional) .dialog-buttons button:last-child {
+  margin-right: 5px;
+}
+
+.midi-qol.dialog.optional .dice-tooltip-collapser:has(>.expanded) {
+  grid-template-rows: 1fr;
+}
+
+.midi-qol .dialog .dialog-buttons button.default {
+  background: rgba(0, 0, 0, 0.05);
+  border: 2px groove #c9c7b8;
+}
+
+.active-effect-sheet.midi-qol .effect-controls {
+  flex: 0;
+  margin: 0 8px 0 5px;
+}
+
+.active-effect-sheet.midi-qol .midi-qol-box {
+  border: 1px groove var(--color-border-light-tertiary);
+  border-top: 0px;
+  border-radius: 0;
+}
+
+/* ----------------------------------------- */
+/* midi-trouble-shooter
+/* ----------------------------------------- */
+.trouble-shooter-action-label:hover {
+  text-shadow: 0 0 4px red;
+}
+
+.midi-trouble-shooter .contents .scrollable {
+  flex: 1;
+  overflow: hidden auto;
+}
+
+.midi-trouble-shooter .form-footer {
+  display: flex;
+}
+
+.midi-qol-import-troubleshooter .notes {
+  color: var(--color-text-primary);
+}
+
+.midi-qol-blind-select {
+  width: 150px;
+}
+
+.midi-qol-blind-select .selected {
+  background-color: #861b1b;
+  color: #fff;
+}
+
+.midi-qol .grid {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  gap: 10px;
+  width: 300px;
+}
+
+.midi-qol .grid-item {
+  width: 50px;
+  height: 50px;
+  margin: 10px;
+  background-color: grey;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.midi-qol .grid-item.selected {
+  background-color: green;
+}
+
+.midi-scrollable-list {
+  list-style: none;
+  margin: 0.5em 0;
+  padding: 0;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--color-border-dark-5);
+  border-radius: 2px;
+  max-height: 600px;
+  overflow: hidden auto;
+  scrollbar-width: thin;
+}
+
+/* ----------------------------------------- */
+/* Dice Result Tooltips
+/* ----------------------------------------- */
+.dice-result .dice-tooltip .dice .total {
+  flex: 50%;
+  max-width: 62.66px;
+}
+
+.dice-result .dice-tooltip .dice .dice-rolls {
+  flex: 50%;
+}
+
+.dice-result .dice-tooltip .dice .total .label {
+  white-space: normal;
+}
+
+.dice-result .dice-tooltip .tooltip-part {
+  padding: 0;
+}
+
+.dice-result .dice-tooltip .tooltip-part .dice {
+  margin: 0.2rem 0;
+}
+
+.dice-result .dice-tooltip-collapser {
+  margin-top: 0.1rem;
+}
+
+.dice-result .dice-total {
+  font-weight: bold;
+  font-size: var(--font-size-20);
+  padding: 0.125rem;
+  margin-top: 0;
+  font-family: var(--font-primary);
+  position: relative;
+}
+
+.dice-roll .dice-result {
+  margin-bottom: 0.2rem;
+}
+
+/* Midi dice tooltip - nested for consolidation */
+.dice-result .midi-dice-tooltip {
+  flex: auto;
+  order: unset;
+  display: block;
+  overflow: hidden;
+  transition: all 250ms ease;
+
+  .tooltip-part {
+    border-bottom: 1px solid var(--color-border-light-1);
+    padding: 0.125rem 0;
+
+    &:last-child {
+      border: none;
+      padding-bottom: 0;
+    }
+
+    &.constant {
+      padding-right: 6px;
+      min-height: 40px;
+      display: grid;
+    }
+  }
+
+  .dice {
+    display: flex;
+    align-items: center;
+
+    .dice-rolls {
+      flex: 1;
+      margin: 5px 0 5px 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1px;
+
+      .roll {
+        position: unset;
+        float: unset;
+        margin: 0;
+      }
+
+      .constant {
+        font-family: var(--font-primary);
+        font-weight: bold;
+        font-size: var(--font-size-18);
+        margin-left: 0.25rem;
+
+        .sign {
+          font-weight: normal;
+          color: var(--color-text-light-6);
+          margin-right: 2px;
+        }
+      }
+    }
+
+    .total {
+      flex-basis: 25%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+
+      > img {
+        top: 6px;
+        position: absolute;
+        width: 32px;
+        border: none;
+        opacity: 0.1;
+      }
+
+      .label {
+        font-family: var(--dnd5e-font-roboto-condensed);
+        font-size: var(--font-size-10);
+        color: var(--color-text-dark-5);
+        text-transform: uppercase;
+        text-align: center;
+      }
+
+      .value {
+        font-family: var(--font-primary);
+        font-weight: bold;
+        font-size: var(--font-size-20);
+      }
+
+      .sign {
+        color: var(--color-text-light-6);
+        font-weight: normal;
+        margin-right: 2px;
+      }
+    }
+  }
+}
+
+.midi-bonus-damage-flavor {
+  text-align: center;
+}
+
+.dnd5e2 .midi-buttons button {
+  background: var(--dnd5e-color-card);
+  font-family: var(--dnd5e-font-roboto);
+  font-weight: bold;
+  font-size: var(--font-size-11);
+  text-transform: uppercase;
+  padding: 0.05rem;
+  border: 1px solid var(--color-border-light-2);
+  box-shadow: 0 0 8px var(--dnd5e-shadow-15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+}
+
+.dnd5e2.chat-card.midi-chat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.dnd5e.chat-card.midi-chat-card .card-buttons {
+  margin: 2px 0;
+  height: 18px;
+  line-height: 14px;
+}
+
+.dnd5e.chat-card.midi-chat-card.card-buttons button {
+  color: red;
+  font-size: var(--font-size-12);
+  height: 18px;
+  line-height: 12px;
+  margin: 2px 0;
+}
+
+.dnd5e.chat-card.midi-chat-card .card-buttons span {
+  display: block;
+  line-height: 18px;
+  text-align: center;
+  border: 1px solid var(--dnd5e-border-light);
+}
+
+/* ----------------------------------------- */
+/* CHAT - DND5E 3 AND MIDI
+/* ----------------------------------------- */
+
+:root {
+  --dnd5e-color-failure-background: rgb(245,221,221);
+  --dnd5e-color-success-background: rgb(204,215,197);
+}
+
+/* Chat log consolidated styles */
+:is(.chat-popout, #chat-log, .chat-log) {
+  .message {
+    border-width: 0;
+    border-left: 0.2rem solid;
+    border-color: var(--user-color);
+  }
+
+  .message.whisper::before {
+    border-radius: 0px;
+  }
+
+  .midi-results {
+    gap: 0.15rem;
+    margin-bottom: 0.25rem;
+
+    .midi-qol.target > img {
+      width: 22px !important;
+      height: 22px !important;
+      object-fit: cover;
+      object-position: top;
+      margin: 0px 0 !important;
+      border-radius: 100%;
+      border: 1px solid var(--dnd5e-color-gold) !important;
+      box-shadow: 0 0 2px var(--dnd5e-shadow-45) !important;
+      background: var(--dnd5e-color-light-gray);
+    }
+
+    .target {
+      padding: 0.2rem 0.3rem;
+
+      .name-stacked {
+        min-height: auto;
+
+        .title {
+          font-size: var(--font-size-14);
+          margin-bottom: 0.1rem;
+        }
+      }
+
+      &.failure {
+        border-color: rgba(110,0,0,0.4);
+        background-color: var(--dnd5e-color-failure-background);
+      }
+
+      &.success {
+        border-color: rgba(0,108,0,0.4);
+        background-color: var(--dnd5e-color-success-background);
+      }
+    }
+
+    .flexrow {
+      gap: 0.15rem;
+    }
+  }
+
+  .message:has(.midi-qol-player-damage-card) {
+    padding: 0;
+    border: none;
+    border-left: 0.2rem solid var(--user-color);
+  }
+}
+
+/* Additional target styling for non-chat-log contexts */
+.midi-results .target.failure {
+  border-color: rgba(110,0,0,0.4);
+  background-color: var(--dnd5e-color-failure-background);
+}
+
+.midi-results .target.success {
+  border-color: rgba(0,108,0,0.4);
+  background-color: var(--dnd5e-color-success-background);
+}
+
+.midi-qol-tooltiptext.midi-qol-save-tooltip {
+  width: max-content;
+  min-width: 200px;
+  right: 0;
+}
+
+.midi-qol-saves-display {
+  padding-top: 0.2rem;
+  font-size: 12px;
+}
+
+/* Condensed Item description */
+.dnd5e2.chat-card .description {
+  padding: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.dnd5e2.chat-card .description:not(:has(p),.collapsed) .details {
+  margin-top: 0.4rem;
+}
+
+/* Condensed footer pills */
+.card-footer.pills.unlist {
+  gap: 0.2rem;
+  margin-top: 0.1rem;
+
+  li.pill.pill-sm {
+    font-size: 9px;
+    padding: 0.2rem 0.3rem;
+  }
+}
+
+/* Midi Attack and Damage buttons */
+.dnd5e2.chat-card .card-buttons.midi-buttons:has(button) {
+  gap: 0.2rem;
+  padding-bottom: 0.4rem;
+}
+
+.midi-qol-attack-buttons button,
+.midi-qol-damage-buttons button,
+.dnd5e2 .midi-buttons button {
+  height: 1.75rem;
+  margin: 0;
+}
+
+/* Midi Attack and Damage results */
+.midi-qol-attack-roll,
+.midi-qol-damage-roll {
+  white-space: nowrap;
+}
+
+.midi-qol-attack-roll > div:nth-child(1),
+.midi-qol-damage-roll > div:nth-child(1),
+.midi-qol-other-damage-roll > div:nth-child(1),
+.midi-qol-utility-roll > div:nth-child(1) {
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.midi-qol-tooltiptext {
+  width: max-content;
+  font-size: 14px;
+  bottom: 100%;
+}
+
+/* ----------------------------------------- */
+/* xmidi-qol-flex-container (Damage Application Card)
+/* ----------------------------------------- */
+.chat-message.message.flexcol:has(.xmidi-qol-flex-container) {
+  /* Hides the header */
+  .message-header {
+    display: none;
+  }
+
+  /* Table Adjustments */
+  table {
+    margin: 0;
+    border: none;
+
+    tbody tr {
+      border-bottom: 1px solid rgba(150, 150, 200, 0.2);
+      background-color: rgba(255, 255, 255, 0.1);
+
+      &:hover {
+        background-color: rgba(150, 150, 200, 0.2);
+      }
+    }
+  }
+
+  th {
+    line-height: normal;
+    padding: 7px 3px 5px 3px;
+    text-align: left !important;
+  }
+
+  td {
+    font-size: 13px;
+    line-height: normal;
+    padding: 0.15rem;
+  }
+
+  th:last-child,
+  td:last-child {
+    padding-right: 0.5rem;
+  }
+
+  th:first-child,
+  td:first-child {
+    padding-left: 8px;
+    width: 100%;
+  }
+
+  /* Attempt to fix alignment in the damage display */
+  td:first-child {
+    display: flex;
+    align-items: center;
+  }
+
+  thead {
+    background: rgba(0, 0, 0, 0.05);
+    font-size: 10px;
+    color: var(--color-text-dark-secondary);
+    text-shadow: none;
+    text-transform: uppercase;
+    border: none;
+    text-wrap: nowrap;
+
+    > tr > th:nth-child(1)::before {
+      font-family: "Font Awesome 6 Pro";
+      content: "\f7a9";
+      margin-right: 3px;
+      color: var(--color-text-light-7);
+    }
+  }
+
+  tfoot td {
+    padding-top: 5px;
+    padding-bottom: 7px;
+
+    &:first-child {
+      position: relative;
+      top: 0.25rem;
+      left: 0.25rem;
+    }
+  }
+
+  table > tbody > tr > td:nth-child(1) > div:nth-child(1) > div:nth-child(1) {
+    min-width: 32px;
+  }
+
+  &:has(button) table > tbody > tr > td:nth-child(1) > div:nth-child(2) > span > div {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 12px;
+    max-width: 95px;
+  }
+
+  /* Select and buttons */
+  select,
+  button {
+    border-radius: 3px;
+    border: 1px solid var(--color-border-light-2);
+    background: rgba(255, 255, 255, 0.4);
+    width: auto !important;
+    height: 26px !important;
+    padding: 0 4px 0 2px;
+    font-size: 12px;
+  }
+
+  button {
+    padding: 0 5px 0 9px;
+  }
+
+  /* Attempt to fix the image too */
+  .midi-qol-target-name {
+    width: 30px;
+    height: 30px;
+    margin-right: 0.25rem;
+    vertical-align: middle;
+  }
+}
+
+/* xmidi-qol-flex-container table header/span styles */
+.xmidi-qol-flex-container {
+  th {
+    font-family: var(--font-sans-condensed);
+    font-size: var(--font-size-11);
+  }
+
+  span {
+    font-family: var(--font-sans-condensed);
+    font-size: var(--font-size-12);
+    font-weight: 600;
+  }
+}
+
+/* Message container for xmidi-qol-flex-container */
+:is(.chat-popout, #chat-log, .chat-log) .message:has(.xmidi-qol-flex-container) {
+  padding: 0;
+  border: none;
+  border-left: 0.2rem solid var(--user-color);
+}
+
+/* Item sheet midi tab */
+section.midi-qol.tab {
+  row-gap: 0px;
+
+  .form-header {
+    color: var(--color-text-dark-primary);
+  }
+
+  label.checkbox {
+    line-height: 0px;
+  }
+
+  textarea {
+    width: 100%;
+
+    &:not(:read-only) {
+      color: var(--color-text-dark-primary);
+    }
+  }
+
+  .midi-properties {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+
+    label.checkbox {
+      align-items: baseline;
+    }
+  }
+
+  .form-group {
+    margin-bottom: 5px;
+  }
+
+  .midi-activation-conditions h3 {
+    border-bottom-color: var(--color-border-light-primary)
+  }
+}
+
+.theme-dark .midi-qol.tab textarea:not(:read-only) {
+  background: var(--dnd5e-background-card);
+}
+
+#midi-qol-undo-workflow .midi-qol-box {
+  margin-right: -1px;
+}
+
+#midi-qol-target-confirmation-config h4 {
+  text-shadow: none;
+  color: var(--color-text-primary);
+}
+
+.midi-qol-target-confirmation-list {
+  overflow-y: scroll;
+  max-height: 600px;
+}
+
+.midi-targeting dl .midi-qol-box dd {
+  margin: 1rem;
+}
+
+/* item on-use config */
+.item-on-use-sheet {
+  h3 {
+    text-align: center;
+  }
+
+  .form-group .form-fields {
+    display: grid;
+    grid-template-columns: 2fr 1fr 2fr var(--input-height);
+  }
+}
+
+/* ----------------------------------------- */
+/* Damage Card Flexbox Styles
+/* ----------------------------------------- */
+
+/* Main container */
+.midi-qol-damage-card {
+  padding: 2px 0;
+}
+
+/* Hide message header for player damage cards */
+.chat-message.message.flexcol:has(.midi-qol-player-damage-card) .message-header {
+  display: none;
+}
+
+/* Header row with "Damage Applied" text */
+.midi-qol-dmg-header {
+  font-size: 0.9em;
+  padding: 2px 4px;
+  border-bottom: 1px solid rgba(128,128,128,0.3);
+  margin-bottom: 2px;
+}
+
+/* Each damage entry row */
+.midi-qol-dmg-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  flex-wrap: wrap;
+}
+
+/* Token image in damage card */
+.midi-qol-damage-card .midi-qol-target-name {
+  border: 0;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Total damage/healing display */
+.midi-qol-dmg-total {
+  font-size: 1.1em;
+  font-weight: bold;
+}
+
+/* Direct vitality damage total (at start of line) */
+.midi-qol-dmg-vitality-total {
+  font-size: 1.05em;
+  font-weight: bold;
+  margin-left: 4px;
+
+  .fa-heart-crack {
+    font-size: 13px;
+    color: #000;
+    margin-right: 1px;
+  }
+}
+
+/* Consolidated damage display elements */
+.midi-qol-dmg-temp,
+.midi-qol-dmg-hp,
+.midi-qol-dmg-vitality,
+.midi-qol-dmg-nochange {
+  font-size: 1.05em;
+}
+
+.midi-qol-dmg-nochange {
+  opacity: 0.7;
+}
+
+/* Damage card icons - consolidated */
+.midi-qol-dmg-temp .fa-shield-alt,
+.midi-qol-dmg-hp .fa-heart,
+.midi-qol-dmg-vitality .fa-heart-crack {
+  font-size: 14px;
+}
+
+.midi-qol-dmg-temp .fa-shield-alt {
+  color: #4488cc;
+}
+
+.midi-qol-dmg-hp .fa-heart {
+  color: #cc4444;
+}
+
+.midi-qol-dmg-vitality .fa-heart-crack {
+  color: #000;
+}
+
+/* Arrow icon between old and new values */
+.midi-qol-dmg-arrow {
+  font-size: 12px;
+  margin: 0 2px;
+  opacity: 0.7;
+  vertical-align: 0px;
+}
+
+/* Healing color (used on multiple elements) */
+.midi-qol-dmg-healing {
+  color: #22aa44;
+}
+
+/* Hidden state for dynamic visibility */
+.midi-qol-dmg-hidden {
+  display: none;
+}
+
+/* Button controls container */
+.midi-qol-dmg-controls {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Multiplier dropdown */
+.midi-qol-dmg-multiplier {
+  width: 32px;
+  padding: 0;
+  font-size: 0.8em;
+  height: 20px;
+}
+
+/* Button pair wrapper */
+.midi-qol-dmg-btn-pair {
+  display: inline-flex;
+}
+
+/* Apply/reverse buttons base */
+.midi-qol-dmg-btn {
+  width: 20px;
+  height: 20px;
+  font-size: 9px;
+  padding: 0;
+  margin: 0;
+}
+
+.midi-qol-dmg-btn-apply {
+  border-radius: 3px 0 0 3px;
+}
+
+.midi-qol-dmg-btn-reverse {
+  border-radius: 0 3px 3px 0;
+}
+
+/* "All" row */
+.midi-qol-dmg-all-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  background: rgba(128,128,128,0.08);
+  margin-top: 2px;
+
+  strong {
+    font-size: 0.9em;
+  }
+}
+
+/* Player card specific - simple text display */
+.midi-qol-dmg-text {
+  font-size: 0.9em;
+
+  &.midi-qol-dmg-healing {
+    color: #22aa44;
+  }
+}
+
+/* ----------------------------------------- */
+/* Advantage/Disadvantage Indicator
+/* ----------------------------------------- */
+/* Attribution info icon - shows tooltip with advantage/disadvantage sources */
+.midi-attribution-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.3em;
+  font-size: 0.75em;
+  cursor: help;
+  vertical-align: middle;
+  color: var(--color-text-light-6, #888);
+  opacity: 0.7;
+}
+
+.midi-attribution-info:hover {
+  opacity: 1;
+  color: var(--color-text-light-highlight, #fff);
+}
+
+/* Attribution tooltip content styling */
+.midi-attribution-tooltip {
+  padding: 0.25rem;
+  font-size: 0.875rem;
+  min-width: 150px;
+}
+
+.midi-attribution-tooltip .attribution-header {
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--color-border-light-1);
+}
+
+.midi-attribution-tooltip .attribution-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.midi-attribution-tooltip .attribution-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.125rem 0;
+}
+
+.midi-attribution-tooltip .attribution-type {
+  font-weight: bold;
+  min-width: 3em;
+}
+
+.midi-attribution-tooltip .attribution-type-ADV,
+.midi-attribution-tooltip .attribution-type-SUCCESS {
+  color: #22aa44;
+}
+
+.midi-attribution-tooltip .attribution-type-DIS,
+.midi-attribution-tooltip .attribution-type-FAIL {
+  color: #cc4444;
+}
+
+.midi-attribution-tooltip .attribution-type-NOADV,
+.midi-attribution-tooltip .attribution-type-NODIS {
+  color: #888888;
+}
+
+.midi-attribution-tooltip .attribution-type-MIN {
+  color: #22aa44;
+}
+
+.midi-attribution-tooltip .attribution-type-MAX {
+  color: #cc4444;
+}
+
+.midi-attribution-tooltip .attribution-type-CRIT {
+  color: #ffaa00;
+}
+
+.midi-attribution-tooltip .attribution-type-NOCRIT {
+  color: #aa8800;
+}
+
+.midi-attribution-tooltip .attribution-type-FUMBLE {
+  color: #8844aa;
+}
+
+.midi-attribution-tooltip .attribution-type-NOFUMBLE {
+  color: #664488;
+}
+
+/* ----------------------------------------- */
+/* Sheet QOL Buttons                         */
+/* ----------------------------------------- */
+/* Layout for buttons injected into actor sheets */
+
+/* Info icon in item row - visible but unobtrusive */
+.midi-info-icon {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.25rem;
+  font-size: var(--font-size-11);
+  color: var(--color-text-dark-secondary);
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.1s, color 0.1s;
+}
+
+.midi-info-icon:hover {
+  opacity: 1;
+  color: var(--dnd5e-color-gold);
+}
+
+/* Activity buttons - absolute positioned to not affect layout */
+.midi-activity-buttons {
+  position: absolute;
+  right: 0.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 0.125rem;
+  align-items: center;
+}
+
+.midi-activity-buttons button {
+  padding: 0.125rem 0.25rem;
+  font-size: var(--font-size-10);
+  line-height: 1;
+  min-width: 1.5rem;
+}
+
+.midi-activity-buttons dnd5e-icon {
+  --icon-size: 18px;
+  --icon-fill: currentColor;
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+/* OverTime Editor */
+.overtime-editor {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+
+.overtime-editor-scroll {
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 0.25rem;
+}
+
+.overtime-editor fieldset {
+  border: 1px solid var(--color-border-light-tertiary, #ccc);
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.overtime-editor fieldset legend {
+  font-weight: bold;
+  padding: 0 0.25rem;
+}
+
+.overtime-ability-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+}
+
+.overtime-ability-option {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+}
+
+.overtime-ability-option input[type="checkbox"] {
+  margin: 0;
+}
+
+.overtime-editor input[type="checkbox"] {
+  accent-color: var(--dnd5e-color-gold, #c9a46c);
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+  outline: 1px solid var(--color-border-light-tertiary, #888);
+  outline-offset: -1px;
+  border-radius: 3px;
+}
+
+.overtime-count-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.overtime-count-input {
+  width: 4rem;
+}
+
+.overtime-count-select {
+  width: 10rem;
+}
+
+.overtime-inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+}
+
+.overtime-inline-check input[type="checkbox"] {
+  margin: 0;
+}
+
+.overtime-checkbox-row {
+  display: flex;
+  gap: 1rem;
+  padding: 0.125rem 0;
+}
+
+/* ── Condition Expression Editor ── */
+.condition-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.condition-editor-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0.5rem;
+}
+
+.condition-editor-key {
+  margin-bottom: 0.5rem;
+}
+
+.condition-key-value {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.85rem;
+  color: var(--color-text-dark-secondary, #666);
+}
+
+.condition-editor-codemirror {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid var(--color-border-light-tertiary, #888);
+  border-radius: 4px;
+}
+
+.condition-editor-codemirror code-mirror {
+  height: 100%;
+}
+
+/* ── Roll Statistics ── */
+
+/* Session/Lifetime toggle visibility (per card) */
+.midi-stats-card .midi-stats-lifetime { display: none; }
+.midi-stats-card.show-lifetime .midi-stats-session { display: none; }
+.midi-stats-card.show-lifetime .midi-stats-lifetime { display: block; }
+
+.midi-stats-period-label-lifetime { display: none; }
+.midi-stats-card.show-lifetime .midi-stats-period-label-session { display: none; }
+.midi-stats-card.show-lifetime .midi-stats-period-label-lifetime { display: inline; }
+
+/* Period toggle button — inline in card header */
+.midi-stats-period-toggle {
+  margin-left: auto;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: normal;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--color-border-light-tertiary, #aaa);
+  border-radius: 3px;
+  background: var(--color-bg-option, rgba(0, 0, 0, 0.05));
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.midi-stats-period-toggle:hover {
+  background: var(--color-hover-bg, rgba(0, 0, 0, 0.1));
+}
+
+/* Scrollable stats tab */
+#midi-stats-stats-tab {
+  overflow-y: auto;
+}
+
+/* ── Roll Statistics Card Layout ── */
+
+.midi-stats-card {
+  border: 1px solid var(--color-border-light-tertiary, #888);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  background: var(--color-bg-option, rgba(0, 0, 0, 0.05));
+  overflow: hidden;
+}
+
+.midi-stats-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  user-select: none;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.midi-stats-card-header:hover {
+  background: var(--color-hover-bg, rgba(0, 0, 0, 0.08));
+}
+
+.midi-stats-chevron {
+  transition: transform 0.2s ease;
+  font-size: 0.75rem;
+  width: 0.75rem;
+  text-align: center;
+}
+
+.midi-stats-card.expanded > .midi-stats-card-header .midi-stats-chevron {
+  transform: rotate(90deg);
+}
+
+.midi-stats-card-body {
+  display: none;
+  padding: 0.5rem 0.75rem 0.75rem;
+}
+
+.midi-stats-card.expanded > .midi-stats-card-body {
+  display: block;
+}
+
+.midi-stats-blocks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.5rem;
+}
+
+.midi-stats-block {
+  border: 1px solid var(--color-border-light-tertiary, #aaa);
+  border-radius: 4px;
+  background: var(--color-bg, rgba(255, 255, 255, 0.5));
+  overflow: hidden;
+}
+
+.midi-stats-block-title {
+  font-weight: bold;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.5rem;
+  background: var(--color-bg-option, rgba(0, 0, 0, 0.06));
+  border-bottom: 1px solid var(--color-border-light-tertiary, #aaa);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.midi-stats-block-section {
+  padding: 0.35rem 0.5rem;
+}
+
+.midi-stats-section-label {
+  font-size: 0.65rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-dark-secondary, #666);
+  margin-bottom: 0.15rem;
+}
+
+.midi-stats-line {
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.midi-stats-sep {
+  margin: 0 0.2rem;
+  color: var(--color-text-dark-secondary, #666);
+}
+
+.midi-stats-pass {
+}
+
+.midi-stats-fail {
+}
+
+/* Damage type breakdown list */
+
+.midi-stats-dmgtype-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  padding: 0.15rem 0;
+  color: var(--color-text-dark-secondary, #666);
+}
+
+.midi-stats-dmgtype-entry {
+  white-space: nowrap;
+}
+
+.midi-stats-dmgtype-label {
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+/* Item Breakdown sub-section */
+
+.midi-stats-items-section {
+  margin-top: 0.5rem;
+}
+
+.midi-stats-items-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.85rem;
+  font-weight: bold;
+  border: 1px solid var(--color-border-light-tertiary, #aaa);
+  border-radius: 4px;
+}
+
+.midi-stats-items-header:hover {
+  background: var(--color-hover-bg, rgba(0, 0, 0, 0.08));
+}
+
+.midi-stats-items-section.expanded > .midi-stats-items-header .midi-stats-chevron {
+  transform: rotate(90deg);
+}
+
+.midi-stats-items-body {
+  display: none;
+  margin-top: 0.25rem;
+}
+
+.midi-stats-items-section.expanded > .midi-stats-items-body {
+  display: block;
+}
+
+.midi-stats-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.midi-stats-items-table thead th {
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.03em;
+  padding: 0.25rem 0.35rem;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border-light-tertiary, #aaa);
+  color: var(--color-text-dark-secondary, #666);
+}
+
+.midi-stats-items-table tbody td {
+  padding: 0.2rem 0.35rem;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border-light-tertiary, #ddd);
+}
+
+.midi-stats-item-col {
+  text-align: left !important;
+}
+
+/* Empty state */
+
+.midi-stats-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  gap: 0.75rem;
+  color: var(--color-text-dark-secondary, #888);
+}
+
+.midi-stats-empty i {
+  font-size: 2rem;
+  opacity: 0.5;
+}
+
+.midi-stats-empty span {
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+/* Config tab fieldsets */
+
+.midi-stats-config-group {
+  border: 1px solid var(--color-border-light-tertiary, #aaa);
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.midi-stats-config-group legend {
+  font-weight: bold;
+  font-size: 0.85rem;
+  padding: 0 0.35rem;
+}
+
+.midi-stats-config-group button {
+  margin-bottom: 0.25rem;
+}
+
+.midi-stats-config-danger {
+  border-color: #cc4444;
+}
+
+.midi-stats-config-danger legend {
+  color: #cc4444;
+}
+
+.midi-stats-danger-btn {
+  color: #cc4444;
+}
+
+.midi-stats-remove-btn {
+  display: block;
+  width: 100%;
+}

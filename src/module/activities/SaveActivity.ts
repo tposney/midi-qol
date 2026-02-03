@@ -3,6 +3,7 @@ import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig
 import { debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
+import { isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { getSceneTargets } from "./activityHelpers.js";
 
@@ -160,7 +161,7 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
         }
       }, message);
       config.midiOptions ??= {};
-      config.midiOptions.fastForwardDamage ??= game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward);
+      config.midiOptions.fastForwardDamage ??= isAutoFastForward("damage");
       return super.rollDamage(config, dialog, message);
     }
   }

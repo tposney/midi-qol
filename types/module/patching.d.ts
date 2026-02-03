@@ -1,6 +1,7 @@
 import { MidiOptions } from "./utils.js";
 import { ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
-export { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./MidiDependentsRegistry.js";
+import { RollModifierTracker } from "./lib/RollModifierTracker.js";
+export { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./lib/MidiDependentsRegistry.js";
 export declare const skipConcentrationActorUuids: Set<string>;
 export interface Options {
     advantage: boolean | undefined;
@@ -54,26 +55,22 @@ export interface AdvantageFlags {
     advantageFlags: string[];
     disadvantageFlags: string[];
     systemRollModeFields: string[];
+    noAdvantageFlags?: string[];
+    noDisadvantageFlags?: string[];
     sourceAdvantageFlags?: string[];
     sourceDisadvantageFlags?: string[];
     sourceNoAdvantageFlags?: string[];
     sourceNoDisadvantageFlags?: string[];
     deprecatedFlags?: Set<string>;
 }
-export declare function computeAbilityAdvantage(actor: Actor.Implementation, rollType: string, abilityId: string, options: MidiOptions): Promise<{
-    advantage: boolean;
-    disadvantage: boolean;
+export declare function computeAbilityAdvantage(actor: Actor.Implementation, rollType: string, abilityId: string, options: MidiOptions, tracker?: RollModifierTracker): Promise<{
+    tracker: RollModifierTracker;
     magicResistance: boolean;
     magicVulnerability: boolean;
 }>;
-export declare function computeSkillAdvantage(actor: Actor.Implementation, skillId: string, options: MidiOptions): Promise<{
-    advantage: boolean;
-    disadvantage: boolean;
-}>;
-export declare function computeToolAdvantage(actor: Actor.Implementation, toolId: string, abilityId: string, options: MidiOptions): Promise<{
-    advantage: boolean;
-    disadvantage: boolean;
-}>;
+export declare function computeSkillAdvantage(actor: Actor.Implementation, skillId: string, options: MidiOptions, tracker?: RollModifierTracker): Promise<RollModifierTracker>;
+export declare function computeToolAdvantage(actor: Actor.Implementation, toolId: string, abilityId: string, options: MidiOptions, tracker?: RollModifierTracker): Promise<RollModifierTracker>;
+export declare function computeAttackAdvantage(actor: Actor.Implementation, actionType: string, options: MidiOptions, abilityId?: string, tracker?: RollModifierTracker): Promise<RollModifierTracker>;
 export declare function _prepareDerivedData(this: Actor.Implementation, wrapped: any, ...args: any[]): void;
 export declare function initPatching(): void;
 export declare function actorPrepareData(this: Actor.Implementation, wrapped: any): void;

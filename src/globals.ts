@@ -1,6 +1,6 @@
 import { AnyMutableObject, AnyObject, InexactPartial } from "fvtt-types/utils";
 import { OnUseMacros } from "./module/apps/Item";
-import { DamageDescriptionObject, DamageOnlyWorkflow, DDBGameLogWorkflow, DummyWorkflow, TrapWorkflow, UndoData, UserWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./module/Workflow";
+import { AttributionEntry, AttributionMap, AugmentedEvent, DamageDescriptionObject, DamageOnlyWorkflow, DDBGameLogWorkflow, DummyWorkflow, TrapWorkflow, UndoData, UserWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./module/Workflow";
 import { MidiOptions } from "./module/utils";
 import * as utils from "./module/utils";
 import * as settings from "./module/settings";
@@ -20,7 +20,8 @@ import { TroubleShooter } from "./module/apps/TroubleShooter";
 import { ChatLogMidi } from "./module/ChatClasses/ChatLogMidi";
 import { ChatMessageMidi } from "./module/ChatClasses/ChatMessageMidi";
 import { DamageApplicationElementMidi } from "./module/ChatClasses/DamageApplicationElementMidi";
-import { MidiDependentsRegistry } from "./module/MidiDependentsRegistry";
+import { MidiDependentsRegistry, RegistryChangeEvent } from "./module/lib/MidiDependentsRegistry";
+import { RollModifierTracker } from "./module/lib/RollModifierTracker";
 
 declare module "fvtt-types/configuration" {
   interface AssumeHookRan {
@@ -74,6 +75,7 @@ declare module "fvtt-types/configuration" {
       "midi-qol.dnd5eCalculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => void;
       "midi-qol.preItemRoll": (workflow: Workflow) => Promise<void | boolean>;
       "midi-qol.preAttackRoll": (workflow: Workflow) => Promise<void | boolean>;
+      "midi-qol.preAttackRollConfig": (workflow: Workflow) => Promise<void | boolean>;
       "midi-qol.AttackRollComplete": (workflow: Workflow) => Promise<void | boolean>;
       "midi-qol.DamageRollComplete": (workflow: Workflow) => Promise<void | boolean>;
       "midi-qol.StatsUpdated": () => void;
@@ -82,6 +84,8 @@ declare module "fvtt-types/configuration" {
       "midi-qol.ready": () => void;
       "midi-qol.removeUndoEntry": (data?: UndoData) => void;
       "midi-qol.setup": (data: typeof globalThis.MidiQOL) => void;
+      "midi-qol.dependentsRegistryChanged": (event: RegistryChangeEvent) => void;
+      "midi-qol-setup-wizard.launch": () => void;
       "getHeaderControlsActivitySheet": (app: foundry.applications.api.Application /*dnd5e.applications.activity.activitySheet*/ , buttons: any[]) => void;
       "tidy5e-sheet.ready": (api: any) => void;
       "simplecover5eReady": () => void;
@@ -440,15 +444,13 @@ declare module "fvtt-types/configuration" {
         actorUuid?: string;
         sourceActorUuid?: string;
         advantageSaveUuids?: string[];
-        advReminderAttackAdvAttribution?: string[];
         ammunitionOnUseMacros?: OnUseMacros;
         AoO?: boolean;
-        attackAdvAttribution?: string[];
         attackTotal?: number;
-        attackRoll?: Roll.Data;
+        attackRoll?: Roll.Data | Roll;
         attackRollCount?: number;
         bonusDamageDetail?: DamageDescriptionObject[];
-        bonusDamageRolls?: Roll.Data[];
+        bonusDamageRolls?: Roll.Data[] | Roll[];
         bonusDamageTotal?: number;
         concentrationRolled?: boolean;
         criticalSaveUuids?: string[];
@@ -457,12 +459,11 @@ declare module "fvtt-types/configuration" {
         damageDetail?: DamageDescriptionObject[];
         damageList?: DamageListEntry[];
         damageRollCount?: number;
-        damageRolls?: Roll.Data[];
+        damageRolls?: Roll.Data[] | Roll[];
         damageTotal?: number;
         defaultDamageType?: string;
         diceRoll?: number;
         effectsAlreadyExpired?: string[];
-        extraRolls?: Roll.Data[];
         failedSaveUuids?: string[];
         fumbleSaveUuids?: string[];
         hitTargetUuids?: string[];
@@ -475,17 +476,15 @@ declare module "fvtt-types/configuration" {
         noOptionalRules?: boolean;
         OnUseMacros?: OnUseMacros;
         otherDamageDetail: DamageDescriptionObject[];
-        otherDamageRolls?: Roll.Data[];
+        otherDamageRolls?: Roll.Data[] | Roll[];
         otherDamageTotal?: number;
         rawBonusDamageDetail?: DamageDescriptionObject[];
         rawDamageDetail?: DamageDescriptionObject[];
         rawOtherDamageDetail?: DamageDescriptionObject[];
         saveDisplayData?: unknown;
-        saveRolls?: {
-          formula: string;
-          options: Roll.Options;
-        }[];
         saveUuids?: string[];
+        /** Structured save attribution map: targetUuid -> type -> source -> displayName */
+        saveAttribution?: Record<string, AttributionMap>;
         semiSuperSaverUuids?: string[];
         superSaverUuids?: string[];
         suspended?: boolean;
@@ -499,9 +498,9 @@ declare module "fvtt-types/configuration" {
         templateUuid?: string;
         workflowOptions?: WorkflowOptions;
         undoDamage?: SerializedDamageListEntry[];
+        utilityRolls?: Roll.Data[] | Roll[];
         "use.consumed"?: any;
         "use.otherScaling"?: number | false;
-        utilityRolls?: Roll.Data[];
         aborted?: boolean;
         type?: number;
         overtimeActorUuid?: string;
@@ -623,6 +622,7 @@ declare global {
     addDependent: typeof utils.addDependent;
     addRollTo: typeof utils.addRollTo;
     addUndoChatMessage: typeof undo.addUndoChatMessage;
+    RollModifierTracker: typeof RollModifierTracker;
     applyTokenDamage: typeof utils.applyTokenDamage;
     canSee: typeof utils.canSee;
     canSense: typeof utils.canSense;
@@ -634,6 +634,9 @@ declare global {
     checkRule: typeof checkRule;
     chooseEffect: typeof utils.chooseEffect;
     collectSettingData: typeof settings.collectSettingData;
+    exportSettingsToJSON: typeof settings.exportSettingsToJSON;
+    importSettingsFromJSON: typeof settings.importSettingsFromJSON;
+    resetConfigSettingsToDefaults: typeof settings.resetConfigSettingsToDefaults;
     completeActivityUse: typeof utils.completeActivityUse;
     completeItemUse: typeof utils.completeItemUse;
     computeAbilityAdvantage: typeof patching.computeAbilityAdvantage;
@@ -719,6 +722,7 @@ declare global {
     removeReactionUsed: typeof utils.removeReactionUsed;
     resolveTargetConfirmation: typeof resolveTargetConfirmation;
     safeGetGameSetting: typeof settings.safeGetGameSetting;
+    shouldDisplaySaveDC: typeof settings.shouldDisplaySaveDC;
     selectTargetsForTemplate: typeof templateTokens;
     setBonusActionUsed: typeof utils.setBonusActionUsed;
     setReactionUsed: typeof utils.setReactionUsed;
@@ -1103,9 +1107,9 @@ export interface Activity extends AnyMutableObject {
   };
   refund: (consumed: unknown) => Promise<void>;
   getRollData: () => AnyMutableObject;
-  rollAttack?: (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => Promise<Roll[] | null>;
-  rollDamage: (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => Promise<Roll[] | void>;
-  rollFormula?: (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => Promise<Roll[] | void>;
+  rollAttack?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | null>;
+  rollDamage(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
+  rollFormula?(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig): Promise<Roll[] | void>;
   // Consumption and scaling methods/properties
   canScale?: boolean;
   _prepareUsageConfig: (config: object) => object;
@@ -1244,7 +1248,7 @@ type BasicRollConfig = {
 export type RollProcessConfig = {
   rolls?: BasicRollConfig[];
   evaluate?: boolean;
-  event?: Event;
+  event?: AugmentedEvent;
   hookNames?: string[];
   subject?: foundry.abstract.Document.Any;
   target?: number;
@@ -1402,10 +1406,6 @@ export type SaveRollRequest = {
 };
 
 export type MonksTokenBarRequest = SaveRollRequest & {
-  altKey: boolean;
-  ctrlKey: boolean;
-  shiftKey: boolean;
-  fastForward: boolean;
   options: {
     midiOptions: {
       itemUuid: string | undefined;
@@ -1427,7 +1427,6 @@ export type FlashRollsRequest = SaveRollRequest & {
 
 export type EpicRollsRequest = SaveRollRequest & {
   actorUuid: string;
-  fastForward: boolean;
 };
 
 export type ModuleIntegrationRequests = {
@@ -1437,8 +1436,10 @@ export type ModuleIntegrationRequests = {
 };
 
 export type SaveDetails = {
+  actorUuid: string;  // UUID of the actor making the save - for reliable tracker lookup
   advantage: boolean | undefined;
   disadvantage: boolean | undefined;
+  modifierTracker: RollModifierTracker | undefined;  // RollModifierTracker with attribution tracking
   isFriendly: boolean;
   isMagicSave: boolean;
   isConcentrationCheck: boolean | undefined;

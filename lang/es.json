@@ -1,6 +1,4 @@
 {
-  "midi-qol.ItemDeleteCheck.Name": "Confirmar eliminar item",
-  "midi-qol.ItemDeleteCheck.Hint": "Abrir un diálogo de confirmación cuando se intente borrar un elemento desde una ficha de personaje",
   "midi-qol.DamageImmunities.Name": "Aplicar inmunidades a daño",
   "midi-qol.DamageImmunities.Hint": "Cuando se usan los botones de daño de midi-qol o se aplica automáticamente el daño, aplicar también las inmunidades, resistencias y vulnerabilidades del objetivo. Se comprueban todos los tipos de daño. TS-Comprobar texto: Busca palabras en la descripción que indiquen 1/2 daño.",
   "midi-qol.SpeedItemRolls.Name": "Habilitar tiradas rápidas de elementos",
@@ -154,8 +152,6 @@
   "midi-qol.UseTokenNames.Hint": "Los títulos de las tarjetas del chat y los nombres de los objetivos usan el nombre del token en lugar del actor",
   "midi-qol.CriticalDamage.Name": "Elige cómo lanzar el daño crítico",
   "midi-qol.CriticalDamage.Hint": "DND5e Settings Only - tirada de crítico estándar de dnd5e, Max Normal Damage - solo dados de arma base (sin dados de crítico) pero todos maximizados, Max Critical Dice - dados de crítico maximizados, Max All Dice - dados de objeto + crítico maximizados, double dice value - resultado de dados x2, Explode Critical Dice - tirada de crítico normal explotando cualquier dado de crítico, Only Weapon Extra Critical - el único bonus de daño por crítico es del campo de crítico extra del objeto",
-  "midi-qol.MergeCard.Name": "Combinar tiradas en una tarjeta",
-  "midi-qol.MergeCard.Hint": "Combina ataque, impactos, daño y TS en una única tarjeta en el chat",
   "midi-qol.MergeCardCondensed.Name": "Condensar tiradas de ataque/daño",
   "midi-qol.MergeCardCondensed.Hint": "Conserva un poco de espacio en el chat haciendo más pequeñas las tiradas de ataque y daño ",
   "midi-qol.ConfigTitle": "Ajustes de Midi-Qol",

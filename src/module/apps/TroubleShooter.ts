@@ -63,11 +63,11 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static override PARTS = {
     tabs: {template: "templates/generic/tab-navigation.hbs"},
-    summary: {template: "modules/midi-qol/templates/troubleshooter/summary.hbs"},
-    common: {template: "modules/midi-qol/templates/troubleshooter/common.hbs"},
-    problems: {template: "modules/midi-qol/templates/troubleshooter/problems.hbs"},
-    errors: {template: "modules/midi-qol/templates/troubleshooter/errors.hbs"},
-    modules: {template: "modules/midi-qol/templates/troubleshooter/modules.hbs"},
+    summary: {template: "modules/midi-qol/templates/apps/TroubleShooter/summary.hbs"},
+    common: {template: "modules/midi-qol/templates/apps/TroubleShooter/common.hbs"},
+    problems: {template: "modules/midi-qol/templates/apps/TroubleShooter/problems.hbs"},
+    errors: {template: "modules/midi-qol/templates/apps/TroubleShooter/errors.hbs"},
+    modules: {template: "modules/midi-qol/templates/apps/TroubleShooter/modules.hbs"},
     footer: {template: "templates/generic/form-footer.hbs"}
   }
 
@@ -1019,6 +1019,19 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     this.checkMidiSaveSettings(data);
     this.checkNoActorTokens(data);
     this.checkConcentrationStatusEffects(data);
+    this.checkChatLogPrune(data);
+  }
+
+  public static checkChatLogPrune(data: TroubleShooterData) {
+    if (!(game.modules.get("chatlog-prune")?.active)) {
+      data.problems.push({
+        moduleId: "chatlog-prune",
+        severity: "Warn",
+        problemSummary: "Chat Log Prune is not active. Long sessions may experience performance issues as chat messages accumulate.",
+        problemDetail: undefined,
+        fixer: "Install and activate chatlog-prune"
+      });
+    }
   }
 
   public static checkAutoAnimations(data: TroubleShooterData) {

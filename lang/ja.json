@@ -1,6 +1,4 @@
 {
-  "midi-qol.ItemDeleteCheck.Name": "アイテム削除時に確認する",
-  "midi-qol.ItemDeleteCheck.Hint": "キャラクターシートからなにかを削除しようとしたときに確認画面が表示されるようになります。",
   "midi-qol.DamageImmunities.Name": "ダメージ耐性を適用する",
   "midi-qol.DamageImmunities.Hint": "上記のダメージボタンを使用したときや、ダメージの自動処理が行われるとき、対象の耐性・脆弱性・抵抗を確認し、適切なダメージを適用します。すべてのダメージ種別が対象となります。",
   "midi-qol.WorldKeyMappings.Name": "キー設定をワールド共通にしたい？",
@@ -127,8 +125,6 @@
     "maxBaseRollCrit": "最大基礎ロールクリティカル",
     "bestOfTwo": "２回ダメージロールして高い方を採用"
   },
-  "midi-qol.MergeCard.Name": "ロールを1枚のチャットカードに統合する",
-  "midi-qol.MergeCard.Hint": "攻撃・ヒット・ダメージ・セーヴを1枚のチャットカードに統合して表示します。",
   "midi-qol.MergeCardCondensed.Name": "攻撃とダメージを詰めて表示",
   "midi-qol.MergeCardCondensed.Hint": "攻撃とダメージのロール結果をコンパクトに表示します。チャットログのスペースを少し節約できます。",
   "midi-qol.DisplayItemProperties.Name": "アイテム特性を表示",

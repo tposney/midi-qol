@@ -65,6 +65,7 @@ export let setupSocket = () => {
   socketlibSocket.register("updateActor", updateActor);
   socketlibSocket.register("updateEffects", updateEffects);
   socketlibSocket.register("updateEntityStats", GMupdateEntityStats)
+  socketlibSocket.register("saveAllStats", GMsaveAllStats)
   socketlibSocket.register("updateUndoChatCardUuids", updateUndoChatCardUuids);
   socketlibSocket.register("updateUndoChatCardUuidsById", updateUndoChatCardUuidsById);
   socketlibSocket.register("removeActionBonusReaction", removeActionBonusReaction);
@@ -139,6 +140,7 @@ export class SaferSocket {
       case "undoMostRecentWorkflow":
       case "undoTillWorkflow":
       case "updateEntityStats":
+      case "saveAllStats":
       case "updateUndoChatCardUuids":
       case "updateUndoChatCardUuidsById":
       case "deleteEffectsByUuid":
@@ -367,6 +369,10 @@ function GMupdateEntityStats(data: { id: string; currentStats: Stats; }) {
   return gameStats.GMupdateEntity(data)
 }
 
+function GMsaveAllStats() {
+  return gameStats.GMsaveAllStats();
+}
+
 export async function timedExecuteAsGM(toDo: string, data: any) {
   if (false) return unTimedExecuteAsGM(toDo, data);
   const start = Date.now();
@@ -377,11 +383,7 @@ export async function timedExecuteAsGM(toDo: string, data: any) {
 }
 
 export function preferredActiveGM() {
-  let preferredGMId = safeGetGameSetting("midi-qol", "PreferredGM");
-  if (preferredGMId === "none") {
-    game.settings.set("midi-qol", "PreferredGM", ""); // reset to no preferred GM
-    preferredGMId = "";
-  }
+  let preferredGMId = configSettings.preferredGM ?? "";
   if (preferredGMId !== "") {
     const preferredGM = game.users?.get(preferredGMId);
     if (preferredGM?.active) return preferredGM as User.Implementation;
@@ -394,7 +396,7 @@ export function preferredActiveGM() {
 export async function unTimedExecuteAsGM(toDo: string, ...args) {
   if (!socketlibSocket) return undefined;
   const myScene = game.user?.viewedScene;
-  const preferredGMId = safeGetGameSetting("midi-qol", "PreferredGM");
+  const preferredGMId = configSettings.preferredGM ?? "";
   let preferredGM = game.users?.get(preferredGMId);
   if (!preferredGM?.active) {
     if (preferredGMId !== "") log(`preferredGM ${preferredGMId} is not active`);
@@ -787,6 +789,7 @@ async function rollAbility(data: {
     create?: boolean;
     rollMode?: string;
     itemId: string;
+    workflowId?: string;
   };
   advantage?: boolean;
   disadvantage?: boolean;
@@ -919,6 +922,7 @@ async function createReverseDamageCard(data: {
   sender: string,
   charName: string,
   actorId: string,
+  actorUuid?: string,
   forceApply: boolean,
   updateOptions: any,
 }): Promise<string[]> {
@@ -1173,7 +1177,7 @@ function updateHPStatusHeader(html: HTMLElement, actorUuid?: string, applied?: b
 }
 
 /** Helper to generate tooltip HTML for a damage item */
-function generateDamageTooltip(damageItem: DamageListEntry): string {
+function generateDamageTooltip(damageItem: DamageListEntry, tokenName?: string): string {
   const tooltipList = damageItem.damageDetail?.map(di => {
     let allMods: string[] = Object.keys(di.active ?? {}).reduce((acc: string[], k) => {
       if (["semiSuperSaver", "superSaver"].includes(k)) return acc;
@@ -1196,7 +1200,10 @@ function generateDamageTooltip(damageItem: DamageListEntry): string {
     if (damageItem.uncannyDodge) toolTipHeader.push("Uncanny Dodge");
     if (damageItem.details?.length > 0) toolTipHeader.push(...damageItem.details);
   }
-  return [...(toolTipHeader ?? []), ...(tooltipList ?? [])].join("<br>");
+  const parts: string[] = [];
+  if (tokenName) parts.push(`<b>${tokenName}</b>`);
+  parts.push(...(toolTipHeader ?? []), ...(tooltipList ?? []));
+  return parts.join("<br>");
 }
 
 async function prepareDamageListItems(
@@ -1415,7 +1422,7 @@ async function prepareDamageListItems(
       vitalityDamageIsHealing: directVitalityDamage < 0,
     };
 
-    listItem.tooltip = generateDamageTooltip(damageItem);
+    listItem.tooltip = generateDamageTooltip(damageItem, listItem.tokenName);
 
     templateData.damageList.push(listItem);
   }
@@ -1437,6 +1444,7 @@ async function createPlayerDamageCard(data: {
   sender: string;
   charName: string;
   actorId: string;
+  actorUuid?: string;
   forceApply: boolean;
   updateOptions: any;
 }): Promise<string | undefined> {
@@ -1489,7 +1497,7 @@ async function createPlayerDamageCard(data: {
       speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: game.user?.id, actor: data.actorId },
       content: content,
       // whisper: ChatMessage.getWhisperRecipients("players").filter(u => u.active).map(u => u.id),
-      flags: { "midi-qol": { "undoDamage": prepareDamageListToJSON(tokenDataList), playerDamageCard: true } }
+      flags: { "midi-qol": { "undoDamage": prepareDamageListToJSON(tokenDataList), playerDamageCard: true, actorUuid: data.actorUuid } }
     };
 
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
@@ -1507,6 +1515,7 @@ async function createGMReverseDamageCard(
     flagTags: any,
     forceApply: boolean,
     updateOptions: any,
+    actorUuid?: string,
   },
   doHits: boolean = true
 ): Promise<string | undefined> {
@@ -1533,7 +1542,7 @@ async function createGMReverseDamageCard(
       speaker: { scene: getCanvas()?.scene?.id, alias: game.user?.name },
       content: content,
       whisper: ChatMessage.getWhisperRecipients("GM").filter(u => (u as User).active).map(u => u.id),
-      flags: { [MODULE_ID]: { "undoDamage": prepareDamageListToJSON(tokenDataList) } }
+      flags: { [MODULE_ID]: { "undoDamage": prepareDamageListToJSON(tokenDataList), actorUuid: data.actorUuid } }
     };
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
     if (data.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? {}, data.flagTags);
@@ -2062,7 +2071,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       const hasOurElements = parent.querySelector(`#dmg-total-${actorUuid.replaceAll(".", "")}`);
       if (!hasOurElements) return;
 
-      // Single click to select token
+      // Single click to select token and pan to it
       img.addEventListener("click", (ev) => {
         ev.preventDefault();
         ev.stopImmediatePropagation();
@@ -2070,6 +2079,9 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         const token = canvas.tokens?.get(tokenId);
         if (token) {
           token.control({ releaseOthers: !ev.shiftKey });
+          // Pan to the token center
+          const center = token.center;
+          canvas.animatePan({ x: center.x, y: center.y });
         }
       }, { capture: true });
 

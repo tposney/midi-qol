@@ -1,6 +1,4 @@
 {
-  "midi-qol.ItemDeleteCheck.Name": "Löschen von Elementen bestätigen",
-  "midi-qol.ItemDeleteCheck.Hint": "Beim Versuch, Elemente aus einem Charakterblatt zu löschen, einen Bestätigungsdialog öffnen",
   "midi-qol.DamageImmunities.Name": "Schadensimmunität anwenden",
   "midi-qol.DamageImmunities.Hint": "Bei der Verwendung von Midi-Qol-Schadensbuttons oder der automatischen Anwendung von Schaden gelten die Schadensimmunitäten/-schwächen/-resistenzen des Ziels. Alle Schadensarten werden geprüft. Saves - Check text ist aktiviert - prüft die Beschreibung des Zaubers auf besondere Zeichenketten, die auf 1/2 Schaden hinweisen",
   "midi-qol.SpeedItemRolls.Name": "Schnellwürfeln für Elemente aktivieren",
@@ -122,8 +120,6 @@
   "midi-qol.UseTokenNames.Hint": "Chatkartentitel und Zielnamen verwenden den Tokennamen und nicht den Akteurnamen",
   "midi-qol.CriticalDamage.Name": "Festlegen, wie kritische Schäden gewürfelt werden",
   "midi-qol.CriticalDamage.Hint": "erfordert Foundry 0.7.0 oder höher. DND5e Default - Standard dnd5e kritischer Wurf, Base max only - nur Grundwaffenwürfel, aber maximiert, max critical dice- Würfel für kritischen Schaden maximiert, max all Dice - Waffenschaden + kritischer Schaden maximiert",
-  "midi-qol.MergeCard.Name": "Würfe zu einer Karte zusammenführen",
-  "midi-qol.MergeCard.Hint": "Angriff, Treffer, Schaden, Rettungswürfe in einer einzigen Chatkarte zusammenfassen",
   "midi-qol.MergeCardCondensed.Name": "Angriffs-/Schadenswürfe komprimieren",
   "midi-qol.MergeCardCondensed.Hint": "Spart ein wenig Platz im Chat-Protokoll, indem Angriffs- und Schadenswürfe kleiner gemacht werden ",
   "midi-qol.ConfigTitle": "Midi-Qol Configuration",

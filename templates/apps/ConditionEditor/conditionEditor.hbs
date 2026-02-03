@@ -1,0 +1,19 @@
+<section class="midi-qol condition-editor">
+  <div class="condition-editor-content">
+    <div class="form-group condition-editor-key">
+      <label>{{localize "midi-qol.ConditionEditor.Key"}}</label>
+      <span class="condition-key-value">{{key}}</span>
+    </div>
+    <div class="condition-editor-codemirror">
+      <code-mirror language="javascript"></code-mirror>
+    </div>
+  </div>
+  <footer class="sheet-footer flexrow">
+    <button type="button" data-action="save">
+      <i class="fas fa-save"></i> {{localize "midi-qol.ConditionEditor.Save"}}
+    </button>
+    <button type="button" data-action="cancel">
+      <i class="fas fa-times"></i> {{localize "midi-qol.ConditionEditor.Cancel"}}
+    </button>
+  </footer>
+</section>

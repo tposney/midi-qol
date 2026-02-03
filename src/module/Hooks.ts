@@ -1,8 +1,8 @@
-import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, log, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastAttack, isAutoFastDamage, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData } from "./utils.js";
-import { autoFastForwardAbilityRolls, checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData } from "./utils.js";
+import { checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { Workflow } from "./Workflow.js";
@@ -11,7 +11,7 @@ import { installedModules } from "./setupModules.js";
 import { preActivityConsumptionHook, activityConsumptionHook } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
-import { MidiDependentsRegistry } from "./MidiDependentsRegistry.js";
+import { MidiDependentsRegistry } from "./lib/MidiDependentsRegistry.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
@@ -516,7 +516,6 @@ export function initHooks() {
 
   Hooks.on("midi-qol.RollComplete", async (workflow) => {
     const activityUuid = workflow.activity.uuid ?? "";
-
     if (savedOverTimeEffectsToDelete[activityUuid]) {
       const effectData = savedOverTimeEffectsToDelete[activityUuid];
       let effect = fromUuidSync(effectData.uuid) as ActiveEffect.Implementation | undefined;
@@ -524,7 +523,8 @@ export function initHooks() {
       if (effect) {
         const saved = workflow.saves.size === 1;
         const failed = workflow.failedSaves.size === 1;
-        const { saveCount, saveCountAction, failCount, failCountAction } = effectData;
+        const { saveCount, saveCountAction, saveConsecutive,
+                failCount, failCountAction, failConsecutive } = effectData;
         const actor = effect.parent as Actor.Implementation;
 
         if (saved || !workflow.hasSave) {
@@ -537,8 +537,8 @@ export function initHooks() {
 
             if (savesRemaining <= 0) {
               // Required saves reached - apply action
-              // Action format: [-+]effectSpec (e.g., "-", "+", "-petrified", "+prone")
-              const action = saveCountAction ?? "-"; // Default: remove
+              // Action format: [c][-+]effectSpec (e.g., "-", "+", "c-petrified", "c+prone")
+              const action = (saveCountAction ?? "-").replace(/^c/, ""); // Strip consecutive flag
               const isRemove = action.startsWith("-");
               const effectSpec = action.length > 1 ? action.slice(1) : undefined;
 
@@ -554,6 +554,10 @@ export function initHooks() {
               }
             } else {
               // Decrement counter on effect
+              // If failCount is consecutive, a save resets the fail streak
+              if (failConsecutive && failCount !== undefined) {
+                foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`, failCount);
+              }
               await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`, savesRemaining);
               await effect.update({ flags: effect.flags });
             }
@@ -563,6 +567,11 @@ export function initHooks() {
           }
         } else if (failed && failCount !== undefined) {
           // Handle failCount - multiple fails trigger action
+          // If saveCount is consecutive, a failure resets the save streak
+          if (saveConsecutive && saveCount !== undefined) {
+            foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`, saveCount);
+          }
+
           let failsRemaining = foundry.utils.getProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`) as number | undefined;
           // Initialize if not set
           if (failsRemaining === undefined) failsRemaining = failCount;
@@ -570,8 +579,7 @@ export function initHooks() {
 
           if (failsRemaining <= 0) {
             // Required fails reached - apply action
-            // Action format: [-+]effectSpec (e.g., "-", "+", "-petrified", "+prone")
-            const action = failCountAction ?? "+"; // Default: permanent
+            const action = (failCountAction ?? "+").replace(/^c/, ""); // Strip consecutive flag
             const isRemove = action.startsWith("-");
             const effectSpec = action.length > 1 ? action.slice(1) : undefined;
 
@@ -590,6 +598,10 @@ export function initHooks() {
             await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`, failsRemaining);
             await effect.update({ flags: effect.flags });
           }
+        } else if (failed && saveConsecutive && saveCount !== undefined) {
+          // Failed but no failCount to process — still need to reset consecutive save streak
+          foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`, saveCount);
+          await effect.update({ flags: effect.flags });
         }
       }
       delete savedOverTimeEffectsToDelete[activityUuid];
@@ -603,6 +615,7 @@ export function initHooks() {
   });
 
   setupMidiFlagTypes();
+
   Hooks.on("applyActiveEffect", midiCustomEffect);
   // Hooks.on("preCreateActiveEffect", checkImmunity); Disabled in lieu of having effect marked suppressed
   Hooks.on("preUpdateItem", preUpdateItemActorOnUseMacro);
@@ -677,6 +690,15 @@ export function initHooks() {
     });
     api.config.itemSummary.registerCommands([
       {
+        label: i18n("midi-qol.buttons.showChatInfo"),
+        enabled: (params) => true,
+        iconClass: 'fas fa-info-circle',
+        execute: (params) => {
+          if (debugEnabled > 1) log('displayCard', params.item);
+          params.item.displayCard();
+        },
+      },
+      {
         label: i18n("midi-qol.buttons.roll"),
         enabled: (params) => ["weapon", "spell", "power", "feat", "tool", "consumable"].includes(params.item.type),
         iconClass: 'fas fa-dice-d20',
@@ -688,24 +710,41 @@ export function initHooks() {
       },
       {
         label: i18n("midi-qol.buttons.attack"),
-        enabled: (params) => ["weapon", "feat"].includes(params.item.type) && params.item.system.activities.some(a => a.type === "attack")
-          && params.item.system.activities.find(a => a.type === "attack"),
+        enabled: (params) => params.item.system.activities?.some(a => a.hasAttack),
         iconClass: 'fas fa-dice-d20',
         execute: (params) => {
           if (debugEnabled > 1) log('rollAttack', params.item);
-          const activity = params.item.system.activities.find(a => a.type === "attack");
-          if (activity) activity.rollAttack({ event: params.event }, {}, { create: true })
+          const activity = params.item.system.activities.find(a => a.hasAttack);
+          if (!activity) return;
+          let configure = !isAutoFastForward("attack");
+          if (areMidiKeysPressed(params.event, "RollToggle")) configure = !configure;
+          activity.rollAttack({ event: params.event }, { configure }, { create: true })
         }
       },
       {
         label: i18n("midi-qol.buttons.damage"),
-        enabled: (params) => ["weapon", "feat", "save", "check", "damage"].includes(params.item.type)
-          && params.item.system.activities?.find(a => a.damage?.parts?.length),
+        enabled: (params) => params.item.system.activities?.some(a => a.hasDamage),
         iconClass: 'fas fa-dice-d20',
         execute: (params) => {
           if (debugEnabled > 1) log('rollDamage', params.item);
-          const activity = params.item.system.activities.find(a => a.damage?.parts?.length);
-          if (activity) activity.rollDamage({ event: params.event }, {}, { create: true })
+          const activity = params.item.system.activities.find(a => a.hasDamage);
+          if (!activity) return;
+          let configure = !isAutoFastForward("damage");
+          if (areMidiKeysPressed(params.event, "RollToggle")) configure = !configure;
+          activity.rollDamage({ event: params.event }, { configure }, { create: true })
+        }
+      },
+      {
+        label: i18n("midi-qol.buttons.versatileDamage"),
+        enabled: (params) => params.item.isVersatile && params.item.system.activities?.some(a => a.hasDamage),
+        iconClass: 'fas fa-hand-fist',
+        execute: (params) => {
+          if (debugEnabled > 1) log('rollVersatileDamage', params.item);
+          const activity = params.item.system.activities.find(a => a.hasDamage);
+          if (!activity) return;
+          let configure = !isAutoFastForward("damage");
+          if (areMidiKeysPressed(params.event, "RollToggle")) configure = !configure;
+          activity.rollDamage({ event: params.event, versatile: true }, { configure }, { create: true })
         }
       }
     ]);
@@ -1347,7 +1386,6 @@ Hooks.on("dnd5e.preRollConcentration", (rollConfig, dialogConfig, messageConfig)
 })
 
 Hooks.on("dnd5e.rollConcentration", (rolls, { subject }) => {
-  if (configSettings.doConcentrationCheck === "item") return;
   if (!subject || !(subject instanceof CONFIG.Actor.documentClass)) {
     const message = "dnd5e.rollConcentration hook called with non-actor";
     TroubleShooter.recordError(new Error(message), message);
@@ -1355,18 +1393,24 @@ Hooks.on("dnd5e.rollConcentration", (rolls, { subject }) => {
     return;
   }
   if (rolls instanceof Roll) rolls = [rolls];
-  // Not sure what multiple concentration rolls mean
   // Assume concentration fails if any of the concentration rolls fail.
+  let failed = false;
+  for (let roll of rolls) {
+    // @ts-expect-error no dnd5e-types
+    if (roll.isFailure) failed = true;
+  }
+  if (configSettings.keepRollStats) {
+    gameStats.addConcentrationResult(subject, !failed);
+  }
+  // The "item" path handles criticalSaves and endConcentration via its own workflow/macros
+  if (configSettings.doConcentrationCheck === "item") return;
   for (let roll of rolls) {
     // @ts-expect-error no dnd5e-types
     if (checkRule("criticalSaves") && roll.isCritical) roll.options.success = true;
-    // triggerTargetMacros(triggerList: string[], targets: Set<any> = this.targets, options: any = {}) {
+  }
+  if (configSettings.removeConcentration && failed) {
     // @ts-expect-error no dnd5e-types
-    if (configSettings.removeConcentration && roll.isFailure) {
-      // @ts-expect-error no dnd5e-types
-      subject.endConcentration();
-      return;
-    }
+    subject.endConcentration();
   }
 });
 
@@ -1420,8 +1464,4 @@ Hooks.on("dnd5e.preConfigureInitiative", (actor, rollConfig) => {
   }
 });
 
-Hooks.on("dnd5e.preRollAbilityCheck", (config, dialog, message) => {
-  if (autoFastForwardAbilityRolls) {
-    dialog.configure = false;
-  }
-});
+

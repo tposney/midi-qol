@@ -1,6 +1,4 @@
 {
-  "midi-qol.ItemDeleteCheck.Name": "Kontrola odstranění položky",
-  "midi-qol.ItemDeleteCheck.Hint": "Při pokusu o odstranění položky z deníku otevře potvrzující dialog.",
   "midi-qol.DamageImmunities.Name": "Aplikace imunit vůči zranění",
   "midi-qol.DamageImmunities.Hint": "Při použití tlačítek Midi-QoL pro zranění a při automatizované aplikaci zranění se uplatní imunity/zranitelnosti/odolání cíle vůči zraněním. Jsou kontrolovány všechny typy zranění.",
   "midi-qol.WorldKeyMappings.Name": "Nastavení klíčů Svět vs Klient",
@@ -127,8 +125,6 @@
     "maxBaseRollCrit": "Maximální základní hod a kritické kostky",
     "bestOfTwo": "Hoď kostkami zásahu dvakrát a použij lepší výsledek"
   },
-  "midi-qol.MergeCard.Name": "Sloučení hodů do jedné karty",
-  "midi-qol.MergeCard.Hint": "Sloučí v chatu útoky, zásahy, zranění a záchrany do jedné karty.",
   "midi-qol.MergeCardCondensed.Name": "Slučovat hody na útok a zásah?",
   "midi-qol.MergeCardCondensed.Hint": "Zaškrtnutí ušetří trochu místa v chatu zmenšením hodů na útok a zásah.",
   "midi-qol.DisplayItemProperties.Name": "Zobrazovat nastavení položky?",

@@ -1,0 +1,329 @@
+<section class="dependents-explorer-wrapper">
+<div class="dependents-explorer-content">
+  <div class="search-bar">
+    <i class="fas fa-search"></i>
+    <input type="text" name="search-filter" placeholder="{{localize 'midi-qol.DependentsExplorer.SearchPlaceholder'}}" value="{{searchFilter}}">
+    {{#if searchFilter}}
+      <button type="button" class="clear-filter" data-action="clearFilter" title="{{localize 'midi-qol.DependentsExplorer.ClearFilter'}}">
+        <i class="fas fa-times"></i>
+      </button>
+    {{/if}}
+  </div>
+
+  {{#if isEmpty}}
+    <p class="empty-message">{{emptyMessage}}</p>
+  {{else}}
+    <div class="sections-list">
+      {{#each sections}}
+        <div class="type-section {{#if collapsed}}collapsed{{/if}}">
+          <div class="section-header" data-action="toggleSection" data-type="{{type}}">
+            <i class="fas fa-caret-{{#if collapsed}}right{{else}}down{{/if}} collapse-icon"></i>
+            <i class="{{icon}}"></i>
+            <span class="section-label">{{label}}</span>
+            <span class="section-count">({{count}})</span>
+          </div>
+          {{#unless collapsed}}
+            <div class="section-content">
+              {{#each entries}}
+                <div class="dependent-entry {{#unless parentExists}}missing{{/unless}} {{#if hasItemParent}}item-effect{{/if}}">
+                  <div class="parent-row">
+                    <div class="parent-info">
+                      <i class="{{parentIcon}}"></i>
+                      {{#if parentExists}}
+                        <a class="document-link" data-action="openDocument" data-uuid="{{parentUuid}}">
+                          {{parentName}}
+                        </a>
+                      {{else}}
+                        <span class="missing-document">{{parentName}} ({{parentUuid}})</span>
+                      {{/if}}
+                      {{#if ownerExists}}
+                        <span class="owner-link">
+                          <span class="owner-separator">{{localize "midi-qol.DependentsExplorer.On"}}</span>
+                          <i class="{{ownerIcon}}"></i>
+                          <a class="document-link" data-action="openDocument" data-uuid="{{ownerUuid}}">
+                            {{ownerName}}
+                          </a>
+                          {{#if grandparentExists}}
+                            <span class="owner-separator">{{localize "midi-qol.DependentsExplorer.On"}}</span>
+                            <i class="{{grandparentIcon}}"></i>
+                            <a class="document-link" data-action="openDocument" data-uuid="{{grandparentUuid}}">
+                              {{grandparentName}}
+                            </a>
+                          {{/if}}
+                        </span>
+                      {{/if}}
+                    </div>
+                    <div class="parent-actions">
+                      {{#if parentExists}}
+                        <button type="button" class="delete-btn" data-action="deleteParent" data-uuid="{{parentUuid}}" title="{{localize 'midi-qol.DependentsExplorer.DeleteParent'}}">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      {{/if}}
+                    </div>
+                  </div>
+                  <div class="dependents-sublist">
+                    {{#each dependents}}
+                      <div class="dependent-row {{#unless exists}}missing{{/unless}} {{#if hasItemParent}}item-effect{{/if}}">
+                        <div class="dependent-info">
+                          <i class="fas fa-turn-up indent-arrow"></i>
+                          <i class="{{icon}}"></i>
+                          {{#if exists}}
+                            <a class="document-link" data-action="openDocument" data-uuid="{{uuid}}">
+                              {{name}}
+                            </a>
+                          {{else}}
+                            <span class="missing-document">{{name}} ({{uuid}})</span>
+                          {{/if}}
+                          {{#if ownerExists}}
+                            <span class="owner-link">
+                              <span class="owner-separator">{{localize "midi-qol.DependentsExplorer.On"}}</span>
+                              <i class="{{ownerIcon}}"></i>
+                              <a class="document-link" data-action="openDocument" data-uuid="{{ownerUuid}}">
+                                {{ownerName}}
+                              </a>
+                              {{#if grandparentExists}}
+                                <span class="owner-separator">{{localize "midi-qol.DependentsExplorer.On"}}</span>
+                                <i class="{{grandparentIcon}}"></i>
+                                <a class="document-link" data-action="openDocument" data-uuid="{{grandparentUuid}}">
+                                  {{grandparentName}}
+                                </a>
+                              {{/if}}
+                            </span>
+                          {{/if}}
+                        </div>
+                        <div class="dependent-actions">
+                          {{#if exists}}
+                            <button type="button" class="delete-btn" data-action="deleteDependent" data-uuid="{{uuid}}" title="{{localize 'midi-qol.DependentsExplorer.DeleteDependent'}}">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          {{/if}}
+                        </div>
+                      </div>
+                    {{/each}}
+                  </div>
+                </div>
+              {{/each}}
+            </div>
+          {{/unless}}
+        </div>
+      {{/each}}
+    </div>
+  {{/if}}
+</div>
+
+<style>
+  .dependents-explorer-wrapper {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dependents-explorer-content {
+    padding: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.5rem;
+    margin-bottom: 0.35rem;
+    border: 1px solid var(--color-border-light-tertiary);
+    border-radius: 3px;
+    background: var(--color-cool-5);
+  }
+
+  .search-bar i.fa-search {
+    color: var(--color-text-dark-secondary);
+    font-size: 0.85rem;
+  }
+
+  .search-bar input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 0.85rem;
+  }
+
+  .search-bar .clear-filter {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-dark-secondary);
+    padding: 0.1rem;
+  }
+
+  .search-bar .clear-filter:hover {
+    color: var(--color-text-dark-primary);
+  }
+
+  .empty-message {
+    text-align: center;
+    color: var(--color-text-dark-secondary);
+    font-style: italic;
+    padding: 1rem;
+  }
+
+  .sections-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .type-section {
+    background: transparent;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9rem;
+    background: var(--color-cool-5);
+    border: 1px solid var(--color-border-light-tertiary);
+    border-radius: 3px;
+    user-select: none;
+    margin-bottom: 0.25rem;
+  }
+
+  .section-header:hover {
+    background: var(--color-cool-5-75);
+  }
+
+  .collapse-icon {
+    width: 0.75rem;
+    text-align: center;
+    color: var(--color-text-dark-secondary);
+  }
+
+  .section-label {
+    flex: 1;
+  }
+
+  .section-count {
+    color: var(--color-text-dark-secondary);
+    font-weight: normal;
+    font-size: 0.8rem;
+  }
+
+  .section-content {
+    padding: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .dependent-entry {
+    padding: 0.35rem;
+    border: 1px solid var(--color-border-light-tertiary);
+    border-radius: 3px;
+    background: var(--color-cool-4);
+    margin-bottom: 0.25rem;
+  }
+
+  .dependent-entry.missing {
+    opacity: 0.7;
+  }
+
+  .dependent-entry:last-child {
+    margin-bottom: 0;
+  }
+
+  .dependent-entry.item-effect > .parent-row,
+  .dependent-row.item-effect {
+    color: orange;
+  }
+
+  .parent-row, .dependent-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.1rem 0;
+    font-size: 0.85rem;
+  }
+
+  .parent-row {
+    font-weight: bold;
+    margin-bottom: 0.15rem;
+  }
+
+  .parent-info, .dependent-info {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+  }
+
+  .owner-link {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-weight: normal;
+  }
+
+  .owner-separator {
+    color: var(--color-text-dark-secondary);
+    font-style: italic;
+    margin-left: 0.15rem;
+  }
+
+  .indent-arrow {
+    color: var(--color-text-dark-secondary);
+    font-size: 0.75rem;
+    margin-right: 0.25rem;
+    transform: scaleX(-1);
+  }
+
+  .dependents-sublist {
+    padding-left: 0.75rem;
+  }
+
+  .document-link {
+    cursor: pointer;
+    color: inherit;
+  }
+
+  .document-link:hover {
+    text-decoration: underline;
+  }
+
+  .document-type {
+    color: var(--color-text-dark-secondary);
+    font-size: 0.8rem;
+    font-weight: normal;
+  }
+
+  .missing-document {
+    color: var(--color-text-dark-secondary);
+    font-style: italic;
+  }
+
+  .delete-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-dark-secondary);
+    padding: 0.1rem;
+    font-size: 0.8rem;
+  }
+
+  .delete-btn:hover {
+    color: var(--color-level-error);
+  }
+
+  .parent-actions, .dependent-actions {
+    display: flex;
+    gap: 0.15rem;
+  }
+</style>
+</section>

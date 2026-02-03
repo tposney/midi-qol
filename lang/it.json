@@ -1,6 +1,4 @@
 {
-"midi-qol.ItemDeleteCheck.Name": "Controllo Eliminazione Oggetto",
-"midi-qol.ItemDeleteCheck.Hint": "Apre una finestra di conferma quando si tenta di eliminare oggetti dalla scheda del personaggio",
 "midi-qol.DamageImmunities.Name": "Applica Immunità al Danno",
 "midi-qol.DamageImmunities.Hint": "Quando si utilizzano i pulsanti del danno di midi-qol o si applica automaticamente il danno, si applicano le immunità, vulnerabilità e resistenze al danno del bersaglio. Vengono controllati tutti i tipi di danno.",
 "midi-qol.WorldKeyMappings.Name": "Configurazione Tasti Mondiale vs Cliente",
@@ -127,8 +125,6 @@
     "maxBaseRollCrit": "Max Base Roll Crit",
     "bestOfTwo": "Tira due volte il dado del danno e scegli il più alto"
 },
-"midi-qol.MergeCard.Name": "Unisci Tiri in una sola scheda",
-"midi-qol.MergeCard.Hint": "Unisci Attacchi, Colpi, Danni, Tiri Salvezza in una sola scheda chat",
 "midi-qol.MergeCardCondensed.Name": "Condensa Tiri di Attacco/Danno",
 "midi-qol.MergeCardCondensed.Hint": "Conserva un po' di spazio nel log chat rendendo più piccoli i tiri di attacco e danno",
 "midi-qol.DisplayItemProperties.Name": "Visualizza Proprietà Elemento",

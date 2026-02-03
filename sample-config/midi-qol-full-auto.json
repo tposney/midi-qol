@@ -1,9 +1,8 @@
 {
   "configSettings": {
     "gmAutoAttack": true,
-    "gmAutoFastForwardAttack": true,
+    "gmAutoFastForward": ["attack", "damage", "check", "save", "skill", "tool"],
     "gmAutoDamage": "always",
-    "gmAutoFastForwardDamage": true,
     "showItemDetails": "all",
     "itemTypeList": [
       "weapon",
@@ -17,7 +16,7 @@
       "backpack"
     ],
     "autoRollAttack": true,
-    "autoFastForward": "all",
+    "autoFastForward": ["attack", "damage", "check", "save", "skill", "tool"],
     "autoTarget": "wallsBlockIgnoreDefeated",
     "autoCheckHit": "all",
     "autoCheckSaves": "all",
@@ -32,7 +31,6 @@
     "playerSaveTimeout": 30,
     "rollNPCSaves": "auto",
     "preRollChecks": false,
-    "mergeCard": true,
     "mergeCardCondensed": false,
     "hideNPCNames": "",
     "useTokenNames": true,
@@ -174,7 +172,10 @@
     "collapsibleTargets": false,
     "autoRemoveSummonedCreature": true,
     "autoUndoTransformations": true,
-    "midiPropertiesTabRole": "0"
+    "midiPropertiesTabRole": "0",
+    "criticalDamage": "default",
+    "criticalDamageGM": "default",
+    "coloredBorders": "none"
   },
   "midiSoundSettings": {
     "any": {},
@@ -184,9 +185,9 @@
   "criticalDamage": "default",
   "criticalDamageGM": "default",
   "nsaFlag": true,
-  "coloredBorders": "None",
+  "coloredBorders": "none",
   "addChatDamageButtons": "none",
-  "autoFastForwardAbilityRolls": true,
+  "autoFastForwardAbilityRolls": false,
   "autoRemoveTargets": "none",
   "forceHideRoll": true,
   "enableWorkflow": true,

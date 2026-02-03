@@ -1,9 +1,11 @@
 import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, log, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { unTimedExecuteAsGM } from "../GMAction.js";
-import { AugmentedEvent, Workflow } from "../Workflow.js";
-import { defaultRollOptions } from "../patching.js";
+import { Workflow } from "../Workflow.js";
+import { computeRollModifiers, applyRollModifiers, RollModifierFlags } from "../patching.js";
+import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags } from "../lib/RollModifierTracker.js";
+import { MidiOptions } from "../utils.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
-import { addAdvAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker } from "../utils.js";
+import { addAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
@@ -12,6 +14,18 @@ import { Activity, ActivityUseConfiguration, DND5ETargetDescriptor, RollDialogCo
 export let MidiAttackSheet: ReturnType<typeof defineMidiAttackSheetClass>;
 export let MidiAttackActivity: ReturnType<typeof defineMidiAttackActivityClass>;
 // export let MidiAttackActivityData;
+
+/**
+ * Get the effective forceRollDialog setting for an activity.
+ * Returns "always" | "never" | "default"
+ */
+function getEffectiveForceRollDialog(activity: any): "always" | "never" | "default" {
+  const activitySetting = activity.midiProperties?.forceRollDialog;
+  if (activitySetting === "always" || activitySetting === "never") {
+    return activitySetting;
+  }
+  return "default";
+}
 
 export function setupAttackActivity() {
   if (debugEnabled > 0) warn("MidiQOL | AttackActivity | setupAttackActivity | Called");
@@ -170,8 +184,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         workflow.disadvantage = undefined;
         attackConfig.midiOptions.advantage = undefined;
         attackConfig.midiOptions.disadvantage = undefined;
-        workflow.attackAdvAttribution = new Set<string>();
-        workflow.advReminderAttackAdvAttribution = new Set<string>();
         workflow.activity = this;
         // @ts-expect-error
         return this.rollAttack({ workflow }, {}, {});
@@ -198,12 +210,9 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         const attackConfig: ActivityUseConfiguration = { workflow };
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
         attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
-        workflow.advantage = true;
-        workflow.disadvantage = false;
-        attackConfig.midiOptions.advantage = true;
-        attackConfig.midiOptions.disadvantage = false;
-        workflow.attackAdvAttribution = new Set<string>();
-        workflow.advReminderAttackAdvAttribution = new Set<string>();
+        // User explicitly chose advantage — set workflowOptions so checkAttackAdvantage processes it
+        attackConfig.midiOptions.workflowOptions.advantage = true;
+        attackConfig.midiOptions.workflowOptions.disadvantage = false;
         workflow.activity = this;
         //@ts-expect-error
         return this.rollAttack(attackConfig, {}, {});
@@ -230,13 +239,10 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         const attackConfig: any = { workflow };
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
         attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
-        workflow.advantage = false;
-        workflow.disadvantage = true;
-        attackConfig.midiOptions.advantage = false;
-        attackConfig.midiOptions.disadvantage = true;
+        // User explicitly chose disadvantage — set workflowOptions so checkAttackAdvantage processes it
+        attackConfig.midiOptions.workflowOptions.advantage = false;
+        attackConfig.midiOptions.workflowOptions.disadvantage = true;
         workflow.activity = this;
-        workflow.attackAdvAttribution = new Set<string>();
-        workflow.advReminderAttackAdvAttribution = new Set<string>();
         //@ts-expect-error
         return this.rollAttack(attackConfig, {}, {});
       }
@@ -344,46 +350,34 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       return returnValue;
     }
 
-    // @ts-expect-error weirdness with how I handled the types
-    async rollAttack(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
-      let preRollHookId: number | undefined;
-      let rollAttackHookId: number | undefined;
-      let postAttackRollConfigurationHookId: number | undefined;
+    async rollAttack(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}): Promise<Roll[] | null> {
+      const hookIds: Record<string, number | undefined> = {};
       let rolls;
       const workflow = config.workflow;
       config.midiOptions ??= {};
+      // @ts-expect-error
+      const areKeysPressed = game.system.utils.areKeysPressed;
 
       try {
-        /* Decide what this should mean
-        if (workflow && workflow?.currentAction === workflow?.WorkflowState_Aborted || workflow?.currentAction === workflow?.WorkflowState_Completed)
-          return this.use(config, dialog, {});
-        */
         if (debugEnabled > 0) warn("MidiQOL | AttackActivity | rollAttack | Called", config, dialog, message);
-        let returnValue = await this.configureAttackRoll(config);
-        if (!workflow || workflow?.aborted) return [];
-        if (!returnValue) {
-          // @ts-expect-error weirdness with how I handled the types
-          return super.rollAttack(config, dialog, message);
-        }
 
-        let requiresAmmoConfirmation = false;
+        if (workflow) 
+          workflow.rollOptions.rollToggle = areMidiKeysPressed(config.event, "RollToggle");
+
+        let returnValue = await this.configureAttackRoll(config);
+        // Check returnValue first - if false (no workflow), fall through to dnd5e base behavior
+        if (!returnValue)
+          return super.rollAttack?.(config, dialog, message) ?? [];
+
+        if (!workflow || workflow?.aborted) return [];
         if (configSettings.allowUseMacro && workflow.workflowOptions.noOnUseMacro !== true) {
           await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
           if (workflow.ammunition) await workflow.callMacros(workflow.ammunition, workflow.ammunitionOnUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
         }
-        await workflow.checkAttackAdvantage();
-        // @ts-expect-error
-        const areKeysPressed = game.system.utils.areKeysPressed;
-        const keys = {
-          normal: areKeysPressed(config.event ?? workflow.workflowOptions.event, "skipDialogNormal"),
-          advantage: areKeysPressed(config.event ?? workflow.workflowOptions.event, "skipDialogAdvantage"),
-          disadvantage: areKeysPressed(config.event ?? workflow.workflowOptions.event, "skipDialogDisadvantage")
-        };
+        // Ensure config.event is set for dnd5e key handling
+        config.event ??= workflow.rollOptions.event;
 
-        // @ts-expect-error no dnd5e-types
-        if (this.item.system.properties?.has("ver") && areMidiKeysPressed(config.event ?? workflow.workflowOptions.event, "Versatile")) {
-          workflow.attackMode = "twoHanded";
-        }
+        let requiresAmmoConfirmation = false;
         // @ts-expect-error no dnd5e-types
         if (this.item.system.properties?.has("amm")) {
           const ammoConfirmation = this.confirmAmmunition;
@@ -395,29 +389,36 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           }
           requiresAmmoConfirmation = ammoConfirmation.confirm;
         }
-        if (Object.values(keys).some(k => k)) dialog.configure = !!(this.midiProperties?.forceRollDialog === "always" || requiresAmmoConfirmation);
-        if (config.workflow && areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle")) config.workflow.rollOptions.rollToggle = !config.workflow.rollOptions.rollToggle;
-        else if (!dialog.configure) {
-          switch (this.midiProperties?.forceRollDialog) {
-            case "always":
-              dialog.configure = true;
-              break;
-            case "never":
-              dialog.configure = false;
-              break;
-            default:
-              dialog.configure = requiresAmmoConfirmation || !(config.midiOptions.fastForwardAttack ?? workflow.workflowOptions.fastForwardAttack ?? false);
-              //@ts-expect-error no dnd5e-types
-              if (this.item?.system.properties.has("thr")) dialog.configure = true; // Let user choose the attack mode
-          }
+        const effectiveForceRollDialog = getEffectiveForceRollDialog(this);
+
+        // Determine dialog.configure based on forceRollDialog setting and shift key
+        // Alt/Ctrl (advantage/disadvantage) are handled by dnd5e, only shift key skips dialog
+        if (areKeysPressed(config.event, "skipDialogNormal")) {
+          // Shift key pressed - skip dialog unless forceRollDialog="always"
+          dialog.configure = effectiveForceRollDialog === "always";
+        } else if (effectiveForceRollDialog === "always") {
+          dialog.configure = true;
+        } else if (effectiveForceRollDialog === "never") {
+          dialog.configure = false;
+        } else {
+          // "default" - use fast forward settings
+          dialog.configure = !isAutoFastForward("attack", { workflow });
         }
-        if (keys.advantage) workflow.rollOptions.advantage = keys.advantage;
-        if (keys.disadvantage) workflow.rollOptions.disadvantage = keys.disadvantage;
-        config.advantage ??= !!keys.advantage || !!(config.midiOptions.advantage ?? (workflow.advantage || workflow.workflowOptions.advantage));
-        config.disadvantage ??= !!keys.disadvantage || !!(config.midiOptions.disadvantage ?? (workflow.disadvantage || workflow.workflowOptions.disadvantage));
+
+        // Ammo confirmation always requires dialog
+        if (requiresAmmoConfirmation) {
+          dialog.configure = true;
+        }
+
+        // Thrown weapons normally require dialog to choose attack mode, but respect forceRollDialog="never"
+        //@ts-expect-error no dnd5e-types
+        if (this.item?.system.properties.has("thr") && effectiveForceRollDialog !== "never") {
+          dialog.configure = true;
+        }
+
         dialog.options ??= {};
 
-        preRollHookId = Hooks.once("dnd5e.preRollAttack", (rollConfig, dialogConfig, messageConfig) => {
+        hookIds["dnd5e.preRollAttack"] = Hooks.once("dnd5e.preRollAttack", (rollConfig, dialogConfig, messageConfig) => {
           if (workflow?.aborted) return false;
           if (workflow?.rollOptions?.rollToggle) dialogConfig.configure = !dialogConfig.configure;
           if (configSettings.checkTwoHanded && ["twoHanded", "offhand"].includes(rollConfig.attackMode)) {
@@ -429,26 +430,32 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
               return false;
             }
           } else if (!rollConfig.attackMode && dialogConfig.options?.attackModeOptions?.length) dialogConfig.configure = true;
-          if (keys.disadvantage && workflow) {
-            workflow.attackAdvAttribution.add(`DIS:keyPress`);
-            workflow.advReminderAttackAdvAttribution.add(`DIS:keyPress`);
-          }
-          if (keys.advantage && workflow) {
-            workflow.attackAdvAttribution.add(`ADV:keyPress`);
-            workflow.advReminderAttackAdvAttribution.add(`ADV:keyPress`);
-          }
           const targetDescriptors = foundry.utils.getProperty(messageConfig, "data.flags.dnd5e.targets") as DND5ETargetDescriptor[] | undefined;
           if (targetDescriptors && workflow) workflow.targetDescriptors = targetDescriptors as DND5ETargetDescriptor[];
+
+          // Apply roll modifiers (auto-fail/success, min/max) for attack rolls
+          const actType = this.actionType;
+          const attackModifierFlags: RollModifierFlags = {
+            failFlags: ["fail.all", "fail.attack.all", `fail.attack.${actType}`],
+            successFlags: ["success.all", "success.attack.all", `success.attack.${actType}`],
+            maxFlags: ["max.attack.all", `max.attack.${actType}`],
+            minFlags: ["min.attack.all", `min.attack.${actType}`]
+          };
+          if (workflow?.attackRollModifierTracker) {
+            computeRollModifiers(this.actor!, attackModifierFlags, workflow.attackRollModifierTracker, { workflow });
+            applyRollModifiers(workflow.attackRollModifierTracker, rollConfig, dialogConfig);
+          }
+
           return true;
         });
-        rollAttackHookId = Hooks.once("dnd5e.rollAttack", (rolls, { ammoUpdate, subject }) => {
+        hookIds["dnd5e.rollAttack"] = Hooks.once("dnd5e.rollAttack", (rolls, { ammoUpdate, subject }) => {
           if (ammoUpdate?.destroy) {
             // @ts-expect-error no dnd5e-types
             const data = this.actor.items.get(ammoUpdate.id).toObject();
             addUpdatesCache(workflow.id, { "flags.midi-qol.ammunitionData": data });
           }
         });
-        postAttackRollConfigurationHookId = Hooks.once("dnd5e.postAttackRollConfiguration", (rolls, config, dialog, message) => {
+        hookIds["dnd5e.postAttackRollConfiguration"] = Hooks.once("dnd5e.postAttackRollConfiguration", (rolls, config, dialog, message) => {
           if (rolls?.length === 0) {
             // if (config.workflow) config.workflow.aborted = true;
             return false;
@@ -480,7 +487,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           message.create = false; // go through the roll process but don't show the attack roll.
         }
 
-
         message ??= {};
         message.create ??= config.midiOptions.chatMessage;
         const rollMode = safeGetGameSetting("core", "rollMode");
@@ -492,20 +498,16 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           message.rollMode = rollMode;
         }
         config.attackMode ??= this.attackMode ?? "oneHanded";
-        // @ts-expect-error no dnd5e-types
-        if (config.event && areMidiKeysPressed(config.event, "Versatile") && this.item.system.damage?.versatile && this.item.system.properties.has("ver")) {
+        // @ts-expect-error isVersatile is a dnd5e getter
+        if (config.event && areMidiKeysPressed(config.event, "Versatile") && this.item.isVersatile) {
           config.attackMode = "twoHanded";
         }
-        if (config.event && workflow) {
-          workflow.rollOptions.rollToggle = areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle");
-        }
-
         // @ts-expect-error weirdness with how I did the types
         rolls = await super.rollAttack(config, dialog, message);
 
         if (!rolls || rolls.length === 0) {
           // if (workflow) workflow.aborted = true;
-          return;
+          return null;
         }
         if (dialog.configure && rolls[0]?.options?.ammunition && rolls[0].options.ammunition !== this.ammunition) {
           await this.update({ ammunition: rolls[0].options.ammunition });
@@ -527,7 +529,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           if (workflow.workflowOptions?.attackRollDSN !== false && !showChatAttackCard) await displayDSNForRoll(rolls[0], "attackRollD20");
           await workflow?.setAttackRoll(rolls[0]);
           rolls[0] = await workflow.processAttackRollBonusFlags();
-          if (["formulaadv", "adv"].includes(configSettings.rollAlternate)) addAdvAttribution(rolls[0], workflow.attackAdvAttribution);
+          // Always add attribution to roll for indicator/tooltip display
+          addAttribution(rolls[0], workflow.attackAttribution);
           await workflow?.setAttackRoll(rolls[0]);
         }
         if (debugEnabled > 0) {
@@ -538,10 +541,10 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       } catch (err) {
         error("AttackActivity | rollAttack | Error configuring dialog", err);
       } finally {
-        if (preRollHookId) Hooks.off("dnd5e.preRollAttack", preRollHookId);
-        if (rollAttackHookId) Hooks.off("dnd5e.rollAttack", rollAttackHookId);
-        if (postAttackRollConfigurationHookId) Hooks.off("dnd5e.postAttackRollConfiguration", postAttackRollConfigurationHookId);
-
+        for (const [hookName, hookId] of Object.entries(hookIds)) {
+          //@ts-expect-error 
+          if (hookId !== undefined) Hooks.off(hookName, hookId);
+        }
       }
       return rolls;
     }
@@ -553,7 +556,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       config.midiOptions ??= {};
 
       if (debugEnabled > 1) debug("Entering configure attack roll", config.event, workflow, config.rollOptions);
-
+      await workflow.checkAttackAdvantage();
       if (workflow.workflowType === "BaseWorkflow") {
         if (workflow.attackRoll && workflow.currentAction === workflow.WorkflowState_Completed) {
           // This should not happen anymore
@@ -591,11 +594,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         }
       }
 
-      if (config.midiOptions.resetAdvantage) {
-        workflow.advantage = false;
-        workflow.disadvantage = false;
-        workflow.rollOptions = foundry.utils.deepClone(defaultRollOptions);
-      }
       if (workflow.workflowType === "TrapWorkflow") workflow.workflowOptions.fastForward = true;
 
       await doActivityReactions(this, workflow);
@@ -609,12 +607,21 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         }
       }
 
-      // Compute advantage
-      await workflow.checkAttackAdvantage();
+      // checkAttackAdvantage() was already called in rollAttack - it handles all advantage sources
+      // and attributions (workflowOptions, rollOptions, flanking, flags, etc.)
       if (await asyncHooksCall("midi-qol.preAttackRoll", workflow) === false
         || await asyncHooksCall(`midi-qol.preAttackRoll.${this.item.uuid}`, workflow) === false
         || await asyncHooksCall(`midi-qol.preAttackRoll.${this.uuid}`, workflow) === false) {
         console.warn("midi-qol | attack roll blocked by preAttackRoll hook");
+        return false;
+      }
+      await workflow.checkAttackAdvantage();
+      // Process keyboard modifiers (ctrl/alt for advantage/disadvantage) after flag processing
+      workflow.attackRollModifierTracker.processKeys(config);
+      if (await asyncHooksCall("midi-qol.preAttackRollConfig", workflow) === false
+        || await asyncHooksCall(`midi-qol.preAttackRollConfig.${this.item.uuid}`, workflow) === false
+        || await asyncHooksCall(`midi-qol.preAttackRollConfig.${this.uuid}`, workflow) === false) {
+        console.warn("midi-qol | attack roll blocked by preAttackRollConfig hook");
         return false;
       }
       if (configSettings.allowUseMacro && workflow.workflowOptions?.noOnUseMacro !== true) {
@@ -622,49 +629,14 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         if (workflow.ammunition) await workflow.callMacros(workflow.ammunition, workflow.ammunitionOnUseMacros?.getMacros("preAttackRollConfig"), "OnUse", "preAttackRollConfig");
       }
 
-      // Advantage is true if any of the sources of advantage are true;
-      let advantage = config.advantage
-        || workflow.workflowOptions.advantage
-        || workflow.advantage
-        || workflow.rollOptions.advantage
-        || workflow.workflowOptions?.advantage
-        || workflow.flankingAdvantage;
-      if (workflow.noAdvantage) advantage = false;
-      // Attribute advantage
-      if (workflow.rollOptions.advantage) {
-        workflow.attackAdvAttribution.add(`ADV:keyPress`);
-        workflow.advReminderAttackAdvAttribution.add(`ADV:keyPress`);
-      }
-      if (workflow.workflowOptions?.advantage)
-        workflow.attackAdvAttribution.add(`ADD:workflowOptions`);
-      if (workflow.flankingAdvantage) {
-        workflow.attackAdvAttribution.add(`ADV:flanking`);
-        workflow.advReminderAttackAdvAttribution.add(`ADV:Flanking`);
-      }
-
-      let disadvantage = config.midiOptions.disadvantage
-        || workflow.workflowOptions.disadvantage
-        || workflow.disadvantage
-        || workflow.rollOptions.disadvantage
-        || workflow.workflowOptions?.disadvantage;
-      if (workflow.noDisadvantage) disadvantage = false;
-      if (workflow.rollOptions.disadvantage) {
-        workflow.attackAdvAttribution.add(`DIS:keyPress`);
-        workflow.advReminderAttackAdvAttribution.add(`DIS:keyPress`);
-      }
-      if (workflow.workflowOptions?.disadvantage)
-        workflow.attackAdvAttribution.add(`DIS:workflowOptions`);
-
-      if (advantage && disadvantage) {
-        advantage = false;
-        disadvantage = false;
-      }
+      // Set config advantage/disadvantage from tracker (after all hooks/macros have had a chance to modify)
+      if (workflow.attackRollModifierTracker.hasAdvantage) config.advantage = true;
+      if (workflow.attackRollModifierTracker.hasDisadvantage) config.disadvantage = true;
 
       workflow.attackRollCount += 1;
       if (workflow.attackRollCount > 1) workflow.damageRollCount = 0;
 
       // create an options object to pass to the roll.
-      // advantage/disadvantage are already set (in options)
       config.midiOptions = foundry.utils.mergeObject(config.midiOptions, {
         chatMessage: (["TrapWorkflow", "Workflow"].includes(workflow.workflowType)) ? false : config.midiOptions.chatMessage,
         fastForward: workflow.workflowOptions?.fastForwardAttack ?? workflow.rollOptions.fastForwardAttack ?? config.midiOptions.fastForward,
@@ -674,8 +646,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       },
         { insertKeys: true, overwrite: true });
       if (workflow.rollOptions.rollToggle) config.midiOptions.fastForward = !config.midiOptions.fastForward;
-      if (advantage) config.midiOptions.advantage ||= true; // advantage passed to the roll takes precedence
-      if (disadvantage) config.midiOptions.disadvantage ||= true; // disadvantage passed to the roll takes precedence
 
       // Setup labels for advantage reminder
       const advantageLabels = Array.from(workflow.advReminderAttackAdvAttribution).filter(s => s.startsWith("ADV:")).map(s => s.replace("ADV:", ""));
@@ -765,4 +735,88 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       return context;
     }
   }
+}
+
+/**
+ * Compute attack advantage/disadvantage from actor flags and target grants flags.
+ * This handles the flag-based advantage checks for attacks.
+ * Special rules (flanking, invisible, nearby foe, heavy weapons) are handled separately in Workflow.
+ *
+ * @param actor - The attacking actor
+ * @param actionType - The action type (mwak, rwak, msak, rsak, etc.)
+ * @param options - MidiOptions including workflow, target info
+ * @param abilityId - Optional ability ID for ability-based attack flags (e.g., "str", "dex")
+ * @param tracker - Optional existing RollModifierTracker to populate
+ * @returns RollModifierTracker with attack advantage attribution
+ */
+export async function computeAttackAdvantage(
+  actor: Actor.Implementation,
+  actionType: string,
+  options: MidiOptions,
+  abilityId?: string,
+  tracker?: RollModifierTracker
+): Promise<RollModifierTracker> {
+  tracker ??= new RollModifierTracker();
+
+  // Define attack advantage flags
+  const attackFlags: AdvantageFlags = {
+    advantageFlags: [
+      "advantage.all",
+      "advantage.attack.all",
+      `advantage.attack.${actionType}`,
+      // Include ability-based attack flags if abilityId is provided
+      ...(abilityId ? [`advantage.attack.${abilityId}`] : [])
+    ],
+    disadvantageFlags: [
+      "disadvantage.all",
+      "disadvantage.attack.all",
+      `disadvantage.attack.${actionType}`,
+      ...(abilityId ? [`disadvantage.attack.${abilityId}`] : [])
+    ],
+    noAdvantageFlags: [
+      "noAdvantage.all",
+      "noAdvantage.attack.all",
+      `noAdvantage.attack.${actionType}`,
+      ...(abilityId ? [`noAdvantage.attack.${abilityId}`] : [])
+    ],
+    noDisadvantageFlags: [
+      "noDisadvantage.all",
+      "noDisadvantage.attack.all",
+      `noDisadvantage.attack.${actionType}`,
+      ...(abilityId ? [`noDisadvantage.attack.${abilityId}`] : [])
+    ],
+    systemRollModeFields: [], // dnd5e doesn't have native attack roll modes at actor level
+    // Target grants flags (checked on target actor)
+    sourceAdvantageFlags: [
+      "grants.advantage.all",
+      "grants.advantage.attack.all",
+      `grants.advantage.attack.${actionType}`
+    ],
+    sourceDisadvantageFlags: [
+      "grants.disadvantage.all",
+      "grants.disadvantage.attack.all",
+      `grants.disadvantage.attack.${actionType}`
+    ],
+    sourceNoAdvantageFlags: [
+      "grants.noAdvantage.attack.all",
+      `grants.noAdvantage.attack.${actionType}`
+    ],
+    sourceNoDisadvantageFlags: [
+      "grants.noDisadvantage.attack.all",
+      `grants.noDisadvantage.attack.${actionType}`
+    ]
+  };
+
+  // For attacks, the "source" that grants advantage/disadvantage is the target
+  // So we pass the target actor as sourceActor
+  const targetToken = options.workflow?.targets?.first();
+  const targetActor = targetToken?.actor ?? undefined;
+
+  await computeAdvantageFlags(actor, attackFlags, {
+    ...options,
+    sourceActor: targetActor,
+    sourceToken: targetToken
+  }, tracker);
+
+  return tracker;
 }

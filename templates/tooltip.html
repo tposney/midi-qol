@@ -6,8 +6,20 @@
       <div class="dice-formula">{{formula}}</div>
     </section>
     {{/if}}
+    {{!-- New structured attribution (Phase A onwards) --}}
+    {{#if attributions.length}}
+    <section class="tooltip-part midi-attribution">
+      {{#each attributions}}
+      <div class="attribution-entry attribution-{{type}}">
+        <span class="attribution-type">{{localizedType}}:</span>
+        <span class="attribution-source">{{source}}</span>
+      </div>
+      {{/each}}
+    </section>
+    {{/if}}
+    {{!-- Legacy HTML-based attribution (backwards compatibility) --}}
     {{#if advTooltip}}
-    <section class="tooltp-part">
+    <section class="tooltip-part">
       {{{advTooltip}}}
     </section>
     {{/if}}

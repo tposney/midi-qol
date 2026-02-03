@@ -1,3 +1,117 @@
+### 13.0.43
+**New Features**
+* **Breaking** Auto fast forwarding rolls (skipping dialog) is now specified the same way for players and GMs on their own tab. There is a new multi select that lets you choose which rolls will be fastforwarded by default for both the player and the gm. Midi attempts to migrate your existing settings, but you should check.
+  - I know a skill roll is a type of ability check, but having a separate setting gives you more control, so you need to set skill separately from ability roll.
+* New RAW (2024) invisibility advantage/disadvantage mode that only relies on being able to see the target.
+* Midi-qol tab property, force config dialog, now overrides the thrown weapon property check.
+* Revived the roll statistics function. Now accessible from the main midi-qol settings panel and tracks a few more things.
+  - For multi target items, e.g. fireball, the total damage is the damage rolled * the number of targets and the average damage is the sum of the applied damage. So unlike weapon attacks which is effectively the damage per roll, AoE can have much higher damage due to the multiple targets.
+* Added an editor for overTime effects, requires dae 13.0.19.
+* Added a condition expression editor, requires dae 13.0.19 plus macro-autocomplete.
+
+**Bug Fixes**
+* Advantage Attribution now follows the same visibility rules as the attack roll formula. If players are not allowed to see the formula, they can't see the attack advantage attribution.
+* Fix for evaluating otherActivity.useCondition twice is some workflows.
+* Fix for checkAttackAdvantage not being called before calling preAttackRoll Hooks/macros.
+  - checkAttackAdvantage is called again after the hooks/macros return. This means changes to actors advantage flags will be respected as they were prior to 13.0.40.
+  - changes made to workflow.tracker.advantage etc will be overwritten.
+  - if you want to make changes to the tracker that will be respected do so in the preAttackConfig Macro/Hooks.
+  - I added a preAttackConfig Hook call as well as macro calls for the above.
+
+**Others**
+* A major rework of advantage attribution, now displays localized string explaining the source. Feedback on the string choices welcome.
+  - This reduces by several thousand the number of fields translators need to worry about.
+  - This feeds through to better/different explanatory text in the dae field browser.
+  - **Unless there is any major push back I plan to remove the legacy attribution in a soon to be forthcoming release**.
+* I've reworked the chat card persistence for workflows and some of the fields may have moved. If you are in the habit of checking the Chat Card for midi persisted fields you will need to review that code.
+* Migrated several standalone module settings into the midi-qol config panel for easier discovery:
+  - **Preferred GM** moved to the GM tab.
+  - **Critical Damage** (player and GM) moved to the Workflow tab, Damage section.
+  - **Colored Borders** moved to the Misc tab, near the other highlighting/display settings.
+  - Existing values are automatically migrated on first load, I think, but you should check. The old settings are hidden from the Foundry module settings page.
+
+**Merged Contributions**
+* Allow easy logging of sandbox evaluation data via `MidiQOL.logEvaluationData = true` (MR !396, thanks @thatlonelybugbear).
+* Updated pt-BR localization (MR !398, thanks @Kharmans).
+* Optional Bonus Value: critical — allows optional bonuses to force critical on attacks, damage, checks, saves, and skills (MR !399, thanks @baconnugget).
+
+### 13.0.42
+* Just remove some spurious debug left in the code.
+
+### 13.0.41
+**Bug Fixes**
+* Fix for not respecting no prompt options in player saves.
+* Fixed a couple of cases where midi was not correctly detecting the module causing the roll and doing strange things with fast forward.
+
+**New Features**
+* Midi support for the new macro-autocomplete module. All of the midi scope passed to the macro is available for auto completion. This module is not publicly available yet and is in closed beta.
+
+### 13.0.40
+* This release includes breaking changes for advantage and disadvantage processing, so don't update just before game time.
+
+**Bug Fixes**
+* Fix for save roll dialog visibility not respecting midi-qol settings (e.g., GM "auto" vs "autoDialog") when `autoFastForwardAbilityRolls` is disabled. The `fastForward` option is now properly merged into the roll configuration.
+* Attack rolls now respect the dnd5e alt/ctl/shift keys. 
+  - With alt/ctl **always** adding advantage/disadvantage to the roll in addition to whatever flags were set, but respecting the midi auto fast forward roll setting. 
+  - Shift/Shift-alt/Shift-ctl, now skip the configure dialog (mostly, force configuration dialog setting and ammo consumption required still force the dialog to be shown) and **override** adv/disadvantage - ignoring any flags that may have been set.
+  - Midi follows dnd5es shift/alt/ctrl behaviour, except in the one case of alt+ctl+shift which forces the roll to be a normal roll without advantage/disadvantage.
+* Improved handling of saves rolled via third-party modules (Flash Rolls, Monks TokenBar, Epic Rolls). Midi-qol now respects each module's own fast forward setting: `bypass-roll-dialog` for Monks TokenBar, `skipRollDialog` for Flash Rolls. Epic Rolls has no specific setting so uses midi's `autoFastForwardAbilityRolls` setting.
+* Fix for empty reaction conditions throwing an error.
+* Fix for an error in processing dependents when a dependent was changed - thanks @Elwin.
+* Some tidy up of the dependents explorer.
+* Fix for macroActivity not being correctly set when calling macros.
+
+**New Features**
+* Reinstated the midi-qol info/attack/damage buttons for core dnd5e sheet. The buttons simply roll an attack or damage roll to chat, without doing any workflow creation. 
+  - The buttons are added per activity which have attack/damage/versatile damage.
+  - Useful when you just want a player to make an attack/damage roll.
+  - Added an info button for each item that rolls the item description to chat.
+  - Added a setting to enable/disable the extra buttons in the misc settings.
+* Refactor of advantage/disadvantage/critical/fumble attribution for attack rolls. 
+  - Displays adv/dis/grants.advantage, fumble/critical flags, keyPress advantage, auto fail/success/min/max modifiers.
+  - The new attribution is visible by hovering over the info icon next to the Advantage/Disadvantage in the chat card.
+* Added attribution for saving throws. 
+  - The attribution is available as a tooltip when hovering over the targets name in the save card.
+  - The dice roll tooltip is now tied to the save total on the save card.
+
+**For developers**
+* A significant refactor to advantage/disadvantage/critical/fumble handling via `RollModifierTracker`.
+  - **Breaking** Some changes in the way midiOptions.advantage/workflowOptions.advantage and rollOptions.advantage are treated. I think they are the same but I don't have enough test cases to be sure.
+  - Going forwards I would expect that most of the changes you want to make to advantage are best served via the tracker interface.
+  - **Breaking** Macros/Hooks that want to influence attack roll modifiers should use `workflow.attackRollModifierTracker` or `workflow.tracker` with the new sub-tracker API, or update actor flags before the checking of advantage/disadvantage is complete.
+  - The tracker uses sub-trackers: `advantage`, `disadvantage`, `critical`, `fumble`, `modifiers`.
+  - **API Summary**
+    - `tracker.advantage.add(source, displayName)` - Add advantage source
+    - `tracker.disadvantage.add(source, displayName)` - Add disadvantage source
+    - `tracker.advantage.suppress(source, displayName)` - Suppress advantage
+    - `tracker.critical.force(source, displayName)` - Force critical hit
+    - `tracker.critical.suppress(source, displayName)` - Prevent critical
+    - `tracker.fumble.suppress(source, displayName)` - Prevent fumble
+    - `tracker.modifiers.fail(source, displayName)` - Auto-fail the roll
+    - Query computed state: `tracker.hasAdvantage`, `tracker.hasDisadvantage`, `tracker.isCritical`, `tracker.isFumble`, `tracker.advantageMode`
+    - Query sub-tracker state: `tracker.advantage.isActive`, `tracker.advantage.isSuppressed`, `tracker.critical.isForced`, `tracker.critical.isNatural`, etc.
+    - Get full state snapshot: `tracker.advantage.get` returns `{ active, suppressed, override }`, `tracker.critical.get` returns `{ natural, forced, suppressed, override }`
+  - **Backwards Compatible:** Workflow getters/setters (`workflow.advantage`, `workflow.disadvantage`, `workflow.isCritical`, `workflow.isFumble`, `workflow.noAdvantage`, `workflow.noDisadvantage`) continue to work and delegate to the tracker.
+  - See `docs/RollModifierTracker.md` for full API documentation and examples.
+  - The same tracker model is used to track advantage etc on saving throws and the same roll modifiers are available.
+  * Whilst I have done a lot of testing on this I am sure there will be breaking changes that I had not noticed.
+
+### 13.0.39
+**Bug Fixes**
+* Fix for isDamaged macros being called twice when apply damage is set to none.
+* Fix for passing wrong item/activity data to function. macro calls.
+* Attack Roll Visibility (dnd5e setting) now editable directly from midi config 
+panel.
+
+**New Features**
+* TroubleShooter now warns if chatlog-prune module is not active.
+* New Dependents Manager app on the main settings list- view/manage document dependencies with search, collapsible sections, and delete options.
+* Added reset all settings to defaults option on main settings.
+
+**Others**
+* Default value changes: `autoCompleteWorkflow` now true, `collapsibleTargets` now false.
+* Removed deprecated settings: `effectActivation`, `itemRollStartWorkflow`.
+
 ### 13.0.38
 **Bug Fixes**
 * Fix for AoE templates not being cleaned up properly when a workflow is aborted. Template cleanup is now set up when the template is placed rather than waiting until the workflow completes.

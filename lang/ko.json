@@ -1,6 +1,4 @@
 {
-    "midi-qol.ItemDeleteCheck.Name": "아이템 제거 확인",
-    "midi-qol.ItemDeleteCheck.Hint": "캐릭터 시트에서 아이템을 삭제하려고 할 때 확인 대화 상자를 연다",
     "midi-qol.DamageImmunities.Name": "피해 면역 적용",
     "midi-qol.DamageImmunities.Hint": "midi-qol 피해 버튼이나 자동 피해 적용이 대상의 피해 면역/저항/취약성을 적용한다. 모든 피해 유형이 확인된다. 문자 확인 내성 굴림 설정은 주문 설명 내에서 1/2 피해를 나타내는 특수 문자열을 확인한다.",
     "midi-qol.SpeedItemRolls.Name": "아이템 빨리감기 굴림 사용",
@@ -137,8 +135,6 @@
         "doubleDice": "피해량 2배",
         "baseDamage": "보너스 없음"
     },
-    "midi-qol.MergeCard.Name": "굴림을 한 카드에 병합",
-    "midi-qol.MergeCard.Hint": "공격, 명중, 피해, 내성 굴림을 하나의 채팅 카드에 병합한다.",
     "midi-qol.MergeCardCondensed.Name": "피해/공격 굴림 압축",
     "midi-qol.MergeCardCondensed.Hint": "공격 및 피해 굴림을 작게 만들어 채팅 로그 공간을 절약한다.",
     "midi-qol.ConfigTitle": "midi-qol 구성",

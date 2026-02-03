@@ -4,7 +4,7 @@ import { debugEnabled, i18n, warn, error, GameSystemConfig } from "../../midi-qo
 import { AugmentedEvent, Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
-import { areMidiKeysPressed, asyncHooksCall, isAutoFastDamage } from "../utils.js";
+import { areMidiKeysPressed, asyncHooksCall, isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { displayDSNForRoll } from "../utils.js";
 
@@ -81,7 +81,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
 
     async _triggerSubsequentActions(config, results) {
     }
-    // @ts-expect-error weird types stuff
+    
     async rollFormula(config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) {
       if (debugEnabled > 0)
         warn("UtilityActivity | rollFormula | Called", config, dialog, message);
@@ -96,7 +96,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
         return;
       }
       config.midiOptions ??= {};
-      config.midiOptions.fastForward ??= isAutoFastDamage(workflow)
+      config.midiOptions.fastForward ??= isAutoFastForward("damage", { workflow })
       if (debugEnabled > 0) {
         warn("MidiUtilityActivity | rollFormula | Called", config, dialog, message);
       }
@@ -115,7 +115,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
       if (Object.values(keys).some(k => k)) dialog.configure = this.midiProperties?.forceRollDialog !== "always";
       else dialog.configure ??= !config.midiOptions.fastForward || this.midiProperties?.forceRollDialog === "always";
       if (workflow.rollOptions?.rollToggle) dialog.configure = !!!dialog.configure;
-      const rollToggle = areMidiKeysPressed(config.event as AugmentedEvent, "RollToggle");
+      const rollToggle = areMidiKeysPressed(config.event, "RollToggle");
       if (workflow) workflow.rollOptions.rollToggle = rollToggle;
       if (rollToggle) dialog.configure = !!!dialog.configure;
       message.create ??= false;

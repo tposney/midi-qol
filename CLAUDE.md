@@ -15,6 +15,13 @@ midi-qol is a Foundry VTT module that enhances the dnd5e system with automated a
 
 ## Key Resources
 
+### midi-qol Source Code
+The midi-qol source code is at:
+```
+/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-13x/src
+```
+**IMPORTANT**: Do NOT search in `/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol/src` - that is an obsolete v12 codebase. Always use `midi-qol-13x` for v13 development.
+
 ### dnd5e Codebase Reference
 When working on midi-qol, you can examine the dnd5e system codebase at:
 ```
@@ -29,6 +36,80 @@ For Foundry VTT core API methods, search the local source code at:
 /home/timp/foundryv13/resources/app/common
 ```
 **Important**: Always use v13 API. Do NOT fetch from `foundryvtt.com/api/v12/` - only use v13 documentation or local source code.
+
+### Third-Party Modules
+Installed 3rd party modules (chris-premades, dae, times-up, etc.) are located at:
+```
+/home/timp/foundry-data/foundryv13/Data/modules
+```
+Use this directory to examine how other modules implement features or handle specific spells/effects.
+
+### tidy5e-sheet Module
+The tidy5e-sheet module source is at:
+```
+/home/timp/foundry-data/foundryv13/Data/modules/tidy5e-sheet
+```
+
+**Note**: The `tidy5e-sheet.js` file is minified Svelte output, but includes readable documentation. Use `tidy5e-sheet.js.map` for source mapping.
+
+**Tidy5e API** (received via `Hooks.once('tidy5e-sheet.ready', (api) => {...})`):
+
+Header Controls (add buttons to sheet headers):
+- `api.registerActorHeaderControls({controls: [...]})` - all actor sheets
+- `api.registerCharacterHeaderControls({controls: [...]})`
+- `api.registerNpcHeaderControls({controls: [...]})`
+- `api.registerGroupHeaderControls({controls: [...]})`
+- `api.registerVehicleHeaderControls({controls: [...]})`
+- `api.registerItemHeaderControls({controls: [...]})` - item sheets
+
+Control object properties:
+```javascript
+{
+  icon: 'fas fa-icon-name',
+  label: 'Button Label',
+  visible() { return this.document.isOwner; },  // optional
+  async onClickAction(event) { /* handler */ },
+  ownership: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER  // optional
+}
+```
+
+Item Summary Commands (buttons in item expand view):
+```javascript
+api.config.itemSummary.registerCommands([
+  {
+    label: 'Roll',
+    enabled: (params) => params.item.type === 'weapon',
+    iconClass: 'fas fa-dice-d20',
+    execute: (params) => { params.item.use(); }
+  }
+]);
+```
+
+Custom Content Registration:
+- `api.registerCharacterContent(new api.models.HtmlContent({...}))`
+- `api.registerNpcContent(...)`
+- `api.registerItemContent(...)`
+- Similar methods for Group, Vehicle
+
+Custom Tab Registration:
+- `api.registerCharacterTab(new api.models.HandlebarsTab({...}))`
+- `api.registerItemTab(new api.models.HtmlTab({...}))`
+- Constants: `api.constants.TAB_ID_CHARACTER_INVENTORY`, etc.
+
+Other config APIs:
+- `api.config.actorItem.registerSectionFooterCommands([...])`
+- `api.config.actorPortrait.registerMenuCommands([...])`
+- `api.config.actorTraits.registerActorTraits([...])`
+- `api.config.actionList.mapActivationTypesToSections({...})`
+
+Hooks provided by tidy5e:
+- `tidy5e-sheet.ready` - API is available
+- `tidy5e-sheet.getActivitiesForPlay` - filter activities shown in play mode
+
+**Current midi-qol integration** (in Hooks.ts):
+1. Uses `api.config.itemSummary.registerCommands()` to add Roll, Attack, Damage buttons
+2. Uses `api.registerItemHeaderControls()` to add Midi-QOL on-use macros config button
+3. Uses `tidy5e-sheet.getActivitiesForPlay` hook to filter automationOnly and rider activities
 
 ### External Documentation
 - **Chris-Premades API**: `/home/timp/Documents/ChrisPremades-API-2026-01-06.md` - Comprehensive documentation of the chris-premades module API (classes, utilities, macros, constants)
@@ -57,13 +138,31 @@ For Foundry VTT core API methods, search the local source code at:
 - **chatlog-prune**: Standalone chat log pruning module at `/home/timp/foundry-data/foundryalpha/Data/modulesrc/chatlog-prune/`
 - **Keep ChatLogPrune and ChatLogMidi in sync**: When modifying `src/module/ChatClasses/ChatLogMidi.ts`, also update `chatlog-prune/src/ChatLogPrune.ts` (and vice versa) unless the change would cause a loss of functionality in one module
 - midi-qol's built-in chat log pruning is deprecated (since 13.0.37) and will be removed in v14 - users should install chatlog-prune instead
+- **midi-qol-setup-wizard**: Step-by-step configuration wizard for midi-qol at `/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-setup-wizard/`
+  - Key files: `scripts/wizard.js` (main wizard UI), `scripts/wizard-steps.js` (step definitions and presets), `scripts/setting-definitions.js` (setting UI definitions), `scripts/module-definitions.js` (module lists for compatibility)
+  - Launched via hook `Hooks.call("midi-qol-setup-wizard.launch")` from midi-qol's settings
 
 ### TypeScript Typing
-- **Avoid using `as any` casts** - always check `globals.ts` first for existing types
+- **Avoid using `as any` casts or `: any` type annotations** - always check `globals.ts` and Foundry types (`fvtt-types`) first for existing types
+- Before writing `as any` or `: any`, search globals.ts for types like `Activity`, `Workflow`, `Actor`, `Item`, etc.
+- Also check if Foundry/dnd5e types exist (e.g., `TokenDocument`, `ChatMessage`, `ActiveEffect`)
 - Adding properties to existing types in `globals.ts` is fine (e.g., new flag keys, new properties on existing interfaces)
 - **Query the user before creating entirely new types** in `globals.ts`
-- Common types defined in globals.ts: `ActivityUseConfiguration`, `RollProcessConfig`, `RollDialogConfig`, flag types for ChatMessage/Item/Actor
+- Common types defined in globals.ts: `Activity`, `ActivityUseConfiguration`, `RollProcessConfig`, `RollDialogConfig`, flag types for ChatMessage/Item/Actor
 - For new flag keys, add them to the appropriate flag type definition in globals.ts (e.g., `"use.otherScaling"?: number | false;` in the midi-qol flags)
+- **Prefer updating globals.ts hooks namespace over @ts-expect-error** - when adding new hook handlers, add the hook name to the `MidiHooks` interface in globals.ts rather than using `// @ts-expect-error` comments
+
+### CSS Class Usage
+- **Never invent CSS class names** - always verify classes exist in the actual templates/stylesheets before using them
+- Search the codebase with `grep` to confirm a CSS class exists before writing selectors that depend on it
+- This applies to tour selectors, querySelector calls, and any DOM manipulation
+
+### Foundry Document Type Checking
+- **Never compare `documentName` strings directly** to check document types
+- Many document types have subclasses that inherit from base classes (e.g., various item types inherit from `Item`)
+- **Wrong**: `doc.documentName === "Item"` or `doc.parent?.documentName === "Item"`
+- **Correct**: `doc instanceof Item` or `doc.parent instanceof Item`
+- This applies to all base document types: `Actor`, `Item`, `ActiveEffect`, `Scene`, `Token`, etc.
 
 ### External API Usage
 - **Before writing any code that calls dnd5e or Foundry methods**, first search the midi-qol codebase to find existing usage of similar functionality
@@ -77,6 +176,33 @@ For Foundry VTT core API methods, search the local source code at:
   - `activities.getByType(type)` - get activities by type (returns array)
   - `activities.find(predicate)` - find activity matching predicate
   - `activities.contents` - array of all activities
+
+### Foundry ApplicationV2 Scrollable Pattern
+
+**Never use raw `overflow-y: auto` CSS hacks for scrolling in ApplicationV2 apps.** Use Foundry's built-in pattern:
+
+1. **Template**: Add `class="scrollable"` to the element that should scroll. This Foundry CSS class handles scrollbar gutter margins.
+2. **CSS**: Set `flex: 1; min-height: 0;` on the element so it fills available space within the flex layout and allows shrinking below content size.
+3. **PARTS**: Add `scrollable: [".selector"]` to the part definition — this preserves scroll position during re-renders. Use `""` (empty string) for the part root element.
+
+Example (RollStatsDisplay):
+```typescript
+// PARTS definition
+stats: {template: "...", scrollable: ["", ".midi-stats-card-body"]}
+```
+```html
+<!-- Template -->
+<section class="tab scrollable {{#if tab.active}}active{{/if}}" ...>
+  <div class="midi-stats-card-body scrollable">
+```
+```css
+/* CSS */
+#midi-stats-stats-tab { flex: 1; min-height: 0; }
+```
+
+For resizable sections, add `resize: vertical; max-height: Npx;` to the CSS.
+
+Reference: Foundry's `.scrollable` class is defined in `foundry2.css` and sets `--scroll-margin`, `margin-right`, `padding-right` for proper scrollbar spacing. The actual scroll behavior comes from the flex layout constraint (`min-height: 0` allows flex items to shrink below content size, triggering overflow).
 
 ## Significant Decisions
 
@@ -400,3 +526,31 @@ Build process:
 cd /home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-tests
 npm run build      # Build test module
 ```
+
+## Planned Refactors
+
+### Advantage Refactor
+
+**Goal**: Migrate attack advantage/disadvantage processing in `checkAttackAdvantage()` and `checkTargetAdvantage()` (Workflow.ts:3581-4020) to use the centralized `computeAdvantageFlags()` pattern from patching.ts.
+
+**Current State**: ~15 separate `evalAllConditionsAsync`/`evalCondition` calls checking:
+- Actor flags: `advantage/disadvantage.all`, `.attack.all`, `.attack.{actType}`, `.attack.{ability}`
+- Actor suppression: `noAdvantage/noDisadvantage.attack.all`, `.attack.{actType}`
+- Target grants: `grants.advantage/disadvantage.all`, `.attack.all`, `.attack.{actType}`
+- Target suppression: `grants.noAdvantage/noDisadvantage.attack.all`, `.attack.{actType}`
+
+**Proposed Solution**:
+1. Create `buildAttackAdvantageFlags(actType, abilityId)` that returns an `AdvantageFlags` config
+2. Call `computeAdvantageFlags(actor, flags, { sourceActor: target })` - target is "source" because it grants adv/dis
+3. Keep special rules separate (flanking, visibility, nearby foe, heavy weapon) - these are geometric/rule-based, not flag-based
+4. Extend `computeAdvantageFlags` to return attribution info for the attack card display
+
+**Benefits**:
+- Single source of truth for flag processing
+- Consistent advantage counting and suppression logic
+- ~180 lines reduced to ~20 lines
+- Same pattern as saves, death saves, ability checks
+
+**Files to modify**:
+- `patching.ts`: Export `computeAdvantageFlags`, add attribution tracking to return value
+- `Workflow.ts`: Refactor `checkAttackAdvantage()`, remove flag-based logic from `checkTargetAdvantage()`

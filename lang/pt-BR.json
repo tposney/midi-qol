@@ -1,6 +1,10 @@
 {
-  "midi-qol.ItemDeleteCheck.Name": "Verificação de Exclusão de Item",
-  "midi-qol.ItemDeleteCheck.Hint": "Abre um diálogo de confirmação quando tentar deletar items da ficha de personagem.",
+  "midi-qol.ResetDefaults.Name": "Redefinir Todas Configurações",
+  "midi-qol.ResetDefaults.Title": "Redefinir Todas Configurações aos Padrões",
+  "midi-qol.ResetDefaults.Content": "Isso redefinirá TODAS as configurações do Midi QOL para os valores padrão. Isso inclui ConfigSettings e todas as configurações do jogo. Esta ação não pode ser desfeita. Tem certeza de que deseja continuar?",
+  "midi-qol.ResetDefaults.Confirm": "Redefinir Todas Configurações",
+  "midi-qol.ResetDefaults.Button": "Redefinir Todas Configurações aos Padrões",
+  "midi-qol.ResetDefaults.Hint": "Redefina todas as configurações do midi-qol para seus valores padrão.",
   "midi-qol.DamageImmunities.Name": "Aplicar Imunidades de Dano",
   "midi-qol.DamageImmunities.Hint": "Quando usar o botões de dano do Midi QOL ou aplicar dano automaticamente, leva em consideração as imunidades/vulnerabilidades/resistências do alvo. Todos os tipos de dano são verificados.",
   "midi-qol.WorldKeyMappings.Name": "Configurações Geral vs Local",
@@ -55,6 +59,7 @@
   "midi-qol.buttons.versatileDamage": "Dano Vers.",
   "midi-qol.buttons.versatileAttack": "Ataque Vers.",
   "midi-qol.buttons.info": "Informação",
+  "midi-qol.buttons.showChatInfo": "Exibir Informações do Chat",
   "midi-qol.buttons.itemUse": "Usar",
   "midi-qol.reallyDelete": "Realmente Excluir Este Item",
   "midi-qol.sure": "Tem certeza?",
@@ -128,10 +133,10 @@
     "maxBaseRollCrit": "Crítico Base Máximo",
     "bestOfTwo": "Vantagem Rolagem de Dano"
   },
-  "midi-qol.MergeCard.Name": "Cartão Mesclado",
-  "midi-qol.MergeCard.Hint": "Mescla Ataques, Acertos, Dano e Salvaguardas em um único cartão de chat.",
   "midi-qol.MergeCardCondensed.Name": "Condensar Rolagens de Ataque/Dano",
   "midi-qol.MergeCardCondensed.Hint": "Conserva um pouco de espaço no log de chat fazendo as rolagens de ataque e dano menores.",
+  "midi-qol.AddSheetButtons.Name": "Adicionar Butões de Item/Atividade",
+  "midi-qol.AddSheetButtons.Hint": "Adiciona botões de rolagem rápida (Info, Ataque, Dano) a itens e atividades nas fichas de personagem.",
   "midi-qol.DisplayItemProperties.Name": "Exibir Propriedades de Itens",
   "midi-qol.DisplayItemProperties.Hint": "Mostra as propriedades do item no cartão de chat. Desabilitar economiza espaço no cartão de chat.",
   "midi-qol.ConfigTitle": "Configurações do Midi QOL",
@@ -151,12 +156,25 @@
   "midi-qol.AttackRoll": "Rolagem de Ataque",
   "midi-qol.CriticalSoundName": "Acerto Crítico",
   "midi-qol.FumbleSoundName": "Falha Crítica",
-  "midi-qol.AttribADV": "ADV",
-  "midi-qol.AttribDIS": "DIS",
-  "midi-qol.AttribCRIT": "CRIT",
-  "midi-qol.AttribNOCRIT": "NOCRIT",
-  "midi-qol.AttribFUMBLE": "FUMBLE",
-  "midi-qol.AttribNOFUMBLE": "NOFUMBLE",
+  "midi-qol.AttribADV": "VANT",
+  "midi-qol.AttribDIS": "DESV",
+  "midi-qol.AttribNOADV": "Sem VANT",
+  "midi-qol.AttribNODIS": "Sem DESV",
+  "midi-qol.AttribCRIT": "CRÍT",
+  "midi-qol.AttribNOCRIT": "Sem CRÍT",
+  "midi-qol.AttribFUMBLE": "FALHA",
+  "midi-qol.AttribNOFUMBLE": "Sem FALHA",
+  "midi-qol.AttribSUCCESS": "Auto-Sucesso",
+  "midi-qol.AttribFAIL": "Auto-Falha",
+  "midi-qol.AttribMIN": "Mínimo",
+  "midi-qol.AttribMAX": "Máximo",
+  "midi-qol.FriendlyAutoFail": "Auto-Falha Aliado",
+  "midi-qol.FriendlyAutoSuccess": "Auto-Sucesso Aliado",
+  "midi-qol.KeyPress": "Pressionar Tecla",
+  "midi-qol.ForcedKeyPress": "Forçar Pressionar Tecla",
+  "midi-qol.RollOptions": "Opções de Rolagem",
+  "midi-qol.WorkflowOptions": "Opções de Workflow",
+  "midi-qol.ActivityUse": "Uso de Atividade",
   "midi-qol.DiceSounds.Hint": "Sons para tocarem em diferentes tipos de rolagens. Aplicado somente para 'Cartões Mesclados'.",
   "midi-qol.CustomSoundsPlaylist.Name": "Playlist de Som",
   "midi-qol.WeaponUseSound.Name": " Arma Usada",
@@ -610,8 +628,6 @@
   "midi-qol.SpellDamage": "Dano de Magia",
   "midi-qol.NonSpellDamage": "Dano de Não-Magia",
   "midi-qol.ConditionHeader": "Condições de Ativação",
-  "midi-qol.EffectActivationCondition.Name": "Aplicação de Efeito",
-  "midi-qol.EffectActivation": "Usar Ativação do Sistema para Aplicação de Efeito (Descontinuado)",
   "midi-qol.ItemActivationCondition.Name": "Uso de Itens",
   "midi-qol.ReactionActivationCondition.Name": "Reação",
   "midi-qol.OtherActivationCondition.Name": "Outro Dano",
@@ -737,6 +753,9 @@
   "midi-qol.SoundSettings.Name": "Configurar Sons do Midi QOL",
   "midi-qol.SoundSettings.Hint": "Configura os sons personalizados do Midi QOL para rolagem de itens.",
   "midi-qol.SoundSettings.Label": "Configurar Sons do Midi QOL",
+  "midi-qol.LaunchSetupWizard.Name": "Assistente de Configuração",
+  "midi-qol.LaunchSetupWizard.Label": "Iniciar Assistente de Configuração.",
+  "midi-qol.LaunchSetupWizard.Hint": "Abre o assistente de configuração passo a passo do Midi QOL.",
   "midi-qol.SoundSettingsBlurb": {
     "1": "Começando...",
     "2": "Escolha 'Criar Playlist de Amostra' para criar a playlist 'Midi Item Sounds' com alguns sons.",
@@ -832,6 +851,36 @@
   "midi-qol.versus": "versus",
   "midi-qol.Skipped": "Pulado",
   "midi-qol.ExportTroubleShooting": "Exportar Informações de Trouble Shooting",
+  "midi-qol.DependentsExplorer": {
+    "Title": "Explorador de Dependentes",
+    "Name": "Explorador de Dependentes",
+    "Label": "Abrir Explorador de Dependentes",
+    "Hint": "Visualizar relações de dependência de documentos rastreadas pelo Midi QOL.",
+    "Empty": "Nenhum documento dependente está sendo rastreado no momento",
+    "NoMatches": "Nenhum documento corresponde ao filtro de pesquisa",
+    "Unknown": "Desconhecido",
+    "SearchPlaceholder": "Filtrar por nome...",
+    "ClearFilter": "Limpar filtro",
+    "TypeActor": "Atores",
+    "TypeItem": "Itens",
+    "TypeActiveEffect": "Efeitos",
+    "TypeToken": "Tokens",
+    "TypeScene": "Cenas",
+    "TypeCombatant": "Combatentes",
+    "On": "em",
+    "Transfer": "Efeito de transferência",
+    "DeleteParent": "Excluir este documento pai",
+    "DeleteDependent": "Excluir este documento dependente",
+    "ConfirmDelete": "Confirmar Exclusão",
+    "ConfirmDeleteParent": "Tem certeza de que deseja excluir {name} ({type})? Isso também excluirá todas as suas dependências.",
+    "ConfirmDeleteDependent": "Tem certeza de que deseja excluir {name} ({type})?",
+    "ConfirmDeleteItemEffect": "Tem certeza de que deseja excluir o efeito {name}? Isso removerá permanentemente o efeito do item.",
+    "Delete": "Excluir",
+    "Cancel": "Cancelar",
+    "Deleted": "{name} foi excluído",
+    "DeleteFailed": "Falha ao excluir o documento",
+    "DocumentNotFound": "Documento não encontrado"
+  },
   "midi-qol.TroubleShooter": {
     "Name": "Abrir Trouble Shooter",
     "Hint": "Trouble Shooter para ajudar a diagnosticar problemas.",
@@ -1379,6 +1428,9 @@
   "midi-qol.NoAmmunitionAvailable": "Não há munição em seu inventário.",
   "midi-qol.NoAmmunitionSelected": "Você deve selecionar a munição a ser usada.",
   "midi-qol.TwoHandedShieldWarning": "Não é possível usar ataque com as duas mãos ou com a mão secundária com um escudo equipado",
+  "midi-qol.otherActivityConsumptionFailed": "{actorName}: {itemName} ({activityName}) - recursos insuficientes para outra atividade",
+  "midi-qol.RefundOtherActivityResource": "Reembolsar Outro Recurso",
+  "midi-qol.ConsumeOtherActivityResource": "Consumir Outro Recurso",
   "dae.MidiQOL.fieldData": {
     "flags.midi-qol.absorption.acid": {
       "name": "Absorção Dano (Ácido)",
@@ -1445,60 +1497,60 @@
       "description": "Vantagem em todas as salvaguardas, testes de atributo e perícias" 
     },
     "flags.midi-qol.advantage.ability.check.all": {
-      "name": "Vantagem Teste (Todos Atributos)",
-      "description": "Vantagem em todos os testes de atributo e perícias" 
+      "name": "Vantagem Teste (Todos Atributos) (Obsoleto)",
+      "description": "Obsoleto - use advantage.check.all em vez disso. Vantagem em todos os testes de atributo e perícias" 
     },
     "flags.midi-qol.advantage.ability.check.cha": {
-      "name": "Vantagem Teste (Carisma)",
-      "description": "Vantagem em testes de Carisma" 
+      "name": "Vantagem Teste (Carisma) (Obsoleto)",
+      "description": "Obsoleto - use advantage.check.cha em vez disso. Vantagem em testes de Carisma" 
     },
     "flags.midi-qol.advantage.ability.check.con": {
-      "name": "Vantagem Teste (Constituição)",
-      "description": "Vantagem em testes de Constituição" 
+      "name": "Vantagem Teste (Constituição) (Obsoleto)",
+      "description": "Obsoleto - use advantage.check.con em vez disso. Vantagem em testes de Constituição" 
     },
     "flags.midi-qol.advantage.ability.check.dex": {
-      "name": "Vantagem Teste (Destreza)",
-      "description": "Vantagem em testes de Destreza" 
+      "name": "Vantagem Teste (Destreza) (Obsoleto)",
+      "description": "Obsoleto - use advantage.check.dex em vez disso. Vantagem em testes de Destreza" 
     },
     "flags.midi-qol.advantage.ability.check.int": {
-      "name": "Vantagem Teste (Inteligência)",
-      "description": "Vantagem em testes de Inteligência" 
+      "name": "Vantagem Teste (Inteligência) (Obsoleto)",
+      "description": "Obsoleto - use advantage.check.int em vez disso. Vantagem em testes de Inteligência" 
     },
     "flags.midi-qol.advantage.ability.check.str": {
-      "name": "Vantagem Teste (Força)",
-      "description": "Vantagem em testes de Força" 
+      "name": "Vantagem Teste (Força) (Obsoleto)",
+      "description": "Obsoleto - use advantage.check.str em vez disso. Vantagem em testes de Força" 
     },
     "flags.midi-qol.advantage.ability.check.wis": {
-      "name": "Vantagem Teste (Sabedoria)",
-      "description": "Vantagem em testes de Sabedoria" 
+      "name": "Vantagem Teste (Sabedoria) (Obsoleto)",
+      "description": "Obsoleto - use advantage.check.wis em vez disso. Vantagem em testes de Sabedoria" 
     },
     "flags.midi-qol.advantage.ability.save.all": {
-      "name": "Vantagem Salvaguarda (Todas)",
-      "description": "Vantagem em todas as salvaguardas" 
+      "name": "Vantagem Salvaguarda (Todas) (Obsoleto)",
+      "description": "Obsoleto - use advantage.save.all em vez disso. Vantagem em todas as salvaguardas" 
     },
     "flags.midi-qol.advantage.ability.save.cha": {
-      "name": "Vantagem Salvaguarda (Carisma)",
-      "description": "Vantagem em salvaguardas de Carisma" 
+      "name": "Vantagem Salvaguarda (Carisma) (Obsoleto)",
+      "description": "Obsoleto - use advantage.save.cha em vez disso. Vantagem em salvaguardas de Carisma" 
     },
     "flags.midi-qol.advantage.ability.save.con": {
-      "name": "Vantagem Salvaguarda (Constituição)",
-      "description": "Vantagem em salvaguardas de Constituição" 
+      "name": "Vantagem Salvaguarda (Constituição) (Obsoleto)",
+      "description": "Obsoleto - use advantage.save.con em vez disso. Vantagem em salvaguardas de Constituição" 
     },
     "flags.midi-qol.advantage.ability.save.dex": {
-      "name": "Vantagem Salvaguarda (Destreza)",
-      "description": "Vantagem em salvaguardas de Destreza" 
+      "name": "Vantagem Salvaguarda (Destreza) (Obsoleto)",
+      "description": "Obsoleto - use advantage.save.dex em vez disso. Vantagem em salvaguardas de Destreza" 
     },
     "flags.midi-qol.advantage.ability.save.int": {
-      "name": "Vantagem Salvaguarda (Inteligência)",
-      "description": "Vantagem em salvaguardas de Inteligência" 
+      "name": "Vantagem Salvaguarda (Inteligência) (Obsoleto)",
+      "description": "Obsoleto - use advantage.save.int em vez disso. Vantagem em salvaguardas de Inteligência" 
     },
     "flags.midi-qol.advantage.ability.save.str": {
-      "name": "Vantagem Salvaguarda (Força)",
-      "description": "Vantagem em salvaguardas de Força" 
+      "name": "Vantagem Salvaguarda (Força) (Obsoleto)",
+      "description": "Obsoleto - use advantage.save.str em vez disso. Vantagem em salvaguardas de Força" 
     },
     "flags.midi-qol.advantage.ability.save.wis": {
-      "name": "Vantagem Salvaguarda (Sabedoria)",
-      "description": "Vantagem em salvaguardas de Sabedoria" 
+      "name": "Vantagem Salvaguarda (Sabedoria) (Obsoleto)",
+      "description": "Obsoleto - use advantage.save.wis em vez disso. Vantagem em salvaguardas de Sabedoria" 
     },
     "flags.midi-qol.advantage.all": {
       "name": "Vantagem Todos Dados",
@@ -1708,82 +1760,202 @@
       "name": "Vantagem (Salvaguarda Contra Morte)",
       "description": "Vantagem em Salvaguardas Contra Morte" 
     },
+    "flags.midi-qol.advantage.check.all": {
+      "name": "Vantagem Teste (Todos)",
+      "description": "Vantagem em todos os testes de atributo e perícia."
+    },
+    "flags.midi-qol.advantage.check.cha": {
+      "name": "Vantagem Teste (Carisma)",
+      "description": "Vantagem em testes de Carisma."
+    },
+    "flags.midi-qol.advantage.check.con": {
+      "name": "Vantagem Teste (Constituição)",
+      "description": "Vantagem em testes de Constituição."
+    },
+    "flags.midi-qol.advantage.check.dex": {
+      "name": "Vantagem Teste (Destreza)",
+      "description": "Vantagem em testes de Destreza."
+    },
+    "flags.midi-qol.advantage.check.int": {
+      "name": "Vantagem Teste (Inteligência)",
+      "description": "Vantagem em testes de Inteligência."
+    },
+    "flags.midi-qol.advantage.check.str": {
+      "name": "Vantagem Teste (Força)",
+      "description": "Vantagem em testes de Força."
+    },
+    "flags.midi-qol.advantage.check.wis": {
+      "name": "Vantagem Teste (Sabedoria)",
+      "description": "Vantagem em testes de Sabedoria."
+    },
+    "flags.midi-qol.advantage.save.all": {
+      "name": "Vantagem Salvaguarda (Todas)",
+      "description": "Vantagem em todas as salvaguardas."
+    },
+    "flags.midi-qol.advantage.save.cha": {
+      "name": "Vantagem Salvaguarda (Carisma)",
+      "description": "Vantagem em salvaguardas de Carisma."
+    },
+    "flags.midi-qol.advantage.save.con": {
+      "name": "Vantagem Salvaguarda (Constituição)",
+      "description": "Vantagem em salvaguardas de Constituição."
+    },
+    "flags.midi-qol.advantage.save.dex": {
+      "name": "Vantagem Salvaguarda (Destreza)",
+      "description": "Vantagem em salvaguardas de Destreza."
+    },
+    "flags.midi-qol.advantage.save.int": {
+      "name": "Vantagem Salvaguarda (Inteligência)",
+      "description": "Vantagem em salvaguardas de Inteligência."
+    },
+    "flags.midi-qol.advantage.save.str": {
+      "name": "Vantagem Salvaguarda (Força)",
+      "description": "Vantagem em salvaguardas de Força."
+    },
+    "flags.midi-qol.advantage.save.wis": {
+      "name": "Vantagem Salvaguarda (Sabedoria)",
+      "description": "Vantagem em salvaguardas de Sabedoria."
+    },
     "flags.midi-qol.advantage.skill.acr": {
       "name": "Vantagem Perícia (Acrobacia)",
-      "description": "Vantagem em testes de Acrobacia" 
+      "description": "Vantagem em testes de Acrobacia." 
     },
     "flags.midi-qol.advantage.skill.all": {
       "name": "Vantagem Perícia (Todas)",
-      "description": "Vantagem em todos os testes de perícia" 
+      "description": "Vantagem em todos os testes de perícia." 
     },
     "flags.midi-qol.advantage.skill.ani": {
       "name": "Vantagem Perícia (Lidar com Animais)",
-      "description": "Vantagem em testes de Lidar com Animais" 
+      "description": "Vantagem em testes de Lidar com Animais." 
     },
     "flags.midi-qol.advantage.skill.arc": {
       "name": "Vantagem Perícia (Arcanismo)",
-      "description": "Vantagem em testes de Arcanismo" 
+      "description": "Vantagem em testes de Arcanismo." 
     },
     "flags.midi-qol.advantage.skill.ath": {
       "name": "Vantagem Perícia (Atletismo)",
-      "description": "Vantagem em testes de Atletismo" 
+      "description": "Vantagem em testes de Atletismo." 
     },
     "flags.midi-qol.advantage.skill.dec": {
       "name": "Vantagem Perícia (Enganação)",
-      "description": "Vantagem em testes de Enganação" 
+      "description": "Vantagem em testes de Enganação." 
     },
     "flags.midi-qol.advantage.skill.his": {
       "name": "Vantagem Perícia (História)",
-      "description": "Vantagem em testes de História" 
+      "description": "Vantagem em testes de História." 
     },
     "flags.midi-qol.advantage.skill.ins": {
       "name": "Vantagem Perícia (Intuição)",
-      "description": "Vantagem em testes de Intuição" 
+      "description": "Vantagem em testes de Intuição." 
     },
     "flags.midi-qol.advantage.skill.inv": {
       "name": "Vantagem Perícia (Investigação)",
-      "description": "Vantagem em testes de Investigação" 
+      "description": "Vantagem em testes de Investigação." 
     },
     "flags.midi-qol.advantage.skill.itm": {
       "name": "Vantagem Perícia (Intimidação)",
-      "description": "Vantagem em testes de Intimidação" 
+      "description": "Vantagem em testes de Intimidação." 
     },
     "flags.midi-qol.advantage.skill.med": {
       "name": "Vantagem Perícia (Medicina)",
-      "description": "Vantagem em testes de Medicina" 
+      "description": "Vantagem em testes de Medicina." 
     },
     "flags.midi-qol.advantage.skill.nat": {
       "name": "Vantagem Perícia (Natureza)",
-      "description": "Vantagem em testes de Natureza" 
+      "description": "Vantagem em testes de Natureza." 
     },
     "flags.midi-qol.advantage.skill.per": {
       "name": "Vantagem Perícia (Persuasão)",
-      "description": "Vantagem em testes de Persuasão" 
+      "description": "Vantagem em testes de Persuasão." 
     },
     "flags.midi-qol.advantage.skill.prc": {
       "name": "Vantagem Perícia (Percepção)",
-      "description": "Vantagem em testes de Percepção" 
+      "description": "Vantagem em testes de Percepção." 
     },
     "flags.midi-qol.advantage.skill.prf": {
       "name": "Vantagem Perícia (Performance)",
-      "description": "Vantagem em testes de Performance" 
+      "description": "Vantagem em testes de Performance." 
     },
     "flags.midi-qol.advantage.skill.rel": {
       "name": "Vantagem Perícia (Religião)",
-      "description": "Vantagem em testes de Religião" 
+      "description": "Vantagem em testes de Religião." 
     },
     "flags.midi-qol.advantage.skill.slt": {
       "name": "Vantagem Perícia (Prestidigitação)",
-      "description": "Vantagem em testes de Prestidigitação" 
+      "description": "Vantagem em testes de Prestidigitação." 
     },
     "flags.midi-qol.advantage.skill.ste": {
       "name": "Vantagem Perícia (Furtividade)",
-      "description": "Vantagem em testes de Furtividade" 
+      "description": "Vantagem em testes de Furtividade." 
     },
     "flags.midi-qol.advantage.skill.sur": {
       "name": "Vantagem Perícia (Sobrevivência)",
-      "description": "Vantagem em testes de Sobrevivência" 
+      "description": "Vantagem em testes de Sobrevivência." 
     },
+    "flags.midi-qol.advantage.skill.str": {
+      "name": "Vantagem Perícia (Força)",
+      "description": "Vantagem em todos os testes de perícia baseados em Força."
+    },
+    "flags.midi-qol.advantage.skill.dex": {
+      "name": "Vantagem Perícia (Destreza)",
+      "description": "Vantagem em todos os testes de perícia baseados em Destreza."
+    },
+    "flags.midi-qol.advantage.skill.con": {
+      "name": "Vantagem Perícia (Constituição)",
+      "description": "Vantagem em todos os testes de perícia baseados em Constituição."
+    },
+    "flags.midi-qol.advantage.skill.int": {
+      "name": "Vantagem Perícia (Inteligência)",
+      "description": "Vantagem em todos os testes de perícia baseados em Inteligência."
+    },
+    "flags.midi-qol.advantage.skill.wis": {
+      "name": "Vantagem Perícia (Sabedoria)",
+      "description": "Vantagem em todos os testes de perícia baseados em Sabedoria."
+    },
+    "flags.midi-qol.advantage.skill.cha": {
+      "name": "Vantagem Perícia (Carisma)",
+      "description": "Vantagem em todos os testes de perícia baseados em Carisma."
+    },
+    "flags.midi-qol.advantage.tool.all": {
+      "name": "Vantagem Ferramenta (Todas)",
+      "description": "Vantagem em todos os testes de ferramentas."
+    },
+    "flags.midi-qol.advantage.tool.alchemist": { "name": "Vantagem Ferramenta (Suprimentos de Alquimista)", "description": "Vantagem em testes com Suprimentos de Alquimista." },
+    "flags.midi-qol.advantage.tool.bagpipes": { "name": "Vantagem Ferramenta (Gaita de Foles)", "description": "Vantagem em testes com Gaita de Foles." },
+    "flags.midi-qol.advantage.tool.brewer": { "name": "Vantagem Ferramenta (Suprimentos de Cervejeiro)", "description": "Vantagem em testes com Suprimentos de Cervejeiro." },
+    "flags.midi-qol.advantage.tool.calligrapher": { "name": "Vantagem Ferramenta (Suprimentos de Caligrafia)", "description": "Vantagem em testes com Suprimentos de Cervejeiro." },
+    "flags.midi-qol.advantage.tool.card": { "name": "Vantagem Ferramenta (Baralho de Cartas)", "description": "Vantagem em testes com Baralho de Cartas." },
+    "flags.midi-qol.advantage.tool.carpenter": { "name": "Vantagem Ferramenta (Ferramentas de Carpinteiro)", "description": "Vantagem em testes com Ferramentas de Carpinteiro." },
+    "flags.midi-qol.advantage.tool.cartographer": { "name": "Vantagem Ferramenta (Ferramentas de Cartógrafo)", "description": "Vantagem em testes com Ferramentas de Cartógrafo." },
+    "flags.midi-qol.advantage.tool.chess": { "name": "Vantagem Ferramenta (Conjunto de Xadrez)", "description": "Vantagem em testes com Conjunto de Xadrez." },
+    "flags.midi-qol.advantage.tool.cobbler": { "name": "Vantagem Ferramenta (Ferramentas de Sapateiro)", "description": "Vantagem em testes com Ferramentas de Sapateiro." },
+    "flags.midi-qol.advantage.tool.cook": { "name": "Vantagem Ferramenta (Utensílios de Cozinheiro)", "description": "Vantagem em testes com Utensílios de Cozinheiro." },
+    "flags.midi-qol.advantage.tool.dice": { "name": "Vantagem Ferramenta (Conjunto de Dados)", "description": "Vantagem em testes com Conjunto de Dados." },
+    "flags.midi-qol.advantage.tool.disg": { "name": "Vantagem Ferramenta (Kit de Disfarce)", "description": "Vantagem em testes com Kit de Disfarce." },
+    "flags.midi-qol.advantage.tool.drum": { "name": "Vantagem Ferramenta (Tambor)", "description": "Vantagem em testes com Tambor." },
+    "flags.midi-qol.advantage.tool.dulcimer": { "name": "Vantagem Ferramenta (Xilofone)", "description": "Vantagem em testes com Xilofone." },
+    "flags.midi-qol.advantage.tool.flute": { "name": "Vantagem Ferramenta (Flauta)", "description": "Vantagem em testes com Flauta." },
+    "flags.midi-qol.advantage.tool.forg": { "name": "Vantagem Ferramenta (Kit de Falsificação)", "description": "Vantagem em testes com Kit de Falsificação." },
+    "flags.midi-qol.advantage.tool.glassblower": { "name": "Vantagem Ferramenta (Ferramentas de Vidreiro)", "description": "Vantagem em testes com Ferramentas de Vidreiro." },
+    "flags.midi-qol.advantage.tool.herb": { "name": "Vantagem Ferramenta (Kit de Herbalismo)", "description": "Vantagem em testes com Kit de Herbalismo." },
+    "flags.midi-qol.advantage.tool.horn": { "name": "Vantagem Ferramenta (Trombeta)", "description": "Vantagem em testes com Trombeta." },
+    "flags.midi-qol.advantage.tool.jeweler": { "name": "Vantagem Ferramenta (Ferramentas de Joalheiro)", "description": "Vantagem em testes com Ferramentas de Joalheiro." },
+    "flags.midi-qol.advantage.tool.leatherworker": { "name": "Vantagem Ferramenta (Ferramentas de Coureiro)", "description": "Vantagem em testes com Ferramentas de Coureiro." },
+    "flags.midi-qol.advantage.tool.lute": { "name": "Vantagem Ferramenta (Alaúde)", "description": "Vantagem em testes com Alaúde." },
+    "flags.midi-qol.advantage.tool.lyre": { "name": "Vantagem Ferramenta (Lira)", "description": "Vantagem em testes com Lira." },
+    "flags.midi-qol.advantage.tool.mason": { "name": "Vantagem Ferramenta (Ferramentas de Pedreiro)", "description": "Vantagem em testes com Ferramentas de Pedreiro." },
+    "flags.midi-qol.advantage.tool.navg": { "name": "Vantagem Ferramenta (Ferramentas de Navegação)", "description": "Vantagem em testes com Ferramentas de Navegação." },
+    "flags.midi-qol.advantage.tool.painter": { "name": "Vantagem Ferramenta (Ferramentas de Pintor)", "description": "Vantagem em testes com Ferramentas de Pintor." },
+    "flags.midi-qol.advantage.tool.panflute": { "name": "Vantagem Ferramenta (Flauta de Pã)", "description": "Vantagem em testes com Flauta de Pã." },
+    "flags.midi-qol.advantage.tool.pois": { "name": "Vantagem Ferramenta (Kit de Venenos)", "description": "Vantagem em testes com Kit de Venenos." },
+    "flags.midi-qol.advantage.tool.potter": { "name": "Vantagem Ferramenta (Ferramentas de Oleiro)", "description": "Vantagem em testes com Ferramentas de Oleiro." },
+    "flags.midi-qol.advantage.tool.shawm": { "name": "Vantagem Ferramenta (Oboé)", "description": "Vantagem em testes com Oboé." },
+    "flags.midi-qol.advantage.tool.smith": { "name": "Vantagem Ferramenta (Ferramentas de Ferreiro)", "description": "Vantagem em testes com Ferramentas de Ferreiro." },
+    "flags.midi-qol.advantage.tool.thief": { "name": "Vantagem Ferramenta (Ferramentas de Ladrão)", "description": "Vantagem em testes com Ferramentas de Ladrão." },
+    "flags.midi-qol.advantage.tool.tinker": { "name": "Vantagem Ferramenta (Ferramentas de Funileiro)", "description": "Vantagem em testes com Ferramentas de Funileiro." },
+    "flags.midi-qol.advantage.tool.viol": { "name": "Vantagem Ferramenta (Violino)", "description": "Vantagem em testes com Violino." },
+    "flags.midi-qol.advantage.tool.weaver": { "name": "Vantagem Ferramenta (Ferramentas de Costureiro)", "description": "Vantagem em testes com Ferramentas de Costureiro." },
+    "flags.midi-qol.advantage.tool.woodcarver": { "name": "Vantagem Ferramenta (Ferramentas de Entalhador)", "description": "Vantagem em testes com Ferramentas de Entalhador." },
     "flags.midi-qol.carefulSpells": {
       "name": "Magia Cuidadosa",
       "description": "Alvos previamente selecionados da salvaguarda de magia são automaticamente bem-sucedidos." 
@@ -1841,60 +2013,60 @@
       "description": "" 
     },
     "flags.midi-qol.disadvantage.ability.check.all": {
-      "name": "Desvantagem Teste (Todos Atributos)",
-      "description": "" 
+      "name": "Desvantagem Teste (Todos Atributos) (Obsoleto)",
+      "description": "Obsoleto - use disadvantage.check.all em vez disso. Desvantagem em todos os testes de atributo." 
     },
     "flags.midi-qol.disadvantage.ability.check.cha": {
-      "name": "Desvantagem Teste (Carisma)",
-      "description": "" 
+      "name": "Desvantagem Teste (Carisma) (Obsoleto)",
+      "description": "Obsoleto - use disadvantage.check.cha em vez disso. Desvantagem em todos os testes de Carisma." 
     },
     "flags.midi-qol.disadvantage.ability.check.con": {
-      "name": "Desvantagem Teste (Constituição)",
-      "description": "" 
+      "name": "Desvantagem Teste (Constituição) (Obsoleto)",
+      "description": "Obsoleto - use disadvantage.check.con em vez disso. Desvantagem em todos os testes de Constituição." 
     },
     "flags.midi-qol.disadvantage.ability.check.dex": {
-      "name": "Desvantagem Teste (Destreza)",
-      "description": "" 
+      "name": "Desvantagem Teste (Destreza) (Obsoleto)",
+      "description": "Obsoleto - use disadvantage.check.dex em vez disso. Desvantagem em todos os testes de Destreza." 
     },
     "flags.midi-qol.disadvantage.ability.check.int": {
-      "name": "Desvantagem Teste (Inteligência)",
-      "description": "" 
+      "name": "Desvantagem Teste (Inteligência) (Obsoleto)",
+      "description": "Obsoleto - use disadvantage.check.int em vez disso. Desvantagem em todos os testes de Inteligência." 
     },
     "flags.midi-qol.disadvantage.ability.check.str": {
-      "name": "Desvantagem Teste (Força)",
-      "description": "" 
+      "name": "Desvantagem Teste (Força) (Obsoleto)",
+      "description": "Obsoleto - use disadvantage.check.str em vez disso. Desvantagem em todos os testes de Força." 
     },
     "flags.midi-qol.disadvantage.ability.check.wis": {
-      "name": "Desvantagem Teste (Sabedoria)",
-      "description": "" 
+      "name": "Desvantagem Teste (Sabedoria) (Obsoleto)",
+      "description": "Obsoleto - use disadvantage.check.wis em vez disso. Desvantagem em todos os testes de Sabedoria." 
     },
     "flags.midi-qol.disadvantage.ability.save.all": {
-      "name": "Desvantagem Salvaguarda (Todas)",
-      "description": "" 
+      "name": "Desvantagem Salvaguarda (Todas) (Obsoleto)",
+      "description": "Obsoleto - use disadvantage.save.all em vez disso. Desvantagem em todas as salvaguardas." 
     },
     "flags.midi-qol.disadvantage.ability.save.cha": {
-      "name": "Desvantagem Salvaguarda (Carisma)",
-      "description": "" 
+      "name": "Desvantagem Salvaguarda (Carisma) (Obsoleto)",
+      "description": "Obsoleto - use disadvantage.save.cha em vez disso. Desvantagem em todas as salvaguardas de Carisma." 
     },
     "flags.midi-qol.disadvantage.ability.save.con": {
-      "name": "Desvantagem Salvaguarda (Constituição)",
-      "description": "" 
+      "name": "Desvantagem Salvaguarda (Constituição) (Obsoleto)",
+      "description": "Obsoleto - use disadvantage.save.con em vez disso. Desvantagem em todas as salvaguardas de Constituição." 
     },
     "flags.midi-qol.disadvantage.ability.save.dex": {
-      "name": "Desvantagem Salvaguarda (Destreza)",
-      "description": "" 
+      "name": "Desvantagem Salvaguarda (Destreza) (Obsoleto)",
+      "description": "Obsoleto - use disadvantage.save.dex em vez disso. Desvantagem em todas as salvaguardas de Destreza." 
     },
     "flags.midi-qol.disadvantage.ability.save.int": {
-      "name": "Desvantagem Salvaguarda (Inteligência)",
-      "description": "" 
+      "name": "Desvantagem Salvaguarda (Inteligência) (Obsoleto)",
+      "description": "Obsoleto - use disadvantage.save.int em vez disso. Desvantagem em todas as salvaguardas de Inteligência." 
     },
     "flags.midi-qol.disadvantage.ability.save.str": {
-      "name": "Desvantagem Salvaguarda (Força)",
-      "description": "" 
+      "name": "Desvantagem Salvaguarda (Força) (Obsoleto)",
+      "description": "Obsoleto - use disadvantage.save.str em vez disso. Desvantagem em todas as salvaguardas de Força." 
     },
     "flags.midi-qol.disadvantage.ability.save.wis": {
-      "name": "Desvantagem Salvaguarda (Sabedoria)",
-      "description": "" 
+      "name": "Desvantagem Salvaguarda (Sabedoria) (Obsoleto)",
+      "description": "Obsoleto - use disadvantage.save.wis em vez disso. Desvantagem em todas as salvaguardas de Sabedoria." 
     },
     "flags.midi-qol.disadvantage.all": {
       "name": "Desvantagem Todos Dados",
@@ -1956,13 +2128,389 @@
       "name": "Desvantagem Ataque (Sabedoria)",
       "description": "" 
     },
+    "flags.midi-qol.noAdvantage.attack.all": {
+      "name": "Sem Vantagem Ataque (Todos)",
+      "description": "Previne Vantagem em todas as jogadas de ataque."
+    },
+    "flags.midi-qol.noAdvantage.attack.mwak": {
+      "name": "Sem Vantagem Ataque (Armado Corpo a Corpo)",
+      "description": "Previne Vantagem em jogadas de Ataque Armado Corpo a Corpo."
+    },
+    "flags.midi-qol.noAdvantage.attack.rwak": {
+      "name": "Sem Vantagem Ataque (Armado à Distância)",
+      "description": "Previne Vantagem em jogadas de Ataque Armado à Distância."
+    },
+    "flags.midi-qol.noAdvantage.attack.msak": {
+      "name": "Sem Vantagem Ataque (Mágico Corpo a Corpo)",
+      "description": "Previne Vantagem em jogadas de Ataque Mágico Corpo a Corpo."
+    },
+    "flags.midi-qol.noAdvantage.attack.rsak": {
+      "name": "Sem Vantagem Ataque (Mágico à Distância)",
+      "description": "Previne Vantagem em jogadas de Ataque Mágico à Distância."
+    },
+    "flags.midi-qol.noDisadvantage.attack.all": {
+      "name": "Sem Desvantagem Ataque (Todos)",
+      "description": "Previne Desvantagem em todas as jogadas de ataque."
+    },
+    "flags.midi-qol.noDisadvantage.attack.mwak": {
+      "name": "Sem Desvantagem Ataque (Armado Corpo a Corpo)",
+      "description": "Previne Desvantagem em jogadas de Ataque Armado Corpo a Corpo."
+    },
+    "flags.midi-qol.noDisadvantage.attack.rwak": {
+      "name": "Sem Desvantagem Ataque (Armado à Distância)",
+      "description": "Previne Desvantagem em jogadas de Ataque Armado à Distância."
+    },
+    "flags.midi-qol.noDisadvantage.attack.msak": {
+      "name": "Sem Desvantagem Ataque (Mágico Corpo a Corpo)",
+      "description": "Previne Desvantagem em jogadas de Ataque Mágico Corpo a Corpo."
+    },
+    "flags.midi-qol.noDisadvantage.attack.rsak": {
+      "name": "Sem Desvantagem Ataque (Mágico à Distância)",
+      "description": "Previne Desvantagem em jogadas de Ataque Mágico à Distância."
+    },
+    "flags.midi-qol.noAdvantage.all": {
+      "name": "Sem Vantagem (Todos)",
+      "description": "Previne Vantagem em todas as jogadas."
+    },
+    "flags.midi-qol.noDisadvantage.all": {
+      "name": "Sem Desvantagem Ataque (Todos)",
+      "description": "Previne Desvantagem em todas as jogadas."
+    },
+    "flags.midi-qol.noAdvantage.concentration": {
+      "name": "Sem Vantagem (Concentração)",
+      "description": "Previne Vantagem em salvaguardas de Concentração."
+    },
+    "flags.midi-qol.noDisadvantage.concentration": {
+      "name": "Sem Desvantagem (Concentração)",
+      "description": "Previne Desvantagem em salvaguardas de Concentração."
+    },
+    "flags.midi-qol.noAdvantage.deathSave": {
+      "name": "Sem Vantagem (Salvaguarda Contra Morte)",
+      "description": "Previne Vantagem em Salvaguardas Contra Morte."
+    },
+    "flags.midi-qol.noDisadvantage.deathSave": {
+      "name": "Sem Desvantagem (Salvaguarda Contra Morte)",
+      "description": "Previne Desvantagem em Salvaguardas Contra Morte."
+    },
+    "flags.midi-qol.initiativeNoAdv": {
+      "name": "Sem Vantagem (Iniciativa)",
+      "description": "Previne Vantagem em jogadas de Iniciativa."
+    },
+    "flags.midi-qol.initiativeNoDisadv": {
+      "name": "Sem Desvantagem (Iniciativa)",
+      "description": "Previne desvantagem em jogadas de Iniciativa."
+    },
+    "flags.midi-qol.noAdvantage.save.all": {
+      "name": "Sem Vantagem Salvaguarda (Todas)",
+      "description": "Previne Vantagem em todas as salvaguardas."
+    },
+    "flags.midi-qol.noAdvantage.save.str": {
+      "name": "Sem Vantagem Salvaguarda (Força)",
+      "description": "Previne Vantagem em salvaguardas de Força."
+    },
+    "flags.midi-qol.noAdvantage.save.dex": {
+      "name": "Sem Vantagem Salvaguarda (Destreza)",
+      "description": "Previne Vantagem em salvaguardas de Destreza."
+    },
+    "flags.midi-qol.noAdvantage.save.con": {
+      "name": "Sem Vantagem Salvaguarda (Constituição)",
+      "description": "Previne Vantagem em salvaguardas de Constituição."
+    },
+    "flags.midi-qol.noAdvantage.save.int": {
+      "name": "Sem Vantagem Salvaguarda (Inteligência)",
+      "description": "Previne Vantagem em salvaguardas de Inteligência."
+    },
+    "flags.midi-qol.noAdvantage.save.wis": {
+      "name": "Sem Vantagem Salvaguarda (Sabedoria)",
+      "description": "Previne Vantagem em salvaguardas de Sabedoria."
+    },
+    "flags.midi-qol.noAdvantage.save.cha": {
+      "name": "Sem Vantagem Salvaguarda (Carisma)",
+      "description": "Previne Vantagem em salvaguardas de Carisma."
+    },
+    "flags.midi-qol.noDisadvantage.save.all": {
+      "name": "Sem Desvantagem Salvaguarda (Todas)",
+      "description": "Previne Desvantagem em todas as salvaguardas."
+    },
+    "flags.midi-qol.noDisadvantage.save.str": {
+      "name": "Sem Desvantagem Salvaguarda (Força)",
+      "description": "Previne Desvantagem em salvaguardas de Força."
+    },
+    "flags.midi-qol.noDisadvantage.save.dex": {
+      "name": "Sem Desvantagem Salvaguarda (Destreza)",
+      "description": "Previne Desvantagem em salvaguardas de Destreza."
+    },
+    "flags.midi-qol.noDisadvantage.save.con": {
+      "name": "Sem Desvantagem Salvaguarda (Constituição)",
+      "description": "Previne Desvantagem em salvaguardas de Constituição."
+    },
+    "flags.midi-qol.noDisadvantage.save.int": {
+      "name": "Sem Desvantagem Salvaguarda (Inteligência)",
+      "description": "Previne Desvantagem em salvaguardas de Inteligência."
+    },
+    "flags.midi-qol.noDisadvantage.save.wis": {
+      "name": "Sem Desvantagem Salvaguarda (Sabedoria)",
+      "description": "Previne Desvantagem em salvaguardas de Sabedoria."
+    },
+    "flags.midi-qol.noDisadvantage.save.cha": {
+      "name": "Sem Desvantagem Salvaguarda (Carisma)",
+      "description": "Previne Desvantagem em salvaguardas de Carisma."
+    },
+    "flags.midi-qol.noAdvantage.check.all": {
+      "name": "Sem Vantagem Teste (Todos)",
+      "description": "Previne Vantagem em todos os testes de atributo."
+    },
+    "flags.midi-qol.noAdvantage.check.str": {
+      "name": "Sem Vantagem Teste (Força)",
+      "description": "Previne Vantagem em testes de Força."
+    },
+    "flags.midi-qol.noAdvantage.check.dex": {
+      "name": "Sem Vantagem Teste (Destreza)",
+      "description": "Previne Vantagem em testes de Destreza."
+    },
+    "flags.midi-qol.noAdvantage.check.con": {
+      "name": "Sem Vantagem Teste (Constituição)",
+      "description": "Previne Vantagem em testes de Constituição."
+    },
+    "flags.midi-qol.noAdvantage.check.int": {
+      "name": "Sem Vantagem Teste (Inteligência)",
+      "description": "Previne Vantagem em testes de Inteligência."
+    },
+    "flags.midi-qol.noAdvantage.check.wis": {
+      "name": "Sem Vantagem Teste (Sabedoria)",
+      "description": "Previne Vantagem em testes de Sabedoria."
+    },
+    "flags.midi-qol.noAdvantage.check.cha": {
+      "name": "Sem Vantagem Teste (Carisma)",
+      "description": "Previne Vantagem em testes de Carisma."
+    },
+    "flags.midi-qol.noDisadvantage.check.all": {
+      "name": "Sem Desvantagem Teste (Todos)",
+      "description": "Previne Desvantagem em todos os testes de atributo."
+    },
+    "flags.midi-qol.noDisadvantage.check.str": {
+      "name": "Sem Desvantagem Teste (Força)",
+      "description": "Previne Desvantagem em testes de Força."
+    },
+    "flags.midi-qol.noDisadvantage.check.dex": {
+      "name": "Sem Desvantagem Teste (Destreza)",
+      "description": "Previne Desvantagem em testes de Destreza."
+    },
+    "flags.midi-qol.noDisadvantage.check.con": {
+      "name": "Sem Desvantagem Teste (Constituição)",
+      "description": "Previne Desvantagem em testes de Constituição."
+    },
+    "flags.midi-qol.noDisadvantage.check.int": {
+      "name": "Sem Desvantagem Teste (Inteligência)",
+      "description": "Previne Desvantagem em testes de Inteligência."
+    },
+    "flags.midi-qol.noDisadvantage.check.wis": {
+      "name": "Sem Desvantagem Teste (Sabedoria)",
+      "description": "Previne Desvantagem em testes de Sabedoria."
+    },
+    "flags.midi-qol.noDisadvantage.check.cha": {
+      "name": "Sem Desvantagem Teste (Carisma)",
+      "description": "Previne Desvantagem em testes de Carisma."
+    },
+    "flags.midi-qol.noAdvantage.skill.all": {
+      "name": "Sem Vantagem Perícia (Todas)",
+      "description": "Previne Vantagem em todos os testes de perícia."
+    },
+    "flags.midi-qol.noAdvantage.skill.str": { "name": "Sem Vantagem Perícia (Força)", "description": "Previne Vantagem em testes de perícia baseados em Força." },
+    "flags.midi-qol.noAdvantage.skill.dex": { "name": "Sem Vantagem Perícia (Destreza)", "description": "Previne Vantagem em testes de perícia baseados em Destreza." },
+    "flags.midi-qol.noAdvantage.skill.con": { "name": "Sem Vantagem Perícia (Constituição)", "description": "Previne Vantagem em testes de perícia baseados em Constituição." },
+    "flags.midi-qol.noAdvantage.skill.int": { "name": "Sem Vantagem Perícia (Inteligência)", "description": "Previne Vantagem em testes de perícia baseados em Inteligência." },
+    "flags.midi-qol.noAdvantage.skill.wis": { "name": "Sem Vantagem Perícia (Sabedoria)", "description": "Previne Vantagem em testes de perícia baseados em Sabedoria." },
+    "flags.midi-qol.noAdvantage.skill.cha": { "name": "Sem Vantagem Perícia (Carisma)", "description": "Previne Vantagem em testes de perícia baseados em Carisma." },
+    "flags.midi-qol.noAdvantage.skill.acr": { "name": "Sem Vantagem Perícia (Acrobacia)", "description": "Previne Vantagem em testes de Acrobacia." },
+    "flags.midi-qol.noAdvantage.skill.ani": { "name": "Sem Vantagem Perícia (Lidar com Animais)", "description": "Previne Vantagem em testes de Lidar com Animais." },
+    "flags.midi-qol.noAdvantage.skill.arc": { "name": "Sem Vantagem Perícia (Arcanismo)", "description": "Previne Vantagem em testes de Arcanismo." },
+    "flags.midi-qol.noAdvantage.skill.ath": { "name": "Sem Vantagem Perícia (Atletismo)", "description": "Previne Vantagem em testes de Atletismo." },
+    "flags.midi-qol.noAdvantage.skill.dec": { "name": "Sem Vantagem Perícia (Enganação)", "description": "Previne Vantagem em testes de Enganação." },
+    "flags.midi-qol.noAdvantage.skill.his": { "name": "Sem Vantagem Perícia (História)", "description": "Previne Vantagem em testes de História." },
+    "flags.midi-qol.noAdvantage.skill.ins": { "name": "Sem Vantagem Perícia (Intuição)", "description": "Previne Vantagem em testes de Intuição." },
+    "flags.midi-qol.noAdvantage.skill.inv": { "name": "Sem Vantagem Perícia (Investigação)", "description": "Previne Vantagem em testes de Investigação." },
+    "flags.midi-qol.noAdvantage.skill.itm": { "name": "Sem Vantagem Perícia (Intimidação)", "description": "Previne Vantagem em testes de Intimidação." },
+    "flags.midi-qol.noAdvantage.skill.med": { "name": "Sem Vantagem Perícia (Medicina)", "description": "Previne Vantagem em testes de Medicina." },
+    "flags.midi-qol.noAdvantage.skill.nat": { "name": "Sem Vantagem Perícia (Natureza)", "description": "Previne Vantagem em testes de Natureza." },
+    "flags.midi-qol.noAdvantage.skill.per": { "name": "Sem Vantagem Perícia (Persuasão)", "description": "Previne Vantagem em testes de Persuasão." },
+    "flags.midi-qol.noAdvantage.skill.prc": { "name": "Sem Vantagem Perícia (Percepção)", "description": "Previne Vantagem em testes de Percepção." },
+    "flags.midi-qol.noAdvantage.skill.prf": { "name": "Sem Vantagem Perícia (Performance)", "description": "Previne Vantagem em testes de Performance." },
+    "flags.midi-qol.noAdvantage.skill.rel": { "name": "Sem Vantagem Perícia (Religião)", "description": "Previne Vantagem em testes de Religião." },
+    "flags.midi-qol.noAdvantage.skill.slt": { "name": "Sem Vantagem Perícia (Prestidigitação)", "description": "Previne Vantagem em testes de Prestidigitação." },
+    "flags.midi-qol.noAdvantage.skill.ste": { "name": "Sem Vantagem Perícia (Furtividade)", "description": "Previne Vantagem em testes de Furtividade." },
+    "flags.midi-qol.noAdvantage.skill.sur": { "name": "Sem Vantagem Perícia (Sobrevivência)", "description": "Previne Vantagem em testes de Sobrevivência." },
+    "flags.midi-qol.noDisadvantage.skill.all": {
+      "name": "Sem Desvantagem Perícia (Todas)",
+      "description": "Previne Desvantagem em todos os testes de perícia."
+    },
+    "flags.midi-qol.noDisadvantage.skill.str": { "name": "Sem Desvantagem Perícia (Força)", "description": "Previne Desvantagem em testes de perícia baseados em Força." },
+    "flags.midi-qol.noDisadvantage.skill.dex": { "name": "Sem Desvantagem Perícia (Destreza)", "description": "Previne Desvantagem em testes de perícia baseados em Destreza." },
+    "flags.midi-qol.noDisadvantage.skill.con": { "name": "Sem Desvantagem Perícia (Constituição)", "description": "Previne Desvantagem em testes de perícia baseados em Constituição." },
+    "flags.midi-qol.noDisadvantage.skill.int": { "name": "Sem Desvantagem Perícia (Inteligência)", "description": "Previne Desvantagem em testes de perícia baseados em Inteligência." },
+    "flags.midi-qol.noDisadvantage.skill.wis": { "name": "Sem Desvantagem Perícia (Sabedoria)", "description": "Previne Desvantagem em testes de perícia baseados em Sabedoria." },
+    "flags.midi-qol.noDisadvantage.skill.cha": { "name": "Sem Desvantagem Perícia (Carisma)", "description": "Previne Desvantagem em testes de perícia baseados em Carisma." },
+    "flags.midi-qol.noDisadvantage.skill.acr": { "name": "Sem Desvantagem Perícia (Acrobacia)", "description": "Previne Desvantagem em testes de Acrobacia." },
+    "flags.midi-qol.noDisadvantage.skill.ani": { "name": "Sem Desvantagem Perícia (Lidar com Animais)", "description": "Previne Desvantagem em testes de Lidar com Animais." },
+    "flags.midi-qol.noDisadvantage.skill.arc": { "name": "Sem Desvantagem Perícia (Arcanismo)", "description": "Previne Desvantagem em testes de Arcanismo." },
+    "flags.midi-qol.noDisadvantage.skill.ath": { "name": "Sem Desvantagem Perícia (Atletismo)", "description": "Previne Desvantagem em testes de Atletismo." },
+    "flags.midi-qol.noDisadvantage.skill.dec": { "name": "Sem Desvantagem Perícia (Enganação)", "description": "Previne Desvantagem em testes de Enganação." },
+    "flags.midi-qol.noDisadvantage.skill.his": { "name": "Sem Desvantagem Perícia (História)", "description": "Previne Desvantagem em testes de História." },
+    "flags.midi-qol.noDisadvantage.skill.ins": { "name": "Sem Desvantagem Perícia (Intuição)", "description": "Previne Desvantagem em testes de Intuição." },
+    "flags.midi-qol.noDisadvantage.skill.inv": { "name": "Sem Desvantagem Perícia (Investigação)", "description": "Previne Desvantagem em testes de Investigação." },
+    "flags.midi-qol.noDisadvantage.skill.itm": { "name": "Sem Desvantagem Perícia (Intimidação)", "description": "Previne Desvantagem em testes de Intimidação." },
+    "flags.midi-qol.noDisadvantage.skill.med": { "name": "Sem Desvantagem Perícia (Medicina)", "description": "Previne Desvantagem em testes de Medicina." },
+    "flags.midi-qol.noDisadvantage.skill.nat": { "name": "Sem Desvantagem Perícia (Natureza)", "description": "Previne Desvantagem em testes de Natureza." },
+    "flags.midi-qol.noDisadvantage.skill.per": { "name": "Sem Desvantagem Perícia (Persuasão)", "description": "Previne Desvantagem em testes de Persuasão." },
+    "flags.midi-qol.noDisadvantage.skill.prc": { "name": "Sem Desvantagem Perícia (Percepção)", "description": "Previne Desvantagem em testes de Percepção." },
+    "flags.midi-qol.noDisadvantage.skill.prf": { "name": "Sem Desvantagem Perícia (Performance)", "description": "Previne Desvantagem em testes de Performance." },
+    "flags.midi-qol.noDisadvantage.skill.rel": { "name": "Sem Desvantagem Perícia (Religião)", "description": "Previne Desvantagem em testes de Religião." },
+    "flags.midi-qol.noDisadvantage.skill.slt": { "name": "Sem Desvantagem Perícia (Prestidigitação)", "description": "Previne Desvantagem em testes de Prestidigitação." },
+    "flags.midi-qol.noDisadvantage.skill.ste": { "name": "Sem Desvantagem Perícia (Furtividade)", "description": "Previne Desvantagem em testes de Furtividade." },
+    "flags.midi-qol.noDisadvantage.skill.sur": { "name": "Sem Desvantagem Perícia (Sobrevivência)", "description": "Previne Desvantagem em testes de Sobrevivência." },
+    "flags.midi-qol.noAdvantage.tool.all": {
+      "name": "Sem Vantagem Ferramenta (Todas)",
+      "description": "Previne Vantagem em todos os testes de ferramentas."
+    },
+    "flags.midi-qol.noAdvantage.tool.alchemist": { "name": "Sem Vantagem Ferramenta (Suprimentos de Alquimista)", "description": "Previne Vantagem em testes com Suprimentos de Alquimista." },
+    "flags.midi-qol.noAdvantage.tool.bagpipes": { "name": "Sem Vantagem Ferramenta (Gaita de Foles)", "description": "Previne Vantagem em testes com Gaita de Foles." },
+    "flags.midi-qol.noAdvantage.tool.brewer": { "name": "Sem Vantagem Ferramenta (Suprimentos de Cervejeiro)", "description": "Previne Vantagem em testes com Suprimentos de Cervejeiro." },
+    "flags.midi-qol.noAdvantage.tool.calligrapher": { "name": "Sem Vantagem Ferramenta (Suprimentos de Caligrafia)", "description": "Previne Vantagem em testes com Suprimentos de Caligrafia." },
+    "flags.midi-qol.noAdvantage.tool.card": { "name": "Sem Vantagem Ferramenta (Baralho de Cartas)", "description": "Previne Vantagem em testes com Baralho de Cartas." },
+    "flags.midi-qol.noAdvantage.tool.carpenter": { "name": "Sem Vantagem Ferramenta (Ferramentas de Carpinteiro)", "description": "Previne Vantagem em testes com Ferramentas de Carpinteiro." },
+    "flags.midi-qol.noAdvantage.tool.cartographer": { "name": "Sem Vantagem Ferramenta (Ferramentas de Cartógrafo)", "description": "Previne Vantagem em testes com Ferramentas de Cartógrafo." },
+    "flags.midi-qol.noAdvantage.tool.chess": { "name": "Sem Vantagem Ferramenta (Conjunto de Xadrez)", "description": "Previne Vantagem em testes com Conjunto de Xadrez." },
+    "flags.midi-qol.noAdvantage.tool.cobbler": { "name": "Sem Vantagem Ferramenta (Ferramentas de Sapateiro)", "description": "Previne Vantagem em testes com Ferramentas de Sapateiro." },
+    "flags.midi-qol.noAdvantage.tool.cook": { "name": "Sem Vantagem Ferramenta (Utensílios de Cozinheiro)", "description": "Previne Vantagem em testes com Utensílios de Cozinheiro." },
+    "flags.midi-qol.noAdvantage.tool.dice": { "name": "Sem Vantagem Ferramenta (Conjunto de Dados)", "description": "Previne Vantagem em testes com Conjunto de Dados." },
+    "flags.midi-qol.noAdvantage.tool.disg": { "name": "Sem Vantagem Ferramenta (Kit de Disfarce)", "description": "Previne Vantagem em testes com Kit de Disfarce." },
+    "flags.midi-qol.noAdvantage.tool.drum": { "name": "Sem Vantagem Ferramenta (Tambor)", "description": "Previne Vantagem em testes com Tambor." },
+    "flags.midi-qol.noAdvantage.tool.dulcimer": { "name": "Sem Vantagem Ferramenta (Xilofone)", "description": "Previne Vantagem em testes com Xilofone." },
+    "flags.midi-qol.noAdvantage.tool.flute": { "name": "Sem Vantagem Ferramenta (Flauta)", "description": "Previne Vantagem em testes com Flauta." },
+    "flags.midi-qol.noAdvantage.tool.forg": { "name": "Sem Vantagem Ferramenta (Kit de Falsificação)", "description": "Previne Vantagem em testes com Kit de Falsificação." },
+    "flags.midi-qol.noAdvantage.tool.glassblower": { "name": "Sem Vantagem Ferramenta (Ferramentas de Vidreiro)", "description": "Previne Vantagem em testes com Ferramentas de Vidreiro." },
+    "flags.midi-qol.noAdvantage.tool.herb": { "name": "Sem Vantagem Ferramenta (Kit de Herbalismo)", "description": "Previne Vantagem em testes com Kit de Herbalismo." },
+    "flags.midi-qol.noAdvantage.tool.horn": { "name": "Sem Vantagem Ferramenta (Trombeta)", "description": "Previne Vantagem em testes com Trombeta." },
+    "flags.midi-qol.noAdvantage.tool.jeweler": { "name": "Sem Vantagem Ferramenta (Ferramentas de Joalheiro)", "description": "Previne Vantagem em testes com Ferramentas de Joalheiro." },
+    "flags.midi-qol.noAdvantage.tool.leatherworker": { "name": "Sem Vantagem Ferramenta (Ferramentas de Coureiro)", "description": "Previne Vantagem em testes com Ferramentas de Coureiro." },
+    "flags.midi-qol.noAdvantage.tool.lute": { "name": "Sem Vantagem Ferramenta (Alaúde)", "description": "Previne Vantagem em testes com Alaúde." },
+    "flags.midi-qol.noAdvantage.tool.lyre": { "name": "Sem Vantagem Ferramenta (Lira)", "description": "Previne Vantagem em testes com Lira." },
+    "flags.midi-qol.noAdvantage.tool.mason": { "name": "Sem Vantagem Ferramenta (Ferramentas de Pedreiro)", "description": "Previne Vantagem em testes com Ferramentas de Pedreiro." },
+    "flags.midi-qol.noAdvantage.tool.navg": { "name": "Sem Vantagem Ferramenta (Ferramentas de Navegação)", "description": "Previne Vantagem em testes com Ferramentas de Navegação." },
+    "flags.midi-qol.noAdvantage.tool.painter": { "name": "Sem Vantagem Ferramenta (Ferramentas de Pintor)", "description": "Previne Vantagem em testes com Ferramentas de Pintor." },
+    "flags.midi-qol.noAdvantage.tool.panflute": { "name": "Sem Vantagem Ferramenta (Flauta de Pã)", "description": "Previne Vantagem em testes com Flauta de Pã." },
+    "flags.midi-qol.noAdvantage.tool.pois": { "name": "Sem Vantagem Ferramenta (Kit de Venenos)", "description": "Previne Vantagem em testes com Kit de Venenos." },
+    "flags.midi-qol.noAdvantage.tool.potter": { "name": "Sem Vantagem Ferramenta (Ferramentas de Oleiro)", "description": "Previne Vantagem em testes com Ferramentas de Oleiro." },
+    "flags.midi-qol.noAdvantage.tool.shawm": { "name": "Sem Vantagem Ferramenta (Oboé)", "description": "Previne Vantagem em testes com Oboé." },
+    "flags.midi-qol.noAdvantage.tool.smith": { "name": "Sem Vantagem Ferramenta (Ferramentas de Ferreiro)", "description": "Previne Vantagem em testes com Ferramentas de Ferreiro." },
+    "flags.midi-qol.noAdvantage.tool.thief": { "name": "Sem Vantagem Ferramenta (Ferramentas de Ladrão)", "description": "Previne Vantagem em testes com Ferramentas de Ladrão." },
+    "flags.midi-qol.noAdvantage.tool.tinker": { "name": "Sem Vantagem Ferramenta (Ferramentas de Funileiro)", "description": "Previne Vantagem em testes com Ferramentas de Funileiro." },
+    "flags.midi-qol.noAdvantage.tool.viol": { "name": "Sem Vantagem Ferramenta (Violino)", "description": "Previne Vantagem em testes com Violino." },
+    "flags.midi-qol.noAdvantage.tool.weaver": { "name": "Sem Vantagem Ferramenta (Ferramentas de Costureiro)", "description": "Previne Vantagem em testes com Ferramentas de Costureiro." },
+    "flags.midi-qol.noAdvantage.tool.woodcarver": { "name": "Sem Vantagem Ferramenta (Ferramentas de Entalhador)", "description": "Previne Vantagem em testes com Ferramentas de Entalhador." },
+    "flags.midi-qol.noDisadvantage.tool.all": {
+      "name": "Sem Desvantagem Ferramenta (Todas)",
+      "description": "Previne Desvantagem em todos os testes de ferramentas."
+    },
+    "flags.midi-qol.noDisadvantage.tool.alchemist": { "name": "Sem Desvantagem Ferramenta (Suprimentos de Alquimista)", "description": "Previne Desvantagem em testes com Suprimentos de Alquimista." },
+    "flags.midi-qol.noDisadvantage.tool.bagpipes": { "name": "Sem Desvantagem Ferramenta (Gaita de Foles)", "description": "Previne Desvantagem em testes com Gaita de Foles." },
+    "flags.midi-qol.noDisadvantage.tool.brewer": { "name": "Sem Desvantagem Ferramenta (Suprimentos de Cervejeiro)", "description": "Previne Desvantagem em testes com Suprimentos de Cervejeiro." },
+    "flags.midi-qol.noDisadvantage.tool.calligrapher": {"name": "Sem Desvantagem Ferramenta (Suprimentos de Caligrafia)", "description": "Previne Desvantagem em testes com Suprimentos de Caligrafia." },
+    "flags.midi-qol.noDisadvantage.tool.card": { "name": "Sem Desvantagem Ferramenta (Baralho de Cartas)", "description": "Previne Desvantagem em testes com Baralho de Cartas." },
+    "flags.midi-qol.noDisadvantage.tool.carpenter": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Carpinteiro)", "description": "Previne Desvantagem em testes com Ferramentas de Carpinteiro." },
+    "flags.midi-qol.noDisadvantage.tool.cartographer": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Cartógrafo)", "description": "Previne Desvantagem em testes com Ferramentas de Cartógrafo." },
+    "flags.midi-qol.noDisadvantage.tool.chess": { "name": "Sem Desvantagem Ferramenta (Conjunto de Xadrez)", "description": "Previne Desvantagem em testes com Conjunto de Xadrez." },
+    "flags.midi-qol.noDisadvantage.tool.cobbler": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Sapateiro)", "description": "Previne Desvantagem em testes com Ferramentas de Sapateiro." },
+    "flags.midi-qol.noDisadvantage.tool.cook": { "name": "Sem Desvantagem Ferramenta (Utensílios de Cozinheiro)", "description": "Previne Desvantagem em testes com Utensílios de Cozinheiro." },
+    "flags.midi-qol.noDisadvantage.tool.dice": { "name": "Sem Desvantagem Ferramenta (Conjunto de Dados)", "description": "Previne Desvantagem em testes com Conjunto de Dados." },
+    "flags.midi-qol.noDisadvantage.tool.disg": { "name": "Sem Desvantagem Ferramenta (Kit de Disfarce)", "description": "Previne Desvantagem em testes com Kit de Disfarce." },
+    "flags.midi-qol.noDisadvantage.tool.drum": { "name": "Sem Desvantagem Ferramenta (Tambor)", "description": "Previne Desvantagem em testes com Tambor." },
+    "flags.midi-qol.noDisadvantage.tool.dulcimer": { "name": "Sem Desvantagem Ferramenta (Xilofone)", "description": "Previne Desvantagem em testes com Xilofone." },
+    "flags.midi-qol.noDisadvantage.tool.flute": { "name": "Sem Desvantagem Ferramenta (Flauta)", "description": "Previne Desvantagem em testes com Flauta." },
+    "flags.midi-qol.noDisadvantage.tool.forg": { "name": "Sem Desvantagem Ferramenta (Kit de Falsificação)", "description": "Previne Desvantagem em testes com Kit de Falsificação." },
+    "flags.midi-qol.noDisadvantage.tool.glassblower": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Vidreiro)", "description": "Previne Desvantagem em testes com Ferramentas de Vidreiro." },
+    "flags.midi-qol.noDisadvantage.tool.herb": { "name": "Sem Desvantagem Ferramenta (Kit de Herbalismo)", "description": "Previne Desvantagem em testes com Kit de Herbalismo." },
+    "flags.midi-qol.noDisadvantage.tool.horn": { "name": "Sem Desvantagem Ferramenta (Trombeta)", "description": "Previne Desvantagem em testes com Trombeta." },
+    "flags.midi-qol.noDisadvantage.tool.jeweler": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Joalheiro)", "description": "Previne Desvantagem em testes com Ferramentas de Joalheiro." },
+    "flags.midi-qol.noDisadvantage.tool.leatherworker": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Coureiro)", "description": "Previne Desvantagem em testes com Ferramentas de Coureiro." },
+    "flags.midi-qol.noDisadvantage.tool.lute": { "name": "Sem Desvantagem Ferramenta (Alaúde)", "description": "Previne Desvantagem em testes com Alaúde." },
+    "flags.midi-qol.noDisadvantage.tool.lyre": { "name": "Sem Desvantagem Ferramenta (Lira)", "description": "Previne Desvantagem em testes com Lira." },
+    "flags.midi-qol.noDisadvantage.tool.mason": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Pedreiro)", "description": "Previne Desvantagem em testes com Ferramentas de Pedreiro." },
+    "flags.midi-qol.noDisadvantage.tool.navg": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Navegação)", "description": "Previne Desvantagem em testes com Ferramentas de Navegação." },
+    "flags.midi-qol.noDisadvantage.tool.painter": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Pintor)", "description": "Previne Desvantagem em testes com Ferramentas de Pintor." },
+    "flags.midi-qol.noDisadvantage.tool.panflute": { "name": "Sem Desvantagem Ferramenta (Flauta de Pã)", "description": "Previne Desvantagem em testes com Flauta de Pã." },
+    "flags.midi-qol.noDisadvantage.tool.pois": { "name": "Sem Desvantagem Ferramenta (Kit de Venenos)", "description": "Previne Desvantagem em testes com Kit de Venenos." },
+    "flags.midi-qol.noDisadvantage.tool.potter": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Oleiro)", "description": "Previne Desvantagem em testes com Ferramentas de Oleiro." },
+    "flags.midi-qol.noDisadvantage.tool.shawm": { "name": "Sem Desvantagem Ferramenta (Oboé)", "description": "Previne Desvantagem em testes com Oboé." },
+    "flags.midi-qol.noDisadvantage.tool.smith": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Ferreiro)", "description": "Previne Desvantagem em testes com Ferramentas de Ferreiro." },
+    "flags.midi-qol.noDisadvantage.tool.thief": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Ladrão)", "description": "Previne Desvantagem em testes com Ferramentas de Ladrão." },
+    "flags.midi-qol.noDisadvantage.tool.tinker": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Funileiro)", "description": "Previne Desvantagem em testes com Ferramentas de Funileiro." },
+    "flags.midi-qol.noDisadvantage.tool.viol": { "name": "Sem Desvantagem Ferramenta (Violino)", "description": "Previne Desvantagem em testes com Violino." },
+    "flags.midi-qol.noDisadvantage.tool.weaver": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Costureiro)", "description": "Previne Desvantagem em testes com Ferramentas de Costureiro." },
+    "flags.midi-qol.noDisadvantage.tool.woodcarver": { "name": "Sem Desvantagem Ferramenta (Ferramentas de Entalhador)", "description": "Previne Desvantagem em testes com Ferramentas de Entalhador." },
     "flags.midi-qol.disadvantage.concentration": {
       "name": "Desvantagem (Concentração)",
-      "description": "" 
+      "description": "Desvantagem em salvaguardas de Concentração." 
     },
     "flags.midi-qol.disadvantage.deathSave": {
       "name": "Desvantagem (Salvaguarda Contra Morte)",
-      "description": "" 
+      "description": "Desvantagem em Salvaguardas Contra Morte." 
+    },
+    "flags.midi-qol.disadvantage.check.all": {
+      "name": "Desvantagem Teste (Todos)",
+      "description": "Desvantagem em todos os testes de atributo."
+    },
+    "flags.midi-qol.disadvantage.check.cha": {
+      "name": "Desvantagem Teste (Carisma)",
+      "description": "Desvantagem em testes de Carisma."
+    },
+    "flags.midi-qol.disadvantage.check.con": {
+      "name": "Desvantagem Teste (Constituição)",
+      "description": "Desvantagem em testes de Constituição."
+    },
+    "flags.midi-qol.disadvantage.check.dex": {
+      "name": "Desvantagem Teste (Destreza)",
+      "description": "Desvantagem em testes de Destreza."
+    },
+    "flags.midi-qol.disadvantage.check.int": {
+      "name": "Desvantagem Teste (Inteligência)",
+      "description": "Desvantagem em testes de Inteligência."
+    },
+    "flags.midi-qol.disadvantage.check.str": {
+      "name": "Desvantagem Teste (Força)",
+      "description": "Desvantagem em testes de Força."
+    },
+    "flags.midi-qol.disadvantage.check.wis": {
+      "name": "Desvantagem Teste (Sabedoria)",
+      "description": "Desvantagem em testes de Sabedoria."
+    },
+    "flags.midi-qol.disadvantage.save.all": {
+      "name": "Desvantagem Salvaguarda (Todas)",
+      "description": "Desvantagem em todas as salvaguardas."
+    },
+    "flags.midi-qol.disadvantage.save.cha": {
+      "name": "Desvantagem Salvaguarda (Carisma)",
+      "description": "Desvantagem em salvaguardas de Carisma."
+    },
+    "flags.midi-qol.disadvantage.save.con": {
+      "name": "Desvantagem Salvaguarda (Constituição)",
+      "description": "Desvantagem em salvaguardas de Constituição."
+    },
+    "flags.midi-qol.disadvantage.save.dex": {
+      "name": "Desvantagem Salvaguarda (Destreza)",
+      "description": "Desvantagem em salvaguardas de Destreza."
+    },
+    "flags.midi-qol.disadvantage.save.int": {
+      "name": "Desvantagem Salvaguarda (Inteligência)",
+      "description": "Desvantagem em salvaguardas de Inteligência."
+    },
+    "flags.midi-qol.disadvantage.save.str": {
+      "name": "Desvantagem Salvaguarda (Força)",
+      "description": "Desvantagem em salvaguardas de Força."
+    },
+    "flags.midi-qol.disadvantage.save.wis": {
+      "name": "Desvantagem Salvaguarda (Sabedoria)",
+      "description": "Desvantagem em salvaguardas de Sabedoria."
     },
     "flags.midi-qol.disadvantage.skill.acr": {
       "name": "Desvantagem Perícia (Acrobacia)",
@@ -2040,6 +2588,70 @@
       "name": "Desvantagem Perícia (Sobrevivência)",
       "description": "" 
     },
+    "flags.midi-qol.disadvantage.skill.str": {
+      "name": "Desvantagem Perícia (Força)",
+      "description": "Desvantagem em testes de perícia baseados em Força."
+    },
+    "flags.midi-qol.disadvantage.skill.dex": {
+      "name": "Desvantagem Perícia (Destreza)",
+      "description": "Desvantagem em testes de perícia baseados em Destreza."
+    },
+    "flags.midi-qol.disadvantage.skill.con": {
+      "name": "Desvantagem Perícia (Constituição)",
+      "description": "Desvantagem em testes de perícia baseados em Constituição."
+    },
+    "flags.midi-qol.disadvantage.skill.int": {
+      "name": "Desvantagem Perícia (Inteligência)",
+      "description": "Desvantagem em testes de perícia baseados em Inteligência."
+    },
+    "flags.midi-qol.disadvantage.skill.wis": {
+      "name": "Desvantagem Perícia (Sabedoria)",
+      "description": "Desvantagem em testes de perícia baseados em Sabedoria."
+    },
+    "flags.midi-qol.disadvantage.skill.cha": {
+      "name": "Desvantagem Perícia (Carisma)",
+      "description": "Desvantagem em testes de perícia baseados em Carisma."
+    },
+    "flags.midi-qol.disadvantage.tool.all": {
+      "name": "Desvantagem Ferramenta (Todas)",
+      "description": "Desvantagem em todos os testes de ferramentas."
+    },
+    "flags.midi-qol.disadvantage.tool.alchemist": { "name": "Desvantagem Ferramenta (Suprimentos de Alquimista)", "description": "Desvantagem em testes com Suprimentos de Alquimista." },
+    "flags.midi-qol.disadvantage.tool.bagpipes": { "name": "Desvantagem Ferramenta (Gaita de Foles)", "description": "Desvantagem em testes com Gaita de Foles." },
+    "flags.midi-qol.disadvantage.tool.brewer": { "name": "Desvantagem Ferramenta (Suprimentos de Cervejeiro)", "description": "Desvantagem em testes com Suprimentos de Cervejeiro." },
+    "flags.midi-qol.disadvantage.tool.calligrapher": {"name": "Desvantagem Ferramenta (Suprimentos de Caligrafia)", "description": "Desvantagem em testes com Suprimentos de Caligrafia." },
+    "flags.midi-qol.disadvantage.tool.card": { "name": "Desvantagem Ferramenta (Baralho de Cartas)", "description": "Desvantagem em testes com Baralho de Cartas." },
+    "flags.midi-qol.disadvantage.tool.carpenter": { "name": "Desvantagem Ferramenta (Ferramentas de Carpinteiro)", "description": "Desvantagem em testes com Ferramentas de Carpinteiro." },
+    "flags.midi-qol.disadvantage.tool.cartographer": { "name": "Desvantagem Ferramenta (Ferramentas de Cartógrafo)", "description": "Desvantagem em testes com Ferramentas de Cartógrafo." },
+    "flags.midi-qol.disadvantage.tool.chess": { "name": "Desvantagem Ferramenta (Conjunto de Xadrez)", "description": "Desvantagem em testes com Conjunto de Xadrez." },
+    "flags.midi-qol.disadvantage.tool.cobbler": { "name": "Desvantagem Ferramenta (Ferramentas de Sapateiro)", "description": "Desvantagem em testes com Ferramentas de Sapateiro." },
+    "flags.midi-qol.disadvantage.tool.cook": { "name": "Desvantagem Ferramenta (Utensílios de Cozinheiro)", "description": "Desvantagem em testes com Utensílios de Cozinheiro." },
+    "flags.midi-qol.disadvantage.tool.dice": { "name": "Desvantagem Ferramenta (Conjunto de Dados)", "description": "Desvantagem em testes com Conjunto de Dados." },
+    "flags.midi-qol.disadvantage.tool.disg": { "name": "Desvantagem Ferramenta (Kit de Disfarce)", "description": "Desvantagem em testes com Kit de Disfarce." },
+    "flags.midi-qol.disadvantage.tool.drum": { "name": "Desvantagem Ferramenta (Tambor)", "description": "Desvantagem em testes com Tambor." },
+    "flags.midi-qol.disadvantage.tool.dulcimer": { "name": "Desvantagem Ferramenta (Xilofone)", "description": "Desvantagem em testes com Xilofone." },
+    "flags.midi-qol.disadvantage.tool.flute": { "name": "Desvantagem Ferramenta (Flauta)", "description": "Desvantagem em testes com Flauta." },
+    "flags.midi-qol.disadvantage.tool.forg": { "name": "Desvantagem Ferramenta (Kit de Falsificação)", "description": "Desvantagem em testes com Kit de Falsificação." },
+    "flags.midi-qol.disadvantage.tool.glassblower": { "name": "Desvantagem Ferramenta (Ferramentas de Vidreiro)", "description": "Desvantagem em testes com Ferramentas de Vidreiro." },
+    "flags.midi-qol.disadvantage.tool.herb": { "name": "Desvantagem Ferramenta (Kit de Herbalismo)", "description": "Desvantagem em testes com Kit de Herbalismo." },
+    "flags.midi-qol.disadvantage.tool.horn": { "name": "Desvantagem Ferramenta (Trombeta)", "description": "Desvantagem em testes com Trombeta." },
+    "flags.midi-qol.disadvantage.tool.jeweler": { "name": "Desvantagem Ferramenta (Ferramentas de Joalheiro)", "description": "Desvantagem em testes com Ferramentas de Joalheiro." },
+    "flags.midi-qol.disadvantage.tool.leatherworker": { "name": "Desvantagem Ferramenta (Ferramentas de Coureiro)", "description": "Desvantagem em testes com Ferramentas de Coureiro." },
+    "flags.midi-qol.disadvantage.tool.lute": { "name": "Desvantagem Ferramenta (Alaúde)", "description": "Desvantagem em testes com Alaúde." },
+    "flags.midi-qol.disadvantage.tool.lyre": { "name": "Desvantagem Ferramenta (Lira)", "description": "Desvantagem em testes com Lira." },
+    "flags.midi-qol.disadvantage.tool.mason": { "name": "Desvantagem Ferramenta (Ferramentas de Pedreiro)", "description": "Desvantagem em testes com Ferramentas de Pedreiro." },
+    "flags.midi-qol.disadvantage.tool.navg": { "name": "Desvantagem Ferramenta (Ferramentas de Navegação)", "description": "Desvantagem em testes com Ferramentas de Navegação." },
+    "flags.midi-qol.disadvantage.tool.painter": { "name": "Desvantagem Ferramenta (Ferramentas de Pintor)", "description": "Desvantagem em testes com Ferramentas de Pintor." },
+    "flags.midi-qol.disadvantage.tool.panflute": { "name": "Desvantagem Ferramenta (Flauta de Pã)", "description": "Desvantagem em testes com Flauta de Pã." },
+    "flags.midi-qol.disadvantage.tool.pois": { "name": "Desvantagem Ferramenta (Kit de Venenos)", "description": "Desvantagem em testes com Kit de Venenos." },
+    "flags.midi-qol.disadvantage.tool.potter": { "name": "Desvantagem Ferramenta (Ferramentas de Oleiro)", "description": "Desvantagem em testes com Ferramentas de Oleiro." },
+    "flags.midi-qol.disadvantage.tool.shawm": { "name": "Desvantagem Ferramenta (Oboé)", "description": "Desvantagem em testes com Oboé." },
+    "flags.midi-qol.disadvantage.tool.smith": { "name": "Desvantagem Ferramenta (Ferramentas de Ferreiro)", "description": "Desvantagem em testes com Ferramentas de Ferreiro." },
+    "flags.midi-qol.disadvantage.tool.thief": { "name": "Desvantagem Ferramenta (Ferramentas de Ladrão)", "description": "Desvantagem em testes com Ferramentas de Ladrão." },
+    "flags.midi-qol.disadvantage.tool.tinker": { "name": "Desvantagem Ferramenta (Ferramentas de Funileiro)", "description": "Desvantagem em testes com Ferramentas de Funileiro." },
+    "flags.midi-qol.disadvantage.tool.viol": { "name": "Desvantagem Ferramenta (Violino)", "description": "Desvantagem em testes com Violino." },
+    "flags.midi-qol.disadvantage.tool.weaver": { "name": "Desvantagem Ferramenta (Ferramentas de Costureiro)", "description": "Desvantagem em testes com Ferramentas de Costureiro." },
+    "flags.midi-qol.disadvantage.tool.woodcarver": { "name": "Desvantagem Ferramenta (Ferramentas de Entalhador)", "description": "Desvantagem em testes com Ferramentas de Entalhador." },
     "flags.midi-qol.fail.ability.all": {
       "name": "Falha Atributo (Todos)",
       "description": "" 
@@ -2178,79 +2790,79 @@
     },
     "flags.midi-qol.fail.skill.acr": {
       "name": "Falha Perícia (Acrobacia)",
-      "description": "" 
+      "description": "Testes de Acrobacia falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.all": {
       "name": "Falha Perícia (Todas)",
-      "description": "" 
+      "description": "Todos os Testes de Perícia falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.ani": {
       "name": "Falha Perícia (Lidar com Animais)",
-      "description": "" 
+      "description": "Testes de Lidar com Animais falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.arc": {
       "name": "Falha Perícia (Arcanismo)",
-      "description": "" 
+      "description": "Testes de Arcanismo falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.ath": {
       "name": "Falha Perícia (Atletismo)",
-      "description": "" 
+      "description": "Testes de Atletismo falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.dec": {
       "name": "Falha Perícia (Enganação)",
-      "description": "" 
+      "description": "Testes de Enganação falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.his": {
       "name": "Falha Perícia (História)",
-      "description": "" 
+      "description": "Testes de História falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.ins": {
       "name": "Falha Perícia (Intuição)",
-      "description": "" 
+      "description": "Testes de Intuição falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.inv": {
       "name": "Falha Perícia (Investigação)",
-      "description": "" 
+      "description": "Testes de Investigação falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.itm": {
       "name": "Falha Perícia (Intimidação)",
-      "description": "" 
+      "description": "Testes de Intimidação falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.med": {
       "name": "Falha Perícia (Medicina)",
-      "description": "" 
+      "description": "Testes de Medicina falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.nat": {
       "name": "Falha Perícia (Natureza)",
-      "description": "" 
+      "description": "Testes de Natureza falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.per": {
       "name": "Falha Perícia (Persuação)",
-      "description": "" 
+      "description": "Testes de Persuasão falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.prc": {
       "name": "Falha Perícia (Percepção)",
-      "description": "" 
+      "description": "Testes de Percepção falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.prf": {
       "name": "Falha Perícia (Performance)",
-      "description": "" 
+      "description": "Testes de Performance falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.rel": {
       "name": "Falha Perícia (Religião)",
-      "description": "" 
+      "description": "Testes de Religião falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.slt": {
       "name": "Falha Perícia (Prestidigitação)",
-      "description": "" 
+      "description": "Testes de Prestidigitação falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.ste": {
       "name": "Falha Perícia (Furtividade)",
-      "description": "" 
+      "description": "Testes de Furtividade falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.skill.sur": {
       "name": "Falha Perícia (Sobrevivência)",
-      "description": "" 
+      "description": "Testes de Sobrevivência falham automaticamente (d20 limitado a 1)." 
     },
     "flags.midi-qol.fail.spell.material": {
       "name": "Falha (Componente Material)",
@@ -2264,6 +2876,50 @@
       "name": "Falha (Componente Vocal)",
       "description": "" 
     },
+    "flags.midi-qol.fail.deathSave": {
+      "name": "Falha (Salvaguarda Contra Morte)",
+      "description": "Falha automaticamente em Salvaguardas Contra Morte."
+    },
+    "flags.midi-qol.fail.tool.all": {
+      "name": "Falha Ferramenta (Todas)",
+      "description": "Falha automaticamente em todos os testes de ferramentas."
+    },
+    "flags.midi-qol.fail.tool.alchemist": { "name": "Falha Ferramenta (Suprimentos de Alquimista)", "description": "Falha automaticamente em testes com Suprimentos de Alquimista." },
+    "flags.midi-qol.fail.tool.bagpipes": { "name": "Falha Ferramenta (Gaita de Foles)", "description": "Falha automaticamente em testes com Gaita de Foles." },
+    "flags.midi-qol.fail.tool.brewer": { "name": "Falha Ferramenta (Suprimentos de Cervejeiro)", "description": "Falha automaticamente em testes com Suprimentos de Cervejeiro." },
+    "flags.midi-qol.fail.tool.calligrapher": {"name": "Falha Ferramenta (Suprimentos de Caligrafia)", "description": "Falha automaticamente em testes com Suprimentos de Caligrafia." },
+    "flags.midi-qol.fail.tool.card": { "name": "Falha Ferramenta (Baralho de Cartas)", "description": "Falha automaticamente em testes com Baralho de Cartas." },
+    "flags.midi-qol.fail.tool.carpenter": { "name": "Falha Ferramenta (Ferramentas de Carpinteiro)", "description": "Falha automaticamente em testes com Ferramentas de Carpinteiro." },
+    "flags.midi-qol.fail.tool.cartographer": { "name": "Falha Ferramenta (Ferramentas de Cartógrafo)", "description": "Falha automaticamente em testes com Ferramentas de Cartógrafo." },
+    "flags.midi-qol.fail.tool.chess": { "name": "Falha Ferramenta (Conjunto de Xadrez)", "description": "Falha automaticamente em testes com Conjunto de Xadrez." },
+    "flags.midi-qol.fail.tool.cobbler": { "name": "Falha Ferramenta (Ferramentas de Sapateiro)", "description": "Falha automaticamente em testes com Ferramentas de Sapateiro." },
+    "flags.midi-qol.fail.tool.cook": { "name": "Falha Ferramenta (Utensílios de Cozinheiro)", "description": "Falha automaticamente em testes com Utensílios de Cozinheiro." },
+    "flags.midi-qol.fail.tool.dice": { "name": "Falha Ferramenta (Conjunto de Dados)", "description": "Falha automaticamente em testes com Conjunto de Dados." },
+    "flags.midi-qol.fail.tool.disg": { "name": "Falha Ferramenta (Kit de Disfarce)", "description": "Falha automaticamente em testes com Kit de Disfarce." },
+    "flags.midi-qol.fail.tool.drum": { "name": "Falha Ferramenta (Tambor)", "description": "Falha automaticamente em testes com Tambor." },
+    "flags.midi-qol.fail.tool.dulcimer": { "name": "Falha Ferramenta (Xilofone)", "description": "Falha automaticamente em testes com Xilofone." },
+    "flags.midi-qol.fail.tool.flute": { "name": "Falha Ferramenta (Flauta)", "description": "Falha automaticamente em testes com Flauta." },
+    "flags.midi-qol.fail.tool.forg": { "name": "Falha Ferramenta (Kit de Falsificação)", "description": "Falha automaticamente em testes com Kit de Falsificação." },
+    "flags.midi-qol.fail.tool.glassblower": { "name": "Falha Ferramenta (Ferramentas de Vidreiro)", "description": "Falha automaticamente em testes com Ferramentas de Vidreiro." },
+    "flags.midi-qol.fail.tool.herb": { "name": "Falha Ferramenta (Kit de Herbalismo)", "description": "Falha automaticamente em testes com Kit de Herbalismo." },
+    "flags.midi-qol.fail.tool.horn": { "name": "Falha Ferramenta (Trombeta)", "description": "Falha automaticamente em testes com Trombeta." },
+    "flags.midi-qol.fail.tool.jeweler": { "name": "Falha Ferramenta (Ferramentas de Joalheiro)", "description": "Falha automaticamente em testes com Ferramentas de Joalheiro." },
+    "flags.midi-qol.fail.tool.leatherworker": { "name": "Falha Ferramenta (Ferramentas de Coureiro)", "description": "Falha automaticamente em testes com Ferramentas de Coureiro." },
+    "flags.midi-qol.fail.tool.lute": { "name": "Falha Ferramenta (Alaúde)", "description": "Falha automaticamente em testes com Alaúde." },
+    "flags.midi-qol.fail.tool.lyre": { "name": "Falha Ferramenta (Lira)", "description": "Falha automaticamente em testes com Lira." },
+    "flags.midi-qol.fail.tool.mason": { "name": "Falha Ferramenta (Ferramentas de Pedreiro)", "description": "Falha automaticamente em testes com Ferramentas de Pedreiro." },
+    "flags.midi-qol.fail.tool.navg": { "name": "Falha Ferramenta (Ferramentas de Navegação)", "description": "Falha automaticamente em testes com Ferramentas de Navegação." },
+    "flags.midi-qol.fail.tool.painter": { "name": "Falha Ferramenta (Ferramentas de Pintor)", "description": "Falha automaticamente em testes com Ferramentas de Pintor." },
+    "flags.midi-qol.fail.tool.panflute": { "name": "Falha Ferramenta (Flauta de Pã)", "description": "Falha automaticamente em testes com Flauta de Pã." },
+    "flags.midi-qol.fail.tool.pois": { "name": "Falha Ferramenta (Kit de Venenos)", "description": "Falha automaticamente em testes com Kit de Venenos." },
+    "flags.midi-qol.fail.tool.potter": { "name": "Falha Ferramenta (Ferramentas de Oleiro)", "description": "Falha automaticamente em testes com Ferramentas de Oleiro." },
+    "flags.midi-qol.fail.tool.shawm": { "name": "Falha Ferramenta (Oboé)", "description": "Falha automaticamente em testes com Oboé." },
+    "flags.midi-qol.fail.tool.smith": { "name": "Falha Ferramenta (Ferramentas de Ferreiro)", "description": "Falha automaticamente em testes com Ferramentas de Ferreiro." },
+    "flags.midi-qol.fail.tool.thief": { "name": "Falha Ferramenta (Ferramentas de Ladrão)", "description": "Falha automaticamente em testes com Ferramentas de Ladrão." },
+    "flags.midi-qol.fail.tool.tinker": { "name": "Falha Ferramenta (Ferramentas de Funileiro)", "description": "Falha automaticamente em testes com Ferramentas de Funileiro." },
+    "flags.midi-qol.fail.tool.viol": { "name": "Falha Ferramenta (Violino)", "description": "Falha automaticamente em testes com Violino." },
+    "flags.midi-qol.fail.tool.weaver": { "name": "Falha Ferramenta (Ferramentas de Costureiro)", "description": "Falha automaticamente em testes com Ferramentas de Costureiro." },
+    "flags.midi-qol.fail.tool.woodcarver": { "name": "Falha Ferramenta (Ferramentas de Entalhador)", "description": "Falha automaticamente em testes com Ferramentas de Entalhador." },
     "flags.midi-qol.grants.advantage.attack.all": {
       "name": "Conceder Vantagem Ataque (Todos)",
       "description": "" 
@@ -2386,79 +3042,111 @@
     },
     "flags.midi-qol.grants.attack.bonus.all": {
       "name": "Conceder Bônus Ataque (Todos)",
-      "description": "" 
+      "description": "Adiciona um bônus a todas as jogadas de ataque feitas contra este ator. Defina para um número ou expressão de rolagem." 
     },
     "flags.midi-qol.grants.attack.bonus.heal": {
       "name": "Conceder Bônus Ataque (Cura)",
-      "description": "" 
+      "description": "Adiciona um bônus às jogadas de ataque de Cura feitas contra este ator. Defina para um número ou expressão de rolagem." 
     },
     "flags.midi-qol.grants.attack.bonus.msak": {
       "name": "Conceder Bônus Ataque (Mágico Corpo a Corpo)",
-      "description": "" 
+      "description": "Adiciona um bônus às jogadas de Ataque Mágico Corpo a Corpo feitas contra este ator. Defina para um número ou expressão de rolagem." 
     },
     "flags.midi-qol.grants.attack.bonus.mwak": {
       "name": "Conceder Bônus Ataque (Armado Corpo a Corpo)",
-      "description": "" 
+      "description": "Adiciona um bônus às jogadas de Ataque Armado Corpo a Corpo feitas contra este ator. Defina para um número ou expressão de rolagem." 
     },
     "flags.midi-qol.grants.attack.bonus.other": {
       "name": "Conceder Bônus Ataque (Outro)",
-      "description": "" 
+      "description": "Adiciona um bônus às jogadas de ataque Outro feitas contra este ator. Defina para um número ou expressão de rolagem." 
     },
     "flags.midi-qol.grants.attack.bonus.rsak": {
       "name": "Conceder Bônus Ataque (Mágico à Distância)",
-      "description": "" 
+      "description": "Adiciona um bônus às jogadas de Ataque Mágico à Distância feitas contra este ator. Defina para um número ou expressão de rolagem." 
     },
     "flags.midi-qol.grants.attack.bonus.rwak": {
       "name": "Conceder Bônus Ataque (Armado à Distância)",
-      "description": "" 
+      "description": "Adiciona um bônus às jogadas de Ataque Armado à Distância feitas contra este ator. Defina para um número ou expressão de rolagem." 
     },
     "flags.midi-qol.grants.attack.bonus.save": {
       "name": "Conceder Bônus Ataque (Salvaguarda)",
-      "description": "" 
+      "description": "Adiciona um bônus às jogadas de ataque baseadas em Salvaguarda feitas contra este ator. Defina para um número ou expressão de rolagem." 
     },
     "flags.midi-qol.grants.attack.bonus.util": {
       "name": "Conceder Bônus Ataque (Utilidade)",
-      "description": "" 
+      "description": "Adiciona um bônus às jogadas de ataque de Utilidade feitas contra este ator. Defina para um número ou expressão de rolagem." 
     },
     "flags.midi-qol.grants.attack.fail.all": {
       "name": "Conceder Falha Ataque (Todos)",
-      "description": "" 
+      "description": "Todos os ataques contra este ator falham automaticamente. Defina como 1 ou uma expressão condicional." 
+    },
+    "flags.midi-qol.grants.attack.fail.heal": {
+      "name": "Conceder Falha Ataque (Cura)",
+      "description": "Ataques de Cura contra este ator erram automaticamente. Defina como 1 ou uma expressão condicional."
+    },
+    "flags.midi-qol.grants.attack.fail.msak": {
+      "name": "Conceder Falha Ataque (Mágico Corpo a Corpo)",
+      "description": "Ataques Mágicos Corpo a Corpo contra este ator erram automaticamente. Defina como 1 ou uma expressão condicional."
+    },
+    "flags.midi-qol.grants.attack.fail.mwak": {
+      "name": "Conceder Falha Ataque (Armado Corpo a Corpo)",
+      "description": "Ataques Armados Corpo a Corpo contra este ator erram automaticamente. Defina como 1 ou uma expressão condicional."
+    },
+    "flags.midi-qol.grants.attack.fail.other": {
+      "name": "Conceder Falha Ataque (Outro)",
+      "description": "Outros Ataques contra este ator erram automaticamente. Defina como 1 ou uma expressão condicional."
+    },
+    "flags.midi-qol.grants.attack.fail.rsak": {
+      "name": "Conceder Falha Ataque (Mágico à Distância)",
+      "description": "Ataques Mágicos à Distância contra este ator erram automaticamente. Defina como 1 ou uma expressão condicional."
+    },
+    "flags.midi-qol.grants.attack.fail.rwak": {
+      "name": "Conceder Falha Ataque (Armado à Distância)",
+      "description": "Ataques Armados à Distância contra este ator erram automaticamente. Defina como 1 ou uma expressão condicional."
+    },
+    "flags.midi-qol.grants.attack.fail.save": {
+      "name": "Conceder Falha Ataque (Save)",
+      "description": "Ataques baseados em Salvaguarda contra este ator erram automaticamente. Defina como 1 ou uma expressão condicional."
+    },
+    "flags.midi-qol.grants.attack.fail.util": {
+      "name": "Conceder Falha Ataque (Utilidade)",
+      "description": "Ataques de Utilidade contra este ator erram automaticamente. Defina como 1 ou uma expressão condicional."
     },
     "flags.midi-qol.grants.attack.success.all": {
       "name": "Conceder Sucesso Ataque (Todos)",
-      "description": "" 
+      "description": "Todos os ataques contra este ator acertam automaticamente. Defina como 1 ou uma expressão condicional." 
     },
     "flags.midi-qol.grants.attack.success.heal": {
       "name": "Conceder Sucesso Ataque (Cura)",
-      "description": "" 
+      "description": "Ataques de Cura contra este ator acertam automaticamente. Defina como 1 ou uma expressão condicional." 
     },
     "flags.midi-qol.grants.attack.success.msak": {
       "name": "Conceder Sucesso Ataque (Mágico Corpo a Corpo)",
-      "description": "" 
+      "description": "Ataques Mágicos Corpo a Corpo contra este ator acertam automaticamente. Defina como 1 ou uma expressão condicional." 
     },
     "flags.midi-qol.grants.attack.success.mwak": {
       "name": "Conceder Sucesso Ataque (Armado Corpo a Corpo)",
-      "description": "" 
+      "description": "Ataques Armados Corpo a Corpo contra este ator acertam automaticamente. Defina como 1 ou uma expressão condicional." 
     },
     "flags.midi-qol.grants.attack.success.other": {
       "name": "Conceder Sucesso Ataque (Outro)",
-      "description": "" 
+      "description": "Outros ataques contra este ator acertam automaticamente. Defina como 1 ou uma expressão condicional." 
     },
     "flags.midi-qol.grants.attack.success.rsak": {
       "name": "Conceder Sucesso Ataque (Mágico à Distância)",
-      "description": "" 
+      "description": "Ataques Mágicos à Distância contra este ator acertam automaticamente. Defina como 1 ou uma expressão condicional." 
     },
     "flags.midi-qol.grants.attack.success.rwak": {
       "name": "Conceder Sucesso Ataque (Armado à Distância)",
-      "description": "" 
+      "description": "Ataques Armados à Distância contra este ator acertam automaticamente. Defina como 1 ou uma expressão condicional." 
     },
     "flags.midi-qol.grants.attack.success.save": {
       "name": "Conceder Sucesso Ataque (Salvaguarda)",
-      "description": "" 
+      "description": "Ataques baseados em Salvaguardas contra este ator acertam automaticamente. Defina como 1 ou uma expressão condicional." 
     },
     "flags.midi-qol.grants.attack.success.util": {
       "name": "Conceder Sucesso Ataque (Utilidade)",
-      "description": "" 
+      "description": "Ataques de Utilidade contra este ator acertam automaticamente. Defina como 1 ou uma expressão condicional." 
     },
     "flags.midi-qol.grants.critical.all": {
       "name": "Conceder Acerto Crítico (Todos)",
@@ -2482,7 +3170,7 @@
     },
     "flags.midi-qol.grants.critical.range": {
       "name": "Conceder Acerto Crítico (Alcance)",
-      "description": "" 
+      "description": "Concede Acerto Crítico para ataques realizados dentro deste alcance." 
     },
     "flags.midi-qol.grants.critical.rsak": {
       "name": "Conceder Acerto Crítico (Ataque Mágico à Distância)",
@@ -2624,45 +3312,41 @@
       "name": "Conceder Desvantagem Perícia (Sabedoria)",
       "description": "" 
     },
+    "flags.midi-qol.grants.advantage.tool.all": {
+      "name": "Conceder Vantagem Ferramenta (Todas)",
+      "description": "Testes de ferramentas forçados por este ator terão Vantagem."
+    },
+    "flags.midi-qol.grants.disadvantage.tool.all": {
+      "name": "Conceder Desvantagem Ferramenta (Todas)",
+      "description": "Testes de ferramentas forçados por este ator terão Desvantagem."
+    },
     "flags.midi-qol.grants.fail.advantage.attack.all": {
       "name": "Conceder Falha Vantagem Ataque (Todos)",
       "description": "" 
     },
-    "flags.midi-qol.noAdvantage.attack.all": {
-      "name": "Sem Vantagem (Todos)",
-      "description": "Qualquer ataque contra o alvo não recebe Vantagem"
+    "flags.midi-qol.grants.noAdvantage.attack.all": {
+      "name": "Conceder Sem Vantagem Ataque (Todos)",
+      "description": "Qualquer ataque contra o alvo não terá Vantagem."
     },
     "flags.midi-qol.grants.noAdvantage.attack.heal": {
-      "name": "Não Conceder Vantagem (Cura)",
+      "name": "Conceder Sem Vantagem (Cura)",
       "description": "Qualquer ataque de Cura contra o alvo não recebe Vantagem."
     },
     "flags.midi-qol.grants.noAdvantage.attack.msak": {
-      "name": "Não Conceder Vantagem (Mágico Corpo a Corpo)",
+      "name": "Conceder Sem Vantagem (Mágico Corpo a Corpo)",
       "description": "Qualquer Ataque Mágico Corpo a Corpo contra o alvo não recebe Vantagem."
     },
     "flags.midi-qol.grants.noAdvantage.attack.mwak": {
-      "name": "Não Conceder Vantagem (Armado Corpo a Corpo)",
+      "name": "Conceder Sem Vantagem (Armado Corpo a Corpo)",
       "description": "Qualquer Ataque Armado Corpo a Corpo contra o alvo não recebe Vantagem."
     },
     "flags.midi-qol.grants.noAdvantage.attack.rsak": {
-      "name": "Não Conceder Vantagem (Mágico à Distância)",
+      "name": "Conceder Sem Vantagem (Mágico à Distância)",
       "description": "Qualquer Ataque Mágico à Distância contra o alvo não recebe Vantagem."
     },
     "flags.midi-qol.grants.noAdvantage.attack.rwak": {
-      "name": "Não Conceder Vantagem (Armado à Distância)",
+      "name": "Conceder Sem Vantagem (Armado à Distância)",
       "description": "Qualquer Ataque Armado à Distância contra o alvo não recebe Vantagem."
-    },
-    "flags.midi-qol.grants.noAdvantage.attack.save": {
-      "name": "Não Conceder Vantagem (Salvaguarda)",
-      "description": "Nenhuma Salvaguarda que o ator forçar, terá Vantagem para ser resistida."
-    },
-    "flags.midi-qol.grants.noAdvantage.attack.check": {
-      "name": "Não Conceder Vantagem (Teste)",
-      "description": "Nenhum Teste de Atributo que o ator forçar, terá Vantagem para ser resistido."
-    },
-    "flags.midi-qol.grants.noAdvantage.attack.skill": {
-      "name": "Não Conceder Vantagem (Perícia)",
-      "description": "Nenhum Teste de Perícia que o ator forçar, terá Vantagem para ser resistido."
     },
     "flags.midi-qol.grants.fail.advantage.attack.msak": {
       "name": "Conceder Falha Vantagem Ataque (Mágico Corpo a Corpo)",
@@ -2680,48 +3364,36 @@
       "name": "Conceder Falha Vantagem Ataque (Armado à Distância)",
       "description": "" 
     },
-    "flags.midi-qol.grants.fail.advantage.attack.save": {
-      "name": "Conceder Falha Vantagem (Salvaguarda)",
-      "description": "" 
-    },
-    "flags.midi-qol.grants.fail.advantage.attack.check": {
-      "name": "Conceder Falha Vantagem (Teste)",
-      "description": ""
-    },
-    "flags.midi-qol.grants.fail.advantage.attack.skill": {
-      "name": "Conceder Falha Vantagem (Perícia)",
-      "description": ""
-    },
     "flags.midi-qol.grants.fail.disadvantage.attack.all": {
       "name": "Conceder Falha Desvantagem Ataque (Todos)",
       "description": "" 
     },
     "flags.midi-qol.grants.noDisadvantage.attack.all": {
-      "name": "Conceder Falha Desvantagem Ataque (Todos)",
-      "description": "" 
+      "name": "Conceder Sem Desvantagem Ataque (Todos)",
+      "description": "Qualquer ataque contra o alvo não terá Desvantagem." 
     },
     "flags.midi-qol.grants.fail.disadvantage.attack.msak": {
       "name": "Conceder Falha Desvantagem Ataque (Mágico Corpo a Corpo)",
       "description": "" 
     },
     "flags.midi-qol.grants.noDisadvantage.attack.msak": {
-      "name": "Não Conceder Desvantagem (Mágico Corpo a Corpo)",
+      "name": "Conceder Sem Desvantagem (Mágico Corpo a Corpo)",
       "description": "Qualquer Ataque Mágico Corpo a Corpo contra o alvo não recebe Desvantagem."
     },
     "flags.midi-qol.grants.fail.disadvantage.attack.mwak": {
       "name": "Conceder Falha Desvantagem Ataque (Armado Corpo a Corpo)",
       "description": "" 
     },
-    "flags.midi-qol.grants.NoDisadvantage.attack.mwak": {
-      "name": "Não Conceder Desvantagem (Armado Corpo a Corpo)",
+    "flags.midi-qol.grants.noDisadvantage.attack.mwak": {
+      "name": "Conceder Sem Desvantagem (Armado Corpo a Corpo)",
       "description": "Qualquer Ataque Armado Corpo a Corpo contra o alvo não recebe Desvantagem."
     },
     "flags.midi-qol.grants.fail.disadvantage.attack.rsak": {
       "name": "Conceder Falha Desvantagem Ataque (Mágico à Distância)",
       "description": "" 
     },
-    "flags.midi-qol.grants.NoDisadvantage.attack.rsak": {
-      "name": "Não Conceder Desvantagem (Mágico à Distância)",
+    "flags.midi-qol.grants.noDisadvantage.attack.rsak": {
+      "name": "Conceder Sem Desvantagem (Mágico à Distância)",
       "description": "Qualquer Ataque Mágico à Distância contra o alvo não recebe Desvantagem."
     },
     "flags.midi-qol.grants.fail.disadvantage.attack.rwak": {
@@ -2729,76 +3401,228 @@
       "description": "" 
     },
     "flags.midi-qol.grants.noDisadvantage.attack.rwak": {
-      "name": "Não Conceder Desvantagem (Armado à Distância)",
+      "name": "Conceder Sem Desvantagem (Armado à Distância)",
       "description": "Qualquer Ataque Armado à Distância contra o alvo não recebe Desvantagem."
     },
-    "flags.midi-qol.grants.fail.disadvantage.attack.save": {
-      "name": "Conceder Falha Desvantagem (Salvaguarda)",
-      "description": "" 
+    "flags.midi-qol.grants.noAdvantage.save.all": {
+      "name": "Conceder Sem Vantagem Salvaguarda (Todas)",
+      "description": "Salvaguardas forçadas por este ator não terão Vantagem."
     },
-    "flags.midi-qol.grants.noDisadvantage.attack.save": {
-      "name": "Não Conceder Desvantagem (Salvaguarda)",
-      "description": "Nenhuma Salvaguarda que o ator forçar, terá Desvantagem para ser resistida."
+    "flags.midi-qol.grants.noAdvantage.save.str": {
+      "name": "Conceder Sem Vantagem Salvaguarda (Força)",
+      "description": "Salvaguardas de Força forçadas por este ator não terão Vantagem."
     },
-    "flags.midi-qol.grants.fail.disadvantage.attack.check": {
-      "name": "Conceder Falha Desvantagem (Teste)",
-      "description": ""
+    "flags.midi-qol.grants.noAdvantage.save.dex": {
+      "name": "Conceder Sem Vantagem Salvaguarda (Destreza)",
+      "description": "Salvaguardas de Destreza forçadas por este ator não terão Vantagem."
     },
-    "flags.midi-qol.grants.noDisadvantage.attack.check": {
-      "name": "Não Conceder Desvantagem (Teste)",
-      "description": "Nenhum Teste que o ator forçar, terá Desvantagem para ser resistido."
+    "flags.midi-qol.grants.noAdvantage.save.con": {
+      "name": "Conceder Sem Vantagem Salvaguarda (Constituição)",
+      "description": "Salvaguardas de Constituição forçadas por este ator não terão Vantagem."
     },
-    "flags.midi-qol.grants.fail.disadvantage.attack.skill": {
-      "name": "Conceder Falha Desvantagem (Perícia)",
-      "description": ""
+    "flags.midi-qol.grants.noAdvantage.save.int": {
+      "name": "Conceder Sem Vantagem Salvaguarda (Inteligência)",
+      "description": "Salvaguardas de Inteligência forçadas por este ator não terão Vantagem."
     },
-    "flags.midi-qol.grants.noDisadvantage.attack.skill": {
-      "name": "Não Conceder Desvantagem (Perícia)",
-      "description": "Nenhum Teste de Perícia que o ator forçar, terá Desvantagem para ser resistido."
+    "flags.midi-qol.grants.noAdvantage.save.wis": {
+      "name": "Conceder Sem Vantagem Salvaguarda (Sabedoria)",
+      "description": "Salvaguardas de Sabedoria forçadas por este ator não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.save.cha": {
+      "name": "Conceder Sem Vantagem Salvaguarda (Carisma)",
+      "description": "Salvaguardas de Carisma forçadas por este ator não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.save.all": {
+      "name": "Conceder Sem Desvantagem Salvaguarda (Todas)",
+      "description": "Salvaguardas forçadas por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.save.str": {
+      "name": "Conceder Sem Desvantagem Salvaguarda (Força)",
+      "description": "Salvaguardas de Força forçadas por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.save.dex": {
+      "name": "Conceder Sem Desvantagem Salvaguarda (Destreza)",
+      "description": "Salvaguardas de Destreza forçadas por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.save.con": {
+      "name": "Conceder Sem Desvantagem Salvaguarda (Constituição)",
+      "description": "Salvaguardas de Constituição forçadas por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.save.int": {
+      "name": "Conceder Sem Desvantagem Salvaguarda (Inteligência)",
+      "description": "Salvaguardas de Inteligência forçadas por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.save.wis": {
+      "name": "Conceder Sem Desvantagem Salvaguarda (Sabedoria)",
+      "description": "Salvaguardas de Sabedoria forçadas por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.save.cha": {
+      "name": "Conceder Sem Desvantagem Salvaguarda (Carisma)",
+      "description": "Salvaguardas de Carisma forçadas por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.check.all": {
+      "name": "Conceder Sem Vantagem Teste (Todas)",
+      "description": "Testes forçados por este ator não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.check.str": {
+      "name": "Conceder Sem Vantagem Teste (Força)",
+      "description": "Testes de Força forçados por este ator não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.check.dex": {
+      "name": "Conceder Sem Vantagem Teste (Destreza)",
+      "description": "Testes de Destreza forçados por este ator não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.check.con": {
+      "name": "Conceder Sem Vantagem Teste (Constituição)",
+      "description": "Testes de Constituição forçados por este ator não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.check.int": {
+      "name": "Conceder Sem Vantagem Teste (Inteligência)",
+      "description": "Testes de Inteligência forçados por este ator não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.check.wis": {
+      "name": "Conceder Sem Vantagem Teste (Sabedoria)",
+      "description": "Testes de Sabedoria forçados por este ator não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.check.cha": {
+      "name": "Conceder Sem Vantagem Teste (Carisma)",
+      "description": "Testes de Carisma forçados por este ator não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.check.all": {
+      "name": "Conceder Sem Desvantagem Teste (Todas)",
+      "description": "Testes forçados por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.check.str": {
+      "name": "Conceder Sem Vantagem Teste (Força)",
+      "description": "Testes de Força forçados por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.check.dex": {
+      "name": "Conceder Sem Vantagem Teste (Destreza)",
+      "description": "Testes de Destreza forçados por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.check.con": {
+      "name": "Conceder Sem Vantagem Teste (Constituição)",
+      "description": "Testes de Constituição forçados por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.check.int": {
+      "name": "Conceder Sem Vantagem Teste (Inteligência)",
+      "description": "Testes de Inteligência forçados por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.check.wis": {
+      "name": "Conceder Sem Vantagem Teste (Sabedoria)",
+      "description": "Testes de Sabedoria forçados por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.check.cha": {
+      "name": "Conceder Sem Vantagem Teste (Carisma)",
+      "description": "Testes de Carisma forçados por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.skill.all": {
+      "name": "Conceder Sem Vantagem Perícia (Todas)",
+      "description": "Testes de perícia forçados por este ator não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.skill.str": {
+      "name": "Conceder Sem Vantagem Perícia (Força)",
+      "description": "Testes de perícia forçados por este ator e que sejam baseados em Força, não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.skill.dex": {
+      "name": "Conceder Sem Vantagem Perícia (Destreza)",
+      "description": "Testes de perícia forçados por este ator e que sejam baseados em Destreza, não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.skill.con": {
+      "name": "Conceder Sem Vantagem Perícia (Constituição)",
+      "description": "Testes de perícia forçados por este ator e que sejam baseados em Constituição, não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.skill.int": {
+      "name": "Conceder Sem Vantagem Perícia (Inteligência)",
+      "description": "Testes de perícia forçados por este ator e que sejam baseados em Inteligência, não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.skill.wis": {
+      "name": "Conceder Sem Vantagem Perícia (Sabedoria)",
+      "description": "Testes de perícia forçados por este ator e que sejam baseados em Sabedoria, não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.skill.cha": {
+      "name": "Conceder Sem Vantagem Perícia (Carisma)",
+      "description": "Testes de perícia forçados por este ator e que sejam baseados em Carisma, não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.skill.all": {
+      "name": "Conceder Sem Desvantagem Perícia (Todas)",
+      "description": "Testes de perícia forçados por este ator não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.skill.str": {
+      "name": "Conceder Sem Desvantagem Perícia (Força)",
+      "description": "Testes de perícia forçados por este ator e que sejam baseados em Força, não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.skill.dex": {
+      "name": "Conceder Sem Desvantagem Perícia (Destreza)",
+      "description": "Testes de perícia forçados por este ator e que sejam baseados em Destreza, não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.skill.con": {
+      "name": "Conceder Sem Desvantagem Perícia (Constituição)",
+      "description": "Testes de perícia forçados por este ator e que sejam baseados em Constituição, não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.skill.int": {
+      "name": "Conceder Sem Desvantagem Perícia (Inteligência)",
+      "description": "Testes de perícia forçados por este ator e que sejam baseados em Inteligência, não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.skill.wis": {
+      "name": "Conceder Sem Desvantagem Perícia (Sabedoria)",
+      "description": "Testes de perícia forçados por este ator e que sejam baseados em Sabedoria, não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.skill.cha": {
+      "name": "Conceder Sem Desvantagem Perícia (Carisma)",
+      "description": "Testes de perícia forçados por este ator e que sejam baseados em Carisma, não terão Desvantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.tool.all": {
+      "name": "Conceder Sem Vantagem Ferramenta (Todas)",
+      "description": "Testes de ferramenta forçados por este ator não terão Vantagem."
+    },
+    "flags.midi-qol.grants.noDisadvantage.tool.all": {
+      "name": "Conceder Sem Desvantagem Ferramenta (Todas)",
+      "description": "Testes de ferramenta forçados por este ator não terão Desvantagem"
     },
     "flags.midi-qol.grants.max.damage.all": {
       "name": "Conceder Dano Máximo (Todos)",
-      "description": "" 
+      "description": "Todas as jogadas de dano causarão dano máximo." 
     },
     "flags.midi-qol.grants.max.damage.heal": {
       "name": "Conceder Dano Máximo (Cura)",
-      "description": "" 
+      "description": "Todas as jogadas de Cura irão curar o máximo." 
     },
     "flags.midi-qol.grants.max.damage.msak": {
-      "name": "Conceder Dano Máximo (Ataque Mágico Corpo a Corpo)",
-      "description": "" 
+      "name": "Conceder Dano Máximo (Mágico Corpo a Corpo)",
+      "description": "Todas as jogadas de Ataque Mágico Corpo a Corpo causarão dano máximo." 
     },
     "flags.midi-qol.grants.max.damage.mwak": {
-      "name": "Conceder Dano Máximo (Ataque Armado Corpo a Corpo)",
-      "description": "" 
+      "name": "Conceder Dano Máximo (Armado Corpo a Corpo)",
+      "description": "Todas as jogadas de Ataque Armado Corpo a Corpo causarão dano máximo." 
     },
     "flags.midi-qol.grants.max.damage.rsak": {
-      "name": "Conceder Dano Máximo (Ataque Mágico à Distância)",
-      "description": "" 
+      "name": "Conceder Dano Máximo (Mágico à Distância)",
+      "description": "Todas as jogadas de Ataque Mágico à Distância causarão dano máximo." 
     },
     "flags.midi-qol.grants.max.damage.rwak": {
-      "name": "Conceder Dano Máximo (Ataque Armado à Distância)",
-      "description": "" 
+      "name": "Conceder Dano Máximo (Armado à Distância)",
+      "description": "Todas as jogadas de Ataque Armado à Distância causarão dano máximo." 
     },
     "flags.midi-qol.grants.max.damage.save": {
       "name": "Conceder Dano Máximo (Salvaguarda)",
-      "description": "" 
+      "description": "Todas as atividades de Salvaguarda causarão dano máximo." 
     },
     "flags.midi-qol.grants.min.damage.all": {
       "name": "Conceder Dano Mínimo (Todos)",
-      "description": "" 
+      "description": "Todas as jogadas de dano causarão dano mínimo." 
     },
     "flags.midi-qol.grants.min.damage.heal": {
       "name": "Conceder Dano Mínimo (Cura)",
-      "description": "" 
+      "description": "Todas as jogadas de Cura irão curar o mínimo." 
     },
     "flags.midi-qol.grants.min.damage.msak": {
       "name": "Conceder Dano Mínimo (Ataque Mágico Corpo a Corpo)",
-      "description": "" 
+      "description": "Todas as jogadas de Ataque Mágico Corpo a Corpo causarão dano mínimo." 
     },
     "flags.midi-qol.grants.min.damage.mwak": {
       "name": "Conceder Dano Mínimo (Ataque Armado Corpo a Corpo)",
-      "description": "" 
+      "description": "Todas as jogadas de Ataque Armado Corpo a Corpo causarão dano mínimo." 
     },
     "flags.midi-qol.grants.min.damage.other": {
       "name": "Conceder Dano Mínimo (Outro)",
@@ -2806,15 +3630,15 @@
     },
     "flags.midi-qol.grants.min.damage.rsak": {
       "name": "Conceder Dano Mínimo (Ataque Mágico à Distância)",
-      "description": "" 
+      "description": "Todas as jogadas de Ataque Mágico à Distância causarão dano mínimo." 
     },
     "flags.midi-qol.grants.min.damage.rwak": {
       "name": "Conceder Dano Mínimo (Ataque Armado à Distância)",
-      "description": "" 
+      "description": "Todas as jogadas de Ataque Armado à Distância causarão dano mínimo." 
     },
     "flags.midi-qol.grants.min.damage.save": {
       "name": "Conceder Dano Mínimo (Salvaguarda)",
-      "description": "" 
+      "description": "Todas as atividades de Salvaguarda causarão dano mínimo." 
     },
     "flags.midi-qol.grants.min.damage.util": {
       "name": "Conceder Dano Mínimo (Utilidade)",
@@ -2858,11 +3682,19 @@
     },
     "flags.midi-qol.ignoreNearbyFoes": {
       "name": "Ignorar Inimigos Próximos",
-      "description": "Ignora desvantagem em jogadas de Ataques à Distância por conta de inimigos adjacentes." 
+      "description": "Ignora Desvantagem em jogadas de Ataque à Distância por conta de inimigos adjacentes." 
     },
     "flags.midi-qol.inMotion": {
       "name": "In Motion",
       "description": "" 
+    },
+    "flags.dnd5e.initiativeAdv": {
+      "name": "Vantagem (Iniciativa)",
+      "description": "Vantagem em jogadas de Iniciativa."
+    },
+    "flags.dnd5e.initiativeDisadv": {
+      "name": "Desvantagem (Iniciativa)",
+      "description": "Desvantagem em jogadas de Iniciativa."
     },
     "flags.midi-qol.long.all": {
       "name": "Alcance Longo (Todos)",
@@ -3068,6 +3900,46 @@
       "name": "Perícia Máxima (Todos)",
       "description": "Número máximo jogado no d20 principal para todos os testes de Perícia." 
     },
+    "flags.midi-qol.max.tool.all": {
+      "name": "Ferramenta Máximo (Todas)",
+      "description": "Número máximo jogado no d20 principal para todos os testes de Ferramenta."
+    },
+    "flags.midi-qol.max.tool.alchemist": { "name": "Ferramenta Máximo (Suprimentos de Alquimista)", "description": "Número máximo jogado no d20 principal em testes com Suprimentos de Alquimista." },
+    "flags.midi-qol.max.tool.bagpipes": { "name": "Ferramenta Máximo (Gaita de Foles)", "description": "Número máximo jogado no d20 principal em testes com Gaita de Foles." },
+    "flags.midi-qol.max.tool.brewer": { "name": "Ferramenta Máximo (Suprimentos de Cervejeiro)", "description": "Número máximo jogado no d20 principal em testes com Suprimentos de Cervejeiro." },
+    "flags.midi-qol.max.tool.calligrapher": {"name": "Ferramenta Máximo (Suprimentos de Caligrafia)", "description": "Número máximo jogado no d20 principal em testes com Suprimentos de Caligrafia." },
+    "flags.midi-qol.max.tool.card": { "name": "Ferramenta Máximo (Baralho de Cartas)", "description": "Número máximo jogado no d20 principal em testes com Baralho de Cartas." },
+    "flags.midi-qol.max.tool.carpenter": { "name": "Ferramenta Máximo (Ferramentas de Carpinteiro)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Carpinteiro." },
+    "flags.midi-qol.max.tool.cartographer": { "name": "Ferramenta Máximo (Ferramentas de Cartógrafo)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Cartógrafo." },
+    "flags.midi-qol.max.tool.chess": { "name": "Ferramenta Máximo (Conjunto de Xadrez)", "description": "Número máximo jogado no d20 principal em testes com Conjunto de Xadrez." },
+    "flags.midi-qol.max.tool.cobbler": { "name": "Ferramenta Máximo (Ferramentas de Sapateiro)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Sapateiro." },
+    "flags.midi-qol.max.tool.cook": { "name": "Ferramenta Máximo (Utensílios de Cozinheiro)", "description": "Número máximo jogado no d20 principal em testes com Utensílios de Cozinheiro." },
+    "flags.midi-qol.max.tool.dice": { "name": "Ferramenta Máximo (Conjunto de Dados)", "description": "Número máximo jogado no d20 principal em testes com Conjunto de Dados." },
+    "flags.midi-qol.max.tool.disg": { "name": "Ferramenta Máximo (Kit de Disfarce)", "description": "Número máximo jogado no d20 principal em testes com Kit de Disfarce." },
+    "flags.midi-qol.max.tool.drum": { "name": "Ferramenta Máximo (Tambor)", "description": "Número máximo jogado no d20 principal em testes com Tambor." },
+    "flags.midi-qol.max.tool.dulcimer": { "name": "Ferramenta Máximo (Xilofone)", "description": "Número máximo jogado no d20 principal em testes com Xilofone." },
+    "flags.midi-qol.max.tool.flute": { "name": "Ferramenta Máximo (Flauta)", "description": "Número máximo jogado no d20 principal em testes com Flauta." },
+    "flags.midi-qol.max.tool.forg": { "name": "Ferramenta Máximo (Kit de Falsificação)", "description": "Número máximo jogado no d20 principal em testes com Kit de Falsificação." },
+    "flags.midi-qol.max.tool.glassblower": { "name": "Ferramenta Máximo (Ferramentas de Vidreiro)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Vidreiro." },
+    "flags.midi-qol.max.tool.herb": { "name": "Ferramenta Máximo (Kit de Herbalismo)", "description": "Número máximo jogado no d20 principal em testes com Kit de Herbalismo." },
+    "flags.midi-qol.max.tool.horn": { "name": "Ferramenta Máximo (Trombeta)", "description": "Número máximo jogado no d20 principal em testes com Trombeta." },
+    "flags.midi-qol.max.tool.jeweler": { "name": "Ferramenta Máximo (Ferramentas de Joalheiro)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Joalheiro." },
+    "flags.midi-qol.max.tool.leatherworker": { "name": "Ferramenta Máximo (Ferramentas de Coureiro)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Coureiro." },
+    "flags.midi-qol.max.tool.lute": { "name": "Ferramenta Máximo (Alaúde)", "description": "Número máximo jogado no d20 principal em testes com Alaúde." },
+    "flags.midi-qol.max.tool.lyre": { "name": "Ferramenta Máximo (Lira)", "description": "Número máximo jogado no d20 principal em testes com Lira." },
+    "flags.midi-qol.max.tool.mason": { "name": "Ferramenta Máximo (Ferramentas de Pedreiro)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Pedreiro." },
+    "flags.midi-qol.max.tool.navg": { "name": "Ferramenta Máximo (Ferramentas de Navegação)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Navegação." },
+    "flags.midi-qol.max.tool.painter": { "name": "Ferramenta Máximo (Ferramentas de Pintor)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Pintor." },
+    "flags.midi-qol.max.tool.panflute": { "name": "Ferramenta Máximo (Flauta de Pã)", "description": "Número máximo jogado no d20 principal em testes com Flauta de Pã." },
+    "flags.midi-qol.max.tool.pois": { "name": "Ferramenta Máximo (Kit de Venenos)", "description": "Número máximo jogado no d20 principal em testes com Kit de Venenos." },
+    "flags.midi-qol.max.tool.potter": { "name": "Ferramenta Máximo (Ferramentas de Oleiro)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Oleiro." },
+    "flags.midi-qol.max.tool.shawm": { "name": "Ferramenta Máximo (Oboé)", "description": "Número máximo jogado no d20 principal em testes com Oboé." },
+    "flags.midi-qol.max.tool.smith": { "name": "Ferramenta Máximo (Ferramentas de Ferreiro)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Ferreiro." },
+    "flags.midi-qol.max.tool.thief": { "name": "Ferramenta Máximo (Ferramentas de Ladrão)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Ladrão." },
+    "flags.midi-qol.max.tool.tinker": { "name": "Ferramenta Máximo (Ferramentas de Funileiro)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Funileiro." },
+    "flags.midi-qol.max.tool.viol": { "name": "Ferramenta Máximo (Violino)", "description": "Número máximo jogado no d20 principal em testes com Violino." },
+    "flags.midi-qol.max.tool.weaver": { "name": "Ferramenta Máximo (Ferramentas de Costureiro)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Costureiro." },
+    "flags.midi-qol.max.tool.woodcarver": { "name": "Ferramenta Máximo (Ferramentas de Entalhador)", "description": "Número máximo jogado no d20 principal em testes com Ferramentas de Entalhador." },
     "flags.midi-qol.min.ability.check.all": {
       "name": "Teste Atributo Mínimo (Todos)",
       "description": "Número mínimo jogado no d20 principal para todos os testes." 
@@ -3164,6 +4036,46 @@
       "name": "Dano Mínimo (Utilidade)",
       "description": "" 
     },
+    "flags.midi-qol.min.tool.all": {
+      "name": "Ferramenta Mínimo (Todas)",
+      "description": "Número mínimo jogado no d20 principal para todos os testes de Ferramenta."
+    },
+    "flags.midi-qol.min.tool.alchemist": { "name": "Ferramenta Mínimo (Suprimentos de Alquimista)", "description": "Número mínimo jogado no d20 principal em testes com Suprimentos de Alquimista." },
+    "flags.midi-qol.min.tool.bagpipes": { "name": "Ferramenta Mínimo (Gaita de Foles)", "description": "Número mínimo jogado no d20 principal em testes com Gaita de Foles." },
+    "flags.midi-qol.min.tool.brewer": { "name": "Ferramenta Mínimo (Suprimentos de Cervejeiro)", "description": "Número mínimo jogado no d20 principal em testes com Suprimentos de Cervejeiro." },
+    "flags.midi-qol.min.tool.calligrapher": {"name": "Ferramenta Mínimo (Suprimentos de Caligrafia)", "description": "Número mínimo jogado no d20 principal em testes com Suprimentos de Caligrafia." },
+    "flags.midi-qol.min.tool.card": { "name": "Ferramenta Mínimo (Baralho de Cartas)", "description": "Número mínimo jogado no d20 principal em testes com Baralho de Cartas." },
+    "flags.midi-qol.min.tool.carpenter": { "name": "Ferramenta Mínimo (Ferramentas de Carpinteiro)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Carpinteiro." },
+    "flags.midi-qol.min.tool.cartographer": { "name": "Ferramenta Mínimo (Ferramentas de Cartógrafo)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Cartógrafo." },
+    "flags.midi-qol.min.tool.chess": { "name": "Ferramenta Mínimo (Conjunto de Xadrez)", "description": "Número mínimo jogado no d20 principal em testes com Conjunto de Xadrez." },
+    "flags.midi-qol.min.tool.cobbler": { "name": "Ferramenta Mínimo (Ferramentas de Sapateiro)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Sapateiro." },
+    "flags.midi-qol.min.tool.cook": { "name": "Ferramenta Mínimo (Utensílios de Cozinheiro)", "description": "Número mínimo jogado no d20 principal em testes com Utensílios de Cozinheiro." },
+    "flags.midi-qol.min.tool.dice": { "name": "Ferramenta Mínimo (Conjunto de Dados)", "description": "Número mínimo jogado no d20 principal em testes com Conjunto de Dados." },
+    "flags.midi-qol.min.tool.disg": { "name": "Ferramenta Mínimo (Kit de Disfarce)", "description": "Número mínimo jogado no d20 principal em testes com Kit de Disfarce." },
+    "flags.midi-qol.min.tool.drum": { "name": "Ferramenta Mínimo (Tambor)", "description": "Número mínimo jogado no d20 principal em testes com Tambor." },
+    "flags.midi-qol.min.tool.dulcimer": { "name": "Ferramenta Mínimo (Xilofone)", "description": "Número mínimo jogado no d20 principal em testes com Xilofone." },
+    "flags.midi-qol.min.tool.flute": { "name": "Ferramenta Mínimo (Flauta)", "description": "Número mínimo jogado no d20 principal em testes com Flauta." },
+    "flags.midi-qol.min.tool.forg": { "name": "Ferramenta Mínimo (Kit de Falsificação)", "description": "Número mínimo jogado no d20 principal em testes com Kit de Falsificação." },
+    "flags.midi-qol.min.tool.glassblower": { "name": "Ferramenta Mínimo (Ferramentas de Vidreiro)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Vidreiro." },
+    "flags.midi-qol.min.tool.herb": { "name": "Ferramenta Mínimo (Kit de Herbalismo)", "description": "Número mínimo jogado no d20 principal em testes com Kit de Herbalismo." },
+    "flags.midi-qol.min.tool.horn": { "name": "Ferramenta Mínimo (Trombeta)", "description": "Número mínimo jogado no d20 principal em testes com Trombeta." },
+    "flags.midi-qol.min.tool.jeweler": { "name": "Ferramenta Mínimo (Ferramentas de Joalheiro)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Joalheiro." },
+    "flags.midi-qol.min.tool.leatherworker": { "name": "Ferramenta Mínimo (Ferramentas de Coureiro)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Coureiro." },
+    "flags.midi-qol.min.tool.lute": { "name": "Ferramenta Mínimo (Alaúde)", "description": "Número mínimo jogado no d20 principal em testes com Alaúde." },
+    "flags.midi-qol.min.tool.lyre": { "name": "Ferramenta Mínimo (Lira)", "description": "Número mínimo jogado no d20 principal em testes com Lira." },
+    "flags.midi-qol.min.tool.mason": { "name": "Ferramenta Mínimo (Ferramentas de Pedreiro)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Pedreiro." },
+    "flags.midi-qol.min.tool.navg": { "name": "Ferramenta Mínimo (Ferramentas de Navegação)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Navegação." },
+    "flags.midi-qol.min.tool.painter": { "name": "Ferramenta Mínimo (Ferramentas de Pintor)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Pintor." },
+    "flags.midi-qol.min.tool.panflute": { "name": "Ferramenta Mínimo (Flauta de Pã)", "description": "Número mínimo jogado no d20 principal em testes com Flauta de Pã." },
+    "flags.midi-qol.min.tool.pois": { "name": "Ferramenta Mínimo (Kit de Venenos)", "description": "Número mínimo jogado no d20 principal em testes com Kit de Venenos." },
+    "flags.midi-qol.min.tool.potter": { "name": "Ferramenta Mínimo (Ferramentas de Oleiro)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Oleiro." },
+    "flags.midi-qol.min.tool.shawm": { "name": "Ferramenta Mínimo (Oboé)", "description": "Número mínimo jogado no d20 principal em testes com Oboé." },
+    "flags.midi-qol.min.tool.smith": { "name": "Ferramenta Mínimo (Ferramentas de Ferreiro)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Ferreiro." },
+    "flags.midi-qol.min.tool.thief": { "name": "Ferramenta Mínimo (Ferramentas de Ladrão)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Ladrão." },
+    "flags.midi-qol.min.tool.tinker": { "name": "Ferramenta Mínimo (Ferramentas de Funileiro)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Funileiro." },
+    "flags.midi-qol.min.tool.viol": { "name": "Ferramenta Mínimo (Violino)", "description": "Número mínimo jogado no d20 principal em testes com Violino." },
+    "flags.midi-qol.min.tool.weaver": { "name": "Ferramenta Mínimo (Ferramentas de Costureiro)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Costureiro." },
+    "flags.midi-qol.min.tool.woodcarver": { "name": "Ferramenta Mínimo (Ferramentas de Entalhador)", "description": "Número mínimo jogado no d20 principal em testes com Ferramentas de Entalhador." },
     "flags.midi-qol.neverTarget": {
       "name": "Inalvejável",
       "description": "" 
@@ -3650,40 +4562,224 @@
     },
     "flags.midi-qol.success.attack.all": {
       "name": "Sucesso Ataque (Todos)",
-      "description": "" 
+      "description": "Todas as jogadas de ataque feitas por este ator acertam automaticamente." 
     },
     "flags.midi-qol.success.attack.heal": {
       "name": "Sucesso Ataque (Cura)",
-      "description": "" 
+      "description": "Jogadas de ataque de Cura feitas por este ator acertam automaticamente." 
     },
     "flags.midi-qol.success.attack.msak": {
       "name": "Sucesso Ataque (Mágico Corpo a Corpo)",
-      "description": "" 
+      "description": "Jogadas de Ataque Mágico Corpo a Corpo feitas por este ator acertam automaticamente." 
     },
     "flags.midi-qol.success.attack.mwak": {
       "name": "Sucesso Ataque (Armado Corpo a Corpo)",
-      "description": "" 
+      "description": "Jogadas de Ataque Armado Corpo a Corpo feitas por este ator acertam automaticamente." 
     },
     "flags.midi-qol.success.attack.other": {
       "name": "Sucesso (Outro)",
-      "description": "" 
+      "description": "Outras jogadas de ataque feitas por este ator acertam automaticamente." 
     },
     "flags.midi-qol.success.attack.rsak": {
       "name": "Sucesso Ataque (Mágico à Distância)",
-      "description": "" 
+      "description": "Jogadas de Ataque Mágico à Distância feitas por este ator acertam automaticamente." 
     },
     "flags.midi-qol.success.attack.rwak": {
       "name": "Sucesso Ataque (Armado à Distância)",
-      "description": "" 
+      "description": "Jogadas de Ataque Armado à Distância feitas por este ator acertam automaticamente." 
     },
     "flags.midi-qol.success.attack.save": {
       "name": "Sucesso (Salvaguarda)",
-      "description": "" 
+      "description": "Jogadas de ataque baseadas em Salvaguarda feitas por este ator acertam automaticamente." 
     },
     "flags.midi-qol.success.attack.util": {
       "name": "Sucesso (Utilidade)",
-      "description": "" 
+      "description": "Jogadas de ataque de Utilidade feitas por este ator acertam automaticamente." 
     },
+    "flags.midi-qol.success.all": {
+      "name": "Sucesso (Todos)",
+      "description": "Todas as jogadas de d20 feitas por este ator são automaticamente bem-sucedidas."
+    },
+    "flags.midi-qol.success.ability.all": {
+      "name": "Sucesso Atributo (Todos)",
+      "description": "Todos os testes de atributo e salvaguardas feitas por este ator são automaticamente bem-sucedidas."
+    },
+    "flags.midi-qol.success.ability.check.all": {
+      "name": "Sucesso Teste (Todos)",
+      "description": "Todos os testes de atributo realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.ability.check.cha": {
+      "name": "Sucesso Teste (Carisma)",
+      "description": "Testes de Carisma feitos por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.ability.check.con": {
+      "name": "Sucesso Teste (Constituição)",
+      "description": "Testes de Constituição feitos por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.ability.check.dex": {
+      "name": "Sucesso Teste (Destreza)",
+      "description": "Testes de Destreza feitos por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.ability.check.int": {
+      "name": "Sucesso Teste (Inteligência)",
+      "description": "Testes de Inteligência feitos por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.ability.check.str": {
+      "name": "Sucesso Teste (Força)",
+      "description": "Testes de Força feitos por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.ability.check.wis": {
+      "name": "Sucesso Teste (Sabedoria)",
+      "description": "Testes de Sabedoria feitos por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.ability.save.all": {
+      "name": "Sucesso Salvaguarda (Todos)",
+      "description": "Todas as salvaguardas realizadas por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.ability.save.cha": {
+      "name": "Sucesso Salvaguarda (Carisma)",
+      "description": "Salvaguardas de Carisma feitos por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.ability.save.con": {
+      "name": "Sucesso Salvaguarda (Constituição)",
+      "description": "Salvaguardas de Constituição feitos por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.ability.save.dex": {
+      "name": "Sucesso Salvaguarda (Destreza)",
+      "description": "Salvaguardas de Destreza feitos por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.ability.save.int": {
+      "name": "Sucesso Salvaguarda (Inteligência)",
+      "description": "Salvaguardas de Inteligência feitos por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.ability.save.str": {
+      "name": "Sucesso Salvaguarda (Força)",
+      "description": "Salvaguardas de Força feitos por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.ability.save.wis": {
+      "name": "Sucesso Salvaguarda (Sabedoria)",
+      "description": "Salvaguardas de Sabedoria feitos por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.all": {
+      "name": "Sucesso Perícia (Todas)",
+      "description": "Todos os testes de perícia realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.acr": {
+      "name": "Sucesso Perícia (Acrobacia)",
+      "description": "Testes de Acrobacia realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.ani": {
+      "name": "Sucesso Perícia (Lidar com Animais)",
+      "description": "Testes de Lidar com Animais realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.arc": {
+      "name": "Sucesso Perícia (Arcanismo)",
+      "description": "Testes de Arcanismo realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.ath": {
+      "name": "Sucesso Perícia (Atletismo)",
+      "description": "Testes de Atletismo realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.dec": {
+      "name": "Sucesso Perícia (Enganação)",
+      "description": "Testes de Enganação realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.his": {
+      "name": "Sucesso Perícia (História)",
+      "description": "Testes de História realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.ins": {
+      "name": "Sucesso Perícia (Intuição)",
+      "description": "Testes de Intuição realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.inv": {
+      "name": "Sucesso Perícia (Investigação)",
+      "description": "Testes de Investigação realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.itm": {
+      "name": "Sucesso Perícia (Intimidação)",
+      "description": "Testes de Intimidação realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.med": {
+      "name": "Sucesso Perícia (Medicina)",
+      "description": "Testes de Medicina realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.nat": {
+      "name": "Sucesso Perícia (Natureza)",
+      "description": "Testes de Natureza realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.per": {
+      "name": "Sucesso Perícia (Persuação)",
+      "description": "Testes de Persuasão realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.prc": {
+      "name": "Sucesso Perícia (Percepção)",
+      "description": "Testes de Percepção realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.prf": {
+      "name": "Sucesso Perícia (Performance)",
+      "description": "Testes de Performance realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.rel": {
+      "name": "Sucesso Perícia (Religião)",
+      "description": "Testes de Religião realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.slt": {
+      "name": "Sucesso Perícia (Prestidigitação)",
+      "description": "Testes de Prestidigitação realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.ste": {
+      "name": "Sucesso Perícia (Furtividade)",
+      "description": "Testes de Furtividade realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.skill.sur": {
+      "name": "Sucesso Perícia (Sobrevivência)",
+      "description": "Testes de Sobrevivência realizados por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.deathSave": {
+      "name": "Sucesso (Salvaguarda Contra Morto)",
+      "description": "Salvaguardas Contra Morte realizadas por este ator são automaticamente bem-sucedidas."
+    },
+    "flags.midi-qol.success.tool.all": {
+      "name": "Sucesso Ferramenta (Todas)",
+      "description": "Todos os testes de ferramenta feitos por este ator são automaticamente bem-sucedidos."
+    },
+    "flags.midi-qol.success.tool.alchemist": { "name": "Sucesso Ferramenta (Suprimentos de Alquimista)", "description": "Testes com Suprimentos de Alquimista feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.bagpipes": { "name": "Sucesso Ferramenta (Gaita de Foles)", "description": "Testes com Gaita de Foles feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.brewer": { "name": "Sucesso Ferramenta (Suprimentos de Cervejeiro)", "description": "Testes com Suprimentos de Cervejeiro feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.calligrapher": {"name": "Sucesso Ferramenta (Suprimentos de Caligrafia)", "description": "Testes com Suprimentos de Caligrafia feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.card": { "name": "Sucesso Ferramenta (Baralho de Cartas)", "description": "Testes com Baralho de Cartas feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.carpenter": { "name": "Sucesso Ferramenta (Ferramentas de Carpinteiro)", "description": "Testes com Ferramentas de Carpinteiro feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.cartographer": { "name": "Sucesso Ferramenta (Ferramentas de Cartógrafo)", "description": "Testes com Ferramentas de Cartógrafo feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.chess": { "name": "Sucesso Ferramenta (Conjunto de Xadrez)", "description": "Testes com Conjunto de Xadrez feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.cobbler": { "name": "Sucesso Ferramenta (Ferramentas de Sapateiro)", "description": "Testes com Ferramentas de Sapateiro feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.cook": { "name": "Sucesso Ferramenta (Utensílios de Cozinheiro)", "description": "Testes com Utensílios de Cozinheiro feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.dice": { "name": "Sucesso Ferramenta (Conjunto de Dados)", "description": "Testes com Conjunto de Dados feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.disg": { "name": "Sucesso Ferramenta (Kit de Disfarce)", "description": "Testes com Kit de Disfarce feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.drum": { "name": "Sucesso Ferramenta (Tambor)", "description": "Testes com Tambor feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.dulcimer": { "name": "Sucesso Ferramenta (Xilofone)", "description": "Testes com Xilofone feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.flute": { "name": "Sucesso Ferramenta (Flauta)", "description": "Testes com Flauta feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.forg": { "name": "Sucesso Ferramenta (Kit de Falsificação)", "description": "Testes com Kit de Falsificação feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.glassblower": { "name": "Sucesso Ferramenta (Ferramentas de Vidreiro)", "description": "Testes com Ferramentas de Vidreiro feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.herb": { "name": "Sucesso Ferramenta (Kit de Herbalismo)", "description": "Testes com Kit de Herbalismo feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.horn": { "name": "Sucesso Ferramenta (Trombeta)", "description": "Testes com Trombeta feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.jeweler": { "name": "Sucesso Ferramenta (Ferramentas de Joalheiro)", "description": "Testes com Ferramentas de Joalheiro feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.leatherworker": { "name": "Sucesso Ferramenta (Ferramentas de Coureiro)", "description": "Testes com Ferramentas de Coureiro feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.lute": { "name": "Sucesso Ferramenta (Alaúde)", "description": "Testes com Alaúde feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.lyre": { "name": "Sucesso Ferramenta (Lira)", "description": "Testes com Lira feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.mason": { "name": "Sucesso Ferramenta (Ferramentas de Pedreiro)", "description": "Testes com Ferramentas de Pedreiro feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.navg": { "name": "Sucesso Ferramenta (Ferramentas de Navegação)", "description": "Testes com Ferramentas de Navegação feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.painter": { "name": "Sucesso Ferramenta (Ferramentas de Pintor)", "description": "Testes com Ferramentas de Pintor feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.panflute": { "name": "Sucesso Ferramenta (Flauta de Pã)", "description": "Testes com Flauta de Pã feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.pois": { "name": "Sucesso Ferramenta (Kit de Venenos)", "description": "Testes com Kit de Venenos feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.potter": { "name": "Sucesso Ferramenta (Ferramentas de Oleiro)", "description": "Testes com Ferramentas de Oleiro feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.shawm": { "name": "Sucesso Ferramenta (Oboé)", "description": "Testes com Oboé feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.smith": { "name": "Sucesso Ferramenta (Ferramentas de Ferreiro)", "description": "Testes com Ferramentas de Ferreiro feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.thief": { "name": "Sucesso Ferramenta (Ferramentas de Ladrão)", "description": "Testes com Ferramentas de Ladrão feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.tinker": { "name": "Sucesso Ferramenta (Ferramentas de Funileiro)", "description": "Testes com Ferramentas de Funileiro feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.viol": { "name": "Sucesso Ferramenta (Violino)", "description": "Testes com Violino feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.weaver": { "name": "Sucesso Ferramenta (Ferramentas de Costureiro)", "description": "Testes com Ferramentas de Costureiro feitos por este ator são automaticamente bem-sucedidos." },
+    "flags.midi-qol.success.tool.woodcarver": { "name": "Sucesso Ferramenta (Ferramentas de Entalhador)", "description": "Testes com Ferramentas de Entalhador feitos por este ator são automaticamente bem-sucedidos." },
     "flags.midi-qol.superSaver.all": {
       "name": "Super Salvaguarda (Todas)",
       "description": "Não sofre dano ao ser bem-sucedido em qualquer salvaguarda e sofre apenas metade em caso de falha." 

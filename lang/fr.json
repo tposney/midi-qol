@@ -1,6 +1,4 @@
 {
-  "midi-qol.ItemDeleteCheck.Name": "Confirmation de suppression d'objet",
-  "midi-qol.ItemDeleteCheck.Hint": "Créé une demande de confirmation lors d'une tentative de suppression d'objet (sort/don..) d'une feuille de personnage",
   "midi-qol.DamageImmunities.Name": "Appliquer les immunités aux dégâts",
   "midi-qol.DamageImmunities.Hint": "Applique les immunités/vulnérabilités/résistances lorsque des dégâts sont infligés automatiquement ou via le bouton fournit par midi-qol. Tous les types de dégâts sont vérifiés.",
   "midi-qol.WorldKeyMappings.Name": "Raccourci entre client",
@@ -153,8 +151,6 @@
     "explodeNPC": "Exploser des dés critiques des PNJ",
     "maxDamageExplode": "Max dégâts de base et exploser les dés critiques"
   },
-  "midi-qol.MergeCard.Name": "Fusionner les jets en une seule carte",
-  "midi-qol.MergeCard.Hint": "Fusionner l'attaque, les coups, les dégâts et les sauvegardes sur une seule carte de tchat",
   "midi-qol.MergeCardCondensed.Name": "Condenser les jets d'attaque/dégâts",
   "midi-qol.MergeCardCondensed.Hint": "Conservez un peu d'espace dans le journal de bord en réduisant la taille des jets d'attaque et de dégâts. ",
   "midi-qol.ConfigTitle": "Midi-Qol Configuration",

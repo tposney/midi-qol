@@ -12,7 +12,7 @@ export class ItemOnUseMacrosConfig extends HandlebarsApplicationMixin(DocumentSh
     form: {
       id: "item-on-use-config",
       classes: ["midi-qol", "item-on-use-sheet", "standard-form"],
-      template: "modules/midi-qol/templates/itemOnUseMacrosConfig.hbs"
+      template: "modules/midi-qol/templates/apps/ItemOnUseMacrosConfig/itemOnUseMacrosConfig.hbs"
     }
   };
 

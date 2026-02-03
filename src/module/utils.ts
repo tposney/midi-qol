@@ -1,7 +1,7 @@
 import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC } from "./settings.js";
 import { log } from "../midi-qol.js";
-import { AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
+import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { concentrationCheckItemDisplayName, midiFlagTypes } from "./Hooks.js";
@@ -351,6 +351,7 @@ export async function applyTokenDamage(
     autoApplyDamage: configSettings.autoApplyDamage,
     sender: game.user?.name,
     actorId: workflow?.actor?.id,
+    actorUuid: workflow?.actor?.uuid,
     charName: workflow?.token?.name ?? workflow?.actor?.name ?? game.user?.name,
     damageList: prepareDamageListToJSON(Object.values(allDamages)),
     chatCardUuid: workflow?.itemCardUuid,
@@ -526,6 +527,14 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       let calcDamageOptions: CalcDamageOptions = {
         invertHealing: true,
         multiplier: challengeModeScale,
+        // Always initialize ignore to ensure dnd5e calculateDamage processes traits correctly
+        ignore: {
+          immunity: new Set<string>(),
+          resistance: new Set<string>(),
+          vulnerability: new Set<string>(),
+          modification: new Set<string>(),
+          absorption: new Set<string>(),
+        },
         midi: {
           challengeModeAR,
           applyDamage: true,
@@ -627,7 +636,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       const preDamageDetails = damagePerActor[actor.uuid];
       const damageDetails = setupDamageDetails(preDamageDetails, selector, actor);
       if (damageDetails) {
-        await workflow?.callDamageHooks(damageDetails, token);
+        await workflow?.callDamageHooksAndMacros(damageDetails, token);
         damageDetails.damageDetails[selector] = damageDetails.damageDetail;
         workflow.damageList.push(damageDetails);
       }
@@ -636,6 +645,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
       actorId: workflow.actor.id,
+      actorUuid: workflow.actor.uuid,
       charName: workflow.token?.name ?? workflow.actor.name ?? game.user?.name,
       damageList: prepareDamageListToJSON(workflow.damageList),
       chatCardUuid: workflow.itemCardUuid,
@@ -1080,6 +1090,7 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
 export interface CountAction {
   count: number;
   mode: "remove" | "permanent";
+  consecutive: boolean;  // If true, counter resets on opposite result
   effectSpec?: string;  // If specified, this effect/status is added to the actor when count is reached
 }
 
@@ -1270,7 +1281,7 @@ export interface OvertimeDetails {
 }
 
 /** Parse a boolean from overtime spec string */
-function parseBool(value: string | undefined, defaultValue: boolean): boolean {
+export function parseBool(value: string | undefined, defaultValue: boolean): boolean {
   if (value === undefined) return defaultValue;
   return value === "true" || value === "1";
 }
@@ -1281,12 +1292,23 @@ function parseBool(value: string | undefined, defaultValue: boolean): boolean {
  * @param defaultMode - Default mode if no action specified ("remove" for saves, "permanent" for fails)
  */
 export function parseCountAction(value: string, defaultMode: "remove" | "permanent"): CountAction {
-  // Format: n[-+]effectSpec where - or + is required
+  // Format: n[c][-+]effectSpec where - or + is required, c = consecutive
   // - means remove, + means permanent
+  // c means counter resets on opposite result
   // effectSpec (if present) is always added to the actor when count is reached
-  // Examples: 2-, 2+, 2-petrified, 2+prone
-  const minusIndex = value.indexOf("-");
-  const plusIndex = value.indexOf("+");
+  // Examples: 2-, 2+, 2c-, 3c+prone, 2-petrified
+
+  // Strip consecutive flag if present (letter 'c' immediately after digits)
+  let consecutive = false;
+  let working = value;
+  const digitEnd = working.search(/\D/);
+  if (digitEnd > 0 && working[digitEnd] === "c") {
+    consecutive = true;
+    working = working.substring(0, digitEnd) + working.substring(digitEnd + 1);
+  }
+
+  const minusIndex = working.indexOf("-");
+  const plusIndex = working.indexOf("+");
 
   // Determine which action indicator comes first (after digits)
   let actionIndex = -1;
@@ -1301,13 +1323,13 @@ export function parseCountAction(value: string, defaultMode: "remove" | "permane
 
   // If no action indicator found, use default mode
   if (actionIndex === -1) {
-    return { count: Number(value), mode: defaultMode };
+    return { count: Number(working), mode: defaultMode, consecutive };
   }
 
-  const count = Number(value.substring(0, actionIndex));
-  const effectSpec = value.substring(actionIndex + 1) || undefined; // Everything after - or +
+  const count = Number(working.substring(0, actionIndex));
+  const effectSpec = working.substring(actionIndex + 1) || undefined; // Everything after - or +
 
-  return { count, mode, effectSpec };
+  return { count, mode, effectSpec, consecutive };
 }
 
 /**
@@ -1315,7 +1337,7 @@ export function parseCountAction(value: string, defaultMode: "remove" | "permane
  * Format: [-+]effectSpec (e.g., "-", "+", "-petrified", "+prone")
  */
 export function countActionToString(action: CountAction): string {
-  const base = action.mode === "remove" ? "-" : "+";
+  const base = (action.consecutive ? "c" : "") + (action.mode === "remove" ? "-" : "+");
   return action.effectSpec ? `${base}${action.effectSpec}` : base;
 }
 
@@ -1617,7 +1639,6 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
   }
 
   // Parse count actions
-  // Support both saveRemove (legacy) and saveCount (new) parameters
   let saveCount: CountAction | undefined;
   let failCount: CountAction | undefined;
 
@@ -1625,14 +1646,15 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
   if (raw.saveCount !== undefined) {
     saveCount = parseCountAction(raw.saveCount, "remove");
   }
-  // Handle saveRemove parameter (legacy, e.g., saveRemove=true, saveRemove=false, saveRemove=2:-)
+  // Handle saveRemove parameter (deprecated — use saveCount instead)
   else if (raw.saveRemove !== undefined) {
-    // saveRemove=true is equivalent to saveCount=1:- (remove after 1 save)
+    foundry.utils.logCompatibilityWarning(`midi-qol | parseOvertimeDetails | saveRemove is deprecated, use saveCount instead (saveRemove=${raw.saveRemove})`,
+      { since: "midi-qol 13.0.43", until: "midi-qol 13.1.0" });
     if (raw.saveRemove === "true" || raw.saveRemove === "1") {
-      saveCount = { count: 1, mode: "remove" };
+      saveCount = { count: 1, mode: "remove", consecutive: false };
     } else if (raw.saveRemove === "false" || raw.saveRemove === "0") {
       // saveRemove=false means don't remove on save - use "permanent" mode with count 0
-      saveCount = { count: 0, mode: "permanent" };
+      saveCount = { count: 0, mode: "permanent", consecutive: false };
     } else {
       // Otherwise parse as count action (e.g., "2", "3:-", etc.)
       saveCount = parseCountAction(raw.saveRemove, "remove");
@@ -1640,15 +1662,17 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
   }
   // Default: remove on first save if no damage on save (only when neither saveCount nor saveRemove specified)
   if (saveCount === undefined && raw.saveDamage === "nodamage" && saveDC > -1) {
-    saveCount = { count: 1, mode: "remove" };
+    saveCount = { count: 1, mode: "remove", consecutive: false };
   }
 
   // Handle failCount parameter
   if (raw.failCount !== undefined) {
     failCount = parseCountAction(raw.failCount, "permanent");
   }
-  // Handle failRemove parameter (legacy)
+  // Handle failRemove parameter (deprecated — use failCount instead)
   else if (raw.failRemove !== undefined) {
+    foundry.utils.logCompatibilityWarning(`midi-qol | parseOvertimeDetails | failRemove is deprecated, use failCount instead (failRemove=${raw.failRemove})`,
+      { since: "midi-qol 13.0.43", until: "midi-qol 13.1.0" });
     failCount = parseCountAction(raw.failRemove, "permanent");
   }
 
@@ -1676,11 +1700,67 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
     itemName: raw.itemName,
     chatFlavor: raw.chatFlavor ?? "",
     rollMode: raw.rollMode,
-    fastForwardDamage: parseBool(raw.fastForwardDamage, false),
-    fastForwardAttack: parseBool(raw.fastForwardAttack, false),
-    autoRollAttack: parseBool(raw.autoRollAttack, false),
-    autoRollDamage: parseBool(raw.autoRollDamage, false),
+    fastForwardDamage: parseBool(raw.fastForwardDamage, true),
+    fastForwardAttack: parseBool(raw.fastForwardAttack, true),
+    autoRollAttack: parseBool(raw.autoRollAttack, true),
+    autoRollDamage: parseBool(raw.autoRollDamage, true),
   };
+}
+
+/**
+ * Serialize overtime form data back to a comma-separated OverTime spec string.
+ * Only emits fields that differ from defaults, keeping the string concise.
+ */
+export function serializeOvertimeDetails(data: Record<string, any>): string {
+  const parts: string[] = [];
+
+  if (data.turn && data.turn !== "start") parts.push(`turn=${data.turn}`);
+  else parts.push(`turn=start`);
+
+  if (data.label) parts.push(`label=${data.label}`);
+
+  // Roll configuration
+  if (data.rollType && data.rollType !== "save") parts.push(`rollType=${data.rollType}`);
+  if (data.saveAbility) parts.push(`saveAbility=${data.saveAbility}`);
+  if (data.saveDC !== undefined && data.saveDC !== "" && data.saveDC !== "-1") parts.push(`saveDC=${data.saveDC}`);
+  if (data.saveMagic) parts.push(`saveMagic=true`);
+
+  // Damage
+  if (data.damageRoll) parts.push(`damageRoll=${data.damageRoll}`);
+  if (data.damageType) parts.push(`damageType=${data.damageType}`);
+  if (data.damageBeforeSave) parts.push(`damageBeforeSave=true`);
+  if (data.saveDamage && data.saveDamage !== "nodamage") parts.push(`saveDamage=${data.saveDamage}`);
+
+  // Count thresholds
+  if (data.saveCountEnabled && data.saveCountNum) {
+    const countStr = `${data.saveCountNum}${data.saveCountConsecutive ? "c" : ""}${data.saveCountMode === "remove" ? "-" : "+"}${data.saveCountEffectSpec || ""}`;
+    parts.push(`saveCount=${countStr}`);
+  }
+  if (data.failCountEnabled && data.failCountNum) {
+    const countStr = `${data.failCountNum}${data.failCountConsecutive ? "c" : ""}${data.failCountMode === "remove" ? "-" : "+"}${data.failCountEffectSpec || ""}`;
+    parts.push(`failCount=${countStr}`);
+  }
+
+  // Action save
+  if (data.actionSave && data.actionSave !== "none") parts.push(`actionSave=${data.actionSave}`);
+
+  // Conditions
+  if (data.applyCondition) parts.push(`applyCondition=${data.applyCondition}`);
+  if (data.removeCondition) parts.push(`removeCondition=${data.removeCondition}`);
+
+  // Advanced options — only emit non-defaults
+  if (data.macro) parts.push(`macro=${data.macro}`);
+  if (data.itemName) parts.push(`itemName=${data.itemName}`);
+  if (data.chatFlavor) parts.push(`chatFlavor=${data.chatFlavor}`);
+  if (data.rollMode && data.rollMode !== "default") parts.push(`rollMode=${data.rollMode}`);
+  if (!data.fastForwardDamage) parts.push(`fastForwardDamage=false`);
+  if (!data.fastForwardAttack) parts.push(`fastForwardAttack=false`);
+  if (!data.autoRollAttack) parts.push(`autoRollAttack=false`);
+  if (!data.autoRollDamage) parts.push(`autoRollDamage=false`);
+  if (data.allowIncapacitated) parts.push(`allowIncapacitated=true`);
+  if (data.killAnim) parts.push(`killAnim=true`);
+
+  return parts.join(", ");
 }
 
 /**
@@ -1799,7 +1879,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
     }
     if ((endTurn && changeTurnEnd) || (startTurn && changeTurnStart)) {
       // Extract values from typed details object (already parsed)
-      const { damageRoll, damageType, damageBeforeSave, macro: macroToCall, allowIncapacitated, killAnim, saveCount, failCount } = details;
+      const { damageRoll, damageType, damageBeforeSave, macro: macroToCall, allowIncapacitated, killAnim, saveCount, failCount, fastForwardAttack, fastForwardDamage, autoRollAttack, autoRollDamage } = details;
 
       if (debugEnabled > 0) warn(`gmOverTimeEffect | Overtime provided data is `, details);
       if (debugEnabled > 0) warn(`gmOverTimeEffect | OverTime label=${label} startTurn=${startTurn} endTurn=${endTurn} damageBeforeSave=${damageBeforeSave} saveDC=${saveDC} saveAbility=${saveAbility} damageRoll=${damageRoll} damageType=${damageType}`);
@@ -1854,8 +1934,10 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
           uuid: effect.uuid,
           saveCount: saveCount?.count,
           saveCountAction: saveCount ? countActionToString(saveCount) : undefined,
+          saveConsecutive: saveCount?.consecutive ?? false,
           failCount: failCount?.count,
           failCountAction: failCount ? countActionToString(failCount) : undefined,
+          failConsecutive: failCount?.consecutive ?? false,
         };
       }
 
@@ -1873,7 +1955,8 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
         }
         if (remove) {
           // @ts-expect-error no dnd5e-types
-          overTimeEffectsToDelete[ownedItem.system.activities.contents[0].uuid] = { uuid: effect.uuid }
+          const otKey = ownedItem.system.activities.contents[0].uuid;
+          overTimeEffectsToDelete[otKey] = { uuid: effect.uuid }
         }
       }
       try {
@@ -1881,10 +1964,10 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
           createWorkflow: true,
           configureDialog: false,
           saveDC,
-          fastForwardAttack: true,
-          fastForwardDamage: true,
-          autoRollAttack: true,
-          autoRollDamage: "onHit",
+          fastForwardAttack,
+          fastForwardDamage,
+          autoRollAttack,
+          autoRollDamage: autoRollDamage ? "onHit" : "none",
           checkGMStatus: true,
           targetsToUse: new Set([theTargetToken]),
           // targetUuids: [theTargetUuid],
@@ -2173,7 +2256,6 @@ export type MidiOptions = {
     checkReaction?: boolean;
     none?: boolean;
   };
-  resetAdvantage?: boolean;
   rollAs?: Actor.Implementation | null;
   rollOptions?: WorkflowRollOptions;
   saveItem?: Item.Implementation;
@@ -3070,18 +3152,19 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
     return 0;
   }
 }
-export function isAutoFastAttack(workflow?: Workflow): boolean {
-  if (workflow?.rollOptions?.fastForwardAttack !== undefined) return workflow.rollOptions.fastForwardAttack
-  if (workflow?.workflowOptions?.autoFastAttack !== undefined) return workflow.workflowOptions.autoFastAttack;
-  if (workflow?.workflowType === "DummyWorkflow") return !!workflow.rollOptions.fastForward;
-  return game.user?.isGM ? configSettings.gmAutoFastForwardAttack : ["all", "attack"].includes(configSettings.autoFastForward);
-}
+export type FastForwardRollType = "attack" | "damage" | "check" | "save" | "skill" | "tool";
 
-export function isAutoFastDamage(workflow?: Workflow): boolean {
-  if (workflow?.rollOptions?.fastForwardDamage !== undefined) return workflow.rollOptions.fastForwardDamage;
-  if (workflow?.workflowOptions?.fastForwardDamage !== undefined) return workflow.workflowOptions.fastForwardDamage;
-  if (workflow?.workflowType === "DummyWorkflow") return !!workflow.rollOptions.fastForwardDamage;
-  return game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward)
+export function isAutoFastForward(rollType: FastForwardRollType, { workflow, user }: { workflow?: Workflow, user?: User } = {}): boolean {
+  if (rollType === "attack") {
+    if (workflow?.rollOptions?.fastForwardAttack !== undefined) return workflow.rollOptions.fastForwardAttack;
+    if (workflow?.workflowOptions?.autoFastAttack !== undefined) return workflow.workflowOptions.autoFastAttack;
+    if (workflow?.workflowType === "DummyWorkflow") return !!workflow.rollOptions.fastForward;
+  } else if (rollType === "damage") {
+    if (workflow?.rollOptions?.fastForwardDamage !== undefined) return workflow.rollOptions.fastForwardDamage;
+    if (workflow?.workflowOptions?.fastForwardDamage !== undefined) return workflow.workflowOptions.fastForwardDamage;
+    if (workflow?.workflowType === "DummyWorkflow") return !!workflow.rollOptions.fastForwardDamage;
+  }
+  return (user ?? game.user)?.isGM ? configSettings.gmAutoFastForward.includes(rollType) : configSettings.autoFastForward.includes(rollType);
 }
 
 export function autoConsumeResource(workflow?: Workflow): string {
@@ -4001,6 +4084,22 @@ export async function bonusDialog(
         //@ts-expect-error
         newRoll._total = -1;
         break;
+      case "critical":
+        foundry.utils.setProperty(newRoll, "options", foundry.utils.duplicate(roll!.options));
+        //@ts-expect-error
+        if (newRoll.options.rollType === "damage") {
+          foundry.utils.setProperty(newRoll, "options.isCritical", true);
+          foundry.utils.setProperty(newRoll, "options.configured", false);
+          newRoll = await newRoll.reroll();
+        } else {
+          const term = newRoll.terms[0] as foundry.dice.terms.Die;
+          const result = term?.results?.find(r => r.active)?.result ?? newRoll.total;
+          foundry.utils.setProperty(term, "options.critical", result);
+          foundry.utils.setProperty(term, "options.criticalSuccess", result);
+          foundry.utils.setProperty(newRoll, "options.criticalSuccess", result);
+        }
+        if (this instanceof Workflow) this.tracker.critical.force(`${button.key}.${flagSelector}`, "Optional bonus");
+        break;
       default:
         if (typeof button.value === "string" && button.value.startsWith("replace ")) {
           const rollParts = button.value.split(" ");
@@ -4507,7 +4606,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
             const spell = activity.cachedSpell;
             // Get the first usable activity - this is what spell.use() will use
             const spellActivity = spell.system?.activities?.filter((a: any) => a.canUse)?.[0];
-            reactionCondition = `(${reactionCondition ?? "true"}) && (${spellActivity.reactionCondition ?? "true"})`;
+            reactionCondition = `(${reactionCondition || "true"}) && (${spellActivity.reactionCondition || "true"})`;
           }
           // @ts-expect-error no dnd5e-types
           if (item.type === "spell") {
@@ -5087,18 +5186,23 @@ async function asyncMySafeEval(expression: string, sandbox: AnyMutableObject, on
       nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid,
       combat: game.combat,
       evalRaceOrType: raceOrType,
-      evalTypeOrRace: typeOrRace
+      evalTypeOrRace: typeOrRace,
+      error: console.error,
+      warn: console.warn,
+      log: console.log
     });
     const sandboxProxy = new Proxy(sandbox, {
       has: () => true, // Include everything
       get: (t, k) => k === Symbol.unscopables ? undefined : (t[k as string] ?? Math[k]),
-      set: () => { error("midi-qol | asnycMySafeEval | You may not set properties of the sandbox environment"); return false } // No-op
+      set: () => { error("midi-qol | asyncMySafeEval | You may not set properties of the sandbox environment"); return false } // No-op
     });
+    if (MidiQOL.logEvaluationData) console.log('MidiQOL asyncMySafeEval', { expression, sandboxProxy });
     result = await evl.call(null, sandboxProxy);
+    if (MidiQOL.logEvaluationData) console.log('MidiQOL asyncMySafeEval', { result });
   } catch (err) {
     // @ts-expect-error sandbox confuses
     const message = `midi-qol | asyncMySafeEval | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
-    console.warn(message, err)
+    console.warn(message, err);
     TroubleShooter.recordError(err, message);
     result = onErrorReturn;
   }
@@ -5141,10 +5245,12 @@ function mySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn
       get: (t, k) => k === Symbol.unscopables ? undefined : (t[k as string] ?? Math[k]),
       set: () => { error("mySafeEval | You may not set properties of the sandbox environment"); return false } // No-op
     });
+    if (MidiQOL.logEvaluationData) console.log('MidiQOL mySafeEval', { expression, sandboxProxy });
     result = evl(sandboxProxy);
+    if (MidiQOL.logEvaluationData) console.log('MidiQOL mySafeEval', { result });
   } catch (err) {
     // @ts-expect-error sandbox confuses
-    const message = `midi-qol | asyncMySafeEval | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
+    const message = `midi-qol | mySafeEval | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
     console.warn(message, err)
     TroubleShooter.recordError(err, message);
     result = onErrorReturn;
@@ -5317,6 +5423,7 @@ export function createConditionData(data: {
   extraData?: any,
   activity?: Activity,
   tokenUuid?: string,
+  targetUuid?: string,
   options?: any | undefined,
   token?: TokenOrDocument // pretty sure this never actually gets passed but eh
 }) {
@@ -5352,7 +5459,7 @@ export function createConditionData(data: {
           get system() { return theTargetActor?.system },
           ...theTargetActor?.getRollData()
         };
-        rollData.targetUuid = theTarget.document.uuid
+        rollData.targetUuid = data.targetUuid ?? theTarget.document.uuid
         rollData.targetId = theTarget.id;
         rollData.targetActorUuid = theTargetActor?.uuid;
         rollData.targetActorId = theTargetActor?.id;
@@ -5922,6 +6029,92 @@ function hookCall(entry: Hooks.HookedFunction, args: any[]) {
   }
 }
 
+/**
+ * Localization map for attribution types
+ */
+const attributionTypeLocalization: Record<string, string> = {
+  "ADV": "midi-qol.AttribADV",
+  "DIS": "midi-qol.AttribDIS",
+  "NOADV": "midi-qol.AttribNOADV",
+  "NODIS": "midi-qol.AttribNODIS",
+  "CRIT": "midi-qol.AttribCRIT",
+  "NOCRIT": "midi-qol.AttribNOCRIT",
+  "FUMBLE": "midi-qol.AttribFUMBLE",
+  "NOFUMBLE": "midi-qol.AttribNOFUMBLE",
+  "SUCCESS": "midi-qol.AttribSUCCESS",
+  "FAIL": "midi-qol.AttribFAIL",
+  "MIN": "midi-qol.AttribMIN",
+  "MAX": "midi-qol.AttribMAX"
+};
+
+/**
+ * Convert an AttributionMap to an array of AttributionEntry for display.
+ * @param map - The attribution map (type -> source -> displayName)
+ * @returns Array of AttributionEntry objects
+ */
+export function attributionMapToArray(map: AttributionMap): AttributionEntry[] {
+  const entries: AttributionEntry[] = [];
+  for (const [type, sources] of Object.entries(map)) {
+    if (sources) {
+      for (const [source, displayName] of Object.entries(sources)) {
+        entries.push({ type: type as AttributionType, source, displayName });
+      }
+    }
+  }
+  return entries;
+}
+
+/**
+ * Add structured attribution to a roll for tooltip display.
+ * @param roll - The roll to add attribution to
+ * @param attributions - AttributionMap (type -> source -> displayName)
+ */
+export function addAttribution(roll: Roll, attributions: AttributionMap) {
+  if (attributions && Object.keys(attributions).length > 0) {
+    // Convert map to array and store on roll options for tooltip rendering
+    const entries = attributionMapToArray(attributions);
+    foundry.utils.setProperty(roll, "options.attributions", entries);
+  }
+}
+
+/**
+ * Get the localized title for an advantage mode (Advantage/Disadvantage/Normal).
+ * @param hasAdvantage - Whether there is effective advantage
+ * @param hasDisadvantage - Whether there is effective disadvantage
+ * @returns Localized title string
+ */
+export function getAdvantageModeTitle(hasAdvantage: boolean | undefined, hasDisadvantage: boolean | undefined): string {
+  if (hasAdvantage && !hasDisadvantage) return i18n("DND5E.Advantage");
+  if (hasDisadvantage && !hasAdvantage) return i18n("DND5E.Disadvantage");
+  return i18n("DND5E.Normal");
+}
+
+/**
+ * Render an attribution tooltip HTML from an AttributionMap.
+ * @param attributions - The attribution map (type -> source -> displayName)
+ * @param title - Optional title for the tooltip (e.g., "Advantage" or "Disadvantage")
+ * @returns Promise resolving to the rendered HTML string
+ */
+export async function renderAttributionTooltip(attributions: AttributionMap, title?: string): Promise<string> {
+  const entries = attributionMapToArray(attributions);
+
+  const localizedEntries = entries.map(attr => ({
+    ...attr,
+    localizedType: i18n(attributionTypeLocalization[attr.type] ?? attr.type)
+  }));
+
+  // Always render the tooltip, even if empty (will show title or "Normal" state)
+  return foundry.applications.handlebars.renderTemplate(
+    "modules/midi-qol/templates/attribution-tooltip.html",
+    { attributions: localizedEntries, title }
+  );
+}
+
+/**
+ * Legacy function for backwards compatibility.
+ * Converts Set-based attribution to structured format and adds to roll.
+ * @deprecated Use addAttribution with AttributionEntry[] instead
+ */
 export function addAdvAttribution(roll: Roll, advAttribution: Set<string>) {
   // <section class="tooltip-part">
   let advHtml: string = "";
@@ -5951,11 +6144,19 @@ export function addAdvAttribution(roll: Roll, advAttribution: Set<string>) {
 
 function getTooltip(roll: Roll, options: any = {}) {
   const parts = roll.dice?.map(d => d.getTooltipData()) ?? [];
-  // parts.tooltipFormula = options?.tooltipFormula ?? false;
-  // parts.formula = roll.formula;
+
+  // Prepare structured attributions with localized type names
+  // @ts-expect-error options.attributions
+  const rawAttributions: AttributionEntry[] = roll.options?.attributions ?? [];
+  const attributions = rawAttributions.map(attr => ({
+    ...attr,
+    localizedType: i18n(attributionTypeLocalization[attr.type] ?? attr.type)
+  }));
+
   const templateData = {
     // @ts-expect-error
     advTooltip: roll.options?.advTooltip,
+    attributions,
     tooltipFormula: options?.tooltipFormula ?? false,
     formula: roll.formula,
     parts
@@ -5995,6 +6196,29 @@ export function midiRenderFormulaRoll(roll: Roll, options?: any) {
 
 export async function midiRenderTemplateRoll(roll: Roll | undefined, template: string, options?: any) {
   if (!roll) return "";
+  // @ts-expect-error no dnd5e-types - advantageMode: 1 = advantage, -1 = disadvantage, 0 = normal
+  const advantageMode = roll.options?.advantageMode;
+  let advantageModeStr: string | undefined;
+  if (advantageMode === 1) advantageModeStr = "advantage";
+  else if (advantageMode === -1) advantageModeStr = "disadvantage";
+
+  // Generate attribution tooltip content if there are attributions
+  let attributionTooltip = "";
+  // @ts-expect-error options.attributions
+  const rawAttributions: AttributionEntry[] = roll.options?.attributions ?? [];
+  if (rawAttributions.length > 0) {
+    const attributions = rawAttributions.map(attr => ({
+      ...attr,
+      localizedType: i18n(attributionTypeLocalization[attr.type] ?? attr.type)
+    }));
+    const title = advantageModeStr === "advantage" ? i18n("DND5E.Advantage") :
+                  advantageModeStr === "disadvantage" ? i18n("DND5E.Disadvantage") : "";
+    attributionTooltip = await foundry.applications.handlebars.renderTemplate(
+      "modules/midi-qol/templates/attribution-tooltip.html",
+      { attributions, title }
+    );
+  }
+
   const chatData = {
     formula: roll.formula,
     user: game.user?.id,
@@ -6002,7 +6226,9 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
     tooltipFormula: options?.tooltipFormula ?? false,
     // @ts-expect-error no dnd5e-types
     flavor: options?.flavor ?? roll.options?.flavor,
-    total: (roll.total !== undefined) ? Math.round((roll.total) * 100) / 100 : "???"
+    total: (roll.total !== undefined) ? Math.round((roll.total) * 100) / 100 : "???",
+    advantageMode: advantageModeStr,
+    attributionTooltip
   };
   return foundry.applications.handlebars.renderTemplate(template, chatData);
 }
@@ -7335,8 +7561,6 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
   if (updateDelay) {
     await busyWait(updateDelay); // let other stuff happen.
   }
-  if (updatesCache[baseDocument.uuid] && !foundry.utils.isEmpty(updatesCache[baseDocument.uuid])) {
-  }
   updatesCache[baseDocument.uuid] = foundry.utils.diffObject(updates, updatesCache[baseDocument.uuid] ?? {});
   if (debugEnabled > 1 && updates.content && updatesCache[baseDocument.uuid]?.content)
     warn("_updateAction | queued content differences ", diffStringsFull(updates.content, updatesCache[baseDocument.uuid].content, { ignoreWhitespace: true, ignoreNewlines: true }));
@@ -7351,7 +7575,7 @@ export async function throttledUpdate(document: ChatMessage.Implementation, upda
   updatesCache[document.uuid] = updates;
   if (!debounceInterval || immediate || !throttlingFunc) {
     if (debugEnabled > 0) warn(`throttledU[date] | immediate update for ${document.uuid}`, updates);
-    return await _updateAction(document, updates);
+    return await _updateAction(document, foundry.utils.duplicate(updates) as ChatMessage.UpdateData);
   }
   return await throttlingFunc(document, foundry.utils.duplicate(updates) as ChatMessage.UpdateData);
 }
@@ -7413,7 +7637,9 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
     else if (effect.parent instanceof Item) // this should be enchantments
       effectsToDelete.push(effect);
   }
-  if (actorEffectsToDelete.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", actorEffectsToDelete, options);
+  if (actorEffectsToDelete.length > 0) {
+    await actor.deleteEmbeddedDocuments("ActiveEffect", actorEffectsToDelete, options);
+  }
   if (effectsToDisable.length > 0) {
     for (let effect of effectsToDisable) {
       await effect.update({ "disabled": true }, options)
@@ -7737,7 +7963,7 @@ export function getCheckRollModeFor(abilityId: string) {
   return configSettings.autoCheckSaves !== "allShow" ? "gmroll" : "public";
 }
 
-export function areMidiKeysPressed(event: AugmentedEvent, action: string) {
+export function areMidiKeysPressed(event: AugmentedEvent | undefined, action: string) {
   if (!event) return false;
   const activeModifiers = {};
   const KeyBoardManager = game.keyboard;

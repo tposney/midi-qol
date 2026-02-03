@@ -101,7 +101,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
   }
 
   static override PARTS = {
-    main: { template: "modules/midi-qol/templates/targetConfirmation.hbs" },
+    main: { template: "modules/midi-qol/templates/apps/TargetConfirmation/targetConfirmation.hbs" },
     footer: { template: "templates/generic/form-footer.hbs" }
   };
 
