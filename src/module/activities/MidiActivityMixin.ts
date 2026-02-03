@@ -899,15 +899,9 @@ export let MidiActivityMixin = Base => {
         return undefined;
       }
 
-      // Check other condition against hit targets
-      if (this.otherCondition) {
-        let shouldRollOther = false;
-        for (const token of config.workflow.hitTargets) {
-          shouldRollOther ||= await evalActivationCondition(config.workflow, this.otherCondition, token, { async: true });
-          if (shouldRollOther) break;
-        }
-        if (!shouldRollOther) return undefined;
-      }
+      // Build otherDamageMatches (no-op if already built)
+      await config.workflow.buildOtherDamageMatches();
+      if (this.otherCondition && !config.workflow.otherDamageMatches?.size) return undefined;
 
       let otherResult: Roll[] | undefined;
       const otherConfig = {

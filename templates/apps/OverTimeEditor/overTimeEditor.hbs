@@ -170,11 +170,6 @@
     {{!-- Advanced --}}
     <fieldset>
         <legend>{{localize "midi-qol.OverTimeEditor.AdvancedSection"}}</legend>
-        <div class="form-group">
-            <label>{{localize "midi-qol.OverTimeEditor.ItemName"}}</label>
-            <input type="text" name="itemName" value="{{details.itemName}}" placeholder="UUID or name" />
-        </div>
-        {{#if details.itemName}}
         <div class="overtime-checkbox-row">
             <label class="overtime-inline-check">
                 <input type="checkbox" name="autoRollAttack" {{checked details.autoRollAttack}} />
@@ -185,10 +180,15 @@
                 {{localize "midi-qol.OverTimeEditor.FastForwardAttack"}}
             </label>
         </div>
-        {{/if}}
-        <div class="form-group">
-            <label>{{localize "midi-qol.OverTimeEditor.Macro"}}</label>
-            <input type="text" name="macro" value="{{details.macro}}" placeholder="function., ItemMacro, Macro." />
+        <div class="overtime-checkbox-row">
+            <label class="overtime-inline-check">
+                <input type="checkbox" name="autoRollDamage" {{checked details.autoRollDamage}} />
+                {{localize "midi-qol.OverTimeEditor.AutoRollDamage"}}
+            </label>
+            <label class="overtime-inline-check">
+                <input type="checkbox" name="fastForwardDamage" {{checked details.fastForwardDamage}} />
+                {{localize "midi-qol.OverTimeEditor.FastForwardDamage"}}
+            </label>
         </div>
         <div class="form-group">
             <label>{{localize "midi-qol.OverTimeEditor.ChatFlavor"}}</label>
@@ -202,16 +202,6 @@
         </div>
         <div class="overtime-checkbox-row">
             <label class="overtime-inline-check">
-                <input type="checkbox" name="autoRollDamage" {{checked details.autoRollDamage}} />
-                {{localize "midi-qol.OverTimeEditor.AutoRollDamage"}}
-            </label>
-            <label class="overtime-inline-check">
-                <input type="checkbox" name="fastForwardDamage" {{checked details.fastForwardDamage}} />
-                {{localize "midi-qol.OverTimeEditor.FastForwardDamage"}}
-            </label>
-        </div>
-        <div class="overtime-checkbox-row">
-            <label class="overtime-inline-check">
                 <input type="checkbox" name="allowIncapacitated" {{checked details.allowIncapacitated}} />
                 {{localize "midi-qol.OverTimeEditor.AllowIncapacitated"}}
             </label>
@@ -219,6 +209,14 @@
                 <input type="checkbox" name="killAnim" {{checked details.killAnim}} />
                 {{localize "midi-qol.OverTimeEditor.KillAnim"}}
             </label>
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.ItemName"}}</label>
+            <input type="text" name="itemName" value="{{details.itemName}}" placeholder="UUID or name" />
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.Macro"}}</label>
+            <input type="text" name="macro" value="{{details.macro}}" placeholder="function., ItemMacro, Macro." />
         </div>
     </fieldset>
   </div>

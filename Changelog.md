@@ -1,12 +1,15 @@
 ### 13.0.43
 **New Features**
-* **Breaking** Auto fast forwarding rolls (skipping dialog) is now specified the same way for players and GMs. There is a new multi select that lets you choose which rolls will be fastforwarded by default for both the player and the gm. Midi attempts to migrate your existing settings, but you should check.
+* **Breaking** Auto fast forwarding rolls (skipping dialog) is now specified the same way for players and GMs on their own tab. There is a new multi select that lets you choose which rolls will be fastforwarded by default for both the player and the gm. Midi attempts to migrate your existing settings, but you should check.
   - I know a skill roll is a type of ability check, but having a separate setting gives you more control, so you need to set skill separately from ability roll.
 * New RAW (2024) invisibility advantage/disadvantage mode that only relies on being able to see the target.
 * Midi-qol tab property, force config dialog, now overrides the thrown weapon property check.
+* Added an editor for overTime effects, requires dae 13.0.19.
+* Added a condition expression editor, requires dae 13.0.19 plus macro-autocomplete.
 
 **Bug Fixes**
 * Advantage Attribution now follows the same visibility rules as the attack roll formula. If players are not allowed to see the formula, they can't see the attack advantage attribution.
+* Fix for evaluating otherActivity.useCondition twice is some workflows.
 * Fix for checkAttackAdvantage not being called before calling preAttackRoll Hooks/macros.
   - checkAttackAdvantage is called again after the hooks/macros return. This means changes to actors advantage flags will be respected as they were prior to 13.0.40.
   - changes made to workflow.tracker.advantage etc will be overwritten.
@@ -17,8 +20,13 @@
 * A major rework of advantage attribution, now displays localized string explaining the source. Feedback on the string choices welcome.
   - This reduces by several thousand the number of fields translators need to worry about.
   - This feeds through to better/different explanatory text in the dae field browser.
-  - Unless there is any major push back I plan to remove the legacy attribution in a soon to be forthcoming release.
+  - **Unless there is any major push back I plan to remove the legacy attribution in a soon to be forthcoming release**.
 * I've reworked the chat card persistence for workflows and some of the fields may have moved. If you are in the habit of checking the Chat Card for midi persisted fields you will need to review that code.
+* Migrated several standalone module settings into the midi-qol config panel for easier discovery:
+  - **Preferred GM** moved to the GM tab.
+  - **Critical Damage** (player and GM) moved to the Workflow tab, Damage section.
+  - **Colored Borders** moved to the Misc tab, near the other highlighting/display settings.
+  - Existing values are automatically migrated on first load, I think, but you should check. The old settings are hidden from the Foundry module settings page.
 
 ### 13.0.42
 * Just remove some spurious debug left in the code.

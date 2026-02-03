@@ -19,7 +19,7 @@ export class UndoWorkflow extends HandlebarsApplicationMixin(ApplicationV2) {
   }
   
   static override PARTS = {
-    main: { template: "modules/midi-qol/templates/undo-workflow.hbs" },
+    main: { template: "modules/midi-qol/templates/apps/UndoWorkflow/undo-workflow.hbs" },
   };
   
   static override DEFAULT_OPTIONS = {

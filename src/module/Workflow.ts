@@ -1,4 +1,4 @@
-import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel } from "../midi-qol.js";
+import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats } from "../midi-qol.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions, shouldDisplaySaveDC } from "./settings.js";
@@ -2409,6 +2409,7 @@ export class Workflow {
     }
 
     await this.processAttackRoll();
+    this.recordAttackStats();
 
     if (configSettings.autoCheckHit !== "none") {
       //@ts-e xpect-error
@@ -2694,39 +2695,28 @@ export class Workflow {
       await this.callMacros(this.item, this.onUseMacros?.getMacros("postSave"), "OnUse", "postSave");
       if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("postSave"), "OnUse", "postSave");
     }
+    if (configSettings.keepRollStats && this.item && this.hasSave) {
+      gameStats.addSaveResult(
+        this.saves.size + this.failedSaves.size,
+        this.saves.size,
+        this.failedSaves.size,
+        this.item
+      );
+    }
     return this.WorkflowState_AllRollsComplete;
   }
   async WorkflowState_AllRollsComplete(context: WorkflowContext = {}): Promise<WorkflowState> {
-    this.otherDamageMatches = new Set();
     let items: any[] = [];
 
     // Skip other damage processing entirely if consumption was already declined
     const consumedFlag = this.chatCard?.getFlag(MODULE_ID, "use.consumed");
     if (consumedFlag === false) {
       // Consumption was declined - ensure other damage is cleared
+      this.otherDamageMatches = new Set();
       this.rawOtherDamageDetail = [];
     } else {
-      // For attacks, only consider hit targets for other damage
-      const targetsForOtherDamage = this.activity.attack
-        ? new Set([...this.hitTargets, ...this.hitTargetsEC])
-        : this.targets;
-
-      for (let token of targetsForOtherDamage) {
-        const otherCondition = this.otherUseCondition;
-        // TODO: (Michael) As below, work this out with activities
-        const ammoCondition = null; // this.ammunition?.getFlag(MODULE_ID, "otherCondition");
-        if (otherCondition) {
-          if (await evalActivationCondition(this, otherCondition, token, { async: true, errorReturn: false }))
-            this.otherDamageMatches = this.otherDamageMatches!.add(token);
-        }
-        else if (ammoCondition) { // TODO work out what this means with activities
-          if (await evalActivationCondition(this, ammoCondition, token, { async: true, errorReturn: false }))
-            this.otherDamageMatches = this.otherDamageMatches!.add(token);
-        }
-        else {
-          this.otherDamageMatches = this.otherDamageMatches!.add(token);
-        }
-      }
+      // Build otherDamageMatches (no-op if rollOtherDamage already built it)
+      await this.buildOtherDamageMatches();
 
       // Process consumption for other activity if it will be applied
       if (this.otherDamageMatches!.size > 0) {
@@ -2735,6 +2725,7 @@ export class Workflow {
     }
 
     if (this.rawDamageDetail && (this.rawDamageDetail?.length || this.rawOtherDamageDetail?.length)) await processDamageRoll(this, this.rawDamageDetail[0]?.type ?? this.defaultDamageType)
+    this.recordDamageStats();
     // If a damage card is going to be created don't call the isDamaged macro - wait for the damage card calculations to do a better job
     if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true && !configSettings.autoApplyDamage.includes("Card"))
       await this.triggerTargetMacros(["isDamaged"], this.hitTargets);
@@ -2850,6 +2841,27 @@ export class Workflow {
 
     // Note: consumed data was already stored above via addUpdatesCacheFlags
     return true;
+  }
+
+  /**
+   * Build otherDamageMatches if not already populated.
+   * Evaluates the otherActivity useCondition per-target exactly once.
+   */
+  async buildOtherDamageMatches(): Promise<void> {
+    if (this.otherDamageMatches !== undefined) return; // already built (may be empty if condition matched no targets)
+    this.otherDamageMatches = new Set();
+    const otherCondition = this.otherUseCondition;
+    const targetsForOtherDamage = this.activity.attack
+      ? new Set([...this.hitTargets, ...this.hitTargetsEC])
+      : this.targets;
+    for (const token of targetsForOtherDamage) {
+      if (otherCondition) {
+        if (await evalActivationCondition(this, otherCondition, token, { async: true, errorReturn: false }))
+          this.otherDamageMatches.add(token);
+      } else {
+        this.otherDamageMatches.add(token);
+      }
+    }
   }
 
   /**
@@ -6760,7 +6772,9 @@ return {
     if (terms[0] instanceof foundry.dice.terms.NumericTerm) {
       this.diceRoll = Number(terms[0].total);
     } else {
-      this.diceRoll = Number(terms[0].total);
+      const dterm = terms[0] as foundry.dice.terms.DiceTerm;
+      const activeResult = dterm.results?.find(d => d.active);
+      this.diceRoll = activeResult ? Number(activeResult.result) : Number(terms[0].total);
     }
 
     // For natural critical/fumble detection, use the actual die face when auto-success/fail
@@ -6881,6 +6895,81 @@ return {
     if (this.isCritical || this.isFumble) {
       addAttribution(this.attackRoll, this.attackAttribution);
       this.attackRollHTML = await midiRenderAttackRoll(this.attackRoll);
+    }
+  }
+
+  protected recordAttackStats() {
+    if (!configSettings.keepRollStats || !this.item || !this.attackRoll) return;
+    gameStats.addAttackRoll({
+      rawRoll: this.diceRoll,
+      fumble: this.isFumble,
+      critical: this.isCritical,
+      total: this.attackTotal
+    }, this.item);
+  }
+
+  protected recordDamageStats() {
+    if (!configSettings.keepRollStats || !this.item || !this.damageList?.length) return;
+    // Only count actual damage (positive hpDamage), not healing
+    const totalHpDamage = this.damageList.reduce((sum, dl) => sum + Math.max(0, dl.hpDamage ?? 0), 0);
+    // Sum raw damage from non-healing types only
+    let totalDamage = 0;
+    for (const dl of this.damageList) {
+      if (dl.rawDamageDetail) {
+        for (const dd of dl.rawDamageDetail) {
+          if (dd.value > 0 && dd.type && !GameSystemConfig.healingTypes[dd.type]) {
+            totalDamage += dd.value;
+          }
+        }
+      }
+    }
+
+    let maxDamage = 0;
+    let healingDone = 0;
+    let kills = 0;
+    for (const dl of this.damageList) {
+      const hp = dl.hpDamage ?? 0;
+      if (hp > 0) maxDamage = Math.max(maxDamage, hp);
+      if (hp < 0) healingDone += Math.abs(hp);
+      if ((dl.oldHP ?? 0) > 0 && (dl.newHP ?? 0) <= 0) kills += 1;
+
+      // Record damage taken or healing received on the target actor
+      if (hp !== 0 && dl.actorId) {
+        const damageByType: Record<string, number> = {};
+        if (hp > 0 && dl.damageDetail) {
+          for (const dd of dl.damageDetail) {
+            if (dd.value > 0 && dd.type) {
+              damageByType[dd.type] = (damageByType[dd.type] ?? 0) + dd.value;
+            }
+          }
+        }
+        gameStats.addDamageTaken(dl.actorId, hp, damageByType);
+      }
+    }
+
+    gameStats.addDamage(totalHpDamage, totalDamage, this.item, maxDamage, healingDone, kills);
+
+    // Aggregate damage dealt by type across all targets (attacker-side stats), excluding healing types
+    const dealtByType: Record<string, number> = {};
+    const appliedByType: Record<string, number> = {};
+    for (const dl of this.damageList) {
+      if (dl.rawDamageDetail) {
+        for (const dd of dl.rawDamageDetail) {
+          if (dd.value > 0 && dd.type && !GameSystemConfig.healingTypes[dd.type]) {
+            dealtByType[dd.type] = (dealtByType[dd.type] ?? 0) + dd.value;
+          }
+        }
+      }
+      if (dl.damageDetail) {
+        for (const dd of dl.damageDetail) {
+          if (dd.value > 0 && dd.type && !GameSystemConfig.healingTypes[dd.type]) {
+            appliedByType[dd.type] = (appliedByType[dd.type] ?? 0) + dd.value;
+          }
+        }
+      }
+    }
+    if (Object.keys(dealtByType).length > 0 || Object.keys(appliedByType).length > 0) {
+      gameStats.addDamageDealtByType(this.item, dealtByType, appliedByType);
     }
   }
 
@@ -8225,6 +8314,7 @@ export class TrapWorkflow extends Workflow {
   }
   async WorkflowState_AttackRollComplete(context: WorkflowContext = {}): Promise<WorkflowState> {
     await this.processAttackRoll();
+    this.recordAttackStats();
     await this.displayAttackRoll();
     this.recordDescriptorACModifiers();
     await this.checkHits(this.workflowOptions);
@@ -8304,6 +8394,7 @@ export class TrapWorkflow extends Workflow {
   async WorkflowState_AllRollsComplete(context: WorkflowContext = {}): Promise<WorkflowState> {
     if (debugEnabled > 1) debug("all rolls complete ", foundry.utils.duplicate(this.rawDamageDetail))
     if (this.rawDamageDetail?.length) await processDamageRoll(this, this.rawDamageDetail[0].type)
+    this.recordDamageStats();
     return this.WorkflowState_ApplyDynamicEffects;
   }
   async WorkflowState_RollFinished(context: WorkflowContext = {}): Promise<WorkflowState> {

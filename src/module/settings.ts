@@ -1,12 +1,13 @@
 import { debug, setDebugLevel, i18n, debugEnabled, error, gameStats } from "../midi-qol.js";
 import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { DependentsExplorer } from "./apps/DependentsExplorer.js";
+import { RollStatsDisplay } from "./apps/RollStatsDisplay.js";
 import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { TargetConfirmationConfig } from "./apps/TargetConfirmationConfig.js";
 import { Workflow } from "./Workflow.js";
 
-// Dummy FormApplication that launches the setup wizard via hook
+// Dummy FormApplication that launches the setup wizard via hook (can't be eliminated - fires a hook, not an app)
 class LaunchWizardSubmenu extends FormApplication {
   constructor(object = {}, options = {}) {
     super(object, options);
@@ -23,29 +24,6 @@ class LaunchWizardSubmenu extends FormApplication {
   async _render(force?: boolean, options?: any) {
     // Don't render anything - just trigger the wizard and close
     Hooks.call("midi-qol-setup-wizard.launch");
-    this.close();
-  }
-  getData() { return {}; }
-  protected _updateObject(event: Event, formData?: object): Promise<unknown> { return Promise.resolve(); }
-}
-
-// Dummy FormApplication that launches the DependentsExplorer
-class LaunchDependentsExplorer extends FormApplication {
-  constructor(object = {}, options = {}) {
-    super(object, options);
-  }
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "midi-qol-launch-dependents-explorer",
-      classes: ["midi-qol"],
-      title: "Dependents Explorer",
-      width: 0,
-      height: 0
-    });
-  }
-  async _render(force?: boolean, options?: any) {
-    // Don't render anything - just open the DependentsExplorer and close this
-    new DependentsExplorer().render(true);
     this.close();
   }
   getData() { return {}; }
@@ -188,11 +166,14 @@ class ConfigSettings {
   checkTwoHanded: boolean = false;
   chooseAmmunition: boolean = true;
   collapsibleTargets: boolean = false;
+  coloredBorders: string = "none";
   concentrationAutomation: boolean = false;
   confirmAmmunition: boolean = false;
   gmConfirmAmmunition: boolean = false;
   consumeResource: string = "none";
   convenientEffectsReaction: string = "Reaction";
+  criticalDamage: string = "default";
+  criticalDamageGM: string = "none";
   criticalSound: string = "";
   customSoundsPlaylist: string = "none";
   damageImmunities: string = "none";
@@ -221,6 +202,7 @@ class ConfigSettings {
   gmDoReactions: string = "all";
   gmHide3dDice: boolean = false;
   gmRemoveButtons: string = "all";
+  preferredGM: string = "";
   hideRollDetails: string = "none";
   ignoreSpellReactionRestriction: boolean = false;
   itemTypeList: string[] | undefined = undefined;
@@ -354,9 +336,7 @@ export async function resetConfigSettingsToDefaults(): Promise<void> {
   await game.settings.set("midi-qol", "ForceHideRoll", true);
   await game.settings.set("midi-qol", "DragDropTarget", false);
   // RollStats is intentionally not reset - statistics data
-  await game.settings.set("midi-qol", "CriticalDamageGM", "none");
-  await game.settings.set("midi-qol", "CriticalDamage", "default");
-  await game.settings.set("midi-qol", "ColoredBorders", "None");
+  // CriticalDamage/CriticalDamageGM/ColoredBorders are now in configSettings (reset above via defaultSettings)
   await game.settings.set("midi-qol", "AutoRemoveTargets", "dead");
   await game.settings.set("midi-qol", "TargetConfirmation", defaultTargetConfirmationSettings);
   await game.settings.set("midi-qol", "playerControlsInvisibleTokens", false);
@@ -550,9 +530,25 @@ export async function importSettingsFromJSON(json) {
     await game.settings.set("midi-qol", "ConfigSettings", cs);
   }
   await game.settings.set("midi-qol", "AutoRemoveTargets", removeOldValues(json.autoRemoveTargets));
-  await game.settings.set("midi-qol", "ColoredBorders", removeOldValues(json.coloredBorders));
-  await game.settings.set("midi-qol", "CriticalDamage", removeOldValues(json.criticalDamage));
-  await game.settings.set("midi-qol", "CriticalDamageGM", removeOldValues(json.criticalDamageGM));
+  // Migrate old top-level coloredBorders into configSettings for backward-compatible imports
+  if (json.coloredBorders !== undefined && !importedConfigSettings.coloredBorders) {
+    let cb = removeOldValues(json.coloredBorders);
+    if (cb === "None") cb = "none"; // Normalize old default
+    importedConfigSettings.coloredBorders = cb;
+    await game.settings.set("midi-qol", "ConfigSettings", importedConfigSettings);
+  }
+  // Migrate old top-level criticalDamage/criticalDamageGM into configSettings for backward-compatible imports
+  if (json.criticalDamage !== undefined && !importedConfigSettings.criticalDamage) {
+    importedConfigSettings.criticalDamage = removeOldValues(json.criticalDamage);
+    if (importedConfigSettings.criticalDamage === "none") importedConfigSettings.criticalDamage = "default";
+  }
+  if (json.criticalDamageGM !== undefined && !importedConfigSettings.criticalDamageGM) {
+    importedConfigSettings.criticalDamageGM = removeOldValues(json.criticalDamageGM);
+    if (importedConfigSettings.criticalDamageGM === "none") importedConfigSettings.criticalDamageGM = importedConfigSettings.criticalDamage ?? "default";
+  }
+  if (json.criticalDamage !== undefined || json.criticalDamageGM !== undefined) {
+    await game.settings.set("midi-qol", "ConfigSettings", importedConfigSettings);
+  }
   await game.settings.set("midi-qol", "DebounceInterval", removeOldValues(json.debounceInterval));
   await game.settings.set("midi-qol", "DragDropTarget", removeOldValues(json.dragDropTargeting));
   await game.settings.set("midi-qol", "EnableWorkflow", removeOldValues(json.enableWorkflow));
@@ -798,12 +794,10 @@ export let fetchParams = () => {
   configSettings.useDamageDetail = true;
   if (configSettings.collapsibleTargets === undefined) configSettings.collapsibleTargets = true;
   if (configSettings.displayProperties === undefined) configSettings.displayProperties = true;
-  criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
-  if (criticalDamage === "none") criticalDamage = "default";
-  criticalDamageGM = game.settings.get("midi-qol", "CriticalDamageGM");
-  if (criticalDamageGM === "none") criticalDamageGM = criticalDamage;
+  criticalDamage = configSettings.criticalDamage ?? "default";
+  criticalDamageGM = configSettings.criticalDamageGM ?? criticalDamage;
   nsaFlag = game.settings.get("midi-qol", "showGM");
-  coloredBorders = game.settings.get("midi-qol", "ColoredBorders");
+  coloredBorders = configSettings.coloredBorders ?? "none";
   itemRollButtons = false; // game.settings.get("midi-qol", "ItemRollButtons");
   if (configSettings.addChatDamageButtons === undefined) configSettings.addChatDamageButtons = "none";
 
@@ -863,6 +857,50 @@ export let fetchParams = () => {
   }
   if (!Array.isArray(configSettings.autoFastForward)) configSettings.autoFastForward = [];
   if (!Array.isArray(configSettings.gmAutoFastForward)) configSettings.gmAutoFastForward = [];
+
+  // Migrate standalone PreferredGM setting into configSettings
+  if (configSettings.preferredGM === undefined) {
+    try {
+      const oldPreferredGM = game.settings.get("midi-qol", "PreferredGM") as string;
+      if (oldPreferredGM && oldPreferredGM !== "") {
+        configSettings.preferredGM = oldPreferredGM;
+        console.warn(`midi-qol | Migrated PreferredGM setting "${oldPreferredGM}" into configSettings`);
+        game.settings.set("midi-qol", "ConfigSettings", configSettings);
+      } else {
+        configSettings.preferredGM = "";
+      }
+    } catch (e) {
+      configSettings.preferredGM = "";
+    }
+  }
+
+  // Migrate standalone CriticalDamage/CriticalDamageGM settings into configSettings
+  if (configSettings.criticalDamage === undefined) {
+    try {
+      const oldCriticalDamage = game.settings.get("midi-qol", "CriticalDamage") as string;
+      configSettings.criticalDamage = (!oldCriticalDamage || oldCriticalDamage === "none") ? "default" : oldCriticalDamage;
+      const oldCriticalDamageGM = game.settings.get("midi-qol", "CriticalDamageGM") as string;
+      configSettings.criticalDamageGM = (!oldCriticalDamageGM || oldCriticalDamageGM === "none") ? configSettings.criticalDamage : oldCriticalDamageGM;
+      console.warn(`midi-qol | Migrated CriticalDamage settings into configSettings (player: "${configSettings.criticalDamage}", GM: "${configSettings.criticalDamageGM}")`);
+      game.settings.set("midi-qol", "ConfigSettings", configSettings);
+    } catch (e) {
+      configSettings.criticalDamage = "default";
+      configSettings.criticalDamageGM = "default";
+    }
+  }
+
+  // Migrate standalone ColoredBorders setting into configSettings
+  if (configSettings.coloredBorders === undefined) {
+    try {
+      const oldColoredBorders = game.settings.get("midi-qol", "ColoredBorders") as string;
+      // Normalize "None" (old default) to "none" (matches options keys)
+      configSettings.coloredBorders = (!oldColoredBorders || oldColoredBorders === "None") ? "none" : oldColoredBorders;
+      console.warn(`midi-qol | Migrated ColoredBorders setting "${oldColoredBorders}" into configSettings as "${configSettings.coloredBorders}"`);
+      game.settings.set("midi-qol", "ConfigSettings", configSettings);
+    } catch (e) {
+      configSettings.coloredBorders = "none";
+    }
+  }
 
   autoRemoveTargets = game.settings.get("midi-qol", "AutoRemoveTargets");
   if (autoRemoveTargets === "allGM") {
@@ -931,26 +969,16 @@ export let fetchParams = () => {
 }
 
 export function readySettingsSetup() {
+  // Deprecated: PreferredGM has moved to configSettings.preferredGM (shown on GM tab)
+  // Kept registered for migration from old setting value
   game.settings.register("midi-qol", "PreferredGM", {
     name: "midi-qol.PreferredGM.Name",
     hint: "midi-qol.PreferredGM.Hint",
     scope: "world",
     default: "",
-    config: true,
+    config: false,
     type: String,
-    choices: game.users?.filter(user => user.isGM).reduce((acc, user) => {
-      acc[user.id] = user.name;
-      return acc;
-    }, { "": i18n("None") }),
   });
-  if (game.settings.get("midi-qol", "CriticalDamage") === "none") {
-    criticalDamage = "default;"
-    game.settings.set("midi-qol", "CriticalDamage", "default");
-  }
-  if (game.settings.get("midi-qol", "CriticalDamageGM") === "none") {
-    criticalDamageGM = criticalDamage;
-    game.settings.set("midi-qol", "CriticalDamageGM", criticalDamage);
-  }
 }
 
 function keysToOptionsObj(prefix: string, keys: string[]) {
@@ -1601,12 +1629,13 @@ export const registerSettings = function () {
     onChange: fetchParams
   });
 
+  // Deprecated: PreferredGM has moved to configSettings.preferredGM (shown on GM tab)
   game.settings.register("midi-qol", "PreferredGM", {
     name: i18n("midi-qol.PreferredGM.Name"),
     hint: i18n("midi-qol.PreferredGM.Hint"),
     scope: "world",
     default: "",
-    config: true,
+    config: false,
     type: String
   });
 
@@ -1651,27 +1680,29 @@ export const registerSettings = function () {
     config: true
   });
 
+  // Deprecated: CriticalDamage/CriticalDamageGM have moved to configSettings (shown on Workflow > Damage tab)
+  // Kept registered for migration from old setting values
   game.settings.register("midi-qol", "CriticalDamageGM", {
     name: "midi-qol.CriticalDamageGM.Name",
-    // hint: "midi-qol.CriticalDamageGM.Hint",
     scope: "world",
     default: "none",
     type: String,
-    config: true,
+    config: false,
     choices: criticalDamageChoices,
     onChange: fetchParams
   });
   game.settings.register("midi-qol", "CriticalDamage", {
     name: "midi-qol.CriticalDamage.Name",
-    hint: "midi-qol.CriticalDamage.Hint",
     scope: "world",
     default: "default",
     type: String,
-    config: true,
+    config: false,
     choices: criticalDamageChoices,
     onChange: fetchParams
   });
 
+  // Deprecated: ColoredBorders has moved to configSettings.coloredBorders (shown on Misc tab)
+  // Kept registered for migration from old setting value
   game.settings.register("midi-qol", "ColoredBorders",
     {
       name: "midi-qol.ColoredBorders.Name",
@@ -1679,7 +1710,7 @@ export const registerSettings = function () {
       scope: "world",
       default: "None",
       type: String,
-      config: true,
+      config: false,
       choices: coloredBordersOptions,
       onChange: fetchParams
     });
@@ -1740,6 +1771,15 @@ export const registerSettings = function () {
     icon: "fas fa-dice-d20",
     type: SoundConfigPanel,
     restricted: true
+  });
+
+  game.settings.registerMenu("midi-qol", "showRollStats", {
+    name: i18n("midi-qol.ShowStats"),
+    label: "midi-qol.ShowStats",
+    hint: i18n("midi-qol.KeepRollStats.Hint"),
+    icon: "fas fa-chart-bar",
+    type: RollStatsDisplay as any,
+    restricted: false
   });
 
   game.settings.register("midi-qol", "playerControlsInvisibleTokens", {
@@ -1811,7 +1851,7 @@ export const registerSettings = function () {
     label: "midi-qol.DependentsExplorer.Label",
     icon: "fas fa-sitemap",
     hint: i18n("midi-qol.DependentsExplorer.Hint"),
-    type: LaunchDependentsExplorer,
+    type: DependentsExplorer as any,
     restricted: true
   });
 

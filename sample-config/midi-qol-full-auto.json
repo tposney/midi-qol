@@ -172,7 +172,10 @@
     "collapsibleTargets": false,
     "autoRemoveSummonedCreature": true,
     "autoUndoTransformations": true,
-    "midiPropertiesTabRole": "0"
+    "midiPropertiesTabRole": "0",
+    "criticalDamage": "default",
+    "criticalDamageGM": "default",
+    "coloredBorders": "none"
   },
   "midiSoundSettings": {
     "any": {},
@@ -182,7 +185,7 @@
   "criticalDamage": "default",
   "criticalDamageGM": "default",
   "nsaFlag": true,
-  "coloredBorders": "None",
+  "coloredBorders": "none",
   "addChatDamageButtons": "none",
   "autoFastForwardAbilityRolls": false,
   "autoRemoveTargets": "none",

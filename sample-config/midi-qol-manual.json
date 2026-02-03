@@ -168,7 +168,10 @@
     "concentrationIncapacitatedConditionCheck": false,
     "mergeCardMulti": false,
     "autoCompleteWorkflow": false,
-    "useCustomSounds": false
+    "useCustomSounds": false,
+    "criticalDamage": "default",
+    "criticalDamageGM": "default",
+    "coloredBorders": "none"
   },
   "midiSoundSettings": {
     "any": {},

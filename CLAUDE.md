@@ -177,6 +177,33 @@ Hooks provided by tidy5e:
   - `activities.find(predicate)` - find activity matching predicate
   - `activities.contents` - array of all activities
 
+### Foundry ApplicationV2 Scrollable Pattern
+
+**Never use raw `overflow-y: auto` CSS hacks for scrolling in ApplicationV2 apps.** Use Foundry's built-in pattern:
+
+1. **Template**: Add `class="scrollable"` to the element that should scroll. This Foundry CSS class handles scrollbar gutter margins.
+2. **CSS**: Set `flex: 1; min-height: 0;` on the element so it fills available space within the flex layout and allows shrinking below content size.
+3. **PARTS**: Add `scrollable: [".selector"]` to the part definition — this preserves scroll position during re-renders. Use `""` (empty string) for the part root element.
+
+Example (RollStatsDisplay):
+```typescript
+// PARTS definition
+stats: {template: "...", scrollable: ["", ".midi-stats-card-body"]}
+```
+```html
+<!-- Template -->
+<section class="tab scrollable {{#if tab.active}}active{{/if}}" ...>
+  <div class="midi-stats-card-body scrollable">
+```
+```css
+/* CSS */
+#midi-stats-stats-tab { flex: 1; min-height: 0; }
+```
+
+For resizable sections, add `resize: vertical; max-height: Npx;` to the CSS.
+
+Reference: Foundry's `.scrollable` class is defined in `foundry2.css` and sets `--scroll-margin`, `margin-right`, `padding-right` for proper scrollbar spacing. The actual scroll behavior comes from the flex layout constraint (`min-height: 0` allows flex items to shrink below content size, triggering overflow).
+
 ## Significant Decisions
 
 ### 13.0.38 Changes

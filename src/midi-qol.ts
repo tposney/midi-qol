@@ -21,6 +21,7 @@ import { RollModifierTracker } from './module/lib/RollModifierTracker.js';
 import { ChatLogMidi } from './module/ChatClasses/ChatLogMidi.js';
 import { injectMidiCompletions } from './module/lib/midiCompletions.js';
 import { OverTimeEditor } from './module/apps/OverTimeEditor.js';
+import { ConditionEditor } from './module/apps/ConditionEditor.js';
 
 // Register macro-autocomplete hook handler at module load time so it's
 // ready before macro-autocomplete fires "macro-autocomplete.ready" in its ready hook.
@@ -1530,6 +1531,46 @@ function setupMidiFlags(DAEapi: any) {
       icon: "fas fa-clock",
       tooltip: i18n("midi-qol.OverTimeEditor.Tooltip"),
     });
+
+    // Register condition expression editor for midi-qol condition flags
+    // Only available when macro-autocomplete is active (provides CodeMirror autocompletion)
+    const macroAutoComplete = (game as Game).modules?.get("macro-autocomplete");
+    if (macroAutoComplete?.active) {
+      const conditionFlagPrefixes = [
+        `flags.${MODULE_ID}.advantage.`,
+        `flags.${MODULE_ID}.disadvantage.`,
+        `flags.${MODULE_ID}.noAdvantage.`,
+        `flags.${MODULE_ID}.noDisadvantage.`,
+        `flags.${MODULE_ID}.grants.advantage.`,
+        `flags.${MODULE_ID}.grants.disadvantage.`,
+        `flags.${MODULE_ID}.grants.noAdvantage.`,
+        `flags.${MODULE_ID}.grants.noDisadvantage.`,
+        `flags.${MODULE_ID}.fail.`,
+        `flags.${MODULE_ID}.success.`,
+        `flags.${MODULE_ID}.max.`,
+        `flags.${MODULE_ID}.min.`,
+        `flags.${MODULE_ID}.optional.`,
+      ];
+      for (const prefix of conditionFlagPrefixes) {
+        DAEapi.registerFieldEditor({
+          keyMatch: prefix,
+          editor: async (currentValue: string, context: any) => {
+            return new Promise<string | null>((resolve) => {
+              new ConditionEditor({
+                value: currentValue,
+                key: context.key,
+                effect: context.effect,
+                parent: context.parent,
+                onSubmit: (newValue: string) => resolve(newValue),
+                onCancel: () => resolve(null),
+              }).render({ force: true });
+            });
+          },
+          icon: "fas fa-code",
+          tooltip: i18n("midi-qol.ConditionEditor.Tooltip"),
+        });
+      }
+    }
   }
 }
 

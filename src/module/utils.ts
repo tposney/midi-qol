@@ -1281,7 +1281,7 @@ export interface OvertimeDetails {
 }
 
 /** Parse a boolean from overtime spec string */
-function parseBool(value: string | undefined, defaultValue: boolean): boolean {
+export function parseBool(value: string | undefined, defaultValue: boolean): boolean {
   if (value === undefined) return defaultValue;
   return value === "true" || value === "1";
 }
@@ -1639,7 +1639,6 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
   }
 
   // Parse count actions
-  // Support both saveRemove (legacy) and saveCount (new) parameters
   let saveCount: CountAction | undefined;
   let failCount: CountAction | undefined;
 
@@ -1647,9 +1646,10 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
   if (raw.saveCount !== undefined) {
     saveCount = parseCountAction(raw.saveCount, "remove");
   }
-  // Handle saveRemove parameter (legacy, e.g., saveRemove=true, saveRemove=false, saveRemove=2:-)
+  // Handle saveRemove parameter (deprecated — use saveCount instead)
   else if (raw.saveRemove !== undefined) {
-    // saveRemove=true is equivalent to saveCount=1:- (remove after 1 save)
+    foundry.utils.logCompatibilityWarning(`midi-qol | parseOvertimeDetails | saveRemove is deprecated, use saveCount instead (saveRemove=${raw.saveRemove})`,
+      { since: "midi-qol 13.0.43", until: "midi-qol 13.1.0" });
     if (raw.saveRemove === "true" || raw.saveRemove === "1") {
       saveCount = { count: 1, mode: "remove", consecutive: false };
     } else if (raw.saveRemove === "false" || raw.saveRemove === "0") {
@@ -1669,8 +1669,10 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
   if (raw.failCount !== undefined) {
     failCount = parseCountAction(raw.failCount, "permanent");
   }
-  // Handle failRemove parameter (legacy)
+  // Handle failRemove parameter (deprecated — use failCount instead)
   else if (raw.failRemove !== undefined) {
+    foundry.utils.logCompatibilityWarning(`midi-qol | parseOvertimeDetails | failRemove is deprecated, use failCount instead (failRemove=${raw.failRemove})`,
+      { since: "midi-qol 13.0.43", until: "midi-qol 13.1.0" });
     failCount = parseCountAction(raw.failRemove, "permanent");
   }
 
@@ -1698,10 +1700,10 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
     itemName: raw.itemName,
     chatFlavor: raw.chatFlavor ?? "",
     rollMode: raw.rollMode,
-    fastForwardDamage: parseBool(raw.fastForwardDamage, false),
-    fastForwardAttack: parseBool(raw.fastForwardAttack, false),
-    autoRollAttack: parseBool(raw.autoRollAttack, false),
-    autoRollDamage: parseBool(raw.autoRollDamage, false),
+    fastForwardDamage: parseBool(raw.fastForwardDamage, true),
+    fastForwardAttack: parseBool(raw.fastForwardAttack, true),
+    autoRollAttack: parseBool(raw.autoRollAttack, true),
+    autoRollDamage: parseBool(raw.autoRollDamage, true),
   };
 }
 
@@ -1751,10 +1753,10 @@ export function serializeOvertimeDetails(data: Record<string, any>): string {
   if (data.itemName) parts.push(`itemName=${data.itemName}`);
   if (data.chatFlavor) parts.push(`chatFlavor=${data.chatFlavor}`);
   if (data.rollMode && data.rollMode !== "default") parts.push(`rollMode=${data.rollMode}`);
-  if (data.fastForwardDamage) parts.push(`fastForwardDamage=true`);
-  if (data.fastForwardAttack) parts.push(`fastForwardAttack=true`);
-  if (data.autoRollAttack) parts.push(`autoRollAttack=true`);
-  if (data.autoRollDamage) parts.push(`autoRollDamage=true`);
+  if (!data.fastForwardDamage) parts.push(`fastForwardDamage=false`);
+  if (!data.fastForwardAttack) parts.push(`fastForwardAttack=false`);
+  if (!data.autoRollAttack) parts.push(`autoRollAttack=false`);
+  if (!data.autoRollDamage) parts.push(`autoRollDamage=false`);
   if (data.allowIncapacitated) parts.push(`allowIncapacitated=true`);
   if (data.killAnim) parts.push(`killAnim=true`);
 
@@ -1877,7 +1879,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
     }
     if ((endTurn && changeTurnEnd) || (startTurn && changeTurnStart)) {
       // Extract values from typed details object (already parsed)
-      const { damageRoll, damageType, damageBeforeSave, macro: macroToCall, allowIncapacitated, killAnim, saveCount, failCount } = details;
+      const { damageRoll, damageType, damageBeforeSave, macro: macroToCall, allowIncapacitated, killAnim, saveCount, failCount, fastForwardAttack, fastForwardDamage, autoRollAttack, autoRollDamage } = details;
 
       if (debugEnabled > 0) warn(`gmOverTimeEffect | Overtime provided data is `, details);
       if (debugEnabled > 0) warn(`gmOverTimeEffect | OverTime label=${label} startTurn=${startTurn} endTurn=${endTurn} damageBeforeSave=${damageBeforeSave} saveDC=${saveDC} saveAbility=${saveAbility} damageRoll=${damageRoll} damageType=${damageType}`);
@@ -1962,10 +1964,10 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
           createWorkflow: true,
           configureDialog: false,
           saveDC,
-          fastForwardAttack: true,
-          fastForwardDamage: true,
-          autoRollAttack: true,
-          autoRollDamage: "onHit",
+          fastForwardAttack,
+          fastForwardDamage,
+          autoRollAttack,
+          autoRollDamage: autoRollDamage ? "onHit" : "none",
           checkGMStatus: true,
           targetsToUse: new Set([theTargetToken]),
           // targetUuids: [theTargetUuid],
@@ -5168,7 +5170,10 @@ async function asyncMySafeEval(expression: string, sandbox: AnyMutableObject, on
       nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid,
       combat: game.combat,
       evalRaceOrType: raceOrType,
-      evalTypeOrRace: typeOrRace
+      evalTypeOrRace: typeOrRace,
+      error: console.error,
+      warn: console.warn,
+      log: console.log
     });
     const sandboxProxy = new Proxy(sandbox, {
       has: () => true, // Include everything

@@ -17,7 +17,7 @@ export class TargetConfirmationConfig extends HandlebarsApplicationMixin(Applica
   selectedPosition: {x: number, y: number} = targetConfirmation.gridPosition ?? foundry.utils.duplicate(defaultTargetConfirmationSettings.gridPosition);
 
   static override PARTS = {
-    main: { template: "modules/midi-qol/templates/targetConfirmationConfig.hbs" }
+    main: { template: "modules/midi-qol/templates/apps/TargetConfirmationConfig/targetConfirmationConfig.hbs" }
   };
 
   static override DEFAULT_OPTIONS = {

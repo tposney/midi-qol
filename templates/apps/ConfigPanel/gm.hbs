@@ -84,5 +84,13 @@
       <label>{{localize "midi-qol.AddFakeDice.Name"}}</label>
       <input type="checkbox" name="addFakeDice" data-dtype="Boolean" {{checked configSettings.addFakeDice}} />
     </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.PreferredGM.Name"}}</label>
+      <select name="preferredGM" data-dtype="String">
+        {{selectOptions preferredGMOptions selected=configSettings.preferredGM}}
+      </select>
+      <div class="notes midi-qol-faint">{{localize "midi-qol.PreferredGM.Hint"}}</div>
+    </div>
   </div>
 </section>

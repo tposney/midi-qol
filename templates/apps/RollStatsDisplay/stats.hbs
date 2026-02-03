@@ -1,0 +1,169 @@
+{{!-- Inline partials: identical HTML for session and lifetime rows --}}
+
+{{#*inline "attacksRow"}}
+<tr class="{{periodClass}}">
+    <td></td>
+    <td>{{stats.numAttacks}}</td>
+    <td>{{stats.numAttackCritical}}</td>
+    <td>{{stats.numAttackFumble}}</td>
+    <td>{{stats.numDamageRolls}}</td>
+    <td>{{stats.numAttack20}}</td>
+    <td>{{stats.attackRollAverage}}</td>
+    <td>{{stats.hitRate}}%</td>
+</tr>
+{{/inline}}
+
+{{#*inline "damageRow"}}
+<tr class="{{periodClass}}">
+    <td></td>
+    <td>{{stats.damageTotalAverage}}</td>
+    <td>{{stats.damageAppliedAverage}}</td>
+    <td>{{stats.maxDamage}}</td>
+    <td>{{stats.healingDone}}</td>
+    <td>{{stats.kills}}</td>
+    {{#each dmgByType}}
+        <td>{{this.dealt}}/{{this.applied}}</td>
+    {{/each}}
+</tr>
+{{/inline}}
+
+{{#*inline "defenceRow"}}
+<tr class="{{periodClass}}">
+    <td></td>
+    <td>{{stats.numSaveSuccess}}/{{stats.numSaves}}</td>
+    <td>{{stats.numConcentrationSuccess}}/{{stats.numConcentrationSaves}}</td>
+    <td>{{stats.numDeathSaveSuccess}}/{{stats.numDeathSaves}}</td>
+    <td>{{stats.damageTaken}}</td>
+    <td>{{stats.healingReceived}}</td>
+    {{#each dmgTaken}}
+        <td>{{this}}</td>
+    {{/each}}
+</tr>
+{{/inline}}
+
+<section id="midi-stats-stats-tab" class="tab scrollable{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+    {{#if hasStats}}
+        {{#each stats}}
+            <div class="midi-stats-card" data-actor-id="{{@key}}">
+                <div class="midi-stats-card-header" data-action="toggleExpand" data-actor-id="{{@key}}">
+                    <i class="fas fa-chevron-right midi-stats-chevron"></i>
+                    <span class="midi-stats-actor-name">{{this.name}}</span>
+                    <button type="button" class="midi-stats-period-toggle" data-action="togglePeriod" data-actor-id="{{@key}}">
+                        <i class="fas fa-clock-rotate-left"></i>
+                        <span class="midi-stats-period-label-session">{{localize "midi-qol.stats.Session"}}</span>
+                        <span class="midi-stats-period-label-lifetime">{{localize "midi-qol.stats.Lifetime"}}</span>
+                    </button>
+                </div>
+                <div class="midi-stats-card-body scrollable">
+
+                    <table class="midi-stats-panel-table">
+                        <thead><tr>
+                            <th class="midi-stats-panel-name"><i class="fas fa-dice-d20"></i> {{localize "midi-qol.stats.Attacks"}}</th>
+                            <th>{{localize "midi-qol.stats.Rolls"}}</th>
+                            <th>{{localize "midi-qol.stats.Crits"}}</th>
+                            <th>{{localize "midi-qol.stats.fumbles"}}</th>
+                            <th>{{localize "midi-qol.stats.Hits"}}</th>
+                            <th>{{localize "midi-qol.stats.nat20s"}}</th>
+                            <th>{{localize "midi-qol.stats.avgRoll"}}</th>
+                            <th>{{localize "midi-qol.stats.hitRate"}}</th>
+                        </tr></thead>
+                        <tbody>
+                            {{> attacksRow periodClass="midi-stats-session" stats=this.session}}
+                            {{> attacksRow periodClass="midi-stats-lifetime" stats=this.lifetime}}
+                        </tbody>
+                    </table>
+
+                    <table class="midi-stats-panel-table">
+                        <thead><tr>
+                            <th class="midi-stats-panel-name"><i class="fas fa-burst"></i> {{localize "midi-qol.stats.Damage"}}</th>
+                            <th>{{localize "midi-qol.stats.Avg"}}</th>
+                            <th>{{localize "midi-qol.stats.AppliedShort"}}</th>
+                            <th>{{localize "midi-qol.stats.maxHit"}}</th>
+                            <th>{{localize "midi-qol.stats.healed"}}</th>
+                            <th>{{localize "midi-qol.stats.kills"}}</th>
+                            {{#each this.damageDealtTypes}}
+                                <th>{{this}}</th>
+                            {{/each}}
+                        </tr></thead>
+                        <tbody>
+                            {{> damageRow periodClass="midi-stats-session" stats=this.session dmgByType=this.sessionDamageByType}}
+                            {{> damageRow periodClass="midi-stats-lifetime" stats=this.lifetime dmgByType=this.lifetimeDamageByType}}
+                        </tbody>
+                    </table>
+
+                    <table class="midi-stats-panel-table">
+                        <thead><tr>
+                            <th class="midi-stats-panel-name"><i class="fas fa-shield-halved"></i> {{localize "midi-qol.stats.Defence"}}</th>
+                            <th>{{localize "midi-qol.stats.Saves"}}</th>
+                            <th>{{localize "midi-qol.stats.conc"}}</th>
+                            <th>{{localize "midi-qol.stats.death"}}</th>
+                            <th>{{localize "midi-qol.stats.Taken"}}</th>
+                            <th>{{localize "midi-qol.stats.healed"}}</th>
+                            {{#each this.damageTakenTypes}}
+                                <th>{{this}}</th>
+                            {{/each}}
+                        </tr></thead>
+                        <tbody>
+                            {{> defenceRow periodClass="midi-stats-session" stats=this.session dmgTaken=this.sessionDmgTaken}}
+                            {{> defenceRow periodClass="midi-stats-lifetime" stats=this.lifetime dmgTaken=this.lifetimeDmgTaken}}
+                        </tbody>
+                    </table>
+
+                    {{#if this.hasItemStats}}
+                        <div class="midi-stats-items-section" data-actor-id="{{@key}}">
+                            <div class="midi-stats-items-header" data-action="toggleItems" data-actor-id="{{@key}}">
+                                <i class="fas fa-chevron-right midi-stats-chevron"></i>
+                                <span>{{localize "midi-qol.stats.ItemBreakdown"}}</span>
+                            </div>
+                            <div class="midi-stats-items-body">
+                                <table class="midi-stats-items-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="midi-stats-item-col">{{localize "midi-qol.stats.Item"}}</th>
+                                            <th>{{localize "midi-qol.stats.Rolls"}}</th>
+                                            <th>{{localize "midi-qol.stats.Hits"}}</th>
+                                            <th>{{localize "midi-qol.stats.Crits"}}</th>
+                                            <th>{{localize "midi-qol.stats.AvgDmg"}}</th>
+                                            <th>{{localize "midi-qol.stats.AppliedShort"}}</th>
+                                            <th>{{localize "midi-qol.stats.kills"}}</th>
+                                            <th>{{localize "midi-qol.stats.SavesCol"}}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {{#each this.itemStats}}
+                                            <tr class="midi-stats-session">
+                                                <td class="midi-stats-item-col">{{this.name}}</td>
+                                                <td>{{this.session.numAttacks}}</td>
+                                                <td>{{this.session.numDamageRolls}}</td>
+                                                <td>{{this.session.numAttackCritical}}</td>
+                                                <td>{{this.session.damageTotalAverage}}</td>
+                                                <td>{{this.session.damageAppliedAverage}}</td>
+                                                <td>{{this.session.kills}}</td>
+                                                <td>{{this.session.numSaveSuccess}}/{{this.session.numSaves}}</td>
+                                            </tr>
+                                            <tr class="midi-stats-lifetime">
+                                                <td class="midi-stats-item-col">{{this.name}}</td>
+                                                <td>{{this.lifetime.numAttacks}}</td>
+                                                <td>{{this.lifetime.numDamageRolls}}</td>
+                                                <td>{{this.lifetime.numAttackCritical}}</td>
+                                                <td>{{this.lifetime.damageTotalAverage}}</td>
+                                                <td>{{this.lifetime.damageAppliedAverage}}</td>
+                                                <td>{{this.lifetime.kills}}</td>
+                                                <td>{{this.lifetime.numSaveSuccess}}/{{this.lifetime.numSaves}}</td>
+                                            </tr>
+                                        {{/each}}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {{/if}}
+                </div>
+            </div>
+        {{/each}}
+    {{else}}
+        <div class="midi-stats-empty">
+            <i class="fas fa-chart-bar"></i>
+            <span>{{localize "midi-qol.stats.NoStats"}}</span>
+        </div>
+    {{/if}}
+</section>

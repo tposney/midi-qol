@@ -1,0 +1,53 @@
+<section id="midi-stats-config-tab" class="tab{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+    {{#if isGm}}
+        <fieldset class="midi-stats-config-group">
+            <legend>{{localize "midi-qol.stats.SettingsSection"}}</legend>
+            <div class="form-group">
+                <label>{{localize "midi-qol.KeepRollStats.Name"}}</label>
+                <input type="checkbox" name="keepRollStats" data-dtype="Boolean" {{checked configSettings.keepRollStats}} />
+                <p class="hint">{{{localize "midi-qol.KeepRollStats.Hint"}}}</p>
+            </div>
+            <div class="form-group">
+                <label>{{localize "midi-qol.SaveStatsEvery.Name"}}</label>
+                <input type="number" name="saveStatsEvery" value="{{configSettings.saveStatsEvery}}" />
+                <p class="hint">{{{localize "midi-qol.SaveStatsEvery.Hint"}}}</p>
+            </div>
+            <div class="form-group">
+                <label>{{localize "midi-qol.PlayerStatsOnly.Name"}}</label>
+                <input type="checkbox" name="playerStatsOnly" data-dtype="Boolean" {{checked configSettings.playerStatsOnly}} />
+                <p class="hint">{{{localize "midi-qol.PlayerStatsOnly.Hint"}}}</p>
+            </div>
+        </fieldset>
+        <fieldset class="midi-stats-config-group">
+            <legend>{{localize "midi-qol.stats.ExportSection"}}</legend>
+            <button type="button" data-action="exportJSON">
+                <i class="fas fa-file-export"></i> {{localize "midi-qol.ExportJSon"}}
+            </button>
+            <button type="button" data-action="exportCSV">
+                <i class="fas fa-file-csv"></i> {{localize "midi-qol.ExportCSV"}}
+            </button>
+        </fieldset>
+        <fieldset class="midi-stats-config-group">
+            <legend>{{localize "midi-qol.stats.SessionSection"}}</legend>
+            <button type="button" data-action="endSession">
+                <i class="fas fa-clock"></i> {{localize "midi-qol.EndSession"}}
+            </button>
+        </fieldset>
+        <fieldset class="midi-stats-config-group midi-stats-config-danger">
+            <legend>{{localize "midi-qol.stats.DangerSection"}}</legend>
+            <button type="button" class="midi-stats-danger-btn" data-action="clearStats">
+                <i class="fas fa-trash"></i> {{localize "midi-qol.ClearStats"}}
+            </button>
+        </fieldset>
+    {{/if}}
+    {{#if hasStats}}
+        <fieldset class="midi-stats-config-group">
+            <legend>{{localize "midi-qol.stats.RemoveActorSection"}}</legend>
+            {{#each stats}}
+                <button type="button" class="midi-stats-remove-btn" data-action="removeStats" data-actor-id="{{@key}}">
+                    <i class="fas fa-user-minus"></i> {{localize "midi-qol.RemoveStats"}} {{this.name}}
+                </button>
+            {{/each}}
+        </fieldset>
+    {{/if}}
+</section>

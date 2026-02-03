@@ -1,6 +1,6 @@
-import { criticalDamage, nsaFlag, coloredBorders, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, quickSettingsBlurb, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, damageCardStyleOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, checkFlankingOptions, hideRollDetailsHintLongOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions, safeGetGameSetting, resetConfigSettingsToDefaults } from "../settings.js"
+import { criticalDamage, criticalDamageChoices, nsaFlag, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, quickSettingsBlurb, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, damageCardStyleOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, checkFlankingOptions, hideRollDetailsHintLongOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions, safeGetGameSetting, resetConfigSettingsToDefaults } from "../settings.js"
 import { configSettings } from "../settings.js"
-import { warn, i18n, error, debug, gameStats, debugEnabled, log, GameSystemConfig, ceInterface } from "../../midi-qol.js";
+import { warn, i18n, error, debug, debugEnabled, log, GameSystemConfig, ceInterface } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -38,16 +38,16 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static override PARTS = {
     tabs: { template: "templates/generic/tab-navigation.hbs" },
-    gm: { template: "modules/midi-qol/templates/config/gm.hbs" },
-    player: { template: "modules/midi-qol/templates/config/player.hbs" },
-    workflow: { template: "modules/midi-qol/templates/config/workflow.hbs" },
-    concentration: { template: "modules/midi-qol/templates/config/concentration.hbs" },
-    reactions: { template: "modules/midi-qol/templates/config/reactions.hbs" },
-    misc: { template: "modules/midi-qol/templates/config/misc.hbs" },
-    mechanics: { template: "modules/midi-qol/templates/config/mechanics.hbs" },
-    rules: { template: "modules/midi-qol/templates/config/rules.hbs" },
-    quick: { template: "modules/midi-qol/templates/config/quick.hbs" },
-    footer: { template: "modules/midi-qol/templates/config/footer.hbs" }
+    gm: { template: "modules/midi-qol/templates/apps/ConfigPanel/gm.hbs" },
+    player: { template: "modules/midi-qol/templates/apps/ConfigPanel/player.hbs" },
+    workflow: { template: "modules/midi-qol/templates/apps/ConfigPanel/workflow.hbs" },
+    concentration: { template: "modules/midi-qol/templates/apps/ConfigPanel/concentration.hbs" },
+    reactions: { template: "modules/midi-qol/templates/apps/ConfigPanel/reactions.hbs" },
+    misc: { template: "modules/midi-qol/templates/apps/ConfigPanel/misc.hbs" },
+    mechanics: { template: "modules/midi-qol/templates/apps/ConfigPanel/mechanics.hbs" },
+    rules: { template: "modules/midi-qol/templates/apps/ConfigPanel/rules.hbs" },
+    quick: { template: "modules/midi-qol/templates/apps/ConfigPanel/quick.hbs" },
+    footer: { template: "modules/midi-qol/templates/apps/ConfigPanel/footer.hbs" }
   }
 
   // V13 version:
@@ -165,6 +165,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       autoRollDamageOptions,
       removeButtonsOptions,
       criticalDamage,
+      criticalDamageChoices,
       autoApplyDamageOptions,
       damageCardStyleOptions,
       playerDamageCardOptions,
@@ -188,6 +189,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       hideRollDetailsHint: hideRollDetailsHintLongOptions,
       nsaFlag,
       coloredBorders,
+      coloredBordersOptions,
       playerRollSavesOptions: playerRollSavesOptionsLocalized,
       rollNPCSavesOptions: rollNPCSavesOptionsLocalized,
       customSoundsPlaylistOptions: game.playlists?.contents.reduce((acc, e) => { acc[e.id] = e.name; return acc }, {}) || {},
@@ -226,6 +228,10 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         skill: i18n("midi-qol.fastForwardOptions.skill"),
         tool: i18n("midi-qol.fastForwardOptions.tool"),
       },
+      preferredGMOptions: game.users?.filter(user => user.isGM).reduce((acc, user) => {
+        acc[user.id] = user.name ?? "";
+        return acc;
+      }, { "": i18n("None") } as Record<string, string>),
     };
     context = foundry.utils.mergeObject(await super._prepareContext(options), context, { inplace: false });
     context.concentrationDisabled =safeGetGameSetting("dnd5e", "disableConcentration");
@@ -313,9 +319,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     this.element.querySelector(".optionalRulesEnabled")?.addEventListener("click", event => {
       configSettings.optionalRulesEnabled = !configSettings.optionalRulesEnabled;
       this.render({ force: true });
-    });
-    this.element.querySelector("#midi-qol-show-stats")?.addEventListener("click", event => {
-      gameStats.showStats();
     });
     this.element.querySelector("#midi-qol-export-config")?.addEventListener("click", exportSettingsToJSON);
     this.element.querySelector("#midi-qol-import-config")?.addEventListener("click", async () => {

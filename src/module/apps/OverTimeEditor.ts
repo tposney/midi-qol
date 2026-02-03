@@ -1,5 +1,5 @@
 import { i18n, MODULE_ID, GameSystemConfig } from "../../midi-qol.js";
-import { serializeOvertimeDetails } from "../utils.js";
+import { serializeOvertimeDetails, parseBool } from "../utils.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -58,7 +58,7 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static override PARTS = {
     form: {
-      template: "modules/midi-qol/templates/overTimeEditor.hbs"
+      template: "modules/midi-qol/templates/apps/OverTimeEditor/overTimeEditor.hbs"
     }
   };
 
@@ -124,10 +124,10 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       rollType: raw.rollType ?? (raw.saveAbility ? "save" : "damage"),
       saveAbilityString: raw.saveAbility ?? "",
       saveDCRaw: raw.saveDC ?? "",
-      saveMagic: raw.saveMagic === "true" || raw.saveMagic === "1",
+      saveMagic: parseBool(raw.saveMagic, false),
       damageRoll: raw.damageRoll ?? "",
       damageType: raw.damageType ?? "",
-      damageBeforeSave: raw.damageBeforeSave === "true" || raw.damageBeforeSave === "1",
+      damageBeforeSave: parseBool(raw.damageBeforeSave, false),
       saveDamage: raw.saveDamage ?? "nodamage",
       actionSave: raw.actionSave ?? "none",
       applyCondition: raw.applyCondition ?? raw.condition ?? "",
@@ -136,12 +136,12 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       itemName: raw.itemName ?? "",
       chatFlavor: raw.chatFlavor ?? "",
       rollMode: raw.rollMode ?? "default",
-      fastForwardDamage: raw.fastForwardDamage === "true" || raw.fastForwardDamage === "1",
-      fastForwardAttack: raw.fastForwardAttack === "true" || raw.fastForwardAttack === "1",
-      autoRollAttack: raw.autoRollAttack === "true" || raw.autoRollAttack === "1",
-      autoRollDamage: raw.autoRollDamage === "true" || raw.autoRollDamage === "1",
-      allowIncapacitated: raw.allowIncapacitated === "true" || raw.allowIncapacitated === "1",
-      killAnim: raw.killAnim === "true" || raw.killAnim === "1",
+      fastForwardDamage: parseBool(raw.fastForwardDamage, true),
+      fastForwardAttack: parseBool(raw.fastForwardAttack, true),
+      autoRollAttack: parseBool(raw.autoRollAttack, true),
+      autoRollDamage: parseBool(raw.autoRollDamage, true),
+      allowIncapacitated: parseBool(raw.allowIncapacitated, false),
+      killAnim: parseBool(raw.killAnim, false),
       // Count fields — defaults
       saveCountEnabled: false,
       saveCountNum: 1,
@@ -164,6 +164,8 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       data.saveCountConsecutive = parsed.consecutive;
       data.saveCountEffectSpec = parsed.effectSpec;
     } else if (raw.saveRemove !== undefined) {
+      foundry.utils.logCompatibilityWarning(`midi-qol | OverTimeEditor | saveRemove is deprecated, use saveCount instead (saveRemove=${raw.saveRemove})`,
+        { since: "midi-qol 13.0.43", until: "midi-qol 13.1.0" });
       if (raw.saveRemove === "true" || raw.saveRemove === "1") {
         data.saveCountEnabled = true;
         data.saveCountNum = 1;
@@ -187,6 +189,8 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       data.failCountConsecutive = parsed.consecutive;
       data.failCountEffectSpec = parsed.effectSpec;
     } else if (raw.failRemove !== undefined) {
+      foundry.utils.logCompatibilityWarning(`midi-qol | OverTimeEditor | failRemove is deprecated, use failCount instead (failRemove=${raw.failRemove})`,
+        { since: "midi-qol 13.0.43", until: "midi-qol 13.1.0" });
       data.failCountEnabled = true;
       const parsed = this.parseCountFields(raw.failRemove);
       data.failCountNum = parsed.count;

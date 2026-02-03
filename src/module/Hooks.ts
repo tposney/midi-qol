@@ -1,4 +1,4 @@
-import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, log, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData } from "./utils.js";
@@ -1386,7 +1386,6 @@ Hooks.on("dnd5e.preRollConcentration", (rollConfig, dialogConfig, messageConfig)
 })
 
 Hooks.on("dnd5e.rollConcentration", (rolls, { subject }) => {
-  if (configSettings.doConcentrationCheck === "item") return;
   if (!subject || !(subject instanceof CONFIG.Actor.documentClass)) {
     const message = "dnd5e.rollConcentration hook called with non-actor";
     TroubleShooter.recordError(new Error(message), message);
@@ -1394,18 +1393,24 @@ Hooks.on("dnd5e.rollConcentration", (rolls, { subject }) => {
     return;
   }
   if (rolls instanceof Roll) rolls = [rolls];
-  // Not sure what multiple concentration rolls mean
   // Assume concentration fails if any of the concentration rolls fail.
+  let failed = false;
+  for (let roll of rolls) {
+    // @ts-expect-error no dnd5e-types
+    if (roll.isFailure) failed = true;
+  }
+  if (configSettings.keepRollStats) {
+    gameStats.addConcentrationResult(subject, !failed);
+  }
+  // The "item" path handles criticalSaves and endConcentration via its own workflow/macros
+  if (configSettings.doConcentrationCheck === "item") return;
   for (let roll of rolls) {
     // @ts-expect-error no dnd5e-types
     if (checkRule("criticalSaves") && roll.isCritical) roll.options.success = true;
-    // triggerTargetMacros(triggerList: string[], targets: Set<any> = this.targets, options: any = {}) {
+  }
+  if (configSettings.removeConcentration && failed) {
     // @ts-expect-error no dnd5e-types
-    if (configSettings.removeConcentration && roll.isFailure) {
-      // @ts-expect-error no dnd5e-types
-      subject.endConcentration();
-      return;
-    }
+    subject.endConcentration();
   }
 });
 

@@ -1,4 +1,4 @@
-import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
+import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
 import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType } from "./utils.js";
 import { installedModules } from "./setupModules.js";
@@ -876,7 +876,11 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     }
     if (saveRollMode) game.settings.set("core", "rollMode", saveRollMode);
     if (abilityId) await expireRollEffect.bind(this)(rollType, abilityId, success);
-    if (config.midiOptions.isConcentrationCheck) expireRollEffect.bind(this)("isConcentrationSave", "", success);
+    if (config.midiOptions.isConcentrationCheck) {
+      // @ts-expect-error no dnd5e-types
+      if (success === undefined && result?.[0]?.isSuccess !== undefined) success = result[0].isSuccess;
+      expireRollEffect.bind(this)("isConcentrationSave", "", success);
+    }
   } catch (err) {
     const message = `doRollAbility error ${this.name} ${abilityId} ${rollType} ${this.uuid}`;
     TroubleShooter.recordError(err, message);
@@ -986,6 +990,21 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
 }
 
 export function deathSaveHook(rolls: Roll[], { chatString, subject: actor }: { chatString: string; updates: Actor.UpdateData; subject: Actor.Implementation }) {
+  if (configSettings.keepRollStats && actor) {
+    if (rolls instanceof Roll) rolls = [rolls];
+    let successes = 0;
+    let failures = 0;
+    for (const roll of rolls) {
+      // @ts-expect-error no dnd5e-types
+      if (roll.isCritical) successes += 2;
+      // @ts-expect-error no dnd5e-types
+      else if (roll.isFumble) failures += 2;
+      // @ts-expect-error no dnd5e-types
+      else if (roll.isFailure) failures += 1;
+      else successes += 1;
+    }
+    gameStats.addDeathSaveResult(actor, successes, failures);
+  }
   if (chatString === "DND5E.DeathSaveFailure") {
     if (hasCondition(actor, "unconscious")) {
       const _id = CONFIG.statusEffects.find(e => e.id === "unconscious")?._id;

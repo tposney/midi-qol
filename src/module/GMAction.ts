@@ -65,6 +65,7 @@ export let setupSocket = () => {
   socketlibSocket.register("updateActor", updateActor);
   socketlibSocket.register("updateEffects", updateEffects);
   socketlibSocket.register("updateEntityStats", GMupdateEntityStats)
+  socketlibSocket.register("saveAllStats", GMsaveAllStats)
   socketlibSocket.register("updateUndoChatCardUuids", updateUndoChatCardUuids);
   socketlibSocket.register("updateUndoChatCardUuidsById", updateUndoChatCardUuidsById);
   socketlibSocket.register("removeActionBonusReaction", removeActionBonusReaction);
@@ -139,6 +140,7 @@ export class SaferSocket {
       case "undoMostRecentWorkflow":
       case "undoTillWorkflow":
       case "updateEntityStats":
+      case "saveAllStats":
       case "updateUndoChatCardUuids":
       case "updateUndoChatCardUuidsById":
       case "deleteEffectsByUuid":
@@ -367,6 +369,10 @@ function GMupdateEntityStats(data: { id: string; currentStats: Stats; }) {
   return gameStats.GMupdateEntity(data)
 }
 
+function GMsaveAllStats() {
+  return gameStats.GMsaveAllStats();
+}
+
 export async function timedExecuteAsGM(toDo: string, data: any) {
   if (false) return unTimedExecuteAsGM(toDo, data);
   const start = Date.now();
@@ -377,11 +383,7 @@ export async function timedExecuteAsGM(toDo: string, data: any) {
 }
 
 export function preferredActiveGM() {
-  let preferredGMId = safeGetGameSetting("midi-qol", "PreferredGM");
-  if (preferredGMId === "none") {
-    game.settings.set("midi-qol", "PreferredGM", ""); // reset to no preferred GM
-    preferredGMId = "";
-  }
+  let preferredGMId = configSettings.preferredGM ?? "";
   if (preferredGMId !== "") {
     const preferredGM = game.users?.get(preferredGMId);
     if (preferredGM?.active) return preferredGM as User.Implementation;
@@ -394,7 +396,7 @@ export function preferredActiveGM() {
 export async function unTimedExecuteAsGM(toDo: string, ...args) {
   if (!socketlibSocket) return undefined;
   const myScene = game.user?.viewedScene;
-  const preferredGMId = safeGetGameSetting("midi-qol", "PreferredGM");
+  const preferredGMId = configSettings.preferredGM ?? "";
   let preferredGM = game.users?.get(preferredGMId);
   if (!preferredGM?.active) {
     if (preferredGMId !== "") log(`preferredGM ${preferredGMId} is not active`);
@@ -1175,7 +1177,7 @@ function updateHPStatusHeader(html: HTMLElement, actorUuid?: string, applied?: b
 }
 
 /** Helper to generate tooltip HTML for a damage item */
-function generateDamageTooltip(damageItem: DamageListEntry): string {
+function generateDamageTooltip(damageItem: DamageListEntry, tokenName?: string): string {
   const tooltipList = damageItem.damageDetail?.map(di => {
     let allMods: string[] = Object.keys(di.active ?? {}).reduce((acc: string[], k) => {
       if (["semiSuperSaver", "superSaver"].includes(k)) return acc;
@@ -1198,7 +1200,10 @@ function generateDamageTooltip(damageItem: DamageListEntry): string {
     if (damageItem.uncannyDodge) toolTipHeader.push("Uncanny Dodge");
     if (damageItem.details?.length > 0) toolTipHeader.push(...damageItem.details);
   }
-  return [...(toolTipHeader ?? []), ...(tooltipList ?? [])].join("<br>");
+  const parts: string[] = [];
+  if (tokenName) parts.push(`<b>${tokenName}</b>`);
+  parts.push(...(toolTipHeader ?? []), ...(tooltipList ?? []));
+  return parts.join("<br>");
 }
 
 async function prepareDamageListItems(
@@ -1417,7 +1422,7 @@ async function prepareDamageListItems(
       vitalityDamageIsHealing: directVitalityDamage < 0,
     };
 
-    listItem.tooltip = generateDamageTooltip(damageItem);
+    listItem.tooltip = generateDamageTooltip(damageItem, listItem.tokenName);
 
     templateData.damageList.push(listItem);
   }
