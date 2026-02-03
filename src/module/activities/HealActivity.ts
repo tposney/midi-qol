@@ -3,6 +3,7 @@ import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from
 import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
+import { isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiHealActivity: ReturnType<typeof defineMidiHealActivityClass>;
@@ -55,8 +56,8 @@ let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
     
     async rollDamage(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       config.midiOptions ??= {};
-      config.midiOptions.fastForwardHeal ??= game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward);
-      config.midiOptions.fastForwardDamage ??= game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward);
+      config.midiOptions.fastForwardHeal ??= isAutoFastForward("damage");
+      config.midiOptions.fastForwardDamage ??= isAutoFastForward("damage");
       return super.rollDamage(config, dialog, message);
     }
     

@@ -1378,6 +1378,7 @@ Only prompt when save fails.
 | `flags.midi-qol.optional.NAME.skill.all` | Evaluated | Optional skill bonus (all) |
 | `flags.midi-qol.optional.NAME.skill.{skill}` | Evaluated | Optional skill bonus (specific) |
 | `flags.midi-qol.optional.NAME.skill.fail.all` | Evaluated | Optional bonus on failed skill (all) |
+| `flags.midi-qol.optional.NAME.skill.fail.{skill}` | Evaluated | Optional bonus on failed skill (specific) |
 
 *Skills: acr, ani, arc, ath, dec, his, ins, inv, itm, med, nat, prc, per, prf, rel, slt, ste, sur.*
 

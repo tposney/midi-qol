@@ -37,10 +37,10 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
   static override PARTS = {
     tabs: { template: "templates/generic/tab-navigation.hbs" },
     sounds: { 
-      template: "modules/midi-qol/templates/sounds/sounds.hbs",
+      template: "modules/midi-qol/templates/apps/SoundConfigPanel/sounds.hbs",
       scrollable: [""]
     },
-    quick: { template: "modules/midi-qol/templates/sounds/quick.hbs" },
+    quick: { template: "modules/midi-qol/templates/apps/SoundConfigPanel/quick.hbs" },
     footer: { template: "templates/generic/form-footer.hbs" },
   }
 

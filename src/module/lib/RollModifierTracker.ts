@@ -3,7 +3,7 @@
  */
 
 import { RollDialogConfig, RollProcessConfig } from "../../globals.js";
-import { i18n } from "../../midi-qol.js";
+import { GameSystemConfig, i18n } from "../../midi-qol.js";
 import { createConditionData, evalAllConditions, evalAllConditionsAsync, tokenForActor, MidiOptions } from "../utils.js";
 
 /** Attribution types for roll modifier tracking */
@@ -14,14 +14,6 @@ export type AdvantageAttributionMap = Partial<Record<AdvantageAttributionType, R
 
 /** Callback type for adding attributions */
 type AttributionCallback = (type: AdvantageAttributionType, source: string, displayName: string) => void;
-
-/** Options for RollModifierTracker constructor/reset */
-export interface RollModifierTrackerOptions {
-  /** Legacy Set format: "${type}:${source}" - reference to external Set */
-  legacyAttribution?: Set<string>;
-  /** Legacy Set format for adv-reminder: "${type}:${source}" - reference to external Set */
-  advReminderAttribution?: Set<string>;
-}
 
 export interface RollModifierFlags {
   failFlags: string[];
@@ -78,6 +70,56 @@ function emitDeprecatedFlagWarning(flag: string): void {
     `midi-qol | The flag "flags.midi-qol.${flag}" is deprecated. Use "flags.midi-qol.${newFlag}" instead.`,
     { since: "13.0.38", until: "14", once: true }
   );
+}
+
+// Helper to resolve a short key (e.g., "mwak", "str", "acr") to a human-readable label
+function resolveKeyLabel(key: string): string {
+  if (key === "all") return "All";
+  const abilityLabel = GameSystemConfig.abilities?.[key]?.label;
+  if (abilityLabel) return abilityLabel;
+  const skillLabel = GameSystemConfig.skills?.[key]?.label;
+  if (skillLabel) return skillLabel;
+  const actionLabel = GameSystemConfig.itemActionTypes?.[key];
+  if (actionLabel) return actionLabel;
+  const dmgLabel = GameSystemConfig.damageTypes?.[key]?.label;
+  if (dmgLabel) return dmgLabel;
+  const toolLabel = globalThis.dnd5e?.documents?.Trait?.keyLabel?.(`tool:${key}`);
+  if (toolLabel) return toolLabel;
+  return key;
+}
+
+// Helper to get a human-readable display name for a midi-qol flag path
+export function getFlagDisplayName(flag: string): string {
+  // Tier 1: Check DAE localizationMap (covers ~95% of template-generated flags)
+  const lmEntry = globalThis.DAE?.localizationMap?.[midiFlag(flag)];
+  if (lmEntry?.name) return lmEntry.name;
+
+  if (!game.i18n) return flag;
+
+  // Tier 2: Check for exact flagTemplate i18n key
+  const exactKey = `midi-qol.flagTemplate.${flag}.name`;
+  const exactResult = game.i18n.localize(exactKey);
+  if (exactResult !== exactKey) {
+    // If the template contains {label} but we have no label segment, strip the placeholder
+    if (exactResult.includes("{label}")) return exactResult.replace(/\s*\(\{label\}\)/, "");
+    return exactResult;
+  }
+
+  // Tier 3: Split on last "." and try prefix template + resolved label
+  const lastDot = flag.lastIndexOf(".");
+  if (lastDot > 0) {
+    const prefix = flag.substring(0, lastDot);
+    const lastElement = flag.substring(lastDot + 1);
+    const prefixKey = `midi-qol.flagTemplate.${prefix}.name`;
+    const prefixResult = game.i18n.localize(prefixKey);
+    if (prefixResult !== prefixKey) {
+      const label = resolveKeyLabel(lastElement);
+      return game.i18n.format(prefixKey, { label });
+    }
+  }
+
+  // Tier 4: Fallback to raw flag
+  return flag;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -203,6 +245,13 @@ export class AdvantageDisadvantageTracker {
     this.#suppressed = false;
     this.#override = false;
   }
+
+  /** Restore state from serialized data */
+  restore(state: { active: boolean; suppressed: boolean; override: boolean }): void {
+    this.#active = state.active;
+    this.#suppressed = state.suppressed;
+    this.#override = state.override;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -327,6 +376,14 @@ export class CriticalFumbleTracker {
     this.#forced = false;
     this.#suppressed = false;
     this.#override = undefined;
+  }
+
+  /** Restore state from serialized data */
+  restore(state: { natural: boolean; forced: boolean; suppressed: boolean; override: boolean | undefined }): void {
+    this.#natural = state.natural;
+    this.#forced = state.forced;
+    this.#suppressed = state.suppressed;
+    this.#override = state.override;
   }
 }
 
@@ -455,6 +512,14 @@ export class RollValueTracker {
     this.#min = -Infinity;
     this.#max = Infinity;
   }
+
+  /** Restore state from serialized data */
+  restore(state: { willFail: boolean; willSucceed: boolean; minValue: number; maxValue: number }): void {
+    this.#autoFail = state.willFail;
+    this.#autoSuccess = state.willSucceed;
+    this.#min = state.minValue;
+    this.#max = state.maxValue;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -478,14 +543,12 @@ export class RollModifierTracker {
   // ─────────────────────────────────────────────────────────────────
 
   #attribution: AdvantageAttributionMap = {};
-  /** Legacy Set format: "${type}:${source}" - reference to external Set */
-  #legacyAttribution: Set<string>;
-  /** Legacy Set format for adv-reminder: "${type}:${source}" - reference to external Set */
-  #advReminderAttribution: Set<string>;
+  /** Legacy Set format: "${type}:${source}" */
+  #legacyAttribution: Set<string> = new Set();
+  /** Legacy Set format for adv-reminder: "${type}:${source}" */
+  #advReminderAttribution: Set<string> = new Set();
 
-  constructor(options?: RollModifierTrackerOptions) {
-    this.#legacyAttribution = options?.legacyAttribution ?? new Set();
-    this.#advReminderAttribution = options?.advReminderAttribution ?? new Set();
+  constructor() {
 
     // Create sub-trackers with bound attribution method
     const addAttr = this.addAttribution.bind(this);
@@ -577,35 +640,47 @@ export class RollModifierTracker {
 
   /**
    * Reset all state to initial values.
-   * @param options - Optional new references for legacy Sets
    */
-  reset(options?: RollModifierTrackerOptions): void {
+  reset(): void {
     this.advantage.reset();
     this.disadvantage.reset();
     this.critical.reset();
     this.fumble.reset();
     this.modifiers.reset();
     this.#attribution = {};
+    this.#legacyAttribution.clear();
+    this.#advReminderAttribution.clear();
+  }
 
-    // Handle legacy attribution Set
-    if (options?.legacyAttribution) {
-      if (options.legacyAttribution !== this.#legacyAttribution) {
-        this.#legacyAttribution.clear();
-        this.#legacyAttribution = options.legacyAttribution;
-      }
-    } else {
-      this.#legacyAttribution.clear();
-    }
+  // ─────────────────────────────────────────────────────────────────
+  // Serialization
+  // ─────────────────────────────────────────────────────────────────
 
-    // Handle advReminder attribution Set
-    if (options?.advReminderAttribution) {
-      if (options.advReminderAttribution !== this.#advReminderAttribution) {
-        this.#advReminderAttribution.clear();
-        this.#advReminderAttribution = options.advReminderAttribution;
-      }
-    } else {
-      this.#advReminderAttribution.clear();
-    }
+  /** Serialize tracker state to a plain object for persistence */
+  toJSON(): object {
+    return {
+      advantage: this.advantage.get,
+      disadvantage: this.disadvantage.get,
+      critical: this.critical.get,
+      fumble: this.fumble.get,
+      modifiers: this.modifiers.get,
+      attribution: this.#attribution,
+      legacyAttribution: Array.from(this.#legacyAttribution),
+      advReminderAttribution: Array.from(this.#advReminderAttribution)
+    };
+  }
+
+  /** Restore tracker state from serialized data */
+  restore(data: ReturnType<RollModifierTracker["toJSON"]> & Record<string, any>): void {
+    if (!data) return;
+    if (data.advantage) this.advantage.restore(data.advantage);
+    if (data.disadvantage) this.disadvantage.restore(data.disadvantage);
+    if (data.critical) this.critical.restore(data.critical);
+    if (data.fumble) this.fumble.restore(data.fumble);
+    if (data.modifiers) this.modifiers.restore(data.modifiers);
+    if (data.attribution) this.#attribution = data.attribution;
+    if (data.legacyAttribution) this.#legacyAttribution = new Set(data.legacyAttribution);
+    if (data.advReminderAttribution) this.#advReminderAttribution = new Set(data.advReminderAttribution);
   }
 
   processKeys(config: RollProcessConfig = {}) {
@@ -680,7 +755,7 @@ export async function computeAdvantageFlags(
         emitDeprecatedFlagWarning(flag);
       }
       const source = flag.replace(/^advantage\./, '');
-      tracker.advantage.add(source, flag);
+      tracker.advantage.add(source, getFlagDisplayName(flag));
       break;
     }
   }
@@ -692,7 +767,7 @@ export async function computeAdvantageFlags(
         emitDeprecatedFlagWarning(flag);
       }
       const source = flag.replace(/^disadvantage\./, '');
-      tracker.disadvantage.add(source, flag);
+      tracker.disadvantage.add(source, getFlagDisplayName(flag));
       break;
     }
   }
@@ -705,7 +780,7 @@ export async function computeAdvantageFlags(
   if (flags.noAdvantageFlags?.length) {
     for (const flag of flags.noAdvantageFlags) {
       if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-        tracker.advantage.suppress(flag, flag);
+        tracker.advantage.suppress(flag, getFlagDisplayName(flag));
         break;
       }
     }
@@ -715,7 +790,7 @@ export async function computeAdvantageFlags(
   if (flags.noDisadvantageFlags?.length) {
     for (const flag of flags.noDisadvantageFlags) {
       if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-        tracker.disadvantage.suppress(flag, flag);
+        tracker.disadvantage.suppress(flag, getFlagDisplayName(flag));
         break;
       }
     }
@@ -735,7 +810,7 @@ export async function computeAdvantageFlags(
     if (flags.sourceAdvantageFlags?.length) {
       for (const flag of flags.sourceAdvantageFlags) {
         if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.advantage.add(`${flag} ${sourceName}`, `${flag} ${sourceName}`);
+          tracker.advantage.add(`${flag} ${sourceName}`, `${getFlagDisplayName(flag)} (${sourceName})`);
           break;
         }
       }
@@ -744,7 +819,7 @@ export async function computeAdvantageFlags(
     if (flags.sourceDisadvantageFlags?.length) {
       for (const flag of flags.sourceDisadvantageFlags) {
         if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.disadvantage.add(`${flag} ${sourceName}`, `${flag} ${sourceName}`);
+          tracker.disadvantage.add(`${flag} ${sourceName}`, `${getFlagDisplayName(flag)} (${sourceName})`);
           break;
         }
       }
@@ -753,7 +828,7 @@ export async function computeAdvantageFlags(
     if (flags.sourceNoAdvantageFlags?.length) {
       for (const flag of flags.sourceNoAdvantageFlags) {
         if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.advantage.suppress(`${flag} ${sourceName}`, `${flag} ${sourceName}`);
+          tracker.advantage.suppress(`${flag} ${sourceName}`, `${getFlagDisplayName(flag)} (${sourceName})`);
           break;
         }
       }
@@ -762,7 +837,7 @@ export async function computeAdvantageFlags(
     if (flags.sourceNoDisadvantageFlags?.length) {
       for (const flag of flags.sourceNoDisadvantageFlags) {
         if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.disadvantage.suppress(`${flag} ${sourceName}`, `${flag} ${sourceName}`);
+          tracker.disadvantage.suppress(`${flag} ${sourceName}`, `${getFlagDisplayName(flag)} (${sourceName})`);
           break;
         }
       }
@@ -804,7 +879,7 @@ export function computeRollModifiers(
   // Evaluate auto-fail flags
   for (const flag of flags.failFlags) {
     if (evalAllConditions(actor, midiFlag(flag), conditionData, false)) {
-      tracker.modifiers.fail(flag, flag);
+      tracker.modifiers.fail(flag, getFlagDisplayName(flag));
       break;
     }
   }
@@ -812,7 +887,7 @@ export function computeRollModifiers(
   // Evaluate auto-success flags
   for (const flag of flags.successFlags) {
     if (evalAllConditions(actor, midiFlag(flag), conditionData, false)) {
-      tracker.modifiers.succeed(flag, flag);
+      tracker.modifiers.succeed(flag, getFlagDisplayName(flag));
       break;
     }
   }
@@ -822,7 +897,7 @@ export function computeRollModifiers(
     const value = evalAllConditions(actor, midiFlag(flag), conditionData, Infinity);
     if (typeof value !== "boolean" && Number.isNumeric(value)) {
       const numValue = Number(value);
-      tracker.modifiers.max(numValue, flag);
+      tracker.modifiers.max(numValue, getFlagDisplayName(flag));
     }
   }
 
@@ -831,7 +906,7 @@ export function computeRollModifiers(
     const value = evalAllConditions(actor, midiFlag(flag), conditionData, -Infinity);
     if (typeof value !== "boolean" && Number.isNumeric(value)) {
       const numValue = Number(value);
-      tracker.modifiers.min(numValue, flag);
+      tracker.modifiers.min(numValue, getFlagDisplayName(flag));
     }
   }
 }
@@ -915,7 +990,7 @@ export async function computeCriticalModifiers(
   // Evaluate critical flags - force critical
   for (const flag of flags.criticalFlags) {
     if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-      tracker.critical.force(flag, flag);
+      tracker.critical.force(flag, getFlagDisplayName(flag));
       break;
     }
   }
@@ -923,7 +998,7 @@ export async function computeCriticalModifiers(
   // Evaluate noCritical flags - suppress critical
   for (const flag of flags.noCriticalFlags) {
     if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-      tracker.critical.suppress(flag, flag);
+      tracker.critical.suppress(flag, getFlagDisplayName(flag));
       break;
     }
   }
@@ -931,7 +1006,7 @@ export async function computeCriticalModifiers(
   // Evaluate fumble flags - force fumble
   for (const flag of flags.fumbleFlags) {
     if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-      tracker.fumble.force(flag, flag);
+      tracker.fumble.force(flag, getFlagDisplayName(flag));
       break;
     }
   }
@@ -939,7 +1014,7 @@ export async function computeCriticalModifiers(
   // Evaluate noFumble flags - suppress fumble
   for (const flag of flags.noFumbleFlags) {
     if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-      tracker.fumble.suppress(flag, flag);
+      tracker.fumble.suppress(flag, getFlagDisplayName(flag));
       break;
     }
   }
@@ -971,7 +1046,7 @@ export async function computeTargetCriticalModifiers(
   // Evaluate grants.critical flags
   for (const flag of flags.criticalFlags) {
     if (await evalAllConditionsAsync(targetActor, midiFlag(flag), conditionData, false)) {
-      tracker.critical.force(flag, `${flag} ${targetName}`);
+      tracker.critical.force(flag, `${getFlagDisplayName(flag)} (${targetName})`);
       break;
     }
   }
@@ -979,7 +1054,7 @@ export async function computeTargetCriticalModifiers(
   // Evaluate grants.noCritical flags
   for (const flag of flags.noCriticalFlags) {
     if (await evalAllConditionsAsync(targetActor, midiFlag(flag), conditionData, false)) {
-      tracker.critical.suppress(flag, `${flag} ${targetName}`);
+      tracker.critical.suppress(flag, `${getFlagDisplayName(flag)} (${targetName})`);
       break;
     }
   }
@@ -987,7 +1062,7 @@ export async function computeTargetCriticalModifiers(
   // Evaluate grants.fumble flags
   for (const flag of flags.fumbleFlags) {
     if (await evalAllConditionsAsync(targetActor, midiFlag(flag), conditionData, false)) {
-      tracker.fumble.force(flag, `${flag} ${targetName}`);
+      tracker.fumble.force(flag, `${getFlagDisplayName(flag)} (${targetName})`);
       break;
     }
   }
@@ -995,7 +1070,7 @@ export async function computeTargetCriticalModifiers(
   // Evaluate grants.noFumble flags
   for (const flag of flags.noFumbleFlags) {
     if (await evalAllConditionsAsync(targetActor, midiFlag(flag), conditionData, false)) {
-      tracker.fumble.suppress(flag, `${flag} ${targetName}`);
+      tracker.fumble.suppress(flag, `${getFlagDisplayName(flag)} (${targetName})`);
       break;
     }
   }

@@ -1121,3 +1121,375 @@ section.midi-qol.tab {
   width: 18px;
   height: 18px;
 }
+
+/* OverTime Editor */
+.overtime-editor {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+
+.overtime-editor-scroll {
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 0.25rem;
+}
+
+.overtime-editor fieldset {
+  border: 1px solid var(--color-border-light-tertiary, #ccc);
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.overtime-editor fieldset legend {
+  font-weight: bold;
+  padding: 0 0.25rem;
+}
+
+.overtime-ability-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+}
+
+.overtime-ability-option {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+}
+
+.overtime-ability-option input[type="checkbox"] {
+  margin: 0;
+}
+
+.overtime-editor input[type="checkbox"] {
+  accent-color: var(--dnd5e-color-gold, #c9a46c);
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+  outline: 1px solid var(--color-border-light-tertiary, #888);
+  outline-offset: -1px;
+  border-radius: 3px;
+}
+
+.overtime-count-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.overtime-count-input {
+  width: 4rem;
+}
+
+.overtime-count-select {
+  width: 10rem;
+}
+
+.overtime-inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+}
+
+.overtime-inline-check input[type="checkbox"] {
+  margin: 0;
+}
+
+.overtime-checkbox-row {
+  display: flex;
+  gap: 1rem;
+  padding: 0.125rem 0;
+}
+
+/* ── Condition Expression Editor ── */
+.condition-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.condition-editor-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0.5rem;
+}
+
+.condition-editor-key {
+  margin-bottom: 0.5rem;
+}
+
+.condition-key-value {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.85rem;
+  color: var(--color-text-dark-secondary, #666);
+}
+
+.condition-editor-codemirror {
+  flex: 1;
+  overflow: auto;
+  border: 1px solid var(--color-border-light-tertiary, #888);
+  border-radius: 4px;
+}
+
+.condition-editor-codemirror code-mirror {
+  height: 100%;
+}
+
+/* ── Roll Statistics ── */
+
+
+/* Session/Lifetime toggle visibility (per card) — works for both block and table-row elements */
+.midi-stats-card tr.midi-stats-lifetime { display: none; }
+.midi-stats-card.show-lifetime tr.midi-stats-session { display: none; }
+.midi-stats-card.show-lifetime tr.midi-stats-lifetime { display: table-row; }
+
+.midi-stats-period-label-lifetime { display: none; }
+.midi-stats-card.show-lifetime .midi-stats-period-label-session { display: none; }
+.midi-stats-card.show-lifetime .midi-stats-period-label-lifetime { display: inline; }
+
+/* Period toggle button — inline in card header */
+.midi-stats-period-toggle {
+  margin-left: auto;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: normal;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--color-border-light-tertiary, #aaa);
+  border-radius: 3px;
+  background: var(--color-bg-option, rgba(0, 0, 0, 0.05));
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.midi-stats-period-toggle:hover {
+  background: var(--color-hover-bg, rgba(0, 0, 0, 0.1));
+}
+
+/* Stats tab fills available space in the flex column */
+#midi-stats-stats-tab {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Roll Statistics Card Layout ── */
+
+.midi-stats-card {
+  border: 1px solid var(--color-border-light-tertiary, #888);
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  background: var(--color-bg-option, rgba(0, 0, 0, 0.05));
+  overflow: clip;
+}
+
+.midi-stats-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  user-select: none;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.midi-stats-card-header:hover {
+  background: var(--color-hover-bg, rgba(0, 0, 0, 0.08));
+}
+
+.midi-stats-chevron {
+  transition: transform 0.2s ease;
+  font-size: 0.75rem;
+  width: 0.75rem;
+  text-align: center;
+}
+
+.midi-stats-card.expanded > .midi-stats-card-header .midi-stats-chevron {
+  transform: rotate(90deg);
+}
+
+.midi-stats-card-body {
+  display: none;
+  padding: 0;
+}
+
+.midi-stats-card.expanded > .midi-stats-card-body {
+  display: flex;
+  flex-direction: column;
+  max-height: 400px;
+}
+
+/* Panel tables — tabular stat display */
+
+.midi-stats-panel-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0;
+  font-size: 0.8rem;
+}
+
+.midi-stats-panel-table thead th {
+  padding: 0.25rem 0.4rem;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: var(--color-bg-option, rgba(0, 0, 0, 0.06));
+  border-bottom: 1px solid var(--color-border-light-tertiary, #aaa);
+  color: var(--color-text-dark-secondary, #666);
+  white-space: nowrap;
+}
+
+.midi-stats-panel-name {
+  text-align: left !important;
+  font-size: 0.8rem !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  color: inherit !important;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.midi-stats-panel-name i {
+  margin-right: 0.2rem;
+}
+
+.midi-stats-panel-table tbody td {
+  padding: 0.2rem 0.4rem;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.midi-stats-panel-table tbody td:first-child {
+  padding: 0;
+  width: 1%;
+}
+
+/* Item Breakdown sub-section */
+
+.midi-stats-items-section {
+  margin-top: 0.5rem;
+}
+
+.midi-stats-items-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.85rem;
+  font-weight: bold;
+  border: 1px solid var(--color-border-light-tertiary, #aaa);
+  border-radius: 4px;
+}
+
+.midi-stats-items-header:hover {
+  background: var(--color-hover-bg, rgba(0, 0, 0, 0.08));
+}
+
+.midi-stats-items-section.expanded > .midi-stats-items-header .midi-stats-chevron {
+  transform: rotate(90deg);
+}
+
+.midi-stats-items-body {
+  display: none;
+  margin-top: 0.25rem;
+}
+
+.midi-stats-items-section.expanded > .midi-stats-items-body {
+  display: block;
+}
+
+.midi-stats-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.midi-stats-items-table thead th {
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.03em;
+  padding: 0.25rem 0.35rem;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border-light-tertiary, #aaa);
+  color: var(--color-text-dark-secondary, #666);
+}
+
+.midi-stats-items-table tbody td {
+  padding: 0.2rem 0.35rem;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border-light-tertiary, #ddd);
+}
+
+.midi-stats-item-col {
+  text-align: left !important;
+}
+
+/* Empty state */
+
+.midi-stats-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  gap: 0.75rem;
+  color: var(--color-text-dark-secondary, #888);
+}
+
+.midi-stats-empty i {
+  font-size: 2rem;
+  opacity: 0.5;
+}
+
+.midi-stats-empty span {
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+/* Config tab fieldsets */
+
+.midi-stats-config-group {
+  border: 1px solid var(--color-border-light-tertiary, #aaa);
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.midi-stats-config-group legend {
+  font-weight: bold;
+  font-size: 0.85rem;
+  padding: 0 0.35rem;
+}
+
+.midi-stats-config-group button {
+  margin-bottom: 0.25rem;
+}
+
+.midi-stats-config-danger {
+  border-color: #cc4444;
+}
+
+.midi-stats-config-danger legend {
+  color: #cc4444;
+}
+
+.midi-stats-danger-btn {
+  color: #cc4444;
+}
+
+.midi-stats-remove-btn {
+  display: block;
+  width: 100%;
+}

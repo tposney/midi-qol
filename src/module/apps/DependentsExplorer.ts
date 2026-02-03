@@ -91,7 +91,7 @@ export class DependentsExplorer extends HandlebarsApplicationMixin(ApplicationV2
 
   static override PARTS = {
     main: {
-      template: "modules/midi-qol/templates/dependentsExplorer.hbs",
+      template: "modules/midi-qol/templates/apps/DependentsExplorer/dependentsExplorer.hbs",
       // Preserve scroll position during re-render
       scrollable: [".sections-list"]
     }

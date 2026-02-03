@@ -1,8 +1,57 @@
-import { GameSystemConfig, MODULE_ID, MQDamageRollTypes, debugEnabled, i18n, log, warn } from "../../midi-qol.js";
-import { configSettings, safeGetGameSetting } from "../settings.js";
+import { GameSystemConfig, MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, i18n, log } from "../../midi-qol.js";
+import { configSettings, safeGetGameSetting, saveToChatCard } from "../settings.js";
 import { getToken } from "../utils.js";
 import { setDamageRollMinTerms } from "../activities/activityHelpers.js";
-import { WorkflowDataFlags } from "../Workflow.js";
+
+const removeAll = (html: HTMLElement, sel: string) => html.querySelectorAll(sel).forEach(el => el.remove());
+const hideAll = (html: HTMLElement, sel: string) => html.querySelectorAll<HTMLElement>(sel).forEach(el => el.style.display = "none");
+const stripHighlight = (html: HTMLElement, sel: string) => html.querySelectorAll<HTMLElement>(sel).forEach(
+  el => el.classList.remove("success", "failure", "critical", "fumble")
+);
+
+import Token = foundry.canvas.placeables.Token;
+let _highlighted: Token.Implementation | null = null;
+
+const onTargetHover = (event) => {
+  event.preventDefault();
+  if (!canvas.scene?.active) return;
+  const token = canvas.tokens?.get(event.currentTarget?.dataset?.id ?? "");
+  if (token?.isVisible) {
+    //@ts-expect-error _onHoverIn
+    if (!token.controlled) token._onHoverIn(event);
+    _highlighted = token;
+  }
+}
+
+const onTargetHoverOut = (event) => {
+  event.preventDefault();
+  if (!canvas.scene?.active) return;
+  //@ts-expect-error onHoverOut
+  if (_highlighted) _highlighted._onHoverOut(event);
+  _highlighted = null;
+}
+
+const onTargetSelect = (event) => {
+  event.stopPropagation();
+  event.preventDefault();
+  if (!canvas.scene?.active) return;
+  const token = canvas.tokens?.get(event.currentTarget.dataset.id);
+  if (token?.controlled) token?.release();
+  else if (token && token?.isVisible && game.user && token.actor?.testUserPermission(game.user, "OWNER")) {
+    token.control({ releaseOthers: false });
+    canvas.animatePan(token.center)
+  }
+};
+
+function onTargetShow(event) {
+  event.stopImmediatePropagation();
+  event.preventDefault();
+  if (!canvas.scene?.active) return;
+  const token = canvas.tokens?.get(event.currentTarget.dataset.id);
+  if (game.user && token?.actor?.testUserPermission(game.user, "OWNER")) {
+    token.actor.sheet?.render(true);
+  }
+}
 
 export let ChatMessageMidi: ReturnType<typeof defineChatMessageMidiClass>;
 
@@ -14,6 +63,28 @@ export function setupChatMessageMidi() {
 
 export function defineChatMessageMidiClass(baseClass: ChatMessage.ImplementationClass) {
   return class ChatMessageMidi extends baseClass /*globalThis.dnd5e.documents.ChatMessage5e*/ {
+
+    prepareDerivedData() {
+      super.prepareDerivedData();
+
+      // Deserialize roll flags in-place from JSON to Roll instances (same pattern as Foundry core's ChatMessage.rolls)
+      const midiFlags = this.flags?.[MODULE_ID];
+      if (!midiFlags) return;
+
+      const attackData = midiFlags.attackRoll;
+      if (attackData && !(attackData instanceof Roll)) {
+        midiFlags.attackRoll = Roll.fromData(attackData) as Roll;
+      }
+
+      for (const field of ["damageRolls", "bonusDamageRolls", "otherDamageRolls",
+        "utilityRolls"] as const) {
+        const data = midiFlags[field];
+        if (data?.length) {
+          midiFlags[field] = data.map((r: any) => r instanceof Roll ? r : Roll.fromData(r));
+        }
+      }
+    }
+
     static get TRAY_TYPES() {
       return globalThis.dnd5e.documents.ChatMessage5e.TRAY_TYPES.concat(["midi-damage-application"]);
     }
@@ -51,9 +122,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       } else {
         html.querySelector(".midi-qol-attack-roll")?.appendChild(p);
       }
-      return;
-
     }
+
     get canSelectTargets() {
       if (this.flags?.[MODULE_ID]?.messageType === "attack") return true;
       // @ts-expect-error no dnd5e-types
@@ -129,6 +199,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         }));
       }
     }
+    
     applyChatCardTemp(li: HTMLElement) {
       if (!canvas.tokens) return;
       const rollsToCheck = this.rolls.filter(r => MQDamageRollTypes.includes(foundry.utils.getProperty(r, "options.midi-qol.rollType") as string));
@@ -141,14 +212,13 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     collectRolls(rollsToAccumulate: Roll[], multiRolls: boolean = false, options: { blind?: boolean }): any[] {
-      let returns: any[] = [];
-      let rolls: Roll[] = [];
+      const returns: any[] = [];
       setDamageRollMinTerms(rollsToAccumulate);
-      for (let i = 0; i < rollsToAccumulate.length; i++) {
-        if (!multiRolls && i < rollsToAccumulate.length - 1) {
-          continue;
-        } else if (multiRolls) rolls = [rollsToAccumulate[i]];
-        else rolls = rollsToAccumulate;
+      const formulaInToolTip = ["formula", "formulaadv"].includes(configSettings.rollAlternate);
+      const hideDetails = this.author?.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none";
+      const hideFormula = hideDetails || (options.blind && !game.user?.isGM);
+      const rollSets: Roll[][] = multiRolls ? rollsToAccumulate.map(r => [r]) : [rollsToAccumulate];
+      for (const rolls of rollSets) {
         //@ts-expect-error
         let { formula, total, breakdown } = game.system.dice.aggregateDamageRolls(rolls).reduce((obj: any, r) => {
           obj.formula.push(r.formula);
@@ -164,32 +234,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           foundry.utils.setProperty(rolls[0], "flags.midi-qol.breakdown", breakdown);
           foundry.utils.setProperty(rolls[0], "flags.midi-qol.total", total);
         }
-        let formulaInToolTip = ["formula", "formulaadv"].includes(configSettings.rollAlternate);
-        let hideDetails = this.author?.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none";
-        let hideFormula = this.author?.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none";
-        if (options.blind && !game.user?.isGM) hideFormula = true;
-        if (this.author?.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none") {
-          switch (configSettings.hideRollDetails) {
-            case "none":
-              break;
-            case "detailsDSN":
-              break;
-            case "details":
-              break;
-            case "d20Only":
-              break;
-            case "hitDamage":
-              break;
-            case "hitCriticalDamage":
-              break;
-            case "attackTotalOnly":
-            case "d20AttackOnly":
-              total = "--";
-              break;
-            case "all":
-              total = "--";
-              break;
-          }
+        if (hideDetails && ["attackTotalOnly", "d20AttackOnly", "all"].includes(configSettings.hideRollDetails ?? "none")) {
+          total = "--";
         }
         if (options.blind && !game.user?.isGM) total = "--";
         const roll = document.createElement("div");
@@ -266,9 +312,6 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
               html.querySelector(`.midi-qol-${rType}-roll`)?.appendChild(flavor);
             }
             html.querySelector(`.midi-qol-${rType}-roll`)?.appendChild(roll);
-            if ((configSettings.hideRollDetails ?? "none") !== "none" && !game.user?.isGM && this.author?.isGM) {
-              html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
-            }
           }
         }
       }
@@ -292,19 +335,11 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           }));
 
           html.querySelector(".message-content")?.appendChild(damageApplication);
-          if (!game.user?.isGM) {
-            //@ ts-expect-error
-            // damageApplication.targetSourceControl.hidden = true;
-            //@ ts-expect-error
-            // damageApplication.targetingMode = "selected";
-          }
         }
       }
     }
 
     _highlightCriticalSuccessFailure(html: HTMLElement) {
-      // @ t s-expect-error no dnd5e-types
-      // if (!this.flags?.[MODULE_ID]) return super._highlightCriticalSuccessFailure(html);
       // @ts-expect-error no dnd5e-types
       super._highlightCriticalSuccessFailure(html);
       const totals = html.querySelectorAll(".dice-total");
@@ -313,23 +348,16 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         if (!total) continue;
         if (!game.user?.isGM && (["whisper", "gmOnly"].includes(configSettings.autoCheckHit) || safeGetGameSetting("dnd5e", "attackRollVisibility") === "none")) {
           total.classList.remove("success", "failure", "critical", "fumble");
-        } else if (total && configSettings.highLightCriticalAttackOnly) {
+        } else if (configSettings.highLightCriticalAttackOnly) {
           //@ts-expect-error
           if (d20Roll?.isCritical) total.classList.add("critical");
           //@ts-expect-error
           if (d20Roll?.isFumble) total.classList.add("fumble");
           total.classList.remove("success", "failure");
-          total.classList.remove("success", "failure");
-        } else if (total && !configSettings.highlightSuccess) {
+        } else if (!configSettings.highlightSuccess) {
           total.classList.remove("success", "failure", "critical", "fumble");
-        } else if (total && !configSettings.highlightSuccess) {
-          //@ts-expect-error
-          if (d20Roll.isCritical) total.classList.add("critical");
-          //@ts-expect-error
-          if (d20Roll.isFumble) total.classList.add("fumble");
         }
       }
-      return;
     }
 
     maskAttackRolls(html: HTMLElement) {
@@ -337,20 +365,18 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       const hitFlag = this.flags?.[MODULE_ID]?.isHit;
       const hitString = hitFlag === undefined ? "" : hitFlag ? i18n("midi-qol.hits") : i18n("midi-qol.misses");
       let attackRollText;
-      let removeFormula = (configSettings.hideRollDetails ?? "none") !== "none";
+      let hideCritFumble = false;
       switch (configSettings.hideRollDetails) {
-        case "none":
-          break;
-        case "detailsDSN":
-          break;
+        case "none": 
+        case "detailsDSN": 
         case "details":
           break;
-        case "d20Only":
+        case "d20Only": 
+        case "d20AttackOnly":
           attackRollText = `(d20) ${this.rolls[0]?.terms[0].total ?? "--"}`;
           break;
         case "hitDamage":
-          html.querySelectorAll(".midi-qol-attack-roll .dice-total")?.forEach(el => el.classList.remove("critical"));
-          html.querySelectorAll(".midi-qol-attack-roll .dice-total")?.forEach(el => el.classList.remove("fumble"));
+          hideCritFumble = true;
           attackRollText = hitString;
           break;
         case "hitCriticalDamage":
@@ -359,20 +385,149 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         case "attackTotalOnly":
           attackRollText = this.rolls[0]?.total ?? "--";
           break;
-        case "d20AttackOnly":
-          attackRollText = `(d20) ${this.rolls[0]?.terms[0].total ?? "--"}`;
-          break;
         case "all":
-          html.querySelectorAll(".midi-qol-attack-roll .dice-total")?.forEach(el => el.classList.remove("critical"));
-          html.querySelectorAll(".midi-qol-attack-roll .dice-total")?.forEach(el => el.classList.remove("fumble"));
+          hideCritFumble = true;
           attackRollText = "--";
           break;
       }
+      if (hideCritFumble) {
+        html.querySelectorAll(".midi-qol-attack-roll .dice-total")?.forEach(el => el.classList.remove("critical", "fumble"));
+      }
       if (attackRollText) html.querySelectorAll(".midi-attack-roll .dice-total")?.forEach(el => el.innerHTML = attackRollText);
-      if (this.author.isGM && !game.user?.isGM && removeFormula) {
-        html.querySelectorAll(".midi-attack-roll .dice-formula")?.forEach(el => el.remove());
-        html.querySelectorAll(".midi-attack-roll .dice-tooltip")?.forEach(el => el.remove());
+      if ((configSettings.hideRollDetails ?? "none") !== "none") {
+        removeAll(html, ".midi-attack-roll .dice-formula");
+        removeAll(html, ".midi-attack-roll .dice-tooltip");
         html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
+        removeAll(html, ".midi-attribution-info");
+      }
+    }
+
+    applyChatVisibility(html: HTMLElement) {
+      if (html.style.display === "none") return; // Already hidden by hideStuffHandler (blind/gmHide)
+      const messageActor = (fromUuidSync(this.flags?.[MODULE_ID]?.["sourceActorUuid"]) as Actor.Implementation ?? this.speakerActor);
+      const messageActorOwner = messageActor?.isOwner;
+
+      // Re-enable save/check buttons
+      if (foundry.utils.getProperty(this, "flags.midi-qol.type") === MESSAGE_TYPES.SAVES) {
+        html.querySelectorAll<HTMLButtonElement>('[data-action="rollSave"]').forEach(el => el.disabled = false);
+        html.querySelectorAll<HTMLButtonElement>('[data-action="rollCheck"]').forEach(el => el.disabled = false);
+      }
+
+      // Hide attack/damage buttons for non-authors
+      if (!this.isAuthor && !(messageActorOwner && saveToChatCard)) {
+        hideAll(html, ".midi-qol-attack-buttons");
+        hideAll(html, ".midi-qol-damage-buttons");
+        hideAll(html, ".midi-qol-otherDamage-button");
+      }
+
+      // Target hover/select/show event listeners
+      html.querySelectorAll<HTMLLIElement>(".midi-qol-target-select").forEach(el => {
+        el.addEventListener("mouseenter", onTargetHover);
+        el.addEventListener("mouseleave", onTargetHoverOut);
+        el.addEventListener("click", onTargetSelect);
+        el.addEventListener("contextmenu", onTargetShow);
+      });
+
+      if (game.user?.isGM) {
+        removeAll(html, ".midi-qol-playerTokenName");
+        if (configSettings.hidePlayerDamageCard && foundry.utils.getProperty(this, "flags.midi-qol.playerDamageCard")) {
+          html.style.display = "none";
+        }
+        html.querySelectorAll<HTMLDivElement>(".midi-qol-hits-display").forEach(el => el.style.display = "");
+        hideAll(html, ".midi-qol-target-npc-Player");
+        if (!configSettings.highlightSuccess) {
+          stripHighlight(html, ".midi-qol-hits-display .midi-qol-hit-class");
+          stripHighlight(html, ".midi-qol-saves-display .midi-qol-save-class");
+        }
+      } else {
+        removeAll(html, ".midi-qol-gmTokenName");
+        if (configSettings.autoCheckHit === "gmOnly") {
+          hideAll(html, ".midi-qol-hits-display");
+        }
+        this.applySaveVisibility(html, messageActor);
+        this.applyAttackVisibility(html);
+
+        // Confirm damage buttons
+        if (!this.isAuthor || configSettings.confirmAttackDamage === "gmOnly") {
+          hideAll(html, ".midi-qol-confirm-damage-roll-complete-hit");
+          hideAll(html, ".midi-qol-confirm-damage-roll-complete-miss");
+          hideAll(html, ".midi-qol-confirm-damage-roll-complete-critical");
+          hideAll(html, ".midi-qol-confirm-damage-roll-cancel");
+        }
+
+        // Dice tooltip/click blocking for GM rolls hidden from players
+        if (this.author?.isGM && (configSettings.hideRollDetails ?? "none") !== "none") {
+          const noDice = this.noDiceClicks.bind(this);
+          html.querySelectorAll(".midi-attack-roll .dice-roll, .midi-damage-roll .dice-roll")
+            .forEach(el => el.addEventListener("click", noDice));
+          html.querySelectorAll<HTMLDivElement>(".midi-attack-roll .dice-tooltip, .midi-damage-roll .dice-tooltip")
+            .forEach(el => el.style.height = "0");
+        }
+      }
+    }
+
+    private applySaveVisibility(html: HTMLElement, messageActor: Actor.Implementation | undefined) {
+      const shouldDisplayChallenge = safeGetGameSetting("dnd5e", "challengeVisibility");
+      const autoCheckSaves = configSettings.autoCheckSaves;
+
+      if (autoCheckSaves === "gmOnly") {
+        hideAll(html, ".midi-qol-saves-display");
+        return;
+      }
+
+      // Strip save attribution tooltip when players can't see save details
+      if (!["all", "allShow"].includes(autoCheckSaves)) {
+        html.querySelectorAll(".midi-qol-target-name[data-tooltip-html]")?.forEach(el => el.removeAttribute("data-tooltip-html"));
+      }
+
+      const dcHidden = shouldDisplayChallenge === "player" && !(messageActor as any)?.hasPlayerOwner;
+      const displayNPCSaves = shouldDisplayChallenge === "all" || (shouldDisplayChallenge === "player" && !dcHidden);
+      const displayPlayerSaves = shouldDisplayChallenge !== "none";
+
+      if (!displayPlayerSaves || autoCheckSaves === "whisper" || this.blind) {
+        removeAll(html, ".midi-qol-save-total");
+        removeAll(html, ".midi-qol-save-tooltip");
+        removeAll(html, ".midi-qol-save-symbol");
+        removeAll(html, ".midi-qol-saveDC");
+      }
+      if (!displayNPCSaves || autoCheckSaves === "whisper" || this.blind) {
+        if (!dcHidden) removeAll(html, ".midi-qol-npc-save-symbol");
+        removeAll(html, ".midi-qol-npc-save-tooltip");
+        removeAll(html, ".midi-qol-npc-save-total");
+        if (!displayNPCSaves && !messageActor?.hasPlayerOwner) {
+          removeAll(html, ".midi-qol-saveDC");
+        }
+      } else if (autoCheckSaves !== "allShow") {
+        removeAll(html, ".midi-qol-npc-save-tooltip");
+        if (autoCheckSaves === "allNoRoll") removeAll(html, ".midi-qol-npc-save-total");
+      }
+
+      if (!configSettings.highlightSuccess || !["all", "player"].includes(shouldDisplayChallenge) || ["whisper", "none"].includes(autoCheckSaves)) {
+        stripHighlight(html, ".midi-qol-saves-display .midi-qol-save-class");
+      }
+      if ((!displayNPCSaves && !dcHidden) || !configSettings.highlightSuccess) {
+        stripHighlight(html, ".midi-qol-save-class.midi-qol-npc-target");
+      }
+    }
+
+    private applyAttackVisibility(html: HTMLElement) {
+      if (!configSettings.optionalRules.ActiveDefenceDC) {
+        removeAll(html, ".midi-qol-active-defence-dc");
+      }
+
+      const attackVisibility = safeGetGameSetting("dnd5e", "attackRollVisibility");
+      const midiAttackVisibility = configSettings.autoCheckHit;
+
+      if (!configSettings.highlightSuccess || attackVisibility === "none" || midiAttackVisibility === "whisper" || this.blind) {
+        stripHighlight(html, ".midi-qol-hits-display .midi-qol-hit-class");
+      }
+      if (attackVisibility === "none" || midiAttackVisibility !== "all" || this.blind) {
+        removeAll(html, ".midi-attack-roll .dice-total .icons");
+        removeAll(html, ".midi-qol-hits-display .midi-qol-hit-symbol");
+        removeAll(html, ".midi-qol-hit-symbol");
+        removeAll(html, ".midi-qol-npc-ac");
+      } else if (attackVisibility === "hideAC") {
+        removeAll(html, ".midi-qol-npc-ac");
       }
     }
 
@@ -384,25 +539,11 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
       // @ts-expect-error no dnd5e-types
       super._enrichChatCard(html);
-      if (this.author?.isGM && (configSettings.hideRollDetails ?? "none") !== "none" && !game.user?.isGM) {
-        html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
-        html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
-        html.querySelectorAll<HTMLDivElement>(".midi-attack-roll .dice-tooltip").forEach(el => el.style.height = "0");
-        html.querySelectorAll<HTMLDivElement>(".midi-damage-roll .dice-tooltip").forEach(el => el.style.height = "0");
-
-      }
-      // Remove the hit miss check mark for non-gm players if required.
-      // Because midi rolls are not marked as attack rolls
-      if (!game.user?.isGM) {
-        const hideAttackResult = safeGetGameSetting("dnd5e", "attackRollVisibility") === "none";
-        if (hideAttackResult || configSettings.autoCheckHit !== "all") {
-          html.querySelectorAll(".midi-attack-roll .dice-total .icons")?.forEach(el => el.remove());
-        }
-      }
+      this.applyChatVisibility(html);
       if (debugEnabled > 1) log("Finished enriching chat card", Date.now(), this.id);
     }
 
-    noDiceClicks(event) {
+    noDiceClicks(event: Event) {
       event.stopImmediatePropagation();
       return;
     }

@@ -123,6 +123,13 @@
           <div class="notes midi-qol-faint">{{{localize "midi-qol.HighLightCriticalAttackOnly.Hint"}}}</div>
       </div>
       <div class="form-group">
+          <label>{{localize "midi-qol.ColoredBorders.Name"}}</label>
+          <select name="coloredBorders" data-dtype="String">
+              {{selectOptions coloredBordersOptions selected=configSettings.coloredBorders localize=true}}
+          </select>
+          <div class="notes midi-qol-faint">{{{localize "midi-qol.ColoredBorders.Hint"}}}</div>
+      </div>
+      <div class="form-group">
           <label>{{localize "midi-qol.RollAlternate.Name"}}</label>
           <select name="rollAlternate" data-dtype="String">
               {{selectOptions rollAlternateOptions selected=configSettings.rollAlternate localize=true}}
@@ -148,27 +155,6 @@
           configSettings.usePlayerPortrait}} />
           <div class="notes midi-qol-faint">{{{localize "midi-qol.UsePlayerPortrait.Hint"}}}</div>
       </div>
-  </div>
-  <div class="midi-qol-box" style="display: show">
-      <div class="form-group">
-          <label>{{localize "midi-qol.KeepRollStats.Name"}}</label>
-          <input type="checkbox" name="keepRollStats" data-dtype="Boolean" {{checked configSettings.keepRollStats}} />
-          <div class="notes midi-qol-faint">{{{localize "midi-qol.KeepRollStats.Hint"}}}</div>
-      </div>
-      <div class="form-group">
-          <label>{{localize "midi-qol.SaveStatsEvery.Name"}}</label>
-          <input type="number" name="saveStatsEvery" value="{{configSettings.saveStatsEvery}}" />
-          <div class="notes midi-qol-faint">{{{localize "midi-qol.SaveStatsEvery.Hint"}}}</div>
-      </div>
-      <div class="form-group">
-          <label>{{localize "midi-qol.PlayerStatsOnly.Name"}}</label>
-          <input type="checkbox" name="playerStatsOnly" data-dtype="Boolean" {{checked
-          configSettings.playerStatsOnly}} />
-          <div class="notes midi-qol-faint">{{{localize "midi-qol.PlayerStatsOnly.Hint"}}}</div>
-      </div>
-      <button type="button" name="show-stats" id="midi-qol-show-stats">
-          <i class="fas fa-dice-d20"></i> {{localize "midi-qol.ShowStats"}}
-      </button>
   </div>
   <div class=" midi-qol-box">
       <div class="form-group customSounds">

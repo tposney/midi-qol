@@ -1,14 +1,11 @@
-import { debug, warn, i18n, error, debugEnabled, i18nFormat, MODULE_ID, MESSAGE_TYPES } from "../midi-qol.js";
-import { DDBGameLogWorkflow, Workflow, WorkflowDataFlags } from "./Workflow.js";
-import { nsaFlag, coloredBorders, configSettings, forceHideRoll, safeGetGameSetting, saveToChatCard } from "./settings.js";
-import { playerFor, playerForActor, doOverTimeEffect, isInCombat, isAutoFastAttack } from "./utils.js";
+import { debug, warn, i18n, error, debugEnabled, i18nFormat, MODULE_ID } from "../midi-qol.js";
+import { DDBGameLogWorkflow, Workflow } from "./Workflow.js";
+import { nsaFlag, coloredBorders, configSettings, forceHideRoll } from "./settings.js";
+import { playerFor, playerForActor, doOverTimeEffect, isInCombat, isAutoFastForward } from "./utils.js";
 import { preferredActiveGM, socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
-import { MidiSaveActivity } from "./activities/SaveActivity.js";
 export const MAESTRO_MODULE_NAME = "maestro";
 export const MODULE_LABEL = "Maestro";
-import Token = foundry.canvas.placeables.Token;
-
 export let colorChatMessageHandler = (message: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
   if (coloredBorders === "none") return true;
   let actorId = message.speaker.actor ?? "";
@@ -82,56 +79,6 @@ export let nsaMessageHandler = (message: ChatMessage.Implementation, data: ChatM
   return true;
 }
 
-let _highlighted: Token.Implementation | null = null;
-
-let _onTargetHover = (event) => {
-  event.preventDefault();
-  if (!canvas.scene?.active) return;
-  const token = canvas.tokens?.get(event.currentTarget?.dataset?.id ?? "");
-  if (token?.isVisible) {
-    //@ts-expect-error _onHoverIn
-    if (!token.controlled) token._onHoverIn(event);
-    _highlighted = token;
-  }
-}
-
-/* -------------------------------------------- */
-
-/**
- * Handle mouse-unhover events for a combatant in the chat card
- * @private
- */
-let _onTargetHoverOut = (event) => {
-  event.preventDefault();
-  if (!canvas.scene?.active) return;
-  //@ts-expect-error onHoverOut
-  if (_highlighted) _highlighted._onHoverOut(event);
-  _highlighted = null;
-}
-
-let _onTargetSelect = (event) => {
-  event.stopPropagation();
-  event.preventDefault();
-  if (!canvas.scene?.active) return;
-  const token = canvas.tokens?.get(event.currentTarget.dataset.id);
-  if (token?.controlled) token?.release();
-  else if (token && token?.isVisible && game.user && token.actor?.testUserPermission(game.user, "OWNER")) {
-    token.control({ releaseOthers: false });
-    canvas.animatePan(token.center)
-  }
-
-};
-
-function _onTargetShow(event) {
-  event.stopImmediatePropagation();
-  event.preventDefault();
-  if (!canvas.scene?.active) return;
-  const token = canvas.tokens?.get(event.currentTarget.dataset.id);
-  if (game.user && token?.actor?.testUserPermission(game.user, "OWNER")) {
-    token.actor.sheet?.render(true);
-  }
-}
-
 export let hideRollRender = (msg: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
   if (forceHideRoll && (msg.whisper.length > 0 || msg?.blind)) {
     if (!game.user?.isGM && !msg.isAuthor && msg.whisper.indexOf(game.user?.id ?? "") === -1) {
@@ -164,19 +111,14 @@ export let hideRollUpdate = (message: ChatMessage.Implementation, data: ChatMess
 };
 
 export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
-  const messageActor = (fromUuidSync(message.flags?.[MODULE_ID]?.[WorkflowDataFlags.actor]) as Actor.Implementation ?? message.speakerActor);
-  const messageActorOwner = messageActor?.isOwner;
   if (debugEnabled > 1) debug("hideStuffHandler message: ", message.id, message)
   // Hide rolls which are blind and not the GM if force hide is true
-  if ((forceHideRoll && message.blind && !game.user?.isGM) 
+  if ((forceHideRoll && message.blind && !game.user?.isGM)
     || (foundry.utils.getProperty(message, "flags.midi-qol.gmHide") && game.user?.isGM)) {
     html.style.display = "none";
     return;
   }
-  // message.shouldDisplayChallenge returns true for message owners, which is not quite what we want.
-  let shouldDisplayChallenge = safeGetGameSetting("dnd5e", "challengeVisibility");
-  if (game.user?.isGM) shouldDisplayChallenge = "all";
-  // If force hide rolls and your are not the author/target of a whisper roll hide it.
+  // If force hide rolls and you are not the author/target of a whisper roll hide it.
   if (forceHideRoll
     && !(game.user?.isGM && nsaFlag)
     && message.whisper.length > 0 && !message.whisper.includes(game.user?.id ?? "")
@@ -184,139 +126,16 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
     html.style.display = "none";
     return;
   }
-  if (foundry.utils.getProperty(message, "flags.midi-qol.type") === MESSAGE_TYPES.SAVES) {
-    html.querySelectorAll<HTMLButtonElement>(`[data-action="rollSave"]`).forEach((el) => { el.disabled = false });
-    html.querySelectorAll<HTMLButtonElement>(`[data-action="rollCheck"]`).forEach((el) => { el.disabled = false });
-  }
-
-  if (!message.isAuthor && !(messageActorOwner && saveToChatCard)) {
-    html.querySelectorAll<HTMLDivElement>(".midi-qol-attack-buttons").forEach((el) => { el.style.display = "none" });
-    html.querySelectorAll<HTMLDivElement>(".midi-qol-damage-buttons").forEach((el) => { el.style.display = "none" });
-    html.querySelectorAll<HTMLButtonElement>(".midi-qol-otherDamage-button").forEach((el) => { el.style.display = "none" });
-  }
-
-  let ids = html.querySelectorAll<HTMLLIElement>(".midi-qol-target-select")
-  ids.forEach((el) => {
-    el.addEventListener("mouseenter", _onTargetHover);
-    el.addEventListener("mouseleave", _onTargetHoverOut);
-    el.addEventListener("click", _onTargetSelect);
-    el.addEventListener("contextmenu", _onTargetShow);
-  })
-  if (game.user?.isGM) {
-    html.querySelectorAll(".midi-qol-playerTokenName").forEach(el => el.remove());
-    if (configSettings.hidePlayerDamageCard && foundry.utils.getProperty(message, "flags.midi-qol.playerDamageCard")) html.style.display = "none";
-
-    html.querySelectorAll<HTMLDivElement>(".midi-qol-hits-display").forEach((el) => el.style.display = "");
-    html.querySelectorAll<HTMLElement>(".midi-qol-target-npc-Player").forEach(el => el.style.display = "none");
-    if (!configSettings.highlightSuccess) {
-      html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => {
-        el.classList.remove("success", "failure", "critical", "fumble");
-      });
-      html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("success", "failure", "critical", "fumble"));
-    }
-  } else {
-    if (message.blind) {
-      html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => {
+  // Blind roll dice replacement — affects non-midi messages too (monks-tokenbar etc.)
+  if (!game.user?.isGM && message.blind) {
+    html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => {
+      el.outerHTML = `<span>${i18n("midi-qol.DiceRolled")}</span>`;
+    });
+    if (!(message.flags && message.flags["monks-tokenbar"]))
+      html.querySelectorAll(".dice-roll").forEach(el => {
         el.outerHTML = `<span>${i18n("midi-qol.DiceRolled")}</span>`;
       });
-      // html.find(".midi-damage-roll .dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
-      if (!(message.flags && message.flags["monks-tokenbar"])) // not a monks roll
-        html.querySelectorAll(".dice-roll").forEach(el => {
-          el.outerHTML = `<span>${i18n("midi-qol.DiceRolled")}</span>`;
-        });
-      // html.find(".dice-result").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`); Monks saving throw css
-      //TODO this should probably just check formula
-    }
-
-    if (configSettings.autoCheckHit === "gmOnly") {
-      html.querySelectorAll<HTMLElement>(".midi-qol-hits-display").forEach(el => el.style.display = "none");
-    }
-
-
-
-    /*
-    "midi-qol.autoCheckSavesOptions": {
-      "none": "Off",
-      "allNoRoll": "Save - All see result only",
-      "all": "Save - All see result + save total",
-      "whisper": "Save - only GM sees",
-      "gmOnly": "Save - only GM sees anything",
-      "allShow": "Save - All see Result + Rolls"
-    },
-    */
-    if (configSettings.autoCheckSaves === "gmOnly") {
-      html.querySelectorAll<HTMLElement>(".midi-qol-saves-display").forEach(el => el.style.display = "none");
-    } else {
-      // Non-GM branch: shouldDisplayChallenge has the raw setting value ("all", "player", or "none")
-      // dcHidden: DC not shown because visibility="player" and NPC caster
-      const dcHidden = shouldDisplayChallenge === "player" && !(messageActor as any)?.hasPlayerOwner;
-      // Show NPC saves when: visibility is "all", OR visibility is "player" AND caster is player-owned (DC shown)
-      const displayNPCSaves = shouldDisplayChallenge === "all" || (shouldDisplayChallenge === "player" && !dcHidden);
-      const displayPlayerSaves = shouldDisplayChallenge !== "none";
-      const autoCheckSaves = configSettings.autoCheckSaves;
-      // Hide save details from non-GM based on visibility settings
-      if (!displayPlayerSaves || autoCheckSaves === "whisper" || message.blind) {
-        html.querySelectorAll(".midi-qol-save-total").forEach(el => el.remove());
-        html.querySelectorAll(".midi-qol-save-tooltip").forEach(el => el.remove());
-        html.querySelectorAll(".midi-qol-save-symbol").forEach(el => el.remove());
-        html.querySelectorAll(".midi-qol-saveDC").forEach(el => el.remove());
-      }
-      if (!displayNPCSaves || autoCheckSaves === "whisper" || message.blind) {
-        // When dcHidden, keep NPC save symbol (check/X) visible so players see pass/fail
-        if (!dcHidden) {
-          html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-symbol").forEach(el => el.remove());
-        }
-        html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-tooltip").forEach(el => el.remove());
-        html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-total").forEach(el => el.remove())
-        if (!displayNPCSaves && !messageActor?.hasPlayerOwner) { // only show dc for player initiated saves
-          html.querySelectorAll(".midi-qol-saveDC").forEach(el => el.remove());
-        }
-      } else if (!["allShow"].includes(autoCheckSaves)) {
-          html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-tooltip").forEach(el => el.remove());
-          if (autoCheckSaves === "allNoRoll") {
-            html.querySelectorAll<HTMLElement>(".midi-qol-npc-save-total").forEach(el => el.remove());
-          }
-      }
-      // Hide ALL highlights when: highlighting disabled, visibility is "none", autoCheckSaves is whisper/none
-      if (!configSettings.highlightSuccess || !["all", "player"].includes(shouldDisplayChallenge) || ["whisper", "none"].includes(autoCheckSaves)) {
-        html.querySelectorAll<HTMLElement>(".midi-qol-saves-display .midi-qol-save-class").forEach(el => el.classList.remove("success", "failure", "critical", "fumble"));
-      }
-      // Hide NPC highlights when: NPC saves not displayed AND DC not hidden, or highlighting disabled
-      // Keep highlights when: displayNPCSaves (full visibility) OR dcHidden (show pass/fail only)
-      if ((!displayNPCSaves && !dcHidden) || !configSettings.highlightSuccess) {
-        html.querySelectorAll<HTMLElement>(".midi-qol-save-class.midi-qol-npc-target").forEach(el => el.classList.remove("success", "failure", "critical", "fumble"));
-      }
-    }
-
-    if (!configSettings.optionalRules.ActiveDefenceDC) {
-      html.querySelectorAll<HTMLElement>(".midi-qol-active-defence-dc").forEach(el => el.remove());
-    }
-    const attackVisibility = safeGetGameSetting("dnd5e", "attackRollVisibility");
-    const midiAttackVisibility = configSettings.autoCheckHit
-    if (!configSettings.highlightSuccess || attackVisibility === "none" || midiAttackVisibility === "whisper" || message.blind) {
-      html.querySelectorAll<HTMLElement>(".midi-qol-hits-display .midi-qol-hit-class").forEach(el => el.classList.remove("success", "failure", "critical", "fumble"));
-    }
-    if (attackVisibility === "none" || midiAttackVisibility !== "all" || message.blind) {
-      html.querySelectorAll(".midi-qol-attack-roll .dice-total .icons").forEach(el => el.remove());
-      html.querySelectorAll(".midi-qol-hits-display .midi-qol-hit-symbol").forEach(el => el.remove());
-      html.querySelectorAll(".midi-qol-hit-symbol").forEach(el => el.remove());
-      html.querySelectorAll(".midi-qol-npc-ac").forEach(el => el.remove());
-    } else if (attackVisibility === "hideAC") {
-      html.querySelectorAll(".midi-qol-npc-ac").forEach(el => el.remove());
-    }
-    if (!message.isAuthor || configSettings.confirmAttackDamage === "gmOnly") {
-      html.querySelectorAll<HTMLElement>(".midi-qol-confirm-damage-roll-complete-hit").forEach(el => el.style.display = "none");
-      html.querySelectorAll<HTMLElement>(".midi-qol-confirm-damage-roll-complete-miss").forEach(el => el.style.display = "none");
-      html.querySelectorAll<HTMLElement>(".midi-qol-confirm-damage-roll-complete-critical").forEach(el => el.style.display = "none");
-      // Can update the attack roll here, but damage rolls are redone in the ChatMessageMidi code so do the hiding for those there
-      html.querySelectorAll<HTMLElement>(".midi-qol-confirm-damage-roll-cancel").forEach(el => el.style.display = "none");
-    }
-
-    // hide the gm version of the name from` players
-    html.querySelectorAll<HTMLElement>(".midi-qol-gmTokenName").forEach(el => el.remove());
   }
-  // @ ts-expect-error protected
-  // setTimeout(() => ui.chat?.scrollBottom(), 0);
   return true;
 }
 

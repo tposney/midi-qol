@@ -2,7 +2,7 @@ import { error, warn, log, debugEnabled, i18n } from "../midi-qol.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { configSettings, pruneChatLog } from "./settings.js";
 
-export const DAE_REQUIRED_VERSION = "13.0.4";
+export const DAE_REQUIRED_VERSION = "13.0.19";
 export const USEFUL_MODULE_VERSIONS = {
   "about-time": "0.0",
   "ActiveAuras": "0.4.13",

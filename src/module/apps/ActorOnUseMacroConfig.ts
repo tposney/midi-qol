@@ -17,7 +17,7 @@ export class ActorOnUseMacrosConfig extends HandlebarsApplicationMixin(Applicati
     dialog: {
       id: "dialog-onuse-config",
       classes: ["dialog", "active-effect-sheet", "midi-qol"],
-      template: "modules/midi-qol/templates/actorOnUseMacrosConfig.hbs"
+      template: "modules/midi-qol/templates/apps/ActorOnUseMacroConfig/actorOnUseMacrosConfig.hbs"
     }
   }
 

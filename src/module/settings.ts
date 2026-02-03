@@ -1,12 +1,13 @@
 import { debug, setDebugLevel, i18n, debugEnabled, error, gameStats } from "../midi-qol.js";
 import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { DependentsExplorer } from "./apps/DependentsExplorer.js";
+import { RollStatsDisplay } from "./apps/RollStatsDisplay.js";
 import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { TargetConfirmationConfig } from "./apps/TargetConfirmationConfig.js";
 import { Workflow } from "./Workflow.js";
 
-// Dummy FormApplication that launches the setup wizard via hook
+// Dummy FormApplication that launches the setup wizard via hook (can't be eliminated - fires a hook, not an app)
 class LaunchWizardSubmenu extends FormApplication {
   constructor(object = {}, options = {}) {
     super(object, options);
@@ -23,29 +24,6 @@ class LaunchWizardSubmenu extends FormApplication {
   async _render(force?: boolean, options?: any) {
     // Don't render anything - just trigger the wizard and close
     Hooks.call("midi-qol-setup-wizard.launch");
-    this.close();
-  }
-  getData() { return {}; }
-  protected _updateObject(event: Event, formData?: object): Promise<unknown> { return Promise.resolve(); }
-}
-
-// Dummy FormApplication that launches the DependentsExplorer
-class LaunchDependentsExplorer extends FormApplication {
-  constructor(object = {}, options = {}) {
-    super(object, options);
-  }
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "midi-qol-launch-dependents-explorer",
-      classes: ["midi-qol"],
-      title: "Dependents Explorer",
-      width: 0,
-      height: 0
-    });
-  }
-  async _render(force?: boolean, options?: any) {
-    // Don't render anything - just open the DependentsExplorer and close this
-    new DependentsExplorer().render(true);
     this.close();
   }
   getData() { return {}; }
@@ -83,7 +61,8 @@ class ResetSettingsSubmenu extends FormApplication {
   protected _updateObject(event: Event, formData?: object): Promise<unknown> { return Promise.resolve(); }
 }
 
-export let autoFastForwardAbilityRolls: boolean;
+let fastForwardMigrationDone = false;
+/** @deprecated Removed in favor of granular configSettings.autoFastForward[] and configSettings.gmAutoFastForward[] arrays */
 export let autoRemoveTargets: string;
 export let coloredBorders: string;
 export let criticalDamage: string;
@@ -171,7 +150,7 @@ class ConfigSettings {
   autoCEEffects: string = "none";
   autoCheckHit: string = "none";
   autoCheckSaves: string = "none";
-  autoFastForward: string = "off";
+  autoFastForward: string[] = [];
   autoItemEffects: string = "off";
   autoRemoveSummonedCreature: boolean = false;
   autoUndoTransformations: boolean = false;
@@ -187,11 +166,14 @@ class ConfigSettings {
   checkTwoHanded: boolean = false;
   chooseAmmunition: boolean = true;
   collapsibleTargets: boolean = false;
+  coloredBorders: string = "none";
   concentrationAutomation: boolean = false;
   confirmAmmunition: boolean = false;
   gmConfirmAmmunition: boolean = false;
   consumeResource: string = "none";
   convenientEffectsReaction: string = "Reaction";
+  criticalDamage: string = "default";
+  criticalDamageGM: string = "none";
   criticalSound: string = "";
   customSoundsPlaylist: string = "none";
   damageImmunities: string = "none";
@@ -215,12 +197,12 @@ class ConfigSettings {
   gmAttackDamageCards: boolean = false;
   gmAutoAttack: boolean = false;
   gmAutoDamage: string = "none";
-  gmAutoFastForwardAttack: boolean = false;
-  gmAutoFastForwardDamage: boolean = false;
+  gmAutoFastForward: string[] = [];
   gmConsumeResource: string = "none";
   gmDoReactions: string = "all";
   gmHide3dDice: boolean = false;
   gmRemoveButtons: string = "all";
+  preferredGM: string = "";
   hideRollDetails: string = "none";
   ignoreSpellReactionRestriction: boolean = false;
   itemTypeList: string[] | undefined = undefined;
@@ -305,7 +287,7 @@ class ConfigSettings {
     DRAllPerDamageDetail: true,
     hiddenAdvantage: "none",
     incapacitated: "nothing",
-    invisAdvantage: "RAW",
+    invisAdvantage: "RAW2024",
     invisVision: false,
     maxDRValue: false,
     nearbyAllyRanged: 0,
@@ -350,14 +332,11 @@ export async function resetConfigSettingsToDefaults(): Promise<void> {
   await game.settings.set("midi-qol", "EnableWorkflow", true);
   // PreferredGM is intentionally not reset - user preference
   await game.settings.set("midi-qol", "ReplaceDefaultActivities", true);
-  await game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", false);
   await game.settings.set("midi-qol", "showGM", false);
   await game.settings.set("midi-qol", "ForceHideRoll", true);
   await game.settings.set("midi-qol", "DragDropTarget", false);
   // RollStats is intentionally not reset - statistics data
-  await game.settings.set("midi-qol", "CriticalDamageGM", "none");
-  await game.settings.set("midi-qol", "CriticalDamage", "default");
-  await game.settings.set("midi-qol", "ColoredBorders", "None");
+  // CriticalDamage/CriticalDamageGM/ColoredBorders are now in configSettings (reset above via defaultSettings)
   await game.settings.set("midi-qol", "AutoRemoveTargets", "dead");
   await game.settings.set("midi-qol", "TargetConfirmation", defaultTargetConfirmationSettings);
   await game.settings.set("midi-qol", "playerControlsInvisibleTokens", false);
@@ -425,7 +404,6 @@ export function collectSettingData() {
     configSettings: cleanConfigSettings,
     midiSoundSettings,
     itemRollButtons,
-    autoFastForwardAbilityRolls,
     autoRemoveTargets,
     coloredBorders,
     criticalDamage,
@@ -540,11 +518,37 @@ export async function importSettingsFromJSON(json) {
 
   // await game.settings.set("midi-qol", "AddChatDamageButtons", removeOldValues(json.addChatDamageButtons));
   // await game.settings.set("midi-qol", "ItemRollButtons", removeOldValues(json.itemRollButtons));
-  await game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", removeOldValues(json.autoFastForwardAbilityRolls));
+  // Migrate imported old fast-forward settings into new array format
+  if (json.autoFastForwardAbilityRolls) {
+    const cs = importedConfigSettings;
+    if (!Array.isArray(cs.autoFastForward)) cs.autoFastForward = [];
+    if (!Array.isArray(cs.gmAutoFastForward)) cs.gmAutoFastForward = [];
+    for (const rollType of ["check", "save", "skill", "tool"]) {
+      if (!cs.autoFastForward.includes(rollType)) cs.autoFastForward.push(rollType);
+      if (!cs.gmAutoFastForward.includes(rollType)) cs.gmAutoFastForward.push(rollType);
+    }
+    await game.settings.set("midi-qol", "ConfigSettings", cs);
+  }
   await game.settings.set("midi-qol", "AutoRemoveTargets", removeOldValues(json.autoRemoveTargets));
-  await game.settings.set("midi-qol", "ColoredBorders", removeOldValues(json.coloredBorders));
-  await game.settings.set("midi-qol", "CriticalDamage", removeOldValues(json.criticalDamage));
-  await game.settings.set("midi-qol", "CriticalDamageGM", removeOldValues(json.criticalDamageGM));
+  // Migrate old top-level coloredBorders into configSettings for backward-compatible imports
+  if (json.coloredBorders !== undefined && !importedConfigSettings.coloredBorders) {
+    let cb = removeOldValues(json.coloredBorders);
+    if (cb === "None") cb = "none"; // Normalize old default
+    importedConfigSettings.coloredBorders = cb;
+    await game.settings.set("midi-qol", "ConfigSettings", importedConfigSettings);
+  }
+  // Migrate old top-level criticalDamage/criticalDamageGM into configSettings for backward-compatible imports
+  if (json.criticalDamage !== undefined && !importedConfigSettings.criticalDamage) {
+    importedConfigSettings.criticalDamage = removeOldValues(json.criticalDamage);
+    if (importedConfigSettings.criticalDamage === "none") importedConfigSettings.criticalDamage = "default";
+  }
+  if (json.criticalDamageGM !== undefined && !importedConfigSettings.criticalDamageGM) {
+    importedConfigSettings.criticalDamageGM = removeOldValues(json.criticalDamageGM);
+    if (importedConfigSettings.criticalDamageGM === "none") importedConfigSettings.criticalDamageGM = importedConfigSettings.criticalDamage ?? "default";
+  }
+  if (json.criticalDamage !== undefined || json.criticalDamageGM !== undefined) {
+    await game.settings.set("midi-qol", "ConfigSettings", importedConfigSettings);
+  }
   await game.settings.set("midi-qol", "DebounceInterval", removeOldValues(json.debounceInterval));
   await game.settings.set("midi-qol", "DragDropTarget", removeOldValues(json.dragDropTargeting));
   await game.settings.set("midi-qol", "EnableWorkflow", removeOldValues(json.enableWorkflow));
@@ -682,7 +686,7 @@ export let fetchParams = () => {
     criticalSaves: false,
     distanceIncludesHeight: false,
     incapacitated: "nothing",
-    invisAdvantage: "RAW",
+    invisAdvantage: "RAW2024",
     hiddenAdvantage: "none",
     maxDRValue: false,
     DRAllPerDamageDetail: true,
@@ -711,7 +715,9 @@ export let fetchParams = () => {
   if (!configSettings.optionalRules.checkRange) configSettings.optionalRules.checkRange = "none";
   if (!configSettings.optionalRules.invisAdvantage) configSettings.optionalRules.invisAdvantage = "none";
   //@ts-expect-error legacy boolean value
-  if (configSettings.optionalRules.invisAdvantage === true) configSettings.optionalRules.invisAdvantage = "RAW";
+  if (configSettings.optionalRules.invisAdvantage === true) configSettings.optionalRules.invisAdvantage = "RAW2014";
+  // Migrate old "RAW" to "RAW2014"
+  if (configSettings.optionalRules.invisAdvantage === "RAW") configSettings.optionalRules.invisAdvantage = "RAW2014";
   if (!configSettings.optionalRules.hiddenAdvantage) configSettings.optionalRules.hiddenAdvantage = "none";
   //@ts-expect-error legacy nonexistent value
   if (configSettings.optionalRules.activeDefenceShowGM === true) {
@@ -788,16 +794,114 @@ export let fetchParams = () => {
   configSettings.useDamageDetail = true;
   if (configSettings.collapsibleTargets === undefined) configSettings.collapsibleTargets = true;
   if (configSettings.displayProperties === undefined) configSettings.displayProperties = true;
-  criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
-  if (criticalDamage === "none") criticalDamage = "default";
-  criticalDamageGM = game.settings.get("midi-qol", "CriticalDamageGM");
-  if (criticalDamageGM === "none") criticalDamageGM = criticalDamage;
+  criticalDamage = configSettings.criticalDamage ?? "default";
+  criticalDamageGM = configSettings.criticalDamageGM ?? criticalDamage;
   nsaFlag = game.settings.get("midi-qol", "showGM");
-  coloredBorders = game.settings.get("midi-qol", "ColoredBorders");
+  coloredBorders = configSettings.coloredBorders ?? "none";
   itemRollButtons = false; // game.settings.get("midi-qol", "ItemRollButtons");
   if (configSettings.addChatDamageButtons === undefined) configSettings.addChatDamageButtons = "none";
 
-  autoFastForwardAbilityRolls = game.settings.get("midi-qol", "AutoFastForwardAbilityRolls");
+  // Migrate old fast-forward settings to new granular arrays
+  if (!fastForwardMigrationDone) {
+    let needsFastForwardMigration = false;
+    const oldFastForwardPlayer = typeof configSettings.autoFastForward === "string" ? configSettings.autoFastForward : undefined;
+    //@ts-expect-error checking for old boolean format
+    const oldGmFfAttack: boolean | undefined = typeof configSettings.gmAutoFastForwardAttack === "boolean" ? configSettings.gmAutoFastForwardAttack : undefined;
+    //@ts-expect-error checking for old boolean format
+    const oldGmFfDamage: boolean | undefined = typeof configSettings.gmAutoFastForwardDamage === "boolean" ? configSettings.gmAutoFastForwardDamage : undefined;
+    let oldAbilityRolls: boolean | undefined;
+
+    if (typeof configSettings.autoFastForward === "string") {
+      const oldValue = configSettings.autoFastForward as unknown as string;
+      const newValue: string[] = [];
+      if (oldValue === "attack" || oldValue === "all") newValue.push("attack");
+      if (oldValue === "damage" || oldValue === "all") newValue.push("damage");
+      configSettings.autoFastForward = newValue;
+      needsFastForwardMigration = true;
+    }
+    if (oldGmFfAttack !== undefined || oldGmFfDamage !== undefined) {
+      const newGmValue: string[] = [];
+      if (oldGmFfAttack) newGmValue.push("attack");
+      if (oldGmFfDamage) newGmValue.push("damage");
+      configSettings.gmAutoFastForward = newGmValue;
+      //@ts-expect-error cleanup old properties
+      delete configSettings.gmAutoFastForwardAttack;
+      //@ts-expect-error cleanup old properties
+      delete configSettings.gmAutoFastForwardDamage;
+      needsFastForwardMigration = true;
+    }
+    // Migrate standalone AutoFastForwardAbilityRolls setting into the arrays
+    try {
+      oldAbilityRolls = game.settings.get("midi-qol", "AutoFastForwardAbilityRolls") as boolean;
+      if (oldAbilityRolls) {
+        for (const rollType of ["check", "save", "skill", "tool"]) {
+          if (!configSettings.autoFastForward.includes(rollType)) configSettings.autoFastForward.push(rollType);
+          if (!configSettings.gmAutoFastForward.includes(rollType)) configSettings.gmAutoFastForward.push(rollType);
+        }
+        needsFastForwardMigration = true;
+        // Reset the old setting so migration only runs once
+        game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", false);
+      }
+    } catch (e) {
+      // Setting may not be registered yet or already removed - that's fine
+    }
+    if (needsFastForwardMigration) {
+      console.warn("midi-qol | Migrated fast-forward settings to granular arrays:",
+        `\n  Player autoFastForward: "${oldFastForwardPlayer ?? "(already migrated)"}" → [${configSettings.autoFastForward.join(", ")}]`,
+        `\n  GM gmAutoFastForwardAttack: ${oldGmFfAttack ?? "(already migrated)"}, gmAutoFastForwardDamage: ${oldGmFfDamage ?? "(already migrated)"} → gmAutoFastForward: [${configSettings.gmAutoFastForward.join(", ")}]`,
+        `\n  AutoFastForwardAbilityRolls: ${oldAbilityRolls ?? false}`
+      );
+      game.settings.set("midi-qol", "ConfigSettings", configSettings);
+    }
+    fastForwardMigrationDone = true;
+  }
+  if (!Array.isArray(configSettings.autoFastForward)) configSettings.autoFastForward = [];
+  if (!Array.isArray(configSettings.gmAutoFastForward)) configSettings.gmAutoFastForward = [];
+
+  // Migrate standalone PreferredGM setting into configSettings
+  if (configSettings.preferredGM === undefined) {
+    try {
+      const oldPreferredGM = game.settings.get("midi-qol", "PreferredGM") as string;
+      if (oldPreferredGM && oldPreferredGM !== "") {
+        configSettings.preferredGM = oldPreferredGM;
+        console.warn(`midi-qol | Migrated PreferredGM setting "${oldPreferredGM}" into configSettings`);
+        game.settings.set("midi-qol", "ConfigSettings", configSettings);
+      } else {
+        configSettings.preferredGM = "";
+      }
+    } catch (e) {
+      configSettings.preferredGM = "";
+    }
+  }
+
+  // Migrate standalone CriticalDamage/CriticalDamageGM settings into configSettings
+  if (configSettings.criticalDamage === undefined) {
+    try {
+      const oldCriticalDamage = game.settings.get("midi-qol", "CriticalDamage") as string;
+      configSettings.criticalDamage = (!oldCriticalDamage || oldCriticalDamage === "none") ? "default" : oldCriticalDamage;
+      const oldCriticalDamageGM = game.settings.get("midi-qol", "CriticalDamageGM") as string;
+      configSettings.criticalDamageGM = (!oldCriticalDamageGM || oldCriticalDamageGM === "none") ? configSettings.criticalDamage : oldCriticalDamageGM;
+      console.warn(`midi-qol | Migrated CriticalDamage settings into configSettings (player: "${configSettings.criticalDamage}", GM: "${configSettings.criticalDamageGM}")`);
+      game.settings.set("midi-qol", "ConfigSettings", configSettings);
+    } catch (e) {
+      configSettings.criticalDamage = "default";
+      configSettings.criticalDamageGM = "default";
+    }
+  }
+
+  // Migrate standalone ColoredBorders setting into configSettings
+  if (configSettings.coloredBorders === undefined) {
+    try {
+      const oldColoredBorders = game.settings.get("midi-qol", "ColoredBorders") as string;
+      // Normalize "None" (old default) to "none" (matches options keys)
+      configSettings.coloredBorders = (!oldColoredBorders || oldColoredBorders === "None") ? "none" : oldColoredBorders;
+      console.warn(`midi-qol | Migrated ColoredBorders setting "${oldColoredBorders}" into configSettings as "${configSettings.coloredBorders}"`);
+      game.settings.set("midi-qol", "ConfigSettings", configSettings);
+    } catch (e) {
+      configSettings.coloredBorders = "none";
+    }
+  }
+
   autoRemoveTargets = game.settings.get("midi-qol", "AutoRemoveTargets");
   if (autoRemoveTargets === "allGM") {
     autoRemoveTargets = game.user?.isGM ? "all" : "dead";
@@ -865,26 +969,16 @@ export let fetchParams = () => {
 }
 
 export function readySettingsSetup() {
+  // Deprecated: PreferredGM has moved to configSettings.preferredGM (shown on GM tab)
+  // Kept registered for migration from old setting value
   game.settings.register("midi-qol", "PreferredGM", {
     name: "midi-qol.PreferredGM.Name",
     hint: "midi-qol.PreferredGM.Hint",
     scope: "world",
     default: "",
-    config: true,
+    config: false,
     type: String,
-    choices: game.users?.filter(user => user.isGM).reduce((acc, user) => {
-      acc[user.id] = user.name;
-      return acc;
-    }, { "": i18n("None") }),
   });
-  if (game.settings.get("midi-qol", "CriticalDamage") === "none") {
-    criticalDamage = "default;"
-    game.settings.set("midi-qol", "CriticalDamage", "default");
-  }
-  if (game.settings.get("midi-qol", "CriticalDamageGM") === "none") {
-    criticalDamageGM = criticalDamage;
-    game.settings.set("midi-qol", "CriticalDamageGM", criticalDamage);
-  }
 }
 
 function keysToOptionsObj(prefix: string, keys: string[]) {
@@ -1376,7 +1470,8 @@ export const checkRangeOptions = keysToOptionsObj("CheckRangeOptions", [
 
 export const invisAdvantageOptions = keysToOptionsObj("InvisAdvantageOptions", [
   "none",
-  "RAW",
+  "RAW2014",
+  "RAW2024",
   "vision"
 ]);
 
@@ -1534,12 +1629,13 @@ export const registerSettings = function () {
     onChange: fetchParams
   });
 
+  // Deprecated: PreferredGM has moved to configSettings.preferredGM (shown on GM tab)
   game.settings.register("midi-qol", "PreferredGM", {
     name: i18n("midi-qol.PreferredGM.Name"),
     hint: i18n("midi-qol.PreferredGM.Hint"),
     scope: "world",
     default: "",
-    config: true,
+    config: false,
     type: String
   });
 
@@ -1553,14 +1649,14 @@ export const registerSettings = function () {
     requiresReload: true
   });
 
+  // Deprecated: kept for one version cycle to allow migration of old value into configSettings arrays
   game.settings.register("midi-qol", "AutoFastForwardAbilityRolls", {
     name: i18n("midi-qol.AutoFastForwardAbilityRolls.Name"),
     hint: i18n("midi-qol.AutoFastForwardAbilityRolls.Hint"),
     scope: "world",
     default: false,
     type: Boolean,
-    config: true,
-    onChange: fetchParams
+    config: false,
   });
 
   game.settings.register("midi-qol", "ForceHideRoll", {
@@ -1584,27 +1680,29 @@ export const registerSettings = function () {
     config: true
   });
 
+  // Deprecated: CriticalDamage/CriticalDamageGM have moved to configSettings (shown on Workflow > Damage tab)
+  // Kept registered for migration from old setting values
   game.settings.register("midi-qol", "CriticalDamageGM", {
     name: "midi-qol.CriticalDamageGM.Name",
-    // hint: "midi-qol.CriticalDamageGM.Hint",
     scope: "world",
     default: "none",
     type: String,
-    config: true,
+    config: false,
     choices: criticalDamageChoices,
     onChange: fetchParams
   });
   game.settings.register("midi-qol", "CriticalDamage", {
     name: "midi-qol.CriticalDamage.Name",
-    hint: "midi-qol.CriticalDamage.Hint",
     scope: "world",
     default: "default",
     type: String,
-    config: true,
+    config: false,
     choices: criticalDamageChoices,
     onChange: fetchParams
   });
 
+  // Deprecated: ColoredBorders has moved to configSettings.coloredBorders (shown on Misc tab)
+  // Kept registered for migration from old setting value
   game.settings.register("midi-qol", "ColoredBorders",
     {
       name: "midi-qol.ColoredBorders.Name",
@@ -1612,7 +1710,7 @@ export const registerSettings = function () {
       scope: "world",
       default: "None",
       type: String,
-      config: true,
+      config: false,
       choices: coloredBordersOptions,
       onChange: fetchParams
     });
@@ -1673,6 +1771,15 @@ export const registerSettings = function () {
     icon: "fas fa-dice-d20",
     type: SoundConfigPanel,
     restricted: true
+  });
+
+  game.settings.registerMenu("midi-qol", "showRollStats", {
+    name: i18n("midi-qol.ShowStats"),
+    label: "midi-qol.ShowStats",
+    hint: i18n("midi-qol.KeepRollStats.Hint"),
+    icon: "fas fa-chart-bar",
+    type: RollStatsDisplay as any,
+    restricted: false
   });
 
   game.settings.register("midi-qol", "playerControlsInvisibleTokens", {
@@ -1744,7 +1851,7 @@ export const registerSettings = function () {
     label: "midi-qol.DependentsExplorer.Label",
     icon: "fas fa-sitemap",
     hint: i18n("midi-qol.DependentsExplorer.Hint"),
-    type: LaunchDependentsExplorer,
+    type: DependentsExplorer as any,
     restricted: true
   });
 

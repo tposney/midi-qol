@@ -1,6 +1,6 @@
-import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { configSettings, autoFastForwardAbilityRolls, checkRule, checkMechanic, safeGetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability } from "./utils.js";
+import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
+import { configSettings, checkRule, checkMechanic, safeGetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
+import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -180,7 +180,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     let hasPreComputedAdvantage = false;
     if (!config.midiOptions.ignorePreComputedAdvantage) {
       hasPreComputedAdvantage = applyPreComputedAdvantage(config);
-      if (hasPreComputedAdvantage && autoFastForwardAbilityRolls) {
+      if (hasPreComputedAdvantage && isAutoFastForward("skill")) {
         config.midiOptions.fastForward = true;
       }
     }
@@ -230,7 +230,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
         if (skillModifiers.autoFail) {
           success = false;
         }
-        setRollDialogOptions(configData, dialogData);
+        setRollDialogOptions(configData, dialogData, "skill");
       });
       rollSkillHookId = Hooks.once("dnd5e.postSkillRollConfiguration", (rolls, config, dialog, messageDetails) => {
         // record message configuration details for later display
@@ -382,7 +382,7 @@ function getAdvantageSourceInfo(config: RollProcessConfig): AdvantageSourceInfo 
   };
 }
 
-function getExternalModuleFastForward(sourceInfo: AdvantageSourceInfo): boolean {
+function getExternalModuleFastForward(sourceInfo: AdvantageSourceInfo, rollType: FastForwardRollType): boolean {
   // Get the appropriate fast forward setting based on which external module is the source
   switch (sourceInfo.sourceType) {
     case 'monks-tokenbar':
@@ -399,14 +399,14 @@ function getExternalModuleFastForward(sourceInfo: AdvantageSourceInfo): boolean 
     case 'epic-rolls-5e':
     case 'none':
     default:
-      return autoFastForwardAbilityRolls;
+      return isAutoFastForward(rollType);
   }
-  // Default to midi's autoFastForwardAbilityRolls
-  return autoFastForwardAbilityRolls;
-  
+  // Default to midi's isAutoFastForward
+  return isAutoFastForward(rollType);
+
 }
 
-function setRollDialogOptions(config: RollProcessConfig, dialog: RollDialogConfig) {
+function setRollDialogOptions(config: RollProcessConfig, dialog: RollDialogConfig, rollType: FastForwardRollType) {
   dialog.options ??= {};
   //@ts-expect-error
   const ADV_MODE = CONFIG.Dice.D20Roll.ADV_MODE;
@@ -425,12 +425,12 @@ function setRollDialogOptions(config: RollProcessConfig, dialog: RollDialogConfi
   } else if (sourceInfo.isExternalModule) {
     // External module (Flash Rolls, Monks TokenBar, Epic Rolls): use the module's own fast forward setting
     // Shift key toggle is handled below for modules that pass the event (Monks TokenBar)
-    const moduleFastForward = getExternalModuleFastForward(sourceInfo);
+    const moduleFastForward = getExternalModuleFastForward(sourceInfo, rollType);
     dialog.configure = !moduleFastForward;
   } else {
     // Standard midi-qol flow (character sheet rolls, checkSaves, etc.)
     if (config.midiOptions?.fastForward) dialog.configure = false;
-    if (autoFastForwardAbilityRolls) dialog.configure = false;
+    if (isAutoFastForward(rollType)) dialog.configure = false;
   }
 
   // Shift key toggle - only works if event is available
@@ -753,7 +753,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     let hasPreComputedAdvantage = false;
     if (!config.midiOptions.ignorePreComputedAdvantage) {
       hasPreComputedAdvantage = applyPreComputedAdvantage(config);
-      if (hasPreComputedAdvantage && autoFastForwardAbilityRolls) {
+      if (hasPreComputedAdvantage && isAutoFastForward(rollType as FastForwardRollType)) {
         config.midiOptions.fastForward = true;
       }
     }
@@ -809,7 +809,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
         if (abilityModifiers.autoFail) {
           success = false;
         }
-        setRollDialogOptions(configData, dialogData);
+        setRollDialogOptions(configData, dialogData, rollType as FastForwardRollType);
       });
 
       rollAbilityHookId = Hooks.once(`dnd5e.post${type}RollConfiguration`, (rolls, configData, dialogData, messageDetails) => {
@@ -876,7 +876,11 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     }
     if (saveRollMode) game.settings.set("core", "rollMode", saveRollMode);
     if (abilityId) await expireRollEffect.bind(this)(rollType, abilityId, success);
-    if (config.midiOptions.isConcentrationCheck) expireRollEffect.bind(this)("isConcentrationSave", "", success);
+    if (config.midiOptions.isConcentrationCheck) {
+      // @ts-expect-error no dnd5e-types
+      if (success === undefined && result?.[0]?.isSuccess !== undefined) success = result[0].isSuccess;
+      expireRollEffect.bind(this)("isConcentrationSave", "", success);
+    }
   } catch (err) {
     const message = `doRollAbility error ${this.name} ${abilityId} ${rollType} ${this.uuid}`;
     TroubleShooter.recordError(err, message);
@@ -904,7 +908,7 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
   let hasPreComputedAdvantage = false;
   if (!config.midiOptions.ignorePreComputedAdvantage) {
     hasPreComputedAdvantage = applyPreComputedAdvantage(config);
-    if (hasPreComputedAdvantage && autoFastForwardAbilityRolls) {
+    if (hasPreComputedAdvantage && isAutoFastForward("save")) {
       config.midiOptions.fastForward = true;
     }
   }
@@ -974,7 +978,7 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
       if (!autoFail && !autoSuccess && configData.midiOptions?.parts?.length) roll.parts = [...(roll.parts ?? []), ...configData.midiOptions.parts];
       if (blindSaveRoll) roll.options.rollMode = CONST.DICE_ROLL_MODES.BLIND;
     }
-    setRollDialogOptions(configData, dialogData);
+    setRollDialogOptions(configData, dialogData, "save");
     if (blindSaveRoll) messageData.rollMode = CONST.DICE_ROLL_MODES.BLIND;
   });
 
@@ -986,6 +990,21 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
 }
 
 export function deathSaveHook(rolls: Roll[], { chatString, subject: actor }: { chatString: string; updates: Actor.UpdateData; subject: Actor.Implementation }) {
+  if (configSettings.keepRollStats && actor) {
+    if (rolls instanceof Roll) rolls = [rolls];
+    let successes = 0;
+    let failures = 0;
+    for (const roll of rolls) {
+      // @ts-expect-error no dnd5e-types
+      if (roll.isCritical) successes += 2;
+      // @ts-expect-error no dnd5e-types
+      else if (roll.isFumble) failures += 2;
+      // @ts-expect-error no dnd5e-types
+      else if (roll.isFailure) failures += 1;
+      else successes += 1;
+    }
+    gameStats.addDeathSaveResult(actor, successes, failures);
+  }
   if (chatString === "DND5E.DeathSaveFailure") {
     if (hasCondition(actor, "unconscious")) {
       const _id = CONFIG.statusEffects.find(e => e.id === "unconscious")?._id;
@@ -1886,12 +1905,12 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     config.midiOptions ??= {};
     const chatMessage = message.create;
     message.create = false;
-    if (dialog.configure === undefined && autoFastForwardAbilityRolls) dialog.configure = false;
+    if (dialog.configure === undefined && isAutoFastForward("tool")) dialog.configure = false;
 
     let hasPreComputedAdvantage = false;
     if (!config.midiOptions.ignorePreComputedAdvantage) {
       hasPreComputedAdvantage = applyPreComputedAdvantage(config);
-      if (hasPreComputedAdvantage && autoFastForwardAbilityRolls) {
+      if (hasPreComputedAdvantage && isAutoFastForward("tool")) {
         config.midiOptions.fastForward = true;
       }
     }
@@ -1936,7 +1955,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
       // Apply roll modifiers (auto-fail, min, max)
       computeRollModifiers(this, toolModifierFlags, rollModifierTracker, { workflow });
       toolModifiers = applyRollModifiers(rollModifierTracker, configData, dialogData);
-      setRollDialogOptions(configData, dialogData);
+      setRollDialogOptions(configData, dialogData, "tool");
       message = messageData;
     });
 
