@@ -4,6 +4,8 @@
   - I know a skill roll is a type of ability check, but having a separate setting gives you more control, so you need to set skill separately from ability roll.
 * New RAW (2024) invisibility advantage/disadvantage mode that only relies on being able to see the target.
 * Midi-qol tab property, force config dialog, now overrides the thrown weapon property check.
+* Revived the roll statistics function. Now accessible from the main midi-qol settings panel and tracks a few more things.
+  - For multi target items, e.g. fireball, the total damage is the damage rolled * the number of targets and the average damage is the sum of the applied damage. So unlike weapon attacks which is effectively the damage per roll, AoE can have much higher damage due to the multiple targets.
 * Added an editor for overTime effects, requires dae 13.0.19.
 * Added a condition expression editor, requires dae 13.0.19 plus macro-autocomplete.
 
@@ -27,6 +29,11 @@
   - **Critical Damage** (player and GM) moved to the Workflow tab, Damage section.
   - **Colored Borders** moved to the Misc tab, near the other highlighting/display settings.
   - Existing values are automatically migrated on first load, I think, but you should check. The old settings are hidden from the Foundry module settings page.
+
+**Merged Contributions**
+* Allow easy logging of sandbox evaluation data via `MidiQOL.logEvaluationData = true` (MR !396, thanks @thatlonelybugbear).
+* Updated pt-BR localization (MR !398, thanks @Kharmans).
+* Optional Bonus Value: critical — allows optional bonuses to force critical on attacks, damage, checks, saves, and skills (MR !399, thanks @baconnugget).
 
 ### 13.0.42
 * Just remove some spurious debug left in the code.
