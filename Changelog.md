@@ -1,4 +1,5 @@
 ### 13.0.43
+**Oops** It turns out that a number of features listed in the 13.0.42 release in fact did not make it in due to an error on my part with the release process. My apologies. All of the 13.0.42 features/bug fixes are definitely in this release as well as a few more (see below).
 **New Features**
 * **Breaking** Auto fast forwarding rolls (skipping dialog) is now specified the same way for players and GMs on their own tab. There is a new multi select that lets you choose which rolls will be fastforwarded by default for both the player and the gm. Midi attempts to migrate your existing settings, but you should check.
   - I know a skill roll is a type of ability check, but having a separate setting gives you more control, so you need to set skill separately from ability roll.
@@ -8,6 +9,12 @@
   - For multi target items, e.g. fireball, the total damage is the damage rolled * the number of targets and the average damage is the sum of the applied damage. So unlike weapon attacks which is effectively the damage per roll, AoE can have much higher damage due to the multiple targets.
 * Added an editor for overTime effects, requires dae 13.0.19.
 * Added a condition expression editor, requires dae 13.0.19 plus macro-autocomplete.
+* Support for multiple saves, e.g. a save activity that specifies a dex or con save, or an athletics/acrobatics check. 
+  - If you are using 3rd party modules to roll the saves (monks/Flash Rolls/Rippers Epic Rolls) this is unsupported.
+  - If rolling via no prompt/auto with dialog the user will be shown a roll dialog that lets them choose which sort of roll to perform.
+  - Only supports saves of the same type, so you can have a skill and a tool roll in the same save, multiple skills fine, multiple tools fine, but if mixed will select just the first in the list.
+* Support for multiple templates. Items that specify multiple templates (metor storm etc) will now collect targets from each template placed. 
+  - If you back out of placing the templates things are "confused" - will be addressed in a later release.
 
 **Bug Fixes**
 * Advantage Attribution now follows the same visibility rules as the attack roll formula. If players are not allowed to see the formula, they can't see the attack advantage attribution.
@@ -18,22 +25,22 @@
   - if you want to make changes to the tracker that will be respected do so in the preAttackConfig Macro/Hooks.
   - I added a preAttackConfig Hook call as well as macro calls for the above.
 
+**Merged Contributions**
+* Allow easy logging of sandbox evaluation data via `MidiQOL.logEvaluationData = true` (MR !396, thanks @thatlonelybugbear).
+* Updated pt-BR localization (MR !398, thanks @Kharmans).
+* Optional Bonus Value: critical — allows optional bonuses to force critical on attacks, damage, checks, saves, and skills (MR !399, thanks @baconnugget).
+
 **Others**
-* A major rework of advantage attribution, now displays localized string explaining the source. Feedback on the string choices welcome.
-  - This reduces by several thousand the number of fields translators need to worry about.
-  - This feeds through to better/different explanatory text in the dae field browser.
-  - **Unless there is any major push back I plan to remove the legacy attribution in a soon to be forthcoming release**.
-* I've reworked the chat card persistence for workflows and some of the fields may have moved. If you are in the habit of checking the Chat Card for midi persisted fields you will need to review that code.
 * Migrated several standalone module settings into the midi-qol config panel for easier discovery:
   - **Preferred GM** moved to the GM tab.
   - **Critical Damage** (player and GM) moved to the Workflow tab, Damage section.
   - **Colored Borders** moved to the Misc tab, near the other highlighting/display settings.
   - Existing values are automatically migrated on first load, I think, but you should check. The old settings are hidden from the Foundry module settings page.
-
-**Merged Contributions**
-* Allow easy logging of sandbox evaluation data via `MidiQOL.logEvaluationData = true` (MR !396, thanks @thatlonelybugbear).
-* Updated pt-BR localization (MR !398, thanks @Kharmans).
-* Optional Bonus Value: critical — allows optional bonuses to force critical on attacks, damage, checks, saves, and skills (MR !399, thanks @baconnugget).
+* A rework of advantage attribution display, uses a localized string explaining the source. Feedback on the string choices welcome.
+  - This reduces by several thousand the number of fields translators need to worry about.
+  - This feeds through to better/different explanatory text in the dae field browser.
+  - **Unless there is any major push back I plan to remove the legacy attribution in a soon to be forthcoming release**.
+* **Breaking** I've reworked the chat card persistence for workflows and some of the fields may have moved. If you are in the habit of checking the Chat Card for midi persisted fields you will need to review that code.
 
 ### 13.0.42
 * Just remove some spurious debug left in the code.

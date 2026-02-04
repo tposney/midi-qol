@@ -780,6 +780,7 @@ async function rollAbility(data: {
   request: string;
   targetUuid: string;
   ability?: string;
+  abilities?: string[];
   skill?: string;
   tool?: string;
   proficiency?: string;
@@ -790,6 +791,10 @@ async function rollAbility(data: {
     rollMode?: string;
     itemId: string;
     workflowId?: string;
+    rollAbilities?: string[];
+    rollSkills?: string[];
+    rollTools?: string[];
+    advantageByAbility?: AnyMutableObject;
   };
   advantage?: boolean;
   disadvantage?: boolean;
@@ -816,11 +821,19 @@ async function rollAbility(data: {
   let dialog: AnyMutableObject = { configure: !data.options?.fastForward };
   let message: AnyMutableObject = { create: data.options?.chatMessage ?? data.options?.create, rollMode: data.options?.rollMode };
   if (data.request === "tool") {
-    const requestedTool = data.tool;
-    let tool = actor.items.get(data.options?.itemId ?? "");
-    // @ts-expect-error no dnd5e-types
-    if (!tool) tool = actor.items.find(i => i.type === "tool" && i.system.type.baseItem === requestedTool);
-    if (!tool) { // no tool of the requested type - auto fail
+    const rollTools = data.options?.rollTools;
+    const toolsToTry = rollTools && rollTools.length > 0 ? rollTools : [data.tool];
+    let tool: Item.Implementation | undefined;
+    let foundToolId: string | undefined;
+    // Try to find a tool item matching any of the requested tools
+    for (const toolId of toolsToTry) {
+      if (!toolId) continue;
+      tool = actor.items.get(data.options?.itemId ?? "") as Item.Implementation | undefined;
+      // @ts-expect-error no dnd5e-types
+      if (!tool || tool.type !== "tool") tool = actor.items.find(i => i.type === "tool" && i.system.type.baseItem === toolId) as Item.Implementation | undefined;
+      if (tool) { foundToolId = toolId; break; }
+    }
+    if (!tool) { // no tool of any requested type - auto fail
       //@ts-expect-error
       return [await new CONFIG.Dice.D20Roll("-1").roll()];
     } else {
@@ -829,6 +842,7 @@ async function rollAbility(data: {
       // @ts-expect-error no dnd5e-types
       config.prof = tool?.system.prof;
       config.item = tool;
+      if (foundToolId && foundToolId !== data.tool) config.tool = foundToolId;
     }
   }
   if (data.rollMode) message.rollMode = data.rollMode;

@@ -1,12 +1,13 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType } from "./utils.js";
+import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiAttackActivity } from "./activities/AttackActivity.js";
 import { templateTokens } from "./activities/activityHelpers.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
+import { MidiRollChoiceDialog, PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, ActivityUseConfiguration, DamageApplicationOptions, DamageDescription, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
@@ -177,6 +178,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
         if (actualActor) return actualActor.rollSkill(config, dialog, message);
       }
     }
+    let userExplicitChoice: string | undefined; // Set by buildConfig wrapper when user changes the choice dropdown
     let hasPreComputedAdvantage = false;
     if (!config.midiOptions.ignorePreComputedAdvantage) {
       hasPreComputedAdvantage = applyPreComputedAdvantage(config);
@@ -221,20 +223,105 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
       const workflow = config.midiOptions?.workflow;
       const midiOptions = config.midiOptions;
       const rollModifierTracker = new RollModifierTracker();
+
+      // Skill choice dialog setup — always computed; dropdown only shown when length > 1
+      const rollSkills: string[] = config.midiOptions?.rollSkills ?? (skillId ? [skillId] : []);
+      const hasMultipleSkills = rollSkills.length > 1;
+      const preComputedSkillAdvantageMap = new Map<string, PreComputedAdvantage>();
+      const multiSkillData = new Map<string, { autoFail: boolean; autoSuccess: boolean }>();
+
+      for (const skill of rollSkills) {
+        const skillResult = await computeSkillAdvantage(this, skill, config.midiOptions);
+
+        // Compute auto-fail/auto-success with a separate tracker per skill
+        const skillTracker = new RollModifierTracker();
+        // @ts-expect-error no dnd5e-types
+        const skillAbilityId = this.system.skills[skill]?.ability;
+        const perSkillFlags: RollModifierFlags = {
+          failFlags: ["fail.all", "fail.skill.all", `fail.skill.${skill}`],
+          successFlags: ["success.all", "success.skill.all", `success.skill.${skill}`],
+          maxFlags: [`max.skill.${skill}`, "max.skill.all"],
+          minFlags: [`min.skill.${skill}`, "min.skill.all"]
+        };
+        if (configSettings.skillAbilityCheckAdvantage && skillAbilityId) {
+          perSkillFlags.failFlags.push("fail.ability.all", "fail.ability.check.all", `fail.ability.check.${skillAbilityId}`);
+          perSkillFlags.successFlags.push("success.ability.all", "success.ability.check.all", `success.ability.check.${skillAbilityId}`);
+          perSkillFlags.maxFlags.push(`max.ability.check.${skillAbilityId}`, "max.ability.check.all");
+          perSkillFlags.minFlags.push(`min.ability.check.${skillAbilityId}`, "min.ability.check.all");
+        }
+        computeRollModifiers(this, perSkillFlags, skillTracker, { workflow });
+
+        const defaultButton = skillResult.hasAdvantage ? "advantage" as const
+          : skillResult.hasDisadvantage ? "disadvantage" as const
+          : "normal" as const;
+
+        preComputedSkillAdvantageMap.set(skill, {
+          hasAdvantage: !!skillResult.hasAdvantage,
+          hasDisadvantage: !!skillResult.hasDisadvantage,
+          defaultButton
+        });
+
+        multiSkillData.set(skill, {
+          autoFail: skillTracker.modifiers.willFail,
+          autoSuccess: skillTracker.modifiers.willSucceed
+        });
+      }
+
+      // Configure dialog with MidiRollChoiceDialog (dropdown only appears when multiple choices)
+      if (rollSkills.length > 0) {
+        dialog.applicationClass = MidiRollChoiceDialog;
+        dialog.options ??= {};
+        const rollChoices = buildRollChoices(this, "skill", rollSkills);
+        // Auto-select the choice with the highest modifier
+        if (rollChoices.length > 1) {
+          const best = rollChoices.reduce((a, b) => parseInt(b.modifier) > parseInt(a.modifier) ? b : a);
+          config.skill = best.value;
+        }
+        dialog.options.rollChoices = rollChoices;
+        dialog.options.advantageByChoice = preComputedSkillAdvantageMap;
+        dialog.options.choiceType = "skill";
+        // Wrap buildConfig so the closure variable captures the user's explicit choice
+        const baseSkillBuildConfig = MidiRollChoiceDialog.createSkillBuildConfig(this);
+        dialog.options.buildConfig = (processConfig, rollConfig, formData, index) => {
+          baseSkillBuildConfig(processConfig, rollConfig, formData, index);
+          if (formData && index === 0) {
+            const chosen = formData.get?.("skill");
+            if (chosen && typeof chosen === "string") userExplicitChoice = chosen;
+          }
+        };
+        if (hasMultipleSkills) dialog.configure = true; // Force dialog open for skill choice
+      }
+
       preRollSkillHookId = Hooks.once("dnd5e.preRollSkill", (configData, dialogData, messageData) => {
-        configData.midiOptions ??= midiOptions;
+        configData.midiOptions = { ...(configData.midiOptions ?? {}), ...(midiOptions ?? {}) };
         messageData.data ??= {};
         if (overtimeActorUuid) messageData.data["flags.midi-qol.overtimeActorUuid"] = overtimeActorUuid;
+
         computeRollModifiers(this, skillModifierFlags, rollModifierTracker, { workflow });
-        skillModifiers = applyRollModifiers(rollModifierTracker, configData, dialogData);
-        if (skillModifiers.autoFail) {
-          success = false;
+        const allAutoFail = multiSkillData.size > 0 && Array.from(multiSkillData.values()).every(d => d.autoFail);
+
+        if (hasMultipleSkills && !allAutoFail) {
+          // Multiple choices, not all auto-fail: keep dialog open for user choice
+          dialogData.configure = true;
+        } else {
+          // Single skill or all auto-fail: apply modifiers normally
+          skillModifiers = applyRollModifiers(rollModifierTracker, configData, dialogData);
+          if (skillModifiers.autoFail) success = false;
         }
         setRollDialogOptions(configData, dialogData, "skill");
       });
-      rollSkillHookId = Hooks.once("dnd5e.postSkillRollConfiguration", (rolls, config, dialog, messageDetails) => {
+      rollSkillHookId = Hooks.once("dnd5e.postSkillRollConfiguration", (rolls, configData, dialog, messageDetails) => {
         // record message configuration details for later display
         message = messageDetails;
+
+        // Detect skill change from choice dialog and check auto-fail/auto-success
+        if (configData.skill && configData.skill !== skillId) {
+          skillId = configData.skill;
+        }
+        const chosenData = multiSkillData.get(skillId ?? "");
+        if (chosenData?.autoFail) success = false;
+        else if (chosenData?.autoSuccess) success = true;
+
         return true;
       });
 
@@ -272,6 +359,11 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
       success = resultTotal >= config.target;
       result.forEach(r => r.options.success = success);
     }
+    // Stamp the chosen skill on the rolls (after bonusCheck) so the save display can show which skill was used
+    // userExplicitChoice is set by buildConfig wrapper when user changes dropdown; config.skill is the auto-selected best
+    const _chosenSkill = userExplicitChoice ?? config.skill;
+    if ((config.midiOptions?.rollSkills?.length ?? 0) > 1) result.forEach(r => { if (r?.options) r.options.midiChosenId = _chosenSkill; });
+
     if (message.create !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
         // const cls = getDocumentClass("ChatMessage");
@@ -750,6 +842,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
       config.midiOptions.fumble = 0;
     }
 
+    let userExplicitChoice: string | undefined; // Set by buildConfig wrapper when user changes the choice dropdown
     let hasPreComputedAdvantage = false;
     if (!config.midiOptions.ignorePreComputedAdvantage) {
       hasPreComputedAdvantage = applyPreComputedAdvantage(config);
@@ -800,21 +893,97 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
       }
       // Fall back to creating a new tracker if not found
       rollModifierTracker ??= new RollModifierTracker();
+
+      // Ability choice dialog setup — always computed; dropdown only shown when length > 1
+      const rollAbilities: string[] = config.midiOptions?.rollAbilities ?? (abilityId ? [abilityId] : []);
+      const hasMultipleChoices = rollAbilities.length > 1;
+      const preComputedAdvantageMap = new Map<string, PreComputedAdvantage>();
+      const multiAbilityData = new Map<string, { autoFail: boolean; autoSuccess: boolean }>();
+
+      for (const ability of rollAbilities) {
+        const abilityResult = await computeAbilityAdvantage(this, rollType, ability, config.midiOptions);
+
+        // Compute auto-fail/auto-success with a separate tracker per ability
+        const abilityTracker = new RollModifierTracker();
+        const abilityFlags: RollModifierFlags = {
+          failFlags: ["fail.all", "fail.ability.all", `fail.ability.${rollType}.all`, `fail.ability.${rollType}.${ability}`],
+          successFlags: ["success.all", "success.ability.all", `success.ability.${rollType}.all`, `success.ability.${rollType}.${ability}`],
+          maxFlags: [`max.ability.${rollType}.${ability}`, `max.ability.${rollType}.all`],
+          minFlags: [`min.ability.${rollType}.${ability}`, `min.ability.${rollType}.all`]
+        };
+        computeRollModifiers(this, abilityFlags, abilityTracker, { workflow });
+
+        const defaultButton = abilityResult.tracker.hasAdvantage ? "advantage" as const
+          : abilityResult.tracker.hasDisadvantage ? "disadvantage" as const
+          : "normal" as const;
+
+        preComputedAdvantageMap.set(ability, {
+          hasAdvantage: !!abilityResult.tracker.hasAdvantage,
+          hasDisadvantage: !!abilityResult.tracker.hasDisadvantage,
+          defaultButton
+        });
+
+        multiAbilityData.set(ability, {
+          autoFail: abilityTracker.modifiers.willFail,
+          autoSuccess: abilityTracker.modifiers.willSucceed
+        });
+      }
+
+      // Configure dialog with MidiRollChoiceDialog (dropdown only appears when multiple choices)
+      if (rollAbilities.length > 0) {
+        dialog.applicationClass = MidiRollChoiceDialog;
+        dialog.options ??= {};
+        const rollChoices = buildRollChoices(this, rollType as "save" | "check", rollAbilities);
+        // Auto-select the choice with the highest modifier
+        if (rollChoices.length > 1) {
+          const best = rollChoices.reduce((a, b) => parseInt(b.modifier) > parseInt(a.modifier) ? b : a);
+          config.ability = best.value;
+        }
+        dialog.options.rollChoices = rollChoices;
+        dialog.options.advantageByChoice = preComputedAdvantageMap;
+        // Wrap buildConfig so the closure variable captures the user's explicit choice
+        const baseBuildConfig = MidiRollChoiceDialog.createSaveBuildConfig(this);
+        dialog.options.buildConfig = (processConfig, rollConfig, formData, index) => {
+          baseBuildConfig(processConfig, rollConfig, formData, index);
+          if (formData && index === 0) {
+            const chosen = formData.get?.("ability");
+            if (chosen && typeof chosen === "string") userExplicitChoice = chosen;
+          }
+        };
+        if (hasMultipleChoices) dialog.configure = true; // Force dialog open for ability choice
+      }
+
       preRollAbilityHookId = Hooks.once(`dnd5e.preRoll${type}`, (configData, dialogData, _message) => {
         // Merge midiOptions to ensure fastForward and other values are preserved even if dnd5e creates an empty midiOptions object
         // Use shallow merge to avoid stack overflow from circular references in workflow
         configData.midiOptions = { ...(configData.midiOptions ?? {}), ...(midiOptions ?? {}) };
+
         computeRollModifiers(this, abilityModifierFlags, rollModifierTracker, { workflow });
-        abilityModifiers = applyRollModifiers(rollModifierTracker, configData, dialogData);
-        if (abilityModifiers.autoFail) {
-          success = false;
+        const allAutoFail = multiAbilityData.size > 0 && Array.from(multiAbilityData.values()).every(d => d.autoFail);
+
+        if (hasMultipleChoices && !allAutoFail) {
+          // Multiple choices, not all auto-fail: keep dialog open for user choice
+          dialogData.configure = true;
+        } else {
+          // Single ability or all auto-fail: apply modifiers normally
+          abilityModifiers = applyRollModifiers(rollModifierTracker, configData, dialogData);
+          if (abilityModifiers.autoFail) success = false;
         }
+
         setRollDialogOptions(configData, dialogData, rollType as FastForwardRollType);
       });
 
       rollAbilityHookId = Hooks.once(`dnd5e.post${type}RollConfiguration`, (rolls, configData, dialogData, messageDetails) => {
         // record the configured message data for later display
         message = messageDetails;
+
+        // Detect ability change from choice dialog and check auto-fail/auto-success
+        if (configData.ability && configData.ability !== abilityId) {
+          abilityId = configData.ability;
+        }
+        const chosenData = multiAbilityData.get(abilityId ?? "");
+        if (chosenData?.autoFail) success = false;
+        else if (chosenData?.autoSuccess) success = true;
       });
       if (this.token) foundry.utils.setProperty(dialog, "options.window.subtitle", this.token.name);
 
@@ -826,7 +995,6 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
       console.warn("midi-qol | doRollAbility: result is a Roll, not an array of Rolls");
       result = [result];
     }
-
     let rollMode: keyof CONFIG.Dice.RollModes = message.rollMode ?? (safeGetGameSetting("core", "rollMode") as keyof CONFIG.Dice.RollModes);
     if ([CONST.DICE_ROLL_MODES.PUBLIC, "roll", CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode)) {
       let blindRollSetting: boolean | undefined;
@@ -867,6 +1035,13 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
         }
       }
     }
+
+    // Stamp the chosen ability on the rolls (after bonusCheck) so the save display can show which ability was used
+    // userExplicitChoice is set by buildConfig wrapper when user changes dropdown; config.ability is the auto-selected best
+    const _hasMulti = (config.midiOptions?.rollAbilities?.length ?? 0) > 1;
+    const _chosenAbility = userExplicitChoice ?? config.ability;
+    //@ts-expect-error midiChosenId is a custom roll option
+    if (_hasMulti) result.forEach(r => { if (r?.options) r.options.midiChosenId = _chosenAbility; });
 
     if (message.create !== false && result) {
       // const cls = getDocumentClass("ChatMessage");
@@ -1901,12 +2076,14 @@ export let actorAbilityRollPatching = () => {
 export async function rollToolCheck(this: Actor.Implementation, wrapped, config: RollProcessConfig & { ability?: string, tool?: string } = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
   let result: Roll[] | undefined;
   let preRollHookId: number | undefined;
+  let postRollHookId: number | undefined;
   try {
     config.midiOptions ??= {};
     const chatMessage = message.create;
     message.create = false;
     if (dialog.configure === undefined && isAutoFastForward("tool")) dialog.configure = false;
 
+    let userExplicitChoice: string | undefined; // Set by buildConfig wrapper when user changes the choice dropdown
     let hasPreComputedAdvantage = false;
     if (!config.midiOptions.ignorePreComputedAdvantage) {
       hasPreComputedAdvantage = applyPreComputedAdvantage(config);
@@ -1949,14 +2126,107 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     const workflow = config.midiOptions?.workflow;
     const midiOptions = config.midiOptions;
     const rollModifierTracker = new RollModifierTracker();
+    let toolId = config.tool;
+    let success: boolean | undefined = undefined;
+
+    // Tool choice dialog setup — always computed; dropdown only shown when length > 1
+    const rollTools: string[] = config.midiOptions?.rollTools ?? (toolId ? [toolId] : []);
+    const hasMultipleTools = rollTools.length > 1;
+    const preComputedToolAdvantageMap = new Map<string, PreComputedAdvantage>();
+    const multiToolData = new Map<string, { autoFail: boolean; autoSuccess: boolean }>();
+
+    for (const tool of rollTools) {
+      //@ts-expect-error no dnd5e-types
+      const toolAbilityId = this.system.tools?.[tool]?.ability || GameSystemConfig.tools[tool]?.ability || "";
+      const toolResult = await computeToolAdvantage(this, tool, toolAbilityId, config.midiOptions);
+
+      // Compute auto-fail/auto-success with a separate tracker per tool
+      const toolTracker = new RollModifierTracker();
+      const perToolFlags: RollModifierFlags = {
+        failFlags: ["fail.all", "fail.tool.all", `fail.tool.${tool}`],
+        successFlags: ["success.all", "success.tool.all", `success.tool.${tool}`],
+        maxFlags: [`max.tool.${tool}`, "max.tool.all"],
+        minFlags: [`min.tool.${tool}`, "min.tool.all"]
+      };
+      if (toolAbilityId) {
+        perToolFlags.failFlags.push("fail.ability.all", "fail.ability.check.all", `fail.ability.check.${toolAbilityId}`);
+        perToolFlags.successFlags.push("success.ability.all", "success.ability.check.all", `success.ability.check.${toolAbilityId}`);
+        perToolFlags.maxFlags.push(`max.ability.check.${toolAbilityId}`, "max.ability.check.all");
+        perToolFlags.minFlags.push(`min.ability.check.${toolAbilityId}`, "min.ability.check.all");
+      }
+      computeRollModifiers(this, perToolFlags, toolTracker, { workflow });
+
+      const defaultButton = toolResult.hasAdvantage ? "advantage" as const
+        : toolResult.hasDisadvantage ? "disadvantage" as const
+        : "normal" as const;
+
+      preComputedToolAdvantageMap.set(tool, {
+        hasAdvantage: !!toolResult.hasAdvantage,
+        hasDisadvantage: !!toolResult.hasDisadvantage,
+        defaultButton
+      });
+
+      multiToolData.set(tool, {
+        autoFail: toolTracker.modifiers.willFail,
+        autoSuccess: toolTracker.modifiers.willSucceed
+      });
+    }
+
+    // Configure dialog with MidiRollChoiceDialog (dropdown only appears when multiple choices)
+    if (rollTools.length > 0) {
+      dialog.applicationClass = MidiRollChoiceDialog;
+      dialog.options ??= {};
+      const rollChoices = buildRollChoices(this, "tool", rollTools);
+      // Auto-select the choice with the highest modifier
+      if (rollChoices.length > 1) {
+        const best = rollChoices.reduce((a, b) => parseInt(b.modifier) > parseInt(a.modifier) ? b : a);
+        config.tool = best.value;
+      }
+      dialog.options.rollChoices = rollChoices;
+      dialog.options.advantageByChoice = preComputedToolAdvantageMap;
+      dialog.options.choiceType = "tool";
+      // Wrap buildConfig so the closure variable captures the user's explicit choice
+      const baseToolBuildConfig = MidiRollChoiceDialog.createToolBuildConfig(this);
+      dialog.options.buildConfig = (processConfig, rollConfig, formData, index) => {
+        baseToolBuildConfig(processConfig, rollConfig, formData, index);
+        if (formData && index === 0) {
+          const chosen = formData.get?.("tool");
+          if (chosen && typeof chosen === "string") userExplicitChoice = chosen;
+        }
+      };
+      if (hasMultipleTools) dialog.configure = true; // Force dialog open for tool choice
+    }
 
     preRollHookId = Hooks.once("dnd5e.preRollTool", (configData, dialogData, messageData) => {
       configData.midiOptions ??= midiOptions;
-      // Apply roll modifiers (auto-fail, min, max)
+
       computeRollModifiers(this, toolModifierFlags, rollModifierTracker, { workflow });
-      toolModifiers = applyRollModifiers(rollModifierTracker, configData, dialogData);
+      const allAutoFail = multiToolData.size > 0 && Array.from(multiToolData.values()).every(d => d.autoFail);
+
+      if (hasMultipleTools && !allAutoFail) {
+        // Multiple choices, not all auto-fail: keep dialog open for user choice
+        dialogData.configure = true;
+      } else {
+        // Single tool or all auto-fail: apply modifiers normally
+        toolModifiers = applyRollModifiers(rollModifierTracker, configData, dialogData);
+      }
       setRollDialogOptions(configData, dialogData, "tool");
       message = messageData;
+    });
+
+    postRollHookId = Hooks.once("dnd5e.postToolRollConfiguration", (rolls, configData, dialogData, messageDetails) => {
+      // record message configuration details for later display
+      message = messageDetails;
+
+      // Detect tool change from choice dialog and check auto-fail/auto-success
+      if (configData.tool && configData.tool !== toolId) {
+        toolId = configData.tool;
+      }
+      const chosenData = multiToolData.get(toolId ?? "");
+      if (chosenData?.autoFail) success = false;
+      else if (chosenData?.autoSuccess) success = true;
+
+      return true;
     });
 
     if (this.token) foundry.utils.setProperty(dialog, "options.window.subtitle", this.token.name);
@@ -1969,6 +2239,12 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
       DSNMarkDiceDisplayed(result);
     }
     if (!result) return result;
+    // Stamp the chosen tool on the rolls (after bonusCheck) so the save display can show which tool was used
+    // userExplicitChoice is set by buildConfig wrapper when user changes dropdown; config.tool is the auto-selected best
+    const _chosenTool = userExplicitChoice ?? config.tool;
+    //@ts-expect-error midiChosenId is a custom roll option
+    if (hasMultipleTools) result.forEach(r => { if (r?.options) r.options.midiChosenId = _chosenTool; });
+
     if (chatMessage !== false && result) {
       await result[0].toMessage(message.data, { rollMode });
     }
@@ -1978,6 +2254,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     throw err;
   } finally {
     if (preRollHookId) Hooks.off("dnd5e.preRollTool", preRollHookId);
+    if (postRollHookId) Hooks.off("dnd5e.postToolRollConfiguration", postRollHookId);
     return result;
   }
 }

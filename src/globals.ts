@@ -45,6 +45,7 @@ declare module "fvtt-types/configuration" {
       "dnd5e.postBuildToolRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
       "dnd5e.postSavingThrowRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postSkillRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
+      "dnd5e.postToolRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       // According to dnd5e createdTokens is a Token[], but it is actually a TokenDocument[]
       "dnd5e.postSummon": (activity: Activity, profile: unknown, tokens: TokenDocument.Implementation[], options: unknown) => void;
       "dnd5e.postUseActivity": (activity: Activity, usageConfig: ActivityUseConfiguration, results: unknown) => boolean;
@@ -84,6 +85,7 @@ declare module "fvtt-types/configuration" {
       "midi-qol.ready": () => void;
       "midi-qol.removeUndoEntry": (data?: UndoData) => void;
       "midi-qol.setup": (data: typeof globalThis.MidiQOL) => void;
+      "midi-qol.targeted": (targets: Set<Token.Implementation> | undefined) => void;
       "midi-qol.dependentsRegistryChanged": (event: RegistryChangeEvent) => void;
       "midi-qol-setup-wizard.launch": () => void;
       "getHeaderControlsActivitySheet": (app: foundry.applications.api.Application /*dnd5e.applications.activity.activitySheet*/ , buttons: any[]) => void;
@@ -496,6 +498,7 @@ declare module "fvtt-types/configuration" {
         tokenCanSenseUuids?: string[];
         attackingTokenUuid?: string;
         templateUuid?: string;
+        templateUuids?: string[];
         workflowOptions?: WorkflowOptions;
         undoDamage?: SerializedDamageListEntry[];
         utilityRolls?: Roll.Data[] | Roll[];
@@ -1252,6 +1255,7 @@ export type RollProcessConfig = {
   hookNames?: string[];
   subject?: foundry.abstract.Document.Any;
   target?: number;
+  ability?: string;
   ammunition?: Item.Implementation;
   workflow?: Workflow;
   midiOptions?: MidiOptions;
@@ -1263,6 +1267,7 @@ export type RollProcessConfig = {
   isCritical?: boolean;
   workflowOptions?: WorkflowOptions
   skill?: string;
+  tool?: string;
   rollMode?: keyof CONFIG.Dice.RollModes;
   simulate?: boolean;
   critical?: {
@@ -1284,6 +1289,15 @@ export type RollDialogConfig = {
     attackModeOptions?: string[];
     defaultButton?: string;
     advantageMode?: number;
+    /** buildConfig callback for SkillTool/MidiRollChoiceDialog pattern */
+    buildConfig?: (...args: any[]) => void;
+    /** Multi-ability choice dialog: available roll choices */
+    rollChoices?: unknown[];
+    /** Multi-ability/skill choice dialog: pre-computed advantage per choice */
+    advantageByChoice?: Map<string, unknown>;
+    /** Choice dropdown type: "ability" for saves, "skill" for skill checks, "tool" for tool checks */
+    choiceType?: "ability" | "skill" | "tool";
+    window?: { subtitle?: string };
   };
 };
 export type RollMessageConfig = {
@@ -1366,8 +1380,11 @@ export type CombinedTargetDescriptor = MidiTargetDescriptor & DND5ETargetDescrip
 export type SaveRollInfo = {
   type: string;
   ability: string | undefined;
+  abilities: string[];
   skill: string | undefined;
+  skills: string[];
   tool: string | undefined;
+  tools: string[];
   action: Function;
 };
 
@@ -1449,6 +1466,8 @@ export type SaveDetails = {
   itemCardUuid: string;
   workflowUuid: string; // deprecated - use workflowId
   workflowOptions: object;
+  /** Pre-computed advantage/disadvantage per ability, for multi-ability choice dialogs */
+  advantageByAbility?: Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; tracker: RollModifierTracker }>;
 };
 
 export type ProcessTargetSaveContext = {

@@ -839,8 +839,6 @@ export let fetchParams = () => {
           if (!configSettings.gmAutoFastForward.includes(rollType)) configSettings.gmAutoFastForward.push(rollType);
         }
         needsFastForwardMigration = true;
-        // Reset the old setting so migration only runs once
-        game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", false);
       }
     } catch (e) {
       // Setting may not be registered yet or already removed - that's fine
@@ -851,7 +849,13 @@ export let fetchParams = () => {
         `\n  GM gmAutoFastForwardAttack: ${oldGmFfAttack ?? "(already migrated)"}, gmAutoFastForwardDamage: ${oldGmFfDamage ?? "(already migrated)"} → gmAutoFastForward: [${configSettings.gmAutoFastForward.join(", ")}]`,
         `\n  AutoFastForwardAbilityRolls: ${oldAbilityRolls ?? false}`
       );
-      game.settings.set("midi-qol", "ConfigSettings", configSettings);
+      // Defer settings writes until game is ready (fetchParams may be called from init/setup hooks)
+      const persistMigration = () => {
+        game.settings.set("midi-qol", "ConfigSettings", configSettings);
+        if (oldAbilityRolls) game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", false);
+      };
+      if (game.ready) persistMigration();
+      else Hooks.once("ready", persistMigration);
     }
     fastForwardMigrationDone = true;
   }

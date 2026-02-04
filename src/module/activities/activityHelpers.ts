@@ -532,16 +532,22 @@ export function selectTargets(this: Workflow | Activity | undefined, templateDoc
       //@ts-expect-error
       VolumetricTemplates.compute3Dtemplate(mTemplate, tokensToCheck);
     }
-    workflow?.setTargets?.(new Set(game.user?.targets));
   }
+
   if (workflow) {
+    if (workflow.placedTemplateCount === 0) {
+      workflow.setTargets(new Set(game.user?.targets ?? []));
+    } else {
+      workflow.setTargets(new Set([...workflow.targets, ...(game.user?.targets ?? [])]));
+    }
+
+    // Use the setter to ensure persistFields is called
     workflow.templateUuid = templateDocument?.uuid;
-    // Set up template cleanup mechanism immediately
+    workflow.placedTemplateCount++;
     workflow.setupTemplateCleanup(templateDocument);
   }
   if (targeting === "none") { // this is no good
-    //@ts-expect-error also no good - if needed, should try to migrate to midi-qol.targeted
-    Hooks.callAll("midi-qol-targeted", workflow?.targets);
+    Hooks.callAll("midi-qol.targeted", workflow?.targets);
     return true;
   }
 
@@ -556,10 +562,20 @@ export function selectTargets(this: Workflow | Activity | undefined, templateDoc
   if (debugEnabled > 0) warn("selectTargets ", workflow?.suspended, workflow?.needTemplate, templateDocument);
 
   if (workflow?.needTemplate) {
-    workflow.needTemplate = false;
-    workflow.templateUuid = templateDocument?.uuid;
-    if (workflow.suspended && workflow.currentAction === workflow.WorkflowState_AwaitTemplate) 
-      workflow.unSuspend.bind(workflow)({ templateDocument });
+    if (workflow.placedTemplateCount < workflow.expectedTemplateCount) {
+      // More templates expected — re-register hooks for the next one
+      workflow.registerTemplateHooks();
+    } else {
+      // All templates placed — finalize
+      workflow.needTemplate = false;
+      if (workflow.expectedTemplateCount > 1) {
+        // Multi-template: sync game.user.targets from the accumulated workflow.targets
+        const allIds = Array.from(workflow.targets).map(t => t.id).filter(Boolean);
+        updateUserTargets(allIds as string[]);
+      }
+      if (workflow.suspended && workflow.currentAction === workflow.WorkflowState_AwaitTemplate)
+        workflow.unSuspend.bind(workflow)({ templateDocument });
+    }
   }
   return;
 };

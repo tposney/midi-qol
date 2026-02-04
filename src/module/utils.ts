@@ -709,6 +709,9 @@ export interface pcSaveOptions {
   requestId: string,
   GMprompt,
   isMagicSave: boolean,
+  rollAbilities?: string[],
+  rollSkills?: string[],
+  rollTools?: string[],
   saveDetails: {
     advantage: boolean | undefined,
     disadvantage: boolean | undefined,
@@ -723,15 +726,79 @@ export interface pcSaveOptions {
     itemCardUuid: string
   }
 };
+
+/**
+ * Build an array of choice options for a multi-ability save/check dialog.
+ * Each entry includes the ability ID, localized label, and formatted modifier string.
+ */
+export function buildRollChoices(
+  actor: Actor.Implementation,
+  rollType: "save" | "check" | "skill" | "tool",
+  ids: string[]
+): { value: string, label: string, modifier: string }[] {
+  if (rollType === "skill") {
+    return ids.map(skillId => {
+      const label = GameSystemConfig.skills[skillId]?.label ?? skillId;
+      //@ts-expect-error no dnd5e-types
+      const total: number = actor.system.skills?.[skillId]?.total ?? 0;
+      const modifier = total >= 0 ? `+${total}` : `${total}`;
+      return { value: skillId, label, modifier };
+    });
+  }
+  if (rollType === "tool") {
+    return ids.map(toolId => {
+      //@ts-expect-error label exists at runtime but not in fvtt-types
+      const label: string = GameSystemConfig.tools[toolId]?.label ?? toolId;
+      //@ts-expect-error no dnd5e-types
+      const total: number = actor.system.tools?.[toolId]?.total ?? 0;
+      const modifier = total >= 0 ? `+${total}` : `${total}`;
+      return { value: toolId, label, modifier };
+    });
+  }
+  return ids.map(abilityId => {
+    const label = GameSystemConfig.abilities[abilityId]?.label ?? abilityId;
+    let total: number;
+    //@ts-expect-error no dnd5e-types
+    const abilityData = actor.system.abilities?.[abilityId];
+    if (rollType === "save") {
+      total = abilityData?.save?.value ?? abilityData?.mod ?? 0;
+    } else {
+      total = (abilityData?.mod ?? 0) + (abilityData?.checkBonus ?? 0);
+    }
+    const modifier = total >= 0 ? `+${total}` : `${total}`;
+    return { value: abilityId, label, modifier };
+  });
+}
+
 export function requestPCSave(ability: string, rollType: string | undefined, player: string, actor: Actor.Implementation | null, options: pcSaveOptions): Promise<ChatMessage.Implementation | undefined> | undefined {
   try {
     // display a chat message to the user telling them to save
     const actorName = actor?.name ?? "Unknown";
-    let abilityString = ability;
-    let abilityDetails = GameSystemConfig.abilities[ability];
-    if (!abilityDetails) abilityDetails = { ...GameSystemConfig.tools[ability], label: "" };
-    if (abilityDetails?.label) abilityString = abilityDetails.label;
-    let content = ` ${actorName} ${shouldDisplaySaveDC() ? "DC " + options.saveDetails.rollDC : ""} ${abilityString} ${i18n("midi-qol.saving-throw")}`;
+    // Build display string - show all choices if multiple abilities or skills available
+    let abilityString: string;
+    const rollAbilities = options.rollAbilities;
+    const rollSkills = options.rollSkills;
+    const rollTools = options.rollTools;
+    if (rollTools && rollTools.length > 0) {
+      //@ts-expect-error label exists at runtime but not in fvtt-types
+      const labels = rollTools.map(t => GameSystemConfig.tools[t]?.label ?? t) as string[];
+      abilityString = labels.join(` ${i18n("midi-qol.or")} `);
+    } else if (rollSkills && rollSkills.length > 0) {
+      const labels = rollSkills.map(s => GameSystemConfig.skills[s]?.label ?? s);
+      abilityString = labels.join(` ${i18n("midi-qol.or")} `);
+    } else if (rollAbilities && rollAbilities.length > 0) {
+      const labels = rollAbilities.map(a => GameSystemConfig.abilities[a]?.label ?? a);
+      abilityString = labels.join(` ${i18n("midi-qol.or")} `);
+    } else {
+      // Fallback when no arrays provided (e.g., external callers)
+      abilityString = ability;
+      let abilityDetails = GameSystemConfig.abilities[ability];
+      if (!abilityDetails) abilityDetails = { ...GameSystemConfig.skills[ability], label: "" };
+      if (!abilityDetails) abilityDetails = { ...GameSystemConfig.tools[ability], label: "" };
+      if (abilityDetails?.label) abilityString = abilityDetails.label;
+    }
+    const rollLabel = rollType === "tool" ? i18n("midi-qol.tool-check") : rollType === "skill" ? i18n("midi-qol.skill-check") : rollType === "check" ? i18n("midi-qol.ability-check") : i18n("midi-qol.saving-throw");
+    let content = ` ${actorName} ${shouldDisplaySaveDC() ? "DC " + options.saveDetails.rollDC : ""} ${abilityString} ${rollLabel}`;
     if (options.saveDetails.advantage && !options.saveDetails.disadvantage) content = content + ` (${i18n("DND5E.Advantage")}) - ${options.flavor})`;
     else if (!options.saveDetails.advantage && options.saveDetails.disadvantage) content = content + ` (${i18n("DND5E.Disadvantage")}) - ${options.flavor})`;
     else content + ` - ${options.flavor})`;
@@ -2276,6 +2343,12 @@ export type MidiOptions = {
   workflow?: Workflow;
   workflowId?: string;
   workflowOptions?: WorkflowOptions;
+  /** Multiple abilities available for a save/check (e.g., ["str", "dex"]) */
+  rollAbilities?: string[];
+  /** Multiple skills available for a skill check (e.g., ["ath", "acr"]) */
+  rollSkills?: string[];
+  /** Multiple tools available for a tool check (e.g., ["thief", "smith"]) */
+  rollTools?: string[];
 };
 type SerializedMidiOptions = Omit<MidiOptions, "targetsToUse" | "rollAs" | "asUser"> & {
   targetsToUse?: string[];
@@ -3553,6 +3626,8 @@ export async function removeTokenConditionEffect(token: Token.Implementation, co
 }
 
 export async function expireMyEffects(this: Workflow, effectsToExpire: string[]) {
+  // Concentration checks are automated system responses, not player actions — don't expire effects.
+  if (this.item?.flags?.[MODULE_ID]?.isConcentrationCheck) return;
   const expireHit = effectsToExpire.includes("1Hit") && !this.effectsAlreadyExpired.includes("1Hit");
   const expireCritical = effectsToExpire.includes("1Critical") && !this.effectsAlreadyExpired.includes("1Critical");
   const expireFumble = effectsToExpire.includes("1Fumble") && !this.effectsAlreadyExpired.includes("1Fumble");

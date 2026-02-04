@@ -541,14 +541,21 @@ export class Workflow {
     this.persistFields({ tokenCanSenseUuids: targetDocuments.map(t => t.uuid) });
   }
 
-  #templateUuid: string | undefined;
+  templateUuids: string[] = [];
+  expectedTemplateCount: number = 1;
+  placedTemplateCount: number = 0;
+
+  // Backward compat: templateUuid returns the first template UUID
   get templateUuid(): string {
-    if (this.#templateUuid !== undefined) return this.#templateUuid;
+    if (this.templateUuids.length > 0) return this.templateUuids[0];
     return this.midiFlags?.templateUuid ?? "";
   }
   set templateUuid(templateUuid: string) {
-    this.#templateUuid = templateUuid;
-    this.persistFields({ templateUuid });
+    // Backward compat: push to array if not already present
+    if (templateUuid && !this.templateUuids.includes(templateUuid)) {
+      this.templateUuids.push(templateUuid);
+    }
+    this.persistFields({ templateUuid, templateUuids: this.templateUuids });
   }
 
   get template(): MeasuredTemplateDocument.Implementation | undefined {
@@ -1765,9 +1772,10 @@ export class Workflow {
 
     this.preSelectedTargets = canvas?.scene ? new Set(game.user?.targets ?? []) : new Set(); // record those targets targeted before cast.
     if (this.needTemplate && options.noTemplateHook !== true) {
-      if (debugEnabled > 0) warn("registering for preCreateMeasuredTemplate, createMeasuredTemplate")
-      this.preCreateTemplateHookId = Hooks.once("preCreateMeasuredTemplate", this.setTemplateFlags.bind(this));
-      this.placeTemplateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
+      this.expectedTemplateCount = Number(this.activity?.target?.template?.count) || 1;
+      this.placedTemplateCount = 0;
+      this.templateUuids = [];
+      this.registerTemplateHooks();
     }
     if (this.activity instanceof MidiSummonActivity && configSettings.autoRemoveSummonedCreature) {
       this.postSummonHookId = Hooks.once("dnd5e.postSummon", (activity, profile, createdTokens, options) => {
@@ -1787,6 +1795,12 @@ export class Workflow {
   public someAutoRollEventKeySet() {
     const event = this.rollOptions.event as AugmentedEvent | undefined;
     return event?.altKey || event?.ctrlKey || event?.metaKey;
+  }
+
+  registerTemplateHooks() {
+    if (debugEnabled > 0) warn("registering for preCreateMeasuredTemplate, createMeasuredTemplate")
+    this.preCreateTemplateHookId = Hooks.once("preCreateMeasuredTemplate", this.setTemplateFlags.bind(this));
+    this.placeTemplateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
   }
 
   setTemplateFlags(
@@ -1994,13 +2008,11 @@ export class Workflow {
   public async unSuspend(context: WorkflowContext = {}) {
     if (context.templateDocument) {
       context.templateUuid = context.templateDocument.uuid;
-      this.templateUuid = context.templateDocument?.uuid;
-      // this.template = context.templateDocument;
+      // templateUuids already populated by selectTargets accumulation
       this.needTemplate = false;
       if (!this.needItemCard) context.itemUseComplete = true;
       if (debugEnabled > 0) warn(`${this.workflowName} unsuspend with template ${this.templateUuid}`, this.suspended, context.templateDocument.flags, this.nameForState(this.currentAction));
-      // Set up template cleanup mechanism immediately
-      await this.setupTemplateCleanup(context.templateDocument);
+      // Template cleanup already set up by selectTargets
     }
     if (context.itemCardUuid) {
       this.itemCardUuid = context.itemCardUuid;
@@ -2257,7 +2269,7 @@ export class Workflow {
   }
   async WorkflowState_AwaitTemplate(context: WorkflowContext = {}): Promise<WorkflowState> {
     if (debugEnabled > 0) warn("WorkflowState_AwaitTemplate started");
-    if (context.templateUuid || this.templateUuid) {
+    if (context.templateUuid || this.templateUuids.length >= this.expectedTemplateCount) {
       this.needTemplate = false;
       if (debugEnabled > 0) warn("WorkflowState_AwaitTemplate context - template placed", "needTemplate", this.needTemplate, "needItemCard", this.needItemCard, "itemUseComplete", this.itemUseComplete);
       return this.WorkflowState_TemplatePlaced;
@@ -3241,23 +3253,24 @@ export class Workflow {
       game.modules.get("boss-loot-assets-free")?.active;
     const AAActive = game.modules.get("autoanimations")?.active;
     const elapsedTimeRequired = 5000;
-    if (configSettings.autoRemoveInstantaneousTemplate && this.templateUuid && this.activity.duration?.units === "inst") {
-      if (!blfxActive) {
-        const elapsed = Date.now() - (this.workflowStartTime ?? 0);
-        // if auto animations is active we need to allow enough time for it to have grabbed the template data before deleting it.
-        let timeout = AAActive ? Math.max(elapsedTimeRequired - elapsed, 1) : 1;
-        timeout = Math.max(elapsedTimeRequired, timeout);
-        setTimeout(() => {
-          const templateToDelete = fromUuidSync(this.templateUuid) as MeasuredTemplateDocument || null;
-          templateToDelete?.delete()
-        }, timeout);
-      } else {
-        const timeout = 5000;
-        setTimeout(() => {
-          const templateToDelete = fromUuidSync(this.templateUuid) as MeasuredTemplateDocument || null;
-          templateToDelete?.delete()
-        }, elapsedTimeRequired);
-        log("Not auto removing instantaneous template because boss loot assets active")
+    if (configSettings.autoRemoveInstantaneousTemplate && this.templateUuids.length > 0 && this.activity.duration?.units === "inst") {
+      for (const tUuid of this.templateUuids) {
+        if (!blfxActive) {
+          const elapsed = Date.now() - (this.workflowStartTime ?? 0);
+          // if auto animations is active we need to allow enough time for it to have grabbed the template data before deleting it.
+          let timeout = AAActive ? Math.max(elapsedTimeRequired - elapsed, 1) : 1;
+          timeout = Math.max(elapsedTimeRequired, timeout);
+          setTimeout(() => {
+            const templateToDelete = fromUuidSync(tUuid) as MeasuredTemplateDocument || null;
+            templateToDelete?.delete()
+          }, timeout);
+        } else {
+          setTimeout(() => {
+            const templateToDelete = fromUuidSync(tUuid) as MeasuredTemplateDocument || null;
+            templateToDelete?.delete()
+          }, elapsedTimeRequired);
+          log("Not auto removing instantaneous template because boss loot assets active")
+        }
       }
     }
     if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookId);
@@ -3373,8 +3386,8 @@ export class Workflow {
       clearUpdatesCache(this.itemCardUuid);
     }
 
-    if (this.templateUuid) {
-      const templateToDelete = await fromUuid(this.templateUuid) as MeasuredTemplateDocument | undefined;
+    for (const tUuid of this.templateUuids) {
+      const templateToDelete = await fromUuid(tUuid) as MeasuredTemplateDocument | undefined;
       if (templateToDelete) await templateToDelete.delete();
     }
     return this.WorkflowState_Cleanup;
@@ -3693,19 +3706,22 @@ export class Workflow {
 
       const invisAdvantage = isRAW2014 ? invisibleToken || !targetCanPerceive : !targetCanPerceive;
       if (invisAdvantage) {
-        if (invisibleToken) {
-          this.attackRollModifierTracker.advantage.add('Attacker invisible', 'Attacker invisible');
-        } else if (!targetCanPerceive) {
+        if (!targetCanPerceive) {
           this.attackRollModifierTracker.advantage.add('Attacker not detected', 'Attacker not detected');
+          foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.invisible", { value: true, effects: ["Attacker not detected"] });
         }
-        foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.invisible", { value: true, effects: ["Invisible Attacker"] });
+
+        if (invisibleToken && isRAW2014) {
+          this.attackRollModifierTracker.advantage.add('Attacker invisible', 'Attacker invisible');
+          foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.invisible", { value: true, effects: ["Invisible Attacker"] });
+        }
       }
 
       const invisDisadvantage = isRAW2014 ? invisibleTarget || !tokenCanPerceive : !tokenCanPerceive;
       if (invisDisadvantage) {
         // Attacker can't see target so disadvantage
         log(`Disadvantage given to ${this.actor.name} due to invisible target`, invisibleTarget, tokenCanPerceive);
-        if (invisibleTarget) {
+        if (invisibleTarget && isRAW2014) {
           this.attackRollModifierTracker.disadvantage.add('invisible foe', 'Invisible foe');
           foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.invisible", { value: true, effects: ["Invisible Defender"] });
         }
@@ -4340,7 +4356,8 @@ export class Workflow {
       targets,
       targetUuids,
       templateId: this.templateId, // deprecated
-      templateUuid: this.templateUuid,
+      templateUuid: this.templateUuid, // first template UUID (backward compat)
+      templateUuids: this.templateUuids, // all template UUIDs
       tokenUuid: this.tokenUuid,
       uuid: this.itemUuid, // deprecated
       workflowOptions: this.workflowOptions,
@@ -4970,18 +4987,19 @@ return {
     this.saveTargetsDisplayed = true;
     this.saveDisplayData = [];
     let rollType: string = "";
-    let rollAbility: string | undefined | null;
-    let rollSkill: string | undefined;
-    let rollTool: string | undefined;
+    let rollAbilities: string[] = [];
+    let rollSkills: string[] = [];
+    let rollTools: string[] = [];
     let rollDC = this.saveActivity?.save?.dc.value ?? this.saveActivity?.check?.dc.value;
 
     if (this.saveActivity?.save) {
       rollType = "save";
       if (this.saveActivity.save.ability instanceof Set) {
-        // TODO work out how to let the player choose the save for dnd5e 4.1
-        rollAbility = this.saveActivity.save.ability.first();
+        rollAbilities = Array.from(this.saveActivity.save.ability);
+      } else {
+        const ability = this.saveActivity.save.ability;
+        if (ability) rollAbilities = [ability];
       }
-      else rollAbility = this.saveActivity.save.ability;
     } else if (this.saveActivity?.check) {
       let skillOrTool = this.saveActivity.check.associated.first();
       // @ts-expect-error no dnd5e-types
@@ -4991,16 +5009,14 @@ return {
       }
       if (!skillOrTool) {
         rollType = "check";
-        // TODO: let user choose
-        rollAbility = this.saveActivity.check.ability;
+        const ability = this.saveActivity.check.ability;
+        if (ability) rollAbilities = [ability];
       } else if (GameSystemConfig.skills[skillOrTool]) {
         rollType = "skill";
-        rollAbility = this.saveActivity.getAbility?.(skillOrTool);
-        rollSkill = skillOrTool;
+        rollSkills = [skillOrTool];
       } else {
         rollType = "tool";
-        rollTool = skillOrTool;
-        rollAbility = this.saveActivity.getAbility?.(skillOrTool);
+        rollTools = [skillOrTool];
       }
     }
     for (let target of this.targets) {
@@ -5033,14 +5049,11 @@ return {
       });
     }
     let { fullDamageText, halfDamageText, noDamageText } = this.computeSaveFlavors();
-    rollAbility ??= "";
-    rollSkill ??= "";
-    rollTool ??= "";
     let templateData = {
       fullDamageText,
       halfDamageText,
       noDamageText,
-      saveDisplayFlavor: await this.computeSaveDisplayFlavor(rollDC, rollType, { rollAbility, rollSkill, rollTool }),
+      saveDisplayFlavor: await this.computeSaveDisplayFlavor(rollDC, rollType, { rollAbilities, rollSkills, rollTools }),
       saves: this.saveDisplayData,
       // TODO force roll damage
     }
@@ -5281,7 +5294,24 @@ return {
     const img = await this.getTargetPortraitImage(target);
     const isPlayerOwned = target.actor?.hasPlayerOwner ?? false;
 
-    const rollHTML = await midiRenderRoll(saveRoll);
+    let rollHTML = await midiRenderRoll(saveRoll);
+    //@ts-expect-error midiChosenId is a custom roll option
+    const midiChosenId: string | undefined = saveRoll.options?.midiChosenId;
+    if (midiChosenId) {
+      let choiceTitle = "";
+      if (GameSystemConfig.abilities[midiChosenId]) {
+        const abilityLabel = GameSystemConfig.abilities[midiChosenId].label ?? "";
+        choiceTitle = game.i18n.format("DND5E.SavePromptTitle", { ability: abilityLabel });
+      } else if (GameSystemConfig.skills[midiChosenId]) {
+        const skillLabel = GameSystemConfig.skills[midiChosenId].label ?? "";
+        choiceTitle = game.i18n.format("DND5E.SkillPromptTitle", { skill: skillLabel, ability: "" });
+      } else {
+        //@ts-expect-error label exists at runtime but not in fvtt-types
+        const toolLabel: string = GameSystemConfig.tools[midiChosenId]?.label ?? "";
+        if (toolLabel) choiceTitle = game.i18n.format("DND5E.ToolPromptTitle", { tool: toolLabel });
+      }
+      if (choiceTitle) rollHTML = `<div style="font-weight:bold; text-align:center;">${choiceTitle}</div>${rollHTML}`;
+    }
     const targetDocUuid = getTokenDocument(target)?.uuid ?? "none";
     if (this.tokenSaves) this.tokenSaves[targetDocUuid] = saveRoll;
 
@@ -5503,58 +5533,97 @@ return {
     rollAction: ((config?: AnyObject, dialog?: AnyObject, message?: AnyObject) => Promise<Roll[] | null>) | undefined;
     rollType: string | undefined;
     rollAbility: string | undefined | null;
+    rollAbilities: string[];
     rollSkill: string | undefined;
+    rollSkills: string[];
     rollTool: string | undefined;
+    rollTools: string[];
     flagRollType: string | undefined;
   } {
     let rollAction: ((config?: AnyObject, dialog?: AnyObject, message?: AnyObject) => Promise<Roll[] | null>) | undefined;
     let rollType: string | undefined;
     let rollAbility: string | undefined | null;
+    let rollAbilities: string[] = [];
     let rollSkill: string | undefined;
+    let rollSkills: string[] = [];
     let rollTool: string | undefined;
+    let rollTools: string[] = [];
     let flagRollType: string | undefined;
 
     if (this.saveActivity?.save) {
       rollType = "save";
       flagRollType = "save";
       if (this.saveActivity.save.ability instanceof Set) {
-        // TODO work out how to let the player choose the save for dnd5e 4.1
-        rollAbility = this.saveActivity.save.ability.first();
+        rollAbilities = Array.from(this.saveActivity.save.ability);
+        rollAbility = rollAbilities[0];
       }
-      else rollAbility = this.saveActivity.save.ability;
+      else {
+        rollAbility = this.saveActivity.save.ability;
+        if (rollAbility) rollAbilities = [rollAbility];
+      }
       // @ts-expect-error no dnd5e-types
       rollAction = CONFIG.Actor.documentClass.prototype.rollSavingThrow;
     } else if (this.saveActivity?.check) {
-      let skillOrTool = this.saveActivity.check.associated.first();
+      const associatedArray = Array.from(this.saveActivity.check.associated);
       // @ts-expect-error no dnd5e-types
-      if (!skillOrTool && this.item.type === "tool") {
+      if (associatedArray.length === 0 && this.item.type === "tool") {
         // @ts-expect-error no dnd5e-types
-        skillOrTool = this.item.system.type.baseItem;
+        const baseItem = this.item.system.type.baseItem;
+        if (baseItem) associatedArray.push(baseItem);
       }
-      if (!skillOrTool) {
+      if (associatedArray.length === 0) {
         rollType = "check";
         rollAbility = this.saveActivity.check.ability;
         // @ts-expect-error no dnd5e-types
         rollAction = CONFIG.Actor.documentClass.prototype.rollAbilityCheck;
         flagRollType = "check";
-      } else if (GameSystemConfig.skills[skillOrTool]) {
-        rollType = "skill";
-        rollAbility = this.saveActivity?.getAbility?.(skillOrTool);
-        rollSkill = skillOrTool;
-        flagRollType = "skill";
-        // @ts-expect-error no dnd5e-types
-        rollAction = CONFIG.Actor.documentClass.prototype.rollSkill;
       } else {
-        // @ts-expect-error no dnd5e-types
-        rollAction = CONFIG.Actor.documentClass.prototype.rollToolCheck;
-        rollType = "tool";
-        rollTool = skillOrTool;
-        rollAbility = this.saveActivity?.getAbility?.(skillOrTool);
-        flagRollType = "tool";
+        // Classify entries as skills or tools
+        const skills = associatedArray.filter(id => !!GameSystemConfig.skills[id]);
+
+        if (skills.length > 0 && skills.length === associatedArray.length) {
+          // All entries are skills
+          rollType = "skill";
+          rollSkill = skills[0];
+          rollSkills = skills;
+          rollAbility = this.saveActivity?.getAbility?.(rollSkill);
+          flagRollType = "skill";
+          // @ts-expect-error no dnd5e-types
+          rollAction = CONFIG.Actor.documentClass.prototype.rollSkill;
+        } else if (skills.length === 0) {
+          // All entries are tools
+          // @ts-expect-error no dnd5e-types
+          rollAction = CONFIG.Actor.documentClass.prototype.rollToolCheck;
+          rollType = "tool";
+          rollTool = associatedArray[0];
+          rollTools = associatedArray;
+          rollAbility = this.saveActivity?.getAbility?.(rollTool);
+          flagRollType = "tool";
+        } else {
+          // Mixed skills/tools — take first entry
+          const first = associatedArray[0];
+          if (GameSystemConfig.skills[first]) {
+            rollType = "skill";
+            rollSkill = first;
+            rollSkills = [first];
+            rollAbility = this.saveActivity?.getAbility?.(first);
+            flagRollType = "skill";
+            // @ts-expect-error no dnd5e-types
+            rollAction = CONFIG.Actor.documentClass.prototype.rollSkill;
+          } else {
+            // @ts-expect-error no dnd5e-types
+            rollAction = CONFIG.Actor.documentClass.prototype.rollToolCheck;
+            rollType = "tool";
+            rollTool = first;
+            rollTools = [first];
+            rollAbility = this.saveActivity?.getAbility?.(first);
+            flagRollType = "tool";
+          }
+        }
       }
     }
 
-    return { rollAction, rollType, rollAbility, rollSkill, rollTool, flagRollType };
+    return { rollAction, rollType, rollAbility, rollAbilities, rollSkill, rollSkills, rollTool, rollTools, flagRollType };
   }
 
   /**
@@ -5832,8 +5901,11 @@ return {
     saveDetails: AnyMutableObject,
     rollType: string,
     rollAbility: string | undefined,
+    rollAbilities: string[],
     rollSkill: string | undefined,
+    rollSkills: string[],
     rollTool: string | undefined,
+    rollTools: string[],
     rollDC: number | undefined,
     showRoll: boolean,
     GMprompt: string,
@@ -5889,23 +5961,31 @@ return {
                 }
               });
             } else {
+              const hasMultiChoices = rollAbilities.length > 1 || rollSkills.length > 1 || rollTools.length > 1;
               let config: AnyMutableObject = {
                 target: showTargetDC ? rollDC : undefined,
                 ability: rollAbility,
+                skill: rollSkill,
                 midiOptions: {
                   workflowId: this.id,
                   itemCardUuid: this.itemCardUuid,
                   advantage: saveDetails.advantage,
                   disadvantage: saveDetails.disadvantage,
                   mapKeys: false,
-                  fastForward: true,
+                  // When multiple choices, force dialog open so GM can choose for timed-out player
+                  fastForward: !hasMultiChoices,
                   ignorePreComputedAdvantage: true, // compute advantage/disadvantage from flags in roll function
                   saveItemUuid: this.saveItem?.uuid,
                   isConcentrationCheck: saveDetails.isConcentrationCheck,
-                  workflowOptions: saveDetails.workflowOptions
+                  workflowOptions: saveDetails.workflowOptions,
+                  rollAbilities,
+                  rollSkills,
+                  rollTools,
+                  advantageByAbility: saveDetails.advantageByAbility
                 }
               };
-              let dialog: AnyObject = { configure: false, ability: rollAbility, skill: rollSkill, tool: rollTool };
+              // When multiple choices, force dialog open so GM can choose
+              let dialog: AnyObject = { configure: hasMultiChoices, ability: rollAbility, skill: rollSkill, tool: rollTool };
               let message: AnyObject = { create: showRoll };
               if (rollType === "tool") {
                 let tool = target.actor?.items.get(this.saveActivity?.item.id ?? "");
@@ -5941,6 +6021,9 @@ return {
         requestId,
         GMprompt,
         isMagicSave: !!isMagicSave,
+        rollAbilities,
+        rollSkills,
+        rollTools,
         saveDetails: saveDetails as pcSaveOptions["saveDetails"]
       }
     );
@@ -5956,8 +6039,11 @@ return {
     saveDetails: AnyMutableObject,
     rollType: string,
     rollAbility: string | undefined,
+    rollAbilities: string[],
     rollSkill: string | undefined,
+    rollSkills: string[],
     rollTool: string | undefined,
+    rollTools: string[],
     whisper: boolean,
     showRoll: boolean,
     showRollDialog: boolean,
@@ -5992,10 +6078,12 @@ return {
     // Only pass target DC if player should see success/failure (based on autoCheckSaves and visibility)
     // GM always sees DC, non-GM only when visibility allows and not whisper mode
     const showTargetDC = owner?.isGM || (configSettings.autoCheckSaves !== "whisper" && shouldDisplaySaveDC(this.actor));
+    const hasMultipleChoices = rollAbilities.length > 1 || rollSkills.length > 1 || rollTools.length > 1;
     return socketlibSocket.executeAsUser("rollAbility", owner?.id, {
       targetUuid: (target.actor as Actor).uuid,
       request: rollType,
       ability: rollAbility,
+      abilities: rollAbilities,
       skill: rollSkill,
       tool: rollTool,
       advantage: saveDetails.advantage,
@@ -6007,7 +6095,8 @@ return {
         chatMessage: showRoll,
         rollMode,
         mapKeys: false,
-        fastForward: simulate || !showRollDialog,
+        // Force dialog open when multiple choices so the player can choose
+        fastForward: hasMultipleChoices ? false : (simulate || !showRollDialog),
         ignorePreComputedAdvantage: true, // compute advantage/disadvantage from flags in roll function
         isMagicSave,
         saveItemUuid: this.item.uuid,
@@ -6016,7 +6105,11 @@ return {
         itemCardUuid: this.itemCardUuid,
         itemUuid: this.itemUuid,
         workflowOptions: saveDetails.workflowOptions,
-        itemId: this.saveActivity?.item.id
+        itemId: this.saveActivity?.item.id,
+        rollAbilities,
+        rollSkills,
+        rollTools,
+        advantageByAbility: saveDetails.advantageByAbility
       },
     });
   }
@@ -6027,7 +6120,7 @@ return {
    */
   queueTargetSaveRoll(options: QueueSaveRollOptions): { promise: Promise<Roll[] | Roll | null> | null, requestCard: Promise<ChatMessage | undefined> | undefined } {
     const { target, saveDetails, rollInfo, isMagicSave, displayOptions, playerInfo, moduleFlags, moduleRequests } = options;
-    const { type: rollType, ability: rollAbility, skill: rollSkill, tool: rollTool, action: rollAction } = rollInfo;
+    const { type: rollType, ability: rollAbility, abilities: rollAbilities, skill: rollSkill, skills: rollSkills, tool: rollTool, tools: rollTools, action: rollAction } = rollInfo;
     const { whisper, showRoll, showRollDialog, simulate } = displayOptions;
     const { player, GMprompt, playerChat } = playerInfo;
     const { playerMonksTB, playerFlashTB, playerEpicRolls, gmMonksTB, gmFlashTB, gmRER } = moduleFlags;
@@ -6079,7 +6172,7 @@ return {
         warn(`checkSaves | Player ${player?.name} controls actor ${(target.actor as Actor).name} - requesting ${rollAbility} ${rollType}`);
       }
       const result = this.createPlayerChatSaveRequest(
-        target, player!, saveDetails, rollType, rollAbility, rollSkill, rollTool, saveDetails.rollDC as number | undefined,
+        target, player!, saveDetails, rollType, rollAbility, rollAbilities, rollSkill, rollSkills, rollTool, rollTools, saveDetails.rollDC as number | undefined,
         showRoll, GMprompt, isMagicSave, rollAction
       );
       return { promise: result.promise, requestCard: result.requestCard };
@@ -6087,7 +6180,7 @@ return {
 
     // Standard socketlib roll
     const promise = this.createStandardSaveRoll(
-      target, saveDetails, rollType, rollAbility, rollSkill, rollTool,
+      target, saveDetails, rollType, rollAbility, rollAbilities, rollSkill, rollSkills, rollTool, rollTools,
       whisper, showRoll, showRollDialog, simulate, isMagicSave
     );
     return { promise, requestCard: undefined };
@@ -6263,7 +6356,9 @@ return {
   }
 
   /**
-   * Build SaveDetails for a target, including magic resistance/vulnerability and advantage checks
+   * Build SaveDetails for a target, including magic resistance/vulnerability and advantage checks.
+   * When multiple abilities are available (rollAbilities.length > 1), pre-computes advantage for
+   * each ability and stores the results in saveDetails.advantageByAbility.
    */
   async buildSaveDetailsForTarget(
     target: Token,
@@ -6271,12 +6366,13 @@ return {
       rollDC: number | undefined;
       rollType: string | undefined;
       rollAbility: string | null | undefined;
+      rollAbilities: string[];
       flagRollType: string;
       isMagicSave: boolean;
       actorDisposition: number;
     }
   ): Promise<SaveDetails> {
-    const { rollDC, rollType, isMagicSave, actorDisposition } = context;
+    const { rollDC, rollType, isMagicSave, actorDisposition, rollAbilities } = context;
     const targetDocument = target.document;
 
     const saveDetails: SaveDetails = {
@@ -6320,6 +6416,43 @@ return {
         minFlags: [`min.ability.${rollType}.all`, `min.ability.${rollType}.${abilityId}`]
       };
       computeRollModifiers(target.actor!, modifierFlags, saveDetails.modifierTracker, { workflow: this });
+    }
+
+    // Pre-compute advantage for all abilities when multiple choices are available
+    if (rollAbilities.length > 1) {
+      const advantageByAbility = new Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; tracker: RollModifierTracker }>();
+      // Store the already-computed default ability
+      advantageByAbility.set(abilityId, {
+        hasAdvantage: !!abilityAdvantage.tracker.hasAdvantage,
+        hasDisadvantage: !!abilityAdvantage.tracker.hasDisadvantage,
+        tracker: abilityAdvantage.tracker
+      });
+      // Compute for remaining abilities
+      for (const altAbility of rollAbilities) {
+        if (altAbility === abilityId) continue;
+        const altResult = await computeAbilityAdvantage(
+          target.actor!,
+          rollType ?? "",
+          altAbility,
+          { workflow: this, isMagicSave: !!isMagicSave }
+        );
+        // Also compute roll modifiers for the alternate ability
+        if (rollType === "save" || rollType === "check") {
+          const altModifierFlags: RollModifierFlags = {
+            failFlags: ["fail.all", "fail.ability.all", `fail.ability.${rollType}.all`, `fail.ability.${rollType}.${altAbility}`],
+            successFlags: ["success.all", "success.ability.all", `success.ability.${rollType}.all`, `success.ability.${rollType}.${altAbility}`],
+            maxFlags: [`max.ability.${rollType}.all`, `max.ability.${rollType}.${altAbility}`],
+            minFlags: [`min.ability.${rollType}.all`, `min.ability.${rollType}.${altAbility}`]
+          };
+          computeRollModifiers(target.actor!, altModifierFlags, altResult.tracker, { workflow: this });
+        }
+        advantageByAbility.set(altAbility, {
+          hasAdvantage: !!altResult.tracker.hasAdvantage,
+          hasDisadvantage: !!altResult.tracker.hasDisadvantage,
+          tracker: altResult.tracker
+        });
+      }
+      saveDetails.advantageByAbility = advantageByAbility;
     }
 
     // Check for friendly target auto-fail/success from activity settings
@@ -6387,7 +6520,7 @@ return {
     this.saveDC = rollDC;
     const requestCards: Array<Promise<ChatMessage | undefined> | undefined> = [];
     let promises: Promise<Roll[] | Roll | null>[] = [];
-    const { rollAction, rollType, rollAbility, rollSkill, rollTool, flagRollType } = this.determineRollTypeAndAction();
+    const { rollAction, rollType, rollAbility, rollAbilities, rollSkill, rollSkills, rollTool, rollTools, flagRollType } = this.determineRollTypeAndAction();
     if (!rollAction) return; // No save or check configured on activity
 
     const { flags: moduleFlags, requests: moduleRequests } = this.computeModuleIntegrationSettings(simulate, flagRollType ?? "");
@@ -6417,6 +6550,7 @@ return {
           rollDC,
           rollType,
           rollAbility,
+          rollAbilities,
           flagRollType: flagRollType ?? "",
           isMagicSave: !!isMagicSave,
           actorDisposition
@@ -6441,8 +6575,11 @@ return {
           rollInfo: {
             type: rollType ?? "save",
             ability: rollAbility ?? undefined,
+            abilities: rollAbilities,
             skill: rollSkill ?? undefined,
+            skills: rollSkills,
             tool: rollTool ?? undefined,
+            tools: rollTools,
             action: rollAction
           },
           isMagicSave: !!isMagicSave,
@@ -6532,30 +6669,46 @@ return {
       i++;
     }
 
-    this.saveDisplayFlavor = await this.computeSaveDisplayFlavor(rollDC, rollType ?? "", { rollAbility: rollAbility ?? "", rollSkill: rollSkill ?? "", rollTool: rollTool ?? "" });
+    this.saveDisplayFlavor = await this.computeSaveDisplayFlavor(rollDC, rollType ?? "", { rollAbilities: rollAbilities ?? [], rollSkills: rollSkills ?? [], rollTools: rollTools ?? [] });
   }
 
 
-  async computeSaveDisplayFlavor(rollDC: number | undefined, rollType: string, options: { rollAbility: string, rollSkill: string, rollTool: string }): Promise<string> {
-    let { rollAbility, rollSkill, rollTool } = options;
+  async computeSaveDisplayFlavor(rollDC: number | undefined, rollType: string, options: { rollAbilities: string[], rollSkills: string[], rollTools: string[] }): Promise<string> {
+    let { rollAbilities, rollSkills, rollTools } = options;
     const allHitTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
-    let saveDisplayFlavor: string = "";
     let DCString = i18n("DND5E.AbbreviationDC") ?? "DC";
     if (DCString === "DND5E.AbbreviationDC") DCString = "DC";
     DCString = `${DCString} ${rollDC}`;
     if ((rollDC ?? -1) === -1) DCString = "";
-    if (rollType === "save")
-      saveDisplayFlavor = `<label class="midi-qol-saveDC">${DCString}</label> ${GameSystemConfig.abilities[rollAbility]?.label ?? rollAbility} ${i18n(allHitTargets.size > 1 ? "midi-qol.saving-throws" : "midi-qol.saving-throw")}`;
-    else if (rollType === "check")
-      saveDisplayFlavor = `<label class="midi-qol-saveDC">${DCString}</label> ${GameSystemConfig.abilities[rollAbility]?.label ?? rollAbility} ${i18n(allHitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:`;
-    else if (rollType === "skill")
-      saveDisplayFlavor = `<label class="midi-qol-saveDC">${DCString}</label> ${GameSystemConfig.skills[rollSkill]?.label ?? rollSkill}`;
-    else if (rollType === "tool") {
-      //@ts-expect-error no dnd5e-types
-      const toolLabel = await game.system?.documents.Trait.keyLabel(`tool:${rollTool}`);
-      saveDisplayFlavor = `<label class="midi-qol-saveDC">${DCString}</label> ${toolLabel}`;
+    const dcLabel = `<label class="midi-qol-saveDC">${DCString}</label>`;
+
+    if (rollType === "save") {
+      const throwLabel = i18n(allHitTargets.size > 1 ? "midi-qol.saving-throws" : "midi-qol.saving-throw");
+      const lines = rollAbilities.map(ability =>
+        `${dcLabel} ${GameSystemConfig.abilities[ability]?.label ?? ability} ${throwLabel}`
+      );
+      return lines.join("<br>");
+    } else if (rollType === "check") {
+      const checkLabel = i18n(allHitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check");
+      const lines = rollAbilities.map(ability =>
+        `${dcLabel} ${GameSystemConfig.abilities[ability]?.label ?? ability} ${checkLabel}:`
+      );
+      return lines.join("<br>");
+    } else if (rollType === "skill") {
+      const lines = rollSkills.map(skill =>
+        `${dcLabel} ${GameSystemConfig.skills[skill]?.label ?? skill}`
+      );
+      return lines.join("<br>");
+    } else if (rollType === "tool") {
+      const lines: string[] = [];
+      for (const tool of rollTools) {
+        //@ts-expect-error no dnd5e-types
+        const toolLabel = await game.system?.documents.Trait.keyLabel(`tool:${tool}`);
+        lines.push(`${dcLabel} ${toolLabel}`);
+      }
+      return lines.join("<br>");
     }
-    return saveDisplayFlavor;
+    return "";
   }
 
   monksSavingCheck(message: ChatMessage.Implementation, update: ChatMessage.UpdateData, _options: ChatMessage.Database.UpdateOptions, _userId: string) {
@@ -8805,6 +8958,7 @@ type MidiMacroData = {
   targetUuids: string[];
   templateId?: string;
   templateUuid?: string;
+  templateUuids?: string[];
   tokenUuid?: string;
   uuid?: string;
   workflow: Workflow;
