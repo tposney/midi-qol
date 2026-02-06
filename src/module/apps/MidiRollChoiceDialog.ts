@@ -1,4 +1,6 @@
 import { i18n, GameSystemConfig } from "../../midi-qol.js";
+import { RollModifierTracker } from "../lib/RollModifierTracker.js";
+import { getToolLabel } from "../utils.js";
 
 /**
  * A choice entry for the dropdown in the roll dialog.
@@ -11,11 +13,19 @@ export interface RollChoice {
 
 /**
  * Pre-computed advantage data for a specific choice, keyed by ability or skill ID.
+ *
+ * trackerData: Serialized RollModifierTracker (via toJSON()) for socketlib transfer.
+ * tracker: The deserialized RollModifierTracker instance (populated by GMAction).
+ *
+ * Class instances don't survive socketlib serialization, so Workflow.ts serializes
+ * to trackerData, and GMAction deserializes back to tracker before calling doRollAbility.
  */
 export interface PreComputedAdvantage {
   hasAdvantage: boolean;
   hasDisadvantage: boolean;
   defaultButton: "advantage" | "disadvantage" | "normal";
+  trackerData?: object;
+  tracker?: RollModifierTracker;
 }
 
 /**
@@ -52,6 +62,14 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
   /* -------------------------------------------- */
   /*  Rendering                                   */
   /* -------------------------------------------- */
+
+  /** @override — restore focus to autofocus button after partial re-render of buttons part */
+  _syncPartState(partId, newElement, priorElement, state) {
+    super._syncPartState(partId, newElement, priorElement, state);
+    if (partId === "buttons") {
+      (newElement.querySelector("[autofocus]") as HTMLElement | null)?.focus();
+    }
+  }
 
   /** @override — read defaultButton from mutable _midiDefaultButton when set, instead of frozen options */
   async _prepareButtonsContext(context, options) {
@@ -101,8 +119,7 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
       if (choiceType === "tool") {
         // Tool change: update config.tool and window title
         this.config.tool = newValue;
-        //@ts-expect-error label exists at runtime but not in fvtt-types
-        const toolLabel: string = GameSystemConfig.tools[newValue]?.label ?? "";
+        const toolLabel = getToolLabel(newValue);
         //@ts-expect-error i18n format
         const flavor = game.i18n.format("DND5E.ToolPromptTitle", { tool: toolLabel });
         foundry.utils.setProperty(this.message, "data.flavor", flavor);
@@ -146,10 +163,32 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
    * This follows the same pattern as dnd5e's `_buildSkillToolConfig` callback
    * used by SkillToolRollConfigurationDialog.
    */
-  static createSaveBuildConfig(actor: Actor.Implementation): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void {
+  /**
+   * Apply pre-computed advantage/disadvantage to a roll config's options so
+   * that D20Roll.fromConfig → configureModifiers() produces the correct formula.
+   */
+  static applyPreComputedAdvantage(rollConfig: any, preComputed: PreComputedAdvantage | undefined): void {
+    if (!preComputed) return;
+    rollConfig.options ??= {};
+    //@ts-expect-error no dnd5e-types
+    const ADV = CONFIG.Dice.D20Roll.ADV_MODE;
+    if (preComputed.hasAdvantage && !preComputed.hasDisadvantage) {
+      rollConfig.options.advantageMode = ADV.ADVANTAGE;
+    } else if (!preComputed.hasAdvantage && preComputed.hasDisadvantage) {
+      rollConfig.options.advantageMode = ADV.DISADVANTAGE;
+    } else {
+      rollConfig.options.advantageMode = ADV.NORMAL;
+    }
+    // Clear legacy flags so configureModifiers() uses advantageMode directly
+    delete rollConfig.options.advantage;
+    delete rollConfig.options.disadvantage;
+  }
+
+  static createSaveBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void {
     return (processConfig, rollConfig, formData, index) => {
-      if (!formData || index !== 0) return;
-      const newAbility = formData.get?.("ability") ?? (formData as any)?.get("ability");
+      if (index !== 0) return;
+      // Get ability from formData if available, otherwise fall back to processConfig for initial render
+      const newAbility = formData?.get?.("ability") ?? processConfig.ability;
       if (!newAbility || typeof newAbility !== "string") return;
 
       //@ts-expect-error no dnd5e-types
@@ -175,6 +214,8 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
       // Replace the roll parts (not append, since the clone has the original ability's parts)
       rollConfig.parts = parts;
       rollConfig.data = data;
+      // Update advantage mode so the formula shows the correct d20 dice
+      MidiRollChoiceDialog.applyPreComputedAdvantage(rollConfig, advantageByChoice?.get(newAbility));
       // Update processConfig so postRollConfiguration hook sees the chosen ability
       processConfig.ability = newAbility;
     };
@@ -186,10 +227,11 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
    *
    * Mirrors dnd5e's `_buildSkillToolConfig` callback but for skill-to-skill changes.
    */
-  static createSkillBuildConfig(actor: Actor.Implementation): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void {
+  static createSkillBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void {
     return (processConfig, rollConfig, formData, index) => {
-      if (!formData || index !== 0) return;
-      const newSkill = formData.get?.("skill") ?? (formData as any)?.get("skill");
+      if (index !== 0) return;
+      // Get skill from formData if available, otherwise fall back to processConfig for initial render
+      const newSkill = formData?.get?.("skill") ?? processConfig.skill;
       if (!newSkill || typeof newSkill !== "string") return;
 
       //@ts-expect-error no dnd5e-types
@@ -224,6 +266,8 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
       // Replace the roll parts
       rollConfig.parts = parts;
       rollConfig.data = data;
+      // Update advantage mode so the formula shows the correct d20 dice
+      MidiRollChoiceDialog.applyPreComputedAdvantage(rollConfig, advantageByChoice?.get(newSkill));
       // Update the ability to match the new skill's ability
       processConfig.ability = abilityId;
     };
@@ -235,10 +279,11 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
    *
    * Mirrors dnd5e's `_buildSkillToolConfig` callback but for tool-to-tool changes.
    */
-  static createToolBuildConfig(actor: Actor.Implementation): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void {
+  static createToolBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void {
     return (processConfig, rollConfig, formData, index) => {
-      if (!formData || index !== 0) return;
-      const newTool = formData.get?.("tool") ?? (formData as any)?.get("tool");
+      if (index !== 0) return;
+      // Get tool from formData if available, otherwise fall back to processConfig for initial render
+      const newTool = formData?.get?.("tool") ?? processConfig.tool;
       if (!newTool || typeof newTool !== "string") return;
 
       //@ts-expect-error no dnd5e-types
@@ -271,6 +316,8 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
       // Replace the roll parts
       rollConfig.parts = parts;
       rollConfig.data = data;
+      // Update advantage mode so the formula shows the correct d20 dice
+      MidiRollChoiceDialog.applyPreComputedAdvantage(rollConfig, advantageByChoice?.get(newTool));
       // Update the ability to match the new tool's ability
       processConfig.ability = abilityId;
     };

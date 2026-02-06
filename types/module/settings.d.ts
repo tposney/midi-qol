@@ -1,4 +1,4 @@
-export declare let autoFastForwardAbilityRolls: boolean;
+/** @deprecated Removed in favor of granular configSettings.autoFastForward[] and configSettings.gmAutoFastForward[] arrays */
 export declare let autoRemoveTargets: string;
 export declare let coloredBorders: string;
 export declare let criticalDamage: string;
@@ -19,6 +19,11 @@ export declare let saveTimeouts: {};
 export declare let saveToChatCard: boolean;
 export declare let targetConfirmation: typeof defaultTargetConfirmationSettings;
 export declare let useWeakReferences: boolean;
+/**
+ * Syncs the chatlog-prune module's "enabled" setting with midi-qol's pruneChatLog setting.
+ * Only runs if chatlog-prune module is active.
+ */
+export declare function syncChatlogPruneSetting(enabled: boolean): void;
 export declare const defaultTargetConfirmationSettings: {
     enabled: boolean;
     always: boolean;
@@ -59,7 +64,7 @@ declare class ConfigSettings {
     autoCEEffects: string;
     autoCheckHit: string;
     autoCheckSaves: string;
-    autoFastForward: string;
+    autoFastForward: string[];
     autoItemEffects: string;
     autoRemoveSummonedCreature: boolean;
     autoUndoTransformations: boolean;
@@ -75,11 +80,14 @@ declare class ConfigSettings {
     checkTwoHanded: boolean;
     chooseAmmunition: boolean;
     collapsibleTargets: boolean;
+    coloredBorders: string;
     concentrationAutomation: boolean;
     confirmAmmunition: boolean;
     gmConfirmAmmunition: boolean;
     consumeResource: string;
     convenientEffectsReaction: string;
+    criticalDamage: string;
+    criticalDamageGM: string;
     criticalSound: string;
     customSoundsPlaylist: string;
     damageImmunities: string;
@@ -103,12 +111,12 @@ declare class ConfigSettings {
     gmAttackDamageCards: boolean;
     gmAutoAttack: boolean;
     gmAutoDamage: string;
-    gmAutoFastForwardAttack: boolean;
-    gmAutoFastForwardDamage: boolean;
+    gmAutoFastForward: string[];
     gmConsumeResource: string;
     gmDoReactions: string;
     gmHide3dDice: boolean;
     gmRemoveButtons: string;
+    preferredGM: string;
     hideRollDetails: string;
     ignoreSpellReactionRestriction: boolean;
     itemTypeList: string[] | undefined;
@@ -246,7 +254,7 @@ export declare function collectSettingData(): {
         autoCEEffects: string;
         autoCheckHit: string;
         autoCheckSaves: string;
-        autoFastForward: string;
+        autoFastForward: string[];
         autoItemEffects: string;
         autoRemoveSummonedCreature: boolean;
         autoUndoTransformations: boolean;
@@ -262,11 +270,14 @@ export declare function collectSettingData(): {
         checkTwoHanded: boolean;
         chooseAmmunition: boolean;
         collapsibleTargets: boolean;
+        coloredBorders: string;
         concentrationAutomation: boolean;
         confirmAmmunition: boolean;
         gmConfirmAmmunition: boolean;
         consumeResource: string;
         convenientEffectsReaction: string;
+        criticalDamage: string;
+        criticalDamageGM: string;
         criticalSound: string;
         customSoundsPlaylist: string;
         damageImmunities: string;
@@ -290,12 +301,12 @@ export declare function collectSettingData(): {
         gmAttackDamageCards: boolean;
         gmAutoAttack: boolean;
         gmAutoDamage: string;
-        gmAutoFastForwardAttack: boolean;
-        gmAutoFastForwardDamage: boolean;
+        gmAutoFastForward: string[];
         gmConsumeResource: string;
         gmDoReactions: string;
         gmHide3dDice: boolean;
         gmRemoveButtons: string;
+        preferredGM: string;
         hideRollDetails: string;
         ignoreSpellReactionRestriction: boolean;
         itemTypeList: string[] | undefined;
@@ -400,7 +411,6 @@ export declare function collectSettingData(): {
     };
     midiSoundSettings: any;
     itemRollButtons: boolean;
-    autoFastForwardAbilityRolls: boolean;
     autoRemoveTargets: string;
     coloredBorders: string;
     criticalDamage: string;

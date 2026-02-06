@@ -48,6 +48,8 @@ const MIDI_COMPLETIONS: CompletionNode = {
       checkNearby: { type: "function", detail: "(disposition, token, distance, options?) => Token", info: "Get first nearby token matching disposition" },
       computeCoverBonus: { type: "function", detail: "(attacker, target, activity?) => number", info: "Compute cover bonus (0, 2, 5, or 999=full)" },
       checkActivityRange: { type: "function", detail: "(activity, token, targets?, showWarning?) => object", info: "Check if activity is in range" },
+      selectTargetsFromTemplates: { type: "function", detail: "(templates, selfTokenRef?, ignoreSelf?, AoETargetType?, autoTarget?) => Token[]", info: "Set game.user.targets from template(s) and return targeted tokens" },
+      computeTargetsFromTemplates: { type: "function", detail: "(templates, selfTokenRef?, ignoreSelf?, AoETargetType?, autoTarget?) => Token[]", info: "Compute tokens inside template(s) without modifying game.user.targets" },
 
       // Conditions and effects
       hasCondition: { type: "function", detail: "(actorRef, condition) => 0 | 1", info: "Check if actor/token has a condition" },

@@ -67,7 +67,7 @@ import {
   needsAOOCheck,
   addRollTo,
 } from "../utils.js";
-import { preTemplateTargets, removeFlanking, selectTargets, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
+import { preTemplateTargets, removeFlanking, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
   _validateType(value: unknown) {
@@ -285,6 +285,7 @@ export let MidiActivityMixin = Base => {
       usage: {
         dialog: MidiActivityUsageDialog,
         actions: {
+          placeTemplate: MidiActivityMixin.#placeTemplate,
           rollDamage: MidiActivityMixin.#rollDamage,
           rollDamageNoCritical: MidiActivityMixin.#rollDamageNoCritical,
           rollDamageCritical: MidiActivityMixin.#rollDamageCritical,
@@ -432,6 +433,40 @@ export let MidiActivityMixin = Base => {
       if (consumed) {
         await message.setFlag(MODULE_ID, "use.consumed", consumed);
       }
+    }
+
+    /**
+     * Handle the "Place Template" button click from the chat card.
+     * Places all templates sequentially and delegates to workflow for validation and processing.
+     */
+    static async #placeTemplate(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+      // @ts-expect-error .canvas
+      const AbilityTemplate = game.system.canvas.AbilityTemplate;
+      const templates: MeasuredTemplateDocument[] = [];
+
+      try {
+        const previews = AbilityTemplate.fromActivity(this);
+        if (!previews) return;
+        for (const template of previews) {
+          const result = await template.drawPreview();
+          if (result) {
+            const docs = Array.isArray(result) ? result : [result];
+            templates.push(...docs);
+          }
+        }
+      } catch (err) {
+        // User cancelled during placement — fall through to validation
+      }
+
+      // Find workflow and process (handles count validation, deletion if incomplete)
+      const workflow = Workflow.getWorkflow(message.uuid);
+      if (!workflow) {
+        warn("MidiActivityMixin | #placeTemplate | No workflow found for message", message.uuid);
+        return;
+      }
+
+      // processPlacedTemplates handles validation, cleanup, and workflow advancement
+      await workflow.processPlacedTemplates(templates, this);
     }
 
     static #rollDamage(this: Activity, event, target, message) {
@@ -627,6 +662,12 @@ export let MidiActivityMixin = Base => {
         if (activity.templates) { // TODO find a better place to store this
           useResults.templates = activity.templates;
           delete activity.templates;
+        }
+        // Process any templates placed (via dialog checkbox or emanation auto-placement)
+        // processPlacedTemplates handles validation, cleanup if incomplete, and workflow integration
+        const allTemplates = (useResults.templates ?? []).flat() as MeasuredTemplateDocument[];
+        if (allTemplates.length > 0) {
+          await usage.workflow.processPlacedTemplates(allTemplates, activity);
         }
         if (configSettings.undoWorkflow) await saveUndoData(usage.workflow);
 
@@ -1644,11 +1685,11 @@ export let MidiActivityMixin = Base => {
               // @ts-expect-error walledtemplates types
               await tokenToUse.attachTemplate(td.object, { "flags.dae.stackable": "noneName" }, true);
               if (workflow && !foundry.utils.getProperty(this, "item.flags.walledtemplates.noAutotarget"))
-                selectTargets.bind(workflow)(td);
+                selectTargetsFromTemplates([td]);
             }
-            else if (getActivityAutoTargetAction(this) !== "none") selectTargets.bind(workflow)(td);
-          } else selectTargets.bind(this)(td);
-          return templates;
+            else if (getActivityAutoTargetAction(this) !== "none") selectTargetsFromTemplates([td]);
+          } else selectTargetsFromTemplates([td]);
+          return templateDocuments;
         }
       }
     }

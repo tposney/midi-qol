@@ -105,12 +105,11 @@ If you prefer to configure settings manually, here's a recommended full automati
 | Merge to One Card | Misc | Checked |
 | Auto Target on Template | Workflow | Walls Block |
 | GM Auto Roll Attack | GM | Checked |
-| GM Auto Fast-Forward Attack | GM | Checked |
 | GM Auto Roll Damage | GM | Always |
-| GM Auto Fast-Forward Damage | GM | Checked |
+| GM Auto Fast Forward Rolls | GM | Attack, Damage |
 | Player Auto Roll Attack | Player | Checked |
 | Player Auto Roll Damage | Player | Attack Hits |
-| Player Auto Fast-Forward | Player | Attack and Damage |
+| Player Auto Fast Forward Rolls | Player | Attack, Damage |
 | Auto Check Hits | Workflow | On |
 | Auto Check Saves | Workflow | Save - players see results |
 | Players Roll Saves | Workflow | Auto roll and show roll dialog |
@@ -228,14 +227,14 @@ If you prefer to configure settings manually, here's a recommended full automati
 
 | Setting | Description |
 |---------|-------------|
+| Preferred GM | Preferred GM for socket calls. If 'none' the first GM on the current scene will be used |
 | Auto Roll Attack | When item is rolled, automatically roll the attack |
 | Consume Resource | Skip consume resource dialog (None/Spell slot/Resources/Both) |
 | Confirm Ammunition | Prompt before consuming ammunition |
 | Require Ammunition | Require ammunition for ranged attacks |
-| Auto Fast-Forward Attack | Always fast-forward attack rolls |
 | Auto Roll Damage | Automatically roll damage (Never/Always/Attack Hits) |
-| Auto Fast-Forward Damage | Always fast-forward damage rolls |
 | Average Damage | Use average damage instead of rolling |
+| Auto Fast Forward Rolls | Multi-select: which roll types to fast-forward (Attack/Damage/Ability Checks/Saving Throws/Skills/Tools). Skills are separate from ability checks for finer control |
 | Remove Buttons | Remove chat card buttons after roll (Off/Attack/Damage/All) |
 | Hide Roll Details | Choose how much of GM rolls to hide from players |
 | Show Attack/Damage Cards | Show separate attack/damage cards for deception |
@@ -252,7 +251,7 @@ If you prefer to configure settings manually, here's a recommended full automati
 | Confirm Ammunition | Prompt before consuming ammunition |
 | Require Ammunition | Require ammunition for ranged attacks |
 | Auto Roll Damage | Automatically roll damage (Never/Always/Attack Hits/Save Only) |
-| Auto Fast-Forward | Fast-forward rolls, also applies to chat card buttons (Off/Attack/Damage/Both) |
+| Auto Fast Forward Rolls | Multi-select: which roll types to fast-forward (Attack/Damage/Ability Checks/Saving Throws/Skills/Tools). Also applies to chat card buttons. Skills are separate from ability checks for finer control |
 | Remove Buttons | Remove chat card buttons after roll (Off/Attack/Damage/All) |
 
 ## Workflow Tab
@@ -347,6 +346,8 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 
 | Setting | Description |
 |---------|-------------|
+| Critical Damage (Player) | How critical hits calculate damage for player characters (DND5e Settings Only/Max Normal/Max Critical Dice/Max All/Double Dice/Explode/etc.) |
+| Critical Damage (GM) | How critical hits calculate damage for GM-controlled actors |
 | Auto Apply Damage | Auto apply damage to hit targets (No/Yes/Yes+Card options) |
 | Damage Card Style | Flexbox (inline HP/TempHP/Vitality display) or Classic (table layout). Use Flexbox if using vitality. |
 | Add Chat Damage Buttons | Enable dnd5e damage tray on chat messages (None/GM/PC/Both) |
@@ -394,6 +395,7 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 
 | Setting | Description |
 |---------|-------------|
+| Colored Borders | Chat messages have colored borders/text in the player character's color (None/Borders Only/Border + Name Text/Border + Name Background) |
 | Saves Before Damage | Calculate saves before damage rolls |
 | Activity Name Prefix | Prefix activity name to chat messages |
 | Midi Properties Tab | Show midi properties tab on items (by role) |

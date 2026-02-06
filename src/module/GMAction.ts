@@ -3,7 +3,7 @@ import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, Game
 import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DamageDescriptionObject, Workflow, WorkflowOptions } from "./Workflow.js";
-import { bonusCheck, checkWounded } from "./patching.js";
+import { bonusCheck, checkWounded, RollModifierTracker } from "./patching.js";
 import { queueUndoData, startUndoWorkflow, updateUndoChatCardUuids, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, updateUndoChatCardUuidsById } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { installedModules } from "./setupModules.js";
@@ -794,7 +794,8 @@ async function rollAbility(data: {
     rollAbilities?: string[];
     rollSkills?: string[];
     rollTools?: string[];
-    advantageByAbility?: AnyMutableObject;
+    /** Pre-computed advantage data per choice (ability/skill/tool). A roll is always ONE type, so one map suffices. */
+    advantageByChoice?: Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; trackerData?: object; tracker?: RollModifierTracker }>;
   };
   advantage?: boolean;
   disadvantage?: boolean;
@@ -814,6 +815,18 @@ async function rollAbility(data: {
     return {};
   }
   let config: AnyMutableObject = { midiOptions: data.options, advantage: data.advantage, disadvantage: data.disadvantage, isMagicSave: data.isMagicSave, isConcentrationCheck: data.isConcentrationCheck, rollDC: data.rollDC, saveItemUuid: data.saveItemUuid, workflowOptions: data.workflowOptions, workflowId: data.workflowId }
+
+  // Deserialize tracker data from advantageByChoice - class instances don't survive socketlib
+  if (data.options?.advantageByChoice instanceof Map) {
+    for (const [key, value] of data.options.advantageByChoice.entries()) {
+      if (value?.trackerData && !(value.tracker instanceof RollModifierTracker)) {
+        const tracker = new RollModifierTracker();
+        tracker.restore(value.trackerData);
+        value.tracker = tracker;
+      }
+    }
+  }
+
   if (data.ability) config.ability = data.ability;
   if (data.skill) config.skill = data.skill;
   if (data.tool) config.tool = data.tool

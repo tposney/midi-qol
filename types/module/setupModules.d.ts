@@ -1,4 +1,4 @@
-export declare const DAE_REQUIRED_VERSION = "13.0.4";
+export declare const DAE_REQUIRED_VERSION = "13.0.19";
 export declare const USEFUL_MODULE_VERSIONS: {
     "about-time": string;
     ActiveAuras: string;

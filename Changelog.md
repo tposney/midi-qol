@@ -1,29 +1,32 @@
 ### 13.0.43
+
+This is a fairly substantial update so don't update just before game time. You have been warned.
+
 **Oops** It turns out that a number of features listed in the 13.0.42 release in fact did not make it in due to an error on my part with the release process. My apologies. All of the 13.0.42 features/bug fixes are definitely in this release as well as a few more (see below).
+
 **New Features**
 * **Breaking** Auto fast forwarding rolls (skipping dialog) is now specified the same way for players and GMs on their own tab. There is a new multi select that lets you choose which rolls will be fastforwarded by default for both the player and the gm. Midi attempts to migrate your existing settings, but you should check.
   - I know a skill roll is a type of ability check, but having a separate setting gives you more control, so you need to set skill separately from ability roll.
-* New RAW (2024) invisibility advantage/disadvantage mode that only relies on being able to see the target.
+* Support for multiple saves, e.g. a save activity that specifies a dex or con save, or an athletics/acrobatics check. 
+- If you are using 3rd party modules to roll the saves (Monks/Flash Rolls/Rippers Epic Rolls) this is unsupported and defaults to the first roll.
+- If the player/gm is prompted for via a roll dialog in the workflow settings  there is a new drop down that allows selection of the desired roll.
+- The roll with the highest modifier (includes advantage/disadvantage at +/-3.325) will be auto selected, so usually the player will usually just have to press the highlighted button, advantage/disadvantage/normal will be highlighted as required. 
+- If the save is being auto rolled (no dialog) midi will select a roll with the highest modifier including advantage/disadvantage at +/- 3.325.
+- Only supports saves of the same type, so you can't have a skill and a tool roll in the same save, multiple skills fine, multiple tools fine, multiple saves fine, but if mixed will select just the first in the list.
+When there is a choice of rolls the roll tooltip (hover over the roll total on the saves display) will display the roll type that was used.
+* Support for multiple templates. Items that specify multiple templates (meteor storm etc) will now collect targets from each template placed. 
+  - Backing out of placing all templates will terminate the template placement and midi will wait until you successfully place all templates.
+  - This has required a significant refactor of the template placement code so there will be bugs.
+* New option, anchor ray/cone templates. If enabled when you use an activity with a ray or cone template (range self) the template will be attached to the edge of your token. You can move the moues to set the direction of the template, but it will always be anchored to the edge of your token.
+* New RAW (2024) invisibility advantage/disadvantage mode that only relies on being able to see the target - cheekily the same as the midi homebrew option.
 * Midi-qol tab property, force config dialog, now overrides the thrown weapon property check.
 * Revived the roll statistics function. Now accessible from the main midi-qol settings panel and tracks a few more things.
   - For multi target items, e.g. fireball, the total damage is the damage rolled * the number of targets and the average damage is the sum of the applied damage. So unlike weapon attacks which is effectively the damage per roll, AoE can have much higher damage due to the multiple targets.
 * Added an editor for overTime effects, requires dae 13.0.19.
 * Added a condition expression editor, requires dae 13.0.19 plus macro-autocomplete.
-* Support for multiple saves, e.g. a save activity that specifies a dex or con save, or an athletics/acrobatics check. 
-  - If you are using 3rd party modules to roll the saves (monks/Flash Rolls/Rippers Epic Rolls) this is unsupported.
-  - If rolling via no prompt/auto with dialog the user will be shown a roll dialog that lets them choose which sort of roll to perform.
-  - Only supports saves of the same type, so you can have a skill and a tool roll in the same save, multiple skills fine, multiple tools fine, but if mixed will select just the first in the list.
-* Support for multiple templates. Items that specify multiple templates (metor storm etc) will now collect targets from each template placed. 
-  - If you back out of placing the templates things are "confused" - will be addressed in a later release.
 
 **Bug Fixes**
 * Advantage Attribution now follows the same visibility rules as the attack roll formula. If players are not allowed to see the formula, they can't see the attack advantage attribution.
-* Fix for evaluating otherActivity.useCondition twice is some workflows.
-* Fix for checkAttackAdvantage not being called before calling preAttackRoll Hooks/macros.
-  - checkAttackAdvantage is called again after the hooks/macros return. This means changes to actors advantage flags will be respected as they were prior to 13.0.40.
-  - changes made to workflow.tracker.advantage etc will be overwritten.
-  - if you want to make changes to the tracker that will be respected do so in the preAttackConfig Macro/Hooks.
-  - I added a preAttackConfig Hook call as well as macro calls for the above.
 
 **Merged Contributions**
 * Allow easy logging of sandbox evaluation data via `MidiQOL.logEvaluationData = true` (MR !396, thanks @thatlonelybugbear).
@@ -41,6 +44,15 @@
   - This feeds through to better/different explanatory text in the dae field browser.
   - **Unless there is any major push back I plan to remove the legacy attribution in a soon to be forthcoming release**.
 * **Breaking** I've reworked the chat card persistence for workflows and some of the fields may have moved. If you are in the habit of checking the Chat Card for midi persisted fields you will need to review that code.
+
+**For Developers**
+* Fix for evaluating otherActivity.useCondition twice is some workflows.
+* Fix for checkAttackAdvantage not being called before calling preAttackRoll Hooks/macros.
+  - checkAttackAdvantage is called again after the hooks/macros return. This means changes to actors advantage flags will be respected as they were prior to 13.0.40.
+  - changes made to workflow.tracker.advantage etc will be overwritten.
+  - if you want to make changes to the tracker that will be respected do so in the preAttackConfig Macro/Hooks.
+  - I added a preAttackConfig Hook call as well as macro calls for the above.
+* **Breaking** MidiQOL exports changed, the template targeting exports are now **only** selectTargetsFromTemplates (update game.user.targets for targets inside any of the array of templates) and computeTargetsFromTemplates, returns an array of tokens inside any of the passed templates.
 
 ### 13.0.42
 * Just remove some spurious debug left in the code.

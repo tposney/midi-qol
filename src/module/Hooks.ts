@@ -1375,10 +1375,15 @@ Hooks.on("dnd5e.preRollConcentration", (rollConfig, dialogConfig, messageConfig)
       }
     );
 
-    // Update the roll options
+    // Set advantage/disadvantage on the rollConfig directly (like death saves)
+    // This is how dnd5e's D20Roll.build expects to receive advantage/disadvantage
+    rollConfig.advantage = advantageSuppressed ? false : advantage;
+    rollConfig.disadvantage = disadvantageSuppressed ? false : disadvantage;
+
+    // Also update the roll options for compatibility
     if (rollConfig.rolls?.[0]?.options) {
-      rollConfig.rolls[0].options.advantage = advantageSuppressed ? false : advantage;
-      rollConfig.rolls[0].options.disadvantage = disadvantageSuppressed ? false : disadvantage;
+      rollConfig.rolls[0].options.advantage = rollConfig.advantage;
+      rollConfig.rolls[0].options.disadvantage = rollConfig.disadvantage;
     }
   }
 
@@ -1415,8 +1420,23 @@ Hooks.on("dnd5e.rollConcentration", (rolls, { subject }) => {
 });
 
 // Make activity templates a tiny bit bigger so that the off by one pixel errors don't happen.
+// Also set anchor flag for self-range cone/ray templates
 Hooks.on("dnd5e.preCreateActivityTemplate", (activity, templateData) => {
   templateData.distance! += 0.000001; // Make the template fractionally larger to avoid rounding errors
+
+  // Check if this template should be anchored to the caster's token
+  // Cones and rays with range self/none/0 should be anchored
+  const templateType = templateData.t;
+  if (templateType === "cone" || templateType === "ray") {
+    const range = activity.range;
+    const isSelfRange = range?.units === "self"
+      || range?.units === "none"
+      || (!range?.value && !range?.long && range?.units !== "touch");
+
+    if (configSettings.anchorConeRayTemplates && isSelfRange) {
+      foundry.utils.setProperty(templateData, "flags.midi-qol.anchorToToken", true);
+    }
+  }
   return true;
 });
 

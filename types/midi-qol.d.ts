@@ -59,8 +59,10 @@ export declare let savedOverTimeEffectsToDelete: Record<string, {
     uuid: string;
     saveCount?: number;
     saveCountAction?: string;
+    saveConsecutive?: boolean;
     failCount?: number;
     failCountAction?: string;
+    failConsecutive?: boolean;
 }>;
 export declare let MQItemMacroLabel: string;
 export declare let MQActivityMacroLabel: string;

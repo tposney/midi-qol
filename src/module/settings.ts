@@ -156,6 +156,7 @@ class ConfigSettings {
   autoUndoTransformations: boolean = false;
   autoRemoveTemplate: boolean = true;
   autoRemoveInstantaneousTemplate: boolean = false;
+  anchorConeRayTemplates: boolean = false;
   autoRollAttack: boolean = false;
   autoRollDamage: string = "none";
   autoCompleteWorkflow = true;

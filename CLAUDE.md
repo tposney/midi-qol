@@ -124,6 +124,12 @@ Hooks provided by tidy5e:
 - Make file changes but leave git operations to the user
 - **NEVER run `git checkout` without explicit user approval** - this can destroy uncommitted work that took days to create
 
+### Transient Debug Statements
+- **Always use `console.error()` for transient debug statements** - NOT `log()`, `warn()`, or other midi logging functions
+- **Never wrap transient debug statements in `if (debugEnabled)`** - they should always execute
+- These are temporary debugging aids meant to be removed after the issue is resolved
+- `console.error()` ensures visibility in the browser console without needing to change midi-qol debug settings
+
 ### Documentation Files
 - **Always include a datestamp in the filename** when creating documentation files
 - Format: `DocumentName-YYYY-MM-DD.md` (e.g., `ChatLog-2026-01-06.md`)

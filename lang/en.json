@@ -1015,6 +1015,8 @@
   "midi-qol.AutoCompleteWorkflow.Hint": "Workflows will be marked as complete if rolled before completion, no extra rolls will be performed",
   "midi-qol.SavesBeforeDamage.Name": "Roll saves before damage (Experimental)",
   "midi-qol.SavesBeforeDamage.Hint": "If enabled saves are rolled before damage is rolled otherwise saves are rolled after damage is rolled",
+  "midi-qol.AnchorConeRayTemplates.Name": "Anchor Cone/Ray templates to caster",
+  "midi-qol.AnchorConeRayTemplates.Hint": "When placing cone or ray templates with range Self/None, the template origin is anchored to the caster's token border. Only the direction can be changed.",
   "midi-qol.emanationNoTemplate": "Emanation/Radius - No Template",
   "midi-qol.emanationTemplate.counted.one": "Emanation No Template",
   "midi-qol.emanationTemplate.counted.other": "Emanation No Template",

@@ -1,6 +1,8 @@
 import { MidiOptions } from "./utils.js";
+import { PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import { ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
 import { RollModifierTracker } from "./lib/RollModifierTracker.js";
+export { RollModifierTracker, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, RollModifierResult, AdvantageFlags } from "./lib/RollModifierTracker.js";
 export { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./lib/MidiDependentsRegistry.js";
 export declare const skipConcentrationActorUuids: Set<string>;
 export interface Options {
@@ -39,38 +41,27 @@ export declare function deathSaveHook(rolls: Roll[], { chatString, subject: acto
 }): void;
 export declare function procAutoFail(actor: Actor.Implementation, rollType: string, abilityId: string): boolean;
 export declare function procAutoFailSkill(actor: Actor.Implementation, skillId?: string): boolean;
-export interface RollModifierFlags {
-    failFlags: string[];
-    successFlags: string[];
-    maxFlags: string[];
-    minFlags: string[];
-}
-export interface RollModifierResult {
-    autoFail: boolean;
-    autoSuccess: boolean;
-    max: number | undefined;
-    min: number | undefined;
-}
-export interface AdvantageFlags {
-    advantageFlags: string[];
-    disadvantageFlags: string[];
-    systemRollModeFields: string[];
-    noAdvantageFlags?: string[];
-    noDisadvantageFlags?: string[];
-    sourceAdvantageFlags?: string[];
-    sourceDisadvantageFlags?: string[];
-    sourceNoAdvantageFlags?: string[];
-    sourceNoDisadvantageFlags?: string[];
-    deprecatedFlags?: Set<string>;
-}
 export declare function computeAbilityAdvantage(actor: Actor.Implementation, rollType: string, abilityId: string, options: MidiOptions, tracker?: RollModifierTracker): Promise<{
     tracker: RollModifierTracker;
     magicResistance: boolean;
     magicVulnerability: boolean;
 }>;
+/**
+ * Build a pre-computed advantage map for multiple roll IDs (abilities, skills, or tools).
+ * Each entry contains a full RollModifierTracker with:
+ * - Advantage/disadvantage (from the appropriate compute function)
+ * - Roll modifiers: fail, success, max, min flags
+ *
+ * Used by Workflow.ts (checkSaves) and doRollAbility/doRollSkill/doRollTool when no pre-computed map is passed.
+ *
+ * @param actor - The actor making the roll
+ * @param rollType - "save", "check", "skill", or "tool"
+ * @param rollIds - Array of ability/skill/tool IDs to compute
+ * @param options - MidiOptions including workflow context
+ */
+export declare function buildPreComputedAdvantageMap(actor: Actor.Implementation, rollType: string, rollIds: string[], options: MidiOptions): Promise<Map<string, PreComputedAdvantage>>;
 export declare function computeSkillAdvantage(actor: Actor.Implementation, skillId: string, options: MidiOptions, tracker?: RollModifierTracker): Promise<RollModifierTracker>;
 export declare function computeToolAdvantage(actor: Actor.Implementation, toolId: string, abilityId: string, options: MidiOptions, tracker?: RollModifierTracker): Promise<RollModifierTracker>;
-export declare function computeAttackAdvantage(actor: Actor.Implementation, actionType: string, options: MidiOptions, abilityId?: string, tracker?: RollModifierTracker): Promise<RollModifierTracker>;
 export declare function _prepareDerivedData(this: Actor.Implementation, wrapped: any, ...args: any[]): void;
 export declare function initPatching(): void;
 export declare function actorPrepareData(this: Actor.Implementation, wrapped: any): void;

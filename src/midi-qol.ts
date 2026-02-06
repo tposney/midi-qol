@@ -705,7 +705,7 @@ import { MidiDamageActivity, setupDamageActivity } from './module/activities/Dam
 import { MidiCastActivity, setupCastActivity } from './module/activities/CastActivity.js';
 import { MidiCheckActivity, setupCheckActivity } from './module/activities/CheckActivity.js';
 import { MidiHealActivity, setupHealActivity } from './module/activities/HealActivity.js';
-import { resolveTargetConfirmation, showItemInfo, templateTokens } from './module/activities/activityHelpers.js';
+import { computeTargetsFromTemplates, resolveTargetConfirmation, selectTargetsFromTemplates, showItemInfo } from './module/activities/activityHelpers.js';
 import { MidiActivityMixin, setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
 import { MidiForwardActivity, setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';
@@ -751,6 +751,7 @@ function setupMidiQOLApi() {
     computeCoverBonus,
     computeDistance,
     computeSkillAdvantage,
+    computeTargetsFromTemplates,
     computeToolAdvantage,
     ConfigPanel,
     configSettings: () => { return configSettings },
@@ -830,7 +831,7 @@ function setupMidiQOLApi() {
     resolveTargetConfirmation,
     safeGetGameSetting,
     shouldDisplaySaveDC,
-    selectTargetsForTemplate: templateTokens,
+    selectTargetsFromTemplates,
     setBonusActionUsed,
     setReactionUsed,
     showItemInfo: (item: Item.Implementation) => { return showItemInfo.bind(item)() },
@@ -867,7 +868,8 @@ function setupMidiQOLApi() {
       ChatLogMidi,
       ChatMessageMidi,
       DamageApplicationElementMidi
-    }
+    },
+    logEvaluationData: false,
   }
 
   //@ts-expect-error

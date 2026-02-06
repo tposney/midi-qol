@@ -728,6 +728,19 @@ export interface pcSaveOptions {
 };
 
 /**
+ * Get the localized label for a tool from the compendium index.
+ * dnd5e tools don't have a static `label` property like skills/abilities - their names come from compendium items.
+ * @param toolId The tool identifier (e.g., "alchemist", "thief")
+ * @returns The tool name, or the toolId as fallback if not found
+ */
+export function getToolLabel(toolId: string): string {
+  const toolUUID = GameSystemConfig.tools[toolId]?.id;
+  //@ts-expect-error no dnd5e-types
+  const toolIndex = toolUUID ? dnd5e.documents.Trait.getBaseItem(toolUUID, { indexOnly: true }) : null;
+  return toolIndex?.name ?? toolId;
+}
+
+/**
  * Build an array of choice options for a multi-ability save/check dialog.
  * Each entry includes the ability ID, localized label, and formatted modifier string.
  */
@@ -747,8 +760,7 @@ export function buildRollChoices(
   }
   if (rollType === "tool") {
     return ids.map(toolId => {
-      //@ts-expect-error label exists at runtime but not in fvtt-types
-      const label: string = GameSystemConfig.tools[toolId]?.label ?? toolId;
+      const label = getToolLabel(toolId);
       //@ts-expect-error no dnd5e-types
       const total: number = actor.system.tools?.[toolId]?.total ?? 0;
       const modifier = total >= 0 ? `+${total}` : `${total}`;
@@ -770,6 +782,25 @@ export function buildRollChoices(
   });
 }
 
+export function selectBestRollChoice(
+  rollChoices: { value: string; label: string; modifier: string }[],
+  advantageMap?: Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean }>
+): { value: string; label: string; modifier: string } | undefined {
+  if (rollChoices.length === 0) return undefined;
+  if (rollChoices.length === 1) return rollChoices[0];
+
+  // Calculate effective value: modifier + advantage adjustment (+3.325 for adv, -3.325 for disadv)
+  const getEffectiveValue = (choice: typeof rollChoices[0]) => {
+    const mod = parseInt(choice.modifier) || 0;
+    const advData = advantageMap?.get(choice.value);
+    if (advData?.hasAdvantage && !advData?.hasDisadvantage) return mod + 3.325;
+    if (advData?.hasDisadvantage && !advData?.hasAdvantage) return mod - 3.325;
+    return mod; // normal or both cancel out
+  };
+
+  return rollChoices.reduce((a, b) => getEffectiveValue(b) > getEffectiveValue(a) ? b : a);
+}
+
 export function requestPCSave(ability: string, rollType: string | undefined, player: string, actor: Actor.Implementation | null, options: pcSaveOptions): Promise<ChatMessage.Implementation | undefined> | undefined {
   try {
     // display a chat message to the user telling them to save
@@ -780,8 +811,7 @@ export function requestPCSave(ability: string, rollType: string | undefined, pla
     const rollSkills = options.rollSkills;
     const rollTools = options.rollTools;
     if (rollTools && rollTools.length > 0) {
-      //@ts-expect-error label exists at runtime but not in fvtt-types
-      const labels = rollTools.map(t => GameSystemConfig.tools[t]?.label ?? t) as string[];
+      const labels = rollTools.map(t => getToolLabel(t));
       abilityString = labels.join(` ${i18n("midi-qol.or")} `);
     } else if (rollSkills && rollSkills.length > 0) {
       const labels = rollSkills.map(s => GameSystemConfig.skills[s]?.label ?? s);
@@ -2305,8 +2335,9 @@ export type MidiOptions = {
   fastForwardHeal?: boolean;
   fastForwardSet?: boolean;
   fumble?: boolean | number;
-  ignorePreComputedAdvantage?: boolean;
+  recomputeAdvantage?: boolean;
   ignoreUserTargets?: boolean;
+  isConcentration?: boolean; // Set by dnd5e for concentration saves
   isConcentrationCheck?: boolean;
   isCritical?: boolean;
   isDummy?: boolean;
@@ -2349,6 +2380,10 @@ export type MidiOptions = {
   rollSkills?: string[];
   /** Multiple tools available for a tool check (e.g., ["thief", "smith"]) */
   rollTools?: string[];
+  /** Pre-computed advantage data per choice (ability/skill/tool), populated by Workflow.ts and deserialized by GMAction.
+   *  A roll is always ONE type, so one map suffices for abilities, skills, or tools.
+   */
+  advantageByChoice?: Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; trackerData?: object; tracker?: import("./patching.js").RollModifierTracker }>;
 };
 type SerializedMidiOptions = Omit<MidiOptions, "targetsToUse" | "rollAs" | "asUser"> & {
   targetsToUse?: string[];

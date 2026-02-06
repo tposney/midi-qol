@@ -68,7 +68,6 @@ import {
   getSaveMultiplierForActivity,
   checkActivityRange,
   computeDistance,
-  getAoETargetType,
   getActivityAutoTargetAction,
   activityHasEmanationNoTemplate,
   completeActivityUse,
@@ -92,13 +91,17 @@ import {
   resolveActivityMacro,
   resolveDAEItemData,
   midiFlag,
+  getAoETargetType,
+  updateUserTargets,
+  getToolLabel,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
-import { bonusCheck, collectBonusFlags, defaultRollOptions, computeAbilityAdvantage, computeRollModifiers, RollModifierFlags } from "./patching.js";
+import { bonusCheck, collectBonusFlags, defaultRollOptions, computeAbilityAdvantage, buildPreComputedAdvantageMap } from "./patching.js";
+import { PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
-import { postTemplateConfirmTargets, selectTargets, templateTokens } from "./activities/activityHelpers.js";
+import { computeTargetsFromTemplates, postTemplateConfirmTargets } from "./activities/activityHelpers.js";
 import { Activity, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
@@ -542,7 +545,7 @@ export class Workflow {
   }
 
   templateUuids: string[] = [];
-  expectedTemplateCount: number = 1;
+  expectedTemplateCount: number = 0;
   placedTemplateCount: number = 0;
 
   // Backward compat: templateUuid returns the first template UUID
@@ -569,8 +572,6 @@ export class Workflow {
     if (!this.templateUuid || typeof this.templateUuid !== "string") return;
     return this.templateUuid.split(".")[-1];
   }
-
-  placeTemplateHookId: number | null;
 
   get inCombat() {
     return this.actor.inCombat
@@ -1051,12 +1052,31 @@ export class Workflow {
   get otherActivity() {
     return this.activity.otherActivity;
   }
+
+  /**
+   * Check if an activity has a valid save configuration (save with abilities, or check with ability/associated)
+   */
+  protected hasValidSaveOrCheck(activity: Activity | null | undefined): boolean {
+    if (!activity) return false;
+    if (activity.save) {
+      // Save must have at least one ability configured
+      const abilities = activity.save.ability;
+      if (abilities instanceof Set) return abilities.size > 0;
+      return !!abilities;
+    }
+    if (activity.check) {
+      // Check must have ability or associated skills/tools
+      return !!activity.check.ability || (activity.check.associated?.size ?? 0) > 0;
+    }
+    return false;
+  }
+
   get activityHasSave() {
-    return Boolean(this.saveActivity?.save || this.saveActivity?.check);
+    return this.hasValidSaveOrCheck(this.saveActivity);
   }
   get saveActivity() {
-    if (this.activity.save || this.activity.check) return this.activity;
-    if (this.otherActivity?.save || this.otherActivity?.check) return this.otherActivity;
+    if (this.hasValidSaveOrCheck(this.activity)) return this.activity;
+    if (this.hasValidSaveOrCheck(this.otherActivity)) return this.otherActivity;
     return undefined;
   }
   get saveActivityDetails(): ActivitySave | ActivityCheck | undefined {
@@ -1501,14 +1521,8 @@ export class Workflow {
     return this.#randomItemId;
   }
 
-  #needTemplate: boolean | undefined;
-  get needTemplate() {
-    if (this.#needTemplate !== undefined) return this.#needTemplate;
-    return this.midiFlags?.needTemplate ?? (activityHasAreaTarget(this.activity) && !activityHasAutoPlaceTemplate(this.activity));
-  }
-  set needTemplate(needTemplate: boolean) {
-    this.#needTemplate = needTemplate;
-    this.persistFields({ needTemplate });
+  get needTemplate(): boolean {
+    return this.expectedTemplateCount > 0 && this.templateUuids.length < this.expectedTemplateCount;
   }
 
   get itemUuid(): string | undefined {
@@ -1589,7 +1603,6 @@ export class Workflow {
   attackRolled: boolean;
   longRangeAttack: boolean | undefined;
   preSelectedTargets: Set<Token.Implementation>;
-  preCreateTemplateHookId: number | undefined;
   postSummonHookId: number | undefined;
   summonedCreatures: TokenDocument.Implementation[] | undefined;
   transformedActorUuids: string[] | undefined;
@@ -1748,7 +1761,6 @@ export class Workflow {
     this.saveTimeouts = {};
     this.defenceTimeouts = {}
     this.forceApplyEffects = false;
-    this.placeTemplateHookId = null;
     this.onUseCalled = false;
     this.attackRolled = false;
     this.flagTags = undefined;
@@ -1771,12 +1783,12 @@ export class Workflow {
     if (this.activity.actionType === "heal" && !Object.keys(GameSystemConfig.healingTypes).includes(this.defaultDamageType ?? "")) this.defaultDamageType = "healing";
 
     this.preSelectedTargets = canvas?.scene ? new Set(game.user?.targets ?? []) : new Set(); // record those targets targeted before cast.
-    if (this.needTemplate && options.noTemplateHook !== true) {
+    if (activityHasAreaTarget(this.activity) && !activityHasAutoPlaceTemplate(this.activity)) {
       this.expectedTemplateCount = Number(this.activity?.target?.template?.count) || 1;
-      this.placedTemplateCount = 0;
-      this.templateUuids = [];
-      this.registerTemplateHooks();
+    } else {
+      this.expectedTemplateCount = 0;
     }
+    this.templateUuids = [];
     if (this.activity instanceof MidiSummonActivity && configSettings.autoRemoveSummonedCreature) {
       this.postSummonHookId = Hooks.once("dnd5e.postSummon", (activity, profile, createdTokens, options) => {
         this.summonedCreatures = createdTokens;
@@ -1795,28 +1807,6 @@ export class Workflow {
   public someAutoRollEventKeySet() {
     const event = this.rollOptions.event as AugmentedEvent | undefined;
     return event?.altKey || event?.ctrlKey || event?.metaKey;
-  }
-
-  registerTemplateHooks() {
-    if (debugEnabled > 0) warn("registering for preCreateMeasuredTemplate, createMeasuredTemplate")
-    this.preCreateTemplateHookId = Hooks.once("preCreateMeasuredTemplate", this.setTemplateFlags.bind(this));
-    this.placeTemplateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
-  }
-
-  setTemplateFlags(
-    templateDoc: MeasuredTemplateDocument.Implementation,
-    data: MeasuredTemplateDocument.CreateData,
-    options: MeasuredTemplateDocument.Database.PreCreateOptions,
-    userId: string
-  ): boolean {
-    if (debugEnabled > 0) warn("setTemplateFlags", templateDoc, this.item.uuid, this.actor.uuid)
-    if (this.item) templateDoc.updateSource({ flags: { "midi-qol": { itemUuid: this.item.uuid } } });
-    if (this.actor) templateDoc.updateSource({ flags: { "midi-qol": { actorUuid: this.actor.uuid } } });
-    if (this.activity) templateDoc.updateSource({ flags: { "midi-qol": { activityUuid: this.activity.uuid } } });
-    templateDoc.updateSource({ flags: { "midi-qol": { workflowId: this.id } } });
-    templateDoc.updateSource({ flags: { "midi-qol": { itemCardUuid: this.itemCardUuid } } });
-    if (!foundry.utils.getProperty(templateDoc, "flags.dnd5e.origin")) templateDoc.updateSource({ flags: { dnd5e: { origin: this.uuid } } });
-    return true;
   }
 
   static async removeItemCardConfirmRollButton(itemCardUuid: string) {
@@ -1905,11 +1895,6 @@ export class Workflow {
     if (!workflow) {
       if (debugEnabled > 0) warn("removeWorkflow | No such workflow ", id);
       return;
-    }
-    // This can lay around if the template was never placed.
-    if (workflow.placeTemplateHookId) {
-      Hooks.off("createMeasuredTemplate", workflow.placeTemplateHookId)
-      Hooks.off("preCreateMeasuredTemplate", workflow.preCreateTemplateHookId!);
     }
     if (workflow.postSummonHookId) Hooks.off("dnd5e.postSummon", workflow.postSummonHookId);
     if (debugEnabled > 0) warn(`removeWorkflow deleting ${id}`, Workflow.workflows[id]);
@@ -2006,14 +1991,6 @@ export class Workflow {
    * Trigger execution of the current state with the context that triggered the unsuspend. e.g. attackRoll or damageRoll
    */
   public async unSuspend(context: WorkflowContext = {}) {
-    if (context.templateDocument) {
-      context.templateUuid = context.templateDocument.uuid;
-      // templateUuids already populated by selectTargets accumulation
-      this.needTemplate = false;
-      if (!this.needItemCard) context.itemUseComplete = true;
-      if (debugEnabled > 0) warn(`${this.workflowName} unsuspend with template ${this.templateUuid}`, this.suspended, context.templateDocument.flags, this.nameForState(this.currentAction));
-      // Template cleanup already set up by selectTargets
-    }
     if (context.itemCardUuid) {
       this.itemCardUuid = context.itemCardUuid;
 
@@ -2029,6 +2006,72 @@ export class Workflow {
       // damageRoll
       this.performState(this.currentAction, context);
     }
+  }
+
+  /**
+   * Process templates that have been placed, integrating them with the workflow.
+   * Validates template count, deletes incomplete placements, sets up template tracking,
+   * cleanup, targeting, and advances the workflow if suspended.
+   * @param templates - Array of placed template documents
+   * @param activity - The activity that placed the templates (used to determine expected count)
+   * @returns true if all expected templates were placed and processed, false if incomplete
+   */
+  async processPlacedTemplates(templates: MeasuredTemplateDocument[], activity?: Activity): Promise<boolean> {
+    if (!templates || templates.length === 0) return false;
+
+    // Validate template count
+    const expectedCount = Number(activity?.target?.template?.count) || 1;
+    if (templates.length < expectedCount) {
+      // Incomplete placement: delete any templates placed so far
+      for (const tDoc of templates) {
+        try { await tDoc.delete(); } catch (e) { /* template may already be gone */ }
+      }
+      return false;
+    }
+
+    // Set midi-qol flags on each template and register cleanup
+    for (const tDoc of templates) {
+      this.templateUuid = tDoc.uuid;  // setter pushes to array + persists
+      await this.setupTemplateCleanup(tDoc);
+    }
+    this.placedTemplateCount = templates.length;
+
+    // Compute targets from ALL templates at once
+    this.selectAllTemplateTargets(activity);
+
+    // Advance the workflow if it was waiting for templates
+    if (this.suspended && this.currentAction === this.WorkflowState_AwaitTemplate) {
+      this.unSuspend();
+    }
+    return true;
+  }
+
+  /**
+   * Compute targets from all placed templates and update targeting state.
+   * Called once after ALL templates are placed, rather than per-template.
+   */
+  selectAllTemplateTargets(activity?: Activity): void {
+    if (!activity) activity = this.activity;
+    const selfToken = getToken(activity?.actor);
+    const ignoreSelf = (activity?.target?.affects.special ?? "").split(";").some(spec => ["-self"].includes(spec));
+    const AoETargetType = activity ? getAoETargetType(activity) : "any";
+    const targeting = getActivityAutoTargetAction(activity);
+    if (targeting === "none") return;
+
+    let allTargetTokens = computeTargetsFromTemplates(this.templateUuids, selfToken, ignoreSelf, AoETargetType, targeting);
+
+    // Apply target count limit if configured
+    if (activity?.target?.affects.count) {
+      const maxTargets = Number(activity.target.affects.count) || 0;
+      if (maxTargets > 0 && allTargetTokens.length > maxTargets) {
+        allTargetTokens = allTargetTokens.slice(0, maxTargets);
+      }
+    }
+
+    // Set all targets at once
+    const allIds = allTargetTokens.map(t => t.id).filter(Boolean) as string[];
+    updateUserTargets(allIds);
+    this.setTargets(new Set(game.user?.targets ?? []));
   }
 
   /**
@@ -2269,8 +2312,7 @@ export class Workflow {
   }
   async WorkflowState_AwaitTemplate(context: WorkflowContext = {}): Promise<WorkflowState> {
     if (debugEnabled > 0) warn("WorkflowState_AwaitTemplate started");
-    if (context.templateUuid || this.templateUuids.length >= this.expectedTemplateCount) {
-      this.needTemplate = false;
+    if (this.templateUuids.length >= this.expectedTemplateCount) {
       if (debugEnabled > 0) warn("WorkflowState_AwaitTemplate context - template placed", "needTemplate", this.needTemplate, "needItemCard", this.needItemCard, "itemUseComplete", this.itemUseComplete);
       return this.WorkflowState_TemplatePlaced;
     }
@@ -2292,12 +2334,15 @@ export class Workflow {
 
     const chatMessage = this.chatCard;
     if (!chatMessage?.content) return this.WorkflowState_AoETargetConfirmation;
-    // remove the place template button from the chat card.
+    // remove the place template button from the chat card only if all templates have been placed
     this.targets = validTargetTokens(this.targets);
     this.hitTargets = new Set()
     this.hitTargetsEC = new Set();
-    let buttonRe = /<button.*?data-action="placeTemplate"[^>]*?>[\s\S]*?<\/button>/
-    let content = chatMessage.content?.replace(buttonRe, "");
+    let content = chatMessage.content;
+    if (this.placedTemplateCount >= (Number(this.activity?.target?.template?.count) || 1)) {
+      const buttonRe = /<button.*?data-action="placeTemplate"[^>]*?>[\s\S]*?<\/button>/
+      content = chatMessage.content?.replace(buttonRe, "");
+    }
     await this.performThrottledUpdate(chatMessage, { content, flags: { "midi-qol": { type: MESSAGE_TYPES.ITEM } }, style: CONST.CHAT_MESSAGE_STYLES.OTHER });
     return this.WorkflowState_AoETargetConfirmation;
   }
@@ -2692,7 +2737,7 @@ export class Workflow {
       if (this.item) await asyncHooksCallAll(`midi-qol.postCheckSaves.${this.item.uuid}`, this);
       if (this.aborted) return this.WorkflowState_Abort;
       const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
-      await Workflow.removeItemCardButtons(this.itemCardUuid as string, { removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none", removeDnd5eTemplateButtons: true });
+      await Workflow.removeItemCardButtons(this.itemCardUuid as string, { removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none", removeDnd5eTemplateButtons: this.placedTemplateCount >= (Number(this.activity?.target?.template?.count) || 1) });
       await this.displaySaves(saveDisplay === "whisper");
     } else {// has saves but we are not checking so do nothing with the damage
       await this.expireTargetEffects(["isAttacked"])
@@ -3245,10 +3290,6 @@ export class Workflow {
     return this.WorkflowState_RollFinished;
   }
   async WorkflowState_Cleanup(context: WorkflowContext = {}): Promise<WorkflowState> {
-    if (this.placeTemplateHookId) {
-      Hooks.off("createMeasuredTemplate", this.placeTemplateHookId);
-      Hooks.off("preCreateMeasuredTemplate", this.preCreateTemplateHookId!);
-    }
     const blfxActive = game.modules.get("boss-loot-assets-premium")?.active ||
       game.modules.get("boss-loot-assets-free")?.active;
     const AAActive = game.modules.get("autoanimations")?.active;
@@ -3376,10 +3417,6 @@ export class Workflow {
 
   async WorkflowState_Abort(context: WorkflowContext = {}): Promise<WorkflowState> {
     this.aborted = true;
-    if (this.placeTemplateHookId) {
-      Hooks.off("createMeasuredTemplate", this.placeTemplateHookId);
-      Hooks.off("preCreateMeasuredTemplate", this.preCreateTemplateHookId!);
-    }
     if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookId);
     if (!this.keepActivityCard && this.itemCardUuid && fromUuidSync(this.itemCardUuid)) {
       await this.chatCard.delete();
@@ -3453,11 +3490,11 @@ export class Workflow {
       content = content.replace(searchRe, "");
       contentChanged = true;
     }
-    // Once the roll if finished cannot place template again so remove the button
+    // Once the roll is finished and all templates placed, remove the template button
     if (content) {
       let isEmanationTargeting = activityHasAutoPlaceTemplate(this.activity) || activityHasEmanationNoTemplate(this.activity);
       let isAoETargeting = !isEmanationTargeting && activityHasAreaTarget(this.activity);
-      if (isAoETargeting && !isEmanationTargeting) {
+      if (isAoETargeting && !isEmanationTargeting && this.placedTemplateCount >= (Number(this.activity?.target?.template?.count) || 1)) {
         const searchRe = /<button[^>]*?data-action="placeTemplate"[\s\S]*?<\/button>/;
         content = content.replace(searchRe, "");
         contentChanged = true;
@@ -5301,14 +5338,13 @@ return {
       let choiceTitle = "";
       if (GameSystemConfig.abilities[midiChosenId]) {
         const abilityLabel = GameSystemConfig.abilities[midiChosenId].label ?? "";
-        choiceTitle = game.i18n.format("DND5E.SavePromptTitle", { ability: abilityLabel });
+        choiceTitle = i18nFormat("DND5E.SavePromptTitle", { ability: abilityLabel });
       } else if (GameSystemConfig.skills[midiChosenId]) {
         const skillLabel = GameSystemConfig.skills[midiChosenId].label ?? "";
-        choiceTitle = game.i18n.format("DND5E.SkillPromptTitle", { skill: skillLabel, ability: "" });
+        choiceTitle = i18nFormat("DND5E.SkillPromptTitle", { skill: skillLabel, ability: "" });
       } else {
-        //@ts-expect-error label exists at runtime but not in fvtt-types
-        const toolLabel: string = GameSystemConfig.tools[midiChosenId]?.label ?? "";
-        if (toolLabel) choiceTitle = game.i18n.format("DND5E.ToolPromptTitle", { tool: toolLabel });
+        const toolLabel = getToolLabel(midiChosenId);
+        if (toolLabel && toolLabel !== midiChosenId) choiceTitle = i18nFormat("DND5E.ToolPromptTitle", { tool: toolLabel });
       }
       if (choiceTitle) rollHTML = `<div style="font-weight:bold; text-align:center;">${choiceTitle}</div>${rollHTML}`;
     }
@@ -5318,8 +5354,23 @@ return {
     // Retrieve the per-target saveDetails for attribution tracking
     const saveDetails = this.targetSaveDetails?.get(targetDocUuid);
 
-    // Always render attribution tooltip (shows "Normal" if no modifiers)
-    const advMode = saveDetails?.modifierTracker;
+    // Use the tracker for the actually-chosen ability/skill/tool when multiple choices were available
+    // Deserialize tracker from trackerData if needed (tracker may be serialized after socketlib transfer)
+    let chosenTracker: RollModifierTracker | undefined;
+    if (midiChosenId && saveDetails?.advantageByChoice) {
+      const chosenData = saveDetails.advantageByChoice.get(midiChosenId);
+      if (chosenData) {
+        if (chosenData.tracker instanceof RollModifierTracker) {
+          chosenTracker = chosenData.tracker;
+        } else if (chosenData.trackerData) {
+          // Deserialize and cache for future access
+          chosenTracker = new RollModifierTracker();
+          chosenTracker.restore(chosenData.trackerData);
+          chosenData.tracker = chosenTracker;
+        }
+      }
+    }
+    const advMode = chosenTracker ?? saveDetails?.modifierTracker;
     const title = getAdvantageModeTitle(advMode?.hasAdvantage, advMode?.hasDisadvantage);
     const attributionTooltip = await renderAttributionTooltip(advMode?.attribution ?? {}, title);
 
@@ -5527,26 +5578,20 @@ return {
 
   /**
    * Determines the roll type, action, and related properties based on the save activity
-   * @returns Object containing rollAction, rollType, rollAbility, rollSkill, rollTool, and flagRollType
+   * @returns Object containing rollAction, rollType, rollAbilities, rollSkills, rollTools, and flagRollType
    */
   protected determineRollTypeAndAction(): {
     rollAction: ((config?: AnyObject, dialog?: AnyObject, message?: AnyObject) => Promise<Roll[] | null>) | undefined;
     rollType: string | undefined;
-    rollAbility: string | undefined | null;
     rollAbilities: string[];
-    rollSkill: string | undefined;
     rollSkills: string[];
-    rollTool: string | undefined;
     rollTools: string[];
     flagRollType: string | undefined;
   } {
     let rollAction: ((config?: AnyObject, dialog?: AnyObject, message?: AnyObject) => Promise<Roll[] | null>) | undefined;
     let rollType: string | undefined;
-    let rollAbility: string | undefined | null;
     let rollAbilities: string[] = [];
-    let rollSkill: string | undefined;
     let rollSkills: string[] = [];
-    let rollTool: string | undefined;
     let rollTools: string[] = [];
     let flagRollType: string | undefined;
 
@@ -5555,11 +5600,10 @@ return {
       flagRollType = "save";
       if (this.saveActivity.save.ability instanceof Set) {
         rollAbilities = Array.from(this.saveActivity.save.ability);
-        rollAbility = rollAbilities[0];
       }
       else {
-        rollAbility = this.saveActivity.save.ability;
-        if (rollAbility) rollAbilities = [rollAbility];
+        const ability = this.saveActivity.save.ability;
+        if (ability) rollAbilities = [ability];
       }
       // @ts-expect-error no dnd5e-types
       rollAction = CONFIG.Actor.documentClass.prototype.rollSavingThrow;
@@ -5573,7 +5617,8 @@ return {
       }
       if (associatedArray.length === 0) {
         rollType = "check";
-        rollAbility = this.saveActivity.check.ability;
+        const ability = this.saveActivity.check.ability;
+        if (ability) rollAbilities = [ability];
         // @ts-expect-error no dnd5e-types
         rollAction = CONFIG.Actor.documentClass.prototype.rollAbilityCheck;
         flagRollType = "check";
@@ -5584,9 +5629,9 @@ return {
         if (skills.length > 0 && skills.length === associatedArray.length) {
           // All entries are skills
           rollType = "skill";
-          rollSkill = skills[0];
           rollSkills = skills;
-          rollAbility = this.saveActivity?.getAbility?.(rollSkill);
+          const ability = this.saveActivity?.getAbility?.(skills[0]);
+          if (ability) rollAbilities = [ability];
           flagRollType = "skill";
           // @ts-expect-error no dnd5e-types
           rollAction = CONFIG.Actor.documentClass.prototype.rollSkill;
@@ -5595,18 +5640,18 @@ return {
           // @ts-expect-error no dnd5e-types
           rollAction = CONFIG.Actor.documentClass.prototype.rollToolCheck;
           rollType = "tool";
-          rollTool = associatedArray[0];
           rollTools = associatedArray;
-          rollAbility = this.saveActivity?.getAbility?.(rollTool);
+          const ability = this.saveActivity?.getAbility?.(associatedArray[0]);
+          if (ability) rollAbilities = [ability];
           flagRollType = "tool";
         } else {
           // Mixed skills/tools — take first entry
           const first = associatedArray[0];
           if (GameSystemConfig.skills[first]) {
             rollType = "skill";
-            rollSkill = first;
             rollSkills = [first];
-            rollAbility = this.saveActivity?.getAbility?.(first);
+            const ability = this.saveActivity?.getAbility?.(first);
+            if (ability) rollAbilities = [ability];
             flagRollType = "skill";
             // @ts-expect-error no dnd5e-types
             rollAction = CONFIG.Actor.documentClass.prototype.rollSkill;
@@ -5614,16 +5659,16 @@ return {
             // @ts-expect-error no dnd5e-types
             rollAction = CONFIG.Actor.documentClass.prototype.rollToolCheck;
             rollType = "tool";
-            rollTool = first;
             rollTools = [first];
-            rollAbility = this.saveActivity?.getAbility?.(first);
+            const ability = this.saveActivity?.getAbility?.(first);
+            if (ability) rollAbilities = [ability];
             flagRollType = "tool";
           }
         }
       }
     }
 
-    return { rollAction, rollType, rollAbility, rollAbilities, rollSkill, rollSkills, rollTool, rollTools, flagRollType };
+    return { rollAction, rollType, rollAbilities, rollSkills, rollTools, flagRollType };
   }
 
   /**
@@ -5703,8 +5748,8 @@ return {
     monkRequestsPlayer: MonksTokenBarRequest[],
     monkRequestsGM: MonksTokenBarRequest[],
     rollType: string,
-    rollAbility: string | undefined,
-    rollSkill: string | undefined,
+    rollAbilities: string[],
+    rollSkills: string[],
     rollDC: number | undefined,
     whisper: boolean,
     isMagicSave: boolean
@@ -5714,11 +5759,11 @@ return {
 
     let request: string | undefined;
     if (rollType === "save") {
-      request = `save:${rollAbility}`;
+      request = `save:${rollAbilities[0]}`;
     } else if (rollType === "check") {
-      request = `ability:${rollAbility}`;
+      request = `ability:${rollAbilities[0]}`;
     } else if (rollType === "skill") {
-      request = `skill:${rollSkill}`;
+      request = `skill:${rollSkills[0]}`;
     }
 
     if (!whisper && monkRequests.length > 0) {
@@ -5787,9 +5832,9 @@ return {
     flashRequestsPlayer: FlashRollsRequest[],
     flashRequestsGM: FlashRollsRequest[],
     rollType: string,
-    rollAbility: string | undefined,
-    rollSkill: string | undefined,
-    rollTool: string | undefined,
+    rollAbilities: string[],
+    rollSkills: string[],
+    rollTools: string[],
     rollDC: number | undefined
   ): void {
     const flashRequests = flashRequestsPlayer.concat(flashRequestsGM);
@@ -5809,7 +5854,7 @@ return {
       flashRequestType = "savingthrow"; // default
     }
 
-    const flashRollKey = rollAbility ?? rollSkill ?? rollTool ?? "dex";
+    const flashRollKey = rollAbilities?.[0] ?? rollSkills?.[0] ?? rollTools?.[0] ?? "dex";
     const flashRequest = {
       requestType: flashRequestType,
       rollKey: flashRollKey,
@@ -5900,11 +5945,8 @@ return {
     player: User,
     saveDetails: AnyMutableObject,
     rollType: string,
-    rollAbility: string | undefined,
     rollAbilities: string[],
-    rollSkill: string | undefined,
     rollSkills: string[],
-    rollTool: string | undefined,
     rollTools: string[],
     rollDC: number | undefined,
     showRoll: boolean,
@@ -5912,6 +5954,9 @@ return {
     isMagicSave: boolean,
     rollAction: Function
   ): { promise: Promise<Roll[] | Roll | null>, requestCard: Promise<ChatMessage | undefined> | undefined } {
+    const rollAbility = rollAbilities[0];
+    const rollSkill = rollSkills[0];
+    const rollTool = rollTools[0];
     //@ts-expect-error
     const BasicRoll = CONFIG.Dice.BasicRoll as typeof Roll;
 
@@ -5951,7 +5996,7 @@ return {
                   advantage: saveDetails.advantage,
                   disadvantage: saveDetails.disadvantage,
                   fastForward: true,
-                  ignorePreComputedAdvantage: true, // compute advantage/disadvantage from flags in roll function
+                  recomputeAdvantage: true, // compute advantage/disadvantage from flags in roll function
                   saveItemUuid: this.saveItem?.uuid,
                   isConcentrationCheck: saveDetails.isConcentrationCheck,
                   workflowOptions: saveDetails.workflowOptions,
@@ -5961,7 +6006,6 @@ return {
                 }
               });
             } else {
-              const hasMultiChoices = rollAbilities.length > 1 || rollSkills.length > 1 || rollTools.length > 1;
               let config: AnyMutableObject = {
                 target: showTargetDC ? rollDC : undefined,
                 ability: rollAbility,
@@ -5972,20 +6016,19 @@ return {
                   advantage: saveDetails.advantage,
                   disadvantage: saveDetails.disadvantage,
                   mapKeys: false,
-                  // When multiple choices, force dialog open so GM can choose for timed-out player
-                  fastForward: !hasMultiChoices,
-                  ignorePreComputedAdvantage: true, // compute advantage/disadvantage from flags in roll function
+                  // Timeout: auto-resolve with best choice, patching.ts handles multi-choice auto-selection
+                  fastForward: true,
+                  recomputeAdvantage: true, // compute advantage/disadvantage from flags in roll function
                   saveItemUuid: this.saveItem?.uuid,
                   isConcentrationCheck: saveDetails.isConcentrationCheck,
                   workflowOptions: saveDetails.workflowOptions,
                   rollAbilities,
                   rollSkills,
                   rollTools,
-                  advantageByAbility: saveDetails.advantageByAbility
+                  advantageByChoice: saveDetails.advantageByChoice
                 }
               };
-              // When multiple choices, force dialog open so GM can choose
-              let dialog: AnyObject = { configure: hasMultiChoices, ability: rollAbility, skill: rollSkill, tool: rollTool };
+              let dialog: AnyObject = { ability: rollAbility, skill: rollSkill, tool: rollTool };
               let message: AnyObject = { create: showRoll };
               if (rollType === "tool") {
                 let tool = target.actor?.items.get(this.saveActivity?.item.id ?? "");
@@ -6032,17 +6075,36 @@ return {
   }
 
   /**
+   * Serialize an advantage map's tracker instances to trackerData for socketlib transmission.
+   * Class instances don't survive socketlib JSON serialization, so we convert tracker -> trackerData.
+   * GMAction will deserialize trackerData back to tracker instances on the receiving end.
+   */
+  serializeAdvantageMapForSocketlib(
+    map: unknown
+  ): Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; trackerData: object }> | undefined {
+    if (!(map instanceof Map)) return undefined;
+    const typedMap = map as Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; tracker?: RollModifierTracker }>;
+    const serialized = new Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; trackerData: object }>();
+    for (const [key, value] of typedMap) {
+      serialized.set(key, {
+        hasAdvantage: value.hasAdvantage,
+        hasDisadvantage: value.hasDisadvantage,
+        defaultButton: value.defaultButton,
+        trackerData: value.tracker?.toJSON() ?? {}
+      });
+    }
+    return serialized;
+  }
+
+  /**
    * Create a standard socketlib save roll
    */
   createStandardSaveRoll(
     target: Token,
     saveDetails: AnyMutableObject,
     rollType: string,
-    rollAbility: string | undefined,
     rollAbilities: string[],
-    rollSkill: string | undefined,
     rollSkills: string[],
-    rollTool: string | undefined,
     rollTools: string[],
     whisper: boolean,
     showRoll: boolean,
@@ -6050,6 +6112,9 @@ return {
     simulate: boolean,
     isMagicSave: boolean
   ): Promise<Roll[] | Roll | null> {
+    const rollAbility = rollAbilities[0];
+    const rollSkill = rollSkills[0];
+    const rollTool = rollTools[0];
     // Find a player owner for the roll if possible
     let owner = playerFor(target);
     if (!owner?.isGM && owner?.active) showRoll = true; // Always show player save rolls
@@ -6078,7 +6143,6 @@ return {
     // Only pass target DC if player should see success/failure (based on autoCheckSaves and visibility)
     // GM always sees DC, non-GM only when visibility allows and not whisper mode
     const showTargetDC = owner?.isGM || (configSettings.autoCheckSaves !== "whisper" && shouldDisplaySaveDC(this.actor));
-    const hasMultipleChoices = rollAbilities.length > 1 || rollSkills.length > 1 || rollTools.length > 1;
     return socketlibSocket.executeAsUser("rollAbility", owner?.id, {
       targetUuid: (target.actor as Actor).uuid,
       request: rollType,
@@ -6095,9 +6159,9 @@ return {
         chatMessage: showRoll,
         rollMode,
         mapKeys: false,
-        // Force dialog open when multiple choices so the player can choose
-        fastForward: hasMultipleChoices ? false : (simulate || !showRollDialog),
-        ignorePreComputedAdvantage: true, // compute advantage/disadvantage from flags in roll function
+        // Let patching.ts handle multi-choice auto-selection when dialog is suppressed
+        fastForward: simulate || !showRollDialog,
+        recomputeAdvantage: true, // compute advantage/disadvantage from flags in roll function
         isMagicSave,
         saveItemUuid: this.item.uuid,
         isConcentrationCheck: saveDetails.isConcentrationCheck,
@@ -6109,7 +6173,8 @@ return {
         rollAbilities,
         rollSkills,
         rollTools,
-        advantageByAbility: saveDetails.advantageByAbility
+        // Serialize tracker instances to trackerData for socketlib transmission
+        advantageByChoice: this.serializeAdvantageMapForSocketlib(saveDetails.advantageByChoice)
       },
     });
   }
@@ -6120,7 +6185,7 @@ return {
    */
   queueTargetSaveRoll(options: QueueSaveRollOptions): { promise: Promise<Roll[] | Roll | null> | null, requestCard: Promise<ChatMessage | undefined> | undefined } {
     const { target, saveDetails, rollInfo, isMagicSave, displayOptions, playerInfo, moduleFlags, moduleRequests } = options;
-    const { type: rollType, ability: rollAbility, abilities: rollAbilities, skill: rollSkill, skills: rollSkills, tool: rollTool, tools: rollTools, action: rollAction } = rollInfo;
+    const { type: rollType, abilities: rollAbilities, skills: rollSkills, tools: rollTools, action: rollAction } = rollInfo;
     const { whisper, showRoll, showRollDialog, simulate } = displayOptions;
     const { player, GMprompt, playerChat } = playerInfo;
     const { playerMonksTB, playerFlashTB, playerEpicRolls, gmMonksTB, gmFlashTB, gmRER } = moduleFlags;
@@ -6169,10 +6234,10 @@ return {
     // Player Chat save request
     if ((player?.active && playerChat) || (player?.isGM && GMprompt === "none")) {
       if (debugEnabled > 0) {
-        warn(`checkSaves | Player ${player?.name} controls actor ${(target.actor as Actor).name} - requesting ${rollAbility} ${rollType}`);
+        warn(`checkSaves | Player ${player?.name} controls actor ${(target.actor as Actor).name} - requesting ${rollAbilities[0]} ${rollType}`);
       }
       const result = this.createPlayerChatSaveRequest(
-        target, player!, saveDetails, rollType, rollAbility, rollAbilities, rollSkill, rollSkills, rollTool, rollTools, saveDetails.rollDC as number | undefined,
+        target, player!, saveDetails, rollType, rollAbilities, rollSkills, rollTools, saveDetails.rollDC as number | undefined,
         showRoll, GMprompt, isMagicSave, rollAction
       );
       return { promise: result.promise, requestCard: result.requestCard };
@@ -6180,7 +6245,7 @@ return {
 
     // Standard socketlib roll
     const promise = this.createStandardSaveRoll(
-      target, saveDetails, rollType, rollAbility, rollAbilities, rollSkill, rollSkills, rollTool, rollTools,
+      target, saveDetails, rollType, rollAbilities, rollSkills, rollTools,
       whisper, showRoll, showRollDialog, simulate, isMagicSave
     );
     return { promise, requestCard: undefined };
@@ -6254,9 +6319,11 @@ return {
 
     if (isFumble) this.fumbleSaves = this.fumbleSaves.add(target);
     if (isCritical) this.criticalSaves = this.criticalSaves.add(target);
-    if (this.checkSuperSaver(target, this.saveActivity?.save?.ability))
+    // Use only the actually-chosen ability (from midiChosenId or rollAbility), not all abilities from the activity
+    const saveAbilities = rollAbility ? new Set([rollAbility]) : this.saveActivity?.save?.ability;
+    if (this.checkSuperSaver(target, saveAbilities))
       this.superSavers = this.superSavers.add(target);
-    if (this.checkSemiSuperSaver(target, this.saveActivity?.save?.ability))
+    if (this.checkSemiSuperSaver(target, saveAbilities))
       this.semiSuperSavers = this.semiSuperSavers.add(target);
 
     // Apply concentration save bonus if applicable
@@ -6357,22 +6424,24 @@ return {
 
   /**
    * Build SaveDetails for a target, including magic resistance/vulnerability and advantage checks.
-   * When multiple abilities are available (rollAbilities.length > 1), pre-computes advantage for
-   * each ability and stores the results in saveDetails.advantageByAbility.
+   * When multiple choices are available (abilities, skills, or tools), pre-computes advantage
+   * for each option and stores results in saveDetails.advantageByChoice.
+   * A roll is always ONE type, so a single map suffices.
    */
   async buildSaveDetailsForTarget(
     target: Token,
     context: {
       rollDC: number | undefined;
       rollType: string | undefined;
-      rollAbility: string | null | undefined;
       rollAbilities: string[];
+      rollSkills: string[];
+      rollTools: string[];
       flagRollType: string;
       isMagicSave: boolean;
       actorDisposition: number;
     }
   ): Promise<SaveDetails> {
-    const { rollDC, rollType, isMagicSave, actorDisposition, rollAbilities } = context;
+    const { rollDC, rollType, isMagicSave, actorDisposition, rollAbilities, rollSkills, rollTools } = context;
     const targetDocument = target.document;
 
     const saveDetails: SaveDetails = {
@@ -6392,67 +6461,60 @@ return {
     };
 
     // Check ability advantage/disadvantage from settings, source grants flags, and magic resistance/vulnerability
-    // computeAbilityAdvantage handles magic resistance check internally
+    // Use the shared helper to compute full trackers (advantage + roll modifiers) for all abilities
     const abilityId = this.saveActivity!.save?.ability?.first() ?? this.saveActivity!.check?.ability ?? "";
-    const abilityAdvantage = await computeAbilityAdvantage(
+    const preComputedMap = await buildPreComputedAdvantageMap(
       target.actor!,
       rollType ?? "",
-      abilityId,
+      rollAbilities,
       { workflow: this, isMagicSave: !!isMagicSave }
     );
-    // Store the RollModifierTracker for potential attribution display
-    saveDetails.modifierTracker = abilityAdvantage.tracker;
-    saveDetails.advantage = abilityAdvantage.tracker.hasAdvantage;
-    saveDetails.disadvantage = abilityAdvantage.tracker.hasDisadvantage;
+
+    // Get the default ability's tracker for saveDetails
+    const defaultAbilityData = preComputedMap.get(abilityId);
+    saveDetails.modifierTracker = defaultAbilityData?.tracker;
+    saveDetails.advantage = defaultAbilityData?.hasAdvantage;
+    saveDetails.disadvantage = defaultAbilityData?.hasDisadvantage;
     saveDetails.isConcentrationCheck = this.item.flags?.[MODULE_ID]?.isConcentrationCheck;
 
-    // Check for auto fail/success/min/max and add to attribution
-    // Compute roll modifiers to populate the tracker's autoFail/autoSuccess/min/max state
-    if ((rollType === "save" || rollType === "check") && saveDetails.modifierTracker) {
-      const modifierFlags: RollModifierFlags = {
-        failFlags: ["fail.all", "fail.ability.all", `fail.ability.${rollType}.all`, `fail.ability.${rollType}.${abilityId}`],
-        successFlags: ["success.all", "success.ability.all", `success.ability.${rollType}.all`, `success.ability.${rollType}.${abilityId}`],
-        maxFlags: [`max.ability.${rollType}.all`, `max.ability.${rollType}.${abilityId}`],
-        minFlags: [`min.ability.${rollType}.all`, `min.ability.${rollType}.${abilityId}`]
-      };
-      computeRollModifiers(target.actor!, modifierFlags, saveDetails.modifierTracker, { workflow: this });
-    }
-
-    // Pre-compute advantage for all abilities when multiple choices are available
-    if (rollAbilities.length > 1) {
-      const advantageByAbility = new Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; tracker: RollModifierTracker }>();
-      // Store the already-computed default ability
-      advantageByAbility.set(abilityId, {
-        hasAdvantage: !!abilityAdvantage.tracker.hasAdvantage,
-        hasDisadvantage: !!abilityAdvantage.tracker.hasDisadvantage,
-        tracker: abilityAdvantage.tracker
-      });
-      // Compute for remaining abilities
-      for (const altAbility of rollAbilities) {
-        if (altAbility === abilityId) continue;
-        const altResult = await computeAbilityAdvantage(
+    // Pre-compute advantage for all choices when multiple are available.
+    // A roll is always ONE type (save, skill check, or tool check), so we use a single map.
+    // Store actual tracker instances here. Serialization to trackerData happens in
+    // createStandardSaveRoll() when sending through socketlib. Local calls (timeout path)
+    // can use the tracker directly without serialization/deserialization.
+    const multipleChoices = rollAbilities.length > 1 || rollSkills.length > 1 || rollTools.length > 1;
+    if (multipleChoices) {
+      // Determine which type has multiple choices and build the map
+      let choiceMap: Map<string, PreComputedAdvantage>;
+      if (rollAbilities.length > 1) {
+        // Already computed above for abilities
+        choiceMap = preComputedMap;
+      } else if (rollSkills.length > 1) {
+        choiceMap = await buildPreComputedAdvantageMap(
           target.actor!,
-          rollType ?? "",
-          altAbility,
-          { workflow: this, isMagicSave: !!isMagicSave }
+          "skill",
+          rollSkills,
+          { workflow: this, isMagicSave: false }
         );
-        // Also compute roll modifiers for the alternate ability
-        if (rollType === "save" || rollType === "check") {
-          const altModifierFlags: RollModifierFlags = {
-            failFlags: ["fail.all", "fail.ability.all", `fail.ability.${rollType}.all`, `fail.ability.${rollType}.${altAbility}`],
-            successFlags: ["success.all", "success.ability.all", `success.ability.${rollType}.all`, `success.ability.${rollType}.${altAbility}`],
-            maxFlags: [`max.ability.${rollType}.all`, `max.ability.${rollType}.${altAbility}`],
-            minFlags: [`min.ability.${rollType}.all`, `min.ability.${rollType}.${altAbility}`]
-          };
-          computeRollModifiers(target.actor!, altModifierFlags, altResult.tracker, { workflow: this });
-        }
-        advantageByAbility.set(altAbility, {
-          hasAdvantage: !!altResult.tracker.hasAdvantage,
-          hasDisadvantage: !!altResult.tracker.hasDisadvantage,
-          tracker: altResult.tracker
+      } else {
+        choiceMap = await buildPreComputedAdvantageMap(
+          target.actor!,
+          "tool",
+          rollTools,
+          { workflow: this, isMagicSave: false }
+        );
+      }
+
+      const advantageByChoice = new Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; tracker?: RollModifierTracker }>();
+      for (const [choice, data] of choiceMap) {
+        advantageByChoice.set(choice, {
+          hasAdvantage: data.hasAdvantage,
+          hasDisadvantage: data.hasDisadvantage,
+          defaultButton: data.defaultButton,
+          tracker: data.tracker
         });
       }
-      saveDetails.advantageByAbility = advantageByAbility;
+      saveDetails.advantageByChoice = advantageByChoice;
     }
 
     // Check for friendly target auto-fail/success from activity settings
@@ -6520,7 +6582,7 @@ return {
     this.saveDC = rollDC;
     const requestCards: Array<Promise<ChatMessage | undefined> | undefined> = [];
     let promises: Promise<Roll[] | Roll | null>[] = [];
-    const { rollAction, rollType, rollAbility, rollAbilities, rollSkill, rollSkills, rollTool, rollTools, flagRollType } = this.determineRollTypeAndAction();
+    const { rollAction, rollType, rollAbilities, rollSkills, rollTools, flagRollType } = this.determineRollTypeAndAction();
     if (!rollAction) return; // No save or check configured on activity
 
     const { flags: moduleFlags, requests: moduleRequests } = this.computeModuleIntegrationSettings(simulate, flagRollType ?? "");
@@ -6549,8 +6611,9 @@ return {
         const saveDetails = await this.buildSaveDetailsForTarget(target, {
           rollDC,
           rollType,
-          rollAbility,
           rollAbilities,
+          rollSkills,
+          rollTools,
           flagRollType: flagRollType ?? "",
           isMagicSave: !!isMagicSave,
           actorDisposition
@@ -6574,11 +6637,8 @@ return {
           saveDetails,
           rollInfo: {
             type: rollType ?? "save",
-            ability: rollAbility ?? undefined,
             abilities: rollAbilities,
-            skill: rollSkill ?? undefined,
             skills: rollSkills,
-            tool: rollTool ?? undefined,
             tools: rollTools,
             action: rollAction
           },
@@ -6616,12 +6676,12 @@ return {
     // Dispatch batched requests to external modules
     this.dispatchMonksTokenBarSaves(
       moduleRequests.monks.player, moduleRequests.monks.gm,
-      rollType ?? "save", rollAbility ?? undefined, rollSkill ?? undefined, rollDC,
+      rollType ?? "save", rollAbilities, rollSkills, rollDC,
       whisper, !!isMagicSave
     );
     this.dispatchFlashRollsSaves(
       moduleRequests.flash.player, moduleRequests.flash.gm,
-      rollType ?? "save", rollAbility ?? undefined, rollSkill ?? undefined, rollTool ?? undefined, rollDC
+      rollType ?? "save", rollAbilities, rollSkills, rollTools, rollDC
     );
     this.dispatchEpicRollsSaves(
       moduleRequests.epic.player, moduleRequests.epic.gm,
@@ -6645,7 +6705,7 @@ return {
     }
 
     // Process each target's save result
-    const processContext = { rollDC, rollAbility: rollAbility ?? undefined, rollType, template, D20Roll };
+    const processContext = { rollDC, rollAbility: rollAbilities[0], rollType, template, D20Roll };
     let i = 0;
     for (let target of allHitTargets) {
       if (!target.actor) continue; // these were skipped when doing the rolls so they can be skipped now
@@ -6664,6 +6724,11 @@ return {
         : tmpResult
           ? [tmpResult]
           : [new D20Roll("1").evaluateSync()];
+
+      // Update rollAbility to the actually-chosen ability from the roll's midiChosenId
+      //@ts-expect-error midiChosenId is a custom roll option
+      const midiChosenId: string | undefined = result[0]?.options?.midiChosenId;
+      if (midiChosenId) processContext.rollAbility = midiChosenId;
 
       await this.processTargetSaveResult(target, result, processContext);
       i++;
@@ -8426,13 +8491,13 @@ export class TrapWorkflow extends Workflow {
     // Create the template
     let templates = await (canvas.scene as unknown as Scene)?.createEmbeddedDocuments("MeasuredTemplate", [templateData]);
     if (templates) {
-      const templateDocument: any = templates[0];
-      const selfToken = getToken(this.tokenUuid);
-      const ignoreSelf = this.item.flags?.[MODULE_ID]?.trapWorkflow?.ignoreSelf ?? false;
-      const AoETargetType = getAoETargetType(this.activity);
-      templateTokens(templateDocument.object, selfToken, ignoreSelf, AoETargetType);
-      selectTargets.bind(this)(templateDocument, null, game.user?.id); // Target the tokens from the template
-      this.targets = new Set(game.user?.targets);
+      for (const tDoc of templates) {
+        if (!tDoc?.uuid) continue;
+        this.templateUuid = tDoc.uuid;
+        await this.setupTemplateCleanup(tDoc as MeasuredTemplateDocument);
+      }
+      this.placedTemplateCount = templates.length;
+      this.selectAllTemplateTargets();
       if (this.templateLocation?.removeDelay) {
         let ids: string[] = templates.map(td => td._id as string)
         //TODO test this again
@@ -8442,8 +8507,6 @@ export class TrapWorkflow extends Workflow {
     return this.WorkflowState_TemplatePlaced
   }
   async WorkflowState_TemplatePlaced(context: WorkflowContext = {}): Promise<WorkflowState> {
-    // perhaps auto place template?
-    this.needTemplate = false;
     return this.WorkflowState_ValidateRoll;
   }
   async WorkflowState_ValidateRoll(context: WorkflowContext = {}): Promise<WorkflowState> {
@@ -8479,7 +8542,7 @@ export class TrapWorkflow extends Workflow {
     throw new Error("Method not implemented.");
   }
   async WorkflowState_WaitForSaves(context: WorkflowContext = {}): Promise<WorkflowState> {
-    if (!this.activity.save) {
+    if (!this.activityHasSave) {
       this.saves = new Set(); // no saving throw, so no-one saves
       const allHitTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
       this.failedSaves = new Set(allHitTargets);
@@ -8577,7 +8640,8 @@ export class DDBGameLogWorkflow extends Workflow {
 
   constructor(actor: Actor.Implementation, activity: Activity, speaker: ChatMessage.SpeakerData, targets: Token.Implementation[], options: any) {
     super(actor, activity, speaker, targets, options);
-    this.needTemplate = activityHasAreaTarget(this.activity) ?? false;
+    this.expectedTemplateCount = activityHasAreaTarget(this.activity) ? 1 : 0;
+    this.templateUuids = [];
     // this.needItemCard = false; TODO see where this is used
     this.needsDamage = !!this.activity.hasDamage;
     this.attackRolled = !activity.hasAttack;
@@ -8678,10 +8742,6 @@ export class DDBGameLogWorkflow extends Workflow {
   }
 
   async WorkflowState_RollFinished(context: WorkflowContext = {}): Promise<WorkflowState> {
-    if (this.placeTemplateHookId) {
-      Hooks.off("createMeasuredTemplate", this.placeTemplateHookId);
-      Hooks.off("preCreateMeasuredTemplate", this.preCreateTemplateHookId!);
-    }
     if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookId);
     super.WorkflowState_RollFinished();
     return this.WorkflowState_Suspend;
@@ -8891,8 +8951,6 @@ type WorkflowContext = InexactPartial<{
   itemCardUuid: string;
   itemUseComplete: boolean;
   otherDamageRoll: Roll;
-  templateDocument: MeasuredTemplateDocument.Implementation;
-  templateUuid: string;
   utilityRolls: Roll[];
 }>;
 

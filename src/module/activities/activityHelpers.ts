@@ -465,120 +465,106 @@ export function isAoETargetable(targetToken: Token.Implementation, options: { se
   }
 }
 
-export function templateTokens(templateDetails: foundry.canvas.placeables.MeasuredTemplate.Implementation, selfTokenRef: TokenOrDocument | string | null | undefined = "", ignoreSelf: boolean = false, AoETargetType: string = "any", autoTarget?: string): Token.Implementation[] {
+export function selectTargetsFromTemplates(
+  templates: (MeasuredTemplateDocument | string)[],
+  selfTokenRef: TokenOrDocument | string | null | undefined = "",
+  ignoreSelf: boolean = false,
+  AoETargetType: string = "any",
+  autoTarget?: string
+): Token.Implementation[] {
+  const tokens = computeTargetsFromTemplates(templates, selfTokenRef, ignoreSelf, AoETargetType, autoTarget);
+  const targetIds = tokens.map(t => t.id).filter(Boolean) as string[];
+  updateUserTargets(targetIds);
+  game.user?.broadcastActivity({ targets: targetIds });
+  return tokens;
+}
+
+
+/**
+ * Returns tokens inside a template without modifying game.user.targets.
+ * Accepts a MeasuredTemplate placeable, a MeasuredTemplateDocument, or a UUID string.
+ * Handles WalledTemplates, VolumetricTemplates, and standard template targeting.
+ * Note: When VolumetricTemplates is active, game.user.targets may be modified as a
+ * side effect of compute3Dtemplate — the returned array is still the authoritative result.
+ */
+export function computeTargetsFromTemplate(
+  template: foundry.canvas.placeables.MeasuredTemplate.Implementation | MeasuredTemplateDocument | string,
+  selfTokenRef: TokenOrDocument | string | null | undefined = "",
+  ignoreSelf: boolean = false,
+  AoETargetType: string = "any",
+  autoTarget?: string
+): Token.Implementation[] {
   if (!autoTarget) autoTarget = configSettings.autoTarget;
-  // deprecated if (!autoTarget) autoTarget = getAutoTarget(templateDetails.item);
-  if ((autoTarget) === "none") return [];
-  const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget);
-  const tokens = canvas.tokens?.placeables ?? [];
-  const selfToken = getToken(selfTokenRef);
-  let targetIds: string[] = [];
-  let targetTokens: Token.Implementation[] = [];
-  updateUserTargets([]);
-  if (autoTarget === "walledtemplates" && game.modules.get("walledtemplates")?.active) {
-    //@ts-expect-error wat
-    if (foundry.utils.getProperty(templateDetails?.item, "flags.walledtemplates.noAutotarget")) return targetTokens;
-    //@ts-expect-error wat
-    targetTokens = (templateDetails.targetsWithinShape) ? templateDetails.targetsWithinShape() : [];
-    targetTokens = targetTokens.filter(token => isAoETargetable(token, { selfToken, ignoreSelf, AoETargetType, autoTarget }))
-    targetIds = targetTokens.map(t => t.id);
+  if (autoTarget === "none") return [];
+
+  // Resolve to a MeasuredTemplate placeable
+  let mTemplate: foundry.canvas.placeables.MeasuredTemplate.Implementation | undefined;
+  if (typeof template === "string") {
+    const tDoc = fromUuidSync(template) as MeasuredTemplateDocument | null;
+    mTemplate = tDoc?.object ?? undefined;
+  } else if (template instanceof MeasuredTemplateDocument) {
+    mTemplate = template.object ?? undefined;
   } else {
-    for (const token of tokens) {
+    mTemplate = template;
+  }
+  if (!mTemplate) return [];
+
+  // For cones/rays during preview, the shape may be stale (computed with old direction)
+  // Force recompute to ensure shape matches current document direction
+  const templateType = mTemplate.document.t;
+  if (templateType === "cone" || templateType === "ray") {
+    const { shape } = computeTemplateShapeDistance(mTemplate.document);
+    mTemplate.shape = shape;
+  } else if (!mTemplate.shape) {
+    const { shape } = computeTemplateShapeDistance(mTemplate.document);
+    mTemplate.shape = shape;
+  }
+
+  const selfToken = getToken(selfTokenRef);
+  let targetTokens: Token.Implementation[] = [];
+
+  if (installedModules.get("levelsvolumetrictemplates")) {
+    const tokensToCheck = canvas.tokens?.placeables?.filter(tk =>
+      isAoETargetable(tk, { selfToken, ignoreSelf, AoETargetType, autoTarget })
+    );
+    //@ts-expect-error VolumetricTemplates
+    VolumetricTemplates.compute3Dtemplate(mTemplate, tokensToCheck);
+    targetTokens = Array.from(game.user?.targets ?? []);
+  } else if (autoTarget === "walledtemplates" && game.modules.get("walledtemplates")?.active) {
+    //@ts-expect-error walledtemplates
+    if (foundry.utils.getProperty(mTemplate?.item, "flags.walledtemplates.noAutotarget")) return targetTokens;
+    //@ts-expect-error walledtemplates
+    targetTokens = (mTemplate.targetsWithinShape) ? mTemplate.targetsWithinShape() : [];
+    targetTokens = targetTokens.filter(token => isAoETargetable(token, { selfToken, ignoreSelf, AoETargetType, autoTarget }));
+  } else {
+    const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget);
+    for (const token of (canvas.tokens?.placeables ?? [])) {
       if (!isAoETargetable(token, { selfToken, ignoreSelf, AoETargetType, autoTarget })) continue;
-      if (token.actor && isTokenInside(templateDetails, token, wallsBlockTargeting)) {
+      if (token.actor && isTokenInside(mTemplate, token, wallsBlockTargeting)) {
         if (token.id) {
           targetTokens.push(token);
-          targetIds.push(token.id);
         }
       }
     }
   }
-  updateUserTargets(targetIds);
   return targetTokens;
 }
 
+export function computeTargetsFromTemplates(
+  templates: (MeasuredTemplateDocument | string)[],
+  selfTokenRef: TokenOrDocument | string | null | undefined = "",
+  ignoreSelf: boolean = false,
+  AoETargetType: string = "any",
+  autoTarget?: string
+): Token.Implementation[] {
+  const allTargetTokens: Set<Token.Implementation> = new Set();
 
-// this is bound to a workflow when called - most of the time
-export function selectTargets(this: Workflow | Activity | undefined, templateDocument: MeasuredTemplateDocument, data?: unknown, userId?: string) {
-  // const workflow = this?.currentAction ? this : Workflow.getWorkflow(templateDocument.flags?.dnd5e?.origin);
-  const activity = this instanceof Workflow ? this.activity : this;
-  const workflow = this instanceof Workflow ? this : null;
-  if (debugEnabled > 0) warn("selectTargets ", this, templateDocument, data, userId);
-  const selfToken = getToken(activity?.actor);
-  // TODO (Michael): HERE! RIGHT HERE!
-  const ignoreSelf = (activity?.target?.affects.special ?? "").split(";").some(spec => ["self", "-self"].includes(spec));
-  if ((activity?.target?.affects.special ?? "").split(";").some(spec => ["self"].includes(spec))) {
-    foundry.utils.logCompatibilityWarning("midi-qol | target specials includes 'self'. Use '-self' to exclude the caster",
-    {since: "midi-qol 13.0.19", until: "31.1.0"});
+  for (const template of templates) {
+    const tokens = computeTargetsFromTemplate(template, selfTokenRef, ignoreSelf, AoETargetType, autoTarget);
+    tokens.forEach(t => allTargetTokens.add(t));
   }
-
-  let AoETargetType = activity ? getAoETargetType(activity) : "any";
-  let targeting = getActivityAutoTargetAction(activity);
-  if ((game.user?.targets.size === 0 || workflow?.workflowOptions.forceTemplateTargeting || userId !== game.user?.id || installedModules.get("levelsvolumetrictemplates")) && targeting !== "none") {
-    let mTemplate = (fromUuidSync(templateDocument.uuid) as MeasuredTemplateDocument)?.object;
-    if (mTemplate && !installedModules.get("levelsvolumetrictemplates")) {
-      if (!mTemplate.shape) {
-        let { shape, distance } = computeTemplateShapeDistance(templateDocument);
-        mTemplate.shape = shape;
-        if (debugEnabled > 0) warn(`selectTargets computed shape ${shape} distance ${distance}`)
-      }
-      templateTokens(mTemplate, selfToken, ignoreSelf, AoETargetType, getActivityAutoTargetAction(activity));
-    } else if (mTemplate) {
-      // Filter tokens before passing to VolumetricTemplates (same as midiATRefreshFunc does)
-      const autoTarget = getActivityAutoTargetAction(activity);
-      const tokensToCheck = canvas.tokens?.placeables?.filter(tk =>
-        isAoETargetable(tk, { selfToken, ignoreSelf, AoETargetType, autoTarget })
-      );
-      //@ts-expect-error
-      VolumetricTemplates.compute3Dtemplate(mTemplate, tokensToCheck);
-    }
-  }
-
-  if (workflow) {
-    if (workflow.placedTemplateCount === 0) {
-      workflow.setTargets(new Set(game.user?.targets ?? []));
-    } else {
-      workflow.setTargets(new Set([...workflow.targets, ...(game.user?.targets ?? [])]));
-    }
-
-    // Use the setter to ensure persistFields is called
-    workflow.templateUuid = templateDocument?.uuid;
-    workflow.placedTemplateCount++;
-    workflow.setupTemplateCleanup(templateDocument);
-  }
-  if (targeting === "none") { // this is no good
-    Hooks.callAll("midi-qol.targeted", workflow?.targets);
-    return true;
-  }
-
-  game.user?.targets?.forEach(token => {
-    if (!isAoETargetable(token, { ignoreSelf, selfToken, AoETargetType, autoTarget: getActivityAutoTargetAction(activity) }))
-      token.setTarget(false, { user: game.user, releaseOthers: false })
-    if (activity?.target?.affects.count && (game.user?.targets?.size ?? 0) > Number(activity.target?.affects?.count ?? "0"))
-      token.setTarget(false, { user: game.user, releaseOthers: false });
-  });
-
-  if (workflow?.workflowType === "TrapWorkflow") return;
-  if (debugEnabled > 0) warn("selectTargets ", workflow?.suspended, workflow?.needTemplate, templateDocument);
-
-  if (workflow?.needTemplate) {
-    if (workflow.placedTemplateCount < workflow.expectedTemplateCount) {
-      // More templates expected — re-register hooks for the next one
-      workflow.registerTemplateHooks();
-    } else {
-      // All templates placed — finalize
-      workflow.needTemplate = false;
-      if (workflow.expectedTemplateCount > 1) {
-        // Multi-template: sync game.user.targets from the accumulated workflow.targets
-        const allIds = Array.from(workflow.targets).map(t => t.id).filter(Boolean);
-        updateUserTargets(allIds as string[]);
-      }
-      if (workflow.suspended && workflow.currentAction === workflow.WorkflowState_AwaitTemplate)
-        workflow.unSuspend.bind(workflow)({ templateDocument });
-    }
-  }
-  return;
-};
+  return Array.from(allTargetTokens);
+}
 
 // If we are blocking the roll let anyone waiting on the roll know it is complete
 function blockRoll(item, workflow) {

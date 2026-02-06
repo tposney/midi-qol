@@ -14,7 +14,7 @@ import { ConfigPanel } from "./module/apps/ConfigPanel";
 import { createEffects, debug, log, moveToken, moveTokenAwayFromPoint, removeEffects, updateEffects, warn } from "./midi-qol";
 import { TargetConfirmationDialog } from "./module/apps/TargetConfirmation";
 import { MidiSounds } from "./module/midi-sounds";
-import { resolveTargetConfirmation, templateTokens } from "./module/activities/activityHelpers";
+import { computeTargetsFromTemplates, resolveTargetConfirmation, selectTargetsFromTemplates } from "./module/activities/activityHelpers";
 import { showUndoWorkflowApp } from "./module/apps/UndoWorkflow";
 import { TroubleShooter } from "./module/apps/TroubleShooter";
 import { ChatLogMidi } from "./module/ChatClasses/ChatLogMidi";
@@ -474,7 +474,7 @@ declare module "fvtt-types/configuration" {
         isCritical?: boolean;
         isFumble?: boolean;
         itemUseComplete?: boolean;
-        needTemplate?: boolean;
+        expectedTemplateCount?: number;
         noOptionalRules?: boolean;
         OnUseMacros?: OnUseMacros;
         otherDamageDetail: DamageDescriptionObject[];
@@ -512,6 +512,7 @@ declare module "fvtt-types/configuration" {
         syntheticItem?: boolean;
         isHit?: boolean;
         otherActivityConsumed?: object;
+        playerDamageCard?: boolean;
       };
     };
     Item: {
@@ -555,6 +556,7 @@ declare module "fvtt-types/configuration" {
         workflowId?: string;
         itemCardUuid?: string;
         dependentOn?: string; // UUID of parent document (Actor/Item) for midi-qol dependent tracking
+        anchorToToken?: boolean; // Whether cone/ray template origin is anchored to caster's token border
       };
     };
     MeasuredTemplateDocument: {
@@ -564,6 +566,7 @@ declare module "fvtt-types/configuration" {
       };
       "midi-qol"?: {
         dependentOn?: string; // UUID of parent document (Actor/Item) for midi-qol dependent tracking
+        anchorToToken?: boolean; // Whether cone/ray template origin is anchored to caster's token border
       };
     }
     TokenDocument: {
@@ -646,6 +649,7 @@ declare global {
     computeCoverBonus: typeof utils.computeCoverBonus;
     computeDistance: typeof utils.computeDistance;
     computeSkillAdvantage: typeof patching.computeSkillAdvantage;
+    computeTargetsFromTemplates: typeof computeTargetsFromTemplates;
     computeToolAdvantage: typeof patching.computeToolAdvantage;
     ConfigPanel: typeof ConfigPanel;
     configSettings: () => typeof configSettings;
@@ -726,7 +730,7 @@ declare global {
     resolveTargetConfirmation: typeof resolveTargetConfirmation;
     safeGetGameSetting: typeof settings.safeGetGameSetting;
     shouldDisplaySaveDC: typeof settings.shouldDisplaySaveDC;
-    selectTargetsForTemplate: typeof templateTokens;
+    selectTargetsFromTemplates: typeof selectTargetsFromTemplates;
     setBonusActionUsed: typeof utils.setBonusActionUsed;
     setReactionUsed: typeof utils.setReactionUsed;
     showItemInfo: (item: Item.Implementation) => Promise<ChatMessage.Implementation | undefined>;
@@ -764,6 +768,7 @@ declare global {
       DamageApplicationElementMidi: typeof DamageApplicationElementMidi
     }
     workflowClass: typeof Workflow,
+    logEvaluationData: boolean,
   }
   interface CONFIG {
     // Temp, until we use dnd5e-types
@@ -855,6 +860,12 @@ declare global {
 }
 
 export type TokenOrDocument = foundry.canvas.placeables.Token.Implementation | TokenDocument.Implementation;
+
+/**
+ * Generic constructor type for mixin patterns.
+ * Used to type functions that accept a class constructor and return a new class.
+ */
+export type Constructor<T = {}> = abstract new (...args: any[]) => T;
 
 export type DamageApplicationOptions = {
   downgrade?: true | Set<string>;
@@ -1265,6 +1276,7 @@ export type RollProcessConfig = {
   attackMode?: string;
   rollOptions?: WorkflowRollOptions
   isCritical?: boolean;
+  isConcentration?: boolean; // Set by dnd5e for concentration saves
   workflowOptions?: WorkflowOptions
   skill?: string;
   tool?: string;
@@ -1379,11 +1391,8 @@ export type CombinedTargetDescriptor = MidiTargetDescriptor & DND5ETargetDescrip
 // Save roll queueing types - used by queueTargetSaveRoll
 export type SaveRollInfo = {
   type: string;
-  ability: string | undefined;
   abilities: string[];
-  skill: string | undefined;
   skills: string[];
-  tool: string | undefined;
   tools: string[];
   action: Function;
 };
@@ -1466,8 +1475,11 @@ export type SaveDetails = {
   itemCardUuid: string;
   workflowUuid: string; // deprecated - use workflowId
   workflowOptions: object;
-  /** Pre-computed advantage/disadvantage per ability, for multi-ability choice dialogs */
-  advantageByAbility?: Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; tracker: RollModifierTracker }>;
+  /** Pre-computed advantage/disadvantage per choice (ability/skill/tool), for multi-choice dialogs.
+   *  A roll is always ONE type (save, skill check, or tool check), so one map suffices.
+   *  trackerData: Serialized tracker (via toJSON) for socketlib - GMAction deserializes to tracker.
+   */
+  advantageByChoice?: Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; trackerData?: object; tracker?: RollModifierTracker }>;
 };
 
 export type ProcessTargetSaveContext = {
