@@ -3,7 +3,7 @@
   "midi-qol.ResetDefaults.Title": "Redefinir Configurações ao Padrão",
   "midi-qol.ResetDefaults.Content": "Isso redefinirá TODAS as configurações do Midi QOL para os valores padrão. Isso inclui ConfigSettings e todas as configurações do jogo. Esta ação não pode ser desfeita. Tem certeza de que deseja continuar?",
   "midi-qol.ResetDefaults.Confirm": "Redefinir Todas Configurações",
-  "midi-qol.ResetDefaults.Button": "Redefinir Todas Configurações aos Padrões",
+  "midi-qol.ResetDefaults.Button": "Redefinir Configurações ao Padrão",
   "midi-qol.ResetDefaults.Hint": "Redefina todas as configurações do midi-qol para seus valores padrão.",
   "midi-qol.DamageImmunities.Name": "Aplicar Imunidades de Dano",
   "midi-qol.DamageImmunities.Hint": "Quando usar o botões de dano do Midi QOL ou aplicar dano automaticamente, leva em consideração as imunidades/vulnerabilidades/resistências do alvo. Todos os tipos de dano são verificados.",
