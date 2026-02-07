@@ -1,6 +1,6 @@
 {
-  "midi-qol.ResetDefaults.Name": "Redefinir Todas Configurações",
-  "midi-qol.ResetDefaults.Title": "Redefinir Todas Configurações aos Padrões",
+  "midi-qol.ResetDefaults.Name": "Redefinir Todas as Configurações",
+  "midi-qol.ResetDefaults.Title": "Redefinir Configurações ao Padrão",
   "midi-qol.ResetDefaults.Content": "Isso redefinirá TODAS as configurações do Midi QOL para os valores padrão. Isso inclui ConfigSettings e todas as configurações do jogo. Esta ação não pode ser desfeita. Tem certeza de que deseja continuar?",
   "midi-qol.ResetDefaults.Confirm": "Redefinir Todas Configurações",
   "midi-qol.ResetDefaults.Button": "Redefinir Todas Configurações aos Padrões",
@@ -15,7 +15,7 @@
   "midi-qol.ShowItemDetails.Hint": "Se ativado, os detalhes do item serão exibidos no cartão do chat ao serem rolados. Você pode usar a configuração do D&D5e para esconder automaticamente a descrição.",
   "midi-qol.AutoRollAttack.Name": "Rolar Ataque ao Rolar Item",
   "midi-qol.AutoRollAttack.Hint": "Quando um ataque é rolado, as configurações de Avanço Rápido Automático são usadas para decidir o que fazer.",
-  "midi-qol.AutoFastForward.Name": "Rolagens de Avanço Rápido Automática",
+  "midi-qol.AutoFastForward.Name": "Rolagens Automáticas de Avanço Rápido",
   "midi-qol.AutoFastForward.Hint": "Quando rolar um ataque ou dano, sempre use Avanço Rápido. Também se aplica ao clicar nos botões de ataque/dano.",
   "midi-qol.AutoCheckHit.Name": "Verificação de Acerto",
   "midi-qol.AutoCheckHit.Hint": "Verifica se uma rolagem de ataque atinge os tokens marcados. O dano é rolado caso um ou mais tokens sejam atingidos e a rolagem automática de dano é ativada. Se desabilitado, Midi QOL irá assumir que o ataque acertou e continuará a rolagem.",
@@ -469,7 +469,7 @@
   "midi-qol.OptionalRules.Name": "Regras Opcionais de Jogo",
   "midi-qol.OptionalRules.Hint": "Regras de Jogo de D&D5e que você talvez queira habilitar. Geralmente não funciona com o módulo Better Rolls.",
   "midi-qol.InvisAdvantage.Name": "Tokens Não-Vistos ou Invisíveis têm Vantagem/Desvantagem em Ataques",
-  "midi-qol.InvisAdvantage.Hint": "<strong>RAW (2014)</strong>: A condição Invisível sempre concede vant/desv. Outros sentidos (Percepção às Cegas, Sentido Sísmico) negam a vant/desv da invisibilidade. <strong>RAW (2024)</strong>: Só concede vant/desv se a outra criatura não puder <em>ver</em> você. Percepção às Cegas/Visão Verdadeira negam, mas Sentido Sísmico não.",
+  "midi-qol.InvisAdvantage.Hint": "<strong>RAW (2014)</strong>: A condição Invisível sempre concede vant/desv. Outros sentidos (Percepção às Cegas, Sentido Sísmico) negam a vant/desv da invisibilidade. <strong>RAW (2024)</strong>: Só concede vant/desv se a outra criatura não puder <em>ver</em>  você. Percepção às Cegas/Visão Verdadeira negam, mas Sentido Sísmico não.",
   "midi-qol.InvisAdvantageOptions": {
     "none": "Não Aplicar",
     "RAW2014": "RAW (2014)",
@@ -485,7 +485,7 @@
     "effect": "Verificar Condição 'Escondido'",
     "perceptive": "Perceptive"
   },
-  "midi-qol.CantSeeAdvantage.Hint": "Usar Visão do Token: Tokens Invisíveis têm vantagem contra alvos que não podem vê-los. Desvantagem se não puder ver o alvo.",
+  "midi-qol.CantSeeAdvantage.Hint": "<strong>Usar Visão do Token</strong>: Tokens Invisíveis têm vantagem contra alvos que não podem vê-los. Desvantagem se não puder ver o alvo.",
   "midi-qol.CheckRange.Name": "Verificar Alcance da Arma ao Atacar",
   "midi-qol.CheckRangeOptions": {
     "none": "Não Verificar",
@@ -526,7 +526,7 @@
     "tokenvisibility": "Alternative Token Visibility (descontinuado)"
   },
   "midi-qol.NearbyAllyRanged.Hint": "Ataques à distância com aliados próximos (5 pés) a alvos possuem desvantagem para alvos menores do que isso (largura * altura). Desabilitado em 0.",
-  "midi-qol.Incapacitated.Name": "Se Ator Incapacitado Fizer Uma Ação, Midi QOL Deveria:",
+  "midi-qol.Incapacitated.Name": "Se Ator Incapacitado Fizer Uma Ação, Midi QOL Deve:",
   "midi-qol.IncapacitatedOptions": {
     "nothing": "Fazer Nada",
     "enforce": "Impôr 'Sem Ações'",
@@ -717,7 +717,7 @@
   "midi-qol.TargetConfirmation.Name": "Confirmação de Alvo",
   "midi-qol.TargetConfirmation.Blurb": "Selecione até {targetCount} {targetType}. Shift-Clique para selecionar múltiplos alvos.",
   "midi-qol.TargetConfirmation.BlurbAny": "Selecione os alvos. Shift-Click para selecionar múltiplos alvos.",
-  "midi-qol.AddDead.Name": "Adicionar Efeito 0 PV",
+  "midi-qol.AddDead.Name": "Adicionar Efeito de 0 PV",
   "midi-qol.AddDead.Hint1": "Jogador Controlado",
   "midi-qol.AddDead.Hint2": "Mestre Controlado",
   "midi-qol.markDefeated": "Marcar como Derrotado no Monitor de Combate",
@@ -727,7 +727,7 @@
     "normal": "Ícone"
   },
   "midi-qol.Wounded": "Ferido",
-  "midi-qol.AddWounded.Name": "Adicionar Efeito PV Abaixo de %",
+  "midi-qol.AddWounded.Name": "Adicionar Efeito se PV Abaixo de %",
   "midi-qol.AddWounded.Hint": "Adiciona a condição selecionada quando o PV for menor do que a porcentagem configurada. Desabilitado em 0.",
   "midi-qol.debugCallTiming.Name": "Log do Tempo de Execução",
   "midi-qol.debugCallTiming.Hint": "Forneçe algumas informações de log sobre quanto tempo as coisas demoram.",
@@ -868,7 +868,7 @@
   "midi-qol.SkillAbilityCheckAdvantage.Hint": "Se um ator possuir vantagem/desvantagem em testes de atributo, perícias baseadas naquele atributo também possuem vantagem/desvantagem.",
   "midi-qol.ignoreTotalCover": "Sem Cobertura Completa",
   "midi-qol.InitPromptTitle": "Rolagem de Iniciativa",
-  "midi-qol.HighlightSuccess.Name": "Cores para Acerto/Erro/Salvaguarda Exibidas",
+  "midi-qol.HighlightSuccess.Name": "Exibir Cores para Acerto/Erro/Salvaguarda",
   "midi-qol.HighlightSuccess.Hint": "Ao exibir acertos/erros, acertos/sucessos estarão em verde e erros/falhas estarão em vermelho.",
   "midi-qol.HighLightCriticalAttackOnly.Name": "Destaque Apenas para Acertos/Erros Críticos",
   "midi-qol.HighLightCriticalAttackOnly.Hint": "Substitui o destaque de acertos e erros do D&D5e, destacando apenas jogadas de acertos/erros críticos",
@@ -882,9 +882,9 @@
   "midi-qol.VitalityDeathRequires.VitalityAndHP": "0 de Vitalidade e 0 de PV",
   "midi-qol.AutoRerollInitiative.Name": "Re-rolar Iniciativa",
   "midi-qol.AutoRerollInitiative.Hint": "Re-rola automaticamente a iniciativa de todos os combatentes no início de uma nova rodada. Aviso: pode quebrar efeitos de rodada/turno.",
-  "midi-qol.RollChecksBlind.Name" : "Testes de Atributo de Jogador às Cegas",
-  "midi-qol.RollSavesBlind.Name" : "Salvaguardas de Jogador às Cegas",
-  "midi-qol.RollSkillsBlind.Name" : "Testes de Perícia de Jogador às Cegas",
+  "midi-qol.RollChecksBlind.Name" : "Testes de Atributo às Cegas de Jogador",
+  "midi-qol.RollSavesBlind.Name" : "Salvaguardas às Cegas de Jogador",
+  "midi-qol.RollSkillsBlind.Name" : "Testes de Perícia às Cegas de Jogador",
   "midi-qol.UndoWorkflow" : {
     "Name": "Desfazer Rolagens de Itens",
     "Hint": "Se habilitado, Midi QOL armazenará informações de desfazer para todas as rolagens. Não é adequado para tempo de jogo. Desfazer via MidiQOL.undoMostRecentWorkflow()",
@@ -963,7 +963,7 @@
   "midi-qol.ConfirmRoll": "Confirmar",
   "midi-qol.ConfirmMiss": "Confirmar Erro",
   "midi-qol.ConfirmHit": "Confirmar Acerto",
-  "midi-qol.AverageDamage.Name": "Rolagens de Dano/Crítico 'Médias'",
+  "midi-qol.AverageDamage.Name": "Rolagens 'Médias' de Dano/Crítico",
   "midi-qol.AverageDamageOptions" : {
     "none": "Nenhum",
     "npc": "Apenas rolagens de dano de PNJs",
@@ -1474,7 +1474,7 @@
   "midi-qol.BaseHealingFlavor": "Cura",
   "midi-qol.OtherDamageFlavor": "Outro",
   "midi-qol.OtherHealingFlavor": "Outra Cura",
-  "midi-qol.RequireAmmunition.Name": "Exigir Munição Disponível Se Usado",
+  "midi-qol.RequireAmmunition.Name": "Exigir Munição Disponível Se Usada",
   "midi-qol.CheckTwoHanded.Name": "Não Requer Escudo em Ataques com Duas Mãos/Ambidestro",
   "midi-qol.NoAmmunition": "Existem 0 {name} no seu inventário",
   "midi-qol.NoAmmunitionAvailable": "Não há munição em seu inventário.",
