@@ -8,17 +8,17 @@ This is a fairly substantial update so don't update just before game time. You h
 * **Breaking** Auto fast forwarding rolls (skipping dialog) is now specified the same way for players and GMs on their own tab. There is a new multi select that lets you choose which rolls will be fastforwarded by default for both the player and the gm. Midi attempts to migrate your existing settings, but you should check.
   - I know a skill roll is a type of ability check, but having a separate setting gives you more control, so you need to set skill separately from ability roll.
 * Support for multiple saves, e.g. a save activity that specifies a dex or con save, or an athletics/acrobatics check. 
-- If you are using 3rd party modules to roll the saves (Monks/Flash Rolls/Rippers Epic Rolls) this is unsupported and defaults to the first roll.
-- If the player/gm is prompted for via a roll dialog in the workflow settings  there is a new drop down that allows selection of the desired roll.
-- The roll with the highest modifier (includes advantage/disadvantage at +/-3.325) will be auto selected, so usually the player will usually just have to press the highlighted button, advantage/disadvantage/normal will be highlighted as required. 
-- If the save is being auto rolled (no dialog) midi will select a roll with the highest modifier including advantage/disadvantage at +/- 3.325.
-- Only supports saves of the same type, so you can't have a skill and a tool roll in the same save, multiple skills fine, multiple tools fine, multiple saves fine, but if mixed will select just the first in the list.
-When there is a choice of rolls the roll tooltip (hover over the roll total on the saves display) will display the roll type that was used.
+  - If you are using 3rd party modules to roll the saves (Monks/Flash Rolls/Rippers Epic Rolls) this is unsupported and defaults to the first roll.
+  - If the player/gm is prompted for via a roll dialog in the workflow settings  there is a new drop down that allows selection of the desired roll.
+  - The roll with the highest modifier (includes advantage/disadvantage at +/-3.325) will be auto selected, so usually the player will usually just have to press the highlighted button, advantage/disadvantage/normal will be highlighted as required. 
+  - If the save is being auto rolled (no dialog) midi will select a roll with the highest modifier including advantage/disadvantage at +/- 3.325.
+  - Only supports saves of the same type, so you can't have a skill and a tool roll in the same save, multiple skills fine, multiple tools fine, multiple saves fine, but if mixed will select just the first in the list.
+  When there is a choice of rolls the roll tooltip (hover over the roll total on the saves display) will display the roll type that was used.
 * Support for multiple templates. Items that specify multiple templates (meteor storm etc) will now collect targets from each template placed. 
   - Backing out of placing all templates will terminate the template placement and midi will wait until you successfully place all templates.
   - A token can only be targeted once, no matter how many templates overlap on the token.
   - This has required a significant refactor of the template placement code so there will be bugs.
-* New option, anchor ray/cone templates. If enabled (on the misc tab) when you use an activity with a ray or cone template (range self) the template will be attached to the edge of your token. You can move the mouse to set the direction of the template, but it will always be anchored to the edge of your token.
+* New option, anchor ray/cone templates, default enabled. If enabled (on the misc tab) when you use an activity with a ray or cone template (range self) the template will be attached to the edge of your token. You can move the mouse to set the direction of the template, but it will always be anchored to the edge of your token.
 * New RAW (2024) invisibility advantage/disadvantage mode that only relies on being able to see the target - cheekily the same as the midi homebrew option.
 * Midi-qol tab property, force config dialog, now overrides the thrown weapon property check.
 * Revived the roll statistics function. Now accessible from the main midi-qol settings panel and tracks a few more things.
@@ -28,7 +28,7 @@ When there is a choice of rolls the roll tooltip (hover over the roll total on t
 
 **Bug Fixes**
 * Advantage Attribution now follows the same visibility rules as the attack roll formula. If players are not allowed to see the formula, they can't see the attack advantage attribution.
-* Fix for some errors in the dnd5e damage drawer that had crept it.
+* Fix for some errors in the dnd5e damage drawer that had crept in.
 * Fix for deleting the wrong damage part when deleting a damage part from an attack activity.
 
 **Merged Contributions**
