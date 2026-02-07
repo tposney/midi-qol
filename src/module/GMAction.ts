@@ -3,7 +3,8 @@ import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, Game
 import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DamageDescriptionObject, Workflow, WorkflowOptions } from "./Workflow.js";
-import { bonusCheck, checkWounded, RollModifierTracker } from "./patching.js";
+import { bonusCheck, checkWounded } from "./patching.js";
+import { RollModifierTracker } from "./lib/RollModifierTracker.js";
 import { queueUndoData, startUndoWorkflow, updateUndoChatCardUuids, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, updateUndoChatCardUuidsById } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { installedModules } from "./setupModules.js";
@@ -1189,16 +1190,16 @@ function updateHPStatusHeader(html: HTMLElement, actorUuid?: string, applied?: b
     }
   });
 
-  // Update the header text
-  const header = html.querySelector<HTMLElement>("#midi-qol-dmg-header");
-  if (header) {
+  // Update the header text (target the span to preserve the caret icon)
+  const headerText = html.querySelector<HTMLElement>("#midi-qol-dmg-header .midi-qol-dmg-header-text");
+  if (headerText) {
     if (appliedCount === 0) {
-      header.textContent = i18n("midi-qol.HPNotUpdated");
+      headerText.textContent = i18n("midi-qol.HPNotUpdated");
     } else if (appliedCount === totalCount) {
-      header.textContent = i18n("midi-qol.HPUpdated");
+      headerText.textContent = i18n("midi-qol.HPUpdated");
     } else {
       // Partial update - show count
-      header.textContent = `${i18n("midi-qol.HPUpdated")} (${appliedCount}/${totalCount})`;
+      headerText.textContent = `${i18n("midi-qol.HPUpdated")} (${appliedCount}/${totalCount})`;
     }
   }
 }

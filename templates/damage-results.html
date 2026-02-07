@@ -1,7 +1,10 @@
-<div class="midi-qol-damage-card">
+<div class="midi-qol-damage-card collapsible dnd5e2-collapsible">
   <div id="midi-qol-dmg-header" class="midi-qol-dmg-header">
-    {{damageApplied}}
+    <i class="fa-solid fa-caret-down"></i>
+    <span class="midi-qol-dmg-header-text">{{damageApplied}}</span>
   </div>
+  <div class="collapsible-content card-content">
+    <div class="wrapper">
   {{#each damageList as |damage iid|}}
   <div class="midi-qol-tooltip midi-qol-dmg-row" data-hp-applied="{{#if ../damageWasApplied}}true{{else}}false{{/if}}" data-actor-uuid="{{damage.displayUuid}}" {{#if damage.tooltip}}data-tooltip='{{damage.tooltip}}'{{/if}}>
     <img src="{{damage.tokenImg}}" id="{{damage.tokenId}}" class="midi-qol-target-name" height="22">
@@ -58,4 +61,6 @@
     </span>
   </div>
   {{/if}}
+    </div>
+  </div>
 </div>

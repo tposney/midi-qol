@@ -5,7 +5,7 @@
 
 ## Overview
 
-Spells with `target.template.count > 1` (e.g., Eldritch Blast with multiple AoE zones) place multiple templates sequentially. midi-qol accumulates targets from all templates and tracks all template UUIDs for proper cleanup, undo, and concentration management.
+Spells with `target.template.count > 1` (e.g., Fire storm with multiple AoE zones) place multiple templates sequentially. midi-qol accumulates targets from all templates and tracks all template UUIDs for proper cleanup, undo, and concentration management.
 
 This implementation handles three template placement paths:
 1. **Chat card button** — User clicks "Place Template" button on chat card

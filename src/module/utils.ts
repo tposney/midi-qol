@@ -2408,7 +2408,7 @@ export type MidiOptions = {
   /** Pre-computed advantage data per choice (ability/skill/tool), populated by Workflow.ts and deserialized by GMAction.
    *  A roll is always ONE type, so one map suffices for abilities, skills, or tools.
    */
-  advantageByChoice?: Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; trackerData?: object; tracker?: import("./patching.js").RollModifierTracker }>;
+  advantageByChoice?: Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; trackerData?: object; tracker?: import("./lib/RollModifierTracker.js").RollModifierTracker }>;
 };
 type SerializedMidiOptions = Omit<MidiOptions, "targetsToUse" | "rollAs" | "asUser"> & {
   targetsToUse?: string[];

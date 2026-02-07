@@ -16,12 +16,6 @@ import { preferredActiveGM } from "./GMAction.js";
 import { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./lib/MidiDependentsRegistry.js";
 import { RollModifierTracker, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, RollModifierResult, AdvantageFlags } from "./lib/RollModifierTracker.js";
 
-// Re-export for backwards compatibility
-export { RollModifierTracker, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, RollModifierResult, AdvantageFlags } from "./lib/RollModifierTracker.js";
-
-// Re-export for backwards compatibility
-export { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./lib/MidiDependentsRegistry.js";
-
 let libWrapper;
 
 const NumericTerm = foundry.dice.terms.NumericTerm;
@@ -29,6 +23,121 @@ const NumericTerm = foundry.dice.terms.NumericTerm;
 // Module-level Set to track actors that should skip concentration checks
 // Used instead of actor flags to avoid database writes and orphaned flags
 export const skipConcentrationActorUuids = new Set<string>();
+
+// ==================== PATCHING ENTRY POINTS ====================
+// These functions are called during module initialization to register libWrapper patches.
+// The helper functions they reference are defined later in this file.
+
+export function initPatching() {
+  libWrapper = globalThis.libWrapper;
+  const ChatLog = foundry.applications.sidebar.tabs.ChatLog;
+  // TODO this needs more work libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.migrateData", removeMidiProperties, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
+  // For new onUse macros stuff.
+  libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.prepareData", itemPrepareData, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareData", actorPrepareData, "WRAPPER");
+  // I think this can be removed in v13 libWrapper.register(MODULE_ID, "KeyboardManager.prototype._onFocusIn", _onFocusIn, "OVERRIDE");
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.getRollData", actorGetRollData, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.getRollData", itemGetRollData, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
+  libWrapper.register(MODULE_ID, "dnd5e.applications.actor.BaseActorSheet.prototype._prepareItem", _prepareItem, "WRAPPER");
+
+  // Setup document classes with both dnd5e's DependentDocumentMixin (for flag-based tracking)
+  // and MidiDependentDocumentMixin (for our registry-based tracking of Actor/Item parents)
+  // This allows dnd5e.dependentOn flag to work for all parent types
+
+  // MeasuredTemplate, Token, AmbientLight need dnd5e's mixin added (not in their base class)
+  class MidiMeasuredTemplateDocument extends MidiDependentDocumentMixin(
+    globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.MeasuredTemplate.documentClass)
+  ) { };
+  //@ts-expect-error
+  CONFIG.MeasuredTemplate.documentClass = MidiMeasuredTemplateDocument;
+
+  class MidiTokenDocument extends MidiDependentDocumentMixin(
+    globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.Token.documentClass)
+  ) { };
+  //@ts-expect-error
+  CONFIG.Token.documentClass = MidiTokenDocument;
+
+  class MidiAmbientLightDocument extends MidiDependentDocumentMixin(
+    globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.AmbientLight.documentClass)
+  ) { };
+  //@ts-expect-error
+  CONFIG.AmbientLight.documentClass = MidiAmbientLightDocument;
+
+  // ActiveEffect, Item, Actor already have dnd5e's DependentDocumentMixin in their class hierarchy
+  // Just add MidiDependentDocumentMixin for our registry tracking
+  //@ts-expect-error - Mixin pattern type inference
+  class MidiActiveEffect extends MidiDependentDocumentMixin(CONFIG.ActiveEffect.documentClass) { };
+  //@ts-expect-error
+  CONFIG.ActiveEffect.documentClass = MidiActiveEffect;
+
+  //@ts-expect-error - Mixin pattern type inference
+  class MidiItem extends MidiDependentDocumentMixin(CONFIG.Item.documentClass) { };
+  //@ts-expect-error
+  CONFIG.Item.documentClass = MidiItem;
+
+  //@ts-expect-error - Mixin pattern type inference
+  class MidiActor extends MidiDependentDocumentMixin(CONFIG.Actor.documentClass) { };
+  //@ts-expect-error
+  CONFIG.Actor.documentClass = MidiActor;
+}
+
+export function readyPatching() {
+  libWrapper.register(MODULE_ID, "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
+  libWrapper.register(MODULE_ID, "game.dnd5e.canvas.AbilityTemplate.prototype._onMovePlacement", midiATOnMovePlacement, "MIXED");
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['dnd5e.CharacterActorSheet'].cls.prototype._filterItems", _filterItems, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.npc['dnd5e.NPCActorSheet'].cls.prototype._filterItems", _filterItems, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.createConcentrationEffectData", createConcentrationEffectData, "WRAPPER");
+  // This controls whether to display the chat message or not
+  // dnd5e.damageActor handles picking up concentration item rolls
+  // processConcentrationSave handles doing the auto roll for concentration chat messages
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.challengeConcentration", challengeConcentration, "MIXED")
+  // Moved overtime processing to the updateCombat hook instead.
+  // libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preDelete", _preDeleteCombat, "WRAPPER");
+
+  libWrapper.register(MODULE_ID, "foundry.applications.ui.Notifications.prototype.notify", notificationNotify, "MIXED");
+  const gameVersion = game.system?.version;
+  if ((game.system?.id === "dnd5e" && foundry.utils.isNewerVersion("3.3", gameVersion ?? ""))) {
+    if (ui.notifications)
+      ui.notifications.error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
+    else
+      error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
+  }
+}
+
+export let visionPatching = () => {
+  if (playerControlsInvisibleTokens) {
+    ui.notifications?.warn("Player control vision is deprecated, use it at your own risk")
+    console.warn("midi-qol | Player control vision is deprecated, use it at your own risk")
+
+    log("Patching Token._isVisionSource")
+    libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._isVisionSource", _isVisionSource, "WRAPPER");
+
+    log("Patching Token.isVisible")
+    libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype.isVisible", isVisible, "WRAPPER");
+  }
+  log("Vision patching - ", playerControlsInvisibleTokens ? "enabled" : "disabled")
+}
+
+export let itemPatching = () => {
+  libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.use", doItemUse, "MIXED");
+  libWrapper.register(MODULE_ID, "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");
+};
+
+export let actorAbilityRollPatching = () => {
+
+  log("Patching roll abilities Save/Test/Skill/Tool")
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollSavingThrow", rollSavingThrow, "MIXED");
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollAbilityCheck", rollAbilityCheck, "MIXED");
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollDeathSave", rollDeathSave, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollSkill", doRollSkill, "MIXED");
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollToolCheck", rollToolCheck, "WRAPPER");
+}
+
+// ==================== END PATCHING ENTRY POINTS ====================
 
 function _isVisionSource(this: Token.Implementation, wrapped) {
   const isVisionSource = wrapped();
@@ -211,6 +320,10 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
         if (actualActor) return actualActor.rollSkill(config, dialog, message);
       }
     }
+    // Check if advantage was pre-computed by an external module (Monks Token Bar, Flash Rolls, Epic Rolls)
+    const sourceInfo = getAdvantageSourceInfo(config);
+    const isExternalModuleRoll = sourceInfo.isExternalModule;
+
     let hasPreComputedAdvantage = false;
     if (!config.midiOptions.recomputeAdvantage) {
       hasPreComputedAdvantage = applyPreComputedAdvantage(config);
@@ -234,9 +347,13 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     const passedSkillAdvantageMap = config.midiOptions?.advantageByChoice as Map<string, PreComputedAdvantage> | undefined;
     const hasPassedSkillAdvantage = passedSkillAdvantageMap?.size &&
       Array.from(passedSkillAdvantageMap.values()).some(v => v.tracker instanceof RollModifierTracker);
-    const preComputedSkillAdvantageMap: Map<string, PreComputedAdvantage> = hasPassedSkillAdvantage && passedSkillAdvantageMap
-      ? passedSkillAdvantageMap
-      : await buildPreComputedAdvantageMap(this, "skill", rollSkills, config.midiOptions ?? {});
+
+    // Skip building advantage map for external module rolls - they already computed advantage
+    const preComputedSkillAdvantageMap: Map<string, PreComputedAdvantage> = isExternalModuleRoll
+      ? new Map() // External modules handle their own advantage - don't recompute
+      : hasPassedSkillAdvantage && passedSkillAdvantageMap
+        ? passedSkillAdvantageMap
+        : await buildPreComputedAdvantageMap(this, "skill", rollSkills, config.midiOptions ?? {});
 
     // Setup dialog with MidiRollChoiceDialog helper
     let userExplicitChoice: string | undefined;
@@ -258,8 +375,12 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
         const chosenSkill = configData.skill ?? skillId;
         const chosenAdvantage = preComputedSkillAdvantageMap.get(chosenSkill!);
         if (chosenAdvantage) {
-          configData.advantage = chosenAdvantage.hasAdvantage;
-          configData.disadvantage = chosenAdvantage.hasDisadvantage;
+          // Only override advantage/disadvantage if not pre-computed from external module
+          // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
+          if (!hasPreComputedAdvantage) {
+            configData.advantage = chosenAdvantage.hasAdvantage;
+            configData.disadvantage = chosenAdvantage.hasDisadvantage;
+          }
           if (chosenAdvantage.tracker) {
             skillModifiers = applyRollModifiers(chosenAdvantage.tracker, configData, dialogData);
             if (skillModifiers.autoFail) success = false;
@@ -454,9 +575,7 @@ function getExternalModuleFastForward(sourceInfo: AdvantageSourceInfo, rollType:
     default:
       return isAutoFastForward(rollType);
   }
-  // Default to midi's isAutoFastForward
   return isAutoFastForward(rollType);
-
 }
 
 function setRollDialogOptions(config: RollProcessConfig, dialog: RollDialogConfig, rollType: FastForwardRollType) {
@@ -470,9 +589,6 @@ function setRollDialogOptions(config: RollProcessConfig, dialog: RollDialogConfi
   // If dialog.configure was explicitly set by the caller (a boolean, not undefined),
   // respect that value. This allows macros/code to pass configure: false to skip the
   // dialog or configure: true to force it, regardless of module settings.
-  // Without this check, midi-qol's own advantage computation (setting config.advantage/
-  // config.disadvantage) can cause getAdvantageSourceInfo to misidentify the roll as
-  // coming from an external module (e.g. Flash Rolls), overriding the caller's intent.
   if (dialog.configure !== undefined) {
     // Caller explicitly set dialog.configure — preserve it
   } else if (sourceInfo.isExternalModule) {
@@ -516,7 +632,6 @@ function setRollDialogOptions(config: RollProcessConfig, dialog: RollDialogConfi
  */
 function applyPreComputedAdvantage(config: RollProcessConfig): boolean {
   const sourceInfo = getAdvantageSourceInfo(config);
-
   if (!sourceInfo.hasPreComputed) {
     return false;
   }
@@ -524,7 +639,6 @@ function applyPreComputedAdvantage(config: RollProcessConfig): boolean {
   // Apply to config if not already set
   config.advantage ??= sourceInfo.advantage;
   config.disadvantage ??= sourceInfo.disadvantage;
-
   return true;
 }
 
@@ -864,6 +978,10 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
       config.midiOptions.fumble = 0;
     }
 
+    // Check if advantage was pre-computed by an external module (Monks Token Bar, Flash Rolls, Epic Rolls)
+    const sourceInfo = getAdvantageSourceInfo(config);
+    const isExternalModuleRoll = sourceInfo.isExternalModule;
+
     let hasPreComputedAdvantage = false;
     if (!config.midiOptions.recomputeAdvantage) {
       hasPreComputedAdvantage = applyPreComputedAdvantage(config);
@@ -890,9 +1008,13 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
       Array.from(passedAdvantageMap.values()).some(v => v.tracker instanceof RollModifierTracker);
     // Concentration saves use the "concentration" roll type which composes with "save"
     const effectiveRollType = (rollType === "save" && config.hookNames?.includes("concentration")) ? "concentration" : rollType;
-    const preComputedAdvantageMap: Map<string, PreComputedAdvantage> = hasPassedAdvantage && passedAdvantageMap
-      ? passedAdvantageMap
-      : await buildPreComputedAdvantageMap(this, effectiveRollType, rollAbilities, config.midiOptions ?? {});
+
+    // Skip building advantage map for external module rolls - they already computed advantage
+    const preComputedAdvantageMap: Map<string, PreComputedAdvantage> = isExternalModuleRoll
+      ? new Map() // External modules handle their own advantage - don't recompute
+      : hasPassedAdvantage && passedAdvantageMap
+        ? passedAdvantageMap
+        : await buildPreComputedAdvantageMap(this, effectiveRollType, rollAbilities, config.midiOptions ?? {});
 
     // Setup dialog with MidiRollChoiceDialog helper
     let userExplicitChoice: string | undefined;
@@ -912,8 +1034,12 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
         const chosenAbility = configData.ability ?? abilityId;
         const chosenAdvantage = preComputedAdvantageMap.get(chosenAbility!);
         if (chosenAdvantage) {
-          configData.advantage = chosenAdvantage.hasAdvantage;
-          configData.disadvantage = chosenAdvantage.hasDisadvantage;
+          // Only override advantage/disadvantage if not pre-computed from external module
+          // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
+          if (!hasPreComputedAdvantage) {
+            configData.advantage = chosenAdvantage.hasAdvantage;
+            configData.disadvantage = chosenAdvantage.hasDisadvantage;
+          }
           if (chosenAdvantage.tracker) {
             abilityModifiers = applyRollModifiers(chosenAdvantage.tracker, configData, dialogData);
             if (abilityModifiers.autoFail) success = false;
@@ -1813,62 +1939,6 @@ export function _prepareDerivedData(this: Actor.Implementation, wrapped, ...args
   }
 }
 
-export function initPatching() {
-  libWrapper = globalThis.libWrapper;
-  const ChatLog = foundry.applications.sidebar.tabs.ChatLog;
-  // TODO this needs more work libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.migrateData", removeMidiProperties, "WRAPPER");
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
-  // For new onUse macros stuff.
-  libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.prepareData", itemPrepareData, "WRAPPER");
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareData", actorPrepareData, "WRAPPER");
-  // I think this can be removed in v13 libWrapper.register(MODULE_ID, "KeyboardManager.prototype._onFocusIn", _onFocusIn, "OVERRIDE");
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.getRollData", actorGetRollData, "WRAPPER");
-  libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.getRollData", itemGetRollData, "WRAPPER");
-  libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
-  libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
-  libWrapper.register(MODULE_ID, "dnd5e.applications.actor.BaseActorSheet.prototype._prepareItem", _prepareItem, "WRAPPER");
-
-  // Setup document classes with both dnd5e's DependentDocumentMixin (for flag-based tracking)
-  // and MidiDependentDocumentMixin (for our registry-based tracking of Actor/Item parents)
-  // This allows dnd5e.dependentOn flag to work for all parent types
-
-  // MeasuredTemplate, Token, AmbientLight need dnd5e's mixin added (not in their base class)
-  class MidiMeasuredTemplateDocument extends MidiDependentDocumentMixin(
-    globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.MeasuredTemplate.documentClass)
-  ) { };
-  //@ts-expect-error
-  CONFIG.MeasuredTemplate.documentClass = MidiMeasuredTemplateDocument;
-
-  class MidiTokenDocument extends MidiDependentDocumentMixin(
-    globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.Token.documentClass)
-  ) { };
-  //@ts-expect-error
-  CONFIG.Token.documentClass = MidiTokenDocument;
-
-  class MidiAmbientLightDocument extends MidiDependentDocumentMixin(
-    globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.AmbientLight.documentClass)
-  ) { };
-  //@ts-expect-error
-  CONFIG.AmbientLight.documentClass = MidiAmbientLightDocument;
-
-  // ActiveEffect, Item, Actor already have dnd5e's DependentDocumentMixin in their class hierarchy
-  // Just add MidiDependentDocumentMixin for our registry tracking
-  //@ts-expect-error - Mixin pattern type inference
-  class MidiActiveEffect extends MidiDependentDocumentMixin(CONFIG.ActiveEffect.documentClass) { };
-  //@ts-expect-error
-  CONFIG.ActiveEffect.documentClass = MidiActiveEffect;
-
-  //@ts-expect-error - Mixin pattern type inference
-  class MidiItem extends MidiDependentDocumentMixin(CONFIG.Item.documentClass) { };
-  //@ts-expect-error
-  CONFIG.Item.documentClass = MidiItem;
-
-  //@ts-expect-error - Mixin pattern type inference
-  class MidiActor extends MidiDependentDocumentMixin(CONFIG.Actor.documentClass) { };
-  //@ts-expect-error
-  CONFIG.Actor.documentClass = MidiActor;
-}
-
 function _prepareItem(wrapped, item, ctx) {
   wrapped(item, ctx);
   // Filter from ctx.activities to preserve dnd5e's visibility filtering (including level limits)
@@ -1961,7 +2031,6 @@ export function itemPrepareData(this: Item.Implementation, wrapped) {
   }
   wrapped();
   prepareOnUseMacroData(this);
-
 }
 
 export function prepareOnUseMacroData(actorOrItem: Actor.Implementation | Item.Implementation) {
@@ -2201,30 +2270,6 @@ async function setDeadStatus(actor: Actor.Implementation, options: { effect: CON
   }
 }
 
-export function readyPatching() {
-  libWrapper.register(MODULE_ID, "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
-  libWrapper.register(MODULE_ID, "game.dnd5e.canvas.AbilityTemplate.prototype._onMovePlacement", midiATOnMovePlacement, "MIXED");
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['dnd5e.CharacterActorSheet'].cls.prototype._filterItems", _filterItems, "WRAPPER");
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.npc['dnd5e.NPCActorSheet'].cls.prototype._filterItems", _filterItems, "WRAPPER");
-  libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.createConcentrationEffectData", createConcentrationEffectData, "WRAPPER");
-  // This controls whether to display the chat message or not
-  // dnd5e.damageActor handles picking up concentration item rolls
-  // processConcentrationSave handles doing the auto roll for concentration chat messages
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.challengeConcentration", challengeConcentration, "MIXED")
-  // Moved overtime processing to the updateCombat hook instead.
-  // libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
-  libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preDelete", _preDeleteCombat, "WRAPPER");
-
-  libWrapper.register(MODULE_ID, "foundry.applications.ui.Notifications.prototype.notify", notificationNotify, "MIXED");
-  const gameVersion = game.system?.version;
-  if ((game.system?.id === "dnd5e" && foundry.utils.isNewerVersion("3.3", gameVersion ?? ""))) {
-    if (ui.notifications)
-      ui.notifications.error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
-    else
-      error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
-  }
-}
-
 function createConcentrationEffectData(this: ActiveEffect.Implementation, wrapped, activity: Activity, data: any = {}) {
   const effectData: ActiveEffect.CreateData = wrapped(activity, data);
   if (!effectData.flags?.dnd5e?.itemUuid) {
@@ -2272,33 +2317,6 @@ export async function challengeConcentration(this: Actor.Implementation, wrapped
   return;
 }
 
-export let visionPatching = () => {
-  if (playerControlsInvisibleTokens) {
-    ui.notifications?.warn("Player control vision is deprecated, use it at your own risk")
-    console.warn("midi-qol | Player control vision is deprecated, use it at your own risk")
-
-    log("Patching Token._isVisionSource")
-    libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._isVisionSource", _isVisionSource, "WRAPPER");
-
-    log("Patching Token.isVisible")
-    libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype.isVisible", isVisible, "WRAPPER");
-  }
-  log("Vision patching - ", playerControlsInvisibleTokens ? "enabled" : "disabled")
-}
-
-// function _getUsageConfig(wrapped): any {
-//   //Radius template spells with self/spec/any will auto place the template so don't prompt for it in config.
-//   const config = wrapped();
-//   const autoCreateTemplate = this.hasAreaTarget && hasAutoPlaceTemplate(this);
-//   if (autoCreateTemplate) config.createMeasuredTemplate = null;
-//   return config;
-// }
-
-export let itemPatching = () => {
-  libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.use", doItemUse, "MIXED");
-  libWrapper.register(MODULE_ID, "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");
-};
-
 export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocument, options: any, user: string) {
   if (user !== game.user?.id) return;
   if (options.undo) return;
@@ -2323,16 +2341,6 @@ export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocu
   }
 };
 
-export let actorAbilityRollPatching = () => {
-
-  log("Patching roll abilities Save/Test/Skill/Tool")
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollSavingThrow", rollSavingThrow, "MIXED");
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollAbilityCheck", rollAbilityCheck, "MIXED");
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollDeathSave", rollDeathSave, "WRAPPER");
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollSkill", doRollSkill, "MIXED");
-  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollToolCheck", rollToolCheck, "WRAPPER");
-}
-
 export async function rollToolCheck(this: Actor.Implementation, wrapped, config: RollProcessConfig & { ability?: string, tool?: string } = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
   let result: Roll[] | undefined;
   let preRollHookId: number | undefined;
@@ -2347,6 +2355,10 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     message.create = false;
     if (dialog.configure === undefined && isAutoFastForward("tool")) dialog.configure = false;
 
+    // Check if advantage was pre-computed by an external module (Monks Token Bar, Flash Rolls, Epic Rolls)
+    const sourceInfo = getAdvantageSourceInfo(config);
+    const isExternalModuleRoll = sourceInfo.isExternalModule;
+
     let hasPreComputedAdvantage = false;
     if (!config.midiOptions.recomputeAdvantage) {
       hasPreComputedAdvantage = applyPreComputedAdvantage(config);
@@ -2354,7 +2366,8 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
         config.midiOptions.fastForward = true;
       }
     }
-    if (!hasPreComputedAdvantage) {
+    // Only compute advantage from flags if not from external module and not pre-computed
+    if (!hasPreComputedAdvantage && !isExternalModuleRoll) {
       if (!config.midiOptions.workflow && config.midiOptions.workflowId) {
         config.midiOptions.workflow = Workflow.getWorkflow(config.midiOptions.workflowId);
       }
@@ -2371,9 +2384,13 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     const passedToolAdvantageMap = config.midiOptions?.advantageByChoice as Map<string, PreComputedAdvantage> | undefined;
     const hasPassedToolAdvantage = passedToolAdvantageMap?.size &&
       Array.from(passedToolAdvantageMap.values()).some(v => v.tracker instanceof RollModifierTracker);
-    const preComputedToolAdvantageMap: Map<string, PreComputedAdvantage> = hasPassedToolAdvantage && passedToolAdvantageMap
-      ? passedToolAdvantageMap
-      : await buildPreComputedAdvantageMap(this, "tool", rollTools, config.midiOptions ?? {});
+
+    // Skip building advantage map for external module rolls - they already computed advantage
+    const preComputedToolAdvantageMap: Map<string, PreComputedAdvantage> = isExternalModuleRoll
+      ? new Map() // External modules handle their own advantage - don't recompute
+      : hasPassedToolAdvantage && passedToolAdvantageMap
+        ? passedToolAdvantageMap
+        : await buildPreComputedAdvantageMap(this, "tool", rollTools, config.midiOptions ?? {});
 
     // Setup dialog with MidiRollChoiceDialog helper
     let userExplicitChoice: string | undefined;
@@ -2393,8 +2410,12 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
         const chosenTool = configData.tool ?? toolId;
         const chosenAdvantage = preComputedToolAdvantageMap.get(chosenTool!);
         if (chosenAdvantage) {
-          configData.advantage = chosenAdvantage.hasAdvantage;
-          configData.disadvantage = chosenAdvantage.hasDisadvantage;
+          // Only override advantage/disadvantage if not pre-computed from external module
+          // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
+          if (!hasPreComputedAdvantage) {
+            configData.advantage = chosenAdvantage.hasAdvantage;
+            configData.disadvantage = chosenAdvantage.hasDisadvantage;
+          }
           if (chosenAdvantage.tracker) {
             toolModifiers = applyRollModifiers(chosenAdvantage.tracker, configData, dialogData);
           }
@@ -2602,149 +2623,6 @@ export function processTraits(actor: Actor.Implementation) {
   } finally {
   }
 }
-export function migrateTraits(actor: Actor.Implementation) {
-  try {
-    // @ts-expect-error no dnd5e-types
-    if (!actor.system.traits) return;
-    const baseData = actor.toObject(true);
-    for (let traitId of ["di", "dr", "dv", "sdi", "sdr", "sdv"]) {
-      // @ts-expect-error no dnd5e-types
-      let trait = actor.system.traits[traitId];
-      let baseTrait = baseData.system.traits[traitId];
-      if (!trait) continue;
-      if (!trait.value) trait.value = new Set();
-
-      if (trait.bypasses instanceof Set) {
-        for (let traitString of baseTrait.value) {
-          switch (traitString) {
-            case "silver":
-              trait.bypasses.add("sil");
-              addPhysicalDamages(trait.value);
-              trait.value.delete("silver");
-              log(`${actor.name} mapping "Silver" to ${trait.value}, ${trait.bypasses}`)
-              break
-            case "adamant":
-              trait.bypasses.add("ada");
-              addPhysicalDamages(trait.value);
-              trait.value.delete("adamant");
-              log(`${actor.name} mapping "Adamantine" to ${trait.value}, ${trait.bypasses}`)
-              break
-            case "physical":
-              addPhysicalDamages(trait.value);
-              trait.value.delete("physical");
-              log(`${actor.name} mapping "Physical" to ${trait.value}, ${trait.bypasses}`)
-              break;
-            case "nonmagic":
-              addPhysicalDamages(trait.value);
-              trait.bypasses.add("mgc");
-              trait.value.delete("nonmagic");
-              log(`${actor.name} mapping "nongamic" to ${trait.custom}`)
-              break;
-            case "spell":
-              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.spell-damage") ?? "Spell Damage");
-              trait.value.delete("spell");
-              log(`${actor.name} mapping "spell" to ${trait.custom}`)
-              break
-            case "power":
-              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.power-damage") ?? "Power Damage");
-              trait.value.delete("power");
-              log(`${actor.name} mapping "power" to ${trait.custom}`)
-              break
-            case "magic":
-              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.Magical") ?? "Magical Damage");
-              trait.value.delete("magic");
-              log(`${actor.name} mapping "magic" to ${trait.custom}`)
-              break
-            case "healing":
-              trait.custom = addCustomTrait(trait.custom, GameSystemConfig.healingTypes.healing.label);
-              trait.value.delete("healing");
-              log(`${actor.name} mapping "healing" to ${trait.custom}`)
-              break
-            case "temphp":
-              trait.custom = addCustomTrait(trait.custom, GameSystemConfig.healingTypes.temphp.label);
-              trait.value.delete("temphp");
-              log(`${actor.name} mapping "temphp" to ${trait.custom}`)
-              break
-            default:
-              trait.value.add(traitString);
-          }
-        }
-      } else {
-        for (let traitString of baseTrait.value) {
-          switch (traitString) {
-            case "silver":
-              if (!trait.bypasses.includes("sil")) trait.bypasses.push("sil");
-              addPhysicalDamages(trait.value);
-              trait.value = removeTraitValue(trait.value, "silver");
-              log(`${actor.name} mapping "Silver" to ${trait.value}, ${trait.bypasses}`)
-              break
-            case "adamant":
-              if (!trait.bypasses.includes("ada")) trait.bypasses.push("ada");
-              addPhysicalDamages(trait.value);
-              trait.value = removeTraitValue(trait.value, "adamant");
-              log(`${actor.name} mapping "Adamantine" to ${trait.value}, ${trait.bypasses}`)
-              break
-            case "physical":
-              addPhysicalDamages(trait.value);
-              trait.value = removeTraitValue(trait.value, "physical");
-              log(`${actor.name} mapping "Physical" to ${trait.value}, ${trait.bypasses}`)
-              break;
-            case "nonmagic":
-              addPhysicalDamages(trait.value);
-              if (!trait.bypasses.includes("mgc")) trait.bypasses.push("mgc");
-              trait.value = removeTraitValue(trait.value, "nonmagic");
-              log(`${actor.name} mapping "nongamic" to ${trait.custom}`)
-              break;
-            case "spell":
-              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.spell-damage") ?? "Spell Damage");
-              trait.value = removeTraitValue(trait.value, "spell");
-              log(`${actor.name} mapping "spell" to ${trait.custom}`)
-              break
-            case "power":
-              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.power-damage") ?? "Power Damage");
-              trait.value = removeTraitValue(trait.value, "power");
-              log(`${actor.name} mapping "power" to ${trait.custom}`)
-              break
-            case "magic":
-              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.Magical") ?? "Magical Damage");
-              trait.value = removeTraitValue(trait.value, "magic");
-              log(`${actor.name} mapping "magic" to ${trait.custom}`)
-              break
-            case "healing":
-              trait.custom = addCustomTrait(trait.custom, GameSystemConfig.healingTypes.healing.label);
-              trait.value = removeTraitValue(trait.value, "healing");
-              log(`${actor.name} mapping "healing" to ${trait.custom}`)
-              break
-            case "temphp":
-              trait.custom = addCustomTrait(trait.custom, GameSystemConfig.healingTypes.temphp.label);
-              trait.value = removeTraitValue(trait.value, "temphp");
-              log(`${actor.name} mapping "temphp" to ${trait.custom}`)
-              break
-            default:
-              trait.value.push(traitString);
-          }
-        }
-      }
-    }
-
-  } catch (err) {
-    const message = `midi-qol | migrateTraits | error for ${actor?.name}`;
-    console.warn(message, this, err);
-    TroubleShooter.recordError(err, message);
-  } finally {
-  }
-}
-
-function removeTraitValue(traitValue: string[] | Set<string>, toRemove: string): string[] | Set<string> {
-  if (traitValue instanceof Set)
-    traitValue.delete(toRemove);
-  else {
-    const position = traitValue.indexOf(toRemove);
-    if (position !== -1) return traitValue.splice(position, 1);
-  }
-  return traitValue;
-}
-
 function addPhysicalDamages(traitValue: string[] | Set<string>) {
   let physicalDamageTypes;
   physicalDamageTypes = Object.keys(GameSystemConfig.damageTypes).filter(dt => GameSystemConfig.damageTypes[dt].isPhysical);
@@ -2752,16 +2630,6 @@ function addPhysicalDamages(traitValue: string[] | Set<string>) {
     if (traitValue instanceof Set) traitValue.add(dt);
     else if (!traitValue.includes(dt)) traitValue.push(dt);
   }
-}
-
-function addCustomTrait(customTraits: string, customTrait: string): string {
-  if (customTraits.length === 0) {
-    return customTrait;
-  }
-  const traitList = customTraits.split(";").map(s => s.trim());
-  if (traitList.includes(customTrait)) return customTraits;
-  traitList.push(customTrait);
-  return traitList.join("; ");
 }
 
 function actorGetRollData(this: Actor.Implementation, wrapped, ...args) {

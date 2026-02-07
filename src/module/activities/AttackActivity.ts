@@ -1,8 +1,7 @@
 import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, log, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { unTimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
-import { computeRollModifiers, applyRollModifiers, RollModifierFlags } from "../patching.js";
-import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags } from "../lib/RollModifierTracker.js";
+import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags } from "../lib/RollModifierTracker.js";
 import { MidiOptions } from "../utils.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
 import { addAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward } from "../utils.js";
@@ -68,32 +67,20 @@ let defineMidiAttackSheetClass = (baseClass: any) => {
         ui.notifications?.warn("Please update other activity. otherActivityUuid is deprecated");
         activity.otherActivityUuid = undefined;
       }
-      let indexOffset = 0;
-      if (activity.damage?.parts) {
-        const isCantrip = activity.item.type === "spell" && activity.item.system.level === 0;
-        const scalingOptions = [
-          { value: "", label: i18n("DND5E.DAMAGE.Scaling.None") },
-          //@ts-expect-error
-          ...Object.entries(GameSystemConfig.damageScalingModes).map(([value, config]) => ({ value, label: isCantrip ? config.labelCantrip : config.label }))
-        ];
-        const types = Object.entries(GameSystemConfig.healingTypes).concat(Object.entries(GameSystemConfig.damageTypes));
-        context.damageParts = activity.damage.parts.map((data, index) => {
-          if (data.base) indexOffset--;
-          const part = {
-            data,
-            fields: this.activity.schema.fields.damage.fields.parts.element.fields,
-            prefix: `damage.parts.${index + indexOffset}.`,
-            source: context.source.damage.parts[index + indexOffset] ?? data,
-            canScale: this.activity.canScaleDamage,
-            scalingOptions,
-            typeOptions: types.map(([value, config]) => ({
-              value, label: config.label, selected: data.types.has(value)
-            }))
-          };
-          // @ts-expect-error no dnd5e-types
-          if (foundry.utils.isNewerVersion(game.system.version, "5.0.2")) part.locked = data.locked || (index === undefined);
-          return this._prepareDamagePartContext(context, part);
-        })
+      // Add healing types to the existing damageParts typeOptions (dnd5e only includes damageTypes)
+      if (context.damageParts?.length) {
+        const healingTypes = Object.entries(GameSystemConfig.healingTypes).map(([value, config]) => ({
+          value, label: config.label, selected: false
+        }));
+        for (const part of context.damageParts) {
+          // Mark existing healing type selections (types may be a Set or undefined)
+          const typesSet = part.data?.types instanceof Set ? part.data.types : new Set();
+          for (const healingType of healingTypes) {
+            healingType.selected = typesSet.has(healingType.value);
+          }
+          // Add healing types to the end of typeOptions
+          part.typeOptions = [...(part.typeOptions ?? []), ...healingTypes.map(h => ({ ...h }))];
+        }
       }
       context.ConfirmTargetOptions = Object.entries(confirmTargetOptions).map(([value, label]) => ({ value, label }));
 

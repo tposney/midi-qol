@@ -29,6 +29,7 @@ When there is a choice of rolls the roll tooltip (hover over the roll total on t
 **Bug Fixes**
 * Advantage Attribution now follows the same visibility rules as the attack roll formula. If players are not allowed to see the formula, they can't see the attack advantage attribution.
 * Fix for some errors in the dnd5e damage drawer that had crept it.
+* Fix for deleting the wrong damage part when deleting a damage part from an attack activity.
 
 **Merged Contributions**
 * Allow easy logging of sandbox evaluation data via `MidiQOL.logEvaluationData = true` (MR !396, thanks @thatlonelybugbear).
@@ -55,6 +56,7 @@ When there is a choice of rolls the roll tooltip (hover over the roll total on t
   - if you want to make changes to the tracker that will be respected do so in the preAttackConfig Macro/Hooks.
   - I added a preAttackConfig Hook call as well as macro calls for the above.
 * **Breaking** MidiQOL exports changed, the template targeting exports are now **only** selectTargetsFromTemplates (update game.user.targets for targets inside any of the array of templates) and computeTargetsFromTemplates, returns an array of tokens inside any of the passed templates.
+* **Breaking** I have removed workflow.saveRolls, since it's not used anywhere and not all that useful. If someone was using it and can't find an easier way let me know and I'll look at putting it back.
 
 ### 13.0.42
 * Just remove some spurious debug left in the code.

@@ -3452,7 +3452,8 @@ export class Workflow {
     let selfTarget = this.token ?? getOrCreateTokenForActor(this.actor);
     if (!this.hitTargetsDisplayed && this.targets?.size > 0 && chatMessage && (this.activity.effects?.length || this.otherActivity?.effects?.length)) {
       this.hitDisplayData = {};
-      const theTargets = (this.effectTargets && (this.effectTargets?.size > 0)) ? this.effectTargets : this.targets;
+      // Always show all targets in the display, not just effectTargets (failed saves)
+      const theTargets = this.targets;
       for (let targetToken of theTargets) {
         if (!targetToken.actor) continue;
         const targetTokenUuid = targetToken.actor?.uuid;
@@ -6112,6 +6113,11 @@ return {
     simulate: boolean,
     isMagicSave: boolean
   ): Promise<Roll[] | Roll | null> {
+    // Validate abilities for save/check types
+    if ((rollType === "save" || rollType === "check") && rollAbilities.length === 0) {
+      console.warn(`midi-qol | createStandardSaveRoll called with rollType=${rollType} but no abilities`);
+      return Promise.resolve(null);
+    }
     const rollAbility = rollAbilities[0];
     const rollSkill = rollSkills[0];
     const rollTool = rollTools[0];
@@ -6584,6 +6590,13 @@ return {
     let promises: Promise<Roll[] | Roll | null>[] = [];
     const { rollAction, rollType, rollAbilities, rollSkills, rollTools, flagRollType } = this.determineRollTypeAndAction();
     if (!rollAction) return; // No save or check configured on activity
+
+    // Validate that abilities are set for save/check types
+    if ((rollType === "save" || rollType === "check") && rollAbilities.length === 0) {
+      const activityType = this.saveActivity?.save ? "save" : "check";
+      console.warn(`midi-qol | ${this.item.name} ${this.saveActivity?.name} has a ${activityType} activity but no ability configured`);
+      return;
+    }
 
     const { flags: moduleFlags, requests: moduleRequests } = this.computeModuleIntegrationSettings(simulate, flagRollType ?? "");
     const { playerMonksTB, playerFlashTB, playerEpicRolls } = moduleFlags;
