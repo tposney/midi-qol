@@ -888,11 +888,11 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     const passedAdvantageMap = config.midiOptions?.advantageByChoice as Map<string, PreComputedAdvantage> | undefined;
     const hasPassedAdvantage = passedAdvantageMap?.size &&
       Array.from(passedAdvantageMap.values()).some(v => v.tracker instanceof RollModifierTracker);
-    // Pass isConcentration flag so concentration-specific advantage flags are checked
-    const midiOptionsWithConcentration = { ...config.midiOptions, isConcentration: config.isConcentration };
+    // Concentration saves use the "concentration" roll type which composes with "save"
+    const effectiveRollType = (rollType === "save" && config.hookNames?.includes("concentration")) ? "concentration" : rollType;
     const preComputedAdvantageMap: Map<string, PreComputedAdvantage> = hasPassedAdvantage && passedAdvantageMap
       ? passedAdvantageMap
-      : await buildPreComputedAdvantageMap(this, rollType, rollAbilities, midiOptionsWithConcentration);
+      : await buildPreComputedAdvantageMap(this, effectiveRollType, rollAbilities, config.midiOptions ?? {});
 
     // Setup dialog with MidiRollChoiceDialog helper
     let userExplicitChoice: string | undefined;
@@ -1225,15 +1225,6 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
     ])
   };
 
-  // Add concentration-specific flags for concentration saves
-  if (options.isConcentration) {
-    abilityFlags.advantageFlags.push("advantage.concentration");
-    abilityFlags.disadvantageFlags.push("disadvantage.concentration");
-    abilityFlags.noAdvantageFlags?.push("noAdvantage.concentration");
-    abilityFlags.noDisadvantageFlags?.push("noDisadvantage.concentration");
-    abilityFlags.systemRollModeFields?.push("attributes.concentration.roll.mode");
-  }
-
   // Add source actor grants flags for saves and checks
   if (rollType === "save" || rollType === "check") {
     abilityFlags.sourceAdvantageFlags = ["grants.advantage.all", `grants.advantage.${rollType}.all`, `grants.advantage.${rollType}.${abilityId}`];
@@ -1331,6 +1322,42 @@ const rollTypeHandlers: Record<string, RollTypeHandler> = {
         flags.minFlags.push("min.ability.check.all", `min.ability.check.${abilityId}`);
       }
       return flags;
+    }
+  },
+  // Concentration saves are ability saves (default CON) with additional concentration-specific flags
+  concentration: {
+    computeAdvantage: async (actor, id, options) => {
+      // Use actor's configured concentration ability, falling back to passed id or default
+      // @ts-expect-error .attributes.concentration
+      const abilityId = actor.system?.attributes?.concentration?.ability || id || GameSystemConfig.defaultAbilities?.concentration || "con";
+      // Get the ability save advantage
+      const saveResult = await computeAbilityAdvantage(actor, "save", abilityId, options);
+
+      // Add concentration-specific flags to the same tracker
+      const concentrationFlags: AdvantageFlags = {
+        advantageFlags: ["advantage.concentration"],
+        disadvantageFlags: ["disadvantage.concentration"],
+        noAdvantageFlags: ["noAdvantage.concentration"],
+        noDisadvantageFlags: ["noDisadvantage.concentration"],
+        systemRollModeFields: ["attributes.concentration.roll.mode"]
+      };
+      await computeAdvantageFlags(actor, concentrationFlags, options, saveResult.tracker);
+
+      return saveResult.tracker;
+    },
+    getModifierFlags: (actor, id) => {
+      // Use actor's configured concentration ability, falling back to passed id or default
+      // @ts-expect-error .attributes.concentration
+      const abilityId = actor.system?.attributes?.concentration?.ability || id || GameSystemConfig.defaultAbilities?.concentration || "con";
+      // Start with ability save modifiers
+      const saveModifiers = rollTypeHandlers.save.getModifierFlags(actor, abilityId);
+      // Add concentration-specific modifiers
+      return {
+        failFlags: [...saveModifiers.failFlags, "fail.concentration"],
+        successFlags: [...saveModifiers.successFlags, "success.concentration"],
+        maxFlags: [...saveModifiers.maxFlags, "max.concentration"],
+        minFlags: [...saveModifiers.minFlags, "min.concentration"]
+      };
     }
   }
 };

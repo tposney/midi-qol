@@ -1,4 +1,4 @@
-import { i18n, GameSystemConfig } from "../../midi-qol.js";
+import { i18n, i18nFormat, GameSystemConfig } from "../../midi-qol.js";
 import { RollModifierTracker } from "../lib/RollModifierTracker.js";
 import { getToolLabel } from "../utils.js";
 
@@ -120,8 +120,7 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
         // Tool change: update config.tool and window title
         this.config.tool = newValue;
         const toolLabel = getToolLabel(newValue);
-        //@ts-expect-error i18n format
-        const flavor = game.i18n.format("DND5E.ToolPromptTitle", { tool: toolLabel });
+        const flavor = i18nFormat("DND5E.ToolPromptTitle", { tool: toolLabel });
         foundry.utils.setProperty(this.message, "data.flavor", flavor);
         (this as any)._updateFrame({ window: { title: flavor } });
       } else if (choiceType === "skill") {
@@ -129,16 +128,14 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
         this.config.skill = newValue;
         const skillLabel = GameSystemConfig.skills[newValue]?.label ?? "";
         const abilityLabel = GameSystemConfig.abilities[this.config.ability]?.label ?? "";
-        //@ts-expect-error i18n format
-        const flavor = game.i18n.format("DND5E.SkillPromptTitle", { skill: skillLabel, ability: abilityLabel });
+        const flavor = i18nFormat("DND5E.SkillPromptTitle", { skill: skillLabel, ability: abilityLabel });
         foundry.utils.setProperty(this.message, "data.flavor", flavor);
         (this as any)._updateFrame({ window: { title: flavor } });
       } else {
         // Ability change (save): update config.ability and window title
         this.config.ability = newValue;
         const abilityLabel = GameSystemConfig.abilities[newValue]?.label ?? "";
-        //@ts-expect-error i18n format
-        const flavor = game.i18n.format("DND5E.SavePromptTitle", { ability: abilityLabel });
+        const flavor = i18nFormat("DND5E.SavePromptTitle", { ability: abilityLabel });
         foundry.utils.setProperty(this.message, "data.flavor", flavor);
         (this as any)._updateFrame({ window: { title: flavor } });
       }

@@ -1112,6 +1112,25 @@ Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
     if (configSettings.saveDROrder === "SaveDrDR" && options?.ignore !== true) {
       if (!applyDamageReduction(actor, damages, options)) return false;
     }
+    // Recalculate damages.amount from modified damage.value entries
+    // This is needed because dnd5e calculates the amount before calling this hook,
+    // so modifications to damage.value (saves, custom resistance/immunity, etc.) aren't reflected in the total
+    //@ts-expect-error
+    damages.amount = 0;
+    //@ts-expect-error
+    damages.temp = 0;
+    for (let damage of damages) {
+      if (damage.type === "temphp") {
+        //@ts-expect-error
+        damages.temp += damage.value;
+      } else {
+        //@ts-expect-error
+        damages.amount += damage.value;
+      }
+    }
+    //@ts-expect-error
+    damages.amount = damages.amount > 0 ? Math.floor(damages.amount) : Math.ceil(damages.amount);
+
     // correct for possibly excessive damage modification - due to midi dm happening before the per type dm
     //@ts-expect-error
     if (damages.amount < 0) {
@@ -1134,26 +1153,51 @@ Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
 
 function applySavesToDamage(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {
   const mo = options.midi;
+  console.error("applySavesToDamage called", {
+    actor: actor.name,
+    mo_saved: mo?.saved,
+    mo_saveMultiplier: mo?.saveMultiplier,
+    mo_superSaver: mo?.superSaver,
+    mo_semiSuperSaver: mo?.semiSuperSaver,
+    damageTypes: damages.map(d => d.type),
+    ignore: options.ignore
+  });
   for (let damage of damages) {
     if (options.ignore === true) continue;
-    if (mo?.superSaver && (options?.ignore?.superSaver === true || options?.ignore?.superSaver?.has(damage.type))) continue;
-    if (mo?.semiSuperSaver && (options?.ignore?.semiSuperSaver === true || options?.ignore?.semiSuperSaver?.has(damage.type))) continue;
-    if (mo?.saved && (options?.ignore?.saved === true || options?.ignore?.saved?.has(damage.type))) continue;
-    if (mo?.superSaver) {
-      mo.saveMultiplier = 0.0;
+    // Skip DR/no-type damage - these should not be modified by saves
+    if (["none", "midi-none"].includes(damage.type)) continue;
+
+    // Check for "all" as well since we use consolidated icons for saves
+    const ignoringSuperSaver = mo?.superSaver && (options?.ignore?.superSaver === true || options?.ignore?.superSaver?.has?.(damage.type) || options?.ignore?.superSaver?.has?.("all"));
+    const ignoringSemiSuperSaver = mo?.semiSuperSaver && (options?.ignore?.semiSuperSaver === true || options?.ignore?.semiSuperSaver?.has?.(damage.type) || options?.ignore?.semiSuperSaver?.has?.("all"));
+    const ignoringSaved = mo?.saved && (options?.ignore?.saved === true || options?.ignore?.saved?.has?.(damage.type) || options?.ignore?.saved?.has?.("all"));
+
+    // Set active flags independently so all applicable icons are shown
+    // Super saver: always show if actor has super saver trait (affects failed save damage)
+    if (mo?.superSaver && !ignoringSuperSaver) {
       foundry.utils.setProperty(damage, "active.superSaver", true);
-    } else if (mo?.semiSuperSaver && (mo.saveMultiplier ?? 1) !== 1) {
+    }
+    // Semi-super saver: show if actor has it and saved with a multiplier
+    if (mo?.semiSuperSaver && !ignoringSemiSuperSaver && (mo.saveMultiplier ?? 1) !== 1) {
       foundry.utils.setProperty(damage, "active.semiSuperSaver", true);
-    } else if (mo?.saved && (mo.saveMultiplier ?? 1) !== 1) {
+    }
+    // Saved: show if target saved with a multiplier (even if also has super/semi-super saver)
+    if (mo?.saved && !ignoringSaved && (mo.saveMultiplier ?? 1) !== 1) {
       foundry.utils.setProperty(damage, "active.saved", true);
     }
-    if (mo?.saved) {
-      damage.value = damage.value * (mo?.saveMultiplier ?? 1);
-      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * (mo?.saveMultiplier ?? 1));
-    } else if (mo?.superSaver) {
+
+    // Calculate damage based on save status and traits
+    if (mo?.saved && !ignoringSaved) {
+      // Target saved - apply save multiplier (0 for super saver, 0.5 for normal)
+      const multiplier = ignoringSuperSaver ? configSettings.defaultSaveMultiplier : (mo?.superSaver ? 0 : (mo?.saveMultiplier ?? 1));
+      damage.value = damage.value * multiplier;
+      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * multiplier);
+    } else if (mo?.superSaver && !ignoringSuperSaver) {
+      // Super saver didn't save - apply defaultSaveMultiplier (typically 1/2)
       damage.value = damage.value * configSettings.defaultSaveMultiplier * (damage.active?.multiplier ?? 1);
       foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * configSettings.defaultSaveMultiplier);
     }
+    // else: no save reduction applies (normal target who didn't save, or all modifiers ignored)
   }
 }
 function applyDamageReduction(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions): boolean {
@@ -1342,51 +1386,10 @@ Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
 });
 
 Hooks.on("dnd5e.preRollConcentration", (rollConfig, dialogConfig, messageConfig) => {
-  if (!rollConfig.subject) return true;
-  const actor = rollConfig.subject as Actor.Implementation;
+  // Advantage/disadvantage for concentration saves is now handled by rollTypeHandlers["concentration"]
+  // in patching.ts, which composes with the save handler and adds concentration-specific flags.
+  // This hook only needs to handle the noConcentrationCheck workflow option.
   if (rollConfig.workflowOptions?.noConcentrationCheck) return false;
-
-  const concAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.advantage.concentration`);
-  const concDisAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.disadvantage.concentration`);
-  const concNoAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.noAdvantage.concentration`);
-  const concNoDisAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.noDisadvantage.concentration`);
-  const noAdvAllFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.noAdvantage.all`);
-  const noDisAdvAllFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.noDisadvantage.all`);
-
-  if (concAdvFlag || concDisAdvFlag || concNoAdvFlag || concNoDisAdvFlag || noAdvAllFlag || noDisAdvAllFlag) {
-    const conditionData = createConditionData({ workflow: undefined, target: undefined, actor });
-
-    let advantageCount = (concAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.advantage.concentration`, conditionData)) ? 1 : 0;
-    let disadvantageCount = (concDisAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.disadvantage.concentration`, conditionData)) ? 1 : 0;
-
-    // Check noAdvantage/noDisadvantage flags
-    const advantageSuppressed = (noAdvAllFlag && evalAllConditions(actor, `flags.${MODULE_ID}.noAdvantage.all`, conditionData))
-      || (concNoAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.noAdvantage.concentration`, conditionData));
-    const disadvantageSuppressed = (noDisAdvAllFlag && evalAllConditions(actor, `flags.${MODULE_ID}.noDisadvantage.all`, conditionData))
-      || (concNoDisAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.noDisadvantage.concentration`, conditionData));
-
-    // Combine midi-qol flags with dnd5e's native roll mode
-    const { advantage, disadvantage } = globalThis.dnd5e.dataModels.fields.AdvantageModeField.combineFields(
-      actor.system,
-      (advantageSuppressed || disadvantageSuppressed) ? [] : ["attributes.concentration.roll.mode"],
-      {
-        advantages: { count: advantageCount, suppressed: advantageSuppressed },
-        disadvantages: { count: disadvantageCount, suppressed: disadvantageSuppressed }
-      }
-    );
-
-    // Set advantage/disadvantage on the rollConfig directly (like death saves)
-    // This is how dnd5e's D20Roll.build expects to receive advantage/disadvantage
-    rollConfig.advantage = advantageSuppressed ? false : advantage;
-    rollConfig.disadvantage = disadvantageSuppressed ? false : disadvantage;
-
-    // Also update the roll options for compatibility
-    if (rollConfig.rolls?.[0]?.options) {
-      rollConfig.rolls[0].options.advantage = rollConfig.advantage;
-      rollConfig.rolls[0].options.disadvantage = rollConfig.disadvantage;
-    }
-  }
-
   return true;
 })
 

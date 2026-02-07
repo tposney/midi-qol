@@ -2337,7 +2337,6 @@ export type MidiOptions = {
   fumble?: boolean | number;
   recomputeAdvantage?: boolean;
   ignoreUserTargets?: boolean;
-  isConcentration?: boolean; // Set by dnd5e for concentration saves
   isConcentrationCheck?: boolean;
   isCritical?: boolean;
   isDummy?: boolean;

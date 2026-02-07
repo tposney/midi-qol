@@ -971,8 +971,8 @@ function registerFlagLocalization(flagPath: string, templateKey: string, label: 
   const lm = globalThis.DAE?.localizationMap;
   if (!lm || !game.i18n) return;
   lm[flagPath] = {
-    name: game.i18n.format(`midi-qol.flagTemplate.${templateKey}.name`, { label }),
-    description: game.i18n.format(`midi-qol.flagTemplate.${templateKey}.description`, { label })
+    name: i18nFormat(`midi-qol.flagTemplate.${templateKey}.name`, { label }),
+    description: i18nFormat(`midi-qol.flagTemplate.${templateKey}.description`, { label })
   };
 }
 

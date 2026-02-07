@@ -1276,7 +1276,6 @@ export type RollProcessConfig = {
   attackMode?: string;
   rollOptions?: WorkflowRollOptions
   isCritical?: boolean;
-  isConcentration?: boolean; // Set by dnd5e for concentration saves
   workflowOptions?: WorkflowOptions
   skill?: string;
   tool?: string;

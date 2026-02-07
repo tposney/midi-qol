@@ -3,7 +3,7 @@
  */
 
 import { RollDialogConfig, RollProcessConfig } from "../../globals.js";
-import { GameSystemConfig, i18n } from "../../midi-qol.js";
+import { GameSystemConfig, i18n, i18nFormat } from "../../midi-qol.js";
 import { createConditionData, evalAllConditions, evalAllConditionsAsync, tokenForActor, MidiOptions } from "../utils.js";
 
 /** Attribution types for roll modifier tracking */
@@ -114,7 +114,7 @@ export function getFlagDisplayName(flag: string): string {
     const prefixResult = game.i18n.localize(prefixKey);
     if (prefixResult !== prefixKey) {
       const label = resolveKeyLabel(lastElement);
-      return game.i18n.format(prefixKey, { label });
+      return i18nFormat(prefixKey, { label });
     }
   }
 
