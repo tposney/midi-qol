@@ -138,103 +138,60 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
       return options;
     }
   }
+  // Flag categories for active damage modifiers
+  static SET_FLAGS = ["modification", "resistance", "vulnerability", "immunity",
+    "absorption", "spell", "magic", "nonmagic", "DR", "uncannyDodge"];
+  static SAVE_FLAGS = ["saved", "superSaver", "semiSuperSaver"]; // Use "all" type for consolidated icon
+  static BOOL_FLAGS = ["threshold"];
+
   calculateDamage(actor: Actor.Implementation, options: DamageApplicationOptions) {
-    // Call actor.calculateDamage once and extract both total and active flags from same calculation
-    // This ensures the displayed total correctly reflects any ignore flags (e.g., ignored saves)
-    // Note: Save multiplier is applied in dnd5e.preCalculateDamage/calculateDamage hooks via applySavesToDamage()
-    // The ordering depends on configSettings.saveDROrder
-    console.error("DamageApplicationElementMidi.calculateDamage", {
-      actor: actor.name,
-      inputDamages: this.damages,
-      options_multiplier: options.multiplier,
-      options_midi: options.midi,
-      options_midi_saved: options.midi?.saved,
-      options_midi_saveMultiplier: options.midi?.saveMultiplier,
-      options_ignore: options.ignore
-    });
     // @ts-expect-error no dnd5e-types
     const damages = actor.calculateDamage(this.damages, options) as DamageDescription[];
     // @ts-expect-error amount and temp are on the damages array
-    let { amount: total, temp } = damages;
-    console.error("DamageApplicationElementMidi.calculateDamage result", {
-      total,
-      temp,
-      damages: damages.map(d => ({ type: d.type, value: d.value, active: d.active }))
-    });
-    temp = Math.floor(Math.max(0, temp ?? 0));
+    const { amount: total, temp: rawTemp } = damages;
+    const temp = Math.floor(Math.max(0, rawTemp ?? 0));
 
-    // Build active object with both dnd5e standard sets and midi custom sets
-    const active: Record<string, Set<string> | boolean> = {
-      // dnd5e standard
-      modification: new Set(),
-      resistance: new Set(),
-      vulnerability: new Set(),
-      immunity: new Set(),
-      threshold: false,
-      // midi custom
-      absorption: new Set(),
-      saved: new Set(),
-      superSaver: new Set(),
-      semiSuperSaver: new Set(),
-      spell: new Set(),
-      magic: new Set(),
-      uncannyDodge: new Set(),
-      nonmagic: new Set(),
-      DR: new Set()
-    };
+    // Build active object from flag categories
+    const active: Record<string, Set<string> | boolean> = {};
+    for (const flag of [...DamageApplicationElementMidi.SET_FLAGS, ...DamageApplicationElementMidi.SAVE_FLAGS]) {
+      active[flag] = new Set();
+    }
+    for (const flag of DamageApplicationElementMidi.BOOL_FLAGS) {
+      active[flag] = false;
+    }
 
     try {
       for (const damage of damages) {
-        // Skip DR/no-type damage for save-related flags - they shouldn't show icons
         const isDRType = ["none", "midi-none"].includes(damage.type);
 
-        // dnd5e standard active flags
-        if (damage.active?.modification) (active.modification as Set<string>).add(damage.type);
-        if (damage.active?.resistance) (active.resistance as Set<string>).add(damage.type);
-        if (damage.active?.vulnerability) (active.vulnerability as Set<string>).add(damage.type);
-        if (damage.active?.immunity) (active.immunity as Set<string>).add(damage.type);
-        if (damage.active?.threshold) active.threshold = true;
-        // midi custom active flags
-        if (damage.active?.absorption) (active.absorption as Set<string>).add(damage.type);
-        if (damage.active?.spell) (active.spell as Set<string>).add(damage.type);
-        if (damage.active?.magic) (active.magic as Set<string>).add(damage.type);
-        if (damage.active?.nonmagic) (active.nonmagic as Set<string>).add(damage.type);
-        if (damage.active?.DR) (active.DR as Set<string>).add(damage.type);
-        // Save-related flags: use "all" for a single consolidated icon, skip DR types
-        if (!isDRType) {
-          if (damage.active?.superSaver) (active.superSaver as Set<string>).add("all");
-          if (damage.active?.semiSuperSaver) (active.semiSuperSaver as Set<string>).add("all");
-          if (damage.active?.saved) (active.saved as Set<string>).add("all");
+        // Set flags that use actual damage type
+        for (const flag of DamageApplicationElementMidi.SET_FLAGS) {
+          if (damage.active?.[flag]) (active[flag] as Set<string>).add(damage.type);
         }
-        if (damage.active?.uncannyDodge) (active.uncannyDodge as Set<string>).add(damage.type);
+        // Save flags use "all" for consolidated icon, skip DR types
+        if (!isDRType) {
+          for (const flag of DamageApplicationElementMidi.SAVE_FLAGS) {
+            if (damage.active?.[flag]) (active[flag] as Set<string>).add("all");
+          }
+        }
+        // Boolean flags
+        for (const flag of DamageApplicationElementMidi.BOOL_FLAGS) {
+          if (damage.active?.[flag]) active[flag] = true;
+        }
       }
 
       // Union with ignore sets to preserve button display for ignored items
-      const union = (t: string) => {
-        if (foundry.utils.getType(options.ignore?.[t]) === "Set") {
-          active[t] = (active[t] as Set<string>).union(options.ignore?.[t]);
+      for (const flag of [...DamageApplicationElementMidi.SET_FLAGS, ...DamageApplicationElementMidi.SAVE_FLAGS]) {
+        if (foundry.utils.getType(options.ignore?.[flag]) === "Set") {
+          active[flag] = (active[flag] as Set<string>).union(options.ignore?.[flag]);
         }
-      };
-      // dnd5e standard
-      union("modification");
-      union("resistance");
-      union("vulnerability");
-      union("immunity");
+      }
+      // Special cases
       if (options.downgrade instanceof Set) {
         active.immunity = (active.immunity as Set<string>).union(options.downgrade);
       }
       // @ts-expect-error threshold exists on dnd5e's ignore type
       active.threshold ||= options.ignore?.threshold ?? false;
-      // midi custom
-      union("absorption");
-      union("spell");
-      union("magic");
-      union("nonmagic");
-      union("saved");
-      union("superSaver");
-      union("semiSuperSaver");
-      union("uncannyDodge");
-      union("DR");
     } catch (err) {
       const message = `midi-qol | calculateDamage failed to calculate damage`;
       console.warn(message, err);

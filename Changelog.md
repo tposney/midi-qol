@@ -16,8 +16,9 @@ This is a fairly substantial update so don't update just before game time. You h
 When there is a choice of rolls the roll tooltip (hover over the roll total on the saves display) will display the roll type that was used.
 * Support for multiple templates. Items that specify multiple templates (meteor storm etc) will now collect targets from each template placed. 
   - Backing out of placing all templates will terminate the template placement and midi will wait until you successfully place all templates.
+  - A token can only be targeted once, no matter how many templates overlap on the token.
   - This has required a significant refactor of the template placement code so there will be bugs.
-* New option, anchor ray/cone templates. If enabled when you use an activity with a ray or cone template (range self) the template will be attached to the edge of your token. You can move the moues to set the direction of the template, but it will always be anchored to the edge of your token.
+* New option, anchor ray/cone templates. If enabled (on the misc tab) when you use an activity with a ray or cone template (range self) the template will be attached to the edge of your token. You can move the mouse to set the direction of the template, but it will always be anchored to the edge of your token.
 * New RAW (2024) invisibility advantage/disadvantage mode that only relies on being able to see the target - cheekily the same as the midi homebrew option.
 * Midi-qol tab property, force config dialog, now overrides the thrown weapon property check.
 * Revived the roll statistics function. Now accessible from the main midi-qol settings panel and tracks a few more things.
@@ -27,6 +28,7 @@ When there is a choice of rolls the roll tooltip (hover over the roll total on t
 
 **Bug Fixes**
 * Advantage Attribution now follows the same visibility rules as the attack roll formula. If players are not allowed to see the formula, they can't see the attack advantage attribution.
+* Fix for some errors in the dnd5e damage drawer that had crept it.
 
 **Merged Contributions**
 * Allow easy logging of sandbox evaluation data via `MidiQOL.logEvaluationData = true` (MR !396, thanks @thatlonelybugbear).
