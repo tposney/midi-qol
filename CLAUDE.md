@@ -130,6 +130,12 @@ Hooks provided by tidy5e:
 - These are temporary debugging aids meant to be removed after the issue is resolved
 - `console.error()` ensures visibility in the browser console without needing to change midi-qol debug settings
 
+### Module Imports
+- **Always import midi-qol functions directly** using ES module imports, NOT via `globalThis.MidiQOL`
+- Example: `import { doSyncRoll } from "../utils.js";` instead of `globalThis.MidiQOL.doSyncRoll(...)`
+- `globalThis.MidiQOL` access is only appropriate in the **test suite** (midi-qol-tests) where direct imports aren't available
+- This ensures proper bundling and avoids runtime lookup issues
+
 ### Documentation Files
 - **Always include a datestamp in the filename** when creating documentation files
 - Format: `DocumentName-YYYY-MM-DD.md` (e.g., `ChatLog-2026-01-06.md`)

@@ -4,7 +4,7 @@ import { log } from "../midi-qol.js";
 import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
-import { concentrationCheckItemDisplayName, midiFlagTypes } from "./Hooks.js";
+import { concentrationCheckItemDisplayName } from "./Hooks.js";
 
 import { OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -875,6 +875,32 @@ export function requestPCActiveDefence(player: User, actor: Actor, saveItemName:
     } catch (err) { returnValue = {} }
     handler(returnValue);
   });
+}
+
+// ==================== Midi Flag Types ====================
+// Maps flag keys to their value types for effect processing in midiCustomEffect
+export var midiFlagTypes: Record<string, string> = {};
+
+export function setupMidiFlagTypes() {
+  let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
+
+  attackTypes.forEach(at => {
+    midiFlagTypes[`flags.midi-qol.DR.${at}`] = "number"
+  });
+  midiFlagTypes["flags.midi-qol.onUseMacroName"] = "string";
+
+  if (game.system?.id === "dnd5e") {
+    midiFlagTypes[`flags.midi-qol.DR.all`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-magical`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-silver`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-adamant`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-physical`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.final`] = "number";
+
+    Object.keys(GameSystemConfig.damageTypes).forEach(dt => {
+      midiFlagTypes[`flags.midi-qol.DR.${dt}`] = "string";
+    })
+  }
 }
 
 export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffect.ChangeData & { effect?: ActiveEffect.Implementation }, current: unknown, delta: unknown, changes: unknown) {
