@@ -599,6 +599,7 @@ declare global {
     checkRule: typeof checkRule;
     computeCoverBonus: typeof utils.computeCoverBonus;
     computeDistance: typeof utils.computeDistance;
+    getDistance: typeof utils.getDistance;
     contestedRoll: typeof utils.contestedRoll;
     displayDSNForRoll: typeof utils.displayDSNForRoll;
     doConcentrationCheck: typeof utils.doConcentrationCheck;
@@ -648,6 +649,7 @@ declare global {
     computeAbilityAdvantage: typeof patching.computeAbilityAdvantage;
     computeCoverBonus: typeof utils.computeCoverBonus;
     computeDistance: typeof utils.computeDistance;
+    getDistance: typeof utils.getDistance;
     computeSkillAdvantage: typeof patching.computeSkillAdvantage;
     computeTargetsFromTemplates: typeof computeTargetsFromTemplates;
     computeToolAdvantage: typeof patching.computeToolAdvantage;
@@ -683,6 +685,7 @@ declare global {
     getTokenPlayerNameForUser: typeof utils.getTokenPlayerNameForUser;
     getTraitMult: typeof utils.getTraitMult;
     getUndoQueue: typeof undo.getUndoQueue,
+    getActorWoundedSemaphore: (actorUuid: string) => foundry.utils.Semaphore,
     getVitalityItem: typeof utils.getVitalityItem,
     getVitalityMax: typeof utils.getVitalityMax,
     getVitalityValue: typeof utils.getVitalityValue,
@@ -716,6 +719,7 @@ declare global {
     MQOnUseOptions: Record<string, string>;
     playerFor: typeof utils.playerFor;
     playerForActor: typeof utils.playerForActor;
+    processWoundedStatus: (actor: Actor.Implementation) => Promise<void>;
     raceOrType: typeof utils.raceOrType;
     reactionDialog: typeof utils.reactionDialog;
     readonly currentConfigSettings: typeof configSettings;

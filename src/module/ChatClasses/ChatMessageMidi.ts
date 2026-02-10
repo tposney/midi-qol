@@ -532,8 +532,11 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     _enrichChatCard(html: HTMLElement) {
-      // @ts-expect-error no dnd5e-types
-      if (!this.flags?.[MODULE_ID]?.messageType) return super._enrichChatCard(html);
+      if (!this.flags?.[MODULE_ID]?.messageType) {
+        this.applyChatVisibility(html);
+        // @ts-expect-error no dnd5e-types
+        return super._enrichChatCard(html);
+      }
       if (debugEnabled > 1) log("Enriching chat card", Date.now(), this.id);
       this.maskAttackRolls(html); // This has to run first to stop errors when ChatMessage5e._enrichDamageTooltip runs
 

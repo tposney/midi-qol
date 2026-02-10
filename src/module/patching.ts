@@ -24,6 +24,17 @@ const NumericTerm = foundry.dice.terms.NumericTerm;
 // Used instead of actor flags to avoid database writes and orphaned flags
 export const skipConcentrationActorUuids = new Set<string>();
 
+// Per-actor semaphores to prevent race conditions in checkWounded
+// Multiple concurrent updateActor hooks can fire for the same actor, causing duplicate status effects
+const actorWoundedSemaphores = new Map<string, foundry.utils.Semaphore>();
+
+export function getActorWoundedSemaphore(actorUuid: string): foundry.utils.Semaphore {
+  if (!actorWoundedSemaphores.has(actorUuid)) {
+    actorWoundedSemaphores.set(actorUuid, new foundry.utils.Semaphore(1));
+  }
+  return actorWoundedSemaphores.get(actorUuid)!;
+}
+
 // ==================== PATCHING ENTRY POINTS ====================
 // These functions are called during module initialization to register libWrapper patches.
 // The helper functions they reference are defined later in this file.
@@ -90,6 +101,9 @@ export function readyPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['dnd5e.CharacterActorSheet'].cls.prototype._filterItems", _filterItems, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.npc['dnd5e.NPCActorSheet'].cls.prototype._filterItems", _filterItems, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.createConcentrationEffectData", createConcentrationEffectData, "WRAPPER");
+  // Register _onUpdate wrapper for wounded/dead status handling
+  // This runs AFTER dnd5e's _onUpdate, checking current state rather than stale update data
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype._onUpdate", actorOnUpdate, "WRAPPER");
   // This controls whether to display the chat message or not
   // dnd5e.damageActor handles picking up concentration item rolls
   // processConcentrationSave handles doing the auto roll for concentration chat messages
@@ -138,6 +152,123 @@ export let actorAbilityRollPatching = () => {
 }
 
 // ==================== END PATCHING ENTRY POINTS ====================
+
+/**
+ * Wrapper for Actor._onUpdate that handles wounded/dead status.
+ * Runs AFTER dnd5e's _onUpdate completes, checking current state.
+ * This is more robust than Hooks.on("updateActor") because:
+ * 1. We run after dnd5e's status handling is complete
+ * 2. We check actual current state, not stale update data
+ * 3. Document lifecycle is more serialized than hook callbacks
+ */
+async function actorOnUpdate(this: Actor.Implementation, wrapped: Function, data: object, options: any, userId: string) {
+  // Check if HP is changing - if so, we need to serialize the entire _onUpdate call
+  // to prevent dnd5e's own status handling from racing with itself
+  const hpUpdate = foundry.utils.getProperty(data, "system.attributes.hp.value");
+  const temphpUpdate = foundry.utils.getProperty(data, "system.attributes.hp.temp");
+  const hpChanging = hpUpdate !== undefined || temphpUpdate !== undefined;
+
+  if (!hpChanging) {
+    // No HP change - just call wrapped normally
+    await wrapped(data, options, userId);
+    return;
+  }
+
+  // HP is changing - serialize the entire _onUpdate call for this actor
+  // This prevents concurrent HP updates from causing race conditions in dnd5e's status handling
+  const semaphore = getActorWoundedSemaphore(this.uuid);
+  await semaphore.add(async () => {
+    // Let dnd5e and base Foundry handle their stuff first (now serialized)
+    await wrapped(data, options, userId);
+
+    // Only active GM processes wounded/dead status changes
+    if (!game.users?.activeGM?.isSelf) return;
+
+    // Skip if vitality update is pending - the updateItem hook will handle it
+    if (!options.midiVitalityUpdatePending) {
+      await processWoundedStatus(this);
+    }
+  });
+}
+
+/**
+ * Process wounded/dead status based on CURRENT actor state.
+ * This function reads the actor's current HP and vitality, not stale update data.
+ *
+ * IMPORTANT: Callers must acquire the actor's semaphore (via getActorWoundedSemaphore)
+ * before calling this function to prevent race conditions.
+ *
+ * Called from actorOnUpdate (for HP changes) and updateItem hook (for vitality changes).
+ */
+export async function processWoundedStatus(actor: Actor.Implementation) {
+  // Read current state - caller is responsible for serialization
+  // @ts-expect-error no dnd5e-types
+  const attributes = actor.system.attributes;
+  if (!attributes?.hp) return;
+
+    // Check for vitality system
+    const vitalityItem = getVitalityItem(actor);
+    const hasVitality = !!vitalityItem;
+
+    // Get current vitality value
+    let currentVitality: number | undefined;
+    if (vitalityItem) {
+      // @ts-expect-error uses exists on items with uses
+      const maxUses = vitalityItem.system.uses?.max ?? 0;
+      // @ts-expect-error uses exists on items with uses
+      const spentUses = vitalityItem.system.uses?.spent ?? 0;
+      currentVitality = maxUses - spentUses;
+    }
+
+    // Determine if actor needs to be dead
+    const deathRequires = configSettings.optionalRules.vitalityDeathRequires || "vitalityOnly";
+    let needsBeaten: boolean;
+    if (hasVitality) {
+      if (deathRequires === "vitalityOnly") {
+        needsBeaten = (currentVitality ?? 0) <= 0;
+      } else {
+        needsBeaten = (currentVitality ?? 0) <= 0 && attributes.hp.value <= 0;
+      }
+    } else {
+      needsBeaten = attributes.hp.value <= 0;
+    }
+
+    // Handle wounded status
+    if (configSettings.addWounded > 0 && configSettings.addWoundedStyle !== "none") {
+      const needsWounded = attributes.hp.pct < configSettings.addWounded && !needsBeaten;
+      const woundedStatus = getWoundedStatus();
+      if (!woundedStatus) {
+        const message = "wounded status condition not set - please update your midi-qol wounded condition on the mechanics tab";
+        TroubleShooter.recordError(new Error(message), "In processWoundedStatus");
+        ui.notifications?.warn(`midi-qol | ${message}`);
+      } else {
+        // toggleStatusEffect handles both cases gracefully - no need to check first
+        await actor.toggleStatusEffect(woundedStatus.id!, {
+          overlay: configSettings.addWoundedStyle === "overlay",
+          active: needsWounded
+        });
+      }
+    }
+
+    // Handle dead status
+    if (hasVitality) {
+      const effect = getVitalityDeadStatus();
+      if (effect) {
+        await setDeadStatus(actor, { effect, useDefeated: configSettings.markNonPlayerDefeated, makeDead: needsBeaten });
+      }
+    } else if (configSettings.addDead !== "none") {
+      let effect = getDeadStatus();
+      let useDefeated = configSettings.markNonPlayerDefeated;
+      // @ts-expect-error no dnd5e-types
+      if (actor.type === "character" || actor.hasPlayerOwner || actor.system.traits?.important) {
+        effect = getUnconsciousStatus();
+        useDefeated = configSettings.markPlayerDefeated;
+      }
+      if (effect) {
+        await setDeadStatus(actor, { effect, useDefeated, makeDead: needsBeaten });
+      }
+    }
+}
 
 function _isVisionSource(this: Token.Implementation, wrapped) {
   const isVisionSource = wrapped();
@@ -448,8 +579,11 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
 
     if (message.create !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
-        // const cls = getDocumentClass("ChatMessage");
-        await result[0].toMessage(message.data, { rollMode });
+        // dnd5e's buildPost already called toMessage(create: false) which ran _prepareMessageData
+        // and added "(Advantage)" to the flavor. We just need to create the message directly
+        // to avoid _prepareMessageData running again and duplicating the advantage text.
+        const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice, rolls: result }, message.data ?? {});
+        await ChatMessage.create(messageData, { rollMode });
       }
     }
     if (skillId) await expireRollEffect.bind(this)("Skill", skillId, success);
@@ -679,20 +813,25 @@ function setupChoiceDialog(
   dialog.options.advantageByChoice = advantageMap;
   dialog.options.choiceType = choiceType;
 
-  // Get the appropriate buildConfig creator based on choice type
-  const baseBuildConfig = choiceType === "skill"
-    ? MidiRollChoiceDialog.createSkillBuildConfig(actor, advantageMap)
-    : choiceType === "tool"
-      ? MidiRollChoiceDialog.createToolBuildConfig(actor, advantageMap)
-      : MidiRollChoiceDialog.createSaveBuildConfig(actor, advantageMap);
+  // Only set buildConfig when we need to rebuild parts on choice change:
+  // - Skills/tools: Always (dnd5e's pattern expects buildConfig to construct parts)
+  // - Saves/checks: Only if multiple abilities (single ability is fully handled by dnd5e)
+  const needsBuildConfig = (choiceType === "skill" || choiceType === "tool") || hasMultiple;
 
-  dialog.options.buildConfig = (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => {
-    baseBuildConfig(processConfig, rollConfig, formData, index);
-    if (formData && index === 0) {
-      const chosen = formData.get?.(choiceType);
-      if (chosen && typeof chosen === "string") onChoiceCapture(chosen);
-    }
-  };
+  if (needsBuildConfig) {
+    const buildConfigType = (choiceType === "skill" || choiceType === "tool")
+      ? choiceType
+      : rollTypeForChoices; // "save" or "check" for ability rolls
+    const baseBuildConfig = MidiRollChoiceDialog.createBuildConfig(actor, buildConfigType, advantageMap);
+
+    dialog.options.buildConfig = (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => {
+      baseBuildConfig(processConfig, rollConfig, formData, index);
+      if (formData && index === 0) {
+        const chosen = formData.get?.(choiceType);
+        if (chosen && typeof chosen === "string") onChoiceCapture(chosen);
+      }
+    };
+  }
 
   if (hasMultiple && dialog.configure !== false) dialog.configure = true;
 
@@ -1106,8 +1245,13 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     if (hasMultipleChoices) result.forEach(r => { if (r?.options) r.options.midiChosenId = chosenAbility; });
 
     if (message.create !== false && result) {
-      //@ts-expect-error
-      CONFIG.Dice.D20Roll.toMessage(result, message.data, { rollMode, create: true });
+      if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
+        // dnd5e's buildPost already called toMessage(create: false) which ran _prepareMessageData
+        // and added "(Advantage)" to the flavor. We just need to create the message directly
+        // to avoid _prepareMessageData running again and duplicating the advantage text.
+        const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice, rolls: result }, message.data ?? {});
+        await ChatMessage.create(messageData, { rollMode });
+      }
     }
     if (saveRollMode) game.settings.set("core", "rollMode", saveRollMode);
     if (abilityId) await expireRollEffect.bind(this)(rollType, abilityId, success);
@@ -1718,11 +1862,12 @@ function _midiATIRefresh(template: foundry.canvas.placeables.MeasuredTemplate.Im
     }
   } else {
     // @ts-expect-error no dnd5e-types
-    if (template.activity && tokenForActor(template.item.parent)) {
-      // @ts-expect-error no dnd5e-types
-      const ignoreSelf = (template.activity?.target.affects.special ?? "").split(";").some((spec: string) => spec === "self");
-      // @ts-expect-error no dnd5e-types
-      selectTargetsFromTemplates([template.document], tokenForActor(template.item.parent), ignoreSelf, getAoETargetType(template.activity), autoTarget);
+    const activity = template.activity;
+    // Get source token from midi-qol flag (set in preCreateActivityTemplate hook)
+    const sourceToken = getTemplateSourceToken(template.document);
+    if (activity && sourceToken) {
+      const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some((spec: string) => spec === "self");
+      selectTargetsFromTemplates([template.document], sourceToken, ignoreSelf, getAoETargetType(activity), autoTarget);
       return true;
     } else {
       selectTargetsFromTemplates([template.document]);
@@ -1739,6 +1884,57 @@ function midiATRefresh(this: foundry.canvas.placeables.MeasuredTemplate.Implemen
 
 // Throttle timer for anchored template movement (mirrors dnd5e's private #moveTime)
 let anchoredMoveTime = 0;
+// Throttle timer for range-clamped template movement
+let rangeClampesMoveTime = 0;
+
+/**
+ * Get the maximum range for a template from its midi-qol flags.
+ * Returns undefined if range should not be enforced.
+ * The maxRange is pre-calculated and set in the dnd5e.preCreateActivityTemplate hook.
+ */
+function getTemplateMaxRange(templateDoc: MeasuredTemplateDocument.Implementation): number | undefined {
+  const midiFlags = templateDoc.flags?.[MODULE_ID] as any;
+  return midiFlags?.maxRange as number | undefined;
+}
+
+/**
+ * Clamp a point to be within maxRange distance from token center.
+ * Returns the clamped point, or the original point if within range.
+ */
+function clampPointToRange(token: Token.Implementation, targetX: number, targetY: number, maxRange: number): { x: number, y: number, clamped: boolean } {
+  const tokenCenter = token.center;
+
+  // Calculate current distance
+  if (!canvas?.grid) return { x: targetX, y: targetY, clamped: false };
+  const distance = canvas.grid.measurePath([tokenCenter, { x: targetX, y: targetY }], {}).distance;
+
+  // Add fudge factor for grid alignment
+  const fudgeFactor = configSettings.gridlessFudge ?? 0;
+  if (distance <= maxRange + fudgeFactor) {
+    return { x: targetX, y: targetY, clamped: false };
+  }
+
+  // Need to clamp - calculate point at maxRange along the line from token to target
+  const dx = targetX - tokenCenter.x;
+  const dy = targetY - tokenCenter.y;
+  const currentDist = Math.sqrt(dx * dx + dy * dy);
+
+  if (currentDist === 0) {
+    return { x: targetX, y: targetY, clamped: false };
+  }
+
+  // Convert maxRange from grid units to pixels
+  const pixelsPerUnit = canvas.dimensions?.distance ? (canvas.dimensions.size / canvas.dimensions.distance) : 1;
+  const maxRangePixels = maxRange * pixelsPerUnit;
+
+  // Scale to be at maxRange
+  const scale = maxRangePixels / currentDist;
+  return {
+    x: tokenCenter.x + dx * scale,
+    y: tokenCenter.y + dy * scale,
+    clamped: true
+  };
+}
 
 /**
  * Calculate the point on a token's border where a ray from center to target intersects.
@@ -1816,40 +2012,86 @@ function getTokenBorderPoint(token: Token.Implementation, targetX: number, targe
 }
 
 /**
- * Wrapper for AbilityTemplate._onMovePlacement to anchor cone/ray templates to the caster's token.
- * When anchorToToken flag is set, the template origin stays on the token border and only rotation changes.
+ * Get the caster's token from a template's midi-qol flags.
+ * The sourceTokenUuid is pre-set in the dnd5e.preCreateActivityTemplate hook.
+ * @returns The token, or undefined if not found
+ */
+function getTemplateSourceToken(templateDoc: MeasuredTemplateDocument.Implementation): Token.Implementation | undefined {
+  const midiFlags = templateDoc.flags?.[MODULE_ID] as any;
+  const sourceTokenUuid = midiFlags?.sourceTokenUuid as string | undefined;
+  if (!sourceTokenUuid) return undefined;
+
+  const tokenDoc = fromUuidSync(sourceTokenUuid) as TokenDocument.Implementation | null;
+  return tokenDoc?.object ?? undefined;
+}
+
+/**
+ * Wrapper for AbilityTemplate._onMovePlacement to:
+ * 1. Anchor cone/ray templates to the caster's token when anchorToToken flag is set
+ * 2. Clamp template placement to activity range when checkRange is enabled
  */
 function midiATOnMovePlacement(this: foundry.canvas.placeables.MeasuredTemplate.Implementation, wrapped, event: PIXI.FederatedPointerEvent) {
-  // Check if this template should be anchored to a token
+  // Check if this template should be anchored to a token (cones/rays from token border)
   const anchorToToken = this.document.flags?.[MODULE_ID]?.anchorToToken;
-  if (!anchorToToken) {
+
+  if (anchorToToken) {
+    // Handle anchored template movement (cones/rays from token border)
+    return handleAnchoredTemplateMovement.call(this, event);
+  }
+
+  // For non-anchored templates, check if we need to enforce range clamping
+  const maxRange = getTemplateMaxRange(this.document);
+  if (!maxRange) {
+    // No range restriction - use default behavior
     return wrapped(event);
   }
 
-  // Get the caster's token from the template's origin
-  const originUuid = this.document.flags?.dnd5e?.origin as string | undefined;
-  if (!originUuid) {
+  const sourceToken = getTemplateSourceToken(this.document);
+  if (!sourceToken) {
     return wrapped(event);
   }
 
-  // Extract actor from origin (activity UUID format: Actor.xxx.Item.xxx.Activity.xxx)
-  const originParts = originUuid.split(".");
-  const actorIndex = originParts.indexOf("Actor");
-  if (actorIndex === -1 || actorIndex + 1 >= originParts.length) {
-    return wrapped(event);
+  // Apply throttling like the original method (20ms)
+  event.stopPropagation();
+  const now = Date.now();
+  if (now - rangeClampesMoveTime <= 20) return;
+
+  // Get mouse position in canvas coordinates
+  const mouse = event.data?.getLocalPosition(this.layer) ?? (event as any).getLocalPosition(this.layer);
+
+  // Clamp position to be within range
+  const clamped = clampPointToRange(sourceToken, mouse.x, mouse.y, maxRange);
+
+  // Get snapped position using dnd5e's method
+  const updates = (this as any).getSnappedPosition(clamped);
+
+  // Handle adjusted size for radius templates (same as dnd5e)
+  const dnd5eFlags = this.document.flags.dnd5e as any;
+  const baseDistance = dnd5eFlags?.dimensions?.size;
+  if (dnd5eFlags?.dimensions?.adjustedSize && baseDistance && canvas?.tokens) {
+    const rectangle = new PIXI.Rectangle(clamped.x, clamped.y, 1, 1);
+    const hoveredToken = canvas.tokens.quadtree?.getObjects(rectangle, {
+      collisionTest: ({ t }: any) => t.visible && !t.document.isSecret
+    }).first();
+    if (hoveredToken) {
+      const size = Math.max(hoveredToken.document.width, hoveredToken.document.height);
+      updates.distance = baseDistance + (size * (canvas.grid?.distance ?? 5) / 2);
+    } else {
+      updates.distance = baseDistance;
+    }
   }
 
-  const actorId = originParts[actorIndex + 1];
-  const actor = game.actors?.get(actorId);
-  if (!actor) {
-    return wrapped(event);
-  }
+  this.document.updateSource(updates);
+  this.refresh();
+  rangeClampesMoveTime = now;
+}
 
-  // Get the actor's token on the current scene
-  const token = tokenForActor(actor);
-  if (!token) {
-    return wrapped(event);
-  }
+/**
+ * Handle movement for anchored templates (cones/rays originating from token border).
+ */
+function handleAnchoredTemplateMovement(this: foundry.canvas.placeables.MeasuredTemplate.Implementation, event: PIXI.FederatedPointerEvent) {
+  const sourceToken = getTemplateSourceToken(this.document);
+  if (!sourceToken) return;
 
   event.stopPropagation();
 
@@ -1861,7 +2103,7 @@ function midiATOnMovePlacement(this: foundry.canvas.placeables.MeasuredTemplate.
   const mouse = event.data?.getLocalPosition(this.layer) ?? (event as any).getLocalPosition(this.layer);
 
   // Calculate the point on the token border closest to the mouse direction
-  const borderPoint = getTokenBorderPoint(token, mouse.x, mouse.y);
+  const borderPoint = getTokenBorderPoint(sourceToken, mouse.x, mouse.y);
 
   // Calculate direction from border point to mouse (in degrees)
   const dx = mouse.x - borderPoint.x;
@@ -2120,153 +2362,41 @@ export async function zeroHPExpiry(actor: Actor.Implementation, update: Actor.Up
   if (expiredEffects.length > 0) await expireEffects(actor, expiredEffects, { "expiry-reason": "midi-qol:zeroHP" })
 }
 
-export async function checkWounded(actor: Actor.Implementation, update: Actor.UpdateData, options: Actor.Database.UpdateOptions, user: string, vitalityValue?: number) {
-  const hpUpdate = foundry.utils.getProperty(update, "system.attributes.hp.value");
-
-  // Check for vitality system
-  const vitalityItem = getVitalityItem(actor);
-  const hasVitality = !!vitalityItem;
-
-  // Use provided vitality value if given, otherwise look up from the item
-  let vitalityUpdate: number | undefined;
-  if (vitalityValue !== undefined) {
-    vitalityUpdate = vitalityValue;
-  } else if (vitalityItem) {
-    // @ts-expect-error uses exists on items with uses
-    const maxUses = vitalityItem.system.uses?.max ?? 0;
-    // @ts-expect-error uses exists on items with uses
-    const spentUses = vitalityItem.system.uses?.spent ?? 0;
-    vitalityUpdate = maxUses - spentUses;
-  }
-
-  if (hpUpdate === undefined && !hasVitality) return;
-  // @ts-expect-error no dnd5e-types
-  const attributes = actor.system.attributes;
-  // Check vitalityDeathRequires setting: "vitalityOnly" = dead when vitality=0, "vitalityAndHP" = dead when both are 0
-  const deathRequires = configSettings.optionalRules.vitalityDeathRequires || "vitalityOnly";
-  let needsBeaten: boolean;
-  if (hasVitality) {
-    if (deathRequires === "vitalityOnly") {
-      // Dead when vitality reaches 0, regardless of HP
-      needsBeaten = (vitalityUpdate ?? 0) <= 0;
-    } else {
-      // Dead only when both vitality and HP are 0
-      needsBeaten = (vitalityUpdate ?? 0) <= 0 && attributes.hp.value <= 0;
-    }
-  } else {
-    needsBeaten = attributes.hp.value <= 0;
-  }
-  if (configSettings.addWounded > 0 && configSettings.addWoundedStyle !== "none") {
-    const needsWounded = attributes.hp.pct < configSettings.addWounded && !needsBeaten;
-    const woundedStatus = getWoundedStatus();
-    if (!woundedStatus) {
-      const message = "wounded status condition not set - please update your midi-qol wounded condition on the mechanics tab";
-      TroubleShooter.recordError(new Error(message), "In check wounded");
-      ui.notifications?.warn(`midi-qol | ${message}`);
-    } else if (installedModules.get("dfreds-convenient-effects") && woundedStatus instanceof ActiveEffect && isConvenientEffect(woundedStatus)) {
-      const wounded = await ConvenientEffectsHasEffect(woundedStatus.name, actor, false);
-      if (wounded !== needsWounded) {
-        if (needsWounded) CEAddEffectWith({ effectName: woundedStatus.name, effectId: woundedStatus.id!, uuid: actor.uuid, overlay: configSettings.addWoundedStyle === "overlay" });
-        else await actor.effects.find(ef => ef.name === woundedStatus.name)?.delete();
-      }
-    } else if (!(woundedStatus instanceof ActiveEffect && isConvenientEffect(woundedStatus))) {
-      const token = tokenForActor(actor);
-      if (woundedStatus && token) {
-        if (!needsWounded) {
-          // Cater to the possibility that the settings changed while the effect was applied
-          await token.actor?.toggleStatusEffect(woundedStatus.id!, { overlay: true, active: false });
-          await token.actor?.toggleStatusEffect(woundedStatus.id!, { overlay: false, active: false });
-        } else {
-          if (!token.document.hasStatusEffect(woundedStatus.id!)) {
-            await token.actor?.toggleStatusEffect(woundedStatus.id!, { overlay: configSettings.addWoundedStyle === "overlay", active: true });
-          }
-        }
-      }
-    }
-  }
-  // When vitality reaches 0, apply the configured vitality dead condition
-  if (hasVitality && needsBeaten) {
-    // For vitality death, use the configured vitalityDeadCondition (defaults to "dead")
-    const effect = getVitalityDeadStatus();
-    if (effect) {
-      await setDeadStatus(actor, { effect, useDefeated: configSettings.markNonPlayerDefeated, makeDead: true });
-    }
-  } else if (hasVitality && !needsBeaten) {
-    // Vitality > 0, remove the vitality dead condition if present
-    const effect = getVitalityDeadStatus();
-    if (effect) {
-      await setDeadStatus(actor, { effect, useDefeated: configSettings.markNonPlayerDefeated, makeDead: false });
-    }
-  } else if (configSettings.addDead !== "none") {
-    // No vitality system - use normal midi settings
-    let effect = getDeadStatus();
-    let useDefeated = configSettings.markNonPlayerDefeated;
-    // @ts-expect-error no dnd5e-types
-    if (actor.type === "character" || actor.hasPlayerOwner || actor.system.traits?.important) {
-      effect = getUnconsciousStatus();
-      useDefeated = configSettings.markPlayerDefeated;
-    }
-    if (!effect) return;
-    if (!needsBeaten) {
-      await setDeadStatus(actor, { effect, useDefeated, makeDead: false });
-    } else {
-      await setDeadStatus(actor, { effect, useDefeated, makeDead: true });
-    }
-  }
+/**
+ * Legacy wrapper for processWoundedStatus.
+ * Called from Hooks.ts updateItem handler for vitality changes.
+ * @deprecated Use processWoundedStatus directly for new code.
+ */
+export async function checkWounded(actor: Actor.Implementation, _update: Actor.UpdateData, _options: Actor.Database.UpdateOptions, _user: string, _vitalityValue?: number) {
+  // Use the per-actor semaphore to serialize with actorOnUpdate
+  const semaphore = getActorWoundedSemaphore(actor.uuid);
+  await semaphore.add(async () => {
+    await processWoundedStatus(actor);
+  });
 }
 
 async function setDeadStatus(actor: Actor.Implementation, options: { effect: CONFIG.StatusEffect | ActiveEffect.Implementation; useDefeated: boolean; makeDead: boolean; overlay?: boolean; }) {
   let { effect, useDefeated, makeDead } = options;
-  if (!effect) return;
+  if (!effect?.id) return;
 
-  // When applying dead status, first remove unconscious and its rider statuses
-  // dnd5e automatically applies unconscious when HP reaches 0, but we want dead instead
-  // Unconscious has incapacitated and prone as riders, which conflict with dead's riders
   if (makeDead) {
-    const conflictingStatuses = ["unconscious", "incapacitated", "prone"];
-    for (const statusId of conflictingStatuses) {
-      if (actor.statuses.has(statusId)) {
-        try {
-          await actor.toggleStatusEffect(statusId, { active: false });
-        } catch (err) {
-          // Ignore errors when removing statuses
-        }
-      }
+    // Remove unconscious effect before adding dead (if present)
+    // Check for actual effect, not just status (which could come from a rider)
+    const unconsciousEffect = actor.effects.find(e => e.statuses.has("unconscious"));
+    if (unconsciousEffect) {
+      await actor.toggleStatusEffect("unconscious", { active: false });
     }
   }
 
-  if (effect && installedModules.get("dfreds-convenient-effects") && effect instanceof ActiveEffect && isConvenientEffect(effect)) {
-    const isBeaten = actor.effects.find(ef => ef.name === effect?.name) !== undefined;
-    if ((makeDead !== isBeaten)) {
+  // toggleStatusEffect handles both cases gracefully:
+  // - active: true when already exists → returns true, no error
+  // - active: false when doesn't exist → returns undefined, no error
+  const result = await actor.toggleStatusEffect(effect.id, { overlay: (configSettings.addDead === "overlay") || options.overlay, active: makeDead });
 
-      if (makeDead) {
-        await CEAddEffectWith({ effectName: effect.name, uuid: actor.uuid, overlay: (configSettings.addDead === "overlay") || !!options.overlay });
-      } else { // remove beaten condition
-        await CERemoveEffect({ effectName: effect.name, uuid: actor.uuid });
-      }
-      if (useDefeated) {
-        const combatants = game.combat?.getCombatantsByActor(actor) ?? [];
-        for (let combatant of combatants) await combatant.update({ defeated: makeDead }, {})
-      }
-    }
-  } else if (!(effect instanceof ActiveEffect && isConvenientEffect(effect))) {
-    // V12 uses an actor
-    const isBeaten = actor.effects.find(ef => ef.name === (i18n(effect?.name ?? ""))) !== undefined;
-    if (isBeaten !== makeDead) {
-      try {
-        await actor.toggleStatusEffect(effect.id!, { overlay: (configSettings.addDead === "overlay") || options.overlay, active: makeDead });
-      } catch (err: any) {
-        // Ignore "already exists" errors from dnd5e's rider status effects (e.g., dead adds incapacitated which adds prone,
-        // and if prone is also a direct rider of dead, it would try to add prone twice)
-        if (!err?.message?.includes("already exists")) {
-          throw err;
-        }
-      }
-      if (useDefeated) {
-        const combatants = game.combat?.getCombatantsByActor(actor) ?? [];
-        for (let combatant of combatants) await combatant.update({ defeated: makeDead }, {});
-      }
-    }
+  // Only update defeated status if the toggle actually changed something
+  if (useDefeated && result !== undefined) {
+    const combatants = game.combat?.getCombatantsByActor(actor) ?? [];
+    for (let combatant of combatants) await combatant.update({ defeated: makeDead }, {});
   }
 }
 
@@ -2460,7 +2590,13 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     if (hasMultipleTools) result.forEach(r => { if (r?.options) r.options.midiChosenId = _chosenTool; });
 
     if (chatMessage !== false && result) {
-      await result[0].toMessage(message.data, { rollMode });
+      if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
+        // dnd5e's buildPost already called toMessage(create: false) which ran _prepareMessageData
+        // and added "(Advantage)" to the flavor. We just need to create the message directly
+        // to avoid _prepareMessageData running again and duplicating the advantage text.
+        const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice, rolls: result }, message.data ?? {});
+        await ChatMessage.create(messageData, { rollMode });
+      }
     }
   } catch (err) {
     const message = "midi-qol | error in rollToolCheck";

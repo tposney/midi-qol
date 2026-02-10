@@ -44,6 +44,25 @@ Installed 3rd party modules (chris-premades, dae, times-up, etc.) are located at
 ```
 Use this directory to examine how other modules implement features or handle specific spells/effects.
 
+### Related Module Source Code
+The following modules have source code that can be edited:
+
+**times-up-10x** (v13 effect duration management):
+```
+/home/timp/foundry-data/foundryalpha/Data/modulesrc/times-up-10x/src
+```
+Key files:
+- `module/handleUpdates.ts` - Effect expiration logic, enchantment handling
+- `module/settings.ts` - Effect queue, configuration
+- `times-up.ts` - Main module entry point
+
+**dae-10x** (v13 Dynamic Active Effects):
+```
+/home/timp/foundry-data/foundryalpha/Data/modulesrc/dae-10x/src/module
+```
+Key files:
+- `dae.ts` - Main DAE logic, effect application, status reconciliation
+
 ### tidy5e-sheet Module
 The tidy5e-sheet module source is at:
 ```

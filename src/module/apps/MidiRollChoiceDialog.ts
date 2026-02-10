@@ -166,6 +166,10 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
    */
   static applyPreComputedAdvantage(rollConfig: any, preComputed: PreComputedAdvantage | undefined): void {
     if (!preComputed) return;
+    // Only override advantageMode if pre-computed flags grant advantage or disadvantage.
+    // If neither, don't set anything - let keyboard modifiers (shift/ctrl) work.
+    if (!preComputed.hasAdvantage && !preComputed.hasDisadvantage) return;
+
     rollConfig.options ??= {};
     //@ts-expect-error no dnd5e-types
     const ADV = CONFIG.Dice.D20Roll.ADV_MODE;
@@ -173,150 +177,112 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
       rollConfig.options.advantageMode = ADV.ADVANTAGE;
     } else if (!preComputed.hasAdvantage && preComputed.hasDisadvantage) {
       rollConfig.options.advantageMode = ADV.DISADVANTAGE;
-    } else {
-      rollConfig.options.advantageMode = ADV.NORMAL;
     }
+    // Note: If both hasAdvantage and hasDisadvantage are true, they cancel out - don't override
     // Clear legacy flags so configureModifiers() uses advantageMode directly
     delete rollConfig.options.advantage;
     delete rollConfig.options.disadvantage;
   }
 
-  static createSaveBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void {
+  /**
+   * Unified factory to create a buildConfig callback for rebuilding roll parts
+   * when the player changes the dropdown selection.
+   *
+   * - skill/tool: Delegates to dnd5e's actor._buildSkillToolConfig()
+   * - save/check: Custom implementation (dnd5e has no public method for this)
+   *
+   * @param actor - The actor making the roll
+   * @param rollType - "save", "check", "skill", or "tool"
+   * @param advantageByChoice - Pre-computed advantage data keyed by choice ID
+   */
+  static createBuildConfig(
+    actor: Actor.Implementation,
+    rollType: "save" | "check" | "skill" | "tool",
+    advantageByChoice?: Map<string, PreComputedAdvantage>
+  ): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void {
     return (processConfig, rollConfig, formData, index) => {
       if (index !== 0) return;
-      // Get ability from formData if available, otherwise fall back to processConfig for initial render
-      const newAbility = formData?.get?.("ability") ?? processConfig.ability;
-      if (!newAbility || typeof newAbility !== "string") return;
 
-      //@ts-expect-error no dnd5e-types
-      const abilityData = actor.system.abilities?.[newAbility];
-      if (!abilityData) return;
+      let choiceId: string;
 
-      const rollData = actor.getRollData();
-      //@ts-expect-error no dnd5e-types
-      const { parts, data } = CONFIG.Dice.D20Roll.constructParts({
-        mod: abilityData.mod,
-        prof: abilityData.saveProf?.hasProficiency ? abilityData.saveProf.term : null,
-        [`${newAbility}SaveBonus`]: abilityData.bonuses?.save,
+      if (rollType === "skill" || rollType === "tool") {
+        // Skill/tool: delegate to dnd5e's _buildSkillToolConfig
+        const formField = rollType;
+        const newChoice = formData?.get?.(formField) ?? processConfig[formField];
+        if (!newChoice || typeof newChoice !== "string") return;
+
+        // Compute hostActor for polymorph skill merging (same as dnd5e's _buildSkillTool)
         //@ts-expect-error no dnd5e-types
-        saveBonus: actor.system.bonuses?.abilities?.save,
+        const hostActor = actor.isPolymorphed && actor.flags?.dnd5e?.transformOptions?.mergeSkills && (rollType === "skill")
+          //@ts-expect-error no dnd5e-types
+          ? game.actors.get(actor.flags.dnd5e?.originalActor) : null;
+
+        // Call dnd5e's method - it handles parts construction, proficiency, bonuses, and exhaustion
         //@ts-expect-error no dnd5e-types
-        cover: (newAbility === "dex") ? actor.system.attributes?.ac?.cover : null
-      }, rollData);
+        actor._buildSkillToolConfig(rollType, hostActor, processConfig, rollConfig, formData, index);
 
-      // Add exhaustion if the method exists
-      //@ts-expect-error no dnd5e-types
-      actor.addRollExhaustion?.(parts, data);
+        choiceId = newChoice;
 
-      // Replace the roll parts (not append, since the clone has the original ability's parts)
-      rollConfig.parts = parts;
-      rollConfig.data = data;
-      // Update advantage mode so the formula shows the correct d20 dice
-      MidiRollChoiceDialog.applyPreComputedAdvantage(rollConfig, advantageByChoice?.get(newAbility));
-      // Update processConfig so postRollConfiguration hook sees the chosen ability
-      processConfig.ability = newAbility;
+      } else {
+        // Ability save/check: only rebuild if ability CHANGED via form
+        // (dnd5e pre-constructs parts in #rollD20Test, so we don't rebuild on fast-forward or same ability)
+        const formAbility = formData?.get?.("ability") as string | null;
+        choiceId = formAbility ?? processConfig.ability;
+        if (!choiceId) return;
+
+        // Only rebuild parts if user changed the ability in the dialog
+        if (formAbility && formAbility !== processConfig.ability) {
+          //@ts-expect-error no dnd5e-types
+          const abilityData = actor.system.abilities?.[formAbility];
+          if (!abilityData) return;
+
+          const rollData = actor.getRollData();
+          const profKey = `${rollType}Prof` as "saveProf" | "checkProf";
+          const typeCapitalized = rollType.charAt(0).toUpperCase() + rollType.slice(1);
+
+          //@ts-expect-error no dnd5e-types
+          const { parts, data } = CONFIG.Dice.D20Roll.constructParts({
+            mod: abilityData.mod,
+            prof: abilityData[profKey]?.hasProficiency ? abilityData[profKey].term : null,
+            [`${formAbility}${typeCapitalized}Bonus`]: abilityData.bonuses?.[rollType],
+            //@ts-expect-error no dnd5e-types
+            [`${rollType}Bonus`]: actor.system.bonuses?.abilities?.[rollType],
+            //@ts-expect-error no dnd5e-types
+            cover: (formAbility === "dex" && rollType === "save") ? actor.system.attributes?.ac?.cover : null
+          }, rollData);
+
+          //@ts-expect-error no dnd5e-types
+          actor.addRollExhaustion?.(parts, data);
+          rollConfig.parts = parts;
+          rollConfig.data = data;
+          processConfig.ability = formAbility;
+        }
+      }
+
+      // Apply midi's pre-computed advantage (midi-specific, not in dnd5e)
+      MidiRollChoiceDialog.applyPreComputedAdvantage(rollConfig, advantageByChoice?.get(choiceId));
     };
   }
 
-  /**
-   * Factory to create a buildConfig callback for rebuilding skill roll parts
-   * when the player changes the skill dropdown.
-   *
-   * Mirrors dnd5e's `_buildSkillToolConfig` callback but for skill-to-skill changes.
-   */
-  static createSkillBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void {
-    return (processConfig, rollConfig, formData, index) => {
-      if (index !== 0) return;
-      // Get skill from formData if available, otherwise fall back to processConfig for initial render
-      const newSkill = formData?.get?.("skill") ?? processConfig.skill;
-      if (!newSkill || typeof newSkill !== "string") return;
+  // Convenience wrappers for backward compatibility and clearer call sites
 
-      //@ts-expect-error no dnd5e-types
-      const skillData = actor.system.skills?.[newSkill];
-      if (!skillData) return;
-
-      const abilityId = skillData.ability;
-      //@ts-expect-error no dnd5e-types
-      const ability = actor.system.abilities?.[abilityId];
-      const rollData = actor.getRollData();
-
-      //@ts-expect-error no dnd5e-types
-      const { calculateSkillToolProficiency } = dnd5e.dataModels.actor.CommonTemplate;
-      let prof = calculateSkillToolProficiency(actor, abilityId, { skill: newSkill });
-
-      //@ts-expect-error no dnd5e-types
-      const { parts, data } = CONFIG.Dice.D20Roll.constructParts({
-        mod: ability?.mod,
-        prof: prof?.hasProficiency ? prof.term : null,
-        [`${newSkill}Bonus`]: skillData.bonuses?.check,
-        [`${abilityId}CheckBonus`]: ability?.bonuses?.check,
-        //@ts-expect-error no dnd5e-types
-        skillBonus: actor.system.bonuses?.abilities?.skill,
-        //@ts-expect-error no dnd5e-types
-        abilityCheckBonus: actor.system.bonuses?.abilities?.check
-      }, rollData);
-
-      // Add exhaustion if the method exists
-      //@ts-expect-error no dnd5e-types
-      actor.addRollExhaustion?.(parts, data);
-
-      // Replace the roll parts
-      rollConfig.parts = parts;
-      rollConfig.data = data;
-      // Update advantage mode so the formula shows the correct d20 dice
-      MidiRollChoiceDialog.applyPreComputedAdvantage(rollConfig, advantageByChoice?.get(newSkill));
-      // Update the ability to match the new skill's ability
-      processConfig.ability = abilityId;
-    };
+  /** @deprecated Use createBuildConfig(actor, "save", advantageByChoice) instead */
+  static createSaveBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>) {
+    return MidiRollChoiceDialog.createBuildConfig(actor, "save", advantageByChoice);
   }
 
-  /**
-   * Factory to create a buildConfig callback for rebuilding tool roll parts
-   * when the player changes the tool dropdown.
-   *
-   * Mirrors dnd5e's `_buildSkillToolConfig` callback but for tool-to-tool changes.
-   */
-  static createToolBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void {
-    return (processConfig, rollConfig, formData, index) => {
-      if (index !== 0) return;
-      // Get tool from formData if available, otherwise fall back to processConfig for initial render
-      const newTool = formData?.get?.("tool") ?? processConfig.tool;
-      if (!newTool || typeof newTool !== "string") return;
+  /** @deprecated Use createBuildConfig(actor, "check", advantageByChoice) instead */
+  static createCheckBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>) {
+    return MidiRollChoiceDialog.createBuildConfig(actor, "check", advantageByChoice);
+  }
 
-      //@ts-expect-error no dnd5e-types
-      const toolData = actor.system.tools?.[newTool];
-      const abilityId = toolData?.ability || GameSystemConfig.tools[newTool]?.ability || "";
-      //@ts-expect-error no dnd5e-types
-      const ability = actor.system.abilities?.[abilityId];
-      const rollData = actor.getRollData();
+  /** @deprecated Use createBuildConfig(actor, "skill", advantageByChoice) instead */
+  static createSkillBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>) {
+    return MidiRollChoiceDialog.createBuildConfig(actor, "skill", advantageByChoice);
+  }
 
-      //@ts-expect-error no dnd5e-types
-      const { calculateSkillToolProficiency } = dnd5e.dataModels.actor.CommonTemplate;
-      let prof = calculateSkillToolProficiency(actor, abilityId, { tool: newTool });
-
-      //@ts-expect-error no dnd5e-types
-      const { parts, data } = CONFIG.Dice.D20Roll.constructParts({
-        mod: ability?.mod,
-        prof: prof?.hasProficiency ? prof.term : null,
-        [`${newTool}Bonus`]: toolData?.bonuses?.check,
-        [`${abilityId}CheckBonus`]: ability?.bonuses?.check,
-        //@ts-expect-error no dnd5e-types
-        toolBonus: actor.system.bonuses?.abilities?.tool,
-        //@ts-expect-error no dnd5e-types
-        abilityCheckBonus: actor.system.bonuses?.abilities?.check
-      }, rollData);
-
-      // Add exhaustion if the method exists
-      //@ts-expect-error no dnd5e-types
-      actor.addRollExhaustion?.(parts, data);
-
-      // Replace the roll parts
-      rollConfig.parts = parts;
-      rollConfig.data = data;
-      // Update advantage mode so the formula shows the correct d20 dice
-      MidiRollChoiceDialog.applyPreComputedAdvantage(rollConfig, advantageByChoice?.get(newTool));
-      // Update the ability to match the new tool's ability
-      processConfig.ability = abilityId;
-    };
+  /** @deprecated Use createBuildConfig(actor, "tool", advantageByChoice) instead */
+  static createToolBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>) {
+    return MidiRollChoiceDialog.createBuildConfig(actor, "tool", advantageByChoice);
   }
 }

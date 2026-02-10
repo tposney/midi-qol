@@ -1,3 +1,8 @@
+### 13.0.44
+**New Features**
+* When placing templates for items that have a range specified, the movement of the template will be constrained to be no more that the range from the user of the item.
+	- This is enabled via the same setting for constraining cone/rays to be anchored to the token
+
 ### 13.0.43
 
 This is a fairly substantial update so don't update just before game time. You have been warned.

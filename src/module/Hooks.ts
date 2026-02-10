@@ -75,21 +75,14 @@ export let readyHooks = async () => {
   Hooks.on("deleteMeasuredTemplate", checkDeleteTemplate);
 
   // Handle updates to the characters HP
-  // Handle concentration checks
+  // Note: Wounded/dead status is now handled by _onUpdate wrapper in patching.ts
+  // This hook handles zeroHPExpiry and concentration removal
   Hooks.on("updateActor", async (actor, update, options: any, user) => {
     if (user !== game.user?.id) return;
     const hpUpdate = foundry.utils.getProperty(update, "system.attributes.hp.value");
     const temphpUpdate = foundry.utils.getProperty(update, "system.attributes.hp.temp");
     if (hpUpdate !== undefined || temphpUpdate !== undefined) {
-      const hpUpdateFunc = async () => {
-        // Skip checkWounded if a vitality update is pending - the updateItem hook will handle it
-        // This prevents race conditions with concurrent toggleStatusEffect calls
-        if (!options.midiVitalityUpdatePending) {
-          await checkWounded(actor, update, options, user);
-        }
-        await zeroHPExpiry(actor, update, options, user);
-      }
-      await hpUpdateFunc();
+      await zeroHPExpiry(actor, update, options, user);
       // @ts-expect-error no dnd5e-types
       if (actor.system.attributes.hp.value <= 0 && configSettings.removeConcentration) {
         // @ts-expect-error no dnd5e-types
@@ -1444,25 +1437,89 @@ Hooks.on("dnd5e.rollConcentration", (rolls, { subject }) => {
   }
 });
 
-// Make activity templates a tiny bit bigger so that the off by one pixel errors don't happen.
-// Also set anchor flag for self-range cone/ray templates
+// Set midi-qol flags on activity templates for use during preview and placement.
+// When constrainTemplatePlacement is enabled:
+// - Sets sourceTokenUuid for all templates
+// - Sets maxRange for templates with limited range (clamps placement during preview)
+// - Sets anchorToToken for cone/ray templates with range Self/None
 Hooks.on("dnd5e.preCreateActivityTemplate", (activity, templateData) => {
   templateData.distance! += 0.000001; // Make the template fractionally larger to avoid rounding errors
+
+  if (!configSettings.constrainTemplatePlacement) return true;
+
+  // Get the caster's token and store its UUID for later use
+  const actor = activity.actor;
+  const token = actor ? tokenForActor(actor) : undefined;
+  if (token) {
+    foundry.utils.setProperty(templateData, "flags.midi-qol.sourceTokenUuid", token.document.uuid);
+  }
+
+  const range = activity.range;
+  const rangeUnits = range?.units;
+
+  // Calculate and store max range for templates that should be range-limited
+  // Only set maxRange for range types that should be limited (not self/none/any)
+  if (rangeUnits && rangeUnits !== "self" && rangeUnits !== "none" && rangeUnits !== "any") {
+    let maxRange = range.long || range.value;
+    if (maxRange && maxRange > 0) {
+      // Convert touch range to a small distance
+      if (rangeUnits === "touch") {
+        maxRange = canvas?.dimensions?.distance ?? 5;
+      }
+      foundry.utils.setProperty(templateData, "flags.midi-qol.maxRange", maxRange);
+    }
+  }
 
   // Check if this template should be anchored to the caster's token
   // Cones and rays with range self/none/0 should be anchored
   const templateType = templateData.t;
   if (templateType === "cone" || templateType === "ray") {
-    const range = activity.range;
-    const isSelfRange = range?.units === "self"
-      || range?.units === "none"
-      || (!range?.value && !range?.long && range?.units !== "touch");
+    const isSelfRange = rangeUnits === "self"
+      || rangeUnits === "none"
+      || (!range?.value && !range?.long && rangeUnits !== "touch");
 
-    if (configSettings.anchorConeRayTemplates && isSelfRange) {
+    if (isSelfRange) {
       foundry.utils.setProperty(templateData, "flags.midi-qol.anchorToToken", true);
     }
   }
   return true;
+});
+
+// Check template placement range - prevent placing templates beyond the activity's range
+// This is a safety check - the preview movement should already clamp position within range
+Hooks.on("preCreateMeasuredTemplate", (templateDoc: MeasuredTemplateDocument.Implementation, templateData: MeasuredTemplateDocument.CreateData, options: object, userId: string) => {
+  if (userId !== game.user?.id) return true;
+
+  // Use pre-set midi-qol flags from preCreateActivityTemplate hook
+  const midiFlags = templateDoc.flags?.[MODULE_ID] as { maxRange?: number, sourceTokenUuid?: string } | undefined;
+  const maxRange = midiFlags?.maxRange;
+  if (!maxRange) return true;
+
+  const sourceTokenUuid = midiFlags?.sourceTokenUuid;
+  if (!sourceTokenUuid) return true;
+
+  // Get the source token
+  const tokenDoc = fromUuidSync(sourceTokenUuid) as TokenDocument.Implementation | null;
+  const token = tokenDoc?.object;
+  if (!token) return true;
+
+  // Calculate distance from token center to template position
+  const templateX = templateDoc.x;
+  const templateY = templateDoc.y;
+  if (templateX === undefined || templateY === undefined) return true;
+
+  // Measure distance using canvas grid
+  if (!canvas?.grid) return true;
+  const tokenCenter = token.center;
+  const distance = canvas.grid.measurePath([tokenCenter, { x: templateX, y: templateY }], {}).distance;
+
+  // Check if within range (add small fudge factor for grid alignment)
+  const fudgeFactor = configSettings.gridlessFudge ?? 0;
+  if (distance <= maxRange + fudgeFactor) return true;
+
+  // Out of range - notify and cancel
+  ui.notifications?.warn(i18n("midi-qol.TemplateOutOfRange"));
+  return false;
 });
 
 // insert midi initiative changes into the initiative config.

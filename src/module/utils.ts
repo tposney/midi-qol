@@ -2639,8 +2639,302 @@ export function distancePointToken({ x, y, elevation = 0 }, token, wallblocking 
 
 export function checkDistance(t1: any, t2: any, distance: number, options: { wallsBlock?: boolean, includeCover?: boolean } = { wallsBlock: false, includeCover: true }): boolean {
   const { wallsBlock = false, includeCover = true } = options;
-  const dist = computeDistance(t1, t2, { wallsBlock, includeCover });
+  const dist = getDistance(t1, t2, { wallsBlock, includeCover });
   return 0 <= dist && dist <= distance;
+}
+
+// ==================== PERIMETER DISTANCE HELPERS ====================
+// These functions compute the minimum distance between token perimeters (bounding rectangles)
+// rather than between grid square centers.
+
+export interface TokenBounds {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Get the bounding rectangle of a token in canvas pixel coordinates.
+ * @param token - The token (or token reference) to get bounds for
+ * @returns The bounding rectangle, or undefined if token is invalid
+ */
+export function getTokenBounds(token: any): TokenBounds | undefined {
+  const t = getPlaceable(token);
+  if (!t || !canvas?.dimensions) return undefined;
+
+  // Cast document to access token-specific properties
+  const doc = t.document as any;
+  const x = doc.x ?? 0;
+  const y = doc.y ?? 0;
+  const width = (doc.width ?? 1) * canvas.dimensions.size;
+  const height = (doc.height ?? 1) * canvas.dimensions.size;
+
+  return {
+    left: x,
+    right: x + width,
+    top: y,
+    bottom: y + height,
+    width,
+    height
+  };
+}
+
+/**
+ * Find the closest point on a rectangle's perimeter to a given point.
+ * @param bounds - The rectangle bounds
+ * @param px - X coordinate of the point
+ * @param py - Y coordinate of the point
+ * @returns The closest point on the rectangle's perimeter
+ */
+export function closestPointOnPerimeter(bounds: TokenBounds, px: number, py: number): { x: number, y: number } {
+  // Clamp the point to the rectangle's extent
+  const clampedX = Math.max(bounds.left, Math.min(bounds.right, px));
+  const clampedY = Math.max(bounds.top, Math.min(bounds.bottom, py));
+
+  // If point is inside the rectangle, find closest edge
+  if (px >= bounds.left && px <= bounds.right && py >= bounds.top && py <= bounds.bottom) {
+    // Point is inside - find distance to each edge
+    const distLeft = px - bounds.left;
+    const distRight = bounds.right - px;
+    const distTop = py - bounds.top;
+    const distBottom = bounds.bottom - py;
+
+    const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+
+    if (minDist === distLeft) return { x: bounds.left, y: py };
+    if (minDist === distRight) return { x: bounds.right, y: py };
+    if (minDist === distTop) return { x: px, y: bounds.top };
+    return { x: px, y: bounds.bottom };
+  }
+
+  // Point is outside - clamped point is on perimeter
+  return { x: clampedX, y: clampedY };
+}
+
+/**
+ * Compute the closest points on two rectangle perimeters.
+ * @param bounds1 - First rectangle bounds
+ * @param bounds2 - Second rectangle bounds
+ * @returns The closest points on each rectangle's perimeter
+ */
+export function closestPerimeterPoints(bounds1: TokenBounds, bounds2: TokenBounds): { p1: { x: number, y: number }, p2: { x: number, y: number } } {
+  // Check if rectangles overlap (distance would be 0)
+  const overlapX = bounds1.left < bounds2.right && bounds1.right > bounds2.left;
+  const overlapY = bounds1.top < bounds2.bottom && bounds1.bottom > bounds2.top;
+
+  if (overlapX && overlapY) {
+    // Rectangles overlap - find a point in the overlap region
+    const overlapLeft = Math.max(bounds1.left, bounds2.left);
+    const overlapRight = Math.min(bounds1.right, bounds2.right);
+    const overlapTop = Math.max(bounds1.top, bounds2.top);
+    const overlapBottom = Math.min(bounds1.bottom, bounds2.bottom);
+    const midX = (overlapLeft + overlapRight) / 2;
+    const midY = (overlapTop + overlapBottom) / 2;
+    return { p1: { x: midX, y: midY }, p2: { x: midX, y: midY } };
+  }
+
+  // Start with center of bounds2 and find closest point on bounds1
+  let center2X = (bounds2.left + bounds2.right) / 2;
+  let center2Y = (bounds2.top + bounds2.bottom) / 2;
+  let p1 = closestPointOnPerimeter(bounds1, center2X, center2Y);
+
+  // Then find closest point on bounds2 to that point
+  let p2 = closestPointOnPerimeter(bounds2, p1.x, p1.y);
+
+  // Iterate once more for better accuracy
+  p1 = closestPointOnPerimeter(bounds1, p2.x, p2.y);
+  p2 = closestPointOnPerimeter(bounds2, p1.x, p1.y);
+
+  return { p1, p2 };
+}
+
+/**
+ * Compute the minimum Euclidean distance between two rectangle perimeters (in pixels).
+ * @param bounds1 - First rectangle bounds
+ * @param bounds2 - Second rectangle bounds
+ * @returns The minimum distance in pixels (0 if rectangles overlap)
+ */
+export function minPerimeterDistancePixels(bounds1: TokenBounds, bounds2: TokenBounds): number {
+  const { p1, p2 } = closestPerimeterPoints(bounds1, bounds2);
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+export interface PerimeterDistanceOptions {
+  /** If true, return -1 if walls block line of sight between closest points */
+  wallsBlock?: boolean;
+  /** If true, include cover calculations (for modules like levelsautocover) */
+  includeCover?: boolean;
+  /** If true, include elevation difference in distance calculation */
+  includeElevation?: boolean;
+}
+
+/**
+ * Compute the minimum grid distance between two token perimeters.
+ * This finds the closest points on each token's bounding rectangle perimeter
+ * and measures the grid distance between them.
+ *
+ * @param t1 - First token (or token reference)
+ * @param t2 - Second token (or token reference)
+ * @param options - Options for distance calculation
+ * @returns The grid distance between perimeters, or -1 if blocked/invalid
+ */
+/**
+ * Check if two token bounds overlap (intersect).
+ */
+function boundsOverlap(bounds1: TokenBounds, bounds2: TokenBounds): boolean {
+  return !(bounds1.right < bounds2.left ||
+           bounds1.left > bounds2.right ||
+           bounds1.bottom < bounds2.top ||
+           bounds1.top > bounds2.bottom);
+}
+
+export function computePerimeterDistance(
+  t1: any,
+  t2: any,
+  options: PerimeterDistanceOptions = {}
+): number {
+  const { wallsBlock = false, includeCover = true, includeElevation = true } = options;
+
+  if (!canvas?.scene || !canvas.grid || !canvas.dimensions) return -1;
+
+  const token1 = getPlaceable(t1);
+  const token2 = getPlaceable(t2);
+  if (!token1 || !token2) return -1;
+
+  // Same token - distance is 0
+  if (token1 === token2) return 0;
+
+  const bounds1 = getTokenBounds(token1);
+  const bounds2 = getTokenBounds(token2);
+  if (!bounds1 || !bounds2) return -1;
+
+  const gridDistance = canvas.dimensions.distance; // typically 5 feet
+  const fudgeFactor = configSettings.gridlessFudge ?? 0;
+
+  // Check if tokens overlap - if so, distance is 0
+  if (boundsOverlap(bounds1, bounds2)) {
+    return 0;
+  }
+
+  // Find the closest points on each perimeter
+  const { p1, p2 } = closestPerimeterPoints(bounds1, bounds2);
+
+  // Check for walls blocking if requested
+  if (wallsBlock) {
+    const ray = new foundry.canvas.geometry.Ray(p1, p2);
+    // Check if any walls block movement between the two points
+    if (canvas.walls?.checkCollision(ray, { type: "move", mode: "any" })) {
+      return -1;
+    }
+  }
+
+  // Calculate grid distance using midiMeasureDistances for proper diagonal rule handling
+  const ray = new foundry.canvas.geometry.Ray(p1, p2);
+  const rawDistance = midiMeasureDistances([{ ray }], { gridSpaces: true })[0];
+
+  // Use fudge factor to determine rounding:
+  // - If raw distance < fudge factor: round down (treat as adjacent, return gridDistance)
+  // - Otherwise: round up (add gridDistance to measured distance)
+  let distance: number;
+  if (rawDistance < fudgeFactor) {
+    // Small gap - treat as adjacent (one grid space)
+    distance = gridDistance;
+  } else {
+    // Larger gap - add grid space for "entering" target's space, round up to grid increment
+    distance = Math.ceil((rawDistance + gridDistance) / gridDistance) * gridDistance;
+  }
+
+  // Include elevation difference if requested
+  if (includeElevation) {
+    const elev1 = (token1.document as any).elevation ?? 0;
+    const elev2 = (token2.document as any).elevation ?? 0;
+    const elevDiff = Math.abs(elev2 - elev1);
+    if (elevDiff > 0) {
+      // Pythagorean distance including elevation
+      distance = Math.sqrt(distance * distance + elevDiff * elevDiff);
+    }
+  }
+
+  return distance;
+}
+
+/**
+ * Check if the perimeter distance between two tokens is within a given limit.
+ * @param t1 - First token (or token reference)
+ * @param t2 - Second token (or token reference)
+ * @param maxDistance - Maximum allowed distance
+ * @param options - Options for distance calculation
+ * @returns true if distance is >= 0 and <= maxDistance
+ */
+export function checkPerimeterDistance(
+  t1: any,
+  t2: any,
+  maxDistance: number,
+  options: PerimeterDistanceOptions = {}
+): boolean {
+  const dist = computePerimeterDistance(t1, t2, options);
+  return dist >= 0 && dist <= maxDistance;
+}
+
+/**
+ * Get detailed perimeter distance information between two tokens.
+ * @param t1 - First token (or token reference)
+ * @param t2 - Second token (or token reference)
+ * @param options - Options for distance calculation
+ * @returns Object with distance, closest points, and whether tokens overlap
+ */
+export function getPerimeterDistanceInfo(
+  t1: any,
+  t2: any,
+  options: PerimeterDistanceOptions = {}
+): { distance: number, point1: { x: number, y: number }, point2: { x: number, y: number }, overlapping: boolean } | undefined {
+  if (!canvas?.scene || !canvas.grid || !canvas.dimensions) return undefined;
+
+  const token1 = getPlaceable(t1);
+  const token2 = getPlaceable(t2);
+  if (!token1 || !token2) return undefined;
+
+  const bounds1 = getTokenBounds(token1);
+  const bounds2 = getTokenBounds(token2);
+  if (!bounds1 || !bounds2) return undefined;
+
+  const { p1, p2 } = closestPerimeterPoints(bounds1, bounds2);
+  const overlapping = boundsOverlap(bounds1, bounds2);
+
+  const distance = computePerimeterDistance(t1, t2, options);
+
+  return {
+    distance,
+    point1: p1,
+    point2: p2,
+    overlapping
+  };
+}
+
+/**
+ * Get the distance between two tokens using the configured measurement method.
+ * This is the main distance function that should be used throughout midi-qol.
+ * It respects the configSettings.optionalRules.distanceMeasurement setting.
+ *
+ * @param t1 - First token (or token reference)
+ * @param t2 - Second token (or token reference)
+ * @param options - Options for distance calculation
+ * @returns The distance between the tokens, or -1 if invalid/blocked
+ */
+export function getDistance(t1: any, t2: any, options: { wallsBlock?: boolean, includeCover?: boolean } = { wallsBlock: false, includeCover: true }): number {
+  if (configSettings.optionalRules.distanceMeasurement === "perimeter") {
+    return computePerimeterDistance(t1, t2, {
+      wallsBlock: options.wallsBlock ?? false,
+      includeCover: options.includeCover ?? true,
+      includeElevation: configSettings.optionalRules.distanceIncludesHeight
+    });
+  }
+  return computeDistance(t1, t2, options);
 }
 
 /** takes two tokens of any size and calculates the distance between them
@@ -3027,7 +3321,7 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
         includeCover: !ignoreTotalCover,
       };
 
-      const rawDistance = computeDistance(token, target, coverOptions);
+      const rawDistance = getDistance(token, target, coverOptions);
       let distance;
       if (isGridless && rawDistance >= 0)
         distance = Math.max(0, parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor);
@@ -3541,7 +3835,7 @@ export function findNearby(
       if (t.actor &&
         (t.id !== token.id || options?.includeToken) && // not the token
         (disposition === null || targetDisposition.includes(t.document.disposition))) {
-        const tokenDistance = computeDistance(t, token, { wallsBlock: true });
+        const tokenDistance = getDistance(t, token, { wallsBlock: true });
         inRange = 0 <= tokenDistance && tokenDistance <= distance
       } else return false; // wrong disposition
       if (inRange && options.canSee && !canSense(t, token)) return false; // Only do the canSee check if the token is inRange
@@ -6503,7 +6797,7 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
   if (token.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)) {
     range = 2;
   }
-  if (computeDistance(token, target, { wallsBlock: true }) > range * (canvas.dimensions?.distance ?? 5)) return false;
+  if (getDistance(token, target, { wallsBlock: true }) > range * (canvas.dimensions?.distance ?? 5)) return false;
   // an enemy's enemies are my friends.
   const allies = findPotentialFlankers(target)
 
@@ -8164,7 +8458,7 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
         if (ignoreToken?.document.uuid === target.document.uuid) {
           inRange = false;
         }
-        const distance = computeDistance(target, tokenToUse, { wallsBlock });
+        const distance = getDistance(target, tokenToUse, { wallsBlock });
         inRange = inRange && distance >= 0 && distance <= Number(minDist);
       }
       if (inRange) {

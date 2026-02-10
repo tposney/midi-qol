@@ -67,7 +67,7 @@ import {
   activityHasAreaTarget,
   getSaveMultiplierForActivity,
   checkActivityRange,
-  computeDistance,
+  getDistance,
   getActivityAutoTargetAction,
   activityHasEmanationNoTemplate,
   completeActivityUse,
@@ -3815,7 +3815,7 @@ export class Workflow {
           } else if (this.item.system.properties?.has("thr")) {
             // @ts-expect-error no dnd5e-types
             const meleeRange = this.item.system.range.reach ?? 5;
-            if (computeDistance(this.token, firstTarget, { wallsBlock: false }) <= meleeRange) nearbyFoe = false;
+            if (getDistance(this.token, firstTarget, { wallsBlock: false }) <= meleeRange) nearbyFoe = false;
             else nearbyFoe = checkNearby(-1, getToken(this.token), configSettings.optionalRules.nearbyFoe, { includeIncapacitated: false, canSee: true });
           }
           if (nearbyFoe) {
@@ -3875,7 +3875,7 @@ export class Workflow {
         const fails = target?.actor?.flags[MODULE_ID]?.fail?.critical ?? {};
 
         // Special case: grants.critical.range
-        if (Number.isNumeric(grants.range) && computeDistance(target, this.token, { wallsBlock: false }) <= Number(grants.range)) {
+        if (Number.isNumeric(grants.range) && getDistance(target, this.token, { wallsBlock: false }) <= Number(grants.range)) {
           this.attackRollModifierTracker.critical.force('grants.critical.range', `${getFlagDisplayName('grants.critical.range')} (${targetName})`);
         }
 

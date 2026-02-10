@@ -709,6 +709,7 @@ declare global {
         getTokenPlayerNameForUser: typeof utils.getTokenPlayerNameForUser;
         getTraitMult: typeof utils.getTraitMult;
         getUndoQueue: typeof undo.getUndoQueue;
+        getActorWoundedSemaphore: (actorUuid: string) => foundry.utils.Semaphore;
         getVitalityItem: typeof utils.getVitalityItem;
         getVitalityMax: typeof utils.getVitalityMax;
         getVitalityValue: typeof utils.getVitalityValue;
@@ -742,6 +743,7 @@ declare global {
         MQOnUseOptions: Record<string, string>;
         playerFor: typeof utils.playerFor;
         playerForActor: typeof utils.playerForActor;
+        processWoundedStatus: (actor: Actor.Implementation) => Promise<void>;
         raceOrType: typeof utils.raceOrType;
         reactionDialog: typeof utils.reactionDialog;
         readonly currentConfigSettings: typeof configSettings;

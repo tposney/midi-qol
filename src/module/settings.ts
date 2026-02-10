@@ -156,7 +156,7 @@ class ConfigSettings {
   autoUndoTransformations: boolean = false;
   autoRemoveTemplate: boolean = true;
   autoRemoveInstantaneousTemplate: boolean = false;
-  anchorConeRayTemplates: boolean = true;
+  constrainTemplatePlacement: boolean = true;
   autoRollAttack: boolean = false;
   autoRollDamage: string = "none";
   autoCompleteWorkflow = true;
@@ -285,6 +285,7 @@ class ConfigSettings {
     criticalSaves: false,
     displayBonusRolls: true,
     distanceIncludesHeight: false,
+    distanceMeasurement: "center", // "center" = grid square centers, "perimeter" = token perimeters
     DRAllPerDamageDetail: true,
     hiddenAdvantage: "none",
     incapacitated: "nothing",
@@ -686,6 +687,7 @@ export let fetchParams = () => {
     criticalNat20: false,
     criticalSaves: false,
     distanceIncludesHeight: false,
+    distanceMeasurement: "center",
     incapacitated: "nothing",
     invisAdvantage: "RAW2024",
     hiddenAdvantage: "none",
@@ -1471,6 +1473,11 @@ export const checkRangeOptions = keysToOptionsObj("CheckRangeOptions", [
   "none",
   "longfail",
   "longdisadv"
+]);
+
+export const distanceMeasurementOptions = keysToOptionsObj("DistanceMeasurementOptions", [
+  "center",
+  "perimeter"
 ]);
 
 export const invisAdvantageOptions = keysToOptionsObj("InvisAdvantageOptions", [
