@@ -20,6 +20,7 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   declare submitted: boolean;
   declare currentData: Record<string, any>;
   declare originalSerialized: string;
+  declare originalPermanent: boolean;
 
   constructor(editorOptions: OverTimeEditorOptions, appOptions?: Partial<foundry.applications.api.ApplicationV2.Configuration>) {
     super(appOptions);
@@ -31,6 +32,7 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     this.submitted = false;
     this.currentData = this.#buildFormData(this.originalValue);
     this.originalSerialized = this.#serializeCurrentData();
+    this.originalPermanent = this.currentData.permanent;
   }
 
   static override DEFAULT_OPTIONS = {
@@ -58,7 +60,8 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static override PARTS = {
     form: {
-      template: "modules/midi-qol/templates/apps/OverTimeEditor/overTimeEditor.hbs"
+      template: "modules/midi-qol/templates/apps/OverTimeEditor/overTimeEditor.hbs",
+      scrollable: [".overtime-editor-scroll"]
     }
   };
 
@@ -153,6 +156,8 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       failCountMode: "permanent",
       failCountConsecutive: false,
       failCountEffectSpec: "",
+      // Runtime state from effect flags (not part of spec string)
+      permanent: false,
     };
 
     // Parse save count
@@ -198,6 +203,9 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       data.failCountConsecutive = parsed.consecutive;
       data.failCountEffectSpec = parsed.effectSpec;
     }
+
+    // Read permanent flag from effect (runtime state, not part of spec string)
+    data.permanent = !!(this.effect as any)?.flags?.[MODULE_ID]?.overtime?.permanent;
 
     return data;
   }
@@ -246,6 +254,7 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     context.failCountMode = this.currentData.failCountMode;
     context.failCountConsecutive = this.currentData.failCountConsecutive;
     context.failCountEffectSpec = this.currentData.failCountEffectSpec;
+    context.permanent = this.currentData.permanent;
 
     // Dropdown options
     context.turnOptions = {
@@ -391,6 +400,7 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       "allowIncapacitated", "killAnim",
       "saveCountEnabled", "saveCountNum", "saveCountMode", "saveCountConsecutive", "saveCountEffectSpec",
       "failCountEnabled", "failCountNum", "failCountMode", "failCountConsecutive", "failCountEffectSpec",
+      "permanent",
     ];
 
     for (const field of directFields) {
@@ -403,13 +413,22 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /** Save action — serialize current data and call the callback */
-  static #onSave(this: OverTimeEditor): void {
+  static async #onSave(this: OverTimeEditor): Promise<void> {
     const data = { ...this.currentData };
     // Map internal names to what serializeOvertimeDetails expects
     data.saveAbility = data.saveAbilityString;
     data.saveDC = data.saveDCRaw;
 
     const result = serializeOvertimeDetails(data);
+
+    // Update permanent flag on effect only if it changed
+    if (this.currentData.permanent !== this.originalPermanent) {
+      const flagUpdate: Record<string, any> = {
+        [`flags.${MODULE_ID}.overtime.permanent`]: this.currentData.permanent || null
+      };
+      await (this.effect as ActiveEffect.Implementation).update(flagUpdate);
+    }
+
     this.submitted = true;
     this.onSubmitCallback(result);
     this.close();

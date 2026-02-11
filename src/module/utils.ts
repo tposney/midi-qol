@@ -2008,7 +2008,9 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
       if (debugEnabled > 0) warn(`gmOverTimeEffect | OverTime label=${label} startTurn=${startTurn} endTurn=${endTurn} damageBeforeSave=${damageBeforeSave} saveDC=${saveDC} saveAbility=${saveAbility} damageRoll=${damageRoll} damageType=${damageType}`);
 
       // Build item and activity data using helper function
-      const isPermanent = !!actionSave; // actionSave items don't need save/check activity type
+      // isPermanent is true for actionSave items OR if effect was marked permanent by saveCount/failCount
+      const effectMarkedPermanent = !!effect.flags?.[MODULE_ID]?.overtime?.permanent;
+      const isPermanent = !!actionSave || effectMarkedPermanent;
       const { itemData, activityData } = await buildOvertimeItemData({ actor, effect, details, label, isPermanent });
 
       // roll the damage and save....
@@ -2050,7 +2052,8 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
       // @ts-expect-error no dnd5e-types
       ownedItem.prepareFinalAttributes();
       // Register effect for save/fail count tracking if either is specified
-      if (!actionSave && (saveCount || failCount) && saveDC > -1) {
+      // Skip registration if effect is already permanent (no save processing needed)
+      if (!actionSave && !isPermanent && (saveCount || failCount) && saveDC > -1) {
         // @ts-expect-error no dnd5e-types
         const activityUuid = ownedItem.system.activities.contents[0].uuid;
         savedOverTimeEffectsToDelete[activityUuid] = {
@@ -2645,51 +2648,16 @@ export function checkDistance(t1: any, t2: any, distance: number, options: { wal
 
 // ==================== PERIMETER DISTANCE HELPERS ====================
 // These functions compute the minimum distance between token perimeters (bounding rectangles)
-// rather than between grid square centers.
-
-export interface TokenBounds {
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-  width: number;
-  height: number;
-}
-
-/**
- * Get the bounding rectangle of a token in canvas pixel coordinates.
- * @param token - The token (or token reference) to get bounds for
- * @returns The bounding rectangle, or undefined if token is invalid
- */
-export function getTokenBounds(token: any): TokenBounds | undefined {
-  const t = getPlaceable(token);
-  if (!t || !canvas?.dimensions) return undefined;
-
-  // Cast document to access token-specific properties
-  const doc = t.document as any;
-  const x = doc.x ?? 0;
-  const y = doc.y ?? 0;
-  const width = (doc.width ?? 1) * canvas.dimensions.size;
-  const height = (doc.height ?? 1) * canvas.dimensions.size;
-
-  return {
-    left: x,
-    right: x + width,
-    top: y,
-    bottom: y + height,
-    width,
-    height
-  };
-}
+// rather than between grid square centers. Uses PIXI.Rectangle which has left/right/top/bottom getters.
 
 /**
  * Find the closest point on a rectangle's perimeter to a given point.
- * @param bounds - The rectangle bounds
+ * @param bounds - The rectangle bounds (PIXI.Rectangle with left/right/top/bottom getters)
  * @param px - X coordinate of the point
  * @param py - Y coordinate of the point
  * @returns The closest point on the rectangle's perimeter
  */
-export function closestPointOnPerimeter(bounds: TokenBounds, px: number, py: number): { x: number, y: number } {
+export function closestPointOnPerimeter(bounds: PIXI.Rectangle, px: number, py: number): { x: number, y: number } {
   // Clamp the point to the rectangle's extent
   const clampedX = Math.max(bounds.left, Math.min(bounds.right, px));
   const clampedY = Math.max(bounds.top, Math.min(bounds.bottom, py));
@@ -2716,11 +2684,11 @@ export function closestPointOnPerimeter(bounds: TokenBounds, px: number, py: num
 
 /**
  * Compute the closest points on two rectangle perimeters.
- * @param bounds1 - First rectangle bounds
- * @param bounds2 - Second rectangle bounds
+ * @param bounds1 - First rectangle bounds (PIXI.Rectangle)
+ * @param bounds2 - Second rectangle bounds (PIXI.Rectangle)
  * @returns The closest points on each rectangle's perimeter
  */
-export function closestPerimeterPoints(bounds1: TokenBounds, bounds2: TokenBounds): { p1: { x: number, y: number }, p2: { x: number, y: number } } {
+export function closestPerimeterPoints(bounds1: PIXI.Rectangle, bounds2: PIXI.Rectangle): { p1: { x: number, y: number }, p2: { x: number, y: number } } {
   // Check if rectangles overlap (distance would be 0)
   const overlapX = bounds1.left < bounds2.right && bounds1.right > bounds2.left;
   const overlapY = bounds1.top < bounds2.bottom && bounds1.bottom > bounds2.top;
@@ -2753,15 +2721,105 @@ export function closestPerimeterPoints(bounds1: TokenBounds, bounds2: TokenBound
 
 /**
  * Compute the minimum Euclidean distance between two rectangle perimeters (in pixels).
- * @param bounds1 - First rectangle bounds
- * @param bounds2 - Second rectangle bounds
+ * @param bounds1 - First rectangle bounds (PIXI.Rectangle)
+ * @param bounds2 - Second rectangle bounds (PIXI.Rectangle)
  * @returns The minimum distance in pixels (0 if rectangles overlap)
  */
-export function minPerimeterDistancePixels(bounds1: TokenBounds, bounds2: TokenBounds): number {
+export function minPerimeterDistancePixels(bounds1: PIXI.Rectangle, bounds2: PIXI.Rectangle): number {
   const { p1, p2 } = closestPerimeterPoints(bounds1, bounds2);
   const dx = p2.x - p1.x;
   const dy = p2.y - p1.y;
   return Math.sqrt(dx * dx + dy * dy);
+}
+
+/**
+ * Options for wall collision checking.
+ */
+export interface WallCollisionOptions {
+  /** Source document for the collision check (typically token document) */
+  source?: any;
+  /** The wallsBlockRange setting value */
+  wallsBlockRange: string;
+  /** Pre-computed cover visibility (from external modules like simbuls, levelsautocover) */
+  coverVisible?: boolean;
+  /** Origin point elevation (for Levels API) */
+  originElevation?: number;
+  /** Destination point elevation (for Levels API) */
+  destElevation?: number;
+  /** Origin top elevation (for Levels API) */
+  originTopElevation?: number;
+  /** Destination top elevation (for Levels API) */
+  destTopElevation?: number;
+}
+
+/**
+ * Check if a wall blocks the path between two points.
+ * Respects the wallsBlockRange setting and handles different collision modes.
+ *
+ * @param origin - Starting point {x, y}
+ * @param dest - Destination point {x, y}
+ * @param options - Collision check options
+ * @returns true if collision detected (path blocked), false if clear
+ */
+export function checkWallCollision(
+  origin: { x: number, y: number },
+  dest: { x: number, y: number },
+  options: WallCollisionOptions
+): boolean {
+  const { wallsBlockRange, coverVisible, source } = options;
+
+  switch (wallsBlockRange) {
+    case "center":
+      return !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
+        source,
+        mode: "any",
+        type: "sight"
+      });
+
+    case "centerLevels":
+    case "levelsautocover":
+      if (installedModules.get("levels")) {
+        if (coverVisible === false) return true;
+        if (coverVisible === undefined) {
+          const p1 = { x: origin.x, y: origin.y, z: options.originElevation ?? 0 };
+          const p2 = { x: dest.x, y: dest.y, z: options.destElevation ?? 0 };
+          //@ts-expect-error Levels API not typed
+          const baseToBase = CONFIG.Levels.API.testCollision(p1, p2, "collision");
+          p1.z = options.originTopElevation ?? p1.z;
+          p2.z = options.destTopElevation ?? p2.z;
+          //@ts-expect-error Levels API not typed
+          const topToBase = CONFIG.Levels.API.testCollision(p1, p2, "collision");
+          return baseToBase && topToBase;
+        }
+        return false;
+      }
+      // Fallback to basic check if Levels not installed
+      return !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
+        source,
+        mode: "any",
+        type: "sight"
+      });
+
+    case "alternative":
+    case "simbuls-cover-calculator":
+    case "simplecover5e":
+      if (coverVisible === undefined) {
+        return !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
+          source,
+          mode: "any",
+          type: "sight"
+        });
+      }
+      return false;
+
+    case "tokencover":
+      // tokencover is handled entirely by pre-check, no per-segment check needed
+      return false;
+
+    case "none":
+    default:
+      return false;
+  }
 }
 
 export interface PerimeterDistanceOptions {
@@ -2786,7 +2844,7 @@ export interface PerimeterDistanceOptions {
 /**
  * Check if two token bounds overlap (intersect).
  */
-function boundsOverlap(bounds1: TokenBounds, bounds2: TokenBounds): boolean {
+function boundsOverlap(bounds1: PIXI.Rectangle, bounds2: PIXI.Rectangle): boolean {
   return !(bounds1.right < bounds2.left ||
            bounds1.left > bounds2.right ||
            bounds1.bottom < bounds2.top ||
@@ -2798,7 +2856,7 @@ export function computePerimeterDistance(
   t2: any,
   options: PerimeterDistanceOptions = {}
 ): number {
-  const { wallsBlock = false, includeCover = true, includeElevation = true } = options;
+  const { wallsBlock = false, includeElevation = true } = options;
 
   if (!canvas?.scene || !canvas.grid || !canvas.dimensions) return -1;
 
@@ -2809,12 +2867,11 @@ export function computePerimeterDistance(
   // Same token - distance is 0
   if (token1 === token2) return 0;
 
-  const bounds1 = getTokenBounds(token1);
-  const bounds2 = getTokenBounds(token2);
+  const bounds1 = token1.bounds;
+  const bounds2 = token2.bounds;
   if (!bounds1 || !bounds2) return -1;
 
   const gridDistance = canvas.dimensions.distance; // typically 5 feet
-  const fudgeFactor = configSettings.gridlessFudge ?? 0;
 
   // Check if tokens overlap - if so, distance is 0
   if (boundsOverlap(bounds1, bounds2)) {
@@ -2824,29 +2881,62 @@ export function computePerimeterDistance(
   // Find the closest points on each perimeter
   const { p1, p2 } = closestPerimeterPoints(bounds1, bounds2);
 
+  // Convert to PIXI.Point to match computeDistance behavior
+  const origin = new PIXI.Point(p1.x, p1.y);
+  const dest = new PIXI.Point(p2.x, p2.y);
+
   // Check for walls blocking if requested
   if (wallsBlock) {
-    const ray = new foundry.canvas.geometry.Ray(p1, p2);
-    // Check if any walls block movement between the two points
-    if (canvas.walls?.checkCollision(ray, { type: "move", mode: "any" })) {
-      return -1;
+    const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
+    if (wallsBlockRange !== "none") {
+      // Get elevation data for Levels API
+      const t1Elevation = (token1 as Token).document?.elevation ?? 0;
+      const t2Elevation = (token2 as Token).document?.elevation ?? 0;
+      const t1DocWidth = (token1 as Token).document?.width ?? 1;
+      const t1DocHeight = (token1 as Token).document?.height ?? 1;
+      const t2DocWidth = (token2 as Token).document?.width ?? 1;
+      const t2DocHeight = (token2 as Token).document?.height ?? 1;
+      const t1TopElevation = t1Elevation + Math.max(t1DocHeight, t1DocWidth) * gridDistance;
+      const t2TopElevation = t2Elevation + Math.min(t2DocHeight, t2DocWidth) * gridDistance;
+
+      const collision = checkWallCollision(origin, dest, {
+        source: (token1 as Token).document,
+        wallsBlockRange,
+        originElevation: t1Elevation,
+        destElevation: t2Elevation,
+        originTopElevation: t1TopElevation,
+        destTopElevation: t2TopElevation
+      });
+      if (collision) {
+        return -1;
+      }
     }
   }
 
-  // Calculate grid distance using midiMeasureDistances for proper diagonal rule handling
-  const ray = new foundry.canvas.geometry.Ray(p1, p2);
-  const rawDistance = midiMeasureDistances([{ ray }], { gridSpaces: true })[0];
+  // Calculate raw distance between closest perimeter points
+  // The approach depends on the grid type and diagonal mode setting
+  const isGridless = canvas.grid.isGridless;
+  const useGriddedGridless = isGridless && configSettings.griddedGridless;
 
-  // Use fudge factor to determine rounding:
-  // - If raw distance < fudge factor: round down (treat as adjacent, return gridDistance)
-  // - Otherwise: round up (add gridDistance to measured distance)
   let distance: number;
-  if (rawDistance < fudgeFactor) {
-    // Small gap - treat as adjacent (one grid space)
-    distance = gridDistance;
+
+  if (isGridless && !useGriddedGridless) {
+    // Pure gridless: calculate raw euclidean distance directly
+    const dx = dest.x - origin.x;
+    const dy = dest.y - origin.y;
+    const pixelDistance = Math.sqrt(dx * dx + dy * dy);
+    const gridSize = canvas.dimensions?.size ?? 100;
+    distance = (pixelDistance / gridSize) * gridDistance;
+  } else if (useGriddedGridless) {
+    // Gridless with griddedGridless: use proxy to treat as SquareGrid
+    // measurePath on the proxy will use SquareGrid's _measurePath which respects diagonal mode
+    const canvasGridProxy = createSquareGridProxy();
+    const result = canvasGridProxy.measurePath([origin, dest], {});
+    distance = result?.distance ?? 0;
   } else {
-    // Larger gap - add grid space for "entering" target's space, round up to grid increment
-    distance = Math.ceil((rawDistance + gridDistance) / gridDistance) * gridDistance;
+    // Gridded scene: measurePath calculates distance respecting diagonal mode
+    const result = canvas.grid.measurePath([origin, dest], {});
+    distance = result?.distance ?? 0;
   }
 
   // Include elevation difference if requested
@@ -2899,8 +2989,8 @@ export function getPerimeterDistanceInfo(
   const token2 = getPlaceable(t2);
   if (!token1 || !token2) return undefined;
 
-  const bounds1 = getTokenBounds(token1);
-  const bounds2 = getTokenBounds(token2);
+  const bounds1 = token1.bounds;
+  const bounds2 = token2.bounds;
   if (!bounds1 || !bounds2) return undefined;
 
   const { p1, p2 } = closestPerimeterPoints(bounds1, bounds2);
@@ -2927,14 +3017,82 @@ export function getPerimeterDistanceInfo(
  * @returns The distance between the tokens, or -1 if invalid/blocked
  */
 export function getDistance(t1: any, t2: any, options: { wallsBlock?: boolean, includeCover?: boolean } = { wallsBlock: false, includeCover: true }): number {
-  if (configSettings.optionalRules.distanceMeasurement === "perimeter") {
-    return computePerimeterDistance(t1, t2, {
+  const isGridless = canvas?.grid?.isGridless ?? false;
+  const isGridded = !isGridless;
+  const diagonals = safeGetGameSetting("core", "gridDiagonals");
+  const isEuclidean = diagonals === CONST.GRID_DIAGONALS.EXACT;
+  const usePerimeter = configSettings.optionalRules.distanceMeasurement === "perimeter";
+
+  let distance: number;
+  let method: string;
+
+  // Determine which measurement method to use:
+  // 1. If (gridded OR (gridless AND griddedGridless)) AND center mode → computeDistance
+  // 2. If perimeter mode → computePerimeterDistance (handles all grid types internally)
+  // 3. Otherwise → core measurePath (pure gridless with Euclidean and center mode)
+
+  const useMidiCenter = (isGridded || (isGridless && configSettings.griddedGridless)) && !usePerimeter;
+  const useMidiPerimeter = (isGridded || (isGridless && configSettings.griddedGridless)) && usePerimeter;;
+
+  const gridDistance = canvas?.dimensions?.distance ?? 5;
+  const fudgeFactor = configSettings.gridlessFudge ?? 0;
+
+  if (useMidiCenter) {
+    distance = computeDistance(t1, t2, options);
+    method = "center";
+  } else if (useMidiPerimeter) {
+    // computePerimeterDistance returns raw perimeter-to-perimeter distance (0 for adjacent/overlapping)
+    const rawPerimeterDistance = computePerimeterDistance(t1, t2, {
       wallsBlock: options.wallsBlock ?? false,
       includeCover: options.includeCover ?? true,
       includeElevation: configSettings.optionalRules.distanceIncludesHeight
     });
+
+    if (rawPerimeterDistance < 0) {
+      // Blocked by walls
+      distance = -1;
+    } else if (rawPerimeterDistance === 0) {
+      // Overlapping or adjacent tokens
+      distance = 0;
+    } else  {
+      // 0 to fudgeFactor → 5 feet (one grid unit)
+      // >fudgeFactor to (fudgeFactor + gridDistance) → 10 feet (two grid units)
+      const adjustedDistance = Math.max(0, rawPerimeterDistance - fudgeFactor);
+      distance = (Math.ceil(adjustedDistance / gridDistance) + 1) * gridDistance;
+    }
+    method = "perimeter";
+  } else {
+    // Fallback: use core measurePath (gridless with Euclidean)
+    const token1 = getPlaceable(t1);
+    const token2 = getPlaceable(t2);
+    if (!token1 || !token2 || !canvas?.grid) return -1;
+    if (token1 === token2) return 0;
+
+    const result = canvas.grid.measurePath([token1.center, token2.center], {});
+    distance = result?.distance ?? 0;
+    method = "euclidean";
   }
-  return computeDistance(t1, t2, options);
+
+  const token1 = getPlaceable(t1);
+  const token2 = getPlaceable(t2);
+  // For debug, compute raw distance between perimeter points
+  let rawDistance = 0;
+  let pixelDistance = 0;
+  if (token1 && token2 && method === "perimeter") {
+    const bounds1 = token1.bounds;
+    const bounds2 = token2.bounds;
+    if (bounds1 && bounds2) {
+      const { p1, p2 } = closestPerimeterPoints(bounds1, bounds2);
+      const ray = new foundry.canvas.geometry.Ray(p1, p2);
+      pixelDistance = ray.distance;
+      const gridSize = canvas?.dimensions?.size ?? 100;
+      const gridDist = canvas?.dimensions?.distance ?? 5;
+      rawDistance = (pixelDistance / gridSize) * gridDist;
+    }
+  }
+  console.error(`getDistance | ${(token1 as Token)?.name} -> ${(token2 as Token)?.name} = ${distance} (${method}, rawDistance=${rawDistance.toFixed(2)}, pixelDist=${pixelDistance.toFixed(0)}, fudge=${fudgeFactor}, gridless=${isGridless}, griddedGridless=${configSettings.griddedGridless})`);
+
+  return distance;
 }
 
 /** takes two tokens of any size and calculates the distance between them
@@ -3041,66 +3199,16 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
             let dest = new PIXI.Point(point.x, point.y);
             const r = new foundry.canvas.geometry.Ray(origin, dest);
             if (wallsBlock) {
-              switch (configSettings.optionalRules.wallsBlockRange) {
-                case "center":
-                  let collisionCheck;
-
-                  collisionCheck = CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, { source: t1.document, mode: "any", type: "sight" })
-                  if (collisionCheck) continue;
-                  break;
-                case "centerLevels":
-                case "levelsautocover":
-                  // //@ts-expect-error
-                  // TODO include auto cover calcs in checking console.error(AutoCover.calculateCover(t1, t2));
-                  if (installedModules.get("levels")) {
-                    if (coverVisible === false) continue;
-                    if (coverVisible === undefined) {
-                      let p1 = {
-                        x: origin.x,
-                        y: origin.y,
-                        z: t1Elevation
-                      }
-                      let p2 = {
-                        x: dest.x,
-                        y: dest.y,
-                        z: t2Elevation
-                      }
-                      //@ts-expect-error
-                      const baseToBase = CONFIG.Levels.API.testCollision(p1, p2, "collision");
-                      p1.z = t1TopElevation;
-                      p2.z = t2TopElevation;
-                      //@ts-expect-error
-                      const topToBase = CONFIG.Levels.API.testCollision(p1, p2, "collision");
-                      if (baseToBase && topToBase) continue;
-                    }
-                  } else {
-                    let collisionCheck;
-                    collisionCheck = CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, { source: t1.document, mode: "any", type: "sight" })
-                    if (collisionCheck) continue;
-                  }
-                  break;
-                case "alternative":
-                case "simbuls-cover-calculator":
-                  if (coverVisible === undefined) {
-                    let collisionCheck;
-                    collisionCheck = CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, { source: t1.document, mode: "any", type: "sight" })
-                    if (collisionCheck) continue;
-                  }
-                  break;
-
-                case "simplecover5e":
-                  // Pre-check already handled LoS via Simple Cover 5e API
-                  // If coverVisible is undefined (pre-check didn't run), fall back to basic collision check
-                  if (coverVisible === undefined) {
-                    let collisionCheck;
-                    collisionCheck = CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, { source: t1.document, mode: "any", type: "sight" })
-                    if (collisionCheck) continue;
-                  }
-                  break;
-
-                case "none":
-                default:
-              }
+              const collision = checkWallCollision(origin, dest, {
+                source: t1.document,
+                wallsBlockRange: configSettings.optionalRules.wallsBlockRange,
+                coverVisible,
+                originElevation: t1Elevation,
+                destElevation: t2Elevation,
+                originTopElevation: t1TopElevation,
+                destTopElevation: t2TopElevation
+              });
+              if (collision) continue;
             }
             segments.push({ ray: r });
           }
@@ -3298,7 +3406,6 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
     }
 
     const isMetric = game.settings.get("dnd5e", "metricLengthUnits") ?? false;
-    let isGridless = canvas.grid?.constructor.name === "GridlessGrid";
     const fudgeFactor = configSettings.gridlessFudge ?? 0;
 
     for (let target of targets) {
@@ -3322,11 +3429,21 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
       };
 
       const rawDistance = getDistance(token, target, coverOptions);
-      let distance;
-      if (isGridless && rawDistance >= 0)
-        distance = Math.max(0, parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor);
-      else
-        distance = parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor;
+
+      // Wall blocking is indicated by rawDistance < 0, check it first before applying fudge factor
+      if (rawDistance < 0) {
+        log(`${target.name} is blocked by a wall`)
+        return {
+          result: "fail",
+          reason: `${actor?.name}'s target is blocked by a wall`,
+          range,
+          longRange
+        }
+      }
+
+      // Apply fudge factor - rawDistance is >= 0, use Math.max to prevent negative from fudge subtraction
+      const distance = Math.max(0, parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor);
+
       if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
         log(`${target.name} is too far ${distance} from your character you cannot hit`)
         if (checkMechanic("checkRange") === "longdisadv" && ["rwak", "rsak", "rpak"].includes(activity.actionType)) {
@@ -3350,15 +3467,6 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
         reason: `${actor?.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`,
         range,
         longRange
-      }
-      if (distance < 0) {
-        log(`${target.name} is blocked by a wall`)
-        return {
-          result: "fail",
-          reason: `${actor?.name}'s target is blocked by a wall`,
-          range,
-          longRange
-        }
       }
     }
     return {
@@ -7622,15 +7730,16 @@ export function getIconFreeLink(entity?: TokenOrDocument | Item | Actor | null) 
   }
 }
 
-export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}) {
-  let isGridless = canvas.grid?.constructor.name === "GridlessGrid";
-  if (!isGridless || !options.gridSpaces || !configSettings.griddedGridless || !canvas.grid) {
-    return segments.map(s => canvas.grid?.measurePath([s.ray.A, s.ray.B], {})).map(d => d?.distance ?? 0);
-  }
-  if (!canvas.grid) return [0];
+/**
+ * Creates a proxy around canvas.grid that makes it behave like a SquareGrid.
+ * Used for griddedGridless mode to apply square grid measurement rules to gridless scenes.
+ * @returns A proxy that redirects grid methods to SquareGrid.prototype
+ */
+export function createSquareGridProxy(): foundry.grid.BaseGrid {
+  if (!canvas.grid) throw new Error("createSquareGridProxy called without canvas.grid");
   const diagonals = safeGetGameSetting("core", "gridDiagonals");
-  const canvasGridProxy = new Proxy(canvas.grid, {
-    get: function (target, prop, receiver) {
+  const canvasGridProxy: foundry.grid.BaseGrid = new Proxy(canvas.grid, {
+    get: function (target, prop, _receiver) {
       if (foundry.grid.SquareGrid.prototype[prop] instanceof Function) {
         return foundry.grid.SquareGrid.prototype[prop].bind(canvasGridProxy);
       } else if (prop === "diagonals") {
@@ -7641,6 +7750,17 @@ export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}
       return Reflect.get(target, prop);
     }
   });
+  return canvasGridProxy;
+}
+
+export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}) {
+  let isGridless = canvas.grid?.constructor.name === "GridlessGrid";
+  if (!isGridless || !options.gridSpaces || !configSettings.griddedGridless || !canvas.grid) {
+    return segments.map(s => canvas.grid?.measurePath([s.ray.A, s.ray.B], {})).map(d => d?.distance ?? 0);
+  }
+  if (!canvas.grid) return [0];
+  const diagonals = safeGetGameSetting("core", "gridDiagonals");
+  const canvasGridProxy = createSquareGridProxy();
   const GridDiagonals = CONST.GRID_DIAGONALS;
   // First snap the poins to the nearest center point for equidistant/1,2,1/2,1,2
   // I expected this would happen automatically in the proxy call - but didn't and not sure why.
@@ -8431,12 +8551,11 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
   let minDist = targetDetails.template.size;
   const targetIds: string[] = [];
   const maxTargets = targetDetails.affects?.count;
-  // ignoreToken set to null if special target include "self" - otherwise set to token
   // TODO (Michael): HERE! RIGHT HERE!
   let ignoreToken = (targetDetails.affects.special ?? "").split(";").some(spec => ["self", "-self"].includes(spec)) ? null : tokenToUse;
   if ((targetDetails.affects.special ?? "").split(";").some(spec => ["self"].includes(spec))) {
     foundry.utils.logCompatibilityWarning("midi-qol | target specials includes 'self'. Use '-self' to exclude the caster",
-      { since: "midi-qol 13.0.19", until: "31.1.0" });
+      { since: "midi-qol 13.0.19", until: "13.1.0" });
   }
   if (canvas.tokens?.placeables && canvas.grid) {
     const canvasTokens = canvas.tokens?.placeables;

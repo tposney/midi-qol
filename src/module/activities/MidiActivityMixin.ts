@@ -4,6 +4,7 @@ import { socketlibSocket } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFirstWorkflow } from "../Workflow.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
+import { ConditionEditor } from "../apps/ConditionEditor.js";
 import { averageDice, skipConcentrationActorUuids } from "../patching.js"
 import {
   aoeTargetTypeOptions,
@@ -80,6 +81,61 @@ export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.Formu
     return foundry.utils.mergeObject(super._defaults, {
       deterministic: false
     });
+  }
+
+  /**
+   * Override _toInput to wrap the text input with a condition editor button.
+   * The button opens the ConditionEditor which provides autocomplete for condition expressions.
+   */
+  _toInput(config: any): HTMLElement {
+    // Get the standard text input from parent
+    const input = super._toInput(config) as HTMLInputElement;
+
+    // Create wrapper container
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("midi-condition-field-wrapper");
+    wrapper.appendChild(input);
+
+    // Create editor button
+    const button = document.createElement("button");
+    button.type = "button";
+    button.classList.add("midi-condition-editor-btn");
+    button.innerHTML = '<i class="fas fa-code"></i>';
+    button.title = i18n("midi-qol.ConditionEditor.Title");
+
+    // Click handler opens the ConditionEditor
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Find the parent item from the form's document
+      const form = input.closest("form");
+      const app = (form as any)?.closest?.("[data-appid]");
+      let parentItem: Item | null = null;
+      if (app) {
+        const appId = app.dataset.appid;
+        const appInstance = foundry.applications.instances.get(appId);
+        // Activity sheets have document property pointing to the activity
+        const activity = (appInstance as any)?.document;
+        parentItem = activity?.item ?? null;
+      }
+
+      new ConditionEditor({
+        value: input.value,
+        key: config.name ?? this.name,
+        label: this.label ?? config.name ?? this.name,
+        parent: parentItem,
+        onSubmit: (newValue: string) => {
+          input.value = newValue;
+          // Trigger change event so the form knows the value changed
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+        },
+        onCancel: () => { }
+      }).render(true);
+    });
+
+    wrapper.appendChild(button);
+    return wrapper;
   }
 }
 

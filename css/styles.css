@@ -1499,3 +1499,38 @@ section.midi-qol.tab {
   display: block;
   width: 100%;
 }
+
+/* -------------------------------------------- */
+/*  Condition Field Editor Button               */
+/* -------------------------------------------- */
+
+.midi-condition-field-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.midi-condition-field-wrapper input {
+  flex: 1;
+}
+
+.midi-condition-editor-btn {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dnd5e-background-card);
+  border: 1px solid var(--dnd5e-color-gold);
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--dnd5e-color-gold);
+}
+
+.midi-condition-editor-btn:hover {
+  background: var(--dnd5e-color-gold);
+  color: var(--dnd5e-background-card);
+}

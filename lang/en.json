@@ -2068,5 +2068,8 @@
   "midi-qol.OverTimeEditor.Cancel": "Cancel",
   "midi-qol.OverTimeEditor.UnsavedTitle": "Unsaved Changes",
   "midi-qol.OverTimeEditor.UnsavedContent": "You have unsaved changes. Close without saving?",
-  "midi-qol.OverTimeEditor.CloseWithoutSaving": "Discard Changes"
+  "midi-qol.OverTimeEditor.CloseWithoutSaving": "Discard Changes",
+  "midi-qol.OverTimeEditor.RuntimeSection": "Runtime State",
+  "midi-qol.OverTimeEditor.Permanent": "Marked Permanent",
+  "midi-qol.OverTimeEditor.PermanentHint": "When checked, no further saves are processed. Set by saveCount/failCount when count reaches zero with '+' mode."
 }

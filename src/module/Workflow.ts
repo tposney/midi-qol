@@ -1133,8 +1133,6 @@ export class Workflow {
     this.forcePersistFields({ otherDamageRolls: otherDamageRolls?.map(r => r.toJSON()) ?? [] });
   }
 
-
-
   #utilityRolls: Roll[] | undefined;
   get utilityRolls(): Roll[] | undefined {
     if (this.#utilityRolls) return this.#utilityRolls;
@@ -1146,8 +1144,6 @@ export class Workflow {
     this.#utilityRolls = utilityRolls;
     this.forcePersistFields({ utilityRolls: utilityRolls?.map(d => { d.data = {}; return d.toJSON() }) ?? [] });
   }
-
-
 
   #damageTotal: number | undefined;
   get damageTotal() {
@@ -1379,6 +1375,7 @@ export class Workflow {
     }
     return new Set();
   }
+
   set advantageSaves(advantageSaves: Set<TokenOrDocument> | undefined) {
     this.#advantageSaves = advantageSaves?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
     const targetDocuments = Array.from(advantageSaves ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
@@ -1592,6 +1589,13 @@ export class Workflow {
     this.criticalSaves = new Set();
     this.fumbleSaves = new Set();
     this.hitTargetsEC = new Set();
+  }
+
+  get saveRolls() {
+    foundry.utils.logCompatibilityWarning("Workflow.saveRolls is deprecated without replacement. Use workflow.tokenSaves instead", {since: "midi-qol 13.0.42", until: "mid-qol 13.1.0"});
+    if (this.tokenSaves)
+      return Object.values(this.tokenSaves).map(r => ({formula: r.formula,  options: r.options}))
+    return [];
   }
 
   ammunition: Item.Implementation | undefined;

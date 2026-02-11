@@ -1,5 +1,5 @@
 <section class="midi-qol overtime-editor">
-  <div class="overtime-editor-scroll">
+  <div class="overtime-editor-scroll scrollable">
     {{!-- Timing & Identity --}}
     <fieldset>
         <legend>{{localize "midi-qol.OverTimeEditor.TimingSection"}}</legend>
@@ -217,6 +217,16 @@
         <div class="form-group">
             <label>{{localize "midi-qol.OverTimeEditor.Macro"}}</label>
             <input type="text" name="macro" value="{{details.macro}}" placeholder="function., ItemMacro, Macro." />
+        </div>
+    </fieldset>
+
+    {{!-- Runtime State --}}
+    <fieldset>
+        <legend>{{localize "midi-qol.OverTimeEditor.RuntimeSection"}}</legend>
+        <div class="form-group">
+            <label>{{localize "midi-qol.OverTimeEditor.Permanent"}}</label>
+            <input type="checkbox" name="permanent" {{checked permanent}} />
+            <div class="notes midi-qol-faint">{{localize "midi-qol.OverTimeEditor.PermanentHint"}}</div>
         </div>
     </fieldset>
   </div>

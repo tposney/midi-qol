@@ -1866,7 +1866,7 @@ function _midiATIRefresh(template: foundry.canvas.placeables.MeasuredTemplate.Im
     // Get source token from midi-qol flag (set in preCreateActivityTemplate hook)
     const sourceToken = getTemplateSourceToken(template.document);
     if (activity && sourceToken) {
-      const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some((spec: string) => spec === "self");
+      const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some((spec: string) => ["self", "-self"].includes(spec));
       selectTargetsFromTemplates([template.document], sourceToken, ignoreSelf, getAoETargetType(activity), autoTarget);
       return true;
     } else {

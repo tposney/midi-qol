@@ -176,6 +176,11 @@ declare module "fvtt-types/configuration" {
           baseLevel?: number;
         };
         dependentOn?: string; // UUID of parent document (Actor/Item) for midi-qol dependent tracking
+        overtime?: {
+          permanent?: boolean;      // Effect marked permanent by saveCount/failCount
+          savesRemaining?: number;  // Remaining saves needed for saveCount
+          failsRemaining?: number;  // Remaining fails needed for failCount
+        };
         overtimeChatCardUuids?: string[];
         transformedActorUuids?: string[];
       };

@@ -541,29 +541,31 @@ export function initHooks() {
               if (isRemove) {
                 expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:saveCount" });
               } else {
-                await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.permanent`, true);
-                await effect.update({ flags: effect.flags });
+                const permanentUpdate: Record<string, any> = { [`flags.${MODULE_ID}.overtime.permanent`]: true };
+                await effect.update(permanentUpdate);
               }
             } else {
               // Decrement counter on effect
               // If failCount is consecutive, a save resets the fail streak
+              const updates: Record<string, any> = {
+                [`flags.${MODULE_ID}.overtime.savesRemaining`]: savesRemaining
+              };
               if (failConsecutive && failCount !== undefined) {
-                foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`, failCount);
+                updates[`flags.${MODULE_ID}.overtime.failsRemaining`] = failCount;
               }
-              await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`, savesRemaining);
-              await effect.update({ flags: effect.flags });
+              await effect.update(updates);
             }
           } else {
-            // No saveCount or no save - original behavior (single save removes)
-            expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime" });
+            // No saveCount specified - check if effect is already permanent
+            const isAlreadyPermanent = !!effect.flags?.[MODULE_ID]?.overtime?.permanent;
+            if (!isAlreadyPermanent) {
+              // Original behavior: single save removes the effect
+              expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime" });
+            }
+            // If already permanent, do nothing - just let the overtime damage continue
           }
         } else if (failed && failCount !== undefined) {
           // Handle failCount - multiple fails trigger action
-          // If saveCount is consecutive, a failure resets the save streak
-          if (saveConsecutive && saveCount !== undefined) {
-            foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`, saveCount);
-          }
-
           let failsRemaining = foundry.utils.getProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`) as number | undefined;
           // Initialize if not set
           if (failsRemaining === undefined) failsRemaining = failCount;
@@ -582,18 +584,24 @@ export function initHooks() {
             if (isRemove) {
               expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:failCount" });
             } else {
-              await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.permanent`, true);
-              await effect.update({ flags: effect.flags });
+              const permanentUpdate: Record<string, any> = { [`flags.${MODULE_ID}.overtime.permanent`]: true };
+              await effect.update(permanentUpdate);
             }
           } else {
             // Decrement counter on effect
-            await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`, failsRemaining);
-            await effect.update({ flags: effect.flags });
+            // If saveCount is consecutive, a failure resets the save streak
+            const updates: Record<string, any> = {
+              [`flags.${MODULE_ID}.overtime.failsRemaining`]: failsRemaining
+            };
+            if (saveConsecutive && saveCount !== undefined) {
+              updates[`flags.${MODULE_ID}.overtime.savesRemaining`] = saveCount;
+            }
+            await effect.update(updates);
           }
         } else if (failed && saveConsecutive && saveCount !== undefined) {
           // Failed but no failCount to process — still need to reset consecutive save streak
-          foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`, saveCount);
-          await effect.update({ flags: effect.flags });
+          const resetUpdate: Record<string, any> = { [`flags.${MODULE_ID}.overtime.savesRemaining`]: saveCount };
+          await effect.update(resetUpdate);
         }
       }
       delete savedOverTimeEffectsToDelete[activityUuid];

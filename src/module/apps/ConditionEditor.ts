@@ -5,7 +5,8 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 interface ConditionEditorOptions {
   value: string;
   key: string;
-  effect: ActiveEffect;
+  effect?: ActiveEffect;
+  label?: string;
   parent: Actor | Item | null;
   onSubmit: (value: string) => void;
   onCancel: () => void;
@@ -279,7 +280,8 @@ function buildConditionCompletions(api: any): Record<string, any> {
 export class ConditionEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   declare originalValue: string;
   declare flagKey: string;
-  declare effect: ActiveEffect;
+  declare effect: ActiveEffect | undefined;
+  declare label: string | undefined;
   declare parentDoc: Actor | Item | null;
   declare onSubmitCallback: (value: string) => void;
   declare onCancelCallback: () => void;
@@ -290,6 +292,7 @@ export class ConditionEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     this.originalValue = editorOptions.value;
     this.flagKey = editorOptions.key;
     this.effect = editorOptions.effect;
+    this.label = editorOptions.label;
     this.parentDoc = editorOptions.parent;
     this.onSubmitCallback = editorOptions.onSubmit;
     this.onCancelCallback = editorOptions.onCancel;
@@ -320,7 +323,8 @@ export class ConditionEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   };
 
   get title(): string {
-    return `${i18n("midi-qol.ConditionEditor.Title")}: ${this.effect?.name ?? ""}`;
+    const name = this.effect?.name ?? this.label ?? "";
+    return `${i18n("midi-qol.ConditionEditor.Title")}: ${name}`;
   }
 
   override async _prepareContext(options: foundry.applications.api.ApplicationV2.RenderOptions) {
