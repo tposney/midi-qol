@@ -207,7 +207,13 @@
     "none": "Nenhum",
     "all": "Verificar (todos veem o resultado)",
     "whisper": "Verificar (apenas Mestre vê o resultado)",
-    "gmOnly": "Verificar (apenas Mestre vê qualquer resultado)"
+    "gmOnly": "Verificar (apenas Mestre vê qualquer resultado)",
+    "expandedHints": {
+      "none": "Não há verificação automática de acertos. Os acertos devem ser julgados manualmente pelo Mestre.",
+      "all": "O Midi QOL verifica automaticamente as jogadas de ataque contra a CA do alvo. Todos os jogadores veem os resultados de acerto/erro.",
+      "whisper": "O Midi QOL verifica automaticamente as jogadas de ataque contra a CA do alvo. Apenas o Mestre vê os resultados de acerto/erro.",
+      "gmOnly": "O Midi QOL verifica automaticamente as jogadas de ataque contra a CA do alvo. Apenas o Mestre vê a jogada de ataque e os resultados."
+    }
   },
   "midi-qol.clickOptions": {
     "off": "Desativado",
@@ -237,7 +243,15 @@
     "all": "Salvaguarda (todos veem resultado + total salvaguarda)",
     "whisper": "Salvaguarda (apenas Mestre vê)",
     "allShow": "Salvaguarda (todos veem resultado + rolagens)",
-    "gmOnly": "Salvaguarda (apenas Mestre vê qualquer resultado)"
+    "gmOnly": "Salvaguarda (apenas Mestre vê qualquer resultado)",
+    "expandedHints": {
+      "none": "Sem salvaguardas automáticas. As salvaguardas devem ser feitas manualmente.",
+      "allNoRoll": "O Midi QOL rola automaticamente as salvaguardas. Todos os jogadores veem os resultados de sucesso/falha, mas não o total da rolagem.",
+      "all": "O Midi QOL rola automaticamente as salvaguardas. Todos os jogadores veem os resultados de sucesso/falha e o total da rolagem.",
+      "allShow": "O Midi QOL rola automaticamente as salvaguardas. Todos os jogadores veem os resultados de sucesso/falha, o total da rolagem e o detalhamento completo da rolagem.",
+      "whisper": "O Midi QOL rola automaticamente as salvaguardas. Apenas o Mestre vê os resultados e os detalhes da rolagem.",
+      "gmOnly": "O Midi QOL rola automaticamente as salvaguardas. Apenas o Mestre vê qualquer coisa relacionada às salvaguardas."
+    }
   },
   "midi-qol.rangeTargetOptions": {
     "none": "Nenhum",
@@ -310,7 +324,19 @@
     "chat": "Mensagem do Chat",
     "mtb": "Monk's Token Bar",
     "ftb": "Flash Token Bar",
-    "rer": "Ripper's Epic Rolls"
+    "rer": "Ripper's Epic Rolls",
+    "expandedHints": {
+      "none": "As salvaguardas são roladas automaticamente, sem interação do jogador. A rolagem é mostrada em particular (apenas para o Mestre).",
+      "nonePublic": "As salvaguardas são roladas automaticamente, sem interação do jogador. A rolagem é mostrada publicamente para todos os jogadores.",
+      "noneDialogPublic": "As salvaguardas são roladas automaticamente, mas a caixa de diálogo de configuração da rolagem é exibida primeiro, permitindo modificações. A rolagem é exibida publicamente.",
+      "noneDialogPrivate": "As salvaguardas são roladas automaticamente, mas a caixa de diálogo de configuração da rolagem é exibida primeiro, permitindo modificações. A rolagem é mostrada em particular (apenas para o Mestre).",
+      "noneDialogSelf": "As salvaguardas são roladas automaticamente, mas a caixa de diálogo de configuração da rolagem é exibida primeiro, permitindo modificações. A rolagem é exibida apenas para o jogador que está rolando o dado.",
+      "noneDialogBlind": "As salvaguardas são roladas automaticamente, mas a caixa de diálogo de configuração da rolagem é exibida primeiro, permitindo modificações. A rolagem é enviada como uma rolagem às cegas.",
+      "chat": "Os jogadores são solicitados a realizar salvaguardas por um botão de mensagem no chat.",
+      "mtb": "Os jogadores rolam salvaguardas através da interface do Monk's Token Bar. Requer o módulo Monk's Token Bar.",
+      "ftb": "Os jogadores rolam salvaguardas através da pop-up do Flash Token Bar. Requer o módulo Flash Rolls 5e.",
+      "rer": "Os jogadores rolam salvaguardas através da interface do Ripper's Epic Rolls. Requer o módulo Epic Rolls."
+    }
   },
   "midi-qol.playerRollSavesOptionsReduced": {
     "none": "Nenhum",
@@ -348,15 +374,7 @@
   "midi-qol.potion": "Poção",
   "midi-qol.HideRollDetails.Name": "Ocultar Detalhes de Rolagens de Mestre",
   "midi-qol.HideRollDetails.Hint": "Escolha quais rolagens de Mestre serão escondidas/exibidas aos jogadores.",
-  "midi-qol.HideRollDetails.HintLong": {
-    "none": "Nenhum: Não Esconde Nada",
-    "detailsDSN": "Rolar Fórmula Mas Mostrar Rolagem DSN: Esconde a fórmula de rolagem mas ainda mostra a rolagem de dados do DSN",
-    "details": "Rolar Fórmula: Esconde a fórmula de rolagem e não mostra a rolagem de dados do DSN",
-    "d20Only": "Exibir Ataque d20 + Dano Total: Exibe somente a rolagem de ataque d20 e o dano total",
-    "hitDamage": "Exibir Acerto/Erro + Dano Total: Mostra Acerto/Erro mais o dano total",
-    "d20attackOnly": "Exibir Apenas Ataques D20: Exibe apenas dados de ataques d20",
-    "all": "Toda a Rolagem: Esconde dos jogadores todos os detalhes da rolagem"
-  },
+  "midi-qol.HideRollDetails.HintLong": "<li class=\"notes midi-qol-faint\"><strong>Nenhum</strong>: Não esconde nada.</li><li class=\"notes midi-qol-faint\"><strong>Rolar Fórmula Mas Mostrar DSN</strong>: Esconde a fórmula de rolagem mas ainda mostra a rolagem de dados do DSN.</li><li class=\"notes midi-qol-faint\"><strong>Rolar Fórmula</strong>: Esconde a fórmula de rolagem e não mostra a rolagem de dados do DSN.</li><li class=\"notes midi-qol-faint\"><strong>Exibir Ataque d20 + Dano Total</strong>: Exibe somente a rolagem de ataque d20 e o dano total.</li><li class=\"notes midi-qol-faint\"><strong>Exibir Acerto/Erro + Dano Total</strong>: Mostra Acerto/Erro mais o dano total.</li><li class=\"notes midi-qol-faint\"><strong>Exibir Apenas Ataques D20</strong>: Exibe apenas dados de ataques d20.</li><li class=\"notes midi-qol-faint\"><strong>Toda a Rolagem</strong>: Esconde dos jogadores todos os detalhes da rolagem.</li>",
   "midi-qol.DiceRolled": "<div>Rolado</div>",
   "midi-qol.ForceHideRoll.Name": "Realmente Esconder Rolagens Privadas/Cegas/Pessoais",
   "midi-qol.ForceHideRoll.Hint": "Não exibe nada para não-destinatários para rolagens privadas/cegas/pessoais. Agradecimentos ao felix.mueller.86@web.de.",
@@ -469,7 +487,8 @@
   "midi-qol.OptionalRules.Name": "Regras Opcionais de Jogo",
   "midi-qol.OptionalRules.Hint": "Regras de Jogo de D&D5e que você talvez queira habilitar. Geralmente não funciona com o módulo Better Rolls.",
   "midi-qol.InvisAdvantage.Name": "Tokens Não-Vistos ou Invisíveis têm Vantagem/Desvantagem em Ataques",
-  "midi-qol.InvisAdvantage.Hint": "<strong>RAW (2014)</strong>: A condição Invisível sempre concede vant/desv. Outros sentidos (Percepção às Cegas, Sentido Sísmico) negam a vant/desv da invisibilidade. <strong>RAW (2024)</strong>: Só concede vant/desv se a outra criatura não puder <em>ver</em>  você. Percepção às Cegas/Visão Verdadeira negam, mas Sentido Sísmico não.",
+  "midi-qol.RAW2014Invisible.Hint": "<strong>RAW (2014)</strong>: A condição Invisível sempre concede vant/desv. Outros sentidos (Percepção às Cegas, Sentido Sísmico) negam a vant/desv da invisibilidade.",
+  "midi-qol.RAW2024Invisible.Hint": "<strong>RAW (2024)</strong>: Só concede vant/desv se a outra criatura não puder <em>ver</em> você. Percepção às Cegas/Visão Verdadeira negam, mas Sentido Sísmico não.",
   "midi-qol.InvisAdvantageOptions": {
     "none": "Não Aplicar",
     "RAW2014": "RAW (2014)",
@@ -620,6 +639,11 @@
   "midi-qol.UsePlayerPortrait.Name": "Usar Imagem do Ator no Cartão de Chat",
   "midi-qol.UsePlayerPortrait.Hint": "Para atores de Jogadores, usar a imagem ao invés do token nos cartões de chat do Midi QOL.",
   "midi-qol.DistanceIncludesHeight.Name": "Incluir Diferença de Altura em Cálculos de Alcance",
+  "midi-qol.DistanceMeasurement.Name": "Método de Medição de Distância",
+  "midi-qol.DistanceMeasurement.Hint": "Como medir a distância entre tokens. 'Padrão' usa a medição principal do Foundry (centro a centro via measurePath). 'Centro dos Quadrados da Grade' usa os centros dos quadrados da grade mais próximos com processamento midi-qol. 'Perímetros do Token' usa os pontos mais próximos nas bordas do token (mais preciso para tokens grandes).",
+  "midi-qol.DistanceMeasurementOptions.default": "Padrão (Principal do Foundry)",
+  "midi-qol.DistanceMeasurementOptions.center": "Centro dos Quadrados da Grade",
+  "midi-qol.DistanceMeasurementOptions.perimeter": "Perímetros do Token",
   "midi-qol.NoSocketLib": "Midi QOL requer o módulo socketlib instalado e habilitado",
   "midi-qol.chatlogPruneDeprecated": "A função de limpeza de registros de chat integrada do Midi QoL está obsoleta. Instale e ative o módulo 'chatlog-prune'. Este recurso será removido na versão 14 do Midi QoL.",
   "midi-qol.confirm": "Diálogo de Confirmação",
@@ -747,12 +771,7 @@
   "midi-qol.FixStickyKeys.Name": "Corrijir alt/ctrl/shift Travado",
   "midi-qol.FixStickyKeys.Hint": "Se ativado, Midi QOL tentará resolver alt/ctrl/shift travado em 'Ativado'",
   "midi-qol.DisplaySaveAdvantage.Name": "Exibe se a Salvaguarda tem Vantagem/Desvantagem",
-  "midi-qol.QuickSettingsBlurb": {
-    "1": "Configurações Rápidas permite definir uma combinação de configurações de uma só vez.",
-    "2": "Quando um dos botões abaixo é pressionado, as alterações são feitas imediatamente nas suas configurações.",
-    "3": "Uma lista de alterações é exibida quando as configurações são concluídas.",
-    "4": "Sugestões de melhorias são bem-vindas."
-  },
+  "midi-qol.QuickSettingsBlurb": "Configurações Rápidas permite definir uma combinação de configurações de uma só vez.<br>Quando um dos botões abaixo é pressionado, as alterações são feitas imediatamente nas suas configurações.<br>Uma lista de alterações é exibida quando as configurações são concluídas.<br>Sugestões de melhorias são bem-vindas.",
   "midi-qol.Reaction.Title": "Processo de Reação",
   "midi-qol.GMDoReactionsOptions": {
     "all": "Ativado",
@@ -806,12 +825,7 @@
   "midi-qol.LaunchSetupWizard.Name": "Assistente de Configuração",
   "midi-qol.LaunchSetupWizard.Label": "Iniciar Assistente de Configuração.",
   "midi-qol.LaunchSetupWizard.Hint": "Abre o assistente de configuração passo a passo do Midi QOL.",
-  "midi-qol.SoundSettingsBlurb": {
-    "1": "Começando...",
-    "2": "Escolha 'Criar Playlist de Amostra' para criar a playlist 'Midi Item Sounds' com alguns sons.",
-    "3": "Escolha 'Configurações Básicas' e mexa nela.",
-    "4": "As outras configurações de criação adicionam mais detalhes/cmoplexidade."
-  },
+  "midi-qol.SoundSettingsBlurb": "Começando...<br>Escolha 'Criar Playlist de Amostra' para criar a playlist 'Midi Item Sounds' com alguns sons.<br>Escolha 'Configurações Básicas' e mexa nela.<br>As outras configurações de criação adicionam mais detalhes/complexidade.",
   "midi-qol.AddRow": "Adicionar Linha",
   "midi-qol.CheckFlanking.Name": "Verificar Flanco",
   "midi-qol.CheckFlanking.Hint": "Verifica se você e seus aliados estão flanqueando o oponente. Dá vantagem a quem ataca e/ou aplica a condição 'CE flanking' a quem ataca OU aplica a condição 'CE Flanked' ao alvo.",
@@ -822,8 +836,18 @@
     "midiFlanking": "Flanqueando Midi",
     "ceflanked": "Flanqueado Convenient Effect",
     "midiFlanked": "Flanqueado Midi",
-    "ceflankedNoconga": "Flanqueado Convenient Effect + Sem Linha de Conga",
-    "midiFlankedNoConga": "Flanqueado Midi + Sem Linha de Conga"
+    "ceflankedNoconga": "Flanqueado Convenient Effect + Sem Fila Indiana",
+    "midiFlankedNoConga": "Flanqueado Midi + Sem Fila Indiana",
+    "expandedHints": {
+      "off": "Sem automação de flanqueamento.",
+      "advonly": "Flanquear concede vantagem em ataques corpo a corpo. Nenhum efeito ou condição se aplica a nenhum dos tokens.",
+      "ceonly": "Aplique o Convenient Effects 'Flanking' ao atacante. Somente esse atacante ganha vantagem, outros atacantes do mesmo alvo não ganham.",
+      "midiFlanking": "Aplique o efeito 'Flanqueando' do Midi QOL ao atacante. Somente esse atacante ganha vantagem, outros atacantes do mesmo alvo não ganham.",
+      "ceflanked": "Aplique o Convenient Effects 'Flanked' ao alvo. Todos os atacantes que realizarem ataques corpo a corpo contra o alvo Flanked ganham vantagem.",
+      "midiFlanked": "Aplique o efeito 'Flanqueado' do Midi QOL ao alvo. Todos os atacantes que realizarem ataques corpo a corpo contra o alvo Flanqueado ganham vantagem.",
+      "ceflankedNoconga": "Aplique o Convenient Effects 'Flanked' ao alvo. Todos os atacantes corpo a corpo ganham vantagem. Tokens já Flanked não podem ser considerados aliados flanqueadores (impede formações em fila indiana).",
+      "midiFlankedNoConga": "Aplique o efeito 'Flanqueado' do Midi QOL ao alvo. Todos os atacantes corpo a corpo ganham vantagem. Tokens já Flanqueados não podem ser considerados aliados flanqueadores (impede formações em fila indiana)."
+    }
   },
   "midi-qol.Flanked": "Flanqueado",
   "midi-qol.Flanking": "Flanqueando",
@@ -988,6 +1012,7 @@
   "midi-qol.TargetConfirmationMixedDisposition": "Confirmar alvos se alvos forem aliados e hostis",
   "midi-qol.TargetConfirmationAllies": "Confirmar alvos se qualquer alvo for um aliado",
   "midi-qol.OutOfRange": "Fora de Alcance",
+  "midi-qol.TemplateOutOfRange": "O posicionamento do modelo está fora do alcance",
   "midi-qol.SaveDROrder.Name": "Ordem de Redução de Dano",
   "midi-qol.SaveDROrder.Hint": "Ordem em que a redução de dano será aplicada.",
   "midi-qol.SaveDROrderOptions": {
@@ -1015,8 +1040,8 @@
   "midi-qol.AutoCompleteWorkflow.Hint": "Workflows serão marcados como concluídos se rolados antes da conclusão. Nenhuma rolagem adicional será realizada.",
   "midi-qol.SavesBeforeDamage.Name": "Rolar Salvaguardas Antes do Dano (Experimental)",
   "midi-qol.SavesBeforeDamage.Hint": "Se habilitado, as salvaguardas são roladas antes do dano ser rolado. Caso contrário, as salvaguardas são roladas depois do dano ser rolado.",
-  "midi-qol.AnchorConeRayTemplates.Name": "Ancorar Modelo Cone/Linha ao Conjurador",
-  "midi-qol.AnchorConeRayTemplates.Hint": "Ao posicionar modelos de cone ou linha com alcance Pessoal/Nenhum, a origem do modelo é ancorada na borda do token do conjurador. Somente a direção pode ser alterada.",
+  "midi-qol.ConstrainTemplatePlacement.Name": "Restringir Posicionamento do Modelo",
+  "midi-qol.ConstrainTemplatePlacement.Hint": "Restringe o posicionamento dos modelos: Modelos de cone/linha com alcance Pessoal/Nenhum são ancorados à borda do token do conjurador. Todos os modelos são fixados para permanecerem dentro do alcance da atividade durante a pré-visualização.",
   "midi-qol.emanationNoTemplate": "Emanação/Raio - Sem Modelo",
   "midi-qol.emanationTemplate.counted.one": "Emanação Sem Modelo",
   "midi-qol.emanationTemplate.counted.other": "Emanação Sem Modelo",
@@ -1275,6 +1300,12 @@
           "start": "Início do Turno",
           "end": "Fim do Turno"
         },
+      "rollAs": {
+          "label": "Rolar Como",
+          "hint": "Quem rola a atividade de OverTime",
+          "target": "Token com Efeito",
+          "source": "Token de Origem"
+        },
         "saveRemoves": {
           "label": "Remover Sucesso Salv.",
           "hint": "Remove o efeito em uma salvaguarda bem-sucedida."
@@ -1413,6 +1444,12 @@
       "saveRemoves": {
         "label": "Remover Sucesso Salv.",
         "hint": "Remove o efeito em uma salvaguarda bem-sucedida."
+      },
+      "rollAs": {
+        "label": "Colar Como",
+        "hint": "Quem rola a atividade de OverTime",
+        "target": "Token com Efeito",
+        "source": "Token de Origem"
       },
       "removeConditionBeforeActivity": {
         "label": "Remover Antes de Rolar",
@@ -2063,5 +2100,8 @@
   "midi-qol.OverTimeEditor.Cancel": "Cancelar",
   "midi-qol.OverTimeEditor.UnsavedTitle": "Alterações Não-Salvas",
   "midi-qol.OverTimeEditor.UnsavedContent": "Você tem alterações não salvas. Fechar sem salvar?",
-  "midi-qol.OverTimeEditor.CloseWithoutSaving": "Descartar Alterações"
+  "midi-qol.OverTimeEditor.CloseWithoutSaving": "Descartar Alterações",
+  "midi-qol.OverTimeEditor.RuntimeSection": "Estado Runtime",
+  "midi-qol.OverTimeEditor.Permanent": "Marcado como Permanente",
+  "midi-qol.OverTimeEditor.PermanentHint": "Quando habilitado, nenhuma outra salvaguarda será processada. Definido por saveCount/failCount quando a contagem chegar a zero com o modo '+'."
 }
