@@ -45,12 +45,10 @@ flowchart TD
       preTargetSave["
         preTargetSave
         <small>Target is about to roll a saving throw</small>
-      "] -- Has Optional Macro --> optSave
+      "] -.-> configureSave
+      configureSave["<p style='width:200px; text-wrap:balance;'>Save Roll Configure Dialog (Skipped with Fast Forward enabled)</p>"]:::edgeLabel -.-> optSave
       optSave -- Success --> isSaveSuccess
       optSave -- Fail --> isSaveFailure
-
-    %% extra note included here because connecting these nodes as normal clutters this part of the chart
-    isAboutToSave ~~~ a["<p style='width:200px; text-wrap:balance;'>preTargetSave -> success/fail if no optional</p>"]:::edgeLabel
     isSaveSuccess["
       isSaveSuccess
       <small>Target rolled a successful save</small>
@@ -58,8 +56,7 @@ flowchart TD
     isSaveFailure["
       isSaveFailure
       <small>Target failed a saving throw</small>
-    "] --> isSave
-    isSave["
+    "] --> isSave["
       isSave
       <small>Target rolled a save</small>
     "]
@@ -77,7 +74,7 @@ flowchart TD
       postTargetEffectApplication
       <small>Target has an effect applied by a rolled item</small>
     "]
-    eff["<p style='width:200px; text-wrap:balance;'>Effects have been applied</p>"]:::edgeLabel -.-> postTargetEffectApplication
+    eff["<p style='width:200px; text-wrap:balance;'>Effects Applied</p>"]:::edgeLabel -.-> postTargetEffectApplication
   end
 
   subgraph optAttack["args[0].tag = 'optional'"]
@@ -112,23 +109,22 @@ flowchart TD
     end
 
     subgraph attack[" "]
-      preAttackRoll["
-        preAttackRoll
-        <small>Before Attack Roll</small>
-      "] --> isPreAttacked
-        isPreAttacked --> preAttackRollConfig
       preAttackRollConfig["
           preAttackRollConfig
         <small>Before Attack Configuration</small>
-      "] -- Has Optional Macro --> optAttack
+      "] --> preAttackRoll
+      preAttackRoll["
+        preAttackRoll
+        <small>Before Attack Roll</small>
+      "] -.-> configureAttack
+      configureAttack["<p style='width:200px; text-wrap:balance;'>Attack Roll Configure Dialog (Skipped with Fast Forward enabled)</p>"]:::edgeLabel -.-> optAttack
       preAttackRollComplete --> isAttacked
         isAttacked --> preCheckHits
-        preCheckHits -- Has Optional Macro --> optAC
-        preCheckHits -.-> showAttack["<p style='width:200px; text-wrap:balance;'>Attack Roll Shown On Card</p>"]:::edgeLabel
         preCheckHits["
           preCheckHits
           <small>Before Check Hits</small>
-        "] --> isHit & isMissed
+        "] -.-> showAttack
+        showAttack["<p style='width:200px; text-wrap:balance;'>Attack Roll Shown On Card</p>"]:::edgeLabel -.-> optAC
         isHit --> postAttackRoll
         isMissed --> postAttackRoll
       postAttackRoll["
@@ -147,9 +143,9 @@ flowchart TD
       preDamageRollConfig["
         preDamageRollConfig
         <small>Before Damage Configuration</small>
-      "] -- Has Optional Macro --> optDamage
+      "] -.-> configureDamage
+      configureDamage["<p style='width:200px; text-wrap:balance;'>Damage Roll Configure Dialog (Skipped with Fast Forward enabled)</p>"]:::edgeLabel -.-> optDamage
       optDamage --> postWaitForDamageRoll
-      preDamageRollConfig -- No Optional Macro --> postWaitForDamageRoll
       postWaitForDamageRoll --> preConfirmRoll
       preConfirmRoll --> postConfirmRoll
       postConfirmRoll --> preDamageRollStarted
@@ -205,8 +201,8 @@ flowchart TD
     prePreambleComplete --> postPreambleComplete
     postPreambleComplete --> preWaitForAttackRoll
 
-    preWaitForAttackRoll -- Has Attack --> preAttackRoll
-      preAttackRollConfig -- No Optional Macro --> postWaitForAttackRoll
+    preWaitForAttackRoll -- Has Attack --> isPreAttacked
+      isPreAttacked --> preAttackRollConfig
     preWaitForAttackRoll -- No Attack --> postWaitForAttackRoll
       optAttack --> postWaitForAttackRoll
     postWaitForAttackRoll -- Has Attack --> preAttackRollComplete
@@ -222,7 +218,7 @@ flowchart TD
         preSave
         <small>Before Checking Saves</small>
       "] -- Has Save --> isAboutToSave
-      isSave --> postWaitForSaves
+      saveResult -.-> postWaitForSaves
     preSave -- No Save --> postWaitForSaves
     postWaitForSaves --> preSavesComplete
     preSavesComplete --> postSave
@@ -246,7 +242,7 @@ flowchart TD
       preActiveEffects["
         preActiveEffects
         <small>Before Active Effects</small>
-      "] --> postTargetEffectApplication
+      "] -.-> eff
       postTargetEffectApplication --> postApplyDynamicEffects
     postApplyDynamicEffects --> preRollFinished
     preRollFinished --> postActiveEffects
