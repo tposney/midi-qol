@@ -1,7 +1,9 @@
-import { criticalDamage, criticalDamageChoices, nsaFlag, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, quickSettingsBlurb, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, damageCardStyleOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, checkFlankingOptions, hideRollDetailsHintLongOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions, safeGetGameSetting, resetConfigSettingsToDefaults, distanceMeasurementOptions } from "../settings.js"
+import { criticalDamage, criticalDamageChoices, nsaFlag, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, damageCardStyleOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, checkFlankingOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions, safeGetGameSetting, resetConfigSettingsToDefaults, distanceMeasurementOptions } from "../settings.js"
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, debugEnabled, log, GameSystemConfig, ceInterface } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
+import type { SelectOptions } from "../../globals.js";
+import { withOptionLabel } from "../lib/HandlebarsHelpers.js";
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const PATH = "./modules/midi-qol/sample-config/";
@@ -83,21 +85,22 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!enableWorkflow) {
       ui.notifications?.error("Workflow automation is not enabled")
     }
-    let wallsBlockRangeOptions = foundry.utils.duplicate(wallsBlockRangeOptionsNew);
-    let CoverCalculationOptions = foundry.utils.duplicate(coverCalculationOptions);
+    let wallsBlockRangeOptions: SelectOptions = foundry.utils.duplicate(wallsBlockRangeOptionsNew);
+    let CoverCalculationOptions: SelectOptions = foundry.utils.duplicate(coverCalculationOptions);
     [{ id: "levelsautocover", name: "'Levels Auto Cover'" }, { id: "simbuls-cover-calculator", name: "'Simbuls Cover Calculator'" }, { id: "simplecover5e", name: "'Simple Cover 5e'" }, { id: "tokencover", name: "'Alternative Token Cover'" }].forEach(module => {
       if (!installedModules.get(module.id)) {
-        wallsBlockRangeOptions[module.id] = `${i18n(wallsBlockRangeOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
-        CoverCalculationOptions[module.id] = `${i18n(CoverCalculationOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
+        const notInstalled = game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" }) ?? "";
+        wallsBlockRangeOptions[module.id] = withOptionLabel(wallsBlockRangeOptions[module.id], `${i18n(wallsBlockRangeOptions[module.id])} - ${notInstalled}`);
+        CoverCalculationOptions[module.id] = withOptionLabel(CoverCalculationOptions[module.id], `${i18n(CoverCalculationOptions[module.id])} - ${notInstalled}`);
       }
     });
     if (!installedModules.get("levels")) {
-      wallsBlockRangeOptions["centerLevels"] = `${i18n(wallsBlockRangeOptions["centerLevels"])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Levels" })}`;
+      wallsBlockRangeOptions["centerLevels"] = withOptionLabel(wallsBlockRangeOptions["centerLevels"], `${i18n(wallsBlockRangeOptions["centerLevels"])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Levels" })}`);
     }
-    let HiddenAdvantageOptions: any = foundry.utils.duplicate(hiddenAdvantageOptions);
+    let HiddenAdvantageOptions: SelectOptions = foundry.utils.duplicate(hiddenAdvantageOptions);
     [{ id: "perceptive", name: "Perceptive" }].forEach(module => {
       if (!installedModules.get(module.id)) {
-        HiddenAdvantageOptions[module.id] = `${i18n(HiddenAdvantageOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
+        HiddenAdvantageOptions[module.id] = withOptionLabel(HiddenAdvantageOptions[module.id], `${i18n(HiddenAdvantageOptions[module.id])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`);
       }
     });
     let quickSettingsOptions = {};
@@ -110,31 +113,33 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     */
     const AddWoundedOptions = foundry.utils.duplicate(addDeadOptions);
     delete AddWoundedOptions["none"];
-    const rollNPCSavesOptionsLocalized = foundry.utils.duplicate(rollNPCSavesOptions);
+    const rollNPCSavesOptionsLocalized: SelectOptions = foundry.utils.duplicate(rollNPCSavesOptions);
     for (let key of Object.keys(rollNPCSavesOptions)) {
+      const notInstalled = game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" }) ?? "";
       switch (key) {
         case "mtb":
-          if (!installedModules.get("monks-tokenbar")) rollNPCSavesOptionsLocalized[key] = `${i18n(rollNPCSavesOptions[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
+          if (!installedModules.get("monks-tokenbar")) rollNPCSavesOptionsLocalized[key] = withOptionLabel(rollNPCSavesOptions[key], `${i18n(rollNPCSavesOptions[key])} - ${notInstalled}`);
           break;
         case "ftb":
-          if (!installedModules.get("flash-rolls-5e")) rollNPCSavesOptionsLocalized[key] = `${i18n(rollNPCSavesOptions[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
+          if (!installedModules.get("flash-rolls-5e")) rollNPCSavesOptionsLocalized[key] = withOptionLabel(rollNPCSavesOptions[key], `${i18n(rollNPCSavesOptions[key])} - ${notInstalled}`);
           break;
         case "rer":
-          if (!installedModules.get("epic-rolls-5e")) rollNPCSavesOptionsLocalized[key] = `${i18n(rollNPCSavesOptions[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
+          if (!installedModules.get("epic-rolls-5e")) rollNPCSavesOptionsLocalized[key] = withOptionLabel(rollNPCSavesOptions[key], `${i18n(rollNPCSavesOptions[key])} - ${notInstalled}`);
       }
 
     }
-    let playerRollSavesOptionsLocalized = foundry.utils.duplicate(playerRollSavesOptions);
+    let playerRollSavesOptionsLocalized: SelectOptions = foundry.utils.duplicate(playerRollSavesOptions);
     for (let key of Object.keys(playerRollSavesOptions)) {
+      const notInstalled = game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" }) ?? "";
       switch (key) {
         case "mtb":
-          if (!installedModules.get("monks-tokenbar")) playerRollSavesOptionsLocalized[key] = `${i18n(playerRollSavesOptionsLocalized[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
+          if (!installedModules.get("monks-tokenbar")) playerRollSavesOptionsLocalized[key] = withOptionLabel(playerRollSavesOptionsLocalized[key], `${i18n(playerRollSavesOptionsLocalized[key])} - ${notInstalled}`);
           break;
         case "ftb":
-          if (!installedModules.get("flash-rolls-5e")) playerRollSavesOptionsLocalized[key] = `${i18n(playerRollSavesOptionsLocalized[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
+          if (!installedModules.get("flash-rolls-5e")) playerRollSavesOptionsLocalized[key] = withOptionLabel(playerRollSavesOptionsLocalized[key], `${i18n(playerRollSavesOptionsLocalized[key])} - ${notInstalled}`);
           break;
         case "rer":
-          if (!installedModules.get("epic-rolls-5e")) playerRollSavesOptionsLocalized[key] = `${i18n(playerRollSavesOptionsLocalized[key])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" })}`;
+          if (!installedModules.get("epic-rolls-5e")) playerRollSavesOptionsLocalized[key] = withOptionLabel(playerRollSavesOptionsLocalized[key], `${i18n(playerRollSavesOptionsLocalized[key])} - ${notInstalled}`);
       }
     };
 
@@ -153,7 +158,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       "vitalityAndHP": "midi-qol.VitalityDeathRequires.VitalityAndHP"
     };
     let context: any = {
-      QuickSettingsBlurb: quickSettingsBlurb,
       configSettings,
       quickSettings: true,
       quickSettingsOptions,
@@ -187,7 +191,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),
       hideRollDetailsOptions,
       checkFlankingOptions,
-      hideRollDetailsHint: hideRollDetailsHintLongOptions,
       nsaFlag,
       coloredBorders,
       coloredBordersOptions,

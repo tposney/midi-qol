@@ -475,9 +475,10 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         return;
       }
 
-      // Strip save attribution tooltip when players can't see save details
+      // Strip save attribution tooltip and info icons when players can't see save details
       if (!["all", "allShow"].includes(autoCheckSaves)) {
         html.querySelectorAll(".midi-qol-target-name[data-tooltip-html]")?.forEach(el => el.removeAttribute("data-tooltip-html"));
+        removeAll(html, ".midi-save-attribution-info");
       }
 
       const dcHidden = shouldDisplayChallenge === "player" && !(messageActor as any)?.hasPlayerOwner;

@@ -1,6 +1,6 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice } from "./utils.js";
+import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, getPerimeterDistanceToPoint } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -475,13 +475,13 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     const midiOptions = config.midiOptions;
 
     // Check if advantageByChoice was passed in (from Workflow via GMAction with deserialized trackers)
-    const passedSkillAdvantageMap = config.midiOptions?.advantageByChoice as Map<string, PreComputedAdvantage> | undefined;
-    const hasPassedSkillAdvantage = passedSkillAdvantageMap?.size &&
-      Array.from(passedSkillAdvantageMap.values()).some(v => v.tracker instanceof RollModifierTracker);
+    const passedSkillAdvantageMap = config.midiOptions?.advantageByChoice as Record<string, PreComputedAdvantage> | undefined;
+    const hasPassedSkillAdvantage = passedSkillAdvantageMap && Object.keys(passedSkillAdvantageMap).length > 0 &&
+      Object.values(passedSkillAdvantageMap).some(v => v.tracker instanceof RollModifierTracker);
 
     // Skip building advantage map for external module rolls - they already computed advantage
-    const preComputedSkillAdvantageMap: Map<string, PreComputedAdvantage> = isExternalModuleRoll
-      ? new Map() // External modules handle their own advantage - don't recompute
+    const preComputedSkillAdvantageMap: Record<string, PreComputedAdvantage> = isExternalModuleRoll
+      ? {} // External modules handle their own advantage - don't recompute
       : hasPassedSkillAdvantage && passedSkillAdvantageMap
         ? passedSkillAdvantageMap
         : await buildPreComputedAdvantageMap(this, "skill", rollSkills, config.midiOptions ?? {});
@@ -499,12 +499,16 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
       messageData.data ??= {};
       if (overtimeActorUuid) messageData.data["flags.midi-qol.overtimeActorUuid"] = overtimeActorUuid;
 
-      const allAutoFail = preComputedSkillAdvantageMap.size > 0 && [...preComputedSkillAdvantageMap.values()].every(d => d.tracker?.modifiers.willFail);
+      const skillAdvantageValues = Object.values(preComputedSkillAdvantageMap);
+      const allAutoFail = skillAdvantageValues.length > 0 && skillAdvantageValues.every(d => {
+        const tracker = d.tracker instanceof RollModifierTracker ? d.tracker : undefined;
+        return tracker?.modifiers.willFail;
+      });
       if (hasMultipleSkills && !allAutoFail && dialogData.configure !== false) {
         dialogData.configure = true;
       } else {
         const chosenSkill = configData.skill ?? skillId;
-        const chosenAdvantage = preComputedSkillAdvantageMap.get(chosenSkill!);
+        const chosenAdvantage = preComputedSkillAdvantageMap[chosenSkill!];
         if (chosenAdvantage) {
           // Only override advantage/disadvantage if not pre-computed from external module
           // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
@@ -512,8 +516,9 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
             configData.advantage = chosenAdvantage.hasAdvantage;
             configData.disadvantage = chosenAdvantage.hasDisadvantage;
           }
-          if (chosenAdvantage.tracker) {
-            skillModifiers = applyRollModifiers(chosenAdvantage.tracker, configData, dialogData);
+          const chosenTracker = chosenAdvantage.tracker instanceof RollModifierTracker ? chosenAdvantage.tracker : undefined;
+          if (chosenTracker) {
+            skillModifiers = applyRollModifiers(chosenTracker, configData, dialogData);
             if (skillModifiers.autoFail) success = false;
           }
         }
@@ -528,9 +533,10 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
       if (configData.skill && configData.skill !== skillId) {
         skillId = configData.skill;
       }
-      const chosenSkillData = preComputedSkillAdvantageMap.get(skillId ?? "");
-      if (chosenSkillData?.tracker?.modifiers.willFail) success = false;
-      else if (chosenSkillData?.tracker?.modifiers.willSucceed) success = true;
+      const chosenSkillData = preComputedSkillAdvantageMap[skillId ?? ""];
+      const chosenSkillTracker = chosenSkillData?.tracker instanceof RollModifierTracker ? chosenSkillData.tracker : undefined;
+      if (chosenSkillTracker?.modifiers.willFail) success = false;
+      else if (chosenSkillTracker?.modifiers.willSucceed) success = true;
 
       // Apply blind roll mode based on chosen skill
       messageDetails.rollMode = applyBlindRollMode(configSettings.rollSkillsBlind, skillId, messageDetails.rollMode);
@@ -788,7 +794,7 @@ function setupChoiceDialog(
   dialog: RollDialogConfig,
   choiceType: RollChoiceType,
   choices: string[],
-  advantageMap: Map<string, PreComputedAdvantage>,
+  advantageMap: Record<string, PreComputedAdvantage>,
   hasPreComputedAdvantage: boolean,
   rollTypeForChoices: "skill" | "tool" | "save" | "check",
   onChoiceCapture: (choice: string) => void
@@ -802,7 +808,7 @@ function setupChoiceDialog(
 
   if (best) {
     if (hasMultiple) (config as AnyMutableObject)[choiceType] = best.value;
-    const bestAdvantage = advantageMap.get(best.value);
+    const bestAdvantage = advantageMap[best.value];
     if (bestAdvantage && !hasPreComputedAdvantage) {
       config.advantage = bestAdvantage.hasAdvantage;
       config.disadvantage = bestAdvantage.hasDisadvantage;
@@ -1142,15 +1148,15 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     const midiOptions = config.midiOptions;
 
     // Check if advantageByChoice was passed in (from Workflow via GMAction with deserialized trackers)
-    const passedAdvantageMap = config.midiOptions?.advantageByChoice as Map<string, PreComputedAdvantage> | undefined;
-    const hasPassedAdvantage = passedAdvantageMap?.size &&
-      Array.from(passedAdvantageMap.values()).some(v => v.tracker instanceof RollModifierTracker);
+    const passedAdvantageMap = config.midiOptions?.advantageByChoice as Record<string, PreComputedAdvantage> | undefined;
+    const hasPassedAdvantage = passedAdvantageMap && Object.keys(passedAdvantageMap).length > 0 &&
+      Object.values(passedAdvantageMap).some(v => v.tracker instanceof RollModifierTracker);
     // Concentration saves use the "concentration" roll type which composes with "save"
     const effectiveRollType = (rollType === "save" && config.hookNames?.includes("concentration")) ? "concentration" : rollType;
 
     // Skip building advantage map for external module rolls - they already computed advantage
-    const preComputedAdvantageMap: Map<string, PreComputedAdvantage> = isExternalModuleRoll
-      ? new Map() // External modules handle their own advantage - don't recompute
+    const preComputedAdvantageMap: Record<string, PreComputedAdvantage> = isExternalModuleRoll
+      ? {} // External modules handle their own advantage - don't recompute
       : hasPassedAdvantage && passedAdvantageMap
         ? passedAdvantageMap
         : await buildPreComputedAdvantageMap(this, effectiveRollType, rollAbilities, config.midiOptions ?? {});
@@ -1166,12 +1172,13 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     preRollAbilityHookId = Hooks.once(`dnd5e.preRoll${type}`, (configData, dialogData, _message) => {
       configData.midiOptions = { ...(configData.midiOptions ?? {}), ...(midiOptions ?? {}) };
 
-      const allAutoFail = preComputedAdvantageMap.size > 0 && [...preComputedAdvantageMap.values()].every(d => d.tracker?.modifiers.willFail);
+      const advantageValues = Object.values(preComputedAdvantageMap);
+      const allAutoFail = advantageValues.length > 0 && advantageValues.every(d => d.tracker instanceof RollModifierTracker && d.tracker.modifiers.willFail);
       if (hasMultipleChoices && !allAutoFail && dialogData.configure !== false) {
         dialogData.configure = true;
       } else {
         const chosenAbility = configData.ability ?? abilityId;
-        const chosenAdvantage = preComputedAdvantageMap.get(chosenAbility!);
+        const chosenAdvantage = preComputedAdvantageMap[chosenAbility!];
         if (chosenAdvantage) {
           // Only override advantage/disadvantage if not pre-computed from external module
           // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
@@ -1179,7 +1186,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
             configData.advantage = chosenAdvantage.hasAdvantage;
             configData.disadvantage = chosenAdvantage.hasDisadvantage;
           }
-          if (chosenAdvantage.tracker) {
+          if (chosenAdvantage.tracker instanceof RollModifierTracker) {
             abilityModifiers = applyRollModifiers(chosenAdvantage.tracker, configData, dialogData);
             if (abilityModifiers.autoFail) success = false;
           }
@@ -1196,9 +1203,10 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
       if (configData.ability && configData.ability !== abilityId) {
         abilityId = configData.ability;
       }
-      const chosenAbilityData = preComputedAdvantageMap.get(abilityId ?? "");
-      if (chosenAbilityData?.tracker?.modifiers.willFail) success = false;
-      else if (chosenAbilityData?.tracker?.modifiers.willSucceed) success = true;
+      const chosenAbilityData = preComputedAdvantageMap[abilityId ?? ""];
+      const chosenAbilityTracker = chosenAbilityData?.tracker instanceof RollModifierTracker ? chosenAbilityData.tracker : undefined;
+      if (chosenAbilityTracker?.modifiers.willFail) success = false;
+      else if (chosenAbilityTracker?.modifiers.willSucceed) success = true;
 
       // Apply blind roll mode based on chosen ability
       const blindRollSettings = rollType === "check" ? configSettings.rollChecksBlind : configSettings.rollSavesBlind;
@@ -1406,28 +1414,6 @@ export function deathSaveHook(rolls: Roll[], { chatString, subject: actor }: { c
     if (!status) return;
     setDeadStatus(actor, { effect: status, useDefeated: true, makeDead: true, overlay: true });
   }
-}
-
-export function procAutoFail(actor: Actor.Implementation, rollType: string, abilityId: string): boolean {
-  const midiFlags = actor.flags[MODULE_ID] ?? {};
-  const fail = midiFlags.fail ?? {};
-  if (fail.ability || fail.all) {
-    const rollFlags = (fail.ability && fail.ability[rollType]) ?? {};
-    const autoFail = fail.all || fail.ability?.all || rollFlags.all || rollFlags[abilityId];
-    return !!autoFail;
-  }
-  return false;
-}
-
-export function procAutoFailSkill(actor: Actor.Implementation, skillId?: string): boolean {
-  const midiFlags = actor.flags[MODULE_ID] ?? {};
-  const fail = midiFlags.fail ?? {};
-  if (fail.skill || fail.all) {
-    const rollFlags = (fail.skill && fail.skill[skillId ?? ""]) || false;
-    const autoFail = fail.all || fail.skill?.all || rollFlags;
-    return !!autoFail;
-  }
-  return false;
 }
 
 export async function computeAbilityAdvantage(actor: Actor.Implementation, rollType: string, abilityId: string, options: MidiOptions, tracker?: RollModifierTracker): Promise<{ tracker: RollModifierTracker, magicResistance: boolean, magicVulnerability: boolean }> {
@@ -1650,8 +1636,8 @@ export async function buildPreComputedAdvantageMap(
   rollType: string,
   rollIds: string[],
   options: MidiOptions
-): Promise<Map<string, PreComputedAdvantage>> {
-  const result = new Map<string, PreComputedAdvantage>();
+): Promise<Record<string, PreComputedAdvantage>> {
+  const result: Record<string, PreComputedAdvantage> = {};
   const workflow = options.workflow;
 
   const handler = rollTypeHandlers[rollType];
@@ -1670,12 +1656,12 @@ export async function buildPreComputedAdvantageMap(
 
     const hasAdv = !!tracker.hasAdvantage;
     const hasDisadv = !!tracker.hasDisadvantage;
-    result.set(id, {
+    result[id] = {
       hasAdvantage: hasAdv,
       hasDisadvantage: hasDisadv,
       defaultButton: hasAdv && !hasDisadv ? "advantage" : !hasAdv && hasDisadv ? "disadvantage" : "normal",
       tracker
-    });
+    };
   }
 
   return result;
@@ -1898,40 +1884,42 @@ function getTemplateMaxRange(templateDoc: MeasuredTemplateDocument.Implementatio
 }
 
 /**
- * Clamp a point to be within maxRange distance from token center.
+ * Clamp a point to be within maxRange distance from the token's perimeter.
+ * Always uses perimeter-based measurement regardless of distanceMeasurement setting,
+ * since template placement should consistently measure from the token's actual shape.
+ * Clamps from the closest point on the token's perimeter polygon at the
+ * exact pixel radius needed to achieve maxRange after gridification.
  * Returns the clamped point, or the original point if within range.
  */
 function clampPointToRange(token: Token.Implementation, targetX: number, targetY: number, maxRange: number): { x: number, y: number, clamped: boolean } {
-  const tokenCenter = token.center;
+  if (!canvas?.grid || !canvas.dimensions) return { x: targetX, y: targetY, clamped: false };
 
-  // Calculate current distance
-  if (!canvas?.grid) return { x: targetX, y: targetY, clamped: false };
-  const distance = canvas.grid.measurePath([tokenCenter, { x: targetX, y: targetY }], {}).distance;
-
-  // Add fudge factor for grid alignment
-  const fudgeFactor = configSettings.gridlessFudge ?? 0;
-  if (distance <= maxRange + fudgeFactor) {
+  // Calculate current distance using perimeter measurement
+  const distance = getPerimeterDistanceToPoint(token, { x: targetX, y: targetY });
+  if (distance < 0 || distance <= maxRange) {
     return { x: targetX, y: targetY, clamped: false };
   }
 
-  // Need to clamp - calculate point at maxRange along the line from token to target
-  const dx = targetX - tokenCenter.x;
-  const dy = targetY - tokenCenter.y;
+  // Clamp from the closest point on the token's perimeter
+  const poly = getTokenPerimeterPolygon(token);
+  const closest = closestPointOnPerimeter(poly, targetX, targetY);
+  // Perimeter gridification: distance = gridDistance + max(0, raw - fudge)
+  // To get distance = maxRange, need raw = maxRange - gridDistance + fudge
+  const pixelsPerUnit = canvas.dimensions.size / canvas.dimensions.distance;
+  const gridDistance = canvas.dimensions.distance;
+  const fudge = configSettings.gridlessFudge ?? 0;
+  const rawNeeded = Math.max(0, maxRange - gridDistance + fudge);
+  const clampRadiusPixels = rawNeeded * pixelsPerUnit;
+
+  const dx = targetX - closest.x;
+  const dy = targetY - closest.y;
   const currentDist = Math.sqrt(dx * dx + dy * dy);
+  if (currentDist === 0) return { x: targetX, y: targetY, clamped: false };
 
-  if (currentDist === 0) {
-    return { x: targetX, y: targetY, clamped: false };
-  }
-
-  // Convert maxRange from grid units to pixels
-  const pixelsPerUnit = canvas.dimensions?.distance ? (canvas.dimensions.size / canvas.dimensions.distance) : 1;
-  const maxRangePixels = maxRange * pixelsPerUnit;
-
-  // Scale to be at maxRange
-  const scale = maxRangePixels / currentDist;
+  const scale = clampRadiusPixels / currentDist;
   return {
-    x: tokenCenter.x + dx * scale,
-    y: tokenCenter.y + dy * scale,
+    x: closest.x + dx * scale,
+    y: closest.y + dy * scale,
     clamped: true
   };
 }
@@ -1947,64 +1935,44 @@ function getTokenBorderPoint(token: Token.Implementation, targetX: number, targe
   const centerX = token.center.x;
   const centerY = token.center.y;
 
-  // Direction from center to target
-  const dx = targetX - centerX;
-  const dy = targetY - centerY;
+  const poly = getTokenPerimeterPolygon(token);
+  const pts = poly.points;
+  const numPts = pts.length;
 
-  // If target is at center, default to right edge
-  if (dx === 0 && dy === 0) {
-    return { x: token.bounds.right, y: centerY };
+  // If target is at center, return the rightmost point on the polygon
+  if (targetX === centerX && targetY === centerY) {
+    let bestX = -Infinity;
+    let bestY = centerY;
+    for (let i = 0; i < numPts; i += 2) {
+      if (pts[i] > bestX) {
+        bestX = pts[i];
+        bestY = pts[i + 1];
+      }
+    }
+    return { x: bestX, y: bestY };
   }
 
-  // Token bounds
-  const bounds = token.bounds;
-  const left = bounds.left;
-  const right = bounds.right;
-  const top = bounds.top;
-  const bottom = bounds.bottom;
+  // Cast ray from center toward target and find first polygon edge intersection
+  const a = { x: centerX, y: centerY };
+  const b = { x: targetX, y: targetY };
 
-  // Calculate intersection with each edge and find the closest valid one
-  // We parameterize the ray as: P = center + t * direction, and solve for t at each edge
   let tMin = Infinity;
   let result = { x: centerX, y: centerY };
 
-  // Right edge (x = right)
-  if (dx > 0) {
-    const t = (right - centerX) / dx;
-    const y = centerY + t * dy;
-    if (y >= top && y <= bottom && t < tMin) {
-      tMin = t;
-      result = { x: right, y };
-    }
-  }
+  for (let i = 0; i < numPts; i += 2) {
+    const ni = (i + 2) % numPts;
+    const c = { x: pts[i], y: pts[i + 1] };
+    const d = { x: pts[ni], y: pts[ni + 1] };
 
-  // Left edge (x = left)
-  if (dx < 0) {
-    const t = (left - centerX) / dx;
-    const y = centerY + t * dy;
-    if (y >= top && y <= bottom && t < tMin) {
-      tMin = t;
-      result = { x: left, y };
-    }
-  }
+    const intersection = foundry.utils.lineLineIntersection(a, b, c, d, { t1: true });
+    if (!intersection) continue;
 
-  // Bottom edge (y = bottom)
-  if (dy > 0) {
-    const t = (bottom - centerY) / dy;
-    const x = centerX + t * dx;
-    if (x >= left && x <= right && t < tMin) {
-      tMin = t;
-      result = { x, y: bottom };
-    }
-  }
-
-  // Top edge (y = top)
-  if (dy < 0) {
-    const t = (top - centerY) / dy;
-    const x = centerX + t * dx;
-    if (x >= left && x <= right && t < tMin) {
-      tMin = t;
-      result = { x, y: top };
+    // t0 > 0: forward along ray from center toward target
+    // 0 <= t1 <= 1: intersection is on this polygon edge segment
+    const t1 = intersection.t1 ?? 0;
+    if (intersection.t0 > 0 && t1 >= 0 && t1 <= 1 && intersection.t0 < tMin) {
+      tMin = intersection.t0;
+      result = { x: intersection.x, y: intersection.y };
     }
   }
 
@@ -2511,13 +2479,13 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     let success: boolean | undefined = undefined;
 
     // Check if advantageByChoice was passed in (from Workflow via GMAction with deserialized trackers)
-    const passedToolAdvantageMap = config.midiOptions?.advantageByChoice as Map<string, PreComputedAdvantage> | undefined;
-    const hasPassedToolAdvantage = passedToolAdvantageMap?.size &&
-      Array.from(passedToolAdvantageMap.values()).some(v => v.tracker instanceof RollModifierTracker);
+    const passedToolAdvantageMap = config.midiOptions?.advantageByChoice as Record<string, PreComputedAdvantage> | undefined;
+    const hasPassedToolAdvantage = passedToolAdvantageMap && Object.keys(passedToolAdvantageMap).length > 0 &&
+      Object.values(passedToolAdvantageMap).some(v => v.tracker instanceof RollModifierTracker);
 
     // Skip building advantage map for external module rolls - they already computed advantage
-    const preComputedToolAdvantageMap: Map<string, PreComputedAdvantage> = isExternalModuleRoll
-      ? new Map() // External modules handle their own advantage - don't recompute
+    const preComputedToolAdvantageMap: Record<string, PreComputedAdvantage> = isExternalModuleRoll
+      ? {} // External modules handle their own advantage - don't recompute
       : hasPassedToolAdvantage && passedToolAdvantageMap
         ? passedToolAdvantageMap
         : await buildPreComputedAdvantageMap(this, "tool", rollTools, config.midiOptions ?? {});
@@ -2533,12 +2501,13 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     preRollHookId = Hooks.once("dnd5e.preRollTool", (configData, dialogData, messageData) => {
       configData.midiOptions = { ...(configData.midiOptions ?? {}), ...(midiOptions ?? {}) };
 
-      const allAutoFail = preComputedToolAdvantageMap.size > 0 && [...preComputedToolAdvantageMap.values()].every(d => d.tracker?.modifiers.willFail);
+      const toolAdvantageValues = Object.values(preComputedToolAdvantageMap);
+      const allAutoFail = toolAdvantageValues.length > 0 && toolAdvantageValues.every(d => d.tracker instanceof RollModifierTracker && d.tracker.modifiers.willFail);
       if (hasMultipleTools && !allAutoFail && dialogData.configure !== false) {
         dialogData.configure = true;
       } else {
         const chosenTool = configData.tool ?? toolId;
-        const chosenAdvantage = preComputedToolAdvantageMap.get(chosenTool!);
+        const chosenAdvantage = preComputedToolAdvantageMap[chosenTool!];
         if (chosenAdvantage) {
           // Only override advantage/disadvantage if not pre-computed from external module
           // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
@@ -2546,7 +2515,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
             configData.advantage = chosenAdvantage.hasAdvantage;
             configData.disadvantage = chosenAdvantage.hasDisadvantage;
           }
-          if (chosenAdvantage.tracker) {
+          if (chosenAdvantage.tracker instanceof RollModifierTracker) {
             toolModifiers = applyRollModifiers(chosenAdvantage.tracker, configData, dialogData);
           }
         }
@@ -2563,9 +2532,10 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
       if (configData.tool && configData.tool !== toolId) {
         toolId = configData.tool;
       }
-      const chosenToolData = preComputedToolAdvantageMap.get(toolId ?? "");
-      if (chosenToolData?.tracker?.modifiers.willFail) success = false;
-      else if (chosenToolData?.tracker?.modifiers.willSucceed) success = true;
+      const chosenToolData = preComputedToolAdvantageMap[toolId ?? ""];
+      const chosenToolTracker = chosenToolData?.tracker instanceof RollModifierTracker ? chosenToolData.tracker : undefined;
+      if (chosenToolTracker?.modifiers.willFail) success = false;
+      else if (chosenToolTracker?.modifiers.willSucceed) success = true;
 
       // Apply blind roll mode based on chosen tool (uses check settings since tools are ability checks)
       messageDetails.rollMode = applyBlindRollMode(configSettings.rollChecksBlind, toolId, messageDetails.rollMode);
@@ -2634,19 +2604,6 @@ async function _preCreateActiveEffect(this: ActiveEffect.Implementation, wrapped
   } finally {
     return wrapped(data, options, user);
   }
-}
-
-export async function createRollResultFromCustomRoll(customRoll: any) {
-  const saveEntry = customRoll.entries?.find((e) => e.type === "multiroll");
-  let saveTotal = saveEntry?.entries?.find((e) => !e.ignored)?.total ?? -1;
-  let advantage = saveEntry ? saveEntry.rollState === "highest" : undefined;
-  let disadvantage = saveEntry ? saveEntry.rollState === "lowest" : undefined;
-  let diceRoll = saveEntry ? saveEntry.entries?.find((e) => !e.ignored)?.roll.terms[0].total : -1;
-  let isCritical = saveEntry ? saveEntry.entries?.find((e) => !e.ignored)?.isCrit : false;
-  const result = await new Roll(`${saveTotal}`).evaluate();
-  foundry.utils.setProperty(result.terms[0].options, "advantage", advantage)
-  foundry.utils.setProperty(result.terms[0].options, "disadvantage", disadvantage)
-  return result;
 }
 
 export async function _preDeleteCombat(this: Combat.Implementation, wrapped, ...args) {

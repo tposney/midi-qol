@@ -215,6 +215,7 @@ export let MidiActivityMixin = Base => {
         overTimeProperties: new SchemaField({
           turnChoice: new StringField({ blank: false, choices: ["start", "end"], default: "start" }),
           saveRemoves: new BooleanField({ initial: true }),
+          rollAs: new StringField({ blank: false, choices: ["target", "source"], initial: "target" }),
           //@ts-expect-error find out why there is a type error here
           preRemoveConditionText: new MidiConditionField({ name: "removeCondition", initial: "" }),
           //@ts-expect-error find out why there is a type error here
@@ -2031,6 +2032,7 @@ export let MidiActivityMixinSheet = Base => {
       context.hasAreaTarget = this.activity.target?.template?.type;
       context.possibleOtherActivity = this.activity.possibleOtherActivity;
       context.turnChoiceOptions = [{ value: "start", label: i18n("midi-qol.OVERTIME.FIELDS.turnChoice.start") }, { value: "end", label: i18n("midi-qol.OVERTIME.FIELDS.turnChoice.end") }];
+      context.overTimeRollAsOptions = [{ value: "target", label: i18n("midi-qol.OVERTIME.FIELDS.rollAs.target") }, { value: "source", label: i18n("midi-qol.OVERTIME.FIELDS.rollAs.source") }];
       context.CEActive = installedModules.get("dfreds-convenient-effects");
       return context;
     }

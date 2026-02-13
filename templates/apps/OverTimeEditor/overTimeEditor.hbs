@@ -34,9 +34,9 @@
         {{else if isCheckRoll}}
         <div class="form-group">
             <label>{{localize "midi-qol.OverTimeEditor.CheckAbility"}}</label>
-            <select name="saveAbility">
-                {{selectOptions abilitySelectOptions selected=selectedAbility}}
-            </select>
+            <multi-select name="saveAbility">
+                {{selectOptions abilitySelectOptions selected=selectedAbilities}}
+            </multi-select>
         </div>
         {{else if isSkillRoll}}
         <div class="form-group">

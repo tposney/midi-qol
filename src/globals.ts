@@ -868,6 +868,9 @@ declare global {
   }
 }
 
+export type SelectOptionValue = string | { label: string; hint: string };
+export type SelectOptions = Record<string, SelectOptionValue>;
+
 export type TokenOrDocument = foundry.canvas.placeables.Token.Implementation | TokenDocument.Implementation;
 
 /**
@@ -1111,6 +1114,7 @@ export interface Activity extends AnyMutableObject {
   overTimeProperties?: {
     turnChoice?: string;
     saveRemoves?: boolean;
+    rollAs?: string;
     preRemoveConditionText?: string;
     postRemoveConditionText?: string;
     removeConditionBeforeActivity?: boolean;
@@ -1314,7 +1318,7 @@ export type RollDialogConfig = {
     /** Multi-ability choice dialog: available roll choices */
     rollChoices?: unknown[];
     /** Multi-ability/skill choice dialog: pre-computed advantage per choice */
-    advantageByChoice?: Map<string, unknown>;
+    advantageByChoice?: Record<string, unknown>;
     /** Choice dropdown type: "ability" for saves, "skill" for skill checks, "tool" for tool checks */
     choiceType?: "ability" | "skill" | "tool";
     window?: { subtitle?: string };
@@ -1469,6 +1473,15 @@ export type ModuleIntegrationRequests = {
   epic: { player: EpicRollsRequest[]; gm: EpicRollsRequest[] };
 };
 
+/** Pre-computed advantage data for a single choice (ability/skill/tool) */
+export type PreComputedAdvantageData = {
+  hasAdvantage: boolean;
+  hasDisadvantage: boolean;
+  defaultButton: "advantage" | "disadvantage" | "normal";
+  /** RollModifierTracker instance (or plain object after socketlib serialization) */
+  tracker?: RollModifierTracker | object;
+};
+
 export type SaveDetails = {
   actorUuid: string;  // UUID of the actor making the save - for reliable tracker lookup
   advantage: boolean | undefined;
@@ -1481,13 +1494,23 @@ export type SaveDetails = {
   saveItemUuid: string;
   workflowId: string;
   itemCardUuid: string;
-  workflowUuid: string; // deprecated - use workflowId
   workflowOptions: object;
+  /** Type of roll: "save", "check", "skill", or "tool" */
+  rollType: string;
+  /** Available abilities for multi-choice saves/checks */
+  rollAbilities: string[];
+  /** Available skills for multi-choice skill checks */
+  rollSkills: string[];
+  /** Available tools for multi-choice tool checks */
+  rollTools: string[];
+  /** Activity's item ID */
+  itemId: string;
+  /** The save roll for this target */
+  saveRoll?: Roll;
   /** Pre-computed advantage/disadvantage per choice (ability/skill/tool), for multi-choice dialogs.
-   *  A roll is always ONE type (save, skill check, or tool check), so one map suffices.
-   *  trackerData: Serialized tracker (via toJSON) for socketlib - GMAction deserializes to tracker.
+   *  A roll is always ONE type (save, skill check, or tool check), so one object suffices.
    */
-  advantageByChoice?: Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; trackerData?: object; tracker?: RollModifierTracker }>;
+  advantageByChoice?: Record<string, PreComputedAdvantageData>;
 };
 
 export type ProcessTargetSaveContext = {

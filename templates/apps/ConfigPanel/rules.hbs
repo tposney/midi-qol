@@ -13,7 +13,7 @@
                 <div class="form-group">
                     <label>{{localize "midi-qol.CheckFlanking.Name"}}</label>
                     <select name="optionalRules.checkFlanking" data-dtype="String">
-                        {{selectOptions checkFlankingOptions selected=configSettings.optionalRules.checkFlanking localize=true}}
+                        {{midiSelectOptions checkFlankingOptions selected=configSettings.optionalRules.checkFlanking localize=true}}
                     </select>
                     <div class="notes midi-qol-faint">{{{localize "midi-qol.CheckFlanking.Hint"}}}</div>
                 </div>
@@ -24,7 +24,8 @@
                             {{selectOptions InvisAdvantageOptions selected=configSettings.optionalRules.invisAdvantage localize=true}}
                         </select>
                         <ul>
-                            <li class="notes midi-qol-faint">{{{localize "midi-qol.InvisAdvantage.Hint"}}}</li>
+                            <li class="notes midi-qol-faint">{{{localize "midi-qol.RAW2014Invisible.Hint"}}}</li>
+                            <li class="notes midi-qol-faint">{{{localize "midi-qol.RAW2024Invisible.Hint"}}}</li>
                             <li class="notes midi-qol-faint">{{{localize "midi-qol.CantSeeAdvantage.Hint"}}}</li>
                         </ul>
                     </div>

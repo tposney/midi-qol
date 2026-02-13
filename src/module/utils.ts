@@ -9,7 +9,7 @@ import { concentrationCheckItemDisplayName } from "./Hooks.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
-import { Activity, ActivityUseConfiguration, CalcDamageOptions, DamageDescription, DamageListEntry, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor } from "../globals.js";
+import { Activity, ActivityUseConfiguration, CalcDamageOptions, DamageDescription, DamageListEntry, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails } from "../globals.js";
 
 import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject, AnyObject } from "fvtt-types/utils";
@@ -784,7 +784,7 @@ export function buildRollChoices(
 
 export function selectBestRollChoice(
   rollChoices: { value: string; label: string; modifier: string }[],
-  advantageMap?: Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean }>
+  advantageMap?: Record<string, { hasAdvantage: boolean; hasDisadvantage: boolean }>
 ): { value: string; label: string; modifier: string } | undefined {
   if (rollChoices.length === 0) return undefined;
   if (rollChoices.length === 1) return rollChoices[0];
@@ -792,7 +792,7 @@ export function selectBestRollChoice(
   // Calculate effective value: modifier + advantage adjustment (+3.325 for adv, -3.325 for disadv)
   const getEffectiveValue = (choice: typeof rollChoices[0]) => {
     const mod = parseInt(choice.modifier) || 0;
-    const advData = advantageMap?.get(choice.value);
+    const advData = advantageMap?.[choice.value];
     if (advData?.hasAdvantage && !advData?.hasDisadvantage) return mod + 3.325;
     if (advData?.hasDisadvantage && !advData?.hasAdvantage) return mod - 3.325;
     return mod; // normal or both cancel out
@@ -1149,18 +1149,20 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
       console.warn(`midi-qol | localActivityOverTime | for actor ${actor} activity ${change.value} not found or not overTime`);
       continue;
     }
-    // Create an item owned by the target actor which has all of the details
+    // Determine which actor should roll the overtime activity
+    const rollAsChoice = activity.overTimeProperties?.rollAs ?? "target";
+    let rollActor = actor; // default: target actor (the actor bearing the effect)
+    if (rollAsChoice === "source") {
+      const originItem = getItemFromEffectOrigin(effect.origin ?? "");
+      if (originItem?.actor) rollActor = originItem.actor;
+    }
+
+    // Create an item owned by the rolling actor which has all of the details
     const itemData: any = activity.item.toObject();
     if (castLevel > spellLevel) foundry.utils.setProperty(itemData, "flags.dnd5e.scaling", castLevel - spellLevel);
     foundry.utils.setProperty(itemData, "system.properties", itemData.system.properties.filter(p => p !== "concentration"));
-    let itemActor = activity.item?.actor;
-    if (!itemActor) {
-      const origin = getItemFromEffectOrigin(effect.origin ?? "");
-      // @ts-expect-error types thinks item parent can only ever be actor, not AE... that seems accurate tbh
-      if (origin) itemActor = origin.parent instanceof ActiveEffect ? origin.parent.actor : origin.actor;
-    }
     foundry.utils.setProperty(itemData, "flags.midi-qol.syntheticItem", true);
-    const newItem = new CONFIG.Item.documentClass(itemData, { parent: itemActor ?? actor });
+    const newItem = new CONFIG.Item.documentClass(itemData, { parent: rollActor });
     newItem.prepareData();
     // @ts-expect-error no dnd5e-types
     newItem.prepareFinalAttributes(); // since the actor prepareData is not being called need to call this by hand
@@ -1182,14 +1184,13 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
       }
     }
     let targetsToUse: Set<Token> | undefined = undefined;
-    if (["self", ""].includes(overTimeActivity.target?.affects?.type)) {
-      overTimeActivity = foundry.utils.deepClone(overTimeActivity);
-      const token = tokenForActor(actor);
-      if (token) targetsToUse = new Set([token])
-      overTimeActivity.target.affects.type = "";
-    }
+    const checkGMstatus = rollAsChoice === "source" && rollActor !== actor && !rollActor.isOwner;
+    // Overtime effects always target the actor bearing the effect
+    const token = tokenForActor(actor);
+    if (token) targetsToUse = new Set([token]);
+
     const overTimeWorkflow: Workflow = await completeActivityUse(overTimeActivity,
-      { midiOptions: { targetsToUse, workflowOptions: { noProvokeReaction: true, autoConsumeResource: "both" } } },
+      { midiOptions: { targetsToUse, checkGMstatus, workflowOptions: { noProvokeReaction: true, autoConsumeResource: "both" } } },
       { configure: overTimeActivity.consumption?.spellSlot === true },
       { create: true }) as Workflow;
 
@@ -1478,45 +1479,60 @@ interface ActionSaveContext {
  * @returns true if effect should be processed further, false to skip
  */
 async function handleActionSaveDialog(ctx: ActionSaveContext): Promise<boolean> {
-  const { actor, effect, details, owner, messageFlavor } = ctx;
-  const { label, saveDC, saveAbility, saveMagic, rollMode, rollTypeString } = details;
+  const { actor, effect, details, owner } = ctx;
+  const { saveDC, saveAbility, saveMagic, rollMode, rollTypeString } = details;
 
   if (!owner?.active) {
     error(`No active owner to request overtime save for ${actor.name} ${effect.name}`);
     return false;
   }
 
-  let saveResult: any = await new Promise(async (resolve, reject) => {
-    let timeoutId: NodeJS.Timeout | undefined;
-    if (configSettings.playerSaveTimeout) timeoutId = setTimeout(() => resolve(undefined), configSettings.playerSaveTimeout * 1000);
-    const content = `${actor.name} use your action to overcome ${label}`;
-    const result = await socketlibSocket.executeAsUser("rollActionSave", owner?.id, {
-      title: `${actor.name} Action: ${label}`,
-      content,
-      actorUuid: actor.uuid,
-      request: rollTypeString,
-      abilities: saveAbility,
-      saveDC,
-      actionSave: "dialog",
-      options: {
-        simulate: false,
-        targetValue: saveDC,
-        messageData: { user: owner?.id, flavor: `${label} ${i18n(messageFlavor[details.rollType])}` },
-        chatMessage: true,
-        rollMode,
-        mapKeys: false,
-        fastForward: false,
-        isMagicSave: saveMagic,
-        isConcentrationCheck: false
-      }
-    });
-    if (timeoutId) clearTimeout(timeoutId);
-    resolve(result);
+  // Build SaveDetails with ALL abilities — doRollAbility/setupChoiceDialog handles the choice UI
+  const saveDetails: SaveDetails = {
+    actorUuid: actor.uuid,
+    advantage: undefined,
+    disadvantage: undefined,
+    modifierTracker: undefined,
+    isFriendly: false,
+    isMagicSave: saveMagic,
+    isConcentrationCheck: false,
+    rollDC: saveDC,
+    saveItemUuid: "",
+    workflowId: "",
+    itemCardUuid: "",
+    workflowOptions: {},
+    rollType: rollTypeString,
+    rollAbilities: rollTypeString !== "skill" ? saveAbility : [],
+    rollSkills: rollTypeString === "skill" ? saveAbility : [],
+    rollTools: [],
+    itemId: "",
+  };
+
+  // Prompt player for confirmation, then roll via rollAbility on their client
+  let saveResult: any = await socketlibSocket.executeAsUser("rollActionSave", owner?.id, {
+    actorUuid: actor.uuid,
+    effectName: effect.name,
+    saveDetails,
+    displayOptions: {
+      fastForward: false,
+      chatMessage: true,
+      showTargetDC: true,
+      rollMode,
+    }
   });
 
-  if (saveResult instanceof Array) saveResult = saveResult[0];
-  if (saveResult?.class) saveResult = JSON.parse(JSON.stringify(saveResult));
-  const success = saveResult?.options?.success || saveResult?.total >= saveDC;
+  // Reconstruct Roll from socketlib serialization — same pattern as normalizeRollResults in checkSaves
+  //@ts-expect-error no dnd5e types
+  const D20Roll = CONFIG.Dice.D20Roll;
+  let roll: Roll | undefined;
+  if (saveResult instanceof Array) {
+    roll = saveResult[0] instanceof Roll ? saveResult[0] : D20Roll.fromJSON(JSON.stringify(saveResult[0]));
+  } else if (saveResult && !(saveResult instanceof Roll)) {
+    roll = D20Roll.fromJSON(JSON.stringify(saveResult));
+  } else {
+    roll = saveResult;
+  }
+  const success = roll?.total !== undefined && roll.total >= saveDC;
   foundry.utils.setProperty(effect, `flags.${MODULE_ID}.actionSaveSuccess`, success === true);
   return true;
 }
@@ -2169,11 +2185,6 @@ export async function _processOverTime(combat: Combat.Implementation, data: Comb
   let testTurn = combat.previous?.turn ?? 0;
   let testRound = combat.previous?.round ?? 0;
   const last = (data.round ?? combat.current.round ?? 0) * 100 + (data.turn ?? combat.current.turn ?? 0);
-  // These changed since overtime moved to _preUpdate function instead of hook
-  // const prev = (combat.previous.round ?? 0) * 100 + (combat.previous.turn ?? 0);
-  // let testTurn = combat.previous.turn ?? 0;
-  // let testRound = combat.previous.round ?? 0;
-  // const last = (combat.current.round ?? 0) * 100 + (combat.current.turn ?? 0);
 
   let toTest = prev;
   let count = 0;
@@ -2409,9 +2420,9 @@ export type MidiOptions = {
   /** Multiple tools available for a tool check (e.g., ["thief", "smith"]) */
   rollTools?: string[];
   /** Pre-computed advantage data per choice (ability/skill/tool), populated by Workflow.ts and deserialized by GMAction.
-   *  A roll is always ONE type, so one map suffices for abilities, skills, or tools.
+   *  A roll is always ONE type, so one object suffices for abilities, skills, or tools.
    */
-  advantageByChoice?: Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; trackerData?: object; tracker?: import("./lib/RollModifierTracker.js").RollModifierTracker }>;
+  advantageByChoice?: Record<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; trackerData?: object; tracker?: import("./lib/RollModifierTracker.js").RollModifierTracker }>;
 };
 type SerializedMidiOptions = Omit<MidiOptions, "targetsToUse" | "rollAs" | "asUser"> & {
   targetsToUse?: string[];
@@ -2647,90 +2658,142 @@ export function checkDistance(t1: any, t2: any, distance: number, options: { wal
 }
 
 // ==================== PERIMETER DISTANCE HELPERS ====================
-// These functions compute the minimum distance between token perimeters (bounding rectangles)
-// rather than between grid square centers. Uses PIXI.Rectangle which has left/right/top/bottom getters.
+// These functions compute the minimum distance between token perimeters (actual shapes)
+// rather than between grid square centers. Supports all v13 token shapes:
+// rectangles, hexagonal polygons, circles, and ellipses.
 
 /**
- * Find the closest point on a rectangle's perimeter to a given point.
- * @param bounds - The rectangle bounds (PIXI.Rectangle with left/right/top/bottom getters)
- * @param px - X coordinate of the point
- * @param py - Y coordinate of the point
- * @returns The closest point on the rectangle's perimeter
+ * Get a token's perimeter as a PIXI.Polygon in world coordinates.
+ * Uses token.getShape() for the actual shape (hex, circle, ellipse, rectangle)
+ * and translates from local to world coordinates.
  */
-export function closestPointOnPerimeter(bounds: PIXI.Rectangle, px: number, py: number): { x: number, y: number } {
-  // Clamp the point to the rectangle's extent
-  const clampedX = Math.max(bounds.left, Math.min(bounds.right, px));
-  const clampedY = Math.max(bounds.top, Math.min(bounds.bottom, py));
+export function getTokenPerimeterPolygon(token: Token): PIXI.Polygon {
+  const shape = token.getShape();
+  const { x, y } = token.document;
 
-  // If point is inside the rectangle, find closest edge
-  if (px >= bounds.left && px <= bounds.right && py >= bounds.top && py <= bounds.bottom) {
-    // Point is inside - find distance to each edge
-    const distLeft = px - bounds.left;
-    const distRight = bounds.right - px;
-    const distTop = py - bounds.top;
-    const distBottom = bounds.bottom - py;
-
-    const minDist = Math.min(distLeft, distRight, distTop, distBottom);
-
-    if (minDist === distLeft) return { x: bounds.left, y: py };
-    if (minDist === distRight) return { x: bounds.right, y: py };
-    if (minDist === distTop) return { x: px, y: bounds.top };
-    return { x: px, y: bounds.bottom };
+  let polygon: PIXI.Polygon;
+  if (shape instanceof PIXI.Polygon) {
+    polygon = shape;
+  } else if (shape instanceof PIXI.Circle) {
+    //@ts-expect-error Foundry extends PIXI.Circle with toPolygon()
+    polygon = shape.toPolygon();
+  } else if (shape instanceof PIXI.Ellipse) {
+    polygon = ellipseToPolygon(shape);
+  } else {
+    // PIXI.Rectangle — Foundry extends with toPolygon()
+    polygon = (shape as any).toPolygon();
   }
 
-  // Point is outside - clamped point is on perimeter
-  return { x: clampedX, y: clampedY };
+  // Translate from local (origin 0,0) to world coordinates
+  const pts = polygon.points;
+  const worldPts: number[] = new Array(pts.length);
+  for (let i = 0; i < pts.length; i += 2) {
+    worldPts[i] = pts[i] + x;
+    worldPts[i + 1] = pts[i + 1] + y;
+  }
+  return new PIXI.Polygon(worldPts);
 }
 
 /**
- * Compute the closest points on two rectangle perimeters.
- * @param bounds1 - First rectangle bounds (PIXI.Rectangle)
- * @param bounds2 - Second rectangle bounds (PIXI.Rectangle)
- * @returns The closest points on each rectangle's perimeter
+ * Approximate a PIXI.Ellipse as a PIXI.Polygon.
+ * Foundry provides toPolygon() for Circle and Rectangle but not Ellipse.
  */
-export function closestPerimeterPoints(bounds1: PIXI.Rectangle, bounds2: PIXI.Rectangle): { p1: { x: number, y: number }, p2: { x: number, y: number } } {
-  // Check if rectangles overlap (distance would be 0)
-  const overlapX = bounds1.left < bounds2.right && bounds1.right > bounds2.left;
-  const overlapY = bounds1.top < bounds2.bottom && bounds1.bottom > bounds2.top;
+function ellipseToPolygon(ellipse: PIXI.Ellipse, segments: number = 24): PIXI.Polygon {
+  const pts: number[] = [];
+  // PIXI.Ellipse stores half-widths in .width and .height properties
+  for (let i = 0; i < segments; i++) {
+    const angle = (2 * Math.PI * i) / segments;
+    pts.push(ellipse.x + ellipse.width * Math.cos(angle));
+    pts.push(ellipse.y + ellipse.height * Math.sin(angle));
+  }
+  return new PIXI.Polygon(pts);
+}
+
+/**
+ * Find the closest point on a polygon's perimeter to a given point.
+ * Uses foundry.utils.closestPointToSegment for each edge.
+ * @param polygon - The polygon (in world coordinates, closed or open)
+ * @param px - X coordinate of the point
+ * @param py - Y coordinate of the point
+ * @returns The closest point on the polygon's perimeter
+ */
+export function closestPointOnPerimeter(polygon: PIXI.Polygon, px: number, py: number): { x: number, y: number } {
+  const pts = polygon.points;
+  const numPts = pts.length;
+  if (numPts < 4) return { x: px, y: py };
+
+  const c = { x: px, y: py };
+  let bestDistSq = Infinity;
+  let best = { x: px, y: py };
+
+  for (let i = 0; i < numPts; i += 2) {
+    const ni = (i + 2) % numPts;
+    const a = { x: pts[i], y: pts[i + 1] };
+    const b = { x: pts[ni], y: pts[ni + 1] };
+    // Skip degenerate zero-length edges
+    if (a.x === b.x && a.y === b.y) continue;
+    const closest = foundry.utils.closestPointToSegment(c, a, b);
+    const dx = closest.x - px;
+    const dy = closest.y - py;
+    const distSq = dx * dx + dy * dy;
+    if (distSq < bestDistSq) {
+      bestDistSq = distSq;
+      best = closest;
+    }
+  }
+  return best;
+}
+
+/**
+ * Compute the closest points on two polygon perimeters.
+ * @param poly1 - First polygon (in world coordinates)
+ * @param poly2 - Second polygon (in world coordinates)
+ * @returns The closest points on each polygon's perimeter
+ */
+export function closestPerimeterPoints(poly1: PIXI.Polygon, poly2: PIXI.Polygon): { p1: { x: number, y: number }, p2: { x: number, y: number } } {
+  // Quick overlap check using bounding boxes
+  const b1 = poly1.getBounds();
+  const b2 = poly2.getBounds();
+  const overlapX = b1.left < b2.right && b1.right > b2.left;
+  const overlapY = b1.top < b2.bottom && b1.bottom > b2.top;
 
   if (overlapX && overlapY) {
-    // Rectangles overlap - find a point in the overlap region
-    const overlapLeft = Math.max(bounds1.left, bounds2.left);
-    const overlapRight = Math.min(bounds1.right, bounds2.right);
-    const overlapTop = Math.max(bounds1.top, bounds2.top);
-    const overlapBottom = Math.min(bounds1.bottom, bounds2.bottom);
-    const midX = (overlapLeft + overlapRight) / 2;
-    const midY = (overlapTop + overlapBottom) / 2;
-    return { p1: { x: midX, y: midY }, p2: { x: midX, y: midY } };
+    // Bounding boxes overlap — check if polygons actually overlap
+    // Use centroid containment as a fast check for convex shapes
+    const c1 = polygonCentroid(poly1);
+    const c2 = polygonCentroid(poly2);
+    if (poly1.contains(c2.x, c2.y) || poly2.contains(c1.x, c1.y)) {
+      const midX = (c1.x + c2.x) / 2;
+      const midY = (c1.y + c2.y) / 2;
+      return { p1: { x: midX, y: midY }, p2: { x: midX, y: midY } };
+    }
   }
 
-  // Start with center of bounds2 and find closest point on bounds1
-  let center2X = (bounds2.left + bounds2.right) / 2;
-  let center2Y = (bounds2.top + bounds2.bottom) / 2;
-  let p1 = closestPointOnPerimeter(bounds1, center2X, center2Y);
-
-  // Then find closest point on bounds2 to that point
-  let p2 = closestPointOnPerimeter(bounds2, p1.x, p1.y);
-
-  // Iterate once more for better accuracy
-  p1 = closestPointOnPerimeter(bounds1, p2.x, p2.y);
-  p2 = closestPointOnPerimeter(bounds2, p1.x, p1.y);
+  // Iterative closest-point refinement (converges for convex shapes)
+  const c2 = polygonCentroid(poly2);
+  let p1 = closestPointOnPerimeter(poly1, c2.x, c2.y);
+  let p2 = closestPointOnPerimeter(poly2, p1.x, p1.y);
+  p1 = closestPointOnPerimeter(poly1, p2.x, p2.y);
+  p2 = closestPointOnPerimeter(poly2, p1.x, p1.y);
 
   return { p1, p2 };
 }
 
 /**
- * Compute the minimum Euclidean distance between two rectangle perimeters (in pixels).
- * @param bounds1 - First rectangle bounds (PIXI.Rectangle)
- * @param bounds2 - Second rectangle bounds (PIXI.Rectangle)
- * @returns The minimum distance in pixels (0 if rectangles overlap)
+ * Get the centroid of a polygon.
  */
-export function minPerimeterDistancePixels(bounds1: PIXI.Rectangle, bounds2: PIXI.Rectangle): number {
-  const { p1, p2 } = closestPerimeterPoints(bounds1, bounds2);
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
-  return Math.sqrt(dx * dx + dy * dy);
+function polygonCentroid(poly: PIXI.Polygon): { x: number, y: number } {
+  const pts = poly.points;
+  let cx = 0, cy = 0;
+  const count = pts.length / 2;
+  for (let i = 0; i < pts.length; i += 2) {
+    cx += pts[i];
+    cy += pts[i + 1];
+  }
+  return { x: cx / count, y: cy / count };
 }
+
+
 
 /**
  * Options for wall collision checking.
@@ -2822,15 +2885,6 @@ export function checkWallCollision(
   }
 }
 
-export interface PerimeterDistanceOptions {
-  /** If true, return -1 if walls block line of sight between closest points */
-  wallsBlock?: boolean;
-  /** If true, include cover calculations (for modules like levelsautocover) */
-  includeCover?: boolean;
-  /** If true, include elevation difference in distance calculation */
-  includeElevation?: boolean;
-}
-
 /**
  * Compute the minimum grid distance between two token perimeters.
  * This finds the closest points on each token's bounding rectangle perimeter
@@ -2842,19 +2896,22 @@ export interface PerimeterDistanceOptions {
  * @returns The grid distance between perimeters, or -1 if blocked/invalid
  */
 /**
- * Check if two token bounds overlap (intersect).
+ * Check if two token shapes overlap.
+ * Uses bounding box check then centroid containment for convex shapes.
  */
-function boundsOverlap(bounds1: PIXI.Rectangle, bounds2: PIXI.Rectangle): boolean {
-  return !(bounds1.right < bounds2.left ||
-           bounds1.left > bounds2.right ||
-           bounds1.bottom < bounds2.top ||
-           bounds1.top > bounds2.bottom);
+function shapesOverlap(poly1: PIXI.Polygon, poly2: PIXI.Polygon): boolean {
+  const b1 = poly1.getBounds();
+  const b2 = poly2.getBounds();
+  if (b1.right < b2.left || b1.left > b2.right || b1.bottom < b2.top || b1.top > b2.bottom) return false;
+  const c1 = polygonCentroid(poly1);
+  const c2 = polygonCentroid(poly2);
+  return poly1.contains(c2.x, c2.y) || poly2.contains(c1.x, c1.y);
 }
 
 export function computePerimeterDistance(
   t1: any,
   t2: any,
-  options: PerimeterDistanceOptions = {}
+  options: DistanceOptions = {}
 ): number {
   const { wallsBlock = false, includeElevation = true } = options;
 
@@ -2867,19 +2924,18 @@ export function computePerimeterDistance(
   // Same token - distance is 0
   if (token1 === token2) return 0;
 
-  const bounds1 = token1.bounds;
-  const bounds2 = token2.bounds;
-  if (!bounds1 || !bounds2) return -1;
+  const poly1 = getTokenPerimeterPolygon(token1 as Token);
+  const poly2 = getTokenPerimeterPolygon(token2 as Token);
 
   const gridDistance = canvas.dimensions.distance; // typically 5 feet
 
   // Check if tokens overlap - if so, distance is 0
-  if (boundsOverlap(bounds1, bounds2)) {
+  if (shapesOverlap(poly1, poly2)) {
     return 0;
   }
 
   // Find the closest points on each perimeter
-  const { p1, p2 } = closestPerimeterPoints(bounds1, bounds2);
+  const { p1, p2 } = closestPerimeterPoints(poly1, poly2);
 
   // Convert to PIXI.Point to match computeDistance behavior
   const origin = new PIXI.Point(p1.x, p1.y);
@@ -2939,186 +2995,203 @@ export function computePerimeterDistance(
     distance = result?.distance ?? 0;
   }
 
-  // Include elevation difference if requested
+  // Include elevation difference if requested, using diagonal-aware combination
   if (includeElevation) {
-    const elev1 = (token1.document as any).elevation ?? 0;
-    const elev2 = (token2.document as any).elevation ?? 0;
-    const elevDiff = Math.abs(elev2 - elev1);
-    if (elevDiff > 0) {
-      // Pythagorean distance including elevation
-      distance = Math.sqrt(distance * distance + elevDiff * elevDiff);
-    }
+    const heightDifference = computeTokenHeightDifference(token1 as Token, token2 as Token);
+    distance = combineDistanceWithHeight(distance, heightDifference);
   }
 
   return distance;
 }
 
 /**
- * Check if the perimeter distance between two tokens is within a given limit.
- * @param t1 - First token (or token reference)
- * @param t2 - Second token (or token reference)
- * @param maxDistance - Maximum allowed distance
- * @param options - Options for distance calculation
- * @returns true if distance is >= 0 and <= maxDistance
+ * Measure point-to-point distance using the current grid mode.
+ * On gridless scenes with griddedGridless enabled, uses the SquareGrid proxy.
+ * Otherwise uses canvas.grid.measurePath directly.
  */
-export function checkPerimeterDistance(
-  t1: any,
-  t2: any,
-  maxDistance: number,
-  options: PerimeterDistanceOptions = {}
-): boolean {
-  const dist = computePerimeterDistance(t1, t2, options);
-  return dist >= 0 && dist <= maxDistance;
+function measurePointDistance(p1: { x: number, y: number }, p2: { x: number, y: number }): number {
+  if (!canvas?.grid) return 0;
+  const isGridless = canvas.grid.isGridless;
+  if (isGridless && configSettings.griddedGridless) {
+    const proxy = createSquareGridProxy();
+    return proxy.measurePath([p1, p2], {})?.distance ?? 0;
+  }
+  return canvas.grid.measurePath([p1, p2], {})?.distance ?? 0;
 }
 
 /**
- * Get detailed perimeter distance information between two tokens.
- * @param t1 - First token (or token reference)
- * @param t2 - Second token (or token reference)
- * @param options - Options for distance calculation
- * @returns Object with distance, closest points, and whether tokens overlap
+ * Measure distance from a token to a point using perimeter mode.
+ * Finds the closest point on the token's perimeter polygon to the destination point,
+ * then measures the grid distance between them.
  */
-export function getPerimeterDistanceInfo(
-  t1: any,
-  t2: any,
-  options: PerimeterDistanceOptions = {}
-): { distance: number, point1: { x: number, y: number }, point2: { x: number, y: number }, overlapping: boolean } | undefined {
-  if (!canvas?.scene || !canvas.grid || !canvas.dimensions) return undefined;
+function measureTokenToPointPerimeter(token: Token, destPoint: { x: number, y: number }): number {
+  if (!canvas?.grid || !canvas.dimensions) return -1;
+  const poly = getTokenPerimeterPolygon(token);
 
-  const token1 = getPlaceable(t1);
-  const token2 = getPlaceable(t2);
-  if (!token1 || !token2) return undefined;
+  // Check if the point is inside the token's perimeter
+  if (poly.contains(destPoint.x, destPoint.y)) return 0;
 
-  const bounds1 = token1.bounds;
-  const bounds2 = token2.bounds;
-  if (!bounds1 || !bounds2) return undefined;
+  // Find closest point on the token perimeter to the destination
+  const closest = closestPointOnPerimeter(poly, destPoint.x, destPoint.y);
+  return measurePointDistance(closest, destPoint);
+}
 
-  const { p1, p2 } = closestPerimeterPoints(bounds1, bounds2);
-  const overlapping = boundsOverlap(bounds1, bounds2);
+/**
+ * Get the perimeter-based distance from a token to a point, with gridification.
+ * This applies the same gridification formula as getDistance in perimeter mode:
+ *   distance = gridDistance + max(0, rawDistance - fudgeFactor)
+ * Used for template placement range checks and clamping, always measuring from perimeter.
+ * @param token - The token to measure from
+ * @param point - The destination point
+ * @returns The gridified distance, or -1 if invalid, or 0 if point is inside the token
+ */
+export function getPerimeterDistanceToPoint(token: Token, point: { x: number, y: number }): number {
+  if (!canvas?.grid || !canvas.dimensions) return -1;
+  const rawDistance = measureTokenToPointPerimeter(token, point);
+  if (rawDistance < 0) return -1;
+  if (rawDistance === 0) return 0;
+  const gridDistance = canvas.dimensions.distance;
+  const fudgeFactor = configSettings.gridlessFudge ?? 0;
+  return gridDistance + Math.max(0, rawDistance - fudgeFactor);
+}
 
-  const distance = computePerimeterDistance(t1, t2, options);
-
-  return {
-    distance,
-    point1: p1,
-    point2: p2,
-    overlapping
-  };
+export interface DistanceOptions {
+  /** If true, return -1 if walls block line of sight between closest points */
+  wallsBlock?: boolean;
+  /** If true, include cover calculations (for modules like levelsautocover) */
+  includeCover?: boolean;
+  /** If true, include elevation difference in distance calculation */
+  includeElevation?: boolean;
 }
 
 /**
  * Get the distance between two tokens using the configured measurement method.
- * This is the main distance function that should be used throughout midi-qol.
+ * This is the main token-to-token distance function used throughout midi-qol.
  * It respects the configSettings.optionalRules.distanceMeasurement setting.
+ *
+ * For token-to-point distance (e.g. template placement), use getPerimeterDistanceToPoint() instead.
  *
  * @param t1 - First token (or token reference)
  * @param t2 - Second token (or token reference)
  * @param options - Options for distance calculation
  * @returns The distance between the tokens, or -1 if invalid/blocked
  */
-export function getDistance(t1: any, t2: any, options: { wallsBlock?: boolean, includeCover?: boolean } = { wallsBlock: false, includeCover: true }): number {
-  const isGridless = canvas?.grid?.isGridless ?? false;
-  const isGridded = !isGridless;
-  const diagonals = safeGetGameSetting("core", "gridDiagonals");
-  const isEuclidean = diagonals === CONST.GRID_DIAGONALS.EXACT;
-  const usePerimeter = configSettings.optionalRules.distanceMeasurement === "perimeter";
-
-  let distance: number;
-  let method: string;
-
-  // Determine which measurement method to use:
-  // 1. If (gridded OR (gridless AND griddedGridless)) AND center mode → computeDistance
-  // 2. If perimeter mode → computePerimeterDistance (handles all grid types internally)
-  // 3. Otherwise → core measurePath (pure gridless with Euclidean and center mode)
-
-  const useMidiCenter = (isGridded || (isGridless && configSettings.griddedGridless)) && !usePerimeter;
-  const useMidiPerimeter = (isGridded || (isGridless && configSettings.griddedGridless)) && usePerimeter;;
-
+export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): number {
+  const { wallsBlock = false, includeCover = true, includeElevation = configSettings.optionalRules.distanceIncludesHeight } = options;
+  const measurementMode = configSettings.optionalRules.distanceMeasurement ?? "center";
   const gridDistance = canvas?.dimensions?.distance ?? 5;
   const fudgeFactor = configSettings.gridlessFudge ?? 0;
 
-  if (useMidiCenter) {
-    distance = computeDistance(t1, t2, options);
-    method = "center";
-  } else if (useMidiPerimeter) {
-    // computePerimeterDistance returns raw perimeter-to-perimeter distance (0 for adjacent/overlapping)
-    const rawPerimeterDistance = computePerimeterDistance(t1, t2, {
-      wallsBlock: options.wallsBlock ?? false,
-      includeCover: options.includeCover ?? true,
-      includeElevation: configSettings.optionalRules.distanceIncludesHeight
-    });
+  let distance: number = 0;
 
-    if (rawPerimeterDistance < 0) {
-      // Blocked by walls
-      distance = -1;
-    } else if (rawPerimeterDistance === 0) {
-      // Overlapping or adjacent tokens
-      distance = 0;
-    } else  {
-      // 0 to fudgeFactor → 5 feet (one grid unit)
-      // >fudgeFactor to (fudgeFactor + gridDistance) → 10 feet (two grid units)
-      const adjustedDistance = Math.max(0, rawPerimeterDistance - fudgeFactor);
-      distance = (Math.ceil(adjustedDistance / gridDistance) + 1) * gridDistance;
-    }
-    method = "perimeter";
-  } else {
-    // Fallback: use core measurePath (gridless with Euclidean)
+  if (measurementMode === "default") {
+    // Default: use Foundry's core measurePath between token centers
     const token1 = getPlaceable(t1);
     const token2 = getPlaceable(t2);
     if (!token1 || !token2 || !canvas?.grid) return -1;
     if (token1 === token2) return 0;
-
     const result = canvas.grid.measurePath([token1.center, token2.center], {});
     distance = result?.distance ?? 0;
-    method = "euclidean";
-  }
+  } else if (measurementMode === "center") {
+    distance = computeDistance(t1, t2, { wallsBlock, includeCover, includeElevation });
+  } else if (measurementMode === "perimeter") {
+    // computePerimeterDistance returns raw perimeter-to-perimeter distance (0 for adjacent/overlapping)
+    const rawPerimeterDistance = computePerimeterDistance(t1, t2, {
+      wallsBlock,
+      includeCover,
+      includeElevation
+    });
 
-  const token1 = getPlaceable(t1);
-  const token2 = getPlaceable(t2);
-  // For debug, compute raw distance between perimeter points
-  let rawDistance = 0;
-  let pixelDistance = 0;
-  if (token1 && token2 && method === "perimeter") {
-    const bounds1 = token1.bounds;
-    const bounds2 = token2.bounds;
-    if (bounds1 && bounds2) {
-      const { p1, p2 } = closestPerimeterPoints(bounds1, bounds2);
-      const ray = new foundry.canvas.geometry.Ray(p1, p2);
-      pixelDistance = ray.distance;
-      const gridSize = canvas?.dimensions?.size ?? 100;
-      const gridDist = canvas?.dimensions?.distance ?? 5;
-      rawDistance = (pixelDistance / gridSize) * gridDist;
+    if (rawPerimeterDistance < 0) {
+      distance = -1;
+    } else {
+      // 0 to fudgeFactor → 5 feet (one grid unit)
+      // >fudgeFactor → 5 + (rawDistance - fudgeFactor)
+      distance = gridDistance + Math.max(0, rawPerimeterDistance - fudgeFactor);
     }
   }
-  console.error(`getDistance | ${(token1 as Token)?.name} -> ${(token2 as Token)?.name} = ${distance} (${method}, rawDistance=${rawDistance.toFixed(2)}, pixelDist=${pixelDistance.toFixed(0)}, fudge=${fudgeFactor}, gridless=${isGridless}, griddedGridless=${configSettings.griddedGridless})`);
-
   return distance;
+}
+
+/**
+ * Compute the height difference between two tokens, accounting for token volume.
+ * Returns 0 if elevation ranges overlap, otherwise the gap plus one grid unit.
+ */
+function computeTokenHeightDifference(token1: Token, token2: Token): number {
+  if (!canvas?.dimensions) return 0;
+  const gridDistance = canvas.dimensions.distance ?? 5;
+
+  const t1Elevation = token1.document.elevation ?? 0;
+  const t2Elevation = token2.document.elevation ?? 0;
+  const t1DocWidth = token1.document.width ?? 1;
+  const t1DocHeight = token1.document.height ?? 1;
+  const t2DocWidth = token2.document.width ?? 1;
+  const t2DocHeight = token2.document.height ?? 1;
+  const t1TopElevation = t1Elevation + Math.max(t1DocHeight, t1DocWidth) * gridDistance;
+  const t2TopElevation = t2Elevation + Math.min(t2DocHeight, t2DocWidth) * gridDistance;
+
+  // If bottom elevation of either token is within the other's elevation range, no height difference
+  if ((t2Elevation > t1Elevation && t2Elevation < t1TopElevation) || (t1Elevation > t2Elevation && t1Elevation < t2TopElevation)) {
+    return 0;
+  }
+  if (t1Elevation < t2Elevation) { // t2 above t1
+    return Math.max(0, t2Elevation - t1TopElevation) + gridDistance;
+  }
+  if (t1Elevation > t2Elevation) { // t1 above t2
+    return Math.max(0, t1Elevation - t2TopElevation) + gridDistance;
+  }
+  return 0;
+}
+
+/**
+ * Combine a flat (horizontal) distance with a height difference using the
+ * current diagonal movement rule. Treats the shorter of the two as the
+ * "diagonal" component and the remainder as the "straight" component.
+ */
+function combineDistanceWithHeight(distance: number, heightDifference: number): number {
+  if (heightDifference <= 0) return distance;
+
+  let nd = Math.min(distance, heightDifference);
+  let ns = Math.abs(distance - heightDifference);
+  const diagonals = safeGetGameSetting("core", "gridDiagonals");
+  const GRID_DIAGONALS = CONST.GRID_DIAGONALS;
+
+  let cd: number;
+  switch (diagonals) {
+    case GRID_DIAGONALS.EQUIDISTANT: cd = nd; break;
+    case GRID_DIAGONALS.EXACT: cd = Math.SQRT2 * nd; break;
+    case GRID_DIAGONALS.APPROXIMATE: cd = 1.5 * nd; break;
+    case GRID_DIAGONALS.RECTILINEAR: cd = 2 * nd; break;
+    case GRID_DIAGONALS.ALTERNATING_1:
+      cd = ((nd + 1) & -2) + (nd >> 1);
+      break;
+    case GRID_DIAGONALS.ALTERNATING_2:
+      cd = ((nd + 1) & -2) + (nd >> 1);
+      break;
+    case GRID_DIAGONALS.ILLEGAL:
+      cd = 2 * nd;
+      nd = 0;
+      ns = distance + heightDifference;
+      break;
+    default:
+      cd = nd;
+      break;
+  }
+  return ns + cd;
 }
 
 /** takes two tokens of any size and calculates the distance between them
 *** gets the shortest distance betwen two tokens taking into account both tokens size
 *** if wallblocking is set then wall are checked
 **/
-// TODO: this monster
-export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: boolean | { wallsBlock?: boolean, includeCover?: boolean } = { wallsBlock: false, includeCover: true }): number {
-  if (!canvas || !canvas.scene) return -1;
-  if (!canvas.grid || !canvas.dimensions) return -1;
+export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: { wallsBlock?: boolean, includeCover?: boolean, includeElevation?: boolean } = { wallsBlock: false, includeCover: true }): number {
+  if (!canvas?.scene || !canvas.grid || !canvas.dimensions) return -1;
   t1 = getPlaceable(t1);
   t2 = getPlaceable(t2);
   if (!t1 || !t2) return -1;
-  if (!canvas || !canvas.grid || !canvas.dimensions) return -1;
-  let wallsBlock: boolean, includeCover: boolean;
-  if (typeof options === "boolean") {
-    wallsBlock = options;
-    includeCover = true;
-    foundry.utils.logCompatibilityWarning("computeDistance(t1, t2, wallsBlock?: boolean) is deprecated in favor of computeDistance(t1, t2, { wallsBlock: boolean, includeCover: boolean }).", { since: "11.6.26", until: "12.5.0" });
-  }
-  else {
-    ({ wallsBlock = false, includeCover = true } = options);
-  }
+  let { wallsBlock = false, includeCover = true, includeElevation = configSettings.optionalRules.distanceIncludesHeight } = options;
   const actor = t1.actor;
   const ignoreWallsFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.ignoreWalls`);
-  // get condition data & eval the property
   if (ignoreWallsFlag) {
     wallsBlock = false;
   }
@@ -3173,30 +3246,30 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
     }
   }
 
-  var x, x1, y, y1, d, r, segments: { ray: Ray }[] = [], rayDistance, distance;
+  let segments: { ray: Ray }[] = [];
+  let rayDistance, distance;
   let heightDifference = 0;
   if (!(t2.document instanceof WallDocument)) {
-    for (x = t1StartX; x < t1DocWidth; x++) {
-      for (y = t1StartY; y < t1DocHeight; y++) {
+    for (let x = t1StartX; x < t1DocWidth; x++) {
+      for (let y = t1StartY; y < t1DocHeight; y++) {
         if (y === t1StartY + 1) {
           if (x > t1StartX && x < t1DocWidth - t1StartX) {
             // skip to the last y position;
             y = t1DocHeight - t1StartY;
           }
         }
-        let origin;
-        const point = canvas.grid.getCenterPoint({ x: Math.round(t1.document.x + (canvas.dimensions.size * x)), y: Math.round(t1.document.y + (canvas.dimensions.size * y)) });
-        origin = new PIXI.Point(point.x, point.y);
-        for (x1 = t2StartX; x1 < t2DocWidth; x1++) {
-          for (y1 = t2StartY; y1 < t2DocHeight; y1++) {
+        const point1 = canvas.grid.getCenterPoint({ x: Math.round(t1.document.x + (canvas.dimensions.size * x)), y: Math.round(t1.document.y + (canvas.dimensions.size * y)) });
+        const origin = new PIXI.Point(point1.x, point1.y);
+        for (let x1 = t2StartX; x1 < t2DocWidth; x1++) {
+          for (let y1 = t2StartY; y1 < t2DocHeight; y1++) {
             if (y1 === t2StartY + 1) {
               if (x1 > t2StartX && x1 < t2DocWidth - t2StartX) {
                 // skip to the last y position;
                 y1 = t2DocHeight - t2StartY;
               }
             }
-            const point = canvas.grid.getCenterPoint({ x: Math.round(t2.document.x + (canvas.dimensions.size * x1)), y: Math.round(t2.document.y + (canvas.dimensions.size * y1)) });
-            let dest = new PIXI.Point(point.x, point.y);
+            const point2 = canvas.grid.getCenterPoint({ x: Math.round(t2.document.x + (canvas.dimensions.size * x1)), y: Math.round(t2.document.y + (canvas.dimensions.size * y1)) });
+            const dest = new PIXI.Point(point2.x, point2.y);
             const r = new foundry.canvas.geometry.Ray(origin, dest);
             if (wallsBlock) {
               const collision = checkWallCollision(origin, dest, {
@@ -3220,24 +3293,14 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
     }
     rayDistance = segments.map(ray => midiMeasureDistances([ray], { gridSpaces: true }));
     distance = Math.min(...rayDistance);
-    if (configSettings.optionalRules.distanceIncludesHeight) {
-      let t1ElevationRange = Math.max(t1DocHeight, t1DocWidth) * (canvas.dimensions?.distance ?? 5);
-      if ((t2Elevation > t1Elevation && t2Elevation < t1TopElevation) || (t1Elevation > t2Elevation && t1Elevation < t2TopElevation)) {
-        //check if bottom elevation of each token is within the other token's elevation space, if so make the height difference 0
-        heightDifference = 0;
-      }
-      else if (t1Elevation < t2Elevation) { // t2 above t1
-        heightDifference = Math.max(0, t2Elevation - t1TopElevation) + (canvas.dimensions?.distance ?? 5);
-      }
-      else if (t1Elevation > t2Elevation) { // t1 above t2
-        heightDifference = Math.max(0, t1Elevation - t2TopElevation) + (canvas.dimensions?.distance ?? 5);
-      }
+    if (includeElevation) {
+      heightDifference = computeTokenHeightDifference(t1 as Token, t2 as Token);
     }
   } else {
     const w = t2.document
-    let closestPoint = foundry.utils.closestPointToSegment(t1.center, w.object.edge.a, w.object.edge.b);
+    const closestPoint = foundry.utils.closestPointToSegment(t1.center, w.object.edge.a, w.object.edge.b);
     distance = midiMeasureDistances([{ ray: new foundry.canvas.geometry.Ray(t1.center, closestPoint) }], { gridSpaces: true });
-    if (configSettings.optionalRules.distanceIncludesHeight) {
+    if (includeElevation) {
       if (!w.flags?.["wall-height"]) heightDifference = 0;
       else {
         const wh = w.flags?.["wall-height"]
@@ -3248,46 +3311,11 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
       }
     }
   }
-  if (configSettings.optionalRules.distanceIncludesHeight) {
-
-    // TODO experimental
-    let nd = Math.min(distance, heightDifference);
-    let ns = Math.abs(distance - heightDifference);
-    // distance = nd + ns;
-    let dimension = canvas.dimensions?.distance ?? 5;
-    let diagonals = safeGetGameSetting("core", "gridDiagonals");
-    const GRID_DIAGONALS = CONST.GRID_DIAGONALS;
-    // Determine the offset distance of the diagonal moves
-    let cd;
-    switch (diagonals) {
-      case GRID_DIAGONALS.EQUIDISTANT: cd = nd; break;
-      case GRID_DIAGONALS.EXACT: cd = Math.SQRT2 * nd; break;
-      case GRID_DIAGONALS.APPROXIMATE: cd = 1.5 * nd; break;
-      case GRID_DIAGONALS.RECTILINEAR: cd = 2 * nd; break;
-      case GRID_DIAGONALS.ALTERNATING_1:
-        // TODO get the diagonals return from MidiMeasureDistances
-        // if ( result.diagonals & 1 ) cd = ((nd + 1) & -2) + (nd >> 1);
-        // else cd = (nd & -2) + ((nd + 1) >> 1);
-        cd = ((nd + 1) & -2) + (nd >> 1);
-        break;
-      case GRID_DIAGONALS.ALTERNATING_2:
-        // TODO get the diagonals return from MidiMeasureDistances
-        // if ( result.diagonals & 1 ) cd = (nd & -2) + ((nd + 1) >> 1);
-        //  else cd = ((nd + 1) & -2) + (nd >> 1);
-        cd = ((nd + 1) & -2) + (nd >> 1);
-        break;
-      case GRID_DIAGONALS.ILLEGAL:
-        // Don't think I want this to be done
-        cd = 2 * nd;
-        nd = 0;
-        // n = di + dj;
-        ns = distance + heightDifference;
-        break;
-    }
-    distance = ns + cd;
+  if (includeElevation) {
+    distance = combineDistanceWithHeight(distance, heightDifference);
   }
   return Math.max(distance, 0);
-};
+}
 
 let pointWarn = foundry.utils.debounce(() => {
   ui.notifications?.warn("4 Point LOS check selected but dnd5e-helpers not installed")
@@ -3406,7 +3434,6 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
     }
 
     const isMetric = game.settings.get("dnd5e", "metricLengthUnits") ?? false;
-    const fudgeFactor = configSettings.gridlessFudge ?? 0;
 
     for (let target of targets) {
       if (target === token) continue;
@@ -3441,8 +3468,8 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
         }
       }
 
-      // Apply fudge factor - rawDistance is >= 0, use Math.max to prevent negative from fudge subtraction
-      const distance = Math.max(0, parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor);
+      // Fudge factor is applied in getDistance - no additional adjustment needed here
+      const distance = Math.max(0, parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)));
 
       if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
         log(`${target.name} is too far ${distance} from your character you cannot hit`)
@@ -7561,23 +7588,61 @@ export async function contestedRoll(data: {
   let player2 = playerFor(targetToken);
   if (!player2?.active) player2 = preferredActiveGM();
   if (!player1 || !player2) return { result: undefined, rolls: [] };
-  const sourceFlavor = contestedRollFlavor(flavor, source.rollType, source.ability)
-  const sourceOptions = foundry.utils.mergeObject(foundry.utils.duplicate(source.rollOptions ?? rollOptions ?? {}), {
-    mapKeys: false,
-    flavor: sourceFlavor,
-    title: `${sourceFlavor}: ${sourceToken?.name} vs ${targetToken?.name}`
-  });
-  const targetFlavor = contestedRollFlavor(flavor, target.rollType, target.ability);
-  const targetOptions = foundry.utils.mergeObject(foundry.utils.duplicate(target.rollOptions ?? rollOptions ?? {}), {
-    mapKeys: false,
-    flavor: targetFlavor,
-    title: `${targetFlavor}: ${targetToken?.name} vs ${sourceToken?.name}`
-  });
-  const sourceConfig = { request: source.rollType.trim(), targetUuid: sourceDocument?.uuid, options: sourceOptions, [source.rollType === "skill" ? "skill" : "ability"]: source.ability.trim() };
-  const targetConfig = { request: target.rollType.trim(), targetUuid: targetDocument?.uuid, options: targetOptions, [target.rollType === "skill" ? "skill" : "ability"]: target.ability.trim() };
+  // Normalize roll types for SaveDetails
+  const normalizeRollType = (rt: string): string => {
+    if (rt === "abil" || rt === "test") return "check";
+    return rt.trim();
+  };
+
+  // Build SaveDetails for each participant
+  const buildContestedSaveDetails = (
+    actorUuid: string,
+    rollType: string,
+    abilityOrSkill: string
+  ): SaveDetails => {
+    const normalizedType = normalizeRollType(rollType);
+    const isSkill = rollType === "skill";
+    return {
+      actorUuid,
+      advantage: undefined,
+      disadvantage: undefined,
+      modifierTracker: undefined,
+      isFriendly: false,
+      isMagicSave: false,
+      isConcentrationCheck: undefined,
+      rollDC: 0,
+      saveItemUuid: "",
+      workflowId: "",
+      itemCardUuid: itemCardUuid ?? "",
+      workflowOptions: {},
+      rollType: normalizedType,
+      rollAbilities: isSkill ? [] : [abilityOrSkill.trim()],
+      rollSkills: isSkill ? [abilityOrSkill.trim()] : [],
+      rollTools: [],
+      itemId: "",
+    };
+  };
+
+  const sourceSaveDetails = buildContestedSaveDetails(
+    sourceDocument?.actor?.uuid ?? "",
+    source.rollType,
+    source.ability
+  );
+  const targetSaveDetails = buildContestedSaveDetails(
+    targetDocument?.actor?.uuid ?? "",
+    target.rollType,
+    target.ability
+  );
+
   const resultPromises = [
-    socketlibSocket.executeAsUser("rollAbility", player1.id, sourceConfig),
-    socketlibSocket.executeAsUser("rollAbility", player2.id, targetConfig),
+    socketlibSocket.executeAsUser("rollAbility", player1.id, {
+      saveDetails: sourceSaveDetails,
+      displayOptions: { chatMessage: true }
+    }),
+    socketlibSocket.executeAsUser("rollAbility", player2.id, {
+      saveDetails: targetSaveDetails,
+      displayOptions: { chatMessage: true }
+    }),
   ];
 
   let results = await Promise.all(resultPromises);
@@ -8201,12 +8266,6 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
   return { deleted: actorEffectsToDelete, disabled: effectsToDisable, itemEffects: effectsToDelete };
 }
 
-export function blankOrUndefinedDamageType(s: string | undefined): string {
-  if (!s) return "none";
-  if (s === "") return "none";
-  return s;
-}
-
 export function processConcentrationRequestMessage(message: ChatMessage.Implementation, html: HTMLElement, data) {
   if (configSettings.doConcentrationCheck !== "chat") return;
   let elt = html.querySelectorAll<HTMLElement>("[data-action=concentration]");
@@ -8365,12 +8424,6 @@ export function getActivityDefaultDamageType(workflow: Workflow): string {
   if (workflow.defaultDamageType) defaultDamageType = workflow.defaultDamageType;
   if (!defaultDamageType) defaultDamageType = MidiQOL.MQdefaultDamageType;
   return defaultDamageType;
-}
-
-export function getDefaultDamageType(item: Item.Implementation): string {
-  // @ts-expect-error no dnd5e-types
-  const activity = item.system.activities.get("dnd5eactivity000");
-  return activity?.damage?.parts[0]?.types.first() ?? MidiQOL.MQdefaultDamageType;
 }
 
 export function activityHasAreaTarget(activity?: Activity): boolean {

@@ -207,7 +207,13 @@
     "none": "None",
     "all": "Check - all see result",
     "whisper": "Check - only GM sees results",
-    "gmOnly": "Check - only GM sees anything"
+    "gmOnly": "Check - only GM sees anything",
+    "expandedHints": {
+      "none": "No automatic hit checking. Hits must be adjudicated manually by the GM.",
+      "all": "Midi-qol automatically checks attack rolls against target AC. All players see hit/miss results.",
+      "whisper": "Midi-qol automatically checks attack rolls against target AC. Only the GM sees hit/miss results.",
+      "gmOnly": "Midi-qol automatically checks attack rolls against target AC. Only the GM sees the attack roll and results."
+    }
   },
   "midi-qol.clickOptions": {
     "off": "Off",
@@ -237,7 +243,15 @@
     "all": "Save - All see result + save total",
     "allShow": "Save - All see Result + Rolls",
     "whisper": "Save - only GM sees results + rolls",
-    "gmOnly": "Save - only GM sees anything"
+    "gmOnly": "Save - only GM sees anything",
+    "expandedHints": {
+      "none": "No automatic saving throws. Saves must be rolled manually.",
+      "allNoRoll": "Midi-qol auto-rolls saving throws. All players see pass/fail results but not the roll total.",
+      "all": "Midi-qol auto-rolls saving throws. All players see pass/fail results and the save total.",
+      "allShow": "Midi-qol auto-rolls saving throws. All players see pass/fail results, save total, and the full roll breakdown.",
+      "whisper": "Midi-qol auto-rolls saving throws. Only the GM sees the results and roll details.",
+      "gmOnly": "Midi-qol auto-rolls saving throws. Only the GM sees anything related to saving throws."
+    }
   },
   "midi-qol.rangeTargetOptions": {
     "none": "None",
@@ -310,7 +324,19 @@
     "chat": "Chat Message",
     "mtb": "Monks Token Bar",
     "ftb": "Flash Token Bar",
-    "rer": "Rippers Epic Rolls"
+    "rer": "Rippers Epic Rolls",
+    "expandedHints": {
+      "none": "Saves are auto-rolled with no player interaction. Roll shown privately (GM only).",
+      "nonePublic": "Saves are auto-rolled with no player interaction. Roll shown publicly to all players.",
+      "noneDialogPublic": "Saves are auto-rolled but the roll configuration dialog is shown first, allowing modification. Roll shown publicly.",
+      "noneDialogPrivate": "Saves are auto-rolled but the roll configuration dialog is shown first, allowing modification. Roll shown privately (GM only).",
+      "noneDialogSelf": "Saves are auto-rolled but the roll configuration dialog is shown first, allowing modification. Roll shown only to the rolling player.",
+      "noneDialogBlind": "Saves are auto-rolled but the roll configuration dialog is shown first, allowing modification. Roll sent as a blind roll.",
+      "chat": "Players are prompted to roll saves via a chat message button.",
+      "mtb": "Players roll saves via the Monks Token Bar interface. Requires the Monks Token Bar module.",
+      "ftb": "Players roll saves via the Flash Token Bar pop-up. Requires the Flash Rolls 5e module.",
+      "rer": "Players roll saves via Ripper's Epic Rolls interface. Requires the Epic Rolls 5e module."
+    }
   },
   "midi-qol.playerRollSavesOptionsReduced": {
     "none": "None",
@@ -348,15 +374,7 @@
   "midi-qol.potion": "Potion",
   "midi-qol.HideRollDetails.Name": "GM Roll details hiding",
   "midi-qol.HideRollDetails.Hint": "Choose how much of GM rolls to hide/show to players",
-  "midi-qol.HideRollDetails.HintLong": {
-    "none": "<strong>None</strong>: Hide nothing",
-    "detailsDSN": "<strong>Roll Formula but show DSN</strong>: Hide the roll formulas but still roll DSN dice",
-    "details": "<strong>Roll Formula</strong>: hide the roll formula and don't show DSN dice",
-    "d20Only": "<strong>Show Attack d20 + damage total</strong>: Show the attack d20 Roll and damage total only",
-    "hitDamage": "<strong>Show Hit/Miss + damage total</strong>: Show hit/miss plus the damage total",
-    "d20attackOnly": "<strong>Show attack D20 Only</strong>: Show the d20 attack dice only",
-    "all": "<strong>Entire Roll</strong>: hide all roll details from the players"
-  },
+  "midi-qol.HideRollDetails.HintLong": "<li class=\"notes midi-qol-faint\"><strong>None</strong>: Hide nothing</li><li class=\"notes midi-qol-faint\"><strong>Roll Formula but show DSN</strong>: Hide the roll formulas but still roll DSN dice</li><li class=\"notes midi-qol-faint\"><strong>Roll Formula</strong>: hide the roll formula and don't show DSN dice</li><li class=\"notes midi-qol-faint\"><strong>Show Attack d20 + damage total</strong>: Show the attack d20 Roll and damage total only</li><li class=\"notes midi-qol-faint\"><strong>Show Hit/Miss + damage total</strong>: Show hit/miss plus the damage total</li><li class=\"notes midi-qol-faint\"><strong>Show attack D20 Only</strong>: Show the d20 attack dice only</li><li class=\"notes midi-qol-faint\"><strong>Entire Roll</strong>: hide all roll details from the players</li>",
   "midi-qol.DiceRolled": "<div>Rolled</div>",
   "midi-qol.ForceHideRoll.Name": "Really Hide private/blind/self-rolls",
   "midi-qol.ForceHideRoll.Hint": "Display nothing to non-recipients for private/blind/self-rolls. Thanks to felix.mueller.86@web.de",
@@ -469,7 +487,8 @@
   "midi-qol.OptionalRules.Name": "Optional Game Rules",
   "midi-qol.OptionalRules.Hint": "DND5E Game rules that you may wish to enable. Generally, don't work with better rolls.",
   "midi-qol.InvisAdvantage.Name": "Unseen/Invisible attackers have advantage/disadvantage on attacks",
-  "midi-qol.InvisAdvantage.Hint": "<strong>RAW (2014)</strong> Invisible condition always grants adv/disadv; other senses (blindsight, tremorsense) negate unseen adv/disadv. <strong>RAW (2024)</strong> Only grants adv/disadv if the other creature cannot <em>see</em> you — blindsight/truesight negate, but tremorsense does not.",
+  "midi-qol.RAW2014Invisible.Hint": "<strong>RAW (2014)</strong> Invisible condition always grants adv/disadv; other senses (blindsight, tremorsense) negate unseen adv/disadv.",
+  "midi-qol.RAW2024Invisible.Hint": "<strong>RAW (2024)</strong> Only grants adv/disadv if the other creature cannot <em>see</em> you — blindsight/truesight negate, but tremorsense does not.",
   "midi-qol.InvisAdvantageOptions": {
     "none": "Do not apply",
     "RAW2014": "RAW (2014)",
@@ -621,7 +640,8 @@
   "midi-qol.UsePlayerPortrait.Hint": "For Actors of type character use the actor portrait instead of the token image in midi-qol chat cards",
   "midi-qol.DistanceIncludesHeight.Name": "Include height difference in distance calculations",
   "midi-qol.DistanceMeasurement.Name": "Distance measurement method",
-  "midi-qol.DistanceMeasurement.Hint": "How to measure distance between tokens. 'Grid Square Centers' uses the closest grid square centers (standard). 'Token Perimeters' uses the closest points on token edges (more accurate for large tokens).",
+  "midi-qol.DistanceMeasurement.Hint": "How to measure distance between tokens. 'Default' uses Foundry's core measurement (center-to-center via measurePath). 'Grid Square Centers' uses the closest grid square centers with midi-qol processing. 'Token Perimeters' uses the closest points on token edges (more accurate for large tokens).",
+  "midi-qol.DistanceMeasurementOptions.default": "Default (Foundry Core)",
   "midi-qol.DistanceMeasurementOptions.center": "Grid Square Centers",
   "midi-qol.DistanceMeasurementOptions.perimeter": "Token Perimeters",
   "midi-qol.NoSocketLib": "Midi-qol requires socketlib installed and enabled",
@@ -751,12 +771,7 @@
   "midi-qol.FixStickyKeys.Name": "Fix sticky alt/ctrl/shift",
   "midi-qol.FixStickyKeys.Hint": "If set midi will attempt to resolve alt/ctrl/shift being stuck 'on'",
   "midi-qol.DisplaySaveAdvantage.Name": "Display if save had Advantage/Disadvantage",
-  "midi-qol.QuickSettingsBlurb": {
-    "1": "Quick settings let you set a combination of settings at once.",
-    "2": "When one of the buttons below is pushed the changes are immediately made to your settings",
-    "3": "A list of changes is displayed once the application is complete",
-    "4": "Suggestions for improvements welcome"
-  },
+  "midi-qol.QuickSettingsBlurb": "Quick settings let you set a combination of settings at once.<br>When one of the buttons below is pushed the changes are immediately made to your settings<br>A list of changes is displayed once the application is complete<br>Suggestions for improvements welcome",
   "midi-qol.Reaction.Title": "Reaction Processing",
   "midi-qol.GMDoReactionsOptions": {
     "all": "On",
@@ -810,12 +825,7 @@
   "midi-qol.LaunchSetupWizard.Name": "Setup Wizard",
   "midi-qol.LaunchSetupWizard.Label": "Launch Setup Wizard",
   "midi-qol.LaunchSetupWizard.Hint": "Opens the step-by-step midi-qol configuration wizard",
-  "midi-qol.SoundSettingsBlurb": {
-    "1": "Getting started...",
-    "2": "Choose 'Create Sample playlist, which will create a playlist 'Midi Item Sounds' with a few sounds",
-    "3": "Choose `Basic Settings` and tinker",
-    "4": "The other create setting add more details/complexity"
-  },
+  "midi-qol.SoundSettingsBlurb": "Getting started...<br>Choose 'Create Sample playlist, which will create a playlist 'Midi Item Sounds' with a few sounds<br>Choose `Basic Settings` and tinker<br>The other create setting add more details/complexity",
   "midi-qol.AddRow": "Add Row",
   "midi-qol.CheckFlanking.Name": "Check Flanking",
   "midi-qol.CheckFlanking.Hint": "Check if you and your allies flank the opponent. Gives attacker advantage, applies <strong>Flanking</strong> condition to attacker, or applies <strong>Flanked</strong> condition to <em>target</em>. Requires restart if changing to use one of the Midi options.",
@@ -827,7 +837,17 @@
     "ceflanked": "Convenient Effects Flanked",
     "midiFlanked": "Midi Flanked effect",
     "ceflankedNoconga": "Convenient Effects Flanked + no conga line",
-    "midiFlankedNoConga": "Midi Flanked + no conga line"
+    "midiFlankedNoConga": "Midi Flanked + no conga line",
+    "expandedHints": {
+      "off": "No flanking automation.",
+      "advonly": "Flanking grants advantage on melee attacks. No effect or condition is applied to either token.",
+      "ceonly": "Apply the Convenient Effects 'Flanking' effect to the attacker. Only that attacker gains advantage — other attackers of the same target do not.",
+      "midiFlanking": "Apply midi-qol's 'Flanking' effect to the attacker. Only that attacker gains advantage — other attackers of the same target do not.",
+      "ceflanked": "Apply the Convenient Effects 'Flanked' effect to the target. All attackers making melee attacks against the flanked target gain advantage.",
+      "midiFlanked": "Apply midi-qol's 'Flanked' effect to the target. All attackers making melee attacks against the flanked target gain advantage.",
+      "ceflankedNoconga": "Apply the Convenient Effects 'Flanked' effect to the target. All melee attackers gain advantage. Already-flanked tokens cannot count as flanking allies (prevents conga lines).",
+      "midiFlankedNoConga": "Apply midi-qol's 'Flanked' effect to the target. All melee attackers gain advantage. Already-flanked tokens cannot count as flanking allies (prevents conga lines)."
+    }
   },
   "midi-qol.Flanked": "Flanked",
   "midi-qol.Flanking": "Flanking",
@@ -1280,6 +1300,12 @@
           "start": "Start of Turn",
           "end": "End of Turn"
         },
+        "rollAs": {
+          "label": "Roll As",
+          "hint": "Who rolls the overtime activity",
+          "target": "Effect Token",
+          "source": "Source Token"
+        },
         "saveRemoves": {
           "label": "Save Removes",
           "hint": "Save removes effect"
@@ -1418,6 +1444,12 @@
       "saveRemoves": {
         "label": "Save Removes",
         "hint": "Save removes effect"
+      },
+      "rollAs": {
+        "label": "Roll As",
+        "hint": "Who rolls the overtime activity",
+        "target": "Effect Token",
+        "source": "Source Token"
       },
       "removeConditionBeforeActivity": {
         "label": "Remove effect before rolling",

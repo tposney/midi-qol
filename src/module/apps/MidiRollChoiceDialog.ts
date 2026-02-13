@@ -1,4 +1,5 @@
 import { i18n, i18nFormat, GameSystemConfig } from "../../midi-qol.js";
+import { PreComputedAdvantageData } from "../../globals.js";
 import { RollModifierTracker } from "../lib/RollModifierTracker.js";
 import { getToolLabel } from "../utils.js";
 
@@ -11,22 +12,8 @@ export interface RollChoice {
   modifier: string;
 }
 
-/**
- * Pre-computed advantage data for a specific choice, keyed by ability or skill ID.
- *
- * trackerData: Serialized RollModifierTracker (via toJSON()) for socketlib transfer.
- * tracker: The deserialized RollModifierTracker instance (populated by GMAction).
- *
- * Class instances don't survive socketlib serialization, so Workflow.ts serializes
- * to trackerData, and GMAction deserializes back to tracker before calling doRollAbility.
- */
-export interface PreComputedAdvantage {
-  hasAdvantage: boolean;
-  hasDisadvantage: boolean;
-  defaultButton: "advantage" | "disadvantage" | "normal";
-  trackerData?: object;
-  tracker?: RollModifierTracker;
-}
+/** Re-export for backward compatibility - canonical type is PreComputedAdvantageData in globals.ts */
+export type PreComputedAdvantage = PreComputedAdvantageData;
 
 /**
  * Custom D20 roll dialog that adds a filtered choice dropdown when multiple
@@ -55,7 +42,7 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
   /** @override */
   static DEFAULT_OPTIONS = {
     rollChoices: [] as RollChoice[],
-    advantageByChoice: new Map<string, PreComputedAdvantage>(),
+    advantageByChoice: {} as Record<string, PreComputedAdvantage>,
     choiceType: "ability" as "ability" | "skill" | "tool"
   };
 
@@ -140,9 +127,9 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
         (this as any)._updateFrame({ window: { title: flavor } });
       }
 
-      // Update advantage/disadvantage from pre-computed map
-      const advantageMap: Map<string, PreComputedAdvantage> | undefined = (this as any).options.advantageByChoice;
-      const preComputed = advantageMap?.get(newValue);
+      // Update advantage/disadvantage from pre-computed object
+      const advantageMap: Record<string, PreComputedAdvantage> | undefined = (this as any).options.advantageByChoice;
+      const preComputed = advantageMap?.[newValue];
       if (preComputed) {
         this._midiDefaultButton = preComputed.defaultButton;
         // Re-render buttons to reflect new advantage state
@@ -198,7 +185,7 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
   static createBuildConfig(
     actor: Actor.Implementation,
     rollType: "save" | "check" | "skill" | "tool",
-    advantageByChoice?: Map<string, PreComputedAdvantage>
+    advantageByChoice?: Record<string, PreComputedAdvantage>
   ): (processConfig: any, rollConfig: any, formData: FormData | null, index: number) => void {
     return (processConfig, rollConfig, formData, index) => {
       if (index !== 0) return;
@@ -260,29 +247,29 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
       }
 
       // Apply midi's pre-computed advantage (midi-specific, not in dnd5e)
-      MidiRollChoiceDialog.applyPreComputedAdvantage(rollConfig, advantageByChoice?.get(choiceId));
+      MidiRollChoiceDialog.applyPreComputedAdvantage(rollConfig, advantageByChoice?.[choiceId]);
     };
   }
 
   // Convenience wrappers for backward compatibility and clearer call sites
 
   /** @deprecated Use createBuildConfig(actor, "save", advantageByChoice) instead */
-  static createSaveBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>) {
+  static createSaveBuildConfig(actor: Actor.Implementation, advantageByChoice?: Record<string, PreComputedAdvantage>) {
     return MidiRollChoiceDialog.createBuildConfig(actor, "save", advantageByChoice);
   }
 
   /** @deprecated Use createBuildConfig(actor, "check", advantageByChoice) instead */
-  static createCheckBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>) {
+  static createCheckBuildConfig(actor: Actor.Implementation, advantageByChoice?: Record<string, PreComputedAdvantage>) {
     return MidiRollChoiceDialog.createBuildConfig(actor, "check", advantageByChoice);
   }
 
   /** @deprecated Use createBuildConfig(actor, "skill", advantageByChoice) instead */
-  static createSkillBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>) {
+  static createSkillBuildConfig(actor: Actor.Implementation, advantageByChoice?: Record<string, PreComputedAdvantage>) {
     return MidiRollChoiceDialog.createBuildConfig(actor, "skill", advantageByChoice);
   }
 
   /** @deprecated Use createBuildConfig(actor, "tool", advantageByChoice) instead */
-  static createToolBuildConfig(actor: Actor.Implementation, advantageByChoice?: Map<string, PreComputedAdvantage>) {
+  static createToolBuildConfig(actor: Actor.Implementation, advantageByChoice?: Record<string, PreComputedAdvantage>) {
     return MidiRollChoiceDialog.createBuildConfig(actor, "tool", advantageByChoice);
   }
 }

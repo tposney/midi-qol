@@ -23,6 +23,7 @@ import { ChatLogMidi } from './module/ChatClasses/ChatLogMidi.js';
 import { injectMidiCompletions } from './module/lib/midiCompletions.js';
 import { OverTimeEditor } from './module/apps/OverTimeEditor.js';
 import { ConditionEditor } from './module/apps/ConditionEditor.js';
+import { registerHandlebarsHelpers } from './module/lib/HandlebarsHelpers.js';
 
 // Register macro-autocomplete hook handler at module load time so it's
 // ready before macro-autocomplete fires "macro-autocomplete.ready" in its ready hook.
@@ -86,8 +87,9 @@ export const MODULE_ID = "midi-qol";
 
 const { StringField } = foundry.data.fields;
 
-export let i18n = (key: string) => {
-  return game.i18n?.localize(key) ?? key;
+export let i18n = (key: SelectOptionValue) => {
+  const k = typeof key === "object" ? key.label : key;
+  return game.i18n?.localize(k) ?? k;
 }
 
 export let i18nFormat = (key: string, data = {}) => {
@@ -152,6 +154,7 @@ Hooks.once("levelsReady", function () {
   levelsAPI = CONFIG.Levels.API;
 });
 Hooks.once("init", () => {
+  registerHandlebarsHelpers();
   setupChatMessageMidi();
   //@ts-expect-error
   CONFIG.ChatMessage.documentClass = ChatMessageMidi;
@@ -713,7 +716,7 @@ import { MidiForwardActivity, setupForwardActivity } from './module/activities/F
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';
 import { MidiTransformActivity, setupTransformActivity } from './module/activities/TransformActivity.js';
 import { MidiCombat5e } from './module/MidiCombat5e.js';
-import { TokenOrDocument } from './globals.js';
+import { TokenOrDocument, SelectOptionValue } from './globals.js';
 import { DamageApplicationElementMidi } from './module/ChatClasses/DamageApplicationElementMidi.js';
 
 // Add any additional hooks if necessary
@@ -846,11 +849,11 @@ function setupMidiQOLApi() {
     testfunc,
     tokenForActor,
     midiPropertiesOptions: {
-      triggeredActivityTargetOptions: Object.entries(triggeredActivityTargetOptions).map(([value, label]) => {
-        return { value, label: i18n(label) }
+      triggeredActivityTargetOptions: Object.entries(triggeredActivityTargetOptions).map(([value, opt]) => {
+        return { value, label: i18n(opt) }
       }),
-      triggeredActivityRollAsOptions: Object.entries(triggeredActivityRollAsOptions).map(([value, label]) => {
-        return { value, label: i18n(label) }
+      triggeredActivityRollAsOptions: Object.entries(triggeredActivityRollAsOptions).map(([value, opt]) => {
+        return { value, label: i18n(opt) }
       }),
     },
     TrapWorkflow,

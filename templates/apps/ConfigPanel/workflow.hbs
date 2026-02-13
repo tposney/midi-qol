@@ -97,7 +97,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.AutoCheckHit.Name"}}</label>
       <select name="autoCheckHit" data-dtype="String">
-        {{selectOptions autoCheckHitOptions selected=configSettings.autoCheckHit localize=true}}
+        {{midiSelectOptions autoCheckHitOptions selected=configSettings.autoCheckHit localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{{localize "midi-qol.AutoCheckHit.Hint"}}}</div>
     </div>
@@ -127,18 +127,6 @@
         </select>
         <div class="notes midi-qol-faint">{{localize "midi-qol.CoverCalculation.Hint"}}</div>
       </div>
-      <div class="form-group">
-        <label>{{localize "midi-qol.DistanceIncludesHeight.Name"}}</label>
-        <input type="checkbox" name="optionalRules.distanceIncludesHeight" data-dtype="Boolean" {{checked
-          configSettings.optionalRules.distanceIncludesHeight}} />
-      </div>
-      <div class="form-group">
-        <label>{{localize "midi-qol.DistanceMeasurement.Name"}}</label>
-        <select name="optionalRules.distanceMeasurement" data-dtype="String">
-          {{selectOptions distanceMeasurementOptions selected=configSettings.optionalRules.distanceMeasurement localize=true}}
-        </select>
-        <div class="notes midi-qol-faint">{{localize "midi-qol.DistanceMeasurement.Hint"}}</div>
-      </div>
     </div>
   </div>
 
@@ -155,7 +143,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.AutoCheckSaves.Name"}}</label>
       <select name="autoCheckSaves" data-dtype="String">
-        {{selectOptions autoCheckSavesOptions selected=configSettings.autoCheckSaves localize=true}}
+        {{midiSelectOptions autoCheckSavesOptions selected=configSettings.autoCheckSaves localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{localize "midi-qol.AutoCheckSaves.Hint"}}</div>
     </div>
@@ -175,7 +163,7 @@
     <div class="form-group">
       <label>{{localize "midi-qol.PlayerRollSaves.Name"}}</label>
       <select name="playerRollSaves" data-dtype="String">
-        {{selectOptions playerRollSavesOptions selected=configSettings.playerRollSaves localize=true}}
+        {{midiSelectOptions playerRollSavesOptions selected=configSettings.playerRollSaves localize=true}}
       </select>
       <div class="notes midi-qol-faint">{{{localize "midi-qol.PlayerRollSaves.Hint"}}}</div>
     </div>

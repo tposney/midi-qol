@@ -12,18 +12,21 @@
   - Fixed scrolling misbehaviour in the overtime editor.
 * Fix so that +self (include caster) and -self (exclude caster) in emanation no template spells work the way they are supposed to. 
   - default is to include self if nothing is specified.
+* Overtime editor supports multi select for ability checks, like saves and skills.
+* Cleaned up overtime action save prompts to use the new multi select save/check/skill/tool dialog.
 * Added a deprecated getter for workflow.saveRolls to ease transition.
 
 **Experimental**
-If you normally play on gridded scenes you can ignore this feature.
-* New distance measuring option, token perimeter to token perimeter, instead of center(s) to center(s). Configurable in Workflow->Hits, Grid Square Centers (default/pre-existing) and Token Perimeters.
+If you play on gridded scenes you can ignore this feature, the two methods result in very similar behaviour.
+* New distance measuring option, token perimeter, instead of center(s) to center(s). Configurable in Workflow->Hits, Grid Square Centers (default/pre-existing) and Token Perimeters.
   - The new method decides how far apart tokens are based on the minimum distance between the token perimeters.
-  - Gridded Gridless changes the way distances are measured in gridless scenes,so that if core is set to use any of the non-Euclidean measurement modes, like Equidistant so that those modes are used by midi when calculating distances. Normally foundry only uses Eudclidean distances in gridless mode.
-  - If using **gridded gridless** with the **Grid Square Centers** option and one of the special dnd5e measurement modes, like Equidistant, you really don't need a fudge factor, since tokens are notionally "snapped" to the closed grid square when doing the distance calculation.
+  - Gridded Gridless changes the way distances are measured in gridless scenes,so that if core is set to use any of the non-Euclidean measurement modes, like Equidistant, those modes are used by midi when calculating distances, overriding default gridless behaviour. Normally foundry only uses Euclidean distances in gridless mode.
+  - If using **gridded gridless** with the **Grid Square Centers** option and one of the special dnd5e measurement modes, like Equidistant, you really don't need a fudge factor, since tokens are notionally "snapped" to the closest grid square when doing the distance calculation.
   - If using Euclidean measurement then you need a fudge factor else you'll have to be very precise in placing your tokens to be able to hit.
-* If using perimeter distance to calculate tokens are NOT snapped to the nearest grid square, however the applicable measurement mode applies when midi calculates distance. 
-  - So if using token perimeter you'll need to specify a fudge factor to avoid the very careful placement issue.
-  - If you are using euclidean measurement, perimeter distance is the way to go, with a fudge factor, since it is the most "natural", the distance between two tokens is the smallest distance between their outlines and you can hit if they are adjacent (or within the fudge factor distance).
+  * If using perimeter distance to calculate tokens are NOT snapped to the nearest grid square, however the applicable measurement mode applies when midi calculates distance. 
+    - So if using token perimeter you'll need to specify a fudge factor to avoid the very careful placement issue.
+    - If you are using euclidean measurement, perimeter distance is the way to go, with a fudge factor, since it is the most "natural", the distance between two tokens is the smallest distance between their outlines and you can hit if they are adjacent (or within the fudge factor distance).
+  * Also remember that in dnd5e if two token are adjacent (i.e. their token perimeters touch) the distance between them is 1 grid square (normally 5 feet). Both Gird Square Centers and Token Perimeters respect this convention.
 
 ### 13.0.44
 * Skipped because of the inadvertent release of a beta 13.0.44

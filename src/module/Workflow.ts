@@ -1013,6 +1013,7 @@ export class Workflow {
     adv?: boolean;
     modifierTracker?: RollModifierTracker;  // Full RollModifierTracker for attribution tracking
     attributionTooltip?: string;  // HTML-escaped attribution tooltip for data-tooltip-html attribute
+    hasAttribution?: boolean;  // Whether there is attribution data to display an info icon
     saveClass: string;
   }[] | undefined;
 
@@ -1594,7 +1595,7 @@ export class Workflow {
   get saveRolls() {
     foundry.utils.logCompatibilityWarning("Workflow.saveRolls is deprecated without replacement. Use workflow.tokenSaves instead", {since: "midi-qol 13.0.42", until: "mid-qol 13.1.0"});
     if (this.tokenSaves)
-      return Object.values(this.tokenSaves).map(r => ({formula: r.formula,  options: r.options}))
+      return Object.values(this.tokenSaves);
     return [];
   }
 
@@ -1648,22 +1649,19 @@ export class Workflow {
   useOther: boolean | undefined;
   otherDamageRollHTML: string | undefined;
   saveTargetsDisplayed: boolean | undefined;
-  tokenSaves: Record<string, Roll> | undefined;
-  targetSaveDetails: Map<string, SaveDetails> | undefined;  // Per-target SaveDetails for attribution tracking
+  targetSaveDetails: Record<string, SaveDetails> | undefined;  // Per-target SaveDetails for attribution tracking
+
+  /** Get save rolls keyed by target UUID - derived from targetSaveDetails */
+  get tokenSaves(): Record<string, Roll> | undefined {
+    if (!this.targetSaveDetails) return undefined;
+    const result: Record<string, Roll> = {};
+    for (const [uuid, details] of Object.entries(this.targetSaveDetails)) {
+      if (details.saveRoll) result[uuid] = details.saveRoll;
+    }
+    return Object.keys(result).length > 0 ? result : undefined;
+  }
   saveDC: number | undefined;
-  saveDetails: {
-    advantage: boolean | undefined,
-    disadvantage: boolean | undefined,
-    isFriendly: boolean,
-    isMagicSave: boolean,
-    isConcentrationCheck: boolean | undefined,
-    rollDC: number,
-    saveItemUuid: string,
-    workflowId: string,
-    itemCardUuid: string,
-    workflowUuid: string, // deprecated
-    workflowOptions: object,
-  } | undefined;
+  saveDetails: SaveDetails | undefined;
   damageItem: DamageListEntry | undefined;
   challengeModeScale: Record<string, number> | undefined;
   activeDefenceRolls: Record<string, Roll> | undefined;
@@ -5354,23 +5352,25 @@ return {
       if (choiceTitle) rollHTML = `<div style="font-weight:bold; text-align:center;">${choiceTitle}</div>${rollHTML}`;
     }
     const targetDocUuid = getTokenDocument(target)?.uuid ?? "none";
-    if (this.tokenSaves) this.tokenSaves[targetDocUuid] = saveRoll;
 
     // Retrieve the per-target saveDetails for attribution tracking
-    const saveDetails = this.targetSaveDetails?.get(targetDocUuid);
+    const saveDetails = this.targetSaveDetails?.[targetDocUuid];
+
+    // Store the save roll in targetSaveDetails (tokenSaves getter reads from here)
+    if (saveDetails) saveDetails.saveRoll = saveRoll;
 
     // Use the tracker for the actually-chosen ability/skill/tool when multiple choices were available
-    // Deserialize tracker from trackerData if needed (tracker may be serialized after socketlib transfer)
+    // Reconstruct tracker if needed (tracker may be a plain object after socketlib transfer)
     let chosenTracker: RollModifierTracker | undefined;
     if (midiChosenId && saveDetails?.advantageByChoice) {
-      const chosenData = saveDetails.advantageByChoice.get(midiChosenId);
-      if (chosenData) {
+      const chosenData = saveDetails.advantageByChoice[midiChosenId];
+      if (chosenData?.tracker) {
         if (chosenData.tracker instanceof RollModifierTracker) {
           chosenTracker = chosenData.tracker;
-        } else if (chosenData.trackerData) {
-          // Deserialize and cache for future access
+        } else {
+          // Reconstruct from plain object and cache for future access
           chosenTracker = new RollModifierTracker();
-          chosenTracker.restore(chosenData.trackerData);
+          chosenTracker.restore(chosenData.tracker);
           chosenData.tracker = chosenTracker;
         }
       }
@@ -5397,6 +5397,7 @@ return {
       id: target.id,
       modifierTracker: saveDetails?.modifierTracker,  // Store per-target modifierTracker for attribution
       attributionTooltip: foundry.utils.escapeHTML(attributionTooltip),  // Escaped for data-tooltip-html, always shown
+      hasAttribution: Object.keys(advMode?.attribution ?? {}).length > 0,
       saveClass: (rollDC === null) ? "" : (saved ? "success" : "failure"),
     });
   }
@@ -5966,7 +5967,6 @@ return {
     const BasicRoll = CONFIG.Dice.BasicRoll as typeof Roll;
 
     const requestId = target?.id ?? foundry.utils.randomID();
-    const playerId = player?.id;
     const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
 
     const promise = new Promise<Roll[] | Roll | null>((resolve) => {
@@ -5984,30 +5984,16 @@ return {
             const showTargetDC = configSettings.autoCheckSaves !== "whisper" && shouldDisplaySaveDC(this.actor);
             if (!game.user?.isGM && saveDisplay === "allShow") {
               // Non-GM users don't have permission to create chat cards impersonating the GM
+              const rollMode = ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
+                ? this.activity.midiProperties?.rollMode
+                : CONST.DICE_ROLL_MODES.PUBLIC;
               result = await timedAwaitExecuteAsGM("rollAbility", {
-                targetUuid: target.actor?.uuid ?? "",
-                request: rollType,
-                ability: rollAbility,
-                skill: rollSkill,
-                tool: rollTool,
-                options: {
-                  messageData: { user: playerId },
-                  target: showTargetDC ? saveDetails.rollDC : undefined,
-                  chatMessage: showRoll,
-                  mapKeys: false,
-                  rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
-                    ? this.activity.midiProperties?.rollMode
-                    : CONST.DICE_ROLL_MODES.PUBLIC,
-                  advantage: saveDetails.advantage,
-                  disadvantage: saveDetails.disadvantage,
+                saveDetails,
+                displayOptions: {
                   fastForward: true,
-                  recomputeAdvantage: true, // compute advantage/disadvantage from flags in roll function
-                  saveItemUuid: this.saveItem?.uuid,
-                  isConcentrationCheck: saveDetails.isConcentrationCheck,
-                  workflowOptions: saveDetails.workflowOptions,
-                  workflowId: this.id,
-                  itemCardUuid: this.itemCardUuid,
-                  itemId: this.saveActivity?.item.id
+                  chatMessage: showRoll,
+                  rollMode,
+                  showTargetDC
                 }
               });
             } else {
@@ -6080,51 +6066,22 @@ return {
   }
 
   /**
-   * Serialize an advantage map's tracker instances to trackerData for socketlib transmission.
-   * Class instances don't survive socketlib JSON serialization, so we convert tracker -> trackerData.
-   * GMAction will deserialize trackerData back to tracker instances on the receiving end.
-   */
-  serializeAdvantageMapForSocketlib(
-    map: unknown
-  ): Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; trackerData: object }> | undefined {
-    if (!(map instanceof Map)) return undefined;
-    const typedMap = map as Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; tracker?: RollModifierTracker }>;
-    const serialized = new Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; trackerData: object }>();
-    for (const [key, value] of typedMap) {
-      serialized.set(key, {
-        hasAdvantage: value.hasAdvantage,
-        hasDisadvantage: value.hasDisadvantage,
-        defaultButton: value.defaultButton,
-        trackerData: value.tracker?.toJSON() ?? {}
-      });
-    }
-    return serialized;
-  }
-
-  /**
    * Create a standard socketlib save roll
    */
   createStandardSaveRoll(
     target: Token,
-    saveDetails: AnyMutableObject,
-    rollType: string,
-    rollAbilities: string[],
-    rollSkills: string[],
-    rollTools: string[],
+    saveDetails: SaveDetails,
     whisper: boolean,
     showRoll: boolean,
     showRollDialog: boolean,
-    simulate: boolean,
-    isMagicSave: boolean
+    simulate: boolean
   ): Promise<Roll[] | Roll | null> {
+    const { rollType, rollAbilities } = saveDetails;
     // Validate abilities for save/check types
     if ((rollType === "save" || rollType === "check") && rollAbilities.length === 0) {
       console.warn(`midi-qol | createStandardSaveRoll called with rollType=${rollType} but no abilities`);
       return Promise.resolve(null);
     }
-    const rollAbility = rollAbilities[0];
-    const rollSkill = rollSkills[0];
-    const rollTool = rollTools[0];
     // Find a player owner for the roll if possible
     let owner = playerFor(target);
     if (!owner?.isGM && owner?.active) showRoll = true; // Always show player save rolls
@@ -6154,38 +6111,13 @@ return {
     // GM always sees DC, non-GM only when visibility allows and not whisper mode
     const showTargetDC = owner?.isGM || (configSettings.autoCheckSaves !== "whisper" && shouldDisplaySaveDC(this.actor));
     return socketlibSocket.executeAsUser("rollAbility", owner?.id, {
-      targetUuid: (target.actor as Actor).uuid,
-      request: rollType,
-      ability: rollAbility,
-      abilities: rollAbilities,
-      skill: rollSkill,
-      tool: rollTool,
-      advantage: saveDetails.advantage,
-      disadvantage: saveDetails.disadvantage,
-      options: {
-        simulate,
-        target: showTargetDC ? saveDetails.rollDC : undefined,
-        messageData: { user: owner?.id },
+      saveDetails,
+      displayOptions: {
+        fastForward: simulate || !showRollDialog,
         chatMessage: showRoll,
         rollMode,
-        mapKeys: false,
-        // Let patching.ts handle multi-choice auto-selection when dialog is suppressed
-        fastForward: simulate || !showRollDialog,
-        recomputeAdvantage: true, // compute advantage/disadvantage from flags in roll function
-        isMagicSave,
-        saveItemUuid: this.item.uuid,
-        isConcentrationCheck: saveDetails.isConcentrationCheck,
-        workflowId: this.id,
-        itemCardUuid: this.itemCardUuid,
-        itemUuid: this.itemUuid,
-        workflowOptions: saveDetails.workflowOptions,
-        itemId: this.saveActivity?.item.id,
-        rollAbilities,
-        rollSkills,
-        rollTools,
-        // Serialize tracker instances to trackerData for socketlib transmission
-        advantageByChoice: this.serializeAdvantageMapForSocketlib(saveDetails.advantageByChoice)
-      },
+        showTargetDC
+      }
     });
   }
 
@@ -6255,8 +6187,7 @@ return {
 
     // Standard socketlib roll
     const promise = this.createStandardSaveRoll(
-      target, saveDetails, rollType, rollAbilities, rollSkills, rollTools,
-      whisper, showRoll, showRollDialog, simulate, isMagicSave
+      target, saveDetails, whisper, showRoll, showRollDialog, simulate
     );
     return { promise, requestCard: undefined };
   }
@@ -6466,8 +6397,12 @@ return {
       saveItemUuid: this.saveItem?.uuid ?? "",
       workflowId: this.id,
       itemCardUuid: this.itemCardUuid ?? "",
-      workflowUuid: this.id, // deprecated
       workflowOptions: this.workflowOptions,
+      rollType: rollType ?? "save",
+      rollAbilities,
+      rollSkills,
+      rollTools,
+      itemId: this.saveActivity?.item.id ?? "",
     };
 
     // Check ability advantage/disadvantage from settings, source grants flags, and magic resistance/vulnerability
@@ -6481,21 +6416,20 @@ return {
     );
 
     // Get the default ability's tracker for saveDetails
-    const defaultAbilityData = preComputedMap.get(abilityId);
-    saveDetails.modifierTracker = defaultAbilityData?.tracker;
+    const defaultAbilityData = preComputedMap[abilityId];
+    // tracker is always a RollModifierTracker instance here (before socketlib serialization)
+    saveDetails.modifierTracker = defaultAbilityData?.tracker instanceof RollModifierTracker ? defaultAbilityData.tracker : undefined;
     saveDetails.advantage = defaultAbilityData?.hasAdvantage;
     saveDetails.disadvantage = defaultAbilityData?.hasDisadvantage;
     saveDetails.isConcentrationCheck = this.item.flags?.[MODULE_ID]?.isConcentrationCheck;
 
     // Pre-compute advantage for all choices when multiple are available.
-    // A roll is always ONE type (save, skill check, or tool check), so we use a single map.
-    // Store actual tracker instances here. Serialization to trackerData happens in
-    // createStandardSaveRoll() when sending through socketlib. Local calls (timeout path)
-    // can use the tracker directly without serialization/deserialization.
+    // A roll is always ONE type (save, skill check, or tool check), so we use a single object.
+    // tracker.toJSON() is called automatically during socketlib transmission; GMAction reconstructs.
     const multipleChoices = rollAbilities.length > 1 || rollSkills.length > 1 || rollTools.length > 1;
     if (multipleChoices) {
-      // Determine which type has multiple choices and build the map
-      let choiceMap: Map<string, PreComputedAdvantage>;
+      // Determine which type has multiple choices and build the object
+      let choiceMap: Record<string, PreComputedAdvantage>;
       if (rollAbilities.length > 1) {
         // Already computed above for abilities
         choiceMap = preComputedMap;
@@ -6515,16 +6449,8 @@ return {
         );
       }
 
-      const advantageByChoice = new Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; tracker?: RollModifierTracker }>();
-      for (const [choice, data] of choiceMap) {
-        advantageByChoice.set(choice, {
-          hasAdvantage: data.hasAdvantage,
-          hasDisadvantage: data.hasDisadvantage,
-          defaultButton: data.defaultButton,
-          tracker: data.tracker
-        });
-      }
-      saveDetails.advantageByChoice = advantageByChoice;
+      // Copy the choice map data to saveDetails (tracker is always an instance here, before socketlib)
+      saveDetails.advantageByChoice = choiceMap;
     }
 
     // Check for friendly target auto-fail/success from activity settings
@@ -6574,8 +6500,7 @@ return {
 
   async checkSaves(whisper = false, simulate = false) {
     this.initSaveResults();
-    this.tokenSaves = {};
-    this.targetSaveDetails = new Map();
+    this.targetSaveDetails = {};
     if (debugEnabled > 1) debug(`checkSaves: whisper ${whisper}  hit targets ${this.hitTargets}`)
     if (this.hitTargets.size <= 0 && this.hitTargetsEC.size <= 0) {
       this.saveDisplayFlavor = `<span>${i18n("midi-qol.noSaveTargets")}</span>`
@@ -6643,7 +6568,7 @@ return {
         this.saveDetails = saveDetails;
         // Store per-target saveDetails for later retrieval during result processing
         const targetDocUuid = getTokenDocument(target)?.uuid;
-        if (targetDocUuid) this.targetSaveDetails?.set(targetDocUuid, saveDetails);
+        if (targetDocUuid && this.targetSaveDetails) this.targetSaveDetails[targetDocUuid] = saveDetails;
         // Call preTargetSave hook - allows external modules to modify saveDetails/tracker before the roll
         await asyncHooksCallAll("midi-qol.preTargetSave", target, this, saveDetails);
         if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["preTargetSave"], new Set([target]));

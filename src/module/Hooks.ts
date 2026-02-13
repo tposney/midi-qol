@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getPerimeterDistanceToPoint } from "./utils.js";
 import { checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -1511,19 +1511,14 @@ Hooks.on("preCreateMeasuredTemplate", (templateDoc: MeasuredTemplateDocument.Imp
   const token = tokenDoc?.object;
   if (!token) return true;
 
-  // Calculate distance from token center to template position
+  // Calculate distance from token to template position using current measurement mode
   const templateX = templateDoc.x;
   const templateY = templateDoc.y;
   if (templateX === undefined || templateY === undefined) return true;
 
-  // Measure distance using canvas grid
-  if (!canvas?.grid) return true;
-  const tokenCenter = token.center;
-  const distance = canvas.grid.measurePath([tokenCenter, { x: templateX, y: templateY }], {}).distance;
-
-  // Check if within range (add small fudge factor for grid alignment)
-  const fudgeFactor = configSettings.gridlessFudge ?? 0;
-  if (distance <= maxRange + fudgeFactor) return true;
+  const distance = getPerimeterDistanceToPoint(token, { x: templateX, y: templateY });
+  if (distance < 0) return true; // can't determine distance, allow placement
+  if (distance <= maxRange) return true;
 
   // Out of range - notify and cancel
   ui.notifications?.warn(i18n("midi-qol.TemplateOutOfRange"));

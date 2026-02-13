@@ -21,6 +21,9 @@
         </span>
       </div>
     </div>
+    {{#if save.hasAttribution}}
+    <span class="midi-save-attribution-info {{save.saveTotalClass}}" data-tooltip-html="{{{save.attributionTooltip}}}" data-tooltip-direction="DOWN"><i class="fas fa-info-circle"></i></span>
+    {{/if}}
     <div class="{{save.saveTotalClass}} midi-qol-tooltip" style="font-weight: bold;">
       {{save.rollTotal}}
       <div class="midi-qol-tooltiptext midi-qol-save-tooltip {{save.saveToolTipClass}}" style="text-align: left;">

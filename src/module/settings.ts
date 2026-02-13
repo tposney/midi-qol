@@ -6,6 +6,7 @@ import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { TargetConfirmationConfig } from "./apps/TargetConfirmationConfig.js";
 import { Workflow } from "./Workflow.js";
+import type { SelectOptions } from "../globals.js";
 
 // Dummy FormApplication that launches the setup wizard via hook (can't be eliminated - fires a hook, not an app)
 class LaunchWizardSubmenu extends FormApplication {
@@ -988,8 +989,15 @@ export function readySettingsSetup() {
   });
 }
 
-function keysToOptionsObj(prefix: string, keys: string[]) {
+function keysToOptionsObj(prefix: string, keys: string[]): Record<string, string> {
   return Object.fromEntries(keys.map(key => [key, `midi-qol.${prefix}.${key}`]));
+}
+
+function keysToExtendedOptionsObj(prefix: string, keys: string[]): SelectOptions {
+  return Object.fromEntries(keys.map(key => [key, {
+    label: `midi-qol.${prefix}.${key}`,
+    hint: `midi-qol.${prefix}.expandedHints.${key}`
+  }]));
 }
 
 export const criticalDamageChoices = keysToOptionsObj("CriticalDamageChoices", [
@@ -1008,7 +1016,7 @@ export const criticalDamageChoices = keysToOptionsObj("CriticalDamageChoices", [
   "bestOfTwo"
 ]);
 
-export const addChatDamageButtonsOptions = keysToOptionsObj("AddChatDamageButtonsOptions", [
+export const addChatDamageButtonsOptions = keysToExtendedOptionsObj("AddChatDamageButtonsOptions", [
   "none",
   "gm",
   "pc",
@@ -1036,28 +1044,28 @@ export const debugOptions = keysToOptionsObj("DebugOptions", [
   "all"
 ]);
 
-export const autoRollDamageOptions = keysToOptionsObj("autoRollDamageOptions", [
+export const autoRollDamageOptions = keysToExtendedOptionsObj("autoRollDamageOptions", [
   "none",
   "always",
   "saveOnly",
   "onHit"
 ]);
 
-export const autoCheckHitOptions = keysToOptionsObj("autoCheckHitOptions", [
+export const autoCheckHitOptions = keysToExtendedOptionsObj("autoCheckHitOptions", [
   "none",
   "all",
   "whisper",
   "gmOnly"
 ]);
 
-export const clickOptions = keysToOptionsObj("clickOptions", [
+export const clickOptions = keysToExtendedOptionsObj("clickOptions", [
   "off",
   "attack",
   "damage",
   "all"
 ]);
 
-export const autoTargetOptions = keysToOptionsObj("autoTargetOptions", [
+export const autoTargetOptions = keysToExtendedOptionsObj("autoTargetOptions", [
   "none",
   "always",
   "alwaysIgnoreIncapacitated",
@@ -1068,7 +1076,7 @@ export const autoTargetOptions = keysToOptionsObj("autoTargetOptions", [
   "walledtemplates"
 ]);
 
-export const autoCheckSavesOptions = keysToOptionsObj("autoCheckSavesOptions", [
+export const autoCheckSavesOptions = keysToExtendedOptionsObj("autoCheckSavesOptions", [
   "none",
   "allNoRoll",
   "all",
@@ -1077,7 +1085,7 @@ export const autoCheckSavesOptions = keysToOptionsObj("autoCheckSavesOptions", [
   "gmOnly",
 ]);
 
-export const rangeTargetOptions = keysToOptionsObj("rangeTargetOptions", [
+export const rangeTargetOptions = keysToExtendedOptionsObj("rangeTargetOptions", [
   "none",
   "always",
   "alwaysIgnoreIncapacitated",
@@ -1087,7 +1095,7 @@ export const rangeTargetOptions = keysToOptionsObj("rangeTargetOptions", [
   "wallsBlockIgnoreDefeated"
 ]);
 
-export const autoApplyDamageOptions = keysToOptionsObj("autoApplyDamageOptions", [
+export const autoApplyDamageOptions = keysToExtendedOptionsObj("autoApplyDamageOptions", [
   "none",
   "noCard",
   "noCardMisses",
@@ -1097,12 +1105,12 @@ export const autoApplyDamageOptions = keysToOptionsObj("autoApplyDamageOptions",
   "yesCardNPC"
 ]);
 
-export const damageCardStyleOptions = keysToOptionsObj("damageCardStyleOptions", [
+export const damageCardStyleOptions = keysToExtendedOptionsObj("damageCardStyleOptions", [
   "flexbox",
   "classic"
 ]);
 
-export const playerDamageCardOptions = keysToOptionsObj("playerDamageCardOptions", [
+export const playerDamageCardOptions = keysToExtendedOptionsObj("playerDamageCardOptions", [
   "none",
   "playerresults",
   "playerbuttons",
@@ -1110,7 +1118,7 @@ export const playerDamageCardOptions = keysToOptionsObj("playerDamageCardOptions
   "npcplayerbuttons"
 ]);
 
-export const removeButtonsOptions = keysToOptionsObj("removeButtonsOptions", [
+export const removeButtonsOptions = keysToExtendedOptionsObj("removeButtonsOptions", [
   "off",
   "attack",
   "damage",
@@ -1118,20 +1126,20 @@ export const removeButtonsOptions = keysToOptionsObj("removeButtonsOptions", [
   "everything"
 ]);
 
-export const damageImmunitiesOptions = keysToOptionsObj("damageImmunitiesOptions", [
+export const damageImmunitiesOptions = keysToExtendedOptionsObj("damageImmunitiesOptions", [
   "none",
   "immunityDefault",
   "immunityPhysical"
 ]);
 
-export const showItemDetailsOptions = keysToOptionsObj("showItemDetailsOptions", [
+export const showItemDetailsOptions = keysToExtendedOptionsObj("showItemDetailsOptions", [
   "none",
   "cardOnly",
   "pc",
   "all"
 ]);
 
-export const rollNPCSavesOptions = keysToOptionsObj("rollNPCSavesOptions", [
+export const rollNPCSavesOptions = keysToExtendedOptionsObj("rollNPCSavesOptions", [
   "none",
   "auto",
   "autoDialog",
@@ -1140,7 +1148,7 @@ export const rollNPCSavesOptions = keysToOptionsObj("rollNPCSavesOptions", [
   "rer"
 ]);
 
-export const playerRollSavesOptions = keysToOptionsObj("playerRollSavesOptions", [
+export const playerRollSavesOptions = keysToExtendedOptionsObj("playerRollSavesOptions", [
   "none",
   "nonePublic",
   "noneDialogPublic",
@@ -1153,12 +1161,12 @@ export const playerRollSavesOptions = keysToOptionsObj("playerRollSavesOptions",
   "rer"
 ]);
 
-export const playerRollSavesOptionsReduced = keysToOptionsObj("playerRollSavesOptionsReduced", [
+export const playerRollSavesOptionsReduced = keysToExtendedOptionsObj("playerRollSavesOptionsReduced", [
   "none",
   "chat"
 ]);
 
-export const hideRollDetailsOptions = keysToOptionsObj("hideRollDetailsOptions", [
+export const hideRollDetailsOptions = keysToExtendedOptionsObj("hideRollDetailsOptions", [
   "none",
   "detailsDSN",
   "details",
@@ -1170,21 +1178,21 @@ export const hideRollDetailsOptions = keysToOptionsObj("hideRollDetailsOptions",
   "all"
 ]);
 
-export const rollOtherDamageOptions = keysToOptionsObj("RollOtherDamageOptions", [
+export const rollOtherDamageOptions = keysToExtendedOptionsObj("RollOtherDamageOptions", [
   "none",
   "always",
   "condition",
   "ifSave"
 ]);
 
-export const showReactionAttackRollOptions = keysToOptionsObj("ShowReactionAttackRollOptions", [
+export const showReactionAttackRollOptions = keysToExtendedOptionsObj("ShowReactionAttackRollOptions", [
   "none",
   "d20",
   "all",
   "allCrit"
 ]);
 
-export const onUseMacroOptions = keysToOptionsObj("onUseMacroOptions", [
+export const onUseMacroOptions = keysToExtendedOptionsObj("onUseMacroOptions", [
   "preTargeting",
   "preItemRoll",
   "templatePlaced",
@@ -1215,13 +1223,13 @@ export const onUseMacroOptions = keysToOptionsObj("onUseMacroOptions", [
   "all"
 ]);
 
-export const confirmTargetOptions = keysToOptionsObj("ConfirmTargetOptions", [
+export const confirmTargetOptions = keysToExtendedOptionsObj("ConfirmTargetOptions", [
   "default",
   "always",
   "never"
 ]);
 
-export const triggeredActivityTargetOptions = keysToOptionsObj("TriggeredActivityTargetOptions", [
+export const triggeredActivityTargetOptions = keysToExtendedOptionsObj("TriggeredActivityTargetOptions", [
   "self",
   "targets",
   "hitTargets",
@@ -1231,7 +1239,7 @@ export const triggeredActivityTargetOptions = keysToOptionsObj("TriggeredActivit
   "retarget"
 ]);
 
-export const triggeredActivityRollAsOptions = keysToOptionsObj("TriggeredActivityRollAsOptions", [
+export const triggeredActivityRollAsOptions = keysToExtendedOptionsObj("TriggeredActivityRollAsOptions", [
   "self",
   "firstTarget",
   "firstHitTarget",
@@ -1310,7 +1318,7 @@ export function getIgnoreTraitsOptions(): { value: string, label: string, group?
   return options;
 }
 
-export const aoeTargetTypeOptions = keysToOptionsObj("AoETargetTypeOptions", [
+export const aoeTargetTypeOptions = keysToExtendedOptionsObj("AoETargetTypeOptions", [
   "any",
   "ally",
   "notAlly",
@@ -1324,14 +1332,14 @@ export const aoeTargetTypeOptions = keysToOptionsObj("AoETargetTypeOptions", [
   "notFriendly"
 ]);
 
-export const autoCEEffectsOptions = keysToOptionsObj("AutoCEEffectsOptions", [
+export const autoCEEffectsOptions = keysToExtendedOptionsObj("AutoCEEffectsOptions", [
   "none",
   "itempri",
   "cepri",
   "both"
 ]);
 
-export const wallsBlockRangeOptionsNew = keysToOptionsObj("WallsBlockRangeOptionsNew", [
+export const wallsBlockRangeOptionsNew = keysToExtendedOptionsObj("WallsBlockRangeOptionsNew", [
   "none",
   "center",
   "centerLevels",
@@ -1342,7 +1350,7 @@ export const wallsBlockRangeOptionsNew = keysToOptionsObj("WallsBlockRangeOption
   "simplecover5e"
 ]);
 
-export const coverCalculationOptions = keysToOptionsObj("CoverCalculationOptions", [
+export const coverCalculationOptions = keysToExtendedOptionsObj("CoverCalculationOptions", [
   "none",
   "simbuls-cover-calculator",
   "simplecover5e",
@@ -1351,71 +1359,64 @@ export const coverCalculationOptions = keysToOptionsObj("CoverCalculationOptions
   "tokenvisibility"
 ]);
 
-export const hiddenAdvantageOptions = keysToOptionsObj("HiddenAdvantageOptions", [
+export const hiddenAdvantageOptions = keysToExtendedOptionsObj("HiddenAdvantageOptions", [
   "none",
   "effect",
   "perceptive"
 ]);
 
-export const addDeadOptions = keysToOptionsObj("AddDeadOptions", [
+export const addDeadOptions = keysToExtendedOptionsObj("AddDeadOptions", [
   "none",
   "overlay",
   "normal"
 ]);
 
-export const quickSettingsBlurb = keysToOptionsObj("QuickSettingsBlurb", [
-  "1",
-  "2",
-  "3",
-  "4"
-]);
-
-export const requiresTargetsOptions = keysToOptionsObj("requiresTargetsOptions", [
+export const requiresTargetsOptions = keysToExtendedOptionsObj("requiresTargetsOptions", [
   "none",
   "combat",
   "tokens",
   "always"
 ]);
 
-export const doReactionsOptions = keysToOptionsObj("DoReactionsOptions", [
+export const doReactionsOptions = keysToExtendedOptionsObj("DoReactionsOptions", [
   "all",
   "allMI",
   "none"
 ]);
 
-export const gmDoReactionsOptions = keysToOptionsObj("GMDoReactionsOptions", [
+export const gmDoReactionsOptions = keysToExtendedOptionsObj("GMDoReactionsOptions", [
   "all",
   "allMI",
   "none"
 ]);
 
-export const recordAOOOptions = keysToOptionsObj("RecordAOOOptions", [
+export const recordAOOOptions = keysToExtendedOptionsObj("RecordAOOOptions", [
   "none",
   "character",
   "all"
 ]);
 
-export const EnforceReactionsOptions = keysToOptionsObj("EnforceReactionsOptions", [
+export const EnforceReactionsOptions = keysToExtendedOptionsObj("EnforceReactionsOptions", [
   "none",
   "displayOnly",
   "character",
   "all"
 ]);
 
-export const autoEffectsOptions = keysToOptionsObj("AutoEffectsOptions", [
+export const autoEffectsOptions = keysToExtendedOptionsObj("AutoEffectsOptions", [
   "off",
   "applyNoButton",
   "applyRemove",
   "applyLeave"
 ]);
 
-export const requireMagicalOptions = keysToOptionsObj("RequireMagicalOptions", [
+export const requireMagicalOptions = keysToExtendedOptionsObj("RequireMagicalOptions", [
   "off",
   "nonspell",
   "allitems"
 ]);
 
-export const checkFlankingOptions = keysToOptionsObj("CheckFlankingOptions", [
+export const checkFlankingOptions = keysToExtendedOptionsObj("CheckFlankingOptions", [
   "off",
   "advonly",
   "ceonly",
@@ -1426,117 +1427,101 @@ export const checkFlankingOptions = keysToOptionsObj("CheckFlankingOptions", [
   "midiFlankedNoConga"
 ]);
 
-export const hideRollDetailsHintLongOptions = keysToOptionsObj("HideRollDetails.HintLong", [
-  "none",
-  "detailsDSN",
-  "details",
-  "d20Only",
-  "hitDamage",
-  "d20attackOnly",
-  "all"
-]);
-
-export const rollAlternateOptions = keysToOptionsObj("RollAlternateOptions", [
+export const rollAlternateOptions = keysToExtendedOptionsObj("RollAlternateOptions", [
   "off",
   "formula",
   "adv",
   "formulaadv"
 ]);
 
-export const consumeResourceOptions = keysToOptionsObj("ConsumeResourceOptions", [
+export const consumeResourceOptions = keysToExtendedOptionsObj("ConsumeResourceOptions", [
   "none",
   "spell",
   "item",
   "both"
 ]);
 
-export const averageDamageOptions = keysToOptionsObj("AverageDamageOptions", [
+export const averageDamageOptions = keysToExtendedOptionsObj("AverageDamageOptions", [
   "none",
   "npc",
   "character",
   "all"
 ]);
 
-export const removeConcentrationEffectsOptions = keysToOptionsObj("RemoveConcentrationEffectsOptions", [
+export const removeConcentrationEffectsOptions = keysToExtendedOptionsObj("RemoveConcentrationEffectsOptions", [
   "none",
   "effects",
   "effectsTemplates"
 ]);
 
-export const incapacitatedOptions = keysToOptionsObj("IncapacitatedOptions", [
+export const incapacitatedOptions = keysToExtendedOptionsObj("IncapacitatedOptions", [
   "nothing",
   "enforce",
   "warn"
 ]);
 
-export const checkRangeOptions = keysToOptionsObj("CheckRangeOptions", [
+export const checkRangeOptions = keysToExtendedOptionsObj("CheckRangeOptions", [
   "none",
   "longfail",
   "longdisadv"
 ]);
 
-export const distanceMeasurementOptions = keysToOptionsObj("DistanceMeasurementOptions", [
+export const distanceMeasurementOptions = keysToExtendedOptionsObj("DistanceMeasurementOptions", [
+  "default",
   "center",
   "perimeter"
 ]);
 
-export const invisAdvantageOptions = keysToOptionsObj("InvisAdvantageOptions", [
+export const invisAdvantageOptions = keysToExtendedOptionsObj("InvisAdvantageOptions", [
   "none",
   "RAW2014",
   "RAW2024",
   "vision"
 ]);
 
-export const confirmAttackDamageOptions = keysToOptionsObj("ConfirmAttackDamageOptions", [
+export const confirmAttackDamageOptions = keysToExtendedOptionsObj("ConfirmAttackDamageOptions", [
   "none",
   "gmOnly",
   "GMPlayer"
 ]);
 
-export const challengeModeArmorOptions = keysToOptionsObj("ChallengeModeArmorOptions", [
+export const challengeModeArmorOptions = keysToExtendedOptionsObj("ChallengeModeArmorOptions", [
   "none",
   "challenge",
   "scale",
   "scaleNoAR"
 ]);
 
-export const saveDROrderOptions = keysToOptionsObj("SaveDROrderOptions", [
+export const saveDROrderOptions = keysToExtendedOptionsObj("SaveDROrderOptions", [
   "DRSaveDr",
   "SaveDRDr",
   "SaveDrDR"
 ]);
 
-export const doConcentrationCheckOptions = keysToOptionsObj("DoConcentrationCheckOptions", [
+export const doConcentrationCheckOptions = keysToExtendedOptionsObj("DoConcentrationCheckOptions", [
   "none",
   "chatOnly",
   "chat",
   "item"
 ]);
 
-export const activationAutomationOptions = keysToOptionsObj("ActivationAutomationOptions", [
+export const activationAutomationOptions = keysToExtendedOptionsObj("ActivationAutomationOptions", [
   "none",
   "chat",
   "auto"
 ]);
 
-export const soundSettingsBlurb = keysToOptionsObj("SoundSettingsBlurb", [
-  "1",
-  "2",
-  "3",
-  "4"
-]);
-
-export const rollConfigOptions = keysToOptionsObj("ConfigDialogOptions", [
+export const rollConfigOptions = keysToExtendedOptionsObj("ConfigDialogOptions", [
   "default",
   "always",
   "never"
 ]);
-export const damageConfigOptions = keysToOptionsObj("ConfigDialogOptions", [
+export const damageConfigOptions = keysToExtendedOptionsObj("ConfigDialogOptions", [
   "default",
   "always",
   "never"
 ]);
-export const consumeConfigOptions = keysToOptionsObj("ConfigDialogOptions", [
+export const consumeConfigOptions = keysToExtendedOptionsObj("ConfigDialogOptions", [
   "default",
   "always",
   "never"

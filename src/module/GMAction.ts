@@ -1,4 +1,4 @@
-import { checkRule, configSettings, safeGetGameSetting, shouldDisplaySaveDC } from "./settings.js";
+import { checkRule, configSettings, safeGetGameSetting } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
@@ -10,8 +10,7 @@ import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { installedModules } from "./setupModules.js";
 import { Stats } from "./RollStats.js";
 import { AnyMutableObject } from "fvtt-types/utils";
-import { DamageApplicationOptions, DamageDescription, DamageListEntry } from "../globals.js";
-const { DialogV2 } = foundry.applications.api;
+import { DamageApplicationOptions, DamageDescription, DamageListEntry, SaveDetails } from "../globals.js";
 
 export let socketlibSocket: any = undefined;
 let traitList = { di: "", dr: "", dv: "", dm: "", da: "" };
@@ -778,112 +777,145 @@ async function rollConcentration(data: { actorUuid: string, target: number, whis
 }
 
 async function rollAbility(data: {
-  request: string;
-  targetUuid: string;
-  ability?: string;
-  abilities?: string[];
-  skill?: string;
-  tool?: string;
-  proficiency?: string;
-  options?: {
+  saveDetails: SaveDetails;
+  displayOptions?: {
     fastForward?: boolean;
     chatMessage?: boolean;
-    create?: boolean;
     rollMode?: string;
-    itemId: string;
-    workflowId?: string;
-    rollAbilities?: string[];
-    rollSkills?: string[];
-    rollTools?: string[];
-    /** Pre-computed advantage data per choice (ability/skill/tool). A roll is always ONE type, so one map suffices. */
-    advantageByChoice?: Map<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; trackerData?: object; tracker?: RollModifierTracker }>;
+    showTargetDC?: boolean;
   };
-  advantage?: boolean;
-  disadvantage?: boolean;
-  isMagicSave?: boolean;
-  isConcentrationCheck?: boolean;
-  rollDC?: number;
-  saveItemUuid?: string;
-  workflowOptions?: WorkflowOptions;
-  workflowId?: string;
-  rollMode?: string;
 }) {
-  if (data.request === "abil") data.request = "check";
-  if (data.request === "test") data.request = "check";
-  const actor = fromActorUuid(data.targetUuid);
+  const sd = data.saveDetails;
+  const disp = data.displayOptions;
+
+  const rollAbilities = sd.rollAbilities;
+  const rollSkills = sd.rollSkills;
+  const rollTools = sd.rollTools;
+  const ability = rollAbilities[0];
+  const skill = rollSkills[0];
+  const tool = rollTools[0];
+  const advantage = sd.advantage;
+  const disadvantage = sd.disadvantage;
+  const isMagicSave = sd.isMagicSave;
+  const isConcentrationCheck = sd.isConcentrationCheck;
+  const rollDC = disp?.showTargetDC !== false ? sd.rollDC : undefined;
+  const saveItemUuid = sd.saveItemUuid;
+  const workflowOptions = sd.workflowOptions;
+  const workflowId = sd.workflowId;
+  const itemId = sd.itemId;
+  const itemCardUuid = sd.itemCardUuid;
+  const advantageByChoice = sd.advantageByChoice;
+
+  const fastForward = disp?.fastForward ?? false;
+  const chatMessage = disp?.chatMessage ?? true;
+  const rollMode = disp?.rollMode;
+
+  // Normalize request type
+  let normalizedRequest = sd.rollType;
+  if (normalizedRequest === "abil") normalizedRequest = "check";
+  if (normalizedRequest === "test") normalizedRequest = "check";
+
+  const actor = fromActorUuid(sd.actorUuid);
   if (!actor) {
-    error(`GMAction.rollAbility | no actor for ${data.targetUuid}`)
+    error(`GMAction.rollAbility | no actor for ${sd.actorUuid}`)
     return {};
   }
-  let config: AnyMutableObject = { midiOptions: data.options, advantage: data.advantage, disadvantage: data.disadvantage, isMagicSave: data.isMagicSave, isConcentrationCheck: data.isConcentrationCheck, rollDC: data.rollDC, saveItemUuid: data.saveItemUuid, workflowOptions: data.workflowOptions, workflowId: data.workflowId }
 
-  // Deserialize tracker data from advantageByChoice - class instances don't survive socketlib
-  if (data.options?.advantageByChoice instanceof Map) {
-    for (const [key, value] of data.options.advantageByChoice.entries()) {
-      if (value?.trackerData && !(value.tracker instanceof RollModifierTracker)) {
-        const tracker = new RollModifierTracker();
-        tracker.restore(value.trackerData);
-        value.tracker = tracker;
+  // Build midiOptions for patching.ts
+  const midiOptions: AnyMutableObject = {
+    itemId,
+    workflowId,
+    rollAbilities,
+    rollSkills,
+    rollTools,
+    advantageByChoice,
+    recomputeAdvantage: true,
+    target: rollDC,
+    isMagicSave,
+    saveItemUuid,
+    isConcentrationCheck,
+    itemCardUuid,
+    workflowOptions,
+  };
+
+  let config: AnyMutableObject = {
+    midiOptions,
+    advantage,
+    disadvantage,
+    isMagicSave,
+    isConcentrationCheck,
+    rollDC,
+    saveItemUuid,
+    workflowOptions,
+    workflowId
+  };
+
+  // Reconstruct tracker instances from advantageByChoice - class instances don't survive socketlib
+  // (tracker.toJSON() is called automatically during serialization, so tracker is a plain object after transmission)
+  if (advantageByChoice && typeof advantageByChoice === "object") {
+    for (const [key, value] of Object.entries(advantageByChoice)) {
+      if (value?.tracker && !(value.tracker instanceof RollModifierTracker)) {
+        const trackerData = value.tracker;
+        value.tracker = new RollModifierTracker();
+        (value.tracker as RollModifierTracker).restore(trackerData);
       }
     }
   }
 
-  if (data.ability) config.ability = data.ability;
-  if (data.skill) config.skill = data.skill;
-  if (data.tool) config.tool = data.tool
-  if (data.proficiency) config.prof = data.proficiency;
-  let dialog: AnyMutableObject = { configure: !data.options?.fastForward };
-  let message: AnyMutableObject = { create: data.options?.chatMessage ?? data.options?.create, rollMode: data.options?.rollMode };
-  if (data.request === "tool") {
-    const rollTools = data.options?.rollTools;
-    const toolsToTry = rollTools && rollTools.length > 0 ? rollTools : [data.tool];
-    let tool: Item.Implementation | undefined;
+  if (ability) config.ability = ability;
+  if (skill) config.skill = skill;
+  if (tool) config.tool = tool;
+  let dialog: AnyMutableObject = { configure: !fastForward };
+  let message: AnyMutableObject = { create: chatMessage, rollMode };
+  if (normalizedRequest === "tool") {
+    const toolsToTry = rollTools.length > 0 ? rollTools : (tool ? [tool] : []);
+    let toolItem: Item.Implementation | undefined;
     let foundToolId: string | undefined;
     // Try to find a tool item matching any of the requested tools
     for (const toolId of toolsToTry) {
       if (!toolId) continue;
-      tool = actor.items.get(data.options?.itemId ?? "") as Item.Implementation | undefined;
+      toolItem = actor.items.get(itemId ?? "") as Item.Implementation | undefined;
       // @ts-expect-error no dnd5e-types
-      if (!tool || tool.type !== "tool") tool = actor.items.find(i => i.type === "tool" && i.system.type.baseItem === toolId) as Item.Implementation | undefined;
-      if (tool) { foundToolId = toolId; break; }
+      if (!toolItem || toolItem.type !== "tool") toolItem = actor.items.find(i => i.type === "tool" && i.system.type.baseItem === toolId) as Item.Implementation | undefined;
+      if (toolItem) { foundToolId = toolId; break; }
     }
-    if (!tool) { // no tool of any requested type - auto fail
+    if (!toolItem) { // no tool of any requested type - auto fail
       //@ts-expect-error
       return [await new CONFIG.Dice.D20Roll("-1").roll()];
     } else {
       // @ts-expect-error no dnd5e-types
-      config.bonus = tool?.system.bonus ?? 0;
+      config.bonus = toolItem?.system.bonus ?? 0;
       // @ts-expect-error no dnd5e-types
-      config.prof = tool?.system.prof;
-      config.item = tool;
-      if (foundToolId && foundToolId !== data.tool) config.tool = foundToolId;
+      config.prof = toolItem?.system.prof;
+      config.item = toolItem;
+      if (foundToolId && foundToolId !== tool) config.tool = foundToolId;
     }
   }
-  if (data.rollMode) message.rollMode = data.rollMode;
+  if (rollMode) message.rollMode = rollMode;
   return new Promise(async (resolve) => {
     let timeoutId: NodeJS.Timeout | undefined;
     let result: Roll[] | Roll | undefined;
     if (configSettings.playerSaveTimeout > 0) timeoutId = setTimeout(async () => {
-      warn(`Roll request for {actor.name}timed out. Doing roll`);
+      warn(`Roll request for ${actor.name} timed out. Doing roll`);
       dialog.configure = false; // assume player is asleep force roll without dialog
       // @ts-expect-error no dnd5e-types
-      if (data.request === "save") result = await actor.rollSavingThrow(config, dialog, message);
+      if (normalizedRequest === "save") result = await actor.rollSavingThrow(config, dialog, message);
       // @ts-expect-error no dnd5e-types
-      else if (data.request === "check") result = await actor.rollAbilityCheck(config, dialog, message);
+      else if (normalizedRequest === "check") result = await actor.rollAbilityCheck(config, dialog, message);
       // @ts-expect-error no dnd5e-types
-      else if (data.request === "skill") result = await actor.rollSkill(config, dialog, message);
+      else if (normalizedRequest === "skill") result = await actor.rollSkill(config, dialog, message);
       // @ts-expect-error no dnd5e-types
-      else if (data.request === "tool") result = await actor.rollToolCheck(config, dialog, message);
+      else if (normalizedRequest === "tool") result = await actor.rollToolCheck(config, dialog, message);
       resolve(result ?? {});
     }, configSettings.playerSaveTimeout * 1000);
     // @ts-expect-error no dnd5e-types
-    if (data.request === "save") result = await actor.rollSavingThrow(config, dialog, message);
+    if (normalizedRequest === "save") result = await actor.rollSavingThrow(config, dialog, message);
     // @ts-expect-error no dnd5e-types
-    else if (data.request === "check") result = await actor.rollAbilityCheck(config, dialog, message);
+    else if (normalizedRequest === "check") result = await actor.rollAbilityCheck(config, dialog, message);
     // @ts-expect-error no dnd5e-types
-    else if (data.request === "skill") result = await actor.rollSkill(config, dialog, message);
+    else if (normalizedRequest === "skill") result = await actor.rollSkill(config, dialog, message);
     // @ts-expect-error no dnd5e-types
-    else if (data.request === "tool") result = await actor.rollToolCheck(config, dialog, message);
+    else if (normalizedRequest === "tool") result = await actor.rollToolCheck(config, dialog, message);
     if (timeoutId) clearTimeout(timeoutId);
     resolve(result ?? {})
   });
@@ -2164,64 +2196,16 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
   return void targetTokenDocument.update({ x: newX, y: newY }, { animate: data.animate ?? true });
 }
 
-async function rollActionSave(data: any) {
-  let { request, actorUuid, abilities, options, content, title, saveDC } = data;
-  let saveResult: any = await new Promise(async (resolve, reject) => {
-    const buttons: foundry.applications.api.DialogV2.Button<any>[] = [];
-    for (let ability of abilities) {
-      let config: any = {
-        type: request,
-        dc: saveDC,
-        action: "rollRequest",
-        hideDC: !game.user?.isGM && !shouldDisplaySaveDC(),
-        format: "short",
-        icon: false
-      };
-      if (["check", "save"].includes(request)) config.ability = ability;
-      else if (request === "skill") {
-        config.skill = ability;
-        config.ability = GameSystemConfig.skills[ability].ability;
-      }
-      const button = {
-        //@ts-expect-error
-        label: game.system?.enrichers?.createRollLabel(config) ?? `${saveDC} ${ability} ${request}`,
-        icon: "fas fa-shield-heart",
-        action: ability,
-        callback: async (html: any) => {
-          let roll = await rollAbility({
-            targetUuid: actorUuid,
-            request,
-            ability: config.ability,
-            skill: config.skill,
-            options
-          })
-          resolve(roll)
-        }
-      };
-      buttons.push(button);
-    }
-    if (!foundry.utils.isEmpty(buttons)) {
-      buttons.push({
-        action: "no",
-        icon: "fa-solid fa-xmark",
-        label: `No`,
-        callback: async () => {
-          resolve(undefined);
-        }
-      });
-      const id = `overtime-dialog-${foundry.utils.randomID()}`;
-      await DialogV2.wait({
-        window: { title },
-        content: `<style>  #${id} .form-footer { flex-direction: column;} </style> ${content}`,
-        buttons,
-        id,
-        rejectClose: false,
-        close: () => { return (null) }
-      });
-    }
-    resolve("invalid");
-  })
-  return saveResult
+async function rollActionSave(data: { actorUuid: string; effectName: string; saveDetails: SaveDetails; displayOptions: object }) {
+  const { DialogV2 } = foundry.applications.api;
+  const actor = fromActorUuid(data.actorUuid);
+  const confirmed = await DialogV2.confirm({
+    window: { title: `${actor?.name ?? ""}: ${data.effectName}` },
+    content: `<p>${actor?.name} &mdash; use your action to roll against ${data.effectName}?</p>`,
+    rejectClose: false,
+  });
+  if (!confirmed) return undefined;
+  return rollAbility({ saveDetails: data.saveDetails, displayOptions: data.displayOptions });
 }
 
 export interface SerializedDamageListEntry extends Omit<DamageListEntry, "calcDamageOptions" | "damageDetail" | "rawDamageDetail" | "damageDetails"> {
