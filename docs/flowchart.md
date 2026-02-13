@@ -126,10 +126,6 @@ flowchart TD
           <small>Before Check Hits</small>
         "] -.-> showAttack
         showAttack["<p style='width:200px; text-wrap:balance;'>Attack Roll Shown On Card</p>"]:::edgeLabel -.-> optAC
-        preCheckHits["
-          preCheckHits
-          <small>Before Check Hits</small>
-        "] --> isHit & isMissed
         isHit --> postAttackRoll
         isMissed --> postAttackRoll
       postAttackRoll["
