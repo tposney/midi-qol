@@ -119,7 +119,12 @@
       "lang": "it",
       "name": "Italian",
       "path": "lang/it.json"
-    }
+    },
+    {
+      "lang": "zh-tw",
+      "name": "正體中文",
+      "path": "lang/zh-tw.json"
+    },
   ],
   "compatibility": {
     "minimum": "13",
