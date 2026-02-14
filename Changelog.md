@@ -2,6 +2,10 @@
 **New Features**
   * When placing templates for items that have a range specified, the movement of the template will be constrained to be no more that the range from the user of the item.
 	  - This is enabled via the same setting for constraining cone/rays to be anchored to the token, now renamed to Constrain Template Placement.
+  * Added some extended helper text for some select options, since the existing explanatory text is limited.
+    - Extended helper text is displayed when you hover over the option.
+    - This has not been implemented everywhere, so more changes over time.
+  * The saving throw results panel, now includes an ? if anything contributed to the target having advantage/disadvantage, much like on the attack roll display.
 
 **Bug Fixes**
 * Fix for player's damage card being shown to the GM.
@@ -14,19 +18,21 @@
   - default is to include self if nothing is specified.
 * Overtime editor supports multi select for ability checks, like saves and skills.
 * Cleaned up overtime action save prompts to use the new multi select save/check/skill/tool dialog.
+* Added a field to the overtime properties on the midi-qol tab to support rolling the activity as either the source actor (the one who has the activity on one of their items) or as the target.
 * Added a deprecated getter for workflow.saveRolls to ease transition.
 
 **Experimental**
-If you play on gridded scenes you can ignore this feature, the two methods result in very similar behaviour.
-* New distance measuring option, token perimeter, instead of center(s) to center(s). Configurable in Workflow->Hits, Grid Square Centers (default/pre-existing) and Token Perimeters.
-  - The new method decides how far apart tokens are based on the minimum distance between the token perimeters.
-  - Gridded Gridless changes the way distances are measured in gridless scenes,so that if core is set to use any of the non-Euclidean measurement modes, like Equidistant, those modes are used by midi when calculating distances, overriding default gridless behaviour. Normally foundry only uses Euclidean distances in gridless mode.
-  - If using **gridded gridless** with the **Grid Square Centers** option and one of the special dnd5e measurement modes, like Equidistant, you really don't need a fudge factor, since tokens are notionally "snapped" to the closest grid square when doing the distance calculation.
-  - If using Euclidean measurement then you need a fudge factor else you'll have to be very precise in placing your tokens to be able to hit.
-  * If using perimeter distance to calculate tokens are NOT snapped to the nearest grid square, however the applicable measurement mode applies when midi calculates distance. 
-    - So if using token perimeter you'll need to specify a fudge factor to avoid the very careful placement issue.
-    - If you are using euclidean measurement, perimeter distance is the way to go, with a fudge factor, since it is the most "natural", the distance between two tokens is the smallest distance between their outlines and you can hit if they are adjacent (or within the fudge factor distance).
-  * Also remember that in dnd5e if two token are adjacent (i.e. their token perimeters touch) the distance between them is 1 grid square (normally 5 feet). Both Gird Square Centers and Token Perimeters respect this convention.
+* Some changes to measuring distance.... All settings now on the mechanics tab.
+  * Three modes, default (foundry token center to token center distance measure), Grid square center (measure from the center of all grid squares covered by the token) and token perimeter (distances are measured as the shortest distance between the the two token perimeter polygons that approximate the token shape - supports all foundry token shapes).
+    - If your core measurement setting is exact (whether on gridded or gridless scenes and independent of your gridded gridless setting) you should use token perimeter as your distance measure. The most noticeable outcome of using perimeter distance is for tokens that are touching on corners, when using exact measurement, both core foundry and center squares will report the tokens are out of range for a melee attack, with perimeter measurement they will be in range of each other, no fudge factor required. The fudge factor is just to allow for lazy placement; how close the tokens need to be before they are considered touching, instead of also accounting for diagonal measurement.
+    - If you play on gridded scenes (or gridless scenes with gridded gridless set) and equidistant core foundry distance measure (or similar), use grid square centers and no fudge factor. Midi will snap each point it considers to the nearest grid square which means a fudge factor is not required.
+    - If playing on gridless scenes without gridded gridless set use either foundry default or token perimeter (with a fudge factor). Token perimeter is "better" since it is closer to what you'd expect adjacent tokens to be
+  * When measuring where an anchored template (cone/ray) can be placed, or restricting how far a template can be placed from a token, token perimeter measurement is **always** used.
+  * Token perimeter will always return a minimum distance between tokens of 5 feet (or whatever the grid setting is) since adjacent tokens in dnd5e are considered to be 5 feet apart.
+* Added active modules tracking to troubleshooter/midi settings data.
+  - When loading settings midi will prompt you if any of the modules that were active when the data was saved are not active.
+  - Troubleshooter now has a review modules button that checks current versus saved modules.
+  - Looking for feedback on the value of this feature.
 
 ### 13.0.44
 * Skipped because of the inadvertent release of a beta 13.0.44

@@ -1,5 +1,6 @@
 import { i18n, systemConcentrationId, error } from "../../midi-qol.js";
-import { autoApplyDamageOptions, autoCEEffectsOptions, autoCheckHitOptions, autoCheckSavesOptions, autoEffectsOptions, autoTargetOptions, CheckedAuthorsList, checkedModuleList, checkMechanic, collectSettingData, configSettings, coverCalculationOptions, enableWorkflow, exportSettingsToJSON, fetchParams, importSettingsFromJSON, rangeTargetOptions, safeGetGameSetting } from "../settings.js";
+import { ModuleReviewDialog } from "./ModuleReviewDialog.js";
+import { autoApplyDamageOptions, autoCEEffectsOptions, autoCheckHitOptions, autoCheckSavesOptions, autoEffectsOptions, autoTargetOptions, CheckedAuthorsList, checkedModuleList, checkMechanic, collectModuleData, collectSettingData, configSettings, coverCalculationOptions, enableWorkflow, exportSettingsToJSON, fetchParams, importSettingsFromJSON, rangeTargetOptions, safeGetGameSetting } from "../settings.js";
 import { USEFUL_MODULE_VERSIONS, getModuleVersion, installedModules } from "../setupModules.js";
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -57,7 +58,8 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
       import: TroubleShooter.#onImport,
       refresh: TroubleShooter.#onRefresh,
       clear: TroubleShooter.#onClear,
-      overwrite: TroubleShooter.#onOverwrite
+      overwrite: TroubleShooter.#onOverwrite,
+      reviewModules: TroubleShooter.#onReviewModules
     }
   };
 
@@ -238,6 +240,24 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     this.overWriteMidiSettings();
   }
 
+  static #onReviewModules(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const modules = TroubleShooter.data?.modules;
+    if (!modules || Object.keys(modules).length === 0) {
+      ui.notifications?.warn(i18n("midi-qol.TroubleShooter.NoModuleData"));
+      return;
+    }
+    const activeModules = Object.fromEntries(
+      Object.entries(modules).filter(([_, mod]: [string, any]) => mod.active)
+    );
+    if (Object.keys(activeModules).length === 0) {
+      ui.notifications?.warn(i18n("midi-qol.TroubleShooter.NoModuleData"));
+      return;
+    }
+    new ModuleReviewDialog(activeModules).render(true);
+  }
+
   async _onRender(context, options) {
     super._onRender(context, options);
     for (let i = 0; i < this._fixerFuncs.length; i++) {
@@ -354,6 +374,12 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
         action: "overwrite",
         icon: "fa-solid fa-download",
         label: "midi-qol.TroubleShooter.Overwrite"
+      },
+      {
+        type: "button",
+        action: "reviewModules",
+        icon: "fa-solid fa-cubes",
+        label: "midi-qol.TroubleShooter.ReviewModules"
       }
     ]
     // V12-only:
@@ -473,20 +499,23 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
       data.summary.moduleSettings["Token Magic FX Auto Hide Template Elements "] = safeGetGameSetting("tokenmagic", "autohideTemplateElements");
     } else data.summary.moduleSettings["Token Magic FX"] = i18n("midi-qol.Inactive");
 
+    // SelectOptionValue can be string or {label, hint} — extract the label string for display
+    const optLabel = (v: any): string => typeof v === "string" ? v : v?.label ?? "";
+
     data.summary.midiSettings = {};
     data.summary.midiSettings["Enable Roll Automation Support (Client Setting)"] = `${enableWorkflow}`;
-    data.summary.midiSettings["Auto Target on Template Draw"] = autoTargetOptions[configSettings.autoTarget];
-    data.summary.midiSettings["Auto Target for Ranged Targets/Spells"] = rangeTargetOptions[configSettings.rangeTarget];
-    data.summary.midiSettings["Auto Apply Item Effects"] = autoEffectsOptions[configSettings.autoItemEffects];
-    data.summary.midiSettings["Apply Convenient Effects"] = autoCEEffectsOptions[configSettings.autoCEEffects];
-    data.summary.midiSettings["Auto Check Hits"] = autoCheckHitOptions[configSettings.autoCheckHit];
+    data.summary.midiSettings["Auto Target on Template Draw"] = optLabel(autoTargetOptions[configSettings.autoTarget]);
+    data.summary.midiSettings["Auto Target for Ranged Targets/Spells"] = optLabel(rangeTargetOptions[configSettings.rangeTarget]);
+    data.summary.midiSettings["Auto Apply Item Effects"] = optLabel(autoEffectsOptions[configSettings.autoItemEffects]);
+    data.summary.midiSettings["Apply Convenient Effects"] = optLabel(autoCEEffectsOptions[configSettings.autoCEEffects]);
+    data.summary.midiSettings["Auto Check Hits"] = optLabel(autoCheckHitOptions[configSettings.autoCheckHit]);
     data.summary.midiSettings["Roll Seperate Attacks per Target"] = `${configSettings.attackPerTarget}`;
-    data.summary.midiSettings["Auto Check Saves"] = autoCheckSavesOptions[configSettings.autoCheckSaves];
-    data.summary.midiSettings["Auto Apply Damage to Target"] = autoApplyDamageOptions[configSettings.autoApplyDamage];
+    data.summary.midiSettings["Auto Check Saves"] = optLabel(autoCheckSavesOptions[configSettings.autoCheckSaves]);
+    data.summary.midiSettings["Auto Apply Damage to Target"] = optLabel(autoApplyDamageOptions[configSettings.autoApplyDamage]);
     // data.summary.midiSettings["Enable Concentration Automation"] = configSettings.concentrationAutomation;
     data.summary.midiSettings["Expire 1Hit/1Attack/1Action on roll"] = `${checkMechanic("actionSpecialDurationImmediate")}`;
-    data.summary.midiSettings["Inapacitated Actors can't Take Actions"] = checkMechanic("incapacitated");
-    data.summary.midiSettings["Calculate Cover"] = coverCalculationOptions[configSettings.optionalRules.coverCalculation];
+    data.summary.midiSettings["Inapacitated Actors can't Take Actions"] = `${checkMechanic("incapacitated")}`;
+    data.summary.midiSettings["Calculate Cover"] = optLabel(coverCalculationOptions[configSettings.optionalRules.coverCalculation]);
     data.summary.midiSettings["Add Fake GM Dice"] = `${configSettings.addFakeDice}`;
     data.summary.knownModules = {};
     let tempModules = {};
@@ -526,76 +555,69 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     });
     */
 
-    for (let moduleData of game.modules ?? []) {
-      let module: any = moduleData;
-      if (!module.active && !checkedModuleList.includes(module.id)) continue;
-      let idToUse = module.id;
-      let titleToUse = module.title;
-      if (idToUse.match(/plutonium/i) || titleToUse.match(/plutonium/i)) {
-        idToUse = idToUse.replace(/plutonium/i, "xxxxxxxxx");
-        titleToUse = titleToUse.replace(/plutonium/i, "xxxxxxxxx")
+    data.modules = collectModuleData();
+
+    // Plutonium detection for summary warning
+    for (const id of Object.keys(data.modules)) {
+      if (id.match(/xxxxxxxxx/i)) {
         data.summary.moduleSettings["xxxxxxxxx detected"] = "incompatible importer found";
-      };
-      data.modules[idToUse] = {
-        title: titleToUse,
-        active: module.active,
-        installed: true,
-        version: module.version,
-        compatibility: module.compatibility?.verified
       }
-      switch (module.id) {
+    }
+
+    for (const [moduleId, moduleEntry] of Object.entries(data.modules) as [string, any][]) {
+      switch (moduleId) {
         case "ATL":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "ActiveAuras":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "about-time":
           break;
         case "anonymous":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "autoanimations":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           if (game.modules.get("autoanimations")?.active) this.checkAutoAnimations(data);
           break;
         case "combat-utility-belt":
           break;
         case "condition-lab-triggler":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "dae":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "ddb-game-log":
           break;
         case "df-templates":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "dfreds-convenient-effects":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
 
           break;
         case "dice-so-nice":
           break;
         case "effect-macro":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "foundryvtt=simple-calendar":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "itemacro":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           this.checkItemMacro(data);
           break;
         case "levels":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "levelsautocover":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "levelsvolumetrictemplates":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "lib-wrapper":
           if (!(game.modules.get("lib-wrapper")?.active)) {
@@ -610,7 +632,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           };
           break;
         case "midi-qol":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "monks-combat-details":
           if (safeGetGameSetting("monks-combat-details", "auto-defeated") !== "none" && configSettings.addDead !== "none") {
@@ -624,13 +646,13 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           }
           break;
         case "monks-little-details":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "monks-tokenbar":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "flash-rolls-5e":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "multilevel-tokens":
           break;
@@ -658,13 +680,13 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
               problemDetail: undefined
             });
           };
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "walledtemplates":
           this.checkWalledTemplates(data);
           break;
         case "warpgate":
-          foundry.utils.setProperty(data.modules[module.id], "settings", TroubleShooter.getDetailedSettings(module.id));
+          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           // if (game.modules.get("warpgate")?.active) TroubleShooter.checkWarpgateUserPermissions(data);
           break;
         case "wjmaia":
@@ -687,7 +709,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
         case "retroactive-advantage-5e":
         case "rollgroups":
         case "wire":
-          data.modules[module.id].incompatible = true;
+          data.modules[moduleId].incompatible = true;
           break;
       }
     }

@@ -1552,3 +1552,136 @@ section.midi-qol.tab {
   background: var(--dnd5e-color-gold);
   color: var(--dnd5e-background-card);
 }
+
+/* Module Review Dialog */
+.midi-module-review-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.midi-module-review-content .notes {
+  font-size: 0.85rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.midi-module-review-warning {
+  background: rgba(255, 140, 0, 0.15);
+  border: 1px solid rgba(255, 140, 0, 0.5);
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  color: #c05000;
+}
+
+.midi-module-review-warning i {
+  margin-right: 0.35rem;
+}
+
+.midi-module-review-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.midi-module-review-actions button {
+  flex: 0 0 auto;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.midi-module-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.midi-module-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.midi-module-item.missing {
+  background: rgba(255, 80, 60, 0.12);
+}
+
+.midi-module-item.installed {
+  background: rgba(255, 200, 0, 0.1);
+}
+
+.midi-module-item.active {
+  opacity: 0.7;
+}
+
+.midi-module-checkbox {
+  flex: 0 0 auto;
+}
+
+.midi-module-info {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.midi-module-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.midi-module-version {
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.midi-module-version-diff {
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+.midi-module-version-diff.version-lower {
+  color: #c43030;
+  font-weight: bold;
+}
+
+.midi-module-badge {
+  flex: 0 0 auto;
+}
+
+.midi-module-badge .badge {
+  display: inline-block;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.midi-module-badge .badge-active {
+  background: rgba(40, 167, 69, 0.15);
+  color: #1a7a35;
+}
+
+.midi-module-badge .badge-installed {
+  background: rgba(255, 193, 7, 0.2);
+  color: #8a6d00;
+}
+
+.midi-module-badge .badge-missing {
+  background: rgba(220, 53, 69, 0.15);
+  color: #a71d2a;
+}
+
+.midi-module-review-actions button[data-action="applyModules"] {
+  margin-left: auto;
+}

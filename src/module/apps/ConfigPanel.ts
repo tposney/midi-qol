@@ -97,6 +97,13 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!installedModules.get("levels")) {
       wallsBlockRangeOptions["centerLevels"] = withOptionLabel(wallsBlockRangeOptions["centerLevels"], `${i18n(wallsBlockRangeOptions["centerLevels"])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Levels" })}`);
     }
+    // Mark walledtemplates option as "not installed" when the module is not active
+    const autoTargetOptionsLocalized: SelectOptions = foundry.utils.duplicate(autoTargetOptions);
+    if (!installedModules.get("walledtemplates")) {
+      const notInstalled = game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "" }) ?? "";
+      autoTargetOptionsLocalized["walledtemplates"] = withOptionLabel(autoTargetOptions["walledtemplates"], `${i18n(autoTargetOptions["walledtemplates"])} - ${notInstalled}`);
+    }
+
     let HiddenAdvantageOptions: SelectOptions = foundry.utils.duplicate(hiddenAdvantageOptions);
     [{ id: "perceptive", name: "Perceptive" }].forEach(module => {
       if (!installedModules.get(module.id)) {
@@ -143,6 +150,25 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     };
 
+    // Mark CE-dependent options as "not active" when Convenient Effects is not active
+    const checkFlankingOptionsLocalized: SelectOptions = foundry.utils.duplicate(checkFlankingOptions);
+    const autoCEEffectsOptionsLocalized: SelectOptions = foundry.utils.duplicate(autoCEEffectsOptions);
+    if (!installedModules.get("dfreds-convenient-effects")) {
+      const notActive = game.i18n?.localize("midi-qol.Inactive") ?? "Inactive";
+      const ceFlankingKeys = ["ceonly", "ceflanked", "ceflankedNoconga"];
+      for (const key of ceFlankingKeys) {
+        if (key in checkFlankingOptionsLocalized) {
+          checkFlankingOptionsLocalized[key] = withOptionLabel(checkFlankingOptions[key], `${i18n(checkFlankingOptions[key])} - ${notActive}`);
+        }
+      }
+      const ceEffectKeys = ["itempri", "cepri", "both"];
+      for (const key of ceEffectKeys) {
+        if (key in autoCEEffectsOptionsLocalized) {
+          autoCEEffectsOptionsLocalized[key] = withOptionLabel(autoCEEffectsOptions[key], `${i18n(autoCEEffectsOptions[key])} - ${notActive}`);
+        }
+      }
+    }
+
     let statusEffectList = CONFIG.statusEffects.map((se) => {
       let name = i18n(se.name);
       if (se.id.startsWith("Convenient Effect")) name = `${name} (CE)`;
@@ -162,7 +188,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       quickSettings: true,
       quickSettingsOptions,
       autoCheckHitOptions,
-      autoTargetOptions,
+      autoTargetOptions: autoTargetOptionsLocalized,
       rangeTargetOptions,
       requiresTargetsOptions,
       autoCheckSavesOptions,
@@ -178,7 +204,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       doReactionsOptions,
       wallsBlockRangeOptions,
       gmDoReactionsOptions,
-      AutoCEEffectsOptions: autoCEEffectsOptions,
+      AutoCEEffectsOptions: autoCEEffectsOptionsLocalized,
       rollOtherDamageOptions,
       showReactionAttackRollOptions,
       CoverCalculationOptions,
@@ -190,7 +216,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       itemTypeLabels: Object.keys(CONFIG.Item.typeLabels).filter(key => !["backpack", "base"].includes(key)).reduce((acc, key) => { acc[key] = CONFIG.Item.typeLabels[key]; return acc }, {}),
       hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),
       hideRollDetailsOptions,
-      checkFlankingOptions,
+      checkFlankingOptions: checkFlankingOptionsLocalized,
       nsaFlag,
       coloredBorders,
       coloredBordersOptions,

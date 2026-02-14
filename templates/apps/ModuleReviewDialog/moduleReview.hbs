@@ -1,0 +1,46 @@
+<section class="midi-module-review-content scrollable">
+  <p class="notes">{{{localize "midi-qol.ModuleReview.Description"}}}</p>
+
+  {{#if hasMissing}}
+  <div class="midi-module-review-warning">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{localize "midi-qol.ModuleReview.MissingWarning"}}
+  </div>
+  {{/if}}
+
+  <div class="midi-module-review-actions">
+    <button type="button" data-action="selectAll">
+      <i class="fas fa-check-double"></i> {{localize "midi-qol.ModuleReview.SelectAll"}}
+    </button>
+    <button type="button" data-action="deselectAll">
+      <i class="fas fa-times"></i> {{localize "midi-qol.ModuleReview.DeselectAll"}}
+    </button>
+    <button type="button" data-action="applyModules">
+      <i class="fas fa-check"></i> {{localize "midi-qol.ModuleReview.Apply"}}
+    </button>
+  </div>
+
+  <div class="midi-module-review-list">
+    {{#each modules}}
+    <div class="midi-module-item {{statusClass}}">
+      <div class="midi-module-checkbox">
+        <input type="checkbox" name="modules.{{id}}" data-module-id="{{id}}"
+          {{#if checked}}checked{{/if}}
+          {{#unless canActivate}}disabled{{/unless}} />
+      </div>
+      <div class="midi-module-info">
+        <span class="midi-module-name">{{title}}</span>
+        <span class="midi-module-version">v{{savedVersion}}</span>
+        {{#if currentVersion}}
+          {{#unless versionMatch}}
+            <span class="midi-module-version-diff {{#if versionLower}}version-lower{{/if}}">(installed: v{{currentVersion}})</span>
+          {{/unless}}
+        {{/if}}
+      </div>
+      <div class="midi-module-badge">
+        <span class="badge {{badgeClass}}">{{localize badgeKey}}</span>
+      </div>
+    </div>
+    {{/each}}
+  </div>
+</section>

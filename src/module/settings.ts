@@ -1,6 +1,7 @@
 import { debug, setDebugLevel, i18n, debugEnabled, error, gameStats } from "../midi-qol.js";
 import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { DependentsExplorer } from "./apps/DependentsExplorer.js";
+import { ModuleReviewDialog } from "./apps/ModuleReviewDialog.js";
 import { RollStatsDisplay } from "./apps/RollStatsDisplay.js";
 import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -432,9 +433,33 @@ export function collectSettingData() {
   };
   return data;
 }
+export function collectModuleData(): Record<string, any> {
+  const modules: Record<string, any> = {};
+  for (const moduleData of game.modules ?? []) {
+    const mod: any = moduleData;
+    if (!mod.active && !checkedModuleList.includes(mod.id)) continue;
+    let idToUse = mod.id;
+    let titleToUse = mod.title;
+    if (idToUse.match(/plutonium/i) || titleToUse.match(/plutonium/i)) {
+      idToUse = idToUse.replace(/plutonium/i, "xxxxxxxxx");
+      titleToUse = titleToUse.replace(/plutonium/i, "xxxxxxxxx");
+    }
+    modules[idToUse] = {
+      title: titleToUse,
+      active: mod.active,
+      installed: true,
+      version: mod.version,
+      compatibility: mod.compatibility?.verified
+    };
+  }
+  return modules;
+}
+
 export function exportSettingsToJSON() {
+  const data = collectSettingData();
+  (data as any).modules = collectModuleData();
   const filename = `fvtt-midi-qol-settings.json`;
-  foundry.utils.saveDataToFile(JSON.stringify(collectSettingData(), null, 2), "text/json", filename);
+  foundry.utils.saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
 }
 
 function removeOldValues(theObject: any) {
@@ -505,9 +530,17 @@ export async function importSettingsFromJSON(json) {
   let requiresReload = false;
   if (typeof json === "string")
     json = JSON.parse(json);
-  if (json.midiSettings) { // this is a trouble shooter file
-    json = json.midiSettings;
+
+  // Extract modules data before unwrapping TroubleShooter format
+  let savedModules = json.modules;  // Regular export or TroubleShooter top-level
+  if (json.midiSettings) {
+    // TroubleShooter format — prefer top-level modules (has settings/incompatible augmentation)
+    // but fall back to midiSettings.modules for newer regular exports
+    savedModules = savedModules ?? json.midiSettings.modules;
+    json = json.midiSettings;  // existing unwrap
   }
+  // Also check unwrapped json.modules for regular settings exports
+  savedModules = savedModules ?? json.modules;
 
   // Handle migration of deprecated displaySaveDC field
   const importedConfigSettings = removeOldValues(json.configSettings);
@@ -579,6 +612,24 @@ export async function importSettingsFromJSON(json) {
   if (settingsAppId) foundry.applications.instances.get(settingsAppId)?.render(true);
   const exportSource = json.flags?.exportSource;
   ui.notifications?.notify(`Importing settings from foundry version ${exportSource?.coreVersion} dnd ${exportSource?.systemVersion} midi ${exportSource?.midiVersion}`);
+
+  // Show module review dialog if saved modules include modules not active or with lower installed versions
+  if (savedModules && Object.keys(savedModules).length > 0) {
+    const activeModules = Object.fromEntries(
+      Object.entries(savedModules).filter(([_, mod]: [string, any]) => mod.active)
+    );
+    const hasMismatch = Object.entries(activeModules).some(([id, mod]: [string, any]) => {
+      const current = game.modules.get(id);
+      if (!current?.active) return true;
+      // Check if installed version is lower than saved version
+      if (current.version && mod.version && foundry.utils.isNewerVersion(mod.version, current.version)) return true;
+      return false;
+    });
+    if (hasMismatch) {
+      new ModuleReviewDialog(activeModules).render(true);
+    }
+  }
+
   if (requiresReload) {
   //@ts-expect-error
     foundry.applications.settings.SettingsConfig.reloadConfirm({ world: true });
@@ -1058,6 +1109,7 @@ export const autoCheckHitOptions = keysToExtendedOptionsObj("autoCheckHitOptions
   "gmOnly"
 ]);
 
+
 export const clickOptions = keysToExtendedOptionsObj("clickOptions", [
   "off",
   "attack",
@@ -1076,6 +1128,7 @@ export const autoTargetOptions = keysToExtendedOptionsObj("autoTargetOptions", [
   "walledtemplates"
 ]);
 
+
 export const autoCheckSavesOptions = keysToExtendedOptionsObj("autoCheckSavesOptions", [
   "none",
   "allNoRoll",
@@ -1084,6 +1137,7 @@ export const autoCheckSavesOptions = keysToExtendedOptionsObj("autoCheckSavesOpt
   "whisper",
   "gmOnly",
 ]);
+
 
 export const rangeTargetOptions = keysToExtendedOptionsObj("rangeTargetOptions", [
   "none",
@@ -1095,6 +1149,7 @@ export const rangeTargetOptions = keysToExtendedOptionsObj("rangeTargetOptions",
   "wallsBlockIgnoreDefeated"
 ]);
 
+
 export const autoApplyDamageOptions = keysToExtendedOptionsObj("autoApplyDamageOptions", [
   "none",
   "noCard",
@@ -1104,6 +1159,7 @@ export const autoApplyDamageOptions = keysToExtendedOptionsObj("autoApplyDamageO
   "yesCardMisses",
   "yesCardNPC"
 ]);
+
 
 export const damageCardStyleOptions = keysToExtendedOptionsObj("damageCardStyleOptions", [
   "flexbox",
@@ -1339,6 +1395,7 @@ export const autoCEEffectsOptions = keysToExtendedOptionsObj("AutoCEEffectsOptio
   "both"
 ]);
 
+
 export const wallsBlockRangeOptionsNew = keysToExtendedOptionsObj("WallsBlockRangeOptionsNew", [
   "none",
   "center",
@@ -1346,7 +1403,6 @@ export const wallsBlockRangeOptionsNew = keysToExtendedOptionsObj("WallsBlockRan
   "levelsautocover",
   "simbuls-cover-calculator",
   "tokencover",
-  "tokenvisibility",
   "simplecover5e"
 ]);
 
@@ -1355,9 +1411,9 @@ export const coverCalculationOptions = keysToExtendedOptionsObj("CoverCalculatio
   "simbuls-cover-calculator",
   "simplecover5e",
   "levelsautocover",
-  "tokencover",
-  "tokenvisibility"
+  "tokencover"
 ]);
+
 
 export const hiddenAdvantageOptions = keysToExtendedOptionsObj("HiddenAdvantageOptions", [
   "none",
@@ -1409,6 +1465,7 @@ export const autoEffectsOptions = keysToExtendedOptionsObj("AutoEffectsOptions",
   "applyRemove",
   "applyLeave"
 ]);
+
 
 export const requireMagicalOptions = keysToExtendedOptionsObj("RequireMagicalOptions", [
   "off",
