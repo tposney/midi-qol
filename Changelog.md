@@ -1,3 +1,7 @@
+### 13.0.46
+**Bug Fixes**
+  * Fix for [object object] in some drop down setings for midi-qol active effect panel.
+
 ### 13.0.45
 **New Features**
   * When placing templates for items that have a range specified, the movement of the template will be constrained to be no more that the range from the user of the item.

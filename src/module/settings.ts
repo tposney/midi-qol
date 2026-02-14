@@ -1174,7 +1174,7 @@ export const playerDamageCardOptions = keysToExtendedOptionsObj("playerDamageCar
   "npcplayerbuttons"
 ]);
 
-export const removeButtonsOptions = keysToExtendedOptionsObj("removeButtonsOptions", [
+export const removeButtonsOptions = keysToOptionsObj("removeButtonsOptions", [
   "off",
   "attack",
   "damage",
@@ -1279,7 +1279,7 @@ export const onUseMacroOptions = keysToExtendedOptionsObj("onUseMacroOptions", [
   "all"
 ]);
 
-export const confirmTargetOptions = keysToExtendedOptionsObj("ConfirmTargetOptions", [
+export const confirmTargetOptions = keysToOptionsObj("ConfirmTargetOptions", [
   "default",
   "always",
   "never"
@@ -1562,23 +1562,23 @@ export const doConcentrationCheckOptions = keysToExtendedOptionsObj("DoConcentra
   "item"
 ]);
 
-export const activationAutomationOptions = keysToExtendedOptionsObj("ActivationAutomationOptions", [
+export const activationAutomationOptions = keysToOptionsObj("ActivationAutomationOptions", [
   "none",
   "chat",
   "auto"
 ]);
 
-export const rollConfigOptions = keysToExtendedOptionsObj("ConfigDialogOptions", [
+export const rollConfigOptions = keysToOptionsObj("ConfigDialogOptions", [
   "default",
   "always",
   "never"
 ]);
-export const damageConfigOptions = keysToExtendedOptionsObj("ConfigDialogOptions", [
+export const damageConfigOptions = keysToOptionsObj("ConfigDialogOptions", [
   "default",
   "always",
   "never"
 ]);
-export const consumeConfigOptions = keysToExtendedOptionsObj("ConfigDialogOptions", [
+export const consumeConfigOptions = keysToOptionsObj("ConfigDialogOptions", [
   "default",
   "always",
   "never"
