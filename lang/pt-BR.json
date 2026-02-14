@@ -235,7 +235,17 @@
     "wallsBlock": "Paredes Bloqueiam",
     "wallsBlockIgnoreIncapacitated": "Paredes Bloqueiam (ignorar Incapacitado/Morto)",
     "wallsBlockIgnoreDefeated": "Paredes Bloqueiam (ignorar Morto)",
-    "walledtemplates": "Usar Walled Templates"
+    "walledtemplates": "Usar Walled Templates",
+    "expandedHints": {
+      "none": "Os modelos não marcam os alvos automaticamente. Os jogadores devem marcar os alvos manualmente.",
+      "always": "Todos os tokens dentro da área do modelo são automaticamente marcados, independentemente das paredes.",
+      "alwaysIgnoreIncapacitated": "Todos os tokens dentro da área do modelo são marcados, mas tokens Incapacitados e mortos são excluídos.",
+      "alwaysIgnoreDefeated": "Todos os tokens dentro da área do modelo são marcados, mas tokens mortos/derrotados são excluídos.",
+      "wallsBlock": "Os tokens dentro da área do modelo são marcados apenas se não houver nenhuma parede entre a origem do modelo e o token.",
+      "wallsBlockIgnoreIncapacitated": "Os tokens são marcados se nenhuma parede os bloquear da origem do modelo. Tokens Incapacitados e mortos são excluídos.",
+      "wallsBlockIgnoreDefeated": "Os tokens são marcados se nenhuma parede os bloquear da origem do modelo. Tokens mortos/derrotados são excluídos.",
+      "walledtemplates": "Delega a marcação para o módulo Walled Templates, que remodela a área do modelo em torno de paredes. Requer o módulo Walled Templates."
+    }
   },
   "midi-qol.autoCheckSavesOptions": {
     "none": "Desativado",
@@ -312,7 +322,15 @@
     "autoDialog": "Rolar e Mostrar o Diálogo de Rolagem",
     "mtb": "Monk's Token Bar",
     "ftb": "Flash Token Bar",
-    "rer": "Ripper's Epic Rolls"
+    "rer": "Ripper's Epic Rolls",
+    "expandedHints": {
+      "none": "O Mestre é solicitado a realizar as salvaguardas através de um botão de mensagem no chat.",
+      "auto": "Salvaguardas são roladas automaticamente, sem interação do Mestre.",
+      "autoDialog": "Salvaguardas são roladas automaticamente, mas a caixa de diálogo de configuração da rolagem é exibida primeiro, permitindo modificações.",
+      "mtb": "Salvaguardas são realizadas através da interface do Monk's Token Bar. Requer o módulo Monk's Token Bar.",
+      "ftb": "Salvaguardas são realizadas através da pop-up do Flash Token Bar. Requer o módulo Flash Rolls 5e.",
+      "rer": "Salvaguardas são realizadas através da interface do Ripper's Epic Rolls. Requer o módulo Epic Rolls."
+    }
   },
   "midi-qol.playerRollSavesOptions": {
     "none": "Nenhum",
@@ -363,7 +381,18 @@
     "hitCriticalDamage": "Exibir Acerto/Erro/Acerto Crítico/Falha Crítica + Dano Total",
     "attackTotalOnly": "Exibir Apenas Total da Rolagem",
     "d20AttackOnly": "Exibir Apenas Ataques D20",
-    "all": "Toda a Rolagem"
+    "all": "Toda a Rolagem",
+    "expandedHints": {
+      "none": "Não esconde nada. Os jogadores veem todos os detalhes da rolagem.",
+      "detailsDSN": "Esconde a fórmula de rolagem mas ainda mostra a rolagem de dados do DSN para que os jogadores vejam a animação.",
+      "details": "Esconde a fórmula de rolagem e não mostra os dados do DSN.",
+      "d20Only": "Exibe somente a rolagem de ataque d20 e o dano total.",
+      "hitDamage": "Exibe Acerto/Erro mais o dano total.",
+      "hitCriticalDamage": "Exibe Acertos/Erros/Críticos/Erros Críticos e o dano total.",
+      "attackTotalOnly": "Exibe somente o total da rolagem de ataque.",
+      "d20AttackOnly": "Exibe somente dados de ataques d20.",
+      "all": "Esconde dos jogadores todos os detalhes da rolagem."
+    }
   },
   "midi-qol.RollOtherDamageOptions": {
     "none": "Nenhum",
@@ -374,7 +403,6 @@
   "midi-qol.potion": "Poção",
   "midi-qol.HideRollDetails.Name": "Ocultar Detalhes de Rolagens de Mestre",
   "midi-qol.HideRollDetails.Hint": "Escolha quais rolagens de Mestre serão escondidas/exibidas aos jogadores.",
-  "midi-qol.HideRollDetails.HintLong": "<li class=\"notes midi-qol-faint\"><strong>Nenhum</strong>: Não esconde nada.</li><li class=\"notes midi-qol-faint\"><strong>Rolar Fórmula Mas Mostrar DSN</strong>: Esconde a fórmula de rolagem mas ainda mostra a rolagem de dados do DSN.</li><li class=\"notes midi-qol-faint\"><strong>Rolar Fórmula</strong>: Esconde a fórmula de rolagem e não mostra a rolagem de dados do DSN.</li><li class=\"notes midi-qol-faint\"><strong>Exibir Ataque d20 + Dano Total</strong>: Exibe somente a rolagem de ataque d20 e o dano total.</li><li class=\"notes midi-qol-faint\"><strong>Exibir Acerto/Erro + Dano Total</strong>: Mostra Acerto/Erro mais o dano total.</li><li class=\"notes midi-qol-faint\"><strong>Exibir Apenas Ataques D20</strong>: Exibe apenas dados de ataques d20.</li><li class=\"notes midi-qol-faint\"><strong>Toda a Rolagem</strong>: Esconde dos jogadores todos os detalhes da rolagem.</li>",
   "midi-qol.DiceRolled": "<div>Rolado</div>",
   "midi-qol.ForceHideRoll.Name": "Realmente Esconder Rolagens Privadas/Cegas/Pessoais",
   "midi-qol.ForceHideRoll.Hint": "Não exibe nada para não-destinatários para rolagens privadas/cegas/pessoais. Agradecimentos ao felix.mueller.86@web.de.",
@@ -513,11 +541,7 @@
   },
   "midi-qol.NearbyFoe.Name": "Ataques à distância possuem desvantagem caso inimigo esteja a essa distância. Desabilitado em 0",
   "midi-qol.WallsBlockRange.Name": "Paredes Bloqueiam Ataques à Distância",
-  "midi-qol.WallsBlockRange.Hint1": "Não: paredes não bloqueiam verificação de alcance.",
-  "midi-qol.WallsBlockRange.Hint2": "Centro: verifica uma linha centro a centro.",
-  "midi-qol.WallsBlockRange.Hint3": "Centro + Levels: verificação de centro mas usa o módulo Levels para determinar o bloqueio de parede LOS. Também use Levels Volumetric Templates para alvos de modelos.",
-  "midi-qol.WallsBlockRange.Hint4": "Levels Auto Cover: usar Levels Auto Cover para testar e bloquear cobertura completa.",
-  "midi-qol.WallsBlockRange.Hint5": "Alternative Token Visibility: Usar Alternative Token Visibility para testar e bloquear cobertura completa.",
+  "midi-qol.WallsBlockRange.Hint": "Se um módulo de cobertura determinar Cobertura Total, o ataque será bloqueado.",
   "midi-qol.WallsBlockRangeOptionsNew": {
     "none": "Não",
     "center": "Verificação de Centro",
@@ -525,8 +549,16 @@
     "levelsautocover": "Levels Auto Cover",
     "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "tokencover": "Alternative Token Cover",
-    "tokenvisibility": "Alternative Token Visibility (descontinuado)",
-    "simplecover5e": "Simple Cover 5e"
+    "simplecover5e": "Simple Cover 5e",
+    "expandedHints": {
+      "none": "Paredes não bloqueiam verificação de alcance.",
+      "center": "Verifica a linha de visão do centro do token até o centro do alvo. Se uma parede bloquear a linha, o ataque será bloqueado.",
+      "centerLevels": "Verificação de centro a centro usando o módulo Levels para determinar a linha de visão (LOS) que bloqueia a parede. Também utiliza Levels Volumetric Templates para direcionamento do modelo. Requer o módulo Levels.",
+      "levelsautocover": "Use o módulo Levels Auto Cover para calcular a cobertura. A Cobertura Total bloqueia o ataque. Requer o módulo Levels Auto Cover.",
+      "simbuls-cover-calculator": "Use o módulo Simbul's Cover Calculator para calcular a cobertura. A Cobertura Total bloqueia o ataque. Requer o módulo Simbul's Cover Calculator.",
+      "tokencover": "Use o módulo Alternative Token Cover para calcular a cobertura. A Cobertura Total bloqueia o ataque. Requer o módulo Alternative Token Cover.",
+      "simplecover5e": "Use o módulo Simple Cover 5e para calcular a cobertura. A Cobertura Total bloqueia o ataque. Requer o módulo Simple Cover 5e."
+    }
   },
   "midi-qol.NearbyAllyRanged.Name": "(Regra da Casa) Ataques à distância contra inimigos próximos de aliados têm desvantagem",
   "midi-qol.WallsBlockRangeOptions": {
@@ -541,8 +573,7 @@
     "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "simplecover5e": "Simple Cover 5e",
     "levelsautocover": "Levels Auto Cover",
-    "tokencover": "Alternative Token Cover",
-    "tokenvisibility": "Alternative Token Visibility (descontinuado)"
+    "tokencover": "Alternative Token Cover"
   },
   "midi-qol.NearbyAllyRanged.Hint": "Ataques à distância com aliados próximos (5 pés) a alvos possuem desvantagem para alvos menores do que isso (largura * altura). Desabilitado em 0.",
   "midi-qol.Incapacitated.Name": "Se Ator Incapacitado Fizer Uma Ação, Midi QOL Deve:",
@@ -967,7 +998,9 @@
       "modules": "Todos os Módulos"
     },
     "ClearErrors": "Limpar Errors",
-    "Overwrite": "Substituir Config. Midi"
+    "Overwrite": "Substituir Config. Midi",
+    "ReviewModules": "Revisar Módulos",
+    "NoModuleData": "Nenhum dado do módulo disponível."
   },
   "midi-qol.Inactive": "Inativo",
   "midi-qol.Active": "Ativo",
@@ -2103,5 +2136,16 @@
   "midi-qol.OverTimeEditor.CloseWithoutSaving": "Descartar Alterações",
   "midi-qol.OverTimeEditor.RuntimeSection": "Estado Runtime",
   "midi-qol.OverTimeEditor.Permanent": "Marcado como Permanente",
-  "midi-qol.OverTimeEditor.PermanentHint": "Quando habilitado, nenhuma outra salvaguarda será processada. Definido por saveCount/failCount quando a contagem chegar a zero com o modo '+'."
+  "midi-qol.OverTimeEditor.PermanentHint": "Quando habilitado, nenhuma outra salvaguarda será processada. Definido por saveCount/failCount quando a contagem chegar a zero com o modo '+'.",
+  "midi-qol.ModuleReview.Title": "Revisão do Módulo — Configurações Importadas",
+  "midi-qol.ModuleReview.Description": "As configurações importadas foram salvas com os seguintes módulos ativos. Os módulos que estavam ativos, mas não estão mais, estão <strong>destacados</strong>. Selecione os módulos que deseja ativar.",
+  "midi-qol.ModuleReview.MissingWarning": "Alguns módulos das configurações salvas não estão instalados e não podem ser ativados.",
+  "midi-qol.ModuleReview.SelectAll": "Selecionar Todos",
+  "midi-qol.ModuleReview.DeselectAll": "Desmarcar Todos",
+  "midi-qol.ModuleReview.Apply": "Ativar Selecionado & Recarregar",
+  "midi-qol.ModuleReview.Active": "Ativo",
+  "midi-qol.ModuleReview.Installed": "Instalado",
+  "midi-qol.ModuleReview.NotInstalled": "Não Instalado",
+  "midi-qol.ModuleReview.NoChanges": "Todos os módulos selecionados já estão ativos.",
+  "midi-qol.ModuleReview.ReloadPrompt": "Configuração do módulo atualizada. Recarregando o mundo."
 }
