@@ -591,9 +591,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           break;
         case "ddb-game-log":
           break;
-        case "df-templates":
-          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
-          break;
         case "dfreds-convenient-effects":
           foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
 
@@ -900,17 +897,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     switch (configSettings.autoTarget) {
-      case "dftemplates":
-        if (!game.modules.get("df-templates")?.active) {
-          data.problems.push({
-            moduleId: "dftemplates",
-            severity: "Error",
-            problemSummary: "You must enable the 'dftemplates' module to use the 'DF Templates' option for 'Auto Target on Template Draw'",
-            problemDetail: undefined,
-            fixer: "Enable the 'dftemplates' module"
-          });
-        }
-        break;
       case "walledtemplates":
         if (!game.modules.get("walledtemplates")?.active) {
           data.problems.push({

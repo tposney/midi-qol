@@ -1,14 +1,14 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getPerimeterDistanceToPoint } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, checkIncapacitated, checkDefeated } from "./utils.js";
 import { checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
-import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
+import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook, getTemplateSourceToken } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { Workflow } from "./Workflow.js";
 import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
 import { installedModules } from "./setupModules.js";
-import { preActivityConsumptionHook, activityConsumptionHook } from "./activities/activityHelpers.js";
+import { preActivityConsumptionHook, activityConsumptionHook, selectTargetsFromTemplates } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
 import { MidiDependentsRegistry } from "./lib/MidiDependentsRegistry.js";
@@ -73,6 +73,56 @@ export let readyHooks = async () => {
   });
 
   Hooks.on("deleteMeasuredTemplate", checkDeleteTemplate);
+
+  // Auto-target tokens when a template is refreshed (moved/reshaped during preview or after placement)
+  // @ts-expect-error fvtt-types missing flags parameter on refreshMeasuredTemplate hook
+  Hooks.on("refreshMeasuredTemplate", (template: foundry.canvas.placeables.MeasuredTemplate.Implementation, flags: Record<string, boolean>) => {
+    if (!flags.refreshPosition && !flags.refreshShape) return;
+    if (!canvas?.tokens) return;
+
+    // @ts-expect-error no dnd5e-types
+    const autoTarget = getActivityAutoTargetAction(template.activity);
+    if (autoTarget === "none") return;
+
+    if (installedModules.get("levelsvolumetrictemplates") && autoTarget !== "walledtemplates") {
+      //@ts-expect-error CONFIG.Levels
+      const levelsTemplateData = CONFIG.Levels.handlers.TemplateHandler.getTemplateData(false);
+      if (template.document.elevation !== levelsTemplateData.elevation) {
+        template.document.elevation = levelsTemplateData.elevation;
+      }
+      // Filter which tokens to pass - not too far; wall blocking is left to levels.
+      let distance = template.document.distance;
+      const dimensions = canvas.dimensions || { size: 1, distance: 1 };
+      distance *= dimensions.size / dimensions.distance;
+      const tokensToCheck = canvas.tokens.placeables?.filter(tk => {
+        const r = new foundry.canvas.geometry.Ray(
+          { x: template.document?.x ?? template.x, y: template.document?.y ?? template.y },
+          { x: tk.x + tk.document.width * dimensions.size, y: tk.y + tk.document.height * dimensions.size }
+        );
+        const maxExtension = (1 + Math.max(tk.document.width, tk.document.height)) * dimensions.size;
+        if (r.distance > distance + maxExtension) return false;
+        if (["alwaysIgnoreIncapacitated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget) && checkIncapacitated(tk, debugEnabled > 0, false))
+          return false;
+        if (["alwaysIgnoreDefeated", "wallsBlockIgnoreDefeated"].includes(autoTarget) && checkDefeated(tk))
+          return false;
+        return true;
+      });
+      if (tokensToCheck && tokensToCheck.length > 0) {
+        //@ts-expect-error VolumetricTemplates
+        VolumetricTemplates.compute3Dtemplate(template, tokensToCheck);
+      }
+    } else {
+      // @ts-expect-error no dnd5e-types
+      const activity = template.activity;
+      const sourceToken = getTemplateSourceToken(template.document);
+      if (activity && sourceToken) {
+        const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some((spec: string) => ["self", "-self"].includes(spec));
+        selectTargetsFromTemplates([template], sourceToken, ignoreSelf, getAoETargetType(activity), autoTarget);
+      } else {
+        selectTargetsFromTemplates([template]);
+      }
+    }
+  });
 
   // Handle updates to the characters HP
   // Note: Wounded/dead status is now handled by _onUpdate wrapper in patching.ts
@@ -1511,14 +1561,17 @@ Hooks.on("preCreateMeasuredTemplate", (templateDoc: MeasuredTemplateDocument.Imp
   const token = tokenDoc?.object;
   if (!token) return true;
 
-  // Calculate distance from token to template position using current measurement mode
+  // Calculate raw grid distance from token perimeter to template position
   const templateX = templateDoc.x;
   const templateY = templateDoc.y;
   if (templateX === undefined || templateY === undefined) return true;
 
-  const distance = getPerimeterDistanceToPoint(token, { x: templateX, y: templateY });
-  if (distance < 0) return true; // can't determine distance, allow placement
-  if (distance <= maxRange) return true;
+  const poly = getTokenPerimeterPolygon(token);
+  const closest = closestPointOnPerimeter(poly, templateX, templateY);
+  const distance = measurePointDistance(closest, { x: templateX, y: templateY });
+  // Allow half a grid square tolerance for grid snapping moving the position slightly beyond range
+  const tolerance = (canvas?.dimensions?.distance ?? 5) / 2;
+  if (distance <= maxRange + tolerance) return true;
 
   // Out of range - notify and cancel
   ui.notifications?.warn(i18n("midi-qol.TemplateOutOfRange"));

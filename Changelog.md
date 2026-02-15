@@ -1,6 +1,6 @@
 ### 13.0.46
 **Bug Fixes**
-  * Fix for [object object] in some drop down setings for midi-qol active effect panel.
+  * Fix for [object object] in some drop down settings for midi-qol active effect panel.
 
 ### 13.0.45
 **New Features**

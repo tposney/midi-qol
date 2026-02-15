@@ -3009,7 +3009,7 @@ export function computePerimeterDistance(
  * On gridless scenes with griddedGridless enabled, uses the SquareGrid proxy.
  * Otherwise uses canvas.grid.measurePath directly.
  */
-function measurePointDistance(p1: { x: number, y: number }, p2: { x: number, y: number }): number {
+export function measurePointDistance(p1: { x: number, y: number }, p2: { x: number, y: number }): number {
   if (!canvas?.grid) return 0;
   const isGridless = canvas.grid.isGridless;
   if (isGridless && configSettings.griddedGridless) {

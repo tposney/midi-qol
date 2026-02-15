@@ -466,7 +466,7 @@ export function isAoETargetable(targetToken: Token.Implementation, options: { se
 }
 
 export function selectTargetsFromTemplates(
-  templates: (MeasuredTemplateDocument | string)[],
+  templates: (foundry.canvas.placeables.MeasuredTemplate.Implementation | MeasuredTemplateDocument | string)[],
   selfTokenRef: TokenOrDocument | string | null | undefined = "",
   ignoreSelf: boolean = false,
   AoETargetType: string = "any",
@@ -509,15 +509,14 @@ export function computeTargetsFromTemplate(
   }
   if (!mTemplate) return [];
 
-  // For cones/rays during preview, the shape may be stale (computed with old direction)
-  // Force recompute to ensure shape matches current document direction
-  const templateType = mTemplate.document.t;
-  if (templateType === "cone" || templateType === "ray") {
-    const { shape } = computeTemplateShapeDistance(mTemplate.document);
-    mTemplate.shape = shape;
-  } else if (!mTemplate.shape) {
-    const { shape } = computeTemplateShapeDistance(mTemplate.document);
-    mTemplate.shape = shape;
+  const useWalledTemplates = autoTarget === "walledtemplates" && game.modules.get("walledtemplates")?.active;
+  if (!useWalledTemplates) {
+    // For cones/rays during preview, the shape may be stale (computed with old direction)
+    const templateType = mTemplate.document.t;
+    if (templateType === "cone" || templateType === "ray" || !mTemplate.shape) {
+      const { shape } = computeTemplateShapeDistance(mTemplate.document);
+      mTemplate.shape = shape;
+    }
   }
 
   const selfToken = getToken(selfTokenRef);
@@ -530,9 +529,7 @@ export function computeTargetsFromTemplate(
     //@ts-expect-error VolumetricTemplates
     VolumetricTemplates.compute3Dtemplate(mTemplate, tokensToCheck);
     targetTokens = Array.from(game.user?.targets ?? []);
-  } else if (autoTarget === "walledtemplates" && game.modules.get("walledtemplates")?.active) {
-    //@ts-expect-error walledtemplates
-    if (foundry.utils.getProperty(mTemplate?.item, "flags.walledtemplates.noAutotarget")) return targetTokens;
+  } else if (useWalledTemplates) {
     //@ts-expect-error walledtemplates
     targetTokens = (mTemplate.targetsWithinShape) ? mTemplate.targetsWithinShape() : [];
     targetTokens = targetTokens.filter(token => isAoETargetable(token, { selfToken, ignoreSelf, AoETargetType, autoTarget }));
@@ -551,7 +548,7 @@ export function computeTargetsFromTemplate(
 }
 
 export function computeTargetsFromTemplates(
-  templates: (MeasuredTemplateDocument | string)[],
+  templates: (foundry.canvas.placeables.MeasuredTemplate.Implementation | MeasuredTemplateDocument | string)[],
   selfTokenRef: TokenOrDocument | string | null | undefined = "",
   ignoreSelf: boolean = false,
   AoETargetType: string = "any",

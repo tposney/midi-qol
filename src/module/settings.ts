@@ -159,6 +159,7 @@ class ConfigSettings {
   autoRemoveTemplate: boolean = true;
   autoRemoveInstantaneousTemplate: boolean = false;
   constrainTemplatePlacement: boolean = true;
+  templateSnapping: string = "full";
   autoRollAttack: boolean = false;
   autoRollDamage: string = "none";
   autoCompleteWorkflow = true;
@@ -369,7 +370,6 @@ export const checkedModuleList = [
   "dae",
   "ddb-importer",
   "ddb-game-log",
-  "df-templates",
   "dice-so-nice",
   "effectmacro",
   "gambits-premades",

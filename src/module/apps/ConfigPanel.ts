@@ -242,6 +242,10 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       RollSavesBlindOptions: foundry.utils.mergeObject({ "all": "All", "death": i18n("DND5E.DeathSave") }, Object.keys(GameSystemConfig.abilities).reduce((acc, s) => { acc[s] = GameSystemConfig.abilities[s].label; return acc }, {})),
       RollChecksBlindOptions: foundry.utils.mergeObject({ "all": "All" }, Object.keys(GameSystemConfig.abilities).reduce((acc, s) => { acc[s] = GameSystemConfig.abilities[s].label; return acc }, {})),
       midiPropertiesTabOptions: CONST.USER_ROLE_NAMES,
+      templateSnappingOptions: {
+        "full": i18n("midi-qol.TemplateSnapping.Full"),
+        "half": i18n("midi-qol.TemplateSnapping.Half"),
+      },
       StatusEffectOptions,
       vitalityDeathRequiresOptions,
       SaveDROrderOptions: saveDROrderOptions,

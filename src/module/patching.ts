@@ -1,11 +1,10 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, getPerimeterDistanceToPoint } from "./utils.js";
+import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiAttackActivity } from "./activities/AttackActivity.js";
-import { selectTargetsFromTemplates } from "./activities/activityHelpers.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
 import { MidiRollChoiceDialog, PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import Token = foundry.canvas.placeables.Token;
@@ -96,7 +95,6 @@ export function initPatching() {
 }
 
 export function readyPatching() {
-  libWrapper.register(MODULE_ID, "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
   libWrapper.register(MODULE_ID, "game.dnd5e.canvas.AbilityTemplate.prototype._onMovePlacement", midiATOnMovePlacement, "MIXED");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['dnd5e.CharacterActorSheet'].cls.prototype._filterItems", _filterItems, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.npc['dnd5e.NPCActorSheet'].cls.prototype._filterItems", _filterItems, "WRAPPER");
@@ -1806,72 +1804,23 @@ export async function computeToolAdvantage(actor: Actor.Implementation, toolId: 
   return tracker;
 }
 
-let debouncedATRefresh = foundry.utils.debounce(_midiATIRefresh, 30);
-function _midiATIRefresh(template: foundry.canvas.placeables.MeasuredTemplate.Implementation) {
-  // We don't have an item to check auto targeting with, so just use the midi setting
-  if (!canvas.tokens) return;
-  // @ts-expect-error no dnd5e-types
-  let autoTarget = getActivityAutoTargetAction(template.activity);
-  if (autoTarget === "none") return;
-  if (autoTarget === "dftemplates" && installedModules.get("df-templates"))
-    return; // df-templates will handle template targeting.
-
-  if (installedModules.get("levelsvolumetrictemplates") && !["walledtemplates"].includes(autoTarget)) {
-    //@ts-expect-error CONFIG.Levels
-    const levelsTemplateData = CONFIG.Levels.handlers.TemplateHandler.getTemplateData(false);
-    if (!template.document.elevation !== levelsTemplateData.elevation) {
-      template.document.elevation = levelsTemplateData.elevation;
-    }
-    // Filter which tokens to pass - not too far wall blocking is left to levels.
-    let distance = template.document.distance;
-    const dimensions = canvas.dimensions || { size: 1, distance: 1 };
-    distance *= dimensions.size / dimensions.distance;
-    const tokens: Token[] | undefined = canvas.tokens.placeables;
-    const tokensToCheck = tokens?.filter(tk => {
-      const r: Ray = new foundry.canvas.geometry.Ray(
-        { x: template.document?.x ?? template.x, y: template.document?.y ?? template.y },
-        { x: tk.x + tk.document.width * dimensions.size, y: tk.y + tk.document.height * dimensions.size }
-      );
-      const maxExtension = (1 + Math.max(tk.document.width, tk.document.height)) * dimensions.size;
-      const centerDist = r.distance;
-      if (centerDist > distance + maxExtension) return false;
-      if (["alwaysIgnoreIncapacitated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget) && checkIncapacitated(tk, debugEnabled > 0, false))
-        return false;
-      if (["alwaysIgnoreDefeated", "wallsBlockIgnoreDefeated"].includes(autoTarget) && checkDefeated(tk))
-        return false;
-      return true;
-    })
-
-    if (tokensToCheck && tokensToCheck.length > 0) {
-      //@ts-expect-error compute3Dtemplate(t, tokensToCheck = canvas.tokens.placeables)
-      VolumetricTemplates.compute3Dtemplate(template, tokensToCheck);
-    }
-  } else {
-    // @ts-expect-error no dnd5e-types
-    const activity = template.activity;
-    // Get source token from midi-qol flag (set in preCreateActivityTemplate hook)
-    const sourceToken = getTemplateSourceToken(template.document);
-    if (activity && sourceToken) {
-      const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some((spec: string) => ["self", "-self"].includes(spec));
-      selectTargetsFromTemplates([template.document], sourceToken, ignoreSelf, getAoETargetType(activity), autoTarget);
-      return true;
-    } else {
-      selectTargetsFromTemplates([template.document]);
-    }
-    return true;
-  }
-  return true;
-}
-
-function midiATRefresh(this: foundry.canvas.placeables.MeasuredTemplate.Implementation, wrapped) {
-  debouncedATRefresh(this);
-  return wrapped();
-}
-
 // Throttle timer for anchored template movement (mirrors dnd5e's private #moveTime)
 let anchoredMoveTime = 0;
 // Throttle timer for range-clamped template movement
 let rangeClampesMoveTime = 0;
+
+/**
+ * Snap a point for template placement based on the templateSnapping setting.
+ * "full" snaps to grid intersections (vertices) only, "half" adds centers and side midpoints.
+ */
+function snapTemplatePosition(point: { x: number; y: number }): { x: number; y: number } {
+  if (!canvas?.grid) return point;
+  const M = CONST.GRID_SNAPPING_MODES;
+  const mode = configSettings.templateSnapping === "half"
+    ? M.CENTER | M.VERTEX | M.CORNER | M.SIDE_MIDPOINT
+    : M.VERTEX;
+  return canvas.grid.getSnappedPoint({ x: point.x, y: point.y }, { mode, resolution: 1 });
+}
 
 /**
  * Get the maximum range for a template from its midi-qol flags.
@@ -1885,38 +1834,27 @@ function getTemplateMaxRange(templateDoc: MeasuredTemplateDocument.Implementatio
 
 /**
  * Clamp a point to be within maxRange distance from the token's perimeter.
- * Always uses perimeter-based measurement regardless of distanceMeasurement setting,
- * since template placement should consistently measure from the token's actual shape.
- * Clamps from the closest point on the token's perimeter polygon at the
- * exact pixel radius needed to achieve maxRange after gridification.
+ * Measures the raw grid distance from the closest perimeter point to the target
+ * using canvas.grid.measurePath (respects the scene's diagonal measurement mode).
  * Returns the clamped point, or the original point if within range.
  */
 function clampPointToRange(token: Token.Implementation, targetX: number, targetY: number, maxRange: number): { x: number, y: number, clamped: boolean } {
   if (!canvas?.grid || !canvas.dimensions) return { x: targetX, y: targetY, clamped: false };
 
-  // Calculate current distance using perimeter measurement
-  const distance = getPerimeterDistanceToPoint(token, { x: targetX, y: targetY });
-  if (distance < 0 || distance <= maxRange) {
+  // Find closest point on token perimeter and measure raw grid distance to target
+  const poly = getTokenPerimeterPolygon(token);
+  const closest = closestPointOnPerimeter(poly, targetX, targetY);
+  const distance = measurePointDistance(closest, { x: targetX, y: targetY });
+  if (distance <= maxRange) {
     return { x: targetX, y: targetY, clamped: false };
   }
 
-  // Clamp from the closest point on the token's perimeter
-  const poly = getTokenPerimeterPolygon(token);
-  const closest = closestPointOnPerimeter(poly, targetX, targetY);
-  // Perimeter gridification: distance = gridDistance + max(0, raw - fudge)
-  // To get distance = maxRange, need raw = maxRange - gridDistance + fudge
-  const pixelsPerUnit = canvas.dimensions.size / canvas.dimensions.distance;
-  const gridDistance = canvas.dimensions.distance;
-  const fudge = configSettings.gridlessFudge ?? 0;
-  const rawNeeded = Math.max(0, maxRange - gridDistance + fudge);
-  const clampRadiusPixels = rawNeeded * pixelsPerUnit;
-
+  // Scale the displacement vector so grid-measured distance equals maxRange
   const dx = targetX - closest.x;
   const dy = targetY - closest.y;
-  const currentDist = Math.sqrt(dx * dx + dy * dy);
-  if (currentDist === 0) return { x: targetX, y: targetY, clamped: false };
+  if (dx === 0 && dy === 0) return { x: targetX, y: targetY, clamped: false };
 
-  const scale = clampRadiusPixels / currentDist;
+  const scale = maxRange / distance;
   return {
     x: closest.x + dx * scale,
     y: closest.y + dy * scale,
@@ -1984,7 +1922,7 @@ function getTokenBorderPoint(token: Token.Implementation, targetX: number, targe
  * The sourceTokenUuid is pre-set in the dnd5e.preCreateActivityTemplate hook.
  * @returns The token, or undefined if not found
  */
-function getTemplateSourceToken(templateDoc: MeasuredTemplateDocument.Implementation): Token.Implementation | undefined {
+export function getTemplateSourceToken(templateDoc: MeasuredTemplateDocument.Implementation): Token.Implementation | undefined {
   const midiFlags = templateDoc.flags?.[MODULE_ID] as any;
   const sourceTokenUuid = midiFlags?.sourceTokenUuid as string | undefined;
   if (!sourceTokenUuid) return undefined;
@@ -1997,6 +1935,7 @@ function getTemplateSourceToken(templateDoc: MeasuredTemplateDocument.Implementa
  * Wrapper for AbilityTemplate._onMovePlacement to:
  * 1. Anchor cone/ray templates to the caster's token when anchorToToken flag is set
  * 2. Clamp template placement to activity range when checkRange is enabled
+ * 3. Apply midi template snapping setting for all template placements
  */
 function midiATOnMovePlacement(this: foundry.canvas.placeables.MeasuredTemplate.Implementation, wrapped, event: PIXI.FederatedPointerEvent) {
   // Check if this template should be anchored to a token (cones/rays from token border)
@@ -2007,51 +1946,55 @@ function midiATOnMovePlacement(this: foundry.canvas.placeables.MeasuredTemplate.
     return handleAnchoredTemplateMovement.call(this, event);
   }
 
-  // For non-anchored templates, check if we need to enforce range clamping
+  // For range-clamped templates, we must handle placement ourselves
   const maxRange = getTemplateMaxRange(this.document);
-  if (!maxRange) {
-    // No range restriction - use default behavior
-    return wrapped(event);
-  }
-
   const sourceToken = getTemplateSourceToken(this.document);
-  if (!sourceToken) {
-    return wrapped(event);
-  }
+  if (maxRange && sourceToken) {
+    // Apply throttling like the original method (20ms)
+    event.stopPropagation();
+    const now = Date.now();
+    if (now - rangeClampesMoveTime <= 20) return;
 
-  // Apply throttling like the original method (20ms)
-  event.stopPropagation();
-  const now = Date.now();
-  if (now - rangeClampesMoveTime <= 20) return;
+    // Get mouse position in canvas coordinates
+    const mouse = event.data?.getLocalPosition(this.layer) ?? (event as any).getLocalPosition(this.layer);
 
-  // Get mouse position in canvas coordinates
-  const mouse = event.data?.getLocalPosition(this.layer) ?? (event as any).getLocalPosition(this.layer);
+    // Clamp position to be within range
+    const position = clampPointToRange(sourceToken, mouse.x, mouse.y, maxRange);
 
-  // Clamp position to be within range
-  const clamped = clampPointToRange(sourceToken, mouse.x, mouse.y, maxRange);
+    // Snap to grid based on templateSnapping setting
+    const snapped = snapTemplatePosition(position);
+    const updates: { x: number; y: number; distance?: number } = { x: snapped.x, y: snapped.y };
 
-  // Get snapped position using dnd5e's method
-  const updates = (this as any).getSnappedPosition(clamped);
-
-  // Handle adjusted size for radius templates (same as dnd5e)
-  const dnd5eFlags = this.document.flags.dnd5e as any;
-  const baseDistance = dnd5eFlags?.dimensions?.size;
-  if (dnd5eFlags?.dimensions?.adjustedSize && baseDistance && canvas?.tokens) {
-    const rectangle = new PIXI.Rectangle(clamped.x, clamped.y, 1, 1);
-    const hoveredToken = canvas.tokens.quadtree?.getObjects(rectangle, {
-      collisionTest: ({ t }: any) => t.visible && !t.document.isSecret
-    }).first();
-    if (hoveredToken) {
-      const size = Math.max(hoveredToken.document.width, hoveredToken.document.height);
-      updates.distance = baseDistance + (size * (canvas.grid?.distance ?? 5) / 2);
-    } else {
-      updates.distance = baseDistance;
+    // Handle adjusted size for radius templates (same as dnd5e)
+    const dnd5eFlags = this.document.flags.dnd5e as any;
+    const baseDistance = dnd5eFlags?.dimensions?.size;
+    if (dnd5eFlags?.dimensions?.adjustedSize && baseDistance && canvas?.tokens) {
+      const rectangle = new PIXI.Rectangle(position.x, position.y, 1, 1);
+      const hoveredToken = canvas.tokens.quadtree?.getObjects(rectangle, {
+        collisionTest: ({ t }: any) => t.visible && !t.document.isSecret
+      }).first();
+      if (hoveredToken) {
+        const size = Math.max(hoveredToken.document.width, hoveredToken.document.height);
+        updates.distance = baseDistance + (size * (canvas.grid?.distance ?? 5) / 2);
+      } else {
+        updates.distance = baseDistance;
+      }
     }
+
+    this.document.updateSource(updates);
+    this.refresh();
+    rangeClampesMoveTime = now;
+    return;
   }
 
-  this.document.updateSource(updates);
-  this.refresh();
-  rangeClampesMoveTime = now;
+  // No range restriction - let the wrapper chain run (dnd5e + other modules),
+  // then re-snap the position using our templateSnapping setting
+  wrapped(event);
+  const snapped = snapTemplatePosition({ x: this.document.x, y: this.document.y });
+  if (snapped.x !== this.document.x || snapped.y !== this.document.y) {
+    this.document.updateSource({ x: snapped.x, y: snapped.y });
+    this.refresh();
+  }
 }
 
 /**
@@ -2078,8 +2021,8 @@ function handleAnchoredTemplateMovement(this: foundry.canvas.placeables.Measured
   const dy = mouse.y - borderPoint.y;
   const direction = Math.toDegrees(Math.atan2(dy, dx));
 
-  // Snap to grid if needed
-  const snapped = this.layer.getSnappedPoint(borderPoint);
+  // Snap to grid based on templateSnapping setting
+  const snapped = snapTemplatePosition(borderPoint);
 
   // Update source and refresh like dnd5e does
   this.document.updateSource({
