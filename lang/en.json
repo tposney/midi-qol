@@ -1111,6 +1111,8 @@
   "midi-qol.ConfirmAmmunition.Name": "Confirm Ammunition choice when rolling attack - shows attack roll configuration",
   "midi-qol.ActivityNamePrefix.Name": "Activity Prefix",
   "midi-qol.ActivityNamePrefix.Hint": "Prefix midi-qol activities name with Midi. Change requires reload",
+  "midi-qol.ConditionEditorEnabled.Name": "Condition Editor",
+  "midi-qol.ConditionEditorEnabled.Hint": "Show condition editor button on condition fields in activity sheets",
   "midi-qol.AoETargetTypeOptions": {
     "any": "Any",
     "ally": "Ally",

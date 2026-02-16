@@ -1,6 +1,42 @@
+### 13.0.47
+**Bug Fixes**
+* Fix for [object object] in some more drop down settings for midi-qol active effect panel.
+* Fix for optional bonus flags (optional.XXX.damage) being applied to other activity damage rolls as well as the primary damage roll, it is now only applied to the primary activity's damage roll.
+* Fix for some off by one errors when placing templates at max range.
+* For cast activities, unless the cast activity overrides the activation type, the activation type of the linked spell will be used to determine reactions.
+  - The use condition of both the cast activity **and** the linked spell will be used to determine if the cast activity can fire or not.
+  - This means you can make a non-reaction spell in to a reaction cast activity, by overriding the activation type in the cast activity and setting it to reaction.
+  - You can turn a reaction spell into a non-reaction activity by overriding the activation type on the cast activity to "action" or similar.
+  - If you don't override the activation type in the cast activity, the activation type of the linked spell will be used **ignoring** the activation type on the cast activity. This ones for you @Moto
+
+**New Features**
+* Added half-grid/full-grid position snapping setting from template placement. Defaults to half-grid (1/2 a grid square, so centers grid intersections and 1/2 way along segments), but it seems RAW is full grid, however core foundry/dnd5e is to snap to half-grid.
+* Auto targeting now goes via a Hook which means it should play more nicely with other modules.
+  - This means you need to decide which module is responsible for template auto targeting.
+  - You need to set each module to do auto targeting as needed, usually just one module should do auto targeting.
+  - The one exception to this is walledTemplates. You can either just choose which modules has autTargeting enabled, or you can disable autoTargeting in walledTemplates and enable the walledTemplates setting in midi's workflow tab.
+* Cast activities now spawn a workflow. The workflow is very limited and only calls the "preTargeting", "preItemRoll" and "dnd5e.preActivityUse" hooks/macros, then hands off to the spell.use activity (via dnd5e's cast activity).
+  - Subject to feedback I can look at increasing the hooks being called, but remember hooks/macros may get called twice, once in each workflow.
+* Boolean-intent midi flags now compose when multiple active effects target the same flag using ADD or MULTIPLY mode. 
+  * Requires DAE 13.0.21 which implements support for boolean intent fields.
+  - ADD mode composes values with `||` (OR — either condition grants the flag).
+  - MULTIPLY mode composes values with `&&` (AND — all conditions required).
+  - Previously, Foundry's default string concatenation produced incorrect values like `"trueattributes.hp.value < 10"` instead of proper conditional expressions.
+  - For example 
+```
+    flags.midi-qol.advantage.all ADD attributes.hp.value === attributes.hp.max
+    flags.midi-qol.advantage.all ADD attributes.hp.value < 10
+```
+    will give advantage to all rolls if hp is at max or less than 10 and flags.midi-qol.advantage.all will be
+```
+    attributes.hp.value === attributes.hp.max || attributes.hp.value < 10
+```
+  - Probably more importantly you can compose effects that grants advantage to different creature types without having to create some omnibus feature to cover all of them.
+  - Affected flags: `advantage.*`, `disadvantage.*`, `noAdvantage.*`, `noDisadvantage.*`, `fail.*`, `success.*`, `critical.*`, `noCritical.*`, `fumble.*`, `noFumble.*`, `grants.advantage.*`, `grants.disadvantage.*`, `grants.noAdvantage.*`, `grants.noDisadvantage.*`, `grants.critical.*`, `grants.noCritical.*`, `grants.fumble.*`, `grants.noFumble.*`, `grants.attack.success.*`, `grants.attack.fail.*`, `magicResistance.*`, `magicVulnerability.*`, `superSaver.*`, `semiSuperSaver.*`, `absorption.*`, `potentCantrip`, `sculptSpells`, `carefulSpells`, `sharpShooter`, `ignoreNearbyFoes`, `neverTarget`, `uncanny-dodge`, `inMotion`, `canFlank`, `fail.spell.vocal/somatic/material`, `fail.disadvantage.heavy`, `initiativeAdv/Disadv/NoAdv/NoDisadv`, `advantage/disadvantage.concentration`, `noAdvantage/noDisadvantage.concentration`, `advantage/disadvantage.deathSave`, `noAdvantage/noDisadvantage.deathSave`, `fail/success.deathSave`.
+
 ### 13.0.46
 **Bug Fixes**
-  * Fix for [object object] in some drop down settings for midi-qol active effect panel.
+* Fix for [object object] in some drop down settings for midi-qol active effect panel.
 
 ### 13.0.45
 **New Features**

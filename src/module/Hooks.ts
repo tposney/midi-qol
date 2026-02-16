@@ -116,7 +116,7 @@ export let readyHooks = async () => {
       const activity = template.activity;
       const sourceToken = getTemplateSourceToken(template.document);
       if (activity && sourceToken) {
-        const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some((spec: string) => ["self", "-self"].includes(spec));
+        const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some((spec: string) => ["-self"].includes(spec));
         selectTargetsFromTemplates([template], sourceToken, ignoreSelf, getAoETargetType(activity), autoTarget);
       } else {
         selectTargetsFromTemplates([template]);

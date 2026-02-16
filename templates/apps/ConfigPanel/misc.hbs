@@ -24,6 +24,12 @@
         configSettings.activityNamePrefix}} />
         <div class="notes midi-qol-faint">{{{localize "midi-qol.ActivityNamePrefix.Hint"}}}</div>
     </div>
+    <div class="form-group conditionEditorEnabled">
+        <label>{{localize "midi-qol.ConditionEditorEnabled.Name"}}</label>
+        <input id="conditionEditorEnabled" type="checkbox" name="conditionEditorEnabled" data-dtype="Boolean" {{checked
+        configSettings.conditionEditorEnabled}} />
+        <div class="notes midi-qol-faint">{{{localize "midi-qol.ConditionEditorEnabled.Hint"}}}</div>
+    </div>
     <div class="form-group midiPropertiesTab">
         <label>{{localize "midi-qol.MidiPropertiesTab.Name"}}</label>
         <select name="midiPropertiesTabRole" data-dtype="String">

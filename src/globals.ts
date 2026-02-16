@@ -31,6 +31,7 @@ declare module "fvtt-types/configuration" {
     interface HookConfig {
       "dae.addSpecialDurations": (daeSpecialDurations: Record<string, string>) => void;
       "dae.setFieldData": (fieldData: Record<string, string[]>) => void;
+      "dae.addAutoFields": (addAutoFields: Function) => void;
       "dae.ready": (api: any) => void;
       "dae.setupComplete": (api: any) => void;
       "dnd5e.activityConsumption": (activity: Activity, usageConfig: ActivityUseConfiguration, messageConfig: RollMessageConfig, updates: unknown) => boolean | void;

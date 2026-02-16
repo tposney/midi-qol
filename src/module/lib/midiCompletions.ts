@@ -37,41 +37,41 @@ const MIDI_COMPLETIONS: CompletionNode = {
       RollModifierTracker: { type: "class", detail: "class", info: "Tracks roll modifiers (advantage, critical, etc.)" },
 
       // Item/activity use
-      completeItemUse: { type: "function", detail: "(item, config?, dialog?, message?) => Promise<Workflow>", info: "Complete an item use workflow" },
-      completeActivityUse: { type: "function", detail: "(activity, usage?, dialog?, message?) => Promise<Workflow>", info: "Complete an activity use workflow" },
+      completeItemUse: { type: "function", detail: "(item, config?, dialog?, message?) => Promise<Workflow>", info: "Complete an item use workflow.\n- item: Item or UUID string\n- config.chooseActivity: show dialog to pick activity\n- config.midiOptions: {advantage, disadvantage, critical, fastForward, targetUuids, ...}\nReturns: Workflow or undefined" },
+      completeActivityUse: { type: "function", detail: "(activity, usage?, dialog?, message?) => Promise<Workflow>", info: "Complete an activity use workflow.\n- activity: Activity or UUID string\n- usage.midiOptions: {advantage, disadvantage, critical, fastForward, fastForwardAttack, fastForwardDamage, targetUuids, targetsToUse, rollAs, ignoreUserTargets, ...}\nReturns: Workflow or undefined" },
 
       // Distance and targeting
-      computeDistance: { type: "function", detail: "(token1, token2, options?) => number", info: "Compute distance between two tokens" },
-      checkDistance: { type: "function", detail: "(t1, t2, distance, options?) => boolean", info: "Check if two tokens are within distance" },
-      findNearby: { type: "function", detail: "(disposition, token, distance, options?) => Token[]", info: "Find all nearby tokens matching disposition (-1=hostile, 0=neutral, 1=friendly)" },
-      findNearbyCount: { type: "function", detail: "(disposition, token, distance, options?) => number", info: "Count nearby tokens matching disposition" },
-      checkNearby: { type: "function", detail: "(disposition, token, distance, options?) => Token", info: "Get first nearby token matching disposition" },
-      computeCoverBonus: { type: "function", detail: "(attacker, target, activity?) => number", info: "Compute cover bonus (0, 2, 5, or 999=full)" },
-      checkActivityRange: { type: "function", detail: "(activity, token, targets?, showWarning?) => object", info: "Check if activity is in range" },
-      selectTargetsFromTemplates: { type: "function", detail: "(templates, selfTokenRef?, ignoreSelf?, AoETargetType?, autoTarget?) => Token[]", info: "Set game.user.targets from template(s) and return targeted tokens" },
-      computeTargetsFromTemplates: { type: "function", detail: "(templates, selfTokenRef?, ignoreSelf?, AoETargetType?, autoTarget?) => Token[]", info: "Compute tokens inside template(s) without modifying game.user.targets" },
+      computeDistance: { type: "function", detail: "(token1, token2, options?) => number", info: "Compute distance between two tokens in grid units.\n- options.wallsBlock: block if no LOS (default false)\n- options.includeCover: include cover calc (default true)\n- options.includeElevation: include height difference\nReturns: distance or -1 if fully blocked" },
+      checkDistance: { type: "function", detail: "(t1, t2, distance, options?) => boolean", info: "Check if two tokens are within a given distance.\n- distance: max distance in grid units\n- options.wallsBlock: block if no LOS (default false)\n- options.includeCover: include cover calc (default true)\nReturns: true if distance <= threshold" },
+      findNearby: { type: "function", detail: "(disposition, token, distance, options?) => Token[]", info: "Find all tokens within distance matching disposition.\n- disposition: -1=hostile, 0=neutral, 1=friendly, null/\"all\"=any, or array\n- options: {includeIncapacitated, canSee, isSeen, includeToken, maxSize, relative}\n- relative (default true): disposition relative to token\nReturns: Token[]" },
+      findNearbyCount: { type: "function", detail: "(disposition, token, distance, options?) => number", info: "Count tokens within distance matching disposition.\n- disposition: -1=hostile, 0=neutral, 1=friendly, null/\"all\"=any, or array\n- options: {includeIncapacitated, canSee, isSeen, includeToken, maxSize, relative}\nReturns: number of matching tokens" },
+      checkNearby: { type: "function", detail: "(disposition, token, distance, options?) => boolean", info: "Check if any token is within distance matching disposition.\n- disposition: -1=hostile, 0=neutral, 1=friendly, null/\"all\"=any\n- options: {includeIncapacitated, canSee, isSeen, includeToken, maxSize, relative}\nReturns: true if at least one match found" },
+      computeCoverBonus: { type: "function", detail: "(attacker, target, activity?) => number", info: "Compute cover AC bonus for target against attacker.\n- attacker/target: Token or TokenDocument\n- activity: optional, used for ignore-cover checks\nReturns: 0=none, 2=half, 5=three-quarters, 999=full" },
+      checkActivityRange: { type: "function", detail: "(activity, token, targets?, showWarning?) => object", info: "Check if targets are within activity's range.\n- showWarning: display UI warning if out of range (default true)\nReturns: {result, attackingToken, range, longRange}\n- result: \"normal\", \"longRange\", or \"outOfRange\"" },
+      selectTargetsFromTemplates: { type: "function", detail: "(templates, selfTokenRef?, ignoreSelf?, AoETargetType?, autoTarget?) => Token[]", info: "Target tokens in template area and update game.user.targets.\n- AoETargetType: \"any\", \"enemy\", \"ally\", \"self\", \"neutral\"\n- autoTarget: \"none\", \"wallsBlock\", \"wallsBlockIgnoreDefeated\", \"wallsBlockIgnoreIncapacitated\", \"walledtemplates\"\nReturns: Token[]" },
+      computeTargetsFromTemplates: { type: "function", detail: "(templates, selfTokenRef?, ignoreSelf?, AoETargetType?, autoTarget?) => Token[]", info: "Compute tokens in template area WITHOUT modifying game.user.targets.\n- AoETargetType: \"any\", \"enemy\", \"ally\", \"self\", \"neutral\"\n- autoTarget: \"none\", \"wallsBlock\", \"wallsBlockIgnoreDefeated\", \"wallsBlockIgnoreIncapacitated\"\nReturns: Token[]" },
 
       // Conditions and effects
-      hasCondition: { type: "function", detail: "(actorRef, condition) => 0 | 1", info: "Check if actor/token has a condition" },
-      checkIncapacitated: { type: "function", detail: "(actorRef?, log?, warn?) => string | false", info: "Check if actor is incapacitated; returns condition name or false" },
-      createConditionData: { type: "function", detail: "({actor, condition, ...}) => object", info: "Create condition data for an actor" },
+      hasCondition: { type: "function", detail: "(actorRef, condition) => 0 | 1", info: "Check if actor/token has a condition.\n- actorRef: Actor, Token, TokenDocument, or UUID string\n- condition: status id (e.g. \"prone\", \"blinded\", \"concentrating\", \"stunned\")\nReturns: 1 if condition exists, 0 if not or immune" },
+      checkIncapacitated: { type: "function", detail: "(actorRef?, log?, warn?) => string | false", info: "Check if actor is incapacitated.\n- actorRef: Actor, Token, or UUID string\n- log: log result to console (default true)\n- warn: show UI warning (default false)\nReturns: condition name (e.g. \"dead\", \"unconscious\") or false" },
+      createConditionData: { type: "function", detail: "({actor, condition, ...}) => object", info: "Create condition/rollData for evalCondition.\n- Fields: {workflow, target, actor, item, activity, token, extraData, options}\nReturns: object with rollData, damage info, combat state for condition evaluation" },
       getConcentrationEffect: { type: "function", detail: "(actor?, item?) => ActiveEffect | undefined", info: "Get the concentration effect for an actor" },
       addConcentrationDependent: { type: "function", detail: "(actorRef, dependent, item?) => Promise", info: "Add a concentration dependent" },
-      createEffects: { type: "function", detail: "({actorUuid, effects, options}) => Promise<ActiveEffect[]>", info: "Create effects on an actor via UUID" },
-      removeEffects: { type: "function", detail: "({actorUuid, effects}) => Promise", info: "Remove effects from an actor by UUID" },
+      createEffects: { type: "function", detail: "({actorUuid, effects, options}) => Promise<boolean>", info: "Create active effects on an actor (runs as GM).\n- actorUuid: actor UUID string\n- effects: array of ActiveEffect.CreateData objects\n- options: {keepId: boolean}\nReturns: true on success, false on failure" },
+      removeEffects: { type: "function", detail: "({actorUuid, effects}) => Promise<boolean>", info: "Remove active effects from an actor (runs as GM).\n- actorUuid: actor UUID string\n- effects: array of effect ID strings\nReturns: true on success, false on failure" },
       updateEffects: { type: "function", detail: "({actorUuid, updates}) => Promise", info: "Update effects on an actor by UUID" },
-      chooseEffect: { type: "function", detail: "({actor, token?, item?, ...}) => Promise<ActiveEffect | null>", info: "Show dialog to choose an effect" },
+      chooseEffect: { type: "function", detail: "({actor, token?, item?, ...}) => Promise<ActiveEffect | false>", info: "Show dialog to choose which effect to apply from an item.\n- Fields: {actor, token, item, workflow, options}\n- options.chooseAll: auto-apply all without dialog\n- options.timeout: dialog timeout in ms\nReturns: selected ActiveEffect or false" },
 
       // Damage
-      applyTokenDamage: { type: "function", detail: "(damage, actor, itemCardUuids?, bonus?, death?) => Promise<ChatMessage>", info: "Apply damage to tokens" },
-      createDamageDetail: { type: "function", detail: "({amount, damageType, flavor?}) => DamageListEntry", info: "Create a damage detail entry" },
-      getTraitMult: { type: "function", detail: "(actor, damageType, item, props?) => number", info: "Get damage multiplier (0=immune, 0.5=resistant, 1=normal, 2=vulnerable)" },
-      modifyDamageBy: { type: "function", detail: "(amount, operator, multiplier?) => object", info: "Create a damage modification object" },
+      applyTokenDamage: { type: "function", detail: "(damageDetail, totalDamage, targets, item, saves, options?) => Promise<string[]>", info: "Apply damage to a set of tokens, creating damage cards.\n- damageDetail: [{value, type, properties}] array\n- targets/saves: Set<Token>\n- options: {workflow, superSavers, semiSuperSavers, forceApply, noConcentrationCheck}\nReturns: array of damage card UUIDs" },
+      createDamageDetail: { type: "function", detail: "({roll, activity, defaultType?}) => DamageDescription[]", info: "Create damage detail from roll results.\n- roll: Roll or Roll[]\n- activity: Activity (for damage type info)\n- defaultType: fallback damage type\nReturns: [{value, type, formula, properties}]" },
+      getTraitMult: { type: "function", detail: "(actor, damageType, item, props?) => number", info: "Get damage trait multiplier for an actor.\n- damageType: e.g. \"fire\", \"slashing\", \"healing\"\n- props: string[] of damage properties (e.g. \"mgc\")\nReturns: -1=healing, 0=immune, 0.5=resistant, 1=normal, 2=vulnerable" },
+      modifyDamageBy: { type: "function", detail: "({damageItem, value, multiplier?, type?, reason?}) => object", info: "Modify damage during isDamaged macro pass only.\n- damageItem: DamageListEntry from workflow\n- value: amount to add/subtract\n- multiplier: optional damage multiplier\n- type/reason: for logging\nReturns: damage modification object" },
 
       // Rolls
       addRollTo: { type: "function", detail: "(roll, bonusRoll) => Roll", info: "Add a bonus roll to another roll" },
       doConcentrationCheck: { type: "function", detail: "(actor, saveDC) => Promise<Roll>", info: "Perform a concentration check" },
-      contestedRoll: { type: "function", detail: "(attacker, defender, attackType, defenseType, options?) => Promise", info: "Perform a contested roll between two actors" },
+      contestedRoll: { type: "function", detail: "(data) => Promise<{result, rolls}>", info: "Perform a contested roll between two actors.\n- data.source/target: {rollType, ability, token, rollOptions}\n- rollType: \"test\" (ability check), \"save\", \"skill\"\n- data.success/failure/drawn: callback functions\nReturns: {result: number (+source wins, -target wins, 0=draw), rolls}" },
       displayDSNForRoll: { type: "function", detail: "(rolls?, rollType?, rollMode?) => Promise", info: "Display Dice So Nice 3D dice animation" },
       sumRolls: { type: "function", detail: "(rolls?, countHealing?) => number", info: "Sum roll results" },
       computeAbilityAdvantage: { type: "function", detail: "(actor, ability) => string | null", info: "Compute advantage/disadvantage for ability roll" },
@@ -86,12 +86,12 @@ const MIDI_COMPLETIONS: CompletionNode = {
       getTokenPlayerName: { type: "function", detail: "(token, checkGM?) => string", info: "Get the player name controlling a token" },
       raceOrType: { type: "function", detail: "(entity) => string", info: "Get race (PCs) or creature type (NPCs)" },
       typeOrRace: { type: "function", detail: "(entity) => string", info: "Get creature type (NPCs) or race (PCs)" },
-      canSee: { type: "function", detail: "(token, target) => boolean", info: "Check if token can see target" },
-      canSense: { type: "function", detail: "(token, target, validModes?) => boolean", info: "Check if token can sense target" },
+      canSee: { type: "function", detail: "(token, target) => boolean", info: "Check if token can see target (sight-based detection only).\n- token/target: Token, TokenDocument, or UUID string\nReturns: true if token has line of sight to target" },
+      canSense: { type: "function", detail: "(token, target, validModes?) => boolean", info: "Check if token can detect target via detection modes.\n- validModes: [\"all\"] (default), or specific modes:\n  \"basicSight\", \"lightPerception\", \"blindsight\", \"darkvision\", \"tremorsense\", \"truesight\"\nReturns: true if any valid mode detects target" },
       canSenseModes: { type: "function", detail: "(token, target, validModes?) => string[]", info: "Get detection modes token can use to sense target" },
       getOrCreateTokenForActor: { type: "function", detail: "(actor?) => Token | undefined", info: "Get or create a token for an actor" },
-      moveToken: { type: "function", detail: "(tokenRef, newCenter, animate?) => Promise", info: "Move a token to new position" },
-      moveTokenAwayFromPoint: { type: "function", detail: "(targetRef, distance, point, animate?, checkCollision?) => Promise", info: "Move token away from a point" },
+      moveToken: { type: "function", detail: "(tokenRef, newCenter, animate?) => Promise", info: "Move a token to a new position (runs as GM).\n- tokenRef: Token, TokenDocument, or UUID string\n- newCenter: {x, y} canvas coordinates\n- animate: animate movement (default true)" },
+      moveTokenAwayFromPoint: { type: "function", detail: "(targetRef, distance, point, animate?, checkCollision?) => Promise", info: "Push a token away from a point (runs as GM).\n- targetRef: Token, TokenDocument, or UUID string\n- distance: distance to push in grid units\n- point: {x, y} origin point to push away from\n- checkCollision: stop at walls (default false)" },
 
       // Action economy
       hasUsedReaction: { type: "function", detail: "(actor) => boolean", info: "Check if reaction has been used this turn" },
@@ -119,7 +119,7 @@ const MIDI_COMPLETIONS: CompletionNode = {
       resolveActivityMacro: { type: "function", detail: "(activity, macroName, macroText, rollData) => Promise", info: "Resolve and execute an activity macro" },
 
       // Condition evaluation
-      evalCondition: { type: "function", detail: "(condition, conditionData, options?) => any", info: "Evaluate a single condition expression" },
+      evalCondition: { type: "function", detail: "(condition, conditionData, options?) => any", info: "Evaluate a condition expression using roll data.\n- condition: formula string with @references, number, or boolean\n- conditionData: rollData object (from createConditionData)\n- options: {errorReturn (default false), async (default false)}\nReturns: evaluated result (boolean/number), or Promise if async" },
       evalAllConditions: { type: "function", detail: "(actorRef, flag, conditionData) => Promise<boolean>", info: "Evaluate all conditions for a flag" },
 
       // Settings and config

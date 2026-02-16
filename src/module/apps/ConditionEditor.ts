@@ -170,69 +170,29 @@ function buildConditionCompletions(api: any): Record<string, any> {
   if (tree.CONST) completions.CONST = cloneWithExtras(tree.CONST);
 
   // ── Sandbox helper functions (merged by asyncMySafeEval/mySafeEval) ──
+  // Pull function completions from the MidiQOL tree to avoid duplicating detail/info strings.
+  // These are the same functions exported on globalThis.MidiQOL and injected into the condition sandbox.
+  const midiChildren = tree.MidiQOL?.children ?? {};
+
   // Roll — pull rich class info (static + instance methods) from global tree
   completions.Roll = cloneWithExtras(tree.Roll,
     { info: "Foundry Roll class for dice expressions" }
   );
-  completions.findNearby = {
-    type: "function",
-    detail: "(disposition, tokenRef, distance, options?) => Token[]",
-    info: "Find tokens within distance. disposition: -1 (hostile), 0 (neutral), 1 (friendly), null (all)"
-  };
-  completions.findNearbyCount = {
-    type: "function",
-    detail: "(disposition, tokenRef, distance, options?) => number",
-    info: "Count tokens within distance of a token"
-  };
-  completions.checkNearby = {
-    type: "function",
-    detail: "(disposition, tokenRef, distance, options?) => boolean",
-    info: "Check if any tokens of given disposition are within distance"
-  };
-  completions.hasCondition = {
-    type: "function",
-    detail: "(actorRef, condition) => 0 | 1",
-    info: "Check if actor/token has a status condition (returns 0 or 1)"
-  };
+
+  // Functions shared with MidiQOL namespace — reference tree entries directly
+  for (const fn of [
+    "findNearby", "findNearbyCount", "checkNearby", "hasCondition",
+    "checkIncapacitated", "canSee", "canSense", "computeDistance",
+    "checkActivityRange", "checkDistance", "contestedRoll",
+  ]) {
+    if (midiChildren[fn]) completions[fn] = midiChildren[fn];
+  }
+
+  // Functions only available in condition sandbox (not in MidiQOL namespace)
   completions.checkDefeated = {
     type: "function",
     detail: "(actorRef) => 0 | 1",
-    info: "Check if actor/token is defeated (returns 0 or 1)"
-  };
-  completions.checkIncapacitated = {
-    type: "function",
-    detail: "(actorRef, logResult?, warning?) => string | false",
-    info: "Check if actor is incapacitated — returns condition name or false"
-  };
-  completions.canSee = {
-    type: "function",
-    detail: "(tokenRef, targetRef) => boolean",
-    info: "Check if a token can see another token (sight-based detection modes)"
-  };
-  completions.canSense = {
-    type: "function",
-    detail: "(tokenRef, targetRef, validModes?) => boolean",
-    info: "Check if a token can sense another via any detection mode"
-  };
-  completions.computeDistance = {
-    type: "function",
-    detail: "(t1, t2, options?) => number",
-    info: "Compute grid distance between two tokens (-1 if impossible)"
-  };
-  completions.checkActivityRange = {
-    type: "function",
-    detail: "(activity, tokenRef, targetsRef, showWarning?) => {result, range?, longRange?}",
-    info: "Check if targets are within the activity's range"
-  };
-  completions.checkDistance = {
-    type: "function",
-    detail: "(t1, t2, distance, options?) => boolean",
-    info: "Check if distance between two tokens is within limit"
-  };
-  completions.contestedRoll = {
-    type: "function",
-    detail: "(data) => Promise<object>",
-    info: "Perform a contested roll (async only). data: {source: {rollType, ability, token}, target: {...}}"
+    info: "Check if actor/token is defeated.\nReturns: 1 if defeated, 0 if not"
   };
   completions.fromUuidSync = {
     type: "function",

@@ -2409,6 +2409,7 @@ export type MidiOptions = {
   targetsToUse?: Set<foundry.canvas.placeables.Token.Implementation>;
   targetUuids?: string[];
   triggeredActivity?: boolean;
+  addOptionalBonuses?: boolean;
   updateWorkflow?: boolean;
   workflow?: Workflow;
   workflowId?: string;
@@ -5153,12 +5154,10 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
         if (!!item.getFlag("dnd5e", "cachedFor")) continue;
         // @ts-expect-error no dnd5e-types
         for (let activity of theItem.system.activities) {
-          // @ts-expect-error no dnd5e-types
-          const activationType = item.system.linkedActivity?.activation.type ??
-            activity.activation?.type;
+          const activationType = activity.effectiveActivationType ?? activity.activation?.type;
           if (!activationType?.includes("reaction")) continue;
           if (activationType !== "reaction") {
-            console.warn(`midi-qol | itemReaction | item ${item.name} ${activity.name} has a reaction type of ${activity.activation.type} which is deprecated - please update to reaction and reaction conditions`)
+            console.warn(`midi-qol | itemReaction | item ${item.name} ${activity.name} has a reaction type of ${activationType} which is deprecated - please update to reaction and reaction conditions`)
           }
           // Item uses a reaction and actor has used a reaction.
           if ((activity.activation?.value ?? 1) > 0 && usedReaction) continue; // TODO can't specify 0 cost reactions in dnd5e 4.x - have to find another way
@@ -5170,7 +5169,12 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
             const spell = activity.cachedSpell;
             // Get the first usable activity - this is what spell.use() will use
             const spellActivity = spell.system?.activities?.filter((a: any) => a.canUse)?.[0];
-            reactionCondition = `(${reactionCondition || "true"}) && (${spellActivity.reactionCondition || "true"})`;
+            const spellCondition = spellActivity?.reactionCondition || "";
+            if (reactionCondition && spellCondition) {
+              reactionCondition = `(${reactionCondition}) && (${spellCondition})`;
+            } else {
+              reactionCondition = reactionCondition || spellCondition;
+            }
           }
           // @ts-expect-error no dnd5e-types
           if (item.type === "spell") {
@@ -5191,16 +5195,13 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
           const config = activity._prepareUsageConfig({ create: false });
           const canUse = await activity._prepareUsageUpdates(config, { returnErrors: true });
           if (canUse instanceof Array) continue; // insufficient uses available
-          if (reactionCondition) {
-            const returnvalue = await evalReactionActivationCondition(options.workflow, reactionCondition, target, { async: true, extraData: { reaction: reactionTriggerLabelFor(triggerType) } });
-            if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using condition ${reactionCondition} condition ${returnvalue}`, options.workflow?.conditionData);
-
-            if (!returnvalue) continue;
-          } else {
-            if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using ${triggerType} filter`);
-            if (!(activity.activation?.type === triggerType || (triggerType === "reactionhit" && activity.activation?.type === "reaction")))
-              continue;
+          // If no condition is specified, default to requiring isAttacked
+          if (!reactionCondition) {
+            reactionCondition = 'reaction === "isAttacked"';
           }
+          const returnvalue = await evalReactionActivationCondition(options.workflow, reactionCondition, target, { async: true, extraData: { reaction: reactionTriggerLabelFor(triggerType) } });
+          if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using condition ${reactionCondition} condition ${returnvalue}`, options.workflow?.conditionData);
+          if (!returnvalue) continue;
           reactions.push(activity);
         }
       };
@@ -8605,8 +8606,8 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
   const targetIds: string[] = [];
   const maxTargets = targetDetails.affects?.count;
   // TODO (Michael): HERE! RIGHT HERE!
-  let ignoreToken = (targetDetails.affects.special ?? "").split(";").some(spec => ["self", "-self"].includes(spec)) ? null : tokenToUse;
-  if ((targetDetails.affects.special ?? "").split(";").some(spec => ["self"].includes(spec))) {
+  let ignoreToken = (targetDetails.affects.special ?? "").split(";").some(spec => ["-self"].includes(spec)) ? tokenToUse : null;
+  if ((targetDetails.affects.special ?? "").split(";").some(spec => "self" === spec)) {
     foundry.utils.logCompatibilityWarning("midi-qol | target specials includes 'self'. Use '-self' to exclude the caster",
       { since: "midi-qol 13.0.19", until: "13.1.0" });
   }

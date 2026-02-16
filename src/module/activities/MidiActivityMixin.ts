@@ -91,48 +91,24 @@ export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.Formu
     // Get the standard text input from parent
     const input = super._toInput(config) as HTMLInputElement;
 
+    if (!configSettings.conditionEditorEnabled) return input;
+
     // Create wrapper container
     const wrapper = document.createElement("div");
     wrapper.classList.add("midi-condition-field-wrapper");
     wrapper.appendChild(input);
 
-    // Create editor button
+    // Create editor button using data-action pattern (event listeners don't survive Handlebars outerHTML serialization)
+    const fieldName = config.name ?? this.name;
+    const fieldLabel = this.label ?? config.name ?? this.name;
     const button = document.createElement("button");
     button.type = "button";
-    button.classList.add("midi-condition-editor-btn");
-    button.innerHTML = '<i class="fas fa-code"></i>';
+    button.classList.add("midi-condition-editor-btn", "unbutton", "control-button");
+    button.dataset.action = "openConditionEditor";
+    button.dataset.fieldName = fieldName;
+    button.dataset.fieldLabel = fieldLabel;
+    button.innerHTML = '<i class="fas fa-code" inert></i>';
     button.title = i18n("midi-qol.ConditionEditor.Title");
-
-    // Click handler opens the ConditionEditor
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      // Find the parent item from the form's document
-      const form = input.closest("form");
-      const app = (form as any)?.closest?.("[data-appid]");
-      let parentItem: Item | null = null;
-      if (app) {
-        const appId = app.dataset.appid;
-        const appInstance = foundry.applications.instances.get(appId);
-        // Activity sheets have document property pointing to the activity
-        const activity = (appInstance as any)?.document;
-        parentItem = activity?.item ?? null;
-      }
-
-      new ConditionEditor({
-        value: input.value,
-        key: config.name ?? this.name,
-        label: this.label ?? config.name ?? this.name,
-        parent: parentItem,
-        onSubmit: (newValue: string) => {
-          input.value = newValue;
-          // Trigger change event so the form knows the value changed
-          input.dispatchEvent(new Event("change", { bubbles: true }));
-        },
-        onCancel: () => { }
-      }).render(true);
-    });
 
     wrapper.appendChild(button);
     return wrapper;
@@ -155,6 +131,11 @@ export let MidiActivityMixin = Base => {
     }
     set targets(value) {
       foundry.utils.logCompatibilityWarning("MidiActivityMixin | setting activity.targets is not supported. Use workflow.targets instead");
+    }
+
+    /** The effective activation type for this activity. Overridden by MidiCastActivity to resolve from the linked spell. */
+    get effectiveActivationType(): string | undefined {
+      return this.activation?.type;
     }
 
     static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.SHARED"];
@@ -731,9 +712,9 @@ export let MidiActivityMixin = Base => {
         usage.workflow.itemUseComplete = true;
 
         usage.workflow.id = useResults.message.uuid;
-        if (usage.workflow.itemUsesReaction && this.actor && !hasUsedReaction(this.actor))
+        if ((usage.workflow.itemUsesReaction || usage.midiOptions?.workflowOptions?.castUsesReaction) && this.actor && !hasUsedReaction(this.actor))
           await setReactionUsed(this.actor);
-        if (usage.workflow.itemUsesBonusAction && this.actor && !hasUsedBonusAction(this.actor))
+        if ((usage.workflow.itemUsesBonusAction || usage.midiOptions?.workflowOptions?.castUsesBonusAction) && this.actor && !hasUsedBonusAction(this.actor))
           await setBonusActionUsed(this.actor);
         // @ts-expect-error no dnd5e-types
         if (activity.item?.type === "spell" || activity.item.flags?.dnd5e?.spellLevel) {
@@ -1007,7 +988,8 @@ export let MidiActivityMixin = Base => {
         midiOptions: {
           ...config.midiOptions,
           fastForward: config.midiOptions?.fastForwardDamage,
-          updateWorkflow: false // rollFormula will try and restart the workflow
+          updateWorkflow: false, // rollFormula will try and restart the workflow
+          addOptionalBonuses: false // don't apply optional bonus flags to other activity damage
         }
       };
 
@@ -1255,7 +1237,9 @@ export let MidiActivityMixin = Base => {
           let promises = result.map(r => displayDSNForRoll(r, "damageRoll"));
           await Promise.all(promises);
         }
-        result = await config.workflow.processDamageRollBonusFlags(result);
+        if (config.midiOptions?.addOptionalBonuses !== false) {
+          result = await config.workflow.processDamageRollBonusFlags(result);
+        }
         return result;
       } catch (err) {
         const message = `doDamageRoll error for item ${this?.name} ${this.uuid}`;
@@ -1447,7 +1431,7 @@ export let MidiActivityMixin = Base => {
         }
       }
 
-      if (options.checkUse && this.useCondition && this.activation?.type !== "reaction") { // reactions condition evaluation is handled elsewhere
+      if (options.checkUse && this.useCondition && this.effectiveActivationType !== "reaction") { // reactions condition evaluation is handled elsewhere
         if (!(await evalActivationCondition(workflow, this.useCondition, workflow.targets.first(), { async: true }))) {
           const message = `${this.useConditionReason} ${this.actor?.name} unable to use ${this.item.name}:${this.name}`;
           if (!(usage.midiOptions?.noUseWarning || usage.midiOptions?.workflowOptions?.noUseWarning))
@@ -1501,12 +1485,12 @@ export let MidiActivityMixin = Base => {
       workflow.itemUsesReaction = false;
       if (!usage.midiOptions?.workflowOptions?.notReaction && options.checkReaction && this.actor?.inCombat) {
         const isTurn = game.combat?.combatant === game.combat?.getCombatantsByActor(this.actor)[0];
-        if (["reaction", "reactiondamage", "reactionmanual", "reactionpreattack"].includes(this.activation?.type ?? "")
+        if (["reaction", "reactiondamage", "reactionmanual", "reactionpreattack"].includes(this.effectiveActivationType ?? "")
           && (this.activation?.cost ?? 1) > 0) {
           workflow.itemUsesReaction = true;
         }
 
-        if (!isTurn && needsAOOCheck(this.actor) && this.attack && this.activation?.type !== "special") {
+        if (!isTurn && needsAOOCheck(this.actor) && this.attack && this.effectiveActivationType !== "special") {
           workflow.itemUsesReaction = true;
           workflow.AoO = true;
         }
@@ -1529,7 +1513,7 @@ export let MidiActivityMixin = Base => {
 
       workflow.itemUsesBonusAction = false;
       if (!usage.midiOptions?.workflowOptions?.notBonusAction && options.checkBonusAction && this.actor?.inCombat && needsBonusActionCheck(this.actor)) {
-        workflow.itemUsesBonusAction = ["bonus"].includes(this.activation?.type ?? "");
+        workflow.itemUsesBonusAction = ["bonus"].includes(this.effectiveActivationType ?? "");
         const queryBonus = workflow.itemUsesBonusAction && hasUsedBonusAction(this.actor) && needsBonusActionCheck(this.actor);
         if (queryBonus) {
           const shouldRoll = await foundry.applications.api.DialogV2.confirm({
@@ -1933,12 +1917,32 @@ export let MidiActivityMixinSheet = Base => {
       actions: {
         ...super.DEFAULT_OPTIONS.actions,
         addMacro: MidiActivitySheet.#addMacro,
+        openConditionEditor: MidiActivitySheet.#openConditionEditor,
       }
     }
     static #addMacro() {
       const Editor = globalThis.DAE?.DIMEditor;
       if (Editor) new Editor({ document: this.activity }).render({ force: true });
       else ui.notifications?.error("DIMEditor not available - install Dynamic Active Effects");
+    }
+
+    static #openConditionEditor(event: PointerEvent, target: HTMLElement) {
+      const fieldName = target.dataset.fieldName ?? "";
+      const fieldLabel = target.dataset.fieldLabel ?? fieldName;
+      const input = target.closest(".midi-condition-field-wrapper")?.querySelector("input") as HTMLInputElement | null;
+      if (!input) return;
+
+      new ConditionEditor({
+        value: input.value,
+        key: fieldName,
+        label: fieldLabel,
+        parent: this.activity?.item ?? null,
+        onSubmit: (newValue: string) => {
+          input.value = newValue;
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+        },
+        onCancel: () => { }
+      }).render({ force: true });
     }
 
     static PARTS = {
@@ -2025,10 +2029,10 @@ export let MidiActivityMixinSheet = Base => {
         return { ...option, selected: this.activity.midiProperties.ignoreTraits.has(option.value) }
       });
       context.AutoTargetTypeOptions = Object.entries(aoeTargetTypeOptions).map(([value, label]) => ({ value, label }));
-      const AutoCEEffectsOptions = Object.entries(autoCEEffectsOptions).map(([value, label]) => ({ value, label }));
+      const AutoCEEffectsOptions = Object.entries(autoCEEffectsOptions).map(([value, opt]) => ({ value, label: typeof opt === "string" ? opt : opt.label }));
       context.AutoCEEffectsOptions = [{ value: "default", label: i18n("midi-qol.MidiSettings") }, ...AutoCEEffectsOptions];
       const defaultAction = { "default": i18n("midi-qol.MidiSettings") };
-      context.AutoTargetActionOptions = Object.entries(foundry.utils.mergeObject(defaultAction, autoTargetOptions)).map(([value, label]) => ({ value, label }));
+      context.AutoTargetActionOptions = Object.entries(foundry.utils.mergeObject(defaultAction, autoTargetOptions)).map(([value, opt]) => ({ value, label: typeof opt === "string" ? opt : opt.label }));
       context.hasAreaTarget = this.activity.target?.template?.type;
       context.possibleOtherActivity = this.activity.possibleOtherActivity;
       context.turnChoiceOptions = [{ value: "start", label: i18n("midi-qol.OVERTIME.FIELDS.turnChoice.start") }, { value: "end", label: i18n("midi-qol.OVERTIME.FIELDS.turnChoice.end") }];

@@ -137,6 +137,7 @@ class ConfigSettings {
   addWounded: number = 0;
   addWoundedStyle: string = "none";
   activityNamePrefix: boolean = true;
+  conditionEditorEnabled: boolean = true;
   activationAutomation: string = "chat";
   midiWoundedCondition: string = "none";
   midiDeadCondition: string = "none";
@@ -1285,7 +1286,7 @@ export const confirmTargetOptions = keysToOptionsObj("ConfirmTargetOptions", [
   "never"
 ]);
 
-export const triggeredActivityTargetOptions = keysToExtendedOptionsObj("TriggeredActivityTargetOptions", [
+export const triggeredActivityTargetOptions = keysToOptionsObj("TriggeredActivityTargetOptions", [
   "self",
   "targets",
   "hitTargets",
@@ -1295,7 +1296,7 @@ export const triggeredActivityTargetOptions = keysToExtendedOptionsObj("Triggere
   "retarget"
 ]);
 
-export const triggeredActivityRollAsOptions = keysToExtendedOptionsObj("TriggeredActivityRollAsOptions", [
+export const triggeredActivityRollAsOptions = keysToOptionsObj("TriggeredActivityRollAsOptions", [
   "self",
   "firstTarget",
   "firstHitTarget",
@@ -1374,7 +1375,7 @@ export function getIgnoreTraitsOptions(): { value: string, label: string, group?
   return options;
 }
 
-export const aoeTargetTypeOptions = keysToExtendedOptionsObj("AoETargetTypeOptions", [
+export const aoeTargetTypeOptions = keysToOptionsObj("AoETargetTypeOptions", [
   "any",
   "ally",
   "notAlly",
