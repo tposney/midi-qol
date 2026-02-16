@@ -2019,7 +2019,6 @@ export class Workflow {
    * @returns true if all expected templates were placed and processed, false if incomplete
    */
   async processPlacedTemplates(templates: MeasuredTemplateDocument[], activity?: Activity): Promise<boolean> {
-    console.error("midi-qol | processPlacedTemplates | called with", templates?.length, "templates");
     if (!templates || templates.length === 0) return false;
 
     // Validate template count
@@ -2087,19 +2086,17 @@ export class Workflow {
    */
   async setupTemplateCleanup(templateDocument: MeasuredTemplateDocument): Promise<boolean> {
     // Skip if no template
-    if (!templateDocument) { console.error("midi-qol | setupTemplateCleanup | no templateDocument"); return false; }
+    if (!templateDocument) return false;
 
     // Skip if template will be auto-removed for instantaneous spells
     if (configSettings.autoRemoveInstantaneousTemplate &&
       this.activity?.duration?.units === "inst") {
-      console.error("midi-qol | setupTemplateCleanup | skipping instantaneous template (autoRemoveInstantaneousTemplate)");
       return false;
     }
 
     // Check for concentration effect first
     const concentrationEffect = getConcentrationEffect(this.actor, this.item);
     if (concentrationEffect) {
-      console.error("midi-qol | setupTemplateCleanup | attaching to concentration effect", concentrationEffect.uuid);
       await templateDocument.setFlag("dnd5e", "dependentOn", concentrationEffect.uuid);
       return true;
     }
@@ -2107,7 +2104,6 @@ export class Workflow {
     // Non-concentration: create template deletion effect if conditions are met
     // Requires DAE and autoRemoveTemplate setting
     if (!installedModules.get("dae") || !configSettings.autoRemoveTemplate) {
-      console.error("midi-qol | setupTemplateCleanup | skipping: dae installed=", installedModules.get("dae"), "autoRemoveTemplate=", configSettings.autoRemoveTemplate);
       return false;
     }
 
@@ -2118,14 +2114,13 @@ export class Workflow {
     );
 
     if (existingEffect) {
-      console.error("midi-qol | setupTemplateCleanup | attaching to existing effect", existingEffect.uuid);
       await templateDocument.setFlag("dnd5e", "dependentOn", existingEffect.uuid);
       return true;
     }
 
     // Create new template deletion effect
     const activityDuration = this.activity.duration;
-    if (!activityDuration?.units) { console.error("midi-qol | setupTemplateCleanup | no duration units", activityDuration); return false; }
+    if (!activityDuration?.units) return false;
 
     const selfTarget = this.token;
     const inCombat = (game.combat as Combat)?.turns.some(
