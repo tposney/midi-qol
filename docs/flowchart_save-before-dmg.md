@@ -139,7 +139,7 @@ flowchart TD
         preDamageRoll
         <small>Before Damage Roll</small>
       "] --> preDamageRollConfig
-        b["<p style='width:200px; text-wrap:balance;'>preDamageRollConfig and optional damage will repeat for damage on an 'other damage' activity</p>"]:::edgeLabel ~~~ optDamage
+        b["<p style='width:200px; text-wrap:balance;'>preDamageRollConfig will repeat for damage on 'other' activities</p>"]:::edgeLabel ~~~ optDamage
       preDamageRollConfig["
         preDamageRollConfig
         <small>Before Damage Configuration</small>

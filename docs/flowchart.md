@@ -144,7 +144,7 @@ flowchart TD
         <small>Before Damage Configuration</small>
       "] -.-> configureDamage
       configureDamage["<p style='width:200px; text-wrap:balance;'>Damage Roll Configure Dialog (Skipped with Fast Forward enabled)</p>"]:::edgeLabel -.-> optDamage
-        b["<p style='width:200px; text-wrap:balance;'>preDamageRollConfig and optional damage will repeat for damage on an 'other damage' activity</p>"]:::edgeLabel ~~~ optDamage
+        b["<p style='width:200px; text-wrap:balance;'>preDamageRollConfig will repeat for damage on 'other' activities</p>"]:::edgeLabel ~~~ optDamage
       preConfirmRoll --> postConfirmRoll
       postConfirmRoll --> preDamageRollStarted
         preDamageRollStarted --> DamageBonus["
