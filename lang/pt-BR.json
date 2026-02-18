@@ -1777,17 +1777,7 @@
   "midi-qol.flagTemplate.grants.noDisadvantage.tool.description": "Testes com {label} não terão desvantagem.",
   "midi-qol.flagTemplate.DR.damageType.name": "Redução  de Dano ({label})",
   "midi-qol.flagTemplate.DR.damageType.description": "Redução de dano {label}.",
-  "midi-qol.flagTemplate.absorption.name": "Absorção ({label})",
-  "midi-qol.flagTemplate.absorption.description": "Converte o dano {label} sofrido em cura.",
   "dae.MidiQOL.fieldData": {
-    "flags.midi-qol.absorption.midi-none": {
-      "name": "Absorção Dano (Sem Tipo)",
-      "description": "" 
-    },
-    "flags.midi-qol.absorption.none": {
-      "name": "Absorção Dano (Sem Dano)",
-      "description": "" 
-    },
     "flags.midi-qol.advantage.ability.all": {
       "name": "Vantagem Atributo (Todos)",
       "description": "Vantagem em todas as salvaguardas, testes de atributo e perícias" 
