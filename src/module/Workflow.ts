@@ -101,7 +101,7 @@ import { PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
-import { computeTargetsFromTemplates, postTemplateConfirmTargets } from "./activities/activityHelpers.js";
+import { activityHasScaledTargetCount, computeTargetsFromTemplates, postTemplateConfirmTargets } from "./activities/activityHelpers.js";
 import { Activity, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
@@ -320,18 +320,8 @@ export class Workflow {
   }
 
   get useActiveDefence() { return false; }
-  #actor: Actor.Implementation | undefined;
   get actor(): Actor.Implementation {
-    if (this.#actor) return this.#actor;
-    const uuid = this.midiFlags?.sourceActorUuid;
-    if (uuid) {
-      this.#actor = fromUuidSync(uuid) as Actor.Implementation;
-    }
-    return this.#actor!;
-  }
-  set actor(actor: Actor.Implementation) {
-    this.#actor = actor;
-    this.persistFields({ sourceActorUuid: actor?.uuid ?? "" });
+    return this.activity?.actor!;
   }
 
   #abort: boolean | undefined;
@@ -982,6 +972,7 @@ export class Workflow {
     attackType?: string;
     baseAc?: number;
     bonusAC?: number;
+    coverLabel?: string;
     gmName: string;
     hitClass: string;
     hitResultNumeric?: string;
@@ -1712,16 +1703,14 @@ export class Workflow {
         error(`Workflow was not provided with valid arguments: ${actor}, ${activity}, ${speaker}, ${targets}, ${options}`);
         throw new Error("Workflow could not be created");
       }
-      this.actor = actor;
+      this.activity = activity;
+      this.item = activity.item ?? options.item;
       if (speaker.token) this.token = canvas.tokens?.get(speaker.token);
       if (options.token) this.token = options.token;
       if (!this.token) {
         this.token = getOrCreateTokenForActor(this.actor);
       }
       if (targets && (targets instanceof Set ? targets.size : targets.length) !== 0) this.targets = new Set(targets ? targets : []);
-      // `activity` should always exist, here, so useless `??` maybe?
-      this.item = activity.item ?? options.item;
-      this.activity = activity;
       if (speaker) this.speaker = speaker;
       this.hitTargets = new Set();
       this.hitTargetsEC = new Set();
@@ -2351,8 +2340,20 @@ export class Workflow {
   async WorkflowState_AoETargetConfirmation(context: WorkflowContext = {}): Promise<WorkflowState> {
     const hasAoETemplate = activityHasAreaTarget(this.activity);
     const emanationNoTemplate = activityHasEmanationNoTemplate(this.activity);
-    if ((hasAoETemplate || emanationNoTemplate) && this.workflowOptions.targetConfirmation !== "none") {
+    // Also handle non-AoE activities with a scaled target count (e.g. Bless upcast)
+    // By this point, dnd5e.preUseActivity has replaced the workflow activity with the scaled version
+    const hasScaledTargetCount = activityHasScaledTargetCount(this.activity);
+    if ((hasAoETemplate || emanationNoTemplate || hasScaledTargetCount) && this.workflowOptions.targetConfirmation !== "none") {
       if (!await postTemplateConfirmTargets(this.activity, { workflowOptions: this.workflowOptions }, this)) {
+        return this.WorkflowState_Abort;
+      }
+    }
+    // Enforce target count after confirmation — for scaled activities this is the first check,
+    // since postChatCardChecks defers count enforcement when the target count depends on scaling.
+    if (hasScaledTargetCount) {
+      const allowedTargets = Number(this.activity.target?.affects?.count);
+      if (allowedTargets && this.targets.size > allowedTargets) {
+        ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
         return this.WorkflowState_Abort;
       }
     }
@@ -5093,6 +5094,7 @@ return {
       fullDamageText,
       halfDamageText,
       noDamageText,
+      hasDamageText: !!(fullDamageText || halfDamageText || noDamageText),
       saveDisplayFlavor: await this.computeSaveDisplayFlavor(rollDC, rollType, { rollAbilities, rollSkills, rollTools }),
       saves: this.saveDisplayData,
       // TODO force roll damage
@@ -5111,6 +5113,7 @@ return {
       fullDamageText,
       halfDamageText,
       noDamageText,
+      hasDamageText: !!(fullDamageText || halfDamageText || noDamageText),
       saveDisplayFlavor: this.saveDisplayFlavor,
       saves: this.saveDisplayData,
       // TODO force roll damage
@@ -5680,70 +5683,38 @@ return {
   /**
    * Build a Monks Token Bar save request for a target
    */
-  buildMonksTokenBarRequest(target: Token, saveDetails: AnyMutableObject, isMagicSave: boolean): MonksTokenBarRequest {
-    // Monks TokenBar's getTokenEntries copies advantage/disadvantage to keys object,
-    // then parseKeys sets altKey/ctrlKey from those. We don't set altKey/ctrlKey/shiftKey
-    // directly as they would redundantly trigger fast-forward in _rollAbility.
-    // Note: fastForward=true would skip the chat card roll button entirely (auto-roll all tokens).
-    // We don't pass it - let Monks use its own bypass-roll-dialog setting instead.
+  buildMonksTokenBarRequest(target: Token, saveDetails: AnyMutableObject): MonksTokenBarRequest {
+    // Monks TokenBar's getTokenEntries reads: token, advantage, disadvantage, request, fastForward.
+    // dc/showdc are read from the top-level options (2nd arg to requestRoll), not per-token.
+    // We don't pass fastForward — let Monks use its own bypass-roll-dialog setting instead.
     return {
       token: target.id ?? "",
-      dc: saveDetails.rollDC as number,
-      showdc: shouldDisplaySaveDC(this.actor),
       advantage: saveDetails.advantage as boolean | undefined,
       disadvantage: saveDetails.disadvantage as boolean | undefined,
-      isMagicSave,
-      isConcentrationCheck: saveDetails.isConcentrationCheck as boolean | undefined,
-      workflowOptions: saveDetails.workflowOptions as object,
-      options: {
-        midiOptions: {
-          itemUuid: this.saveItem?.uuid,
-          workflowId: this.id,
-          itemCardUuid: this.itemCardUuid
-        }
-      }
     };
   }
 
   /**
    * Build a Flash Rolls 5e save request for a target
    */
-  buildFlashRollsRequest(target: Token, saveDetails: AnyMutableObject, isMagicSave: boolean): FlashRollsRequest {
-    // Note: Flash Rolls does not use a fastForward parameter - it uses its own skipRollDialog setting
+  buildFlashRollsRequest(target: Token, saveDetails: AnyMutableObject): FlashRollsRequest {
+    // dispatchFlashRollsSaves aggregates these into a single FlashAPI.requestRoll call,
+    // reading only: token, advantage, disadvantage from per-target entries.
     return {
-      actorId: target.actor?.id ?? target.id ?? "",
-      actorUuid: (target.actor as Actor).uuid,
       token: target.id ?? "",
       advantage: saveDetails.advantage as boolean | undefined,
       disadvantage: saveDetails.disadvantage as boolean | undefined,
-      dc: saveDetails.rollDC as number,
-      showdc: shouldDisplaySaveDC(this.actor),
-      isMagicSave,
-      isConcentrationCheck: saveDetails.isConcentrationCheck as boolean | undefined,
-      workflowOptions: saveDetails.workflowOptions as object,
-      midiOptions: {
-        itemUuid: this.saveItem?.uuid,
-        workflowId: this.id,
-        itemCardUuid: this.itemCardUuid
-      }
     };
   }
 
   /**
    * Build an Epic Rolls 5e save request for a target
    */
-  buildEpicRollsRequest(target: Token, saveDetails: AnyMutableObject, isMagicSave: boolean): EpicRollsRequest {
-    // Note: Epic Rolls does not use a fastForward parameter - it has internal autoRoll logic for GM only
+  buildEpicRollsRequest(target: Token, saveDetails: AnyMutableObject): EpicRollsRequest {
     return {
       actorUuid: (target.actor as Actor).uuid,
-      token: target.id ?? "",
       advantage: saveDetails.advantage as boolean | undefined,
       disadvantage: saveDetails.disadvantage as boolean | undefined,
-      dc: saveDetails.rollDC as number,
-      showdc: shouldDisplaySaveDC(this.actor),
-      isMagicSave,
-      isConcentrationCheck: saveDetails.isConcentrationCheck as boolean | undefined,
-      workflowOptions: saveDetails.workflowOptions as object
     };
   }
 
@@ -5758,11 +5729,11 @@ return {
     rollSkills: string[],
     rollDC: number | undefined,
     whisper: boolean,
-    isMagicSave: boolean
   ): void {
     const monkRequests = monkRequestsPlayer.concat(monkRequestsGM);
     if (monkRequests.length === 0) return;
 
+    // MTB request string format: "save:dex", "ability:str", "skill:prc"
     let request: string | undefined;
     if (rollType === "save") {
       request = `save:${rollAbilities[0]}`;
@@ -5772,61 +5743,38 @@ return {
       request = `skill:${rollSkills[0]}`;
     }
 
-    if (!whisper && monkRequests.length > 0) {
+    const showdc = shouldDisplaySaveDC(this.actor);
+
+    // MTB requestRoll options only reads: request, silent, rollmode, dc, showdc, callback
+    const buildRequestData = (tokenData: MonksTokenBarRequest[], rollMode: string): AnyMutableObject => {
       const requestData: AnyMutableObject = {
-        tokenData: monkRequests,
+        tokenData,
         request,
         silent: true,
-        showdc: shouldDisplaySaveDC(this.actor),
-        rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
-          ? this.activity.midiProperties!.rollMode
-          : whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC,
-        isMagicSave
+        showdc,
+        rollMode,
       };
-      if (shouldDisplaySaveDC(this.actor) && "whisper" !== configSettings.autoCheckSaves) {
+      if (showdc && "whisper" !== configSettings.autoCheckSaves) {
         requestData.dc = rollDC;
       }
-      timedExecuteAsGM("monksTokenBarSaves", requestData);
+      return requestData;
+    };
+
+    if (!whisper) {
+      const rollMode = ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
+        ? this.activity.midiProperties!.rollMode
+        : CONST.DICE_ROLL_MODES.PUBLIC;
+      timedExecuteAsGM("monksTokenBarSaves", buildRequestData(monkRequests, rollMode));
     } else {
-      // Whisper mode - send GM and player requests separately
-      const requestDataGM: AnyMutableObject = {
-        tokenData: monkRequestsGM,
-        request,
-        silent: true,
-        rollMode: whisper ? CONST.DICE_ROLL_MODES.PRIVATE : "roll",
-        isMagicSave,
-        options: {
-          workflowOptions: this.workflowOptions,
-          midiOptions: {
-            isConcentrationCheck: !!this.item.flags[MODULE_ID]?.isConcentrationCheck,
-            isMagicSave,
-            saveItemUuid: this.item.uuid,
-            workflowId: this.id,
-            itemCardUuid: this.itemCardUuid,
-          }
-        }
-      };
-      const requestDataPlayer: AnyMutableObject = {
-        tokenData: monkRequestsPlayer,
-        request,
-        silent: true,
-        rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
-          ? this.activity.midiProperties!.rollMode
-          : "roll",
-        isMagicSave,
-        saveItemUuid: this.item.uuid,
-        workflowId: this.id,
-        itemCardUuid: this.itemCardUuid
-      };
-      if (shouldDisplaySaveDC(this.actor) && "whisper" !== configSettings.autoCheckSaves) {
-        requestDataPlayer.dc = rollDC;
-        requestDataGM.dc = rollDC;
-      }
+      // Whisper mode - send GM and player requests separately with different roll modes
+      const playerRollMode = ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
+        ? this.activity.midiProperties!.rollMode
+        : "roll";
       if (monkRequestsPlayer.length > 0) {
-        timedExecuteAsGM("monksTokenBarSaves", requestDataPlayer);
+        timedExecuteAsGM("monksTokenBarSaves", buildRequestData(monkRequestsPlayer, playerRollMode));
       }
       if (monkRequestsGM.length > 0) {
-        timedExecuteAsGM("monksTokenBarSaves", requestDataGM);
+        timedExecuteAsGM("monksTokenBarSaves", buildRequestData(monkRequestsGM, CONST.DICE_ROLL_MODES.PRIVATE));
       }
     }
   }
@@ -5874,7 +5822,6 @@ return {
         ? this.activity.midiProperties!.rollMode
         : "roll",
       workflowId: this.id,
-      itemCardUuid: this.itemCardUuid
     };
 
     timedExecuteAsGM("flashTokenBarSaves", flashRequest);
@@ -6076,7 +6023,7 @@ return {
     showRollDialog: boolean,
     simulate: boolean
   ): Promise<Roll[] | Roll | null> {
-    const { rollType, rollAbilities } = saveDetails;
+    const { rollType, rollAbilities = [] } = saveDetails;
     // Validate abilities for save/check types
     if ((rollType === "save" || rollType === "check") && rollAbilities.length === 0) {
       console.warn(`midi-qol | createStandardSaveRoll called with rollType=${rollType} but no abilities`);
@@ -6145,7 +6092,7 @@ return {
       });
 
       const requests = player?.isGM ? moduleRequests.monks.gm : moduleRequests.monks.player;
-      requests.push(this.buildMonksTokenBarRequest(target, saveDetails, isMagicSave));
+      requests.push(this.buildMonksTokenBarRequest(target, saveDetails));
       return { promise, requestCard: undefined };
     }
 
@@ -6157,7 +6104,7 @@ return {
       });
 
       const requests = player?.isGM ? moduleRequests.flash.gm : moduleRequests.flash.player;
-      requests.push(this.buildFlashRollsRequest(target, saveDetails, isMagicSave));
+      requests.push(this.buildFlashRollsRequest(target, saveDetails));
       return { promise, requestCard: undefined };
     }
 
@@ -6169,7 +6116,7 @@ return {
       });
 
       const requests = player?.isGM ? moduleRequests.epic.gm : moduleRequests.epic.player;
-      requests.push(this.buildEpicRollsRequest(target, saveDetails, isMagicSave));
+      requests.push(this.buildEpicRollsRequest(target, saveDetails));
       return { promise, requestCard: undefined };
     }
 
@@ -6619,7 +6566,7 @@ return {
     this.dispatchMonksTokenBarSaves(
       moduleRequests.monks.player, moduleRequests.monks.gm,
       rollType ?? "save", rollAbilities, rollSkills, rollDC,
-      whisper, !!isMagicSave
+      whisper,
     );
     this.dispatchFlashRollsSaves(
       moduleRequests.flash.player, moduleRequests.flash.gm,
@@ -7320,9 +7267,9 @@ return {
           }
           isHit = (attackTotal + attackBonus) >= targetAC || this.isCritical;
         }
-        if (bonusAC === FULL_COVER) isHit = false; // bonusAC will only be FULL_COVER if cover bonus checking is enabled.
+        if (bonusAC === FULL_COVER || !isFinite(targetAC)) isHit = false; // total cover: either from computeCoverBonus or from descriptor AC (Infinity)
 
-        if (targetEC) isHitEC = challengeModeArmorSet && attackTotal <= targetAC && attackTotal >= targetEC && bonusAC !== FULL_COVER;
+        if (targetEC) isHitEC = challengeModeArmorSet && attackTotal <= targetAC && attackTotal >= targetEC && bonusAC !== FULL_COVER && isFinite(targetAC);
         // check to see if the roll hit the target
         if ((isHit || isHitEC) && this.activity.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
           const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
@@ -7339,10 +7286,12 @@ return {
           if (targetEC) targetEC = targetActor.system.attributes.ac.EC + bonusAC + descriptorMod;
           if (result.ac) targetAC = result.ac + bonusAC; // deal with bonus ac if any.
           if (targetEC) targetEC = targetAC - targetAR + descriptorMod; // targetEC is always the same as targetAC - targetAR + descriptorMod
-          if (bonusAC === FULL_COVER) isHit = false; // bonusAC will only be FULL_COVER if cover bonus checking is enabled.
-          isHit = (attackTotal + attackBonus >= targetAC || this.isCritical) && result.name !== "missed";
-          if (challengeModeArmorSet) isHit = this.attackTotal >= targetAC || this.isCritical;
-          if (targetEC) isHitEC = challengeModeArmorSet && this.attackTotal <= targetAC && this.attackTotal >= targetEC;
+          if (bonusAC === FULL_COVER || !isFinite(targetAC)) isHit = false; // total cover: either from computeCoverBonus or from descriptor AC (Infinity)
+          else {
+            isHit = (attackTotal + attackBonus >= targetAC || this.isCritical) && result.name !== "missed";
+            if (challengeModeArmorSet) isHit = this.attackTotal >= targetAC || this.isCritical;
+          }
+          if (targetEC) isHitEC = challengeModeArmorSet && this.attackTotal <= targetAC && this.attackTotal >= targetEC && isFinite(targetAC);
         } else if ((!isHit && !isHitEC) && this.activity.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`)) {
           const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
           if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
@@ -7370,7 +7319,7 @@ return {
             this.attackRollModifierTracker.critical.setOverride(optionalCrit, "optionalCritRule", i18n("midi-qol.OptionalCritRule"));
           }
         }
-        hitResultNumeric = this.isCritical ? "++" : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
+        hitResultNumeric = this.isCritical ? "++" : !isFinite(targetAC) ? `${attackTotal}/∞` : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
       }
 
       const midiFlagsActorFail = this.actor.flags?.[MODULE_ID]?.fail;
@@ -7439,8 +7388,8 @@ return {
       if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor")) && !this.isCritical) hitScale = Math.floor((this.attackTotal - targetEC + 1) / ((targetActor?.system.attributes.ac.AR ?? 0) + 1) * 10) / 10;
       if (!this.challengeModeScale) this.challengeModeScale = {};
       this.challengeModeScale[targetToken.actor?.uuid ?? "dummy"] = hitScale;
-      if (this.isCritical) isHit = true;
-      if (isHit || this.isCritical) this.hitTargets = this.hitTargets.add(targetToken);
+      if (this.isCritical && isFinite(targetAC)) isHit = true;
+      if (isHit || (this.isCritical && isFinite(targetAC))) this.hitTargets = this.hitTargets.add(targetToken);
       if (isHitEC) this.hitTargetsEC = this.hitTargetsEC.add(targetToken);
       if (isHit || isHitEC) await this.processCriticalFlags();
       // This was set by computeCoverBonus so clear it after use.
@@ -7493,8 +7442,8 @@ return {
       const targetUuid = targetToken.document.uuid;
 
       let acBonusString = "";
-      let targetACString = `${targetAC}`;
-      if (attackBonus || bonusAC || reactionOptionalAC) {
+      let targetACString = !isFinite(targetAC) ? "∞" : `${targetAC}`;
+      if (isFinite(targetAC) && (attackBonus || bonusAC || reactionOptionalAC)) {
         //@ts-expect-error no dnd5e-types
         const baseAC = targetToken.actor?.system.attributes.ac?.value ?? 10;
         const optionalAC = reactionOptionalAC - baseAC;
@@ -7510,6 +7459,12 @@ return {
 
       const acDisplay = `${targetACString}${acBonusString}`;
 
+      // Determine cover label from target statuses
+      const targetStatuses = targetToken.actor?.statuses;
+      let coverLabel: string | undefined;
+      if (targetStatuses?.has("coverThreeQuarters")) coverLabel = "\u00BE";
+      else if (targetStatuses?.has("coverHalf")) coverLabel = "\u00BD";
+
       this.hitDisplayData[targetUuid] = {
         targetClass: !!targetToken.actor?.hasPlayerOwner ? "midi-qol-player-target" : "midi-qol-npc-target",
         target: targetToken,
@@ -7523,6 +7478,7 @@ return {
         baseAc: targetToken.actor?.system.attributes.ac?.value ?? 10,
         hitClass: ["hit", "critical", "isHitEC"].includes(isHitResult) ? "success" : "failure",
         acClass: (targetToken.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-ac",
+        coverLabel,
         hitSymbol,
         attackType,
         showAC: true,

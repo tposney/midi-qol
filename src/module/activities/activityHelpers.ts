@@ -132,6 +132,29 @@ export function activityConsumptionHook(activity: Activity, usageConfig: Activit
   return true;
 }
 
+/**
+ * Check if an activity's target count is a formula (not a plain number or blank).
+ * By the time this runs, prepareFinalData has already evaluated the formula to a number,
+ * so we check the raw _source data for the original formula string.
+ * If activity.target.override is true, the formula lives on the activity;
+ * otherwise it's inherited from the item via _setOverride.
+ * A formula-based count means the target count may change with scaling or other roll data,
+ * so target confirmation should be deferred until after the consumption dialog.
+ */
+export function activityHasScaledTargetCount(activity: Activity): boolean {
+  // @ts-expect-error no dnd5e-types - override is added by dnd5e's _setOverride, _source is raw DataModel source
+  const sourceCount = activity.target?.override
+    // @ts-expect-error no dnd5e-types
+    ? activity._source?.target?.affects?.count
+    // @ts-expect-error no dnd5e-types
+    : activity.item?.system?._source?.target?.affects?.count;
+  // Blank or missing means no explicit count (infinite targets) — not scaled.
+  // A plain numeric string like "3" is already resolved — not scaled.
+  // Anything else is a formula that may depend on roll data — treat as scaled.
+  if (typeof sourceCount !== "string" || sourceCount === "") return false;
+  return /[^0-9.]/.test(sourceCount);
+}
+
 function activityRequiresPostTemplateConfirmation(activity: Activity): boolean {
   // const isRangeTargeting = ["ft", "m"].includes(activity.range?.units) && ["creature", "ally", "enemy"].includes(activity.target?.affects.type);
   if (activity.target?.template?.type) {
@@ -139,6 +162,7 @@ function activityRequiresPostTemplateConfirmation(activity: Activity): boolean {
     //  } else if (isRangeTargeting) {
     //    return true;
   }
+  if (activityHasScaledTargetCount(activity)) return true;
   return false;
 }
 

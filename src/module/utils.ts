@@ -9,7 +9,7 @@ import { concentrationCheckItemDisplayName } from "./Hooks.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
-import { Activity, ActivityUseConfiguration, CalcDamageOptions, DamageDescription, DamageListEntry, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails } from "../globals.js";
+import { Activity, ActivityUseConfiguration, CalcDamageOptions, DamageDescription, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails } from "../globals.js";
 
 import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject, AnyObject } from "fvtt-types/utils";
@@ -2423,7 +2423,7 @@ export type MidiOptions = {
   /** Pre-computed advantage data per choice (ability/skill/tool), populated by Workflow.ts and deserialized by GMAction.
    *  A roll is always ONE type, so one object suffices for abilities, skills, or tools.
    */
-  advantageByChoice?: Record<string, { hasAdvantage: boolean; hasDisadvantage: boolean; defaultButton: "advantage" | "disadvantage" | "normal"; trackerData?: object; tracker?: import("./lib/RollModifierTracker.js").RollModifierTracker }>;
+  advantageByChoice?: Record<string, PreComputedAdvantageData>;
 };
 type SerializedMidiOptions = Omit<MidiOptions, "targetsToUse" | "rollAs" | "asUser"> & {
   targetsToUse?: string[];
@@ -3587,6 +3587,19 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
     item = activity.item;
   }
   if (!attacker || !target) return existingCoverBonus;
+
+  // If the target has a dnd5e cover status, ac.value already includes the cover bonus
+  // (for half/three-quarters). Skip querying cover modules to avoid double-counting.
+  // coverTotal is special: dnd5e's coverBonus getter returns 0 for it (ac.value unchanged),
+  // so we must return FULL_COVER explicitly.
+  const targetStatuses = target.actor?.statuses;
+  if (targetStatuses?.has("coverTotal")) {
+    return FULL_COVER;
+  }
+  if (targetStatuses?.has("coverHalf") || targetStatuses?.has("coverThreeQuarters")) {
+    return 0;
+  }
+
   let coverBonus = 0;
   try {
     switch (configSettings.optionalRules.coverCalculation) {

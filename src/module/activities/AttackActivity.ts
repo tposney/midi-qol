@@ -417,8 +417,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
               return false;
             }
           } else if (!rollConfig.attackMode && dialogConfig.options?.attackModeOptions?.length) dialogConfig.configure = true;
-          const targetDescriptors = foundry.utils.getProperty(messageConfig, "data.flags.dnd5e.targets") as DND5ETargetDescriptor[] | undefined;
-          if (targetDescriptors && workflow) workflow.targetDescriptors = targetDescriptors as DND5ETargetDescriptor[];
 
           // Apply roll modifiers (auto-fail/success, min/max) for attack rolls
           const actType = this.actionType;
@@ -469,6 +467,19 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           }
           return true;
         })
+        // Capture target descriptors last, after all other modules have had a chance to modify AC (e.g. cover)
+        //@ts-expect-error dnd5e hook not in fvtt-types
+        hookIds["dnd5e.postRollConfiguration"] = Hooks.once("dnd5e.postRollConfiguration", (rolls, config, dialog, message) => {
+          const targetDescriptors = foundry.utils.getProperty(message, "data.flags.dnd5e.targets") as DND5ETargetDescriptor[] | undefined;
+          if (targetDescriptors && workflow) {
+            // Convert dnd5e's null AC (coverTotal) to Infinity for midi's internal use.
+            // Infinity propagates through arithmetic (ac.value + Infinity = Infinity) ensuring auto-miss.
+            for (const td of targetDescriptors) {
+              if (td.ac === null) td.ac = Infinity;
+            }
+            workflow.targetDescriptors = targetDescriptors as DND5ETargetDescriptor[];
+          }
+        });
         // Active defence resolves by triggering saving throws and returns early
         if (workflow.useActiveDefence) {
           message.create = false; // go through the roll process but don't show the attack roll.

@@ -1,6 +1,6 @@
 import { checkRule, configSettings, safeGetGameSetting } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue } from "./utils.js";
+import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DamageDescriptionObject, Workflow, WorkflowOptions } from "./Workflow.js";
 import { bonusCheck, checkWounded } from "./patching.js";
@@ -9,8 +9,7 @@ import { queueUndoData, startUndoWorkflow, updateUndoChatCardUuids, _removeMostR
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { installedModules } from "./setupModules.js";
 import { Stats } from "./RollStats.js";
-import { AnyMutableObject } from "fvtt-types/utils";
-import { DamageApplicationOptions, DamageDescription, DamageListEntry, SaveDetails } from "../globals.js";
+import { DamageApplicationOptions, DamageDescription, DamageListEntry, MonksTokenBarRequest, RollDialogConfig, RollMessageConfig, RollProcessConfig, SaveDetails } from "../globals.js";
 
 export let socketlibSocket: any = undefined;
 let traitList = { di: "", dr: "", dv: "", dm: "", da: "" };
@@ -784,13 +783,60 @@ async function rollAbility(data: {
     rollMode?: string;
     showTargetDC?: boolean;
   };
+  // Legacy fields from pre-13.0.44 callers
+  request?: string;
+  targetUuid?: string;
+  ability?: string;
+  skill?: string;
+  tool?: string;
+  options?: any;
+  advantage?: boolean;
+  disadvantage?: boolean;
+  isMagicSave?: boolean;
+  isConcentrationCheck?: boolean;
+  rollDC?: number;
+  saveItemUuid?: string;
+  workflowOptions?: object;
+  workflowId?: string;
+  rollMode?: string;
 }) {
+  // Backward compatibility: migrate pre-13.0.44 flat argument format to new structure
+  if (!data.saveDetails && data.targetUuid) {
+    foundry.utils.logCompatibilityWarning(
+      "midi-qol | rollAbility called with legacy flat argument format. Use { saveDetails, displayOptions } instead.",
+      { since: "midi-qol 13.0.44", until: "midi-qol 13.1.0" }
+    );
+    data.saveDetails = {
+      actorUuid: data.targetUuid,
+      rollType: data.request ?? "save",
+      rollAbilities: data.ability ? [data.ability] : [],
+      rollSkills: data.skill ? [data.skill] : [],
+      rollTools: data.tool ? [data.tool] : [],
+      advantage: data.advantage,
+      disadvantage: data.disadvantage,
+      isMagicSave: data.isMagicSave ?? false,
+      isConcentrationCheck: data.isConcentrationCheck,
+      isFriendly: false,
+      rollDC: data.rollDC ?? 0,
+      saveItemUuid: data.saveItemUuid ?? "",
+      workflowOptions: data.workflowOptions ?? {},
+      workflowId: data.workflowId ?? "",
+      itemCardUuid: "",
+      itemId: data.options?.itemId ?? "",
+      modifierTracker: undefined,
+    };
+    data.displayOptions = {
+      fastForward: data.options?.fastForward,
+      chatMessage: data.options?.chatMessage ?? data.options?.create,
+      rollMode: data.options?.rollMode ?? data.rollMode,
+    };
+  }
   const sd = data.saveDetails;
   const disp = data.displayOptions;
 
-  const rollAbilities = sd.rollAbilities;
-  const rollSkills = sd.rollSkills;
-  const rollTools = sd.rollTools;
+  const rollAbilities = sd.rollAbilities ?? [];
+  const rollSkills = sd.rollSkills ?? [];
+  const rollTools = sd.rollTools ?? [];
   const ability = rollAbilities[0];
   const skill = rollSkills[0];
   const tool = rollTools[0];
@@ -822,8 +868,7 @@ async function rollAbility(data: {
   }
 
   // Build midiOptions for patching.ts
-  const midiOptions: AnyMutableObject = {
-    itemId,
+  const midiOptions: MidiOptions = {
     workflowId,
     rollAbilities,
     rollSkills,
@@ -834,20 +879,14 @@ async function rollAbility(data: {
     isMagicSave,
     saveItemUuid,
     isConcentrationCheck,
-    itemCardUuid,
     workflowOptions,
   };
 
-  let config: AnyMutableObject = {
+  let config: RollProcessConfig = {
     midiOptions,
     advantage,
     disadvantage,
-    isMagicSave,
-    isConcentrationCheck,
-    rollDC,
-    saveItemUuid,
     workflowOptions,
-    workflowId
   };
 
   // Reconstruct tracker instances from advantageByChoice - class instances don't survive socketlib
@@ -865,8 +904,8 @@ async function rollAbility(data: {
   if (ability) config.ability = ability;
   if (skill) config.skill = skill;
   if (tool) config.tool = tool;
-  let dialog: AnyMutableObject = { configure: !fastForward };
-  let message: AnyMutableObject = { create: chatMessage, rollMode };
+  let dialog: RollDialogConfig = { configure: !fastForward };
+  let message: RollMessageConfig = { create: chatMessage, rollMode: rollMode as RollMessageConfig["rollMode"] };
   if (normalizedRequest === "tool") {
     const toolsToTry = rollTools.length > 0 ? rollTools : (tool ? [tool] : []);
     let toolItem: Item.Implementation | undefined;
@@ -891,7 +930,7 @@ async function rollAbility(data: {
       if (foundToolId && foundToolId !== tool) config.tool = foundToolId;
     }
   }
-  if (rollMode) message.rollMode = rollMode;
+  if (rollMode) message.rollMode = rollMode as RollMessageConfig["rollMode"];
   return new Promise(async (resolve) => {
     let timeoutId: NodeJS.Timeout | undefined;
     let result: Roll[] | Roll | undefined;
@@ -921,21 +960,24 @@ async function rollAbility(data: {
   });
 }
 
-// TODO: This, once MTB is in in v13. For now, not worth even typing
-function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: string; dc: number | undefined, isMagicSave: boolean | undefined, midiOptions: any | undefined }) {
-  // let tokens = data.tokens.map((tuuid: any) => new Token(MQfromUuid(tuuid)));
-
-  // TODO come back and see what things can be passed to this.
+function monksTokenBarSaves(data: {
+  tokenData: MonksTokenBarRequest[];
+  request: string;
+  silent: boolean;
+  showdc: boolean;
+  rollMode: string;
+  dc?: number;
+}) {
+  // MTB requestRoll options only reads: request, silent, rollmode, dc, showdc, callback
   //@ts-expect-error MonksTokenBar
   game.MonksTokenBar?.requestRoll(
     data.tokenData,
     {
       request: data.request,
       silent: data.silent,
+      showdc: data.showdc,
       rollmode: data.rollMode,
       dc: data.dc,
-      isMagicSave: data.isMagicSave,
-      options: data.midiOptions
     });
 }
 
@@ -950,13 +992,14 @@ function flashTokenBarSaves(data: {
   sendAsRequest: boolean;
   rollMode: string | undefined;
   workflowId: string;
-  itemCardUuid: string;
 }) {
   if (debugEnabled > 0) debug("flashTokenBarSaves | Called with data:", data);
 
   //@ts-expect-error FlashAPI
   if (typeof FlashAPI !== 'undefined') {
     if (debugEnabled > 0) debug("flashTokenBarSaves | FlashAPI found, calling requestRoll");
+    // FlashAPI.requestRoll reads: requestType, rollKey, actorIds, dc, advantage,
+    // disadvantage, rollMode, skipRollDialog, sendAsRequest, workflowId
     //@ts-expect-error FlashAPI
     FlashAPI.requestRoll({
       requestType: data.requestType,
@@ -966,7 +1009,7 @@ function flashTokenBarSaves(data: {
       advantage: data.advantage,
       disadvantage: data.disadvantage,
       skipRollDialog: data.skipRollDialog,
-      sendAsRequest: true,
+      sendAsRequest: data.sendAsRequest,
       rollMode: data.rollMode,
       workflowId: data.workflowId
     });

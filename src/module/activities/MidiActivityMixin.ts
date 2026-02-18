@@ -68,7 +68,7 @@ import {
   needsAOOCheck,
   addRollTo,
 } from "../utils.js";
-import { preTemplateTargets, removeFlanking, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
+import { activityHasScaledTargetCount, preTemplateTargets, removeFlanking, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
   _validateType(value: unknown) {
@@ -294,18 +294,23 @@ export let MidiActivityMixin = Base => {
     }
     get messageFlags() {
       const baseFlags = super.messageFlags;
-      // cannot change targets once the workflow has started....
-      if (baseFlags.dnd5e?.targets) delete baseFlags.dnd5e.targets;
+      // Lock target membership to workflow.targets, but use dnd5e's fresh AC values.
+      // dnd5e's getTargetDescriptors() reads live ac.value (which includes cover bonuses)
+      // and returns null for coverTotal. Don't use workflow.targetDescriptors here because
+      // getWorkflowByActivityUuid may return a stale workflow from a previous use.
       const targets = new Map();
       if (this.workflow?.targets) {
+        const dnd5eDescriptors = baseFlags.targets as Array<{uuid: string, ac: number | null}> | undefined;
         for (const token of this.workflow.targets) {
           const { name } = token;
           const { img, system, uuid } = token.actor ?? {};
+          if (!uuid) continue;
+          const dnd5eTarget = dnd5eDescriptors?.find(td => td.uuid === uuid);
           //@ts-expect-error no dnd5e types
-          if (uuid) targets.set(uuid, { name, img, uuid, ac: system?.attributes?.ac?.value });
+          const ac = dnd5eTarget ? dnd5eTarget.ac : system?.attributes?.ac?.value ?? null;
+          targets.set(uuid, { name, img, uuid, ac });
         }
         baseFlags.targets = Array.from(targets.values());
-
       }
       return baseFlags;
     }
@@ -1581,9 +1586,11 @@ export let MidiActivityMixin = Base => {
         }
 
         // Determine allowed number of targets
+        // Skip count enforcement for scaled target counts — deferred to WorkflowState_AoETargetConfirmation
+        // where the user will have a chance to adjust targets after seeing the scaled count.
         let allowedTargets: number;
         const hasExplicitCount = this.target?.affects?.count && this.target.affects.count !== "";
-        if (hasExplicitCount) {
+        if (hasExplicitCount && !activityHasScaledTargetCount(this)) {
           allowedTargets = Number(this.target.affects.count);
         } else if (options.checkTargets && requiresTargets && shouldEnforceSingleTarget(this)) {
           // Enforce single target for weapons when the setting is enabled
@@ -1679,6 +1686,9 @@ export let MidiActivityMixin = Base => {
         case "consumeOtherActivity": return !(consumed && foundry.utils.isEmpty(consumed));
         // Show refund button only when actually consumed (non-empty object)
         case "refundOtherActivity": return !consumed || foundry.utils.isEmpty(consumed);
+        // dnd5e hides placeTemplate when !game.canvas.scene, which is true during page reload
+        // before canvas is ready — only check permission here
+        case "placeTemplate": return !game.user?.can("TEMPLATE_CREATE");
       }
       return super.shouldHideChatButton?.(button, message) ?? false;
     }

@@ -58,6 +58,19 @@ When an Active Effect with CUSTOM mode is applied, midi-qol processes the value 
 | **Number Flags** (DR.{attackType}) | Value parsed as number |
 | **Boolean Flags** (default) | Value evaluated as conditional expression |
 
+### BooleanFormula Fields
+
+Many midi-qol flags are registered as **BooleanFormula** fields with DAE. BooleanFormula is a custom field type (provided by DAE's `BooleanFormulaField` class) that accepts either a boolean value (`true`/`false`) or a string expression that is evaluated at runtime as a conditional formula. In the DAE Active Effect editor, BooleanFormula fields show a specialized input that allows entering either a simple toggle or a conditional expression.
+
+Flags marked as **BooleanFormula** in the sections below accept:
+- `1`, `true` — always active
+- `0`, `false` — never active
+- A conditional expression string (e.g., `abilities.str.mod >= 3`) — evaluated at runtime
+
+All **Evaluated** flags in the advantage, disadvantage, noAdvantage, noDisadvantage, fail, success, critical, noCritical, fumble, noFumble, grants, magicResistance, and magicVulnerability categories are BooleanFormula fields.
+
+Additionally, the following special flags are BooleanFormula: `neverTarget`, `ignoreNearbyFoes`, `potentCantrip`, `sculptSpells`, `carefulSpells`, `sharpShooter`, `uncanny-dodge`, `inMotion`, `initiativeAdv`, `initiativeDisadv`, `initiativeNoAdv`, `initiativeNoDisadv`, `advantage.concentration`, `disadvantage.concentration`, `noAdvantage.concentration`, `noDisadvantage.concentration`, `fail.disadvantage.heavy`, and `canFlank`.
+
 **Deferred evaluation flags** include:
 - `flags.midi-qol.optional.*` - Optional bonus effects
 - `flags.midi-qol.advantage.*` / `disadvantage.*` - Advantage/disadvantage conditions
@@ -381,7 +394,7 @@ Convert incoming damage of a specific type to healing.
 
 ## Advantage
 
-Grant advantage on various roll types. All advantage flags are **Evaluated** (conditional expression).
+Grant advantage on various roll types. All advantage flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 ### All Rolls
 
@@ -452,7 +465,7 @@ Grant advantage on various roll types. All advantage flags are **Evaluated** (co
 
 ## Disadvantage
 
-Grant disadvantage on various roll types. All disadvantage flags are **Evaluated** (conditional expression).
+Grant disadvantage on various roll types. All disadvantage flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 ### All Rolls
 
@@ -523,7 +536,7 @@ Grant disadvantage on various roll types. All disadvantage flags are **Evaluated
 
 ## No Advantage
 
-Prevent advantage on various roll types. These flags suppress advantage even when other sources would grant it. All noAdvantage flags are **Evaluated** (conditional expression).
+Prevent advantage on various roll types. These flags suppress advantage even when other sources would grant it. All noAdvantage flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 ### All Rolls
 
@@ -591,7 +604,7 @@ Prevent advantage on various roll types. These flags suppress advantage even whe
 
 ## No Disadvantage
 
-Prevent disadvantage on various roll types. These flags suppress disadvantage even when other sources would impose it. All noDisadvantage flags are **Evaluated** (conditional expression).
+Prevent disadvantage on various roll types. These flags suppress disadvantage even when other sources would impose it. All noDisadvantage flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 ### All Rolls
 
@@ -659,7 +672,7 @@ Prevent disadvantage on various roll types. These flags suppress disadvantage ev
 
 ## Critical Hits
 
-Force attacks to be critical hits. All critical flags are **Evaluated** (conditional expression).
+Force attacks to be critical hits. All critical flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 | Flag | Access | Description |
 |------|--------|-------------|
@@ -672,7 +685,7 @@ Force attacks to be critical hits. All critical flags are **Evaluated** (conditi
 
 ## No Critical
 
-Prevent attacks from being critical hits. All noCritical flags are **Evaluated** (conditional expression).
+Prevent attacks from being critical hits. All noCritical flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 | Flag | Access | Description |
 |------|--------|-------------|
@@ -685,7 +698,7 @@ Prevent attacks from being critical hits. All noCritical flags are **Evaluated**
 
 ## Fumble
 
-Force attacks to be fumbles (critical failures). All fumble flags are **Evaluated** (conditional expression).
+Force attacks to be fumbles (critical failures). All fumble flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 | Flag | Access | Description |
 |------|--------|-------------|
@@ -698,7 +711,7 @@ Force attacks to be fumbles (critical failures). All fumble flags are **Evaluate
 
 ## No Fumble
 
-Prevent attacks from being fumbles. All noFumble flags are **Evaluated** (conditional expression).
+Prevent attacks from being fumbles. All noFumble flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 | Flag | Access | Description |
 |------|--------|-------------|
@@ -711,7 +724,7 @@ Prevent attacks from being fumbles. All noFumble flags are **Evaluated** (condit
 
 ## Auto-Fail
 
-Force automatic failure on rolls. All fail flags are **Evaluated** (conditional expression).
+Force automatic failure on rolls. All fail flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 ### Ability Rolls
 
@@ -771,7 +784,7 @@ Force automatic failure on rolls. All fail flags are **Evaluated** (conditional 
 
 ## Auto-Success
 
-Force automatic success on rolls. All success flags are **Evaluated** (conditional expression).
+Force automatic success on rolls. All success flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 ### Attack Rolls
 
@@ -822,7 +835,7 @@ Force automatic success on rolls. All success flags are **Evaluated** (condition
 
 ## Grants (Target Effects)
 
-Flags applied to a target that affect incoming attacks/rolls against them. All grants flags are **Evaluated** (conditional expression) unless noted.
+Flags applied to a target that affect incoming attacks/rolls against them. All grants flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE, unless noted.
 
 ### Grant Advantage to Attackers
 
@@ -993,7 +1006,7 @@ These flags are set on the **source actor** (caster) and suppress advantage/disa
 
 ## Magic Resistance/Vulnerability
 
-Advantage or disadvantage on saves against magical effects. All magic resistance/vulnerability flags are **Evaluated** (conditional expression).
+Advantage or disadvantage on saves against magical effects. All magic resistance/vulnerability flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 ### Magic Resistance
 
@@ -1187,23 +1200,23 @@ Modify item range values. Range flags are **Evaluated** (expression with roll da
 
 ### Super Saver
 
-No damage on save, half damage on fail.
+No damage on save, half damage on fail. Registered as **BooleanFormula** fields with DAE.
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.superSaver.all` | Direct | No damage on save, half damage on fail (all saves) |
-| `flags.midi-qol.superSaver.{ability}` | Direct | Super saver for specific ability saves |
+| `flags.midi-qol.superSaver.all` | Evaluated | No damage on save, half damage on fail (all saves) |
+| `flags.midi-qol.superSaver.{ability}` | Evaluated | Super saver for specific ability saves |
 
 *Abilities: str, dex, con, int, wis, cha.*
 
 ### Semi Super Saver
 
-No damage on save (normal damage on fail).
+No damage on save (normal damage on fail). Registered as **BooleanFormula** fields with DAE.
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.semiSuperSaver.all` | Direct | No damage on save (all saves) |
-| `flags.midi-qol.semiSuperSaver.{ability}` | Direct | Semi super saver for specific ability saves |
+| `flags.midi-qol.semiSuperSaver.all` | Evaluated | No damage on save (all saves) |
+| `flags.midi-qol.semiSuperSaver.{ability}` | Evaluated | Semi super saver for specific ability saves |
 
 *Abilities: str, dex, con, int, wis, cha.*
 
@@ -1412,21 +1425,23 @@ Only prompt when save fails.
 
 ### Combat Features
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.ignoreNearbyFoes` | Evaluated | Ignore disadvantage on ranged attacks from nearby enemies |
-| `flags.midi-qol.sharpShooter` | Evaluated | No disadvantage at long range. **Deprecated:** Use `flags.dnd5e.sharpShooter` |
-| `flags.midi-qol.uncanny-dodge` | Direct | Halve incoming damage |
-| `flags.midi-qol.potentCantrip` | Direct | Cantrips do half damage on successful save |
-| `flags.midi-qol.neverTarget` | Direct | Token cannot be targeted |
-| `flags.midi-qol.inMotion` | Direct | Token is in motion |
+| Flag | Access | BooleanFormula | Description |
+|------|--------|:--------------:|-------------|
+| `flags.midi-qol.ignoreNearbyFoes` | Evaluated | Yes | Ignore disadvantage on ranged attacks from nearby enemies |
+| `flags.midi-qol.sharpShooter` | Evaluated | Yes | No disadvantage at long range. **Deprecated:** Use `flags.dnd5e.sharpShooter` |
+| `flags.midi-qol.uncanny-dodge` | Evaluated | Yes | Halve incoming damage |
+| `flags.midi-qol.potentCantrip` | Evaluated | Yes | Cantrips do half damage on successful save |
+| `flags.midi-qol.neverTarget` | Evaluated | Yes | Token cannot be targeted |
+| `flags.midi-qol.inMotion` | Evaluated | Yes | Token is in motion |
+| `flags.midi-qol.canFlank` | Evaluated | Yes | Token can participate in flanking |
+| `flags.midi-qol.fail.disadvantage.heavy` | Evaluated | Yes | Disadvantage on attacks with heavy weapons |
 
 ### Spellcasting Features
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.sculptSpells` | Direct | Pre-selected targets of save spells auto-succeed and receive super-saver status |
-| `flags.midi-qol.carefulSpells` | Direct | Pre-selected targets of save spells automatically succeed |
+| Flag | Access | BooleanFormula | Description |
+|------|--------|:--------------:|-------------|
+| `flags.midi-qol.sculptSpells` | Evaluated | Yes | Pre-selected targets of save spells auto-succeed and receive super-saver status |
+| `flags.midi-qol.carefulSpells` | Evaluated | Yes | Pre-selected targets of save spells automatically succeed |
 
 ### Over Time Effects
 

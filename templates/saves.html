@@ -1,11 +1,13 @@
 <div style="text-align: center">
   <strong>{{{saveDisplayFlavor}}}</strong>
 </div>
+{{#if hasDamageText}}
 <div style="text-align: center">
   <strong>
     {{{fullDamageText}}} {{{halfDamageText}}} {{{noDamageText}}}
   </strong>
 </div>
+{{/if}}
 <ul class="dnd5e2 unlist evaluation wrapper">
   {{#each saves as |save iid|}}
   <li class="midi-qol midi-qol-save-class target midi-qol-target-select {{save.targetClass}} {{save.saveClass}}" data-id="{{save.target.id}}">

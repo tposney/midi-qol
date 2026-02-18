@@ -172,6 +172,11 @@ Hooks provided by tidy5e:
 - **midi-qol-setup-wizard**: Step-by-step configuration wizard for midi-qol at `/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-setup-wizard/`
   - Key files: `scripts/wizard.js` (main wizard UI), `scripts/wizard-steps.js` (step definitions and presets), `scripts/setting-definitions.js` (setting UI definitions), `scripts/module-definitions.js` (module lists for compatibility)
   - Launched via hook `Hooks.call("midi-qol-setup-wizard.launch")` from midi-qol's settings
+- **item-delete-check**: Item deletion confirmation and inventory/resource change tracking module at `/home/timp/foundry-data/foundryalpha/Data/modules/item-delete-check/`
+  - Single source file: `main.js` (plain JS, no build step)
+  - Git repo on `master` branch
+  - Tracks: item create/delete, quantity changes, uses/charges, currency, spell slots, HP, activity uses
+  - Logs changes to chat and/or a journal entry
 
 ### TypeScript Typing
 - **Avoid using `as any` casts or `: any` type annotations** - always check `globals.ts` and Foundry types (`fvtt-types`) first for existing types

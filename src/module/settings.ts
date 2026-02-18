@@ -464,7 +464,7 @@ export function exportSettingsToJSON() {
 }
 
 function removeOldValues(theObject: any) {
-  if (typeof theObject !== "object") return theObject;
+  if (theObject == null || typeof theObject !== "object") return theObject;
   Object.keys(theObject).forEach(key => {
     if (theObject[key]?.newValue !== undefined) {
       theObject[key] = theObject[key].newValue;

@@ -141,6 +141,7 @@
   display: inline-block;
   border: 0px;
   padding: 0px;
+  white-space: nowrap;
 }
 
 .midi-qol-tooltip .midi-qol-tooltiptext {
@@ -572,9 +573,18 @@
 }
 
 /* Midi Attack and Damage buttons */
-.dnd5e2.chat-card .card-buttons.midi-buttons:has(button) {
+/* When card-buttons has no visible buttons, collapse gap so empty flex items don't create blank space */
+.card-buttons.midi-buttons:not(:has(button)) {
+  gap: 0;
+}
+.card-buttons.midi-buttons:has(button) {
   gap: 0.2rem;
   padding-bottom: 0.4rem;
+}
+/* Hide empty marker divs so they don't participate as flex items */
+.midi-dnd5e-buttons:not(:has(button)),
+.end-midi-dnd5e-buttons {
+  display: none;
 }
 
 .midi-qol-attack-buttons button,
@@ -1684,4 +1694,17 @@ section.midi-qol.tab {
 
 .midi-module-review-actions button[data-action="applyModules"] {
   margin-left: auto;
+}
+
+/* Cover label (½, ¾) in hit display */
+.midi-qol-cover-label {
+  font-size: 0.85em;
+  font-weight: bold;
+  opacity: 0.8;
+  margin-right: 1px;
+}
+
+/* Make unchecked checkboxes more visible in dark theme */
+body.theme-dark input[type="checkbox"] {
+  --checkbox-background-color: #6a6a6a;
 }

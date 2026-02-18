@@ -1587,16 +1587,16 @@ Hooks.on("dnd5e.preConfigureInitiative", (actor, rollConfig) => {
 
   // Check for advantage
   if (evalAllConditions(actor, "flags.midi-qol.advantage.all", conditionData)
-    || evalAllConditions(actor, "flags.midi-qol.advantage.ability.check.all", conditionData)
-    || evalAllConditions(actor, `flags.midi-qol.advantage.ability.check.${init}`, conditionData)
+    || evalAllConditions(actor, "flags.midi-qol.advantage.check.all", conditionData)
+    || evalAllConditions(actor, `flags.midi-qol.advantage.check.${init}`, conditionData)
     || evalAllConditions(actor, `flags.${game.system?.id}.initiativeAdv`, conditionData)) {
     options.advantage ||= true;
   }
 
   // Check for disadvantage
   if (evalAllConditions(actor, "flags.midi-qol.disadvantage.all", conditionData)
-    || evalAllConditions(actor, "flags.midi-qol.disadvantage.ability.check.all", conditionData)
-    || evalAllConditions(actor, `flags.midi-qol.disadvantage.ability.check.${init}`, conditionData)
+    || evalAllConditions(actor, "flags.midi-qol.disadvantage.check.all", conditionData)
+    || evalAllConditions(actor, `flags.midi-qol.disadvantage.check.${init}`, conditionData)
     || evalAllConditions(actor, `flags.${game.system?.id}.initiativeDisadv`, conditionData)) {
     options.disadvantage ||= true;
   }

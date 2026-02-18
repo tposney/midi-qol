@@ -116,9 +116,11 @@ export let midiFlags: { name: string, type?: string }[] = [];
 // Handle both init orderings: DAE's init may fire before or after midi's init.
 // midiInitComplete tracks whether midi's init has set up GameSystemConfig/allAttackTypes.
 let daeAddAutoFields: Function | null = null;
+let daeBooleanFormulaField: any = null;
 let midiInitComplete = false;
-Hooks.once("dae.addAutoFields", (addAutoFields: Function) => {
+Hooks.once("dae.addAutoFields", (addAutoFields: Function, fields: any) => {
   daeAddAutoFields = addAutoFields;
+  daeBooleanFormulaField = fields?.BooleanFormulaField;
   // If midi's init already ran, register flags now (DAE init fired late)
   if (midiInitComplete) {
     setupMidiFlags();
@@ -380,14 +382,11 @@ Hooks.on("dae.addFieldMappings", (fieldMappings) => {
   fetchParams();
   for (let key of Object.keys(GameSystemConfig.damageTypes ?? {})) {
     fieldMappings[`flags.${MODULE_ID}.DR.${key}`] = `system.traits.dm.amount.${key}`;
-    fieldMappings[`flags.${MODULE_ID}.absorption.${key}`] = `system.traits.da.${key}`;
   }
   for (let key of Object.keys(GameSystemConfig.healingTypes ?? {})) {
     fieldMappings[`flags.${MODULE_ID}.DR.${key}`] = `system.traits.dm.amount.${key}`;
-    fieldMappings[`flags.${MODULE_ID}.absorption.${key}`] = `system.traits.da.${key}`;
   }
   fieldMappings[`flags.${MODULE_ID}.DR.all`] = "system.traits.dm.midi.all";
-  fieldMappings[`flags.${MODULE_ID}.absorption.all`] = "system.traits.da.midi.all";
 
   Object.keys(GameSystemConfig.itemActionTypes).forEach(aType => {
     fieldMappings[`flags.${MODULE_ID}.DR.${aType}`] = `system.traits.dm.midi.${aType}`;
@@ -423,19 +422,6 @@ Hooks.on("dae.addFieldMappings", (fieldMappings) => {
   fieldMappings[`flags.${MODULE_ID}.grants.fail.advantage.attack.all`] = `flags.${MODULE_ID}.grants.noAdvantage.attack.all`;
   fieldMappings[`flags.${MODULE_ID}.grants.fail.disadvantage.attack.all`] = `flags.${MODULE_ID}.grants.noDisadvantage.attack.all`;
 
-  // Deprecated flag mappings: advantage.ability.save/check -> advantage.save/check (consistent with attack/skill/tool)
-  // These allow old effects to continue working while users transition to the new naming convention
-  fieldMappings[`flags.${MODULE_ID}.advantage.ability.save.all`] = `flags.${MODULE_ID}.advantage.save.all`;
-  fieldMappings[`flags.${MODULE_ID}.disadvantage.ability.save.all`] = `flags.${MODULE_ID}.disadvantage.save.all`;
-  fieldMappings[`flags.${MODULE_ID}.advantage.ability.check.all`] = `flags.${MODULE_ID}.advantage.check.all`;
-  fieldMappings[`flags.${MODULE_ID}.disadvantage.ability.check.all`] = `flags.${MODULE_ID}.disadvantage.check.all`;
-  // Per-ability mappings for saves and checks
-  for (let abl of Object.keys(GameSystemConfig.abilities)) {
-    fieldMappings[`flags.${MODULE_ID}.advantage.ability.save.${abl}`] = `flags.${MODULE_ID}.advantage.save.${abl}`;
-    fieldMappings[`flags.${MODULE_ID}.disadvantage.ability.save.${abl}`] = `flags.${MODULE_ID}.disadvantage.save.${abl}`;
-    fieldMappings[`flags.${MODULE_ID}.advantage.ability.check.${abl}`] = `flags.${MODULE_ID}.advantage.check.${abl}`;
-    fieldMappings[`flags.${MODULE_ID}.disadvantage.ability.check.${abl}`] = `flags.${MODULE_ID}.disadvantage.check.${abl}`;
-  }
   if (debugEnabled > 0) warn("fieldMappings", fieldMappings);
 
 });
@@ -521,6 +507,10 @@ Hooks.once('setup', function () {
   setupSheetQol();
   createMidiMacros();
   setupMidiQOLApi();
+});
+
+Hooks.once("dae.setupComplete", () => {
+  applyPendingLocalizations();
 });
 
 Hooks.once("ready", () => {
@@ -995,84 +985,93 @@ export async function updateEffects(data: { actorUuid: string, updates: ActiveEf
   }
 }
 
-function registerFlagLocalization(flagPath: string, templateKey: string, label: string) {
+let pendingLocalizations: {flagPath: string, templateKey: string, label: string | (() => string)}[] = [];
+
+function registerFlagLocalization(flagPath: string, templateKey: string, label: string | (() => string)) {
+  pendingLocalizations.push({flagPath, templateKey, label});
+}
+
+function applyPendingLocalizations() {
   const lm = globalThis.DAE?.localizationMap;
   if (!lm || !game.i18n) return;
-  lm[flagPath] = {
-    name: i18nFormat(`midi-qol.flagTemplate.${templateKey}.name`, { label }),
-    description: i18nFormat(`midi-qol.flagTemplate.${templateKey}.description`, { label })
-  };
+  for (const {flagPath, templateKey, label} of pendingLocalizations) {
+    const resolvedLabel = typeof label === "function" ? label() : label;
+    lm[flagPath] = {
+      name: i18nFormat(`midi-qol.flagTemplate.${templateKey}.name`, { label: resolvedLabel }),
+      description: i18nFormat(`midi-qol.flagTemplate.${templateKey}.description`, { label: resolvedLabel })
+    };
+  }
+  pendingLocalizations = [];
 }
 
 function setupMidiFlags() {
-  const booleanString = (flag: string) => midiFlags.push({ name: flag, type: "booleanString" });
+  const booleanFormula = (flag: string) => midiFlags.push({ name: flag, type: daeBooleanFormulaField });
   const untyped = (flag: string) => midiFlags.push({ name: flag });
 
-  booleanString(`flags.${MODULE_ID}.advantage.all`);
+  booleanFormula(`flags.${MODULE_ID}.advantage.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.all`);
-  booleanString(`flags.${MODULE_ID}.disadvantage.all`);
+  booleanFormula(`flags.${MODULE_ID}.disadvantage.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.all`);
   // Global flags not generated by per-key loops
-  booleanString(`flags.${MODULE_ID}.fail.all`);
+  booleanFormula(`flags.${MODULE_ID}.fail.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.all`);
-  booleanString(`flags.${MODULE_ID}.success.all`);
+  booleanFormula(`flags.${MODULE_ID}.success.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.all`);
-  booleanString(`flags.${MODULE_ID}.neverTarget`);
+  booleanFormula(`flags.${MODULE_ID}.neverTarget`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.neverTarget`);
   untyped(`flags.${MODULE_ID}.grants.critical.range`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.critical.range`);
   untyped(`flags.${MODULE_ID}.grants.criticalThreshold`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.criticalThreshold`);
-  booleanString(`flags.${MODULE_ID}.advantage.concentration`);
+  booleanFormula(`flags.${MODULE_ID}.advantage.concentration`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.concentration`);
-  booleanString(`flags.${MODULE_ID}.disadvantage.concentration`);
+  booleanFormula(`flags.${MODULE_ID}.disadvantage.concentration`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.concentration`);
-  booleanString(`flags.${MODULE_ID}.noAdvantage.concentration`);
+  booleanFormula(`flags.${MODULE_ID}.noAdvantage.concentration`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.concentration`);
-  booleanString(`flags.${MODULE_ID}.noDisadvantage.concentration`);
+  booleanFormula(`flags.${MODULE_ID}.noDisadvantage.concentration`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.concentration`);
-  booleanString(`flags.${MODULE_ID}.noAdvantage.all`);
+  booleanFormula(`flags.${MODULE_ID}.noAdvantage.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.all`);
-  booleanString(`flags.${MODULE_ID}.noDisadvantage.all`);
+  booleanFormula(`flags.${MODULE_ID}.noDisadvantage.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.all`);
-  booleanString(`flags.${MODULE_ID}.initiativeAdv`);
+  booleanFormula(`flags.${MODULE_ID}.initiativeAdv`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.initiativeAdv`);
-  booleanString(`flags.${MODULE_ID}.initiativeDisadv`);
+  booleanFormula(`flags.${MODULE_ID}.initiativeDisadv`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.initiativeDisadv`);
-  booleanString(`flags.${MODULE_ID}.initiativeNoAdv`);
+  booleanFormula(`flags.${MODULE_ID}.initiativeNoAdv`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.initiativeNoAdv`);
-  booleanString(`flags.${MODULE_ID}.initiativeNoDisadv`);
+  booleanFormula(`flags.${MODULE_ID}.initiativeNoDisadv`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.initiativeNoDisadv`);
-  booleanString(`flags.${MODULE_ID}.ignoreNearbyFoes`);
+  booleanFormula(`flags.${MODULE_ID}.ignoreNearbyFoes`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.ignoreNearbyFoes`);
   untyped(`flags.${MODULE_ID}.`);
   untyped(`flags.${MODULE_ID}.concentrationSaveBonus`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.concentrationSaveBonus`);
-  booleanString(`flags.${MODULE_ID}.potentCantrip`);
+  booleanFormula(`flags.${MODULE_ID}.potentCantrip`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.potentCantrip`);
-  booleanString(`flags.${MODULE_ID}.sculptSpells`);
+  booleanFormula(`flags.${MODULE_ID}.sculptSpells`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.sculptSpells`);
-  booleanString(`flags.${MODULE_ID}.carefulSpells`);
+  booleanFormula(`flags.${MODULE_ID}.carefulSpells`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.carefulSpells`);
   // magicResistance.all and magicVulnerability.all generated by abilities loop
   // range.all, long.all, rangeOverride.attack.all generated by attack types loop
-  booleanString(`flags.${MODULE_ID}.magicResistance.save.all`);
+  booleanFormula(`flags.${MODULE_ID}.magicResistance.save.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.magicResistance.save.all`);
-  booleanString(`flags.${MODULE_ID}.magicResistance.check.all`);
+  booleanFormula(`flags.${MODULE_ID}.magicResistance.check.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.magicResistance.check.all`);
-  booleanString(`flags.${MODULE_ID}.magicResistance.skill.all`);
+  booleanFormula(`flags.${MODULE_ID}.magicResistance.skill.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.magicResistance.skill.all`);
   const extendedAttackTypeLabels: Record<string, string> = { check: "Ability Check", skill: "Skill Check", tool: "Tool Check", all: "All" };
   let attackTypes = allAttackTypes.concat(["save", "check", "skill", "tool", "all"])
   attackTypes.forEach(at => {
-    booleanString(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`);
-    booleanString(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`);
-    booleanString(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`);
-    let label = GameSystemConfig.itemActionTypes[at] ?? extendedAttackTypeLabels[at] ?? at;
-    label = label.replace(/ Attack$/, "");
+    const label = () => (GameSystemConfig.itemActionTypes[at] ?? extendedAttackTypeLabels[at] ?? at).replace(/ Attack$/, "");
     registerFlagLocalization(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`, "grants.noAdvantage.attack", label);
     registerFlagLocalization(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`, "grants.disadvantage.attack", label);
     registerFlagLocalization(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`, "grants.noDisadvantage.attack", label);
@@ -1083,46 +1082,46 @@ function setupMidiFlags() {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.range.${at}`);
     untyped(`flags.${MODULE_ID}.long.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.long.${at}`);
-    booleanString(`flags.${MODULE_ID}.advantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.advantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.attack.${at}`);
-    booleanString(`flags.${MODULE_ID}.disadvantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.attack.${at}`);
-    booleanString(`flags.${MODULE_ID}.noAdvantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.attack.${at}`);
-    booleanString(`flags.${MODULE_ID}.noDisadvantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.attack.${at}`);
-    booleanString(`flags.${MODULE_ID}.fail.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.attack.${at}`);
-    booleanString(`flags.${MODULE_ID}.success.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.success.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.attack.${at}`);
-    booleanString(`flags.${MODULE_ID}.critical.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.critical.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.critical.${at}`);
-    booleanString(`flags.${MODULE_ID}.noCritical.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.noCritical.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noCritical.${at}`);
-    booleanString(`flags.${MODULE_ID}.noFumble.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.noFumble.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noFumble.${at}`);
-    booleanString(`flags.${MODULE_ID}.fumble.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.fumble.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fumble.${at}`);
-    booleanString(`flags.${MODULE_ID}.grants.advantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.attack.${at}`);
-    booleanString(`flags.${MODULE_ID}.grants.critical.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.critical.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.critical.${at}`);
-    booleanString(`flags.${MODULE_ID}.grants.noCritical.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noCritical.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noCritical.${at}`);
-    booleanString(`flags.${MODULE_ID}.grants.noFumble.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noFumble.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noFumble.${at}`);
-    booleanString(`flags.${MODULE_ID}.grants.fumble.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.fumble.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fumble.${at}`);
-    booleanString(`flags.${MODULE_ID}.fail.critical.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.critical.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.critical.${at}`);
     untyped(`flags.${MODULE_ID}.grants.attack.bonus.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.attack.bonus.${at}`);
-    booleanString(`flags.${MODULE_ID}.grants.attack.success.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.attack.success.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.attack.success.${at}`);
-    booleanString(`flags.${MODULE_ID}.grants.attack.fail.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.attack.fail.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.attack.fail.${at}`);
     if (at !== "heal") untyped(`flags.${MODULE_ID}.DR.${at}`);
-    booleanString(`flags.${MODULE_ID}.advantage.damage.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.advantage.damage.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.damage.${at}`);
     untyped(`flags.${MODULE_ID}.max.damage.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.damage.${at}`);
@@ -1142,8 +1141,7 @@ function setupMidiFlags() {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.damage.${at}`);
     untyped(`flags.${MODULE_ID}.rangeOverride.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.rangeOverride.attack.${at}`);
-    let label = GameSystemConfig.itemActionTypes[at] ?? extendedAttackTypeLabels[at] ?? at;
-    label = label.replace(/ Attack$/, "");
+    const label = () => (GameSystemConfig.itemActionTypes[at] ?? extendedAttackTypeLabels[at] ?? at).replace(/ Attack$/, "");
     registerFlagLocalization(`flags.${MODULE_ID}.range.${at}`, "range", label);
     registerFlagLocalization(`flags.${MODULE_ID}.long.${at}`, "long", label);
     registerFlagLocalization(`flags.${MODULE_ID}.advantage.attack.${at}`, "advantage.attack", label);
@@ -1179,19 +1177,19 @@ function setupMidiFlags() {
   });
   // Ability-scope flags not generated by per-ability loop
   // (advantage.save.all, advantage.check.all, etc. now generated by abilities loop with "all" key)
-  booleanString(`flags.${MODULE_ID}.advantage.ability.all`);
+  booleanFormula(`flags.${MODULE_ID}.advantage.ability.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.ability.all`);
-  booleanString(`flags.${MODULE_ID}.disadvantage.ability.all`);
+  booleanFormula(`flags.${MODULE_ID}.disadvantage.ability.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.ability.all`);
-  booleanString(`flags.${MODULE_ID}.fail.ability.all`);
+  booleanFormula(`flags.${MODULE_ID}.fail.ability.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.ability.all`);
-  booleanString(`flags.${MODULE_ID}.success.ability.all`);
+  booleanFormula(`flags.${MODULE_ID}.success.ability.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.ability.all`);
   untyped(`flags.${MODULE_ID}.max.ability.save.concentration`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.ability.save.concentration`);
   untyped(`flags.${MODULE_ID}.min.ability.save.concentration`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.ability.save.concentration`);
-  booleanString(`flags.${MODULE_ID}.sharpShooter`);
+  booleanFormula(`flags.${MODULE_ID}.sharpShooter`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.sharpShooter`);
 
   untyped(`flags.${MODULE_ID}.rollModifiers.damage.all.all`);
@@ -1234,37 +1232,37 @@ function setupMidiFlags() {
 
   Object.keys(GameSystemConfig.abilities).concat(["all"]).forEach(abl => {
     // New consistent flag names (without .ability. prefix - matches attack/skill/tool pattern)
-    booleanString(`flags.${MODULE_ID}.advantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.advantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.check.${abl}`);
-    booleanString(`flags.${MODULE_ID}.disadvantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.check.${abl}`);
-    booleanString(`flags.${MODULE_ID}.advantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.advantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.save.${abl}`);
-    booleanString(`flags.${MODULE_ID}.disadvantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.save.${abl}`);
-    booleanString(`flags.${MODULE_ID}.noAdvantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.check.${abl}`);
-    booleanString(`flags.${MODULE_ID}.noAdvantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.save.${abl}`);
-    booleanString(`flags.${MODULE_ID}.noDisadvantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.check.${abl}`);
-    booleanString(`flags.${MODULE_ID}.noDisadvantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.save.${abl}`);
     // bs(`flags.${MODULE_ID}.advantage.attack.${abl}`);
     // daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.attack.${abl}`);
     // bs(`flags.${MODULE_ID}.disadvantage.attack.${abl}`);
     // daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.attack.${abl}`);
-    booleanString(`flags.${MODULE_ID}.fail.ability.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.ability.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.ability.check.${abl}`);
-    booleanString(`flags.${MODULE_ID}.fail.ability.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.ability.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.ability.save.${abl}`);
-    booleanString(`flags.${MODULE_ID}.success.ability.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.success.ability.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.ability.check.${abl}`);
-    booleanString(`flags.${MODULE_ID}.success.ability.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.success.ability.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.ability.save.${abl}`);
-    booleanString(`flags.${MODULE_ID}.superSaver.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.superSaver.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.superSaver.${abl}`);
-    booleanString(`flags.${MODULE_ID}.semiSuperSaver.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.semiSuperSaver.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.semiSuperSaver.${abl}`);
     untyped(`flags.${MODULE_ID}.max.ability.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.ability.save.${abl}`);
@@ -1282,43 +1280,43 @@ function setupMidiFlags() {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.check.${abl}`);
     untyped(`flags.${MODULE_ID}.optional.NAME.check.fail.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.check.fail.${abl}`);
-    booleanString(`flags.${MODULE_ID}.magicResistance.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.magicResistance.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.magicResistance.${abl}`);
-    booleanString(`flags.${MODULE_ID}.magicVulnerability.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.magicVulnerability.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.magicVulnerability.${abl}`);
-    booleanString(`flags.${MODULE_ID}.grants.advantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.save.${abl}`);
-    booleanString(`flags.${MODULE_ID}.grants.advantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.check.${abl}`);
-    booleanString(`flags.${MODULE_ID}.grants.advantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.skill.${abl}`);
-    booleanString(`flags.${MODULE_ID}.grants.disadvantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.save.${abl}`);
-    booleanString(`flags.${MODULE_ID}.grants.disadvantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.check.${abl}`);
-    booleanString(`flags.${MODULE_ID}.grants.disadvantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.skill.${abl}`);
-    booleanString(`flags.${MODULE_ID}.grants.noAdvantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.save.${abl}`);
-    booleanString(`flags.${MODULE_ID}.grants.noDisadvantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.save.${abl}`);
-    booleanString(`flags.${MODULE_ID}.grants.noAdvantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.check.${abl}`);
-    booleanString(`flags.${MODULE_ID}.grants.noDisadvantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.check.${abl}`);
-    booleanString(`flags.${MODULE_ID}.grants.noAdvantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.skill.${abl}`);
-    booleanString(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${abl}`);
-    booleanString(`flags.${MODULE_ID}.advantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.advantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.skill.${abl}`);
-    booleanString(`flags.${MODULE_ID}.disadvantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.skill.${abl}`);
-    booleanString(`flags.${MODULE_ID}.noAdvantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.skill.${abl}`);
-    booleanString(`flags.${MODULE_ID}.noDisadvantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.skill.${abl}`);
-    const label = GameSystemConfig.abilities[abl]?.label ?? (abl === "all" ? "All" : abl);
+    const label = () => GameSystemConfig.abilities[abl]?.label ?? (abl === "all" ? "All" : abl);
     registerFlagLocalization(`flags.${MODULE_ID}.advantage.check.${abl}`, "advantage.check", label);
     registerFlagLocalization(`flags.${MODULE_ID}.disadvantage.check.${abl}`, "disadvantage.check", label);
     registerFlagLocalization(`flags.${MODULE_ID}.advantage.save.${abl}`, "advantage.save", label);
@@ -1368,32 +1366,32 @@ function setupMidiFlags() {
   untyped(`flags.${MODULE_ID}.min.skill.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.skill.all`);
   Object.keys(GameSystemConfig.skills).concat(["all"]).forEach(skill => {
-    booleanString(`flags.${MODULE_ID}.advantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.advantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.skill.${skill}`);
-    booleanString(`flags.${MODULE_ID}.disadvantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.skill.${skill}`);
-    booleanString(`flags.${MODULE_ID}.noAdvantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.skill.${skill}`);
-    booleanString(`flags.${MODULE_ID}.noDisadvantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.skill.${skill}`);
-    booleanString(`flags.${MODULE_ID}.fail.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.skill.${skill}`);
-    booleanString(`flags.${MODULE_ID}.success.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.success.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.skill.${skill}`);
     // bs(`flags.${MODULE_ID}.max.skill.${skill}`); replaced by core
     // bs(`flags.${MODULE_ID}.min.skill.${skill}`); replaced by core
     untyped(`flags.${MODULE_ID}.optional.NAME.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.skill.${skill}`);
     // Per-skill grants flags
-    booleanString(`flags.${MODULE_ID}.grants.advantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.skill.${skill}`);
-    booleanString(`flags.${MODULE_ID}.grants.disadvantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.skill.${skill}`);
-    booleanString(`flags.${MODULE_ID}.grants.noAdvantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.skill.${skill}`);
-    booleanString(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${skill}`);
-    const label = GameSystemConfig.skills[skill]?.label ?? (skill === "all" ? "All" : skill);
+    const label = () => GameSystemConfig.skills[skill]?.label ?? (skill === "all" ? "All" : skill);
     registerFlagLocalization(`flags.${MODULE_ID}.advantage.skill.${skill}`, "advantage.skill", label);
     registerFlagLocalization(`flags.${MODULE_ID}.disadvantage.skill.${skill}`, "disadvantage.skill", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noAdvantage.skill.${skill}`, "noAdvantage.skill", label);
@@ -1406,48 +1404,48 @@ function setupMidiFlags() {
     registerFlagLocalization(`flags.${MODULE_ID}.grants.noAdvantage.skill.${skill}`, "grants.noAdvantage.skill", label);
     registerFlagLocalization(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${skill}`, "grants.noDisadvantage.skill", label);
   })
-  booleanString(`flags.${MODULE_ID}.advantage.deathSave`);
+  booleanFormula(`flags.${MODULE_ID}.advantage.deathSave`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.deathSave`);
-  booleanString(`flags.${MODULE_ID}.disadvantage.deathSave`);
+  booleanFormula(`flags.${MODULE_ID}.disadvantage.deathSave`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.deathSave`);
-  booleanString(`flags.${MODULE_ID}.noAdvantage.deathSave`);
+  booleanFormula(`flags.${MODULE_ID}.noAdvantage.deathSave`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.deathSave`);
-  booleanString(`flags.${MODULE_ID}.noDisadvantage.deathSave`);
+  booleanFormula(`flags.${MODULE_ID}.noDisadvantage.deathSave`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.deathSave`);
   untyped(`flags.${MODULE_ID}.deathSaveBonus`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.deathSaveBonus`);
-  booleanString(`flags.${MODULE_ID}.fail.deathSave`);
+  booleanFormula(`flags.${MODULE_ID}.fail.deathSave`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.deathSave`);
-  booleanString(`flags.${MODULE_ID}.success.deathSave`);
+  booleanFormula(`flags.${MODULE_ID}.success.deathSave`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.deathSave`);
   // All tool .all entries generated by tools loop with "all" key
   Object.keys(GameSystemConfig.tools).concat(["all"]).forEach(tool => {
-    booleanString(`flags.${MODULE_ID}.advantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.advantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.tool.${tool}`);
-    booleanString(`flags.${MODULE_ID}.disadvantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.tool.${tool}`);
-    booleanString(`flags.${MODULE_ID}.noAdvantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.tool.${tool}`);
-    booleanString(`flags.${MODULE_ID}.noDisadvantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.tool.${tool}`);
-    booleanString(`flags.${MODULE_ID}.fail.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.tool.${tool}`);
-    booleanString(`flags.${MODULE_ID}.success.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.success.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.tool.${tool}`);
     untyped(`flags.${MODULE_ID}.max.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.tool.${tool}`);
     untyped(`flags.${MODULE_ID}.min.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.tool.${tool}`);
     // Per-tool grants flags
-    booleanString(`flags.${MODULE_ID}.grants.advantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.tool.${tool}`);
-    booleanString(`flags.${MODULE_ID}.grants.disadvantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.tool.${tool}`);
-    booleanString(`flags.${MODULE_ID}.grants.noAdvantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.tool.${tool}`);
-    booleanString(`flags.${MODULE_ID}.grants.noDisadvantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.tool.${tool}`);
-    const label = tool === "all" ? "All" : ((globalThis.dnd5e?.documents.Trait.keyLabel(`tool:${tool}`) as string) ?? tool);
+    const label = () => tool === "all" ? "All" : ((globalThis.dnd5e?.documents.Trait.keyLabel(`tool:${tool}`) as string) ?? tool);
     registerFlagLocalization(`flags.${MODULE_ID}.advantage.tool.${tool}`, "advantage.tool", label);
     registerFlagLocalization(`flags.${MODULE_ID}.disadvantage.tool.${tool}`, "disadvantage.tool", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noAdvantage.tool.${tool}`, "noAdvantage.tool", label);
@@ -1463,7 +1461,7 @@ function setupMidiFlags() {
   });
   // fix for translations
   ["vocal", "somatic", "material"].forEach(comp => {
-    booleanString(`flags.${MODULE_ID}.fail.spell.${comp.toLowerCase()}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.spell.${comp.toLowerCase()}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.spell.${comp.toLowerCase()}`);
   });
   untyped(`flags.${MODULE_ID}.DR.all`);
@@ -1489,7 +1487,7 @@ function setupMidiFlags() {
   Object.keys(GameSystemConfig.damageTypes).forEach(key => {
     untyped(`flags.${MODULE_ID}.DR.${key}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.${key}`);
-    const label = GameSystemConfig.damageTypes[key]?.label ?? key;
+    const label = () => GameSystemConfig.damageTypes[key]?.label ?? key;
     registerFlagLocalization(`flags.${MODULE_ID}.DR.${key}`, "DR.damageType", label);
   });
 
@@ -1518,23 +1516,16 @@ function setupMidiFlags() {
   untyped(`flags.${MODULE_ID}.optional.NAME.force`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.force`);
 
-  booleanString(`flags.${MODULE_ID}.uncanny-dodge`);
+  booleanFormula(`flags.${MODULE_ID}.uncanny-dodge`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.uncanny-dodge`);
   untyped(`flags.${MODULE_ID}.OverTime`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.OverTime`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.ActivityOverTime`);
-  booleanString(`flags.${MODULE_ID}.inMotion`);
+  booleanFormula(`flags.${MODULE_ID}.inMotion`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.inMotion`);
-  const damageTypes = Object.keys(GameSystemConfig.damageTypes);
-  for (let key of damageTypes) {
-    booleanString(`flags.${MODULE_ID}.absorption.${key}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.absorption.${key}`);
-    const label = GameSystemConfig.damageTypes[key]?.label ?? key;
-    registerFlagLocalization(`flags.${MODULE_ID}.absorption.${key}`, "absorption", label);
-  }
-  booleanString(`flags.${MODULE_ID}.fail.disadvantage.heavy`);
+  booleanFormula(`flags.${MODULE_ID}.fail.disadvantage.heavy`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.disadvantage.heavy`);
-  booleanString(`flags.${MODULE_ID}.canFlank`);
+  booleanFormula(`flags.${MODULE_ID}.canFlank`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.canFlank`);
   /*
   bs(`flags.${MODULE_ID}.grants.advantage.attack.all`);

@@ -583,10 +583,8 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
 
     if (message.create !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
-        // dnd5e's buildPost already called toMessage(create: false) which ran _prepareMessageData
-        // and added "(Advantage)" to the flavor. We just need to create the message directly
-        // to avoid _prepareMessageData running again and duplicating the advantage text.
-        const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice, rolls: result }, message.data ?? {});
+        const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
+        messageData.rolls = result;
         await ChatMessage.create(messageData, { rollMode });
       }
     }
@@ -1252,10 +1250,8 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
 
     if (message.create !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
-        // dnd5e's buildPost already called toMessage(create: false) which ran _prepareMessageData
-        // and added "(Advantage)" to the flavor. We just need to create the message directly
-        // to avoid _prepareMessageData running again and duplicating the advantage text.
-        const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice, rolls: result }, message.data ?? {});
+        const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
+        messageData.rolls = result;
         await ChatMessage.create(messageData, { rollMode });
       }
     }
@@ -1437,26 +1433,18 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
   }
 
   // Build advantage/disadvantage flags to check
-  // Using new consistent naming: advantage.save.all, advantage.check.all (matches attack/skill/tool pattern)
-  // Also include deprecated flags (advantage.ability.save.*, advantage.ability.check.*) for backwards compatibility
   const abilityFlags: AdvantageFlags = {
     advantageFlags: [
       "advantage.all",
       "advantage.ability.all",
       `advantage.${rollType}.all`,
       `advantage.${rollType}.${abilityId}`,
-      // Deprecated flags - will emit warning when used
-      `advantage.ability.${rollType}.all`,
-      `advantage.ability.${rollType}.${abilityId}`
     ],
     disadvantageFlags: [
       "disadvantage.all",
       "disadvantage.ability.all",
       `disadvantage.${rollType}.all`,
       `disadvantage.${rollType}.${abilityId}`,
-      // Deprecated flags - will emit warning when used
-      `disadvantage.ability.${rollType}.all`,
-      `disadvantage.ability.${rollType}.${abilityId}`
     ],
     // Actor noAdvantage/noDisadvantage flags (prevent actor's own advantage/disadvantage)
     noAdvantageFlags: [
@@ -1470,13 +1458,6 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
       `noDisadvantage.${rollType}.${abilityId}`
     ],
     systemRollModeFields: [`abilities.${abilityId}.${rollType}.roll.mode`],
-    // Track which flags are deprecated for warning generation
-    deprecatedFlags: new Set([
-      `advantage.ability.${rollType}.all`,
-      `advantage.ability.${rollType}.${abilityId}`,
-      `disadvantage.ability.${rollType}.all`,
-      `disadvantage.ability.${rollType}.${abilityId}`
-    ])
   };
 
   // Add source actor grants flags for saves and checks
@@ -1719,16 +1700,6 @@ export async function computeSkillAdvantage(actor: Actor.Implementation, skillId
       // New flag names (preferred)
       skillFlags.advantageFlags.push("advantage.ability.all", "advantage.check.all", `advantage.check.${abilityId}`);
       skillFlags.disadvantageFlags.push("disadvantage.ability.all", "disadvantage.check.all", `disadvantage.check.${abilityId}`);
-      // Deprecated flag names (for backwards compatibility)
-      skillFlags.advantageFlags.push("advantage.ability.check.all", `advantage.ability.check.${abilityId}`);
-      skillFlags.disadvantageFlags.push("disadvantage.ability.check.all", `disadvantage.ability.check.${abilityId}`);
-      // Track deprecated flags for warning generation
-      skillFlags.deprecatedFlags = new Set([
-        "advantage.ability.check.all",
-        `advantage.ability.check.${abilityId}`,
-        "disadvantage.ability.check.all",
-        `disadvantage.ability.check.${abilityId}`
-      ]);
     }
   }
 
@@ -1782,16 +1753,6 @@ export async function computeToolAdvantage(actor: Actor.Implementation, toolId: 
     // Add noAdvantage/noDisadvantage for ability-based check
     toolFlags.noAdvantageFlags?.push(`noAdvantage.check.all`, `noAdvantage.check.${abilityId}`);
     toolFlags.noDisadvantageFlags?.push(`noDisadvantage.check.all`, `noDisadvantage.check.${abilityId}`);
-    // Deprecated flag names (for backwards compatibility)
-    toolFlags.advantageFlags.push("advantage.ability.check.all", `advantage.ability.check.${abilityId}`);
-    toolFlags.disadvantageFlags.push("disadvantage.ability.check.all", `disadvantage.ability.check.${abilityId}`);
-    // Track deprecated flags for warning generation
-    toolFlags.deprecatedFlags = new Set([
-      "advantage.ability.check.all",
-      `advantage.ability.check.${abilityId}`,
-      "disadvantage.ability.check.all",
-      `disadvantage.ability.check.${abilityId}`
-    ]);
   }
 
   // For tools, source actor is the caster (workflow.actor) if any
@@ -2504,10 +2465,8 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
 
     if (chatMessage !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
-        // dnd5e's buildPost already called toMessage(create: false) which ran _prepareMessageData
-        // and added "(Advantage)" to the flavor. We just need to create the message directly
-        // to avoid _prepareMessageData running again and duplicating the advantage text.
-        const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice, rolls: result }, message.data ?? {});
+        const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
+        messageData.rolls = result;
         await ChatMessage.create(messageData, { rollMode });
       }
     }

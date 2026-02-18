@@ -31,7 +31,7 @@ declare module "fvtt-types/configuration" {
     interface HookConfig {
       "dae.addSpecialDurations": (daeSpecialDurations: Record<string, string>) => void;
       "dae.setFieldData": (fieldData: Record<string, string[]>) => void;
-      "dae.addAutoFields": (addAutoFields: Function) => void;
+      "dae.addAutoFields": (addAutoFields: Function, fields: { BooleanFormulaField?: any }) => void;
       "dae.ready": (api: any) => void;
       "dae.setupComplete": (api: any) => void;
       "dnd5e.activityConsumption": (activity: Activity, usageConfig: ActivityUseConfiguration, messageConfig: RollMessageConfig, updates: unknown) => boolean | void;
@@ -1293,6 +1293,9 @@ export type RollProcessConfig = {
   workflowOptions?: WorkflowOptions
   skill?: string;
   tool?: string;
+  bonus?: number | string;
+  prof?: object;
+  item?: Item.Implementation;
   rollMode?: keyof CONFIG.Dice.RollModes;
   simulate?: boolean;
   critical?: {
@@ -1433,39 +1436,34 @@ export type ModuleIntegrationFlags = {
   gmRER: boolean;
 };
 
-export type SaveRollRequest = {
+/** Per-token entry for Monks Token Bar requestRoll.
+ *  MTB's getTokenEntries only reads: token, advantage, disadvantage, request, fastForward.
+ *  dc/showdc are read from the top-level options, not per-token.
+ */
+export type MonksTokenBarRequest = {
   token: string;
-  dc: number;
-  showdc: boolean;
   advantage: boolean | undefined;
   disadvantage: boolean | undefined;
-  isMagicSave: boolean;
-  isConcentrationCheck: boolean | undefined;
-  workflowOptions: object;
 };
 
-export type MonksTokenBarRequest = SaveRollRequest & {
-  options: {
-    midiOptions: {
-      itemUuid: string | undefined;
-      workflowId: string;
-      itemCardUuid: string | undefined;
-    };
-  };
+/** Per-token entry for Flash Rolls 5e requestRoll.
+ *  dispatchFlashRollsSaves aggregates these into a single FlashAPI.requestRoll call,
+ *  reading only: token, advantage, disadvantage.
+ */
+export type FlashRollsRequest = {
+  token: string;
+  advantage: boolean | undefined;
+  disadvantage: boolean | undefined;
 };
 
-export type FlashRollsRequest = SaveRollRequest & {
-  actorId: string;
+/** Per-token entry for Epic Rolls 5e requestRoll.
+ *  dispatchEpicRollsSaves reads: actorUuid, advantage, disadvantage.
+ *  DC, showDC, blindRoll etc. are set at the dispatch level from workflow properties.
+ */
+export type EpicRollsRequest = {
   actorUuid: string;
-  midiOptions: {
-    itemUuid: string | undefined;
-    workflowId: string;
-    itemCardUuid: string | undefined;
-  };
-};
-
-export type EpicRollsRequest = SaveRollRequest & {
-  actorUuid: string;
+  advantage: boolean | undefined;
+  disadvantage: boolean | undefined;
 };
 
 export type ModuleIntegrationRequests = {
@@ -1499,11 +1497,11 @@ export type SaveDetails = {
   /** Type of roll: "save", "check", "skill", or "tool" */
   rollType: string;
   /** Available abilities for multi-choice saves/checks */
-  rollAbilities: string[];
+  rollAbilities?: string[];
   /** Available skills for multi-choice skill checks */
-  rollSkills: string[];
+  rollSkills?: string[];
   /** Available tools for multi-choice tool checks */
-  rollTools: string[];
+  rollTools?: string[];
   /** Activity's item ID */
   itemId: string;
   /** The save roll for this target */

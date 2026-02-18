@@ -1777,17 +1777,7 @@
   "midi-qol.flagTemplate.grants.noDisadvantage.tool.description": "{label} checks will not have disadvantage.",
   "midi-qol.flagTemplate.DR.damageType.name": "Damage Reduction ({label})",
   "midi-qol.flagTemplate.DR.damageType.description": "{label} Damage Reduction.",
-  "midi-qol.flagTemplate.absorption.name": "Absorption ({label})",
-  "midi-qol.flagTemplate.absorption.description": "Converts {label} Damage taken to healing.",
   "dae.MidiQOL.fieldData": {
-    "flags.midi-qol.absorption.midi-none": {
-      "name": "Absorption None",
-      "description": ""
-    },
-    "flags.midi-qol.absorption.none": {
-      "name": "No Absorption",
-      "description": ""
-    },
     "flags.midi-qol.advantage.ability.all": {
       "name": "Advantage All Ability",
       "description": "Advantage on all saves, ability checks and skills."

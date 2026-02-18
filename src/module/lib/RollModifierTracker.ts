@@ -49,8 +49,6 @@ export interface AdvantageFlags {
   sourceDisadvantageFlags?: string[];
   sourceNoAdvantageFlags?: string[];
   sourceNoDisadvantageFlags?: string[];
-  // Track deprecated flags for warning generation
-  deprecatedFlags?: Set<string>;
 }
 
 // Helper to get flag path with midi-qol prefix
@@ -58,19 +56,6 @@ function midiFlag(flag: string): string {
   return `flags.midi-qol.${flag}`;
 }
 
-// Helper to emit deprecation warning for deprecated midi-qol flags
-function emitDeprecatedFlagWarning(flag: string): void {
-  const newFlag = flag
-    .replace("advantage.ability.save.", "advantage.save.")
-    .replace("advantage.ability.check.", "advantage.check.")
-    .replace("disadvantage.ability.save.", "disadvantage.save.")
-    .replace("disadvantage.ability.check.", "disadvantage.check.");
-
-  foundry.utils.logCompatibilityWarning(
-    `midi-qol | The flag "flags.midi-qol.${flag}" is deprecated. Use "flags.midi-qol.${newFlag}" instead.`,
-    { since: "13.0.38", until: "14", once: true }
-  );
-}
 
 // Helper to resolve a short key (e.g., "mwak", "str", "acr") to a human-readable label
 function resolveKeyLabel(key: string): string {
@@ -751,9 +736,6 @@ export async function computeAdvantageFlags(
   // Check actor's advantage flags
   for (const flag of flags.advantageFlags) {
     if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-      if (flags.deprecatedFlags?.has(flag)) {
-        emitDeprecatedFlagWarning(flag);
-      }
       const source = flag.replace(/^advantage\./, '');
       tracker.advantage.add(source, getFlagDisplayName(flag));
       break;
@@ -763,9 +745,6 @@ export async function computeAdvantageFlags(
   // Check actor's disadvantage flags
   for (const flag of flags.disadvantageFlags) {
     if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-      if (flags.deprecatedFlags?.has(flag)) {
-        emitDeprecatedFlagWarning(flag);
-      }
       const source = flag.replace(/^disadvantage\./, '');
       tracker.disadvantage.add(source, getFlagDisplayName(flag));
       break;

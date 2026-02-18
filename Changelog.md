@@ -1,8 +1,40 @@
+### 13.0.49
+**Bug Fixes**
+* Fixed "Place Measured Template" button being hidden on chat cards after foundry reload. (dnd5e hides the button when canvas isn't ready; midi now overrides this to only check user permission.)
+* Improved unchecked checkbox visibility in dark theme.
+* Fix for troubleshooter overwriting settings throwing an error.
+* Fix for displaying Dice So Nice rolls twice in various circumstances. An accidental side effect of getting rid of the duplicate (Advantage) (Advantage) display.
+* Fixed a potential error with double counting cover. 
+  - If a module sets the cover status on an actor, dnd5e will return the adjusted ac in ac.value. Midi was ignoring that and going ahead and computing cover itself and potentially double counting the ac bonus. (SimpleCover5e is a module that set actor.statuses to reflect cover).
+  - If there is a cover status (coverHalf, coverThreeQuarters, or coverTotal) set on the actor midi no longer does any cover calculations on the actor assuming the ac value returned in flags.dnd5e.targets.ac is correct, i.e. includes cover. For "normal" cover situations that will be the case.
+  - Midi will take account of a cover value of null indicating full cover.
+  - Midi now records target AC on the dnd5e.postRollConfiguration hook, so if you are making changes to flags.dnd5e.targets you need to do so on a hook before then.
+* When displaying hits, if the target has 1/2, 3/4 or total cover status on an actor.status midi will flag that in the display, via 1/2 or 3/4 on the left of the target AC and the infinity symbol if full cover.
+  - If midi calculates the cover bonus it will be displayed as if was before, i.e. AC +2/5/99 for 1/2, 3/4 or full cover. This is intentional so you can know how the cover value was chosen.
+* Fixed workflow actor being undefined when restoring a workflow from a chat card. The actor is now always derived from the workflow's activity rather than being stored separately.
+* Added missing compatibility layer for revised rollAbilitySaveV2 in GMAction.
+* Made the ability/skill/tool arrays optional, so you just need to pass the ones you need to pass.
+
+**Changes**
+* Non-AoE activities with formula-based target counts (e.g. Bless upcast: `3 + @scaling`) now defer target confirmation until after activity consumption, so the scaled target count is respected.
+* Fixed flag localization in the DAE effect editor — midi-qol flag names now display correctly.
+* Midi-qol boolean flags (advantage, disadvantage, fail, success, etc.) now use DAE's new `BooleanFormulaField` class instead of the removed `booleanString` type. Multiple active effects targeting the same flag now correctly compose with `||` (ADD/UPGRADE) and `&&` (MULTIPLY/DOWNGRADE). Requires DAE 13.0.22+.
+
+**Breaking Changes**
+* Removed deprecated `flags.midi-qol.absorption.{damageType}` flags. Use `system.traits.da.{damageType}` directly instead.
+* Removed deprecated `flags.midi-qol.advantage.ability.save.{ability}` and `flags.midi-qol.advantage.ability.check.{ability}` flags (and their disadvantage equivalents). Use `flags.midi-qol.advantage.save.{ability}` and `flags.midi-qol.advantage.check.{ability}` instead.
+  - The `.ability.` prefix was redundant and inconsistent with the attack/skill/tool flag naming pattern.
+  - DAE field mappings that silently remapped these flags have also been removed.
+* Reaction activities with no use condition now default to `reaction === "isAttacked"`, ensuring they only apply once. Activities with an explicit use condition are unchanged.
+
+### 13.0.48
+* Remove debug console.error statements left in by mistake. Thanks @Elwin
+
 ### 13.0.47
 **Bug Fixes**
 * Fix for [object object] in some more drop down settings for midi-qol active effect panel.
 * Fix for optional bonus flags (optional.XXX.damage) being applied to other activity damage rolls as well as the primary damage roll, it is now only applied to the primary activity's damage roll.
-* Fix for some off by one errors when placing templates at max range.
+* Fix for some off by one errors wredhen placing templates at max range.
 * For cast activities, unless the cast activity overrides the activation type, the activation type of the linked spell will be used to determine reactions.
   - The use condition of both the cast activity **and** the linked spell will be used to determine if the cast activity can fire or not.
   - This means you can make a non-reaction spell in to a reaction cast activity, by overriding the activation type in the cast activity and setting it to reaction.
