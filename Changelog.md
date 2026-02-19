@@ -1,3 +1,14 @@
+### 13.0.50
+**Bug Fixes**
+  * Fix for AoE targeting not respecting target restrictions (like enemy only).
+  * Switched the 'no reaction condition specified" from isAttacked to isHit which is probably better and will stop a pile of items not working properly anymore.
+  * For overtime effects that specify no saveCount or failCount, midi will default them to being saveCount=1- (i.e. remove on the first successful save)
+
+* Some more changes to cover....
+  - If an actor has a cover status [actor.statuses.has("coverHalf") or coverThreeQuarters or coverTotal] set midi does **no** cover calculations and assumes that that actor.coverBonus/attributes.ac.cover reflects the bonus and that dex saving throw bonus has been set as well.
+  - When a saving throw is made with cover the 1/2, 3/4 symbols will be added next to the saving throw total, like it does for attack roll ac.
+  - Midi now uses the values stored in CONFIG.DND5E.statusEffects coverHalf and coverThreeQuarters when applying cover values itself.
+
 ### 13.0.49
 **Bug Fixes**
 * Fixed "Place Measured Template" button being hidden on chat cards after foundry reload. (dnd5e hides the button when canvas isn't ready; midi now overrides this to only check user permission.)

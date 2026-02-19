@@ -112,8 +112,12 @@ export let readyHooks = async () => {
         VolumetricTemplates.compute3Dtemplate(template, tokensToCheck);
       }
     } else {
+      // template.activity is set by dnd5e on AbilityTemplate during preview, but not on
+      // the standard MeasuredTemplate created after placement. Fall back to looking up
+      // the activity from the template's dnd5e.origin flag (the activity UUID).
       // @ts-expect-error no dnd5e-types
-      const activity = template.activity;
+      const activity = template.activity
+        ?? (template.document.flags?.dnd5e?.origin ? fromUuidSync(template.document.flags.dnd5e.origin) : undefined);
       const sourceToken = getTemplateSourceToken(template.document);
       if (activity && sourceToken) {
         const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some((spec: string) => ["-self"].includes(spec));

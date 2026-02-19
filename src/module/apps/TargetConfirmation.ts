@@ -1,7 +1,7 @@
 import { Activity } from "../../globals.js";
 import { i18n, error, i18nFormat } from "../../midi-qol.js";
 import { checkMechanic, checkRule, configSettings, targetConfirmation } from "../settings.js";
-import { FULL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, computeCoverBonus, computeFlankingStatus, getToken, isInCombat, isValidTarget, markFlanking, tokenForActor, updateUserTargets, getTokenName } from "../utils.js";
+import { TOTAL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, getCoverBonus, computeFlankingStatus, getToken, isInCombat, isValidTarget, markFlanking, tokenForActor, updateUserTargets, getTokenName } from "../utils.js";
 import { shouldEnforceSingleTarget } from "../activities/activityHelpers.js";
 import { getTokenPlayerName } from "../utils.js";
 import { TroubleShooter } from "./TroubleShooter.js";
@@ -188,7 +188,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       // TODO look at doing save cover bonus calculations here - need the template
       if (typeof configSettings.optionalRules.coverCalculation === "string" && configSettings.optionalRules.coverCalculation !== "none") {
         if (!activityHasAreaTarget(this.data.activity)) {
-          const targetCover = attackerToken ? computeCoverBonus(attackerToken, target, this.data.activity) : 0;
+          const targetCover = attackerToken ? getCoverBonus(attackerToken, target, this.data.activity) : 0;
           switch (targetCover) {
             case HALF_COVER:
               details.push(`${i18n("DND5E.CoverHalf")} ${i18n("DND5E.Cover")}`);
@@ -196,11 +196,13 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
             case THREE_QUARTERS_COVER:
               details.push(`${i18n("DND5E.CoverThreeQuarters")} ${i18n("DND5E.Cover")}`);
               break;
-            case FULL_COVER:
+            case TOTAL_COVER:
               details.push(`${i18n("DND5E.CoverTotal")} ${i18n("DND5E.Cover")}`);
               break;
-            default:
+            case 0:
               details.push(`${i18n("No")} ${i18n("DND5E.Cover")}`);
+            default:
+              details.push(`+${targetCover} ${i18n("DND5E.Cover")}`);
               break;
           }
         }

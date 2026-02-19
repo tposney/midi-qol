@@ -1799,11 +1799,6 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
       saveCount = parseCountAction(raw.saveRemove, "remove");
     }
   }
-  // Default: remove on first save if no damage on save (only when neither saveCount nor saveRemove specified)
-  if (saveCount === undefined && raw.saveDamage === "nodamage" && saveDC > -1) {
-    saveCount = { count: 1, mode: "remove", consecutive: false };
-  }
-
   // Handle failCount parameter
   if (raw.failCount !== undefined) {
     failCount = parseCountAction(raw.failCount, "permanent");
@@ -1813,6 +1808,12 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
     foundry.utils.logCompatibilityWarning(`midi-qol | parseOvertimeDetails | failRemove is deprecated, use failCount instead (failRemove=${raw.failRemove})`,
       { since: "midi-qol 13.0.43", until: "midi-qol 13.1.0" });
     failCount = parseCountAction(raw.failRemove, "permanent");
+  }
+
+  // Default: if neither saveCount nor failCount is specified and there's a valid saveDC,
+  // remove the effect on a single successful save.
+  if (saveCount === undefined && failCount === undefined && saveDC > -1) {
+    saveCount = { count: 1, mode: "remove", consecutive: false };
   }
 
   return {
@@ -3570,9 +3571,44 @@ function getLevelsAutoCoverOptions() {
   return options;
 }
 
-export const FULL_COVER = 999;
-export const THREE_QUARTERS_COVER = 5;
-export const HALF_COVER = 2;
+export const TOTAL_COVER = Infinity;
+// Initialized from CONFIG.DND5E.statusEffects in initCoverConstants(), fallback to dnd5e 2024 defaults
+export let THREE_QUARTERS_COVER: number = 5;
+export let HALF_COVER: number = 2;
+
+/** Initialize cover constants from CONFIG.DND5E.statusEffects. Call after dnd5e init. */
+export function initCoverConstants() {
+  //@ts-expect-error CONFIG.DND5E not typed
+  THREE_QUARTERS_COVER = CONFIG.DND5E?.statusEffects?.coverThreeQuarters?.coverBonus ?? 5;
+  //@ts-expect-error CONFIG.DND5E not typed
+  HALF_COVER = CONFIG.DND5E?.statusEffects?.coverHalf?.coverBonus ?? 2;
+}
+
+/** Check if an actor has any dnd5e cover status (coverHalf, coverThreeQuarters, or coverTotal). */
+export function hasCoverStatus(actor: Actor | null | undefined): boolean {
+  const statuses = actor?.statuses;
+  return !!(statuses?.has("coverHalf") || statuses?.has("coverThreeQuarters") || statuses?.has("coverTotal"));
+}
+
+/** Check if an actor has the coverTotal status (impossible to hit). */
+export function hasCoverTotal(actor: Actor | null | undefined): boolean {
+  return !!actor?.statuses?.has("coverTotal");
+}
+
+/**
+ * Get the effective cover bonus for a target, from any source.
+ * If the target has a dnd5e cover status, returns ac.cover (already baked into AC/saves by dnd5e).
+ * Otherwise, returns the module-computed cover bonus from computeCoverBonus.
+ */
+export function getCoverBonus(attacker: TokenOrDocument, target: TokenOrDocument, activity?: Activity): number {
+  const targetActor = target instanceof TokenDocument ? target.actor : (target as Token)?.actor;
+  if (hasCoverTotal(targetActor)) return TOTAL_COVER;
+  if (hasCoverStatus(targetActor)) {
+    //@ts-expect-error no dnd5e-types
+    return targetActor?.system.attributes.ac.cover ?? 0;
+  }
+  return computeCoverBonus(attacker, target, activity);
+}
 
 export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOrDocument, activity?: Activity): number {
   const attacker = attackerIn instanceof TokenDocument ? attackerIn.object : attackerIn;
@@ -3591,12 +3627,11 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
   // If the target has a dnd5e cover status, ac.value already includes the cover bonus
   // (for half/three-quarters). Skip querying cover modules to avoid double-counting.
   // coverTotal is special: dnd5e's coverBonus getter returns 0 for it (ac.value unchanged),
-  // so we must return FULL_COVER explicitly.
-  const targetStatuses = target.actor?.statuses;
-  if (targetStatuses?.has("coverTotal")) {
-    return FULL_COVER;
+  // so we must return TOTAL_COVER explicitly.
+  if (hasCoverTotal(target.actor)) {
+    return TOTAL_COVER;
   }
-  if (targetStatuses?.has("coverHalf") || targetStatuses?.has("coverThreeQuarters")) {
+  if (hasCoverStatus(target.actor)) {
     return 0;
   }
 
@@ -3611,7 +3646,7 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
         // const coverData = AutoCover.calculateCover(attacker, target, {DEBUG: true});
         //@ts-expect-error
         const coverDetail = AutoCover.getCoverData();
-        if (coverData.rawCover === 0) coverBonus = FULL_COVER;
+        if (coverData.rawCover === 0) coverBonus = TOTAL_COVER;
         else if (coverData.rawCover > coverDetail[1].percent) coverBonus = 0;
         else if (coverData.rawCover < coverDetail[0].percent) coverBonus = THREE_QUARTERS_COVER;
         else if (coverData.rawCover < coverDetail[1].percent) coverBonus = HALF_COVER;
@@ -3626,7 +3661,7 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
             coverBonus = 0;
             break;
           }
-          if (coverData?.data?.results.cover === 3) coverBonus = FULL_COVER;
+          if (coverData?.data?.results.cover === 3) coverBonus = TOTAL_COVER;
           else coverBonus = -coverData?.data?.results.value || 0;
           console.log("midi-qol | ComputeCover Bonus - For token ", attacker.name, " attacking ", target.name, " cover data is ", coverBonus, coverData)
         }
@@ -3656,7 +3691,7 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
           if (coverResult.bonus !== undefined) {
             // New API: bonus is 0=none, 2=half, 5=threeQuarters, null=total
             if (coverResult.bonus === null) {
-              coverBonus = FULL_COVER;
+              coverBonus = TOTAL_COVER;
             } else {
               coverBonus = coverResult.bonus;
             }
@@ -3673,7 +3708,7 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
                 coverBonus = THREE_QUARTERS_COVER;
                 break;
               default:
-                coverBonus = FULL_COVER;
+                coverBonus = TOTAL_COVER;
             }
           }
         };
@@ -3683,7 +3718,7 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
         if (!installedModules.get("tokencover")) coverBonus = 0;
         else {
           const coverValue = calcTokenCover(attacker, target);
-          if (coverValue === 4 || coverValue === 3) coverBonus = FULL_COVER;
+          if (coverValue === 4 || coverValue === 3) coverBonus = TOTAL_COVER;
           else if (coverValue === 2) coverBonus = THREE_QUARTERS_COVER;
           else if (coverValue === 1) coverBonus = HALF_COVER;
           else coverBonus = 0;
@@ -3698,10 +3733,10 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
     //TODO is this right or should it be the same as non-spell?
     // @ts-expect-error no dnd5e-types
     if ((activity?.midiProperties?.ignoreFullCover) && item?.type === "spell") coverBonus = 0;
-    else if ((activity?.midiProperties?.ignoreFullCover) && coverBonus === FULL_COVER) coverBonus = THREE_QUARTERS_COVER;
+    else if ((activity?.midiProperties?.ignoreFullCover) && coverBonus === TOTAL_COVER) coverBonus = THREE_QUARTERS_COVER;
 
     // @ts-expect-error no dnd5e-types
-    if ((activity?.actionType ?? item?.system.actionType) === "rwak" && attacker.actor && coverBonus !== FULL_COVER && coverBonus !== 0
+    if ((activity?.actionType ?? item?.system.actionType) === "rwak" && attacker.actor && coverBonus !== TOTAL_COVER && coverBonus !== 0
       && (attacker.actor?.flags?.[MODULE_ID]?.sharpShooter || attacker.actor?.flags?.dnd5e?.sharpShooter)) {
       const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
       let sharpShooterEnabled = evalCondition(attacker.actor?.flags?.dnd5e?.sharpShooter, conditionData);
@@ -3712,7 +3747,7 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
     if (["rsak"/*, "rpak"*/].includes((activity?.actionType ?? item?.system.actionType))
       && attacker.actor
       && (attacker.actor.flags?.dnd5e?.spellSniper)
-      && coverBonus !== FULL_COVER && coverBonus !== 0) {
+      && coverBonus !== TOTAL_COVER && coverBonus !== 0) {
       const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
       let spellSniperEnabled: boolean | undefined = evalCondition(attacker.actor.flags.dnd5e.spellSniper, conditionData);
       if (spellSniperEnabled) coverBonus = 0;
@@ -5208,9 +5243,9 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
           const config = activity._prepareUsageConfig({ create: false });
           const canUse = await activity._prepareUsageUpdates(config, { returnErrors: true });
           if (canUse instanceof Array) continue; // insufficient uses available
-          // If no condition is specified, default to requiring isAttacked
+          // If no condition is specified, default to requiring isHit
           if (!reactionCondition) {
-            reactionCondition = 'reaction === "isAttacked"';
+            reactionCondition = 'reaction === "isHit"';
           }
           const returnvalue = await evalReactionActivationCondition(options.workflow, reactionCondition, target, { async: true, extraData: { reaction: reactionTriggerLabelFor(triggerType) } });
           if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using condition ${reactionCondition} condition ${returnvalue}`, options.workflow?.conditionData);

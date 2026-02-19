@@ -472,11 +472,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         hookIds["dnd5e.postRollConfiguration"] = Hooks.once("dnd5e.postRollConfiguration", (rolls, config, dialog, message) => {
           const targetDescriptors = foundry.utils.getProperty(message, "data.flags.dnd5e.targets") as DND5ETargetDescriptor[] | undefined;
           if (targetDescriptors && workflow) {
-            // Convert dnd5e's null AC (coverTotal) to Infinity for midi's internal use.
-            // Infinity propagates through arithmetic (ac.value + Infinity = Infinity) ensuring auto-miss.
-            for (const td of targetDescriptors) {
-              if (td.ac === null) td.ac = Infinity;
-            }
+            // Don't mutate td.ac — it's a shared reference with the chat message data.
+            // null AC (coverTotal) is handled downstream in checkHits() as auto-miss.
             workflow.targetDescriptors = targetDescriptors as DND5ETargetDescriptor[];
           }
         });
@@ -609,7 +606,10 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       // and attributions (workflowOptions, rollOptions, flanking, flags, etc.)
       if (await asyncHooksCall("midi-qol.preAttackRoll", workflow) === false
         || await asyncHooksCall(`midi-qol.preAttackRoll.${this.item.uuid}`, workflow) === false
-        || await asyncHooksCall(`midi-qol.preAttackRoll.${this.uuid}`, workflow) === false) {
+        || await asyncHooksCall(`midi-qol.preAttackRoll.${this.uuid}`, workflow) === false
+        || await asyncHooksCall("midi-qol.premades.preAttackRoll", workflow) === false
+        || await asyncHooksCall(`midi-qol.premades.preAttackRoll.${this.item.uuid}`, workflow) === false
+        || await asyncHooksCall(`midi-qol.premades.preAttackRoll.${this.uuid}`, workflow) === false) {
         console.warn("midi-qol | attack roll blocked by preAttackRoll hook");
         return false;
       }
@@ -618,7 +618,10 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       workflow.attackRollModifierTracker.processKeys(config);
       if (await asyncHooksCall("midi-qol.preAttackRollConfig", workflow) === false
         || await asyncHooksCall(`midi-qol.preAttackRollConfig.${this.item.uuid}`, workflow) === false
-        || await asyncHooksCall(`midi-qol.preAttackRollConfig.${this.uuid}`, workflow) === false) {
+        || await asyncHooksCall(`midi-qol.preAttackRollConfig.${this.uuid}`, workflow) === false
+        || await asyncHooksCall(`midi-qol.premades.preAttackRollConfig`, workflow) === false
+        || await asyncHooksCall(`midi-qol.premades.preAttackRollConfig.${this.item.uuid}`, workflow) === false
+        || await asyncHooksCall(`midi-qol.premades.preAttackRollConfig.${this.uuid}`, workflow) === false) {
         console.warn("midi-qol | attack roll blocked by preAttackRollConfig hook");
         return false;
       }

@@ -34,7 +34,11 @@ import {
   removeHidden,
   hasDAE,
   computeCoverBonus,
-  FULL_COVER,
+  TOTAL_COVER,
+  THREE_QUARTERS_COVER,
+  HALF_COVER,
+  hasCoverStatus,
+  hasCoverTotal,
   isInCombat,
   displayDSNForRoll,
   setActionUsed,
@@ -1005,6 +1009,7 @@ export class Workflow {
     modifierTracker?: RollModifierTracker;  // Full RollModifierTracker for attribution tracking
     attributionTooltip?: string;  // HTML-escaped attribution tooltip for data-tooltip-html attribute
     hasAttribution?: boolean;  // Whether there is attribution data to display an info icon
+    coverLabel?: string;  // ½ or ¾ cover indicator
     saveClass: string;
   }[] | undefined;
 
@@ -1673,7 +1678,7 @@ export class Workflow {
   } | undefined;
 
   sequenceId?: string;
-  descriptorACModifiers: Map<string, number> = new Map(); // Map of actor uuid to AC modifier, used for active defences
+  targetACModifiers: Map<string, number> = new Map(); // Map of actor uuid to AC modifier, used for active defences
 
   // Does this do anything?
   applicationTargets: Set<Token.Implementation> | undefined;
@@ -2475,7 +2480,7 @@ export class Workflow {
       //@ts-e xpect-error
       // if (ui.chat?._shouldShowNotifications()) await Dialog.confirm();
       await this.displayAttackRoll({ GMOnlyAttackRoll: true });
-      this.recordDescriptorACModifiers();
+      this.recordTargetACModifiers();
       await this.checkHits();
       await this.displayAttackRoll();
       const rollMode = safeGetGameSetting("core", "rollMode");
@@ -5146,7 +5151,7 @@ return {
             img: t.actor?.img as string,
             uuid: t.actor?.uuid ?? "",
             //@ts-expect-error no dnd5e-types
-            ac: t.actor?.statuses.has("coverTotal") ? null : t?.actor?.system.attributes.ac.value as number,
+            ac: hasCoverTotal(t.actor) ? null : t?.actor?.system.attributes.ac.value as number,
             saved: saves?.has(t.uuid),
             semiSuperSaver: semiSuperSavers?.has(t.uuid),
             superSaver: superSavers?.has(t.uuid),
@@ -5317,7 +5322,7 @@ return {
    * @param saveRollTotal The total of the save roll
    * @param saved Whether the target saved
    * @param rollDC The save DC (or undefined if no DC)
-   * @param coverSaveBonus Cover bonus applied to the save
+   * @param coverSaveBonus Computed cover bonus (for label when no cover status)
    */
   protected async buildSaveDisplayEntry(
     target: Token,
@@ -5325,14 +5330,13 @@ return {
     saveRollTotal: number,
     saved: boolean,
     rollDC: number | undefined,
-    coverSaveBonus: number
+    coverSaveBonus: number = 0,
   ): Promise<void> {
     let adv = "";
     if (configSettings.displaySaveAdvantage) {
       adv = this.advantageSaves.has(target) ? `(${i18n("DND5E.Advantage")})` : "";
       if (this.disadvantageSaves?.has(target)) adv = `(${i18n("DND5E.Disadvantage")})`;
     }
-    if (coverSaveBonus) adv += `(+${coverSaveBonus} Cover)`;
 
     const img = await this.getTargetPortraitImage(target);
     const isPlayerOwned = target.actor?.hasPlayerOwner ?? false;
@@ -5382,6 +5386,13 @@ return {
     const title = getAdvantageModeTitle(advMode?.hasAdvantage, advMode?.hasDisadvantage);
     const attributionTooltip = await renderAttributionTooltip(advMode?.attribution ?? {}, title);
 
+    // Determine cover label from target statuses, or from computed cover bonus
+    let coverLabel: string | undefined;
+    if (target.actor?.statuses?.has("coverThreeQuarters")) coverLabel = "\u00BE";
+    else if (target.actor?.statuses?.has("coverHalf")) coverLabel = "\u00BD";
+    else if (coverSaveBonus >= THREE_QUARTERS_COVER) coverLabel = "\u00BE";
+    else if (coverSaveBonus >= HALF_COVER) coverLabel = "\u00BD";
+
     this.saveDisplayData?.push({
       gmName: getTokenName(target),
       playerName: getTokenPlayerName(target) ?? "",
@@ -5401,6 +5412,7 @@ return {
       modifierTracker: saveDetails?.modifierTracker,  // Store per-target modifierTracker for attribution
       attributionTooltip: foundry.utils.escapeHTML(attributionTooltip),  // Escaped for data-tooltip-html, always shown
       hasAttribution: Object.keys(advMode?.attribution ?? {}).length > 0,
+      coverLabel,
       saveClass: (rollDC === null) ? "" : (saved ? "success" : "failure"),
     });
   }
@@ -5515,12 +5527,35 @@ return {
         // Special case for templates
         const coverData = await globalThis.CoverCalculator.checkCoverViaCoordinates(
           position.x, position.y, false, 'AoE', false, target);
-        if (coverData?.data.results.cover === 3) return FULL_COVER;
+        if (coverData?.data.results.cover === 3) return TOTAL_COVER;
         return -coverData.data.results.value;
       }
 
       if (configSettings.optionalRules.coverCalculation === "tokencover" && installedModules.get("tokencover")) {
         if (this.token) return computeCoverBonus(foundry.utils.deepClone(this.token, { center: position } as any), target, this.activity);
+      }
+
+      if (configSettings.optionalRules.coverCalculation === "simplecover5e"
+        && installedModules.get("simplecover5e")) {
+        // simplecover5e's getCover accepts Position {x,y,elevation} for attacker per its API docs,
+        // but wallsBlock() internally calls attackerDoc.getCenterPoint() which doesn't exist on Position.
+        // Work around by adding getCenterPoint to the synthetic.
+        const syntheticAttacker = {
+          center: position,
+          scene: canvas.scene,
+          x: position.x,
+          y: position.y,
+          elevation: template.document.elevation,
+          getCenterPoint() { return { x: position.x, y: position.y }; },
+          document: {
+            x: position.x,
+            y: position.y,
+            elevation: template.document.elevation,
+            disposition: targetDocument?.disposition,
+            getCenterPoint() { return { x: position.x, y: position.y }; },
+          }
+        };
+        return computeCoverBonus(syntheticAttacker as unknown as Token, target, this.activity);
       }
 
       return 0;
@@ -6154,7 +6189,19 @@ return {
     this.updateAdvantageTrackingFromRoll(target, result);
     let { isFumble, isCritical } = this.determineCriticalOrFumble(saveRolls[0], saveRollTotal);
     const coverSaveBonus = await this.calculateCoverSaveBonus(target, template, rollAbility);
-    saveRollTotal += coverSaveBonus;
+    if (coverSaveBonus > 0 && saveRolls[0]) {
+      // Inject cover bonus into the roll so it's visible in the roll tooltip
+      const OperatorTerm = foundry.dice.terms.OperatorTerm;
+      const NumericTerm = foundry.dice.terms.NumericTerm;
+      saveRolls[0].terms.push(
+        new OperatorTerm({ operator: "+" }),
+        new NumericTerm({ number: coverSaveBonus, options: { flavor: i18n("DND5E.Cover") } })
+      );
+      saveRolls[0].resetFormula();
+      //@ts-expect-error _total is protected
+      saveRolls[0]._total += coverSaveBonus;
+      saveRollTotal += coverSaveBonus;
+    }
 
     // Adjust the save dc if something changed it during the roll
     let resultDC = rollDC ?? 0;
@@ -7157,16 +7204,17 @@ return {
     return damageRolls;
   }
 
-  recordDescriptorACModifiers() {
-    this.descriptorACModifiers = new Map() as Map<string, number>;
+  recordTargetACModifiers() {
+    this.targetACModifiers = new Map() as Map<string, number>;
     const allTargetDescriptors = this.targetDescriptors;
     for (let targetToken of this.targets) {
       let targetActor = targetToken.actor;
       if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
       const targetDescriptor = getTargetDescriptor(targetActor.uuid, allTargetDescriptors);
-      if (targetDescriptor?.ac) {
+      // null AC means coverTotal — no modifier to compute; cover is handled via status in checkHits
+      if (targetDescriptor?.ac != null) {
         //@ts-expect-error no dnd5e-types
-        this.descriptorACModifiers.set(targetActor.uuid, targetDescriptor.ac - targetActor.system.attributes.ac.value);
+        this.targetACModifiers.set(targetActor.uuid, targetDescriptor.ac - targetActor.system.attributes.ac.value);
       }
     }
   }
@@ -7187,9 +7235,12 @@ return {
       let targetName = configSettings.useTokenNames && targetToken.name ? targetToken.name : targetToken.actor?.name;
       let targetActor = targetToken.actor;
       if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
-      let descriptorMod = this.descriptorACModifiers.get(targetActor.uuid) ?? 0;
+      let targetACMod = this.targetACModifiers.get(targetActor.uuid) ?? 0;
       //@ts-expect-error no dnd5e-types
-      let targetAC = targetActor.system.attributes.ac.value + descriptorMod;
+      let targetAC = targetActor.system.attributes.ac.value + targetACMod;
+      // ac.value already includes coverHalf/coverThreeQuarters bonus from dnd5e.
+      // coverTotal has no coverBonus in dnd5e (ac.value unchanged), so we set Infinity for auto-miss.
+      if (hasCoverTotal(targetActor)) targetAC = Infinity;
       let attackBonus = 0;
       const wjVehicle = installedModules.get("wjmais") ? foundry.utils.getProperty(targetActor, "flags.wjmais.crew.min") != null : false;
       // @ts-expect-error no dnd5e-types
@@ -7207,9 +7258,9 @@ return {
       let hitResultNumeric: string | undefined;
 
       // @ts-expect-error no dnd5e-types
-      let targetEC = (targetActor.system.attributes.ac.EC ?? 0) + descriptorMod;
+      let targetEC = (targetActor.system.attributes.ac.EC ?? 0) + targetACMod;
       // @ts-expect-error no dnd5e-types
-      let targetAR = (targetActor.system.attributes.ac.AR ?? 0) + descriptorMod;
+      let targetAR = (targetActor.system.attributes.ac.AR ?? 0) + targetACMod;
 
       let bonusAC = 0;
 
@@ -7233,9 +7284,19 @@ return {
         ignoreCover ||= await evalAllConditionsAsync(this.actor, midiFlag(`sharpShooter`), conditionData);
         ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.dnd5e.sharpShooter`, conditionData);
       }
-      if (this.token) bonusAC = computeCoverBonus(this.token, targetToken, this.activity);
-      if (ignoreCover && bonusAC < FULL_COVER) bonusAC = 0;
-      targetAC += bonusAC;
+      // Cover bonus handling:
+      // - If target has a dnd5e cover status, ac.value already includes the bonus — don't call computeCoverBonus.
+      // - If no cover status, compute cover from modules/midi cover calculation.
+      // - ignoreCover: for status-based cover, subtract the baked-in coverBonus; for computed cover, zero the bonus.
+      if (!hasCoverStatus(targetActor)) {
+        if (this.token) bonusAC = computeCoverBonus(this.token, targetToken, this.activity);
+        if (ignoreCover && bonusAC < TOTAL_COVER) bonusAC = 0;
+        targetAC += bonusAC;
+      } else if (ignoreCover && isFinite(targetAC)) {
+        // Undo the cover component baked into ac.value by dnd5e (includes AE modifications, not just status bonus)
+        //@ts-expect-error no dnd5e-types
+        targetAC -= targetActor.system.attributes.ac.cover ?? 0;
+      }
 
       const midiFlagsAttackBonus = targetActor.flags?.[MODULE_ID]?.grants?.attack?.bonus;
       let reactionOptionalAC = 0;
@@ -7260,16 +7321,16 @@ return {
             // TODO what else to do once rolled
             if (result?.ac) { // result.ac is available if the optional ac returns a newAC total.
               reactionOptionalAC = result.ac;
-              targetAC = reactionOptionalAC + bonusAC + descriptorMod;
+              targetAC = reactionOptionalAC + bonusAC + targetACMod;
             }
             // @ts-expect-error no dnd5e-types
-            else targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + bonusAC + descriptorMod;
+            else targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + bonusAC + targetACMod;
           }
           isHit = (attackTotal + attackBonus) >= targetAC || this.isCritical;
         }
-        if (bonusAC === FULL_COVER || !isFinite(targetAC)) isHit = false; // total cover: either from computeCoverBonus or from descriptor AC (Infinity)
+        if (!isFinite(targetAC)) isHit = false; // total cover (coverTotal status or TOTAL_COVER from computeCoverBonus)
 
-        if (targetEC) isHitEC = challengeModeArmorSet && attackTotal <= targetAC && attackTotal >= targetEC && bonusAC !== FULL_COVER && isFinite(targetAC);
+        if (targetEC) isHitEC = challengeModeArmorSet && attackTotal <= targetAC && attackTotal >= targetEC && isFinite(targetAC);
         // check to see if the roll hit the target
         if ((isHit || isHitEC) && this.activity.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
           const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
@@ -7281,12 +7342,12 @@ return {
           if (!Workflow.getWorkflow(this.id)) // workflow has been removed - bail out
             return;
           // @ts-expect-error no dnd5e-types
-          targetAC = (reactionOptionalAC || Number.parseInt(targetActor.system.attributes.ac.value)) + bonusAC + descriptorMod;
+          targetAC = (reactionOptionalAC || Number.parseInt(targetActor.system.attributes.ac.value)) + bonusAC + targetACMod;
           // @ts-expect-error no dnd5e-types
-          if (targetEC) targetEC = targetActor.system.attributes.ac.EC + bonusAC + descriptorMod;
+          if (targetEC) targetEC = targetActor.system.attributes.ac.EC + bonusAC + targetACMod;
           if (result.ac) targetAC = result.ac + bonusAC; // deal with bonus ac if any.
-          if (targetEC) targetEC = targetAC - targetAR + descriptorMod; // targetEC is always the same as targetAC - targetAR + descriptorMod
-          if (bonusAC === FULL_COVER || !isFinite(targetAC)) isHit = false; // total cover: either from computeCoverBonus or from descriptor AC (Infinity)
+          if (targetEC) targetEC = targetAC - targetAR + targetACMod; // targetEC is always the same as targetAC - targetAR + descriptorMod
+          if (!isFinite(targetAC)) isHit = false; // total cover
           else {
             isHit = (attackTotal + attackBonus >= targetAC || this.isCritical) && result.name !== "missed";
             if (challengeModeArmorSet) isHit = this.attackTotal >= targetAC || this.isCritical;
@@ -7395,7 +7456,7 @@ return {
       // This was set by computeCoverBonus so clear it after use.
       foundry.utils.setProperty(targetActor, midiFlag(`acBonus`), 0);
 
-      if (game.user?.isGM) log(`${this.speaker?.alias} Rolled a ${this.attackTotal + attackBonus} to hit ${targetName} 's AC of ${targetAC} ${(isHit || this.isCritical) ? "hitting" : "missing"}`);
+      if (game.user?.isGM) log(`${this.speaker?.alias} Rolled a ${this.attackTotal + attackBonus} to hit ${targetName} 's AC of ${targetAC} ${isHit ? "hitting" : "missing"}`);
       // Log the hit on the target
       let attackType = ""; //item?.name ? i18n(item.name) : "Attack";
 
@@ -7460,10 +7521,9 @@ return {
       const acDisplay = `${targetACString}${acBonusString}`;
 
       // Determine cover label from target statuses
-      const targetStatuses = targetToken.actor?.statuses;
       let coverLabel: string | undefined;
-      if (targetStatuses?.has("coverThreeQuarters")) coverLabel = "\u00BE";
-      else if (targetStatuses?.has("coverHalf")) coverLabel = "\u00BD";
+      if (targetActor.statuses?.has("coverThreeQuarters")) coverLabel = "\u00BE";
+      else if (targetActor.statuses?.has("coverHalf")) coverLabel = "\u00BD";
 
       this.hitDisplayData[targetUuid] = {
         targetClass: !!targetToken.actor?.hasPlayerOwner ? "midi-qol-player-target" : "midi-qol-npc-target",
@@ -7950,7 +8010,7 @@ export class ActiveDefenceWorkflow extends Workflow {
 
       // TODO: Add in AC Bonus for cover
       // @ts-expect-error no dnd5e-types
-      const actorAC = targetActorSystem.attributes.ac.value + (this.descriptorACModifiers.get(target.actor.uuid) ?? 0);
+      const actorAC = targetActorSystem.attributes.ac.value + (this.targetACModifiers.get(target.actor.uuid) ?? 0);
       let dcMod = actorAC - (22 - configSettings.optionalRules.activeDefenceModifier);
       let modString = `+ ${dcMod}`;
       if (dcMod < 0) modString = `- ${Math.abs(dcMod)}`;
@@ -7990,7 +8050,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.dnd5e.sharpShooter`, conditionData);
       }
       if (this.token) coverBonus = computeCoverBonus(this.token, target, this.activity);
-      if (ignoreCover && coverBonus < FULL_COVER) coverBonus = 0;
+      if (ignoreCover && coverBonus < TOTAL_COVER) coverBonus = 0;
       if (coverBonus) modString += ` + ${coverBonus}`;
       let formula = `1d20${modString}`;
 
@@ -8086,7 +8146,7 @@ export class ActiveDefenceWorkflow extends Workflow {
           rollTotal += (reaction.ac ?? 0) + acChange; // deal with bonus ac if any.
           results[i] = await new BasicRoll(`${rollTotal}`, {}, { type: "activeDefence" }).evaluate();
 
-          // if (coverBonus === FULL_COVER) isHit = false; // bonusAC will only be FULL_COVER if cover bonus checking is enabled.
+          // if (coverBonus === TOTAL_COVER) isHit = false; // bonusAC will only be TOTAL_COVER if cover bonus checking is enabled.
         }
       } else if (!isHit && this.activity.attack && this.attackRoll && target !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`)) {
         const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item.uuid }, { inplace: false, overwrite: true });
@@ -8301,7 +8361,7 @@ export class DamageOnlyWorkflow extends Workflow {
     if (this.itemCardUuid) {
       this.isFumble = false;
       this.attackTotal = 9999;
-      this.recordDescriptorACModifiers();
+      this.recordTargetACModifiers();
       await this.checkHits(this.workflowOptions);
       this.hitTargets = new Set(this.targets);
       await this.displayHits(whisperCard, false);
@@ -8430,7 +8490,7 @@ export class TrapWorkflow extends Workflow {
     await this.processAttackRoll();
     this.recordAttackStats();
     await this.displayAttackRoll();
-    this.recordDescriptorACModifiers();
+    this.recordTargetACModifiers();
     await this.checkHits(this.workflowOptions);
     const whisperCard = configSettings.autoCheckHit === "whisper" || safeGetGameSetting("core", "rollMode") === CONST.DICE_ROLL_MODES.BLIND;
     await this.displayHits(whisperCard);
@@ -8577,7 +8637,7 @@ export class DDBGameLogWorkflow extends Workflow {
 
     if (debugEnabled > 1) debug(this.attackRollHTML)
     if (configSettings.autoCheckHit !== "none" && this.activity.attack) {
-      this.recordDescriptorACModifiers(); // Not sure this is relevant
+      this.recordTargetACModifiers(); // Not sure this is relevant
       await this.checkHits(this.workflowOptions);
       await this.displayHits(configSettings.autoCheckHit === "whisper");
     }
