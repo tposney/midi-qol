@@ -44,6 +44,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       foundry.utils.setProperty(options, "workflowOptions.fastForward", options.workflowOptions?.fastForward);
       return options.callback ? options.callback(value) : value;
     }
+    // Make sure the current targets respect the targeting rules of the activity
+    this.validateAndUpdateTargets();
+ 
     if (["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(checkRule("checkFlanking") as string) && game.user?.targets) {
       const actor = this.data.activity.actor;
       const token = tokenForActor(actor);
@@ -54,18 +57,19 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     // this.callback = options.callback;
     this.hookId = Hooks.on("targetToken", (user, token, targeted) => {
       if (user !== game.user) return;
+      if (game.user.targets) {
+        this.validateAndUpdateTargets();
+      }
+      // Validate max number of targets after target validation, so that invalid targets can be removed without triggering a warning
       if (this.data.maxTargets && game.user.targets?.size > this.data.maxTargets)
         ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets: this.data.maxTargets }));
-      if (game.user.targets) {
-        const validTargets: Array<string> = [];
-        for (let target of game.user.targets) {
-          // if (maxTargets && validTargets.length >= maxTargets) break;
-          if (isValidTarget(target)) validTargets.push(target.id);
-        }
-        updateUserTargets(validTargets);
+
+      const newTargets = Array.from(game.user.targets ?? []);
+      // Do not re-render if the targets have not changed
+      if (!newTargets.equals(this.data.targets ?? [])) {
+        this.data.targets = newTargets;
+        this.render();
       }
-      this.data.targets = Array.from(game.user.targets ?? []);
-      this.render();
     });
     return this;
   }
@@ -126,6 +130,33 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     }
   };
 
+  validateAndUpdateTargets() {
+    const targets = Array.from(game.user?.targets ?? []);
+    const actor = this.data.activity.actor;
+    const attackerToken = tokenForActor(actor);
+    let validTargets: Array<string> = [];
+    for (let target of targets) {
+      // Skip invalid targets
+      if (!isValidTarget(target)) continue;
+
+      // Skip targets that are excluded by workflow options (if present)
+      if (this.data.options?.workflowOptions?.excludeTargets && this.data.options.workflowOptions.excludeTargets?.includes(target.document.uuid)) continue;
+
+      // Skip targets that do not match the activity's target type
+      switch (this.data.activity.target?.affects?.type ?? "any") {
+        case "enemy":
+          if ((attackerToken?.document?.disposition ?? 1) * target.document.disposition >= 0) continue;
+          break;
+        case "ally":
+          if ((attackerToken?.document?.disposition ?? 1) * target.document.disposition < 0) continue;
+          break;
+        default: break;
+      }
+      validTargets.push(target.id);
+    }
+    updateUserTargets(validTargets);
+  }
+
   async _prepareContext(options: ApplicationV2.RenderOptions) {
     let context: Omit<typeof this.data, 'targets'> & ApplicationV2.RenderContext & {
       blurb?: string;
@@ -150,15 +181,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     const token = tokenForActor(actor);
     for (let target of targets) {
       // if (maxTargets && data.targets.length >= maxTargets) break;
-      switch (this.data.activity.target?.affects?.type ?? "any") {
-        case "enemy":
-          if ((token?.document?.disposition ?? 1) * target.document.disposition >= 0) continue;
-          break;
-        case "ally":
-          if ((token?.document?.disposition ?? 1) * target.document.disposition < 0) continue;
-          break;
-        default: break;
-      }
+
+      // Note: no need to revaldiate targets, they are filtered before first render and each time token selection changes
+
       let img = target.document.texture.src as string;
       if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
         img = await game.video?.createThumbnail(img as string, { width: 50, height: 50 }) ?? "";
