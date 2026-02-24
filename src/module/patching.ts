@@ -663,7 +663,8 @@ function getAdvantageSourceInfo(config: RollProcessConfig): AdvantageSourceInfo 
   const hasExternalSource =
     (hasEventAdvantage && !!installedModules.get("monks-tokenbar"))
     || (hasRolls && !hasWorkflowId && !!installedModules.get("epic-rolls-5e"))
-    || (hasDirect && !hasWorkflowId && !!installedModules.get("flash-rolls-5e"));
+    // @ts-expect-error Flash Rolls sets config._isFlashRoll on its request rolls
+    || (config._isFlashRoll && !!installedModules.get("flash-rolls-5e"));
 
   // Determine which module provided the advantage/disadvantage based on how it was passed
   // Only match a specific module if it is actually active
@@ -672,8 +673,9 @@ function getAdvantageSourceInfo(config: RollProcessConfig): AdvantageSourceInfo 
     sourceType = 'monks-tokenbar';  // Monks TokenBar passes event.advantage/disadvantage
   } else if (hasRolls && !hasWorkflowId && installedModules.get("epic-rolls-5e")) {
     sourceType = 'epic-rolls-5e';   // Epic Rolls passes rolls[0].options.advantage/disadvantage
-  } else if (hasDirect && !hasWorkflowId && installedModules.get("flash-rolls-5e")) {
-    sourceType = 'flash-rolls-5e';  // Flash Rolls sets config.advantage/disadvantage directly (no workflowId)
+  // @ts-expect-error Flash Rolls sets config._isFlashRoll on its request rolls
+  } else if (config._isFlashRoll && installedModules.get("flash-rolls-5e")) {
+    sourceType = 'flash-rolls-5e';  // Flash Rolls marks its rolls with config._isFlashRoll
   } else if (hasDirect || hasMidiOptions) {
     sourceType = 'midi-qol';        // midi-qol internal (GMAction, character sheet, etc.)
   }
@@ -701,10 +703,6 @@ function getExternalModuleFastForward(sourceInfo: AdvantageSourceInfo, rollType:
       }
       break;
     case 'flash-rolls-5e':
-      if (installedModules.get("flash-rolls-5e")) {
-        return safeGetGameSetting("flash-rolls-5e", "skipRollDialog") as boolean ?? false;
-      }
-      break;
     case 'midi-qol':
     case 'epic-rolls-5e':
     case 'none':
