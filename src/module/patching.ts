@@ -1,6 +1,6 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance } from "./utils.js";
+import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -76,6 +76,12 @@ export function initPatching() {
   //@ts-expect-error
   CONFIG.AmbientLight.documentClass = MidiAmbientLightDocument;
 
+  class MidiRegionDocument extends MidiDependentDocumentMixin(
+    globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.Region.documentClass)
+  ) { };
+  //@ts-expect-error
+  CONFIG.Region.documentClass = MidiRegionDocument;
+
   // ActiveEffect, Item, Actor already have dnd5e's DependentDocumentMixin in their class hierarchy
   // Just add MidiDependentDocumentMixin for our registry tracking
   //@ts-expect-error - Mixin pattern type inference
@@ -92,6 +98,19 @@ export function initPatching() {
   class MidiActor extends MidiDependentDocumentMixin(CONFIG.Actor.documentClass) { };
   //@ts-expect-error
   CONFIG.Actor.documentClass = MidiActor;
+}
+
+/**
+ * libWrapper WRAPPER for Token._onClickLeft, Token._onClickRight2, and TokenLayer.selectObjects.
+ * Sets _userInitiatedTarget flag so the targetToken hook can distinguish user clicks from programmatic targeting.
+ */
+function userInitiatedTargetWrapper(this: any, wrapped: Function, ...args: any[]) {
+  setUserInitiatedTarget(true);
+  try {
+    return wrapped(...args);
+  } finally {
+    setUserInitiatedTarget(false);
+  }
 }
 
 export function readyPatching() {
@@ -111,6 +130,12 @@ export function readyPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preDelete", _preDeleteCombat, "WRAPPER");
 
   libWrapper.register(MODULE_ID, "foundry.applications.ui.Notifications.prototype.notify", notificationNotify, "MIXED");
+
+  // User-initiated targeting detection — set flag so targetToken hook can distinguish user clicks from programmatic targeting
+  libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickLeft", userInitiatedTargetWrapper, "WRAPPER");
+  libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickRight2", userInitiatedTargetWrapper, "WRAPPER");
+  libWrapper.register(MODULE_ID, "foundry.canvas.layers.TokenLayer.prototype.selectObjects", userInitiatedTargetWrapper, "WRAPPER");
+
   const gameVersion = game.system?.version;
   if ((game.system?.id === "dnd5e" && foundry.utils.isNewerVersion("3.3", gameVersion ?? ""))) {
     if (ui.notifications)
@@ -544,6 +569,12 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
 
     const saveCreate = message.create;
     message.create = false;
+
+    // Set originatingMessage so dnd5e's MessageRegistry and getOriginatingMessage() work correctly
+    const originatingCardId = config.midiOptions?.workflow?.itemCardId
+      ?? (config.midiOptions?.itemCardUuid ? fromUuidSync(config.midiOptions.itemCardUuid)?.id : undefined);
+    if (originatingCardId) foundry.utils.setProperty(message, "data.flags.dnd5e.originatingMessage", originatingCardId);
+
     if (this.token) foundry.utils.setProperty(dialog, "options.window.subtitle", this.token.name);
     result = await wrapped(config, dialog, message);
     message.create = saveCreate;
@@ -581,11 +612,18 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     const _chosenSkill = userExplicitChoice ?? config.skill;
     if ((config.midiOptions?.rollSkills?.length ?? 0) > 1) result.forEach(r => { if (r?.options) r.options.midiChosenId = _chosenSkill; });
 
+    // Set originatingMessage on roll options so modules can access it without .parent
+    const rollOriginatingId = foundry.utils.getProperty(message, "data.flags.dnd5e.originatingMessage") as string | undefined
+      ?? originatingCardId;
+    if (rollOriginatingId) result.forEach(r => { if (r?.options) r.options.originatingMessage = rollOriginatingId; });
+
     if (message.create !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
         messageData.rolls = result;
-        await ChatMessage.create(messageData, { rollMode });
+        const chatMsg = await ChatMessage.create(messageData, { rollMode });
+        // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
+        if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
       }
     }
     if (skillId) await expireRollEffect.bind(this)("Skill", skillId, success);
@@ -1140,6 +1178,11 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     const saveCreate = message.create;
     message.create = false;
 
+    // Set originatingMessage so dnd5e's MessageRegistry and getOriginatingMessage() work correctly
+    const originatingCardId = config.midiOptions.workflow?.itemCardId
+      ?? (config.midiOptions.itemCardUuid ? fromUuidSync(config.midiOptions.itemCardUuid)?.id : undefined);
+    if (originatingCardId) foundry.utils.setProperty(message, "data.flags.dnd5e.originatingMessage", originatingCardId);
+
     let abilityModifiers: RollModifierResult | undefined;
     const midiOptions = config.midiOptions;
 
@@ -1248,11 +1291,19 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     //@ts-expect-error midiChosenId is a custom roll option
     if (hasMultipleChoices) result.forEach(r => { if (r?.options) r.options.midiChosenId = chosenAbility; });
 
+    // Set originatingMessage on roll options so modules can access it without .parent
+    const rollOriginatingId = foundry.utils.getProperty(message, "data.flags.dnd5e.originatingMessage") as string | undefined
+      ?? originatingCardId;
+    //@ts-expect-error originatingMessage is a custom roll option
+    if (rollOriginatingId) result.forEach(r => { if (r?.options) r.options.originatingMessage = rollOriginatingId; });
+
     if (message.create !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
         messageData.rolls = result;
-        await ChatMessage.create(messageData, { rollMode });
+        const chatMsg = await ChatMessage.create(messageData, { rollMode });
+        // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
+        if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
       }
     }
     if (saveRollMode) game.settings.set("core", "rollMode", saveRollMode);
@@ -1310,10 +1361,10 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
     };
 
     // Process advantage/disadvantage flags using centralized helper
-    // For death saves, source actor is the caster (if any workflow exists)
+    // For death saves, the grants actor is the caster (if any workflow exists)
     const tracker = await computeAdvantageFlags(this, advantageFlags, {
       ...config.midiOptions,
-      sourceActor: config.midiOptions.workflow?.actor
+      grantsActor: config.midiOptions.workflow?.actor
     });
     config.advantage = tracker.hasAdvantage;
     config.disadvantage = tracker.hasDisadvantage;
@@ -1468,11 +1519,11 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
     abilityFlags.sourceNoDisadvantageFlags = ["grants.noDisadvantage.all", `grants.noDisadvantage.${rollType}.all`, `grants.noDisadvantage.${rollType}.${abilityId}`];
   }
 
-  // For saves/checks, source actor is the caster (workflow.actor)
+  // For saves/checks, the grants actor is the caster (workflow.actor)
   // Pass tracker to be populated with attribution
   await computeAdvantageFlags(actor, abilityFlags, {
     ...effectiveOptions,
-    sourceActor: effectiveOptions.workflow?.actor
+    grantsActor: effectiveOptions.workflow?.actor
   }, tracker);
   return { tracker: tracker, magicResistance, magicVulnerability };
 }
@@ -1708,7 +1759,7 @@ export async function computeSkillAdvantage(actor: Actor.Implementation, skillId
   tracker ??= new RollModifierTracker();
   await computeAdvantageFlags(actor, skillFlags, {
     ...options,
-    sourceActor: options.workflow?.actor
+    grantsActor: options.workflow?.actor
   }, tracker);
   return tracker;
 }
@@ -1760,7 +1811,7 @@ export async function computeToolAdvantage(actor: Actor.Implementation, toolId: 
   tracker ??= new RollModifierTracker();
   await computeAdvantageFlags(actor, toolFlags, {
     ...options,
-    sourceActor: options.workflow?.actor
+    grantsActor: options.workflow?.actor
   }, tracker);
   return tracker;
 }
@@ -2349,12 +2400,19 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
   let postRollHookId: number | undefined;
   try {
     config.midiOptions ??= {};
+    message.data ??= {};
     let toolId = config.tool;
     const rollTools: string[] = config.midiOptions?.rollTools ?? (toolId ? [toolId] : []);
     if (rollTools.length === 0)
       throw new Error(`rollToolCheck called with no tools to roll for ${this.name}`);
     const chatMessage = message.create;
     message.create = false;
+
+    // Set originatingMessage so dnd5e's MessageRegistry and getOriginatingMessage() work correctly
+    const originatingCardId = config.midiOptions?.workflow?.itemCardId
+      ?? (config.midiOptions?.itemCardUuid ? fromUuidSync(config.midiOptions.itemCardUuid)?.id : undefined);
+    if (originatingCardId) foundry.utils.setProperty(message, "data.flags.dnd5e.originatingMessage", originatingCardId);
+
     if (dialog.configure === undefined && isAutoFastForward("tool")) dialog.configure = false;
 
     // Check if advantage was pre-computed by an external module (Monks Token Bar, Flash Rolls, Epic Rolls)
@@ -2463,11 +2521,19 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     //@ts-expect-error midiChosenId is a custom roll option
     if (hasMultipleTools) result.forEach(r => { if (r?.options) r.options.midiChosenId = _chosenTool; });
 
+    // Set originatingMessage on roll options so modules can access it without .parent
+    const rollOriginatingId = foundry.utils.getProperty(message, "data.flags.dnd5e.originatingMessage") as string | undefined
+      ?? originatingCardId;
+    //@ts-expect-error originatingMessage is a custom roll option
+    if (rollOriginatingId) result.forEach(r => { if (r?.options) r.options.originatingMessage = rollOriginatingId; });
+
     if (chatMessage !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
         messageData.rolls = result;
-        await ChatMessage.create(messageData, { rollMode });
+        const chatMsg = await ChatMessage.create(messageData, { rollMode });
+        // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
+        if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
       }
     }
   } catch (err) {
@@ -2593,9 +2659,7 @@ export function processTraits(actor: Actor.Implementation) {
           case "spell":
             // trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.spell-damage"));
             break
-          case "power":
-            // trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.power-damage"));
-            break
+          // "power" type removed in v13
           case "magic":
             // trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.Magical"));
             break

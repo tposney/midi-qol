@@ -26,8 +26,8 @@
     {{#if save.hasAttribution}}
     <span class="midi-save-attribution-info {{save.saveTotalClass}}" data-tooltip-html="{{{save.attributionTooltip}}}" data-tooltip-direction="DOWN"><i class="fas fa-info-circle"></i></span>
     {{/if}}
-    <div class="{{save.saveTotalClass}} midi-qol-tooltip" style="font-weight: bold;">
-      {{#if save.coverLabel}}<span class="midi-qol-cover-label">{{save.coverLabel}}</span>{{/if}}
+    <div class="{{save.saveTotalClass}} midi-qol-tooltip" style="font-weight: bold;" {{#if save.saveTooltip}}data-tooltip="{{save.saveTooltip}}"{{/if}}>
+      {{#if save.coverLabel}}<img class="midi-qol-cover-icon" src="{{save.coverLabel}}" />{{/if}}
       {{save.rollTotal}}
       <div class="midi-qol-tooltiptext midi-qol-save-tooltip {{save.saveToolTipClass}}" style="text-align: left;">
         {{{save.rollHTML}}}

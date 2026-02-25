@@ -8,7 +8,7 @@ import { RollModifierTracker } from "./lib/RollModifierTracker.js";
 import { queueUndoData, startUndoWorkflow, updateUndoChatCardUuids, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, updateUndoChatCardUuidsById } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { installedModules } from "./setupModules.js";
-import { Stats } from "./RollStats.js";
+import { StatUpdateMessage } from "./RollStats.js";
 import { DamageApplicationOptions, DamageDescription, DamageListEntry, MonksTokenBarRequest, RollDialogConfig, RollMessageConfig, RollProcessConfig, SaveDetails } from "../globals.js";
 
 export let socketlibSocket: any = undefined;
@@ -63,7 +63,7 @@ export let setupSocket = () => {
   socketlibSocket.register("undoTillWorkflow", undoTillWorkflow);
   socketlibSocket.register("updateActor", updateActor);
   socketlibSocket.register("updateEffects", updateEffects);
-  socketlibSocket.register("updateEntityStats", GMupdateEntityStats)
+  socketlibSocket.register("recordStats", GMrecordStats)
   socketlibSocket.register("saveAllStats", GMsaveAllStats)
   socketlibSocket.register("updateUndoChatCardUuids", updateUndoChatCardUuids);
   socketlibSocket.register("updateUndoChatCardUuidsById", updateUndoChatCardUuidsById);
@@ -109,6 +109,7 @@ export class SaferSocket {
       case "rollConcentration":
       case "removeEffect":
       case "removeActionBonusReaction":
+      case "recordStats":
       case "toggleStatusEffect":
         return true;
 
@@ -138,7 +139,6 @@ export class SaferSocket {
       case "startUndoWorkflow":
       case "undoMostRecentWorkflow":
       case "undoTillWorkflow":
-      case "updateEntityStats":
       case "saveAllStats":
       case "updateUndoChatCardUuids":
       case "updateUndoChatCardUuidsById":
@@ -364,8 +364,8 @@ function removeActorStats(data: { actorId: string }) {
   return gameStats.GMremoveActorStats(data.actorId)
 }
 
-function GMupdateEntityStats(data: { id: string; currentStats: Stats; }) {
-  return gameStats.GMupdateEntity(data)
+function GMrecordStats(data: StatUpdateMessage) {
+  return gameStats.GMrecordStats(data);
 }
 
 function GMsaveAllStats() {
@@ -880,6 +880,7 @@ async function rollAbility(data: {
     saveItemUuid,
     isConcentrationCheck,
     workflowOptions,
+    itemCardUuid,
   };
 
   let config: RollProcessConfig = {

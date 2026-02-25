@@ -17,6 +17,19 @@
                     </select>
                     <div class="notes midi-qol-faint">{{{localize "midi-qol.CheckFlanking.Hint"}}}</div>
                 </div>
+                <div class="form-group">
+                    <label>{{localize "midi-qol.FlankingBonus.Name"}}</label>
+                    <select name="optionalRules.flankingBonus" data-dtype="String">
+                        {{selectOptions flankingBonusOptions selected=configSettings.optionalRules.flankingBonus localize=true}}
+                    </select>
+                    <div class="notes midi-qol-faint">{{{localize "midi-qol.FlankingBonus.Hint"}}}</div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "midi-qol.ShowFlankingHighlight.Name"}}</label>
+                    <input type="checkbox" name="optionalRules.showFlankingHighlight" data-dtype="Boolean"
+                        {{checked configSettings.optionalRules.showFlankingHighlight}} />
+                    <div class="notes midi-qol-faint">{{{localize "midi-qol.ShowFlankingHighlight.Hint"}}}</div>
+                </div>
                 <div class="midi-qol-box">
                     <div class="form-group">
                         <label>{{localize "midi-qol.InvisAdvantage.Name"}}</label>

@@ -1,4 +1,4 @@
-import { debug, setDebugLevel, i18n, debugEnabled, error, gameStats } from "../midi-qol.js";
+import { debug, setDebugLevel, i18n, debugEnabled, error, gameStats, updateFlankingStatusEffects } from "../midi-qol.js";
 import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { DependentsExplorer } from "./apps/DependentsExplorer.js";
 import { ModuleReviewDialog } from "./apps/ModuleReviewDialog.js";
@@ -283,6 +283,8 @@ class ConfigSettings {
     autoRerollInitiative: false,
     challengeModeArmor: "none",
     checkFlanking: "off",
+    flankingBonus: "advantage" as string,
+    showFlankingHighlight: false,
     checkRange: "longFail",
     coverCalculation: "none",
     criticalNat20: false,
@@ -734,6 +736,7 @@ export let fetchParams = () => {
     challengeModeArmor: "none",
     challengeModeArmorScale: false,
     checkFlanking: "off",
+    flankingBonus: "advantage",
     checkRange: "longfail",
     coverCalculation: "none",
     displayBonusRolls: true,
@@ -1025,6 +1028,7 @@ export let fetchParams = () => {
     });
   }
 
+  updateFlankingStatusEffects();
   Hooks.callAll("midi-qol.ConfigSettingsChanged");
 }
 
@@ -1484,6 +1488,15 @@ export const checkFlankingOptions = keysToExtendedOptionsObj("CheckFlankingOptio
   "ceflankedNoconga",
   "midiFlankedNoConga"
 ]);
+
+export const flankingBonusOptions = {
+  "advantage": "midi-qol.FlankingBonusOptions.advantage",
+  "1": "midi-qol.FlankingBonusOptions.1",
+  "2": "midi-qol.FlankingBonusOptions.2",
+  "3": "midi-qol.FlankingBonusOptions.3",
+  "4": "midi-qol.FlankingBonusOptions.4",
+  "5": "midi-qol.FlankingBonusOptions.5",
+};
 
 export const rollAlternateOptions = keysToExtendedOptionsObj("RollAlternateOptions", [
   "off",

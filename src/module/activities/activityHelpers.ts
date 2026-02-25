@@ -359,8 +359,7 @@ export async function showItemInfo(this: Item.Implementation): Promise<ChatMessa
     hasDamage: false,
     // @ts-expect-error no dnd5e-types
     isSpell: this.type === "spell",
-    // @ts-expect-error no dnd5e-types
-    isPower: this.type === "power",
+    isPower: false,
     hasSave: false,
     hasAreaTarget: false,
     hasAttackRoll: false,
@@ -499,7 +498,6 @@ export function selectTargetsFromTemplates(
   const tokens = computeTargetsFromTemplates(templates, selfTokenRef, ignoreSelf, AoETargetType, autoTarget);
   const targetIds = tokens.map(t => t.id).filter(Boolean) as string[];
   updateUserTargets(targetIds);
-  game.user?.broadcastActivity({ targets: targetIds });
   return tokens;
 }
 

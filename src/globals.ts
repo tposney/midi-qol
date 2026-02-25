@@ -1,5 +1,17 @@
 import { AnyMutableObject, AnyObject, InexactPartial } from "fvtt-types/utils";
 import { OnUseMacros } from "./module/apps/Item";
+import { ActorOnUseMacrosConfig } from "./module/apps/ActorOnUseMacroConfig";
+import { ItemOnUseMacrosConfig } from "./module/apps/ItemOnUseMacrosConfig";
+import { DependentsExplorer } from "./module/apps/DependentsExplorer";
+import { MidiActivityChoiceDialog } from "./module/apps/MidiActivityChoiceDialog";
+import { MidiRollChoiceDialog } from "./module/apps/MidiRollChoiceDialog";
+import { ModuleReviewDialog } from "./module/apps/ModuleReviewDialog";
+import { RollStatsDisplay } from "./module/apps/RollStatsDisplay";
+import { SoundConfigPanel } from "./module/apps/SoundConfigPanel";
+import { TargetConfirmationConfig } from "./module/apps/TargetConfirmationConfig";
+import { UndoWorkflow } from "./module/apps/UndoWorkflow";
+import { OverTimeEditor } from "./module/apps/OverTimeEditor";
+import { ConditionEditor } from "./module/apps/ConditionEditor";
 import { AttributionEntry, AttributionMap, AugmentedEvent, DamageDescriptionObject, DamageOnlyWorkflow, DDBGameLogWorkflow, DummyWorkflow, TrapWorkflow, UndoData, UserWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./module/Workflow";
 import { MidiOptions } from "./module/utils";
 import * as utils from "./module/utils";
@@ -777,6 +789,23 @@ declare global {
       ChatMessageMidi: typeof ChatMessageMidi,
       DamageApplicationElementMidi: typeof DamageApplicationElementMidi
     }
+    apps: {
+      ActorOnUseMacrosConfig: typeof ActorOnUseMacrosConfig,
+      ConditionEditor: typeof ConditionEditor,
+      ConfigPanel: typeof ConfigPanel,
+      DependentsExplorer: typeof DependentsExplorer,
+      ItemOnUseMacrosConfig: typeof ItemOnUseMacrosConfig,
+      MidiActivityChoiceDialog: typeof MidiActivityChoiceDialog,
+      MidiRollChoiceDialog: typeof MidiRollChoiceDialog,
+      ModuleReviewDialog: typeof ModuleReviewDialog,
+      OverTimeEditor: typeof OverTimeEditor,
+      RollStatsDisplay: typeof RollStatsDisplay,
+      SoundConfigPanel: typeof SoundConfigPanel,
+      TargetConfirmationConfig: typeof TargetConfirmationConfig,
+      TargetConfirmationDialog: typeof TargetConfirmationDialog,
+      TroubleShooter: typeof TroubleShooter,
+      UndoWorkflow: typeof UndoWorkflow,
+    }
     workflowClass: typeof Workflow,
     logEvaluationData: boolean,
   }
@@ -1400,6 +1429,7 @@ export type MidiTargetDescriptor = {
   };
   itemType?: string;
   uncannyDodge?: boolean;
+  flankingBonus?: number;
 };
 
 export type CombinedTargetDescriptor = MidiTargetDescriptor & DND5ETargetDescriptor;

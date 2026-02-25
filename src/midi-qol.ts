@@ -7,22 +7,31 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, getDistance, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, getDistance, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
 import { MidiKeyManager } from './module/MidiKeyManager.js';
 import { MidiSounds } from './module/midi-sounds.js';
 import { addUndoChatMessage, getUndoQueue, removeMostRecentWorkflow, showUndoQueue, undoMostRecentWorkflow } from './module/undo.js';
-import { showUndoWorkflowApp } from './module/apps/UndoWorkflow.js';
+import { UndoWorkflow, showUndoWorkflowApp } from './module/apps/UndoWorkflow.js';
 import { TroubleShooter } from './module/apps/TroubleShooter.js';
 import { TargetConfirmationDialog } from './module/apps/TargetConfirmation.js';
+import { TargetConfirmationConfig } from './module/apps/TargetConfirmationConfig.js';
 import { MidiAttackActivity, setupAttackActivity } from './module/activities/AttackActivity.js';
 import { RollModifierTracker } from './module/lib/RollModifierTracker.js';
 import { ChatLogMidi } from './module/ChatClasses/ChatLogMidi.js';
 import { injectMidiCompletions } from './module/lib/midiCompletions.js';
 import { OverTimeEditor } from './module/apps/OverTimeEditor.js';
 import { ConditionEditor } from './module/apps/ConditionEditor.js';
+import { ActorOnUseMacrosConfig } from './module/apps/ActorOnUseMacroConfig.js';
+import { ItemOnUseMacrosConfig } from './module/apps/ItemOnUseMacrosConfig.js';
+import { DependentsExplorer } from './module/apps/DependentsExplorer.js';
+import { MidiActivityChoiceDialog } from './module/apps/MidiActivityChoiceDialog.js';
+import { MidiRollChoiceDialog } from './module/apps/MidiRollChoiceDialog.js';
+import { ModuleReviewDialog } from './module/apps/ModuleReviewDialog.js';
+import { RollStatsDisplay } from './module/apps/RollStatsDisplay.js';
+import { SoundConfigPanel } from './module/apps/SoundConfigPanel.js';
 import { registerHandlebarsHelpers } from './module/lib/HandlebarsHelpers.js';
 
 // Register macro-autocomplete hook handler at module load time so it's
@@ -176,17 +185,153 @@ Hooks.once("init", () => {
   CONFIG.Combat.documentClass = MidiCombat5e;
 });
 
-// @ts-expect-error it'll get populated don't worry
-globalThis.MidiQOL ??= {}
-globalThis.MidiQOL.checkIncapacitated = checkIncapacitated;
-globalThis.MidiQOL.getVitalityItem = getVitalityItem;
-globalThis.MidiQOL.getVitalityValue = getVitalityValue;
-globalThis.MidiQOL.getVitalityMax = getVitalityMax;
-globalThis.MidiQOL.hasVitalitySystem = hasVitalitySystem;
-// @ts-expect-error - these are new helper functions for macro resolution
-globalThis.MidiQOL.resolveItemMacro = resolveItemMacro;
-// @ts-expect-error - these are new helper functions for macro resolution
-globalThis.MidiQOL.resolveActivityMacro = resolveActivityMacro;
+// Phase 1: ES module load — pure function/class references available immediately
+// @ts-expect-error it'll get populated incrementally
+globalThis.MidiQOL ??= {};
+Object.assign(globalThis.MidiQOL, {
+  activityHasEmanationNoTemplate,
+  addDependent,
+  addConcentrationDependent,
+  addRollTo,
+  addUndoChatMessage,
+  applyTokenDamage,
+  actorFromUuid,
+  canSee,
+  canSense,
+  canSenseModes,
+  checkActivityRange,
+  checkDistance,
+  checkIncapacitated,
+  checkNearby,
+  chooseEffect,
+  completeItemUse,
+  completeActivityUse,
+  computeAbilityAdvantage,
+  computeCoverBonus,
+  computeDistance,
+  computeSkillAdvantage,
+  computeToolAdvantage,
+  contestedRoll,
+  createConditionData,
+  createDamageDetail,
+  createEffects,
+  DamageOnlyWorkflow,
+  DDBGameLogWorkflow,
+  debug,
+  displayDSNForRoll,
+  doConcentrationCheck,
+  doOverTimeEffect,
+  DummyWorkflow,
+  evalAllConditions,
+  evalCondition,
+  findNearby,
+  findNearbyCount,
+  fromUuidSync,
+  getCachedChatMessage: getCachedDocument,
+  getChanges,
+  getConcentrationEffect,
+  getDistance,
+  getTokenPlayerName,
+  getTokenPlayerNameForUser,
+  getTokenForActor: getOrCreateTokenForActor,
+  getTokenForActorAsSet: getOrCreateTokenForActorAsSet,
+  getTraitMult,
+  getUndoQueue,
+  getActorWoundedSemaphore,
+  getVitalityItem,
+  getVitalityMax,
+  getVitalityValue,
+  hasCondition,
+  hasUsedBonusAction,
+  hasUsedReaction,
+  hasVitalitySystem,
+  isTargetable: isValidTarget,
+  log,
+  MidiDependentsRegistry,
+  midiRenderRoll,
+  midiRenderAttackRoll,
+  midiRenderDamageRoll,
+  midiRenderBonusDamageRoll,
+  midiRenderOtherDamageRoll,
+  MidiSounds,
+  modifyDamageBy,
+  moveToken,
+  moveTokenAwayFromPoint,
+  MQfromActorUuid: fromActorUuid,
+  MQfromUuid: fromUuidSync,
+  playerFor,
+  playerForActor,
+  processWoundedStatus,
+  raceOrType,
+  reactionDialog,
+  removeActionUsed,
+  removeBonusActionUsed,
+  removeEffects,
+  removeHiddenCondition,
+  removeInvisibleCondition,
+  removeMostRecentWorkflow,
+  removeReactionUsed,
+  resolveItemMacro,
+  resolveActivityMacro,
+  resolveTargetConfirmation,
+  RollModifierTracker,
+  setBonusActionUsed,
+  setReactionUsed,
+  showUndoQueue,
+  showUndoWorkflowApp,
+  testfunc,
+  tokenForActor,
+  TrapWorkflow,
+  typeOrRace,
+  undoMostRecentWorkflow,
+  updateEffects,
+  UserWorkflow,
+  validRollAbility,
+  warn,
+  Workflow,
+  workflowClass: Workflow,
+  Workflows: { "Workflow": Workflow, "DamageOnlyWorkflow": DamageOnlyWorkflow, "TrapWorkflow": TrapWorkflow, "DummyWorkflow": DummyWorkflow, "DDBGameLogWorkflow": DDBGameLogWorkflow },
+  ChatClasses: {
+    ChatLogMidi,
+    ChatMessageMidi,
+    DamageApplicationElementMidi
+  },
+  apps: {
+    ActorOnUseMacrosConfig,
+    ConditionEditor,
+    ConfigPanel,
+    DependentsExplorer,
+    ItemOnUseMacrosConfig,
+    MidiActivityChoiceDialog,
+    MidiRollChoiceDialog,
+    ModuleReviewDialog,
+    OverTimeEditor,
+    ReactionDialog,
+    RollModifyDialog,
+    RollStatsDisplay,
+    SoundConfigPanel,
+    TargetConfirmationConfig,
+    TargetConfirmationDialog,
+    TroubleShooter,
+    UndoWorkflow,
+  },
+  logEvaluationData: false,
+});
+
+// Deprecated top-level app class accessors — use MidiQOL.apps.X instead
+for (const appName of ["ConfigPanel", "TargetConfirmationDialog", "TroubleShooter"] as const) {
+  Object.defineProperty(globalThis.MidiQOL, appName, {
+    get() {
+      foundry.utils.logCompatibilityWarning(
+        `MidiQOL.${appName} is deprecated. Use MidiQOL.apps.${appName} instead.`,
+        { since: "midi-qol 13.0.50", until: "midi-qol 13.1.0" }
+      );
+      return globalThis.MidiQOL.apps[appName];
+    },
+    configurable: true,
+    enumerable: true,
+  });
+}
 
 function setupActivities() {
   // @ts-expect-error it'll get populated don't worry
@@ -516,10 +661,10 @@ Hooks.once("dae.setupComplete", () => {
 
 Hooks.once("ready", () => {
   // can't hook off simple cover ready as it fires too early to be able to call api.setLibraryMode
-  if (configSettings.optionalRules.coverCalculation === "simplecover5e" && game.modules.get("simplecover5e")?.active) {
-    //@ts-expect-error
-    game.modules.get("simplecover5e")?.api?.setLibraryMode(true);
-  }
+  // if (configSettings.optionalRules.coverCalculation === "simplecover5e" && game.modules.get("simplecover5e")?.active) {
+  //   //@ts-expect-error
+  //   game.modules.get("simplecover5e")?.api?.setLibraryMode(true);
+  // }
 })
 
 function addConfigOptions() {
@@ -730,134 +875,33 @@ import { TokenOrDocument, SelectOptionValue } from './globals.js';
 import { DamageApplicationElementMidi } from './module/ChatClasses/DamageApplicationElementMidi.js';
 
 // Add any additional hooks if necessary
+// Phase 2: setup hook — properties that depend on CONFIG, settings, i18n, or game state
 function setupMidiQOLApi() {
 
   const detectionModes = CONFIG.Canvas.detectionModes;
-  let InvisibleDisadvantageVisionModes = Object.keys(detectionModes)
+  const InvisibleDisadvantageVisionModes = Object.keys(detectionModes)
     //@ts-expect-error I think imprecise is added by a module - TODO Check
     .filter(dm => !detectionModes[dm].imprecise);
 
-  let WallsBlockConditions = [
-    "burrow"
-  ];
+  const humanoid = ["human", "humanoid", "elven", "elf", "half-elf", "drow", "dwarf", "dwarven", "halfling", "gnome", "tiefling", "orc", "dragonborn", "half-orc"];
 
-  let humanoid = ["human", "humanoid", "elven", "elf", "half-elf", "drow", "dwarf", "dwarven", "halfling", "gnome", "tiefling", "orc", "dragonborn", "half-orc"];
-  const Workflows = { "Workflow": Workflow, "DamageOnlyWorkflow": DamageOnlyWorkflow, "TrapWorkflow": TrapWorkflow, "DummyWorkflow": DummyWorkflow, "DDBGameLogWorkflow": DDBGameLogWorkflow };
-  globalThis.MidiQOL = {
-    ...globalThis.MidiQOL,
-    activityHasEmanationNoTemplate,
-    addDependent,
-    addConcentrationDependent,
-    addRollTo,
-    addUndoChatMessage,
-    RollModifierTracker,
-    applyTokenDamage,
-    canSee,
-    canSense,
-    canSenseModes,
-    checkIncapacitated,
-    checkDistance,
-    checkNearby,
-    checkActivityRange,
+  Object.assign(globalThis.MidiQOL, {
     checkRule,
-    completeItemUse,
-    completeActivityUse,
-    computeAbilityAdvantage,
-    computeCoverBonus,
-    computeDistance,
-    getDistance,
-    computeSkillAdvantage,
-    computeTargetsFromTemplates,
-    computeToolAdvantage,
-    ConfigPanel,
-    configSettings: () => { return configSettings },
-    get currentConfigSettings() { return configSettings },
     collectSettingData,
-    exportSettingsToJSON,
-    importSettingsFromJSON,
-    resetConfigSettingsToDefaults,
-    contestedRoll,
-    createConditionData,
-    createDamageDetail,
-    DamageOnlyWorkflow,
+    computeTargetsFromTemplates,
+    configSettings: () => { return configSettings },
     debouncedUpdate: throttledUpdate,
-    debug,
-    displayDSNForRoll,
-    doConcentrationCheck,
-    doOverTimeEffect,
-    evalAllConditions,
-    evalCondition,
-    DummyWorkflow,
-    chooseEffect,
     enableWorkflow,
+    exportSettingsToJSON,
     fetchParams,
-    findNearby,
-    findNearbyCount,
     gameStats,
-    getCachedChatMessage: getCachedDocument,
-    getChanges, // (actorOrItem, key) - what effects on the actor or item target the specific key
-    getConcentrationEffect,
-    getSaveRollModeFor,
     getCheckRollModeFor,
-    getTokenPlayerName,
-    getTokenPlayerNameForUser,
-    getTokenForActor: getOrCreateTokenForActor,
-    getTokenForActorAsSet: getOrCreateTokenForActorAsSet,
-    getTraitMult,
-    getUndoQueue,
-    getActorWoundedSemaphore,
-    getVitalityItem,
-    getVitalityMax,
-    getVitalityValue,
-    hasCondition,
-    hasUsedBonusAction,
-    hasUsedReaction,
-    hasVitalitySystem,
+    getSaveRollModeFor,
     humanoid,
+    importSettingsFromJSON,
     incapacitatedConditions: ["incapacitated", "Convenient Effect: Incapacitated", "stunned", "Convenient Effect: Stunned", "paralyzed", "paralysis", "Convenient Effect: Paralyzed", "unconscious", "Convenient Effect: Unconscious", "dead", "Convenient Effect: Dead", "petrified", "Convenient Effect: Petrified"],
     InvisibleDisadvantageVisionModes,
-    isTargetable: isValidTarget,
-    TargetConfirmationDialog,
-    log,
     midiFlags,
-    MidiDependentsRegistry,
-    midiRenderRoll,
-    midiRenderAttackRoll,
-    midiRenderDamageRoll,
-    midiRenderBonusDamageRoll,
-    midiRenderOtherDamageRoll,
-    get midiSoundSettings() { return game.settings.get("midi-qol", "MidiSoundSettings") },
-    MidiSounds,
-    modifyDamageBy,
-    MQfromActorUuid: fromActorUuid,
-    actorFromUuid,
-    MQfromUuid: fromUuidSync,
-    fromUuidSync,
-    MQOnUseOptions,
-    playerFor,
-    playerForActor,
-    processWoundedStatus,
-    raceOrType,
-    typeOrRace,
-    reactionDialog,
-    removeHiddenCondition,
-    removeInvisibleCondition,
-    removeMostRecentWorkflow,
-    removeActionUsed,
-    removeBonusActionUsed,
-    removeReactionUsed,
-    resolveTargetConfirmation,
-    safeGetGameSetting,
-    shouldDisplaySaveDC,
-    selectTargetsFromTemplates,
-    setBonusActionUsed,
-    setReactionUsed,
-    showItemInfo: (item: Item.Implementation) => { return showItemInfo.bind(item)() },
-    showUndoQueue,
-    showUndoWorkflowApp,
-    socket: () => { return new SaferSocket(socketlibSocket) },
-    testfunc,
-    tokenForActor,
     midiPropertiesOptions: {
       triggeredActivityTargetOptions: Object.entries(triggeredActivityTargetOptions).map(([value, opt]) => {
         return { value, label: i18n(opt) }
@@ -866,29 +910,34 @@ function setupMidiQOLApi() {
         return { value, label: i18n(opt) }
       }),
     },
-    TrapWorkflow,
-    TroubleShooter,
-    undoMostRecentWorkflow,
-    validRollAbility,
-    WallsBlockConditions,
-    warn,
-    Workflow,
-    UserWorkflow,
-    workflowClass: Workflow,
-    Workflows,
-    moveToken,
-    moveTokenAwayFromPoint,
-    createEffects,
-    removeEffects,
-    updateEffects,
-    get updatesCache() { return updatesCache },
-    ChatClasses: {
-      ChatLogMidi,
-      ChatMessageMidi,
-      DamageApplicationElementMidi
+    MQOnUseOptions,
+    resetConfigSettingsToDefaults,
+    safeGetGameSetting,
+    selectTargetsFromTemplates,
+    shouldDisplaySaveDC,
+    showItemInfo: (item: Item.Implementation) => { return showItemInfo.bind(item)() },
+    socket: () => { return new SaferSocket(socketlibSocket) },
+    WallsBlockConditions: ["burrow"],
+  });
+
+  // Define getters that need live access to settings/game state
+  Object.defineProperties(globalThis.MidiQOL, {
+    currentConfigSettings: {
+      get() { return configSettings },
+      configurable: true,
+      enumerable: true,
     },
-    logEvaluationData: false,
-  }
+    midiSoundSettings: {
+      get() { return game.settings.get("midi-qol", "MidiSoundSettings") },
+      configurable: true,
+      enumerable: true,
+    },
+    updatesCache: {
+      get() { return updatesCache },
+      configurable: true,
+      enumerable: true,
+    },
+  });
 
   //@ts-expect-error
   game.modules.get("midi-qol").api = globalThis.MidiQOL;
@@ -1728,10 +1777,7 @@ export function setupMidiStatusEffects() {
       id: "flanking",
       _id: getStaticID("flanking"),
       name: i18n("midi-qol.Flanking"),
-      changes: [
-        { key: "flags.midi-qol.advantage.attack.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
-        { key: "flags.midi-qol.advantage.attack.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
-      ],
+      changes: getFlankingStatusChanges(),
       img: "icons/svg/sword.svg",
       // effectData: { transfer: false },
       flags: { dae: { specialDuration: ["combatEnd"] } }
@@ -1748,10 +1794,7 @@ export function setupMidiStatusEffects() {
       id: "flanked",
       _id: getStaticID("flanked"),
       name: i18n("midi-qol.Flanked"),
-      changes: [
-        { key: "flags.midi-qol.grants.advantage.attack.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
-        { key: "flags.midi-qol.grants.advantage.attack.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
-      ],
+      changes: getFlankedStatusChanges(),
       img: "modules/midi-qol/icons/encirclement.svg",
       // effectData: { transfer: false },
       flags: { dae: { specialDuration: ["combatEnd"] } }
@@ -1762,4 +1805,49 @@ export function setupMidiStatusEffects() {
     midiFlankedEffect = effect;
     globalThis.MidiQOL.midiFlankedEffect = effect;
   });
+}
+
+function getFlankingStatusChanges(): object[] {
+  const bonus = configSettings.optionalRules?.flankingBonus ?? "advantage";
+  if (bonus === "advantage") {
+    return [
+      { key: "flags.midi-qol.advantage.attack.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
+      { key: "flags.midi-qol.advantage.attack.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
+    ];
+  }
+  // Fixed bonus: flanking status is visual-only; bonus computed per-target in recordFlankingBonuses
+  return [];
+}
+
+function getFlankedStatusChanges(): object[] {
+  const bonus = configSettings.optionalRules?.flankingBonus ?? "advantage";
+  if (bonus === "advantage") {
+    return [
+      { key: "flags.midi-qol.grants.advantage.attack.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
+      { key: "flags.midi-qol.grants.advantage.attack.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
+    ];
+  }
+  // Fixed bonus: flanked status is visual-only; bonus computed per-target in recordFlankingBonuses
+  return [];
+}
+
+export function updateFlankingStatusEffects() {
+  const flanking = CONFIG.statusEffects.find(e => e.id === "flanking") as any;
+  const flanked = CONFIG.statusEffects.find(e => e.id === "flanked") as any;
+  if (flanking) flanking.changes = getFlankingStatusChanges();
+  if (flanked) flanked.changes = getFlankedStatusChanges();
+
+  // Rebuild cached effect instances (only if statuses have been registered)
+  if (flanking) {
+    ActiveEffect.implementation.fromStatusEffect("flanking").then(effect => {
+      midiFlankingEffect = effect;
+      globalThis.MidiQOL.midiFlankingEffect = effect;
+    });
+  }
+  if (flanked) {
+    ActiveEffect.implementation.fromStatusEffect("flanked").then(effect => {
+      midiFlankedEffect = effect;
+      globalThis.MidiQOL.midiFlankedEffect = effect;
+    });
+  }
 }

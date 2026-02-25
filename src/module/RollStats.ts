@@ -42,6 +42,20 @@ let blankStats = {
   lifetimeDamageAppliedByType: {} as Record<string, number>
 }
 
+/**
+ * Discriminated union of stat update messages sent from clients to GM.
+ * Each client sends only the raw roll data; the GM applies it as
+ * increments to its authoritative copy.
+ */
+export type StatUpdateMessage =
+  | { type: "attackRoll"; actorId: string; userId: string | undefined; itemName: string; rawRoll: number; fumble: boolean; critical: boolean; total: number }
+  | { type: "damage"; actorId: string; userId: string | undefined; itemName: string; hpDamage: number; totalDamage: number; maxDamage: number; healingDone: number; kills: number; hasAttackActivity: boolean }
+  | { type: "saveResult"; actorId: string; userId: string | undefined; itemName: string; numSaves: number; numSuccess: number; numFail: number }
+  | { type: "damageTaken"; actorId: string; hpDamage: number; damageByType: Record<string, number> }
+  | { type: "damageDealtByType"; actorId: string; userId: string | undefined; dealtByType: Record<string, number>; appliedByType: Record<string, number> }
+  | { type: "concentrationResult"; actorId: string; success: boolean }
+  | { type: "deathSaveResult"; actorId: string; successes: number; failures: number };
+
 export class RollStats {
   currentStats: Record<string, Stats>;
 
@@ -93,18 +107,18 @@ export class RollStats {
     return stats;
   }
 
-  getItemStats(item: Item.Implementation, id: string, collection: ValidCollection) {
-    if (!item) return { name: "", session: foundry.utils.duplicate(blankStat) as InnerStats, lifetime: foundry.utils.duplicate(blankStat) as InnerStats };
+  getItemStats(item: Item.Implementation | undefined, itemName: string, id: string, collection: ValidCollection) {
+    if (!itemName) return { name: "", session: foundry.utils.duplicate(blankStat) as InnerStats, lifetime: foundry.utils.duplicate(blankStat) as InnerStats };
     let currentStats = this.getEntityStats(id, collection);
     if (!currentStats) return;
-    if (!currentStats.itemStats[item.name]) {
-      currentStats.itemStats[item.name] = { name: item.name, session: foundry.utils.duplicate(blankStat), lifetime: foundry.utils.duplicate(blankStat) }
+    if (!currentStats.itemStats[itemName]) {
+      currentStats.itemStats[itemName] = { name: itemName, session: foundry.utils.duplicate(blankStat), lifetime: foundry.utils.duplicate(blankStat) }
     }
     // Backfill lifetime for pre-existing itemStats that lack it
-    if (!currentStats.itemStats[item.name].lifetime) {
-      currentStats.itemStats[item.name].lifetime = foundry.utils.duplicate(blankStat);
+    if (!currentStats.itemStats[itemName].lifetime) {
+      currentStats.itemStats[itemName].lifetime = foundry.utils.duplicate(blankStat);
     }
-    return currentStats.itemStats[item.name];
+    return currentStats.itemStats[itemName];
   }
 
   rollCount: number;
@@ -129,6 +143,7 @@ export class RollStats {
 
   async clearStats() {
     if (!game.user?.isGM) return;
+    this.currentStats = {};
     await game.settings.set("midi-qol", "RollStats", {});
   }
   async clearActorStats(actorId: string) {
@@ -156,193 +171,265 @@ export class RollStats {
     this.currentStats = game.settings.get("midi-qol", "RollStats");
   }
 
+  // ==================== Client-side methods ====================
+  // These send raw roll data to the GM via socket. The GM applies
+  // the increments to its authoritative copy (see GMrecordStats).
+
   public addDamage(hpDamage: number, totalDamage: number, item: Item.Implementation | undefined, maxDamage: number = 0, healingDone: number = 0, kills: number = 0) {
     const actorId = item?.actor?.id;
     if (!actorId) return;
-    const actorStats = this.getEntityStats(actorId, game.actors);
-    if (!actorStats) return;
-    let playerStats: Stats | undefined;
-    if (game.user && item!.actor!.testUserPermission(game.user, "OWNER")) {
-      playerStats = this.getEntityStats(game.user.id, game.users)
-    }
-    for (let stats of [actorStats, playerStats]) {
-      if (!stats) continue;
-      const session = stats.session;
-      const lifetime = stats.lifetime;
-      let itemData: ItemStats | undefined;
-      if (stats === actorStats)
-        itemData = this.getItemStats(item!, actorId, game.actors!);
-      else if (game.user)
-        itemData = this.getItemStats(item!, game.user.id, game.users);
-      const didDamage = totalDamage > 0 || hpDamage > 0;
-      [session, lifetime, itemData?.session, itemData?.lifetime].filter(s => !!s).forEach(stats => {
-        const isItemStats = (stats === itemData?.session || stats === itemData?.lifetime);
-        if (didDamage) {
-          stats.numDamageRolls += 1;
-          stats.damageApplied += hpDamage;
-          stats.damageTotal += totalDamage;
-          stats.maxDamage = Math.max(stats.maxDamage, maxDamage);
-        } else if (healingDone > 0 && isItemStats) {
-          // Healing-only use: record as negative damage for item display
-          stats.numDamageRolls += 1;
-          stats.damageApplied -= healingDone;
-          stats.damageTotal -= healingDone;
-        }
-        stats.healingDone += healingDone;
-        stats.kills += kills;
-        // @ts-expect-error no dnd5e-types for activities
-        if ((didDamage || healingDone > 0) && item && !item.system.activities?.some(a => a.hasAttack)) { // no attack so count each use as an attack
-          stats.numAttacks += 1;
-        }
-      });
-    }
-    this.updateEntity(actorId);
-    if (playerStats) this.updateEntity(game.user?.id)
+    // @ts-expect-error no dnd5e-types for activities
+    const hasAttackActivity = !!(item && item.system.activities?.some(a => a.hasAttack));
+    const userId = (game.user && item!.actor!.testUserPermission(game.user, "OWNER")) ? game.user.id : undefined;
+    timedExecuteAsGM("recordStats", {
+      type: "damage", actorId, userId, itemName: item?.name ?? "",
+      hpDamage, totalDamage, maxDamage, healingDone, kills, hasAttackActivity
+    } satisfies StatUpdateMessage);
     Hooks.callAll("midi-qol.StatsUpdated");
   }
 
   public addSaveResult(numSaves: number, numSuccess: number, numFail: number, item: Item.Implementation) {
     const actorId = item?.actor?.id;
     if (!actorId) return;
-    const actorStats = this.getEntityStats(actorId, game.actors);
-    if (!actorStats) return;
-    let playerStats: Stats | undefined;
-    if (game.user && item.actor!.testUserPermission(game.user, "OWNER")) {
-      playerStats = this.getEntityStats(game.user.id, game.users)
-    }
-    for (let stats of [actorStats, playerStats]) {
-      if (!stats) continue;
-      let itemData: ItemStats | undefined;
-      if (stats === actorStats)
-        itemData = this.getItemStats(item, actorId, game.actors!);
-      else if (game.user)
-        itemData = this.getItemStats(item, game.user.id, game.users);
-      [stats.session, stats.lifetime, itemData?.session, itemData?.lifetime].filter(s => !!s).forEach(stats => {
-        stats.numSaves += numSaves;
-        stats.numSaveSuccess += numSuccess;
-        stats.numSaveFail += numFail;
-      });
-    }
-    this.updateEntity(actorId);
-    if (playerStats) this.updateEntity(game.user?.id);
+    const userId = (game.user && item.actor!.testUserPermission(game.user, "OWNER")) ? game.user.id : undefined;
+    timedExecuteAsGM("recordStats", {
+      type: "saveResult", actorId, userId, itemName: item.name,
+      numSaves, numSuccess, numFail
+    } satisfies StatUpdateMessage);
     Hooks.callAll("midi-qol.StatsUpdated");
   }
 
   public addAttackRoll({ rawRoll, fumble, critical, total }: { rawRoll: number; fumble: boolean; critical: boolean; total: number}, item: Item.Implementation) {
     const actorId = item.actor?.id;
-    const currentStats = this.getEntityStats(actorId, game.actors);
-    if (!currentStats) return;
-    let playerStats: Stats | undefined;
-    if (game.user && item.actor?.testUserPermission(game.user, "OWNER")) {
-      playerStats = this.getEntityStats(game.user.id, game.users)
-    }
-    for (let stats of [currentStats, playerStats]) {
-      if (!stats) continue;
-      let itemData: ItemStats | undefined;
-      if (stats === currentStats)
-        itemData = this.getItemStats(item, actorId ?? "", game.actors!);
-      else
-        itemData = this.getItemStats(item, game.user?.id ?? "", game.users!);
-      const session = stats.session;
-      const lifetime = stats.lifetime;
-      [session, lifetime, itemData?.session, itemData?.lifetime].forEach(stats => {
-        if (!stats) return;
-        stats.numAttacks += 1;
-        if (rawRoll === 20) stats.numAttack20 += 1;
-        if (critical) stats.numAttackCritical += 1;
-        if (fumble) stats.numAttackFumble += 1;
-        stats.attackRollsDiceTotal += rawRoll;
-        stats.attackRollTotal += total;
-      });
-    }
-    this.updateEntity(actorId);
-    if (playerStats) this.updateEntity(game.user?.id);
+    if (!actorId) return;
+    const userId = (game.user && item.actor?.testUserPermission(game.user, "OWNER")) ? game.user.id : undefined;
+    timedExecuteAsGM("recordStats", {
+      type: "attackRoll", actorId, userId, itemName: item.name,
+      rawRoll, fumble, critical, total
+    } satisfies StatUpdateMessage);
     Hooks.callAll("midi-qol.StatsUpdated");
-
   }
 
   public addDamageTaken(actorId: string, hpDamage: number, damageByType: Record<string, number>) {
     if (!actorId || hpDamage === 0) return;
-    const actorStats = this.getEntityStats(actorId, game.actors);
-    if (!actorStats) return;
-    if (hpDamage > 0) {
-      actorStats.session.damageTaken += hpDamage;
-      actorStats.lifetime.damageTaken += hpDamage;
-      for (const [type, amount] of Object.entries(damageByType)) {
-        if (amount <= 0) continue;
-        actorStats.sessionDamageTakenByType[type] = (actorStats.sessionDamageTakenByType[type] ?? 0) + amount;
-        actorStats.lifetimeDamageTakenByType[type] = (actorStats.lifetimeDamageTakenByType[type] ?? 0) + amount;
-      }
-    } else {
-      const healing = Math.abs(hpDamage);
-      actorStats.session.healingReceived += healing;
-      actorStats.lifetime.healingReceived += healing;
-    }
-    this.updateEntity(actorId);
+    timedExecuteAsGM("recordStats", {
+      type: "damageTaken", actorId, hpDamage, damageByType
+    } satisfies StatUpdateMessage);
     Hooks.callAll("midi-qol.StatsUpdated");
   }
 
   public addDamageDealtByType(item: Item.Implementation, dealtByType: Record<string, number>, appliedByType: Record<string, number>) {
     const actorId = item?.actor?.id;
     if (!actorId) return;
-    const actorStats = this.getEntityStats(actorId, game.actors);
-    if (!actorStats) return;
-    let playerStats: Stats | undefined;
-    if (game.user && item.actor!.testUserPermission(game.user, "OWNER")) {
-      playerStats = this.getEntityStats(game.user.id, game.users);
-    }
-    for (const stats of [actorStats, playerStats]) {
-      if (!stats) continue;
-      for (const [type, amount] of Object.entries(dealtByType)) {
-        if (amount <= 0) continue;
-        stats.sessionDamageDealtByType[type] = (stats.sessionDamageDealtByType[type] ?? 0) + amount;
-        stats.lifetimeDamageDealtByType[type] = (stats.lifetimeDamageDealtByType[type] ?? 0) + amount;
-      }
-      for (const [type, amount] of Object.entries(appliedByType)) {
-        if (amount <= 0) continue;
-        stats.sessionDamageAppliedByType[type] = (stats.sessionDamageAppliedByType[type] ?? 0) + amount;
-        stats.lifetimeDamageAppliedByType[type] = (stats.lifetimeDamageAppliedByType[type] ?? 0) + amount;
-      }
-    }
-    this.updateEntity(actorId);
-    if (playerStats) this.updateEntity(game.user?.id);
+    const userId = (game.user && item.actor!.testUserPermission(game.user, "OWNER")) ? game.user.id : undefined;
+    timedExecuteAsGM("recordStats", {
+      type: "damageDealtByType", actorId, userId, dealtByType, appliedByType
+    } satisfies StatUpdateMessage);
   }
 
   public addConcentrationResult(actor: Actor.Implementation, success: boolean) {
     const actorId = actor?.id;
     if (!actorId) return;
-    const actorStats = this.getEntityStats(actorId, game.actors);
-    if (!actorStats) return;
-    for (const stats of [actorStats.session, actorStats.lifetime]) {
-      stats.numConcentrationSaves += 1;
-      if (success) stats.numConcentrationSuccess += 1;
-      else stats.numConcentrationFail += 1;
-    }
-    this.updateEntity(actorId);
+    timedExecuteAsGM("recordStats", {
+      type: "concentrationResult", actorId, success
+    } satisfies StatUpdateMessage);
     Hooks.callAll("midi-qol.StatsUpdated");
   }
 
   public addDeathSaveResult(actor: Actor.Implementation, successes: number, failures: number) {
     const actorId = actor?.id;
     if (!actorId) return;
-    const actorStats = this.getEntityStats(actorId, game.actors);
-    if (!actorStats) return;
-    for (const stats of [actorStats.session, actorStats.lifetime]) {
-      stats.numDeathSaves += 1;
-      stats.numDeathSaveSuccess += successes;
-      stats.numDeathSaveFail += failures;
-    }
-    this.updateEntity(actorId);
+    timedExecuteAsGM("recordStats", {
+      type: "deathSaveResult", actorId, successes, failures
+    } satisfies StatUpdateMessage);
     Hooks.callAll("midi-qol.StatsUpdated");
   }
 
-  public updateEntity(id?: string | null) {
-    if (!id) return;
-    timedExecuteAsGM("updateEntityStats", {
-      id,
-      currentStats: gameStats.currentStats[id]
-    })
+  // ==================== GM-side recording ====================
+  // Only runs on the GM. Applies raw roll data as increments to
+  // the authoritative stats. Called via socket from any client.
+
+  /**
+   * GM-only: apply a stat update message as increments to the authoritative stats.
+   * This is the single entry point for all stat recording, ensuring no race conditions.
+   */
+  public async GMrecordStats(msg: StatUpdateMessage) {
+    if (!game.user?.isGM) return;
+
+    switch (msg.type) {
+      case "attackRoll":
+        this._recordAttackRoll(msg);
+        break;
+      case "damage":
+        this._recordDamage(msg);
+        break;
+      case "saveResult":
+        this._recordSaveResult(msg);
+        break;
+      case "damageTaken":
+        this._recordDamageTaken(msg);
+        break;
+      case "damageDealtByType":
+        this._recordDamageDealtByType(msg);
+        break;
+      case "concentrationResult":
+        this._recordConcentrationResult(msg);
+        break;
+      case "deathSaveResult":
+        this._recordDeathSaveResult(msg);
+        break;
+    }
+
+    // Periodic save
+    this.rollCount = (this.rollCount + 1) % Math.max(1, configSettings.saveStatsEvery);
+    if (this.rollCount === 0) {
+      await game.settings.set("midi-qol", "RollStats", this.currentStats);
+    }
   }
+
+  private _getPlayerStats(actorId: string, userId: string | undefined): Stats | undefined {
+    if (!userId) return undefined;
+    const user = game.users?.get(userId);
+    if (!user) return undefined;
+    const actor = game.actors?.get(actorId);
+    if (!actor || !actor.testUserPermission(user, "OWNER")) return undefined;
+    return this.getEntityStats(userId, game.users);
+  }
+
+  private _recordAttackRoll(msg: Extract<StatUpdateMessage, { type: "attackRoll" }>) {
+    const actorStats = this.getEntityStats(msg.actorId, game.actors);
+    if (!actorStats) return;
+    const playerStats = this._getPlayerStats(msg.actorId, msg.userId);
+
+    for (const stats of [actorStats, playerStats]) {
+      if (!stats) continue;
+      const itemData = (stats === actorStats)
+        ? this.getItemStats(undefined, msg.itemName, msg.actorId, game.actors!)
+        : this.getItemStats(undefined, msg.itemName, msg.userId ?? "", game.users!);
+      for (const s of [stats.session, stats.lifetime, itemData?.session, itemData?.lifetime]) {
+        if (!s) continue;
+        s.numAttacks += 1;
+        if (msg.rawRoll === 20) s.numAttack20 += 1;
+        if (msg.critical) s.numAttackCritical += 1;
+        if (msg.fumble) s.numAttackFumble += 1;
+        s.attackRollsDiceTotal += msg.rawRoll;
+        s.attackRollTotal += msg.total;
+      }
+    }
+  }
+
+  private _recordDamage(msg: Extract<StatUpdateMessage, { type: "damage" }>) {
+    const actorStats = this.getEntityStats(msg.actorId, game.actors);
+    if (!actorStats) return;
+    const playerStats = this._getPlayerStats(msg.actorId, msg.userId);
+    const didDamage = msg.totalDamage > 0 || msg.hpDamage > 0;
+
+    for (const stats of [actorStats, playerStats]) {
+      if (!stats) continue;
+      const itemData = (stats === actorStats)
+        ? this.getItemStats(undefined, msg.itemName, msg.actorId, game.actors!)
+        : this.getItemStats(undefined, msg.itemName, msg.userId ?? "", game.users!);
+      for (const s of [stats.session, stats.lifetime, itemData?.session, itemData?.lifetime]) {
+        if (!s) continue;
+        const isItemStats = (s === itemData?.session || s === itemData?.lifetime);
+        if (didDamage) {
+          s.numDamageRolls += 1;
+          s.damageApplied += msg.hpDamage;
+          s.damageTotal += msg.totalDamage;
+          s.maxDamage = Math.max(s.maxDamage, msg.maxDamage);
+        } else if (msg.healingDone > 0 && isItemStats) {
+          s.numDamageRolls += 1;
+          s.damageApplied -= msg.healingDone;
+          s.damageTotal -= msg.healingDone;
+        }
+        s.healingDone += msg.healingDone;
+        s.kills += msg.kills;
+        if ((didDamage || msg.healingDone > 0) && !msg.hasAttackActivity) {
+          s.numAttacks += 1;
+        }
+      }
+    }
+  }
+
+  private _recordSaveResult(msg: Extract<StatUpdateMessage, { type: "saveResult" }>) {
+    const actorStats = this.getEntityStats(msg.actorId, game.actors);
+    if (!actorStats) return;
+    const playerStats = this._getPlayerStats(msg.actorId, msg.userId);
+
+    for (const stats of [actorStats, playerStats]) {
+      if (!stats) continue;
+      const itemData = (stats === actorStats)
+        ? this.getItemStats(undefined, msg.itemName, msg.actorId, game.actors!)
+        : this.getItemStats(undefined, msg.itemName, msg.userId ?? "", game.users!);
+      for (const s of [stats.session, stats.lifetime, itemData?.session, itemData?.lifetime]) {
+        if (!s) continue;
+        s.numSaves += msg.numSaves;
+        s.numSaveSuccess += msg.numSuccess;
+        s.numSaveFail += msg.numFail;
+      }
+    }
+  }
+
+  private _recordDamageTaken(msg: Extract<StatUpdateMessage, { type: "damageTaken" }>) {
+    const actorStats = this.getEntityStats(msg.actorId, game.actors);
+    if (!actorStats) return;
+    if (msg.hpDamage > 0) {
+      actorStats.session.damageTaken += msg.hpDamage;
+      actorStats.lifetime.damageTaken += msg.hpDamage;
+      for (const [type, amount] of Object.entries(msg.damageByType)) {
+        if (amount <= 0) continue;
+        actorStats.sessionDamageTakenByType[type] = (actorStats.sessionDamageTakenByType[type] ?? 0) + amount;
+        actorStats.lifetimeDamageTakenByType[type] = (actorStats.lifetimeDamageTakenByType[type] ?? 0) + amount;
+      }
+    } else {
+      const healing = Math.abs(msg.hpDamage);
+      actorStats.session.healingReceived += healing;
+      actorStats.lifetime.healingReceived += healing;
+    }
+  }
+
+  private _recordDamageDealtByType(msg: Extract<StatUpdateMessage, { type: "damageDealtByType" }>) {
+    const actorStats = this.getEntityStats(msg.actorId, game.actors);
+    if (!actorStats) return;
+    const playerStats = this._getPlayerStats(msg.actorId, msg.userId);
+
+    for (const stats of [actorStats, playerStats]) {
+      if (!stats) continue;
+      for (const [type, amount] of Object.entries(msg.dealtByType)) {
+        if (amount <= 0) continue;
+        stats.sessionDamageDealtByType[type] = (stats.sessionDamageDealtByType[type] ?? 0) + amount;
+        stats.lifetimeDamageDealtByType[type] = (stats.lifetimeDamageDealtByType[type] ?? 0) + amount;
+      }
+      for (const [type, amount] of Object.entries(msg.appliedByType)) {
+        if (amount <= 0) continue;
+        stats.sessionDamageAppliedByType[type] = (stats.sessionDamageAppliedByType[type] ?? 0) + amount;
+        stats.lifetimeDamageAppliedByType[type] = (stats.lifetimeDamageAppliedByType[type] ?? 0) + amount;
+      }
+    }
+  }
+
+  private _recordConcentrationResult(msg: Extract<StatUpdateMessage, { type: "concentrationResult" }>) {
+    const actorStats = this.getEntityStats(msg.actorId, game.actors);
+    if (!actorStats) return;
+    for (const s of [actorStats.session, actorStats.lifetime]) {
+      s.numConcentrationSaves += 1;
+      if (msg.success) s.numConcentrationSuccess += 1;
+      else s.numConcentrationFail += 1;
+    }
+  }
+
+  private _recordDeathSaveResult(msg: Extract<StatUpdateMessage, { type: "deathSaveResult" }>) {
+    const actorStats = this.getEntityStats(msg.actorId, game.actors);
+    if (!actorStats) return;
+    for (const s of [actorStats.session, actorStats.lifetime]) {
+      s.numDeathSaves += 1;
+      s.numDeathSaveSuccess += msg.successes;
+      s.numDeathSaveFail += msg.failures;
+    }
+  }
+
+  // ==================== Legacy GM methods ====================
+
   public exportToJSON() {
     const data = this.currentStats;
     const filename = `fvtt-midi-qol-stats.json`;
@@ -378,16 +465,6 @@ export class RollStats {
   public async GMsaveAllStats() {
     if (!game.user?.isGM) return;
     await game.settings.set("midi-qol", "RollStats", this.currentStats);
-  }
-
-  public async GMupdateEntity({ id, currentStats }: { id: string; currentStats: Stats }) {
-    if (!id) return;
-    this.currentStats[id] = currentStats;
-    this.rollCount = (this.rollCount + 1) % Math.max(1, configSettings.saveStatsEvery);
-
-    if (this.rollCount === 0) {
-      await game.settings.set("midi-qol", "RollStats", this.currentStats);
-    }
   }
 }
 

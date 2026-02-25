@@ -1696,12 +1696,41 @@ section.midi-qol.tab {
   margin-left: auto;
 }
 
-/* Cover label (½, ¾) in hit display */
-.midi-qol-cover-label {
-  font-size: 0.85em;
-  font-weight: bold;
-  opacity: 0.8;
+/* Cover icon in hit/save display */
+.midi-qol-cover-icon {
+  display: inline !important;
+  width: 14px !important;
+  height: 14px !important;
+  vertical-align: -0.125em;
   margin-right: 1px;
+  filter: brightness(0);
+}
+
+/* Flanking icon (sword) in hit display */
+.midi-qol-flanking-icon {
+  display: inline !important;
+  width: 14px !important;
+  height: 14px !important;
+  vertical-align: -0.125em;
+  margin-right: 1px;
+  filter: brightness(0);
+}
+
+.midi-qol-cover-ignored-icon {
+  display: inline !important;
+  width: 14px !important;
+  height: 14px !important;
+  vertical-align: -0.125em;
+  margin-right: 1px;
+}
+
+.midi-qol-reaction-icon {
+  display: inline !important;
+  width: 14px !important;
+  height: 14px !important;
+  vertical-align: -0.125em;
+  margin-right: 1px;
+  filter: brightness(0);
 }
 
 /* Make unchecked checkboxes more visible in dark theme */

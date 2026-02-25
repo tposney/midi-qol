@@ -195,7 +195,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       }
 
       let attackerToken = token;
-      if (token && checkMechanic("checkRange") !== "none" && (["mwak", "msak", "mpak", "rwak", "rsak", "rpak", "utility", "check", "save", "damage"].includes(this.data.activity.actionType))) {
+      if (token && checkMechanic("checkRange") !== "none" && (["mwak", "msak", "rwak", "rsak", "utility", "check", "save", "damage"].includes(this.data.activity.actionType))) {
         const { result, attackingToken } = checkActivityRange(this.data.activity, token, new Set([target]), false);
         if (attackingToken) attackerToken = attackingToken;
         switch (result) {
@@ -210,10 +210,11 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
             break;
         }
       }
-      // TODO look at doing save cover bonus calculations here - need the template
-      if (typeof configSettings.optionalRules.coverCalculation === "string" && configSettings.optionalRules.coverCalculation !== "none") {
-        if (!activityHasAreaTarget(this.data.activity)) {
-          const targetCover = attackerToken ? getCoverBonus(attackerToken, target, this.data.activity) : 0;
+      // Cover display: always check status-based cover (coverTotal etc.); only show "No Cover" when a cover module is configured
+      if (!activityHasAreaTarget(this.data.activity)) {
+        const hasCoverModule = typeof configSettings.optionalRules.coverCalculation === "string" && configSettings.optionalRules.coverCalculation !== "none";
+        const targetCover = attackerToken ? getCoverBonus(attackerToken, target, this.data.activity) : 0;
+        if (targetCover > 0 || hasCoverModule) {
           switch (targetCover) {
             case HALF_COVER:
               details.push(`${i18n("DND5E.CoverHalf")} ${i18n("DND5E.Cover")}`);
@@ -226,6 +227,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
               break;
             case 0:
               details.push(`${i18n("No")} ${i18n("DND5E.Cover")}`);
+              break;
             default:
               details.push(`+${targetCover} ${i18n("DND5E.Cover")}`);
               break;

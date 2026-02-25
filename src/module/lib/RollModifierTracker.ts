@@ -726,9 +726,14 @@ export async function computeAdvantageFlags(
     tracker.disadvantage.add("options", "Options");
   }
 
+  // The opposing entity that grants advantage/disadvantage.
+  // For attacks: the defender. For saves: the caster. Falls back to actor's own token.
+  const grantsActor = options.grantsActor ?? options.workflow?.actor;
+  const grantsToken = options.grantsToken ?? (grantsActor ? tokenForActor(grantsActor) : undefined);
+
   const conditionData = createConditionData({
     workflow: options.workflow,
-    target: tokenForActor(actor),
+    target: grantsToken ?? tokenForActor(actor),
     actor,
     item: options.item ?? options.itemUuid ?? options.saveItem ?? options.saveItemUuid
   });
@@ -752,8 +757,6 @@ export async function computeAdvantageFlags(
   }
 
   // Check source actor grants flags
-  const sourceActor = options.sourceActor ?? options.workflow?.actor;
-  const sourceToken = options.sourceToken ?? (sourceActor ? tokenForActor(sourceActor) : undefined);
 
   // Check actor's noAdvantage flags
   if (flags.noAdvantageFlags?.length) {
@@ -775,21 +778,21 @@ export async function computeAdvantageFlags(
     }
   }
 
-  if (sourceActor) {
-    const sourceConditionData = createConditionData({
+  if (grantsActor) {
+    const grantsConditionData = createConditionData({
       workflow: options.workflow,
       target: tokenForActor(actor),
-      actor: sourceActor,
-      token: sourceToken,
+      actor: grantsActor,
+      token: grantsToken,
       item: options.item ?? options.itemUuid ?? options.saveItem ?? options.saveItemUuid
     });
 
-    const sourceName = sourceToken?.name ?? sourceActor.name ?? "";
+    const grantsName = grantsToken?.name ?? grantsActor.name ?? "";
 
     if (flags.sourceAdvantageFlags?.length) {
       for (const flag of flags.sourceAdvantageFlags) {
-        if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.advantage.add(`${flag} ${sourceName}`, `${getFlagDisplayName(flag)} (${sourceName})`);
+        if (await evalAllConditionsAsync(grantsActor, midiFlag(flag), grantsConditionData, false)) {
+          tracker.advantage.add(`${flag} ${grantsName}`, `${getFlagDisplayName(flag)} (${grantsName})`);
           break;
         }
       }
@@ -797,8 +800,8 @@ export async function computeAdvantageFlags(
 
     if (flags.sourceDisadvantageFlags?.length) {
       for (const flag of flags.sourceDisadvantageFlags) {
-        if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.disadvantage.add(`${flag} ${sourceName}`, `${getFlagDisplayName(flag)} (${sourceName})`);
+        if (await evalAllConditionsAsync(grantsActor, midiFlag(flag), grantsConditionData, false)) {
+          tracker.disadvantage.add(`${flag} ${grantsName}`, `${getFlagDisplayName(flag)} (${grantsName})`);
           break;
         }
       }
@@ -806,8 +809,8 @@ export async function computeAdvantageFlags(
 
     if (flags.sourceNoAdvantageFlags?.length) {
       for (const flag of flags.sourceNoAdvantageFlags) {
-        if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.advantage.suppress(`${flag} ${sourceName}`, `${getFlagDisplayName(flag)} (${sourceName})`);
+        if (await evalAllConditionsAsync(grantsActor, midiFlag(flag), grantsConditionData, false)) {
+          tracker.advantage.suppress(`${flag} ${grantsName}`, `${getFlagDisplayName(flag)} (${grantsName})`);
           break;
         }
       }
@@ -815,8 +818,8 @@ export async function computeAdvantageFlags(
 
     if (flags.sourceNoDisadvantageFlags?.length) {
       for (const flag of flags.sourceNoDisadvantageFlags) {
-        if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.disadvantage.suppress(`${flag} ${sourceName}`, `${getFlagDisplayName(flag)} (${sourceName})`);
+        if (await evalAllConditionsAsync(grantsActor, midiFlag(flag), grantsConditionData, false)) {
+          tracker.disadvantage.suppress(`${flag} ${grantsName}`, `${getFlagDisplayName(flag)} (${grantsName})`);
           break;
         }
       }
@@ -1014,11 +1017,11 @@ export async function computeTargetCriticalModifiers(
   targetName: string,
   flags: CriticalModifierFlags,
   tracker: RollModifierTracker,
-  options?: { workflow?: any, sourceActor?: Actor.Implementation }
+  options?: { workflow?: any, grantsActor?: Actor.Implementation }
 ): Promise<void> {
   const conditionData = createConditionData({
     workflow: options?.workflow,
-    actor: options?.sourceActor,
+    actor: options?.grantsActor,
     target: tokenForActor(targetActor)
   });
 

@@ -4,7 +4,7 @@ import { Workflow } from "../Workflow.js";
 import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags } from "../lib/RollModifierTracker.js";
 import { MidiOptions } from "../utils.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
-import { addAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward } from "../utils.js";
+import { addAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
@@ -313,7 +313,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       let checkReaction = !usage.midiOptions.isTriggered; // first pass do reaction checks
       let checkBonusAction = !usage.midiOptions.isTriggered; // first pass do bonus action checks
       let targets: Set<foundry.canvas.placeables.Token.Implementation> | undefined;
-      const savedTargets = foundry.utils.deepClone(game.user?.targets);
+      const localSavedTargetIds = Array.from(game.user?.targets ?? []).map(t => t.id);
       if (usage.midiOptions.targetsToUse) targets = usage.midiOptions.targetsToUse;
       if (!targets) targets = new Set(game.user?.targets);
       for (let target of targets) {
@@ -333,7 +333,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         checkReaction = false;
         checkBonusAction = false;
       }
-      if (game.user && savedTargets) game.user.targets = savedTargets; // restore targets
+      updateUserTargets(localSavedTargetIds);
       return returnValue;
     }
 
@@ -512,6 +512,28 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         }
 
         if (workflow) {
+          // Sync tracker with what the player actually chose in the roll dialog
+          // @ts-expect-error CONFIG.Dice.D20Roll not typed
+          const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
+          const returnedAdvMode = rolls[0]?.options?.advantageMode;
+          if (returnedAdvMode !== undefined) {
+            const trackerMode = workflow.attackRollModifierTracker.advantageMode;
+            if (returnedAdvMode !== trackerMode) {
+              const label = i18n("midi-qol.ConfigButtons");
+              if (returnedAdvMode === ADV_MODE.ADVANTAGE) {
+                workflow.attackRollModifierTracker.advantage.setOverride("config-buttons", label);
+                workflow.attackRollModifierTracker.disadvantage.clearOverride();
+              } else if (returnedAdvMode === ADV_MODE.DISADVANTAGE) {
+                workflow.attackRollModifierTracker.disadvantage.setOverride("config-buttons", label);
+                workflow.attackRollModifierTracker.advantage.clearOverride();
+              } else {
+                // Player chose normal — clear any overrides
+                workflow.attackRollModifierTracker.advantage.clearOverride();
+                workflow.attackRollModifierTracker.disadvantage.clearOverride();
+              }
+            }
+          }
+
           workflow.attackMode = rolls[0].options.attackMode ?? config.attackMode;
           if (this.ammunition && !this.ammunitionItem) { // assume it was deleted
             const storedData = foundry.utils.getProperty(workflow.chatCard, "flags.midi-qol.ammunitionData") as any;
@@ -551,7 +573,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       config.midiOptions ??= {};
 
       if (debugEnabled > 1) debug("Entering configure attack roll", config.event, workflow, config.rollOptions);
-      await workflow.checkAttackAdvantage();
       if (workflow.workflowType === "BaseWorkflow") {
         if (workflow.attackRoll && workflow.currentAction === workflow.WorkflowState_Completed) {
           // This should not happen anymore
@@ -602,8 +623,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         }
       }
 
-      // checkAttackAdvantage() was already called in rollAttack - it handles all advantage sources
-      // and attributions (workflowOptions, rollOptions, flanking, flags, etc.)
+      // preAttackRoll hooks may modify flags; checkAttackAdvantage() runs after them (below)
       if (await asyncHooksCall("midi-qol.preAttackRoll", workflow) === false
         || await asyncHooksCall(`midi-qol.preAttackRoll.${this.item.uuid}`, workflow) === false
         || await asyncHooksCall(`midi-qol.preAttackRoll.${this.uuid}`, workflow) === false
@@ -808,15 +828,14 @@ export async function computeAttackAdvantage(
     ]
   };
 
-  // For attacks, the "source" that grants advantage/disadvantage is the target
-  // So we pass the target actor as sourceActor
+  // For attacks, the entity that grants advantage/disadvantage is the defender (target)
   const targetToken = options.workflow?.targets?.first();
   const targetActor = targetToken?.actor ?? undefined;
 
   await computeAdvantageFlags(actor, attackFlags, {
     ...options,
-    sourceActor: targetActor,
-    sourceToken: targetToken
+    grantsActor: targetActor,
+    grantsToken: targetToken
   }, tracker);
 
   return tracker;

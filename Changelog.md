@@ -1,3 +1,49 @@
+### 13.0.51
+**Bug Fixes**
+* Fix for not respecting target type settings when using levels volumetric templates.
+* Fix for AoE templates setting targets for all players, not just the client that rolled the item.
+* Fix for some template placements incorrectly including some tokens in the cover save bonus.* Various other fixes for template targeting not correctly recording targets.
+* When rolling a self target feature (for example action surge) the user's targets switch to self, which breaks the usage pattern of attack, action surge, attack, since the second attack will target the attacker (targets get swapped to the action surger).
+  - Midi now reverts targets back to what they were before the slef target activity ran.
+  - Midi should now remember the target you had selected before doing action surge, allowing attack, action surge, attack without needing to retarget.
+* More changes to cover calculation.
+  - Midi will now always check the configured cover module and use the "best" cover of the token status and what the module returns.
+  - Fix for midi using simple cover to check if a token can be hit or not, midi was being more restrictive than the cover module setting. Mid defaults to using the cover module setting.
+  - Cover display on the hits result display has been changed. Reactions, cover and flanking are now indicated by icons.
+  - The AC display is now just the final AC and you can hover over the ac total to see the breakdown of the components.
+  - There seems to be an incompatibility between simplecover5e and levels that makes means midi gets the wrong cover values if wall-height is active and midi is using simplecover5e to determine cover.
+* Fix for not properly processing advantage/disadvantage set in the roll configuration dialog. If the player changes advantage/disadvantage in the dialog, midi now syncs the tracker with the player's choice.
+* Fix for advantage/disadvantage condition expressions using the actor's own token as `target` instead of the opposing entity (e.g., the defender for attacks, the caster for saves).
+* Fix for `fail.attack`, `success.attack`, and `grants.attack.success/fail` condition flags incorrectly seeing the attacker's data as `target` instead of the actual target in condition expressions.* Fix for flanked not correctly setting flanked on diagonals when using perimeter distance measurement.
+* Fix for roll statistics dropping some rolls from recording. Rewrote stats recording so that clients send raw roll data to the GM which applies increments to a single authoritative copy, eliminating race conditions when multiple players roll simultaneously.
+* Merged target confirmation improvements (MR !405) - thanks @Elwin
+  - Target validation now runs on initial render and on every target change, filtering out invalid targets (defeated, wrong disposition for enemy/ally-only activities, excluded targets from workflow options).
+  - Targets are no longer re-rendered if the target set hasn't actually changed.
+* Fix for perimeter distance LoS check being too permissive, allowing attacks through walls in some multi-square token configurations. Replaced custom extreme-point geometry with `testCollision` ray casting using 17 boundary test points from attacker center to target, matching Foundry's native `_canSenseModes` approach.
+* Fix for DummyWorkflow not storing the actor passed to its constructor, causing downstream errors when `this.actor` was accessed (the base Workflow getter derives actor from `this.activity` which can be undefined for DummyWorkflow).
+* Fix for `initializeVision` using `.set()` instead of `.add()` when attaching vision sources during canSee checks, which caused the vision source not to be marked as attached.
+* Fix for `setupCanSeeSense` skipping vision re-initialization for target tokens that had stale LoS data from prior workflow checks. Now only skips re-initialization for the attacker token; targets are always freshly initialized.
+
+**New Features**
+* Added Region as a supported parent type in the dependent document tracking system. Deleting a region now cascade-deletes its dependents, matching the existing behavior for templates, tokens, and lights.
+* Since dnd5e 2024 has dropped flanking/flanked as an optional rule, it seemed like a good idea to double down on flanking support by adding a new flanking mode; rather than giving advantage there is now an option for flanking to grant a numeric bonus to the attack roll, set in the optional rules tab.
+  - Since advantage applied to the attack roll it is an all or nothing process (all targets are attacked at advantage or none are).
+  - With a per token numeric value for flanked/flanking midi can apply the bonus per token when adjudicating hits, which is does by reducing the target AC by the flanking/flanked bonus.
+  - The hits display card indicates flanked/flanking for each target.
+  - I think the flanking solution with a fixed bonus (of your choice) is a much better solution than the advantage route, and makes advantage still a much better thing to get, and suggest trying it.
+  - If using CPR and apply midi effects and switching to a fixed bonus, you may need to edit the CPR effects for flanking/flanked to remove the advantage changes from the effect. CPR makes a copy of the effects and thereafter does not change them.
+* Added support (preliminary) for flanking on hex grids. Midi does not use the RAW dnd5e rules for flanking, it uses a simplified geometric approach which is nearly the same.
+* Added a flanking/flanked visualisation option to midi. If enabled (from the optional rules tab) when you target a creature and select an adjacent token midi will highlight the squares/hexes that would provide flanking/flanked if occupied by an ally.
+  - It's moderately expensive so not recommended for game play, but can be useful to adjudicate disputes in game. (i.e. the gm enables it and then can check what midi thinks the right squares for advantage are).
+
+**For developers**
+* Since midi defers creating the chat card when rolling saves/skill checks etc, rolls[0].parent will be undefined in the dnd5e.rollSavingThrow hook. I've updated midi so that for the saving throw chatCard, message.getOriginatingMessage() will now correctly return the message that triggered the save and for Hooks.on("dnd5e.rollSavingThrow", roll), roll.options.originatingMessage is the id of the chat card that caused the roll to be initiated.
+* Added MidiQOL.apps.xxxx which contains each of the midi-qol dialogs in case anyone needs to access them.
+* DummyWorkflow now correctly records the actor for the workflow, meaning that item macros in optional.name rolls will be able to proceed normally.
+
+**Breaking Changes**
+* sourceActor/sourceToken renamed to grantsActor, grantsToken to reflect what they are actually used for. The actor/token that should be used for grants flags, the target for attacks and the caster for saves.
+
 ### 13.0.50
 **Bug Fixes**
   * Fix for AoE targeting not respecting target restrictions (like enemy only).
@@ -20,7 +66,7 @@
   - If there is a cover status (coverHalf, coverThreeQuarters, or coverTotal) set on the actor midi no longer does any cover calculations on the actor assuming the ac value returned in flags.dnd5e.targets.ac is correct, i.e. includes cover. For "normal" cover situations that will be the case.
   - Midi will take account of a cover value of null indicating full cover.
   - Midi now records target AC on the dnd5e.postRollConfiguration hook, so if you are making changes to flags.dnd5e.targets you need to do so on a hook before then.
-* When displaying hits, if the target has 1/2, 3/4 or total cover status on an actor.status midi will flag that in the display, via 1/2 or 3/4 on the left of the target AC and the infinity symbol if full cover.
+* When displaying hits, if the target has 1/2, 3/4 or total cover status on an actor.status midi will flag that in the display, via 1/2 or 3/4 dnd5e icon on the left of the target AC and the infinity symbol if full cover.
   - If midi calculates the cover bonus it will be displayed as if was before, i.e. AC +2/5/99 for 1/2, 3/4 or full cover. This is intentional so you can know how the cover value was chosen.
 * Fixed workflow actor being undefined when restoring a workflow from a chat card. The actor is now always derived from the workflow's activity rather than being stored separately.
 * Added missing compatibility layer for revised rollAbilitySaveV2 in GMAction.

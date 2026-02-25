@@ -67,6 +67,9 @@ import {
   isValidTarget,
   needsAOOCheck,
   addRollTo,
+  pushTargetSave,
+  popTargetSave,
+  clearTargetSave,
 } from "../utils.js";
 import { activityHasScaledTargetCount, preTemplateTargets, removeFlanking, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
@@ -588,6 +591,8 @@ export let MidiActivityMixin = Base => {
       try {
         usage.midiOptions ??= {};
         usage.midiOptions.workflowOptions ??= {};
+        // Capture current targets before template placement can replace them
+        usage.midiOptions.workflowOptions.preSelectedTargetUuids ??= Array.from(game.user?.targets ?? []).map(t => t.document.uuid);
         if (debugEnabled > 0) warn("MidiQOL | MidiActivity | use | Called", usage, dialog, message);
         let item = this.item.clone({}, { keepId: true });
         // @ts-expect-error no dnd5e-types
@@ -670,11 +675,25 @@ export let MidiActivityMixin = Base => {
         });
 
         if (!await activity.preTargetingChecks(usage, dialog, message)) return false;
+        // Save/clear targets BEFORE setupTargets changes game.user.targets for self-targeting
+        const isSelfTarget = this.target?.affects?.type === "self"
+          // @ts-expect-error item.type includes "tool" at runtime
+          || (this.item.type === "tool" && !this.target?.affects?.type);
+        if (isSelfTarget) {
+          pushTargetSave();
+          usage.workflow!.selfTargeted = true;
+        } else {
+          clearTargetSave();
+        }
         if (!await activity.setupTargets(usage, dialog, message)) {
+          if (isSelfTarget) { popTargetSave(); usage.workflow!.selfTargeted = false; }
           ui.notifications?.warn(i18n("midi-qol.noTargets"));
           return false;
         }
-        if (!await activity.preChatChecks(usage, dialog, message)) return false;
+        if (!await activity.preChatChecks(usage, dialog, message)) {
+          if (isSelfTarget) { popTargetSave(); usage.workflow!.selfTargeted = false; }
+          return false;
+        }
         try {
           useResults = await super.use.bind(activity)(usage, dialog, message);
         } catch (err) {
@@ -1262,14 +1281,16 @@ export let MidiActivityMixin = Base => {
         const target = getToken(tokenRef);
         if (!target) continue;
         wasSightEnabled[target.id] = target.document.sight.enabled;
-        if (
-          // sight not enabled but we are treating it as if it is
-          (!target.document.sight.enabled && configSettings.optionalRules.invisVision)
+        // Skip initializeVision only for the attacker token if it already has a
+        // properly initialized vision source — re-initializing would destroy Foundry's
+        // active vision source. Targets are always re-initialized to avoid stale LOS.
+        if (target === getToken(workflow.token) && target.vision?.active && target.vision?.los) continue;
+        const needsInit = (!target.document.sight.enabled && configSettings.optionalRules.invisVision)
           // @ts-expect-error no dnd5e-types
           || (target.actor?.type === "npc")
-          // sight enabled but not the owner of the token
           || (!target.isOwner && target.document.sight.enabled)
-          || (!target.vision || !target.vision?.los)) {
+          || (!target.vision || !target.vision?.los);
+        if (needsInit) {
           initializeVision(target);
           needPause = game.modules.get("levels-3d-preview")?.active ?? false;
         }
@@ -1279,9 +1300,7 @@ export let MidiActivityMixin = Base => {
         for (let tokenRef of workflow.targets) {
           const target = getToken(tokenRef);
           if (!target || !target.vision?.los) continue;
-          const sourceId = target.sourceId;
-          //@ts-expect-error
-          canvas.effects?.visionSources.set(sourceId, target.vision);
+          target.vision.add();
         }
       }
 

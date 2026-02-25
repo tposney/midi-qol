@@ -1,14 +1,14 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, checkIncapacitated, checkDefeated } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget } from "./utils.js";
 import { checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook, getTemplateSourceToken } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { Workflow } from "./Workflow.js";
 import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
 import { installedModules } from "./setupModules.js";
-import { preActivityConsumptionHook, activityConsumptionHook, selectTargetsFromTemplates } from "./activities/activityHelpers.js";
+import { preActivityConsumptionHook, activityConsumptionHook, selectTargetsFromTemplates, isAoETargetable } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
 import { MidiDependentsRegistry } from "./lib/MidiDependentsRegistry.js";
@@ -37,6 +37,13 @@ export let readyHooks = async () => {
   });
 
   Hooks.on("targetToken", foundry.utils.debounce(checkFlanking, 150));
+  Hooks.on("targetToken", (user, token, targeted) => onUserManualTarget(user));
+
+  // Flanking visualization — update when token selection, targeting, or position changes
+  const debouncedFlankingHighlight = foundry.utils.debounce(updateFlankingHighlight, 150);
+  Hooks.on("controlToken", debouncedFlankingHighlight);
+  Hooks.on("targetToken", debouncedFlankingHighlight);
+  Hooks.on("refreshToken", debouncedFlankingHighlight);
 
   //@ts-expect-error
   Hooks.on("ddb-game-log.pendingRoll", (data) => {
@@ -75,10 +82,13 @@ export let readyHooks = async () => {
   Hooks.on("deleteMeasuredTemplate", checkDeleteTemplate);
 
   // Auto-target tokens when a template is refreshed (moved/reshaped during preview or after placement)
+  // Only the user who placed the template should update targeting, otherwise all clients
+  // would set their own game.user.targets causing every player to target the AoE tokens.
   // @ts-expect-error fvtt-types missing flags parameter on refreshMeasuredTemplate hook
   Hooks.on("refreshMeasuredTemplate", (template: foundry.canvas.placeables.MeasuredTemplate.Implementation, flags: Record<string, boolean>) => {
     if (!flags.refreshPosition && !flags.refreshShape) return;
     if (!canvas?.tokens) return;
+    if (template.document.author?.id !== game.user?.id) return;
 
     // @ts-expect-error no dnd5e-types
     const autoTarget = getActivityAutoTargetAction(template.activity);
@@ -90,6 +100,17 @@ export let readyHooks = async () => {
       if (template.document.elevation !== levelsTemplateData.elevation) {
         template.document.elevation = levelsTemplateData.elevation;
       }
+      // Resolve the activity and source token for disposition filtering
+      // @ts-expect-error no dnd5e-types
+      const activity = template.activity
+        ?? (template.document.flags?.dnd5e?.origin ? fromUuidSync(template.document.flags.dnd5e.origin) : undefined);
+      const sourceToken = getTemplateSourceToken(template.document);
+      const selfToken = sourceToken ?? undefined;
+      const AoETargetType = activity ? getAoETargetType(activity) : "any";
+      const ignoreSelf = activity
+        ? (activity?.target.affects.special ?? "").split(";").some((spec: string) => ["-self"].includes(spec))
+        : false;
+
       // Filter which tokens to pass - not too far; wall blocking is left to levels.
       let distance = template.document.distance;
       const dimensions = canvas.dimensions || { size: 1, distance: 1 };
@@ -101,10 +122,7 @@ export let readyHooks = async () => {
         );
         const maxExtension = (1 + Math.max(tk.document.width, tk.document.height)) * dimensions.size;
         if (r.distance > distance + maxExtension) return false;
-        if (["alwaysIgnoreIncapacitated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget) && checkIncapacitated(tk, debugEnabled > 0, false))
-          return false;
-        if (["alwaysIgnoreDefeated", "wallsBlockIgnoreDefeated"].includes(autoTarget) && checkDefeated(tk))
-          return false;
+        if (!isAoETargetable(tk, { selfToken, ignoreSelf, AoETargetType, autoTarget })) return false;
         return true;
       });
       if (tokensToCheck && tokensToCheck.length > 0) {
@@ -304,6 +322,13 @@ export let readyHooks = async () => {
     if (!preferredActiveGM()?.isSelf) return;
     if (options.undo) return;
     MidiDependentsRegistry.deleteDependents(deletedToken.uuid);
+  });
+
+  // Handle deletion of Regions - cascade delete dependents via MidiDependentsRegistry
+  Hooks.on("deleteRegion", (deletedRegion: any, options: any, user) => {
+    if (!preferredActiveGM()?.isSelf) return;
+    if (options.undo) return;
+    MidiDependentsRegistry.deleteDependents(deletedRegion.uuid);
   });
 
   // Hooks.on("restCompleted", restManager); I think this means 1.6 is required.
@@ -752,7 +777,7 @@ export function initHooks() {
       },
       {
         label: i18n("midi-qol.buttons.roll"),
-        enabled: (params) => ["weapon", "spell", "power", "feat", "tool", "consumable"].includes(params.item.type),
+        enabled: (params) => ["weapon", "spell", "feat", "tool", "consumable"].includes(params.item.type),
         iconClass: 'fas fa-dice-d20',
         execute: (params) => {
           if (debugEnabled > 1) log('roll', params.item);

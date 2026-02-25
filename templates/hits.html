@@ -28,23 +28,13 @@
               </span>
             </div>
             {{#if showAC}}
-            <div class="midi-qol-ac {{hit.acClass}}">
+            <div class="midi-qol-ac {{hit.acClass}}" {{#if hit.acTooltip}}data-tooltip="{{hit.acTooltip}}"{{/if}}>
               <span>
-                {{#if hit.coverLabel}}<span class="midi-qol-cover-label">{{hit.coverLabel}}</span>{{/if}}
+                {{#each hit.acIcons}}<img class="{{this.cssClass}}" src="{{this.img}}" {{#if this.tooltip}}data-tooltip="{{this.tooltip}}"{{/if}} />{{/each}}
                 <i class="fas fa-shield-halved"></i>
                 <span style="font-weight: bold;">{{hit.acDisplay}}</span>
               </span>
             </div>
-            {{else}}
-            {{#if hit.bonusAC}}
-            <div class="midi-qol-ac {{hit.acClass}}">
-              <span>
-                {{#if hit.coverLabel}}<span class="midi-qol-cover-label">{{hit.coverLabel}}</span>{{/if}}
-                <i class="fas fa-shield-halved"></i>
-                <span style="font-weight: bold;">+{{hit.bonusAC}}</span>
-              </span>
-            </div>
-            {{/if}}
             {{/if}}
           </li>
           {{/each}}

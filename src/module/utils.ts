@@ -205,10 +205,6 @@ export let getTraitMult = (actor: Actor.Implementation, dmgTypeString: string, i
         else if (item?.type === "spell" && trait.has("spell")) {
           totalMult = totalMult * mult;
           continue;
-          // @ts-expect-error no dnd5e-types
-        } else if (item?.type === "power" && trait.has("power")) {
-          totalMult = totalMult * mult;
-          continue;
         }
         if (customs.length > 0) {
           if (!magicalDamage && (customs.includes("nonmagic") || customs.includes(GameSystemConfig.customDamageResistanceTypes?.nonmagic))) {
@@ -222,10 +218,6 @@ export let getTraitMult = (actor: Actor.Implementation, dmgTypeString: string, i
             continue;
             // @ts-expect-error no dnd5e-types
           } else if (item?.type === "spell" && (customs.includes("spell") || customs.includes(GameSystemConfig.customDamageResistanceTypes.spell))) {
-            totalMult = totalMult * mult;
-            continue;
-            // @ts-expect-error no dnd5e-types
-          } else if (item?.type === "power" && (customs.includes("power") || customs.includes(GameSystemConfig.customDamageResistanceTypes.power))) {
             totalMult = totalMult * mult;
             continue;
           }
@@ -2032,8 +2024,8 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
 
       // roll the damage and save....
       const theTargetToken = getOrCreateTokenForActor(actor)!;
-      const theTargetId = theTargetToken?.document.id;
-      if (game.user && theTargetId) updateUserTargets([theTargetId]);
+      // Target is passed via targetsToUse in the options below — no need to modify game.user.targets
+      // which would clobber the GM's real targets before completeActivityUse can save them.
 
       // Handle stacking damage rolls
       if (damageRoll && activityData.damage?.parts?.[0]) {
@@ -2255,14 +2247,16 @@ export async function completeActivityUse(activityRef: Activity | string | undef
   if (localRoll) {
     return await new Promise((resolve) => {
       const maxWait = 90; // If the activity usage doesn't complete in 90 seconds then we have a problem
-      let saveTargets = Array.from(game.user?.targets ?? []).map(t => { return t.id });
+      // Local save of current targets — restored on cleanup
+      const localSavedTargetIds = Array.from(game.user?.targets ?? []).map(t => t.id);
       if (usage.midiOptions!.ignoreUserTargets) updateUserTargets([]);
       if (game.user && targetsToUse.size === 0 && activity.target?.affects?.type === "self") {
-        updateUserTargets([]);
         const selfTarget = getToken(activity.item.actor);
         if (selfTarget) {
-          selfTarget.setTarget(true, { user: game.user, releaseOthers: false, groupSelection: true });
+          updateUserTargets([selfTarget.id]);
           targetsToUse = new Set([selfTarget]);
+        } else {
+          updateUserTargets([]);
         }
       } else if (targetsToUse.size === 0 && !usage.midiOptions!.ignoreUserTargets) {
         targetsToUse = new Set(game.user?.targets);
@@ -2275,31 +2269,6 @@ export async function completeActivityUse(activityRef: Activity | string | undef
       }
       usage.sequenceId = foundry.utils.randomID();
       const castHookName = "dnd5e.postUseLinkedSpell";
-      const castHookId = Hooks.on(castHookName, (activity, activityUsage, results) => {
-        // dependent activity fired
-        if (usage.sequenceId !== activityUsage.sequenceId) return;
-        Hooks.off(castHookName, castHookId);
-        //@ts-expect-error
-        Hooks.off(abortHookName, abortHookId);
-        //@ts-expect-error
-        Hooks.off(completeHookName, completeHookId);
-        if (debugEnabled > 0) warn(`spell use hook fired: ${activity.item?.name} ${completeHookName}`)
-        updateUserTargets(saveTargets);
-        resolve(usage.workflow);
-      });
-      //@ts-expect-error
-      const abortHookId = Hooks.on(abortHookName, (workflow) => {
-        if (workflow.sequenceId !== usage.sequenceId) return;
-        //@ts-expect-error
-        Hooks.off(abortHookName, abortHookId);
-        //@ts-expect-error
-        Hooks.off(completeHookName, completeHookId);
-        Hooks.off(castHookName, castHookId);
-        if (debugEnabled > 0) warn(`completeItemUse abort hook fired: ${workflow.workflowName} ${abortHookName}`)
-        updateUserTargets(saveTargets);
-        resolve(workflow);
-      });
-
       let completeHookName = `midi-qol.postCleanup.${activity.uuid}`;
       // @ts-expect-error no clue
       if (!activity || activity.activity?.id) {
@@ -2307,36 +2276,41 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         // forward activities wont call the expected postCleanup Hook
         completeHookName = "midi-qol.postCleanup";
       }
-      //@ts-expect-error
-      const completeHookId = Hooks.on(completeHookName, (workflow) => {
-        if (workflow.sequenceId !== usage.sequenceId) return;
-        //@ts-expect-error
-        Hooks.off(completeHookName, completeHookId);
-        //@ts-expect-error
-        Hooks.off(abortHookName, abortHookId);
+
+      // All three hooks and the timeout do the same cleanup: unregister hooks, restore targets, resolve.
+      const cleanupAndResolve = (result: any, source?: string) => {
         Hooks.off(castHookName, castHookId);
-        if (debugEnabled > 0) warn(`completeActivityUse complete hook fired: ${workflow.workflowName} ${completeHookName}`)
-        updateUserTargets(saveTargets);
-        resolve(workflow);
+        //@ts-expect-error dynamic hook name
+        Hooks.off(abortHookName, abortHookId);
+        //@ts-expect-error dynamic hook name
+        Hooks.off(completeHookName, completeHookId);
+        if (source && debugEnabled > 0) warn(`completeActivityUse ${source}: ${activity?.item?.name} ${completeHookName}`);
+        updateUserTargets(localSavedTargetIds);
+        resolve(result);
+      };
+
+      const castHookId = Hooks.on(castHookName, (activity, activityUsage, results) => {
+        if (usage.sequenceId !== activityUsage.sequenceId) return;
+        cleanupAndResolve(usage.workflow, "postUseLinkedSpell");
+      });
+      //@ts-expect-error dynamic hook name
+      const abortHookId = Hooks.on(abortHookName, (workflow: Workflow) => {
+        if (workflow.sequenceId !== usage.sequenceId) return;
+        cleanupAndResolve(workflow, "preAbort");
+      });
+      //@ts-expect-error dynamic hook name
+      const completeHookId = Hooks.on(completeHookName, (workflow: Workflow) => {
+        if (workflow.sequenceId !== usage.sequenceId) return;
+        cleanupAndResolve(workflow, "postCleanup");
       });
       setTimeout(() => {
-        //@ts-expect-error
-        Hooks.off(abortHookName, abortHookId);
-        //@ts-expect-error
-        Hooks.off(completeHookName, completeHookId);
-        Hooks.off(castHookName, castHookId);
-        resolve(undefined);
+        cleanupAndResolve(undefined);
       }, maxWait * 1000);
       usage.midiOptions!.targetsToUse = targetsToUse;
       // @ts-expect-error no dnd5e-types
       activity.use(usage, dialog, message).then(result => {
         if (!result) {
-          //@ts-expect-error
-          Hooks.off(abortHookName, abortHookId);
-          //@ts-expect-error
-          Hooks.off(completeHookName, completeHookId);
-          Hooks.off(castHookName, castHookId);
-          resolve(result)
+          cleanupAndResolve(result);
         }
       });
     });
@@ -2385,6 +2359,7 @@ export type MidiOptions = {
   isMagicSave?: boolean;
   isTriggered?: boolean;
   item?: Item.Implementation;
+  itemCardUuid?: string;
   itemUuid?: string;
   noUseWarning?: boolean;
   parts?: string[];
@@ -2399,11 +2374,11 @@ export type MidiOptions = {
   saveItem?: Item.Implementation;
   saveItemUuid?: string;
   simulate?: boolean;
-  // sourceActor/sourceToken: Who grants advantage/disadvantage (explicit, not derived from workflow.actor)
-  // For saves/checks: typically workflow.actor (caster)
-  // For attacks: would be target.actor (defender)
-  sourceActor?: Actor.Implementation;
-  sourceToken?: Token.Implementation;
+  // grantsActor/grantsToken: The opposing entity that grants advantage/disadvantage.
+  // For attacks: the defender (target). For saves/checks: the caster (workflow.actor).
+  // Falls back to the actor themselves when there is no opposing entity.
+  grantsActor?: Actor.Implementation;
+  grantsToken?: Token.Implementation;
   spellLevel?: number;
   target?: number;
   targets?: Set<foundry.canvas.placeables.Token.Implementation>;
@@ -2832,49 +2807,61 @@ export function checkWallCollision(
   options: WallCollisionOptions
 ): boolean {
   const { wallsBlockRange, coverVisible, source } = options;
+  let blocked: boolean;
 
   switch (wallsBlockRange) {
-    case "center":
-      return !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
+    case "center": {
+      blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
         source,
         mode: "any",
         type: "sight"
       });
+      return blocked;
+    }
 
     case "centerLevels":
     case "levelsautocover":
       if (installedModules.get("levels")) {
-        if (coverVisible === false) return true;
+        if (coverVisible === false) {
+          return true;
+        }
         if (coverVisible === undefined) {
           const p1 = { x: origin.x, y: origin.y, z: options.originElevation ?? 0 };
           const p2 = { x: dest.x, y: dest.y, z: options.destElevation ?? 0 };
           //@ts-expect-error Levels API not typed
           const baseToBase = CONFIG.Levels.API.testCollision(p1, p2, "collision");
-          p1.z = options.originTopElevation ?? p1.z;
-          p2.z = options.destTopElevation ?? p2.z;
+          const p1Top = { x: origin.x, y: origin.y, z: options.originTopElevation ?? p1.z };
+          const p2Top = { x: dest.x, y: dest.y, z: options.destTopElevation ?? p2.z };
           //@ts-expect-error Levels API not typed
-          const topToBase = CONFIG.Levels.API.testCollision(p1, p2, "collision");
-          return baseToBase && topToBase;
+          const topToBase = CONFIG.Levels.API.testCollision(p1Top, p2Top, "collision");
+          blocked = baseToBase && topToBase;
+          return blocked;
         }
         return false;
       }
       // Fallback to basic check if Levels not installed
-      return !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
+      blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
         source,
         mode: "any",
         type: "sight"
       });
+      return blocked;
 
     case "alternative":
     case "simbuls-cover-calculator":
-    case "simplecover5e":
       if (coverVisible === undefined) {
-        return !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
+        blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
           source,
           mode: "any",
           type: "sight"
         });
+        return blocked;
       }
+      return false;
+
+    case "simplecover5e":
+      // simplecover5e wall blocking is handled entirely by the pre-check (getCover with losCheck: true)
+      // No per-ray fallback — if the pre-check didn't resolve, we don't block
       return false;
 
     case "tokencover":
@@ -2910,12 +2897,62 @@ function shapesOverlap(poly1: PIXI.Polygon, poly2: PIXI.Polygon): boolean {
   return poly1.contains(c2.x, c2.y) || poly2.contains(c1.x, c1.y);
 }
 
+/**
+ * Run module-level pre-checks (levelsautocover, simbuls, tokencover, simplecover5e)
+ * to determine if a target is fully blocked before doing per-ray wall checks.
+ * Returns { blocked: true } if the module says total cover,
+ * or { coverVisible } to pass through to per-ray checks.
+ */
+function computeWallBlockPreCheck(
+  t1: Token.Implementation,
+  t2: Token.Implementation,
+  wallsBlock: boolean,
+  includeCover: boolean
+): { blocked: boolean, coverVisible?: boolean | undefined } {
+  const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
+  //@ts-expect-error
+  if (installedModules.get("levelsautocover") && game.settings.get("levelsautocover", "apiMode") && wallsBlock && wallsBlockRange === "levelsautocover" && includeCover) {
+    //@ts-expect-error
+    const levelsautocoverData = AutoCover.calculateCover(t1, t2, getLevelsAutoCoverOptions());
+    const coverVisible = levelsautocoverData.rawCover > 0;
+    const result = coverVisible ? { blocked: false, coverVisible: true } : { blocked: true };
+    return result;
+  } else if (globalThis.CoverCalculator && wallsBlockRange === "simbuls-cover-calculator" && includeCover) {
+    if (t1 === t2) return { blocked: false, coverVisible: undefined };
+    const coverData = globalThis.CoverCalculator.Cover(t1, t2);
+    if (debugEnabled > 0) warn("wallBlockPreCheck | simbuls cover calculator ", t1.name, t2.name, coverData);
+    const result = (coverData?.data.results.cover === 3 && wallsBlock) ? { blocked: true } : { blocked: false, coverVisible: true };
+    return result;
+  } else if (installedModules.get("tokencover") && wallsBlockRange === "tokencover" && includeCover) {
+    const coverValue = calcTokenCover(t1, t2);
+    const result = (coverValue === 3 && wallsBlock) ? { blocked: true } : { blocked: false, coverVisible: true };
+    return result;
+  } else if (installedModules.get("simplecover5e") && wallsBlockRange === "simplecover5e" && wallsBlock) {
+    //@ts-expect-error
+    const simpleCoverApi = game.modules.get("simplecover5e")?.api;
+    if (simpleCoverApi) {
+      // If we're using simple cover to determine walls block have to use losCheck: true, otherwise will never return more than 3/4 cover
+      // const losCheck = !!safeGetGameSetting("simplecover5e", "losCheck");
+      const coverResult = simpleCoverApi.getCover({
+        attacker: t1,
+        target: t2,
+        scene: t1.scene,
+        losCheck: true
+      });
+      const result = (coverResult?.bonus === null || coverResult?.cover === "total") ? { blocked: true } : { blocked: false, coverVisible: true };
+      return result;
+    }
+  }
+  return { blocked: false, coverVisible: undefined };
+}
+
+
 export function computePerimeterDistance(
   t1: any,
   t2: any,
   options: DistanceOptions = {}
 ): number {
-  const { wallsBlock = false, includeElevation = true } = options;
+  let { wallsBlock = false, includeElevation = true, includeCover = true } = options;
 
   if (!canvas?.scene || !canvas.grid || !canvas.dimensions) return -1;
 
@@ -2925,6 +2962,13 @@ export function computePerimeterDistance(
 
   // Same token - distance is 0
   if (token1 === token2) return 0;
+
+  // Check ignoreWalls flag
+  const actor = (token1 as Token).actor;
+  const ignoreWallsFlag = actor ? foundry.utils.getProperty(actor, `flags.${MODULE_ID}.ignoreWalls`) : false;
+  if (ignoreWallsFlag) {
+    wallsBlock = false;
+  }
 
   const poly1 = getTokenPerimeterPolygon(token1 as Token);
   const poly2 = getTokenPerimeterPolygon(token2 as Token);
@@ -2947,27 +2991,38 @@ export function computePerimeterDistance(
   if (wallsBlock) {
     const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
     if (wallsBlockRange !== "none") {
-      // Get elevation data for Levels API
-      const t1Elevation = (token1 as Token).document?.elevation ?? 0;
-      const t2Elevation = (token2 as Token).document?.elevation ?? 0;
-      const t1DocWidth = (token1 as Token).document?.width ?? 1;
-      const t1DocHeight = (token1 as Token).document?.height ?? 1;
-      const t2DocWidth = (token2 as Token).document?.width ?? 1;
-      const t2DocHeight = (token2 as Token).document?.height ?? 1;
-      const t1TopElevation = t1Elevation + Math.max(t1DocHeight, t1DocWidth) * gridDistance;
-      const t2TopElevation = t2Elevation + Math.min(t2DocHeight, t2DocWidth) * gridDistance;
+      // Run module pre-checks (simplecover5e, levelsautocover, simbuls, tokencover)
+      const preCheck = computeWallBlockPreCheck(token1 as Token, token2 as Token, wallsBlock, includeCover);
+      if (preCheck.blocked) return -1;
 
-      const collision = checkWallCollision(origin, dest, {
-        source: (token1 as Token).document,
-        wallsBlockRange,
-        originElevation: t1Elevation,
-        destElevation: t2Elevation,
-        originTopElevation: t1TopElevation,
-        destTopElevation: t2TopElevation
-      });
-      if (collision) {
-        return -1;
+      // If no module pre-check resolved it, cast rays from attacker center to
+      // a grid of 17 boundary test points on the target (same pattern as _canSenseModes).
+      // Block only if ALL rays are blocked by walls.
+      if (preCheck.coverVisible === undefined) {
+        const srcCenter = (token1 as Token).center;
+        const tgtCenter = (token2 as Token).center;
+        const t = Math.min((token2 as Token).w, (token2 as Token).h) / 4;
+        const t2 = Math.min((token2 as Token).w, (token2 as Token).h) / 2 - 2;
+        const offsets = t > 0 ? [
+          [0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t],
+          [-t2, -t2], [-t2, t2], [t2, t2], [t2, -t2], [-t2, 0], [t2, 0], [0, -t2], [0, t2]
+        ] : [[0, 0]];
+        const testPoints = offsets.map(o => new PIXI.Point(tgtCenter.x + o[0], tgtCenter.y + o[1]));
+        const srcOrigin = new PIXI.Point(srcCenter.x, srcCenter.y);
+
+        let allBlocked = true;
+        for (const tgtPt of testPoints) {
+          const collision = CONFIG.Canvas.polygonBackends.sight.testCollision(
+            srcOrigin, tgtPt,
+            { type: "sight", mode: "any" }
+          );
+          if (!collision) { allBlocked = false; break; }
+        }
+        if (allBlocked) {
+          return -1;
+        }
       }
+      // coverVisible === true means module says not blocked — continue to distance calc
     }
   }
 
@@ -3081,6 +3136,7 @@ export interface DistanceOptions {
 export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): number {
   const { wallsBlock = false, includeCover = true, includeElevation = configSettings.optionalRules.distanceIncludesHeight } = options;
   const measurementMode = configSettings.optionalRules.distanceMeasurement ?? "center";
+  const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
   const gridDistance = canvas?.dimensions?.distance ?? 5;
   const fudgeFactor = configSettings.gridlessFudge ?? 0;
 
@@ -3092,6 +3148,24 @@ export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): nu
     const token2 = getPlaceable(t2);
     if (!token1 || !token2 || !canvas?.grid) return -1;
     if (token1 === token2) return 0;
+    // Still run wall blocking checks even in default mode
+    if (wallsBlock) {
+      const preCheck = computeWallBlockPreCheck(token1 as Token.Implementation, token2 as Token.Implementation, wallsBlock, includeCover);
+      if (preCheck.blocked) return -1;
+      // If no module pre-check resolved (coverVisible is undefined), do a basic center-to-center sight check
+      if (preCheck.coverVisible === undefined) {
+        const origin = new PIXI.Point(token1.center.x, token1.center.y);
+        const dest = new PIXI.Point(token2.center.x, token2.center.y);
+        const collision = checkWallCollision(origin, dest, {
+          source: token1.document,
+          wallsBlockRange: configSettings.optionalRules.wallsBlockRange,
+          coverVisible: undefined,
+          originElevation: (token1.document as TokenDocument).elevation ?? 0,
+          destElevation: (token2.document as TokenDocument).elevation ?? 0,
+        });
+        if (collision) return -1;
+      }
+    }
     const result = canvas.grid.measurePath([token1.center, token2.center], {});
     distance = result?.distance ?? 0;
   } else if (measurementMode === "center") {
@@ -3210,43 +3284,11 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: {
   const t2Elevation = t2.document.elevation ?? 0;
   const t1TopElevation = t1Elevation + Math.max(t1DocHeight, t1DocWidth) * (canvas.dimensions?.distance ?? 5);
   const t2TopElevation = t2Elevation + Math.min(t2DocHeight, t2DocWidth) * (canvas.dimensions?.distance ?? 5); // assume t2 is trying to make itself small
-  let coverVisible;
-  // For levels autocover and simbul's cover calculator pre-compute token cover - full cover means no attack and so return -1
-  // otherwise don't bother doing los checks they are overruled by the cover check
-  //@ts-expect-error
-  if (installedModules.get("levelsautocover") && game.settings.get("levelsautocover", "apiMode") && wallsBlock && configSettings.optionalRules.wallsBlockRange === "levelsautocover" && includeCover) {
-    //@ts-expect-error
-    const levelsautocoverData = AutoCover.calculateCover(t1, t2, getLevelsAutoCoverOptions());
-    coverVisible = levelsautocoverData.rawCover > 0;
-    if (!coverVisible) return -1;
-  } else if (globalThis.CoverCalculator && configSettings.optionalRules.wallsBlockRange === "simbuls-cover-calculator" && includeCover) {
-    if (t1 === t2) return 0; // Simbul's throws an error when calculating cover for the same token
-    const coverData = globalThis.CoverCalculator.Cover(t1, t2);
-    if (debugEnabled > 0) warn("computeDistance | simbuls cover calculator ", t1.name, t2.name, coverData);
-    if (coverData?.data.results.cover === 3 && wallsBlock) return -1;
-    coverVisible = true;
-  } else if (installedModules.get("tokencover") && configSettings.optionalRules.wallsBlockRange === "tokencover" && includeCover) {
-    const coverValue = calcTokenCover(t1, t2);
-    if (coverValue === 3 && wallsBlock) return -1;
-    coverVisible = true;
-  } else if (installedModules.get("simplecover5e") && configSettings.optionalRules.wallsBlockRange === "simplecover5e" && wallsBlock) {
-    // Use Simple Cover 5e's LoS check - total cover (bonus === null) means no LoS
-    //@ts-expect-error
-    const simpleCoverApi = game.modules.get("simplecover5e")?.api;
-    if (simpleCoverApi) {
-      const coverResult = simpleCoverApi.getCover({
-        attacker: t1,
-        target: t2,
-        scene: t1.scene,
-        losCheck: true
-      });
-      // If total cover (no LoS), return -1 to indicate blocked
-      if (coverResult?.bonus === null || coverResult?.cover === "total") {
-        return -1;
-      }
-      coverVisible = true;
-    }
-  }
+  const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
+  // Module pre-check: full cover means no attack, otherwise skip per-ray los checks
+  const preCheck = wallsBlock ? computeWallBlockPreCheck(t1, t2, wallsBlock, includeCover) : { blocked: false, coverVisible: undefined };
+  if (preCheck.blocked) return -1;
+  const coverVisible = preCheck.coverVisible;
 
   let segments: { ray: Ray }[] = [];
   let rayDistance, distance;
@@ -3426,7 +3468,7 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
       longRange = 0;
     }
 
-    const meleeActions = new Set(["mwak", "msak", "mpak"]);
+    const meleeActions = new Set(["mwak", "msak"]);
     const isMeleeAttack = meleeActions.has(activity.actionType);
     // @ts-expect-error no dnd5e-types
     const hasThrownProperty = activity.item.labels.properties?.some(p => p.abbr === "thr");
@@ -3453,7 +3495,7 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
       const ignoreTotalCover = activity.midiProperties?.ignoreFullCover;
 
       const coverOptions = {
-        wallsBlock: !!configSettings.optionalRules.wallsBlockRange && !ignoreTotalCover,
+        wallsBlock: configSettings.optionalRules.wallsBlockRange !== "none" && !ignoreTotalCover,
         includeCover: !ignoreTotalCover,
       };
 
@@ -3475,7 +3517,7 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
 
       if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
         log(`${target.name} is too far ${distance} from your character you cannot hit`)
-        if (checkMechanic("checkRange") === "longdisadv" && ["rwak", "rsak", "rpak"].includes(activity.actionType)) {
+        if (checkMechanic("checkRange") === "longdisadv" && ["rwak", "rsak"].includes(activity.actionType)) {
           return {
             result: "dis",
             reason: `${actor?.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`,
@@ -3597,43 +3639,31 @@ export function hasCoverTotal(actor: Actor | null | undefined): boolean {
 
 /**
  * Get the effective cover bonus for a target, from any source.
- * If the target has a dnd5e cover status, returns ac.cover (already baked into AC/saves by dnd5e).
- * Otherwise, returns the module-computed cover bonus from computeCoverBonus.
+ * Returns the higher of the dnd5e status-based cover and the module-computed cover.
  */
 export function getCoverBonus(attacker: TokenOrDocument, target: TokenOrDocument, activity?: Activity): number {
   const targetActor = target instanceof TokenDocument ? target.actor : (target as Token)?.actor;
   if (hasCoverTotal(targetActor)) return TOTAL_COVER;
-  if (hasCoverStatus(targetActor)) {
-    //@ts-expect-error no dnd5e-types
-    return targetActor?.system.attributes.ac.cover ?? 0;
-  }
-  return computeCoverBonus(attacker, target, activity);
+  //@ts-expect-error no dnd5e-types
+  const statusCoverBonus: number = targetActor?.system?.attributes?.ac?.cover ?? 0;
+  const moduleCoverBonus = computeCoverBonus(attacker, target, activity);
+  return Math.max(statusCoverBonus, moduleCoverBonus);
 }
 
+/**
+ * Returns the raw cover bonus from the configured cover module.
+ * Does NOT check cover statuses, apply attack-specific reductions (sharpshooter, etc.),
+ * or reconcile with status-based cover.
+ */
 export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOrDocument, activity?: Activity): number {
   const attacker = attackerIn instanceof TokenDocument ? attackerIn.object : attackerIn;
   const target = targetIn instanceof TokenDocument ? targetIn.object : targetIn;
-  let existingCoverBonus = target?.actor?.flags?.[MODULE_ID]?.acBonus ?? 0;
-  let item: Item.Implementation | undefined;
   if (activity instanceof Item) {
-    item = activity;
+    const item = activity;
     activity = undefined;
-    foundry.utils.logCompatibilityWarning("computeCoverBonus(attacker, target, item) is deprecated in favor of computeCoverBonus(attacker, target, activity");
-  } else if (activity) {
-    item = activity.item;
+    foundry.utils.logCompatibilityWarning("computeCoverBonus(attacker, target, item) is deprecated in favor of computeCoverBonus(attacker, target, activity)");
   }
-  if (!attacker || !target) return existingCoverBonus;
-
-  // If the target has a dnd5e cover status, ac.value already includes the cover bonus
-  // (for half/three-quarters). Skip querying cover modules to avoid double-counting.
-  // coverTotal is special: dnd5e's coverBonus getter returns 0 for it (ac.value unchanged),
-  // so we must return TOTAL_COVER explicitly.
-  if (hasCoverTotal(target.actor)) {
-    return TOTAL_COVER;
-  }
-  if (hasCoverStatus(target.actor)) {
-    return 0;
-  }
+  if (!attacker || !target) return 0;
 
   let coverBonus = 0;
   try {
@@ -3643,7 +3673,6 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
         if (!installedModules.get("levelsautocover") || !game.settings.get("levelsautocover", "apiMode") || !AutoCover) return 0;
         //@ts-expect-error
         const coverData = AutoCover.calculateCover(attacker, target);
-        // const coverData = AutoCover.calculateCover(attacker, target, {DEBUG: true});
         //@ts-expect-error
         const coverDetail = AutoCover.getCoverData();
         if (coverData.rawCover === 0) coverBonus = TOTAL_COVER;
@@ -3651,8 +3680,8 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
         else if (coverData.rawCover < coverDetail[0].percent) coverBonus = THREE_QUARTERS_COVER;
         else if (coverData.rawCover < coverDetail[1].percent) coverBonus = HALF_COVER;
         if (coverData.obstructingToken) coverBonus = Math.max(2, coverBonus);
-        console.log("midi-qol | ComputerCoverBonus - For token ", attacker.name, " attacking ", target.name, " cover data is ", coverBonus, coverData, coverDetail)
         break;
+
       case "simbuls-cover-calculator":
         if (!installedModules.get("simbuls-cover-calculator")) return 0;
         if (globalThis.CoverCalculator) {
@@ -3663,55 +3692,31 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
           }
           if (coverData?.data?.results.cover === 3) coverBonus = TOTAL_COVER;
           else coverBonus = -coverData?.data?.results.value || 0;
-          console.log("midi-qol | ComputeCover Bonus - For token ", attacker.name, " attacking ", target.name, " cover data is ", coverBonus, coverData)
         }
         break;
+        
       case "simplecover5e":
         //@ts-expect-error
         const simpleCoverApi = game.modules.get("simplecover5e")?.api;
-        if (!installedModules.get("simplecover5e") || !simpleCoverApi) coverBonus = 0;
-        else {
-          // Enable LoS check when wallsBlockRange is set to simplecover5e
-          const losCheck = configSettings.optionalRules.wallsBlockRange === "simplecover5e";
+        if (!installedModules.get("simplecover5e") || !simpleCoverApi) return 0;
+          // simplecover5e caps at 3/4 cover from occluders — check LOS first via wallsBlockRange
+          if (attacker !== target && configSettings.optionalRules.wallsBlockRange !== "none") {
+            const preCheck = computeWallBlockPreCheck(attacker as Token.Implementation, target as Token.Implementation, true, true);
+            if (preCheck.blocked) {
+              coverBonus = TOTAL_COVER;
+              break;
+            }
+          }
           const coverOptions: any = {
             attacker,
             target,
             scene: attacker.scene,
-            losCheck   // Check LoS - blocked LoS treated as total cover
+            losCheck: true
           };
-          // Only pass activity if defined (for cover rules ignore/override logic)
           if (activity) coverOptions.activity = activity;
           const coverResult = simpleCoverApi.getCover(coverOptions);
-          // getCover returns null if attacker, target, or scene is missing
-          if (!coverResult) {
-            coverBonus = 0;
-            break;
-          }
-          // Use bonus value if available (new API), otherwise fall back to cover string (old API)
-          if (coverResult.bonus !== undefined) {
-            // New API: bonus is 0=none, 2=half, 5=threeQuarters, null=total
-            if (coverResult.bonus === null) {
-              coverBonus = TOTAL_COVER;
-            } else {
-              coverBonus = coverResult.bonus;
-            }
-          } else {
-            // Fallback to original string-based cover level
-            switch (coverResult.cover) {
-              case "none":
-                coverBonus = 0;
-                break;
-              case "half":
-                coverBonus = HALF_COVER;
-                break;
-              case "threeQuarters":
-                coverBonus = THREE_QUARTERS_COVER;
-                break;
-              default:
-                coverBonus = TOTAL_COVER;
-            }
-          }
-        };
+          if (!coverResult || coverResult.bonus == null) return TOTAL_COVER;
+          coverBonus = coverResult.bonus;
         break;
 
       case "tokencover":
@@ -3729,32 +3734,6 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
         coverBonus = 0;
         break;
     }
-
-    //TODO is this right or should it be the same as non-spell?
-    // @ts-expect-error no dnd5e-types
-    if ((activity?.midiProperties?.ignoreFullCover) && item?.type === "spell") coverBonus = 0;
-    else if ((activity?.midiProperties?.ignoreFullCover) && coverBonus === TOTAL_COVER) coverBonus = THREE_QUARTERS_COVER;
-
-    // @ts-expect-error no dnd5e-types
-    if ((activity?.actionType ?? item?.system.actionType) === "rwak" && attacker.actor && coverBonus !== TOTAL_COVER && coverBonus !== 0
-      && (attacker.actor?.flags?.[MODULE_ID]?.sharpShooter || attacker.actor?.flags?.dnd5e?.sharpShooter)) {
-      const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
-      let sharpShooterEnabled = evalCondition(attacker.actor?.flags?.dnd5e?.sharpShooter, conditionData);
-      sharpShooterEnabled ||= evalCondition(attacker.actor?.flags?.[MODULE_ID]?.sharpShooter, conditionData);
-      if (sharpShooterEnabled) coverBonus = 0;
-    }
-    // @ts-expect-error no dnd5e-types
-    if (["rsak"/*, "rpak"*/].includes((activity?.actionType ?? item?.system.actionType))
-      && attacker.actor
-      && (attacker.actor.flags?.dnd5e?.spellSniper)
-      && coverBonus !== TOTAL_COVER && coverBonus !== 0) {
-      const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
-      let spellSniperEnabled: boolean | undefined = evalCondition(attacker.actor.flags.dnd5e.spellSniper, conditionData);
-      if (spellSniperEnabled) coverBonus = 0;
-    }
-    if (target.actor && coverBonus > existingCoverBonus)
-      foundry.utils.setProperty(target.actor, `flags.${MODULE_ID}.acBonus`, coverBonus);
-    else coverBonus = existingCoverBonus;
     return coverBonus;
   } catch (err) {
     const message = "Error in computeCoverBonus";
@@ -3762,6 +3741,140 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
     TroubleShooter.recordError(err, message)
     return 0;
   }
+}
+
+/**
+ * Result of computing the effective AC for a target in an attack.
+ */
+export interface TargetACResult {
+  effectiveAC: number;          // Final AC to compare against attack roll
+  baseAC: number;               // ac.value minus status cover
+  statusCoverBonus: number;     // From dnd5e cover status (already baked into ac.value)
+  moduleCoverBonus: number;     // Raw value from cover module
+  appliedCoverDelta: number;    // Extra cover added beyond status (module - status, if positive)
+  effectiveCoverBonus: number;  // Total effective cover after reductions (0 if ignored)
+  coverIgnored: boolean;        // Whether cover was stripped by a feat/flag
+  flankingMod: number;          // Flanking reduction
+  targetACMod: number;          // From targetDescriptors
+}
+
+/**
+ * Compute the effective AC for a target, reconciling status-based cover with module-computed
+ * cover (status acts as minimum), applying attack-specific reductions (ignoreFullCover,
+ * sharpShooter, spellSniper, ignoreCover), and incorporating flanking and targetACMod.
+ */
+export function computeTargetAC(
+  attacker: Token,
+  target: Token,
+  activity: Activity | undefined,
+  options: {
+    ignoreCover?: boolean;
+    flankingMod?: number;
+    targetACMod?: number;
+  } = {}
+): TargetACResult {
+  const targetActor = target.actor;
+  const item = activity?.item;
+  const { ignoreCover = false, flankingMod = 0, targetACMod = 0 } = options;
+
+  //@ts-expect-error no dnd5e-types
+  const acValue: number = targetActor?.system?.attributes?.ac?.value ?? 10;
+  //@ts-expect-error no dnd5e-types
+  let statusCoverBonus: number = targetActor?.system?.attributes?.ac?.cover ?? 0;
+  const baseAC = acValue - statusCoverBonus;
+
+  // TOTAL_COVER not set by dnd5e for tokens with total cover
+  if (hasCoverTotal(targetActor)) statusCoverBonus = TOTAL_COVER;
+
+  // Get raw module cover
+  const moduleCoverBonus = computeCoverBonus(attacker, target, activity);
+
+  // Effective cover is the higher of status vs module
+  let effectiveCoverBonus = Math.max(statusCoverBonus, moduleCoverBonus);
+  // Delta is what we need to ADD beyond what dnd5e already baked into ac.value
+  let appliedCoverDelta = Math.max(moduleCoverBonus - statusCoverBonus, 0);
+
+  // --- Attack-specific reductions ---
+
+  // ignoreFullCover (midi property on activity)
+  if (activity?.midiProperties?.ignoreFullCover) {
+    //@ts-expect-error item.type includes dnd5e subtypes
+    if (item?.type === "spell") {
+      // Spells with ignoreFullCover: ignore all cover
+      effectiveCoverBonus = 0;
+      appliedCoverDelta = 0;
+    } else if (effectiveCoverBonus === TOTAL_COVER) {
+      // Non-spells: downgrade total cover to three-quarters
+      effectiveCoverBonus = THREE_QUARTERS_COVER;
+      appliedCoverDelta = Math.max(THREE_QUARTERS_COVER - statusCoverBonus, 0);
+    }
+  }
+
+  // Sharpshooter (rwak only, not total cover)
+  //@ts-expect-error no dnd5e-types
+  if ((activity?.actionType ?? item?.system?.actionType) === "rwak"
+    && attacker.actor
+    && effectiveCoverBonus !== TOTAL_COVER && effectiveCoverBonus !== 0
+    && (attacker.actor.flags?.[MODULE_ID]?.sharpShooter || attacker.actor.flags?.dnd5e?.sharpShooter)) {
+    const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
+    let enabled = evalCondition(attacker.actor.flags?.dnd5e?.sharpShooter, conditionData);
+    enabled ||= evalCondition(attacker.actor.flags?.[MODULE_ID]?.sharpShooter, conditionData);
+    if (enabled) {
+      effectiveCoverBonus = 0;
+      appliedCoverDelta = 0;
+    }
+  }
+
+  // Spell Sniper (rsak only, not total cover)
+  //@ts-expect-error no dnd5e-types
+  if (["rsak"].includes(activity?.actionType ?? item?.system?.actionType)
+    && attacker.actor
+    && attacker.actor.flags?.dnd5e?.spellSniper
+    && effectiveCoverBonus !== TOTAL_COVER && effectiveCoverBonus !== 0) {
+    const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
+    const enabled: boolean | undefined = evalCondition(attacker.actor.flags.dnd5e.spellSniper, conditionData);
+    if (enabled) {
+      effectiveCoverBonus = 0;
+      appliedCoverDelta = 0;
+    }
+  }
+
+  // ignoreCover flag (from midi flag evaluation in checkHits)
+  let coverIgnored = false;
+  if (ignoreCover && effectiveCoverBonus < TOTAL_COVER) {
+    coverIgnored = true;
+    effectiveCoverBonus = 0;
+    appliedCoverDelta = 0;
+  }
+
+  // Final AC: start from ac.value (includes status cover except total covere),
+  // add delta (module cover above status), subtract status if cover ignored,
+  // add targetACMod, subtract flanking
+  let effectiveAC = acValue + targetACMod;
+  if (coverIgnored) {
+    // Remove the status cover baked into ac.value
+    effectiveAC -= statusCoverBonus;
+  } else {
+    // Add any module cover above the status
+    effectiveAC += appliedCoverDelta;
+  }
+  effectiveAC -= flankingMod;
+
+  // Total cover from module/status → auto-miss
+  if (effectiveCoverBonus === TOTAL_COVER) effectiveAC = Infinity;
+
+  const result = {
+    effectiveAC,
+    baseAC,
+    statusCoverBonus,
+    moduleCoverBonus,
+    appliedCoverDelta,
+    effectiveCoverBonus,
+    coverIgnored,
+    flankingMod,
+    targetACMod
+  };
+  return result;
 }
 export type FastForwardRollType = "attack" | "damage" | "check" | "save" | "skill" | "tool";
 
@@ -4265,7 +4378,7 @@ export function actorFromUuid(uuid?: string): any {
 }
 
 // TODO: This
-class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) {
+export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   rollExpanded: boolean;
   timeRemaining: number;
   timeoutId: NodeJS.Timeout | undefined;
@@ -5173,7 +5286,7 @@ export function reactionTriggerLabelFor(triggerType: string): string {
   return "reactionHit";
 }
 
-export async function doReactions(targetRef: TokenOrDocument | string, triggerTokenUuid: string | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options: any = {}): Promise<{ name?: string, uuid?: string, ac?: number }> {
+export async function doReactions(targetRef: TokenOrDocument | string, triggerTokenUuid: string | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options: any = {}): Promise<{ name?: string, uuid?: string, ac?: number, itemName?: string }> {
   const target = getToken(targetRef);
   try {
     const noResult = { name: undefined, uuid: undefined, ac: undefined };
@@ -5473,7 +5586,11 @@ export async function promptReactions(
       const newAC = await bonusDialog.bind(data)(validFlags, "ac", displayBonusRolls !== false, `${actor.name} - ${i18n("DND5E.AC")} ${actor.system.attributes.ac.value}`, acRoll, "roll");
       const endTime = Date.now();
       if (debugEnabled > 0) warn("promptReactions | returned via bonus dialog ", endTime - startTime)
-      return { name: actor.name, uuid: actor.uuid, ac: newAC?.total };
+      // Only return the AC result if the user actually used an optional bonus (AC changed)
+      if (newAC?.total !== acRoll.total) {
+        return { name: actor.name, uuid: actor.uuid, ac: newAC?.total };
+      }
+      return { name: "None" };
     }
     const endTime = Date.now();
     if (debugEnabled > 0) warn("promptReactions | returned no result ", endTime - startTime)
@@ -5586,7 +5703,7 @@ export async function reactionDialog(
 }
 
 // TODO: Probably this
-class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
+export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   startTime: number;
   endTime: number;
   timeoutId: any;
@@ -6859,15 +6976,145 @@ export function heightIntersects(targetDocument: TokenDocument.Implementation, f
   if (flankerTopElevation < targetElevation || flankerElevation > targetTopElevation) return false;
   return true;
 }
-export function findPotentialFlankers(target: Token.Implementation) {
-  const allies = findNearby(-1, target, (canvas.dimensions?.distance ?? 5));
-  const reachAllies = findNearby(-1, target, 2 * (canvas.dimensions?.distance ?? 5)).filter(
-    ally => !(allies.some(tk => tk === ally)) &&
-      //@ts-expect-error no dnd5e-types
-      ally.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)
-  );
-  return allies.concat(reachAllies);
+/**
+ * Check if a grid cell (identified by pixel coordinates of a point within it) is adjacent to a target token,
+ * using purely geometric bounding-box distance. This avoids measurement-mode-dependent calculations
+ * (center vs perimeter) that cause inconsistencies with diagonal adjacency under different grid diagonal settings.
+ *
+ * @param cellPoint - A point within the candidate grid cell (e.g. a token's grid-square center)
+ * @param target - The target token to check adjacency against
+ * @param maxDistCells - Maximum distance in grid cells (1 for adjacent/5ft, 2 for reach/10ft)
+ * @returns true if the cell's bounding box is within maxDistCells of the target's bounding box
+ */
+function isCellAdjacentToToken(cellPoint: { x: number; y: number }, target: Token.Implementation, maxDistCells: number = 1): boolean {
+  if (!canvas?.grid) return false;
+  const gridW = canvas.grid.sizeX;
+  const gridH = canvas.grid.sizeY;
+
+  // Get the cell's top-left from the point, then compute its bounding box
+  const cellTopLeft = canvas.grid.getTopLeftPoint(cellPoint);
+  const cellLeft = cellTopLeft.x;
+  const cellTop = cellTopLeft.y;
+  const cellRight = cellLeft + gridW;
+  const cellBottom = cellTop + gridH;
+
+  // Target bounding box
+  const targetLeft = target.x;
+  const targetTop = target.y;
+  const targetRight = target.x + target.document.width * gridW;
+  const targetBottom = target.y + target.document.height * gridH;
+
+  // Compute the gap between the two bounding boxes along each axis
+  const dx = Math.max(0, cellLeft - targetRight, targetLeft - cellRight);
+  const dy = Math.max(0, cellTop - targetBottom, targetTop - cellBottom);
+
+  // For adjacent cells (maxDistCells=1), gap must be 0 (touching/overlapping)
+  // For reach cells (maxDistCells=2), gap must be at most 1 grid cell
+  const maxGap = (maxDistCells - 1) * Math.max(gridW, gridH);
+  // Use Chebyshev-style check: both dx and dy must be within maxGap
+  // (since grid adjacency is 8-directional, not Euclidean)
+  return dx <= maxGap && dy <= maxGap;
 }
+
+/**
+ * Get the distance between two tokens for flanking purposes.
+ * On gridless scenes, always uses perimeter measurement so that tokens
+ * whose borders are close together are correctly identified as adjacent,
+ * even when their centers are far apart (e.g. large tokens).
+ */
+function getFlankingDistance(t1: Token.Implementation, t2: Token.Implementation): number {
+  const gridDist = canvas?.dimensions?.distance ?? 5;
+  const fudge = configSettings.gridlessFudge ?? 0;
+  if (canvas?.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS) {
+    const raw = computePerimeterDistance(t1, t2, { wallsBlock: true, includeElevation: false });
+    if (raw < 0) return -1;
+    return gridDist + Math.max(0, raw - fudge);
+  }
+  return getDistance(t1, t2, { wallsBlock: true });
+}
+
+export function findPotentialFlankers(target: Token.Implementation) {
+  const gridDist = canvas?.dimensions?.distance ?? 5;
+  const isGridless = canvas?.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS;
+
+  let allies: Token.Implementation[];
+  let reachAllies: Token.Implementation[];
+
+  if (isGridless) {
+    // On gridless, use perimeter-based distance for finding nearby flankers
+    const canvasPlaceables = canvas?.tokens?.placeables ?? [];
+    const allNearby = canvasPlaceables.filter(t => {
+      if (!isValidTarget(t)) return false;
+      if (!t.actor) return false;
+      if (t.id === target.id) return false;
+      if (checkIncapacitated(t.actor, debugEnabled > 0, false)) return false;
+      // Check disposition: must be hostile to target
+      if (t.document.disposition === target.document.disposition) return false;
+      const dist = getFlankingDistance(t, target);
+      return dist >= 0 && dist <= gridDist;
+    });
+    const reachNearby = canvasPlaceables.filter(t => {
+      if (!isValidTarget(t)) return false;
+      if (!t.actor) return false;
+      if (t.id === target.id) return false;
+      if (checkIncapacitated(t.actor, debugEnabled > 0, false)) return false;
+      if (t.document.disposition === target.document.disposition) return false;
+      if (allNearby.some(a => a === t)) return false;
+      //@ts-expect-error no dnd5e-types
+      if (!t.actor.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)) return false;
+      const dist = getFlankingDistance(t, target);
+      return dist >= 0 && dist <= 2 * gridDist;
+    });
+    allies = allNearby.concat(reachNearby);
+  } else {
+    allies = findNearby(-1, target, gridDist);
+    reachAllies = findNearby(-1, target, 2 * gridDist).filter(
+      ally => !(allies.some(tk => tk === ally)) &&
+        //@ts-expect-error no dnd5e-types
+        ally.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)
+    );
+    allies = allies.concat(reachAllies);
+  }
+  return allies;
+}
+
+/**
+ * Compute the centroid (average pixel position) of a token's occupied hex centers.
+ * Falls back to token.center if the grid is not hexagonal or offsets can't be obtained.
+ */
+function getHexCentroid(target: Token.Implementation): { x: number; y: number } {
+  if (!canvas?.grid?.isHexagonal) return target.center;
+  const offsets = target.document.getOccupiedGridSpaceOffsets();
+  if (!offsets.length) return target.center;
+  let sumX = 0, sumY = 0;
+  for (const offset of offsets) {
+    const center = canvas.grid.getCenterPoint(offset);
+    sumX += center.x;
+    sumY += center.y;
+  }
+  return { x: sumX / offsets.length, y: sumY / offsets.length };
+}
+
+/**
+ * Angle-based flanking test: checks if token and ally are >= 150° apart
+ * as seen from a reference point (centroid for hex, center for gridless).
+ * Used for hex grids and gridless scenes where ray-through-edges doesn't apply.
+ */
+function isAngleFlanking(
+  token: Token.Implementation,
+  ally: Token.Implementation,
+  target: Token.Implementation
+): boolean {
+  // Use hex centroid for hex grids, target center for gridless
+  const referencePoint = canvas?.grid?.isHexagonal ? getHexCentroid(target) : target.center;
+  const angleToken = Math.atan2(token.center.y - referencePoint.y, token.center.x - referencePoint.x);
+  const angleAlly = Math.atan2(ally.center.y - referencePoint.y, ally.center.x - referencePoint.x);
+  let diff = Math.abs(angleToken - angleAlly);
+  if (diff > Math.PI) diff = 2 * Math.PI - diff; // normalize to [0, π]
+  const MIN_FLANKING_ANGLE = (150 / 180) * Math.PI; // 150° in radians
+  return diff >= MIN_FLANKING_ANGLE;
+}
+
 
 // TODO: Can definitely probably clean this up some
 export async function computeFlankedStatus(target: Token.Implementation): Promise<boolean> {
@@ -6904,7 +7151,8 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
       if (tokenCanFlank === false) continue;
     }
     // Loop through each square covered by attacker and ally
-    let maxDist = (canvas.dimensions?.distance ?? 5);
+    // Use geometric bounding-box adjacency instead of distancePointToken to avoid
+    // measurement-mode-dependent distance calculations (center vs perimeter)
     const tokenStartX = -Math.max(0, token.document.width / 2 - 0.5);
     const tokenStartY = -Math.max(0, token.document.height / 2 - 0.5);
     const tokenPoints: any[] = [];
@@ -6912,15 +7160,10 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
       for (let y = tokenStartY; y < token.document.height / 2; y++) {
         let tx = token.center.x + x * gridW;
         let ty = token.center.y + y * gridH;
-        if ((distancePointToken({ x: tx, y: ty, elevation: token.document.elevation }, target) ?? +Infinity) > maxDist) {
-          // console.error("Too far away", tx, ty, ax, ay, token.center, ally.center, target.center);
-          continue;
-        }
+        if (!isCellAdjacentToToken({ x: tx, y: ty }, target)) continue;
         tokenPoints.push({ x: tx, y: ty });
       }
     }
-    // @ts-expect-error not in types yet
-    if (game.settings.get("core", "gridDiagonals") === 1) maxDist *= Math.sqrt(2);
     for (let ally of allies) {
       if (ally.document.uuid === token.document.uuid) continue;
       const actor: any = ally.actor;
@@ -6936,6 +7179,11 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
         const hasFlanked = hasCondition(actor, "flanked");
         if (hasFlanked) continue
       }
+      // Hex grid or gridless: use angle-based flanking instead of ray-edge intersection
+      if (canvas.grid?.isHexagonal || canvas.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS) {
+        if (isAngleFlanking(token, ally, target)) return true;
+        continue;
+      }
       const allyStartX = -Math.max(0, ally.document.width / 2 - 0.5);
       const allyStartY = -Math.max(0, ally.document.height / 2 - 0.5);
       const allyPoints: any[] = [];
@@ -6943,9 +7191,7 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
         for (let y1 = allyStartY; y1 < ally.document.height / 2; y1++) {
           let ax = ally.center.x + x1 * gridW;
           let ay = ally.center.y + y1 * gridH;
-          if ((distancePointToken({ x: ax, y: ay, elevation: ally.document.elevation }, target) ?? +Infinity) > maxDist) {
-            continue;
-          }
+          if (!isCellAdjacentToToken({ x: ax, y: ay }, target)) continue;
           allyPoints.push({ x: ax, y: ay });
         }
       }
@@ -6981,7 +7227,7 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
   if (token.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)) {
     range = 2;
   }
-  if (getDistance(token, target, { wallsBlock: true }) > range * (canvas.dimensions?.distance ?? 5)) return false;
+  if (getFlankingDistance(token, target) > range * (canvas.dimensions?.distance ?? 5)) return false;
   // an enemy's enemies are my friends.
   const allies = findPotentialFlankers(target)
 
@@ -6989,9 +7235,6 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
   if (allies.length <= 1) return false; // length 1 means no other allies nearby
   const gridW = canvas.grid?.sizeX ?? 100;
   const gridH = canvas.grid?.sizeY ?? 100;
-  let maxDist = (canvas.dimensions?.distance ?? 5);
-  //@ts-expect-error
-  if (game.settings.get("core", "gridDiagonals") === 1) maxDist *= Math.sqrt(2);
   const tl = { x: target.x, y: target.y };
   const tr = { x: target.x + target.document.width * gridW, y: target.y };
   const bl = { x: target.x, y: target.y + target.document.height * gridH };
@@ -7002,6 +7245,8 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
   const right: [x0: number, y0: number, x1: number, y1: number] = [tr.x, tr.y, br.x, br.y];
 
   // Loop through each square covered by attacker and ally
+  // Use geometric bounding-box adjacency instead of distancePointToken to avoid
+  // measurement-mode-dependent distance calculations (center vs perimeter)
   const tokenStartX = -Math.max(0, token.document.width / 2 - 0.5);
   const tokenStartY = -Math.max(0, token.document.height / 2 - 0.5);
   const tokenPoints: any[] = [];
@@ -7009,10 +7254,7 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
     for (let y = tokenStartY; y < token.document.height / 2; y++) {
       let tx = token.center.x + x * gridW;
       let ty = token.center.y + y * gridH;
-      if ((distancePointToken({ x: tx, y: ty, elevation: token.document.elevation }, target) ?? +Infinity) > maxDist) {
-        // console.error("Too far away", tx, ty, ax, ay, token.center, ally.center, target.center);
-        continue;
-      }
+      if (!isCellAdjacentToToken({ x: tx, y: ty }, target)) continue;
       tokenPoints.push({ x: tx, y: ty });
     }
   }
@@ -7027,6 +7269,11 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
       const allyCanFlank = await evalCondition(ally.actor.flags[MODULE_ID]?.canFlank, conditionData, undefined);
       if (allyCanFlank === false) continue;
     }
+    // Hex grid or gridless: use angle-based flanking instead of ray-edge intersection
+    if (canvas.grid?.isHexagonal || canvas.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS) {
+      if (isAngleFlanking(token, ally, target)) return true;
+      continue;
+    }
     const allyStartX = -Math.max(0, ally.document.width / 2 - 0.5);
     const allyStartY = -Math.max(0, ally.document.height / 2 - 0.5);
 
@@ -7035,7 +7282,7 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
       for (let y1 = allyStartY; y1 < ally.document.height / 2; y1++) {
         let ax = ally.center.x + x1 * gridW;
         let ay = ally.center.y + y1 * gridH;
-        if ((distancePointToken({ x: ax, y: ay, elevation: ally.document.elevation }, target) ?? +Infinity) > maxDist) {
+        if (!isCellAdjacentToToken({ x: ax, y: ay }, target)) {
           continue;
         }
         allyPoints.push({ x: ax, y: ay });
@@ -7084,73 +7331,79 @@ export function getIncapacitatedStatusEffect() {
 }
 
 export async function markFlanking(token?: Token.Implementation | null, target?: Token.Implementation | null): Promise<boolean> {
-  // checkFlankingStatus requires a flanking token (token) and a target
-  // checkFlankedStatus requires only a target token
   if (!canvas) return false;
-  let needsFlanking = false;
   if (!target || !target?.actor) return false;
-  if (!checkRule("checkFlanking") || checkRule("checkFlanking") === "off") return false;
-  if (["ceonly"].includes(checkRule("checkFlanking") as string)) {
+  const flankingMode = checkRule("checkFlanking") as string;
+  if (!flankingMode || flankingMode === "off") return false;
+
+  const isFlankingMode = ["advonly", "ceonly", "midiFlanking"].includes(flankingMode);
+  const isFlankedMode = ["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(flankingMode);
+  const skipAttackerStatus = (configSettings.optionalRules?.flankingBonus ?? "advantage") !== "advantage";
+
+  if (isFlankingMode) {
+    // Attacker-side flanking: requires both token and target
     if (!token || token === target) return false;
-    needsFlanking = await computeFlankingStatus(token, target);
-    if (installedModules.get("dfreds-convenient-effects")) {
-      let CEFlanking = getFlankingEffect();
-      if (!CEFlanking) return needsFlanking;
-      const hasFlanking = CEHasEffectApplied({ effectName: CEFlanking.name ?? "Flanking", uuid: token.actor?.uuid ?? "" });
-      if (needsFlanking && !hasFlanking && token.actor) {
-        await CEAddEffectWith({ effectName: CEFlanking.name ?? "Flanking", uuid: token.actor.uuid, overlay: false });
-      } else if (!needsFlanking && hasFlanking && token.actor) {
-        await CERemoveEffect({ effectName: CEFlanking.name ?? "Flanking", uuid: token.actor.uuid });
+    const needsFlanking = await computeFlankingStatus(token, target);
+    if (skipAttackerStatus) return needsFlanking;
+
+    // Apply flanking status to attacker (advantage mode only)
+    if (flankingMode === "ceonly") {
+      if (installedModules.get("dfreds-convenient-effects")) {
+        let CEFlanking = getFlankingEffect();
+        if (!CEFlanking) return needsFlanking;
+        const hasFlanking = CEHasEffectApplied({ effectName: CEFlanking.name ?? "Flanking", uuid: token.actor?.uuid ?? "" });
+        if (needsFlanking && !hasFlanking && token.actor) {
+          await CEAddEffectWith({ effectName: CEFlanking.name ?? "Flanking", uuid: token.actor.uuid, overlay: false });
+        } else if (!needsFlanking && hasFlanking && token.actor) {
+          await CERemoveEffect({ effectName: CEFlanking.name ?? "Flanking", uuid: token.actor.uuid });
+        }
+      }
+    } else if (flankingMode === "midiFlanking") {
+      const MidiFlanking: any = CONFIG.statusEffects.find(se => se.id === "flanking");
+      if (!MidiFlanking) return false;
+      let cprEffect: ActiveEffect | undefined = getCPREffect(MidiFlanking?._id as string)
+      if (!cprEffect) {
+        if (!token.actor?.isOwner) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: token.actor?.uuid, statusId: MidiFlanking.id, options: { active: needsFlanking } });
+        else await token.actor.toggleStatusEffect(MidiFlanking.id, { active: needsFlanking });
+      } else if (needsFlanking) {
+        if (!token.actor?.effects.get(cprEffect.id!)) {
+          if (!token.actor?.isOwner) await unTimedExecuteAsGM("createEffects", { actorUuid: token.actor?.uuid, effects: [cprEffect.toObject()], options: { keepId: true } });
+          else await token.actor.createEmbeddedDocuments("ActiveEffect", [cprEffect.toObject()], { keepId: true });
+        }
+      } else {
+        if (token.actor?.effects.get(cprEffect.id!)) {
+          if (!target.actor.isOwner) await unTimedExecuteAsGM("removeEffects", { actorUuid: token.actor.uuid, effects: [cprEffect.id], options: {} });
+          await token.actor.deleteEmbeddedDocuments("ActiveEffect", [cprEffect.id!]);
+        }
       }
     }
-  } else if (checkRule("checkFlanking") === "midiFlanking") {
-    if (!token || token === target) return false;
-    needsFlanking = await computeFlankingStatus(token, target);
-    const MidiFlanking: any = CONFIG.statusEffects.find(se => se.id === "flanking");
-    if (!MidiFlanking) return false;
-    let cprEffect: ActiveEffect | undefined = getCPREffect(MidiFlanking?._id as string)
-    if (!cprEffect) {
-      if (!token.actor?.isOwner) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: token.actor?.uuid, statusId: MidiFlanking.id, options: { active: needsFlanking } });
-      else await token.actor.toggleStatusEffect(MidiFlanking.id, { active: needsFlanking });
-    } else if (needsFlanking) {
-      if (!token.actor?.effects.get(cprEffect.id!)) {
-        if (!token.actor?.isOwner) await unTimedExecuteAsGM("createEffects", { actorUuid: token.actor?.uuid, effects: [cprEffect.toObject()], options: { keepId: true } });
-        else await token.actor.createEmbeddedDocuments("ActiveEffect", [cprEffect.toObject()], { keepId: true });
-      }
-    } else {
-      if (token.actor?.effects.get(cprEffect.id!)) {
-        if (!target.actor.isOwner) await unTimedExecuteAsGM("removeEffects", { actorUuid: token.actor.uuid, effects: [cprEffect.id], options: {} });
-        await token.actor.deleteEmbeddedDocuments("ActiveEffect", [cprEffect.id!]);
-      }
-    }
-  } else if (checkRule("checkFlanking") === "advonly") {
-    if (!token) return false;
-    needsFlanking = await computeFlankingStatus(token, target);
-  } else if (["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking") as string)) {
+    // advonly: no status to apply
+    return needsFlanking;
+
+  } else if (isFlankedMode) {
+    // Target-side flanked: applies status to target
     if (!target.actor) return false;
-    if (installedModules.get("dfreds-convenient-effects")) {
-      let CEFlanked = getFlankedEffect();
-      if (!CEFlanked) return false;
-      const needsFlanked = await computeFlankedStatus(target);
-      const hasFlanked = CEHasEffectApplied({ effectName: CEFlanked.name ?? "Flanked", uuid: target.actor.uuid });
-      if (needsFlanked && !hasFlanked && target.actor) {
-        await CEAddEffectWith({ effectName: CEFlanked.name ?? "Flanked", uuid: target.actor.uuid, overlay: false });
-      } else if (!needsFlanked && hasFlanked && token?.actor) {
-        await CERemoveEffect({ effectName: CEFlanked.name ?? "Flanked", uuid: target.actor.uuid });
-      }
-      return false;
-    }
-  } else if (["midiFlanked", "midiFlankedNoConga"].includes(checkRule("checkFlanking") as string)) {
-    if (!target.actor) return false;
-    const MidiFlanked = CONFIG.statusEffects.find(se => se.id === "flanked");
-    if (!MidiFlanked) return false;
-    const cprEffect: ActiveEffect | undefined = getCPREffect(MidiFlanked?._id as string)
     const needsFlanked = await computeFlankedStatus(target);
-    if (!cprEffect) {
-      if (!target.actor.isOwner) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: target.actor.uuid, statusId: MidiFlanked.id, options: { active: needsFlanked } });
-      else await target.actor.toggleStatusEffect(MidiFlanked.id, { active: needsFlanked });
-    } else {
-      if (needsFlanked) {
+
+    if (["ceflanked", "ceflankedNoconga"].includes(flankingMode)) {
+      if (installedModules.get("dfreds-convenient-effects")) {
+        let CEFlanked = getFlankedEffect();
+        if (!CEFlanked) return false;
+        const hasFlanked = CEHasEffectApplied({ effectName: CEFlanked.name ?? "Flanked", uuid: target.actor.uuid });
+        if (needsFlanked && !hasFlanked && target.actor) {
+          await CEAddEffectWith({ effectName: CEFlanked.name ?? "Flanked", uuid: target.actor.uuid, overlay: false });
+        } else if (!needsFlanked && hasFlanked && token?.actor) {
+          await CERemoveEffect({ effectName: CEFlanked.name ?? "Flanked", uuid: target.actor.uuid });
+        }
+      }
+    } else if (["midiFlanked", "midiFlankedNoConga"].includes(flankingMode)) {
+      const MidiFlanked = CONFIG.statusEffects.find(se => se.id === "flanked");
+      if (!MidiFlanked) return false;
+      const cprEffect: ActiveEffect | undefined = getCPREffect(MidiFlanked?._id as string)
+      if (!cprEffect) {
+        if (!target.actor.isOwner) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: target.actor.uuid, statusId: MidiFlanked.id, options: { active: needsFlanked } });
+        else await target.actor.toggleStatusEffect(MidiFlanked.id, { active: needsFlanked });
+      } else if (needsFlanked) {
         if (!target.actor.effects.get(cprEffect.id!)) {
           if (!target.actor.isOwner) await unTimedExecuteAsGM("createEffects", { actorUuid: target.actor.uuid, effects: [cprEffect.toObject()], options: { keepId: true } });
           else await target.actor.createEmbeddedDocuments("ActiveEffect", [cprEffect.toObject()], { keepId: true });
@@ -7163,7 +7416,7 @@ export async function markFlanking(token?: Token.Implementation | null, target?:
       }
     }
   }
-  return needsFlanking;
+  return false;
 }
 
 export async function chackFlanking(user: User.Implementation, target: Token.Implementation, targeted: boolean): Promise<boolean> {
@@ -7172,6 +7425,207 @@ export async function chackFlanking(user: User.Implementation, target: Token.Imp
   if (user.targets.size === 1) return markFlanking(token, target);
   return false
 
+}
+
+let flankingHighlightContainer: PIXI.Container | null = null;
+
+/**
+ * Get the flanking icon path based on the current flanking mode.
+ */
+function getFlankingHighlightIcon(): string {
+  const flankingMode = checkRule("checkFlanking") as string;
+  const isFlankedMode = ["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(flankingMode);
+  return isFlankedMode ? "modules/midi-qol/icons/encirclement.svg" : "icons/svg/sword.svg";
+}
+
+/**
+ * Update the flanking highlight overlay. Called when token selection or targeting changes.
+ * Highlights grid cells around the current target where an ally could stand to create
+ * a flanking condition with the currently selected token using icon sprites.
+ */
+export async function updateFlankingHighlight(): Promise<void> {
+  if (!canvas?.grid || !canvas.interface?.grid) return;
+
+  // Clear previous sprites
+  if (flankingHighlightContainer) {
+    flankingHighlightContainer.destroy({ children: true });
+    flankingHighlightContainer = null;
+  }
+
+  // Early exits: setting disabled, flanking mode off, gridless (no cells to highlight)
+  if (!configSettings.optionalRules?.showFlankingHighlight) return;
+  const flankingMode = checkRule("checkFlanking") as string;
+  if (!flankingMode || flankingMode === "off") return;
+  if (canvas.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS) return;
+
+  // Need exactly one controlled token and one target
+  const token = canvas.tokens?.controlled?.[0];
+  const target = game.user?.targets?.first();
+  if (!token || !target || token === target) return;
+  if (!canvas.dimensions) return;
+
+  // Check selected token is within melee range of target (allow reach if equipped)
+  const gridDist = canvas.dimensions.distance ?? 5;
+  let tokenRange = 1;
+  // @ts-expect-error no dnd5e-types
+  if (token.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)) {
+    tokenRange = 2;
+  }
+  const tokenDist = getDistance(token, target, { wallsBlock: true });
+  if (tokenDist > tokenRange * gridDist) return;
+
+  const gridW = canvas.grid.sizeX ?? 100;
+  const gridH = canvas.grid.sizeY ?? 100;
+
+  // Adjacency distance — matches computeFlankingStatus logic
+  let maxDist = gridDist;
+  // @ts-expect-error not in types yet
+  if (game.settings.get("core", "gridDiagonals") === 1) maxDist *= Math.sqrt(2);
+
+  // Get target's occupied offsets and their centers for adjacency checks
+  const targetOffsets = target.document.getOccupiedGridSpaceOffsets();
+  const targetOffsetSet = new Set(targetOffsets.map((o: {i: number, j: number}) => `${o.i},${o.j}`));
+  const targetCellCenters = targetOffsets.map((o: {i: number, j: number}) => canvas.grid!.getCenterPoint(o));
+
+  // Expand target bounds by 2 cells in each direction to find candidate cells
+  const bounds = {
+    x: target.x - 2 * gridW,
+    y: target.y - 2 * gridH,
+    width: target.document.width * gridW + 4 * gridW,
+    height: target.document.height * gridH + 4 * gridH,
+  };
+  const [i0, j0, i1, j1] = canvas.grid.getOffsetRange(bounds);
+
+  // Build target edge segments for square grid ray testing
+  let top: [number, number, number, number] | undefined;
+  let bottom: [number, number, number, number] | undefined;
+  let left: [number, number, number, number] | undefined;
+  let right: [number, number, number, number] | undefined;
+
+  if (!canvas.grid.isHexagonal) {
+    const tl = { x: target.x, y: target.y };
+    const tr = { x: target.x + target.document.width * gridW, y: target.y };
+    const bl = { x: target.x, y: target.y + target.document.height * gridH };
+    const br = { x: target.x + target.document.width * gridW, y: target.y + target.document.height * gridH };
+    top = [tl.x, tl.y, tr.x, tr.y];
+    bottom = [bl.x, bl.y, br.x, br.y];
+    left = [tl.x, tl.y, bl.x, bl.y];
+    right = [tr.x, tr.y, br.x, br.y];
+  }
+
+  // Build token grid points (same multi-square logic as computeFlankingStatus)
+  // Use measurePath against target cell centers for hex-grid compatibility
+  const tokenPoints: { x: number; y: number }[] = [];
+  const tokenStartX = -Math.max(0, token.document.width / 2 - 0.5);
+  const tokenStartY = -Math.max(0, token.document.height / 2 - 0.5);
+  const tokenMaxDist = tokenRange * maxDist + 1; // +1 tolerance for hex precision
+  for (let x = tokenStartX; x < token.document.width / 2; x++) {
+    for (let y = tokenStartY; y < token.document.height / 2; y++) {
+      const tx = token.center.x + x * gridW;
+      const ty = token.center.y + y * gridH;
+      let closeEnough = false;
+      for (const tc of targetCellCenters) {
+        const d = canvas.grid.measurePath([{ x: tx, y: ty }, tc], {}).distance;
+        if (d <= tokenMaxDist) { closeEnough = true; break; }
+      }
+      if (!closeEnough) continue;
+      tokenPoints.push({ x: tx, y: ty });
+    }
+  }
+  if (tokenPoints.length === 0) return;
+
+  // Hex flanking uses centroid + angle
+  const centroid = canvas.grid.isHexagonal ? getHexCentroid(target) : undefined;
+  const MIN_FLANKING_ANGLE = (150 / 180) * Math.PI;
+
+  // Collect valid cell positions
+  const validCells: { i: number; j: number }[] = [];
+  for (let i = i0; i <= i1; i++) {
+    for (let j = j0; j <= j1; j++) {
+      // Skip cells occupied by the target
+      if (targetOffsetSet.has(`${i},${j}`)) continue;
+
+      const cellCenter = canvas.grid.getCenterPoint({ i, j });
+
+      // Check candidate is adjacent to target using measurePath against occupied cell centers
+      // Add small tolerance (1ft) for floating-point imprecision in hex center coordinates
+      let isAdjacent = false;
+      for (const tc of targetCellCenters) {
+        const d = canvas.grid.measurePath([cellCenter, tc], {}).distance;
+        if (d > 0 && d <= maxDist + 1) { isAdjacent = true; break; }
+      }
+      if (!isAdjacent) continue;
+
+      let isValid = false;
+
+      if (canvas.grid.isHexagonal && centroid) {
+        // Hex flanking: check angle from centroid
+        for (const tp of tokenPoints) {
+          const tokenCenter = canvas.grid.getCenterPoint(tp);
+          const angleToken = Math.atan2(tokenCenter.y - centroid.y, tokenCenter.x - centroid.x);
+          const angleCandidate = Math.atan2(cellCenter.y - centroid.y, cellCenter.x - centroid.x);
+          let diff = Math.abs(angleToken - angleCandidate);
+          if (diff > Math.PI) diff = 2 * Math.PI - diff;
+          if (diff >= MIN_FLANKING_ANGLE) {
+            isValid = true;
+            break;
+          }
+        }
+      } else if (top && bottom && left && right) {
+        // Square grid: ray through opposite edges test
+        for (const tp of tokenPoints) {
+          const p1 = canvas.grid.getCenterPoint(tp);
+          const p2 = cellCenter;
+          const ray = new foundry.canvas.geometry.Ray(p1, p2);
+          const throughTopBottom = ray.intersectSegment(top) && ray.intersectSegment(bottom);
+          const throughLeftRight = ray.intersectSegment(left) && ray.intersectSegment(right);
+          if (throughTopBottom || throughLeftRight) {
+            isValid = true;
+            break;
+          }
+        }
+      }
+
+      if (isValid) validCells.push({ i, j });
+    }
+  }
+
+  if (validCells.length === 0) return;
+
+  // Load the flanking icon texture and place sprites
+  const iconPath = getFlankingHighlightIcon();
+  let texture: PIXI.Texture;
+  try {
+    texture = await PIXI.Assets.load(iconPath);
+  } catch {
+    return;
+  }
+  if (!texture?.valid) return;
+
+  // Re-check state after async load — selection/target may have changed
+  if (!canvas?.interface?.grid) return;
+  if (canvas.tokens?.controlled?.[0] !== token) return;
+  if (game.user?.targets?.first() !== target) return;
+
+  flankingHighlightContainer = new PIXI.Container();
+  flankingHighlightContainer.name = "midi-qol-flanking-highlight";
+  flankingHighlightContainer.zIndex = (CONFIG.Canvas.groups.interface.zIndexScrollingText ?? 1100) - 1;
+  flankingHighlightContainer.sortableChildren = false;
+  flankingHighlightContainer.eventMode = "none";
+  canvas.interface.addChild(flankingHighlightContainer);
+
+  const spriteSize = Math.min(gridW, gridH) * 0.8;
+  for (const { i, j } of validCells) {
+    const center = canvas.grid.getCenterPoint({ i, j });
+    const sprite = new PIXI.Sprite(texture);
+    sprite.anchor.set(0.5);
+    sprite.position.set(center.x, center.y);
+    sprite.width = spriteSize;
+    sprite.height = spriteSize;
+    sprite.alpha = 0.6;
+    sprite.tint = 0xFF6600;
+    flankingHighlightContainer.addChild(sprite);
+  }
 }
 
 export function getChanges(actorOrItem: Actor.Implementation | Item.Implementation, key: string) {
@@ -7235,9 +7689,7 @@ export function initializeVision(tk: Token.Implementation, force = false) {
     tk.vision.los = tk.vision.shape;
   }
   if (tk.vision.visionMode) tk.vision.visionMode.animated = false;
-  // @ts-expect-error TODO find out why this is an error
-  canvas.effects?.visionSources.set(sourceId, tk.vision);
-  // tk.document.sight.enabled = sightEnabled;
+  tk.vision.add();
   return true;
 }
 export function _canSenseModes(token: Token.Implementation, target: Token.Implementation, validModesParam: Array<string> = ["all"]): Array<string> {
@@ -7248,10 +7700,17 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   if (!token.hasSight && !configSettings.optionalRules.invisVision) return ["senseAll"];
   if ((!token.vision || !token.vision.los) && !initializeVision(token)) return ["noSight"];
   const matchedModes: Set<string> = new Set();
-  // Determine the array of offset points to test
+  // Determine the array of offset points to test.
+  // Inner ring at t (min dimension / 4) matches Foundry's standard tolerance.
+  // Outer ring at t2 (min dimension / 2 - 2) tests near the token boundary,
+  // catching narrow visible slivers that the inner ring misses.
   const t = Math.min(target.w, target.h) / 4;
+  const t2 = Math.min(target.w, target.h) / 2 - 2;
   const targetPoint = target.center;
-  const offsets = t > 0 ? [[0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t]] : [[0, 0]];
+  const offsets = t > 0 ? [
+    [0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t],
+    [-t2, -t2], [-t2, t2], [t2, t2], [t2, -t2], [-t2, 0], [t2, 0], [0, -t2], [0, t2]
+  ] : [[0, 0]];
   const tests = offsets.map(o => ({
     point: new PIXI.Point(targetPoint.x + o[0], targetPoint.y + o[1]),
     elevation: target?.document.elevation ?? 0,
@@ -7261,6 +7720,23 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   const tokenDetectionModes = token.detectionModes;
   const modes = CONFIG.Canvas.detectionModes;
   let validModes = new Set(validModesParam);
+
+  // Pre-populate the LOS cache using direct ray casting against walls.
+  // This is more precise than visionSource.los.contains() which uses a polygon
+  // approximation (ClockwiseSweepPolygon) that can miss narrow visible corridors
+  // through wall gaps. Foundry uses this same testCollision approach for restricted
+  // vision angles; we extend it to 360° vision for accuracy.
+  if (token.vision) {
+    const origin = { x: token.vision.x, y: token.vision.y };
+    for (const test of tests) {
+      const collision = CONFIG.Canvas.polygonBackends.sight.testCollision(
+        origin,
+        test.point,
+        { type: "sight", mode: "any", source: token.vision, useThreshold: true, priority: token.vision.priority }
+      );
+      test.los.set(token.vision, !collision);
+    }
+  }
 
   const lightSources = canvas.effects?.lightSources;
   for (const lightSource of (lightSources ?? [])) {
@@ -7272,7 +7748,6 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
 
   const lightPerception = tokenDetectionModes.find(m => m.id === modes.lightPerception?.id);
   if (lightPerception && ["lightPerception", "all"].some(mode => validModes.has(mode))) {
-    // const result = modes.lightPerception.testVisibility(token.vision, basic, config);
     // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
     const result = (lightPerception && token.vision) ? modes.lightPerception.testVisibility(token.vision, lightPerception, config) : false;
     if (result === true)
@@ -8704,9 +9179,61 @@ function getCPREffect(id: string): ActiveEffect.Implementation | undefined {
   return cprItem?.effects.get(id) as ActiveEffect;
 }
 
+// --- Target save/restore ---
+
 export function updateUserTargets(targetIds: string[]) {
   // @ts-expect-error not in v13 yet
   canvas.tokens?.setTargets(targetIds);
+}
+
+/**
+ * Module-level target save/restore for self-target workflows only.
+ * - pushTargetSave(): captures targets when depth goes from 0→1
+ * - popTargetSave(): restores targets when depth goes from 1→0
+ * - clearTargetSave(): discards saved state (called when non-self-target
+ *   workflow starts, or when user manually retargets)
+ *
+ * User-initiated retargeting is detected via libWrapper patches on
+ * Token._onClickLeft, Token._onClickRight2, and TokenLayer.selectObjects
+ * (registered in patching.ts). These set _userInitiatedTarget = true before
+ * the wrapped call, and the targetToken hook checks this flag.
+ */
+let _savedTargetIds: string[] | null = null;
+let _targetSaveDepth = 0;
+
+/** Set by libWrapper patches in patching.ts around user-initiated targeting actions. */
+export let _userInitiatedTarget = false;
+export function setUserInitiatedTarget(value: boolean) { _userInitiatedTarget = value; }
+
+export function pushTargetSave() {
+  if (_targetSaveDepth === 0) {
+    _savedTargetIds = Array.from(game.user?.targets ?? []).map(t => t.id);
+  }
+  _targetSaveDepth++;
+}
+
+export function popTargetSave() {
+  _targetSaveDepth--;
+  if (_targetSaveDepth <= 0 && _savedTargetIds !== null) {
+    updateUserTargets(_savedTargetIds);
+    _savedTargetIds = null;
+    _targetSaveDepth = 0;
+  }
+}
+
+export function clearTargetSave() {
+  _savedTargetIds = null;
+  _targetSaveDepth = 0;
+}
+
+/**
+ * Called from the targetToken hook. If the user manually changed targets
+ * (via click/right-click/box-select), discard any pending self-target save.
+ */
+export function onUserManualTarget(user: User) {
+  if (user === game.user && _userInitiatedTarget) {
+    clearTargetSave();
+  }
 }
 
 export async function cleanCPRFlanked() {
