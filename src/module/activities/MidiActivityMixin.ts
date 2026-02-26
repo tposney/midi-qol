@@ -944,7 +944,14 @@ export let MidiActivityMixin = Base => {
             otherResult = await this.rollOtherDamage(config, dialog);
           }
         }
-        if (config.midiOptions?.updateWorkflow !== false && config.workflow.suspended) config.workflow.unSuspend.bind(config.workflow)({ damageRoll: result?.[0], otherDamageRoll: otherResult?.[0] });
+        if (config.midiOptions?.updateWorkflow !== false && config.workflow.suspended) {
+          // If neither the activity nor the other activity produced damage rolls,
+          // we still need to advance the workflow past WaitForDamageRoll.
+          // Use noDamage flag to indicate no damage was available to roll
+          // (as opposed to the user cancelling the roll).
+          const noDamage = !result?.[0] && !otherResult?.[0] && !(this.hasDamage || this.hasHealing);
+          config.workflow.unSuspend.bind(config.workflow)({ damageRoll: result?.[0], otherDamageRoll: otherResult?.[0], noDamage });
+        }
       } catch (err) {
         const message = "doDamageRoll error";
         TroubleShooter.recordError(err, message);
@@ -1832,6 +1839,10 @@ export let MidiActivityMixin = Base => {
         displayProperties: configSettings.displayProperties,
         canCancel: configSettings.undoWorkflow, // TODO enable this when more testing done.
       };
+      if (!configSettings.displayProperties && context.supplements) {
+        const materialsLabel = i18n("DND5E.Materials");
+        context.supplements = context.supplements.filter(s => !s.includes(`>${materialsLabel}</`));
+      }
       const rollSaveOptions = new Set();
       rollSaveOptions.add(configSettings.rollNPCLinkedSaves);
       rollSaveOptions.add(configSettings.rollNPCSaves);

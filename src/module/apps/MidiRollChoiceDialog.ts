@@ -75,6 +75,22 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
     context = await super._prepareConfigurationContext(context, options);
     const choices: RollChoice[] = (this as any).options.rollChoices;
     const choiceType: string = (this as any).options.choiceType ?? "ability";
+
+    // For skill/tool rolls, add the ability dropdown (replicates SkillToolRollConfigurationDialog)
+    // so the player can change which ability is used for the check.
+    if (choiceType === "skill" || choiceType === "tool") {
+      context.fields.unshift({
+        field: new foundry.data.fields.StringField({
+          //@ts-expect-error no dnd5e-types
+          required: true, blank: false, label: game.i18n.localize("DND5E.Abilities")
+        }),
+        name: "ability",
+        //@ts-expect-error no dnd5e-types
+        options: Object.entries(CONFIG.DND5E.abilities).map(([value, { label }]) => ({ value, label })),
+        value: this.config.ability
+      });
+    }
+
     if (choices?.length > 1) {
       context.fields.unshift({
         field: new foundry.data.fields.StringField({
@@ -99,6 +115,18 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
   _onChangeForm(formConfig, event) {
     super._onChangeForm(formConfig, event);
     const choiceType: string = (this as any).options.choiceType ?? "ability";
+
+    // Handle ability change on skill/tool rolls (replicates SkillToolRollConfigurationDialog)
+    if ((choiceType === "skill" || choiceType === "tool") && event.target?.name === "ability") {
+      const ability = event.target.value ?? this.config.ability;
+      if (this.config.skill) {
+        const skillLabel = GameSystemConfig.skills[this.config.skill]?.label ?? "";
+        const abilityLabel = GameSystemConfig.abilities[ability]?.label ?? "";
+        const flavor = i18nFormat("DND5E.SkillPromptTitle", { skill: skillLabel, ability: abilityLabel });
+        foundry.utils.setProperty(this.message, "data.flavor", flavor);
+        (this as any)._updateFrame({ window: { title: flavor } });
+      }
+    }
 
     if (event.target?.name === choiceType) {
       const newValue = event.target.value;

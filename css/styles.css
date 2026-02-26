@@ -550,6 +550,31 @@
   font-size: 12px;
 }
 
+/* Save row layout: name truncates, indicators + total pinned right */
+.midi-qol-save-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.midi-qol-save-name .name-stacked .title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.midi-qol-save-indicators {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.midi-qol-save-total {
+  white-space: nowrap;
+}
+
 
 /* Condensed Item description */
 .dnd5e2.chat-card .description {

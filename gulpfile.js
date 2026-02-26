@@ -243,9 +243,7 @@ function compressDistribution() {
     // Copy the module.json to the bundle directory
     () => gulp.src(DIST + "/module.json").pipe(gulp.dest(BUNDLE)),
     // Cleanup by deleting the intermediate module named folder
-    pdel(DIST + PACKAGE.name),
-    async () => { await foundryvttCli.extractPack("packs/sampleitems", "pack-src/sampleitems");
-  }
+    pdel(DIST + PACKAGE.name)
   );
 }
 
@@ -258,13 +256,40 @@ exports.clean = pdel([DIST, BUNDLE]);
 exports.devClean = pdel([DEV_DIST()]);
 
 /**
+ * Strip ID suffixes from folder directory names created by extractPack.
+ * extractPack generates "Name_ID" directories; this renames them to just "Name".
+ * Processes directories bottom-up so child renames happen before parent renames.
+ */
+function cleanPackFolderNames(packSrcDir) {
+  const entries = fs.readdirSync(packSrcDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const fullPath = path.join(packSrcDir, entry.name);
+    // Recurse into subdirectories first (bottom-up)
+    cleanPackFolderNames(fullPath);
+    // Check if directory contains _Folder.json — if so, it's a pack folder
+    const folderJsonPath = path.join(fullPath, "_Folder.json");
+    if (!fs.existsSync(folderJsonPath)) continue;
+    const folderData = JSON.parse(fs.readFileSync(folderJsonPath, "utf8"));
+    // Use the folder name from _Folder.json, replacing spaces with underscores to avoid path issues
+    const cleanName = folderData.name.replace(/ /g, " ");
+    if (cleanName !== entry.name) {
+      const newPath = path.join(packSrcDir, cleanName);
+      fs.renameSync(fullPath, newPath);
+      console.log(`Renamed: ${entry.name} -> ${cleanName}`);
+    }
+  }
+}
+
+/**
  * Extract packs: packs/ -> pack-src/ (LevelDB to JSON)
  */
 exports.extractPacks = gulp.series(
   pdel(["pack-src/sampleitems"]),
   async () => {
     if (!foundryvttCli) foundryvttCli = await import("@foundryvtt/foundryvtt-cli");
-    await foundryvttCli.extractPack("packs/sampleitems", "pack-src/sampleitems");
+    await foundryvttCli.extractPack("packs/sampleitems", "pack-src/sampleitems", { folders: true });
+    cleanPackFolderNames("pack-src/sampleitems");
     plog("Extracted packs/sampleitems to pack-src/sampleitems");
   }
 );
@@ -284,65 +309,179 @@ function generateFoundryId() {
 /**
  * Process pack-src JSON files to ensure they have _id and _key
  * Also handles embedded documents (effects, activities)
+ * Recursively scans subdirectories for nested folder structures.
  */
 async function ensurePackIds(packSrcDir) {
-  const files = fs.readdirSync(packSrcDir).filter(f => f.endsWith(".json"));
   let modified = 0;
+  const midiVersion = PACKAGE.version;
+  const compendiumSource = "midi-qol.midiqol-sample-items";
 
-  for (const file of files) {
-    const filePath = path.join(packSrcDir, file);
-    const content = fs.readFileSync(filePath, "utf8");
-    const item = JSON.parse(content);
-    let changed = false;
+  // Get the last compile time from marker file
+  const lastCompileMarker = path.join(packSrcDir, ".last-compile");
+  let lastCompileTime = 0;
+  if (fs.existsSync(lastCompileMarker)) {
+    lastCompileTime = fs.statSync(lastCompileMarker).mtimeMs;
+  }
 
-    // Generate _id if missing
-    if (!item._id) {
-      item._id = generateFoundryId();
-      changed = true;
-      console.log(`Generated _id for ${file}: ${item._id}`);
+  function processDirectory(dir, folderId) {
+    // Check if this directory has a _Folder.json to determine its folder ID
+    const folderJsonPath = path.join(dir, "_Folder.json");
+    if (fs.existsSync(folderJsonPath)) {
+      const folderData = JSON.parse(fs.readFileSync(folderJsonPath, "utf8"));
+      folderId = folderData._id || null;
     }
 
-    // Generate or fix _key if missing/wrong
-    const isFolder = item.type === "Folder" || (item.sorting !== undefined && !item.system);
-    const expectedKey = isFolder ? `!folders!${item._id}` : `!items!${item._id}`;
-    if (!item._key || item._key !== expectedKey) {
-      item._key = expectedKey;
-      changed = true;
-      console.log(`Set _key for ${file}: ${item._key}`);
-    }
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        processDirectory(fullPath, folderId);
+      } else if (entry.name.endsWith(".json") && entry.name !== "_Folder.json") {
+        const content = fs.readFileSync(fullPath, "utf8");
+        const item = JSON.parse(content);
+        let changed = false;
 
-    // Handle embedded effects
-    if (Array.isArray(item.effects)) {
-      for (const effect of item.effects) {
-        if (!effect._id) {
-          effect._id = generateFoundryId();
+        // Generate _id if missing
+        if (!item._id) {
+          item._id = generateFoundryId();
+          changed = true;
+          console.log(`Generated _id for ${entry.name}: ${item._id}`);
+        }
+
+        // Generate or fix _key if missing/wrong
+        const expectedKey = `!items!${item._id}`;
+        if (!item._key || item._key !== expectedKey) {
+          item._key = expectedKey;
+          changed = true;
+          console.log(`Set _key for ${entry.name}: ${item._key}`);
+        }
+
+        // Set folder from directory structure
+        const expectedFolder = folderId || null;
+        if (item.folder !== expectedFolder) {
+          console.log(`Set folder for ${entry.name}: ${item.folder || "null"} -> ${expectedFolder || "null"}`);
+          item.folder = expectedFolder;
           changed = true;
         }
-        const effectKey = `!items.effects!${item._id}.${effect._id}`;
-        if (!effect._key || effect._key !== effectKey) {
-          effect._key = effectKey;
-          changed = true;
-        }
-      }
-    }
 
-    // Handle embedded activities (dnd5e 5.x)
-    if (item.system?.activities && typeof item.system.activities === "object") {
-      for (const [actId, activity] of Object.entries(item.system.activities)) {
-        if (activity && typeof activity === "object") {
-          if (!activity._id) {
-            activity._id = actId; // Use the key as ID if missing
-            changed = true;
+        // Handle embedded effects
+        if (Array.isArray(item.effects)) {
+          for (const effect of item.effects) {
+            if (!effect._id) {
+              effect._id = generateFoundryId();
+              changed = true;
+            }
+            const effectKey = `!items.effects!${item._id}.${effect._id}`;
+            if (!effect._key || effect._key !== effectKey) {
+              effect._key = effectKey;
+              changed = true;
+            }
           }
         }
+
+        // Handle embedded activities (dnd5e 5.x)
+        if (item.system?.activities && typeof item.system.activities === "object") {
+          for (const [actId, activity] of Object.entries(item.system.activities)) {
+            if (activity && typeof activity === "object") {
+              if (!activity._id) {
+                activity._id = actId; // Use the key as ID if missing
+                changed = true;
+              }
+            }
+          }
+        }
+
+        // Stamp chris-premades info for CPR medkit compatibility
+        // Only bump version if file was modified since last compile, or if info is missing
+        const fileMtime = fs.statSync(fullPath).mtimeMs;
+        const cprInfo = item.flags?.["chris-premades"]?.info;
+        const fileModifiedSinceCompile = fileMtime > lastCompileTime;
+        const cprInfoMissing = !cprInfo || !cprInfo.version || !cprInfo.source;
+        if (cprInfoMissing || fileModifiedSinceCompile) {
+          if (!item.flags) item.flags = {};
+          if (!item.flags["chris-premades"]) item.flags["chris-premades"] = {};
+          if (!item.flags["chris-premades"].info) item.flags["chris-premades"].info = {};
+          const info = item.flags["chris-premades"].info;
+          if (info.source !== compendiumSource || info.version !== midiVersion) {
+            const reason = cprInfoMissing ? "missing CPR info" : "file modified since last compile";
+            console.log(`CPR version updated for ${entry.name}: ${info.version || "none"} -> v${midiVersion} (${reason})`);
+            info.source = compendiumSource;
+            info.version = midiVersion;
+            changed = true;
+          } else if (fileModifiedSinceCompile) {
+            console.log(`CPR version unchanged for ${entry.name}: v${midiVersion} (file modified but version already current)`);
+          }
+        }
+
+        if (changed) {
+          fs.writeFileSync(fullPath, JSON.stringify(item, null, 2));
+          modified++;
+        }
       }
     }
+  }
 
-    if (changed) {
-      fs.writeFileSync(filePath, JSON.stringify(item, null, 2));
+  // Ensure _Folder.json files have correct _id, _key, and parent folder from directory nesting
+  function ensureFolderIds(dir, parentFolderId) {
+    const folderJsonPath = path.join(dir, "_Folder.json");
+    let currentFolderId = parentFolderId;
+
+    if (!fs.existsSync(folderJsonPath) && dir !== packSrcDir) {
+      // Auto-create _Folder.json for subdirectories that don't have one
+      const folderId = generateFoundryId();
+      const folder = {
+        name: path.basename(dir),
+        sorting: "a",
+        folder: parentFolderId || null,
+        type: "Item",
+        _id: folderId,
+        _key: `!folders!${folderId}`
+      };
+      fs.writeFileSync(folderJsonPath, JSON.stringify(folder, null, 2));
+      console.log(`Auto-created _Folder.json for ${path.basename(dir)} (${folderId})`);
       modified++;
+      currentFolderId = folderId;
+    } else if (fs.existsSync(folderJsonPath)) {
+      const content = fs.readFileSync(folderJsonPath, "utf8");
+      const folder = JSON.parse(content);
+      let changed = false;
+
+      if (!folder._id) {
+        folder._id = generateFoundryId();
+        changed = true;
+        console.log(`Generated _id for _Folder.json in ${dir}: ${folder._id}`);
+      }
+      const expectedKey = `!folders!${folder._id}`;
+      if (!folder._key || folder._key !== expectedKey) {
+        folder._key = expectedKey;
+        changed = true;
+      }
+      // Set parent folder from directory nesting
+      const expectedParent = parentFolderId || null;
+      if (folder.folder !== expectedParent) {
+        console.log(`Set parent folder for ${folder.name}: ${folder.folder || "null"} -> ${expectedParent || "null"}`);
+        folder.folder = expectedParent;
+        changed = true;
+      }
+      if (changed) {
+        fs.writeFileSync(folderJsonPath, JSON.stringify(folder, null, 2));
+        modified++;
+      }
+      currentFolderId = folder._id;
+    }
+
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        ensureFolderIds(path.join(dir, entry.name), currentFolderId);
+      }
     }
   }
+
+  // First pass: ensure all folder IDs exist and parent folders are correct (items reference them)
+  ensureFolderIds(packSrcDir, null);
+  // Second pass: process items and set folder from directory structure
+  processDirectory(packSrcDir, null);
 
   if (modified > 0) {
     console.log(`Updated ${modified} file(s) with generated IDs`);
@@ -357,9 +496,14 @@ exports.compilePacks = gulp.series(
   async () => {
     await ensurePackIds("pack-src/sampleitems");
     if (!foundryvttCli) foundryvttCli = await import("@foundryvtt/foundryvtt-cli");
-    await foundryvttCli.compilePack("pack-src/sampleitems", "packs/sampleitems");
+    await foundryvttCli.compilePack("pack-src/sampleitems", "packs/sampleitems", { recursive: true });
+    // Touch the last-compile marker so we can detect modified files on next compile
+    const marker = path.join("pack-src/sampleitems", ".last-compile");
+    fs.writeFileSync(marker, new Date().toISOString());
     plog("Compiled pack-src/sampleitems to packs/sampleitems");
-  }
+  },
+  pdel([DEV_DIST() + PACK + GLOB], { force: true }),
+  outputPackFiles(DEV_DIST()),
 );
 /**
  * Default Build operation (uses esbuild for single bundled file, with type checking)

@@ -354,6 +354,93 @@ export async function applyTokenDamage(
   return cardIds;
 }
 
+/**
+ * Apply different damage/healing amounts to multiple targets, producing a single damage card.
+ * Each entry specifies a token and its own damageDetail/totalDamage.
+ * @param targetDamages Array of per-target damage specifications
+ * @param item The item responsible for the damage (used for card display)
+ * @param options Same options as applyTokenDamage (workflow, forceApply, updateOptions, etc.)
+ */
+export async function applyTokenDamageMany(
+  targetDamages: { token: Token.Implementation, damageDetail: DamageDescription[], totalDamage: number }[],
+  item: Item.Implementation | null | undefined,
+  options: any = {
+    workflow: undefined,
+    updateOptions: { awaitDamageApplication: configSettings.waitForDamageApplication },
+    forceApply: false,
+  }
+): Promise<any[]> {
+  let allDamages: Record<string, DamageListEntry> = {};
+  let workflow: Workflow | undefined = options.workflow;
+  if (item && !options.workflow) workflow = Workflow.getWorkflow(item.uuid);
+
+  for (const entry of targetDamages) {
+    const actor = entry.token.actor;
+    if (!actor) continue;
+    const damageDetail = entry.damageDetail.map(de => ({ ...de, value: (de.value ?? de.damage) }));
+    const calcDamageOptions = {
+      invertHealing: true,
+      multiplier: 1,
+      midi: {
+        saved: false,
+        itemType: item?.type,
+        saveMultiplier: 1,
+        isHit: true,
+        superSaver: false,
+        semiSuperSaver: false,
+        sourceActorUuid: actor?.uuid,
+        uncannyDodge: false,
+        save: false,
+        targetUuid: entry.token?.document.uuid,
+        fumbleSave: false,
+        criticalSave: false,
+        isCritical: false,
+        isFumble: false
+      }
+    };
+    // @ts-expect-error no dnd5e-types
+    const combinedDamage: DamageDescription[] = foundry.utils.deepClone(actor.calculateDamage(damageDetail, calcDamageOptions));
+    const fullDamage = setupDamageDetails({
+      actorId: actor.id!,
+      actorUuid: actor.uuid,
+      critical: false,
+      damageDetail: combinedDamage,
+      damageDetails: {
+        combinedDamage,
+        rawcombinedDamage: damageDetail,
+        calcDamageOptions: { combinedDamage: calcDamageOptions }
+      },
+      isHit: true,
+      rawDamageDetail: damageDetail,
+      saved: false,
+      sceneId: canvas.scene?.id ?? "",
+      semiSuperSaver: false,
+      superSaver: false,
+      totalDamage: entry.totalDamage,
+      targetUuid: entry.token.document.uuid,
+    }, "combinedDamage", actor);
+    if (fullDamage) allDamages[actor.uuid] = fullDamage;
+  }
+
+  if (!options.updateOptions?.awaitDamageApplication) {
+    options.updateOptions ??= {};
+    options.updateOptions.awaitDamageApplication = true;
+  }
+  const cardIds: string[] = await timedAwaitExecuteAsGM("createReverseDamageCard", {
+    autoApplyDamage: configSettings.autoApplyDamage,
+    sender: game.user?.name,
+    actorId: workflow?.actor?.id,
+    actorUuid: workflow?.actor?.uuid,
+    charName: workflow?.token?.name ?? workflow?.actor?.name ?? game.user?.name,
+    damageList: prepareDamageListToJSON(Object.values(allDamages)),
+    chatCardUuid: workflow?.itemCardUuid,
+    flagTags: workflow?.flagTags,
+    updateOptions: options.updateOptions,
+    forceApply: options.forceApply,
+  });
+  return cardIds;
+}
+
 export interface applyDamageDetails {
   label: string;
   damageDetail: any[];

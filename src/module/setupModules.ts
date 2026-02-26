@@ -80,7 +80,23 @@ export function checkModules() { // this really should happen in TroubleShooter
     ui.notifications?.error("midi-qol.NoSocketLib", {permanent: true, localize: true});
   }
   // Warn about deprecated built-in chat log pruning
-  if (game.user?.isGM && pruneChatLog && !game.modules.get("chatlog-prune")?.active) {
-    ui.notifications?.warn("midi-qol.chatlogPruneDeprecated", { localize: true });
+  if (game.user?.isGM && pruneChatLog) {
+    const chatlogPruneModule = game.modules.get("chatlog-prune");
+    const chatlogPruneActive = chatlogPruneModule?.active;
+    const chatlogPruneEnabled = chatlogPruneActive && (game.settings as any).get("chatlog-prune", "enabled");
+    if (!chatlogPruneActive || !chatlogPruneEnabled) {
+      let message = `<h3>${i18n("midi-qol.chatlogPruneWarning")}</h3>`;
+      message += `<p>${i18n("midi-qol.chatlogPruneDeprecated")}</p>`;
+      if (!chatlogPruneActive) {
+        message += `<p>${i18n("midi-qol.chatlogPruneInstallHint")}</p>`;
+      } else if (!chatlogPruneEnabled) {
+        message += `<p>${i18n("midi-qol.chatlogPruneEnableHint")}</p>`;
+      }
+      ChatMessage.implementation.create({
+        content: message,
+        whisper: game.users?.filter(u => u.isGM).map(u => u.id),
+        speaker: { alias: "midi-qol" }
+      });
+    }
   }
 }

@@ -13,8 +13,8 @@
   <li class="midi-qol midi-qol-save-class target midi-qol-target-select {{save.targetClass}} {{save.saveClass}}" data-id="{{save.target.id}}">
     <i class="fas {{save.saveSymbol}}"></i>
     <img src="{{save.img}}" style="background-color: var(--dnd5e-background-10); width: 30px; height: 30px;" />
-    <div class="midi-qol-target-name" style="flex-grow: 1;" id="{{save.target.id}}" data-uuid="{{save.target.document.uuid}}" data-tooltip-html="{{{save.attributionTooltip}}}" data-tooltip-direction="UP">
-      <div class="name-stacked" style="width:170px">
+    <div class="midi-qol-target-name midi-qol-save-name" id="{{save.target.id}}" data-uuid="{{save.target.document.uuid}}" data-tooltip-html="{{{save.attributionTooltip}}}" data-tooltip-direction="UP">
+      <div class="name-stacked">
         <span class="midi-qol-gmTokenName midi-qol-target-name title" id="save.target.id">
           {{{save.gmName}}}
         </span>
@@ -23,15 +23,17 @@
         </span>
       </div>
     </div>
-    {{#if save.hasAttribution}}
-    <span class="midi-save-attribution-info {{save.saveTotalClass}}" data-tooltip-html="{{{save.attributionTooltip}}}" data-tooltip-direction="DOWN"><i class="fas fa-info-circle"></i></span>
-    {{/if}}
-    <div class="{{save.saveTotalClass}} midi-qol-tooltip" style="font-weight: bold;" {{#if save.saveTooltip}}data-tooltip="{{save.saveTooltip}}"{{/if}}>
+    <div class="midi-qol-save-indicators">
+      {{#if save.hasAttribution}}
+      <span class="midi-save-attribution-info {{save.saveTotalClass}}" data-tooltip-html="{{{save.attributionTooltip}}}" data-tooltip-direction="DOWN"><i class="fas fa-info-circle"></i></span>
+      {{/if}}
       {{#if save.coverLabel}}<img class="midi-qol-cover-icon" src="{{save.coverLabel}}" />{{/if}}
-      {{save.rollTotal}}
-      <div class="midi-qol-tooltiptext midi-qol-save-tooltip {{save.saveToolTipClass}}" style="text-align: left;">
-        {{{save.rollHTML}}}
-      </div>
+      <span class="{{save.saveTotalClass}} midi-qol-tooltip midi-qol-save-total" style="font-weight: bold;" {{#if save.saveTooltip}}data-tooltip="{{save.saveTooltip}}"{{/if}}>
+        {{save.rollTotal}}
+        <span class="midi-qol-tooltiptext midi-qol-save-tooltip {{save.saveToolTipClass}}" style="text-align: left;">
+          {{{save.rollHTML}}}
+        </span>
+      </span>
     </div>
   </li>
   {{/each}}

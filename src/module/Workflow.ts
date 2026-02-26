@@ -2567,6 +2567,9 @@ export class Workflow {
       // record the data - currently done in item handling
       return this.WorkflowState_ConfirmRoll;
     }
+    // Activity itself had no damage and other activity produced no rolls
+    // (e.g. utility activity whose other activity's useCondition filtered out all targets)
+    if (context.noDamage) return this.WorkflowState_WaitForSaves;
     const hasDamageRoll = this.activity.hasDamage || this.otherActivity?.hasDamage || this.activity.hasHealing || this.otherActivity?.hasHealing;
     if (!hasDamageRoll) return this.WorkflowState_WaitForSaves;
     if (context.attackRoll) return this.WorkflowState_AttackRollComplete;
@@ -9065,6 +9068,7 @@ type WorkflowContext = InexactPartial<{
   damageRoll: Roll;
   itemCardUuid: string;
   itemUseComplete: boolean;
+  noDamage: boolean;
   otherDamageRoll: Roll;
   utilityRolls: Roll[];
 }>;

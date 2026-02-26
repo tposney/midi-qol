@@ -1,0 +1,241 @@
+{
+  "name": "Aura of Protection",
+  "type": "feat",
+  "img": "icons/magic/air/wind-tornado-wall-blue.webp",
+  "effects": [
+    {
+      "_id": "9OFOAQENA1VYGc7T",
+      "flags": {
+        "ActiveAuras": {
+          "isAura": true,
+          "inactive": false,
+          "aura": "Allies",
+          "radius": "10",
+          "hidden": false,
+          "height": false,
+          "alignment": "",
+          "type": "",
+          "ignoreSelf": false,
+          "hostile": false,
+          "onlyOnce": false,
+          "nameOverride": "",
+          "customCheck": "",
+          "displayTemp": false,
+          "wallsBlock": "system"
+        },
+        "dae": {
+          "stackable": "none",
+          "specialDuration": [],
+          "transfer": true,
+          "macroRepeat": "none",
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "durationExpression": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "showIcon": true
+        },
+        "dnd5e-helpers": {
+          "rest-effect": "Ignore"
+        },
+        "core": {
+          "overlay": false
+        }
+      },
+      "changes": [
+        {
+          "key": "system.bonuses.abilities.save",
+          "mode": 0,
+          "value": "+@abilities.cha.mod",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "origin": "Compendium.midi-qol.midiqol-sample-items.Item.qX0OnNxcPebyZUtG",
+      "tint": "#ffffff",
+      "transfer": true,
+      "name": "Aura of Protection",
+      "description": "",
+      "statuses": [],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/air/wind-tornado-wall-blue.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!lgK9jaZ1UnAA6aTX.9OFOAQENA1VYGc7T"
+    }
+  ],
+  "flags": {
+    "dae": {
+      "migrated": true,
+      "activeEquipped": false,
+      "alwaysActive": true
+    },
+    "magicitems": {
+      "enabled": false,
+      "equipped": false,
+      "attuned": false,
+      "charges": "0",
+      "chargeType": "c1",
+      "destroy": false,
+      "destroyFlavorText": "reaches 0 charges: it crumbles into ashes and is destroyed.",
+      "rechargeable": false,
+      "recharge": "0",
+      "rechargeType": "t1",
+      "rechargeUnit": "r1",
+      "sorting": "l"
+    },
+    "favtab": {
+      "isFavorite": false
+    },
+    "core": {},
+    "gm-notes": {},
+    "betterRolls5e": {
+      "quickDesc": {
+        "value": true,
+        "altValue": true
+      },
+      "quickProperties": {
+        "value": true,
+        "altValue": true
+      },
+      "quickOther": {
+        "value": true,
+        "altValue": true
+      },
+      "quickFlavor": {
+        "value": true,
+        "altValue": true
+      }
+    },
+    "cf": {
+      "id": "temp_qt0kn9os0vl",
+      "color": "#000000"
+    },
+    "spellTemplateManager": {
+      "stmData": {
+        "ignoreDuration": false,
+        "spellTexture": "",
+        "useTexture": false,
+        "alpha": 50,
+        "coneOrigin": 1,
+        "loopAnimations": true
+      }
+    },
+    "midiProperties": {
+      "confirmTargets": "default",
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "noConcentrationCheck": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "AoETargetType": "any",
+      "AoETargetTypeIncludeSelf": true,
+      "autoTarget": "default",
+      "removeAttackDamageButtons": "default"
+    },
+    "tidy5e-sheet": {
+      "section": "",
+      "actionSection": ""
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>Starting at 6th level, whenever you or a friendly creature within 10 feet of you must make a saving throw, the creature gains a bonus to the saving throw equal to your Charisma modifier (with a minimum bonus of +1). You must be conscious to grant this bonus.</p>\n<p> At 18th level, the range of this aura increases to 30 feet.</p>\n<p>Midi-qol: requires Active Auras to function. Aura will appear on token when applied</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "Midi 12.4.7",
+      "revision": 1,
+      "rules": "2024",
+      "book": "",
+      "page": "",
+      "license": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "",
+      "subtype": ""
+    },
+    "requirements": "Paladin 6",
+    "activities": {},
+    "identifier": "aura-of-protection-hud-10010",
+    "enchant": {},
+    "prerequisites": {
+      "level": null,
+      "repeatable": false
+    },
+    "properties": [],
+    "advancement": [],
+    "cover": null,
+    "crewed": false
+  },
+  "_stats": {
+    "compendiumSource": "Item.WiVleJLWZ5UXryDN",
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782991287,
+    "modifiedTime": 1741782991287,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
+  },
+  "folder": "fZIl4G4qj3C894LI",
+  "_id": "lgK9jaZ1UnAA6aTX",
+  "sort": 2400000,
+  "ownership": {
+    "default": 0,
+    "Zl1BOUaPLwDEujaL": 3
+  },
+  "_key": "!items!lgK9jaZ1UnAA6aTX"
+}

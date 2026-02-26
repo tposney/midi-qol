@@ -240,7 +240,33 @@ For resizable sections, add `resize: vertical; max-height: Npx;` to the CSS.
 
 Reference: Foundry's `.scrollable` class is defined in `foundry2.css` and sets `--scroll-margin`, `margin-right`, `padding-right` for proper scrollbar spacing. The actual scroll behavior comes from the flex layout constraint (`min-height: 0` allows flex items to shrink below content size, triggering overflow).
 
+### SRD Reference Data
+- Extracted SRD item/spell data is at `/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-13x/SRD/`
+  - Folders with a `24` suffix (e.g., `equipment24/`, `spells24/`, `classes24/`) contain **modern (2024 / SRD 5.2)** rules data
+  - Folders without the suffix (e.g., `items/`, `spells/`, `classes/`) contain **legacy (2014)** rules data
+- **Always check the `24` folder first** if one exists — we target the modern ruleset. Only fall back to the non-24 folder if there is no 24 equivalent
+- **Always check the SRD folder first** when creating or verifying sample items — it contains the canonical dnd5e data including activity configurations, damage types, and save DCs
+- **SRD filenames use mixed case** (e.g., `Power_Word_Kill_phbsplPowerWordK.json`) — when searching with Glob, use case-insensitive patterns or use Grep instead to avoid missing files
+
+### Sample Item Spell Icons
+- **Always use the icon from the dnd5e SRD compendium** when creating sample item spells
+- SRD spell source data is at `/home/timp/foundry-data/foundryv13/Data/systems/dnd5e/packs/_source/spells/`
+- Do not invent icon paths — verify they exist at `/home/timp/foundryv13/resources/app/public/icons/`
+- The SRD icons are the canonical choices and ensure consistency with the base system
+
 ## Significant Decisions
+
+### Sample Item / Activity Conventions
+
+1. **Activity effects `onSave` field is counter-intuitive**
+   - In the activity `effects` array, each entry has `{ "_id": "effectId", "onSave": bool }`
+   - `onSave: false` (default) — only apply the effect when the target **fails** the save
+   - `onSave: true` — **always** apply the effect, regardless of save result (i.e. apply even on a successful save)
+   - The name `onSave` does NOT mean "only apply if saved" — it means "also apply on save"
+
+2. **Foundry document IDs must be exactly 16 characters**
+   - Effect IDs, item IDs, activity IDs — all must be 16 chars
+   - Example: `befuddledEffct0` (15 chars) silently fails; `befuddledEffect0` (16 chars) works
 
 ### 13.0.38 Changes
 

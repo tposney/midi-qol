@@ -1,3 +1,15 @@
+### 13.0.52
+**Bug Fixes**
+* If a utility activity has no damage, but the other activity does and the other activity condition prevents it from firing, midi would loop endlessly trying to roll damage until the failsafe cut in and the workflow gets aborted.
+
+**New Features**
+* Midi sample items now records version numbers that means it is compatible with CPR medkit and will track changes to items when you medkit the item/actor.
+  - I'd recommend that you give midi's sample items a higher compendium search number than the rest of the automation libraries, since you probably want those items in preference to midi's sample items.
+  - I've included a few spells of level 8/9, the most notable being mass heal which now works properly to apportion hit points. If only I'd done this before I finished my level 20 campaign.
+
+**For developers**
+* Midi's sample items is now build from pack-src by default, I have also structured the items into a folder structure to make it easier for developers to submit changes/browse  for items as needed
+
 ### 13.0.51
 **Bug Fixes**
 * Fix for not respecting target type settings when using levels volumetric templates.

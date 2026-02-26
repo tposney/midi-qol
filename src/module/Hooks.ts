@@ -90,6 +90,12 @@ export let readyHooks = async () => {
     if (!canvas?.tokens) return;
     if (template.document.author?.id !== game.user?.id) return;
 
+    // Only auto-target for templates created by dnd5e activities (midi or native).
+    // template.activity is set during preview; flags.dnd5e.origin is set after placement.
+    // Skip manually placed or non-activity templates entirely.
+    // @ts-expect-error no dnd5e-types
+    if (!template.activity && !template.document.flags?.dnd5e?.origin) return;
+
     // @ts-expect-error no dnd5e-types
     const autoTarget = getActivityAutoTargetAction(template.activity);
     if (autoTarget === "none") return;
