@@ -2188,7 +2188,8 @@ export class Workflow {
    * @returns The rendered HTML string
    */
   async renderAttributionTooltip(): Promise<string> {
-    const title = getAdvantageModeTitle(this.advantage, this.disadvantage);
+    const mode = this.attackRoll?.options?.advantageMode ?? this.attackRollModifierTracker.advantageMode ?? CONFIG.Dice.D20Roll.ADV_MODE.NORMAL;
+    const title = getAdvantageModeTitle(mode);
     return renderAttributionTooltip(this.attackAttribution ?? {}, title);
   }
 
@@ -4840,7 +4841,7 @@ return {
       let searchRe = /<div class="midi-qol-attack-roll"[\s\S]*?<div class="end-midi-qol-attack-roll">/
       // Determine attack label based on attackRollModifierTracker.advantageMode
       let attackString: string;
-      const mode = this.attackRollModifierTracker.advantageMode;
+      const mode = this.attackRoll?.options?.advantageMode ?? this.attackRollModifierTracker.advantageMode ?? ADV_MODE.NORMAL;
       if (mode === ADV_MODE.ADVANTAGE) {
         attackString = i18n("DND5E.Advantage");
       } else if (mode === ADV_MODE.DISADVANTAGE) {
@@ -5456,7 +5457,8 @@ return {
       }
     }
     const advMode = chosenTracker ?? saveDetails?.modifierTracker;
-    const title = getAdvantageModeTitle(advMode?.hasAdvantage, advMode?.hasDisadvantage);
+    const mode = saveRoll?.options?.advantageMode ?? advMode?.advantageMode ?? CONFIG.Dice.D20Roll.ADV_MODE.NORMAL;
+    const title = getAdvantageModeTitle(mode);
     const attributionTooltip = await renderAttributionTooltip(advMode?.attribution ?? {}, title);
 
     // Determine cover label from effective cover (status + module delta)
