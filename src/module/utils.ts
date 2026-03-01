@@ -6895,14 +6895,15 @@ export function addAttribution(roll: Roll, attributions: AttributionMap) {
 }
 
 /**
- * Get the localized title for an advantage mode (Advantage/Disadvantage/Normal).
- * @param hasAdvantage - Whether there is effective advantage
- * @param hasDisadvantage - Whether there is effective disadvantage
+ * Get localized title for a resolved d20 advantage mode.
+ * @param mode - Resolved roll advantage mode (`-1` DIS, `0` NORMAL, `1` ADV)
  * @returns Localized title string
  */
-export function getAdvantageModeTitle(hasAdvantage: boolean | undefined, hasDisadvantage: boolean | undefined): string {
-  if (hasAdvantage && !hasDisadvantage) return i18n("DND5E.Advantage");
-  if (hasDisadvantage && !hasAdvantage) return i18n("DND5E.Disadvantage");
+export function getAdvantageModeTitle(mode: number | null | undefined): string {
+  const ADV_MODE = CONFIG.Dice.D20Roll.ADV_MODE;
+
+  if (mode === ADV_MODE.ADVANTAGE) return i18n("DND5E.Advantage");
+  if (mode === ADV_MODE.DISADVANTAGE) return i18n("DND5E.Disadvantage");
   return i18n("DND5E.Normal");
 }
 
