@@ -293,7 +293,7 @@ export async function postTemplateConfirmTargets(activity: Activity, options: Mi
     workflow.setTargets(new Set(game.user?.targets));
     if (needCanSeeSense) await workflow.activity.setupCanSeeSense({ workflow });
   }
-  if (activityRequiresPostTemplateConfirmation(activity) && (requiresTargetConfirmation(activity, options) || activity.target?.affects?.choice)) {
+  if (requiresTargetConfirmation(activity, options) || (activityRequiresPostTemplateConfirmation(activity) && activity.target?.affects?.choice)) {
     let result = true;
     result = await resolveTargetConfirmation(activity, options);
     if (result && game.user?.targets) {

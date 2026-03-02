@@ -1284,6 +1284,14 @@
           "label": "Roll as",
           "hint": "Roll the activity as if owned by..."
         },
+        "triggeredActivityConsume": {
+          "label": "Consume Resources",
+          "hint": "Consume spell slots and resources when the triggered activity runs"
+        },
+        "triggeredActivityConfigure": {
+          "label": "Show Configure Dialog",
+          "hint": "Show the configuration/consume dialog when the triggered activity runs"
+        },
         "otherActivityCompatible": {
           "label": "Other Activity Compatible",
           "hint": "Can be used as an other activity"

@@ -9,7 +9,7 @@
         {
           "key": "flags.midi-qol.OverTime",
           "mode": 5,
-          "value": "turn=end,\nrollType=save,\nsaveAbility=wis,\nsaveDC=@attributes.spelldc,\nlabel=Hold Person",
+          "value": "turn=end,\nrollType=save,\nsaveAbility=wis,\nsaveDC=@activity.save.dc.value,\nlabel=Hold Person",
           "priority": 20
         },
         {

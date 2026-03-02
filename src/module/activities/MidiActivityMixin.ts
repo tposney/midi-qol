@@ -28,7 +28,7 @@ import { installedModules } from "../setupModules.js";
 import { saveUndoData } from "../undo.js";
 import {
   activityHasAreaTarget,
-  asyncHooksCall,
+  callActivityHooks,
   canSee,
   canSense,
   checkActivityRange,
@@ -70,6 +70,7 @@ import {
   pushTargetSave,
   popTargetSave,
   clearTargetSave,
+  getConsumptionData,
 } from "../utils.js";
 import { activityHasScaledTargetCount, preTemplateTargets, removeFlanking, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
@@ -172,6 +173,8 @@ export let MidiActivityMixin = Base => {
           triggeredActivityConditionText: new MidiConditionField({ name: "triggeredActivityCondition", initial: "" }),
           triggeredActivityTargets: new StringField({ name: "triggeredActivityTargets", initial: "targets", required: true, blank: false }),
           triggeredActivityRollAs: new StringField({ name: "triggeredActivityRollAs", initial: "self" }),
+          triggeredActivityConsume: new BooleanField({ name: "triggeredActivityConsume", initial: true }),
+          triggeredActivityConfigure: new BooleanField({ name: "triggeredActivityConfigure", initial: true }),
           autoConsume: new BooleanField({ name: "autoConsume", initial: false }),
           forceConsumeDialog: new StringField({ name: "forceConsumeDialog", initial: "default" }),
           forceRollDialog: new StringField({ name: "forceRollDialog", initial: "default" }),
@@ -473,7 +476,7 @@ export let MidiActivityMixin = Base => {
       }
 
       // Get consumed delta data from messageConfig (not return value)
-      const consumed = messageConfig.data?.flags?.dnd5e?.use?.consumed;
+      const consumed = getConsumptionData(messageConfig);
 
       // Set the consumed flag - button visibility is handled by shouldHideChatButton
       if (consumed) {
@@ -840,9 +843,7 @@ export let MidiActivityMixin = Base => {
       let preRollDamageHookId: number | undefined;
       let rollDamageHookId: number | undefined;
       try {
-        if (await asyncHooksCall("midi-qol.preDamageRoll", config.workflow, this, config, dialog, message) === false
-          || await asyncHooksCall(`midi-qol.preDamageRoll.${this.item.uuid}`, config.workflow, this, config, dialog, message) === false
-          || await asyncHooksCall(`midi-qol.preDamageRoll.${this.uuid}`, config.workflow, this, config, dialog, message) === false) {
+        if (await callActivityHooks(this, "midi-qol.preDamageRoll", config.workflow, this, config, dialog, message) === false) {
           console.warn("midi-qol | Damage roll blocked via pre-hook");
           return;
         }
@@ -1351,30 +1352,33 @@ export let MidiActivityMixin = Base => {
         return false;
       }
       const workflow = config.workflow;
+      // If targetsToUse was provided (e.g. from completeActivityUse with targetUuids),
+      // pre-select them as game.user.targets so the normal flow picks them up.
       if ((config.midiOptions?.targetsToUse?.size ?? 0) > 0 && !activityHasAreaTarget(this) && this.target?.affects.type !== "self") {
-        workflow.setTargets(config.midiOptions!.targetsToUse!);
-      } else {
-        if (((this.target?.affects.type ?? "") !== "")
-          || configSettings.enforceSingleWeaponTarget
-          || (targetConfirmation.enabled && targetConfirmation.always)
-          || (targetConfirmation.enabled && targetConfirmation.noneTargeted)
-          || this.forcedTargetConfirmation) {
-          if (!(await preTemplateTargets(this, config.midiOptions ?? {})))
-            return false;
-        }
-        // Setup targets.
-        let selfTarget = this.target?.affects.type === "self";
-        // @ts-expect-error no dnd5e-types
-        if (this.item.type === "tool" && !this.target?.affects.type)
-          selfTarget = true;
-        if (!selfTarget) {
-          workflow.setTargets(validTargetTokens(new Set(game.user?.targets)));
-        } else { // There is no token for the actor on the scene - create a temp target for this
-          foundry.utils.setProperty(config, "midiOptions.workflowOptions.targetConfirmation", "none");
-          let potentialTarget = getOrCreateTokenForActor(this.actor);
-          workflow.setTargets(new Set());
-          if (potentialTarget) workflow.setTargets(workflow.targets.add(potentialTarget));
-        }
+        const tokenIds = Array.from(config.midiOptions!.targetsToUse!).map(t => (t as Token).id);
+        updateUserTargets(tokenIds);
+      }
+      if (((this.target?.affects.type ?? "") !== "")
+        || configSettings.enforceSingleWeaponTarget
+        || (targetConfirmation.enabled && targetConfirmation.always)
+        || (targetConfirmation.enabled && targetConfirmation.noneTargeted)
+        || this.forcedTargetConfirmation
+        || config.midiOptions?.workflowOptions?.targetConfirmation === "always") {
+        if (!(await preTemplateTargets(this, config.midiOptions ?? {})))
+          return false;
+      }
+      // Setup targets.
+      let selfTarget = this.target?.affects.type === "self";
+      // @ts-expect-error no dnd5e-types
+      if (this.item.type === "tool" && !this.target?.affects.type)
+        selfTarget = true;
+      if (!selfTarget) {
+        workflow.setTargets(validTargetTokens(new Set(game.user?.targets)));
+      } else { // There is no token for the actor on the scene - create a temp target for this
+        foundry.utils.setProperty(config, "midiOptions.workflowOptions.targetConfirmation", "none");
+        let potentialTarget = getOrCreateTokenForActor(this.actor);
+        workflow.setTargets(new Set());
+        if (potentialTarget) workflow.setTargets(workflow.targets.add(potentialTarget));
       }
       // remove selection of un-targetable targets TODO
       if (canvas.scene) {
@@ -1409,12 +1413,8 @@ export let MidiActivityMixin = Base => {
       }
 
       if (options.callHooks) {
-        cancelWorkflow = await asyncHooksCall("midi-qol.preTargeting", { activity: this, token: workflow.token, config: usage, dialog, message }) === false
-          || await asyncHooksCall(`midi-qol.preTargeting.${this.item.uuid}`, { activity: this, token: workflow.token, config: usage, dialog, message }) === false
-          || await asyncHooksCall(`midi-qol.preTargeting.${this.uuid}`, { activity: this, token: workflow.token, config: usage, dialog, message }) === false;
-        cancelWorkflow ||= await asyncHooksCall("midi-qol.preTargetingV2", { workflow, usage, dialog, message }) === false
-          || await asyncHooksCall(`midi-qol.preTargetingV2.${this.item.uuid}`, { workflow, usage, dialog, message }) === false
-          || await asyncHooksCall(`midi-qol.preTargetingV2.${this.uuid}`, { workflow, usage, dialog, message }) === false;
+        cancelWorkflow = await callActivityHooks(this, "midi-qol.preTargeting", { activity: this, token: workflow.token, config: usage, dialog, message }) === false;
+        cancelWorkflow ||= await callActivityHooks(this, "midi-qol.preTargetingV2", { workflow, usage, dialog, message }) === false;
       }
 
       if (options.callMacros && configSettings.allowUseMacro) {
@@ -1440,10 +1440,8 @@ export let MidiActivityMixin = Base => {
         options = foundry.utils.mergeObject(options, usage.midiOptions?.proceedChecks ?? {}, { insertKeys: true, overwrite: true });
 
       if (options.callHooks) {
-        let hookAbort = await asyncHooksCall("midi-qol.preItemRoll", { activity: this, token: workflow.token, config: usage, dialog, message }) === false
-          || await asyncHooksCall(`midi-qol.preItemRoll.${this.uuid}`, { activity: this, token: workflow.token, config: usage, dialog, message }) === false;
-        hookAbort ||= await asyncHooksCall("midi-qol.preItemRollV2", { workflow, usage, dialog, message }) === false
-          || await asyncHooksCall(`midi-qol.preItemRollV2.${this.item.uuid}`, { workflow, usage, dialog, message }) === false;
+        let hookAbort = await callActivityHooks(this, "midi-qol.preItemRoll", { activity: this, token: workflow.token, config: usage, dialog, message }) === false;
+        hookAbort ||= await callActivityHooks(this, "midi-qol.preItemRollV2", { workflow, usage, dialog, message }) === false;
         if (hookAbort || workflow.aborted) {
           console.warn("midi-qol | attack roll blocked by preItemRoll hook");
           workflow.aborted = true;
@@ -1566,7 +1564,7 @@ export let MidiActivityMixin = Base => {
       const workflow = usage.workflow;
       const removeWorkflow = async (workflow: Workflow) => {
         Workflow.removeWorkflow(workflow.id);
-        const consumed = workflow.chatCard?.getFlag("dnd5e", "use.consumed");
+        const consumed = getConsumptionData(workflow.chatCard);
         if (!foundry.utils.isEmpty(consumed)) {
           await workflow.activity.refund(consumed);
         }

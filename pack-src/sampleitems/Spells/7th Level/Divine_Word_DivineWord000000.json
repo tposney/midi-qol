@@ -1,0 +1,396 @@
+{
+  "name": "Divine Word",
+  "type": "spell",
+  "img": "icons/magic/holy/projectiles-blades-salvo-yellow.webp",
+  "effects": [
+    {
+      "_id": "dvnWrdDeafened00",
+      "changes": [],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": 60,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "transfer": false,
+      "flags": {
+        "dae": {
+          "stackable": false,
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "transfer": false,
+          "dontApply": false,
+          "showIcon": true
+        }
+      },
+      "tint": "#ffffff",
+      "name": "Divine Word (Deafened)",
+      "description": "<p>Deafened by Divine Word for 1 minute (41-50 HP when struck).</p>",
+      "statuses": [
+        "deafened"
+      ],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/holy/projectiles-blades-salvo-yellow.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!DivineWord000000.dvnWrdDeafened00"
+    },
+    {
+      "_id": "dvnWrdBlndDeaf00",
+      "changes": [],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": 600,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "transfer": false,
+      "flags": {
+        "dae": {
+          "stackable": false,
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "transfer": false,
+          "dontApply": false,
+          "showIcon": true
+        }
+      },
+      "tint": "#ffffff",
+      "name": "Divine Word (Blinded & Deafened)",
+      "description": "<p>Blinded and Deafened by Divine Word for 10 minutes (31-40 HP when struck).</p>",
+      "statuses": [
+        "blinded",
+        "deafened"
+      ],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/holy/projectiles-blades-salvo-yellow.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!DivineWord000000.dvnWrdBlndDeaf00"
+    },
+    {
+      "_id": "dvnWrdAllThree00",
+      "changes": [],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": 3600,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "transfer": false,
+      "flags": {
+        "dae": {
+          "stackable": false,
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "transfer": false,
+          "dontApply": false,
+          "showIcon": true
+        }
+      },
+      "tint": "#ffffff",
+      "name": "Divine Word (Blinded, Deafened & Stunned)",
+      "description": "<p>Blinded, Deafened, and Stunned by Divine Word for 1 hour (21-30 HP when struck).</p>",
+      "statuses": [
+        "blinded",
+        "deafened",
+        "stunned"
+      ],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/holy/projectiles-blades-salvo-yellow.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!DivineWord000000.dvnWrdAllThree00"
+    }
+  ],
+  "flags": {
+    "midiProperties": {
+      "magicdam": false,
+      "magiceffect": true,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "[postActiveEffects]ItemMacro",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "itemacro": {
+      "macro": {
+        "name": "Divine Word",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "// Divine Word — apply HP-threshold effects to targets that failed their save\nconst failedTargets = Array.from(workflow.failedSaves);\nif (!failedTargets.length) return;\n\nfor (const token of failedTargets) {\n  const hp = token.actor?.system?.attributes?.hp?.value ?? 0;\n  if (hp <= 0) continue;\n\n  if (hp <= 20) {\n    // 0-20 HP: the target dies\n    await token.actor.update({\"system.attributes.hp.value\": 0});\n    await MidiQOL.applyTokenDamage([{damage: hp, type: \"none\"}], hp, new Set([token]), workflow.item, new Set(), {forceApply: true});\n  } else if (hp <= 30) {\n    // 21-30 HP: Blinded, Deafened, and Stunned for 1 hour\n    const effect = workflow.item.effects.find(e => e._id === \"dvnWrdAllThree00\" || e.name.includes(\"Stunned\"));\n    if (effect) await MidiQOL.socket().executeAsGM(\"createEffects\", {actorUuid: token.actor.uuid, effects: [effect.toObject()]});\n  } else if (hp <= 40) {\n    // 31-40 HP: Blinded and Deafened for 10 minutes\n    const effect = workflow.item.effects.find(e => e._id === \"dvnWrdBlndDeaf00\" || (e.name.includes(\"Blinded\") && !e.name.includes(\"Stunned\")));\n    if (effect) await MidiQOL.socket().executeAsGM(\"createEffects\", {actorUuid: token.actor.uuid, effects: [effect.toObject()]});\n  } else if (hp <= 50) {\n    // 41-50 HP: Deafened for 1 minute\n    const effect = workflow.item.effects.find(e => e._id === \"dvnWrdDeafened00\" || (e.name.includes(\"Deafened\") && !e.name.includes(\"Blinded\")));\n    if (effect) await MidiQOL.socket().executeAsGM(\"createEffects\", {actorUuid: token.actor.uuid, effects: [effect.toObject()]});\n  }\n  // 51+ HP: no effect\n\n  // Extraplanar creatures (Celestial, Elemental, Fey, Fiend) are forced back to their plane\n  const creatureType = token.actor?.system?.details?.type?.value?.toLowerCase() ?? \"\";\n  if ([\"celestial\", \"elemental\", \"fey\", \"fiend\"].includes(creatureType)) {\n    const td = token.document ?? token;\n    await td.update({hidden: true});\n    ui.notifications.info(`${token.name} (${creatureType}) is banished back to its plane of origin by Divine Word and cannot return for 24 hours!`);\n  }\n}",
+        "sort": 0,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {},
+        "_stats": {
+          "systemId": null,
+          "systemVersion": null,
+          "coreVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null
+        },
+        "_id": null,
+        "folder": null
+      }
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>You utter a word imbued with power from the Upper Planes. Each creature of your choice in range makes a Charisma saving throw. On a failed save, a target that has 50 Hit Points or fewer suffers an effect based on its current Hit Points:</p>\n<table><thead><tr><td>Hit Points</td><td>Effect</td></tr></thead><tbody><tr><td>0-20</td><td>The target dies.</td></tr><tr><td>21-30</td><td>Blinded, Deafened, and Stunned for 1 hour.</td></tr><tr><td>31-40</td><td>Blinded and Deafened for 10 minutes.</td></tr><tr><td>41-50</td><td>Deafened for 1 minute.</td></tr></tbody></table>\n<p>Regardless of HP, a Celestial, Elemental, Fey, or Fiend that fails is forced back to its plane of origin.</p>\n<p><strong>midi-qol</strong>: Automates the CHA save. On failure, an ItemMacro checks each target's HP and applies the appropriate condition effects. Targets over 50 HP are unaffected. Extraplanar creature banishment is notified but not mechanically enforced. The kill effect sets HP to 0.</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024"
+    },
+    "activation": {
+      "type": "bonus",
+      "condition": "",
+      "value": 1
+    },
+    "duration": {
+      "value": "",
+      "units": "inst"
+    },
+    "target": {
+      "affects": {
+        "type": "creature",
+        "count": "",
+        "choice": false,
+        "special": "each creature of your choice within range"
+      },
+      "template": {
+        "units": "",
+        "contiguous": false
+      }
+    },
+    "range": {
+      "value": "30",
+      "units": "ft",
+      "special": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "ability": "",
+    "level": 7,
+    "school": "evo",
+    "materials": {
+      "value": "",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "preparation": {
+      "mode": "prepared",
+      "prepared": false
+    },
+    "properties": [
+      "vocal"
+    ],
+    "activities": {
+      "dnd5eactivity000": {
+        "_id": "dnd5eactivity000",
+        "type": "save",
+        "activation": {
+          "type": "bonus",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "units": ""
+          },
+          "affects": {
+            "type": "creature",
+            "count": "",
+            "choice": false
+          },
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "damage": {
+          "onSave": "none",
+          "parts": []
+        },
+        "save": {
+          "ability": [
+            "cha"
+          ],
+          "dc": {
+            "calculation": "spellcasting",
+            "formula": ""
+          }
+        },
+        "name": "",
+        "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "always",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    },
+    "identifier": "divine-word",
+    "sourceClass": ""
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "folder": "SpellFldr7thLevl",
+  "_id": "DivineWord000000",
+  "sort": 300000,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!DivineWord000000"
+}

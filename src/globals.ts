@@ -206,6 +206,10 @@ declare module "fvtt-types/configuration" {
         spellSniper?: boolean;
         // added by us
         sharpShooter?: string;
+        // dnd5e transformation flags
+        isPolymorphed?: boolean;
+        originalActor?: string; // actor ID of the pre-transform form
+        previousActorIds?: string[];
       };
       "midi-qol"?: {
         dependentOn?: string; // UUID of parent document for midi-qol dependent tracking
@@ -604,6 +608,13 @@ declare module "fvtt-types/configuration" {
 };
 
 declare global {
+  namespace Roll {
+    interface _Options {
+      /** dnd5e D20Roll advantage mode: -1 (disadvantage), 0 (normal), 1 (advantage) */
+      advantageMode?: number;
+    }
+  }
+
   // Note: Intentional `var` use here to add to the `globalThis`
   var MidiDAEEval: {
     testfunc: (...args: any[]) => void;
@@ -821,6 +832,7 @@ declare global {
       }>;
       actorSizes: Record<string, {
         label: string;
+        token?: number;
       }>;
       areaTargetTypes: Record<string, {
         label: string;
@@ -1022,8 +1034,10 @@ export type DamageListEntry = PreSetupDamageListEntry & {
   hpDamage: number;
   newHP: number;
   newTempHP: number;
+  newTempMax?: number;
   oldHP: number;
   oldTempHP: number;
+  oldTempMax?: number;
   tempDamage: number;
   useDamageDetail: boolean;
   wasHit: boolean;
@@ -1227,6 +1241,8 @@ export interface Activity extends AnyMutableObject {
     triggeredActivityConditionText?: string;
     triggeredActivityTargets: string;
     triggeredActivityRollAs?: string;
+    triggeredActivityConsume?: boolean;
+    triggeredActivityConfigure?: boolean;
     autoConsume: boolean;
     forceConsumeDialog?: string;
     forceRollDialog?: string;
@@ -1263,11 +1279,16 @@ export type DamageDescription = {
   properties: Set<string>;
   active?: {
     multiplier?: number;
+    threshold?: boolean;
+    // 5.2.x flat structure (set by dnd5e)
     modifications?: boolean;
     resistance?: boolean;
     vulnerability?: boolean;
     immunity?: boolean;
-    // midi additions
+    // 5.3+ nested structure (set by dnd5e)
+    all?: { modification?: boolean; resistance?: boolean; vulnerability?: boolean; immunity?: boolean };
+    type?: { modification?: boolean; resistance?: boolean; vulnerability?: boolean; immunity?: boolean };
+    // midi additions (always flat, set by midi-qol in both versions)
     absorption?: boolean;
     DR?: boolean;
     spell?: boolean;
@@ -1277,6 +1298,7 @@ export type DamageDescription = {
     semiSuperSaver?: boolean;
     saved?: boolean;
     uncannyDodge?: boolean;
+    [key: string]: any; // custom resistance type names
   };
   damage?: number;
   formula?: string;

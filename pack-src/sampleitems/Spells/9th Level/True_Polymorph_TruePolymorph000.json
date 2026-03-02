@@ -295,6 +295,8 @@
           "triggeredActivityConditionText": "",
           "triggeredActivityTargets": "failedSaves",
           "triggeredActivityRollAs": "self",
+          "triggeredActivityConsume": false,
+          "triggeredActivityConfigure": false,
           "autoTargetType": "any",
           "autoTargetAction": "default",
           "otherActivityCompatible": true,

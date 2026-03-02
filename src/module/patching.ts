@@ -754,9 +754,8 @@ function getExternalModuleFastForward(sourceInfo: AdvantageSourceInfo, rollType:
 
 function setRollDialogOptions(config: RollProcessConfig, dialog: RollDialogConfig, rollType: FastForwardRollType) {
   dialog.options ??= {};
-  //@ts-expect-error
-  const ADV_MODE = CONFIG.Dice.D20Roll.ADV_MODE;
-
+  // @ts-expect-error CONFIG.Dice.D20Roll not typed
+  const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
   const sourceInfo = getAdvantageSourceInfo(config);
 
   // Determine dialog visibility (whether to show the roll configuration dialog)
@@ -2536,6 +2535,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
         if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
       }
     }
+    return result;
   } catch (err) {
     const message = "midi-qol | error in rollToolCheck";
     TroubleShooter.recordError(err, message);
@@ -2543,7 +2543,6 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
   } finally {
     if (preRollHookId) Hooks.off("dnd5e.preRollTool", preRollHookId);
     if (postRollHookId) Hooks.off("dnd5e.postToolRollConfiguration", postRollHookId);
-    return result;
   }
 }
 

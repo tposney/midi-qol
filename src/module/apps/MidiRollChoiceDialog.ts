@@ -85,7 +85,6 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
           required: true, blank: false, label: game.i18n.localize("DND5E.Abilities")
         }),
         name: "ability",
-        //@ts-expect-error no dnd5e-types
         options: Object.entries(CONFIG.DND5E.abilities).map(([value, { label }]) => ({ value, label })),
         value: this.config.ability
       });
@@ -186,12 +185,12 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
     if (!preComputed.hasAdvantage && !preComputed.hasDisadvantage) return;
 
     rollConfig.options ??= {};
-    //@ts-expect-error no dnd5e-types
-    const ADV = CONFIG.Dice.D20Roll.ADV_MODE;
+    // @ts-expect-error CONFIG.Dice.D20Roll not typed
+    const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
     if (preComputed.hasAdvantage && !preComputed.hasDisadvantage) {
-      rollConfig.options.advantageMode = ADV.ADVANTAGE;
+      rollConfig.options.advantageMode = ADV_MODE.ADVANTAGE;
     } else if (!preComputed.hasAdvantage && preComputed.hasDisadvantage) {
-      rollConfig.options.advantageMode = ADV.DISADVANTAGE;
+      rollConfig.options.advantageMode = ADV_MODE.DISADVANTAGE;
     }
     // Note: If both hasAdvantage and hasDisadvantage are true, they cancel out - don't override
     // Clear legacy flags so configureModifiers() uses advantageMode directly

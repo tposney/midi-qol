@@ -264,9 +264,36 @@ Reference: Foundry's `.scrollable` class is defined in `foundry2.css` and sets `
    - `onSave: true` — **always** apply the effect, regardless of save result (i.e. apply even on a successful save)
    - The name `onSave` does NOT mean "only apply if saved" — it means "also apply on save"
 
-2. **Foundry document IDs must be exactly 16 characters**
-   - Effect IDs, item IDs, activity IDs — all must be 16 chars
-   - Example: `befuddledEffct0` (15 chars) silently fails; `befuddledEffect0` (16 chars) works
+2. **CRITICAL: Foundry document IDs must be exactly 16 characters**
+   - This applies to ALL IDs: item `_id`, effect `_id`, activity `_id` — every single one must be exactly 16 chars
+   - **Always count the characters** when creating a new ID. This is a recurring source of bugs — 15-char IDs cause silent failures, undefined `uuid` errors, and tidy5e-sheet crashes
+   - IDs also appear in `_key` fields (e.g., `!items!MyItemId00000000`) and effect `_key` fields (e.g., `!items.effects!MyItemId00000000.myEffectId000000`) — these must be consistent
+   - The filename convention `Name_Id.json` must also match the `_id`
+   - Example: `FingerOfDeath00` (15 chars) causes `doc.uuid` to be undefined → crash; `FingerOfDeath000` (16 chars) works
+   - When in doubt, pad with trailing zeros: `Befuddlement0000` not `Befuddlement000`
+
+3. **Self-only effects must set `flags.dae.selfTarget: true`**
+   - Even if the activity's `target.affects.type` is `"self"`, effects in the activity's effects array will be applied to all targeted actors (e.g., tokens in a template area)
+   - To ensure an effect is only applied to the caster, set `"selfTarget": true` in the effect's `flags.dae` object
+   - Example: Delayed Blast Fireball's "Charging" effect should only apply to the caster, not to creatures in the template area
+   - There is also `selfTargetAlways` which applies the self-effect even when there are no targets
+
+4. **DAE effect changes are reapplied on every actor data recalculation — never use them for mutable state**
+   - A change like `flags.midi-qol.someCounter` with mode OVERRIDE and value `"0"` will reset the flag to 0 every time the actor is recalculated, not just when the effect is first applied
+   - For flags that a macro needs to increment or modify, initialize them in the DAE macro's `args[0] === "on"` handler instead
+   - Effect changes are appropriate for static values (e.g., `macro.itemMacro` to register a macro, or `system.attributes.ac.bonus` for a flat modifier)
+
+5. **Skipping the consume/configuration dialog on an activity**
+   - Use `midiProperties.forceConsumeDialog` set to `"never"` — this is the midi activity property that controls the consume/configuration dialog
+   - Do NOT use `summon.prompt` for this purpose — that controls the summon profile selection dialog, not the consume dialog
+   - Valid values: `"default"` (follow global settings), `"never"` (always skip), `"always"` (always show)
+
+6. **Multi-activity items: always set `otherActivityId` to `"none"` on activities that should NOT auto-pair**
+   - When an item has multiple activities (e.g., "Place Bead" utility + "Trigger Explosion" save), midi-qol will auto-detect an "other activity" if `otherActivityId` is `""` (empty string)
+   - This causes the save activity to be rolled alongside the utility activity, which is wrong for items like Delayed Blast Fireball where the activities are used at different times
+   - **Fix**: Set `"otherActivityId": "none"` on both activities
+   - Also set `"otherActivityCompatible": false` on activities that should never be used as another activity's "other activity"
+   - The `otherActivityId` field: `"none"` = no other activity, `""` = auto-detect, or a specific activity ID/identifier
 
 ### 13.0.38 Changes
 

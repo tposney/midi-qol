@@ -912,6 +912,7 @@ section.midi-qol.tab {
 .midi-qol-dmg-temp,
 .midi-qol-dmg-hp,
 .midi-qol-dmg-vitality,
+.midi-qol-dmg-tempmax,
 .midi-qol-dmg-nochange {
   font-size: 1.05em;
 }
@@ -923,7 +924,8 @@ section.midi-qol.tab {
 /* Damage card icons - consolidated */
 .midi-qol-dmg-temp .fa-shield-alt,
 .midi-qol-dmg-hp .fa-heart,
-.midi-qol-dmg-vitality .fa-heart-crack {
+.midi-qol-dmg-vitality .fa-heart-crack,
+.midi-qol-dmg-tempmax .fa-skull {
   font-size: 14px;
 }
 
@@ -937,6 +939,10 @@ section.midi-qol.tab {
 
 .midi-qol-dmg-vitality .fa-heart-crack {
   color: #000;
+}
+
+.midi-qol-dmg-tempmax .fa-skull {
+  color: #663399;
 }
 
 /* Arrow icon between old and new values */

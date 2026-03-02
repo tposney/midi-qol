@@ -1,0 +1,981 @@
+{
+  "name": "Prismatic Spray",
+  "type": "spell",
+  "img": "icons/magic/light/beams-strike-blue.webp",
+  "effects": [
+    {
+      "_id": "prsmtcRestrained",
+      "changes": [
+        {
+          "key": "flags.midi-qol.OverTime",
+          "mode": 5,
+          "value": "turn=end,saveAbility=con,saveDC=@activity.save.dc.value,saveMagic=true,saveCount=3-,failCount=3-petrified,label=Prismatic Spray (Indigo)",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "transfer": false,
+      "flags": {
+        "dae": {
+          "stackable": false,
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "transfer": false,
+          "dontApply": false,
+          "showIcon": true
+        }
+      },
+      "tint": "#ffffff",
+      "name": "Prismatic Spray (Indigo - Restrained)",
+      "description": "<p>Restrained by the indigo ray of Prismatic Spray. At the end of each turn, the target makes a Constitution saving throw. Three successful saves end the effect. Three failures result in the target being permanently Petrified. The successes and failures need not be consecutive.</p>",
+      "statuses": [
+        "restrained"
+      ],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/defensive/armor-stone-skin.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!PrismaticSpray00.prsmtcRestrained"
+    },
+    {
+      "_id": "prsmtcBlinded000",
+      "changes": [
+        {
+          "key": "flags.midi-qol.OverTime",
+          "mode": 5,
+          "value": "turn=start,saveAbility=wis,saveDC=@activity.save.dc.value,saveMagic=true,saveCount=1-,label=Prismatic Spray (Violet)",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": 1,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "transfer": false,
+      "flags": {
+        "dae": {
+          "stackable": false,
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "transfer": false,
+          "dontApply": false,
+          "showIcon": true
+        }
+      },
+      "tint": "#ffffff",
+      "name": "Prismatic Spray (Violet - Blinded)",
+      "description": "<p>Blinded by the violet ray of Prismatic Spray. At the start of your next turn, make a Wisdom saving throw. On a success, the blindness ends. On a failure, you are teleported to another plane of existence (DM's choice) and the blindness ends.</p>",
+      "statuses": [
+        "blinded"
+      ],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/control/silhouette-grow-shrink-blue.webp",
+      "type": "base",
+      "system": {},
+      "sort": 100,
+      "_key": "!items.effects!PrismaticSpray00.prsmtcBlinded000"
+    }
+  ],
+  "flags": {
+    "midiProperties": {
+      "magicdam": true,
+      "magiceffect": true,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "[postActiveEffects]ItemMacro",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "itemacro": {
+      "macro": {
+        "name": "Prismatic Spray",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "// Prismatic Spray — postActiveEffects macro\n// Only run for the main cast activity, not ray sub-activities\nif (workflow.activity?._id !== \"dnd5eactivity000\") return;\n\n// 2024 PHB rays: 1=Red (Fire), 2=Orange (Acid), 3=Yellow (Lightning),\n// 4=Green (Poison), 5=Blue (Cold), 6=Indigo (Restrained), 7=Violet (Blinded), 8=Two rays\nconst RAY_NAMES = [\"\", \"Red\", \"Orange\", \"Yellow\", \"Green\", \"Blue\", \"Indigo\", \"Violet\"];\nconst RAY_DAMAGE_TYPES = [\"\", \"fire\", \"acid\", \"lightning\", \"poison\", \"cold\"];\nconst RAY_COLORS = [\"\", \"#ff4444\", \"#ff8c00\", \"#ffd700\", \"#22cc22\", \"#4488ff\", \"#6a0dad\", \"#9b30ff\"];\n\nconst failedTargets = new Set(workflow.failedSaves);\nconst allTargets = Array.from(workflow.targets);\nconst rayMap = new Map();\nconst chatLines = [];\n\nfor (const tk of allTargets) {\n  const saved = !failedTargets.has(tk);\n  const roll = await new Roll(\"1d8\").evaluate();\n  let rays;\n  if (roll.total === 8) {\n    const r1 = await new Roll(\"1d7\").evaluate();\n    const r2 = await new Roll(\"1d7\").evaluate();\n    rays = [r1.total, r2.total];\n    chatLines.push(`<b>${tk.name}</b>: d8 = <b>8</b> (two rays!) \\u2192 <span style=\"color:${RAY_COLORS[r1.total]}\">${RAY_NAMES[r1.total]}</span> (d7: ${r1.total}) and <span style=\"color:${RAY_COLORS[r2.total]}\">${RAY_NAMES[r2.total]}</span> (d7: ${r2.total})`);\n  } else {\n    rays = [roll.total];\n    chatLines.push(`<b>${tk.name}</b>: d8 = <b>${roll.total}</b> \\u2192 <span style=\"color:${RAY_COLORS[roll.total]}\">${RAY_NAMES[roll.total]}</span> ray`);\n  }\n  for (const r of rays) {\n    if (!rayMap.has(r)) rayMap.set(r, []);\n    rayMap.get(r).push({ token: tk, saved });\n  }\n}\n\nawait ChatMessage.create({\n  content: `<b>Prismatic Spray — Ray Assignments</b><br>${chatLines.join(\"<br>\")}`,\n  speaker: ChatMessage.getSpeaker({ token: workflow.token })\n});\n\n// Damage rays (1-5): one 12d6 roll per ray type, shared among all targets hit by that ray\nconst targetDamages = [];\nfor (let ray = 1; ray <= 5; ray++) {\n  const targets = rayMap.get(ray);\n  if (!targets) continue;\n  const damageType = RAY_DAMAGE_TYPES[ray];\n  const dmgRoll = await new Roll(\"12d6\").evaluate();\n  for (const { token: tk, saved } of targets) {\n    const damage = saved ? Math.floor(dmgRoll.total / 2) : dmgRoll.total;\n    targetDamages.push({\n      token: tk,\n      damageDetail: [{ value: damage, type: damageType, properties: new Set([\"mgc\"]) }],\n      totalDamage: damage\n    });\n  }\n}\nif (targetDamages.length) {\n  await MidiQOL.applyTokenDamageMany(targetDamages, workflow.item, { workflow, forceApply: false });\n}\n\n// Helper: trigger a ray activity via completeActivityUse\nconst freshItem = actor.items.get(item.id);\nasync function triggerRayEffect(identifier, targetUuids) {\n  if (!targetUuids.length) return;\n  const act = freshItem.system.activities.find(a => a.identifier === identifier);\n  if (act) await MidiQOL.completeActivityUse(act, { midiOptions: { targetUuids } });\n}\n\n// Indigo ray (6): apply Restrained effect (with OverTime CON saves) to failed-save targets\nconst indigoTargets = rayMap.get(6);\nif (indigoTargets) {\n  const failedUuids = indigoTargets.filter(t => !t.saved).map(t => t.token.document.uuid);\n  await triggerRayEffect(\"indigo-ray\", failedUuids);\n}\n\n// Violet ray (7): apply Blinded effect (with OverTime WIS save) to failed-save targets\nconst violetTargets = rayMap.get(7);\nif (violetTargets) {\n  const failedUuids = violetTargets.filter(t => !t.saved).map(t => t.token.document.uuid);\n  await triggerRayEffect(\"violet-ray\", failedUuids);\n}",
+        "sort": 0,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {},
+        "_stats": {
+          "systemId": null,
+          "systemVersion": null,
+          "coreVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null
+        },
+        "_id": null,
+        "folder": null
+      }
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>Eight rays of light flash from you in a 60-foot Cone. Each creature in the Cone makes a Dexterity saving throw. For each target, roll 1d8 to determine which color ray affects it:</p>\n<table><thead><tr><td>d8</td><td>Ray</td><td>Effect</td></tr></thead><tbody><tr><td>1</td><td>Red</td><td>12d6 Fire damage (half on save)</td></tr><tr><td>2</td><td>Orange</td><td>12d6 Acid damage (half on save)</td></tr><tr><td>3</td><td>Yellow</td><td>12d6 Lightning damage (half on save)</td></tr><tr><td>4</td><td>Green</td><td>12d6 Poison damage (half on save)</td></tr><tr><td>5</td><td>Blue</td><td>12d6 Cold damage (half on save)</td></tr><tr><td>6</td><td>Indigo</td><td>Restrained; CON saves to end or become Petrified</td></tr><tr><td>7</td><td>Violet</td><td>Blinded; WIS save or teleported to another plane</td></tr><tr><td>8</td><td>Special</td><td>Struck by two rays (roll 1d7 twice)</td></tr></tbody></table>\n<p><strong>midi-qol automation</strong>: Fully automated. The DEX save determines hit/half damage. The ItemMacro rolls 1d8 per target to assign rays. Damage rays (1–5) deal 12d6 of the appropriate type (half on save). Roll 8 assigns two rays via 1d7 each. Indigo (6) applies Restrained with OverTime CON saves — 3 successes end the effect, 3 failures apply Petrified permanently. Violet (7) applies Blinded with an OverTime WIS save — success ends blindness, failure means teleportation to another plane (DM adjudicates destination).</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024"
+    },
+    "activation": {
+      "type": "action",
+      "condition": "",
+      "value": 1
+    },
+    "duration": {
+      "value": "",
+      "units": "inst"
+    },
+    "target": {
+      "affects": {
+        "type": "creature",
+        "count": "",
+        "choice": false,
+        "special": ""
+      },
+      "template": {
+        "units": "ft",
+        "contiguous": false,
+        "type": "cone",
+        "size": "60"
+      }
+    },
+    "range": {
+      "units": "self",
+      "special": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "ability": "",
+    "level": 7,
+    "school": "evo",
+    "materials": {
+      "value": "",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "preparation": {
+      "mode": "prepared",
+      "prepared": false
+    },
+    "properties": [
+      "vocal",
+      "somatic"
+    ],
+    "activities": {
+      "dnd5eactivity000": {
+        "_id": "dnd5eactivity000",
+        "type": "save",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "type": "cone",
+            "size": "60",
+            "units": "ft"
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "damage": {
+          "onSave": "half",
+          "parts": []
+        },
+        "save": {
+          "ability": [
+            "dex"
+          ],
+          "dc": {
+            "calculation": "spellcasting",
+            "formula": ""
+          }
+        },
+        "name": "",
+        "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      },
+      "prsmtcRedRay0000": {
+        "_id": "prsmtcRedRay0000",
+        "type": "utility",
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "12d6 Fire damage (half on successful DEX save)"
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": false,
+          "template": {
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "units": ""
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "name": "Red Ray",
+        "sort": 100,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": true,
+          "identifier": "red-ray",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      },
+      "prsmtcOrangeRay0": {
+        "_id": "prsmtcOrangeRay0",
+        "type": "utility",
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "12d6 Acid damage (half on successful DEX save)"
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": false,
+          "template": {
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "units": ""
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "name": "Orange Ray",
+        "sort": 200,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": true,
+          "identifier": "orange-ray",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      },
+      "prsmtcYellowRay0": {
+        "_id": "prsmtcYellowRay0",
+        "type": "utility",
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "12d6 Lightning damage (half on successful DEX save)"
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": false,
+          "template": {
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "units": ""
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "name": "Yellow Ray",
+        "sort": 300,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": true,
+          "identifier": "yellow-ray",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      },
+      "prsmtcGreenRay00": {
+        "_id": "prsmtcGreenRay00",
+        "type": "utility",
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "12d6 Poison damage (half on successful DEX save)"
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": false,
+          "template": {
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "units": ""
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "name": "Green Ray",
+        "sort": 400,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": true,
+          "identifier": "green-ray",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      },
+      "prsmtcBlueRay000": {
+        "_id": "prsmtcBlueRay000",
+        "type": "utility",
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "12d6 Cold damage (half on successful DEX save)"
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": false,
+          "template": {
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "units": ""
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "name": "Blue Ray",
+        "sort": 500,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": true,
+          "identifier": "blue-ray",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      },
+      "prsmtcIndigoRay0": {
+        "_id": "prsmtcIndigoRay0",
+        "type": "utility",
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "Restrained — CON saves at end of turn (3 successes to end, 3 failures = Petrified)"
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "prsmtcRestrained",
+            "onSave": false
+          }
+        ],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": false,
+          "template": {
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "units": ""
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "name": "Indigo Ray",
+        "sort": 600,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": true,
+          "identifier": "indigo-ray",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      },
+      "prsmtcVioletRay0": {
+        "_id": "prsmtcVioletRay0",
+        "type": "utility",
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "Blinded — WIS save at start of next turn (success ends, failure = teleported)"
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "prsmtcBlinded000",
+            "onSave": false
+          }
+        ],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": false,
+          "template": {
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "units": ""
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "name": "Violet Ray",
+        "sort": 700,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": true,
+          "identifier": "violet-ray",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    },
+    "identifier": "prismatic-spray",
+    "sourceClass": ""
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "folder": "SpellFldr7thLevl",
+  "_id": "PrismaticSpray00",
+  "sort": 400000,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!PrismaticSpray00"
+}

@@ -80,6 +80,8 @@ export let nsaFlag: boolean;
 export let playerControlsInvisibleTokens: boolean = false;
 export let pruneChatLog: boolean = true;
 export let replaceDefaultActivities: boolean = true;
+export let isDnd5e53: boolean = false;
+export function setDnd5e53(value: boolean) { isDnd5e53 = value; }
 export let saveRequests = {};
 export let saveTimeouts = {};
 export let saveToChatCard: boolean = false;
@@ -1647,14 +1649,6 @@ export const registerSettings = function () {
     onChange: fetchParams
   });
 
-  game.settings.register("midi-qol", "showGM", {
-    scope: "world",
-    default: false,
-    type: Boolean,
-    config: false,
-    onChange: fetchParams
-  });
-
   game.settings.register("midi-qol", "notificationVersion", {
     scope: "world",
     default: "0.0.0",
@@ -1727,6 +1721,16 @@ export const registerSettings = function () {
     config: false,
   });
 
+  game.settings.register("midi-qol", "showGM", {
+    name: i18n("midi-qol.showGM.Name"),
+    hint: i18n("midi-qol.showGM.Hint"),
+    scope: "world",
+    default: false,
+    type: Boolean,
+    config: true,
+    onChange: fetchParams
+  });
+  
   game.settings.register("midi-qol", "ForceHideRoll", {
     name: i18n("midi-qol.ForceHideRoll.Name"),
     hint: i18n("midi-qol.ForceHideRoll.Hint"),

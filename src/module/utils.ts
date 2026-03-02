@@ -1250,14 +1250,14 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
 
     // Check remove Condition
     if ((overTimeActivity.overTimeProperties?.preRemoveConditionText ?? "") !== "" && overTimeActivity.overTimeProperties!.removeConditionBeforeActivity) {
-      const conditionData = createConditionData({ actor, workflow: undefined, target: actor });
+      const conditionData = createConditionData({ actor, workflow: undefined, target: actor, effect });
       if (await evalCondition(activity.overTimeProperties?.preRemoveConditionText ?? "false", conditionData, { async: true })) {
         await effect.delete();
         return;
       }
     }
     if ((overTimeActivity?.useCondition ?? "") !== "") {
-      const conditionData = createConditionData({ actor, workflow: undefined, target: actor });
+      const conditionData = createConditionData({ actor, workflow: undefined, target: actor, effect });
       if (!await evalCondition(activity.useCondition ?? "true", conditionData, { async: true, errorReturn: true })) {
         return; // use condition failed but don't want to thrown an notification warning
       }
@@ -1280,7 +1280,7 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
     }
     // Check remove condition
     if ((activity.overTimeProperties?.postRemoveConditionText ?? "") !== "" && !activity.overTimeProperties!.removeConditionBeforeActivity) {
-      const conditionData = createConditionData({ actor, workflow: overTimeWorkflow, target: actor });
+      const conditionData = createConditionData({ actor, workflow: overTimeWorkflow, target: actor, effect });
       if (await evalCondition(activity.overTimeProperties!.postRemoveConditionText ?? "false", conditionData, { async: true })) {
         await effect.delete();
         return;
@@ -2018,7 +2018,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
   if (effect.disabled || effect.isSuppressed) return;
   const auraFlags = effect.flags?.ActiveAuras ?? {};
   if (auraFlags.isAura && auraFlags.ignoreSelf) return;
-  const rollData = createConditionData({ actor, workflow: undefined, target: actor });
+  const rollData = createConditionData({ actor, workflow: undefined, target: actor, effect });
   if (!rollData.flags) rollData.flags = actor.flags;
   rollData.flags.midiqol = rollData.flags[MODULE_ID];
   const changes = effect.changes.filter(change => change.key.startsWith(`flags.${MODULE_ID}.OverTime`));
@@ -3981,6 +3981,20 @@ export function isAutoFastForward(rollType: FastForwardRollType, { workflow, use
 export function autoConsumeResource(workflow?: Workflow): string {
   if (workflow?.workflowOptions?.autoConsumeResource !== undefined) return workflow.workflowOptions.autoConsumeResource;
   return game.user?.isGM ? configSettings.gmConsumeResource : configSettings.consumeResource;
+}
+
+/**
+ * Retrieve consumption deltas from a ChatMessage or a messageConfig object.
+ * dnd5e 5.3+ stores consumption in system.deltas / data.system.deltas.
+ * dnd5e 5.2.x stored consumption in flags.dnd5e.use.consumed / data.flags.dnd5e.use.consumed.
+ */
+export function getConsumptionData(source: any): any {
+  if (!source) return undefined;
+  // ChatMessage case
+  if (source.system?.deltas != null) return source.system.deltas;
+  if (typeof source.getFlag === "function") return source.getFlag("dnd5e", "use.consumed");
+  // messageConfig case (plain object with .data passed to activity.consume())
+  return source.data?.system?.deltas ?? source.data?.flags?.dnd5e?.use?.consumed;
 }
 
 export function getAutoRollDamage(workflow?: Workflow): string {
@@ -6242,7 +6256,8 @@ export function createConditionData(data: {
   tokenUuid?: string,
   targetUuid?: string,
   options?: any | undefined,
-  token?: TokenOrDocument // pretty sure this never actually gets passed but eh
+  token?: TokenOrDocument, // pretty sure this never actually gets passed but eh
+  effect?: ActiveEffect.Implementation,
 }) {
   const actor = data.workflow?.actor ?? data.actor;
   let item: Item.Implementation | undefined;
@@ -6327,6 +6342,9 @@ export function createConditionData(data: {
       // define like this so it's only called if needed to avoid deprecation warnings
       // @ts-expect-error no dnd5e-types
       Object.defineProperty(rollData.item, "actionType", { get() { return item.system.actionType } });
+    }
+    if (data.effect) {
+      rollData.effect = data.effect;
     }
     if (game.combat) {
       const combat = game.combat;
@@ -6800,6 +6818,22 @@ export async function asyncHooksCallAll(hook: string, ...args): Promise<boolean 
   return true;
 }
 
+/**
+ * Call a cancellable midi hook with all standard variants:
+ * base, .item.uuid, .activity.uuid, and premades equivalents.
+ * Returns false if any hook returns false (short-circuits).
+ */
+export async function callActivityHooks(activity: { uuid: string; item: { uuid: string } }, hookName: string, ...args): Promise<boolean> {
+  if (await asyncHooksCall(hookName, ...args) === false) return false;
+  if (await asyncHooksCall(`${hookName}.${activity.item.uuid}`, ...args) === false) return false;
+  if (await asyncHooksCall(`${hookName}.${activity.uuid}`, ...args) === false) return false;
+  const premadesHook = hookName.replace("midi-qol.", "midi-qol.premades.");
+  if (await asyncHooksCall(premadesHook, ...args) === false) return false;
+  if (await asyncHooksCall(`${premadesHook}.${activity.item.uuid}`, ...args) === false) return false;
+  if (await asyncHooksCall(`${premadesHook}.${activity.uuid}`, ...args) === false) return false;
+  return true;
+}
+
 export async function asyncHooksCall(hook: string, ...args): Promise<boolean | undefined> {
   if (CONFIG.debug.hooks) {
     console.log(`DEBUG | midi-qol async Calling ${hook} hook with args:`);
@@ -6900,8 +6934,8 @@ export function addAttribution(roll: Roll, attributions: AttributionMap) {
  * @returns Localized title string
  */
 export function getAdvantageModeTitle(mode: number | null | undefined): string {
-  const ADV_MODE = CONFIG.Dice.D20Roll.ADV_MODE;
-
+  // @ts-expect-error CONFIG.Dice.D20Roll not typed
+  const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
   if (mode === ADV_MODE.ADVANTAGE) return i18n("DND5E.Advantage");
   if (mode === ADV_MODE.DISADVANTAGE) return i18n("DND5E.Disadvantage");
   return i18n("DND5E.Normal");
@@ -7014,7 +7048,6 @@ export function midiRenderFormulaRoll(roll: Roll, options?: any) {
 
 export async function midiRenderTemplateRoll(roll: Roll | undefined, template: string, options?: any) {
   if (!roll) return "";
-  // @ts-expect-error no dnd5e-types - advantageMode: 1 = advantage, -1 = disadvantage, 0 = normal
   const advantageMode = roll.options?.advantageMode;
   let advantageModeStr: string | undefined;
   if (advantageMode === 1) advantageModeStr = "advantage";

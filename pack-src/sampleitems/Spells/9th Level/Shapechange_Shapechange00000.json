@@ -26,7 +26,7 @@
       "ida": false
     },
     "midi-qol": {
-      "onUseMacroName": "",
+      "onUseMacroName": "[postActiveEffects]ItemMacro",
       "rollAttackPerTarget": "default",
       "itemCondition": "",
       "effectCondition": "",
@@ -43,6 +43,30 @@
       "info": {
         "source": "midi-qol.midiqol-sample-items",
         "version": "13.0.51"
+      }
+    },
+    "itemacro": {
+      "macro": {
+        "name": "Shapechange",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "// Shapechange — add at-will version of the spell to the polymorphed creature\n// so the caster can use their action to assume a different form during the duration.\nconst transformedActors = workflow.transformedActors ?? [];\nif (!transformedActors.length) return;\nconst spellData = item.toObject();\n// Set preparation to at-will so it doesn't consume spell slots\nspellData.system.preparation = { mode: \"atwill\", prepared: true };\n// Remove material cost requirement\nspellData.system.materials = { value: \"\", consumed: false, cost: 0, supply: 0 };\n// Remove concentration (the original caster maintains concentration)\nspellData.system.properties = spellData.system.properties.filter(p => p !== \"concentration\");\n// Disable spell slot consumption and concentration on all activities\nfor (const [id, act] of Object.entries(spellData.system.activities)) {\n  act.consumption = { targets: [], scaling: { allowed: false, max: \"\" }, spellSlot: false };\n  if (act.duration) act.duration.concentration = false;\n}\n// Generate a new ID to avoid conflicts\nspellData._id = foundry.utils.randomID();\n// Mark as at-will transform so it can be identified and cleaned up\nfoundry.utils.setProperty(spellData, \"flags.midi-qol.atWillTransform\", true);\nfor (const polyActor of transformedActors) {\n  await polyActor.createEmbeddedDocuments(\"Item\", [spellData]);\n}",
+        "sort": 0,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {},
+        "_stats": {
+          "systemId": null,
+          "systemVersion": null,
+          "coreVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null
+        },
+        "_id": null,
+        "folder": null
       }
     }
   },

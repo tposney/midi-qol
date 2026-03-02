@@ -1,0 +1,259 @@
+{
+  "name": "Reverse Gravity",
+  "type": "spell",
+  "img": "icons/magic/control/sihouette-hold-beam-green.webp",
+  "effects": [],
+  "flags": {
+    "midiProperties": {
+      "magicdam": true,
+      "magiceffect": true,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "[postActiveEffects]ItemMacro",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "itemacro": {
+      "macro": {
+        "name": "Reverse Gravity",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "// Reverse Gravity — targets that fail DEX save fall upward 100 feet\n// If they hit a ceiling, they take fall damage (1d6 per 10 feet)\n// If no ceiling, they hover at the top of the cylinder\nconst failedTargets = Array.from(workflow.failedSaves);\nif (!failedTargets.length) return;\n\nconst { DialogV2 } = foundry.applications.api;\nconst result = await DialogV2.wait({\n  window: { title: \"Reverse Gravity — Ceiling Height\" },\n  content: `<p>How high is the ceiling above the affected area? (Targets fall upward up to 100 feet.)</p>\n<p>Enter the ceiling height in feet, or 0 if there is no ceiling (targets hover at top).</p>\n<div class=\"form-group\"><label>Ceiling Height (ft)</label><input type=\"number\" name=\"height\" value=\"0\" min=\"0\" max=\"100\" style=\"width:80px\"></div>`,\n  rejectClose: false,\n  buttons: [\n    { action: \"confirm\", label: \"Apply\", default: true, callback: (event, button) => {\n      return parseInt(button.form.elements.height?.value) || 0;\n    }},\n    { action: \"cancel\", label: \"Cancel\" }\n  ]\n});\n\nif (result === undefined || result === null || result === \"cancel\") return;\nconst ceilingHeight = Math.min(Math.max(result, 0), 100);\n\nif (ceilingHeight <= 0) {\n  ChatMessage.create({content: `<strong>Reverse Gravity</strong>: ${failedTargets.map(t => t.name).join(\", \")} fall upward and hover at the top of the cylinder (100 ft). No fall damage — they will fall when the spell ends.`, speaker: ChatMessage.getSpeaker({token: workflow.token})});\n  return;\n}\n\n// Calculate fall damage: 1d6 per 10 feet\nconst d6Count = Math.floor(ceilingHeight / 10);\nif (d6Count <= 0) return;\n\nconst targetDamages = [];\nfor (const token of failedTargets) {\n  const dmgRoll = await new Roll(`${d6Count}d6`).evaluate();\n  targetDamages.push({\n    token,\n    damageDetail: [{value: dmgRoll.total, type: \"bludgeoning\", properties: new Set([\"mgc\"])}],\n    totalDamage: dmgRoll.total\n  });\n}\n\nChatMessage.create({content: `<strong>Reverse Gravity</strong>: ${failedTargets.map(t => t.name).join(\", \")} fall upward ${ceilingHeight} ft and strike the ceiling, taking ${d6Count}d6 bludgeoning damage.`, speaker: ChatMessage.getSpeaker({token: workflow.token})});\n\nif (targetDamages.length) {\n  await MidiQOL.applyTokenDamageMany(targetDamages, workflow.item, {workflow, forceApply: false});\n}",
+        "sort": 0,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {},
+        "_stats": {
+          "systemId": null,
+          "systemVersion": null,
+          "coreVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null
+        },
+        "_id": null,
+        "folder": null
+      }
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>This spell reverses gravity in a 50-foot-radius, 100-foot high Cylinder centered on a point within range. All creatures and objects in that area that aren't anchored to the ground fall upward and reach the top of the Cylinder. A creature can make a Dexterity saving throw to grab a fixed object it can reach, thus avoiding the fall upward.</p>\n<p>If a ceiling or an anchored object is encountered in this upward fall, creatures and objects strike it just as they would during a downward fall. If an affected creature or object reaches the Cylinder's top without striking anything, it hovers there for the duration. When the spell ends, affected objects and creatures fall downward.</p>\n<p><strong>midi-qol</strong>: Automates the DEX save in a 50ft cylinder. On failure, an ItemMacro prompts the GM for the ceiling height. If there is a ceiling, targets take fall damage (1d6 per 10 feet). If no ceiling, targets hover and will fall when the spell ends (not automated).</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024"
+    },
+    "activation": {
+      "type": "action",
+      "condition": "",
+      "value": 1
+    },
+    "duration": {
+      "value": "1",
+      "units": "minute"
+    },
+    "target": {
+      "affects": {
+        "type": "creatureOrObject",
+        "count": "",
+        "choice": false,
+        "special": ""
+      },
+      "template": {
+        "units": "ft",
+        "contiguous": false,
+        "type": "cylinder",
+        "size": "50",
+        "height": "100"
+      }
+    },
+    "range": {
+      "value": "100",
+      "units": "ft",
+      "special": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "ability": "",
+    "level": 7,
+    "school": "trs",
+    "materials": {
+      "value": "a lodestone and iron filings",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "preparation": {
+      "mode": "prepared",
+      "prepared": false
+    },
+    "properties": [
+      "vocal",
+      "somatic",
+      "material",
+      "concentration"
+    ],
+    "activities": {
+      "dnd5eactivity000": {
+        "_id": "dnd5eactivity000",
+        "type": "save",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "minute",
+          "value": "1",
+          "concentration": true,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "type": "cylinder",
+            "size": "50",
+            "height": "100",
+            "units": "ft"
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "damage": {
+          "onSave": "none",
+          "parts": []
+        },
+        "save": {
+          "ability": [
+            "dex"
+          ],
+          "dc": {
+            "calculation": "spellcasting",
+            "formula": ""
+          }
+        },
+        "name": "",
+        "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    },
+    "identifier": "reverse-gravity",
+    "sourceClass": ""
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "folder": "SpellFldr7thLevl",
+  "_id": "ReverseGravity00",
+  "sort": 500000,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!ReverseGravity00"
+}

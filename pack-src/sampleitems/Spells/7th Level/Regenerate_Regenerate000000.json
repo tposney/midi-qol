@@ -1,22 +1,22 @@
 {
-  "name": "Befuddlement",
+  "name": "Regenerate",
   "type": "spell",
-  "img": "icons/skills/trades/academics-investigation-puzzles.webp",
+  "img": "icons/magic/life/cross-explosion-burst-green.webp",
   "effects": [
     {
-      "_id": "befuddledEffect0",
+      "_id": "regenerateOTEff0",
       "changes": [
         {
-          "key": "flags.midi-qol.onUseMacroName",
-          "mode": 0,
-          "value": "ItemMacro, preItemRoll",
+          "key": "flags.midi-qol.OverTime",
+          "mode": 5,
+          "value": "turn=start, damageRoll=1, damageType=healing, label=Regenerate (1 HP/turn)",
           "priority": 20
         }
       ],
       "disabled": false,
       "duration": {
         "startTime": null,
-        "seconds": null,
+        "seconds": 3600,
         "combat": null,
         "rounds": null,
         "turns": null,
@@ -35,8 +35,8 @@
         }
       },
       "tint": "#ffffff",
-      "name": "Befuddled",
-      "description": "<p>Befuddled by the Befuddlement spell. The creature can't cast spells or take the Magic action. At the end of every 30 days, the creature can repeat the Intelligence saving throw, ending the effect on a success. The effect can also be ended by Greater Restoration, Heal, or Wish.</p>",
+      "name": "Regenerate",
+      "description": "<p>Regenerating: regains 1 Hit Point at the start of each turn for 1 hour. Any severed body parts regrow after 2 minutes.</p>",
       "statuses": [],
       "_stats": {
         "compendiumSource": null,
@@ -49,11 +49,11 @@
         "lastModifiedBy": null,
         "exportSource": null
       },
-      "img": "icons/skills/trades/academics-investigation-puzzles.webp",
+      "img": "icons/magic/life/cross-explosion-burst-green.webp",
       "type": "base",
       "system": {},
       "sort": 0,
-      "_key": "!items.effects!Befuddlement000.befuddledEffect0"
+      "_key": "!items.effects!Regenerate000000.regenerateOTEff0"
     }
   ],
   "flags": {
@@ -87,33 +87,6 @@
       "otherCondition": "",
       "removeAttackDamageButtons": "default"
     },
-    "dae": {
-      "macro": {
-        "name": "Befuddlement",
-        "img": "icons/skills/trades/academics-investigation-puzzles.webp",
-        "type": "script",
-        "scope": "global",
-        "command": "if (args[0].tag !== \"OnUse\") return;\nif (workflow.item.type !== \"spell\") return;\nui.notifications.warn(`${actor.name} is Befuddled and cannot cast spells!`);\nreturn false;",
-        "author": "Zl1BOUaPLwDEujaL",
-        "ownership": {
-          "default": 3
-        },
-        "_id": null,
-        "folder": null,
-        "sort": 0,
-        "flags": {},
-        "_stats": {
-          "coreVersion": "13.346",
-          "systemId": "dnd5e",
-          "systemVersion": "4.3.6",
-          "createdTime": null,
-          "modifiedTime": null,
-          "lastModifiedBy": null,
-          "compendiumSource": null,
-          "duplicateSource": null
-        }
-      }
-    },
     "dnd5e": {
       "riders": {
         "activity": []
@@ -128,7 +101,7 @@
   },
   "system": {
     "description": {
-      "value": "<p>You blast the mind of a creature that you can see within range. The target makes an Intelligence saving throw.</p>\n<p>On a failed save, the target takes 10d12 Psychic damage and can't cast spells or take the Magic action. At the end of every 30 days, the target repeats the save, ending the effect on a success. The effect can also be ended by the Greater Restoration, Heal, or Wish spell.</p>\n<p>On a successful save, the target takes half as much damage only.</p>\n<p><strong>midi-qol</strong>: Automates the INT save with 10d12 psychic damage (half on success). On failure, applies a Befuddled effect that prevents the target from casting spells via an ActorOnUse macro (preItemRoll). The 30-day repeat save is not automated and should be managed by the GM.</p>",
+      "value": "<p>A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.</p>\n<p><strong>midi-qol</strong>: Automates the 4d8 + 15 instant healing and applies an OverTime effect that heals 1 HP at the start of each turn for 1 hour.</p>",
       "chat": ""
     },
     "source": {
@@ -136,13 +109,13 @@
       "rules": "2024"
     },
     "activation": {
-      "type": "action",
+      "type": "minute",
       "condition": "",
       "value": 1
     },
     "duration": {
-      "value": "",
-      "units": "inst"
+      "value": "1",
+      "units": "hour"
     },
     "target": {
       "affects": {
@@ -157,8 +130,7 @@
       }
     },
     "range": {
-      "value": "150",
-      "units": "ft",
+      "units": "touch",
       "special": ""
     },
     "uses": {
@@ -167,10 +139,10 @@
       "recovery": []
     },
     "ability": "",
-    "level": 8,
-    "school": "enc",
+    "level": 7,
+    "school": "trs",
     "materials": {
-      "value": "a key ring with no keys",
+      "value": "a prayer wheel",
       "consumed": false,
       "cost": 0,
       "supply": 0
@@ -187,10 +159,10 @@
     "activities": {
       "dnd5eactivity000": {
         "_id": "dnd5eactivity000",
-        "type": "save",
+        "type": "heal",
         "activation": {
-          "type": "action",
-          "value": null,
+          "type": "minute",
+          "value": 1,
           "override": false
         },
         "consumption": {
@@ -205,13 +177,14 @@
           "chatFlavor": ""
         },
         "duration": {
-          "units": "inst",
+          "units": "hour",
+          "value": "1",
           "concentration": false,
           "override": false
         },
         "effects": [
           {
-            "_id": "befuddledEffect0",
+            "_id": "regenerateOTEff0",
             "onSave": false
           }
         ],
@@ -236,35 +209,20 @@
           "max": "",
           "recovery": []
         },
-        "damage": {
-          "onSave": "half",
-          "parts": [
-            {
-              "custom": {
-                "enabled": false,
-                "formula": ""
-              },
-              "number": 10,
-              "denomination": "12",
-              "bonus": "",
-              "types": [
-                "psychic"
-              ],
-              "scaling": {
-                "mode": ""
-              }
-            }
+        "healing": {
+          "number": 4,
+          "denomination": 8,
+          "bonus": "15",
+          "types": [
+            "healing"
           ],
-          "critical": {
-            "allow": false
-          }
-        },
-        "save": {
-          "ability": [
-            "int"
-          ],
-          "dc": {
-            "calculation": "spellcasting",
+          "custom": {
+            "enabled": false,
+            "formula": ""
+          },
+          "scaling": {
+            "mode": "",
+            "number": null,
             "formula": ""
           }
         },
@@ -300,7 +258,7 @@
           "chooseEffects": false
         },
         "useConditionReason": "",
-        "otherActivityId": "none",
+        "otherActivityId": "",
         "isOverTimeFlag": false,
         "overTimeProperties": {
           "saveRemoves": true,
@@ -309,7 +267,7 @@
         }
       }
     },
-    "identifier": "befuddlement",
+    "identifier": "regenerate",
     "sourceClass": ""
   },
   "_stats": {
@@ -323,11 +281,11 @@
     "lastModifiedBy": null,
     "exportSource": null
   },
-  "folder": "SpellFldr8thLevl",
-  "_id": "Befuddlement000",
-  "sort": 0,
+  "folder": "SpellFldr7thLevl",
+  "_id": "Regenerate000000",
+  "sort": 200000,
   "ownership": {
     "default": 0
   },
-  "_key": "!items!Befuddlement000"
+  "_key": "!items!Regenerate000000"
 }

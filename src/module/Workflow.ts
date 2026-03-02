@@ -1,7 +1,7 @@
 import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats } from "../midi-qol.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions, shouldDisplaySaveDC } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions, shouldDisplaySaveDC, isDnd5e53 } from "./settings.js";
 import {
   createDamageDetail,
   processDamageRoll,
@@ -102,6 +102,7 @@ import {
   popTargetSave,
   clearTargetSave,
   getToolLabel,
+  getConsumptionData,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, computeAbilityAdvantage, buildPreComputedAdvantageMap } from "./patching.js";
@@ -109,7 +110,7 @@ import { PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
-import { activityHasScaledTargetCount, computeTargetsFromTemplates, postTemplateConfirmTargets } from "./activities/activityHelpers.js";
+import { activityHasScaledTargetCount, computeTargetsFromTemplates, postTemplateConfirmTargets, requiresTargetConfirmation } from "./activities/activityHelpers.js";
 import { Activity, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
@@ -1574,7 +1575,11 @@ export class Workflow {
 
   get spellLevel(): number {
     let spellLevel;
-    if (this.chatCard) spellLevel = foundry.utils.getProperty(this.chatCard, "flags.dnd5e.use.spellLevel")
+    if (this.chatCard) {
+      spellLevel = isDnd5e53
+        ? foundry.utils.getProperty(this.chatCard, "system.spellLevel")
+        : foundry.utils.getProperty(this.chatCard, "flags.dnd5e.use.spellLevel");
+    }
     return spellLevel ?? this.castData?.castLevel ?? 0;
   }
 
@@ -1612,6 +1617,7 @@ export class Workflow {
   postSummonHookId: number | undefined;
   summonedCreatures: TokenDocument.Implementation[] | undefined;
   transformedActorUuids: string[] | undefined;
+  transformedActors: Actor.Implementation[] | undefined;
   kickStart: boolean | undefined;
   disadvantageSaves: Set<Token.Implementation> | undefined;
   saveResults: Roll[] | undefined; /* D20Roll */
@@ -1778,6 +1784,7 @@ export class Workflow {
     if (options.workflowOptions)
       foundry.utils.mergeObject(this.workflowOptions, options.workflowOptions, { overwrite: true });
     if (this.activity.midiProperties?.noConcentrationCheck) this.workflowOptions.noConcentrationCheck = true;
+    if (this.workflowOptions.templateUuid) this.templateUuid = this.workflowOptions.templateUuid;
 
     this.defaultDamageType = getActivityDefaultDamageType(this) ?? MidiQOL.MQdefaultDamageType;
     MidiQOL.MQdefaultDamageType = this.defaultDamageType; // Set the default damage type for the module.
@@ -1956,18 +1963,7 @@ export class Workflow {
       return true;
     }
     if (debugEnabled > 1) log(`callHooksForAction | ${prePost} ${this.nameForState(action)}`)
-    let hookName = `midi-qol.${prePost}${this.nameForState(action)}`
-    if (await asyncHooksCall(hookName, this) === false) return false;
-    if (this.item && await asyncHooksCall(`${hookName}.${this.item.uuid}`, this) === false) return false;
-    if (this.activity && await asyncHooksCall(`${hookName}.${this.activity.uuid}`, this) === false) return false;
-    if (await asyncHooksCall(`${hookName}.${this.id}`, this) === false) return false;
-    hookName = `midi-qol.premades.${prePost}${this.nameForState(action)}`
-    if (await asyncHooksCall(hookName, this) === false) return false;
-    if (this.item && await asyncHooksCall(`${hookName}.${this.item.uuid}`, this) === false) return false;
-    if (this.activity && await asyncHooksCall(`${hookName}.${this.activity.uuid}`, this) === false) return false;
-    if (await asyncHooksCall(`${hookName}.${this.id}`, this) === false) return false;
-
-    return true;
+    return this.callCancellableHooks(`midi-qol.${prePost}${this.nameForState(action)}`);
   }
   async callOnUseMacrosForAction(prePost: ("pre" | "post"), action: WorkflowState): Promise<(DamageBonusMacroResult | any)[]> {
     if (!configSettings.allowUseMacro || this.workflowOptions.noOnUseMacro === true) {
@@ -2188,7 +2184,9 @@ export class Workflow {
    * @returns The rendered HTML string
    */
   async renderAttributionTooltip(): Promise<string> {
-    const mode = this.attackRoll?.options?.advantageMode ?? this.attackRollModifierTracker.advantageMode ?? CONFIG.Dice.D20Roll.ADV_MODE.NORMAL;
+    // @ts-expect-error CONFIG.Dice.D20Roll not typed
+    const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
+    const mode = this.attackRoll?.options?.advantageMode ?? this.attackRollModifierTracker.advantageMode ?? ADV_MODE.NORMAL;
     const title = getAdvantageModeTitle(mode);
     return renderAttributionTooltip(this.attackAttribution ?? {}, title);
   }
@@ -2361,7 +2359,8 @@ export class Workflow {
     // Also handle non-AoE activities with a scaled target count (e.g. Bless upcast)
     // By this point, dnd5e.preUseActivity has replaced the workflow activity with the scaled version
     const hasScaledTargetCount = activityHasScaledTargetCount(this.activity);
-    if ((hasAoETemplate || emanationNoTemplate || hasScaledTargetCount) && this.workflowOptions.targetConfirmation !== "none") {
+    const forceConfirmation = requiresTargetConfirmation(this.activity, { workflowOptions: this.workflowOptions });
+    if ((hasAoETemplate || emanationNoTemplate || hasScaledTargetCount || forceConfirmation) && this.workflowOptions.targetConfirmation !== "none") {
       if (!await postTemplateConfirmTargets(this.activity, { workflowOptions: this.workflowOptions }, this)) {
         return this.WorkflowState_Abort;
       }
@@ -2405,10 +2404,10 @@ export class Workflow {
     if (configSettings.undoWorkflow) await saveTargetsUndoData(this);
     this.effectsAlreadyExpired = [];
 
-    if (await asyncHooksCall("midi-qol.targetingComplete", this) === false) {
+    if (await this.callCancellableHooks("midi-qol.targetingComplete") === false) {
       ui.notifications?.warn(`midi-qol | Targeting complete hook cancelled roll`);
       return this.WorkflowState_Abort;
-    };
+    }
     if ((!getAutoRollAttack(this) && this.activity.attack) || this.activity instanceof MidiTransformActivity) {
       // Not auto rolling so display targets
       const rollMode = safeGetGameSetting("core", "rollMode");
@@ -2476,9 +2475,7 @@ export class Workflow {
     if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["isAttacked"]);
     await this.processAttackRoll();
     // REFACTOR look at splitting this into a couple of states
-    await asyncHooksCallAll("midi-qol.preCheckHits", this);
-    if (this.item) await asyncHooksCallAll(`midi-qol.preCheckHits.${this.item.uuid}`, this);
-    if (this.activity) await asyncHooksCallAll(`midi-qol.preCheckHits.${this.activity.uuid}`, this);
+    await this.callMidiHooks("midi-qol.preCheckHits");
     if (this.aborted) return this.WorkflowState_Abort;
 
     if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
@@ -2490,8 +2487,6 @@ export class Workflow {
     this.recordAttackStats();
 
     if (configSettings.autoCheckHit !== "none") {
-      //@ts-e xpect-error
-      // if (ui.chat?._shouldShowNotifications()) await Dialog.confirm();
       await this.displayAttackRoll({ GMOnlyAttackRoll: true });
       this.recordTargetACModifiers();
       await this.recordFlankingBonuses();
@@ -2499,28 +2494,17 @@ export class Workflow {
       await this.displayAttackRoll();
       const rollMode = safeGetGameSetting("core", "rollMode");
       this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === CONST.DICE_ROLL_MODES.BLIND || rollMode === CONST.DICE_ROLL_MODES.PRIVATE;
-      await asyncHooksCallAll("midi-qol.hitsChecked", this);
-      if (this.item)
-        await asyncHooksCallAll(`midi-qol.hitsChecked.${this.item.uuid}`, this);
-      if (this.activity)
-        await asyncHooksCallAll(`midi-qol.hitsChecked.${this.activity.uuid}`, this);
-      if (this.aborted)
-        return this.WorkflowState_Abort;
+      await this.callMidiHooks("midi-qol.hitsChecked");
+      if (this.aborted) return this.WorkflowState_Abort;
       await this.displayHits(this.whisperAttackCard);
     } else {
       await this.displayAttackRoll();
     }
     if (checkRule("removeHiddenInvis")) await removeHidden.bind(this)();
     if (checkRule("removeHiddenInvis")) await removeInvisible.bind(this)();
-    /*
-    const attackExpiries = [
-      "isAttacked"
-    ];
-    await this.expireTargetEffects(attackExpiries);
-    */
+    await this.expireTargetEffects(["isAttacked"]);
 
-    await asyncHooksCallAll("midi-qol.AttackRollComplete", this);
-    if (this.item) await asyncHooksCallAll(`midi-qol.AttackRollComplete.${this.id}`, this);
+    await this.callMidiHooks("midi-qol.AttackRollComplete");
     if (this.aborted) return this.WorkflowState_Abort;
 
     if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
@@ -2542,7 +2526,6 @@ export class Workflow {
         return this.WorkflowState_ConfirmRoll;
       if (this.workflowOptions.forceCompletion || configSettings.autoCompleteWorkflow) {
         expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"])
-        await this.expireTargetEffects(["isAttacked"]);
         return this.WorkflowState_RollFinished;
       }
       // if (configSettings.autoRollDamage !== "always") return this.WorkflowState_RollFinished;
@@ -2631,7 +2614,6 @@ export class Workflow {
   }
   async WorkflowState_RollConfirmed(context: WorkflowContext = {}): Promise<WorkflowState> {
     expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"])
-    await this.expireTargetEffects(["isAttacked"]);
     return this.WorkflowState_DamageRollStarted;
   }
   async WorkflowState_DamageRollStarted(context: WorkflowContext = {}): Promise<WorkflowState> {
@@ -2656,12 +2638,10 @@ export class Workflow {
       await this.callMacros(this.item, this.onUseMacros?.getMacros("postDamageRoll"), "OnUse", "postDamageRoll");
       if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros("postDamageRoll"), "OnUse", "postDamageRoll");
     }
-    await asyncHooksCallAll("midi-qol.DamageRollComplete", this);
-    if (this.item) await asyncHooksCallAll(`midi-qol.DamageRollComplete.${this.item.uuid}`, this);
+    await this.callMidiHooks("midi-qol.DamageRollComplete");
     if (this.aborted) return this.WorkflowState_Abort;
     if (this.hitTargets?.size || this.hitTargetsEC?.size) expireMyEffects.bind(this)(["1Hit"]);
     expireMyEffects.bind(this)(["1Action", "1Attack", "1Spell", "1Critical", "1Fumble"]);
-    await this.expireTargetEffects(["isAttacked"]);
     await this.displayDamageRolls();
 
     if (this.isFumble) {
@@ -2734,8 +2714,7 @@ export class Workflow {
     await this.displaySaveTargets();
     this.initSaveResults();
     if (configSettings.autoCheckSaves !== "none") {
-      await asyncHooksCallAll("midi-qol.preCheckSaves", this);
-      if (this.item) await asyncHooksCallAll(`midi-qol.preCheckSaves.${this.item.uuid}`, this);
+      await this.callMidiHooks("midi-qol.preCheckSaves");
       if (this.aborted) return this.WorkflowState_Abort;
       if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length)
       // setup to process saving throws as generated
@@ -2758,14 +2737,12 @@ export class Workflow {
       }
       if (debugEnabled > 1) debug("Check Saves: ", this.saveRequests, this.saveTimeouts, this.saves);
       if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessageHTML"]?.length)
-      await asyncHooksCallAll("midi-qol.postCheckSaves", this);
-      if (this.item) await asyncHooksCallAll(`midi-qol.postCheckSaves.${this.item.uuid}`, this);
+      await this.callMidiHooks("midi-qol.postCheckSaves");
       if (this.aborted) return this.WorkflowState_Abort;
       const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity.saveDisplay;
       await Workflow.removeItemCardButtons(this.itemCardUuid as string, { removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none", removeDnd5eTemplateButtons: this.placedTemplateCount >= (Number(this.activity?.target?.template?.count) || 1) });
       await this.displaySaves(saveDisplay === "whisper");
     } else {// has saves but we are not checking so do nothing with the damage
-      await this.expireTargetEffects(["isAttacked"])
       this.effectTargets = this.failedSaves;
       return this.WorkflowState_RollFinished;
     }
@@ -2863,7 +2840,7 @@ export class Workflow {
         }
         // Store consumed delta data on chat card for refund capability
         // Use empty object if user chose not to consume - this still marks consumption as "checked"
-        const consumed = messageConfig.data?.flags?.dnd5e?.use?.consumed ?? {};
+        const consumed = getConsumptionData(messageConfig) ?? {};
         // Get scaling from the dialog's return value (otherUsageConfig), not messageConfig
         // consume() handles resources but doesn't set up scaling flags
         const scaling = otherUsageConfig.scaling;
@@ -2907,7 +2884,7 @@ export class Workflow {
       }
       // Store consumed delta data on chat card for refund capability
       // Use empty object if nothing was consumed - this still marks consumption as "checked"
-      const consumed = messageConfig.data?.flags?.dnd5e?.use?.consumed ?? {};
+      const consumed = getConsumptionData(messageConfig) ?? {};
       // For auto-consume, scaling is from otherUsageConfig (default is 0/undefined)
       const scaling = otherUsageConfig.scaling;
       if (this.itemCardUuid) {
@@ -3049,7 +3026,6 @@ export class Workflow {
 
     // Do special expiries
     const specialExpiries = [
-      "isAttacked",
       "isDamaged",
       "isHealed",
       "isSaveSuccess",
@@ -3433,7 +3409,10 @@ export class Workflow {
             foundry.utils.setProperty(usage, "midiOptions.isCritical", this.isCritical);
             foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringWorkflowId", this.id);
             foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringActivityUuid", this.activity.uuid);
-            await completeActivityUse(triggeredActivity, usage, {}, {});
+            const triggerConsume = this.activity.midiProperties?.triggeredActivityConsume ?? true;
+            const triggerConfigure = this.activity.midiProperties?.triggeredActivityConfigure ?? true;
+            if (!triggerConsume) foundry.utils.setProperty(usage, "consume", { resources: false, spellSlot: false, action: false });
+            await completeActivityUse(triggeredActivity, usage, { configure: triggerConfigure }, {});
           }
         }
       }
@@ -3546,9 +3525,7 @@ export class Workflow {
     // Template cleanup is now handled by setupTemplateCleanup in unSuspend
 
     if (configSettings.autoRemoveSummonedCreature && this.summonedCreatures && this.summonedCreatures.length > 0) {
-      // @ts-expect-error no dnd5e-types
-      const hasConcentration: boolean = this.item.requiresConcentration;
-      let origin = hasConcentration && this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "");
+      let origin = getConcentrationEffect(this.actor, this.item);
       if (origin) {
         for (let sc of this.summonedCreatures) {
           //@ts-expect-error
@@ -3609,11 +3586,19 @@ export class Workflow {
     }
 
     if (configSettings.autoUndoTransformations && this.transformedActorUuids && this.transformedActorUuids.length > 0) {
-      // @ts-expect-error no dnd5e-types
-      const hasConcentration: boolean = this.item.requiresConcentration;
-      let origin = hasConcentration && this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "");
+      let origin = getConcentrationEffect(this.actor, this.item);
       if (origin) {
-        origin.setFlag("midi-qol", "transformedActorUuids", this.transformedActorUuids);
+        await origin.setFlag("midi-qol", "transformedActorUuids", this.transformedActorUuids);
+        // Also set the flag on the polymorphed actors' concentration effects,
+        // since the player controls the polymorphed form and concentration breaks there
+        if (this.transformedActors) {
+          for (const polyActor of this.transformedActors) {
+            const polyConcentration = getConcentrationEffect(polyActor, this.item);
+            if (polyConcentration) {
+              await polyConcentration.setFlag("midi-qol", "transformedActorUuids", this.transformedActorUuids);
+            }
+          }
+        }
       } else {
         // need to create an effect to remove the summoned creatures
         const activityDuration = this.activity.duration;
@@ -3670,8 +3655,7 @@ export class Workflow {
       }
     }
 
-    await asyncHooksCallAll("midi-qol.postActiveEffects", this);
-    if (this.item) await asyncHooksCallAll(`midi-qol.postActiveEffects.${this.item.uuid}`, this);
+    await this.callMidiHooks("midi-qol.postActiveEffects");
     // Call onUseMacro if not already called
     if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
       await this.callMacros(this.item, this.onUseMacros?.getMacros("postActiveEffects"), "OnUse", "postActiveEffects");
@@ -3679,8 +3663,7 @@ export class Workflow {
     }
     if (this.aborted) return this.WorkflowState_Abort;  // TODO This is wrong
 
-    await asyncHooksCallAll("midi-qol.RollComplete", this);
-    if (this.item) await asyncHooksCallAll(`midi-qol.RollComplete.${this.item.uuid}`, this);
+    await this.callMidiHooks("midi-qol.RollComplete");
     if (this.aborted) return this.WorkflowState_Abort;  // TODO This is wrong
     if (autoRemoveTargets !== "none") setTimeout(untargetDeadTokens, 500); // delay to let the updates finish
     const inCombat = this.actor && isInCombat(this.actor);
@@ -4196,6 +4179,27 @@ export class Workflow {
       }
     }
     return results;
+  }
+
+  async callMidiHooks(...hookNames: string[]): Promise<void> {
+    for (const hookName of hookNames) {
+      await asyncHooksCallAll(hookName, this);
+      if (this.item) await asyncHooksCallAll(`${hookName}.${this.item.uuid}`, this);
+      if (this.activity) await asyncHooksCallAll(`${hookName}.${this.activity.uuid}`, this);
+    }
+  }
+
+  async callCancellableHooks(hookName: string): Promise<boolean> {
+    if (await asyncHooksCall(hookName, this) === false) return false;
+    if (this.item && await asyncHooksCall(`${hookName}.${this.item.uuid}`, this) === false) return false;
+    if (this.activity && await asyncHooksCall(`${hookName}.${this.activity.uuid}`, this) === false) return false;
+    if (await asyncHooksCall(`${hookName}.${this.id}`, this) === false) return false;
+    const premadesHook = hookName.replace("midi-qol.", "midi-qol.premades.");
+    if (await asyncHooksCall(premadesHook, this) === false) return false;
+    if (this.item && await asyncHooksCall(`${premadesHook}.${this.item.uuid}`, this) === false) return false;
+    if (this.activity && await asyncHooksCall(`${premadesHook}.${this.activity.uuid}`, this) === false) return false;
+    if (await asyncHooksCall(`${premadesHook}.${this.id}`, this) === false) return false;
+    return true;
   }
 
   async expireTargetEffects(expireList: string[]) {
@@ -4831,8 +4835,7 @@ return {
 
   async displayAttackRoll(displayOptions: { GMOnlyAttackRoll?: boolean } = {}) {
     // @ts-expect-error CONFIG.Dice.D20Roll not typed
-    const ADV_MODE: { DISADVANTAGE, NORMAL, ADVANTAGE } = CONFIG.Dice.D20Roll.ADV_MODE;
-
+    const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
     const chatMessage = this.chatCard;
     let newFlags = {};
     let content;
@@ -5393,19 +5396,18 @@ return {
    * Handles advantage/disadvantage display, cover bonus, and roll rendering
    * @param target The target token
    * @param saveRoll The save roll result
-   * @param saveRollTotal The total of the save roll
    * @param saved Whether the target saved
    * @param rollDC The save DC (or undefined if no DC)
-   * @param coverSaveBonus Computed cover bonus (for label when no cover status)
+   * @param coverSaveBonus Computed cover bonus (for label when no cover status); total cover displays as ∞
    */
   protected async buildSaveDisplayEntry(
     target: Token,
     saveRoll: Roll,
-    saveRollTotal: number,
     saved: boolean,
     rollDC: number | undefined,
     coverSaveBonus: number = 0,
   ): Promise<void> {
+    const saveRollTotal = coverSaveBonus >= TOTAL_COVER ? Infinity : (saveRoll.total ?? 0);
     let adv = "";
     if (configSettings.displaySaveAdvantage) {
       adv = this.advantageSaves.has(target) ? `(${i18n("DND5E.Advantage")})` : "";
@@ -5457,7 +5459,9 @@ return {
       }
     }
     const advMode = chosenTracker ?? saveDetails?.modifierTracker;
-    const mode = saveRoll?.options?.advantageMode ?? advMode?.advantageMode ?? CONFIG.Dice.D20Roll.ADV_MODE.NORMAL;
+    // @ts-expect-error CONFIG.Dice.D20Roll not typed
+    const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
+    const mode = saveRoll?.options?.advantageMode ?? advMode?.advantageMode ?? ADV_MODE.NORMAL;
     const title = getAdvantageModeTitle(mode);
     const attributionTooltip = await renderAttributionTooltip(advMode?.attribution ?? {}, title);
 
@@ -5474,11 +5478,15 @@ return {
     // Build save tooltip showing breakdown: "15 = 1d20(12) + 3 vs DC 14"
     let saveTooltip: string | undefined;
     if (rollDC !== undefined) {
-      const resultString = saveRoll.result;
-      if (resultString && resultString !== String(saveRollTotal)) {
-        saveTooltip = `${saveRollTotal} = ${resultString} vs DC ${rollDC}`;
+      if (!isFinite(saveRollTotal)) {
+        saveTooltip = `∞ vs DC ${rollDC}`;
       } else {
-        saveTooltip = `${saveRollTotal} vs DC ${rollDC}`;
+        const resultString = saveRoll.result;
+        if (resultString && resultString !== String(saveRollTotal)) {
+          saveTooltip = `${saveRollTotal} = ${resultString} vs DC ${rollDC}`;
+        } else {
+          saveTooltip = `${saveRollTotal} vs DC ${rollDC}`;
+        }
       }
     }
 
@@ -5494,7 +5502,7 @@ return {
         + (saved ? "fa-check" : "fa-xmark")),
       saveTotalClass: target.actor?.hasPlayerOwner ? "" : "midi-qol-npc-save-total",
       saveToolTipClass: target.actor?.hasPlayerOwner ? "" : "midi-qol-npc-save-tooltip",
-      rollTotal: String(saveRollTotal),
+      rollTotal: isFinite(saveRollTotal) ? String(saveRollTotal) : "∞",
       rollDetail: "",
       rollHTML,
       id: target.id,
@@ -5594,30 +5602,44 @@ return {
     // Get the raw module-computed cover bonus
     let moduleCoverBonus = 0;
 
-    // Area of effect with template
-    if (activityHasAreaTarget(this.activity) && template) {
-      const position = foundry.utils.duplicate(template.center);
+    // Determine the cover origin point: explicit coverOrigin > template center > caster token
+    let position: { x: number, y: number } | undefined;
+    let originElevation: number = this.token?.document?.elevation ?? 0;
+
+    if (this.workflowOptions.coverOrigin) {
+      position = { x: this.workflowOptions.coverOrigin.x, y: this.workflowOptions.coverOrigin.y };
+      originElevation = this.workflowOptions.coverOrigin.elevation ?? originElevation;
+    } else if (template) {
+      position = foundry.utils.duplicate(template.center);
       const dimensions = canvas.dimensions;
       if (template.document.t === "rect") {
         position.x += (template.document.width ?? 1) / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
         position.y += (template.document.width ?? 1) / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
       }
+      originElevation = template.document.elevation;
+    }
 
+    if (position) {
+      // Cover calculation from a point (coverOrigin, template center, etc.)
       if (configSettings.optionalRules.coverCalculation === "levelsautocover"
         && installedModules.get("levelsautocover")) {
-        // TODO Fix this monstrosity
         moduleCoverBonus = computeCoverBonus({
           center: position,
+          x: position.x,
+          y: position.y,
           id: this.token?.id,
+          elevation: originElevation,
+          getCenterPoint() { return { x: position.x, y: position.y }; },
           document: {
-            elevation: template.document.elevation,
+            x: position.x,
+            y: position.y,
+            elevation: originElevation,
             disposition: targetDocument?.disposition,
             object: { id: this.token?.id },
           }
         } as unknown as Token, target, this.activity);
       } else if (configSettings.optionalRules.coverCalculation === "simbuls-cover-calculator"
         && installedModules.get("simbuls-cover-calculator")) {
-        // Special case for templates
         const coverData = await globalThis.CoverCalculator.checkCoverViaCoordinates(
           position.x, position.y, false, 'AoE', false, target);
         if (coverData?.data.results.cover === 3) moduleCoverBonus = TOTAL_COVER;
@@ -5632,21 +5654,20 @@ return {
           id: this.token?.id,
           x: position.x,
           y: position.y,
-          elevation: template.document.elevation,
+          elevation: originElevation,
           getCenterPoint() { return { x: position.x, y: position.y }; },
           document: {
             x: position.x,
             y: position.y,
-            elevation: template.document.elevation,
+            elevation: originElevation,
             disposition: targetDocument?.disposition,
             getCenterPoint() { return { x: position.x, y: position.y }; },
-            object: { id: this.token?.id },
           }
         };
         moduleCoverBonus = computeCoverBonus(syntheticAttacker as unknown as Token, target, this.activity);
       }
     } else if (this.token) {
-      // Direct targeting (no template)
+      // Direct targeting (no template) — cover from caster position
       moduleCoverBonus = computeCoverBonus(this.token, target, this.activity);
     }
     const effectiveCoverBonus = Math.max(moduleCoverBonus, statusCoverBonus);
@@ -5656,7 +5677,13 @@ return {
       // If actor has status cover, dnd5e already added it — we need to negate it
       return -statusCoverBonus;
     }
-    if (effectiveCoverBonus === TOTAL_COVER) return TOTAL_COVER;
+    if (effectiveCoverBonus === TOTAL_COVER) {
+      if (this.activity.midiProperties?.ignoreFullCover) {
+        // Downgrade total cover to three-quarters
+        return Math.max(THREE_QUARTERS_COVER - statusCoverBonus, 0);
+      }
+      return TOTAL_COVER;
+    }
     // dnd5e already includes status cover in the DEX save bonus.
     // Return only the delta: how much module cover exceeds status cover.
     return Math.max(moduleCoverBonus - statusCoverBonus, 0);
@@ -5687,7 +5714,6 @@ return {
    * @param result The roll result array
    */
   protected updateAdvantageTrackingFromRoll(target: Token, result: Roll[]): void {
-    // @ts-expect-error no dnd5e-types - advantageMode: 1 = advantage, -1 = disadvantage, 0 = normal
     const advantageMode = result[0]?.options?.advantageMode;
     if (advantageMode !== undefined) {
       // Standard dnd5e roll with advantageMode
@@ -6282,7 +6308,7 @@ return {
     this.updateAdvantageTrackingFromRoll(target, result);
     let { isFumble, isCritical } = this.determineCriticalOrFumble(saveRolls[0], saveRollTotal);
     const coverSaveBonus = await this.calculateCoverSaveBonus(target, template, rollAbility);
-    if (coverSaveBonus > 0 && saveRolls[0]) {
+    if (coverSaveBonus > 0 && coverSaveBonus < TOTAL_COVER && saveRolls[0]) {
       // Inject cover bonus into the roll so it's visible in the roll tooltip
       const OperatorTerm = foundry.dice.terms.OperatorTerm;
       const NumericTerm = foundry.dice.terms.NumericTerm;
@@ -6306,6 +6332,9 @@ return {
       saved = (isCritical || saveRollTotal >= resultDC) && !isFumble;
     }
     if (this.checkSculptOrCarefulSpells(target)) {
+      saved = true;
+    }
+    if (coverSaveBonus >= TOTAL_COVER) {
       saved = true;
     }
 
@@ -6365,7 +6394,7 @@ return {
     this.updateSaveFailSets(target, saved);
 
     if (game.user?.isGM) log(`Ability save/check: ${target.name} rolled ${saveRollTotal} vs ${rollAbility} DC ${rollDC}`);
-    await this.buildSaveDisplayEntry(target, saveRolls[0], saveRollTotal, saved, rollDC, coverSaveBonus);
+    await this.buildSaveDisplayEntry(target, saveRolls[0], saved, rollDC, coverSaveBonus);
   }
 
   /**
@@ -6726,9 +6755,9 @@ return {
     const results = this.normalizeRollResults(rawResults, D20Roll);
     this.saveResults = results.filter(r => !!r).flat();
 
-    // Get template for area target saves
+    // Get template for area target saves (also when templateUuid is set explicitly via midiOptions)
     let template: foundry.canvas.placeables.MeasuredTemplate.Implementation | undefined | null;
-    if (activityHasAreaTarget(this.activity) && this.templateUuid) {
+    if (this.templateUuid) {
       const templateDocument = await fromUuid(this.templateUuid) as MeasuredTemplateDocument | null;
       template = templateDocument?.object;
     }
@@ -7985,7 +8014,6 @@ export class SavesFirstWorkflow extends Workflow {
         return this.WorkflowState_ConfirmRoll;
       if (this.workflowOptions.forceCompletion || configSettings.autoCompleteWorkflow) {
         expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"])
-        await this.expireTargetEffects(["isAttacked"]);
         return this.WorkflowState_RollFinished;
       }
     }
@@ -8785,8 +8813,7 @@ export class DDBGameLogWorkflow extends Workflow {
   async WorkflowState_AttackRollComplete(context: WorkflowContext = {}): Promise<WorkflowState> {
     this.effectsAlreadyExpired = [];
     if (checkRule("removeHiddenInvis")) await removeHidden.bind(this)();
-    await asyncHooksCallAll("midi-qol.preCheckHits", this);
-    if (this.item) await asyncHooksCallAll(`midi-qol.preCheckHits.${this.item.uuid}`, this);
+    await this.callMidiHooks("midi-qol.preCheckHits");
 
     if (debugEnabled > 1) debug(this.attackRollHTML)
     if (configSettings.autoCheckHit !== "none" && this.activity.attack) {
@@ -8794,8 +8821,7 @@ export class DDBGameLogWorkflow extends Workflow {
       await this.checkHits(this.workflowOptions);
       await this.displayHits(configSettings.autoCheckHit === "whisper");
     }
-    await asyncHooksCallAll("midi-qol.AttackRollComplete", this);
-    if (this.item) await asyncHooksCallAll(`midi-qol.AttackRollComplete.${this.item.uuid}`, this);
+    await this.callMidiHooks("midi-qol.AttackRollComplete");
     if (this.aborted) return this.WorkflowState_Abort;
     return this.WorkflowState_WaitForDamageRoll;
   }
@@ -9012,6 +9038,8 @@ export type WorkflowOptions = InexactPartial<{
   workflowName: string;
   castUsesReaction: boolean;
   castUsesBonusAction: boolean;
+  coverOrigin: { x: number, y: number, elevation?: number };
+  templateUuid: string;
   preSelectedTargetUuids: string[];
 }>
 

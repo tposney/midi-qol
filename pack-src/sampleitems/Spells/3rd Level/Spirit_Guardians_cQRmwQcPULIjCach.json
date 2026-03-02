@@ -15,13 +15,13 @@
         {
           "key": "flags.midi-qol.OverTime",
           "mode": 5,
-          "value": "turn=start,\nlabel=Spirit  Guardians,\ndamageRoll=(@spellLevel)d8,\ndamageType=radiant,\nsaveRemove=false,\nsaveDC=@attributes.spelldc,\nsaveAbility=wis,\nsaveDamage=halfdamage,\nkillAnim=true",
+          "value": "turn=start,\nlabel=Spirit  Guardians,\ndamageRoll=(@spellLevel)d8,\ndamageType=radiant,\nsaveRemove=false,\nsaveDC=@activity.save.dc.value,\nsaveAbility=wis,\nsaveDamage=halfdamage,\nkillAnim=true",
           "priority": 20
         },
         {
           "key": "macro.itemMacro",
           "mode": 0,
-          "value": "@token @spellLevel @attributes.spelldc",
+          "value": "@token @spellLevel @attributes.spell.dc",
           "priority": 20
         }
       ],

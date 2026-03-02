@@ -1,15 +1,30 @@
 ### 13.0.52
 **Bug Fixes**
+* Fix for skill/tool checks when showing the configuration dialog to allow choosing the ability to use, matches dnd5e functionality.
 * If a utility activity has no damage, but the other activity does and the other activity condition prevents it from firing, midi would loop endlessly trying to roll damage until the failsafe cut in and the workflow gets aborted.
+* Fix attack/save advantage mode label on chat cards showing the wrong mode after re-render. The displayed label now uses the resolved roll result rather than the pre-roll tracker state. (MR !407, thatlonelybugbear).
+* The isAttacked special duration will now continue to only fire for activities that have an attack roll. It will now fire only when the attack roll completes, previously it was also checked at other points in the workflow, after the damage roll completed for example.
 
 **New Features**
 * Midi sample items now records version numbers that means it is compatible with CPR medkit and will track changes to items when you medkit the item/actor.
   - I'd recommend that you give midi's sample items a higher compendium search number than the rest of the automation libraries, since you probably want those items in preference to midi's sample items.
-  - I've included a few spells of level 8/9, the most notable being mass heal which now works properly to apportion hit points. If only I'd done this before I finished my level 20 campaign.
+  - Added some spells for levels 7-9:
+    - **7th Level**: Delayed Blast Fireball, Divine Word, Finger of Death, Prismatic Spray, Regenerate, Reverse Gravity
+    - **8th Level**: Befuddlement, Power Word Stun
+    - **9th Level**: Foresight, Imprisonment, Meteor Swarm, Power Word Kill, Shapechange, Storm of Vengeance, True Polymorph, True Resurrection, Weird
+  - Notable: Finger of Death will summon the zombie if the target dies, Prismatic Spray handles all the colours, Storm of Vengeance fully automates rounds 1-10, Mass Heal allows proper apportionment of healing.
+  * 13.0.52 is tentatively marked as compatible with dnd5e 5.3. It requires a dae update as well
+    - significant changes to damage handling, so there might be bugs there.
+    - support for damage to max hit points (tempmax).
+    - change in the display of advantage rolls
 
 **For developers**
 * Midi's sample items is now build from pack-src by default, I have also structured the items into a folder structure to make it easier for developers to submit changes/browse  for items as needed
-
+* All midi-qol hooks, now call the preMades version as well. Also call the midi-qol hooks with the workflowId, which is almost always the chart card uuid.
+* `WorkflowOptions` now accepts `templateUuid` and `coverOrigin: { x, y, elevation? }`, both passable via `completeActivityUse` as `{ midiOptions: { workflowOptions: { templateUuid, coverOrigin } } }`.
+  - `templateUuid` sets the workflow's template UUID (e.g., for activities that reference a previously-placed template).
+  - `coverOrigin` sets the origin point for DEX save cover calculations, overriding both template center and caster position. Useful when the template may be deleted by the time saves are rolled.
+  
 ### 13.0.51
 **Bug Fixes**
 * Fix for not respecting target type settings when using levels volumetric templates.

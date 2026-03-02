@@ -1,4 +1,4 @@
-import { checkRule, configSettings, safeGetGameSetting } from "./settings.js";
+import { checkRule, configSettings, safeGetGameSetting, isDnd5e53 } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
@@ -40,6 +40,7 @@ export let setupSocket = () => {
   socketlibSocket.register("deleteEffectsByUuid", deleteEffectsByUuid);
   socketlibSocket.register("deleteItemEffects", deleteItemEffects);
   socketlibSocket.register("deleteToken", deleteToken);
+  socketlibSocket.register("toggleTokenHidden", toggleTokenHidden);
   socketlibSocket.register("gmOverTimeEffect", _gmOverTimeEffect);
   socketlibSocket.register("localActivityOverTimeEffect", _localActivityOverTimeEffect);
   socketlibSocket.register("monksTokenBarSaves", monksTokenBarSaves);
@@ -91,6 +92,7 @@ export class SaferSocket {
       case "bonusCheck":
       case "chooseReactions":
       case "completeItemUse":
+      case "completeActivityUse":
       case "confirmDamageRollComplete":
       case "confirmDamageRollCompleteHit":
       case "confirmDamageRollCompleteMiss":
@@ -111,6 +113,7 @@ export class SaferSocket {
       case "removeActionBonusReaction":
       case "recordStats":
       case "toggleStatusEffect":
+      case "toggleTokenHidden":
         return true;
 
       case "addConvenientEffect":
@@ -567,6 +570,14 @@ async function deleteToken(data: { tokenUuid: string }) {
   const token = await fromUuid(data.tokenUuid) as TokenDocument.Implementation;
   if (token) { // token will be a token document.
     token.delete();
+  }
+}
+
+async function toggleTokenHidden(data: { tokenUuid: string, force?: boolean }) {
+  const token = await fromUuid(data.tokenUuid) as TokenDocument.Implementation;
+  if (token) {
+    const hidden = data.force ?? !token.hidden;
+    await token.update({ hidden });
   }
 }
 
@@ -1075,6 +1086,7 @@ interface DamageListContextEntry {
   hpChanged?: boolean;
   tempHpChanged?: boolean;
   vitalityChanged?: boolean;
+  tempMaxChanged?: boolean;
   noChange?: boolean;
   buttonId: string;
   iconPrefix: string;
@@ -1090,14 +1102,15 @@ interface DamageListContextEntry {
 }
 
 /** Helper to calculate damage amounts from a damage detail array */
-function calculateDamageAmounts(damageDetail: DamageDescription[]): { amount: number; temp: number; healing: number; vitality: number } {
+function calculateDamageAmounts(damageDetail: DamageDescription[]): { amount: number; temp: number; healing: number; vitality: number; tempMax: number } {
   return damageDetail.reduce((acc, d) => {
     if (d.type === "temphp") acc.temp += d.value;
     else if (d.type === "vitality") acc.vitality += d.value; // Vitality damage (positive) or healing (negative)
-    else if (["healing"].includes(d.type) || d.active?.absorption) acc.healing += d.value;
+    else if (d.type === "maximum") acc.tempMax += d.value; // Max HP reduction (positive = reduce max)
+    else if (d.type === "healing" || d.active?.absorption || (d.active?.type as Record<string, boolean> | undefined)?.absorption) acc.healing += d.value;
     else if (d.type !== "midi-none") acc.amount += d.value;
     return acc;
-  }, { amount: 0, temp: 0, healing: 0, vitality: 0 });
+  }, { amount: 0, temp: 0, healing: 0, vitality: 0, tempMax: 0 });
 }
 
 /** Helper to update damage card display elements */
@@ -1115,7 +1128,7 @@ function updateDamageCardDisplay(
   showUndoMode: boolean
 ): void {
   const displayUuid = actorUuid.replaceAll(".", "");
-  const { oldHP, newHP, oldTempHP, newTempHP, oldVitality, newVitality } = undoEntry;
+  const { oldHP, newHP, oldTempHP, newTempHP, oldVitality, newVitality, oldTempMax, newTempMax } = undoEntry;
 
   // In undo mode, we're showing what undo would do (restore to old state = healing)
   // In apply mode, we're showing the original damage
@@ -1125,6 +1138,7 @@ function updateDamageCardDisplay(
   // This handles multiple damage applications with multipliers
   let fromHP: number, toHP: number, fromTempHP: number, toTempHP: number;
   let fromVitality: number | undefined, toVitality: number | undefined;
+  let fromTempMax: number | undefined, toTempMax: number | undefined;
 
   if (showUndoMode) {
     // Undo mode: restore from current state to original old values
@@ -1135,6 +1149,13 @@ function updateDamageCardDisplay(
     fromTempHP = actor?.system.attributes.hp.temp ?? newTempHP ?? 0;
     toHP = oldHP ?? 0;
     toTempHP = oldTempHP ?? 0;
+
+    // Get current tempmax from actor
+    if (oldTempMax !== undefined) {
+      // @ts-expect-error no dnd5e types
+      fromTempMax = actor?.system.attributes.hp.tempmax ?? newTempMax ?? 0;
+      toTempMax = oldTempMax;
+    }
 
     // Get current vitality from actor
     const vitalityItem = getVitalityItem(actor);
@@ -1154,12 +1175,15 @@ function updateDamageCardDisplay(
     toTempHP = newTempHP ?? 0;
     fromVitality = oldVitality;
     toVitality = newVitality;
+    fromTempMax = oldTempMax;
+    toTempMax = newTempMax;
   }
 
   // Calculate the actual changes from stored values
   const hpDelta = Math.abs((toHP ?? 0) - (fromHP ?? 0));
   const tempHpDelta = Math.abs((toTempHP ?? 0) - (fromTempHP ?? 0));
   const vitalityDelta = Math.abs((toVitality ?? 0) - (fromVitality ?? 0));
+  const tempMaxDelta = Math.abs((toTempMax ?? 0) - (fromTempMax ?? 0));
 
   // Total damage = HP change + TempHP change
   const totalDamage = hpDelta + tempHpDelta;
@@ -1167,7 +1191,8 @@ function updateDamageCardDisplay(
   const hpChanged = hpDelta > 0;
   const tempHpChanged = tempHpDelta > 0;
   const vitalityChanged = vitalityDelta > 0;
-  const noChange = !hpChanged && !tempHpChanged && !vitalityChanged;
+  const tempMaxChanged = tempMaxDelta > 0;
+  const noChange = !hpChanged && !tempHpChanged && !vitalityChanged && !tempMaxChanged;
 
   const totalSpan = html.querySelector<HTMLSpanElement>(`#dmg-total-${displayUuid}`);
   const tempSpan = html.querySelector<HTMLSpanElement>(`#dmg-temp-${displayUuid}`);
@@ -1175,6 +1200,7 @@ function updateDamageCardDisplay(
   const noChangeSpan = html.querySelector<HTMLSpanElement>(`#dmg-nochange-${displayUuid}`);
   const vitalitySpan = html.querySelector<HTMLSpanElement>(`#dmg-vitality-${displayUuid}`);
   const directVitalitySpan = html.querySelector<HTMLSpanElement>(`#dmg-vit-direct-${displayUuid}`);
+  const tempMaxSpan = html.querySelector<HTMLSpanElement>(`#dmg-tempmax-${displayUuid}`);
 
   // Update total damage display - sum of HP and TempHP changes
   if (totalSpan) {
@@ -1231,6 +1257,19 @@ function updateDamageCardDisplay(
     }
   }
 
+  // Update tempMax (max HP reduction) display
+  if (tempMaxSpan) {
+    if (tempMaxChanged && fromTempMax !== undefined && toTempMax !== undefined) {
+      tempMaxSpan.classList.remove("midi-qol-dmg-hidden");
+      const tmOld = tempMaxSpan.querySelector<HTMLSpanElement>(".dmg-tempmax-old");
+      const tmNew = tempMaxSpan.querySelector<HTMLSpanElement>(".dmg-tempmax-new");
+      if (tmOld) tmOld.textContent = String(Math.trunc(fromTempMax));
+      if (tmNew) tmNew.textContent = String(Math.trunc(toTempMax));
+    } else {
+      tempMaxSpan.classList.add("midi-qol-dmg-hidden");
+    }
+  }
+
   // Update no change display
   if (noChangeSpan) {
     noChangeSpan.classList.toggle("midi-qol-dmg-hidden", !noChange);
@@ -1283,11 +1322,23 @@ function updateHPStatusHeader(html: HTMLElement, actorUuid?: string, applied?: b
 /** Helper to generate tooltip HTML for a damage item */
 function generateDamageTooltip(damageItem: DamageListEntry, tokenName?: string): string {
   const tooltipList = damageItem.damageDetail?.map(di => {
-    let allMods: string[] = Object.keys(di.active ?? {}).reduce((acc: string[], k) => {
-      if (["semiSuperSaver", "superSaver"].includes(k)) return acc;
-      if (di.active?.[k] && k !== "multiplier") acc.push(k);
-      return acc;
-    }, []);
+    let allMods: string[];
+    if (isDnd5e53) {
+      // 5.3+: all boolean flags nested under all/type
+      allMods = [];
+      for (const cat of ["modification", "resistance", "vulnerability", "immunity",
+        "absorption", "DR", "saved", "uncannyDodge", "spell", "magic", "nonmagic"]) {
+        if (di.active?.all?.[cat] || di.active?.type?.[cat]) allMods.push(cat);
+      }
+      if (di.active?.threshold) allMods.push("threshold");
+    } else {
+      // 5.2.x: all keys flat
+      allMods = Object.keys(di.active ?? {}).reduce((acc: string[], k) => {
+        if (["semiSuperSaver", "superSaver"].includes(k)) return acc;
+        if (di.active?.[k] && k !== "multiplier") acc.push(k);
+        return acc;
+      }, []);
+    }
     if ((di.allActives?.length ?? 0) > 0) allMods = allMods.concat(di.allActives!);
     let mods = (allMods.length > 0) ? `| ${allMods.join(",")}` : "";
     return `${di.value > 0 ? Math.floor(di.value) : Math.ceil(di.value)} ${{ ...GameSystemConfig.damageTypes, ...GameSystemConfig.healingTypes }[di.type === "" ? "none" : di.type]?.label ?? "none"} ${mods}`
@@ -1298,6 +1349,7 @@ function generateDamageTooltip(damageItem: DamageListEntry, tokenName?: string):
     if (damageItem.newHP !== damageItem.oldHP) toolTipHeader.push(`HP: ${damageItem.oldHP} -> ${damageItem.newHP}`);
     if ((damageItem.newTempHP ?? 0) !== (damageItem.oldTempHP ?? 0)) toolTipHeader.push(`TempHP: ${damageItem.oldTempHP} -> ${damageItem.newTempHP}`);
     if ((damageItem.newVitality ?? 0) !== (damageItem.oldVitality ?? 0)) toolTipHeader.push(`Vitality: ${damageItem.oldVitality} -> ${damageItem.newVitality}`);
+    if ((damageItem.newTempMax ?? 0) !== (damageItem.oldTempMax ?? 0)) toolTipHeader.push(`Max HP: ${damageItem.oldTempMax} -> ${damageItem.newTempMax}`);
     if (damageItem.superSaver) toolTipHeader.push("Super Saved");
     else if (damageItem.semiSuperSaver) toolTipHeader.push("Semi Super Saved");
     else if (damageItem.saved) toolTipHeader.push("Saved");
@@ -1352,18 +1404,20 @@ async function prepareDamageListItems(
     if (actor.isOwner && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
       // @ts-expect-error no dnd5e-types
       const hp = actor.system.attributes.hp;
-      let { amount, temp, healing, vitality: vitalityDamage } = calculateDamageAmounts(damageItem.damageDetail);
+      let { amount, temp, healing, vitality: vitalityDamage, tempMax } = calculateDamageAmounts(damageItem.damageDetail);
       amount = Math.max(0, amount);
+      tempMax = Math.trunc(tempMax);
       const { amount: rawAmount, healing: rawHealing, vitality: rawVitality } = calculateDamageAmounts(damageItem.rawDamageDetail);
-      damageItem.totalDamage = damageItem.damageDetail.reduce((acc, d) => acc + (!["temphp", "midi-none", "vitality"].includes(d.type) ? d.value : 0), 0);
+      damageItem.totalDamage = damageItem.damageDetail.reduce((acc, d) => acc + (!["temphp", "midi-none", "vitality", "maximum"].includes(d.type) ? d.value : 0), 0);
       amount = amount + healing;
       amount = amount > 0 ? Math.floor(amount) : Math.ceil(amount);
 
       let deltaTemp = amount > 0 ? Math.min(hp.temp, amount) : 0;
       // Since tempDamage represents the final change in tempHP - we can use it for calcs and it is ignored.
 
-      let deltaHP = Math.clamp(amount - deltaTemp, -hp.damage, hp.value);
-      if (hpDamage !== deltaHP) {
+      // tempMax adjusts the clamp bounds: positive tempMax forces hp.value down if it would exceed new effective max
+      let deltaHP = Math.clamp(amount - deltaTemp, -hp.damage + tempMax, hp.value - tempMax);
+      if (hpDamage !== deltaHP && tempMax === 0) {
         error(`damage detail amount ${amount} !== hpDamage ${hpDamage}`, configSettings.useDamageDetail ? "ignoring hpDamage" : "using hpDamage");
         if (!configSettings.useDamageDetail) deltaHP = hpDamage;
       }
@@ -1372,10 +1426,16 @@ async function prepareDamageListItems(
         "system.attributes.hp.temp": hp.temp - deltaTemp,
         "system.attributes.hp.value": hp.value - deltaHP
       };
+      // Apply tempmax reduction (positive tempMax = reduce max HP)
+      if (tempMax !== 0) {
+        updates["system.attributes.hp.tempmax"] = (hp.tempmax ?? 0) - tempMax;
+      }
 
       if (temp > updates["system.attributes.hp.temp"]) updates["system.attributes.hp.temp"] = temp;
       damageItem.newTempHP = updates["system.attributes.hp.temp"];
       damageItem.newHP = updates["system.attributes.hp.value"];
+      damageItem.oldTempMax = hp.tempmax ?? 0;
+      damageItem.newTempMax = updates["system.attributes.hp.tempmax"] ?? damageItem.oldTempMax;
       damageItem.hpDamage = deltaHP;
       damageItem.tempDamage = deltaTemp;
       // Include healing and vitality in rawTotalDamage so it displays correctly
@@ -1512,7 +1572,8 @@ async function prepareDamageListItems(
       hpChanged: newHP !== oldHP,
       tempHpChanged: (damageItem.newTempHP ?? 0) !== (damageItem.oldTempHP ?? 0),
       vitalityChanged: (damageItem.newVitality ?? 0) !== (damageItem.oldVitality ?? 0),
-      noChange: newHP === oldHP && (damageItem.newTempHP ?? 0) === (damageItem.oldTempHP ?? 0) && (damageItem.newVitality ?? 0) === (damageItem.oldVitality ?? 0),
+      tempMaxChanged: (damageItem.newTempMax ?? 0) !== (damageItem.oldTempMax ?? 0),
+      noChange: newHP === oldHP && (damageItem.newTempHP ?? 0) === (damageItem.oldTempHP ?? 0) && (damageItem.newVitality ?? 0) === (damageItem.oldVitality ?? 0) && (damageItem.newTempMax ?? 0) === (damageItem.oldTempMax ?? 0),
       buttonId: actorUuid,
       // @ts-expect-error no dnd5e-types
       iconPrefix: (data.autoApplyDamage === "yesCardNPC" && actor.type === "character") ? "*" : "",
@@ -1664,7 +1725,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       // TODO: Remove the latter after sufficient time has passed
       const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
       const undoDamageData = recoverDamageListFromJSON(undoFlag);
-      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, newHP, newTempHP, newVitality, calcDamageOptions, updateOptions } of undoDamageData) {
+      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempHP, newVitality, calcDamageOptions, updateOptions } of undoDamageData) {
         if (!actorUuid) continue;
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
         applyButton?.children[0].classList.add("midi-qol-enable-damage-button");
@@ -1681,6 +1742,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           "system.attributes.hp.temp": oldTempHP ?? 0,
           "system.attributes.hp.value": oldHP ?? 0
         };
+        if (oldTempMax !== undefined) updates["system.attributes.hp.tempmax"] = oldTempMax;
         // Handle vitality undo - only if actor still has a vitality item
         const undoItem = undoDamageData.find(d => d.actorUuid === actorUuid);
         const vitalityItem = getVitalityItem(actor);
@@ -1716,7 +1778,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       // TODO: Remove the latter after sufficient time has passed
       const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
       const undoDamageData = recoverDamageListFromJSON(undoFlag);
-      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, oldHP, oldTempHP, oldVitality, calcDamageOptions, updateOptions } of undoDamageData) {
+      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, newTempMax, oldHP, oldTempHP, oldVitality, calcDamageOptions, updateOptions } of undoDamageData) {
         if (!actorUuid) continue;
         let actor = fromActorUuid(actorUuid);
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
@@ -1727,6 +1789,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         reverseButton?.children[0].classList.add("midi-qol-enable-damage-button");
         log(`Setting HP to ${newTempHP} and ${newHP} ${actor?.name} ${actorUuid}`);
         const update = { "system.attributes.hp.temp": newTempHP ?? 0, "system.attributes.hp.value": newHP ?? 0 } as Actor.UpdateData;
+        if (newTempMax !== undefined) update["system.attributes.hp.tempmax"] = newTempMax;
         const amount = (newHP ?? 0) - (oldHP ?? 0);
         // Handle vitality apply - only if actor still has a vitality item
         const applyItem = undoDamageData.find(d => d.actorUuid === actorUuid);
@@ -1759,7 +1822,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
   const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
   const undoDamageData = recoverDamageListFromJSON(undoFlag);
   undoDamageData?.forEach((undoEntry) => {
-    const { actorUuid, oldTempHP, oldHP, newHP, newTempHP, oldVitality, newVitality, damageDetail, calcDamageOptions, updateOptions, oldVitalitySpent, newVitalitySpent } = undoEntry;
+    const { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempHP, newTempMax, oldVitality, newVitality, damageDetail, calcDamageOptions, updateOptions, oldVitalitySpent, newVitalitySpent } = undoEntry;
     if (!actorUuid) return;
     let button = html.querySelector<HTMLButtonElement>(`#reverse-${actorUuid.replaceAll(".", "")}`);
     button?.addEventListener("click", (ev) => {
@@ -1781,6 +1844,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           "system.attributes.hp.temp": oldTempHP ?? 0,
           "system.attributes.hp.value": oldHP ?? 0
         };
+        if (oldTempMax !== undefined) updates["system.attributes.hp.tempmax"] = oldTempMax;
         // Handle vitality undo - only if actor still has a vitality item
         const vitalityItem = getVitalityItem(actor);
         let vitalityUpdated = false;
@@ -1829,6 +1893,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
             "system.attributes.hp.temp": newTempHP ?? 0,
             "system.attributes.hp.value": newHP ?? 0
           };
+          if (newTempMax !== undefined) updates["system.attributes.hp.tempmax"] = newTempMax;
           // Handle vitalityItem apply - only if actor still has a vitality item
           const vitalityItem = getVitalityItem(actor);
           let vitalityUpdated = false;
@@ -1861,9 +1926,9 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           // @ts-expect-error no dnd5e types
           const preApplyTempHP = actor?.system.attributes.hp.temp ?? 0;
 
-          // Separate vitality damage from HP damage
-          // Filter out vitality from damageDetail for HP application
-          const hpDamageDetail = damageDetail?.filter(d => d.type !== "vitality") ?? [];
+          // Separate vitality and maximum from HP damage
+          // Filter out vitality and maximum from damageDetail for HP application
+          const hpDamageDetail = damageDetail?.filter(d => d.type !== "vitality" && d.type !== "maximum") ?? [];
 
           // Calculate the multiplied HP damage (excluding vitality)
           // @ts-expect-error no dnd5e-types
@@ -1876,15 +1941,19 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           }
           totalMultipliedHpDamage = Math.trunc(totalMultipliedHpDamage);
 
-          // Calculate multiplied direct vitality damage separately
+          // Calculate multiplied direct vitality and maximum damage separately
           const multiplier = mults[multiplierString ?? "x1"] ?? 1;
           let multipliedVitalityDamage = 0;
+          let multipliedTempMaxDamage = 0;
           for (const d of damageDetail ?? []) {
             if (d.type === "vitality") {
               multipliedVitalityDamage += d.value * multiplier;
+            } else if (d.type === "maximum") {
+              multipliedTempMaxDamage += d.value * multiplier;
             }
           }
           multipliedVitalityDamage = Math.trunc(multipliedVitalityDamage);
+          multipliedTempMaxDamage = Math.trunc(multipliedTempMaxDamage);
 
           // Calculate vitality changes
           const vitalityItem = getVitalityItem(actor);
@@ -1944,6 +2013,14 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
             await vitalityItem.update({ "system.uses.spent": newSpent });
           }
 
+          // Apply tempMax (max HP reduction) if there was any maximum damage
+          if (multipliedTempMaxDamage !== 0 && actor) {
+            // @ts-expect-error no dnd5e types
+            const currentTempMax = actor.system.attributes.hp.tempmax ?? 0;
+            // @ts-expect-error no dnd5e types for hp.tempmax
+            await actor.update({ "system.attributes.hp.tempmax": currentTempMax - multipliedTempMaxDamage });
+          }
+
           // Update display to show what undo would do (undo mode)
           updateDamageCardDisplay(html, actorUuid, undoEntry, true);
           // Update HP status for this target (applied = true)
@@ -1987,15 +2064,18 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       const calculatedDamages: DamageDescription[] = foundry.utils.deepClone(actor.calculateDamage(damageDetail, options));
 
       // Sum up the damage values and truncate towards 0 (matching how damage is actually applied)
-      // Exclude vitality from HP total - it's shown separately
+      // Exclude vitality and maximum from HP total - they're shown separately
       let totalDamage = 0;
       let tempHpDamage = 0;
       let multipliedVitalityDamage = 0;
+      let multipliedTempMaxDamage = 0;
       for (const dmg of calculatedDamages) {
         if (dmg.type === "temphp") {
           tempHpDamage += dmg.value;
         } else if (dmg.type === "vitality") {
           multipliedVitalityDamage += dmg.value;
+        } else if (dmg.type === "maximum") {
+          multipliedTempMaxDamage += dmg.value;
         } else if (!["midi-none", "none"].includes(dmg.type)) {
           totalDamage += dmg.value;
         }
@@ -2004,6 +2084,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       totalDamage = Math.trunc(totalDamage);
       tempHpDamage = Math.trunc(tempHpDamage);
       multipliedVitalityDamage = Math.trunc(multipliedVitalityDamage);
+      multipliedTempMaxDamage = Math.trunc(multipliedTempMaxDamage);
 
       // Calculate new HP/temp HP values
       let newTempHP = currentTempHP;
@@ -2037,6 +2118,13 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       const tempSpan = html.querySelector<HTMLSpanElement>(`#dmg-temp-${displayUuid}`);
       const hpSpan = html.querySelector<HTMLSpanElement>(`#dmg-hp-${displayUuid}`);
       const noChangeSpan = html.querySelector<HTMLSpanElement>(`#dmg-nochange-${displayUuid}`);
+      const tempMaxSpan = html.querySelector<HTMLSpanElement>(`#dmg-tempmax-${displayUuid}`);
+
+      // Get current tempmax
+      // @ts-expect-error no dnd5e types
+      const currentTempMax = actor.system.attributes.hp.tempmax ?? 0;
+      const newTempMax = currentTempMax - multipliedTempMaxDamage;
+      const tempMaxChanged = multipliedTempMaxDamage !== 0;
 
       // Get vitality info early to calculate max absorbable damage
       const vitalityItem = getVitalityItem(actor);
@@ -2058,7 +2146,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       const tempHpChanged = newTempHP !== currentTempHP;
       // Always show total damage if there's damage to apply (even if HP is already at 0 and damage goes to vitality)
       const hasDamageToApply = absTotalDamage > 0;
-      const noChange = !hpChanged && !tempHpChanged && !hasDamageToApply;
+      const noChange = !hpChanged && !tempHpChanged && !hasDamageToApply && !tempMaxChanged;
 
       // Update total damage display - show if there's any damage to apply
       if (totalSpan) {
@@ -2085,6 +2173,15 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         const hpNew = hpSpan.querySelector<HTMLSpanElement>(".dmg-hp-new");
         if (hpOld) hpOld.textContent = String(Math.trunc(currentHP));
         if (hpNew) hpNew.textContent = String(Math.trunc(newHP));
+      }
+
+      // Update tempMax (max HP reduction) display
+      if (tempMaxSpan) {
+        tempMaxSpan.classList.toggle("midi-qol-dmg-hidden", !tempMaxChanged);
+        const tmOld = tempMaxSpan.querySelector<HTMLSpanElement>(".dmg-tempmax-old");
+        const tmNew = tempMaxSpan.querySelector<HTMLSpanElement>(".dmg-tempmax-new");
+        if (tmOld) tmOld.textContent = String(Math.trunc(currentTempMax));
+        if (tmNew) tmNew.textContent = String(Math.trunc(newTempMax));
       }
 
       // Update no change display

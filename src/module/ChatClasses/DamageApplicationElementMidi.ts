@@ -1,4 +1,4 @@
-import { configSettings } from "../settings.js"; 
+import { configSettings, isDnd5e53 } from "../settings.js";
 import { GameSystemConfig, MODULE_ID, MQDamageRollTypes, debugEnabled, i18nFormat, log, warn } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { CombinedTargetDescriptor, DamageApplicationOptions } from "../../globals.js";
@@ -147,9 +147,10 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
   calculateDamage(actor: Actor.Implementation, options: DamageApplicationOptions) {
     // @ts-expect-error no dnd5e-types
     const damages = actor.calculateDamage(this.damages, options) as DamageDescription[];
-    // @ts-expect-error amount and temp are on the damages array
-    const { amount: total, temp: rawTemp } = damages;
+    // @ts-expect-error amount, temp, tempMax are on the damages array
+    const { amount: total, temp: rawTemp, tempMax: rawTempMax } = damages;
     const temp = Math.floor(Math.max(0, rawTemp ?? 0));
+    const tempMax = rawTempMax ?? 0;
 
     // Build active object from flag categories
     const active: Record<string, Set<string> | boolean> = {};
@@ -166,15 +167,24 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
 
         // Set flags that use actual damage type
         for (const flag of DamageApplicationElementMidi.SET_FLAGS) {
-          if (damage.active?.[flag]) (active[flag] as Set<string>).add(damage.type);
+          if (isDnd5e53) {
+            if (damage.active?.type?.[flag]) (active[flag] as Set<string>).add(damage.type);
+            if (damage.active?.all?.[flag]) (active[flag] as Set<string>).add("ALL");
+          } else {
+            if (damage.active?.[flag]) (active[flag] as Set<string>).add(damage.type);
+          }
         }
         // Save flags use "all" for consolidated icon, skip DR types
         if (!isDRType) {
           for (const flag of DamageApplicationElementMidi.SAVE_FLAGS) {
-            if (damage.active?.[flag]) (active[flag] as Set<string>).add("all");
+            if (isDnd5e53) {
+              if (damage.active?.type?.[flag] || damage.active?.all?.[flag]) (active[flag] as Set<string>).add("all");
+            } else {
+              if (damage.active?.[flag]) (active[flag] as Set<string>).add("all");
+            }
           }
         }
-        // Boolean flags
+        // Boolean flags (threshold stays flat in both versions)
         for (const flag of DamageApplicationElementMidi.BOOL_FLAGS) {
           if (damage.active?.[flag]) active[flag] = true;
         }
@@ -197,6 +207,6 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
       console.warn(message, err);
       TroubleShooter.recordError(err, message);
     }
-    return { temp, total, active };
+    return { temp, tempMax, total, active };
   }
 }

@@ -4,7 +4,7 @@ import { Workflow } from "../Workflow.js";
 import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags } from "../lib/RollModifierTracker.js";
 import { MidiOptions } from "../utils.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
-import { addAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets } from "../utils.js";
+import { addAttribution, areMidiKeysPressed, callActivityHooks, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
@@ -624,24 +624,14 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       }
 
       // preAttackRoll hooks may modify flags; checkAttackAdvantage() runs after them (below)
-      if (await asyncHooksCall("midi-qol.preAttackRoll", workflow) === false
-        || await asyncHooksCall(`midi-qol.preAttackRoll.${this.item.uuid}`, workflow) === false
-        || await asyncHooksCall(`midi-qol.preAttackRoll.${this.uuid}`, workflow) === false
-        || await asyncHooksCall("midi-qol.premades.preAttackRoll", workflow) === false
-        || await asyncHooksCall(`midi-qol.premades.preAttackRoll.${this.item.uuid}`, workflow) === false
-        || await asyncHooksCall(`midi-qol.premades.preAttackRoll.${this.uuid}`, workflow) === false) {
+      if (await callActivityHooks(this, "midi-qol.preAttackRoll", workflow) === false) {
         console.warn("midi-qol | attack roll blocked by preAttackRoll hook");
         return false;
       }
       await workflow.checkAttackAdvantage();
       // Process keyboard modifiers (ctrl/alt for advantage/disadvantage) after flag processing
       workflow.attackRollModifierTracker.processKeys(config);
-      if (await asyncHooksCall("midi-qol.preAttackRollConfig", workflow) === false
-        || await asyncHooksCall(`midi-qol.preAttackRollConfig.${this.item.uuid}`, workflow) === false
-        || await asyncHooksCall(`midi-qol.preAttackRollConfig.${this.uuid}`, workflow) === false
-        || await asyncHooksCall(`midi-qol.premades.preAttackRollConfig`, workflow) === false
-        || await asyncHooksCall(`midi-qol.premades.preAttackRollConfig.${this.item.uuid}`, workflow) === false
-        || await asyncHooksCall(`midi-qol.premades.preAttackRollConfig.${this.uuid}`, workflow) === false) {
+      if (await callActivityHooks(this, "midi-qol.preAttackRollConfig", workflow) === false) {
         console.warn("midi-qol | attack roll blocked by preAttackRollConfig hook");
         return false;
       }

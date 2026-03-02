@@ -1,6 +1,5 @@
 import { Activity } from "../../globals.js";
-import { debugEnabled, GameSystemConfig, i18n, i18nFormat, warn } from "../../midi-qol.js";
-import { Workflow } from "../Workflow.js";
+import { debugEnabled, GameSystemConfig, i18nFormat, warn } from "../../midi-qol.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { getTokenDocument } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
@@ -82,22 +81,42 @@ let defineMidiTransformActivityClass = <T extends Activity>(ActivityClass: T) =>
         return;
       }
 
+      // transformedActorUuids stores ORIGINAL actor UUIDs (stable across re-transforms)
       const transformedActorUuids: string[] = [];
+      // transformedActors tracks the polymorphed actors for concentration flag setting
+      const transformedActors: Actor.Implementation[] = [];
       for (const token of targets) {
         //@ts-expect-error
-        const actor = token instanceof Actor ? token : token.actor;
+        let actor: Actor.Implementation = token instanceof Actor ? token : token.actor;
+        //@ts-expect-error isPolymorphed - dnd5e property
         if (actor.isPolymorphed) {
-          ui.notifications?.warn(i18nFormat("midi-qol.TRANSFORM.AlreadyTransformed", { name: actor.name }));
-          continue;
+          // Always revert to original form before applying a new transform — no nested transforms
+          //@ts-expect-error revertOriginalForm - dnd5e method
+          const reverted = await actor.revertOriginalForm({ renderSheet: false });
+          if (reverted instanceof TokenDocument && reverted.actor) {
+            actor = reverted.actor;
+          } else if (reverted instanceof Actor) {
+            actor = reverted;
+          } else {
+            ui.notifications?.warn(i18nFormat("midi-qol.TRANSFORM.AlreadyTransformed", { name: actor.name }));
+            continue;
+          }
         }
-        const transformedTokens: TokenDocument[] | TokenDocument | undefined= await actor.transformInto(source, this.settings);
-        if (transformedTokens instanceof Array && transformedTokens[0]?.actor?.uuid) 
-          transformedActorUuids.push(transformedTokens[0].actor.uuid);
-        else if (transformedTokens instanceof TokenDocument && transformedTokens.actor?.uuid)
-          transformedActorUuids.push(transformedTokens.actor.uuid);
-        // TODO: Create message for transformed actors
+        const originalActorUuid = actor.uuid;
+        //@ts-expect-error transformInto - dnd5e method
+        const transformedTokens: TokenDocument[] | TokenDocument | undefined = await actor.transformInto(source, this.settings);
+        if (transformedTokens) {
+          transformedActorUuids.push(originalActorUuid);
+          if (transformedTokens instanceof Array && transformedTokens[0]?.actor)
+            transformedActors.push(transformedTokens[0].actor);
+          else if (transformedTokens instanceof TokenDocument && transformedTokens.actor)
+            transformedActors.push(transformedTokens.actor);
+        }
       }
-      if (config.workflow) config.workflow.transformedActorUuids = transformedActorUuids;
+      if (config.workflow) {
+        config.workflow.transformedActorUuids = transformedActorUuids;
+        config.workflow.transformedActors = transformedActors;
+      }
     }
     static defineSchema() {
       return {

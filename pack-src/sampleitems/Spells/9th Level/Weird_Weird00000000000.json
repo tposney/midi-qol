@@ -9,7 +9,7 @@
         {
           "key": "flags.midi-qol.OverTime",
           "mode": 5,
-          "value": "turn=end,\nrollType=save,\nsaveAbility=wis,\nsaveDC=@attributes.spelldc,\nsaveRemove=true,\ndamageRoll=4d10,\ndamageType=psychic,\nsaveDamage=nodamage,\nlabel=Weird (Frightened)",
+          "value": "turn=end,\nrollType=save,\nsaveAbility=wis,\nsaveDC=@activity.save.dc.value,\nsaveRemove=true,\ndamageRoll=4d10,\ndamageType=psychic,\nsaveDamage=nodamage,\nlabel=Weird (Frightened)",
           "priority": 20
         }
       ],

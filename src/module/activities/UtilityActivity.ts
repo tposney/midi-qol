@@ -4,7 +4,7 @@ import { debugEnabled, i18n, warn, error, GameSystemConfig } from "../../midi-qo
 import { AugmentedEvent, Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
-import { areMidiKeysPressed, asyncHooksCall, isAutoFastForward } from "../utils.js";
+import { areMidiKeysPressed, callActivityHooks, isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { displayDSNForRoll } from "../utils.js";
 
@@ -100,9 +100,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
       if (debugEnabled > 0) {
         warn("MidiUtilityActivity | rollFormula | Called", config, dialog, message);
       }
-      if (await asyncHooksCall("midi-qol.preFormulaRoll", workflow) === false
-        || await asyncHooksCall(`midi-qol.preFormulaRoll.${this.item.uuid}`, workflow) === false
-        || await asyncHooksCall(`midi-qol.preFormulaRoll.${this.uuid}`, workflow) === false) {
+      if (await callActivityHooks(this, "midi-qol.preFormulaRoll", workflow) === false) {
         console.warn("midi-qol | UtilityActivity | Formula roll blocked via pre-hook");
         return;
       }
