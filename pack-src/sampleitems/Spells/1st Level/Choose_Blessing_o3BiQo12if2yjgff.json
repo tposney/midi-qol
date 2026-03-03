@@ -2,18 +2,233 @@
   "name": "Choose Blessing",
   "type": "spell",
   "img": "icons/magic/control/buff-flight-wings-blue.webp",
+  "effects": [
+    {
+      "name": "Blessed",
+      "origin": "Item.o3BiQo12if2yjgff",
+      "duration": {
+        "rounds": 1,
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "transfer": false,
+      "disabled": false,
+      "_id": "Q0havLsLloUiTB8e",
+      "changes": [
+        {
+          "key": "StatusEffect",
+          "mode": 0,
+          "value": "bleeding",
+          "priority": 20
+        }
+      ],
+      "description": "",
+      "statuses": [],
+      "flags": {
+        "dae": {
+          "disableIncapacitated": false,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "dontApply": false,
+          "stackable": "none",
+          "showIcon": true,
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": ""
+        }
+      },
+      "tint": "#ffffff",
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/control/buff-flight-wings-blue.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!o3BiQo12if2yjgff.Q0havLsLloUiTB8e"
+    },
+    {
+      "name": "Ethereal",
+      "origin": "Item.o3BiQo12if2yjgff",
+      "duration": {
+        "rounds": 1,
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "transfer": false,
+      "disabled": false,
+      "_id": "l0zLtfBsYQBtiBPN",
+      "changes": [
+        {
+          "key": "StatusEffect",
+          "mode": 0,
+          "value": "ethereal",
+          "priority": 20
+        }
+      ],
+      "description": "",
+      "statuses": [],
+      "flags": {
+        "dae": {
+          "disableIncapacitated": false,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "dontApply": true,
+          "stackable": "none",
+          "showIcon": false,
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": ""
+        }
+      },
+      "tint": "#ffffff",
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/control/buff-flight-wings-blue.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!o3BiQo12if2yjgff.l0zLtfBsYQBtiBPN"
+    },
+    {
+      "name": "Invisible",
+      "origin": "Item.o3BiQo12if2yjgff",
+      "duration": {
+        "rounds": 1,
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "transfer": false,
+      "disabled": false,
+      "_id": "BKllJaSYjW5sZOjV",
+      "changes": [
+        {
+          "key": "StatusEffect",
+          "mode": 0,
+          "value": "invisible",
+          "priority": 20
+        }
+      ],
+      "description": "",
+      "statuses": [],
+      "flags": {
+        "dae": {
+          "disableIncapacitated": false,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "dontApply": true,
+          "stackable": "none",
+          "showIcon": false,
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": ""
+        }
+      },
+      "tint": "#ffffff",
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/control/buff-flight-wings-blue.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!o3BiQo12if2yjgff.BKllJaSYjW5sZOjV"
+    }
+  ],
+  "flags": {
+    "midiProperties": {
+      "confirmTargets": "default",
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "concentration": false,
+      "noConcentrationCheck": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "effectCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
   "system": {
     "description": {
-      "value": "<p>In dnd5e v4 this is easily handled by multiple activities on the item, rather than a macro call</p>",
-      "chat": ""
+      "value": "<p>A demo item showing how multiple activities on a single item can let the caster choose which effect to apply, without needing a macro. Each activity applies a different status effect (Blessed, Ethereal, or Invisible) for 1 round.</p>\n<p><strong>midi-qol</strong>: No macros required. Three utility activities each apply a different effect. In dnd5e v4 this is easily handled by multiple activities on the item.</p>",
+      "chat": "<p>A demo item showing how multiple activities on a single item can let the caster choose which effect to apply, without needing a macro. Each activity applies a different status effect (Blessed, Ethereal, or Invisible) for 1 round.</p>"
     },
     "source": {
-      "custom": "",
-      "book": "SRD 5.1",
+      "custom": "midi-qol sample",
+      "rules": "2014",
+      "book": "",
       "page": "",
-      "license": "CC-BY-4.0",
-      "revision": 1,
-      "rules": "2024"
+      "license": ""
     },
     "activation": {
       "type": "action",
@@ -60,6 +275,7 @@
       "mode": "prepared",
       "prepared": false
     },
+    "properties": [],
     "activities": {
       "f0g7Byzc0bn8rHsb": {
         "type": "utility",
@@ -118,6 +334,7 @@
         },
         "useConditionText": "",
         "effectConditionText": "",
+        "useConditionReason": "",
         "macroData": {
           "name": "",
           "command": ""
@@ -145,8 +362,7 @@
           "rollMode": "default",
           "chooseEffects": false
         },
-        "useConditionReason": "",
-        "otherActivityId": "",
+        "otherActivityId": "none",
         "isOverTimeFlag": false,
         "overTimeProperties": {
           "saveRemoves": true,
@@ -156,6 +372,7 @@
       },
       "vtlNke9SL8OB7e1S": {
         "type": "utility",
+        "name": "Blessed",
         "_id": "vtlNke9SL8OB7e1S",
         "sort": 0,
         "activation": {
@@ -210,7 +427,7 @@
         },
         "useConditionText": "",
         "effectConditionText": "",
-        "name": "Blessed",
+        "useConditionReason": "",
         "macroData": {
           "name": "",
           "command": ""
@@ -238,8 +455,7 @@
           "rollMode": "default",
           "chooseEffects": false
         },
-        "useConditionReason": "",
-        "otherActivityId": "",
+        "otherActivityId": "none",
         "isOverTimeFlag": false,
         "overTimeProperties": {
           "saveRemoves": true,
@@ -304,6 +520,7 @@
         },
         "useConditionText": "",
         "effectConditionText": "",
+        "useConditionReason": "",
         "macroData": {
           "name": "",
           "command": ""
@@ -331,8 +548,7 @@
           "rollMode": "default",
           "chooseEffects": false
         },
-        "useConditionReason": "",
-        "otherActivityId": "",
+        "otherActivityId": "none",
         "isOverTimeFlag": false,
         "overTimeProperties": {
           "saveRemoves": true,
@@ -341,306 +557,8 @@
         }
       }
     },
-    "identifier": "choose-blessing-11313",
-    "properties": [],
-    "sourceClass": "rogue"
-  },
-  "effects": [
-    {
-      "name": "Blessed",
-      "origin": "Item.zu07aTJs8XPIsKVM",
-      "duration": {
-        "rounds": 1,
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
-      "transfer": false,
-      "disabled": false,
-      "_id": "Q0havLsLloUiTB8e",
-      "changes": [
-        {
-          "key": "StatusEffect",
-          "mode": 0,
-          "value": "bleeding",
-          "priority": 20
-        }
-      ],
-      "description": "",
-      "statuses": [],
-      "flags": {
-        "times-up": {
-          "isPassive": false
-        },
-        "dae": {
-          "disableIncapacitated": false,
-          "selfTarget": false,
-          "selfTargetAlways": false,
-          "dontApply": false,
-          "stackable": "none",
-          "showIcon": true,
-          "durationExpression": "",
-          "macroRepeat": "none",
-          "specialDuration": [],
-          "enableCondition": "",
-          "disableCondition": ""
-        },
-        "ActiveAuras": {
-          "isAura": false,
-          "aura": "None",
-          "nameOverride": "",
-          "radius": "",
-          "alignment": "",
-          "type": "",
-          "customCheck": "",
-          "ignoreSelf": false,
-          "height": false,
-          "hidden": false,
-          "displayTemp": false,
-          "hostile": false,
-          "onlyOnce": false,
-          "wallsBlock": "system"
-        },
-        "core": {
-          "overlay": false
-        }
-      },
-      "tint": "#ffffff",
-      "_stats": {
-        "compendiumSource": null,
-        "duplicateSource": null,
-        "coreVersion": "13.346",
-        "systemId": "dnd5e",
-        "systemVersion": "4.3.6",
-        "createdTime": null,
-        "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
-      },
-      "img": "icons/magic/control/buff-flight-wings-blue.webp",
-      "type": "base",
-      "system": {},
-      "sort": 0,
-      "_key": "!items.effects!o3BiQo12if2yjgff.Q0havLsLloUiTB8e"
-    },
-    {
-      "name": "Ethereal",
-      "origin": "Item.zu07aTJs8XPIsKVM",
-      "duration": {
-        "rounds": 1,
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
-      "transfer": false,
-      "disabled": false,
-      "_id": "l0zLtfBsYQBtiBPN",
-      "changes": [
-        {
-          "key": "StatusEffect",
-          "mode": 0,
-          "value": "ethereal",
-          "priority": 20
-        }
-      ],
-      "description": "",
-      "statuses": [],
-      "flags": {
-        "times-up": {
-          "isPassive": false
-        },
-        "dae": {
-          "disableIncapacitated": false,
-          "selfTarget": false,
-          "selfTargetAlways": false,
-          "dontApply": true,
-          "stackable": "none",
-          "showIcon": false,
-          "durationExpression": "",
-          "macroRepeat": "none",
-          "specialDuration": []
-        },
-        "ActiveAuras": {
-          "isAura": false,
-          "aura": "None",
-          "nameOverride": "",
-          "radius": "",
-          "alignment": "",
-          "type": "",
-          "customCheck": "",
-          "ignoreSelf": false,
-          "height": false,
-          "hidden": false,
-          "displayTemp": false,
-          "hostile": false,
-          "onlyOnce": false,
-          "wallsBlock": "system"
-        }
-      },
-      "tint": "#ffffff",
-      "_stats": {
-        "compendiumSource": null,
-        "duplicateSource": null,
-        "coreVersion": "13.346",
-        "systemId": "dnd5e",
-        "systemVersion": "4.3.6",
-        "createdTime": null,
-        "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
-      },
-      "img": "icons/magic/control/buff-flight-wings-blue.webp",
-      "type": "base",
-      "system": {},
-      "sort": 0,
-      "_key": "!items.effects!o3BiQo12if2yjgff.l0zLtfBsYQBtiBPN"
-    },
-    {
-      "name": "Invisible",
-      "origin": "Item.zu07aTJs8XPIsKVM",
-      "duration": {
-        "rounds": 1,
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
-      "transfer": false,
-      "disabled": false,
-      "_id": "BKllJaSYjW5sZOjV",
-      "changes": [
-        {
-          "key": "StatusEffect",
-          "mode": 0,
-          "value": "invisible",
-          "priority": 20
-        }
-      ],
-      "description": "",
-      "statuses": [],
-      "flags": {
-        "times-up": {
-          "isPassive": false
-        },
-        "dae": {
-          "disableIncapacitated": false,
-          "selfTarget": false,
-          "selfTargetAlways": false,
-          "dontApply": true,
-          "stackable": "none",
-          "showIcon": false,
-          "durationExpression": "",
-          "macroRepeat": "none",
-          "specialDuration": []
-        },
-        "ActiveAuras": {
-          "isAura": false,
-          "aura": "None",
-          "nameOverride": "",
-          "radius": "",
-          "alignment": "",
-          "type": "",
-          "customCheck": "",
-          "ignoreSelf": false,
-          "height": false,
-          "hidden": false,
-          "displayTemp": false,
-          "hostile": false,
-          "onlyOnce": false,
-          "wallsBlock": "system"
-        }
-      },
-      "tint": "#ffffff",
-      "_stats": {
-        "compendiumSource": null,
-        "duplicateSource": null,
-        "coreVersion": "13.346",
-        "systemId": "dnd5e",
-        "systemVersion": "4.3.6",
-        "createdTime": null,
-        "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
-      },
-      "img": "icons/magic/control/buff-flight-wings-blue.webp",
-      "type": "base",
-      "system": {},
-      "sort": 0,
-      "_key": "!items.effects!o3BiQo12if2yjgff.BKllJaSYjW5sZOjV"
-    }
-  ],
-  "folder": "SpellFldr1stLevl",
-  "flags": {
-    "core": {},
-    "midiProperties": {
-      "confirmTargets": "default",
-      "autoFailFriendly": false,
-      "autoSaveFriendly": false,
-      "critOther": false,
-      "offHandWeapon": false,
-      "magicdam": false,
-      "magiceffect": false,
-      "concentration": false,
-      "noConcentrationCheck": false,
-      "toggleEffect": false,
-      "ignoreTotalCover": false,
-      "otherSaveDamage": "default",
-      "idr": false,
-      "idi": false,
-      "idv": false,
-      "ida": false
-    },
-    "midi-qol": {
-      "forceCEOff": false,
-      "forceCEOn": false,
-      "itemCondition": "",
-      "reactionCondition": "",
-      "otherCondition": "",
-      "effectCondition": "",
-      "onUseMacroName": "",
-      "effectActivation": false,
-      "rollAttackPerTarget": "default"
-    },
-    "walledtemplates": {
-      "wallsBlock": "globalDefault",
-      "wallRestriction": "globalDefault"
-    },
-    "dnd5e": {
-      "persistSourceMigration": true,
-      "migratedProperties": [
-        "vocal",
-        "somatic",
-        "material",
-        "concentration"
-      ],
-      "dependents": [
-        {
-          "uuid": "Scene.GO63mgFDMhBfPVWf.Token.VxnS8IyNJ8uAWCXx.Actor.2W8ip8j0hvK2pQ7V.ActiveEffect.wkj5MlEIWufdBz06"
-        }
-      ],
-      "riders": {
-        "activity": [],
-        "effect": []
-      }
-    },
-    "tidy5e-sheet": {
-      "section": "",
-      "actionSection": ""
-    },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
-      }
-    }
+    "identifier": "choose-blessing",
+    "sourceClass": ""
   },
   "_stats": {
     "compendiumSource": null,
@@ -648,16 +566,16 @@
     "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
-    "createdTime": 1741782997074,
-    "modifiedTime": 1741782997074,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
     "exportSource": null
   },
   "_id": "o3BiQo12if2yjgff",
+  "folder": "SpellFldr1stLevl",
   "sort": 1000000,
   "ownership": {
-    "default": 0,
-    "Zl1BOUaPLwDEujaL": 3
+    "default": 0
   },
   "_key": "!items!o3BiQo12if2yjgff"
 }

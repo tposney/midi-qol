@@ -4,138 +4,41 @@
   "img": "icons/magic/water/orb-ice-glow.webp",
   "effects": [],
   "flags": {
-    "ddbimporter": {
-      "id": 138274,
-      "definitionId": 14615,
-      "entityTypeId": 435869154,
-      "dndbeyond": {
-        "lookup": "generic",
-        "lookupName": "generic",
-        "level": null,
-        "castAtLevel": null
-      },
-      "sources": [
-        {
-          "sourceId": 27,
-          "pageNumber": 169,
-          "sourceType": 1
-        }
-      ],
-      "tags": [
-        "Damage"
-      ]
-    },
-    "betterRolls5e": {
-      "quickVersatile": {
-        "altValue": true
-      },
-      "quickCharges": {
-        "value": {
-          "use": true,
-          "resource": true
-        },
-        "altValue": {
-          "use": true,
-          "resource": true
-        }
-      }
-    },
-    "midi-qol": {
-      "effectActivation": false,
-      "onUseMacroName": "[preDamageRoll]ItemMacro",
-      "rollAttackPerTarget": "default",
-      "removeAttackDamageButtons": "default",
-      "itemCondition": "",
-      "reactionCondition": "",
-      "otherCondition": "",
-      "effectCondition": ""
-    },
     "midiProperties": {
+      "magicdam": true,
+      "magiceffect": true,
       "nodam": false,
       "fulldam": false,
       "halfdam": false,
-      "rollOther": false,
-      "critOther": false,
-      "magicdam": false,
-      "magiceffect": false,
-      "concentration": false,
-      "toggleEffect": false,
-      "confirmTargets": "default",
       "autoFailFriendly": false,
       "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
       "offHandWeapon": false,
-      "noConcentrationCheck": false,
+      "concentration": false,
+      "toggleEffect": false,
       "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
       "idr": false,
       "idi": false,
       "idv": false,
       "ida": false
     },
-    "core": {},
-    "scene-packer": {
-      "hash": "9f7ff19882d5754133397d9eb2657cd5ce210bd1",
-      "sourceId": "Item.CHNM01gLo3kddfju"
-    },
-    "itemacro": {
-      "macro": {
-        "data": {
-          "_id": null,
-          "name": "Toll the Dead",
-          "type": "script",
-          "author": "devnIbfBHb74U9Zv",
-          "img": "icons/svg/dice-target.svg",
-          "scope": "global",
-          "command": "if (args[0].macroPass === \"preDamageRoll\") {\n    const target = await fromUuid(args[0].targetUuids[0]);\n    const needsD12 = target.actor.data.data.attributes.hp.value < target.actor.data.data.attributes.hp.max;\n    const theItem = await fromUuid(args[0].uuid);\n    let formula = theItem.data.data.damage.parts[0][0];\n    if (needsD12) \n        formula = formula.replace(\"d8\", \"d12\")\n    else \n        formula = formula.replace(\"d12\", \"d8\");\n    theItem.data.data.damage.parts[0][0] = formula;\n}",
-          "folder": null,
-          "sort": 0,
-          "permission": {
-            "default": 0
-          },
-          "flags": {}
-        },
-        "name": "Toll the Dead 10.0.10",
-        "type": "script",
-        "img": "icons/svg/dice-target.svg",
-        "scope": "global",
-        "command": "const version = \"10.0.10\";\ntry {\n    if (args[0].macroPass === \"preDamageRoll\") {\n        const target = await fromUuid(args[0].targetUuids[0]);\n        const needsD12 = target.actor.system.attributes.hp.value < target.actor.system.attributes.hp.max;\n        const theItem = await fromUuid(args[0].uuid);\n        let formula = theItem.system.damage.parts[0][0];\n        let scalingFormula = theItem.system.scaling.formula;\n        if (needsD12) {\n            formula = formula.replace(\"d8\", \"d12\");\n            if (scalingFormula) scalingFormula = scalingFormula.replace(\"d8\", \"d12\");\n        }\n        else  {\n            formula = formula.replace(\"d12\", \"d8\");\n            if (scalingFormula) scalingFormula = scalingFormula.replace(\"d12\", \"d8\");\n        }\n        theItem.system.scaling.formula = scalingFormula;\n        theItem.system.damage.parts[0][0] = formula;\n    }\n} catch (err) {\n    console.error(`${args[0].itemData.name} - Toll The Dead ${version}`, err);\n}",
-        "sort": 0,
-        "ownership": {
-          "default": 0
-        },
-        "flags": {},
-        "_stats": {
-          "systemId": null,
-          "systemVersion": null,
-          "coreVersion": null,
-          "createdTime": null,
-          "modifiedTime": null,
-          "lastModifiedBy": null
-        }
-      }
-    },
-    "cf": {
-      "id": "temp_0hvf80hl1zcf"
+    "midi-qol": {
+      "onUseMacroName": "[preDamageRoll]ItemMacro",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
     },
     "dnd5e": {
-      "persistSourceMigration": true,
-      "migratedProperties": [
-        "vocal",
-        "somatic"
-      ],
       "riders": {
-        "activity": []
-      },
-      "last": {
-        "dnd5eactivity000": {
-          "damageType": {
-            "0": "necrotic"
-          }
-        }
+        "activity": [],
+        "effect": []
       }
-    },
-    "tidy5e-sheet": {
-      "section": "",
-      "actionSection": ""
     },
     "dae": {
       "macro": {
@@ -143,7 +46,7 @@
         "img": "icons/magic/water/orb-ice-glow.webp",
         "type": "script",
         "scope": "global",
-        "command": "const version = \"10.0.10\";\ntry {\n    if (args[0].macroPass === \"preDamageRoll\") {\n        const target = await fromUuid(args[0].targetUuids[0]);\n        const needsD12 = target.actor.system.attributes.hp.value < target.actor.system.attributes.hp.max;\n        if (needsD12) {\n            rolledActivity.damage.parts[0].denomination = 12\n        }\n        else  {\n            rolledActivity.damage.parts[0].denomination = 8;\n        }\n    }\n} catch (err) {\n    console.error(`${args[0].itemData.name} - Toll The Dead ${version}`, err);\n}",
+        "command": "const version = \"13.0.52\";\ntry {\n    if (args[0].macroPass === \"preDamageRoll\") {\n        const target = await fromUuid(args[0].targetUuids[0]);\n        const needsD12 = target.actor.system.attributes.hp.value < target.actor.system.attributes.hp.max;\n        if (needsD12) {\n            rolledActivity.damage.parts[0].denomination = 12;\n        } else {\n            rolledActivity.damage.parts[0].denomination = 8;\n        }\n    }\n} catch (err) {\n    console.error(`${args[0].itemData.name} - Toll The Dead ${version}`, err);\n}",
         "author": "Zl1BOUaPLwDEujaL",
         "ownership": {
           "default": 3
@@ -153,9 +56,9 @@
         "sort": 0,
         "flags": {},
         "_stats": {
-          "coreVersion": "12.331",
-          "systemId": "dnd5e",
-          "systemVersion": "4.2.2",
+          "coreVersion": null,
+          "systemId": null,
+          "systemVersion": null,
           "createdTime": null,
           "modifiedTime": null,
           "lastModifiedBy": null,
@@ -173,13 +76,15 @@
   },
   "system": {
     "description": {
-      "value": "<p class=\"Core-Styles_Core-Body\">You will need to add the description yourself.</p>",
-      "chat": "<p class=\"Core-Styles_Core-Body\">You point at one creature you can see within range, and the sound of a dolorous bell fills the air around it for a moment. The target must succeed on a Wisdom saving throw or take 1d8 necrotic damage. If the target is missing any of its hit points, it instead takes 1d12 necrotic damage.</p>\n<p class=\"Core-Styles_Core-Body\">The spell’s damage increases by one die when you reach 5th level (2d8 or 2d12), 11th level (3d8 or 3d12), and 17th level (4d8 or 4d12).</p>"
+      "value": "<p>You point at one creature you can see within range, and the sound of a dolorous bell fills the air around it for a moment. The target must succeed on a Wisdom saving throw or take 1d8 necrotic damage. If the target is missing any of its hit points, it instead takes 1d12 necrotic damage.</p><p>The spell's damage increases by one die when you reach 5th level (2d8 or 2d12), 11th level (3d8 or 3d12), and 17th level (4d8 or 4d12).</p>\n<p><strong>midi-qol</strong>: Uses a <code>[preDamageRoll]ItemMacro</code> to swap the damage die from d8 to d12 when the target is below max HP. The macro modifies <code>rolledActivity.damage.parts[0].denomination</code> before the damage roll.</p>",
+      "chat": "<p>You point at one creature you can see within range, and the sound of a dolorous bell fills the air around it for a moment. The target must succeed on a Wisdom saving throw or take 1d8 necrotic damage. If the target is missing any of its hit points, it instead takes 1d12 necrotic damage.</p><p>The spell's damage increases by one die when you reach 5th level (2d8 or 2d12), 11th level (3d8 or 3d12), and 17th level (4d8 or 4d12).</p>"
     },
     "source": {
-      "custom": "Xanathar's Guide to Everything pg 169",
-      "revision": 1,
-      "rules": "2024"
+      "custom": "midi-qol sample",
+      "rules": "2014",
+      "book": "",
+      "page": "",
+      "license": ""
     },
     "activation": {
       "type": "action",
@@ -224,8 +129,12 @@
     },
     "preparation": {
       "mode": "prepared",
-      "prepared": true
+      "prepared": false
     },
+    "properties": [
+      "vocal",
+      "somatic"
+    ],
     "activities": {
       "dnd5eactivity000": {
         "_id": "dnd5eactivity000",
@@ -291,23 +200,20 @@
                 "formula": ""
               }
             }
-          ],
-          "critical": {
-            "allow": false
-          }
+          ]
         },
         "save": {
-          "ability": [
-            "wis"
-          ],
+          "ability": "wis",
           "dc": {
             "calculation": "spellcasting",
             "formula": ""
           }
         },
+        "name": "",
         "sort": 0,
         "useConditionText": "",
         "effectConditionText": "",
+        "useConditionReason": "",
         "macroData": {
           "name": "",
           "command": ""
@@ -335,8 +241,7 @@
           "rollMode": "default",
           "chooseEffects": false
         },
-        "useConditionReason": "",
-        "otherActivityId": "",
+        "otherActivityId": "none",
         "isOverTimeFlag": false,
         "overTimeProperties": {
           "saveRemoves": true,
@@ -345,27 +250,25 @@
         }
       }
     },
-    "identifier": "toll-the-dead-10013",
-    "properties": [],
-    "sourceClass": "ranger"
+    "identifier": "toll-the-dead",
+    "sourceClass": ""
   },
   "_stats": {
-    "compendiumSource": "Compendium.world.ddb-spells.eWALttYghEEA1qOa",
+    "compendiumSource": null,
     "duplicateSource": null,
     "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
-    "createdTime": 1741782997074,
-    "modifiedTime": 1741782997074,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
     "exportSource": null
   },
   "folder": "SpellFldrCantrip",
-  "ownership": {
-    "default": 0,
-    "Zl1BOUaPLwDEujaL": 3
-  },
   "_id": "DGClDQQLcKrY2T2y",
   "sort": 0,
+  "ownership": {
+    "default": 0
+  },
   "_key": "!items!DGClDQQLcKrY2T2y"
 }

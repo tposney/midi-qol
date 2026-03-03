@@ -5,15 +5,12 @@
   "effects": [
     {
       "_id": "l6ntxjpimprip38b",
-      "changes": [
-        {
-          "key": "macro.tokenMagic",
-          "mode": 0,
-          "value": "glacial-aura",
-          "priority": 20
-        }
-      ],
+      "name": "Aura of Vitality",
+      "description": "",
+      "origin": "Item.E0EIO6qacu1z3RKs",
+      "transfer": false,
       "disabled": false,
+      "changes": [],
       "duration": {
         "startTime": null,
         "seconds": null,
@@ -23,53 +20,23 @@
         "startRound": null,
         "startTurn": null
       },
-      "origin": "Actor.FzHGnPGyw01MRHXm.Item.sTiwetZlEawz5RLi",
-      "transfer": false,
+      "tint": "#ffffff",
+      "statuses": [],
       "flags": {
-        "core": {
-          "statusId": ""
-        },
         "dae": {
           "stackable": "none",
           "durationExpression": "",
           "macroRepeat": "none",
           "specialDuration": [],
-          "transfer": false
-        },
-        "ActiveAuras": {
-          "isAura": false,
-          "aura": "None",
-          "radius": null,
-          "alignment": "",
-          "type": "",
-          "ignoreSelf": false,
-          "height": false,
-          "hidden": false,
-          "displayTemp": false,
-          "hostile": false,
-          "onlyOnce": false
-        },
-        "dnd5e-helpers": {
-          "rest-effect": "Ignore"
-        },
-        "dnd5e": {
-          "dependents": [
-            {
-              "uuid": "Actor.7N8gaC46atZcugen.ActiveEffect.jXTP9duBbsVBFz0D"
-            },
-            {
-              "uuid": "Actor.7N8gaC46atZcugen.ActiveEffect.S9t1X4eOG99AxFxr"
-            },
-            {
-              "uuid": "Actor.7N8gaC46atZcugen.ActiveEffect.XOhWWAOWf9nwwTMB"
-            }
-          ]
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "enableCondition": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "dontApply": false,
+          "showIcon": true
         }
       },
-      "tint": "#ffffff",
-      "name": "Aura of Vitality",
-      "description": "",
-      "statuses": [],
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
@@ -89,98 +56,6 @@
     }
   ],
   "flags": {
-    "favtab": {
-      "isFavorite": false
-    },
-    "midi-qol": {
-      "onUseMacroName": "",
-      "effectActivation": false,
-      "onUseMacroParts": {
-        "0": {
-          "0": "ItemMacro",
-          "1": "postActiveEffects"
-        }
-      },
-      "rollAttackPerTarget": "default",
-      "itemCondition": "",
-      "effectCondition": "",
-      "reactionCondition": "",
-      "otherCondition": "",
-      "AoETargetType": "any",
-      "AoETargetTypeIncludeSelf": true,
-      "autoTarget": "default",
-      "removeAttackDamageButtons": "default"
-    },
-    "core": {},
-    "itemacro": {
-      "macro": {
-        "data": {
-          "_id": null,
-          "name": "Aura of Vitality",
-          "type": "script",
-          "author": "devnIbfBHb74U9Zv",
-          "img": "icons/svg/dice-target.svg",
-          "scope": "global",
-          "command": "actor = await fromUuid(args[0].actorUuid);\nconst itemData = {\n    name: args[0].itemData.name + \" Cure\",\n    type: \"feat\",\n    img: args[0].itemData.img,\n    data: {\n        actionType: \"heal\",\n        activation: {type: \"bonus\"},\n        damage: {parts: [[\"2d6\", \"healing\"]]},\n        target: {value: 1, type: \"creature\"},\n        range: {value: 30, units: \"ft\"}\n    }\n};\nconst items = (await actor.createEmbeddedDocuments(\"Item\", [itemData])).map(i=> i.uuid);\nlet removeUuids = getProperty(actor.data.flags, \"midi-qol.concentration-data.removeUuids\") ?? [];\nremoveUuids = removeUuids.concat(items);\nif (removeUuids.length > 0) actor.setFlag(\"midi-qol\", \"concentration-data.removeUuids\", removeUuids);",
-          "folder": null,
-          "sort": 0,
-          "permission": {
-            "default": 0
-          },
-          "flags": {}
-        },
-        "name": "Aura of Vitality",
-        "type": "script",
-        "img": "icons/svg/dice-target.svg",
-        "scope": "global",
-        "command": "const version = \"10.0.10\";\ntry {\n    actor = await fromUuid(args[0].actorUuid);\n    const itemData = {\n        name: args[0].itemData.name + \" Cure\",\n        type: \"feat\",\n        img: args[0].itemData.img,\n        system: {\n            actionType: \"heal\",\n            activation: {type: \"bonus\"},\n            damage: {parts: [[\"2d6\", \"healing\"]]},\n            target: {value: 1, type: \"creature\"},\n            range: {value: 30, units: \"ft\"}\n        }\n    };\n    const items = (await actor.createEmbeddedDocuments(\"Item\", [itemData])).map(i=> i.uuid);\n    let removeUuids = getProperty(actor.data.flags, \"midi-qol.concentration-data.removeUuids\") ?? [];\n    removeUuids = removeUuids.concat(items);\n    if (removeUuids.length > 0) actor.setFlag(\"midi-qol\", \"concentration-data.removeUuids\", removeUuids);\n} catch (err) {\n\t    console.error(`${args[0].itemData.name} - Aura of Vitality ${version}`, err);\n\t\treturn {}\n}",
-        "sort": 0,
-        "ownership": {
-          "default": 0
-        },
-        "flags": {},
-        "_stats": {
-          "systemId": null,
-          "systemVersion": null,
-          "coreVersion": null,
-          "createdTime": null,
-          "modifiedTime": null,
-          "lastModifiedBy": null
-        }
-      }
-    },
-    "scene-packer": {
-      "sourceId": "Item.9rDJI0I5GPcf2h7M",
-      "hash": "8e7c5b9b02f5a25bb5dfe4e1c47f3e816366f93a"
-    },
-    "betterRolls5e": {
-      "quickOther": {
-        "context": "",
-        "value": true,
-        "altValue": true
-      },
-      "quickDesc": {
-        "value": true,
-        "altValue": true
-      },
-      "quickProperties": {
-        "value": true,
-        "altValue": true
-      },
-      "quickVersatile": {
-        "value": false,
-        "altValue": false
-      },
-      "quickFlavor": {
-        "value": true,
-        "altValue": true
-      },
-      "quickDamage": {
-        "context": {
-          "0": ""
-        }
-      }
-    },
     "midiProperties": {
       "nodam": false,
       "fulldam": false,
@@ -202,66 +77,19 @@
       "idv": false,
       "ida": false
     },
-    "cf": {
-      "id": "temp_0hvf80hl1zcf"
+    "midi-qol": {
+      "onUseMacroName": "",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
     },
     "dnd5e": {
-      "persistSourceMigration": true,
-      "migratedProperties": [
-        "vocal",
-        "concentration"
-      ],
       "riders": {
         "activity": [],
         "effect": []
-      },
-      "dependents": [
-        {
-          "uuid": "Actor.WSDm88RsLBxiViel.ActiveEffect.ra4MfPfHgWmKfsRQ"
-        }
-      ],
-      "last": {
-        "dnd5eactivity000": {
-          "damageType": {
-            "0": "healing"
-          }
-        },
-        "xAwjAilat4WOhGf3": {
-          "damageType": {
-            "0": "healing"
-          }
-        }
-      }
-    },
-    "tidy5e-sheet": {
-      "section": "",
-      "actionSection": ""
-    },
-    "dae": {
-      "macro": {
-        "name": "Aura of Vitality 10.0.10",
-        "img": "icons/magic/holy/barrier-shield-winged-blue.webp",
-        "type": "script",
-        "scope": "global",
-        "command": "",
-        "author": "Zl1BOUaPLwDEujaL",
-        "ownership": {
-          "default": 3
-        },
-        "_id": null,
-        "folder": null,
-        "sort": 0,
-        "flags": {},
-        "_stats": {
-          "coreVersion": "12.331",
-          "systemId": "dnd5e",
-          "systemVersion": "4.0.4",
-          "createdTime": null,
-          "modifiedTime": null,
-          "lastModifiedBy": null,
-          "compendiumSource": null,
-          "duplicateSource": null
-        }
       }
     },
     "chris-premades": {
@@ -273,13 +101,12 @@
   },
   "system": {
     "description": {
-      "value": "<p>Healing energy radiates from you in an aura with a 30-foot radius. Until the spell ends, the aura moves with you, centered on you. You can use a bonus action to cause one creature in the aura (including you) to regain 2d6 hit points.</p><p></p><p>midi-qol: When you cast the spell choose \"Enable Aura\" which will consume the spell slot and enable the second activity \"Heal Target\" until the duration passes.</p>",
+      "value": "<p>Healing energy radiates from you in an aura with a 30-foot radius. Until the spell ends, the aura moves with you, centered on you. You can use a bonus action to cause one creature in the aura (including you) to regain 2d6 hit points.</p>\n<p><strong>midi-qol</strong>: No macros required. Two activities: \"Enable Aura\" (consumes spell slot, applies the Aura of Vitality effect) and \"Heal Target\" (bonus action, 2d6 healing, only usable while the aura effect is active via useConditionText).</p>",
       "chat": "<p>Healing energy radiates from you in an aura with a 30-foot radius. Until the spell ends, the aura moves with you, centered on you. You can use a bonus action to cause one creature in the aura (including you) to regain 2d6 hit points.</p>"
     },
     "source": {
-      "custom": "Midi 12.4.25",
-      "revision": 1,
-      "rules": "2024",
+      "custom": "midi-qol sample",
+      "rules": "2014",
       "book": "",
       "page": "",
       "license": ""
@@ -328,10 +155,15 @@
       "mode": "prepared",
       "prepared": false
     },
+    "properties": [
+      "vocal",
+      "concentration"
+    ],
     "activities": {
       "VdXYuJ9mTcblkhO9": {
         "type": "utility",
         "_id": "VdXYuJ9mTcblkhO9",
+        "name": "Enable Aura",
         "sort": 0,
         "activation": {
           "type": "action",
@@ -387,7 +219,7 @@
         },
         "useConditionText": "",
         "effectConditionText": "",
-        "name": "Enable Aura",
+        "useConditionReason": "",
         "macroData": {
           "name": "",
           "command": ""
@@ -415,8 +247,7 @@
           "rollMode": "default",
           "chooseEffects": false
         },
-        "useConditionReason": "",
-        "otherActivityId": "",
+        "otherActivityId": "none",
         "isOverTimeFlag": false,
         "overTimeProperties": {
           "saveRemoves": true,
@@ -426,6 +257,9 @@
       },
       "xAwjAilat4WOhGf3": {
         "type": "heal",
+        "_id": "xAwjAilat4WOhGf3",
+        "name": "Heal Target",
+        "sort": 0,
         "activation": {
           "type": "bonus",
           "value": null,
@@ -492,11 +326,9 @@
             "formula": ""
           }
         },
-        "name": "Heal Target",
-        "sort": 0,
         "useConditionText": "effects.some(ef => ef.name === \"Aura of Vitality\")",
         "effectConditionText": "",
-        "_id": "xAwjAilat4WOhGf3",
+        "useConditionReason": "",
         "macroData": {
           "name": "",
           "command": ""
@@ -509,6 +341,7 @@
         },
         "midiProperties": {
           "forceDialog": false,
+          "forceConsumeDialog": "never",
           "confirmTargets": "default",
           "automationOnly": false,
           "identifier": "",
@@ -520,12 +353,11 @@
           "autoTargetType": "any",
           "autoTargetAction": "default",
           "otherActivityCompatible": true,
-          "displayActivityName": false,
+          "displayActivityName": true,
           "rollMode": "default",
           "chooseEffects": false
         },
-        "useConditionReason": "",
-        "otherActivityId": "",
+        "otherActivityId": "none",
         "isOverTimeFlag": false,
         "overTimeProperties": {
           "saveRemoves": true,
@@ -534,27 +366,25 @@
         }
       }
     },
-    "identifier": "aura-of-vitality-10010",
-    "properties": [],
+    "identifier": "aura-of-vitality",
     "sourceClass": ""
   },
   "_stats": {
-    "compendiumSource": "Compendium.world.fixup.Item.mBw8CdwZvUfMH1T2",
+    "compendiumSource": null,
     "duplicateSource": null,
     "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
-    "createdTime": 1741783000513,
-    "modifiedTime": 1741783000527,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
     "exportSource": null
   },
   "folder": "SpellFldr3rdLevl",
   "_id": "E0EIO6qacu1z3RKs",
   "sort": 200000,
   "ownership": {
-    "default": 0,
-    "Zl1BOUaPLwDEujaL": 3
+    "default": 0
   },
   "_key": "!items!E0EIO6qacu1z3RKs"
 }

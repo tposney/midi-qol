@@ -73,7 +73,7 @@
   "system": {
     "description": {
       "value": "<p>A flood of Healing energy flows from you into injured creatures around you. You restore up to 700 Hit Points, divided as you choose among any number of creatures that you can see within range. Creatures healed by this spell are also cured of all Diseases and any effect making them Blinded or Deafened. This spell has no effect on Undead or constructs.</p>\n<p><strong>midi-qol</strong>: Select targets and confirm. A dialog appears to apportion the 700 HP healing pool among selected targets (pre-filled with each target's missing HP, with +/- buttons). Uses <code>applyTokenDamageMany</code> to produce a single reversible damage card for all healed targets. Automatically removes blinded and deafened conditions. Undead and constructs are filtered out.</p>",
-      "chat": ""
+      "chat": "<p>A flood of Healing energy flows from you into injured creatures around you. You restore up to 700 Hit Points, divided as you choose among any number of creatures that you can see within range. Creatures healed by this spell are also cured of all Diseases and any effect making them Blinded or Deafened. This spell has no effect on Undead or constructs.</p>"
     },
     "source": {
       "custom": "midi-qol sample",

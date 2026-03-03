@@ -708,6 +708,7 @@ declare global {
     getCheckRollModeFor: typeof utils.getCheckRollModeFor;
     getConcentrationEffect: typeof utils.getConcentrationEffect;
     getSaveRollModeFor: typeof utils.getSaveRollModeFor;
+    getItemFromEffectOrigin: typeof utils.getItemFromEffectOrigin;
     getTokenForActor: typeof utils.getOrCreateTokenForActor;
     getTokenForActorAsSet: typeof utils.getOrCreateTokenForActorAsSet;
     getTokenPlayerName: typeof utils.getTokenPlayerName;
@@ -1404,7 +1405,7 @@ export type ActivityUseConfiguration = InexactPartial<{
   event: Event;
   scaling: false | number;
   spell: {
-    slot: number;
+    slot: string;
   };
   subsequentActions?: boolean;
   cause: {

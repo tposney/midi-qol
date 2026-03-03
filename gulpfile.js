@@ -506,6 +506,20 @@ exports.compilePacks = gulp.series(
   outputPackFiles(DEV_DIST()),
 );
 /**
+ * Create a symlink from dist/pack-src -> ../pack-src so the in-game
+ * "Import Sample Items" macro can find the JSON source files.
+ */
+function createPackSrcSymlink(output = null) {
+  return (cb) => {
+    const target = (output || DIST) + "pack-src";
+    if (!fs.existsSync(target)) {
+      fs.symlinkSync("../pack-src", target);
+    }
+    cb();
+  };
+}
+
+/**
  * Default Build operation (uses esbuild for single bundled file, with type checking)
  */
 exports.default = gulp.series(
@@ -523,6 +537,7 @@ exports.default = gulp.series(
     outputSoundFiles(),
     outputConfigFiles(),
   ),
+  createPackSrcSymlink(),
 );
 /**
  * Extends the default build task by copying the result to the Development Environment

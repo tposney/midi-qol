@@ -177,7 +177,7 @@
   "system": {
     "description": {
       "value": "<p>Starting at 10th level, you and friendly creatures within 10 feet of you can't be frightened while you are conscious.</p>\n<p>At 18th level, the range of this aura increases to 30 feet.</p>\n<p>Midi-qol: requires Active Auras to function</p>",
-      "chat": ""
+      "chat": "<p>Starting at 10th level, you and friendly creatures within 10 feet of you can't be frightened while you are conscious.</p>\n<p>At 18th level, the range of this aura increases to 30 feet.</p>"
     },
     "source": {
       "custom": "Midi 12.4.7",

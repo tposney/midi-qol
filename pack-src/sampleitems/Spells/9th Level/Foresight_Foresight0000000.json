@@ -1,7 +1,7 @@
 {
   "name": "Foresight",
   "type": "spell",
-  "img": "icons/magic/perception/eye-ringed-glow-angry-large-teal.webp",
+  "img": "icons/magic/symbols/circle-ouroboros.webp",
   "effects": [
     {
       "_id": "foresightEffect0",
@@ -13,13 +13,13 @@
           "priority": 20
         },
         {
-          "key": "flags.midi-qol.advantage.ability.check.all",
+          "key": "flags.midi-qol.advantage.check.all",
           "mode": 5,
           "value": "1",
           "priority": 20
         },
         {
-          "key": "flags.midi-qol.advantage.ability.save.all",
+          "key": "flags.midi-qol.advantage.save.all",
           "mode": 5,
           "value": "1",
           "priority": 20
@@ -67,7 +67,7 @@
         "lastModifiedBy": null,
         "exportSource": null
       },
-      "img": "icons/magic/perception/eye-ringed-glow-angry-large-teal.webp",
+      "img": "icons/magic/symbols/circle-ouroboros.webp",
       "type": "base",
       "system": {},
       "sort": 0,
@@ -120,7 +120,7 @@
   "system": {
     "description": {
       "value": "<p>You touch a willing creature and bestow a limited ability to see into the immediate future. For the Duration, the target can't be surprised and has advantage on Attack rolls, Ability Checks, and Saving Throws. Additionally, other creatures have disadvantage on attack rolls against the target for the duration.</p>\n<p>This spell immediately ends if you cast it again before its Duration ends.</p>\n<p><strong>midi-qol</strong>: Applies an active effect granting advantage on all attack rolls, ability checks, and saving throws, and imposing disadvantage on all incoming attack rolls. Duration 8 hours. The \"can't be surprised\" aspect is not automated.</p>",
-      "chat": ""
+      "chat": "<p>You touch a willing creature and bestow a limited ability to see into the immediate future. For the Duration, the target can't be surprised and has advantage on Attack rolls, Ability Checks, and Saving Throws. Additionally, other creatures have disadvantage on attack rolls against the target for the duration.</p>\n<p>This spell immediately ends if you cast it again before its Duration ends.</p>"
     },
     "source": {
       "custom": "midi-qol sample",

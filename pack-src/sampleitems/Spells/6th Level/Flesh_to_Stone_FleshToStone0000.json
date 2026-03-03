@@ -1,0 +1,297 @@
+{
+  "name": "Flesh to Stone",
+  "type": "spell",
+  "img": "icons/magic/earth/strike-body-stone-crumble.webp",
+  "effects": [
+    {
+      "name": "Turning to Stone",
+      "img": "icons/magic/defensive/armor-stone-skin.webp",
+      "origin": "Item.FleshToStone0000",
+      "transfer": false,
+      "_id": "ftsRestrained000",
+      "type": "base",
+      "system": {},
+      "changes": [
+        {
+          "key": "flags.midi-qol.OverTime",
+          "mode": 5,
+          "value": "turn=end,\nsaveDC=@attributes.spell.dc,\nsaveAbility=con,\nsaveCount=3-,\nfailCount=2-petrified,\nrollAs=origin,\nlabel=Flesh to Stone (CON save)",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": 60,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "description": "<p>The target has the Restrained condition. At the end of each turn it makes a Constitution saving throw. Three failed saves (including the initial): Petrified. Three successful saves: spell ends. The successes and failures needn't be consecutive.</p>",
+      "tint": "#ffffff",
+      "statuses": [
+        "restrained"
+      ],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "stackable": "none",
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "dontApply": false,
+          "showIcon": true
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_key": "!items.effects!FleshToStone0000.ftsRestrained000"
+    }
+  ],
+  "flags": {
+    "midiProperties": {
+      "magicdam": false,
+      "magiceffect": true,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "concentration": true,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>You attempt to turn one creature that you can see within range into stone. The target makes a Constitution saving throw. On a failed save, it has the Restrained condition for the duration. On a successful save, its Speed is 0 until the start of your next turn. Constructs automatically succeed on the save.</p><p>A Restrained target makes another Constitution saving throw at the end of each of its turns. If it successfully saves against this spell three times, the spell ends. If it fails its saves three times, it is turned to stone and has the Petrified condition for the duration. The successes and failures needn't be consecutive; keep track of both until the target collects three of a kind.</p><p>If you maintain your Concentration on this spell for the entire possible duration, the target is Petrified until the condition is ended by Greater Restoration or similar magic.</p>\n<p><strong>midi-qol</strong>: No macros required. Save activity applies Restrained (on fail) or speed 0 (on success). The Restrained effect includes an OverTime end-of-turn CON save with <code>saveCount=3-</code> (3 saves removes the effect) and <code>failCount=2-petrified</code> (2 more fails applies Petrified status and removes the effect). The initial failed save counts as the first of three failures.</p>",
+      "chat": "<p>You attempt to turn one creature that you can see within range into stone. The target makes a Constitution saving throw. On a failed save, it has the Restrained condition for the duration. On a successful save, its Speed is 0 until the start of your next turn. Constructs automatically succeed on the save.</p><p>A Restrained target makes another Constitution saving throw at the end of each of its turns. If it successfully saves against this spell three times, the spell ends. If it fails its saves three times, it is turned to stone and has the Petrified condition for the duration. The successes and failures needn't be consecutive; keep track of both until the target collects three of a kind.</p><p>If you maintain your Concentration on this spell for the entire possible duration, the target is Petrified until the condition is ended by Greater Restoration or similar magic.</p>"
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "page": "",
+      "license": "CC-BY-4.0"
+    },
+    "activation": {
+      "type": "action",
+      "condition": "",
+      "value": 1
+    },
+    "duration": {
+      "value": "1",
+      "units": "minute"
+    },
+    "target": {
+      "affects": {
+        "type": "creature",
+        "count": "1",
+        "choice": false,
+        "special": ""
+      },
+      "template": {
+        "units": "",
+        "contiguous": false,
+        "type": ""
+      }
+    },
+    "range": {
+      "value": "60",
+      "units": "ft",
+      "special": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "ability": "",
+    "level": 6,
+    "school": "trs",
+    "materials": {
+      "value": "a cockatrice feather",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "preparation": {
+      "mode": "prepared",
+      "prepared": false
+    },
+    "properties": [
+      "vocal",
+      "somatic",
+      "material",
+      "concentration"
+    ],
+    "activities": {
+      "dnd5eactivity000": {
+        "_id": "dnd5eactivity000",
+        "type": "save",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "ftsRestrained000",
+            "onSave": false
+          }
+        ],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "damage": {
+          "parts": [],
+          "onSave": "none"
+        },
+        "save": {
+          "ability": "con",
+          "dc": {
+            "calculation": "spellcasting",
+            "formula": ""
+          }
+        },
+        "name": "",
+        "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "useConditionReason": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    },
+    "identifier": "flesh-to-stone",
+    "sourceClass": ""
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "folder": "SpellFldr6thLevl",
+  "_id": "FleshToStone0000",
+  "sort": 400000,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!FleshToStone0000"
+}

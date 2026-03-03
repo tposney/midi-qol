@@ -293,17 +293,23 @@ export async function postTemplateConfirmTargets(activity: Activity, options: Mi
     workflow.setTargets(new Set(game.user?.targets));
     if (needCanSeeSense) await workflow.activity.setupCanSeeSense({ workflow });
   }
-  if (requiresTargetConfirmation(activity, options) || (activityRequiresPostTemplateConfirmation(activity) && activity.target?.affects?.choice)) {
-    let result = true;
-    result = await resolveTargetConfirmation(activity, options);
+  // Only show confirmation here if the activity deferred from pre-template
+  // (i.e. it has a template or scaled target count). Otherwise preTemplateTargets
+  // already handled confirmation and we just need to sync targets.
+  if (activityRequiresPostTemplateConfirmation(activity) && requiresTargetConfirmation(activity, options)) {
+    const result = await resolveTargetConfirmation(activity, options);
     if (result && game.user?.targets) {
       await updateTargets();
     }
     return result === true;
   }
-  if (game.user?.targets) {
+  // Only sync targets from game.user.targets when the activity has a template or
+  // scaled target count — these need post-template syncing because dnd5e auto-targets
+  // tokens inside the template. For non-template activities, targets were already set
+  // in setupTargets and must not be overwritten from game.user.targets (which may have
+  // been changed by concurrent effects during the async workflow state transitions).
+  if (activityRequiresPostTemplateConfirmation(activity) && game.user?.targets) {
     await updateTargets();
-    return true;
   }
   return true;
 }

@@ -1,128 +1,111 @@
 {
   "name": "Divine Smite",
   "type": "spell",
-  "img": "icons/skills/melee/weapons-crossed-swords-yellow-teal.webp",
-  "effects": [],
-  "flags": {
-    "dynamiceffects": {
-      "effects": [
+  "img": "icons/skills/melee/strike-flail-destructive-yellow.webp",
+  "effects": [
+    {
+      "_id": "dsSmiteReady0000",
+      "name": "Divine Smite",
+      "description": "<p>When you hit with a melee weapon attack, you may use a Bonus Action and a spell slot to add Radiant damage.</p>",
+      "origin": "Item.Eb2MnoKGAh3XbgH9",
+      "transfer": true,
+      "disabled": false,
+      "changes": [
         {
-          "modSpecKey": "macro.itemMacro",
-          "value": "@target @item.level @item",
-          "mode": "+",
-          "targetSpecific": false,
-          "id": 1,
-          "itemId": "0u1wiqpT0znKtx4g",
-          "active": true,
-          "_targets": []
-        },
-        {
-          "modSpecKey": "macro.tokenMagic",
-          "value": "fumes",
-          "mode": "+",
-          "targetSpecific": false,
-          "id": 2,
-          "itemId": "0u1wiqpT0znKtx4g",
-          "active": true,
-          "_targets": [],
-          "label": "Macro TokenMagic"
+          "key": "flags.dnd5e.DamageBonusMacro",
+          "mode": 0,
+          "value": "ItemMacro",
+          "priority": 20
         }
       ],
-      "equipActive": false,
-      "alwaysActive": false
-    },
-    "betterRolls5e": {
-      "quickDamage": {
-        "context": {
-          "0": ""
-        },
-        "value": {
-          "0": true
-        },
-        "altValue": {
-          "0": true
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "tint": "#ffffff",
+      "statuses": [],
+      "flags": {
+        "dae": {
+          "stackable": "none",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "durationExpression": "",
+          "enableCondition": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "dontApply": false,
+          "showIcon": false
         }
       },
-      "critRange": {
-        "value": ""
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": null,
+        "systemId": null,
+        "systemVersion": null,
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
       },
-      "critDamage": {
-        "value": ""
-      },
-      "quickDesc": {
-        "value": true,
-        "altValue": true
-      },
-      "quickProperties": {
-        "value": true,
-        "altValue": true
-      },
-      "quickOther": {
-        "value": true,
-        "altValue": true
-      },
-      "quickFlavor": {
-        "value": true,
-        "altValue": true
-      },
-      "quickVersatile": {
-        "value": false,
-        "altValue": false
+      "img": "icons/skills/melee/strike-flail-destructive-yellow.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!Eb2MnoKGAh3XbgH9.dsSmiteReady0000"
+    }
+  ],
+  "flags": {
+    "midiProperties": {
+      "magicdam": true,
+      "magiceffect": true,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
       }
-    },
-    "favtab": {
-      "isFavourite": true,
-      "isFavorite": false
-    },
-    "itemacro": {
-      "macro": {
-        "data": {
-          "_id": null,
-          "name": "Divine Smite MQ0.8.88",
-          "type": "script",
-          "author": "devnIbfBHb74U9Zv",
-          "img": "icons/svg/dice-target.svg",
-          "scope": "global",
-          "command": "const version = \"0.9.52\";\ntry {\n    let target = await fromUuid(args[0].hitTargetUuids[0] ?? \"\");\n    let numDice = 1 + args[0].spellLevel;\n    if (numDice > 5) numDice = 5;\n    // Apparently improved divine smite should not be added to the divine smite. Uncomment these lines if you want it to be included\n    // if (improvedDivineSmite) numDice += 1;\n    // let improvedDivineSmite = args[0].actor.items.find(i=> i.name ===\"Improved Divine Smite\");\n    let undead = [\"undead\", \"fiend\"].some(type => (target?.actor.data.data.details.type?.value || \"\").toLowerCase().includes(type));\n    if (undead) numDice += 1;\n    if (args[0].isCritical) numDice = numDice * 2;\n    let damageRoll = await new Roll(`${numDice}d8`).roll();\n    new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, \"radiant\", target ? [target] : [], damageRoll, {flavor: \"Divine Smite - Damage Roll (Radiant)\", itemCardId: args[0].itemCardId})\n} catch (err) {\n    console.error(`${args[0].itemData.name} - Divine Smite ${version}`, err);\n}",
-          "folder": null,
-          "sort": 0,
-          "permission": {
-            "default": 0
-          },
-          "flags": {}
-        },
-        "name": "Divine Smite 10.0.8",
-        "type": "script",
-        "img": "icons/svg/dice-target.svg",
-        "scope": "global",
-        "command": "const version = \"10.0.8\";\ntry {\n    let target = await fromUuid(args[0].hitTargetUuids[0] ?? \"\");\n    let numDice = 1 + args[0].spellLevel;\n    if (numDice > 5) numDice = 5;\n    // Apparently improved divine smite should not be added to the divine smite. Uncomment these lines if you want it to be included\n    // if (improvedDivineSmite) numDice += 1;\n    // let improvedDivineSmite = args[0].actor.items.find(i=> i.name ===\"Improved Divine Smite\");\n    let undead = [\"undead\", \"fiend\"].some(type => (target?.actor.system.details.type?.value || \"\").toLowerCase().includes(type));\n    if (undead) numDice += 1;\n    if (args[0].isCritical) numDice = numDice * 2;\n    let damageRoll = await new Roll(`${numDice}d8`).roll({async: true});\n    new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, \"radiant\", target ? [target] : [], damageRoll, {flavor: \"Divine Smite - Damage Roll (Radiant)\", itemCardId: args[0].itemCardId})\n} catch (err) {\n    console.error(`${args[0].itemData.name} - Divine Smite ${version}`, err);\n}",
-        "sort": 0,
-        "ownership": {
-          "default": 0
-        },
-        "flags": {},
-        "_stats": {
-          "systemId": null,
-          "systemVersion": null,
-          "coreVersion": null,
-          "createdTime": null,
-          "modifiedTime": null,
-          "lastModifiedBy": null
-        }
-      }
-    },
-    "mess": {
-      "templateTexture": ""
     },
     "dae": {
-      "alwaysActive": false,
-      "activeEquipped": false,
       "macro": {
         "name": "Divine Smite",
-        "img": "icons/skills/melee/weapons-crossed-swords-yellow-teal.webp",
+        "img": "icons/skills/melee/strike-flail-destructive-yellow.webp",
         "type": "script",
         "scope": "global",
-        "command": "const version = \"10.0.8\";\ntry {\n    let target = await fromUuid(args[0].hitTargetUuids[0] ?? \"\");\n    let undead = [\"undead\", \"fiend\"].some(type => (target?.actor.system.details.type?.value || \"\").toLowerCase().includes(type));\n    if (!undead) return;\n    if (undead) numDice = 1;\n    // Apparently improved divine smite should not be added to the divine smite. Uncomment these lines if you want it to be included\n    // if (improvedDivineSmite) numDice += 1;\n    // let improvedDivineSmite = args[0].actor.items.find(i=> i.name ===\"Improved Divine Smite\");\n    let damageRoll = await new CONFIG.Dice.DamageRoll(`${numDice}d8`, {}, {type: \"radiant\", isCritical: workflow.damageRolls[0].isCritical, flavor: \"Undead Target\"}).roll();\n    return damageRoll;\n} catch (err) {\n    console.error(`${args[0].itemData.name} - Divine Smite ${version}`, err);\n}",
+        "command": "const version = \"13.0.52\";\ntry {\n    if (![\"mwak\"].includes(rolledActivity.actionType)) return {};\n    if (workflow.hitTargets.size === 0) return {};\n    // Find available spell slots (level 1-5, capped at 5d8 max)\n    const spells = actor.system.spells;\n    let options = \"\";\n    for (let i = 1; i <= 9; i++) {\n        const slot = spells[`spell${i}`];\n        if (slot && slot.value > 0) {\n            const numDice = Math.min(1 + i, 5);\n            options += `<option value=\"spell${i}\">${slot.label} (${slot.value}) ${numDice}d8</option>`;\n        }\n    }\n    if (spells.pact?.value > 0 && spells.pact?.level > 0) {\n        const numDice = Math.min(1 + spells.pact.level, 5);\n        options += `<option value=\"pact\">${spells.pact.label} (${spells.pact.value}) ${numDice}d8</option>`;\n    }\n    if (!options) return {};\n    const useLabel = game.i18n.localize(\"DND5E.AbilityUseCast\");\n    const choice = await foundry.applications.api.DialogV2.wait({\n        window: {title: macroItem.name},\n        position: {width: 400},\n        content: `<form><p>${useLabel} ${macroItem.name}?</p><select name=\"slotKey\">${options}</select></form>`,\n        buttons: [\n            {action: \"use\", label: useLabel, default: true, callback: (event, button) => button.form.elements.slotKey.value},\n            {action: \"no\", label: game.i18n.localize(\"Cancel\"), callback: () => false}\n        ],\n        close: () => false\n    });\n    if (!choice) return {};\n    // Consume the spell slot\n    const slotKey = choice;\n    const slotPath = `system.spells.${slotKey}`;\n    const current = foundry.utils.getProperty(actor, slotPath);\n    if (current.value <= 0) return {};\n    await actor.update({[`${slotPath}.value`]: current.value - 1});\n    // Calculate damage dice\n    const slotLevel = current.level;\n    let numDice = Math.min(1 + slotLevel, 5);\n    // Check for undead/fiend\n    const target = workflow.hitTargets.first();\n    const creatureType = (target?.actor?.system?.details?.type?.value || \"\").toLowerCase();\n    if ([\"undead\", \"fiend\"].includes(creatureType)) numDice += 1;\n    // Build the damage roll respecting critical hits\n    const isCritical = workflow.isCritical;\n    return await new CONFIG.Dice.DamageRoll(`${numDice}d8`, {}, {type: \"radiant\", isCritical, flavor: macroItem.name}).evaluate();\n} catch (err) {\n    console.error(`${macroItem.name} ${version}`, err);\n    return {};\n}",
         "author": "Zl1BOUaPLwDEujaL",
         "ownership": {
           "default": 3
@@ -132,9 +115,9 @@
         "sort": 0,
         "flags": {},
         "_stats": {
-          "coreVersion": "12.331",
-          "systemId": "dnd5e",
-          "systemVersion": "4.1.1",
+          "coreVersion": null,
+          "systemId": null,
+          "systemVersion": null,
           "createdTime": null,
           "modifiedTime": null,
           "lastModifiedBy": null,
@@ -142,101 +125,6 @@
           "duplicateSource": null
         }
       }
-    },
-    "midi-qol": {
-      "onUseMacroName": "[damageBonus]ItemMacro",
-      "effectActivation": false,
-      "rollAttackPerTarget": "default",
-      "itemCondition": "",
-      "effectCondition": "",
-      "reactionCondition": "",
-      "otherCondition": "",
-      "removeAttackDamageButtons": "default"
-    },
-    "core": {},
-    "autoanimations": {
-      "killAnim": false,
-      "below": false,
-      "override": false,
-      "targetToken": {
-        "enable": false
-      },
-      "sourceToken": {
-        "enable": false
-      },
-      "allSounds": {
-        "explosion": {
-          "audioExplodeEnabled": false,
-          "file": "",
-          "delay": 100,
-          "volume": 25
-        },
-        "item": {
-          "enableAudio": false,
-          "file": "",
-          "delay": 100,
-          "volume": 25
-        }
-      },
-      "autoOverride": {
-        "enable": false
-      },
-      "version": 1
-    },
-    "scene-packer": {
-      "sourceId": "Item.2XCtHOdRoQPD7PYj"
-    },
-    "cf": {
-      "id": "temp_qt0kn9os0vl",
-      "color": "#000000"
-    },
-    "midiProperties": {
-      "nodam": false,
-      "halfdam": false,
-      "fulldam": false,
-      "rollOther": false,
-      "critOther": false,
-      "concentration": false,
-      "magicdam": false,
-      "magiceffect": false,
-      "toggleEffect": false,
-      "autoFailFriendly": false,
-      "autoSaveFriendly": false,
-      "offHandWeapon": false,
-      "ignoreTotalCover": false,
-      "confirmTargets": "default",
-      "noConcentrationCheck": false,
-      "idr": false,
-      "idi": false,
-      "idv": false,
-      "ida": false
-    },
-    "spellTemplateManager": {
-      "stmData": {
-        "ignoreDuration": false,
-        "spellTexture": "",
-        "useTexture": false,
-        "alpha": 50,
-        "coneOrigin": 1,
-        "loopAnimations": true
-      }
-    },
-    "dnd5e": {
-      "riders": {
-        "activity": [],
-        "effect": []
-      },
-      "last": {
-        "Rl6CXHuDSLjA44wM": {
-          "damageType": {
-            "0": "radiant"
-          }
-        }
-      }
-    },
-    "tidy5e-sheet": {
-      "section": "",
-      "actionSection": ""
     },
     "chris-premades": {
       "info": {
@@ -247,18 +135,19 @@
   },
   "system": {
     "description": {
-      "value": "<p>Starting at 2nd Level, when you hit a creature with a melee weapon Attack, you can expend one spell slot to deal radiant damage to the target, in addition to the weapon’s damage.</p><p>The extra damage is 2d8 for a 1st-level spell slot, plus 1d8 for each Spell Level higher than 1st, to a maximum of 5d8.</p><p>The damage increases by 1d8 if the target is an Undead or a fiend, to a maximum of 6d8.</p><p> </p><p><strong>midi-qol:</strong></p><p>This item uses the \"item macro\" feature where the macro that does the rolling is bound to the item to add the extra damage for undead targets</p><p> Update: according to sources (Jeremy Crawford) improved divine smite does not increase the damage done by a divine smite - despite the helper text in improved divine smite.</p>",
-      "chat": ""
+      "value": "<p>The target takes an extra 2d8 Radiant damage from the attack. The damage increases by 1d8 if the target is a Fiend or an Undead.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d8 for each spell slot level above 1.</p><p><strong>midi-qol</strong>: Uses a transfer effect that registers a <code>DamageBonusMacro</code> on the actor. On any melee weapon hit, the macro prompts to use Divine Smite, lets the player choose a spell slot level, consumes the slot, and adds <code>(1+level)d8</code> Radiant damage (max 5d8). Adds 1d8 extra vs Fiends and Undead. Critical hits are handled via <code>isCritical</code> on the DamageRoll. No separate cast required — the prompt appears automatically on melee hits.</p>",
+      "chat": "<p>The target takes an extra 2d8 Radiant damage from the attack. The damage increases by 1d8 if the target is a Fiend or an Undead.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d8 for each spell slot level above 1.</p>"
     },
     "source": {
-      "custom": "",
-      "revision": 1,
-      "rules": "2024"
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
     },
     "activation": {
       "type": "bonus",
-      "condition": "",
-      "value": 1
+      "condition": "Immediately after hitting a target with a Melee weapon or an Unarmed Strike",
+      "value": null
     },
     "duration": {
       "value": "",
@@ -266,20 +155,19 @@
     },
     "target": {
       "affects": {
-        "special": "",
-        "type": "creature",
-        "count": "1",
-        "choice": false
+        "type": "",
+        "count": "",
+        "choice": false,
+        "special": ""
       },
       "template": {
-        "type": "",
         "units": "",
-        "contiguous": false
+        "contiguous": false,
+        "type": ""
       }
     },
     "range": {
-      "value": "5",
-      "units": "ft",
+      "units": "self",
       "special": ""
     },
     "uses": {
@@ -289,7 +177,7 @@
     },
     "ability": "",
     "level": 1,
-    "school": "con",
+    "school": "evo",
     "materials": {
       "value": "",
       "consumed": false,
@@ -300,31 +188,25 @@
       "mode": "prepared",
       "prepared": false
     },
+    "properties": [
+      "vocal"
+    ],
     "activities": {
       "dnd5eactivity000": {
-        "name": "",
-        "img": "",
-        "target": {
-          "prompt": false
-        },
-        "appliedEffects": [],
-        "_id": "dnd5eactivity000"
-      },
-      "Rl6CXHuDSLjA44wM": {
+        "_id": "dnd5eactivity000",
         "type": "damage",
-        "_id": "Rl6CXHuDSLjA44wM",
-        "sort": 0,
         "activation": {
-          "type": "action",
+          "type": "bonus",
           "value": null,
-          "override": false
+          "override": true
         },
         "consumption": {
+          "targets": [],
           "scaling": {
-            "allowed": false
+            "allowed": false,
+            "max": ""
           },
-          "spellSlot": true,
-          "targets": []
+          "spellSlot": true
         },
         "description": {
           "chatFlavor": ""
@@ -339,6 +221,7 @@
           "override": false
         },
         "target": {
+          "prompt": true,
           "template": {
             "contiguous": false,
             "units": "ft"
@@ -346,13 +229,12 @@
           "affects": {
             "choice": false
           },
-          "override": false,
-          "prompt": true
+          "override": false
         },
         "uses": {
           "spent": 0,
-          "recovery": [],
-          "max": ""
+          "max": "",
+          "recovery": []
         },
         "damage": {
           "critical": {
@@ -379,9 +261,13 @@
             }
           ]
         },
+        "name": "Cast Manually",
+        "img": "",
+        "sort": 0,
+        "appliedEffects": [],
         "useConditionText": "",
         "effectConditionText": "",
-        "name": "",
+        "useConditionReason": "",
         "macroData": {
           "name": "",
           "command": ""
@@ -395,8 +281,8 @@
         "midiProperties": {
           "forceDialog": false,
           "confirmTargets": "default",
-          "automationOnly": false,
-          "identifier": "",
+          "automationOnly": true,
+          "identifier": "cast-manually",
           "ignoreTraits": [],
           "triggeredActivityId": "none",
           "triggeredActivityConditionText": "",
@@ -404,13 +290,12 @@
           "triggeredActivityRollAs": "self",
           "autoTargetType": "any",
           "autoTargetAction": "default",
-          "otherActivityCompatible": true,
+          "otherActivityCompatible": false,
           "displayActivityName": false,
           "rollMode": "default",
           "chooseEffects": false
         },
-        "useConditionReason": "",
-        "otherActivityId": "",
+        "otherActivityId": "none",
         "isOverTimeFlag": false,
         "overTimeProperties": {
           "saveRemoves": true,
@@ -419,27 +304,25 @@
         }
       }
     },
-    "identifier": "divine-smite-1008",
-    "properties": [],
-    "sourceClass": "rogue"
+    "identifier": "divine-smite",
+    "sourceClass": ""
   },
   "_stats": {
-    "compendiumSource": "Item.pJKe8oNZdJSKtbcu",
+    "compendiumSource": null,
     "duplicateSource": null,
-    "coreVersion": "13.346",
-    "systemId": "dnd5e",
-    "systemVersion": "4.3.6",
-    "createdTime": 1741782997074,
-    "modifiedTime": 1741782997074,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
     "exportSource": null
   },
   "folder": "SpellFldr1stLevl",
   "_id": "Eb2MnoKGAh3XbgH9",
   "sort": 1700000,
   "ownership": {
-    "default": 0,
-    "Zl1BOUaPLwDEujaL": 3
+    "default": 0
   },
   "_key": "!items!Eb2MnoKGAh3XbgH9"
 }

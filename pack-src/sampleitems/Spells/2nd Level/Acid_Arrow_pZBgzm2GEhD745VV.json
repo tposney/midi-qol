@@ -1,18 +1,123 @@
 {
   "name": "Acid Arrow",
   "type": "spell",
+  "img": "icons/skills/ranged/arrow-flying-poisoned-green.webp",
+  "effects": [
+    {
+      "_id": "aaLingeringAcid0",
+      "name": "Acid Arrow",
+      "img": "icons/skills/ranged/arrow-flying-poisoned-green.webp",
+      "type": "base",
+      "system": {},
+      "changes": [
+        {
+          "key": "flags.midi-qol.ActivityOverTime",
+          "mode": 5,
+          "value": "deferredDamage",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": 2,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "description": "<p>On a hit, the target takes 4d4 Acid damage and 2d4 Acid damage at the end of its next turn.</p>",
+      "origin": "",
+      "transfer": false,
+      "statuses": [],
+      "tint": "#ffffff",
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "stackable": "multi",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "transfer": false,
+          "durationExpression": "",
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "enableCondition": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "dontApply": false,
+          "showIcon": false
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": null,
+        "systemId": null,
+        "systemVersion": null,
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_key": "!items.effects!pZBgzm2GEhD745VV.aaLingeringAcid0"
+    }
+  ],
+  "flags": {
+    "midiProperties": {
+      "magicdam": true,
+      "magiceffect": true,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
   "system": {
     "description": {
-      "value": "<p>A shimmering green arrow streaks toward a target within range and bursts in a spray of acid. Make a ranged spell Attack against the target. On a hit, the target takes 4d4 acid damage immediately and 2d4 acid damage at the end of its next turn. On a miss, the arrow splashes the target with acid for half as much of the initial damage and no damage at the end of its next turn.</p><p><strong>At Higher Levels.</strong> When you cast this spell using a spell slot of 3rd level or higher, the damage (both initial and later) increases by 1d4 for each slot level above 2nd.</p>",
-      "chat": ""
+      "value": "<p>A shimmering green arrow streaks toward a target within range and bursts in a spray of acid. Make a ranged spell attack against the target. On a hit, the target takes 4d4 Acid damage and 2d4 Acid damage at the end of its next turn. On a miss, the arrow splashes the target with acid for half as much of the initial damage only.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage (both initial and later) increases by 1d4 for each spell slot level above 2.</p><p><strong>midi-qol</strong>: Three activities — the main attack (4d4 Acid, scales +1d4/level) applies a Lingering Acid effect on hit that triggers deferred damage (2d4 Acid, scales +1d4/level) at end of the target's next turn via <code>ActivityOverTime</code>. On a miss, a triggered \"Missed Damage\" activity deals half initial damage. Both the Missed Damage and Deferred Damage activities are <code>automationOnly</code>.</p>",
+      "chat": "<p>A shimmering green arrow streaks toward a target within range and bursts in a spray of acid. Make a ranged spell attack against the target. On a hit, the target takes 4d4 Acid damage and 2d4 Acid damage at the end of its next turn. On a miss, the arrow splashes the target with acid for half as much of the initial damage only.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage (both initial and later) increases by 1d4 for each spell slot level above 2.</p>"
     },
     "source": {
-      "custom": "midi-qol 12.4.28",
-      "book": "SRD 5.1",
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
       "page": "",
-      "license": "CC-BY-4.0",
-      "rules": "2014",
-      "revision": 1
+      "license": "CC-BY-4.0"
     },
     "activation": {
       "type": "action",
@@ -43,8 +148,8 @@
     },
     "uses": {
       "max": "",
-      "recovery": [],
-      "spent": 0
+      "spent": 0,
+      "recovery": []
     },
     "level": 2,
     "school": "evo",
@@ -56,7 +161,7 @@
     },
     "preparation": {
       "mode": "prepared",
-      "prepared": true
+      "prepared": false
     },
     "properties": [
       "vocal",
@@ -67,6 +172,8 @@
       "dnd5eactivity000": {
         "_id": "dnd5eactivity000",
         "type": "attack",
+        "name": "",
+        "sort": 0,
         "activation": {
           "type": "action",
           "value": null,
@@ -90,14 +197,14 @@
         },
         "effects": [
           {
-            "_id": "KxbU4A3kfPPS8k6Z"
+            "_id": "aaLingeringAcid0"
           }
         ],
         "range": {
           "override": false
         },
         "target": {
-          "prompt": false,
+          "prompt": true,
           "template": {
             "contiguous": false,
             "units": "ft"
@@ -106,6 +213,11 @@
             "choice": false
           },
           "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
         },
         "attack": {
           "ability": "",
@@ -144,16 +256,14 @@
             }
           ]
         },
-        "uses": {
-          "spent": 0,
-          "recovery": [],
-          "max": ""
-        },
-        "sort": 0,
+        "img": "",
+        "appliedEffects": [
+          "aaLingeringAcid0"
+        ],
         "useConditionText": "",
         "effectConditionText": "",
         "macroData": {
-          "name": "Attack",
+          "name": "",
           "command": ""
         },
         "ignoreTraits": {
@@ -163,42 +273,38 @@
           "ida": false
         },
         "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
           "ignoreTraits": [],
-          "triggeredActivityId": "missed-damage",
+          "triggeredActivityId": "aaMissedDmgAct00",
           "triggeredActivityConditionText": "",
           "triggeredActivityTargets": "missedTargets",
           "triggeredActivityRollAs": "self",
-          "forceDialog": false,
-          "confirmTargets": "default",
           "autoTargetType": "any",
           "autoTargetAction": "default",
-          "automationOnly": false,
           "otherActivityCompatible": true,
-          "identifier": "",
           "displayActivityName": false,
           "rollMode": "default",
           "chooseEffects": false
         },
+        "useConditionReason": "",
+        "otherActivityId": "none",
         "attackMode": "",
         "ammunition": "",
-        "otherActivityId": "none",
-        "otherActivityUuid": "",
-        "name": "",
         "isOverTimeFlag": false,
         "overTimeProperties": {
           "saveRemoves": true,
           "preRemoveConditionText": "",
           "postRemoveConditionText": ""
-        },
-        "useConditionReason": "",
-        "img": "",
-        "appliedEffects": [
-          "KxbU4A3kfPPS8k6Z"
-        ]
+        }
       },
-      "dnd5eactivity200": {
-        "_id": "dnd5eactivity200",
+      "aaMissedDmgAct00": {
+        "_id": "aaMissedDmgAct00",
         "type": "damage",
+        "name": "Missed Damage",
+        "sort": 100,
         "activation": {
           "type": "special",
           "value": null,
@@ -236,6 +342,11 @@
           },
           "override": false
         },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
         "damage": {
           "critical": {
             "allow": false,
@@ -261,12 +372,8 @@
             }
           ]
         },
-        "uses": {
-          "spent": 0,
-          "recovery": [],
-          "max": ""
-        },
-        "sort": 0,
+        "img": "",
+        "appliedEffects": [],
         "useConditionText": "",
         "effectConditionText": "",
         "macroData": {
@@ -280,37 +387,37 @@
           "ida": false
         },
         "midiProperties": {
+          "forceDialog": false,
+          "forceConsumeDialog": "never",
+          "confirmTargets": "never",
+          "automationOnly": true,
+          "identifier": "missed-damage",
           "ignoreTraits": [],
           "triggeredActivityId": "none",
           "triggeredActivityConditionText": "",
           "triggeredActivityTargets": "targets",
           "triggeredActivityRollAs": "self",
-          "forceDialog": false,
-          "confirmTargets": "never",
           "autoTargetType": "any",
           "autoTargetAction": "default",
-          "automationOnly": true,
           "otherActivityCompatible": false,
-          "identifier": "",
           "displayActivityName": true,
           "rollMode": "default",
           "chooseEffects": false
         },
-        "name": "Missed Damage",
+        "useConditionReason": "",
+        "otherActivityId": "",
         "isOverTimeFlag": false,
         "overTimeProperties": {
-          "turnChoice": "start",
           "saveRemoves": true,
           "preRemoveConditionText": "",
           "postRemoveConditionText": ""
-        },
-        "useConditionReason": "",
-        "otherActivityId": ""
+        }
       },
-      "UdkVO8IGu4CUeTKk": {
+      "aaDeferDmgAct000": {
+        "_id": "aaDeferDmgAct000",
         "type": "damage",
-        "_id": "UdkVO8IGu4CUeTKk",
-        "sort": 0,
+        "name": "Deferred Damage",
+        "sort": 200,
         "activation": {
           "type": "special",
           "value": null,
@@ -318,11 +425,12 @@
           "condition": ""
         },
         "consumption": {
+          "targets": [],
           "scaling": {
-            "allowed": false
+            "allowed": false,
+            "max": ""
           },
-          "spellSlot": false,
-          "targets": []
+          "spellSlot": false
         },
         "description": {
           "chatFlavor": ""
@@ -337,27 +445,27 @@
           "override": false
         },
         "target": {
+          "prompt": true,
           "template": {
             "contiguous": false,
-            "units": "ft",
-            "type": ""
+            "units": "ft"
           },
           "affects": {
             "choice": false,
             "type": "self",
             "special": ""
           },
-          "override": true,
-          "prompt": true
+          "override": true
         },
         "uses": {
           "spent": 0,
-          "recovery": [],
-          "max": ""
+          "max": "",
+          "recovery": []
         },
         "damage": {
           "critical": {
-            "allow": false
+            "allow": false,
+            "bonus": ""
           },
           "parts": [
             {
@@ -379,6 +487,8 @@
             }
           ]
         },
+        "img": "",
+        "appliedEffects": [],
         "useConditionText": "",
         "effectConditionText": "",
         "macroData": {
@@ -392,195 +502,54 @@
           "ida": false
         },
         "midiProperties": {
+          "forceDialog": false,
+          "forceConsumeDialog": "never",
+          "confirmTargets": "never",
+          "automationOnly": true,
+          "identifier": "deferredDamage",
           "ignoreTraits": [],
           "triggeredActivityId": "none",
           "triggeredActivityConditionText": "",
           "triggeredActivityTargets": "targets",
           "triggeredActivityRollAs": "self",
-          "forceDialog": false,
-          "confirmTargets": "never",
           "autoTargetType": "any",
           "autoTargetAction": "default",
-          "automationOnly": true,
           "otherActivityCompatible": false,
-          "identifier": "",
           "displayActivityName": true,
           "rollMode": "default",
           "chooseEffects": false
         },
-        "name": "Deferred Damage",
+        "useConditionReason": "",
+        "otherActivityId": "",
         "isOverTimeFlag": true,
         "overTimeProperties": {
           "turnChoice": "end",
           "saveRemoves": false,
           "preRemoveConditionText": "false",
           "postRemoveConditionText": "true"
-        },
-        "useConditionReason": "",
-        "otherActivityId": ""
+        }
       }
     },
     "identifier": "acid-arrow",
-    "sourceClass": "",
-    "ability": ""
+    "ability": "",
+    "sourceClass": ""
   },
-  "flags": {
-    "midi-qol": {
-      "fumbleThreshold": null,
-      "rollAttackPerTarget": "default",
-      "removeAttackDamageButtons": "default",
-      "forceCEOff": true,
-      "itemCondition": "",
-      "reactionCondition": "",
-      "otherCondition": "",
-      "effectCondition": "",
-      "forceCEOn": false
-    },
-    "midiProperties": {
-      "autoFailFriendly": false,
-      "autoSaveFriendly": false,
-      "magicdam": false,
-      "magiceffect": false,
-      "noConcentrationCheck": false,
-      "toggleEffect": false,
-      "ignoreTotalCover": false
-    },
-    "dnd5e": {
-      "last": {
-        "dnd5eactivity000": {
-          "damageType": {
-            "0": "acid"
-          }
-        },
-        "UdkVO8IGu4CUeTKk": {
-          "damageType": {
-            "0": "acid"
-          }
-        }
-      },
-      "riders": {
-        "activity": []
-      }
-    },
-    "tidy5e-sheet": {
-      "section": "",
-      "actionSection": ""
-    },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
-      }
-    }
-  },
-  "img": "icons/magic/acid/projectile-bolts-salvo-green.webp",
-  "effects": [
-    {
-      "name": "Acid Arrow",
-      "img": "icons/magic/acid/projectile-bolts-salvo-green.webp",
-      "origin": "Scene.GO63mgFDMhBfPVWf.Token.y8rDGEEuPTa8Oz4m.Actor.2W8ip8j0hvK2pQ7V.Item.hVq6KYxm3XgN7Gll",
-      "transfer": false,
-      "_id": "KxbU4A3kfPPS8k6Z",
-      "type": "base",
-      "system": {},
-      "changes": [
-        {
-          "key": "flags.midi-qol.ActivityOverTime",
-          "mode": 5,
-          "value": "deferred-damage",
-          "priority": 20
-        }
-      ],
-      "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": 2,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
-      "description": "",
-      "tint": "#ffffff",
-      "statuses": [],
-      "sort": 0,
-      "flags": {
-        "dae": {
-          "enableCondition": "",
-          "disableCondition": "",
-          "disableIncapacitated": false,
-          "selfTarget": false,
-          "selfTargetAlways": false,
-          "dontApply": false,
-          "stackable": "multi",
-          "showIcon": false,
-          "durationExpression": "",
-          "macroRepeat": "none",
-          "specialDuration": []
-        },
-        "dnd5e": {
-          "riders": {
-            "statuses": []
-          },
-          "dependents": [
-            {
-              "uuid": "Scene.GO63mgFDMhBfPVWf.Token.epty7QCoXN6ondzS.Actor.CUd9btBTjzY0Pdd4.ActiveEffect.NesLeDAimLAA5O1f"
-            }
-          ]
-        },
-        "core": {
-          "overlay": false
-        },
-        "ActiveAuras": {
-          "isAura": false,
-          "aura": "None",
-          "nameOverride": "",
-          "radius": "",
-          "alignment": "",
-          "type": "",
-          "customCheck": "",
-          "ignoreSelf": false,
-          "height": false,
-          "hidden": false,
-          "displayTemp": false,
-          "hostile": false,
-          "onlyOnce": false,
-          "wallsBlock": "system",
-          "statuses": []
-        }
-      },
-      "_stats": {
-        "compendiumSource": null,
-        "duplicateSource": null,
-        "coreVersion": "13.346",
-        "systemId": "dnd5e",
-        "systemVersion": "4.3.6",
-        "createdTime": null,
-        "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
-      },
-      "_key": "!items.effects!pZBgzm2GEhD745VV.KxbU4A3kfPPS8k6Z"
-    }
-  ],
-  "folder": "SpellFldr2ndLevl",
   "_stats": {
-    "compendiumSource": "Compendium.world.fixup.Item.noYMat7CcbvgjRXH",
+    "compendiumSource": null,
     "duplicateSource": null,
-    "coreVersion": "13.350",
-    "systemId": "dnd5e",
-    "systemVersion": "5.1.10",
-    "createdTime": 1741782999099,
-    "modifiedTime": 1762306738064,
-    "lastModifiedBy": "pEOrrBXRIpR6dPVY",
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
     "exportSource": null
   },
+  "folder": "SpellFldr2ndLevl",
   "_id": "pZBgzm2GEhD745VV",
   "sort": 100000,
   "ownership": {
-    "default": 0,
-    "Zl1BOUaPLwDEujaL": 3
+    "default": 0
   },
   "_key": "!items!pZBgzm2GEhD745VV"
 }

@@ -391,7 +391,6 @@ export function preferredActiveGM() {
     if (preferredGM?.active) return preferredGM as User.Implementation;
     log(`preferredGM ${preferredGMId} is not active`);
   }
-  if (game.user?.isGM) return game.user;
   return game.users?.activeGM ?? null;
 }
 

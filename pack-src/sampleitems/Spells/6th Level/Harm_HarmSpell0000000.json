@@ -1,0 +1,311 @@
+{
+  "name": "Harm",
+  "type": "spell",
+  "img": "icons/magic/unholy/strike-body-explode-disintegrate.webp",
+  "effects": [
+    {
+      "name": "HP Maximum Reduced",
+      "img": "icons/magic/unholy/strike-body-explode-disintegrate.webp",
+      "origin": "Item.HarmSpell0000000",
+      "transfer": false,
+      "_id": "harmHpMaxReduce0",
+      "type": "base",
+      "system": {},
+      "changes": [
+        {
+          "key": "system.attributes.hp.tempmax",
+          "mode": 2,
+          "value": "-@damageTotal",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "description": "<p>Hit Point maximum is reduced by an amount equal to the Necrotic damage taken. This reduction lasts until the target finishes a Long Rest.</p>",
+      "tint": "#ffffff",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "stackable": "multi",
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [
+            "longRest"
+          ],
+          "enableCondition": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "dontApply": false,
+          "showIcon": true
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_key": "!items.effects!HarmSpell0000000.harmHpMaxReduce0"
+    }
+  ],
+  "flags": {
+    "midiProperties": {
+      "magicdam": true,
+      "magiceffect": true,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>You unleash virulent magic on a creature you can see within range. The target makes a Constitution saving throw. On a failed save, it takes 14d6 Necrotic damage, and its Hit Point maximum is reduced by an amount equal to the Necrotic damage it took. On a successful save, it takes half as much damage only. This spell can't reduce a target's Hit Point maximum below 1.</p>\n<p><strong>midi-qol</strong>: No macros required. Uses a save activity for 14d6 Necrotic (half on save). On a failed save, applies an HP Maximum Reduced effect that reduces <code>system.attributes.hp.tempmax</code> by <code>@damageTotal</code>. The effect lasts until a long rest (via DAE specialDuration).</p>",
+      "chat": "<p>You unleash virulent magic on a creature you can see within range. The target makes a Constitution saving throw. On a failed save, it takes 14d6 Necrotic damage, and its Hit Point maximum is reduced by an amount equal to the Necrotic damage it took. On a successful save, it takes half as much damage only. This spell can't reduce a target's Hit Point maximum below 1.</p>"
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "page": "",
+      "license": "CC-BY-4.0"
+    },
+    "activation": {
+      "type": "action",
+      "condition": "",
+      "value": 1
+    },
+    "duration": {
+      "value": "",
+      "units": "inst"
+    },
+    "target": {
+      "affects": {
+        "type": "creature",
+        "count": "1",
+        "choice": false,
+        "special": ""
+      },
+      "template": {
+        "units": "",
+        "contiguous": false,
+        "type": ""
+      }
+    },
+    "range": {
+      "value": "60",
+      "units": "ft",
+      "special": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "ability": "",
+    "level": 6,
+    "school": "nec",
+    "materials": {
+      "value": "",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "preparation": {
+      "mode": "prepared",
+      "prepared": false
+    },
+    "properties": [
+      "vocal",
+      "somatic"
+    ],
+    "activities": {
+      "dnd5eactivity000": {
+        "_id": "dnd5eactivity000",
+        "type": "save",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "harmHpMaxReduce0",
+            "onSave": false
+          }
+        ],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "damage": {
+          "parts": [
+            {
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "number": 14,
+              "denomination": "6",
+              "bonus": "",
+              "types": [
+                "necrotic"
+              ],
+              "scaling": {
+                "mode": ""
+              }
+            }
+          ],
+          "onSave": "half"
+        },
+        "save": {
+          "ability": "con",
+          "dc": {
+            "calculation": "spellcasting",
+            "formula": ""
+          }
+        },
+        "name": "",
+        "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "useConditionReason": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    },
+    "identifier": "harm",
+    "sourceClass": ""
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "folder": "SpellFldr6thLevl",
+  "_id": "HarmSpell0000000",
+  "sort": 100000,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!HarmSpell0000000"
+}

@@ -5,7 +5,7 @@
   "system": {
     "description": {
       "value": "<p><em>Wondrous item, (requires attunement)</em></p><p>While wearing this brooch, you have resistance to force damage, and you have immunity to damage from the <em>@Compendium[dnd5e.spells.41JIhpDyM9Anm7cs]{Magic Missile}</em> spell.</p><p><strong>midi-qol</strong>: implements damage resistance to force and if the actor is targeted by a spell called \"Magic Missile\" it will do no damage.<br />12.4.15</p>",
-      "chat": ""
+      "chat": "<p><em>Wondrous item, (requires attunement)</em></p><p>While wearing this brooch, you have resistance to force damage, and you have immunity to damage from the <em>@Compendium[dnd5e.spells.41JIhpDyM9Anm7cs]{Magic Missile}</em> spell.</p>"
     },
     "source": {
       "custom": "SRD 5.1",

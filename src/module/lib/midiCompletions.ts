@@ -135,6 +135,9 @@ const MIDI_COMPLETIONS: CompletionNode = {
       getVitalityValue: { type: "function", detail: "(actor?) => number | undefined", info: "Get current vitality value" },
       getVitalityMax: { type: "function", detail: "(actor?) => number | undefined", info: "Get max vitality value" },
 
+      // Origin / item resolution
+      getItemFromEffectOrigin: { type: "function", detail: "(origin: string) => Item | undefined", info: "Resolve an effect's origin to the source Item, traversing concentration and other ActiveEffect chains. Handles recursive origins with cycle detection." },
+
       // Misc
       showItemInfo: { type: "function", detail: "(item) => Promise<ChatMessage>", info: "Show item information in chat" },
       getChanges: { type: "function", detail: "(actorOrItem, key) => ActiveEffect[]", info: "Get effects that modify a specific key" },

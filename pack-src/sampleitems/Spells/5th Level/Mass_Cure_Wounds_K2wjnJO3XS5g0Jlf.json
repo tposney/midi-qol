@@ -1,18 +1,67 @@
 {
   "name": "Mass Cure Wounds",
   "type": "spell",
+  "img": "icons/magic/life/cross-area-circle-green-white.webp",
+  "effects": [],
+  "flags": {
+    "midiProperties": {
+      "magicdam": false,
+      "magiceffect": true,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "always",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default",
+      "autoTarget": "alwaysIgnoreDefeated",
+      "AoETargetType": "any",
+      "AoETargetTypeIncludeSelf": true,
+      "itemActivation": "workflow.targets.size <= 6"
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
   "system": {
     "description": {
-      "value": "<p>A wave of Healing energy washes out from a point of your choice within range. Choose up to six creatures in a 30-foot-radius Sphere centered on that point. Each target regains Hit Points equal to 3d8 + your Spellcasting ability modifier. This spell has no effect on Undead or constructs.</p><p><strong>At Higher Levels.</strong> When you cast this spell using a spell slot of 6th level or higher, the Healing increases by 1d8 for each slot level above 5th.</p>",
-      "chat": ""
+      "value": "<p>A wave of healing energy washes out from a point you can see within range. Choose up to six creatures in a 30-foot-radius Sphere centered on that point. Each target regains Hit Points equal to 5d8 plus your spellcasting ability modifier.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The healing increases by 1d8 for each spell slot level above 5.</p>\n<p><strong>midi-qol</strong>: No macros required. Uses a heal activity for 5d8 + @mod healing that scales by 1d8 per slot level above 5th. Auto-targets up to 6 creatures in a 30-foot sphere (confirm targets enabled). The caster is included in auto-targeting.</p>",
+      "chat": "<p>A wave of healing energy washes out from a point you can see within range. Choose up to six creatures in a 30-foot-radius Sphere centered on that point. Each target regains Hit Points equal to 5d8 plus your spellcasting ability modifier.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The healing increases by 1d8 for each spell slot level above 5.</p>"
     },
     "source": {
-      "custom": "",
-      "book": "SRD 5.1",
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
       "page": "",
-      "license": "CC-BY-4.0",
-      "revision": 1,
-      "rules": "2024"
+      "license": "CC-BY-4.0"
     },
     "activation": {
       "type": "action",
@@ -20,22 +69,22 @@
       "value": 1
     },
     "duration": {
-      "value": "5",
+      "value": "",
       "units": "inst"
     },
     "target": {
       "affects": {
         "count": "6",
-        "type": "ally",
+        "type": "creature",
         "choice": false,
         "special": ""
       },
       "template": {
         "units": "ft",
-        "count": "",
         "contiguous": false,
         "type": "sphere",
-        "size": "30"
+        "size": "30",
+        "count": ""
       }
     },
     "range": {
@@ -50,7 +99,7 @@
     },
     "ability": "",
     "level": 5,
-    "school": "evo",
+    "school": "abj",
     "materials": {
       "value": "",
       "consumed": false,
@@ -61,6 +110,10 @@
       "mode": "prepared",
       "prepared": false
     },
+    "properties": [
+      "vocal",
+      "somatic"
+    ],
     "activities": {
       "dnd5eactivity000": {
         "_id": "dnd5eactivity000",
@@ -107,7 +160,7 @@
           "recovery": []
         },
         "healing": {
-          "number": 3,
+          "number": 5,
           "denomination": 8,
           "bonus": "@mod",
           "types": [
@@ -123,9 +176,11 @@
             "formula": ""
           }
         },
+        "name": "",
         "sort": 0,
         "useConditionText": "",
         "effectConditionText": "",
+        "useConditionReason": "",
         "macroData": {
           "name": "",
           "command": ""
@@ -153,9 +208,7 @@
           "rollMode": "default",
           "chooseEffects": false
         },
-        "name": "",
-        "useConditionReason": "",
-        "otherActivityId": "",
+        "otherActivityId": "none",
         "isOverTimeFlag": false,
         "overTimeProperties": {
           "saveRemoves": true,
@@ -164,100 +217,25 @@
         }
       }
     },
-    "identifier": "mass-cure-wounds-11313",
-    "properties": [],
-    "sourceClass": "ranger"
+    "identifier": "mass-cure-wounds",
+    "sourceClass": ""
   },
-  "flags": {
-    "core": {},
-    "walledtemplates": {
-      "wallsBlock": "unwalled",
-      "wallRestriction": "move",
-      "attachToken": "na",
-      "addTokenSize": false
-    },
-    "midi-qol": {
-      "AoETargetType": "any",
-      "AoETargetTypeIncludeSelf": true,
-      "autoTarget": "alwaysIgnoreDefeated",
-      "removeAttackDamageButtons": "default",
-      "itemActivation": "workflow.targets.size <= 6",
-      "effectActivation": false,
-      "otherActivation": "",
-      "itemCondition": "workflow.targets.size <= 6",
-      "reactionCondtion": "",
-      "otherCondition": "",
-      "effectCondition": "",
-      "reactionCondition": "",
-      "rollAttackPerTarget": "default"
-    },
-    "midiProperties": {
-      "confirmTargets": "always",
-      "autoFailFriendly": false,
-      "autoSaveFriendly": false,
-      "rollOther": false,
-      "critOther": false,
-      "offHandWeapon": false,
-      "magicdam": false,
-      "magiceffect": false,
-      "concentration": false,
-      "noConcentrationCheck": false,
-      "toggleEffect": false,
-      "ignoreTotalCover": false,
-      "saveDamage": "default",
-      "idr": false,
-      "idi": false,
-      "idv": false,
-      "ida": false
-    },
-    "dnd5e": {
-      "persistSourceMigration": true,
-      "migratedProperties": [
-        "vocal",
-        "somatic"
-      ],
-      "last": {
-        "dnd5eactivity000": {
-          "damageType": {
-            "0": "healing"
-          }
-        }
-      },
-      "riders": {
-        "activity": [],
-        "effect": []
-      }
-    },
-    "tidy5e-sheet": {
-      "section": "",
-      "actionSection": ""
-    },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
-      }
-    }
-  },
-  "img": "icons/magic/life/heart-cross-strong-green.webp",
-  "effects": [],
-  "folder": "SpellFldr5thLevl",
   "_stats": {
     "compendiumSource": null,
     "duplicateSource": null,
     "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
-    "createdTime": 1741782997074,
-    "modifiedTime": 1741782997074,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
     "exportSource": null
   },
+  "folder": "SpellFldr5thLevl",
   "_id": "K2wjnJO3XS5g0Jlf",
   "sort": 300000,
   "ownership": {
-    "default": 0,
-    "Zl1BOUaPLwDEujaL": 3
+    "default": 0
   },
   "_key": "!items!K2wjnJO3XS5g0Jlf"
 }

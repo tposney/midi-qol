@@ -76,7 +76,7 @@
   "system": {
     "description": {
       "value": "<p>You unleash negative energy toward a creature you can see within range. The target makes a Constitution saving throw, taking 7d8 + 30 Necrotic damage on a failed save or half as much damage on a successful one.</p>\n<p>A Humanoid killed by this spell rises at the start of your next turn as a <strong>@UUID[Compendium.dnd5e.actors24.Actor.mmZombie00000000]{Zombie}</strong> that follows your verbal orders.</p>\n<p><strong>midi-qol</strong>: Automates the CON save and 7d8 + 30 necrotic damage (half on save). If a humanoid target is killed, a Zombie is automatically summoned at the start of the caster's next turn (or immediately if not in combat). The dead target's token is hidden when the zombie is raised.</p>",
-      "chat": ""
+      "chat": "<p>You unleash negative energy toward a creature you can see within range. The target makes a Constitution saving throw, taking 7d8 + 30 Necrotic damage on a failed save or half as much damage on a successful one.</p>\n<p>A Humanoid killed by this spell rises at the start of your next turn as a <strong>@UUID[Compendium.dnd5e.actors24.Actor.mmZombie00000000]{Zombie}</strong> that follows your verbal orders.</p>"
     },
     "source": {
       "custom": "midi-qol sample",

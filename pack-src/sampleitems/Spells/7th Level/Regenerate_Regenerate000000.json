@@ -102,7 +102,7 @@
   "system": {
     "description": {
       "value": "<p>A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.</p>\n<p><strong>midi-qol</strong>: Automates the 4d8 + 15 instant healing and applies an OverTime effect that heals 1 HP at the start of each turn for 1 hour.</p>",
-      "chat": ""
+      "chat": "<p>A creature you touch regains 4d8 + 15 Hit Points. For the duration, the target regains 1 Hit Point at the start of each of its turns, and any severed body parts regrow after 2 minutes.</p>"
     },
     "source": {
       "custom": "midi-qol sample",

@@ -49,7 +49,7 @@
   "system": {
     "description": {
       "value": "<p>You compel one creature you can see within range to die. If the target has 100 Hit Points or fewer, it dies. Otherwise, it takes 12d12 Psychic damage.</p>\n<p><strong>midi-qol</strong>: Uses three activities with no macros. The main utility activity triggers two conditional branches: if the target has 100 HP or fewer, the \"Instant Death\" other activity deals 100 psychic damage (killing it). If the target has more than 100 HP, the \"Psychic Damage\" triggered activity deals 12d12 psychic damage instead.</p>",
-      "chat": ""
+      "chat": "<p>You compel one creature you can see within range to die. If the target has 100 Hit Points or fewer, it dies. Otherwise, it takes 12d12 Psychic damage.</p>"
     },
     "source": {
       "custom": "midi-qol sample",

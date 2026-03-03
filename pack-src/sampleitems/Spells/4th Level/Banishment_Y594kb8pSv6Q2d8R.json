@@ -1,60 +1,49 @@
 {
   "name": "Banishment",
   "type": "spell",
-  "img": "icons/magic/control/energy-stream-link-spiral-teal.webp",
+  "img": "icons/magic/unholy/barrier-fire-pink.webp",
   "effects": [
     {
-      "_id": "iufZU12yslQQSskX",
-      "flags": {
-        "dae": {
-          "transfer": false,
-          "stackable": "none",
-          "specialDuration": [],
-          "macroRepeat": "none",
-          "selfTarget": false,
-          "selfTargetAlways": false,
-          "durationExpression": ""
-        },
-        "ActiveAuras": {
-          "isAura": false,
-          "ignoreSelf": false,
-          "hidden": false,
-          "height": false,
-          "alignment": "",
-          "type": "",
-          "aura": "None",
-          "radius": null,
-          "save": "",
-          "savedc": null
-        },
-        "core": {
-          "statusId": ""
-        }
-      },
-      "changes": [
-        {
-          "key": "macro.itemMacro",
-          "mode": 0,
-          "value": "@target",
-          "priority": 0
-        }
-      ],
-      "disabled": false,
+      "_id": "banishedEffect00",
+      "name": "Banished",
+      "origin": "",
       "duration": {
         "startTime": null,
-        "seconds": null,
+        "seconds": 60,
         "combat": null,
         "rounds": null,
         "turns": null,
         "startRound": null,
         "startTurn": null
       },
-      "origin": "Actor.DMTSWfQs8whM5FtE.Item.cPJGG9KDdaYy3RTU",
-      "tint": "#ffffff",
+      "disabled": false,
       "transfer": false,
-      "name": "Banishment",
-      "description": "",
-      "statuses": [],
+      "flags": {
+        "dae": {
+          "stackable": "none",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "transfer": false,
+          "durationExpression": "",
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "enableCondition": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "dontApply": false,
+          "showIcon": true
+        }
+      },
+      "img": "icons/creatures/unholy/demon-fire-horned-clawed.webp",
+      "tint": "#ffffff",
+      "type": "base",
+      "system": {},
+      "changes": [],
+      "description": "<p>The target is transported to a harmless demiplane and has the &amp;Reference[Incapacitated]{Incapacitated} condition. When the spell ends, the target reappears in the space it left or in the nearest unoccupied space if that space is occupied.</p><p>If the target is an Aberration, a Celestial, an Elemental, a Fey, or a Fiend, the target doesn't return if the spell lasts for 1 minute. The target is instead transported to a random location on a plane associated with its creature type.</p>",
+      "statuses": [
+        "incapacitated"
+      ],
+      "sort": 0,
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
@@ -66,164 +55,10 @@
         "lastModifiedBy": null,
         "exportSource": null
       },
-      "img": "icons/magic/control/energy-stream-link-spiral-teal.webp",
-      "type": "base",
-      "system": {},
-      "sort": 0,
-      "_key": "!items.effects!Y594kb8pSv6Q2d8R.iufZU12yslQQSskX"
+      "_key": "!items.effects!Y594kb8pSv6Q2d8R.banishedEffect00"
     }
   ],
   "flags": {
-    "dynamiceffects": {
-      "equipActive": true,
-      "alwaysActive": false,
-      "effects": [
-        {
-          "modSpecKey": "macro.execute",
-          "value": "Banishment @target",
-          "mode": "+",
-          "targetSpecific": false,
-          "id": 1,
-          "itemId": "pz0vjFCdPtQkdKKQ",
-          "active": true,
-          "_targets": [],
-          "label": "Macro Execute"
-        }
-      ]
-    },
-    "betterRolls5e": {
-      "critRange": {
-        "type": "String",
-        "value": null
-      },
-      "critDamage": {
-        "type": "String",
-        "value": ""
-      },
-      "quickDesc": {
-        "type": "Boolean",
-        "value": true,
-        "altValue": true
-      },
-      "quickAttack": {
-        "type": "Boolean",
-        "value": true,
-        "altValue": true
-      },
-      "quickSave": {
-        "type": "Boolean",
-        "value": true,
-        "altValue": true
-      },
-      "quickDamage": {
-        "type": "Array",
-        "value": [],
-        "altValue": [],
-        "context": []
-      },
-      "quickVersatile": {
-        "type": "Boolean",
-        "value": false,
-        "altValue": false
-      },
-      "quickProperties": {
-        "type": "Boolean",
-        "value": true,
-        "altValue": true
-      },
-      "quickCharges": {
-        "type": "Boolean",
-        "value": {
-          "use": false,
-          "resource": false
-        },
-        "altValue": {
-          "use": false,
-          "resource": false
-        }
-      },
-      "quickTemplate": {
-        "type": "Boolean",
-        "value": true,
-        "altValue": true
-      },
-      "quickOther": {
-        "type": "Boolean",
-        "value": true,
-        "altValue": true,
-        "context": ""
-      },
-      "quickFlavor": {
-        "type": "Boolean",
-        "value": true,
-        "altValue": true
-      },
-      "quickPrompt": {
-        "type": "Boolean",
-        "value": false,
-        "altValue": false
-      }
-    },
-    "dae": {
-      "alwaysActive": false,
-      "activeEquipped": true
-    },
-    "core": {},
-    "midi-qol": {
-      "onUseMacroName": "",
-      "effectActivation": false,
-      "rollAttackPerTarget": "default",
-      "itemCondition": "",
-      "effectCondition": "",
-      "reactionCondition": "",
-      "otherCondition": ""
-    },
-    "itemacro": {
-      "macro": {
-        "_data": {
-          "name": "Banishment",
-          "type": "script",
-          "scope": "global",
-          "command": "let target = canvas.tokens.get(args[1]);\n\nif (args[0] === \"on\") {\n    await target.update({hidden : true});\n    await target.actor.setFlag('world','banishment', 1);\n    ChatMessage.create({content: target.name + \"  was banished\"})\n    \n}\nif(args[0]=== \"off\") {\n target.update({hidden : false})\n target;actor.unsetFlag(args[1], 'world', 'banishment');\n ChatMessage.create({content: target.name + \"  returned\"})\n}",
-          "author": "devnIbfBHb74U9Zv"
-        },
-        "data": {
-          "name": "Banishment",
-          "type": "script",
-          "scope": "global",
-          "command": "let target = canvas.tokens.get(args[1]);\n\nif (args[0] === \"on\") {\n    await target.update({hidden : true});\n    await target.actor.setFlag('world','banishment', 1);\n    ChatMessage.create({content: target.name + \"  was banished\"})\n    \n}\nif(args[0]=== \"off\") {\n target.update({hidden : false})\n target.actor.unsetFlag('world', 'banishment');\n ChatMessage.create({content: target.name + \"  returned\"})\n}",
-          "author": "devnIbfBHb74U9Zv"
-        },
-        "options": {},
-        "apps": {},
-        "compendium": null,
-        "name": "Banishment 11.0.7",
-        "type": "script",
-        "img": "icons/svg/dice-target.svg",
-        "scope": "global",
-        "command": "const version = \"11.0.7\";\ntry {\n    let target = await fromUuid(lastArgValue.tokenUuid);\n    if (args[0] === \"on\") {\n        await ChatMessage.create({content: MidiQOL.getTokenPlayerName(target) + \"  was banished\"})\n        await DAE.setTokenVisibility(lastArgValue.tokenUuid, false)\n        await DAE.setFlag(lastArgValue.tokenUuid, \"banishment\", 1);\n        \n    }\n    if(args[0]=== \"off\") {\n        await ChatMessage.create({content: MidiQOL.getTokenPlayerName(target) + \"  returned\"})\n        await DAE.setTokenVisibility(lastArgValue.tokenUuid, true)\n        await DAE.unsetFlag(lastArgValue.tokenUuid, 'banishment');\n    }\n} catch (err)  {\n    console.error(`Banishment ${version}`, err);\n}",
-        "sort": 0,
-        "ownership": {
-          "default": 0
-        },
-        "flags": {},
-        "_stats": {
-          "systemId": null,
-          "systemVersion": null,
-          "coreVersion": null,
-          "createdTime": null,
-          "modifiedTime": null,
-          "lastModifiedBy": null
-        }
-      }
-    },
-    "favtab": {
-      "isFavorite": false
-    },
-    "cf": {
-      "id": "temp_0hvf80hl1zcf",
-      "color": "#000000"
-    },
     "midiProperties": {
       "nodam": false,
       "fulldam": false,
@@ -231,35 +66,34 @@
       "rollOther": false,
       "critOther": false,
       "magicdam": false,
-      "magiceffect": false,
-      "concentration": false,
+      "magiceffect": true,
+      "concentration": true,
       "toggleEffect": false,
+      "confirmTargets": "default",
       "autoFailFriendly": false,
       "autoSaveFriendly": false,
       "offHandWeapon": false,
-      "ignoreTotalCover": false,
-      "confirmTargets": "default",
       "noConcentrationCheck": false,
+      "ignoreTotalCover": false,
       "idr": false,
       "idi": false,
       "idv": false,
       "ida": false
     },
-    "dnd5e": {
-      "persistSourceMigration": true,
-      "migratedProperties": [
-        "vocal",
-        "somatic",
-        "material",
-        "concentration"
-      ],
-      "riders": {
-        "activity": []
-      }
+    "midi-qol": {
+      "onUseMacroName": "",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
     },
-    "tidy5e-sheet": {
-      "section": "",
-      "actionSection": ""
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
     },
     "chris-premades": {
       "info": {
@@ -270,13 +104,15 @@
   },
   "system": {
     "description": {
-      "value": "<p>You attempt to send one creature that you can see within range to another plane of existence. The target must succeed on a Charisma saving throw or be banished.</p><p>If the target is native to the plane of existence you're on, you banish the target to a harmless demiplane. While there, the target is incapacitated. The target remains there until the spell ends, at which point the target reappears in the space it left or in the nearest unoccupied space if that space is occupied.</p><p>If the target is native to a different plane of existence than the one you're on, the target is banished with a faint popping noise, returning to its home plane. If the spell ends before 1 minute has passed, the target reappears in the space it left or in the nearest unoccupied space if that space is occupied. Otherwise, the target doesn't return.</p><p><strong>At Higher Levels.</strong> When you cast this spell using a spell slot of 5th level or higher, you can target one additional creature for each slot level above 4th.</p><p></p><p>midi-qol: 11.0.7<br />Scaling not implemented</p>",
-      "chat": ""
+      "value": "<p>One or more creatures that you can see within range must succeed on a Charisma saving throw or be transported to a harmless demiplane for the duration. While there, the target has the &amp;Reference[Incapacitated]{Incapacitated} condition. When the spell ends, the target reappears in the space it left or in the nearest unoccupied space if that space is occupied.</p><p>If the target is an Aberration, a Celestial, an Elemental, a Fey, or a Fiend, the target doesn't return if the spell lasts for 1 minute. The target is instead transported to a random location on a plane associated with its creature type.</p><p><strong>Using a Higher-Level Spell Slot.</strong> You can target one additional creature for each spell slot level above 4.</p><p><strong>midi-qol</strong>: No macros required. CHA save applies the Incapacitated status effect on a failed save. Scales to additional targets with higher-level spell slots (@item.level - 3).</p>",
+      "chat": "<p>One or more creatures that you can see within range must succeed on a Charisma saving throw or be transported to a harmless demiplane for the duration. While there, the target has the &amp;Reference[Incapacitated]{Incapacitated} condition. When the spell ends, the target reappears in the space it left or in the nearest unoccupied space if that space is occupied.</p><p>If the target is an Aberration, a Celestial, an Elemental, a Fey, or a Fiend, the target doesn't return if the spell lasts for 1 minute. The target is instead transported to a random location on a plane associated with its creature type.</p><p><strong>Using a Higher-Level Spell Slot.</strong> You can target one additional creature for each spell slot level above 4.</p>"
     },
     "source": {
-      "custom": "PHB pg. 217",
-      "revision": 1,
-      "rules": "2024"
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "page": "",
+      "license": "CC-BY-4.0"
     },
     "activation": {
       "type": "action",
@@ -290,7 +126,7 @@
     "target": {
       "affects": {
         "type": "creature",
-        "count": "1",
+        "count": "@item.level - 3",
         "choice": false,
         "special": ""
       },
@@ -301,7 +137,7 @@
       }
     },
     "range": {
-      "value": "60",
+      "value": "30",
       "units": "ft",
       "special": ""
     },
@@ -310,11 +146,10 @@
       "spent": 0,
       "recovery": []
     },
-    "ability": "",
     "level": 4,
     "school": "abj",
     "materials": {
-      "value": "An item distasteful to the target",
+      "value": "a pentacle",
       "consumed": false,
       "cost": 0,
       "supply": 0
@@ -323,6 +158,12 @@
       "mode": "prepared",
       "prepared": false
     },
+    "properties": [
+      "vocal",
+      "somatic",
+      "material",
+      "concentration"
+    ],
     "activities": {
       "dnd5eactivity000": {
         "_id": "dnd5eactivity000",
@@ -350,7 +191,7 @@
         },
         "effects": [
           {
-            "_id": "iufZU12yslQQSskX",
+            "_id": "banishedEffect00",
             "onSave": false
           }
         ],
@@ -374,24 +215,21 @@
           "recovery": []
         },
         "damage": {
-          "onSave": "half",
-          "parts": [],
-          "critical": {
-            "allow": false
-          }
+          "onSave": "none",
+          "parts": []
         },
         "save": {
-          "ability": [
-            "cha"
-          ],
+          "ability": "cha",
           "dc": {
             "calculation": "spellcasting",
-            "formula": "16"
+            "formula": ""
           }
         },
         "sort": 0,
+        "name": "",
         "useConditionText": "",
         "effectConditionText": "",
+        "useConditionReason": "",
         "macroData": {
           "name": "",
           "command": ""
@@ -419,8 +257,7 @@
           "rollMode": "default",
           "chooseEffects": false
         },
-        "useConditionReason": "",
-        "otherActivityId": "",
+        "otherActivityId": "none",
         "isOverTimeFlag": false,
         "overTimeProperties": {
           "saveRemoves": true,
@@ -429,8 +266,7 @@
         }
       }
     },
-    "identifier": "banishment",
-    "properties": []
+    "identifier": "banishment"
   },
   "_stats": {
     "compendiumSource": null,
@@ -438,17 +274,16 @@
     "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
-    "createdTime": 1741782997074,
-    "modifiedTime": 1741782997074,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
     "exportSource": null
   },
   "folder": "SpellFldr4thLevl",
   "_id": "Y594kb8pSv6Q2d8R",
-  "sort": 1200000,
+  "sort": 100000,
   "ownership": {
-    "default": 0,
-    "Zl1BOUaPLwDEujaL": 3
+    "default": 0
   },
   "_key": "!items!Y594kb8pSv6Q2d8R"
 }

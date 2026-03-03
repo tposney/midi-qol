@@ -1,15 +1,124 @@
 {
   "name": "Chill Touch",
   "type": "spell",
+  "img": "icons/magic/unholy/strike-hand-glow-pink.webp",
+  "effects": [
+    {
+      "name": "Blocked Healing",
+      "img": "icons/magic/life/heart-broken-red.webp",
+      "origin": "Item.SNhuBXUyQNl1X0pe",
+      "transfer": false,
+      "_id": "ctBlockedHeal000",
+      "type": "base",
+      "system": {},
+      "changes": [
+        {
+          "key": "system.traits.di.value",
+          "mode": 0,
+          "value": "healing",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": 1,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "description": "<p>The target can't regain Hit Points until the end of your next turn.</p>",
+      "tint": "#ffffff",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "stackable": "none",
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [
+            "turnEndSource"
+          ],
+          "enableCondition": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "dontApply": false,
+          "showIcon": true
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_key": "!items.effects!SNhuBXUyQNl1X0pe.ctBlockedHeal000"
+    }
+  ],
+  "flags": {
+    "midiProperties": {
+      "magicdam": true,
+      "magiceffect": true,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
   "system": {
     "description": {
-      "value": "<p>You create a ghostly, skeletal hand in the space of a creature within range. Make a ranged spell attack against the creature to assail it with the chill of the grave. On a hit, the target takes 1d8 Necrotic damage, and it can't regain hit points until the start of your next turn. Until then, the hand clings to the target.</p><p>If you hit an undead target, it also has disadvantage on attack rolls against you until the end of your next turn.</p><p>This spell's damage increases by 1d8 when you reach 5th level (2d8), 11th level (3d8), and 17th level (4d8).</p><p></p><p>Midi-qol: 11.0.7: two effects are created since they expire at different times</p>",
-      "chat": ""
+      "value": "<p>Channeling the chill of the grave, make a melee spell attack against a target within reach. On a hit, the target takes 1d10 Necrotic damage, and it can't regain Hit Points until the end of your next turn.</p><p><strong>Cantrip Upgrade.</strong> The damage increases by 1d10 when you reach levels 5 (2d10), 11 (3d10), and 17 (4d10).</p>\n<p><strong>midi-qol</strong>: No macros required. Melee spell attack deals 1d10 Necrotic (cantrip scaling). On hit, applies a Blocked Healing effect that grants immunity to healing damage type, expiring at end of caster's next turn via DAE specialDuration.</p>",
+      "chat": "<p>Channeling the chill of the grave, make a melee spell attack against a target within reach. On a hit, the target takes 1d10 Necrotic damage, and it can't regain Hit Points until the end of your next turn.</p><p><strong>Cantrip Upgrade.</strong> The damage increases by 1d10 when you reach levels 5 (2d10), 11 (3d10), and 17 (4d10).</p>"
     },
     "source": {
-      "custom": "PHB pg. 221",
-      "revision": 1,
-      "rules": "2024"
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "page": "",
+      "license": "CC-BY-4.0"
     },
     "activation": {
       "type": "action",
@@ -34,8 +143,7 @@
       }
     },
     "range": {
-      "value": "120",
-      "units": "ft",
+      "units": "touch",
       "special": ""
     },
     "uses": {
@@ -54,8 +162,12 @@
     },
     "preparation": {
       "mode": "prepared",
-      "prepared": true
+      "prepared": false
     },
+    "properties": [
+      "vocal",
+      "somatic"
+    ],
     "activities": {
       "dnd5eactivity000": {
         "_id": "dnd5eactivity000",
@@ -83,10 +195,7 @@
         },
         "effects": [
           {
-            "_id": "fLDUdp710OrGuQKT"
-          },
-          {
-            "_id": "u1vxcPNPV0mLIfXo"
+            "_id": "ctBlockedHeal000"
           }
         ],
         "range": {
@@ -116,7 +225,7 @@
           },
           "flat": false,
           "type": {
-            "value": "ranged",
+            "value": "melee",
             "classification": "spell"
           }
         },
@@ -128,7 +237,7 @@
           "parts": [
             {
               "number": 1,
-              "denomination": 8,
+              "denomination": 10,
               "bonus": "",
               "types": [
                 "necrotic"
@@ -145,12 +254,11 @@
             }
           ]
         },
+        "name": "",
         "sort": 0,
         "useConditionText": "",
         "effectConditionText": "",
-        "attackMode": "oneHanded",
-        "ammunition": "",
-        "otherActivityUuid": "",
+        "useConditionReason": "",
         "macroData": {
           "name": "",
           "command": ""
@@ -178,8 +286,7 @@
           "rollMode": "default",
           "chooseEffects": false
         },
-        "otherActivityId": "",
-        "useConditionReason": "",
+        "otherActivityId": "none",
         "isOverTimeFlag": false,
         "overTimeProperties": {
           "saveRemoves": true,
@@ -189,218 +296,24 @@
       }
     },
     "identifier": "chill-touch",
-    "properties": [],
-    "sourceClass": "rogue"
+    "sourceClass": ""
   },
-  "flags": {
-    "core": {},
-    "midi-qol": {
-      "fumbleThreshold": null,
-      "effectActivation": true,
-      "rollAttackPerTarget": "default",
-      "removeAttackDamageButtons": "default",
-      "itemCondition": "",
-      "reactionCondition": "",
-      "otherCondition": "",
-      "effectCondition": ""
-    },
-    "midiProperties": {
-      "nodam": false,
-      "fulldam": false,
-      "halfdam": false,
-      "rollOther": false,
-      "critOther": false,
-      "magicdam": false,
-      "magiceffect": false,
-      "concentration": false,
-      "toggleEffect": false,
-      "autoFailFriendly": false,
-      "autoSaveFriendly": false,
-      "offHandWeapon": false,
-      "ignoreTotalCover": false,
-      "confirmTargets": "default",
-      "noConcentrationCheck": false,
-      "idr": false,
-      "idi": false,
-      "idv": false,
-      "ida": false
-    },
-    "cf": {
-      "id": "temp_0hvf80hl1zcf"
-    },
-    "dnd5e": {
-      "persistSourceMigration": true,
-      "migratedProperties": [
-        "vocal",
-        "somatic"
-      ],
-      "last": {
-        "dnd5eactivity000": {
-          "attackMode": "oneHanded",
-          "damageType": {
-            "0": "necrotic"
-          }
-        }
-      },
-      "dependents": [
-        {
-          "uuid": "Scene.GO63mgFDMhBfPVWf.Token.y8rDGEEuPTa8Oz4m.Actor.2W8ip8j0hvK2pQ7V.ActiveEffect.OQWn48cnSJ3IoTjq"
-        },
-        {
-          "uuid": "Scene.GO63mgFDMhBfPVWf.Token.y8rDGEEuPTa8Oz4m.Actor.2W8ip8j0hvK2pQ7V.ActiveEffect.EnKNr3XUE1Uhcrnt"
-        }
-      ],
-      "riders": {
-        "activity": []
-      }
-    },
-    "tidy5e-sheet": {
-      "section": "",
-      "actionSection": ""
-    },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
-      }
-    }
-  },
-  "img": "icons/magic/water/projectile-ice-faceted-blue.webp",
-  "effects": [
-    {
-      "origin": "Actor.iO04pmtZ0N3gTAk9.Item.kBdike3EFVRSdeLp",
-      "duration": {
-        "rounds": 2,
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
-      "disabled": false,
-      "_id": "fLDUdp710OrGuQKT",
-      "changes": [
-        {
-          "key": "flags.midi-qol.disadvantage.attack.mwak",
-          "mode": 0,
-          "value": "targetActorUuid === \"@actorUuid\" && details.type.value === \"undead\"",
-          "priority": 20
-        }
-      ],
-      "tint": "#ffffff",
-      "transfer": false,
-      "flags": {
-        "dae": {
-          "selfTarget": false,
-          "selfTargetAlways": false,
-          "stackable": "none",
-          "durationExpression": "",
-          "macroRepeat": "none",
-          "specialDuration": [
-            "turnEndSource"
-          ]
-        },
-        "core": {
-          "statusId": ""
-        }
-      },
-      "name": "Chill Touch - Attack Disadvantage",
-      "description": "",
-      "statuses": [],
-      "_stats": {
-        "compendiumSource": null,
-        "duplicateSource": null,
-        "coreVersion": "13.346",
-        "systemId": "dnd5e",
-        "systemVersion": "4.3.6",
-        "createdTime": null,
-        "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
-      },
-      "img": "icons/magic/water/projectile-ice-faceted-blue.webp",
-      "type": "base",
-      "system": {},
-      "sort": 0,
-      "_key": "!items.effects!SNhuBXUyQNl1X0pe.fLDUdp710OrGuQKT"
-    },
-    {
-      "origin": "Actor.iO04pmtZ0N3gTAk9.Item.kBdike3EFVRSdeLp",
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": 2,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
-      "disabled": false,
-      "_id": "u1vxcPNPV0mLIfXo",
-      "changes": [
-        {
-          "key": "system.traits.di.value",
-          "mode": 0,
-          "value": "healing",
-          "priority": 20
-        }
-      ],
-      "tint": "#ffffff",
-      "transfer": false,
-      "flags": {
-        "dae": {
-          "selfTarget": false,
-          "selfTargetAlways": false,
-          "stackable": "none",
-          "durationExpression": "",
-          "macroRepeat": "none",
-          "specialDuration": [
-            "turnStartSource"
-          ]
-        },
-        "core": {
-          "statusId": ""
-        }
-      },
-      "name": "Chill Touch - No Healing",
-      "description": "",
-      "statuses": [],
-      "_stats": {
-        "compendiumSource": null,
-        "duplicateSource": null,
-        "coreVersion": "13.346",
-        "systemId": "dnd5e",
-        "systemVersion": "4.3.6",
-        "createdTime": null,
-        "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
-      },
-      "img": "icons/magic/water/projectile-ice-faceted-blue.webp",
-      "type": "base",
-      "system": {},
-      "sort": 0,
-      "_key": "!items.effects!SNhuBXUyQNl1X0pe.u1vxcPNPV0mLIfXo"
-    }
-  ],
   "_stats": {
     "compendiumSource": null,
     "duplicateSource": null,
     "coreVersion": "13.346",
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
-    "createdTime": 1741782997074,
-    "modifiedTime": 1741782997074,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
     "exportSource": null
   },
   "folder": "SpellFldrCantrip",
   "_id": "SNhuBXUyQNl1X0pe",
   "sort": 900000,
   "ownership": {
-    "default": 0,
-    "Zl1BOUaPLwDEujaL": 3
+    "default": 0
   },
   "_key": "!items!SNhuBXUyQNl1X0pe"
 }

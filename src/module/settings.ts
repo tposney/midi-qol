@@ -1636,7 +1636,12 @@ export const registerSettings = function () {
     type: Object,
     config: false,
     onChange: () => {
-      gameStats.fetchStats();
+      // Only non-GM clients should reload stats from the database.
+      // The GM's in-memory currentStats is the authoritative copy;
+      // reloading here would overwrite unsaved increments (race condition).
+      if (!game.user?.isGM) {
+        gameStats.fetchStats();
+      }
       Hooks.callAll("midi-qol.StatsUpdated");
     }
   });

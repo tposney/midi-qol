@@ -5,7 +5,7 @@
   "system": {
     "description": {
       "value": "<p><em>Wondrous item</em></p><p>While wearing these dark lenses, you have darkvision out to a range of 60 feet. If you already have darkvision, wearing the goggles increases its range by 60 feet.</p><p></p><p>Midi-qol: activated by equipping/unequipping the item. This version is not stricly correct, it grants light amplification instead of darkvision, but that is so much cooler. If you don't like it edit the macro.</p>",
-      "chat": ""
+      "chat": "<p><em>Wondrous item</em></p><p>While wearing these dark lenses, you have darkvision out to a range of 60 feet. If you already have darkvision, wearing the goggles increases its range by 60 feet.</p>"
     },
     "source": {
       "custom": "DMG pg 172",

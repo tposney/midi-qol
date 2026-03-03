@@ -5,7 +5,7 @@
   "system": {
     "description": {
       "value": "<p><em>This feature is safe to rename.</em></p><p>midi-qol: 11.0.7</p>",
-      "chat": ""
+      "chat": "<p><em>This feature is safe to rename.</em></p>"
     },
     "source": {
       "custom": "Midi 12.4.25",

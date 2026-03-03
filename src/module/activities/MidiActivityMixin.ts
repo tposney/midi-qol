@@ -17,7 +17,6 @@ import {
   getIgnoreTraitsOptions,
   removeButtonsOptions,
   safeGetGameSetting,
-  targetConfirmation,
   triggeredActivityRollAsOptions,
   triggeredActivityTargetOptions,
   rollConfigOptions,
@@ -72,7 +71,7 @@ import {
   clearTargetSave,
   getConsumptionData,
 } from "../utils.js";
-import { activityHasScaledTargetCount, preTemplateTargets, removeFlanking, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
+import { activityHasScaledTargetCount, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
   _validateType(value: unknown) {
@@ -696,6 +695,13 @@ export let MidiActivityMixin = Base => {
         if (!await activity.preChatChecks(usage, dialog, message)) {
           if (isSelfTarget) { popTargetSave(); usage.workflow!.selfTargeted = false; }
           return false;
+        }
+        // If midiOptions.spellLevel is provided, set the spell slot key so that
+        // dnd5e's _prepareUsageScaling derives the correct scaling from it.
+        // @ts-expect-error item.type includes "spell" at runtime
+        if (usage.midiOptions?.spellLevel && activity.item?.type === "spell") {
+          usage.spell ??= {} as { slot: string };
+          usage.spell.slot = `spell${usage.midiOptions.spellLevel}`;
         }
         try {
           useResults = await super.use.bind(activity)(usage, dialog, message);
@@ -1352,33 +1358,37 @@ export let MidiActivityMixin = Base => {
         return false;
       }
       const workflow = config.workflow;
-      // If targetsToUse was provided (e.g. from completeActivityUse with targetUuids),
-      // pre-select them as game.user.targets so the normal flow picks them up.
-      if ((config.midiOptions?.targetsToUse?.size ?? 0) > 0 && !activityHasAreaTarget(this) && this.target?.affects.type !== "self") {
+      const hasTargetsToUse = (config.midiOptions?.targetsToUse?.size ?? 0) > 0 && !activityHasAreaTarget(this);
+      // If targetsToUse was provided (e.g. from completeActivityUse, OverTime effects),
+      // pre-populate game.user.targets so any confirmation dialog shows the right selection.
+      if (hasTargetsToUse) {
         const tokenIds = Array.from(config.midiOptions!.targetsToUse!).map(t => (t as Token).id);
         updateUserTargets(tokenIds);
       }
-      if (((this.target?.affects.type ?? "") !== "")
-        || configSettings.enforceSingleWeaponTarget
-        || (targetConfirmation.enabled && targetConfirmation.always)
-        || (targetConfirmation.enabled && targetConfirmation.noneTargeted)
-        || this.forcedTargetConfirmation
-        || config.midiOptions?.workflowOptions?.targetConfirmation === "always") {
+      if (requiresTargetConfirmation(this, config.midiOptions ?? {})
+        || configSettings.enforceSingleWeaponTarget) {
         if (!(await preTemplateTargets(this, config.midiOptions ?? {})))
           return false;
-      }
-      // Setup targets.
-      let selfTarget = this.target?.affects.type === "self";
-      // @ts-expect-error no dnd5e-types
-      if (this.item.type === "tool" && !this.target?.affects.type)
-        selfTarget = true;
-      if (!selfTarget) {
+        // Confirmation was shown — read the user's final selection from game.user.targets.
         workflow.setTargets(validTargetTokens(new Set(game.user?.targets)));
-      } else { // There is no token for the actor on the scene - create a temp target for this
-        foundry.utils.setProperty(config, "midiOptions.workflowOptions.targetConfirmation", "none");
-        let potentialTarget = getOrCreateTokenForActor(this.actor);
-        workflow.setTargets(new Set());
-        if (potentialTarget) workflow.setTargets(workflow.targets.add(potentialTarget));
+      } else if (hasTargetsToUse) {
+        // No confirmation needed — set workflow targets directly from the provided Set
+        // to avoid race conditions with game.user.targets being changed by concurrent effects.
+        workflow.setTargets(validTargetTokens(config.midiOptions!.targetsToUse!));
+      } else {
+        // No targetsToUse and no confirmation — use current user targets or self-target.
+        let selfTarget = this.target?.affects.type === "self";
+        // @ts-expect-error no dnd5e-types
+        if (this.item.type === "tool" && !this.target?.affects.type)
+          selfTarget = true;
+        if (!selfTarget) {
+          workflow.setTargets(validTargetTokens(new Set(game.user?.targets)));
+        } else {
+          foundry.utils.setProperty(config, "midiOptions.workflowOptions.targetConfirmation", "none");
+          let potentialTarget = getOrCreateTokenForActor(this.actor);
+          workflow.setTargets(new Set());
+          if (potentialTarget) workflow.setTargets(workflow.targets.add(potentialTarget));
+        }
       }
       // remove selection of un-targetable targets TODO
       if (canvas.scene) {

@@ -1,16 +1,16 @@
 {
   "name": "Greater Invisibility",
   "type": "spell",
-  "img": "icons/magic/air/fog-gas-smoke-swirling-gray.webp",
+  "img": "icons/creatures/magical/spirit-undead-ghost-blue.webp",
   "effects": [
     {
-      "_id": "GoUSbGdrl7G0I89N",
+      "_id": "grInvisibleEff00",
       "flags": {
         "dae": {
+          "transfer": false,
           "stackable": "none",
           "specialDuration": [],
           "macroRepeat": "none",
-          "transfer": false,
           "selfTarget": false,
           "selfTargetAlways": false,
           "durationExpression": "",
@@ -18,42 +18,21 @@
           "disableCondition": "",
           "disableIncapacitated": false,
           "dontApply": false,
-          "showIcon": false
-        },
-        "ActiveAuras": {
-          "isAura": false,
-          "ignoreSelf": false,
-          "hidden": false,
-          "height": false,
-          "aura": "None",
-          "radius": "",
-          "alignment": "",
-          "type": "",
-          "save": "",
-          "savedc": null,
-          "displayTemp": false,
-          "hostile": false,
-          "onlyOnce": false,
-          "nameOverride": "",
-          "customCheck": "",
-          "wallsBlock": "system"
-        },
-        "core": {
-          "overlay": false
+          "showIcon": true
         }
       },
       "changes": [],
       "disabled": false,
       "duration": {
         "startTime": null,
-        "seconds": null,
+        "seconds": 60,
         "combat": null,
         "rounds": null,
         "turns": null,
         "startRound": null,
         "startTurn": null
       },
-      "origin": "Actor.Y7foSiLRLo7ysFr9.Item.MtbkgRT7nopCAnpB",
+      "origin": null,
       "tint": "#ffffff",
       "transfer": false,
       "name": "Invisible",
@@ -64,26 +43,22 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "13.346",
-        "systemId": "dnd5e",
-        "systemVersion": "4.3.6",
+        "coreVersion": null,
+        "systemId": null,
+        "systemVersion": null,
         "createdTime": null,
         "modifiedTime": null,
         "lastModifiedBy": null,
         "exportSource": null
       },
-      "img": "icons/magic/air/fog-gas-smoke-swirling-gray.webp",
+      "img": "systems/dnd5e/icons/svg/statuses/invisible.svg",
       "type": "base",
       "system": {},
       "sort": 0,
-      "_key": "!items.effects!nrvUid8zdhVAx8BB.GoUSbGdrl7G0I89N"
+      "_key": "!items.effects!nrvUid8zdhVAx8BB.grInvisibleEff00"
     }
   ],
   "flags": {
-    "dae": {
-      "activeEquipped": false,
-      "alwaysActive": false
-    },
     "midi-qol": {
       "onUseMacroName": "",
       "effectActivation": false,
@@ -93,85 +68,6 @@
       "otherCondition": "",
       "effectCondition": ""
     },
-    "core": {},
-    "favtab": {
-      "isFavorite": false
-    },
-    "autoanimations": {
-      "killAnim": false,
-      "animLevel": false,
-      "override": false,
-      "animType": "t1",
-      "animName": "",
-      "bards": {
-        "bardAnim": "a1",
-        "bardTarget": true,
-        "bardTargetAnim": "a1",
-        "bardTargetColor": "a1",
-        "bardSelf": true,
-        "marker": true,
-        "markerColor": "a1",
-        "markerColorTarget": "a1"
-      },
-      "spellVar": "a1",
-      "hmAnim": "a1",
-      "rangedOptions": {
-        "rangeDmgType": ""
-      },
-      "color": "n1",
-      "spellOptions": {
-        "spellLoops": 1
-      },
-      "uaStrikeType": "physical",
-      "dtvar": "dt1",
-      "divineSmite": {
-        "dsEnable": false,
-        "dsSelf": true,
-        "dsSelfDelay": 0,
-        "dsSelfColor": "a1",
-        "dsTarget": true,
-        "dsTargetDelay": 1250,
-        "dsTargetColor": "a1"
-      },
-      "explosion": false,
-      "exAnimLevel": false,
-      "explodeVariant": "ev1",
-      "impactVar": "a1",
-      "explodeColor": "",
-      "explodeRadius": "0",
-      "explodeLoop": "1",
-      "allSounds": {
-        "explosion": {
-          "audioExplodeEnabled": false,
-          "file": "",
-          "delay": 100,
-          "volume": 0.25
-        },
-        "item": {
-          "enableAudio": false,
-          "file": "",
-          "delay": 100,
-          "volume": 0.25
-        }
-      },
-      "selfRadius": "5",
-      "animTint": "#ffffff",
-      "auraOpacity": 0.75,
-      "ctaOption": false,
-      "teleDist": 30,
-      "templates": {
-        "tempType": "a1",
-        "tempAnim": "",
-        "tempColor": "",
-        "tempLoop": 1,
-        "customAnim": false,
-        "customPath": ""
-      }
-    },
-    "cf": {
-      "id": "temp_0hvf80hl1zcf",
-      "color": "#000000"
-    },
     "midiProperties": {
       "nodam": false,
       "fulldam": false,
@@ -179,8 +75,8 @@
       "rollOther": false,
       "critOther": false,
       "magicdam": false,
-      "magiceffect": false,
-      "concentration": false,
+      "magiceffect": true,
+      "concentration": true,
       "toggleEffect": false,
       "confirmTargets": "default",
       "autoFailFriendly": false,
@@ -194,20 +90,9 @@
       "ida": false
     },
     "dnd5e": {
-      "persistSourceMigration": true,
-      "migratedProperties": [
-        "vocal",
-        "somatic",
-        "material",
-        "concentration"
-      ],
-      "dependents": [
-        {
-          "uuid": "Scene.GO63mgFDMhBfPVWf.Token.y8rDGEEuPTa8Oz4m.Actor.2W8ip8j0hvK2pQ7V.ActiveEffect.CLY6KUZ49xpraDlX"
-        }
-      ],
       "riders": {
-        "activity": []
+        "activity": [],
+        "effect": []
       }
     },
     "chris-premades": {
@@ -219,22 +104,24 @@
   },
   "system": {
     "description": {
-      "value": "<p>A creature you touch becomes invisible until the spell ends. Anything the target is wearing or carrying is invisible as long as it is on the target's person. The spell ends for a target that attacks or casts a spell.</p><p><strong>At Higher Levels.</strong> When you cast this spell using a spell slot of 3rd level or higher, you can target one additional creature for each slot level above 2nd.</p><p> * This version of Greater Invisibility uses the core Invisible status effect and interacts with foundry vision modes</p>",
-      "chat": ""
+      "value": "<p>A creature you touch has the Invisible condition until the spell ends.</p><p>midi-qol: Utility activity applies Invisible status for the full duration. Unlike regular Invisibility, the effect does NOT end when the target attacks or casts a spell.</p>",
+      "chat": "<p>A creature you touch has the Invisible condition until the spell ends.</p>"
     },
     "source": {
-      "custom": "PHB pg. 254",
+      "custom": "midi-qol sample",
       "revision": 1,
-      "rules": "2024"
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
     },
     "activation": {
       "type": "action",
       "condition": "",
-      "value": 1
+      "value": null
     },
     "duration": {
       "value": "1",
-      "units": "hour"
+      "units": "minute"
     },
     "target": {
       "affects": {
@@ -259,10 +146,10 @@
       "recovery": []
     },
     "ability": "",
-    "level": 2,
+    "level": 4,
     "school": "ill",
     "materials": {
-      "value": "An eyelash encased in gum arabic",
+      "value": "",
       "consumed": false,
       "cost": 0,
       "supply": 0
@@ -298,7 +185,7 @@
         },
         "effects": [
           {
-            "_id": "GoUSbGdrl7G0I89N"
+            "_id": "grInvisibleEff00"
           }
         ],
         "range": {
@@ -357,7 +244,7 @@
           "chooseEffects": false
         },
         "useConditionReason": "",
-        "otherActivityId": "",
+        "otherActivityId": "none",
         "isOverTimeFlag": false,
         "overTimeProperties": {
           "saveRemoves": true,
@@ -367,26 +254,28 @@
       }
     },
     "identifier": "greater-invisibility",
-    "properties": [],
-    "sourceClass": "paladin"
+    "properties": [
+      "vocal",
+      "somatic",
+      "concentration"
+    ]
   },
   "_stats": {
-    "compendiumSource": "Item.MtbkgRT7nopCAnpB",
+    "compendiumSource": null,
     "duplicateSource": null,
-    "coreVersion": "13.346",
-    "systemId": "dnd5e",
-    "systemVersion": "4.3.6",
-    "createdTime": 1741782997074,
-    "modifiedTime": 1741782997074,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
     "exportSource": null
   },
-  "folder": "SpellFldr2ndLevl",
+  "folder": "SpellFldr4thLevl",
   "_id": "nrvUid8zdhVAx8BB",
-  "sort": 500000,
+  "sort": 0,
   "ownership": {
-    "default": 0,
-    "Zl1BOUaPLwDEujaL": 3
+    "default": 0
   },
   "_key": "!items!nrvUid8zdhVAx8BB"
 }

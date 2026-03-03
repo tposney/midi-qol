@@ -1,17 +1,18 @@
 {
   "name": "Ice Knife",
+  "type": "spell",
+  "img": "icons/magic/water/projectile-ice-shard.webp",
   "system": {
     "description": {
-      "value": "<p>You create a shard of ice and fling it at one creature within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 Piercing damage. Hit or miss, the shard then explodes. The target and each creature within 5 feet of it must succeed on a Dexterity saving throw or take 2d6 Cold damage.</p><p><strong>Using a Higher-Level Spell Slot. </strong>The Cold damage increases by 1d6 for each spell slot level above 1.</p><p>Midi Verison 12.4.16</p>",
-      "chat": ""
+      "value": "<p>You create a shard of ice and fling it at one creature within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 Piercing damage. Hit or miss, the shard then explodes. The target and each creature within 5 feet of it must succeed on a Dexterity saving throw or take 2d6 Cold damage.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The Cold damage increases by 1d6 for each spell slot level above 1.</p><p><strong>midi-qol</strong>: Two activities — a ranged spell attack for 1d10 Piercing (no scaling), then a Shard Explosion DEX save for 2d6 Cold (no damage on save, scales +1d6/level). The attack activity uses <code>triggeredActivityId</code> to automatically fire the explosion (hit or miss) as a 5ft radius template centered on the target. The explosion activity is <code>automationOnly</code> so it cannot be used manually.</p>",
+      "chat": "<p>You create a shard of ice and fling it at one creature within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 Piercing damage. Hit or miss, the shard then explodes. The target and each creature within 5 feet of it must succeed on a Dexterity saving throw or take 2d6 Cold damage.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The Cold damage increases by 1d6 for each spell slot level above 1.</p>"
     },
     "source": {
-      "custom": "Midi 12.4.25",
-      "rules": "2024",
-      "revision": 1,
-      "book": "",
+      "custom": "midi-qol sample",
+      "book": "SRD 5.2",
       "page": "",
-      "license": ""
+      "license": "CC-BY-4.0",
+      "rules": "2024"
     },
     "activation": {
       "type": "action",
@@ -83,8 +84,8 @@
         },
         "duration": {
           "units": "inst",
-          "override": false,
-          "concentration": false
+          "concentration": false,
+          "override": false
         },
         "effects": [],
         "range": {
@@ -120,19 +121,20 @@
           "includeBase": true,
           "parts": [
             {
-              "custom": {
-                "enabled": false,
-                "formula": ""
-              },
               "number": 1,
               "denomination": 10,
               "bonus": "",
               "types": [
                 "piercing"
               ],
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
               "scaling": {
                 "mode": "",
-                "number": 1
+                "number": null,
+                "formula": ""
               }
             }
           ]
@@ -143,6 +145,9 @@
           "max": ""
         },
         "sort": 0,
+        "name": "",
+        "img": "",
+        "appliedEffects": [],
         "useConditionText": "",
         "effectConditionText": "",
         "macroData": {
@@ -156,15 +161,15 @@
           "ida": false
         },
         "midiProperties": {
-          "ignoreTraits": [],
-          "triggeredActivityId": "dnd5eactivity100",
-          "triggeredActivityConditionText": "true",
-          "triggeredActivityTargets": "targets",
-          "triggeredActivityRollAs": "firstTarget",
           "forceDialog": false,
           "confirmTargets": "default",
           "automationOnly": false,
           "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "iceKnifeSaveAct0",
+          "triggeredActivityConditionText": "true",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "firstTarget",
           "autoTargetType": "any",
           "autoTargetAction": "default",
           "otherActivityCompatible": true,
@@ -172,11 +177,9 @@
           "rollMode": "default",
           "chooseEffects": false
         },
+        "otherActivityId": "none",
         "attackMode": "",
         "ammunition": "",
-        "otherActivityId": "none",
-        "otherActivityUuid": "",
-        "name": "",
         "useConditionReason": "",
         "isOverTimeFlag": false,
         "overTimeProperties": {
@@ -185,9 +188,10 @@
           "postRemoveConditionText": ""
         }
       },
-      "dnd5eactivity100": {
-        "_id": "dnd5eactivity100",
+      "iceKnifeSaveAct0": {
+        "_id": "iceKnifeSaveAct0",
         "type": "save",
+        "name": "Shard Explosion",
         "activation": {
           "type": "",
           "value": null,
@@ -207,8 +211,8 @@
         },
         "duration": {
           "units": "inst",
-          "override": false,
-          "concentration": false
+          "concentration": false,
+          "override": false
         },
         "effects": [],
         "range": {
@@ -237,16 +241,16 @@
           "onSave": "none",
           "parts": [
             {
-              "custom": {
-                "enabled": false,
-                "formula": ""
-              },
               "number": 2,
               "denomination": 6,
               "bonus": "",
               "types": [
                 "cold"
               ],
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
               "scaling": {
                 "mode": "whole",
                 "number": 1,
@@ -272,8 +276,9 @@
           "recovery": [],
           "max": ""
         },
-        "sort": 0,
-        "name": "Shard Explosion",
+        "sort": 100,
+        "img": "",
+        "appliedEffects": [],
         "useConditionText": "",
         "effectConditionText": "",
         "macroData": {
@@ -287,24 +292,25 @@
           "ida": false
         },
         "midiProperties": {
+          "forceDialog": false,
+          "forceConsumeDialog": "never",
+          "confirmTargets": "default",
+          "automationOnly": true,
+          "identifier": "",
           "ignoreTraits": [],
           "triggeredActivityId": "none",
           "triggeredActivityConditionText": "",
           "triggeredActivityTargets": "targets",
           "triggeredActivityRollAs": "self",
-          "forceDialog": false,
-          "confirmTargets": "default",
-          "automationOnly": true,
-          "identifier": "",
           "autoTargetType": "any",
           "autoTargetAction": "default",
-          "otherActivityCompatible": true,
-          "displayActivityName": false,
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
           "rollMode": "default",
           "chooseEffects": false
         },
+        "otherActivityId": "none",
         "useConditionReason": "",
-        "otherActivityId": "",
         "isOverTimeFlag": false,
         "overTimeProperties": {
           "saveRemoves": true,
@@ -314,11 +320,8 @@
       }
     },
     "identifier": "ice-knife",
-    "sourceClass": "bard",
     "ability": ""
   },
-  "type": "spell",
-  "img": "icons/magic/water/projectile-ice-shard.webp",
   "effects": [],
   "folder": "SpellFldr1stLevl",
   "flags": {
@@ -326,35 +329,16 @@
       "riders": {
         "activity": [],
         "effect": []
-      },
-      "last": {
-        "dnd5eactivity100": {
-          "damageType": {
-            "0": "cold"
-          }
-        },
-        "dnd5eactivity000": {
-          "damageType": {
-            "0": "piercing"
-          }
-        }
       }
     },
-    "tidy5e-sheet": {
-      "section": "",
-      "actionSection": ""
-    },
     "midi-qol": {
-      "fumbleThreshold": null,
-      "AoETargetType": "any",
-      "AoETargetTypeIncludeSelf": true,
-      "autoTarget": "default",
       "rollAttackPerTarget": "default",
       "removeAttackDamageButtons": "default",
       "itemCondition": "",
       "reactionCondition": "",
       "otherCondition": "",
-      "effectCondition": ""
+      "effectCondition": "",
+      "onUseMacroName": ""
     },
     "midiProperties": {
       "autoFailFriendly": false,
@@ -376,22 +360,21 @@
       }
     }
   },
+  "_id": "0u9PqRJa5Qkkv9CC",
   "_stats": {
-    "compendiumSource": "Compendium.world.fixup.Item.atouILWWnyIcVD30",
+    "compendiumSource": null,
     "duplicateSource": null,
-    "coreVersion": "13.346",
-    "systemId": "dnd5e",
-    "systemVersion": "4.3.6",
-    "createdTime": 1741783011910,
-    "modifiedTime": 1741783011925,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
     "exportSource": null
   },
-  "_id": "0u9PqRJa5Qkkv9CC",
-  "sort": 101563,
+  "sort": 0,
   "ownership": {
-    "default": 0,
-    "Zl1BOUaPLwDEujaL": 3
+    "default": 0
   },
   "_key": "!items!0u9PqRJa5Qkkv9CC"
 }

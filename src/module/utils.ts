@@ -1196,20 +1196,25 @@ export async function doActivityOverTimeEffect(actor: Actor.Implementation, effe
 }
 
 async function getOvertimeActivity(actor: Actor.Implementation, effect: ActiveEffect.Implementation, change: ActiveEffect.ChangeData, startTurn: boolean) {
-  let activity /* MidiActivityMixin */ = await fromUuid(change.value) as Activity | null;
+  const changeValue = String(change.value ?? "");
+  let activity /* MidiActivityMixin */ = await fromUuid(changeValue) as Activity | null;
   if (!activity && effect.transfer) {
     //@ts-expect-error no dnd5e-types
-    activity = effect.parent?.system.activities?.find(a => a.identifier === change.value);
+    activity = effect.parent?.system.activities?.find(a => a.identifier === changeValue);
   }
   if (!activity && effect.origin) {
     const originItem = getItemFromEffectOrigin(effect.origin);
-    // @ts-expect-error no dnd5e-types
-    if (originItem) activity = originItem.system.activities.find(a => a.identifier === change.value);
+    if (originItem) {
+      // @ts-expect-error no dnd5e-types
+      activity = originItem.system.activities.find(a => a.identifier === changeValue);
+    }
   }
   if (!activity) {
+    console.error(`getOvertimeActivity | activity not found for changeValue: "${changeValue}"`);
     return undefined;
   }
   const turnChoice = activity.overTimeProperties?.turnChoice ?? "start";
+  console.error(`getOvertimeActivity | found activity: ${activity.name}, turnChoice: ${turnChoice}, startTurn: ${startTurn}`);
   // Check start/end turn
   if (turnChoice === "start" && !startTurn) return undefined;
   if (turnChoice === "end" && startTurn) return undefined;
@@ -9379,15 +9384,15 @@ export async function cleanCPRFlanked() {
   }
   cprEffect = getCPREffect(flankedId);
 }
-function getItemFromEffectOrigin(origin: string, alreadyVisited: string[] = []): Item.Implementation | undefined {
+export function getItemFromEffectOrigin(origin: string, alreadyVisited: string[] = []): Item.Implementation | undefined {
   let originItem: Item.Implementation | undefined;
   if (alreadyVisited.includes(origin)) return;
   const originEffectOrItem = fromUuidSync(origin) as ActiveEffect.Implementation | Item.Implementation | undefined;
   if (originEffectOrItem instanceof Item) return originEffectOrItem;
-  if (originEffectOrItem?.origin) {
-    if (originEffectOrItem.parent instanceof Item) {
-      originItem = originEffectOrItem.parent;
-    } else originItem = getItemFromEffectOrigin(originEffectOrItem.origin, [...alreadyVisited, origin]);
+  if (originEffectOrItem?.parent instanceof Item) {
+    originItem = originEffectOrItem.parent;
+  } else if (originEffectOrItem?.origin) {
+    originItem = getItemFromEffectOrigin(originEffectOrItem.origin, [...alreadyVisited, origin]);
     // recursive so @michael can feel fancy
   }
   return originItem;

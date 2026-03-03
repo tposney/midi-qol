@@ -110,7 +110,7 @@ import { PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
-import { activityHasScaledTargetCount, computeTargetsFromTemplates, postTemplateConfirmTargets, requiresTargetConfirmation } from "./activities/activityHelpers.js";
+import { activityHasScaledTargetCount, computeTargetsFromTemplates, postTemplateConfirmTargets } from "./activities/activityHelpers.js";
 import { Activity, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
@@ -2354,19 +2354,15 @@ export class Workflow {
     return this.WorkflowState_AoETargetConfirmation;
   }
   async WorkflowState_AoETargetConfirmation(context: WorkflowContext = {}): Promise<WorkflowState> {
-    const hasAoETemplate = activityHasAreaTarget(this.activity);
-    const emanationNoTemplate = activityHasEmanationNoTemplate(this.activity);
-    // Also handle non-AoE activities with a scaled target count (e.g. Bless upcast)
-    // By this point, dnd5e.preUseActivity has replaced the workflow activity with the scaled version
-    const hasScaledTargetCount = activityHasScaledTargetCount(this.activity);
-    const forceConfirmation = requiresTargetConfirmation(this.activity, { workflowOptions: this.workflowOptions });
-    if ((hasAoETemplate || emanationNoTemplate || hasScaledTargetCount || forceConfirmation) && this.workflowOptions.targetConfirmation !== "none") {
-      if (!await postTemplateConfirmTargets(this.activity, { workflowOptions: this.workflowOptions }, this)) {
-        return this.WorkflowState_Abort;
-      }
+    // postTemplateConfirmTargets uses requiresTargetConfirmation to decide whether to show
+    // the confirmation dialog — covers AoE templates, scaled counts, activity/global settings,
+    // and workflowOptions.targetConfirmation overrides.
+    if (!await postTemplateConfirmTargets(this.activity, { workflowOptions: this.workflowOptions }, this)) {
+      return this.WorkflowState_Abort;
     }
     // Enforce target count after confirmation — for scaled activities this is the first check,
     // since postChatCardChecks defers count enforcement when the target count depends on scaling.
+    const hasScaledTargetCount = activityHasScaledTargetCount(this.activity);
     if (hasScaledTargetCount) {
       const allowedTargets = Number(this.activity.target?.affects?.count);
       if (allowedTargets && this.targets.size > allowedTargets) {
@@ -3103,7 +3099,8 @@ export class Workflow {
         }
       }
     };
-    let origin = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid;
+    let origin = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid
+      ?? getConcentrationEffect(this.actor, this.item)?.uuid;
     let damageComponents = {};
     let damageListItem;
     let hpDamage;
