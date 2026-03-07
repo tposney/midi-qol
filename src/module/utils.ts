@@ -900,7 +900,7 @@ export function requestPCSave(ability: string, rollType: string | undefined, pla
       abilityString = labels.join(` ${i18n("midi-qol.or")} `);
     } else {
       // Fallback when no arrays provided (e.g., external callers)
-      abilityString = ability;
+      abilityString = ability || i18n("midi-qol.plain-d20-roll");
       let abilityDetails = GameSystemConfig.abilities[ability];
       if (!abilityDetails) abilityDetails = { ...GameSystemConfig.skills[ability], label: "" };
       if (!abilityDetails) abilityDetails = { ...GameSystemConfig.tools[ability], label: "" };
@@ -2360,18 +2360,20 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         abortHookName = "midi-qol.preAbort";
       }
       usage.sequenceId = foundry.utils.randomID();
-      const castHookName = "dnd5e.postUseLinkedSpell";
       let completeHookName = `midi-qol.postCleanup.${activity.uuid}`;
       // @ts-expect-error no clue
-      if (!activity || activity.activity?.id) {
+      if (!activity || activity.activity?.id || activity.type === "cast") {
         // Magic items create a pseudo item when doing the roll so have to hope we get the right completion
-        // forward activities wont call the expected postCleanup Hook
+        // Forward activities and CastActivity won't fire postCleanup with the cast activity's UUID —
+        // the spell workflow fires it with the spell activity's UUID instead.
+        // Use the generic hook and rely on sequenceId gating to match the correct workflow.
         completeHookName = "midi-qol.postCleanup";
       }
 
-      // All three hooks and the timeout do the same cleanup: unregister hooks, restore targets, resolve.
+      // Both hooks and the timeout do the same cleanup: unregister hooks, restore targets, resolve.
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       const cleanupAndResolve = (result: any, source?: string) => {
-        Hooks.off(castHookName, castHookId);
+        if (timeoutId !== undefined) { clearTimeout(timeoutId); timeoutId = undefined; }
         //@ts-expect-error dynamic hook name
         Hooks.off(abortHookName, abortHookId);
         //@ts-expect-error dynamic hook name
@@ -2381,10 +2383,6 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         resolve(result);
       };
 
-      const castHookId = Hooks.on(castHookName, (activity, activityUsage, results) => {
-        if (usage.sequenceId !== activityUsage.sequenceId) return;
-        cleanupAndResolve(usage.workflow, "postUseLinkedSpell");
-      });
       //@ts-expect-error dynamic hook name
       const abortHookId = Hooks.on(abortHookName, (workflow: Workflow) => {
         if (workflow.sequenceId !== usage.sequenceId) return;
@@ -2395,8 +2393,8 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         if (workflow.sequenceId !== usage.sequenceId) return;
         cleanupAndResolve(workflow, "postCleanup");
       });
-      setTimeout(() => {
-        cleanupAndResolve(undefined);
+      timeoutId = setTimeout(() => {
+        cleanupAndResolve(undefined, "timeout");
       }, maxWait * 1000);
       usage.midiOptions!.targetsToUse = targetsToUse;
       // @ts-expect-error no dnd5e-types
@@ -6023,6 +6021,7 @@ async function asyncMySafeEval(expression: string, sandbox: AnyMutableObject, on
       combat: game.combat,
       evalRaceOrType: raceOrType,
       evalTypeOrRace: typeOrRace,
+      sizeNumeric,
       error: console.error,
       warn: console.warn,
       log: console.log
@@ -6073,7 +6072,8 @@ function mySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn
       nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid,
       combat: game.combat,
       evalRaceOrType: raceOrType,
-      evalTypeOrRaceEval: typeOrRace
+      evalTypeOrRaceEval: typeOrRace,
+      sizeNumeric
     });
 
     const sandboxProxy = new Proxy(sandbox, {
@@ -6118,6 +6118,19 @@ export function typeOrRace(entity: TokenOrDocument | Actor | string): string {
   // cater to dnd5e 2.4+ where race can be a string or an Item
   // @ts-expect-error no dnd5e-types
   else return (systemData.details?.race?.name ?? systemData.details?.race)?.toLocaleLowerCase() ?? "";
+}
+
+export function sizeNumeric(size: string): number | undefined {
+  const s = size?.toLowerCase();
+  if (!s) return undefined;
+  const actorSizes = GameSystemConfig.actorSizes;
+  // Direct key match (e.g. "sm", "lg", "grg")
+  if (actorSizes[s]?.numerical !== undefined) return actorSizes[s].numerical;
+  // Long form match (e.g. "small", "gargantuan") — compare against labels
+  for (const [, config] of Object.entries(actorSizes)) {
+    if (game.i18n!.localize(config.label).toLowerCase() === s) return config.numerical;
+  }
+  return undefined;
 }
 
 export function raceOrType(entity: TokenOrDocument | Actor | string): string {
@@ -6665,7 +6678,9 @@ export async function setReactionUsed(actor: Actor.Implementation, active: boole
     if (actions?.reactionsReset === "never") {
       effect.updateSource({ flags: { dae: { specialDuration: [] } } });
     }
+    if (await asyncHooksCall("midi-qol.preSetReactionUsed", actor, effect) === false) return;
     await ActiveEffect.implementation.create(effect.toObject(), { parent: actor, keepId: true });
+    await asyncHooksCallAll("midi-qol.setReactionUsed", actor, effect);
   }
 }
 
@@ -6699,7 +6714,9 @@ export async function setBonusActionUsed(actor: Actor.Implementation) {
   }
   effect.origin = actor.uuid;
 
+  if (await asyncHooksCall("midi-qol.preSetBonusActionUsed", actor, effect) === false) return;
   await ActiveEffect.implementation.create(effect as any, { parent: actor, keepId: true });
+  await asyncHooksCallAll("midi-qol.setBonusActionUsed", actor, effect);
 }
 
 export async function removeActionUsed(actor: Actor.Implementation) {
@@ -8592,7 +8609,6 @@ export function addRollTo(roll: Roll, bonusRoll: Roll | Roll.Evaluated<Roll.Any>
   return newRoll;
 }
 
-// TODO: Make this its own application
 export async function chooseEffect({ actor, token, item, workflow, options }: {
   actor: Actor.Implementation;
   token: Token.Implementation;
@@ -8603,8 +8619,6 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
     timeout?: number;
   }
 }) {
-  let second1TimeoutId: NodeJS.Timeout;
-  let timeRemaining: number;
   if (!item) return false;
   const effects = item.effects.filter(
     (e) => !e.transfer && !!(options?.chooseAll || e.flags?.dae?.dontApply)
@@ -8620,142 +8634,94 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
     origin = workflow.actor.effects.get(workflow.chatCard.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid ?? item?.uuid;
   }
   if (!targets || targets.size === 0) return;
-  let returnValue = new Promise((resolve, reject) => {
-    const callback = async function (this: ActiveEffect) {
-      clearTimeout(timeoutId);
-      const effectData = this.toObject();
-      effectData.origin = item.uuid;
-      foundry.utils.setProperty(effectData, "flags.dae.dontApply", false);
-      const applyItem = item.clone({ effects: [effectData] }, { keepId: true })
-      await globalThis.DAE.doEffects(
-        applyItem, true, targets, {
-        damageTotal: 0,
-        origin,
-        critical: false,
-        fumble: false,
-        itemCardUuid: "",
-        metaData: {},
-        selfEffects: "none",
-        // @ts-expect-error no dnd5e-types
-        spellLevel: (workflow?.spellLevel ?? applyItem.level ?? 0),
-        toggleEffect: workflow?.activity.midiProperties?.toggleEffect, //TODO Check this
-        tokenUuid: token.document.uuid,
-        actorUuid: actor.uuid,
-        whisper: false,
-        workflowOptions: workflow?.workflowOptions,
-        context: {
-        }
-      });
-      if (this.toObject()) {
-        if (debugEnabled)
-          warn(
-            `chooseEffect | applying effect ${this.name} to ${targets.size} targets`,
-            targets
-          );/*
-        for (let target of targets) {
-          await target.actor.createEmbeddedDocuments('ActiveEffect', [
-            effectData,
-          ]);
-        }*/
-      }
-      resolve(this);
-    };
 
-    const style = `
-      <style>
-        .dnd5e2.effectNoTarget.dialog {
-          max-height: 800px;
-          .window-content {
-            overflow: auto;
-          }
-          .dialog-content {
-            display: none;
-          }
-          .dialog-buttons {
-            flex-direction: column;
-            button.dialog-button {
-              border: 5px;
-              margin: 0;
-              display: grid;			
-              grid-template-columns: 40px 150px;
-              grid-gap: 5px;
-              span {
-                overflow: hidden;
-                text-overflow: ellipsis;
-              }
-            }
-          }
-        }
-        .dnd5e2.effectNoTarget.dialog .window-header .window-title {
-          visibility: visible;
-          color: initial;
-          text-align: center;
-          font-weight: bold;
-        }
-      </style>`;
-    function render([html]) {
-      html.parentElement.querySelectorAll('.dialog-button').forEach((n) => {
+  const { DialogV2 } = foundry.applications.api;
+  const timeout = options?.timeout ?? configSettings.reactionTimeout ?? defaultTimeout;
+  let timeRemaining = timeout;
+  let second1TimeoutId: NodeJS.Timeout;
+  let timeoutId: NodeJS.Timeout;
+
+  const titleBase = `${i18n('CONTROLS.CommonSelect')} ${i18n('DOCUMENT.ActiveEffect')}`;
+  const targetContent = `<p style="text-align:center"><b>${i18n('EFFECT.StatusTarget')}: [</b>${[...targets].map((t) => t.name)}<b>]</b></p>`;
+
+  const buttons = effects.map(effect => ({
+    action: effect.uuid,
+    label: effect.name,
+    callback: () => effect,
+  }));
+
+  const chosenEffect = await DialogV2.wait({
+    window: { title: `${titleBase}: ${timeRemaining}s` },
+    classes: ["midi-qol-choose-effect"],
+    position: { width: 220 },
+    content: targetContent,
+    buttons,
+    render: (_event, dialog) => {
+      dialog.element.querySelectorAll<HTMLButtonElement>(".form-footer button").forEach((btn) => {
+        const eff = fromUuidSync(btn.dataset.action ?? "") as ActiveEffect;
+        if (!eff) return;
         const img = document.createElement('img');
-        const eff = fromUuidSync(n.dataset.button) as ActiveEffect;
         img.src = eff.img as string;
-        const effNameSpan = document.createElement('span');
-        effNameSpan.textContent = eff.name;
-        n.innerHTML = '';
-        n.appendChild(img);
-        n.appendChild(effNameSpan);
-        n.dataset.tooltip = eff.name;
+        const span = btn.querySelector("span");
+        if (span) span.dataset.tooltip = eff.name;
+        btn.prepend(img);
       });
-    }
-    let buttons = {};
-    for (let effect of effects) {
-      buttons[effect.uuid] = {
-        label: effect.name,
-        callback: callback.bind(effect),
+      // Start countdown timer
+      const titleEl = dialog.element.querySelector(".window-title");
+      const set1SecondTimeout = function () {
+        second1TimeoutId = setTimeout(() => {
+          if (!timeoutId) return;
+          timeRemaining -= 1;
+          if (titleEl) titleEl.textContent = `${titleBase}: ${timeRemaining}s`;
+          if (timeRemaining > 0) set1SecondTimeout();
+        }, 1000);
       };
-    }
-    let timeout = options?.timeout ?? configSettings.reactionTimeout ?? defaultTimeout;
-    timeRemaining = timeout;
-    //@ts-expect-error game.system.applications
-    const Mixin = game.system?.applications.DialogMixin(foundry.appv1.api.Dialog);
-    const dialogOptions = {
-      classes: ['dnd5e2', 'effectNoTarget', 'dialog'],
-      width: 220,
-      height: 'auto',
-    };
-    const data = {
-      title: `${i18n('CONTROLS.CommonSelect')} ${i18n(
-        'DOCUMENT.ActiveEffect'
-      )}: ${timeRemaining}s`,
-      content: `<center><b>${i18n('EFFECT.StatusTarget')}: [</b>${[
-        ...targets,
-      ].map((t) => t.name)}<b>]</b></center> ${style}`,
-      buttons,
-      render,
-    };
-
-    let dialog = new Mixin(data, dialogOptions);
-    dialog.render(true);
-    const set1SecondTimeout = function () {
-      second1TimeoutId = setTimeout(() => {
-        if (!timeoutId) return;
-        timeRemaining -= 1;
-        dialog.data.title = `${i18n('CONTROLS.CommonSelect')} ${i18n(
-          'DOCUMENT.ActiveEffect'
-        )}: ${timeRemaining}s`;
-        const title = dialog.element[0]?.querySelector(".window-title");
-        if (title) title.textContent = dialog.data.title;
-        if (timeRemaining > 0) set1SecondTimeout();
-      }, 1000);
-    };
-    let timeoutId = setTimeout(() => {
-      if (debugEnabled > 0) warn(`chooseEffect | timeout fired closing dialog`);
+      timeoutId = setTimeout(() => {
+        if (debugEnabled > 0) warn(`chooseEffect | timeout fired closing dialog`);
+        clearTimeout(second1TimeoutId);
+        dialog.close();
+      }, timeout * 1000);
+      set1SecondTimeout();
+    },
+    close: () => {
+      clearTimeout(timeoutId);
       clearTimeout(second1TimeoutId);
-      dialog.close();
-      reject('timeout');
-    }, timeout * 1000);
-    set1SecondTimeout();
+    },
   });
-  return await returnValue;
+
+  if (!chosenEffect || !(chosenEffect instanceof ActiveEffect)) return false;
+
+  const effectData = chosenEffect.toObject();
+  effectData.origin = item.uuid;
+  foundry.utils.setProperty(effectData, "flags.dae.dontApply", false);
+  const applyItem = item.clone({ effects: [effectData] }, { keepId: true })
+  await globalThis.DAE.doEffects(
+    applyItem, true, targets, {
+    damageTotal: 0,
+    origin,
+    critical: false,
+    fumble: false,
+    itemCardUuid: "",
+    metaData: {},
+    selfEffects: "none",
+    // @ts-expect-error no dnd5e-types
+    spellLevel: (workflow?.spellLevel ?? applyItem.level ?? 0),
+    toggleEffect: workflow?.activity.midiProperties?.toggleEffect,
+    tokenUuid: token.document.uuid,
+    actorUuid: actor.uuid,
+    whisper: false,
+    workflowOptions: workflow?.workflowOptions,
+    context: {
+    }
+  });
+  if (chosenEffect.toObject()) {
+    if (debugEnabled)
+      warn(
+        `chooseEffect | applying effect ${chosenEffect.name} to ${targets.size} targets`,
+        targets
+      );
+  }
+  return chosenEffect;
 }
 
 export function canSee(tokenEntity: TokenOrDocument, targetEntity: TokenOrDocument) {
@@ -9336,18 +9302,22 @@ export function pushTargetSave() {
     _savedTargetIds = Array.from(game.user?.targets ?? []).map(t => t.id);
   }
   _targetSaveDepth++;
+
 }
 
 export function popTargetSave() {
   _targetSaveDepth--;
-  if (_targetSaveDepth <= 0 && _savedTargetIds !== null) {
-    updateUserTargets(_savedTargetIds);
+  const willRestore = _targetSaveDepth <= 0 && _savedTargetIds !== null;
+
+  if (willRestore) {
+    updateUserTargets(_savedTargetIds!);
     _savedTargetIds = null;
     _targetSaveDepth = 0;
   }
 }
 
 export function clearTargetSave() {
+
   _savedTargetIds = null;
   _targetSaveDepth = 0;
 }

@@ -47,22 +47,6 @@
           "specialDuration": [],
           "enableCondition": "",
           "disableCondition": ""
-        },
-        "ActiveAuras": {
-          "isAura": true,
-          "aura": "Allies",
-          "nameOverride": "",
-          "radius": "30",
-          "alignment": "",
-          "type": "",
-          "customCheck": "",
-          "ignoreSelf": false,
-          "height": false,
-          "hidden": false,
-          "displayTemp": false,
-          "hostile": false,
-          "onlyOnce": false,
-          "wallsBlock": "system"
         }
       },
       "tint": "#ffffff",
@@ -78,8 +62,19 @@
         "exportSource": null
       },
       "img": "icons/magic/light/explosion-star-glow-blue-purple.webp",
-      "type": "base",
-      "system": {},
+      "type": "auraeffects.aura",
+      "system": {
+        "distanceFormula": "30",
+        "disposition": 1,
+        "applyToSelf": true,
+        "collisionTypes": ["move"],
+        "script": "",
+        "canStack": false,
+        "combatOnly": false,
+        "disableOnHidden": true,
+        "evaluatePreApply": false,
+        "showRadius": false
+      },
       "sort": 0,
       "_key": "!items.effects!Rl3Gvx6YK6oFPRbQ.YORAdBBkqyYwsqFa"
     }
@@ -126,8 +121,8 @@
   },
   "system": {
     "description": {
-      "value": "<p>Spell text is not in the SRD. Divine energy radiates from you in a 30-foot-radius aura, granting allies advantage on saving throws against spells and magical effects, and converting successful saves into no-damage results (super saver).</p>\n<p><strong>midi-qol</strong>: Requires Active Auras module. The effect uses an Active Aura (Allies, 30ft radius) that grants <code>flags.midi-qol.advantage.save.all</code> and <code>flags.midi-qol.superSaver.all</code>, both conditioned on <code>item.type === \"spell\" || item.flags?.midiProperties?.magiceffect</code>.</p>",
-      "chat": "<p>Spell text is not in the SRD. Divine energy radiates from you in a 30-foot-radius aura, granting allies advantage on saving throws against spells and magical effects, and converting successful saves into no-damage results (super saver).</p>"
+      "value": "<p>Description not in the SRD.</p>\n<p><strong>midi-qol</strong>: Requires Aura Effects module. The effect uses an aura effect (allies, 30ft radius) that grants <code>flags.midi-qol.advantage.save.all</code> and <code>flags.midi-qol.superSaver.all</code>, both conditioned on <code>item.type === \"spell\" || item.flags?.midiProperties?.magiceffect</code>.</p>",
+      "chat": "<p>Description not in the SRD.</p>"
     },
     "source": {
       "custom": "midi-qol sample",

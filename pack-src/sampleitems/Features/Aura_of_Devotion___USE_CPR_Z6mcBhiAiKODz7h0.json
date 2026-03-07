@@ -18,23 +18,6 @@
           "disableIncapacitated": false,
           "showIcon": false
         },
-        "ActiveAuras": {
-          "isAura": true,
-          "aura": "Allies",
-          "radius": "@classes.paladin.levels > 17 ? 30 : 10",
-          "alignment": "",
-          "type": "",
-          "ignoreSelf": false,
-          "height": false,
-          "hidden": false,
-          "hostile": false,
-          "onlyOnce": false,
-          "nameOverride": "",
-          "customCheck": "",
-          "displayTemp": false,
-          "wallsBlock": "system",
-          "statuses": []
-        },
         "core": {
           "overlay": false
         }
@@ -75,8 +58,19 @@
         "exportSource": null
       },
       "img": "icons/svg/holy-shield.svg",
-      "type": "base",
-      "system": {},
+      "type": "auraeffects.aura",
+      "system": {
+        "distanceFormula": "@classes.paladin.levels > 17 ? 30 : 10",
+        "disposition": 1,
+        "applyToSelf": true,
+        "collisionTypes": ["move"],
+        "script": "",
+        "canStack": false,
+        "combatOnly": false,
+        "disableOnHidden": true,
+        "evaluatePreApply": false,
+        "showRadius": false
+      },
       "sort": 0,
       "_key": "!items.effects!Z6mcBhiAiKODz7h0.ZBApXapUUQs7zxcY"
     }
@@ -195,7 +189,7 @@
   },
   "system": {
     "description": {
-      "value": "<p>Starting at 7th level, you and friendly creatures within 10 feet of you can’t be Charmed while you are conscious.</p>\n<p>At 18th level, the range of this aura increases to 30 feet.</p>\n<p> </p>\n<p>Midi-qol: requires Active Auras to function</p>",
+      "value": "<p>Starting at 7th level, you and friendly creatures within 10 feet of you can’t be Charmed while you are conscious.</p>\n<p>At 18th level, the range of this aura increases to 30 feet.</p>\n<p> </p>\n<p><strong>midi-qol</strong>: Requires Aura Effects module. Uses an aura effect (allies, 10/30ft radius based on paladin level) that grants immunity to the charmed condition.</p>",
       "chat": "<p>Starting at 7th level, you and friendly creatures within 10 feet of you can’t be Charmed while you are conscious.</p>\n<p>At 18th level, the range of this aura increases to 30 feet.</p>"
     },
     "source": {

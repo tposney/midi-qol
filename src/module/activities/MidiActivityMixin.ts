@@ -38,6 +38,7 @@ import {
   evalCondition,
   getAutoRollAttack,
   getAutoRollDamage,
+  getDistance,
   getRemoveAttackButtons,
   getRemoveDamageButtons,
   getSpeaker,
@@ -624,7 +625,6 @@ export let MidiActivityMixin = Base => {
         if (item.parent) await removeFlanking(item.parent);
         // config.midiOptions.workflowOptions.targetConfirmation ??= this.forcedTargetConfirmation;
         if (!usage.workflow) return undefined;
-
         if (usage.midiOptions.isCritical) {
           usage.workflow.isCritical = true;
           usage.workflow.attackRollModifierTracker.addAttribution("CRIT", "activity.use", i18n("midi-qol.ActivityUse"));
@@ -1103,9 +1103,7 @@ export let MidiActivityMixin = Base => {
           workflow.displayChatCardWithoutDamageDetail();
         };
 
-        // Allow overrides form the caller
-        if (workflow && config.midiOptions?.spellLevel) workflow.rollOptions.spellLevel = config.midiOptions.spellLevel;
-        if (workflow && config.midiOptions?.powerLevel) workflow.rollOptions.spellLevel = config.midiOptions.powerLevel;
+        // Allow overrides from the caller
         if (debugEnabled > 0) warn("rolling damage  ", this.name, this);
 
         if (workflow && config.midiOptions?.isCritical !== undefined)
@@ -1333,6 +1331,27 @@ export let MidiActivityMixin = Base => {
         if (tokenCanSee) workflow.tokenCanSee.add(target);
         else workflow.tokenCanSee.delete(target);
       }
+
+      // Blood Sense: treat wounded targets within bloodsense range as sensed/seen
+      if (workflow.token?.actor) {
+        const bloodsenseRange = Number(foundry.utils.getProperty(workflow.token.actor, `flags.${MODULE_ID}.bloodsense`) ?? 0);
+        if (bloodsenseRange > 0) {
+          for (const target of workflow.targets) {
+            if (workflow.tokenCanSense.has(target) && workflow.tokenCanSee.has(target)) continue;
+            const targetToken = getToken(target);
+            if (!targetToken?.actor) continue;
+            // @ts-expect-error no dnd5e-types
+            const hp = targetToken.actor.system.attributes?.hp;
+            if (!hp || hp.value >= hp.max) continue; // not wounded
+            const distance = getDistance(workflow.token, targetToken, { wallsBlock: false });
+            if (distance >= 0 && distance <= bloodsenseRange) {
+              workflow.tokenCanSense.add(target);
+              workflow.tokenCanSee.add(target);
+            }
+          }
+        }
+      }
+
       // Trigger setters to persist the mutated sets
       workflow.targetsCanSense = workflow.targetsCanSense;
       workflow.tokenCanSense = workflow.tokenCanSense;
@@ -1365,8 +1384,9 @@ export let MidiActivityMixin = Base => {
         const tokenIds = Array.from(config.midiOptions!.targetsToUse!).map(t => (t as Token).id);
         updateUserTargets(tokenIds);
       }
-      if (requiresTargetConfirmation(this, config.midiOptions ?? {})
-        || configSettings.enforceSingleWeaponTarget) {
+      const isSelfTargetActivity = this.target?.affects?.type === "self";
+      if (!isSelfTargetActivity && (requiresTargetConfirmation(this, config.midiOptions ?? {})
+        || configSettings.enforceSingleWeaponTarget)) {
         if (!(await preTemplateTargets(this, config.midiOptions ?? {})))
           return false;
         // Confirmation was shown — read the user's final selection from game.user.targets.

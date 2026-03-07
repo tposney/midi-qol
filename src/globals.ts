@@ -92,6 +92,10 @@ declare module "fvtt-types/configuration" {
       "midi-qol.preAttackRollConfig": (workflow: Workflow) => Promise<void | boolean>;
       "midi-qol.AttackRollComplete": (workflow: Workflow) => Promise<void | boolean>;
       "midi-qol.DamageRollComplete": (workflow: Workflow) => Promise<void | boolean>;
+      "midi-qol.preSetReactionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => boolean | void;
+      "midi-qol.setReactionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => void;
+      "midi-qol.preSetBonusActionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => boolean | void;
+      "midi-qol.setBonusActionUsed": (actor: Actor.Implementation, effect: ActiveEffect.Implementation) => void;
       "midi-qol.StatsUpdated": () => void;
       "midi-qol.addUndoEntry": (data: UndoData) => void;
       "midi-qol.midiReady": () => void;
@@ -834,6 +838,7 @@ declare global {
       actorSizes: Record<string, {
         label: string;
         token?: number;
+        numerical: number;
       }>;
       areaTargetTypes: Record<string, {
         label: string;

@@ -86,6 +86,7 @@ const MIDI_COMPLETIONS: CompletionNode = {
       playerForActor: { type: "function", detail: "(actor?) => User | undefined", info: "Get the player controlling an actor" },
       getTokenPlayerName: { type: "function", detail: "(token, checkGM?) => string", info: "Get the player name controlling a token" },
       raceOrType: { type: "function", detail: "(entity) => string", info: "Get race (PCs) or creature type (NPCs)" },
+      sizeNumeric: { type: "function", detail: "(size: string) => number | undefined", info: "Get numerical size index (0=tiny, 1=sm, 2=med, 3=lg, 4=huge, 5=grg). Accepts short keys (\"sm\", \"lg\") or long names (\"Small\", \"Large\"), case insensitive." },
       typeOrRace: { type: "function", detail: "(entity) => string", info: "Get creature type (NPCs) or race (PCs)" },
       canSee: { type: "function", detail: "(token, target) => boolean", info: "Check if token can see target (sight-based detection only).\n- token/target: Token, TokenDocument, or UUID string\nReturns: true if token has line of sight to target" },
       canSense: { type: "function", detail: "(token, target, validModes?) => boolean", info: "Check if token can detect target via detection modes.\n- validModes: [\"all\"] (default), or specific modes:\n  \"basicSight\", \"lightPerception\", \"blindsight\", \"darkvision\", \"tremorsense\", \"truesight\"\nReturns: true if any valid mode detects target" },

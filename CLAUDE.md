@@ -48,6 +48,30 @@ For full API details (header controls, custom content/tabs, config APIs), read t
 - **Always check SRD folder first** when creating/verifying sample items
 - SRD filenames use mixed case — use case-insensitive patterns or Grep
 
+### Ember Packs Module
+- Location: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/ember-packs/`
+- Separate module for modified ember Character Options compendium data
+- `pack-src/character-options/` — JSON source files (ancestries, cultures, attunements, paths, soulbound, features)
+- `pack-src/automated-items/` — Standalone copies of modified creature items (mirroring ember-creatures folder hierarchy)
+- `packs/*/` — Compiled LevelDB output
+- Build: `npm run compilePacks` (JSON → LevelDB), `npm run extractPacks` (LevelDB → JSON)
+- Deploy: `npx gulp deploy` (compiles and copies to dev modules directory)
+- In-game sync: Run `scripts/sync-pack-src.mjs` as a world macro (requires symlink: `ln -s /path/to/ember-packs/pack-src <devDir>/ember-packs/pack-src`)
+- **IMPORTANT**: When modifying any item on a creature in `ember-creatures`, also add/update a standalone copy of that item in `pack-src/automated-items/` under the matching folder path. The standalone item needs a new 16-char `_id`, `_key` format `!items!<id>`, and `flags.chris-premades.info` with `source: "ember-packs.automated-items"` and `version` matching the module version.
+
+### Extracting LevelDB Compendium Packs
+The preferred method is `@foundryvtt/foundryvtt-cli`:
+1. Copy the LevelDB pack to a `packs/` directory
+2. Use `foundryvttCli.extractPack(packPath, destPath, { folders: true })` to extract to JSON
+3. Use `foundryvttCli.compilePack(srcPath, destPath, { recursive: true })` to compile back
+4. The `cleanPackFolderNames()` utility renames extracted `Name_ID` directories to `Name`
+
+For quick one-off extraction without the CLI, use `classic-level` from Foundry's node_modules:
+```bash
+NODE_PATH=/home/timp/foundryv13/resources/app/node_modules node extract-script.js
+```
+Note: This approach doesn't handle embedded document hierarchy (effects stored as ID references) — prefer the CLI for round-trippable extraction.
+
 ### Sample Item Spell Icons
 - Use icons from the dnd5e SRD compendium: `/home/timp/foundry-data/foundryv13/Data/systems/dnd5e/packs/_source/spells/`
 - Verify icon paths exist at `/home/timp/foundryv13/resources/app/public/icons/`
@@ -66,6 +90,7 @@ For full API details (header controls, custom content/tabs, config APIs), read t
 - **Document type checking**: Use `instanceof Item` not `doc.documentName === "Item"` — applies to all base document types
 - **External API calls**: Search midi-qol codebase for existing usage FIRST, then dnd5e source. Never assume methods exist.
   - `activities.getByIdentifier()` does NOT exist — use `activities.get(id)`, `activities.getByType(type)`, `activities.find(predicate)`, or `activities.contents`
+- **Actor effects**: `actor.appliedEffects` returns transfer effects, but `token.actor.effects` (the embedded collection) does NOT include transfer effects from items. To iterate all effects including transfers, use `actor.allApplicableEffects()` (a generator). In dnd5e, skip non-applied enchantments: `ef.type === "enchantment" && !ef.isAppliedEnchantment`.
 
 ### Documentation & Changelog
 - **Datestamp filenames**: `DocumentName-YYYY-MM-DD.md` for all docs

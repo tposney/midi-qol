@@ -1131,7 +1131,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
   let result: Roll[] | undefined;
   let type: "SavingThrow" | "AbilityCheck" = "SavingThrow";
   try {
-    if (rollAbilities.length === 0)
+    if (rollAbilities.length === 0 && rollType === "save")
       throw new Error(`doRollAbility called with no abilities to roll for ${this.name}`);
     if (config.event) {
       // Checks if we rolled from a concentration request dialog. If so use the actor specified in the request card
@@ -1510,12 +1510,28 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
     systemRollModeFields: [`abilities.${abilityId}.${rollType}.roll.mode`],
   };
 
+  // Add spell school-specific save advantage/disadvantage flags
+  // @ts-expect-error .system.school
+  const saveSchool = options.workflow?.saveItem?.system?.school;
+  if (rollType === "save" && saveSchool) {
+    abilityFlags.advantageFlags.push(`advantage.save.school.${saveSchool}`);
+    abilityFlags.disadvantageFlags.push(`disadvantage.save.school.${saveSchool}`);
+    abilityFlags.noAdvantageFlags.push(`noAdvantage.save.school.${saveSchool}`);
+    abilityFlags.noDisadvantageFlags.push(`noDisadvantage.save.school.${saveSchool}`);
+  }
+
   // Add source actor grants flags for saves and checks
   if (rollType === "save" || rollType === "check") {
     abilityFlags.sourceAdvantageFlags = ["grants.advantage.all", `grants.advantage.${rollType}.all`, `grants.advantage.${rollType}.${abilityId}`];
     abilityFlags.sourceDisadvantageFlags = ["grants.disadvantage.all", `grants.disadvantage.${rollType}.all`, `grants.disadvantage.${rollType}.${abilityId}`];
     abilityFlags.sourceNoAdvantageFlags = ["grants.noAdvantage.all", `grants.noAdvantage.${rollType}.all`, `grants.noAdvantage.${rollType}.${abilityId}`];
     abilityFlags.sourceNoDisadvantageFlags = ["grants.noDisadvantage.all", `grants.noDisadvantage.${rollType}.all`, `grants.noDisadvantage.${rollType}.${abilityId}`];
+    if (rollType === "save" && saveSchool) {
+      abilityFlags.sourceAdvantageFlags.push(`grants.advantage.save.school.${saveSchool}`);
+      abilityFlags.sourceDisadvantageFlags.push(`grants.disadvantage.save.school.${saveSchool}`);
+      abilityFlags.sourceNoAdvantageFlags.push(`grants.noAdvantage.save.school.${saveSchool}`);
+      abilityFlags.sourceNoDisadvantageFlags.push(`grants.noDisadvantage.save.school.${saveSchool}`);
+    }
   }
 
   // For saves/checks, the grants actor is the caster (workflow.actor)
@@ -1533,7 +1549,7 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
  */
 interface RollTypeHandler {
   computeAdvantage: (actor: Actor.Implementation, id: string, options: MidiOptions) => Promise<RollModifierTracker>;
-  getModifierFlags: (actor: Actor.Implementation, id: string) => RollModifierFlags;
+  getModifierFlags: (actor: Actor.Implementation, id: string, options?: MidiOptions) => RollModifierFlags;
 }
 
 const rollTypeHandlers: Record<string, RollTypeHandler> = {
@@ -1542,12 +1558,21 @@ const rollTypeHandlers: Record<string, RollTypeHandler> = {
       const result = await computeAbilityAdvantage(actor, "save", id, options);
       return result.tracker;
     },
-    getModifierFlags: (_actor, id) => ({
-      failFlags: ["fail.all", "fail.ability.all", "fail.ability.save.all", `fail.ability.save.${id}`],
-      successFlags: ["success.all", "success.ability.all", "success.ability.save.all", `success.ability.save.${id}`],
-      maxFlags: ["max.ability.save.all", `max.ability.save.${id}`],
-      minFlags: ["min.ability.save.all", `min.ability.save.${id}`]
-    })
+    getModifierFlags: (_actor, id, options) => {
+      const flags: RollModifierFlags = {
+        failFlags: ["fail.all", "fail.ability.all", "fail.ability.save.all", `fail.ability.save.${id}`],
+        successFlags: ["success.all", "success.ability.all", "success.ability.save.all", `success.ability.save.${id}`],
+        maxFlags: ["max.ability.save.all", `max.ability.save.${id}`],
+        minFlags: ["min.ability.save.all", `min.ability.save.${id}`]
+      };
+      // @ts-expect-error .system.school
+      const saveSchool = options?.workflow?.saveItem?.system?.school;
+      if (saveSchool) {
+        flags.failFlags.push(`fail.save.school.${saveSchool}`);
+        flags.successFlags.push(`success.save.school.${saveSchool}`);
+      }
+      return flags;
+    }
   },
   check: {
     computeAdvantage: async (actor, id, options) => {
@@ -1680,7 +1705,7 @@ export async function buildPreComputedAdvantageMap(
     const tracker = await handler.computeAdvantage(actor, id, options);
 
     // Add roll modifiers (fail/success/max/min) to the same tracker
-    const modifierFlags = handler.getModifierFlags(actor, id);
+    const modifierFlags = handler.getModifierFlags(actor, id, options);
     computeRollModifiers(actor, modifierFlags, tracker, { workflow });
 
     const hasAdv = !!tracker.hasAdvantage;
@@ -2702,6 +2727,9 @@ function actorGetRollData(this: Actor.Implementation, wrapped, ...args) {
   data.cfg.armorClasses = GameSystemConfig.armorClasses;
   data.cfg.actorSizes = GameSystemConfig.actorSizes;
   data.cfg.skills = GameSystemConfig.skills;
+  if (data.traits) {
+    data.traits.sizeNumeric = GameSystemConfig.actorSizes[this.system.traits?.size]?.numerical ?? 2;
+  }
   return data;
 }
 

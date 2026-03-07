@@ -38,7 +38,14 @@
       "tint": "#ffffff",
       "type": "base",
       "system": {},
-      "changes": [],
+      "changes": [
+        {
+          "key": "macro.itemMacro",
+          "mode": 0,
+          "value": "",
+          "priority": 20
+        }
+      ],
       "description": "<p>The target is transported to a harmless demiplane and has the &amp;Reference[Incapacitated]{Incapacitated} condition. When the spell ends, the target reappears in the space it left or in the nearest unoccupied space if that space is occupied.</p><p>If the target is an Aberration, a Celestial, an Elemental, a Fey, or a Fiend, the target doesn't return if the spell lasts for 1 minute. The target is instead transported to a random location on a plane associated with its creature type.</p>",
       "statuses": [
         "incapacitated"
@@ -95,16 +102,43 @@
         "effect": []
       }
     },
+    "dae": {
+      "macro": {
+        "name": "Banishment",
+        "img": "icons/magic/unholy/barrier-fire-pink.webp",
+        "type": "script",
+        "scope": "global",
+        "command": "const lastArg = args[args.length - 1];\nconst tokenId = lastArg.tokenId;\nif (args[0] === \"on\") {\n    await DAE.setTokenVisibility(tokenId, false);\n} else if (args[0] === \"off\") {\n    await DAE.setTokenVisibility(tokenId, true);\n}",
+        "author": "Zl1BOUaPLwDEujaL",
+        "ownership": {
+          "default": 3
+        },
+        "_id": null,
+        "folder": null,
+        "sort": 0,
+        "flags": {},
+        "_stats": {
+          "coreVersion": null,
+          "systemId": null,
+          "systemVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null,
+          "compendiumSource": null,
+          "duplicateSource": null
+        }
+      }
+    },
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.52"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>One or more creatures that you can see within range must succeed on a Charisma saving throw or be transported to a harmless demiplane for the duration. While there, the target has the &amp;Reference[Incapacitated]{Incapacitated} condition. When the spell ends, the target reappears in the space it left or in the nearest unoccupied space if that space is occupied.</p><p>If the target is an Aberration, a Celestial, an Elemental, a Fey, or a Fiend, the target doesn't return if the spell lasts for 1 minute. The target is instead transported to a random location on a plane associated with its creature type.</p><p><strong>Using a Higher-Level Spell Slot.</strong> You can target one additional creature for each spell slot level above 4.</p><p><strong>midi-qol</strong>: No macros required. CHA save applies the Incapacitated status effect on a failed save. Scales to additional targets with higher-level spell slots (@item.level - 3).</p>",
+      "value": "<p>One or more creatures that you can see within range must succeed on a Charisma saving throw or be transported to a harmless demiplane for the duration. While there, the target has the &amp;Reference[Incapacitated]{Incapacitated} condition. When the spell ends, the target reappears in the space it left or in the nearest unoccupied space if that space is occupied.</p><p>If the target is an Aberration, a Celestial, an Elemental, a Fey, or a Fiend, the target doesn't return if the spell lasts for 1 minute. The target is instead transported to a random location on a plane associated with its creature type.</p><p><strong>Using a Higher-Level Spell Slot.</strong> You can target one additional creature for each spell slot level above 4.</p><p><strong>midi-qol</strong>: CHA save applies the Incapacitated status and hides the token (via DAE macro) on a failed save. When the effect expires, the token is made visible again. Scales to additional targets with higher-level spell slots (@item.level - 3).</p>",
       "chat": "<p>One or more creatures that you can see within range must succeed on a Charisma saving throw or be transported to a harmless demiplane for the duration. While there, the target has the &amp;Reference[Incapacitated]{Incapacitated} condition. When the spell ends, the target reappears in the space it left or in the nearest unoccupied space if that space is occupied.</p><p>If the target is an Aberration, a Celestial, an Elemental, a Fey, or a Fiend, the target doesn't return if the spell lasts for 1 minute. The target is instead transported to a random location on a plane associated with its creature type.</p><p><strong>Using a Higher-Level Spell Slot.</strong> You can target one additional creature for each spell slot level above 4.</p>"
     },
     "source": {

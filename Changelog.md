@@ -1,29 +1,43 @@
 ### 13.0.52
 **Bug Fixes**
 * Fix for skill/tool checks when showing the configuration dialog to allow choosing the ability to use, matches dnd5e functionality.
+* For check activities you can now specify no skill/tool or ability, in which case midi will just do a normal d20 roll and compare against the dc.
 * If a utility activity has no damage, but the other activity does and the other activity condition prevents it from firing, midi would loop endlessly trying to roll damage until the failsafe cut in and the workflow is aborted.
-* Fix attack/save advantage mode label on chat cards showing the wrong mode after re-render. The displayed label now uses the resolved roll result rather than the pre-roll tracker state. (MR !407, thatlonelybugbear).
+* Fix attack/save advantage mode label on chat cards showing the wrong mode after re-render. The displayed label now uses the resolved roll result rather than the pre-roll tracker state. (MR !407, @thatlonelybugbear).
 * The isAttacked special duration will only fire for activities that have an attack roll. It will now fire only when the attack roll completes, previously it was also checked at other points in the workflow, after the damage roll completed for example.
 * Reinstate gm sees all whispered messages setting, accidentally removed in 13.0.39.
 * Fix for another race condition in roll statistics that would cause some roll data to get dropped.
+* Fix for complete activity use returning early which could impact targeting for cast spells, especially AoE spells cast as a sequence of completeActivityUse or reaction spells cast from an item.
+* Fix for an error where midi's completeActivityUse was not clearing a timeout that would restore targets randomly after the activity completed.
+* If you are calling activity.use/item.use, setting config.midiOptions.spellLevel will now correctly cast the spell at the specified level.
 
 **New Features**
-* Midi sample items now records version numbers that means it is compatible with CPR medkit and will track changes to items when you medkit the item/actor.
-  - All sample spells are now 2024 versions.
+* MidiQOL.sizeNumeric, which returns 0,1,2,3,4,5 for Tiny, Small, Medium, Large, Huge and Gargantuan sizes. 
+* Added sizeNumeric to getRollData. 
+* Also available in condition evaluation
+  sizeNumeric(traits.size) >= sizeNumeric("lg")
+  traits.sizeNumeric >= sizeNumeric("lg")
+  sizeNumeric(traits.size) >= sizeNumeric("large")
+  target.traits.sizeNumeric > sizeNumeric(traits.size) 
+* Added flags.midi-qol.advantage.save.school.nec, etc to allow saves against particular spell schools. Flags added are advantage/disadvantage/noAdvantage/noDisadvantage/fail/success,grants.advantage, grants.noAdvantage, grants.disadvantage, grants.noDisadvantage.
+* Added flags.midi-qol.bloodSense mode range. When enabled the creature with the flag set does **not** suffer disadvantage from hidden/invisible creatures if they are not at full hp and are withing the range (does not work with 2014 rules, where the invisible condition automatically grants disadvantage even if the target can be seen).
+* 13.0.52 is tentatively marked as compatible with dnd5e 5.3. It requires a dae update as well. Midi should automatically adapt if you 5.3 installed.
+- significant changes to damage handling (in dnd5e 5.3), so there might be bugs there.
+- support for damage to max hit points (tempmax).
+- change in the display of advantage rolls
+* Midi sample items now records version numbers which means it is compatible with CPR medkit (requires adding the midi sample items compendium to the search list in CPR) and will track changes to items when you medkit the item/actor.
   - I'd recommend that you give midi's sample items a higher compendium search number than the rest of the automation libraries, since you probably want those items in preference to midi's sample items.
+* All sample spells are now 2024 versions, mostly rewritten.
   - Added some spells for levels 7-9:
     - **7th Level**: Delayed Blast Fireball, Divine Word, Finger of Death, Prismatic Spray, Regenerate, Reverse Gravity
     - **8th Level**: Befuddlement, Power Word Stun
     - **9th Level**: Foresight, Imprisonment, Meteor Swarm, Power Word Kill, Shapechange, Storm of Vengeance, True Polymorph, True Resurrection, Weird
-  - Notable: Finger of Death will summon the zombie if the target dies, Prismatic Spray handles all the colours, Storm of Vengeance fully automates rounds 1-10, Mass Heal allows proper apportionment of healing.
-* 13.0.52 is tentatively marked as compatible with dnd5e 5.3. It requires a dae update as well
-  - significant changes to damage handling, so there might be bugs there.
-  - support for damage to max hit points (tempmax).
-  - change in the display of advantage rolls
+  - Notable: Finger of Death will summon the zombie if the target dies, Prismatic Spray handles all the colours, Storm of Vengeance fully automates rounds 1-10 (be warned the template it places is **HUGE**), Mass Heal allows proper apportionment of healing.
 
 **For developers**
-* Midi's sample items is now build from pack-src by default, I have also structured the items into a folder structure to make it easier for developers to submit changes/browse  for items as needed
+* Midi's sample items is now build from pack-src by default, I have also structured the items into a folder structure to make it easier for developers to submit changes/browse for items as needed
 * All midi-qol hooks, now call the preMades version as well. Also call the midi-qol hooks with the workflowId, which is almost always the chart card uuid.
+* Added four new hooks, midi-qol.preSetReactionUsed, midi-qol.preSetBonusActionUsed, midi-qol.setBonusReactionUsed, midi-qol.setReactionUsed, all pass the same args actor, reactionEffect. The reaction effect is "live" so modifications via updateSource will be applied to the effect when it is created on the actor and the hooks are called via aysncHooksCall so they can await actions, like doing a Roll.
 * `WorkflowOptions` now accepts `templateUuid` and `coverOrigin: { x, y, elevation? }`, both passable via `completeActivityUse` as `{ midiOptions: { workflowOptions: { templateUuid, coverOrigin } } }`.
   - `templateUuid` sets the workflow's template UUID (e.g., for activities that reference a previously-placed template).
   - `coverOrigin` sets the origin point for DEX save cover calculations, overriding both template center and caster position. Useful when the template may be deleted by the time saves are rolled.

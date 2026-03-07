@@ -7,7 +7,7 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
@@ -279,6 +279,7 @@ Object.assign(globalThis.MidiQOL, {
   RollModifierTracker,
   setBonusActionUsed,
   setReactionUsed,
+  sizeNumeric,
   showUndoQueue,
   showUndoWorkflowApp,
   testfunc,
@@ -1097,6 +1098,8 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.initiativeNoDisadv`);
   booleanFormula(`flags.${MODULE_ID}.ignoreNearbyFoes`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.ignoreNearbyFoes`);
+  untyped(`flags.${MODULE_ID}.bloodsense`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.bloodsense`);
   untyped(`flags.${MODULE_ID}.`);
   untyped(`flags.${MODULE_ID}.concentrationSaveBonus`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.concentrationSaveBonus`);
@@ -1409,6 +1412,41 @@ function setupMidiFlags() {
     registerFlagLocalization(`flags.${MODULE_ID}.disadvantage.skill.${abl}`, "disadvantage.abilitySkill", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noAdvantage.skill.${abl}`, "noAdvantage.abilitySkill", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noDisadvantage.skill.${abl}`, "noDisadvantage.abilitySkill", label);
+  })
+
+  // Spell school save advantage/disadvantage flags
+  Object.keys(GameSystemConfig.spellSchools).forEach(school => {
+    booleanFormula(`flags.${MODULE_ID}.advantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.success.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.save.school.${school}`);
+    const label = () => GameSystemConfig.spellSchools[school]?.label ?? school;
+    registerFlagLocalization(`flags.${MODULE_ID}.advantage.save.school.${school}`, "advantage.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.disadvantage.save.school.${school}`, "disadvantage.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.noAdvantage.save.school.${school}`, "noAdvantage.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.noDisadvantage.save.school.${school}`, "noDisadvantage.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.fail.save.school.${school}`, "fail.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.success.save.school.${school}`, "success.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.grants.advantage.save.school.${school}`, "grants.advantage.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.grants.disadvantage.save.school.${school}`, "grants.disadvantage.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.grants.noAdvantage.save.school.${school}`, "grants.noAdvantage.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.grants.noDisadvantage.save.school.${school}`, "grants.noDisadvantage.save.school", label);
   })
 
   // advantage/disadvantage/fail/success.skill.all generated by skills loop with "all" key

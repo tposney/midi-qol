@@ -1768,3 +1768,28 @@ section.midi-qol.tab {
 body.theme-dark input[type="checkbox"] {
   --checkbox-background-color: #6a6a6a;
 }
+
+/* Choose Effect dialog (DialogV2) */
+.midi-qol-choose-effect .form-footer {
+  flex-direction: column;
+}
+
+.midi-qol-choose-effect .form-footer button {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 5px;
+  align-items: center;
+  margin: 0;
+}
+
+.midi-qol-choose-effect .form-footer button img {
+  width: 36px;
+  height: 36px;
+  border: none;
+}
+
+.midi-qol-choose-effect .form-footer button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}

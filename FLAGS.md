@@ -419,8 +419,10 @@ Grant advantage on various roll types. All advantage flags are **Evaluated** (co
 |------|--------|-------------|
 | `flags.midi-qol.advantage.save.all` | Evaluated | Advantage on all saves |
 | `flags.midi-qol.advantage.save.{ability}` | Evaluated | Advantage on specific ability saves |
+| `flags.midi-qol.advantage.save.school.{school}` | Evaluated | Advantage on saves vs spells of a specific school |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Ability Checks
 
@@ -490,8 +492,10 @@ Grant disadvantage on various roll types. All disadvantage flags are **Evaluated
 |------|--------|-------------|
 | `flags.midi-qol.disadvantage.save.all` | Evaluated | Disadvantage on all saves |
 | `flags.midi-qol.disadvantage.save.{ability}` | Evaluated | Disadvantage on specific ability saves |
+| `flags.midi-qol.disadvantage.save.school.{school}` | Evaluated | Disadvantage on saves vs spells of a specific school |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Ability Checks
 
@@ -559,8 +563,10 @@ Prevent advantage on various roll types. These flags suppress advantage even whe
 |------|--------|-------------|
 | `flags.midi-qol.noAdvantage.save.all` | Evaluated | Prevent advantage on all saves |
 | `flags.midi-qol.noAdvantage.save.{ability}` | Evaluated | Prevent advantage on specific ability saves |
+| `flags.midi-qol.noAdvantage.save.school.{school}` | Evaluated | Prevent advantage on saves vs spells of a specific school |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Ability Checks
 
@@ -627,8 +633,10 @@ Prevent disadvantage on various roll types. These flags suppress disadvantage ev
 |------|--------|-------------|
 | `flags.midi-qol.noDisadvantage.save.all` | Evaluated | Prevent disadvantage on all saves |
 | `flags.midi-qol.noDisadvantage.save.{ability}` | Evaluated | Prevent disadvantage on specific ability saves |
+| `flags.midi-qol.noDisadvantage.save.school.{school}` | Evaluated | Prevent disadvantage on saves vs spells of a specific school |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Ability Checks
 
@@ -734,10 +742,12 @@ Force automatic failure on rolls. All fail flags are **Evaluated** (conditional 
 | `flags.midi-qol.fail.ability.all` | Evaluated | Fail all ability-based rolls |
 | `flags.midi-qol.fail.ability.save.all` | Evaluated | Fail all saving throws |
 | `flags.midi-qol.fail.ability.save.{ability}` | Evaluated | Fail specific ability saves |
+| `flags.midi-qol.fail.save.school.{school}` | Evaluated | Fail saves vs spells of a specific school |
 | `flags.midi-qol.fail.ability.check.all` | Evaluated | Fail all ability checks |
 | `flags.midi-qol.fail.ability.check.{ability}` | Evaluated | Fail specific ability checks |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Attack Rolls
 
@@ -802,10 +812,12 @@ Force automatic success on rolls. All success flags are **Evaluated** (condition
 | `flags.midi-qol.success.ability.all` | Evaluated | Succeed all ability-based rolls (saves and checks) |
 | `flags.midi-qol.success.ability.save.all` | Evaluated | Succeed all saving throws |
 | `flags.midi-qol.success.ability.save.{ability}` | Evaluated | Succeed specific ability saves |
+| `flags.midi-qol.success.save.school.{school}` | Evaluated | Succeed saves vs spells of a specific school |
 | `flags.midi-qol.success.ability.check.all` | Evaluated | Succeed all ability checks |
 | `flags.midi-qol.success.ability.check.{ability}` | Evaluated | Succeed specific ability checks |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Skills
 
@@ -951,8 +963,10 @@ These flags are set on the **source actor** (caster/attacker) and affect targets
 |------|--------|-------------|
 | `flags.midi-qol.grants.advantage.save.all` | Evaluated | Targets have advantage on all saves forced by this actor |
 | `flags.midi-qol.grants.advantage.save.{ability}` | Evaluated | Targets have advantage on specific ability saves |
+| `flags.midi-qol.grants.advantage.save.school.{school}` | Evaluated | Targets have advantage on saves vs this actor's spells of a specific school |
 | `flags.midi-qol.grants.disadvantage.save.all` | Evaluated | Targets have disadvantage on all saves forced by this actor |
 | `flags.midi-qol.grants.disadvantage.save.{ability}` | Evaluated | Targets have disadvantage on specific ability saves |
+| `flags.midi-qol.grants.disadvantage.save.school.{school}` | Evaluated | Targets have disadvantage on saves vs this actor's spells of a specific school |
 | `flags.midi-qol.grants.advantage.check.all` | Evaluated | Target has advantage on all ability checks |
 | `flags.midi-qol.grants.advantage.check.{ability}` | Evaluated | Advantage on specific ability checks |
 | `flags.midi-qol.grants.disadvantage.check.all` | Evaluated | Target has disadvantage on all ability checks |
@@ -969,6 +983,7 @@ These flags are set on the **source actor** (caster/attacker) and affect targets
 | `flags.midi-qol.grants.disadvantage.tool.{toolId}` | Evaluated | Disadvantage on specific tool checks |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 *Skills: acr, ani, arc, ath, dec, his, ins, itm, inv, med, nat, prc, per, prf, rel, slt, ste, sur.*
 
 ### Grant No Advantage/Disadvantage on Saves, Checks, Skills, Tools
@@ -980,6 +995,7 @@ These flags are set on the **source actor** (caster) and suppress advantage/disa
 | `flags.midi-qol.grants.noAdvantage.all` | Evaluated | Suppress all advantage on rolls forced by this actor |
 | `flags.midi-qol.grants.noAdvantage.save.all` | Evaluated | Suppress advantage on all saves forced by this actor |
 | `flags.midi-qol.grants.noAdvantage.save.{ability}` | Evaluated | Suppress advantage on specific ability saves |
+| `flags.midi-qol.grants.noAdvantage.save.school.{school}` | Evaluated | Suppress advantage on saves vs this actor's spells of a specific school |
 | `flags.midi-qol.grants.noAdvantage.check.all` | Evaluated | Suppress advantage on all ability checks forced by this actor |
 | `flags.midi-qol.grants.noAdvantage.check.{ability}` | Evaluated | Suppress advantage on specific ability checks |
 | `flags.midi-qol.grants.noAdvantage.skill.all` | Evaluated | Suppress advantage on all skill checks forced by this actor |
@@ -990,6 +1006,7 @@ These flags are set on the **source actor** (caster) and suppress advantage/disa
 | `flags.midi-qol.grants.noDisadvantage.all` | Evaluated | Suppress all disadvantage on rolls forced by this actor |
 | `flags.midi-qol.grants.noDisadvantage.save.all` | Evaluated | Suppress disadvantage on all saves forced by this actor |
 | `flags.midi-qol.grants.noDisadvantage.save.{ability}` | Evaluated | Suppress disadvantage on specific ability saves |
+| `flags.midi-qol.grants.noDisadvantage.save.school.{school}` | Evaluated | Suppress disadvantage on saves vs this actor's spells of a specific school |
 | `flags.midi-qol.grants.noDisadvantage.check.all` | Evaluated | Suppress disadvantage on all ability checks forced by this actor |
 | `flags.midi-qol.grants.noDisadvantage.check.{ability}` | Evaluated | Suppress disadvantage on specific ability checks |
 | `flags.midi-qol.grants.noDisadvantage.skill.all` | Evaluated | Suppress disadvantage on all skill checks forced by this actor |
@@ -999,6 +1016,7 @@ These flags are set on the **source actor** (caster) and suppress advantage/disa
 | `flags.midi-qol.grants.noDisadvantage.tool.{toolId}` | Evaluated | Suppress disadvantage on specific tool checks |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 **Example use case:** A creature whose gaze attack prevents targets from having advantage on the save, regardless of other effects they have.
 

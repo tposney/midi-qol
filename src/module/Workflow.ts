@@ -1068,8 +1068,8 @@ export class Workflow {
       return !!abilities;
     }
     if (activity.check) {
-      // Check must have ability or associated skills/tools
-      return !!activity.check.ability || (activity.check.associated?.size ?? 0) > 0;
+      // Check is valid with ability, associated skills/tools, or as a plain d20 roll
+      return true;
     }
     return false;
   }
@@ -2432,7 +2432,7 @@ export class Workflow {
 
     const isFastRoll = this.rollOptions.fastForwardAttack ?? this.workflowOptions.fastForwardAttack ?? isAutoFastForward("attack", { workflow: this });
     this.rollOptions.fastForwardAttack ||= isFastRoll;
-    const autoRollAttack = this.rollOptions.autoRollAttack ?? getAutoRollAttack(this);
+    const autoRollAttack = getAutoRollAttack(this);
     if (!autoRollAttack) {
       // Not auto rolling attack so setup the buttons to display advantage/disadvantage
       const chatMessage = this.chatCard;
@@ -2577,9 +2577,7 @@ export class Workflow {
         this.item = new CONFIG.Item.documentClass(storedData, { parent: this.actor })
       }
 
-      this.rollOptions.spellLevel = this.spellLevel;
       this.rollOptions.isCritical = this.isCritical;
-      this.rollOptions.isFumble = this.isFumble;
       this.rollOptions.fastForwardDamage = isAutoFastForward("damage", { workflow: this });
       this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, { create: false });
       return this.WorkflowState_Suspend;
@@ -3695,13 +3693,6 @@ export class Workflow {
     if (this.workflowOptions?.disadvantage) {
       this.attackRollModifierTracker.disadvantage.add("workflowOptions", i18n("midi-qol.WorkflowOptions"));
     }
-    if (this.rollOptions?.advantage) {
-      this.attackRollModifierTracker.advantage.add("rollOptions", i18n("midi-qol.RollOptions"));
-    }
-    if (this.rollOptions?.disadvantage) {
-      this.attackRollModifierTracker.disadvantage.add("rollOptions", i18n("midi-qol.RollOptions"));
-    }
-
     // Long range disadvantage (set in WorkflowState_ValidateRoll)
     if (this.longRangeAttack) {
       this.attackRollModifierTracker.disadvantage.add('range', 'Long Range');
@@ -5889,7 +5880,7 @@ return {
     if (rollType === "save") {
       request = `save:${rollAbilities[0]}`;
     } else if (rollType === "check") {
-      request = `ability:${rollAbilities[0]}`;
+      request = rollAbilities[0] ? `ability:${rollAbilities[0]}` : `dice:1d20`;
     } else if (rollType === "skill") {
       request = `skill:${rollSkills[0]}`;
     }
@@ -5959,10 +5950,13 @@ return {
       flashRequestType = "savingthrow"; // default
     }
 
-    const flashRollKey = rollAbilities?.[0] ?? rollSkills?.[0] ?? rollTools?.[0] ?? "dex";
+    const flashRollKey = rollAbilities?.[0] ?? rollSkills?.[0] ?? rollTools?.[0];
+    if (!flashRollKey) {
+      flashRequestType = "custom";
+    }
     const flashRequest = {
       requestType: flashRequestType,
-      rollKey: flashRollKey,
+      rollKey: flashRollKey ?? "1d20",
       actorIds: flashRequests.map(request => request.token),
       dc: rollDC,
       advantage: flashRequests.some(r => r.advantage) || undefined,
@@ -5993,7 +5987,8 @@ return {
     if (rerRequests.length === 0) return;
 
     const rerType = rollType;
-    const type = `${rerType}.${this.saveActivity?.save?.ability.first() ?? this.saveActivity?.check?.associated.first() ?? "dex"}`;
+    const abilityOrAssociated = this.saveActivity?.save?.ability.first() ?? this.saveActivity?.check?.associated.first();
+    const type = abilityOrAssociated ? `${rerType}.${abilityOrAssociated}` : "custom";
     const rerRequest = {
       actors: rerRequests.map(request => request.actorUuid),
       contestants: [],
@@ -6005,6 +6000,7 @@ return {
         showRollResults: false,
         hideNames: true,
         noMessage: true,
+        ...(abilityOrAssociated ? {} : { formula: "1d20" }),
         rollSettings: rerRequests.map(request => ({
           advantage: request.advantage,
           disadvantage: request.disadvantage,
@@ -6176,8 +6172,8 @@ return {
   ): Promise<Roll[] | Roll | null> {
     const { rollType, rollAbilities = [] } = saveDetails;
     // Validate abilities for save/check types
-    if ((rollType === "save" || rollType === "check") && rollAbilities.length === 0) {
-      console.warn(`midi-qol | createStandardSaveRoll called with rollType=${rollType} but no abilities`);
+    if (rollType === "save" && rollAbilities.length === 0) {
+      console.warn(`midi-qol | createStandardSaveRoll called with rollType=save but no abilities`);
       return Promise.resolve(null);
     }
     // Find a player owner for the roll if possible
@@ -6633,10 +6629,9 @@ return {
     const { rollAction, rollType, rollAbilities, rollSkills, rollTools, flagRollType } = this.determineRollTypeAndAction();
     if (!rollAction) return; // No save or check configured on activity
 
-    // Validate that abilities are set for save/check types
-    if ((rollType === "save" || rollType === "check") && rollAbilities.length === 0) {
-      const activityType = this.saveActivity?.save ? "save" : "check";
-      console.warn(`midi-qol | ${this.item.name} ${this.saveActivity?.name} has a ${activityType} activity but no ability configured`);
+    // Validate that abilities are set for save types (checks can be plain d20 with no ability)
+    if (rollType === "save" && rollAbilities.length === 0) {
+      console.warn(`midi-qol | ${this.item.name} ${this.saveActivity?.name} has a save activity but no ability configured`);
       return;
     }
 
@@ -6809,6 +6804,9 @@ return {
       );
       return lines.join("<br>");
     } else if (rollType === "check") {
+      if (rollAbilities.length === 0) {
+        return `${dcLabel} ${i18n("midi-qol.plain-d20-roll")}:`;
+      }
       const checkLabel = i18n(allHitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check");
       const lines = rollAbilities.map(ability =>
         `${dcLabel} ${GameSystemConfig.abilities[ability]?.label ?? ability} ${checkLabel}:`
@@ -7907,82 +7905,31 @@ return {
         warn(`chooseEffect | no effects found for ${this.item.name}`);
       return [];
     }
-    let returnValue: Promise<ActiveEffect.Implementation> = new Promise((resolve, _reject) => {
-      const callback = async function () {
-        resolve(this);
-      };
-
-      const style = `
-        <style>
-          .dnd5e2.effectNoTarget.dialog {
-            max-height: 800px;
-            .window-content {
-              overflow: auto;
-            }
-            .dialog-content {
-              display: none;
-            }
-            .dialog-buttons {
-              flex-direction: column;
-              button.dialog-button {
-                border: 5px;
-                margin: 0;
-                display: grid;			
-                grid-template-columns: 40px 150px;
-                grid-gap: 5px;
-                span {
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                }
-              }
-            }
-          }
-          .dnd5e2.effectNoTarget.dialog .window-header .window-title {
-            visibility: visible;
-            color: initial;
-            text-align: center;
-            font-weight: bold;
-          }
-        </style>`;
-      function render([html]) {
-        html.parentElement.querySelectorAll('.dialog-button').forEach((n) => {
+    const { DialogV2 } = foundry.applications.api;
+    const buttons = effects.map(effect => ({
+      action: effect.uuid,
+      label: effect.name,
+      callback: () => effect,
+    }));
+    const chosen: ActiveEffect.Implementation | null = await DialogV2.wait({
+      window: { title: `${i18n('CONTROLS.CommonSelect')} ${i18n('DOCUMENT.ActiveEffect')}` },
+      classes: ["midi-qol-choose-effect"],
+      position: { width: 220 },
+      buttons,
+      render: (_event, dialog) => {
+        dialog.element.querySelectorAll<HTMLButtonElement>(".form-footer button").forEach((btn) => {
+          const eff = fromUuidSync(btn.dataset.action ?? "") as ActiveEffect.Implementation;
+          if (!eff) return;
           const img = document.createElement('img');
-          const eff = fromUuidSync(n.dataset.button) as ActiveEffect.Implementation;
           img.src = eff.img as string ?? "";
-          const effNameSpan = document.createElement('span');
-          effNameSpan.textContent = eff.name;
-          n.innerHTML = '';
-          n.appendChild(img);
-          n.appendChild(effNameSpan);
-          n.dataset.tooltip = eff.name;
+          const span = btn.querySelector("span");
+          if (span) span.dataset.tooltip = eff.name;
+          btn.prepend(img);
         });
-      }
-      let buttons = {};
-      for (let effect of effects) {
-        buttons[effect.uuid] = {
-          label: effect.name,
-          callback: callback.bind(effect),
-        };
-      }
-      //@ts-expect-error no dnd5e-types
-      const Mixin = game.system.applications.DialogMixin(Dialog);
-      const dialogOptions = {
-        classes: ['dnd5e2', 'effectNoTarget', 'dialog'],
-        width: 220,
-        height: 'auto',
-      };
-      const data = {
-        title: `${i18n('CONTROLS.CommonSelect')} ${i18n('DOCUMENT.ActiveEffect')}`,
-        content: `${style}`,
-        buttons,
-        render,
-        midiOptions: options,
-      };
-
-      let dialog = new Mixin(data, dialogOptions);
-      dialog.render(true);
+      },
     });
-    return [await returnValue];
+    if (!chosen) return [];
+    return [chosen];
   }
 }
 export class SavesFirstWorkflow extends Workflow {
@@ -8718,7 +8665,6 @@ export class TrapWorkflow extends Workflow {
     }
     if (debugEnabled > 1) debug("TrapWorkflow: Rolling damage ", this.rollOptions.event, this.spellLevel, this.workflowOptions.versatile, this.targets, this.hitTargets);
     this.rollOptions.fastForward = true;
-    this.rollOptions.spellLevel = this.spellLevel;
     this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {});
     return this.WorkflowState_Suspend; // wait for a damage roll to advance the state.
   }
@@ -8894,7 +8840,6 @@ export class DummyWorkflow extends Workflow {
     this.advantage = options?.advantage;
     this.disadvantage = options?.disadvantage
     this.rollOptions.fastForward = options?.fastForward;
-    this.rollOptions.fastForwardKey = options?.fastFowrd;
   }
 
   override get actor(): Actor.Implementation {
@@ -9042,18 +8987,12 @@ export type WorkflowOptions = InexactPartial<{
 
 // Workflow's `rollOptions`
 export type WorkflowRollOptions = InexactPartial<{
-  autoRollAttack: boolean;
   event: AugmentedEvent;
   fastForward: boolean;
   fastForwardAttack: boolean;
   fastForwardDamage: boolean;
-  fastForwardKey?: boolean;
   isCritical: boolean;
-  isFumble: boolean;
   rollToggle: boolean;
-  spellLevel: number;
-  advantage: boolean;
-  disadvantage: boolean;
 }>;
 
 export type UndoData = {

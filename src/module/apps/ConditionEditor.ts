@@ -183,7 +183,7 @@ function buildConditionCompletions(api: any): Record<string, any> {
   for (const fn of [
     "findNearby", "findNearbyCount", "checkNearby", "hasCondition",
     "checkIncapacitated", "canSee", "canSense", "computeDistance",
-    "checkActivityRange", "checkDistance", "contestedRoll",
+    "checkActivityRange", "checkDistance", "contestedRoll", "sizeNumeric",
   ]) {
     if (midiChildren[fn]) completions[fn] = midiChildren[fn];
   }
@@ -223,7 +223,6 @@ function buildConditionCompletions(api: any): Record<string, any> {
     detail: "(actor) => string",
     info: "Get creature type (NPCs) or race (PCs) of an actor"
   };
-
   // getRollData() fields are available at the root level too (abilities, attributes, details, etc.)
   // Merge actor system schema completions so users can type e.g. abilities.str.mod directly
   if (actorSystemChildren) {
