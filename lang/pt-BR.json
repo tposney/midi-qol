@@ -149,6 +149,7 @@
   "midi-qol.saving-throw": "Salvaguarda",
   "midi-qol.ability-check": "Teste de Atributo",
   "midi-qol.ability-checks": "Testes de Atributo",
+  "midi-qol.plain-d20-roll": "Rolagem d20",
   "midi-qol.RollChoice": "Escolha o Atributo",
   "midi-qol.or": "ou",
   "midi-qol.skill-check": "Teste de Perícia",
@@ -677,7 +678,10 @@
   "midi-qol.DistanceMeasurementOptions.center": "Centro dos Quadrados da Grade",
   "midi-qol.DistanceMeasurementOptions.perimeter": "Perímetros do Token",
   "midi-qol.NoSocketLib": "Midi QOL requer o módulo socketlib instalado e habilitado",
-  "midi-qol.chatlogPruneDeprecated": "A função de limpeza de registros de chat integrada do Midi QoL está obsoleta. Instale e ative o módulo 'chatlog-prune'. Este recurso será removido na versão 14 do Midi QoL.",
+  "midi-qol.chatlogPruneWarning": "Aviso",
+  "midi-qol.chatlogPruneDeprecated": "A função de Limpeza do Histórico de Chat integrada do Midi QoL foi descontinuada. Ela será removida na versão 13.1.",
+  "midi-qol.chatlogPruneInstallHint": "Instale e ative o módulo 'chatlog-prune'. Lembre-se de ativar a opção 'Habilitar Limpeza do Histórico de Chat' nas configurações do módulo.",
+  "midi-qol.chatlogPruneEnableHint": "O módulo 'chatlog-prune' está instalado, mas a limpeza do histórico de chat não está ativada. Ative-a nas configurações do módulo chatlog-prune.",
   "midi-qol.confirm": "Diálogo de Confirmação",
   "midi-qol.ExportConfig": "Exportar as Configurações do Midi QOL para Um Arquivo Json",
   "midi-qol.ImportConfig": "Importar as Configurações do Midi QOL de Um Arquivo Json",
@@ -1281,6 +1285,14 @@
           "label": "Rolar Como",
           "hint": "Role a Atividade como se ela fosse de..."
         },
+        "triggeredActivityConsume": {
+          "label": "Consumir Recursos",
+          "hint": "Consome espaços de magia e recursos quando a Atividade Gatilho é executada."
+        },
+        "triggeredActivityConfigure": {
+          "label": "Mostrar Diálogo de Configuração",
+          "hint": "Exibe a caixa de diálogo de configuração/consumo quando a Atividade Gatilho for executada."
+        },
         "otherActivityCompatible": {
           "label": "Outra Atividade",
           "hint": "Pode ser usada como uma outra Atividade."
@@ -1671,6 +1683,26 @@
   "midi-qol.flagTemplate.advantage.save.description": "Vantagem em salvaguardas de {label}.",
   "midi-qol.flagTemplate.disadvantage.save.name": "Desvantagem (Salv. de {label})",
   "midi-qol.flagTemplate.disadvantage.save.description": "Desvantagem em salvaguardas de {label}.",
+  "midi-qol.flagTemplate.advantage.save.school.name": "Vantagem (Salvaguardas vs Magias de {label})",
+  "midi-qol.flagTemplate.advantage.save.school.description": "Vantagem em salvaguardas contra magias de {label}.",
+  "midi-qol.flagTemplate.disadvantage.save.school.name": "Desvantagem (Salvaguardas vs Magias de {label})",
+  "midi-qol.flagTemplate.disadvantage.save.school.description": "Desvantagem em salvaguardas contra magias de {label}.",
+  "midi-qol.flagTemplate.noAdvantage.save.school.name": "Sem Vantagem (Salvaguardas vs Magias de {label})",
+  "midi-qol.flagTemplate.noAdvantage.save.school.description": "Vantagem não se aplica em salvaguardas contra magias de {label}.",
+  "midi-qol.flagTemplate.noDisadvantage.save.school.name": "Sem Desvantagem (Salvaguardas vs Magias de {label})",
+  "midi-qol.flagTemplate.noDisadvantage.save.school.description": "Desvantagem não se aplica em salvaguardas contra magias de {label}.",
+  "midi-qol.flagTemplate.fail.save.school.name": "Falha (Salvaguardas vs Magias de {label})",
+  "midi-qol.flagTemplate.fail.save.school.description": "Salvaguardas contra magias de {label} falham automaticamente.",
+  "midi-qol.flagTemplate.success.save.school.name": "Sucesso (Salvaguardas vs Magias de {label})",
+  "midi-qol.flagTemplate.success.save.school.description": "Salvaguardas contra magias de {label} são automaticamente bem-sucedidas.",
+  "midi-qol.flagTemplate.grants.advantage.save.school.name": "Conceder Vantagem (Salvaguardas vs Magias de {label})",
+  "midi-qol.flagTemplate.grants.advantage.save.school.description": "Alvos têm vantagem em salvaguardas contra magias de {label} deste ator.",
+  "midi-qol.flagTemplate.grants.disadvantage.save.school.name": "Conceder Desvantagem (Salvaguardas vs Magias de {label})",
+  "midi-qol.flagTemplate.grants.disadvantage.save.school.description": "Alvos têm desvantagem em salvaguardas contra magias de {label} deste ator.",
+  "midi-qol.flagTemplate.grants.noAdvantage.save.school.name": "Conceder Sem Vantagem (Salvaguardas vs Magias de {label})",
+  "midi-qol.flagTemplate.grants.noAdvantage.save.school.description": "Salvaguardas contra magias de {label} deste ator não terão vantagem.",
+  "midi-qol.flagTemplate.grants.noDisadvantage.save.school.name": "Conceder Sem Desvantagem (Salvaguardas vs Magias de {label})",
+  "midi-qol.flagTemplate.grants.noDisadvantage.save.school.description": "Salvaguardas contra magias de {label} deste ator não terão desvantagem.",
   "midi-qol.flagTemplate.noAdvantage.check.name": "Sem Vantagem (Testes de {label})",
   "midi-qol.flagTemplate.noAdvantage.check.description": "Vantagem não pode ser aplicada em testes de {label}.",
   "midi-qol.flagTemplate.noAdvantage.save.name": "Sem Vantagem (Salv. de {label})",
@@ -1959,6 +1991,10 @@
     "flags.midi-qol.grants.criticalThreshold": {
       "name": "Conceder Margem Acerto Crítico",
       "description": "" 
+    },
+    "flags.midi-qol.bloodsense": {
+      "name": "Blood Sense (Alcance)",
+      "description": "Percepção às Cegas dentro deste alcance para criaturas feridas (sem qualquer ponto de vida). Anula vantagem de não poder detectar o alvo se ele estiver dentro do alcance especificado. Não afeta a visão real do token."
     },
     "flags.midi-qol.ignoreNearbyFoes": {
       "name": "Ignorar Inimigos Próximos",
