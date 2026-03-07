@@ -161,7 +161,7 @@ class ConfigSettings {
   autoUndoTransformations: boolean = false;
   autoRemoveTemplate: boolean = true;
   autoRemoveInstantaneousTemplate: boolean = false;
-  constrainTemplatePlacement: boolean = true;
+  constrainTemplatePlacement: boolean = false;
   templateSnapping: string = "full";
   autoRollAttack: boolean = false;
   autoRollDamage: string = "none";
