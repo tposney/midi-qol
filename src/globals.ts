@@ -1195,6 +1195,9 @@ export interface Activity extends AnyMutableObject {
   consume: (usageConfig: object, messageConfig: object) => Promise<object | false>;
   roll?: {
     formula?: string;
+    name: string;
+    prompt: boolean;
+    visible: boolean;
   };
   duration: {
     concentration?: boolean;

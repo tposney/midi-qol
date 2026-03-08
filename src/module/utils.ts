@@ -3476,7 +3476,8 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
 
     let actor = token.actor;
     // look at undefined versus !
-    if (!(activity.range.value ?? activity.range.reach) && !activity.range.long && activity.range.units !== "touch") return {
+    // Note: currently dnd5e can set value to an empty string instead of a number
+    if (!(activity.range.value || activity.range.reach) && !activity.range.long && activity.range.units !== "touch") return {
       result: "normal",
       reason: "no range specified"
     };
@@ -3492,7 +3493,7 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
     };
 
     const attackType = activity.actionType;
-    let range = (activity.range?.value ?? activity.range?.reach ?? 0);
+    let range = ((activity.range?.value || activity.range?.reach) ?? 0);
     let longRange = (activity.range?.long ?? 0);
     if (activity.actor?.system) { // TODO revisit when/if flags move to activities
       let conditionData;

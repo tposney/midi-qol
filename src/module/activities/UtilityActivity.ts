@@ -96,7 +96,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
         return;
       }
       config.midiOptions ??= {};
-      config.midiOptions.fastForward ??= isAutoFastForward("damage", { workflow })
+      config.midiOptions.fastForwardDamage ??= isAutoFastForward("damage", { workflow })
       if (debugEnabled > 0) {
         warn("MidiUtilityActivity | rollFormula | Called", config, dialog, message);
       }
@@ -110,8 +110,19 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
       const keys = {
         normal: areKeysPressed(config.event, "skipDialogNormal") || areKeysPressed(config.event, "skipDialogAdvantage") || areKeysPressed(config.event, "skipDialogDisadvantage")
       };
-      if (Object.values(keys).some(k => k)) dialog.configure = this.midiProperties?.forceRollDialog !== "always";
-      else dialog.configure ??= !config.midiOptions.fastForward || this.midiProperties?.forceRollDialog === "always";
+      if (Object.values(keys).some((k) => k)) dialog.configure = this.midiProperties?.forceDamageDialog !== "always";
+      else if (dialog.configure === undefined) {
+          switch (this.midiProperties?.forceDamageDialog) {
+            case "always":
+              dialog.configure = true;
+              break;
+            case "never":
+              dialog.configure = false;
+              break;
+            default:
+              dialog.configure = !(config.midiOptions?.fastForwardDamage ?? config.workflow?.workflowOptions.fastForwardDamage ?? false);
+          }
+      }
       if (workflow.rollOptions?.rollToggle) dialog.configure = !!!dialog.configure;
       const rollToggle = areMidiKeysPressed(config.event, "RollToggle");
       if (workflow) workflow.rollOptions.rollToggle = rollToggle;

@@ -4803,7 +4803,8 @@ return {
       const utilityRoll = this.utilityRoll; // will concat as needed
       //let searchRe = /<div class="midi-qol-attack-roll">.*?<\/div>/;
       let searchRe = /<div class="midi-qol-utility-roll"[\s\S]*?<div class="end-midi-qol-utility-roll">/
-      const rollString = i18n("DND5E.UTILITY.Title");
+      // Display roll name if available, otherwise default to utility activity type title
+      const rollString = this.activity?.roll?.name || i18n("DND5E.UTILITY.Title");
       let replaceString = `<div class="midi-qol-utility-roll"><div style="text-align:center" >${rollString}</div>${this.utilityRollHTML}<div class="end-midi-qol-utility-roll">`
       content = chatMessage.content.replace(searchRe, replaceString);
       if (debugEnabled > 0) warn("displayUtilityRoll |", this.utilityRoll)
