@@ -157,6 +157,7 @@ const MIDI_COMPLETIONS: CompletionNode = {
   },
 
   workflow: {
+    type: "variable", detail: "Workflow", info: "The midi-qol workflow instance",
     children: {
       tracker: {
         type: "property", detail: "RollModifierTracker", info: "The attack roll modifier tracker",
@@ -250,10 +251,56 @@ const MIDI_COMPLETIONS: CompletionNode = {
           reset: { type: "method", detail: "(options?)", info: "Reset all sub-trackers and attribution" },
         }
       },
-      targets: { type: "property", detail: "Set<Token5e>", info: "The targeted tokens" },
-      hitTargets: { type: "property", detail: "Set<Token5e>", info: "Tokens that were hit" },
-      failedSaves: { type: "property", detail: "Set<Token5e>", info: "Tokens that failed saves" },
-      savedTargets: { type: "property", detail: "Set<Token5e>", info: "Tokens that succeeded saves" },
+      targets: {
+        type: "property", detail: "Set<Token5e>", info: "The targeted tokens",
+        children: {
+          size: { type: "property", detail: "number", info: "Number of elements in the set" },
+          has: { type: "method", detail: "(value) => boolean", info: "Check if a value is in the set" },
+          add: { type: "method", detail: "(value) => Set", info: "Add a value to the set" },
+          delete: { type: "method", detail: "(value) => boolean", info: "Remove a value from the set" },
+          clear: { type: "method", detail: "() => void", info: "Remove all elements" },
+          forEach: { type: "method", detail: "(callback) => void", info: "Execute a function for each element" },
+          values: { type: "method", detail: "() => Iterator", info: "Returns an iterator of values" },
+          first: { type: "method", detail: "() => Token5e | undefined", info: "Get the first element (Foundry Set)" },
+        }
+      },
+      hitTargets: {
+        type: "property", detail: "Set<Token5e>", info: "Tokens that were hit",
+        children: {
+          size: { type: "property", detail: "number", info: "Number of elements in the set" },
+          has: { type: "method", detail: "(value) => boolean", info: "Check if a value is in the set" },
+          add: { type: "method", detail: "(value) => Set", info: "Add a value to the set" },
+          delete: { type: "method", detail: "(value) => boolean", info: "Remove a value from the set" },
+          clear: { type: "method", detail: "() => void", info: "Remove all elements" },
+          forEach: { type: "method", detail: "(callback) => void", info: "Execute a function for each element" },
+          values: { type: "method", detail: "() => Iterator", info: "Returns an iterator of values" },
+          first: { type: "method", detail: "() => Token5e | undefined", info: "Get the first element (Foundry Set)" },
+        }
+      },
+      failedSaves: {
+        type: "property", detail: "Set<Token5e>", info: "Tokens that failed saves",
+        children: {
+          size: { type: "property", detail: "number", info: "Number of elements in the set" },
+          has: { type: "method", detail: "(value) => boolean", info: "Check if a value is in the set" },
+          add: { type: "method", detail: "(value) => Set", info: "Add a value to the set" },
+          delete: { type: "method", detail: "(value) => boolean", info: "Remove a value from the set" },
+          forEach: { type: "method", detail: "(callback) => void", info: "Execute a function for each element" },
+          values: { type: "method", detail: "() => Iterator", info: "Returns an iterator of values" },
+          first: { type: "method", detail: "() => Token5e | undefined", info: "Get the first element (Foundry Set)" },
+        }
+      },
+      savedTargets: {
+        type: "property", detail: "Set<Token5e>", info: "Tokens that succeeded saves",
+        children: {
+          size: { type: "property", detail: "number", info: "Number of elements in the set" },
+          has: { type: "method", detail: "(value) => boolean", info: "Check if a value is in the set" },
+          add: { type: "method", detail: "(value) => Set", info: "Add a value to the set" },
+          delete: { type: "method", detail: "(value) => boolean", info: "Remove a value from the set" },
+          forEach: { type: "method", detail: "(callback) => void", info: "Execute a function for each element" },
+          values: { type: "method", detail: "() => Iterator", info: "Returns an iterator of values" },
+          first: { type: "method", detail: "() => Token5e | undefined", info: "Get the first element (Foundry Set)" },
+        }
+      },
       actor: {
         type: "property", detail: "Actor5e", info: "The D&D 5e actor performing the action",
         children: {
@@ -308,17 +355,6 @@ const MIDI_COMPLETIONS: CompletionNode = {
       },
       activity: {
         type: "property", detail: "Activity", info: "The D&D 5e activity being used",
-        children: {
-          type: { type: "property", detail: "string", info: "Activity type" },
-          name: { type: "property", detail: "string", info: "Activity name" },
-          item: { type: "property", detail: "Item5e", info: "Parent item" },
-          damage: { type: "property", detail: "object", info: "Damage configuration" },
-          save: { type: "property", detail: "object", info: "Save configuration" },
-          attack: { type: "property", detail: "object", info: "Attack configuration" },
-          use: { type: "method", detail: "(usage?, dialog?, message?) => Promise<ChatMessage[]>", info: "Use this activity" },
-          rollAttack: { type: "method", detail: "(config?, dialog?, message?) => Promise<D20Roll[]>", info: "Roll attack" },
-          rollDamage: { type: "method", detail: "(config?, dialog?, message?) => Promise<DamageRoll[]>", info: "Roll damage" },
-        }
       },
       token: {
         type: "property", detail: "Token5e", info: "The D&D 5e token performing the action",
@@ -333,12 +369,58 @@ const MIDI_COMPLETIONS: CompletionNode = {
       },
       isCritical: { type: "property", detail: "boolean", info: "Whether the attack is a critical hit" },
       isFumble: { type: "property", detail: "boolean", info: "Whether the attack is a fumble" },
-      attackRoll: { type: "property", detail: "D20Roll", info: "The attack roll" },
+      attackRoll: {
+        type: "property", detail: "D20Roll", info: "The attack roll",
+        children: {
+          total: { type: "property", detail: "number", info: "The total result of the roll" },
+          formula: { type: "property", detail: "string", info: "The roll formula" },
+          result: { type: "property", detail: "string", info: "The roll result string" },
+          terms: { type: "property", detail: "RollTerm[]", info: "The parsed roll terms" },
+          dice: { type: "property", detail: "DiceTerm[]", info: "The dice terms in the roll" },
+          isCritical: { type: "property", detail: "boolean", info: "Whether the roll is a natural 20" },
+          isFumble: { type: "property", detail: "boolean", info: "Whether the roll is a natural 1" },
+          hasAdvantage: { type: "property", detail: "boolean", info: "Whether rolled with advantage" },
+          hasDisadvantage: { type: "property", detail: "boolean", info: "Whether rolled with disadvantage" },
+          toMessage: { type: "method", detail: "(messageData?, options?) => Promise<ChatMessage>", info: "Send the roll to chat" },
+        }
+      },
       attackTotal: { type: "property", detail: "number", info: "Attack roll total" },
-      damageRolls: { type: "property", detail: "DamageRoll[]", info: "Damage rolls" },
+      damageRolls: {
+        type: "property", detail: "DamageRoll[]", info: "Damage rolls",
+        children: {
+          length: { type: "property", detail: "number", info: "Number of damage rolls" },
+          forEach: { type: "method", detail: "(callback) => void", info: "Execute a function for each roll" },
+          map: { type: "method", detail: "(callback) => Array", info: "Map each roll to a new value" },
+          filter: { type: "method", detail: "(callback) => DamageRoll[]", info: "Filter damage rolls" },
+          reduce: { type: "method", detail: "(callback, initial?) => any", info: "Reduce damage rolls to a value" },
+          find: { type: "method", detail: "(callback) => DamageRoll | undefined", info: "Find a damage roll matching a condition" },
+        }
+      },
       damageTotal: { type: "property", detail: "number", info: "Total damage" },
-      damageDetail: { type: "property", detail: "object[]", info: "Damage breakdown by type" },
-      saveResults: { type: "property", detail: "Map", info: "Save results by token UUID" },
+      damageDetail: {
+        type: "property", detail: "object[]", info: "Damage breakdown by type",
+        children: {
+          length: { type: "property", detail: "number", info: "Number of damage entries" },
+          forEach: { type: "method", detail: "(callback) => void", info: "Execute a function for each entry" },
+          map: { type: "method", detail: "(callback) => Array", info: "Map each entry to a new value" },
+          filter: { type: "method", detail: "(callback) => object[]", info: "Filter damage entries" },
+          find: { type: "method", detail: "(callback) => object | undefined", info: "Find a damage entry matching a condition" },
+        }
+      },
+      saveResults: {
+        type: "property", detail: "Map<string, object>", info: "Save results by token UUID",
+        children: {
+          size: { type: "property", detail: "number", info: "Number of entries in the map" },
+          get: { type: "method", detail: "(key) => object | undefined", info: "Get a save result by token UUID" },
+          has: { type: "method", detail: "(key) => boolean", info: "Check if a token UUID has a result" },
+          set: { type: "method", detail: "(key, value) => Map", info: "Set a save result for a token UUID" },
+          delete: { type: "method", detail: "(key) => boolean", info: "Remove a save result" },
+          forEach: { type: "method", detail: "(callback) => void", info: "Execute a function for each entry" },
+          keys: { type: "method", detail: "() => Iterator", info: "Returns an iterator of keys" },
+          values: { type: "method", detail: "() => Iterator", info: "Returns an iterator of values" },
+          entries: { type: "method", detail: "() => Iterator", info: "Returns an iterator of [key, value] pairs" },
+        }
+      },
       templateId: { type: "property", detail: "string", info: "Placed template ID" },
       uuid: { type: "property", detail: "string", info: "Workflow UUID" },
       id: { type: "property", detail: "string", info: "Workflow ID" },
@@ -478,14 +560,44 @@ const MIDI_ARGS0: CompletionEntry = {
  */
 export function injectMidiCompletions(): void {
   // Register hook - macro-autocomplete fires this after it initializes
-  (Hooks as any).on("macro-autocomplete.ready", ({ tree, rebuildSignatureMap, schemaToCompletions, mergeCompletions, classToCompletions }: {
+  (Hooks as any).on("macro-autocomplete.ready", ({ tree, rebuildSignatureMap, schemaToCompletions, mergeCompletions, classToCompletions,
+    registerCategoryConfigs, registerBlockColours, registerScopeMergeKeys }: {
     tree: CompletionNode;
     rebuildSignatureMap: () => void;
     schemaToCompletions?: (schema: any) => CompletionNode;
     mergeCompletions?: (target: { children?: CompletionNode }, additions: CompletionNode) => void;
     classToCompletions?: (cls: any) => { staticChildren: CompletionNode; instanceChildren: CompletionNode; constructorDetail?: string };
+    registerCategoryConfigs?: (configs: Record<string, { display: string; colour: string; order: number; namespaceOnly?: boolean }>) => void;
+    registerBlockColours?: (colours: Record<string, number>) => void;
+    registerScopeMergeKeys?: (keys: string[]) => void;
   }) => {
     console.log("midi-qol | Injecting midi-qol completions into macro-autocomplete");
+
+    // Register visual editor (Blockly) configuration
+    registerCategoryConfigs?.({
+      activity: { display: "Activity", colour: "#e76f51", order: 10 },
+      workflow: { display: "Workflow", colour: "#e63946", order: 13 },
+      rolledItem: { display: "Rolled Item", colour: "#6a994e", order: 17 },
+      macroItem: { display: "Macro Item", colour: "#6a994e", order: 18 },
+      rolledActivity: { display: "Rolled Activity", colour: "#e76f51", order: 19 },
+      macroActivity: { display: "Macro Activity", colour: "#e76f51", order: 20 },
+      options: { display: "Options", colour: "#a5805b", order: 23 },
+      midiData: { display: "Midi Data", colour: "#e63946", order: 24 },
+      MidiQOL: { display: "MidiQOL", colour: "#e63946", order: 30 },
+      chrisPremades: { display: "Chris Premades", colour: "#e76f51", order: 31, namespaceOnly: true },
+      // Condition editor categories
+      "Actor Data": { display: "Actor Data", colour: "#457b9d", order: 70 },
+      "Target Data": { display: "Target Data", colour: "#2a9d8f", order: 71 },
+      "Workflow": { display: "Workflow", colour: "#e63946", order: 72 },
+      "World": { display: "World", colour: "#e9c46a", order: 73 },
+      "Combat": { display: "Combat", colour: "#5ba580", order: 74 },
+      "Functions": { display: "Functions", colour: "#9b59b6", order: 75 },
+    });
+    registerBlockColours?.({
+      MidiQOL: 0,
+      workflow: 350,
+    });
+    registerScopeMergeKeys?.(["macroItem", "rolledItem", "macroActivity", "rolledActivity"]);
 
     const cfg = (globalThis as any).CONFIG;
 
@@ -495,26 +607,27 @@ export function injectMidiCompletions(): void {
     // Inject workflow top-level variable (spread from scope by Foundry)
     tree.workflow = MIDI_COMPLETIONS.workflow;
 
-    // Inject item as top-level variable (spread from scope by Foundry)
-    // Base data properties declared here; instance methods come from prototype walk
-    tree.item = {
-      type: "variable", detail: "Item", info: "Item being used (available in midi-qol macros, spread from scope)",
-      children: {
+    // Enrich item entry with midi-specific info (merge, don't replace — macro-autocomplete
+    // already enriched tree.item with document schema, runtime data, and prototype methods)
+    if (!tree.item) {
+      tree.item = { type: "variable", detail: "Item", info: "Item being used (available in midi-qol macros, spread from scope)", children: {} };
+    }
+    tree.item.type = "variable";
+    tree.item.detail = "Item";
+    tree.item.info = "Item being used (available in midi-qol macros, spread from scope)";
+    if (mergeCompletions) {
+      mergeCompletions(tree.item, {
         name: { type: "property", detail: "string", info: "Item name" },
         type: { type: "property", detail: "string", info: "Item type (weapon, spell, feat, equipment, consumable, ...)" },
         img: { type: "property", detail: "string", info: "Item image path" },
         uuid: { type: "property", detail: "string", info: "Item UUID" },
         id: { type: "property", detail: "string", info: "Item ID" },
         isOwner: { type: "property", detail: "boolean", info: "Current user is owner" },
-        system: {
-          type: "property", detail: "object", info: "Item system data (populated from system schema)",
-          children: {}
-        },
         items: { type: "property", detail: "Collection<Item>", info: "Actor's item collection" },
         effects: { type: "property", detail: "Collection<ActiveEffect>", info: "Item's effects" },
         actor: { type: "property", detail: "Actor | null", info: "Owning actor" },
-      }
-    };
+      });
+    }
 
     // Inject activity as top-level variable (spread from scope by Foundry)
     // Properties from dnd5e Activity + midi-qol MidiActivityMixin
@@ -528,8 +641,55 @@ export function injectMidiCompletions(): void {
       sort: { type: "property", detail: "number", info: "Sort order" },
 
       // Relationships
-      item: { type: "property", detail: "Item", info: "Parent item" },
-      actor: { type: "property", detail: "Actor", info: "Owning actor (via item.actor)" },
+      item: {
+        type: "property", detail: "Item5e", info: "Parent item",
+        children: {
+          system: {
+            type: "property", detail: "object", info: "Item system data",
+            children: {
+              description: { type: "property", detail: "object", info: "Item description" },
+              damage: { type: "property", detail: "object", info: "Damage configuration" },
+              save: { type: "property", detail: "object", info: "Save configuration" },
+              range: { type: "property", detail: "object", info: "Range configuration" },
+              target: { type: "property", detail: "object", info: "Target configuration" },
+              duration: { type: "property", detail: "object", info: "Duration configuration" },
+              uses: { type: "property", detail: "object", info: "Limited uses" },
+              level: { type: "property", detail: "number", info: "Spell level" },
+              properties: { type: "property", detail: "Set<string>", info: "Item properties" },
+            }
+          },
+          activities: { type: "property", detail: "Collection<Activity>", info: "Item's activities" },
+          effects: { type: "property", detail: "Collection<ActiveEffect>", info: "Item's effects" },
+          actor: { type: "property", detail: "Actor5e | null", info: "Owning actor" },
+          name: { type: "property", detail: "string", info: "Item name" },
+          type: { type: "property", detail: "string", info: "Item type" },
+          img: { type: "property", detail: "string", info: "Item image path" },
+          uuid: { type: "property", detail: "string", info: "Item UUID" },
+        }
+      },
+      actor: {
+        type: "property", detail: "Actor5e", info: "Owning actor (via item.actor)",
+        children: {
+          system: {
+            type: "property", detail: "object", info: "Actor system data",
+            children: {
+              abilities: { type: "property", detail: "object", info: "Ability scores { str, dex, con, int, wis, cha }" },
+              attributes: { type: "property", detail: "object", info: "Actor attributes (hp, ac, movement, etc.)" },
+              skills: { type: "property", detail: "object", info: "Skill data" },
+              traits: { type: "property", detail: "object", info: "Damage/condition traits (di, dr, dv, ci)" },
+              details: { type: "property", detail: "object", info: "Character details (level, cr, race)" },
+              spells: { type: "property", detail: "object", info: "Spell slots" },
+            }
+          },
+          items: { type: "property", detail: "Collection<Item5e>", info: "Actor's item collection" },
+          effects: { type: "property", detail: "Collection<ActiveEffect5e>", info: "Actor's active effects" },
+          name: { type: "property", detail: "string", info: "Actor name" },
+          uuid: { type: "property", detail: "string", info: "Actor UUID" },
+          getRollData: { type: "method", detail: "() => object", info: "Get data for roll formulas" },
+          getFlag: { type: "method", detail: "(scope, key) => any", info: "Get a flag value" },
+          setFlag: { type: "method", detail: "(scope, key, value) => Promise", info: "Set a flag value" },
+        }
+      },
 
       // Type checks
       actionType: { type: "property", detail: "string", info: "Action type (e.g. 'mwak', 'rwak', 'msak', 'rsak', 'save', 'heal', 'utility')" },
@@ -706,6 +866,26 @@ export function injectMidiCompletions(): void {
       children: ACTIVITY_CHILDREN,
     };
 
+    // Register Activity as a PascalCase class entry so type resolution works
+    // (e.g., "Collection<Activity>" in for-of loops resolves to Activity's instance members)
+    tree.Activity = {
+      type: "class", detail: "Activity", info: "dnd5e Activity base class",
+      instanceChildren: ACTIVITY_CHILDREN,
+    };
+
+    // Point workflow.activity to the full ACTIVITY_CHILDREN so the namespace
+    // block and sidebar show all activity properties (not just the abbreviated set)
+    if (tree.workflow?.children?.activity) {
+      tree.workflow.children.activity.children = ACTIVITY_CHILDREN;
+    }
+
+    // Register Workflow as a top-level class entry so typed_var blocks and type
+    // resolution (e.g., for-of loops yielding Workflow) can access workflow properties
+    tree.Workflow = {
+      type: "class", detail: "Workflow", info: "midi-qol Workflow class",
+      instanceChildren: tree.workflow?.children ?? {},
+    };
+
     // Dynamically inject instance methods from runtime class prototypes
     if (classToCompletions && mergeCompletions) {
       // Item instance methods
@@ -726,6 +906,9 @@ export function injectMidiCompletions(): void {
             const walked = classToCompletions(ActCls);
             if (!tree.activity.instanceChildren) tree.activity.instanceChildren = {};
             mergeCompletions({ children: tree.activity.instanceChildren }, walked.instanceChildren);
+            // Also merge into the PascalCase Activity class entry for type resolution
+            if (!tree.Activity.instanceChildren) tree.Activity.instanceChildren = {};
+            mergeCompletions({ children: tree.Activity.instanceChildren }, walked.instanceChildren);
           }
         }
       }
@@ -759,20 +942,407 @@ export function injectMidiCompletions(): void {
     // This mirrors executeMacroWithScope() in Workflow.ts — Foundry's Macro#executeScript
     // destructures {speaker, actor, token} and spreads the rest as top-level vars.
     for (const { key, detail, info, ref } of MIDI_SCOPE_MAP) {
+      const source = ref ? tree[ref] : undefined;
       // Add to scope.children for `scope.xxx` completion
       if (tree.scope?.children) {
-        tree.scope.children[key] = { type: "property", detail, info };
+        tree.scope.children[key] = {
+          type: "property", detail, info,
+          ...(source?.children && { children: source.children }),
+          ...(source?.instanceChildren && { instanceChildren: source.instanceChildren }),
+        };
       }
       // Create top-level variable entry if it doesn't already exist.
       // Entries with a `ref` share children/instanceChildren with the referenced entry.
       if (!tree[key]) {
-        const source = ref ? tree[ref] : undefined;
         tree[key] = {
           type: "variable", detail, info,
           ...(source?.children && { children: source.children }),
           ...(source?.instanceChildren && { instanceChildren: source.instanceChildren }),
         };
       }
+    }
+
+    // Inject rich chrisPremades (CPR) completions — replaces the shallow
+    // objectToCompletions walk with properly typed function signatures
+    // extracted from the CPR source map.
+    if (mergeCompletions && (globalThis as any).chrisPremades) {
+      const fn = (detail: string, info: string): CompletionEntry => ({ type: "function", detail, info });
+      const prop = (detail: string, info: string): CompletionEntry => ({ type: "property", detail, info });
+      const method = (detail: string, info: string): CompletionEntry => ({ type: "method", detail, info });
+
+      const CPR_UTILS: CompletionNode = {
+        actorUtils: {
+          type: "object", detail: "object", info: "Actor utility functions",
+          children: {
+            getEffects: fn("(actor, options?) => ActiveEffect[]", "Get effects on an actor"),
+            addFavorites: fn("async (actor, entities, type?) => Promise", "Add items to favorites"),
+            removeFavorites: fn("async (actor, entities, type?) => Promise", "Remove items from favorites"),
+            getFirstToken: fn("(actor) => Token5e", "Get first token for an actor"),
+            getLevelOrCR: fn("(actor) => number", "Get character level or CR"),
+            checkTrait: fn("(actor, type, trait) => boolean", "Check if actor has a damage/condition trait"),
+            typeOrRace: fn("(actor) => string", "Get creature type or race"),
+            raceOrType: fn("(actor) => string", "Get creature race or type"),
+            getSize: fn("(actor, returnString?) => number|string", "Get creature size"),
+            hasUsedReaction: fn("(actor) => boolean", "Check if actor has used reaction"),
+            setReactionUsed: fn("async (actor) => Promise", "Mark reaction as used"),
+            removeReactionUsed: fn("async (actor, force?) => Promise", "Clear reaction used"),
+            hasUsedBonusAction: fn("(actor) => boolean", "Check if bonus action used"),
+            setBonusActionUsed: fn("async (actor) => Promise", "Mark bonus action used"),
+            removeBonusActionUsed: fn("async (actor, force?) => Promise", "Clear bonus action used"),
+            hasSpellSlots: fn("(actor, atLeast?) => boolean", "Check for available spell slots"),
+            getCastableSpells: fn("(actor) => Item[]", "Get spells the actor can cast"),
+            isShapeChanger: fn("(actor) => boolean", "Check if actor is a shape changer"),
+            doConcentrationCheck: fn("async (actor, saveDC) => Promise", "Force a concentration check"),
+            polymorph: fn("async (origActor, newActor, options, renderSheet?) => Promise", "Polymorph an actor"),
+            getEquippedArmor: fn("(actor, types?) => Item|undefined", "Get equipped armor"),
+            getEquippedShield: fn("(actor) => Item|undefined", "Get equipped shield"),
+            compareSize: fn("(source, target, goal) => boolean", "Compare creature sizes"),
+            getBestAbility: fn("(actor, abilities) => string", "Get highest ability from list"),
+            getTokens: fn("(actor) => Token5e[]", "Get all tokens for an actor"),
+            giveHeroicInspiration: fn("async (actor) => Promise", "Give heroic inspiration"),
+          }
+        },
+        effectUtils: {
+          type: "object", detail: "object", info: "Effect utility functions",
+          children: {
+            createEffect: fn("async (entity, effectData, ...) => Promise<ActiveEffect>", "Create an active effect"),
+            createEffects: fn("async (entity, effectDataArray, optionsArray) => Promise", "Create multiple effects"),
+            getConcentrationEffect: fn("(actor, item) => ActiveEffect|undefined", "Get concentration effect for item"),
+            getEffectByIdentifier: fn("(actor, identifier) => ActiveEffect|undefined", "Get effect by CPR identifier"),
+            getAllEffectsByIdentifier: fn("(actor, identifier) => ActiveEffect[]", "Get all effects by identifier"),
+            getEffectByStatusID: fn("(actor, statusID) => ActiveEffect|undefined", "Get effect by status ID"),
+            applyConditions: fn("async (actor, conditions, ...) => Promise", "Apply conditions to actor"),
+            addDependent: fn("async (entity, dependents, forceGM?) => Promise", "Add dependent entities"),
+            addMacro: fn("(effectData, type, macroList) => void", "Add embedded macro to effect data"),
+            getCastData: fn("(effect) => object", "Get cast data stored on effect"),
+            getCastLevel: fn("(effect) => number", "Get cast level from effect"),
+            getBaseLevel: fn("(effect) => number", "Get base spell level from effect"),
+            setCastData: fn("async (effect, data) => Promise", "Set cast data on effect"),
+            setCastLevel: fn("async (effect, level) => Promise", "Set cast level on effect"),
+            getSaveDC: fn("(effect) => number", "Get save DC stored on effect"),
+            setSaveDC: fn("async (effect, dc) => Promise", "Set save DC on effect"),
+            syntheticActiveEffect: fn("async (effectData, entity) => Promise<ActiveEffect>", "Create synthetic effect"),
+            getOriginItem: fn("async (effect) => Promise<Item>", "Get origin item of effect"),
+            getOriginItemSync: fn("(effect) => Item|undefined", "Get origin item synchronously"),
+            getConditions: fn("(effect) => string[]", "Get conditions from effect"),
+          }
+        },
+        itemUtils: {
+          type: "object", detail: "object", info: "Item utility functions",
+          children: {
+            createItems: fn("async (actor, updates, ...) => Promise<Item[]>", "Create items on actor"),
+            getItemByIdentifier: fn("(actor, identifier) => Item|undefined", "Get item by CPR identifier"),
+            getAllItemsByIdentifier: fn("(actor, identifier) => Item[]", "Get all items by identifier"),
+            syntheticItem: fn("async (itemData, actor) => Promise<Item>", "Create a synthetic (temporary) item"),
+            enchantItem: fn("async (item, effectData, ...) => Promise", "Apply enchantment to item"),
+            cloneItem: fn("(item, updates?) => Item", "Clone an item with optional updates"),
+            getConfig: fn("(item, key) => any", "Get CPR config value from item"),
+            setConfig: fn("async (item, key, value) => Promise", "Set CPR config value on item"),
+            getSaveDC: fn("(item) => number", "Get save DC for item"),
+            getVersion: fn("(item) => string", "Get CPR automation version"),
+            getSource: fn("(item) => string", "Get CPR automation source"),
+            isUpToDate: fn("async (item) => Promise<boolean>", "Check if automation is up to date"),
+            isSpellFeature: fn("(item) => boolean", "Check if item is a spell feature"),
+            convertDuration: fn("(entity) => object", "Convert duration to seconds"),
+            getEquipmentState: fn("(item) => string", "Get equipment state"),
+            getActivity: fn("(item, type) => Activity|undefined", "Get activity by type"),
+            getEffectByIdentifier: fn("(item, identifier) => ActiveEffect|undefined", "Get effect on item by identifier"),
+            getSpellActivities: fn("(item) => Activity[]", "Get spell-related activities"),
+            canUse: fn("(item) => boolean", "Check if item can be used"),
+          }
+        },
+        tokenUtils: {
+          type: "object", detail: "object", info: "Token utility functions",
+          children: {
+            getDistance: fn("(sourceToken, targetToken, ...) => number", "Get distance between tokens"),
+            findNearby: fn("(token, range, disposition, ...) => Token5e[]", "Find nearby tokens"),
+            pushToken: fn("async (sourceToken, targetToken, distance) => Promise", "Push token away"),
+            canSee: fn("(sourceToken, targetToken) => boolean", "Check line of sight"),
+            canSense: fn("(sourceToken, targetToken, senseModes?) => boolean", "Check if token can sense another"),
+            checkIncapacitated: fn("(token, logResult?) => boolean", "Check if token is incapacitated"),
+            checkForRoom: fn("(token, gridSquares) => boolean", "Check if room exists for token"),
+            attachToToken: fn("async (token, uuidsToAttach) => Promise", "Attach entities to token"),
+            detachFromToken: fn("async (token, uuidsToDetach) => Promise", "Detach entities from token"),
+            getLightLevel: fn("(token) => string", "Get light level at token position"),
+            grappleHelper: fn("async (sourceToken, targetToken, item, ...) => Promise", "Handle grapple mechanics"),
+            moveTokenAlongRay: fn("async (targetToken, ray, distance) => Promise", "Move token along ray"),
+            getMovementHitTokens: fn("(startPoint, endPoint, radius, ...) => Token5e[]", "Get tokens hit during movement"),
+            getLinearDistanceMoved: fn("(token) => number", "Get linear distance moved this turn"),
+            isGrappledBy: fn("(target, source) => boolean", "Check if target is grappled by source"),
+            mountToken: fn("async (rider, target, ...) => Promise", "Mount a token on another"),
+            checkCover: fn("(sourceToken, targetToken, ...) => number", "Check cover between tokens"),
+            getBaseActor: fn("(token) => Actor5e", "Get base actor (unlinked original)"),
+          }
+        },
+        workflowUtils: {
+          type: "object", detail: "object", info: "Workflow utility functions",
+          children: {
+            bonusDamage: fn("async (workflow, formula, ...) => Promise", "Add bonus damage to workflow"),
+            bonusAttack: fn("async (workflow, formula) => Promise", "Add bonus to attack roll"),
+            replaceDamage: fn("async (workflow, formula, ...) => Promise", "Replace workflow damage"),
+            applyDamage: fn("async (tokens, value, damageType) => Promise", "Apply damage to tokens"),
+            completeActivityUse: fn("async (activity, config?) => Promise", "Complete an activity use programmatically"),
+            completeItemUse: fn("async (item, config?) => Promise", "Complete an item use programmatically"),
+            syntheticActivityRoll: fn("async (activity, targets?, ...) => Promise", "Roll synthetic activity"),
+            syntheticItemRoll: fn("async (item, targets, ...) => Promise", "Roll synthetic item"),
+            syntheticItemDataRoll: fn("async (itemData, actor, targets, ...) => Promise", "Roll from item data"),
+            syntheticActivityDataRoll: fn("async (activityData, item, actor, targets, ...) => Promise", "Roll from activity data"),
+            negateDamageItemDamage: fn("(ditem) => void", "Negate all damage on a damage item"),
+            setDamageItemDamage: fn("(ditem, amount, adjustRaw?) => void", "Set damage item damage amount"),
+            getDamageTypes: fn("(damageRolls) => string[]", "Get damage types from rolls"),
+            getTotalDamageOfType: fn("(damageDetail, actor, type) => number", "Get total damage of a type"),
+            getCastData: fn("(workflow) => object", "Get cast data from workflow"),
+            getCastLevel: fn("(workflow) => number", "Get cast level from workflow"),
+            modifyDamageAppliedFlat: fn("(ditem, amount) => void", "Modify damage applied by flat amount"),
+            handleInstantTemplate: fn("async (workflow) => Promise", "Handle instant template placement"),
+            isAttackType: fn("(workflow, type?) => boolean", "Check workflow attack type"),
+            getActionType: fn("(workflow) => string", "Get workflow action type"),
+            swapAttackAbility: fn("async (workflow, ability?, ...) => Promise", "Swap attack ability modifier"),
+            addEntityRemoval: fn("(workflow, entities) => void", "Mark entities for removal after workflow"),
+            preventDeath: fn("(ditem) => void", "Prevent target death from this damage"),
+            specialItemUse: fn("async (item, targets, sourceFeature, ...) => Promise", "Special item use flow"),
+            updateTargets: fn("async (workflow, targets, ...) => Promise", "Update workflow targets"),
+            removeTargets: fn("async (workflow, tokens, ...) => Promise", "Remove tokens from targets"),
+          }
+        },
+        rollUtils: {
+          type: "object", detail: "object", info: "Roll utility functions",
+          children: {
+            contestedRoll: fn("async (...) => Promise", "Perform a contested roll"),
+            rollDice: fn("async (formula, ...) => Promise<Roll>", "Roll a dice formula"),
+            damageRoll: fn("async (formula, entity, options?) => Promise<DamageRoll>", "Roll damage"),
+            getCriticalFormula: fn("async (formula, rollData) => Promise<string>", "Get critical hit formula"),
+            getChangedDamageRoll: fn("async (origRoll, newType) => Promise<DamageRoll>", "Change damage roll type"),
+            addToRoll: fn("async (roll, formula, ...) => Promise<Roll>", "Add formula to existing roll"),
+            requestRoll: fn("async (token, request, ability, options?) => Promise", "Request a roll from player"),
+            makeCritical: fn("(roll) => Roll", "Convert a roll to critical"),
+            rollDiceSync: fn("(formula, ...) => Roll", "Roll dice synchronously"),
+            replaceD20: fn("async (roll, number) => Promise<Roll>", "Replace d20 result"),
+          }
+        },
+        dialogUtils: {
+          type: "object", detail: "object", info: "Dialog utility functions",
+          children: {
+            buttonDialog: fn("async (title, content, buttons, ...) => Promise<string>", "Show button dialog"),
+            numberDialog: fn("async (title, content, input?) => Promise<number>", "Show number input dialog"),
+            selectDialog: fn("async (title, content, input?) => Promise<string>", "Show select dialog"),
+            selectTargetDialog: fn("async (title, content, targets, ...) => Promise", "Show target selection dialog"),
+            selectDocumentDialog: fn("async (title, content, documents, ...) => Promise", "Show document selection dialog"),
+            selectDocumentsDialog: fn("async (title, content, documents, ...) => Promise", "Show multi-document selection"),
+            confirm: fn("async (title, content, ...) => Promise<boolean>", "Show confirmation dialog"),
+            selectHitDie: fn("async (actor, title, content, ...) => Promise", "Show hit die selection"),
+            selectSpellSlot: fn("async (actor, title, content, ...) => Promise<number>", "Show spell slot selection"),
+            selectDamageType: fn("async (damageTypes, title, ...) => Promise<string>", "Show damage type selection"),
+            confirmUseItem: fn("async (item, ...) => Promise<boolean>", "Confirm item use"),
+          }
+        },
+        combatUtils: {
+          type: "object", detail: "object", info: "Combat utility functions",
+          children: {
+            currentTurn: fn("() => Combatant|undefined", "Get current turn combatant"),
+            inCombat: fn("() => boolean", "Check if combat is active"),
+            combatStarted: fn("() => boolean", "Check if combat has started"),
+            perTurnCheck: fn("(entity, name, ownTurnOnly, tokenId) => boolean", "Check once-per-turn usage"),
+            setTurnCheck: fn("async (entity, name, reset) => Promise", "Set per-turn usage flag"),
+            getCurrentCombatantToken: fn("() => Token5e|undefined", "Get current combatant's token"),
+            isOwnTurn: fn("(token) => boolean", "Check if it's this token's turn"),
+          }
+        },
+        templateUtils: {
+          type: "object", detail: "object", info: "Template utility functions",
+          children: {
+            getTokensInTemplate: fn("(template) => Token5e[]", "Get tokens within a template"),
+            getTokensInShape: fn("(shape, scene, ...) => Token5e[]", "Get tokens in a shape"),
+            placeTemplate: fn("async (templateData, returnTokens?) => Promise", "Place a measured template"),
+            getCastData: fn("(template) => object", "Get cast data from template"),
+            getCastLevel: fn("(template) => number", "Get cast level from template"),
+            getSaveDC: fn("(template) => number", "Get save DC from template"),
+            getSourceActor: fn("async (template) => Promise<Actor5e>", "Get source actor of template"),
+            overlap: fn("(template1, template2) => boolean", "Check if two templates overlap"),
+            attachToTemplate: fn("async (template, uuids) => Promise", "Attach entities to template"),
+            rayIntersectsTemplate: fn("(templateDoc, ray) => boolean", "Check if ray intersects template"),
+          }
+        },
+        socketUtils: {
+          type: "object", detail: "object", info: "Socket utility functions",
+          children: {
+            gmID: fn("() => string", "Get the GM's user ID"),
+            isTheGM: fn("() => boolean", "Check if current user is the GM"),
+            hasPermission: fn("(entity, userId) => boolean", "Check user permission on entity"),
+            firstOwner: fn("(document, useId) => User", "Get first owner of document"),
+            remoteRollItem: fn("async (item, config, options, userId) => Promise", "Roll item as another user"),
+          }
+        },
+        regionUtils: {
+          type: "object", detail: "object", info: "Region utility functions",
+          children: {
+            createRegions: fn("async (regionDatas, scene, ...) => Promise", "Create scene regions"),
+            templateToRegionShape: fn("(template, ...) => object", "Convert template to region shape"),
+            getCastData: fn("(region) => object", "Get cast data from region"),
+            getCastLevel: fn("(region) => number", "Get cast level from region"),
+            getSaveDC: fn("(region) => number", "Get save DC from region"),
+            rayIntersectsRegion: fn("(region, ray) => boolean", "Check if ray intersects region"),
+          }
+        },
+        macroUtils: {
+          type: "object", detail: "object", info: "Embedded macro utility functions",
+          children: {
+            getEmbeddedMacros: fn("(entity, type, options?) => object[]", "Get embedded macros on entity"),
+            addEmbeddedMacro: fn("async (entity, macroData) => Promise", "Add embedded macro to entity"),
+            removeEmbeddedMacro: fn("async (entity, type, name) => Promise", "Remove embedded macro"),
+            getDocumentPasses: fn("(document, type) => string[]", "Get valid passes for doc+event type"),
+            getEventTypes: fn("() => string[]", "Get all event type keys"),
+            getAllDocumentPasses: fn("(document) => object", "Get all passes for all event types"),
+            getAllEmbeddedMacros: fn("(entity) => object[]", "Get all embedded macros"),
+          }
+        },
+        activityUtils: {
+          type: "object", detail: "object", info: "Activity utility functions",
+          children: {
+            getActivityByIdentifier: fn("(item, identifier, ...) => Activity|undefined", "Get activity by identifier"),
+            getIdentifier: fn("(activity) => string", "Get CPR identifier of activity"),
+            setIdentifier: fn("async (activity, identifier) => Promise", "Set CPR identifier"),
+            withChangedDamage: fn("(activity, formula, types?, ...) => Activity", "Clone activity with changed damage"),
+            duplicateActivity: fn("(activity) => Activity", "Duplicate an activity"),
+            getSaveDC: fn("(activity) => number", "Get save DC of activity"),
+            hasSave: fn("(activity) => boolean", "Check if activity has a save"),
+            isSpellActivity: fn("(activity) => boolean", "Check if activity belongs to a spell"),
+            canUse: fn("(activity) => boolean", "Check if activity can be used"),
+            isHidden: fn("(activity) => boolean", "Check if activity is hidden"),
+          }
+        },
+        genericUtils: {
+          type: "object", detail: "object", info: "General utility functions",
+          children: {
+            sleep: fn("(ms) => Promise<void>", "Sleep for ms milliseconds"),
+            translate: fn("(key) => string", "Localize a string key"),
+            format: fn("(key, obj) => string", "Format a localized string"),
+            setProperty: fn("(object, key, value) => boolean", "Set a nested property"),
+            getProperty: fn("(object, key) => any", "Get a nested property"),
+            duplicate: fn("(object) => object", "Deep duplicate an object"),
+            deepClone: fn("(object) => object", "Deep clone an object"),
+            mergeObject: fn("(original, other, options?) => object", "Merge objects"),
+            update: fn("async (entity, updates?, options?) => Promise", "Update entity (GM-safe)"),
+            remove: fn("async (entity) => Promise", "Delete entity (GM-safe)"),
+            setFlag: fn("async (entity, scope, key, value) => Promise", "Set flag (GM-safe)"),
+            unsetFlag: fn("async (entity, scope, key) => Promise", "Unset flag (GM-safe)"),
+            getCPRSetting: fn("(key) => any", "Get a CPR module setting"),
+            setCPRSetting: fn("async (key, value) => Promise", "Set a CPR module setting"),
+            randomID: fn("(length?) => string", "Generate random ID"),
+            notify: fn("(message, type?, ...) => void", "Show notification"),
+            getIdentifier: fn("(entity) => string", "Get CPR identifier from entity"),
+            getRules: fn("(entity) => string", "Get rules version (legacy/modern)"),
+            titleCase: fn("(inputString) => string", "Convert string to title case"),
+            createEmbeddedDocuments: fn("async (entity, type, updates, options) => Promise", "Create embedded docs (GM-safe)"),
+            updateEmbeddedDocuments: fn("async (entity, type, updates, options) => Promise", "Update embedded docs (GM-safe)"),
+            deleteEmbeddedDocuments: fn("async (entity, type, ids, options) => Promise", "Delete embedded docs (GM-safe)"),
+          }
+        },
+        compendiumUtils: {
+          type: "object", detail: "object", info: "Compendium utility functions",
+          children: {
+            getCPRAutomation: fn("async (item, ...) => Promise<object>", "Get CPR automation for item"),
+            getAllAutomations: fn("async (item, options?) => Promise<object[]>", "Get all automations for item"),
+            getItemFromCompendium: fn("async (key, name, ...) => Promise<Item>", "Get item from compendium"),
+            getPreferredAutomation: fn("async (item, options) => Promise<object>", "Get preferred automation"),
+            getActorFromCompendium: fn("async (key, name, ...) => Promise<Actor>", "Get actor from compendium"),
+          }
+        },
+        constants: {
+          type: "object", detail: "object", info: "CPR constants and lookup tables",
+          children: {
+            packs: prop("object", "Compendium pack keys"),
+            attacks: prop("string[]", "All attack types"),
+            meleeAttacks: prop("string[]", "Melee attack types"),
+            rangedAttacks: prop("string[]", "Ranged attack types"),
+            weaponAttacks: prop("string[]", "Weapon attack types"),
+            spellAttacks: prop("string[]", "Spell attack types"),
+            sizes: prop("object", "Creature size mappings"),
+            damageTypeOptions: prop("object[]", "Damage type select options"),
+            creatureTypeOptions: prop("object[]", "Creature type select options"),
+            itemTypes: prop("string[]", "Valid item types"),
+            abilityOptions: prop("object[]", "Ability score select options"),
+            statusOptions: prop("object[]", "Status condition options"),
+            skillOptions: prop("object[]", "Skill select options"),
+            overTimeOptions: prop("object[]", "Overtime effect options"),
+            getBaseWeaponOptions: fn("() => object[]", "Get base weapon options"),
+            getToolNames: fn("() => object[]", "Get tool proficiency names"),
+            getFeatOptions: fn("() => object[]", "Get feat options"),
+          }
+        },
+        errors: {
+          type: "object", detail: "object", info: "Error helper functions",
+          children: {
+            missingPack: fn("() => void", "Log missing pack error"),
+            missingPackItem: fn("(key, name) => void", "Log missing pack item error"),
+            missingActivity: fn("(identifier) => void", "Log missing activity error"),
+          }
+        },
+        animationUtils: {
+          type: "object", detail: "object", info: "Animation utility functions (Sequencer/JB2A)",
+          children: {
+            sequencerCheck: fn("() => boolean", "Check if Sequencer is available"),
+            jb2aCheck: fn("() => boolean", "Check if JB2A is available"),
+            simpleAttack: fn("(sourceToken, targetToken, animation, ...) => void", "Play simple attack animation"),
+            preloadAnimations: fn("async (animations, showProgress?) => Promise", "Preload animation files"),
+          }
+        },
+        spellUtils: {
+          type: "object", detail: "object", info: "Spell utility functions",
+          children: {
+            getClassSpells: fn("(identifier) => string[]", "Get spells for a class"),
+            getAllClassSpells: fn("() => object", "Get all class spell lists"),
+            isClassSpell: fn("(item, identifier) => boolean", "Check if spell belongs to class"),
+            getCompendiumSpell: fn("async (name, ...) => Promise<Item>", "Get spell from compendium"),
+          }
+        },
+        crosshairUtils: {
+          type: "object", detail: "object", info: "Crosshair utility functions",
+          children: {
+            aimCrosshair: fn("async (...) => Promise<object>", "Show aiming crosshair"),
+          }
+        },
+      };
+
+      const CPR_COMPLETIONS: CompletionNode = {
+        utils: {
+          type: "object", detail: "object", info: "CPR utility modules",
+          children: CPR_UTILS,
+        },
+        Summons: {
+          type: "class", detail: "class", info: "CPR Summons handler",
+          children: {
+            spawn: fn("async (sourceActors, updates?, originItem, summonerToken, options?) => Promise", "Spawn summoned creatures"),
+          }
+        },
+        Teleport: {
+          type: "class", detail: "class", info: "CPR Teleport handler",
+        },
+        Crosshairs: {
+          type: "class", detail: "class", info: "CPR Crosshairs class",
+        },
+        DialogApp: {
+          type: "class", detail: "class", info: "CPR Dialog application",
+        },
+        EmbeddedMacros: {
+          type: "class", detail: "class", info: "CPR Embedded Macros application",
+        },
+        macros: prop("object", "CPR macro implementations"),
+        legacyMacros: prop("object", "CPR legacy macro implementations"),
+        integration: {
+          type: "object", detail: "object", info: "Third-party integrations",
+          children: {
+            ddbi: fn("(item) => Promise<object>", "Get D&D Beyond Importer automation"),
+            acc: prop("object", "Additional Compendiums Companion integration"),
+          }
+        },
+      };
+
+      if (!tree.chrisPremades) {
+        tree.chrisPremades = { type: "object", detail: "object", info: "chris-premades (CPR) module namespace" };
+      }
+      mergeCompletions(tree.chrisPremades, CPR_COMPLETIONS);
+      console.log("midi-qol | Injected rich chrisPremades completions");
     }
 
     // Rebuild signature map with the new completions

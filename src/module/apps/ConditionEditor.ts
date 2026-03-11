@@ -236,6 +236,127 @@ function buildConditionCompletions(api: any): Record<string, any> {
   return completions;
 }
 
+/**
+ * Build a Blockly-specific category specification for the condition editor.
+ * Organized into: Actor Data, Target Data, Workflow, Combat, Functions.
+ * Only includes variables explicitly available in the condition sandbox.
+ * Each category maps JS code paths to completion entries used by the
+ * Blockly editor to register property/function blocks.
+ */
+function buildBlocklyCategories(api: any): Record<string, Record<string, any>> {
+  const midiChildren = api.tree?.MidiQOL?.children ?? {};
+  // getRollData() flattens system data, so actor.abilities.str.mod is correct
+  // (not actor.system.abilities.str.mod) in the condition sandbox
+  const actorSystemChildren = api.tree?.actor?.children?.system?.children ?? {};
+
+  // Item system children for getRollData().item properties — prefer Item5e if available
+  const itemSystemChildren = api.tree?.Item5e?.children?.system?.children
+    ?? api.tree?.item?.children?.system?.children ?? {};
+
+  // Activity children from the completion tree
+  const activityChildren = api.tree?.activity?.children ?? {};
+
+  // Build indexed array children: indices 0-4, each with item system properties
+  // Generates code like items[0].name, equippedItems[2].level, etc.
+  function buildArrayItemChildren(): Record<string, any> {
+    const indexed: Record<string, any> = {};
+    for (let i = 0; i <= 4; i++) {
+      indexed[String(i)] = {
+        type: "property",
+        detail: "object",
+        info: `Item at index ${i} (item.getRollData() format)`,
+        children: itemSystemChildren,
+      };
+    }
+    return indexed;
+  }
+
+  // Build actor entries: condition-specific leaf fields + namespace blocks for system subtrees
+  const actorEntries: Record<string, any> = {
+    "actor.raceOrType": { type: "property", detail: "string", info: "Race (PCs) or creature type (NPCs)" },
+    "actor.typeOrRace": { type: "property", detail: "string", info: "Creature type (NPCs) or race (PCs)" },
+    "actor.isCombatTurn": { type: "property", detail: "boolean", info: "Whether it's this actor's combat turn" },
+    canSee: { type: "property", detail: "boolean", info: "Whether actor can see the target" },
+    canSense: { type: "property", detail: "boolean", info: "Whether actor can sense the target" },
+    equippedItems: { type: "property", detail: "object[]", info: "Actor's equipped items (item.getRollData() format)", children: buildArrayItemChildren() },
+    isAttuned: { type: "property", detail: "boolean", info: "Whether the triggering item is attuned" },
+    items: { type: "property", detail: "object[]", info: "Actor's items (item.getRollData() format)", children: buildArrayItemChildren() },
+    tokenUuid: { type: "property", detail: "string", info: "Actor's token document UUID" },
+  };
+  // Add system subtrees as namespace blocks (actor.abilities, actor.attributes, etc.)
+  for (const [key, entry] of Object.entries(actorSystemChildren as Record<string, any>)) {
+    const children = entry?.children ?? entry?.instanceChildren;
+    if (children && Object.keys(children).length > 0) {
+      actorEntries[`actor.${key}`] = { ...entry, children };
+    }
+  }
+
+  // Build target entries: condition-specific leaf fields + namespace blocks for system subtrees
+  const targetEntries: Record<string, any> = {
+    "target.canSee": { type: "property", detail: "boolean", info: "Whether target can see the attacker" },
+    "target.canSense": { type: "property", detail: "boolean", info: "Whether target can sense the attacker" },
+    "target.equippedItems": { type: "property", detail: "object[]", info: "Target's equipped items (item.getRollData() format)", children: buildArrayItemChildren() },
+    "target.failedSave": { type: "property", detail: "boolean", info: "Whether target failed the save" },
+    "target.isCombatTurn": { type: "property", detail: "boolean", info: "Whether it's the target's combat turn" },
+    "target.isHit": { type: "property", detail: "boolean", info: "Whether target was hit by the attack" },
+    "target.isHitEC": { type: "property", detail: "boolean", info: "Whether target was hit (including EC)" },
+    "target.items": { type: "property", detail: "object[]", info: "Target's items (item.getRollData() format)", children: buildArrayItemChildren() },
+    "target.raceOrType": { type: "property", detail: "string", info: "Target's race or creature type" },
+    "target.saved": { type: "property", detail: "boolean", info: "Whether target passed the save" },
+    "target.semiSuperSaver": { type: "property", detail: "boolean", info: "Whether target is a semi-super saver" },
+    "target.superSaver": { type: "property", detail: "boolean", info: "Whether target is a super saver" },
+    "target.typeOrRace": { type: "property", detail: "string", info: "Target's creature type or race" },
+    raceOrType: { type: "property", detail: "string", info: "Target's race or creature type" },
+    targetActorUuid: { type: "property", detail: "string", info: "Target actor UUID" },
+    targetUuid: { type: "property", detail: "string", info: "Target token document UUID" },
+    typeOrRace: { type: "property", detail: "string", info: "Target's creature type or race" },
+  };
+  // Add system subtrees as namespace blocks (target.abilities, target.attributes, etc.)
+  for (const [key, entry] of Object.entries(actorSystemChildren as Record<string, any>)) {
+    const children = entry?.children ?? entry?.instanceChildren;
+    if (children && Object.keys(children).length > 0) {
+      targetEntries[`target.${key}`] = { ...entry, children };
+    }
+  }
+
+  return {
+    "Actor Data": actorEntries,
+    "Target Data": targetEntries,
+    "Workflow": {
+      hasAttack: { type: "property", detail: "boolean", info: "Whether the activity has an attack roll" },
+      hasDamage: { type: "property", detail: "boolean", info: "Whether the activity deals damage" },
+      hasSave: { type: "property", detail: "boolean", info: "Whether the workflow includes a save" },
+      isConcentrationCheck: { type: "property", detail: "boolean", info: "Whether this is a concentration check" },
+      isDeathSave: { type: "property", detail: "boolean", info: "Whether this is a death saving throw" },
+      item: { type: "property", detail: "object", info: "Triggering item (item.getRollData() format)", children: itemSystemChildren },
+      shouldRollDamage: { type: "property", detail: "boolean", info: "Whether damage should be rolled" },
+      "workflow.activity": { type: "variable", detail: "Activity", info: "The workflow's triggering activity", children: activityChildren },
+    },
+    "World": {
+      worldTime: { type: "property", detail: "number", info: "Current world time (game.time.worldTime)" },
+    },
+    "Combat": {
+      combatRound: { type: "property", detail: "number", info: "Current combat round number" },
+      combatTime: { type: "property", detail: "number", info: "Combat time (round + turn/100)" },
+      combatTurn: { type: "property", detail: "number", info: "Current combat turn number" },
+      isCombatTurn: { type: "property", detail: "boolean", info: "Whether it's the actor's combat turn" },
+    },
+    "Functions": {
+      ...(midiChildren.findNearby ? { findNearby: midiChildren.findNearby } : {}),
+      ...(midiChildren.findNearbyCount ? { findNearbyCount: midiChildren.findNearbyCount } : {}),
+      ...(midiChildren.checkNearby ? { checkNearby: midiChildren.checkNearby } : {}),
+      ...(midiChildren.hasCondition ? { hasCondition: midiChildren.hasCondition } : {}),
+      ...(midiChildren.checkIncapacitated ? { checkIncapacitated: midiChildren.checkIncapacitated } : {}),
+      ...(midiChildren.computeDistance ? { computeDistance: midiChildren.computeDistance } : {}),
+      ...(midiChildren.sizeNumeric ? { sizeNumeric: midiChildren.sizeNumeric } : {}),
+      checkDefeated: { type: "function", detail: "(actorRef) => 0 | 1", info: "Check if actor/token is defeated" },
+      fromUuidSync: { type: "function", detail: "(uuid) => Document | null", info: "Synchronously resolve a UUID to a Document" },
+      evalRaceOrType: { type: "function", detail: "(actor) => string", info: "Get race (PCs) or creature type (NPCs) of an actor" },
+      evalTypeOrRace: { type: "function", detail: "(actor) => string", info: "Get creature type (NPCs) or race (PCs) of an actor" },
+    },
+  };
+}
+
 export class ConditionEditor extends HandlebarsApplicationMixin(ApplicationV2) {
   declare originalValue: string;
   declare flagKey: string;
@@ -308,7 +429,8 @@ export class ConditionEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!api?.setContextCompletions) return;
 
     const completions = buildConditionCompletions(api);
-    api.setContextCompletions(codeMirrorEl, completions);
+    const blocklyCategories = buildBlocklyCategories(api);
+    api.setContextCompletions(codeMirrorEl, completions, blocklyCategories);
   }
 
   /** Read current value from the code-mirror element */

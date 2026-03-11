@@ -6371,9 +6371,9 @@ return {
     if (isCritical) this.criticalSaves = this.criticalSaves.add(target);
     // Use only the actually-chosen ability (from midiChosenId or rollAbility), not all abilities from the activity
     const saveAbilities = rollAbility ? new Set([rollAbility]) : this.saveActivity?.save?.ability;
-    if (this.checkSuperSaver(target, saveAbilities))
+    if (await this.checkSuperSaver(target, saveAbilities))
       this.superSavers = this.superSavers.add(target);
-    if (this.checkSemiSuperSaver(target, saveAbilities))
+    if (await this.checkSemiSuperSaver(target, saveAbilities))
       this.semiSuperSavers = this.semiSuperSavers.add(target);
 
     // Apply concentration save bonus if applicable
@@ -6986,17 +6986,17 @@ return {
     return true;
   }
 
-  checkSuperSaver(token: Token.Implementation, abilities: Set<string> | undefined): boolean {
+  async checkSuperSaver(token: Token.Implementation, abilities: Set<string> | undefined): Promise<boolean> {
     if (!abilities) return false;
     for (let ability of abilities.values()) {
       const flags = token.actor?.flags?.[MODULE_ID]?.superSaver;
       if (!flags) return false;
       if (flags.all) {
-        const flagVal = evalActivationCondition(this, flags.all, token, { errorReturn: false });
+        const flagVal = await evalActivationCondition(this, flags.all, token, { errorReturn: false });
         if (flagVal) return true;
       }
       if (flags[ability]) {
-        const flagVal = evalActivationCondition(this, flags[ability], token, { errorReturn: false });
+        const flagVal = await evalActivationCondition(this, flags[ability], token, { errorReturn: false });
         if (flagVal) return true;
       }
       // @ts-expect-error no dnd5e-types
@@ -7007,17 +7007,17 @@ return {
     return false;
   }
 
-  checkSemiSuperSaver(token: Token.Implementation, abilities: Set<string> | undefined) {
+  async checkSemiSuperSaver(token: Token.Implementation, abilities: Set<string> | undefined): Promise<boolean> {
     if (!abilities) return false;
     for (let ability of abilities.values()) {
       const flags = token.actor?.flags?.[MODULE_ID]?.semiSuperSaver;
       if (!flags) return false;
       if (flags.all) {
-        const flagVal = evalActivationCondition(this, flags.all, token, { errorReturn: false });
+        const flagVal = await evalActivationCondition(this, flags.all, token, { errorReturn: false });
         if (flagVal) return true;
       }
       if (flags[ability]) {
-        const flagVal = evalActivationCondition(this, flags[ability], token, { errorReturn: false });
+        const flagVal = await evalActivationCondition(this, flags[ability], token, { errorReturn: false });
         if (flagVal) return true;
       }
     }

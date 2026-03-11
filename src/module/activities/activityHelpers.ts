@@ -31,8 +31,9 @@ export function shouldEnforceSingleTarget(activity: Activity): boolean {
   const hasExplicitCount = activity.target?.affects?.count && activity.target.affects.count !== "";
   if (hasExplicitCount) return false;
 
-  // Only enforce for creature-like target types
-  return creatureTargetTypes.includes(activity.target?.affects?.type);
+  // Enforce for creature-like target types, or when there's no target specification at all
+  const affectsType = activity.target?.affects?.type;
+  return !affectsType || creatureTargetTypes.includes(affectsType);
 }
 
 export async function confirmWorkflow(existingWorkflow: Workflow): Promise<boolean> {

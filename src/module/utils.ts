@@ -4341,8 +4341,9 @@ export async function removeInvisibleCondition(tokenRef?: TokenOrDocument | stri
 
   await removeTokenConditionEffect(token, i18n(`midi-qol.invisible`) ?? "");
 
-  if (CONFIG.statusEffects.find(se => se.id === (CONFIG.specialStatusEffects.INVISIBLE ?? "invisible"))) {
-    await (token.actor)?.toggleStatusEffect(CONFIG.specialStatusEffects.INVISIBLE, { active: false })
+  const invisId = CONFIG.specialStatusEffects.INVISIBLE ?? "invisible";
+  if (CONFIG.statusEffects.find(se => se.id === invisId)) {
+    await (token.actor)?.toggleStatusEffect(invisId, { active: false })
   }
   if (debugEnabled > 0) log(`Invisibility removed for ${token.name}`)
 }
@@ -6095,17 +6096,17 @@ function mySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn
   return result;
 };
 
-export function evalReactionActivationCondition(workflow: Workflow, condition: string | undefined | boolean, target: TokenOrDocument, options: any = {}): boolean {
+export async function evalReactionActivationCondition(workflow: Workflow, condition: string | undefined | boolean, target: TokenOrDocument, options: any = {}): Promise<boolean> {
   if (options.errorReturn === undefined) options.errorReturn = false
   // if (condition === undefined || condition === "" || condition === false) return false;
   return evalActivationCondition(workflow, condition, target, options);
 }
-export function evalActivationCondition(workflow: Workflow | undefined, condition: string | undefined | boolean, target?: TokenOrDocument, options: any = {}): boolean {
+export async function evalActivationCondition(workflow: Workflow | undefined, condition: string | undefined | boolean, target?: TokenOrDocument, options: any = {}): Promise<boolean> {
   if (condition === undefined || condition === "" || condition === true) return true;
   if (condition === false) return false;
   const conditionData = createConditionData({ workflow, target, actor: workflow?.actor, extraData: options?.extraData, item: options.item });
   options.errorReturn ??= true;
-  const returnValue = evalCondition(condition, workflow?.conditionData, options);
+  const returnValue = await evalCondition(condition, conditionData, options);
   return returnValue;
 }
 
@@ -9364,6 +9365,18 @@ export function getItemFromEffectOrigin(origin: string, alreadyVisited: string[]
   } else if (originEffectOrItem?.origin) {
     originItem = getItemFromEffectOrigin(originEffectOrItem.origin, [...alreadyVisited, origin]);
     // recursive so @michael can feel fancy
+  }
+  // Fallback: if we couldn't resolve to an Item (e.g. grandchild embedded docs on synthetic actors),
+  // try stripping the ActiveEffect segment to resolve the parent Item directly
+  if (!originItem && origin.includes(".ActiveEffect.")) {
+    const itemUuid = origin.replace(/\.ActiveEffect\.[^.]+$/, "");
+    let item = fromUuidSync(itemUuid);
+    // If the UUID contains .Actor. segment (synthetic token), try without it
+    if (!(item instanceof Item) && itemUuid.includes(".Actor.")) {
+      const withoutActor = itemUuid.replace(/\.Actor\.[^.]+/, "");
+      item = fromUuidSync(withoutActor);
+    }
+    if (item instanceof Item) originItem = item;
   }
   return originItem;
 }

@@ -1,3 +1,9 @@
+### 13.0.53
+* Weapons attack single target setting now correctly enforces single target for weapons with no target specification 
+* Fix false-positive Flash Rolls detection in getAdvantageSourceInfo (MR !406). Thanks @Carolingian.
+* Fix for error being thrown on CONFIG.specialStatusEffects.INVISIBLE being set to null.
+* Some changes to support the next version of macro autocomplete.
+
 ### 13.0.52
 **Bug Fixes**
 * Fix for skill/tool checks when showing the configuration dialog to allow choosing the ability to use, matches dnd5e functionality.
