@@ -575,14 +575,14 @@ export function injectMidiCompletions(): void {
 
     // Register visual editor (Blockly) configuration
     registerCategoryConfigs?.({
-      activity: { display: "Activity", colour: "#e76f51", order: 10 },
-      workflow: { display: "Workflow", colour: "#e63946", order: 13 },
-      rolledItem: { display: "Rolled Item", colour: "#6a994e", order: 17 },
-      macroItem: { display: "Macro Item", colour: "#6a994e", order: 18 },
-      rolledActivity: { display: "Rolled Activity", colour: "#e76f51", order: 19 },
-      macroActivity: { display: "Macro Activity", colour: "#e76f51", order: 20 },
-      options: { display: "Options", colour: "#a5805b", order: 23 },
-      midiData: { display: "Midi Data", colour: "#e63946", order: 24 },
+      activity: { display: "activity", colour: "#e76f51", order: 10 },
+      workflow: { display: "workflow", colour: "#e63946", order: 13 },
+      rolledItem: { display: "rolledItem", colour: "#6a994e", order: 17 },
+      macroItem: { display: "macroItem", colour: "#6a994e", order: 18 },
+      rolledActivity: { display: "rolledActivity", colour: "#e76f51", order: 19 },
+      macroActivity: { display: "macroActivity", colour: "#e76f51", order: 20 },
+      options: { display: "options", colour: "#a5805b", order: 23 },
+      midiData: { display: "midiData", colour: "#e63946", order: 24 },
       MidiQOL: { display: "MidiQOL", colour: "#e63946", order: 30 },
       chrisPremades: { display: "Chris Premades", colour: "#e76f51", order: 31, namespaceOnly: true },
       // Condition editor categories

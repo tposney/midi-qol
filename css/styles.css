@@ -1727,8 +1727,8 @@ section.midi-qol.tab {
   margin-left: auto;
 }
 
-/* Cover icon in hit/save display */
-.midi-qol-cover-icon {
+/* AC modifier icons in hit/save display (cover, flanking, reaction, grants) */
+.midi-qol-ac-icon {
   display: inline !important;
   width: 14px !important;
   height: 14px !important;
@@ -1737,17 +1737,7 @@ section.midi-qol.tab {
   filter: brightness(0);
 }
 
-/* Flanking icon (sword) in hit display */
-.midi-qol-flanking-icon {
-  display: inline !important;
-  width: 14px !important;
-  height: 14px !important;
-  vertical-align: -0.125em;
-  margin-right: 1px;
-  filter: brightness(0);
-}
-
-.midi-qol-cover-ignored-icon {
+.midi-qol-ac-icon-no-filter {
   display: inline !important;
   width: 14px !important;
   height: 14px !important;
@@ -1755,13 +1745,10 @@ section.midi-qol.tab {
   margin-right: 1px;
 }
 
-.midi-qol-reaction-icon {
-  display: inline !important;
-  width: 14px !important;
-  height: 14px !important;
+.midi-qol-ac-icon-fa {
+  font-size: 8px;
   vertical-align: -0.125em;
   margin-right: 1px;
-  filter: brightness(0);
 }
 
 /* Make unchecked checkboxes more visible in dark theme */

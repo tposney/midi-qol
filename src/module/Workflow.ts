@@ -981,7 +981,7 @@ export class Workflow {
     attackTotal?: number;
     attackType?: string;
     baseAc?: number;
-    acIcons?: Array<{ img: string; tooltip?: string; cssClass: string }>;
+    acIcons?: Array<{ img?: string; icon?: string; tooltip?: string; cssClass: string }>;
     gmName: string;
     hitClass: string;
     hitResultNumeric?: string;
@@ -7429,13 +7429,15 @@ return {
       if (!this.isFumble) {
         if (midiFlagsAttackBonus) {
           if (midiFlagsAttackBonus?.all) {
-            const attackBonusRoll = await (new Roll(midiFlagsAttackBonus.all, targetActor.getRollData()))?.evaluate();
-            attackBonus = attackBonusRoll?.total ?? 0;
+            const bonusValue = midiFlagsAttackBonus.all;
+            attackBonus = Number.isNumeric(bonusValue) ? Number(bonusValue)
+              : (await (new Roll(`${bonusValue}`, targetActor.getRollData())).evaluate()).total ?? 0;
             foundry.utils.setProperty(this.actor, "flags.midi.evaluated.grants.attack.bonus.all", { value: attackBonus, effects: [`${targetActor.name}`] });
           }
           if (midiFlagsAttackBonus[this.activity.actionType]) {
-            const attackBonusRoll = await (new Roll(midiFlagsAttackBonus[this.activity.actionType], targetActor.getRollData())).evaluate();
-            attackBonus = attackBonusRoll?.total ?? 0;
+            const bonusValue = midiFlagsAttackBonus[this.activity.actionType];
+            attackBonus = Number.isNumeric(bonusValue) ? Number(bonusValue)
+              : (await (new Roll(`${bonusValue}`, targetActor.getRollData())).evaluate()).total ?? 0;
             foundry.utils.setProperty(this.actor, `flags.midi.evaluated.grants.attack.bonus.${this.activity.actionType}`, { value: attackBonus, effects: [`${targetActor.name}`] });
           }
         }
@@ -7648,54 +7650,66 @@ return {
       if (this.isFumble) hitResultNumeric = "--";
       const targetUuid = targetToken.document.uuid;
 
-      const acDisplay = !isFinite(targetAC) ? "∞" : `${targetAC}`;
+      const effectiveAC = targetAC - attackBonus;
+      const acDisplay = !isFinite(targetAC) ? "∞" : `${effectiveAC}`;
 
-      // Build array of AC modifier icons (cover, cover-ignored, flanking, reaction)
-      const acIcons: Array<{ img: string; tooltip?: string; cssClass: string }> = [];
+      // Build array of AC modifier icons and AC tooltip — icon order matches tooltip order
+      const acIcons: Array<{ img?: string; icon?: string; tooltip?: string; cssClass: string }> = [];
+      let acTooltipParts = `${acResult?.baseAC ?? effectiveAC}`;
+      if (targetACMod) acTooltipParts += ` ${targetACMod > 0 ? "+" : ""}${targetACMod}`;
+
       const displayCover = acResult?.effectiveCoverBonus ?? 0;
       if (!acResult?.coverIgnored && displayCover >= TOTAL_COVER) {
-        acIcons.push({ img: "systems/dnd5e/icons/svg/statuses/cover-total.svg", tooltip: i18n("EFFECT.DND5E.StatusTotalCover"), cssClass: "midi-qol-cover-icon" });
+        acIcons.push({ img: "systems/dnd5e/icons/svg/statuses/cover-total.svg", tooltip: `+${displayCover}: ${i18n("EFFECT.DND5E.StatusTotalCover")}`, cssClass: "midi-qol-ac-icon" });
       } else if (!acResult?.coverIgnored && displayCover >= THREE_QUARTERS_COVER) {
-        acIcons.push({ img: "systems/dnd5e/icons/svg/statuses/cover-three-quarters.svg", tooltip: i18n("EFFECT.DND5E.StatusThreeQuartersCover"), cssClass: "midi-qol-cover-icon" });
+        acIcons.push({ img: "systems/dnd5e/icons/svg/statuses/cover-three-quarters.svg", tooltip: `+${displayCover}: ${i18n("EFFECT.DND5E.StatusThreeQuartersCover")}`, cssClass: "midi-qol-ac-icon" });
       } else if (!acResult?.coverIgnored && displayCover >= HALF_COVER) {
-        acIcons.push({ img: "systems/dnd5e/icons/svg/statuses/cover-half.svg", tooltip: i18n("EFFECT.DND5E.StatusHalfCover"), cssClass: "midi-qol-cover-icon" });
+        acIcons.push({ img: "systems/dnd5e/icons/svg/statuses/cover-half.svg", tooltip: `+${displayCover}: ${i18n("EFFECT.DND5E.StatusHalfCover")}`, cssClass: "midi-qol-ac-icon" });
       }
+      if (!acResult?.coverIgnored && acResult && acResult.effectiveCoverBonus > 0)
+        acTooltipParts += ` +${acResult.effectiveCoverBonus}`;
+
       if (acResult?.coverIgnored) {
         if (this.activity?.actionType === "rwak") {
-          acIcons.push({ img: "icons/skills/targeting/target-strike-gray.webp", tooltip: i18n("midi-qol.SharpShooter"), cssClass: "midi-qol-cover-ignored-icon" });
+          acIcons.push({ img: "icons/skills/targeting/target-strike-gray.webp", tooltip: i18n("midi-qol.SharpShooter"), cssClass: "midi-qol-ac-icon-no-filter" });
         } else if (this.activity?.actionType === "rsak") {
-          acIcons.push({ img: "icons/skills/targeting/crosshair-triple-strike-orange.webp", tooltip: i18n("midi-qol.SpellSniper"), cssClass: "midi-qol-cover-ignored-icon" });
+          acIcons.push({ img: "icons/skills/targeting/crosshair-triple-strike-orange.webp", tooltip: i18n("midi-qol.SpellSniper"), cssClass: "midi-qol-ac-icon-no-filter" });
         }
       }
+
       const isMeleeAction = ["mwak", "msak"].includes(this.activity?.actionType ?? "");
       if (flankingACMod > 0 && isMeleeAction) {
         const flankingMode = checkRule("checkFlanking") as string;
         const isFlankedMode = ["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(flankingMode);
         acIcons.push({
           img: isFlankedMode ? "modules/midi-qol/icons/encirclement.svg" : "icons/svg/sword.svg",
-          tooltip: isFlankedMode ? i18n("midi-qol.Flanked") : i18n("midi-qol.Flanking"),
-          cssClass: "midi-qol-flanking-icon"
+          tooltip: `-${flankingACMod}: ${isFlankedMode ? i18n("midi-qol.Flanked") : i18n("midi-qol.Flanking")}`,
+          cssClass: "midi-qol-ac-icon"
         });
-      }
-      if (reactionItemName) {
-        acIcons.push({ img: "modules/midi-qol/icons/reaction.svg", tooltip: `${i18n("DND5E.Reaction")}: ${reactionItemName}`, cssClass: "midi-qol-reaction-icon" });
+        acTooltipParts += ` -${flankingACMod}`;
       }
 
-      // Build AC tooltip showing breakdown
-      let acTooltip: string | undefined;
-      if (isFinite(targetAC) && acResult) {
-        let parts = `${acResult.baseAC}`;
-        if (targetACMod) parts += ` ${targetACMod > 0 ? "+" : ""}${targetACMod}`;
-        // Show effective cover (max of status and module) unless ignored
-        if (!acResult.coverIgnored && acResult.effectiveCoverBonus > 0)
-          parts += ` +${acResult.effectiveCoverBonus} (${i18n("DND5E.Cover")})`;
-        if (reactionACDelta) parts += ` ${reactionACDelta > 0 ? "+" : ""}${reactionACDelta} (${i18n("DND5E.Reaction")})`;
-        if (flankingACMod && isMeleeAction) parts += ` -${flankingACMod} (${i18n("midi-qol.FlankingLabel")})`;
-        if (attackBonus) parts += ` -${attackBonus}`;
-        const effectiveAC = targetAC - attackBonus;
-        if (parts !== `${effectiveAC}`) {
-          acTooltip = `${effectiveAC} = ${parts}`;
+      if (reactionACDelta) {
+        acIcons.push({ img: "modules/midi-qol/icons/reaction.svg", tooltip: `${reactionACDelta > 0 ? "+" : ""}${reactionACDelta}: ${i18n("DND5E.Reaction")}: ${reactionItemName}`, cssClass: "midi-qol-ac-icon" });
+        acTooltipParts += ` ${reactionACDelta > 0 ? "+" : ""}${reactionACDelta}`;
+      }
+
+      if (attackBonus) {
+        const grantsFlagKey = `flags.${MODULE_ID}.grants.attack.bonus`;
+        const grantsEffectNames = targetActor.allApplicableEffects()
+          .filter(e => !e.disabled && e.changes?.some(c => c.key.startsWith(grantsFlagKey)))
+          .map(e => e.name)
+          .toArray();
+        if (grantsEffectNames.length) {
+          const acDelta = -attackBonus;
+          acIcons.push({ icon: "fas fa-bolt", tooltip: `${acDelta > 0 ? "+" : ""}${acDelta}: ${grantsEffectNames.join(", ")}`, cssClass: "midi-qol-ac-icon-fa" });
         }
+        acTooltipParts += ` ${-attackBonus > 0 ? "+" : ""}${-attackBonus}`;
+      }
+
+      let acTooltip: string | undefined;
+      if (isFinite(targetAC) && acTooltipParts !== `${effectiveAC}`) {
+        acTooltip = `${effectiveAC} = ${acTooltipParts}`;
       }
 
       this.hitDisplayData[targetUuid] = {
@@ -7705,7 +7719,7 @@ return {
         uuid: targetUuid,
         hitStyle,
         attackBonus,
-        ac: targetAC - attackBonus,
+        ac: effectiveAC,
         acDisplay,
         acTooltip,
         //@ts-expect-error no dnd5e-types

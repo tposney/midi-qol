@@ -1834,7 +1834,7 @@
     },
     "flags.midi-qol.fail.disadvantage.heavy": {
       "name": "Fail Disadvantage Heavy",
-      "description": "Disadvantage on stealth because of heavy armor"
+      "description": "Disadvantage on attack rolls because of heavy weapon"
     },
     "flags.midi-qol.": {
       "name": "MIDI-QOL Flags",
