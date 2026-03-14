@@ -1,0 +1,390 @@
+{
+  "name": "Finger of Death",
+  "type": "spell",
+  "img": "icons/magic/unholy/hand-light-pink.webp",
+  "effects": [],
+  "flags": {
+    "midiProperties": {
+      "magicdam": true,
+      "magiceffect": true,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "[postActiveEffects]ItemMacro",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "dae": {
+      "macro": {
+        "name": "Finger of Death",
+        "img": "icons/magic/unholy/hand-light-pink.webp",
+        "type": "script",
+        "scope": "global",
+        "command": "// Finger of Death — Raise Zombie automation\n// postActiveEffects: check for humanoids killed, raise as zombies\n\nasync function raiseZombies(casterActor, spellItem, targetTokenUuids) {\n  const raiseActivity = spellItem.system.activities.find(\n    a => a.identifier === \"raise-zombie\"\n  );\n  for (const tokenDocUuid of targetTokenUuids) {\n    const tokenDoc = await fromUuid(tokenDocUuid);\n    if (!tokenDoc) continue;\n    const targetActor = tokenDoc.actor;\n    const isDead = targetActor?.statuses?.has(\"dead\")\n      || targetActor?.statuses?.has(\"defeated\");\n    if (!isDead) continue;\n    await MidiQOL.socket().executeAsGM(\"toggleTokenHidden\", { tokenUuid: tokenDoc.uuid, force: true });\n    if (raiseActivity) {\n      await MidiQOL.socket().executeAsGM(\"completeActivityUse\", {\n        activityUuid: raiseActivity.uuid,\n        actorUuid: casterActor.uuid,\n        usage: {\n          summons: {\n            placements: [{\n              x: tokenDoc.x,\n              y: tokenDoc.y,\n              elevation: tokenDoc.elevation\n            }]\n          }\n        },\n        dialog: {},\n        message: {}\n      });\n    }\n  }\n}\n\nif (args[0]?.macroPass === \"postActiveEffects\") {\n  const validTargets = [];\n  for (const entry of workflow.damageList) {\n    if (entry.newHP > 0) continue;\n    const targetActor = await fromUuid(entry.actorUuid);\n    if (!targetActor) continue;\n    const creatureType = targetActor.system?.details?.type?.value?.toLowerCase();\n    if (creatureType !== \"humanoid\") continue;\n    validTargets.push(entry.targetUuid);\n  }\n  if (validTargets.length === 0) return;\n\n  const inCombat = !!game.combat?.started;\n  if (!inCombat) {\n    await raiseZombies(actor, item, validTargets);\n  } else {\n    await actor.setFlag(\"midi-qol\", \"fingerOfDeathTargets\", validTargets);\n    function cleanup() {\n      Hooks.off(\"updateCombat\", updateHookId);\n      Hooks.off(\"deleteCombat\", deleteHookId);\n      delete globalThis._midiFingerOfDeathHooks?.[actor.uuid];\n      actor.unsetFlag(\"midi-qol\", \"fingerOfDeathTargets\");\n    }\n    const updateHookId = Hooks.on(\"updateCombat\", async (combat, data, options, userId) => {\n      if (data.round === undefined && data.turn === undefined) return;\n      const combatant = combat.combatant;\n      if (combatant?.actor?.uuid !== actor.uuid) return;\n      const targets = actor.getFlag(\"midi-qol\", \"fingerOfDeathTargets\") ?? [];\n      const toRaise = [];\n      const stillPending = [];\n      for (const tokenUuid of targets) {\n        const tokenDoc = await fromUuid(tokenUuid);\n        if (!tokenDoc?.actor) continue;\n        const hp = tokenDoc.actor.system.attributes.hp.value;\n        const isDead = tokenDoc.actor.statuses?.has(\"dead\") || tokenDoc.actor.statuses?.has(\"defeated\");\n        if (hp > 0) continue;\n        if (isDead) { toRaise.push(tokenUuid); }\n        else { stillPending.push(tokenUuid); }\n      }\n      if (toRaise.length) await raiseZombies(actor, item, toRaise);\n      if (stillPending.length) {\n        await actor.setFlag(\"midi-qol\", \"fingerOfDeathTargets\", stillPending);\n      } else {\n        cleanup();\n      }\n    });\n    const deleteHookId = Hooks.on(\"deleteCombat\", () => {\n      cleanup();\n    });\n    globalThis._midiFingerOfDeathHooks ??= {};\n    globalThis._midiFingerOfDeathHooks[actor.uuid] = { updateHookId, deleteHookId };\n  }\n}",
+        "author": "",
+        "ownership": {
+          "default": 3
+        },
+        "_id": null,
+        "folder": null,
+        "sort": 0,
+        "flags": {},
+        "_stats": {
+          "coreVersion": "13.346",
+          "systemId": "dnd5e",
+          "systemVersion": "4.3.6",
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null,
+          "compendiumSource": null,
+          "duplicateSource": null
+        }
+      }
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>You unleash negative energy toward a creature you can see within range. The target makes a Constitution saving throw, taking 7d8 + 30 Necrotic damage on a failed save or half as much damage on a successful one.</p>\n<p>A Humanoid killed by this spell rises at the start of your next turn as a <strong>@UUID[Compendium.dnd5e.actors24.Actor.mmZombie00000000]{Zombie}</strong> that follows your verbal orders.</p>\n<p><strong>midi-qol</strong>: Automates the CON save and 7d8 + 30 necrotic damage (half on save). If a humanoid target is killed, a Zombie is automatically summoned at the start of the caster's next turn (or immediately if not in combat). The dead target's token is hidden when the zombie is raised.</p>",
+      "chat": "<p>You unleash negative energy toward a creature you can see within range. The target makes a Constitution saving throw, taking 7d8 + 30 Necrotic damage on a failed save or half as much damage on a successful one.</p>\n<p>A Humanoid killed by this spell rises at the start of your next turn as a <strong>@UUID[Compendium.dnd5e.actors24.Actor.mmZombie00000000]{Zombie}</strong> that follows your verbal orders.</p>"
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024"
+    },
+    "activation": {
+      "type": "action",
+      "condition": "",
+      "value": 1
+    },
+    "duration": {
+      "value": "",
+      "units": "inst"
+    },
+    "target": {
+      "affects": {
+        "type": "creature",
+        "count": "1",
+        "choice": false,
+        "special": ""
+      },
+      "template": {
+        "units": "",
+        "contiguous": false
+      }
+    },
+    "range": {
+      "value": "60",
+      "units": "ft",
+      "special": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "ability": "",
+    "level": 7,
+    "school": "nec",
+    "materials": {
+      "value": "",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "preparation": {
+      "mode": "prepared",
+      "prepared": false
+    },
+    "properties": [
+      "vocal",
+      "somatic"
+    ],
+    "activities": {
+      "dnd5eactivity000": {
+        "_id": "dnd5eactivity000",
+        "type": "save",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "units": ""
+          },
+          "affects": {
+            "type": "creature",
+            "count": "1",
+            "choice": false
+          },
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "damage": {
+          "onSave": "half",
+          "parts": [
+            {
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "number": 7,
+              "denomination": 8,
+              "bonus": "30",
+              "types": [
+                "necrotic"
+              ],
+              "scaling": {
+                "mode": "",
+                "number": null,
+                "formula": ""
+              }
+            }
+          ],
+          "critical": {
+            "allow": false,
+            "bonus": ""
+          }
+        },
+        "save": {
+          "ability": [
+            "con"
+          ],
+          "dc": {
+            "calculation": "spellcasting",
+            "formula": ""
+          }
+        },
+        "name": "",
+        "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      },
+      "bfoGmw7iFaVObnn6": {
+        "type": "summon",
+        "name": "Raise Zombie",
+        "_id": "bfoGmw7iFaVObnn6",
+        "friendlySummon": true,
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": true,
+          "condition": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false,
+          "targets": []
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "perm",
+          "concentration": false,
+          "override": true
+        },
+        "range": {
+          "override": true,
+          "units": "any",
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": ""
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": false,
+          "prompt": true
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "sort": 0,
+        "bonuses": {
+          "ac": "",
+          "hd": "",
+          "hp": "",
+          "attackDamage": "",
+          "saveDamage": "",
+          "healing": ""
+        },
+        "creatureSizes": [],
+        "creatureTypes": [],
+        "match": {
+          "attacks": false,
+          "proficiency": false,
+          "saves": false
+        },
+        "profiles": [
+          {
+            "uuid": "Compendium.dnd5e.actors24.Actor.mmZombie00000000",
+            "_id": "zl3kO0TCnNPCrj46",
+            "level": {
+              "min": null,
+              "max": null
+            },
+            "types": []
+          }
+        ],
+        "summon": {
+          "prompt": true,
+          "mode": "",
+          "identifier": ""
+        },
+        "img": "",
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "forceConsumeDialog": "never",
+          "confirmTargets": "default",
+          "automationOnly": true,
+          "identifier": "raise-zombie",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    },
+    "identifier": "finger-of-death",
+    "sourceClass": ""
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "folder": "SpellFldr7thLevl",
+  "_id": "FingerOfDeath000",
+  "sort": 100000,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!FingerOfDeath000"
+}

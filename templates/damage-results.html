@@ -1,7 +1,10 @@
-<div class="midi-qol-damage-card">
+<div class="midi-qol-damage-card collapsible dnd5e2-collapsible">
   <div id="midi-qol-dmg-header" class="midi-qol-dmg-header">
-    {{damageApplied}}
+    <i class="fa-solid fa-caret-down"></i>
+    <span class="midi-qol-dmg-header-text">{{damageApplied}}</span>
   </div>
+  <div class="collapsible-content card-content">
+    <div class="wrapper">
   {{#each damageList as |damage iid|}}
   <div class="midi-qol-tooltip midi-qol-dmg-row" data-hp-applied="{{#if ../damageWasApplied}}true{{else}}false{{/if}}" data-actor-uuid="{{damage.displayUuid}}" {{#if damage.tooltip}}data-tooltip='{{damage.tooltip}}'{{/if}}>
     <img src="{{damage.tokenImg}}" id="{{damage.tokenId}}" class="midi-qol-target-name" height="22">
@@ -20,6 +23,10 @@
     {{!-- Vitality: black symbol --}}
     <span id="dmg-vitality-{{damage.displayUuid}}" class="midi-qol-dmg-vitality{{#unless damage.vitalityChanged}} midi-qol-dmg-hidden{{/unless}}{{#if damage.vitalityIncrease}} midi-qol-dmg-healing{{/if}}">
       <i class="fas fa-heart-crack"></i><span class="dmg-vit-old">{{damage.oldVitality}}</span><i class="fas fa-arrow-right midi-qol-dmg-arrow"></i><span class="dmg-vit-new">{{damage.newVitality}}</span>
+    </span>
+    {{!-- Max HP: skull icon --}}
+    <span id="dmg-tempmax-{{damage.displayUuid}}" class="midi-qol-dmg-tempmax{{#unless damage.tempMaxChanged}} midi-qol-dmg-hidden{{/unless}}">
+      <i class="fas fa-skull"></i><span class="dmg-tempmax-old">{{damage.damageItem.oldTempMax}}</span><i class="fas fa-arrow-right midi-qol-dmg-arrow"></i><span class="dmg-tempmax-new">{{damage.damageItem.newTempMax}}</span>
     </span>
     {{!-- No change: show (0) --}}
     <span id="dmg-nochange-{{damage.displayUuid}}" class="midi-qol-dmg-nochange{{#unless damage.noChange}} midi-qol-dmg-hidden{{/unless}}">(0)</span>
@@ -58,4 +65,6 @@
     </span>
   </div>
   {{/if}}
+    </div>
+  </div>
 </div>

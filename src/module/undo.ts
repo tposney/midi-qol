@@ -159,7 +159,9 @@ export async function saveTargetsUndoData(workflow: Workflow) {
   });
   workflow.undoData.serverTime = game.time?.serverTime;
   workflow.undoData.itemCardUuid = workflow.itemCardUuid;
-  if (workflow.templateUuid) workflow.undoData.templateUuids.push(workflow.templateUuid);
+  for (const tUuid of workflow.templateUuids) {
+    if (tUuid) workflow.undoData.templateUuids.push(tUuid);
+  }
   return unTimedExecuteAsGM("queueUndoData", workflow.undoData)
 }
 

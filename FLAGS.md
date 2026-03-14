@@ -58,6 +58,19 @@ When an Active Effect with CUSTOM mode is applied, midi-qol processes the value 
 | **Number Flags** (DR.{attackType}) | Value parsed as number |
 | **Boolean Flags** (default) | Value evaluated as conditional expression |
 
+### BooleanFormula Fields
+
+Many midi-qol flags are registered as **BooleanFormula** fields with DAE. BooleanFormula is a custom field type (provided by DAE's `BooleanFormulaField` class) that accepts either a boolean value (`true`/`false`) or a string expression that is evaluated at runtime as a conditional formula. In the DAE Active Effect editor, BooleanFormula fields show a specialized input that allows entering either a simple toggle or a conditional expression.
+
+Flags marked as **BooleanFormula** in the sections below accept:
+- `1`, `true` — always active
+- `0`, `false` — never active
+- A conditional expression string (e.g., `abilities.str.mod >= 3`) — evaluated at runtime
+
+All **Evaluated** flags in the advantage, disadvantage, noAdvantage, noDisadvantage, fail, success, critical, noCritical, fumble, noFumble, grants, magicResistance, and magicVulnerability categories are BooleanFormula fields.
+
+Additionally, the following special flags are BooleanFormula: `neverTarget`, `ignoreNearbyFoes`, `potentCantrip`, `sculptSpells`, `carefulSpells`, `sharpShooter`, `uncanny-dodge`, `inMotion`, `initiativeAdv`, `initiativeDisadv`, `initiativeNoAdv`, `initiativeNoDisadv`, `advantage.concentration`, `disadvantage.concentration`, `noAdvantage.concentration`, `noDisadvantage.concentration`, `fail.disadvantage.heavy`, and `canFlank`.
+
 **Deferred evaluation flags** include:
 - `flags.midi-qol.optional.*` - Optional bonus effects
 - `flags.midi-qol.advantage.*` / `disadvantage.*` - Advantage/disadvantage conditions
@@ -387,7 +400,7 @@ Convert incoming damage of a specific type to healing.
 
 ## Advantage
 
-Grant advantage on various roll types. All advantage flags are **Evaluated** (conditional expression).
+Grant advantage on various roll types. All advantage flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 ### All Rolls
 
@@ -412,8 +425,10 @@ Grant advantage on various roll types. All advantage flags are **Evaluated** (co
 |------|--------|-------------|
 | `flags.midi-qol.advantage.save.all` | Evaluated | Advantage on all saves |
 | `flags.midi-qol.advantage.save.{ability}` | Evaluated | Advantage on specific ability saves |
+| `flags.midi-qol.advantage.save.school.{school}` | Evaluated | Advantage on saves vs spells of a specific school |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Ability Checks
 
@@ -460,7 +475,7 @@ Grant advantage on various roll types. All advantage flags are **Evaluated** (co
 
 ## Disadvantage
 
-Grant disadvantage on various roll types. All disadvantage flags are **Evaluated** (conditional expression).
+Grant disadvantage on various roll types. All disadvantage flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 ### All Rolls
 
@@ -485,8 +500,10 @@ Grant disadvantage on various roll types. All disadvantage flags are **Evaluated
 |------|--------|-------------|
 | `flags.midi-qol.disadvantage.save.all` | Evaluated | Disadvantage on all saves |
 | `flags.midi-qol.disadvantage.save.{ability}` | Evaluated | Disadvantage on specific ability saves |
+| `flags.midi-qol.disadvantage.save.school.{school}` | Evaluated | Disadvantage on saves vs spells of a specific school |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Ability Checks
 
@@ -533,7 +550,7 @@ Grant disadvantage on various roll types. All disadvantage flags are **Evaluated
 
 ## No Advantage
 
-Prevent advantage on various roll types. These flags suppress advantage even when other sources would grant it. All noAdvantage flags are **Evaluated** (conditional expression).
+Prevent advantage on various roll types. These flags suppress advantage even when other sources would grant it. All noAdvantage flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 ### All Rolls
 
@@ -556,8 +573,10 @@ Prevent advantage on various roll types. These flags suppress advantage even whe
 |------|--------|-------------|
 | `flags.midi-qol.noAdvantage.save.all` | Evaluated | Prevent advantage on all saves |
 | `flags.midi-qol.noAdvantage.save.{ability}` | Evaluated | Prevent advantage on specific ability saves |
+| `flags.midi-qol.noAdvantage.save.school.{school}` | Evaluated | Prevent advantage on saves vs spells of a specific school |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Ability Checks
 
@@ -601,7 +620,7 @@ Prevent advantage on various roll types. These flags suppress advantage even whe
 
 ## No Disadvantage
 
-Prevent disadvantage on various roll types. These flags suppress disadvantage even when other sources would impose it. All noDisadvantage flags are **Evaluated** (conditional expression).
+Prevent disadvantage on various roll types. These flags suppress disadvantage even when other sources would impose it. All noDisadvantage flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 ### All Rolls
 
@@ -624,8 +643,10 @@ Prevent disadvantage on various roll types. These flags suppress disadvantage ev
 |------|--------|-------------|
 | `flags.midi-qol.noDisadvantage.save.all` | Evaluated | Prevent disadvantage on all saves |
 | `flags.midi-qol.noDisadvantage.save.{ability}` | Evaluated | Prevent disadvantage on specific ability saves |
+| `flags.midi-qol.noDisadvantage.save.school.{school}` | Evaluated | Prevent disadvantage on saves vs spells of a specific school |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Ability Checks
 
@@ -669,7 +690,7 @@ Prevent disadvantage on various roll types. These flags suppress disadvantage ev
 
 ## Critical Hits
 
-Force attacks to be critical hits. All critical flags are **Evaluated** (conditional expression).
+Force attacks to be critical hits. All critical flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 | Flag | Access | Description |
 |------|--------|-------------|
@@ -682,7 +703,7 @@ Force attacks to be critical hits. All critical flags are **Evaluated** (conditi
 
 ## No Critical
 
-Prevent attacks from being critical hits. All noCritical flags are **Evaluated** (conditional expression).
+Prevent attacks from being critical hits. All noCritical flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 | Flag | Access | Description |
 |------|--------|-------------|
@@ -697,7 +718,7 @@ Prevent attacks from being critical hits. All noCritical flags are **Evaluated**
 
 ## Fumble
 
-Force attacks to be fumbles (critical failures). All fumble flags are **Evaluated** (conditional expression).
+Force attacks to be fumbles (critical failures). All fumble flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 | Flag | Access | Description |
 |------|--------|-------------|
@@ -710,7 +731,7 @@ Force attacks to be fumbles (critical failures). All fumble flags are **Evaluate
 
 ## No Fumble
 
-Prevent attacks from being fumbles. All noFumble flags are **Evaluated** (conditional expression).
+Prevent attacks from being fumbles. All noFumble flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 | Flag | Access | Description |
 |------|--------|-------------|
@@ -723,7 +744,7 @@ Prevent attacks from being fumbles. All noFumble flags are **Evaluated** (condit
 
 ## Auto-Fail
 
-Force automatic failure on rolls. All fail flags are **Evaluated** (conditional expression).
+Force automatic failure on rolls. All fail flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 ### Ability Rolls
 
@@ -733,10 +754,12 @@ Force automatic failure on rolls. All fail flags are **Evaluated** (conditional 
 | `flags.midi-qol.fail.ability.all` | Evaluated | Fail all ability-based rolls |
 | `flags.midi-qol.fail.ability.save.all` | Evaluated | Fail all saving throws |
 | `flags.midi-qol.fail.ability.save.{ability}` | Evaluated | Fail specific ability saves |
+| `flags.midi-qol.fail.save.school.{school}` | Evaluated | Fail saves vs spells of a specific school |
 | `flags.midi-qol.fail.ability.check.all` | Evaluated | Fail all ability checks |
 | `flags.midi-qol.fail.ability.check.{ability}` | Evaluated | Fail specific ability checks |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Attack Rolls
 
@@ -783,7 +806,7 @@ Force automatic failure on rolls. All fail flags are **Evaluated** (conditional 
 
 ## Auto-Success
 
-Force automatic success on rolls. All success flags are **Evaluated** (conditional expression).
+Force automatic success on rolls. All success flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 ### Attack Rolls
 
@@ -801,10 +824,12 @@ Force automatic success on rolls. All success flags are **Evaluated** (condition
 | `flags.midi-qol.success.ability.all` | Evaluated | Succeed all ability-based rolls (saves and checks) |
 | `flags.midi-qol.success.ability.save.all` | Evaluated | Succeed all saving throws |
 | `flags.midi-qol.success.ability.save.{ability}` | Evaluated | Succeed specific ability saves |
+| `flags.midi-qol.success.save.school.{school}` | Evaluated | Succeed saves vs spells of a specific school |
 | `flags.midi-qol.success.ability.check.all` | Evaluated | Succeed all ability checks |
 | `flags.midi-qol.success.ability.check.{ability}` | Evaluated | Succeed specific ability checks |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Skills
 
@@ -836,7 +861,7 @@ Force automatic success on rolls. All success flags are **Evaluated** (condition
 
 ## Grants (Target Effects)
 
-Flags applied to a target that affect incoming attacks/rolls against them. All grants flags are **Evaluated** (conditional expression) unless noted.
+Flags applied to a target that affect incoming attacks/rolls against them. All grants flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE, unless noted.
 
 ### Grant Advantage to Attackers
 
@@ -952,8 +977,10 @@ These flags are set on the **source actor** (caster/attacker) and affect targets
 |------|--------|-------------|
 | `flags.midi-qol.grants.advantage.save.all` | Evaluated | Targets have advantage on all saves forced by this actor |
 | `flags.midi-qol.grants.advantage.save.{ability}` | Evaluated | Targets have advantage on specific ability saves |
+| `flags.midi-qol.grants.advantage.save.school.{school}` | Evaluated | Targets have advantage on saves vs this actor's spells of a specific school |
 | `flags.midi-qol.grants.disadvantage.save.all` | Evaluated | Targets have disadvantage on all saves forced by this actor |
 | `flags.midi-qol.grants.disadvantage.save.{ability}` | Evaluated | Targets have disadvantage on specific ability saves |
+| `flags.midi-qol.grants.disadvantage.save.school.{school}` | Evaluated | Targets have disadvantage on saves vs this actor's spells of a specific school |
 | `flags.midi-qol.grants.advantage.check.all` | Evaluated | Target has advantage on all ability checks |
 | `flags.midi-qol.grants.advantage.check.{ability}` | Evaluated | Advantage on specific ability checks |
 | `flags.midi-qol.grants.disadvantage.check.all` | Evaluated | Target has disadvantage on all ability checks |
@@ -970,6 +997,7 @@ These flags are set on the **source actor** (caster/attacker) and affect targets
 | `flags.midi-qol.grants.disadvantage.tool.{toolId}` | Evaluated | Disadvantage on specific tool checks |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 *Skills: acr, ani, arc, ath, dec, his, ins, itm, inv, med, nat, prc, per, prf, rel, slt, ste, sur.*
 
 ### Grant No Advantage/Disadvantage on Saves, Checks, Skills, Tools
@@ -981,6 +1009,7 @@ These flags are set on the **source actor** (caster) and suppress advantage/disa
 | `flags.midi-qol.grants.noAdvantage.all` | Evaluated | Suppress all advantage on rolls forced by this actor |
 | `flags.midi-qol.grants.noAdvantage.save.all` | Evaluated | Suppress advantage on all saves forced by this actor |
 | `flags.midi-qol.grants.noAdvantage.save.{ability}` | Evaluated | Suppress advantage on specific ability saves |
+| `flags.midi-qol.grants.noAdvantage.save.school.{school}` | Evaluated | Suppress advantage on saves vs this actor's spells of a specific school |
 | `flags.midi-qol.grants.noAdvantage.check.all` | Evaluated | Suppress advantage on all ability checks forced by this actor |
 | `flags.midi-qol.grants.noAdvantage.check.{ability}` | Evaluated | Suppress advantage on specific ability checks |
 | `flags.midi-qol.grants.noAdvantage.skill.all` | Evaluated | Suppress advantage on all skill checks forced by this actor |
@@ -991,6 +1020,7 @@ These flags are set on the **source actor** (caster) and suppress advantage/disa
 | `flags.midi-qol.grants.noDisadvantage.all` | Evaluated | Suppress all disadvantage on rolls forced by this actor |
 | `flags.midi-qol.grants.noDisadvantage.save.all` | Evaluated | Suppress disadvantage on all saves forced by this actor |
 | `flags.midi-qol.grants.noDisadvantage.save.{ability}` | Evaluated | Suppress disadvantage on specific ability saves |
+| `flags.midi-qol.grants.noDisadvantage.save.school.{school}` | Evaluated | Suppress disadvantage on saves vs this actor's spells of a specific school |
 | `flags.midi-qol.grants.noDisadvantage.check.all` | Evaluated | Suppress disadvantage on all ability checks forced by this actor |
 | `flags.midi-qol.grants.noDisadvantage.check.{ability}` | Evaluated | Suppress disadvantage on specific ability checks |
 | `flags.midi-qol.grants.noDisadvantage.skill.all` | Evaluated | Suppress disadvantage on all skill checks forced by this actor |
@@ -1000,6 +1030,7 @@ These flags are set on the **source actor** (caster) and suppress advantage/disa
 | `flags.midi-qol.grants.noDisadvantage.tool.{toolId}` | Evaluated | Suppress disadvantage on specific tool checks |
 
 *Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 **Example use case:** A creature whose gaze attack prevents targets from having advantage on the save, regardless of other effects they have.
 
@@ -1009,7 +1040,7 @@ These flags are set on the **source actor** (caster) and suppress advantage/disa
 
 ## Magic Resistance/Vulnerability
 
-Advantage or disadvantage on saves against magical effects. All magic resistance/vulnerability flags are **Evaluated** (conditional expression).
+Advantage or disadvantage on saves against magical effects. All magic resistance/vulnerability flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
 ### Magic Resistance
 
@@ -1211,23 +1242,23 @@ Modify item range values. Range flags are **Evaluated** (expression with roll da
 
 ### Super Saver
 
-No damage on save, half damage on fail.
+No damage on save, half damage on fail. Registered as **BooleanFormula** fields with DAE.
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.superSaver.all` | Direct | No damage on save, half damage on fail (all saves) |
-| `flags.midi-qol.superSaver.{ability}` | Direct | Super saver for specific ability saves |
+| `flags.midi-qol.superSaver.all` | Evaluated | No damage on save, half damage on fail (all saves) |
+| `flags.midi-qol.superSaver.{ability}` | Evaluated | Super saver for specific ability saves |
 
 *Abilities: str, dex, con, int, wis, cha.*
 
 ### Semi Super Saver
 
-No damage on save (normal damage on fail).
+No damage on save (normal damage on fail). Registered as **BooleanFormula** fields with DAE.
 
 | Flag | Access | Description |
 |------|--------|-------------|
-| `flags.midi-qol.semiSuperSaver.all` | Direct | No damage on save (all saves) |
-| `flags.midi-qol.semiSuperSaver.{ability}` | Direct | Semi super saver for specific ability saves |
+| `flags.midi-qol.semiSuperSaver.all` | Evaluated | No damage on save (all saves) |
+| `flags.midi-qol.semiSuperSaver.{ability}` | Evaluated | Semi super saver for specific ability saves |
 
 *Abilities: str, dex, con, int, wis, cha.*
 
@@ -1440,21 +1471,23 @@ Only prompt when save fails.
 
 ### Combat Features
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.ignoreNearbyFoes` | Evaluated | Ignore disadvantage on ranged attacks from nearby enemies |
-| `flags.midi-qol.sharpShooter` | Evaluated | No disadvantage at long range. **Deprecated:** Use `flags.dnd5e.sharpShooter` |
-| `flags.midi-qol.uncanny-dodge` | Direct | Halve incoming damage |
-| `flags.midi-qol.potentCantrip` | Direct | Cantrips do half damage on successful save |
-| `flags.midi-qol.neverTarget` | Direct | Token cannot be targeted |
-| `flags.midi-qol.inMotion` | Direct | Token is in motion |
+| Flag | Access | BooleanFormula | Description |
+|------|--------|:--------------:|-------------|
+| `flags.midi-qol.ignoreNearbyFoes` | Evaluated | Yes | Ignore disadvantage on ranged attacks from nearby enemies |
+| `flags.midi-qol.sharpShooter` | Evaluated | Yes | No disadvantage at long range. **Deprecated:** Use `flags.dnd5e.sharpShooter` |
+| `flags.midi-qol.uncanny-dodge` | Evaluated | Yes | Halve incoming damage |
+| `flags.midi-qol.potentCantrip` | Evaluated | Yes | Cantrips do half damage on successful save |
+| `flags.midi-qol.neverTarget` | Evaluated | Yes | Token cannot be targeted |
+| `flags.midi-qol.inMotion` | Evaluated | Yes | Token is in motion |
+| `flags.midi-qol.canFlank` | Evaluated | Yes | Token can participate in flanking |
+| `flags.midi-qol.fail.disadvantage.heavy` | Evaluated | Yes | Disadvantage on attacks with heavy weapons |
 
 ### Spellcasting Features
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.sculptSpells` | Direct | Pre-selected targets of save spells auto-succeed and receive super-saver status |
-| `flags.midi-qol.carefulSpells` | Direct | Pre-selected targets of save spells automatically succeed |
+| Flag | Access | BooleanFormula | Description |
+|------|--------|:--------------:|-------------|
+| `flags.midi-qol.sculptSpells` | Evaluated | Yes | Pre-selected targets of save spells auto-succeed and receive super-saver status |
+| `flags.midi-qol.carefulSpells` | Evaluated | Yes | Pre-selected targets of save spells automatically succeed |
 
 ### Over Time Effects
 

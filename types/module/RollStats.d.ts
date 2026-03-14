@@ -5,7 +5,6 @@ export declare class RollStats {
     prepareStats(): Record<string, Stats>;
     getItemStats(item: Item.Implementation, id: string, collection: ValidCollection): ItemStats | undefined;
     rollCount: number;
-    static saveInterval: number;
     constructor();
     endSession(): Promise<void>;
     clearStats(): Promise<void>;
@@ -14,18 +13,25 @@ export declare class RollStats {
     toPrecision(number: number, digits: number): number;
     get statData(): Record<string, Stats>;
     fetchStats(): void;
-    addDamage(hpDamage: number, totalDamage: number, numTargets: number, item?: Item.Implementation): void;
+    addDamage(hpDamage: number, totalDamage: number, item: Item.Implementation | undefined, maxDamage?: number, healingDone?: number, kills?: number): void;
+    addSaveResult(numSaves: number, numSuccess: number, numFail: number, item: Item.Implementation): void;
     addAttackRoll({ rawRoll, fumble, critical, total }: {
         rawRoll: number;
         fumble: boolean;
         critical: boolean;
         total: number;
     }, item: Item.Implementation): void;
+    addDamageTaken(actorId: string, hpDamage: number, damageByType: Record<string, number>): void;
+    addDamageDealtByType(item: Item.Implementation, dealtByType: Record<string, number>, appliedByType: Record<string, number>): void;
+    addConcentrationResult(actor: Actor.Implementation, success: boolean): void;
+    addDeathSaveResult(actor: Actor.Implementation, successes: number, failures: number): void;
     updateEntity(id?: string | null): void;
     exportToJSON(): void;
     headerLine: string;
     dumpStatLine(actorName: string, itemName: string, stats: InnerStats): string;
     exportToCSV(): void;
+    saveStats(): Promise<void>;
+    GMsaveAllStats(): Promise<void>;
     GMupdateEntity({ id, currentStats }: {
         id: string;
         currentStats: Stats;
@@ -43,19 +49,41 @@ type InnerStats = {
     numDamageRolls: number;
     damageApplied: number;
     damageTotal: number;
+    numSaves: number;
+    numSaveSuccess: number;
+    numSaveFail: number;
+    maxDamage: number;
+    healingDone: number;
+    kills: number;
+    damageTaken: number;
+    healingReceived: number;
+    numConcentrationSaves: number;
+    numConcentrationSuccess: number;
+    numConcentrationFail: number;
+    numDeathSaves: number;
+    numDeathSaveSuccess: number;
+    numDeathSaveFail: number;
     attackRollAverage?: number;
     damageTotalAverage?: number;
     damageAppliedAverage?: number;
+    hitRate?: number;
 };
 type ItemStats = {
     name: string;
     session: InnerStats;
+    lifetime: InnerStats;
 };
 export type Stats = {
     name: string;
     session: InnerStats;
     lifetime: InnerStats;
     itemStats: Record<string, ItemStats>;
+    sessionDamageTakenByType: Record<string, number>;
+    lifetimeDamageTakenByType: Record<string, number>;
+    sessionDamageDealtByType: Record<string, number>;
+    lifetimeDamageDealtByType: Record<string, number>;
+    sessionDamageAppliedByType: Record<string, number>;
+    lifetimeDamageAppliedByType: Record<string, number>;
 };
 type ValidCollection = foundry.documents.collections.Actors | foundry.documents.collections.Users;
 export {};

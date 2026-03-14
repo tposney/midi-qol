@@ -3,3 +3,5 @@ foundryconfig.json
 packBackup
 dist
 *.code-workspace
+SRD
+.last-compile

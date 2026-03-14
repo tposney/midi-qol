@@ -62,6 +62,8 @@
           options=../triggeredActivityTargetOptions}}
         {{ formField fields.triggeredActivityRollAs value=../source.midiProperties.triggeredActivityRollAs localize=true
           options=../triggeredActivityRollAsOptions}}
+        {{ formField fields.triggeredActivityConsume value=../source.midiProperties.triggeredActivityConsume }}
+        {{ formField fields.triggeredActivityConfigure value=../source.midiProperties.triggeredActivityConfigure }}
       {{/if}}
     {{/with}}
   </fieldset>
@@ -71,6 +73,7 @@
     {{#if source.isOverTimeFlag}}
       {{#with fields.overTimeProperties.fields as |fields|}}
         {{ formField fields.turnChoice value=../source.overTimeProperties.turnChoice options=../turnChoiceOptions localize=true}}
+        {{ formField fields.rollAs value=../source.overTimeProperties.rollAs options=../overTimeRollAsOptions localize=true}}
         {{ formField fields.saveRemoves value=../source.overTimeProperties.saveRemoves input=@root.inputs.createCheckboxInput }}
         {{ formField fields.preRemoveConditionText value=../source.overTimeProperties.preRemoveConditionText}}
         {{ formField fields.postRemoveConditionText value=../source.overTimeProperties.postRemoveConditionText}}

@@ -31,8 +31,9 @@ export function shouldEnforceSingleTarget(activity: Activity): boolean {
   const hasExplicitCount = activity.target?.affects?.count && activity.target.affects.count !== "";
   if (hasExplicitCount) return false;
 
-  // Only enforce for creature-like target types
-  return creatureTargetTypes.includes(activity.target?.affects?.type);
+  // Enforce for creature-like target types, or when there's no target specification at all
+  const affectsType = activity.target?.affects?.type;
+  return !affectsType || creatureTargetTypes.includes(affectsType);
 }
 
 export async function confirmWorkflow(existingWorkflow: Workflow): Promise<boolean> {
@@ -132,6 +133,29 @@ export function activityConsumptionHook(activity: Activity, usageConfig: Activit
   return true;
 }
 
+/**
+ * Check if an activity's target count is a formula (not a plain number or blank).
+ * By the time this runs, prepareFinalData has already evaluated the formula to a number,
+ * so we check the raw _source data for the original formula string.
+ * If activity.target.override is true, the formula lives on the activity;
+ * otherwise it's inherited from the item via _setOverride.
+ * A formula-based count means the target count may change with scaling or other roll data,
+ * so target confirmation should be deferred until after the consumption dialog.
+ */
+export function activityHasScaledTargetCount(activity: Activity): boolean {
+  // @ts-expect-error no dnd5e-types - override is added by dnd5e's _setOverride, _source is raw DataModel source
+  const sourceCount = activity.target?.override
+    // @ts-expect-error no dnd5e-types
+    ? activity._source?.target?.affects?.count
+    // @ts-expect-error no dnd5e-types
+    : activity.item?.system?._source?.target?.affects?.count;
+  // Blank or missing means no explicit count (infinite targets) — not scaled.
+  // A plain numeric string like "3" is already resolved — not scaled.
+  // Anything else is a formula that may depend on roll data — treat as scaled.
+  if (typeof sourceCount !== "string" || sourceCount === "") return false;
+  return /[^0-9.]/.test(sourceCount);
+}
+
 function activityRequiresPostTemplateConfirmation(activity: Activity): boolean {
   // const isRangeTargeting = ["ft", "m"].includes(activity.range?.units) && ["creature", "ally", "enemy"].includes(activity.target?.affects.type);
   if (activity.target?.template?.type) {
@@ -139,6 +163,7 @@ function activityRequiresPostTemplateConfirmation(activity: Activity): boolean {
     //  } else if (isRangeTargeting) {
     //    return true;
   }
+  if (activityHasScaledTargetCount(activity)) return true;
   return false;
 }
 
@@ -269,17 +294,23 @@ export async function postTemplateConfirmTargets(activity: Activity, options: Mi
     workflow.setTargets(new Set(game.user?.targets));
     if (needCanSeeSense) await workflow.activity.setupCanSeeSense({ workflow });
   }
-  if (activityRequiresPostTemplateConfirmation(activity) && (requiresTargetConfirmation(activity, options) || activity.target?.affects?.choice)) {
-    let result = true;
-    result = await resolveTargetConfirmation(activity, options);
+  // Only show confirmation here if the activity deferred from pre-template
+  // (i.e. it has a template or scaled target count). Otherwise preTemplateTargets
+  // already handled confirmation and we just need to sync targets.
+  if (activityRequiresPostTemplateConfirmation(activity) && requiresTargetConfirmation(activity, options)) {
+    const result = await resolveTargetConfirmation(activity, options);
     if (result && game.user?.targets) {
       await updateTargets();
     }
     return result === true;
   }
-  if (game.user?.targets) {
+  // Only sync targets from game.user.targets when the activity has a template or
+  // scaled target count — these need post-template syncing because dnd5e auto-targets
+  // tokens inside the template. For non-template activities, targets were already set
+  // in setupTargets and must not be overwritten from game.user.targets (which may have
+  // been changed by concurrent effects during the async workflow state transitions).
+  if (activityRequiresPostTemplateConfirmation(activity) && game.user?.targets) {
     await updateTargets();
-    return true;
   }
   return true;
 }
@@ -335,8 +366,7 @@ export async function showItemInfo(this: Item.Implementation): Promise<ChatMessa
     hasDamage: false,
     // @ts-expect-error no dnd5e-types
     isSpell: this.type === "spell",
-    // @ts-expect-error no dnd5e-types
-    isPower: this.type === "power",
+    isPower: false,
     hasSave: false,
     hasAreaTarget: false,
     hasAttackRoll: false,
@@ -465,104 +495,102 @@ export function isAoETargetable(targetToken: Token.Implementation, options: { se
   }
 }
 
-export function templateTokens(templateDetails: foundry.canvas.placeables.MeasuredTemplate.Implementation, selfTokenRef: TokenOrDocument | string | null | undefined = "", ignoreSelf: boolean = false, AoETargetType: string = "any", autoTarget?: string): Token.Implementation[] {
+export function selectTargetsFromTemplates(
+  templates: (foundry.canvas.placeables.MeasuredTemplate.Implementation | MeasuredTemplateDocument | string)[],
+  selfTokenRef: TokenOrDocument | string | null | undefined = "",
+  ignoreSelf: boolean = false,
+  AoETargetType: string = "any",
+  autoTarget?: string
+): Token.Implementation[] {
+  const tokens = computeTargetsFromTemplates(templates, selfTokenRef, ignoreSelf, AoETargetType, autoTarget);
+  const targetIds = tokens.map(t => t.id).filter(Boolean) as string[];
+  updateUserTargets(targetIds);
+  return tokens;
+}
+
+
+/**
+ * Returns tokens inside a template without modifying game.user.targets.
+ * Accepts a MeasuredTemplate placeable, a MeasuredTemplateDocument, or a UUID string.
+ * Handles WalledTemplates, VolumetricTemplates, and standard template targeting.
+ * Note: When VolumetricTemplates is active, game.user.targets may be modified as a
+ * side effect of compute3Dtemplate — the returned array is still the authoritative result.
+ */
+export function computeTargetsFromTemplate(
+  template: foundry.canvas.placeables.MeasuredTemplate.Implementation | MeasuredTemplateDocument | string,
+  selfTokenRef: TokenOrDocument | string | null | undefined = "",
+  ignoreSelf: boolean = false,
+  AoETargetType: string = "any",
+  autoTarget?: string
+): Token.Implementation[] {
   if (!autoTarget) autoTarget = configSettings.autoTarget;
-  // deprecated if (!autoTarget) autoTarget = getAutoTarget(templateDetails.item);
-  if ((autoTarget) === "none") return [];
-  const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget);
-  const tokens = canvas.tokens?.placeables ?? [];
-  const selfToken = getToken(selfTokenRef);
-  let targetIds: string[] = [];
-  let targetTokens: Token.Implementation[] = [];
-  updateUserTargets([]);
-  if (autoTarget === "walledtemplates" && game.modules.get("walledtemplates")?.active) {
-    //@ts-expect-error wat
-    if (foundry.utils.getProperty(templateDetails?.item, "flags.walledtemplates.noAutotarget")) return targetTokens;
-    //@ts-expect-error wat
-    targetTokens = (templateDetails.targetsWithinShape) ? templateDetails.targetsWithinShape() : [];
-    targetTokens = targetTokens.filter(token => isAoETargetable(token, { selfToken, ignoreSelf, AoETargetType, autoTarget }))
-    targetIds = targetTokens.map(t => t.id);
+  if (autoTarget === "none") return [];
+
+  // Resolve to a MeasuredTemplate placeable
+  let mTemplate: foundry.canvas.placeables.MeasuredTemplate.Implementation | undefined;
+  if (typeof template === "string") {
+    const tDoc = fromUuidSync(template) as MeasuredTemplateDocument | null;
+    mTemplate = tDoc?.object ?? undefined;
+  } else if (template instanceof MeasuredTemplateDocument) {
+    mTemplate = template.object ?? undefined;
   } else {
-    for (const token of tokens) {
+    mTemplate = template;
+  }
+  if (!mTemplate) return [];
+
+  const useWalledTemplates = autoTarget === "walledtemplates" && game.modules.get("walledtemplates")?.active;
+  if (!useWalledTemplates) {
+    // For cones/rays during preview, the shape may be stale (computed with old direction)
+    const templateType = mTemplate.document.t;
+    if (templateType === "cone" || templateType === "ray" || !mTemplate.shape) {
+      const { shape } = computeTemplateShapeDistance(mTemplate.document);
+      mTemplate.shape = shape;
+    }
+  }
+
+  const selfToken = getToken(selfTokenRef);
+  let targetTokens: Token.Implementation[] = [];
+
+  if (installedModules.get("levelsvolumetrictemplates")) {
+    const tokensToCheck = canvas.tokens?.placeables?.filter(tk =>
+      isAoETargetable(tk, { selfToken, ignoreSelf, AoETargetType, autoTarget })
+    );
+    //@ts-expect-error VolumetricTemplates
+    VolumetricTemplates.compute3Dtemplate(mTemplate, tokensToCheck);
+    targetTokens = Array.from(game.user?.targets ?? []);
+  } else if (useWalledTemplates) {
+    //@ts-expect-error walledtemplates
+    targetTokens = (mTemplate.targetsWithinShape) ? mTemplate.targetsWithinShape() : [];
+    targetTokens = targetTokens.filter(token => isAoETargetable(token, { selfToken, ignoreSelf, AoETargetType, autoTarget }));
+  } else {
+    const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget);
+    for (const token of (canvas.tokens?.placeables ?? [])) {
       if (!isAoETargetable(token, { selfToken, ignoreSelf, AoETargetType, autoTarget })) continue;
-      if (token.actor && isTokenInside(templateDetails, token, wallsBlockTargeting)) {
+      if (token.actor && isTokenInside(mTemplate, token, wallsBlockTargeting)) {
         if (token.id) {
           targetTokens.push(token);
-          targetIds.push(token.id);
         }
       }
     }
   }
-  updateUserTargets(targetIds);
   return targetTokens;
 }
 
+export function computeTargetsFromTemplates(
+  templates: (foundry.canvas.placeables.MeasuredTemplate.Implementation | MeasuredTemplateDocument | string)[],
+  selfTokenRef: TokenOrDocument | string | null | undefined = "",
+  ignoreSelf: boolean = false,
+  AoETargetType: string = "any",
+  autoTarget?: string
+): Token.Implementation[] {
+  const allTargetTokens: Set<Token.Implementation> = new Set();
 
-// this is bound to a workflow when called - most of the time
-export function selectTargets(this: Workflow | Activity | undefined, templateDocument: MeasuredTemplateDocument, data?: unknown, userId?: string) {
-  // const workflow = this?.currentAction ? this : Workflow.getWorkflow(templateDocument.flags?.dnd5e?.origin);
-  const activity = this instanceof Workflow ? this.activity : this;
-  const workflow = this instanceof Workflow ? this : null;
-  if (debugEnabled > 0) warn("selectTargets ", this, templateDocument, data, userId);
-  const selfToken = getToken(activity?.actor);
-  // TODO (Michael): HERE! RIGHT HERE!
-  const ignoreSelf = (activity?.target?.affects.special ?? "").split(";").some(spec => ["self", "-self"].includes(spec));
-  if ((activity?.target?.affects.special ?? "").split(";").some(spec => ["self"].includes(spec))) {
-    foundry.utils.logCompatibilityWarning("midi-qol | target specials includes 'self'. Use '-self' to exclude the caster",
-    {since: "midi-qol 13.0.19", until: "31.1.0"});
+  for (const template of templates) {
+    const tokens = computeTargetsFromTemplate(template, selfTokenRef, ignoreSelf, AoETargetType, autoTarget);
+    tokens.forEach(t => allTargetTokens.add(t));
   }
-
-  let AoETargetType = activity ? getAoETargetType(activity) : "any";
-  let targeting = getActivityAutoTargetAction(activity);
-  if ((game.user?.targets.size === 0 || workflow?.workflowOptions.forceTemplateTargeting || userId !== game.user?.id || installedModules.get("levelsvolumetrictemplates")) && targeting !== "none") {
-    let mTemplate = (fromUuidSync(templateDocument.uuid) as MeasuredTemplateDocument)?.object;
-    if (mTemplate && !installedModules.get("levelsvolumetrictemplates")) {
-      if (!mTemplate.shape) {
-        let { shape, distance } = computeTemplateShapeDistance(templateDocument);
-        mTemplate.shape = shape;
-        if (debugEnabled > 0) warn(`selectTargets computed shape ${shape} distance ${distance}`)
-      }
-      templateTokens(mTemplate, selfToken, ignoreSelf, AoETargetType, getActivityAutoTargetAction(activity));
-    } else if (mTemplate) {
-      // Filter tokens before passing to VolumetricTemplates (same as midiATRefreshFunc does)
-      const autoTarget = getActivityAutoTargetAction(activity);
-      const tokensToCheck = canvas.tokens?.placeables?.filter(tk =>
-        isAoETargetable(tk, { selfToken, ignoreSelf, AoETargetType, autoTarget })
-      );
-      //@ts-expect-error
-      VolumetricTemplates.compute3Dtemplate(mTemplate, tokensToCheck);
-    }
-    workflow?.setTargets?.(new Set(game.user?.targets));
-  }
-  if (workflow) {
-    workflow.templateUuid = templateDocument?.uuid;
-    // Set up template cleanup mechanism immediately
-    workflow.setupTemplateCleanup(templateDocument);
-  }
-  if (targeting === "none") { // this is no good
-    //@ts-expect-error also no good - if needed, should try to migrate to midi-qol.targeted
-    Hooks.callAll("midi-qol-targeted", workflow?.targets);
-    return true;
-  }
-
-  game.user?.targets?.forEach(token => {
-    if (!isAoETargetable(token, { ignoreSelf, selfToken, AoETargetType, autoTarget: getActivityAutoTargetAction(activity) }))
-      token.setTarget(false, { user: game.user, releaseOthers: false })
-    if (activity?.target?.affects.count && (game.user?.targets?.size ?? 0) > Number(activity.target?.affects?.count ?? "0"))
-      token.setTarget(false, { user: game.user, releaseOthers: false });
-  });
-
-  if (workflow?.workflowType === "TrapWorkflow") return;
-  if (debugEnabled > 0) warn("selectTargets ", workflow?.suspended, workflow?.needTemplate, templateDocument);
-
-  if (workflow?.needTemplate) {
-    workflow.needTemplate = false;
-    workflow.templateUuid = templateDocument?.uuid;
-    if (workflow.suspended && workflow.currentAction === workflow.WorkflowState_AwaitTemplate) 
-      workflow.unSuspend.bind(workflow)({ templateDocument });
-  }
-  return;
-};
+  return Array.from(allTargetTokens);
+}
 
 // If we are blocking the roll let anyone waiting on the roll know it is complete
 function blockRoll(item, workflow) {

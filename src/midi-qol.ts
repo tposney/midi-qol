@@ -1,27 +1,38 @@
 import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, exportSettingsToJSON, importSettingsFromJSON, safeGetGameSetting, shouldDisplaySaveDC, triggeredActivityTargetOptions, triggeredActivityRollAsOptions, resetConfigSettingsToDefaults } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, setupModules } from './module/setupModules.js';
-import { itemPatching, visionPatching, actorAbilityRollPatching, readyPatching, initPatching, addDiceTermModifiers, MidiDependentsRegistry, computeAbilityAdvantage, computeSkillAdvantage, computeToolAdvantage } from './module/patching.js';
+import { itemPatching, visionPatching, actorAbilityRollPatching, readyPatching, initPatching, addDiceTermModifiers, computeAbilityAdvantage, computeSkillAdvantage, computeToolAdvantage, processWoundedStatus, getActorWoundedSemaphore } from './module/patching.js';
+import { MidiDependentsRegistry } from './module/lib/MidiDependentsRegistry.js';
 import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
 import { MidiKeyManager } from './module/MidiKeyManager.js';
 import { MidiSounds } from './module/midi-sounds.js';
 import { addUndoChatMessage, getUndoQueue, removeMostRecentWorkflow, showUndoQueue, undoMostRecentWorkflow } from './module/undo.js';
-import { showUndoWorkflowApp } from './module/apps/UndoWorkflow.js';
+import { UndoWorkflow, showUndoWorkflowApp } from './module/apps/UndoWorkflow.js';
 import { TroubleShooter } from './module/apps/TroubleShooter.js';
 import { TargetConfirmationDialog } from './module/apps/TargetConfirmation.js';
+import { TargetConfirmationConfig } from './module/apps/TargetConfirmationConfig.js';
 import { MidiAttackActivity, setupAttackActivity } from './module/activities/AttackActivity.js';
 import { RollModifierTracker } from './module/lib/RollModifierTracker.js';
 import { ChatLogMidi } from './module/ChatClasses/ChatLogMidi.js';
 import { injectMidiCompletions } from './module/lib/midiCompletions.js';
 import { OverTimeEditor } from './module/apps/OverTimeEditor.js';
 import { ConditionEditor } from './module/apps/ConditionEditor.js';
+import { ActorOnUseMacrosConfig } from './module/apps/ActorOnUseMacroConfig.js';
+import { ItemOnUseMacrosConfig } from './module/apps/ItemOnUseMacrosConfig.js';
+import { DependentsExplorer } from './module/apps/DependentsExplorer.js';
+import { MidiActivityChoiceDialog } from './module/apps/MidiActivityChoiceDialog.js';
+import { MidiRollChoiceDialog } from './module/apps/MidiRollChoiceDialog.js';
+import { ModuleReviewDialog } from './module/apps/ModuleReviewDialog.js';
+import { RollStatsDisplay } from './module/apps/RollStatsDisplay.js';
+import { SoundConfigPanel } from './module/apps/SoundConfigPanel.js';
+import { registerHandlebarsHelpers } from './module/lib/HandlebarsHelpers.js';
 
 // Register macro-autocomplete hook handler at module load time so it's
 // ready before macro-autocomplete fires "macro-autocomplete.ready" in its ready hook.
@@ -85,8 +96,9 @@ export const MODULE_ID = "midi-qol";
 
 const { StringField } = foundry.data.fields;
 
-export let i18n = (key: string) => {
-  return game.i18n?.localize(key) ?? key;
+export let i18n = (key: SelectOptionValue) => {
+  const k = typeof key === "object" ? key.label : key;
+  return game.i18n?.localize(k) ?? k;
 }
 
 export let i18nFormat = (key: string, data = {}) => {
@@ -109,7 +121,21 @@ export async function busyWait(milliSeconds: number) {
   return (new Promise(resolve => setTimeout(resolve, milliSeconds)));
 }
 
-export let midiFlags: string[] = [];
+export let midiFlags: { name: string, type?: string }[] = [];
+// Handle both init orderings: DAE's init may fire before or after midi's init.
+// midiInitComplete tracks whether midi's init has set up GameSystemConfig/allAttackTypes.
+let daeAddAutoFields: Function | null = null;
+let daeBooleanFormulaField: any = null;
+let midiInitComplete = false;
+Hooks.once("dae.addAutoFields", (addAutoFields: Function, fields: any) => {
+  daeAddAutoFields = addAutoFields;
+  daeBooleanFormulaField = fields?.BooleanFormulaField;
+  // If midi's init already ran, register flags now (DAE init fired late)
+  if (midiInitComplete) {
+    setupMidiFlags();
+    daeAddAutoFields(midiFlags.filter(f => !!f.name));
+  }
+});
 export let allAttackTypes: string[] = []
 export let gameStats: RollStats;
 export let overTimeEffectsToDelete: Record<string, { uuid: string }> = {};
@@ -151,6 +177,7 @@ Hooks.once("levelsReady", function () {
   levelsAPI = CONFIG.Levels.API;
 });
 Hooks.once("init", () => {
+  registerHandlebarsHelpers();
   setupChatMessageMidi();
   //@ts-expect-error
   CONFIG.ChatMessage.documentClass = ChatMessageMidi;
@@ -158,17 +185,156 @@ Hooks.once("init", () => {
   CONFIG.Combat.documentClass = MidiCombat5e;
 });
 
-// @ts-expect-error it'll get populated don't worry
-globalThis.MidiQOL ??= {}
-globalThis.MidiQOL.checkIncapacitated = checkIncapacitated;
-globalThis.MidiQOL.getVitalityItem = getVitalityItem;
-globalThis.MidiQOL.getVitalityValue = getVitalityValue;
-globalThis.MidiQOL.getVitalityMax = getVitalityMax;
-globalThis.MidiQOL.hasVitalitySystem = hasVitalitySystem;
-// @ts-expect-error - these are new helper functions for macro resolution
-globalThis.MidiQOL.resolveItemMacro = resolveItemMacro;
-// @ts-expect-error - these are new helper functions for macro resolution
-globalThis.MidiQOL.resolveActivityMacro = resolveActivityMacro;
+// Phase 1: ES module load — pure function/class references available immediately
+// @ts-expect-error it'll get populated incrementally
+globalThis.MidiQOL ??= {};
+Object.assign(globalThis.MidiQOL, {
+  activityHasEmanationNoTemplate,
+  addDependent,
+  addConcentrationDependent,
+  addRollTo,
+  addUndoChatMessage,
+  applyTokenDamage,
+  applyTokenDamageMany,
+  actorFromUuid,
+  canSee,
+  canSense,
+  canSenseModes,
+  checkActivityRange,
+  checkDistance,
+  checkIncapacitated,
+  checkNearby,
+  chooseEffect,
+  completeItemUse,
+  completeActivityUse,
+  computeAbilityAdvantage,
+  computeCoverBonus,
+  computeDistance,
+  computeSkillAdvantage,
+  computeToolAdvantage,
+  contestedRoll,
+  createConditionData,
+  createDamageDetail,
+  createEffects,
+  DamageOnlyWorkflow,
+  DDBGameLogWorkflow,
+  debug,
+  displayDSNForRoll,
+  doConcentrationCheck,
+  doOverTimeEffect,
+  DummyWorkflow,
+  evalAllConditions,
+  evalCondition,
+  findNearby,
+  findNearbyCount,
+  fromUuidSync,
+  getCachedChatMessage: getCachedDocument,
+  getChanges,
+  getConcentrationEffect,
+  getDistance,
+  getItemFromEffectOrigin,
+  getTokenPlayerName,
+  getTokenPlayerNameForUser,
+  getTokenForActor: getOrCreateTokenForActor,
+  getTokenForActorAsSet: getOrCreateTokenForActorAsSet,
+  getTraitMult,
+  getUndoQueue,
+  getActorWoundedSemaphore,
+  getVitalityItem,
+  getVitalityMax,
+  getVitalityValue,
+  hasCondition,
+  hasUsedBonusAction,
+  hasUsedReaction,
+  hasVitalitySystem,
+  isTargetable: isValidTarget,
+  log,
+  MidiDependentsRegistry,
+  midiRenderRoll,
+  midiRenderAttackRoll,
+  midiRenderDamageRoll,
+  midiRenderBonusDamageRoll,
+  midiRenderOtherDamageRoll,
+  MidiSounds,
+  modifyDamageBy,
+  moveToken,
+  moveTokenAwayFromPoint,
+  MQfromActorUuid: fromActorUuid,
+  MQfromUuid: fromUuidSync,
+  playerFor,
+  playerForActor,
+  processWoundedStatus,
+  raceOrType,
+  reactionDialog,
+  removeActionUsed,
+  removeBonusActionUsed,
+  removeEffects,
+  removeHiddenCondition,
+  removeInvisibleCondition,
+  removeMostRecentWorkflow,
+  removeReactionUsed,
+  resolveItemMacro,
+  resolveActivityMacro,
+  resolveTargetConfirmation,
+  RollModifierTracker,
+  setBonusActionUsed,
+  setReactionUsed,
+  sizeNumeric,
+  showUndoQueue,
+  showUndoWorkflowApp,
+  testfunc,
+  tokenForActor,
+  TrapWorkflow,
+  typeOrRace,
+  undoMostRecentWorkflow,
+  updateEffects,
+  UserWorkflow,
+  validRollAbility,
+  warn,
+  Workflow,
+  workflowClass: Workflow,
+  Workflows: { "Workflow": Workflow, "DamageOnlyWorkflow": DamageOnlyWorkflow, "TrapWorkflow": TrapWorkflow, "DummyWorkflow": DummyWorkflow, "DDBGameLogWorkflow": DDBGameLogWorkflow },
+  ChatClasses: {
+    ChatLogMidi,
+    ChatMessageMidi,
+    DamageApplicationElementMidi
+  },
+  apps: {
+    ActorOnUseMacrosConfig,
+    ConditionEditor,
+    ConfigPanel,
+    DependentsExplorer,
+    ItemOnUseMacrosConfig,
+    MidiActivityChoiceDialog,
+    MidiRollChoiceDialog,
+    ModuleReviewDialog,
+    OverTimeEditor,
+    ReactionDialog,
+    RollModifyDialog,
+    RollStatsDisplay,
+    SoundConfigPanel,
+    TargetConfirmationConfig,
+    TargetConfirmationDialog,
+    TroubleShooter,
+    UndoWorkflow,
+  },
+  logEvaluationData: false,
+});
+
+// Deprecated top-level app class accessors — use MidiQOL.apps.X instead
+for (const appName of ["ConfigPanel", "TargetConfirmationDialog", "TroubleShooter"] as const) {
+  Object.defineProperty(globalThis.MidiQOL, appName, {
+    get() {
+      foundry.utils.logCompatibilityWarning(
+        `MidiQOL.${appName} is deprecated. Use MidiQOL.apps.${appName} instead.`,
+        { since: "midi-qol 13.0.50", until: "midi-qol 13.1.0" }
+      );
+      return globalThis.MidiQOL.apps[appName];
+    },
+    configurable: true,
+    enumerable: true,
+  });
+}
 
 function setupActivities() {
   // @ts-expect-error it'll get populated don't worry
@@ -201,6 +367,8 @@ function setupActivities() {
 
 Hooks.once('init', async function () {
   GameSystemConfig = CONFIG.DND5E;
+  initCoverConstants();
+  setupMidiFlagTypes();
   log('Initializing midi-qol');
   window.customElements.define("midi-damage-application", DamageApplicationElementMidi as unknown as CustomElementConstructor);
   setupActivities();
@@ -208,7 +376,7 @@ Hooks.once('init', async function () {
   if (game.settings.get("midi-qol", "pruneChatLog") && !game.modules.get("chatlog-prune")?.active) {
     foundry.utils.logCompatibilityWarning(
       "midi-qol | Built-in chat log pruning is deprecated. Please install and activate the 'chatlog-prune' module instead.",
-      { since: "13.0.37", until: "14.0.0" }
+      { since: "13.0.37", until: "13.1.0" }
     );
     BaseChatLogClass = CONFIG.ui.chat;
     //@ts-expect-error - lots of incorrect missing elements from the class
@@ -221,7 +389,7 @@ Hooks.once('init', async function () {
   Hooks.once('dfreds-convenient-effects.ready', () => {
     setupMidiStatusEffects();
   });
-  Hooks.once("dae.ready", api => setupMidiFlags(api));
+  Hooks.once("dae.ready", api => setupMidiFlagEditors(api));
 
   addConfigOptions();
   GameSystemConfig.areaTargetTypes["emanationNoTemplate"] = {
@@ -236,6 +404,13 @@ Hooks.once('init', async function () {
   GameSystemConfig.damageTypes["vitality"] = { label: i18n("midi-qol.vitalityDamage"), icon: `modules/${MODULE_ID}/icons/vitality.svg` };
   GameSystemConfig.healingTypes["vitality"] = { label: i18n("midi-qol.vitalityHealing"), icon: `modules/${MODULE_ID}/icons/vitality.svg` };
   allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
+  midiInitComplete = true;
+  // Register midi flags with DAE if the hook already fired (normal case: DAE init before midi init).
+  // If the hook hasn't fired yet, the Hooks.once callback will handle it.
+  if (daeAddAutoFields) {
+    setupMidiFlags();
+    daeAddAutoFields(midiFlags.filter(f => !!f.name));
+  }
   initHooks();
 
   // globalThis.MidiQOL = { checkIncapacitated };
@@ -356,14 +531,11 @@ Hooks.on("dae.addFieldMappings", (fieldMappings) => {
   fetchParams();
   for (let key of Object.keys(GameSystemConfig.damageTypes ?? {})) {
     fieldMappings[`flags.${MODULE_ID}.DR.${key}`] = `system.traits.dm.amount.${key}`;
-    fieldMappings[`flags.${MODULE_ID}.absorption.${key}`] = `system.traits.da.${key}`;
   }
   for (let key of Object.keys(GameSystemConfig.healingTypes ?? {})) {
     fieldMappings[`flags.${MODULE_ID}.DR.${key}`] = `system.traits.dm.amount.${key}`;
-    fieldMappings[`flags.${MODULE_ID}.absorption.${key}`] = `system.traits.da.${key}`;
   }
   fieldMappings[`flags.${MODULE_ID}.DR.all`] = "system.traits.dm.midi.all";
-  fieldMappings[`flags.${MODULE_ID}.absorption.all`] = "system.traits.da.midi.all";
 
   Object.keys(GameSystemConfig.itemActionTypes).forEach(aType => {
     fieldMappings[`flags.${MODULE_ID}.DR.${aType}`] = `system.traits.dm.midi.${aType}`;
@@ -399,19 +571,6 @@ Hooks.on("dae.addFieldMappings", (fieldMappings) => {
   fieldMappings[`flags.${MODULE_ID}.grants.fail.advantage.attack.all`] = `flags.${MODULE_ID}.grants.noAdvantage.attack.all`;
   fieldMappings[`flags.${MODULE_ID}.grants.fail.disadvantage.attack.all`] = `flags.${MODULE_ID}.grants.noDisadvantage.attack.all`;
 
-  // Deprecated flag mappings: advantage.ability.save/check -> advantage.save/check (consistent with attack/skill/tool)
-  // These allow old effects to continue working while users transition to the new naming convention
-  fieldMappings[`flags.${MODULE_ID}.advantage.ability.save.all`] = `flags.${MODULE_ID}.advantage.save.all`;
-  fieldMappings[`flags.${MODULE_ID}.disadvantage.ability.save.all`] = `flags.${MODULE_ID}.disadvantage.save.all`;
-  fieldMappings[`flags.${MODULE_ID}.advantage.ability.check.all`] = `flags.${MODULE_ID}.advantage.check.all`;
-  fieldMappings[`flags.${MODULE_ID}.disadvantage.ability.check.all`] = `flags.${MODULE_ID}.disadvantage.check.all`;
-  // Per-ability mappings for saves and checks
-  for (let abl of Object.keys(GameSystemConfig.abilities)) {
-    fieldMappings[`flags.${MODULE_ID}.advantage.ability.save.${abl}`] = `flags.${MODULE_ID}.advantage.save.${abl}`;
-    fieldMappings[`flags.${MODULE_ID}.disadvantage.ability.save.${abl}`] = `flags.${MODULE_ID}.disadvantage.save.${abl}`;
-    fieldMappings[`flags.${MODULE_ID}.advantage.ability.check.${abl}`] = `flags.${MODULE_ID}.advantage.check.${abl}`;
-    fieldMappings[`flags.${MODULE_ID}.disadvantage.ability.check.${abl}`] = `flags.${MODULE_ID}.disadvantage.check.${abl}`;
-  }
   if (debugEnabled > 0) warn("fieldMappings", fieldMappings);
 
 });
@@ -499,12 +658,16 @@ Hooks.once('setup', function () {
   setupMidiQOLApi();
 });
 
+Hooks.once("dae.setupComplete", () => {
+  applyPendingLocalizations();
+});
+
 Hooks.once("ready", () => {
   // can't hook off simple cover ready as it fires too early to be able to call api.setLibraryMode
-  if (configSettings.optionalRules.coverCalculation === "simplecover5e" && game.modules.get("simplecover5e")?.active) {
-    //@ts-expect-error
-    game.modules.get("simplecover5e")?.api?.setLibraryMode(true);
-  }
+  // if (configSettings.optionalRules.coverCalculation === "simplecover5e" && game.modules.get("simplecover5e")?.active) {
+  //   //@ts-expect-error
+  //   game.modules.get("simplecover5e")?.api?.setLibraryMode(true);
+  // }
 })
 
 function addConfigOptions() {
@@ -705,170 +868,79 @@ import { MidiDamageActivity, setupDamageActivity } from './module/activities/Dam
 import { MidiCastActivity, setupCastActivity } from './module/activities/CastActivity.js';
 import { MidiCheckActivity, setupCheckActivity } from './module/activities/CheckActivity.js';
 import { MidiHealActivity, setupHealActivity } from './module/activities/HealActivity.js';
-import { resolveTargetConfirmation, showItemInfo, templateTokens } from './module/activities/activityHelpers.js';
+import { computeTargetsFromTemplates, resolveTargetConfirmation, selectTargetsFromTemplates, showItemInfo } from './module/activities/activityHelpers.js';
 import { MidiActivityMixin, setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
 import { MidiForwardActivity, setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';
 import { MidiTransformActivity, setupTransformActivity } from './module/activities/TransformActivity.js';
 import { MidiCombat5e } from './module/MidiCombat5e.js';
-import { TokenOrDocument } from './globals.js';
+import { TokenOrDocument, SelectOptionValue } from './globals.js';
 import { DamageApplicationElementMidi } from './module/ChatClasses/DamageApplicationElementMidi.js';
 
 // Add any additional hooks if necessary
+// Phase 2: setup hook — properties that depend on CONFIG, settings, i18n, or game state
 function setupMidiQOLApi() {
 
   const detectionModes = CONFIG.Canvas.detectionModes;
-  let InvisibleDisadvantageVisionModes = Object.keys(detectionModes)
+  const InvisibleDisadvantageVisionModes = Object.keys(detectionModes)
     //@ts-expect-error I think imprecise is added by a module - TODO Check
     .filter(dm => !detectionModes[dm].imprecise);
 
-  let WallsBlockConditions = [
-    "burrow"
-  ];
+  const humanoid = ["human", "humanoid", "elven", "elf", "half-elf", "drow", "dwarf", "dwarven", "halfling", "gnome", "tiefling", "orc", "dragonborn", "half-orc"];
 
-  let humanoid = ["human", "humanoid", "elven", "elf", "half-elf", "drow", "dwarf", "dwarven", "halfling", "gnome", "tiefling", "orc", "dragonborn", "half-orc"];
-  const Workflows = { "Workflow": Workflow, "DamageOnlyWorkflow": DamageOnlyWorkflow, "TrapWorkflow": TrapWorkflow, "DummyWorkflow": DummyWorkflow, "DDBGameLogWorkflow": DDBGameLogWorkflow };
-  globalThis.MidiQOL = {
-    ...globalThis.MidiQOL,
-    activityHasEmanationNoTemplate,
-    addDependent,
-    addConcentrationDependent,
-    addRollTo,
-    addUndoChatMessage,
-    RollModifierTracker,
-    applyTokenDamage,
-    canSee,
-    canSense,
-    canSenseModes,
-    checkIncapacitated,
-    checkDistance,
-    checkNearby,
-    checkActivityRange,
+  Object.assign(globalThis.MidiQOL, {
     checkRule,
-    completeItemUse,
-    completeActivityUse,
-    computeAbilityAdvantage,
-    computeCoverBonus,
-    computeDistance,
-    computeSkillAdvantage,
-    computeToolAdvantage,
-    ConfigPanel,
-    configSettings: () => { return configSettings },
-    get currentConfigSettings() { return configSettings },
     collectSettingData,
-    exportSettingsToJSON,
-    importSettingsFromJSON,
-    resetConfigSettingsToDefaults,
-    contestedRoll,
-    createConditionData,
-    createDamageDetail,
-    DamageOnlyWorkflow,
+    computeTargetsFromTemplates,
+    configSettings: () => { return configSettings },
     debouncedUpdate: throttledUpdate,
-    debug,
-    displayDSNForRoll,
-    doConcentrationCheck,
-    doOverTimeEffect,
-    evalAllConditions,
-    evalCondition,
-    DummyWorkflow,
-    chooseEffect,
     enableWorkflow,
+    exportSettingsToJSON,
     fetchParams,
-    findNearby,
-    findNearbyCount,
     gameStats,
-    getCachedChatMessage: getCachedDocument,
-    getChanges, // (actorOrItem, key) - what effects on the actor or item target the specific key
-    getConcentrationEffect,
-    getSaveRollModeFor,
     getCheckRollModeFor,
-    getTokenPlayerName,
-    getTokenPlayerNameForUser,
-    getTokenForActor: getOrCreateTokenForActor,
-    getTokenForActorAsSet: getOrCreateTokenForActorAsSet,
-    getTraitMult,
-    getUndoQueue,
-    getVitalityItem,
-    getVitalityMax,
-    getVitalityValue,
-    hasCondition,
-    hasUsedBonusAction,
-    hasUsedReaction,
-    hasVitalitySystem,
+    getSaveRollModeFor,
     humanoid,
+    importSettingsFromJSON,
     incapacitatedConditions: ["incapacitated", "Convenient Effect: Incapacitated", "stunned", "Convenient Effect: Stunned", "paralyzed", "paralysis", "Convenient Effect: Paralyzed", "unconscious", "Convenient Effect: Unconscious", "dead", "Convenient Effect: Dead", "petrified", "Convenient Effect: Petrified"],
     InvisibleDisadvantageVisionModes,
-    isTargetable: isValidTarget,
-    TargetConfirmationDialog,
-    log,
     midiFlags,
-    MidiDependentsRegistry,
-    midiRenderRoll,
-    midiRenderAttackRoll,
-    midiRenderDamageRoll,
-    midiRenderBonusDamageRoll,
-    midiRenderOtherDamageRoll,
-    get midiSoundSettings() { return game.settings.get("midi-qol", "MidiSoundSettings") },
-    MidiSounds,
-    modifyDamageBy,
-    MQfromActorUuid: fromActorUuid,
-    actorFromUuid,
-    MQfromUuid: fromUuidSync,
-    fromUuidSync,
-    MQOnUseOptions,
-    playerFor,
-    playerForActor,
-    raceOrType,
-    typeOrRace,
-    reactionDialog,
-    removeHiddenCondition,
-    removeInvisibleCondition,
-    removeMostRecentWorkflow,
-    removeActionUsed,
-    removeBonusActionUsed,
-    removeReactionUsed,
-    resolveTargetConfirmation,
-    safeGetGameSetting,
-    shouldDisplaySaveDC,
-    selectTargetsForTemplate: templateTokens,
-    setBonusActionUsed,
-    setReactionUsed,
-    showItemInfo: (item: Item.Implementation) => { return showItemInfo.bind(item)() },
-    showUndoQueue,
-    showUndoWorkflowApp,
-    socket: () => { return new SaferSocket(socketlibSocket) },
-    testfunc,
-    tokenForActor,
     midiPropertiesOptions: {
-      triggeredActivityTargetOptions: Object.entries(triggeredActivityTargetOptions).map(([value, label]) => {
-        return { value, label: i18n(label) }
+      triggeredActivityTargetOptions: Object.entries(triggeredActivityTargetOptions).map(([value, opt]) => {
+        return { value, label: i18n(opt) }
       }),
-      triggeredActivityRollAsOptions: Object.entries(triggeredActivityRollAsOptions).map(([value, label]) => {
-        return { value, label: i18n(label) }
+      triggeredActivityRollAsOptions: Object.entries(triggeredActivityRollAsOptions).map(([value, opt]) => {
+        return { value, label: i18n(opt) }
       }),
     },
-    TrapWorkflow,
-    TroubleShooter,
-    undoMostRecentWorkflow,
-    validRollAbility,
-    WallsBlockConditions,
-    warn,
-    Workflow,
-    UserWorkflow,
-    workflowClass: Workflow,
-    Workflows,
-    moveToken,
-    moveTokenAwayFromPoint,
-    createEffects,
-    removeEffects,
-    updateEffects,
-    get updatesCache() { return updatesCache },
-    ChatClasses: {
-      ChatLogMidi,
-      ChatMessageMidi,
-      DamageApplicationElementMidi
-    }
-  }
+    MQOnUseOptions,
+    resetConfigSettingsToDefaults,
+    safeGetGameSetting,
+    selectTargetsFromTemplates,
+    shouldDisplaySaveDC,
+    showItemInfo: (item: Item.Implementation) => { return showItemInfo.bind(item)() },
+    socket: () => { return new SaferSocket(socketlibSocket) },
+    WallsBlockConditions: ["burrow"],
+  });
+
+  // Define getters that need live access to settings/game state
+  Object.defineProperties(globalThis.MidiQOL, {
+    currentConfigSettings: {
+      get() { return configSettings },
+      configurable: true,
+      enumerable: true,
+    },
+    midiSoundSettings: {
+      get() { return game.settings.get("midi-qol", "MidiSoundSettings") },
+      configurable: true,
+      enumerable: true,
+    },
+    updatesCache: {
+      get() { return updatesCache },
+      configurable: true,
+      enumerable: true,
+    },
+  });
 
   //@ts-expect-error
   game.modules.get("midi-qol").api = globalThis.MidiQOL;
@@ -885,6 +957,7 @@ function setupMidiQOLApi() {
     checkRule,
     computeCoverBonus,
     computeDistance,
+    getDistance,
     contestedRoll,
     displayDSNForRoll,
     doConcentrationCheck,
@@ -965,152 +1038,165 @@ export async function updateEffects(data: { actorUuid: string, updates: ActiveEf
   }
 }
 
-function registerFlagLocalization(flagPath: string, templateKey: string, label: string) {
-  const lm = globalThis.DAE?.localizationMap;
-  if (!lm || !game.i18n) return;
-  lm[flagPath] = {
-    name: game.i18n.format(`midi-qol.flagTemplate.${templateKey}.name`, { label }),
-    description: game.i18n.format(`midi-qol.flagTemplate.${templateKey}.description`, { label })
-  };
+let pendingLocalizations: {flagPath: string, templateKey: string, label: string | (() => string)}[] = [];
+
+function registerFlagLocalization(flagPath: string, templateKey: string, label: string | (() => string)) {
+  pendingLocalizations.push({flagPath, templateKey, label});
 }
 
-function setupMidiFlags(DAEapi: any) {
-  midiFlags.push(`flags.${MODULE_ID}.advantage.all`);
+function applyPendingLocalizations() {
+  const lm = globalThis.DAE?.localizationMap;
+  if (!lm || !game.i18n) return;
+  for (const {flagPath, templateKey, label} of pendingLocalizations) {
+    const resolvedLabel = typeof label === "function" ? label() : label;
+    lm[flagPath] = {
+      name: i18nFormat(`midi-qol.flagTemplate.${templateKey}.name`, { label: resolvedLabel }),
+      description: i18nFormat(`midi-qol.flagTemplate.${templateKey}.description`, { label: resolvedLabel })
+    };
+  }
+  pendingLocalizations = [];
+}
+
+function setupMidiFlags() {
+  const booleanFormula = (flag: string) => midiFlags.push({ name: flag, type: daeBooleanFormulaField });
+  const untyped = (flag: string) => midiFlags.push({ name: flag });
+
+  booleanFormula(`flags.${MODULE_ID}.advantage.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.all`);
-  midiFlags.push(`flags.${MODULE_ID}.disadvantage.all`);
+  booleanFormula(`flags.${MODULE_ID}.disadvantage.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.all`);
   // Global flags not generated by per-key loops
-  midiFlags.push(`flags.${MODULE_ID}.fail.all`);
+  booleanFormula(`flags.${MODULE_ID}.fail.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.all`);
-  midiFlags.push(`flags.${MODULE_ID}.success.all`);
+  booleanFormula(`flags.${MODULE_ID}.success.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.all`);
-  midiFlags.push(`flags.${MODULE_ID}.neverTarget`);
+  booleanFormula(`flags.${MODULE_ID}.neverTarget`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.neverTarget`);
-  midiFlags.push(`flags.${MODULE_ID}.grants.critical.range`);
+  untyped(`flags.${MODULE_ID}.grants.critical.range`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.critical.range`);
-  midiFlags.push(`flags.${MODULE_ID}.grants.criticalThreshold`);
+  untyped(`flags.${MODULE_ID}.grants.criticalThreshold`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.criticalThreshold`);
-  midiFlags.push(`flags.${MODULE_ID}.advantage.concentration`);
+  booleanFormula(`flags.${MODULE_ID}.advantage.concentration`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.concentration`);
-  midiFlags.push(`flags.${MODULE_ID}.disadvantage.concentration`);
+  booleanFormula(`flags.${MODULE_ID}.disadvantage.concentration`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.concentration`);
-  midiFlags.push(`flags.${MODULE_ID}.noAdvantage.concentration`);
+  booleanFormula(`flags.${MODULE_ID}.noAdvantage.concentration`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.concentration`);
-  midiFlags.push(`flags.${MODULE_ID}.noDisadvantage.concentration`);
+  booleanFormula(`flags.${MODULE_ID}.noDisadvantage.concentration`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.concentration`);
-  midiFlags.push(`flags.${MODULE_ID}.noAdvantage.all`);
+  booleanFormula(`flags.${MODULE_ID}.noAdvantage.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.all`);
-  midiFlags.push(`flags.${MODULE_ID}.noDisadvantage.all`);
+  booleanFormula(`flags.${MODULE_ID}.noDisadvantage.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.all`);
-  midiFlags.push(`flags.${MODULE_ID}.initiativeAdv`);
+  booleanFormula(`flags.${MODULE_ID}.initiativeAdv`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.initiativeAdv`);
-  midiFlags.push(`flags.${MODULE_ID}.initiativeDisadv`);
+  booleanFormula(`flags.${MODULE_ID}.initiativeDisadv`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.initiativeDisadv`);
-  midiFlags.push(`flags.${MODULE_ID}.initiativeNoAdv`);
+  booleanFormula(`flags.${MODULE_ID}.initiativeNoAdv`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.initiativeNoAdv`);
-  midiFlags.push(`flags.${MODULE_ID}.initiativeNoDisadv`);
+  booleanFormula(`flags.${MODULE_ID}.initiativeNoDisadv`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.initiativeNoDisadv`);
-  midiFlags.push(`flags.${MODULE_ID}.ignoreNearbyFoes`);
+  booleanFormula(`flags.${MODULE_ID}.ignoreNearbyFoes`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.ignoreNearbyFoes`);
-  midiFlags.push(`flags.${MODULE_ID}.`);
-  midiFlags.push(`flags.${MODULE_ID}.concentrationSaveBonus`);
+  untyped(`flags.${MODULE_ID}.bloodsense`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.bloodsense`);
+  untyped(`flags.${MODULE_ID}.`);
+  untyped(`flags.${MODULE_ID}.concentrationSaveBonus`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.concentrationSaveBonus`);
-  midiFlags.push(`flags.${MODULE_ID}.potentCantrip`);
+  booleanFormula(`flags.${MODULE_ID}.potentCantrip`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.potentCantrip`);
-  midiFlags.push(`flags.${MODULE_ID}.sculptSpells`);
+  booleanFormula(`flags.${MODULE_ID}.sculptSpells`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.sculptSpells`);
-  midiFlags.push(`flags.${MODULE_ID}.carefulSpells`);
+  booleanFormula(`flags.${MODULE_ID}.carefulSpells`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.carefulSpells`);
   // magicResistance.all and magicVulnerability.all generated by abilities loop
   // range.all, long.all, rangeOverride.attack.all generated by attack types loop
-  midiFlags.push(`flags.${MODULE_ID}.magicResistance.save.all`);
+  booleanFormula(`flags.${MODULE_ID}.magicResistance.save.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.magicResistance.save.all`);
-  midiFlags.push(`flags.${MODULE_ID}.magicResistance.check.all`);
+  booleanFormula(`flags.${MODULE_ID}.magicResistance.check.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.magicResistance.check.all`);
-  midiFlags.push(`flags.${MODULE_ID}.magicResistance.skill.all`);
+  booleanFormula(`flags.${MODULE_ID}.magicResistance.skill.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.magicResistance.skill.all`);
   const extendedAttackTypeLabels: Record<string, string> = { check: "Ability Check", skill: "Skill Check", tool: "Tool Check", all: "All" };
   let attackTypes = allAttackTypes.concat(["save", "check", "skill", "tool", "all"])
   attackTypes.forEach(at => {
-    midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`);
-    let label = GameSystemConfig.itemActionTypes[at] ?? extendedAttackTypeLabels[at] ?? at;
-    label = label.replace(/ Attack$/, "");
+    const label = () => (GameSystemConfig.itemActionTypes[at] ?? extendedAttackTypeLabels[at] ?? at).replace(/ Attack$/, "");
     registerFlagLocalization(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`, "grants.noAdvantage.attack", label);
     registerFlagLocalization(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`, "grants.disadvantage.attack", label);
     registerFlagLocalization(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`, "grants.noDisadvantage.attack", label);
   });
   attackTypes = allAttackTypes.concat(["heal", "other", "save", "util", "all"])
   attackTypes.forEach(at => {
-    midiFlags.push(`flags.${MODULE_ID}.range.${at}`);
+    untyped(`flags.${MODULE_ID}.range.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.range.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.long.${at}`);
+    untyped(`flags.${MODULE_ID}.long.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.long.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.advantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.advantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.disadvantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.noAdvantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.noDisadvantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.fail.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.success.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.success.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.critical.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.critical.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.critical.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.noCritical.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.noCritical.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noCritical.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.noFumble.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.noFumble.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noFumble.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.fumble.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.fumble.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fumble.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.advantage.attack.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.critical.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.critical.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.critical.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noCritical.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noCritical.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noCritical.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noFumble.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noFumble.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noFumble.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.fumble.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.fumble.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fumble.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.fail.critical.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.critical.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.critical.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.attack.bonus.${at}`);
+    untyped(`flags.${MODULE_ID}.grants.attack.bonus.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.attack.bonus.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.attack.success.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.attack.success.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.attack.success.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.attack.fail.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.attack.fail.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.attack.fail.${at}`);
-    if (at !== "heal") midiFlags.push(`flags.${MODULE_ID}.DR.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.advantage.damage.${at}`);
+    if (at !== "heal") untyped(`flags.${MODULE_ID}.DR.${at}`);
+    booleanFormula(`flags.${MODULE_ID}.advantage.damage.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.damage.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.max.damage.${at}`);
+    untyped(`flags.${MODULE_ID}.max.damage.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.damage.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.min.damage.${at}`);
+    untyped(`flags.${MODULE_ID}.min.damage.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.damage.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.max.damage.${at}`);
+    untyped(`flags.${MODULE_ID}.grants.max.damage.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.max.damage.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.min.damage.${at}`);
+    untyped(`flags.${MODULE_ID}.grants.min.damage.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.min.damage.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.bonus.damage.${at}`);
+    untyped(`flags.${MODULE_ID}.grants.bonus.damage.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.bonus.damage.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.optional.NAME.attack.${at}`);
+    untyped(`flags.${MODULE_ID}.optional.NAME.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.optional.NAME.attack.fail.${at}`);
+    untyped(`flags.${MODULE_ID}.optional.NAME.attack.fail.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.attack.fail.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.optional.NAME.damage.${at}`);
+    untyped(`flags.${MODULE_ID}.optional.NAME.damage.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.damage.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.rangeOverride.attack.${at}`);
+    untyped(`flags.${MODULE_ID}.rangeOverride.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.rangeOverride.attack.${at}`);
-    let label = GameSystemConfig.itemActionTypes[at] ?? extendedAttackTypeLabels[at] ?? at;
-    label = label.replace(/ Attack$/, "");
+    const label = () => (GameSystemConfig.itemActionTypes[at] ?? extendedAttackTypeLabels[at] ?? at).replace(/ Attack$/, "");
     registerFlagLocalization(`flags.${MODULE_ID}.range.${at}`, "range", label);
     registerFlagLocalization(`flags.${MODULE_ID}.long.${at}`, "long", label);
     registerFlagLocalization(`flags.${MODULE_ID}.advantage.attack.${at}`, "advantage.attack", label);
@@ -1146,146 +1232,146 @@ function setupMidiFlags(DAEapi: any) {
   });
   // Ability-scope flags not generated by per-ability loop
   // (advantage.save.all, advantage.check.all, etc. now generated by abilities loop with "all" key)
-  midiFlags.push(`flags.${MODULE_ID}.advantage.ability.all`);
+  booleanFormula(`flags.${MODULE_ID}.advantage.ability.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.ability.all`);
-  midiFlags.push(`flags.${MODULE_ID}.disadvantage.ability.all`);
+  booleanFormula(`flags.${MODULE_ID}.disadvantage.ability.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.ability.all`);
-  midiFlags.push(`flags.${MODULE_ID}.fail.ability.all`);
+  booleanFormula(`flags.${MODULE_ID}.fail.ability.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.ability.all`);
-  midiFlags.push(`flags.${MODULE_ID}.success.ability.all`);
+  booleanFormula(`flags.${MODULE_ID}.success.ability.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.ability.all`);
-  midiFlags.push(`flags.${MODULE_ID}.max.ability.save.concentration`);
+  untyped(`flags.${MODULE_ID}.max.ability.save.concentration`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.ability.save.concentration`);
-  midiFlags.push(`flags.${MODULE_ID}.min.ability.save.concentration`);
+  untyped(`flags.${MODULE_ID}.min.ability.save.concentration`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.ability.save.concentration`);
-  midiFlags.push(`flags.${MODULE_ID}.sharpShooter`);
+  booleanFormula(`flags.${MODULE_ID}.sharpShooter`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.sharpShooter`);
 
-  midiFlags.push(`flags.${MODULE_ID}.rollModifiers.damage.all.all`);
+  untyped(`flags.${MODULE_ID}.rollModifiers.damage.all.all`);
   Object.keys(GameSystemConfig.damageTypes).forEach(dt => {
-    midiFlags.push(`flags.${MODULE_ID}.rollModifiers.damage.all.${dt}`);
+    untyped(`flags.${MODULE_ID}.rollModifiers.damage.all.${dt}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.damage.all.${dt}`);
   })
-  midiFlags.push(`flags.${MODULE_ID}.rollModifiers.attack.all`);
+  untyped(`flags.${MODULE_ID}.rollModifiers.attack.all`);
 
   attackTypes.forEach(at => {
-    midiFlags.push(`flags.${MODULE_ID}.rollModifiers.attack.${at}`);
+    untyped(`flags.${MODULE_ID}.rollModifiers.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.rollModifiers.damage.${at}.all`);
+    untyped(`flags.${MODULE_ID}.rollModifiers.damage.${at}.all`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.damage.${at}.all`);
     Object.keys(GameSystemConfig.damageTypes).forEach(dt => {
-      midiFlags.push(`flags.${MODULE_ID}.rollModifiers.damage.${at}.${dt}`);
+      untyped(`flags.${MODULE_ID}.rollModifiers.damage.${at}.${dt}`);
       daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.damage.${at}.${dt}`);
     })
   });
   ["weapon", "spell", "tool", "feat"].forEach(it => {
-    midiFlags.push(`flags.${MODULE_ID}.rollModifiers.attack.${it}`);
+    untyped(`flags.${MODULE_ID}.rollModifiers.attack.${it}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.attack.${it}`);
-    midiFlags.push(`flags.${MODULE_ID}.rollModifiers.damage.${it}.all`);
+    untyped(`flags.${MODULE_ID}.rollModifiers.damage.${it}.all`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.damage.${it}.all`);
     Object.keys(GameSystemConfig.damageTypes).forEach(dt => {
-      midiFlags.push(`flags.${MODULE_ID}.rollModifiers.damage.${it}.${dt}`);
+      untyped(`flags.${MODULE_ID}.rollModifiers.damage.${it}.${dt}`);
       daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.damage.${it}.${dt}`);
     })
   })
-  midiFlags.push(`flags.${MODULE_ID}.actions.reactionsMax`);
+  untyped(`flags.${MODULE_ID}.actions.reactionsMax`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.actions.reactionsMax`);
-  midiFlags.push(`flags.${MODULE_ID}.actions.reactionsReset`);
+  untyped(`flags.${MODULE_ID}.actions.reactionsReset`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.actions.reactionsReset`);
-  midiFlags.push(`flags.${MODULE_ID}.actions.bonusActionsMax`);
+  untyped(`flags.${MODULE_ID}.actions.bonusActionsMax`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.actions.bonusActionsMax`);
-  midiFlags.push(`flags.${MODULE_ID}.actions.bonusActionsReset`);
+  untyped(`flags.${MODULE_ID}.actions.bonusActionsReset`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.actions.bonusActionsReset`);
-  // midiFlags.push(`flags.${MODULE_ID}.actions.reactionUsed`);
+  // nbs(`flags.${MODULE_ID}.actions.reactionUsed`);
   // daeFieldBrowserFields.push(`flags.${MODULE_ID}.actions.reactionUsed`);
 
   Object.keys(GameSystemConfig.abilities).concat(["all"]).forEach(abl => {
     // New consistent flag names (without .ability. prefix - matches attack/skill/tool pattern)
-    midiFlags.push(`flags.${MODULE_ID}.advantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.advantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.check.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.disadvantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.check.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.advantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.advantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.save.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.disadvantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.save.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.noAdvantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.check.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.noAdvantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.save.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.noDisadvantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.check.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.noDisadvantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.save.${abl}`);
-    // midiFlags.push(`flags.${MODULE_ID}.advantage.attack.${abl}`);
+    // bs(`flags.${MODULE_ID}.advantage.attack.${abl}`);
     // daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.attack.${abl}`);
-    // midiFlags.push(`flags.${MODULE_ID}.disadvantage.attack.${abl}`);
+    // bs(`flags.${MODULE_ID}.disadvantage.attack.${abl}`);
     // daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.attack.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.fail.ability.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.ability.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.ability.check.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.fail.ability.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.ability.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.ability.save.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.success.ability.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.success.ability.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.ability.check.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.success.ability.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.success.ability.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.ability.save.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.superSaver.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.superSaver.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.superSaver.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.semiSuperSaver.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.semiSuperSaver.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.semiSuperSaver.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.max.ability.save.${abl}`);
+    untyped(`flags.${MODULE_ID}.max.ability.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.ability.save.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.min.ability.save.${abl}`);
+    untyped(`flags.${MODULE_ID}.min.ability.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.ability.save.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.max.ability.check.${abl}`);
+    untyped(`flags.${MODULE_ID}.max.ability.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.ability.check.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.min.ability.check.${abl}`);
+    untyped(`flags.${MODULE_ID}.min.ability.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.ability.check.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.optional.NAME.save.${abl}`);
+    untyped(`flags.${MODULE_ID}.optional.NAME.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.save.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.optional.NAME.save.fail.${abl}`);
+    untyped(`flags.${MODULE_ID}.optional.NAME.save.fail.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.save.fail.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.optional.NAME.check.${abl}`);
+    untyped(`flags.${MODULE_ID}.optional.NAME.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.check.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.optional.NAME.check.fail.${abl}`);
+    untyped(`flags.${MODULE_ID}.optional.NAME.check.fail.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.check.fail.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.magicResistance.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.magicResistance.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.magicResistance.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.magicVulnerability.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.magicVulnerability.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.magicVulnerability.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.advantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.save.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.advantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.check.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.advantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.skill.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.save.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.check.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.skill.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.save.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.save.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.save.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.check.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.check.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.check.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.check.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.skill.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.advantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.advantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.skill.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.disadvantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.skill.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.noAdvantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.skill.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.noDisadvantage.skill.${abl}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.skill.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.skill.${abl}`);
-    const label = GameSystemConfig.abilities[abl]?.label ?? (abl === "all" ? "All" : abl);
+    const label = () => GameSystemConfig.abilities[abl]?.label ?? (abl === "all" ? "All" : abl);
     registerFlagLocalization(`flags.${MODULE_ID}.advantage.check.${abl}`, "advantage.check", label);
     registerFlagLocalization(`flags.${MODULE_ID}.disadvantage.check.${abl}`, "disadvantage.check", label);
     registerFlagLocalization(`flags.${MODULE_ID}.advantage.save.${abl}`, "advantage.save", label);
@@ -1328,39 +1414,100 @@ function setupMidiFlags(DAEapi: any) {
     registerFlagLocalization(`flags.${MODULE_ID}.noDisadvantage.skill.${abl}`, "noDisadvantage.abilitySkill", label);
   })
 
+  // Spell school save advantage/disadvantage flags
+  Object.keys(GameSystemConfig.spellSchools).forEach(school => {
+    booleanFormula(`flags.${MODULE_ID}.advantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.success.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.save.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.save.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.save.school.${school}`);
+    const label = () => GameSystemConfig.spellSchools[school]?.label ?? school;
+    registerFlagLocalization(`flags.${MODULE_ID}.advantage.save.school.${school}`, "advantage.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.disadvantage.save.school.${school}`, "disadvantage.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.noAdvantage.save.school.${school}`, "noAdvantage.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.noDisadvantage.save.school.${school}`, "noDisadvantage.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.fail.save.school.${school}`, "fail.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.success.save.school.${school}`, "success.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.grants.advantage.save.school.${school}`, "grants.advantage.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.grants.disadvantage.save.school.${school}`, "grants.disadvantage.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.grants.noAdvantage.save.school.${school}`, "grants.noAdvantage.save.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.grants.noDisadvantage.save.school.${school}`, "grants.noDisadvantage.save.school", label);
+
+    // Attack advantage/disadvantage per spell school
+    booleanFormula(`flags.${MODULE_ID}.advantage.attack.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.attack.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.attack.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.attack.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.attack.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.attack.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.attack.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.attack.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.attack.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.attack.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.attack.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.attack.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.attack.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.school.${school}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.attack.school.${school}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.school.${school}`);
+    registerFlagLocalization(`flags.${MODULE_ID}.advantage.attack.school.${school}`, "advantage.attack.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.disadvantage.attack.school.${school}`, "disadvantage.attack.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.noAdvantage.attack.school.${school}`, "noAdvantage.attack.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.noDisadvantage.attack.school.${school}`, "noDisadvantage.attack.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.grants.advantage.attack.school.${school}`, "grants.advantage.attack.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.grants.disadvantage.attack.school.${school}`, "grants.disadvantage.attack.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.grants.noAdvantage.attack.school.${school}`, "grants.noAdvantage.attack.school", label);
+    registerFlagLocalization(`flags.${MODULE_ID}.grants.noDisadvantage.attack.school.${school}`, "grants.noDisadvantage.attack.school", label);
+  })
+
   // advantage/disadvantage/fail/success.skill.all generated by skills loop with "all" key
   // max/min.skill.all kept here since per-skill max/min is replaced by core
-  midiFlags.push(`flags.${MODULE_ID}.max.skill.all`);
+  untyped(`flags.${MODULE_ID}.max.skill.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.skill.all`);
-  midiFlags.push(`flags.${MODULE_ID}.min.skill.all`);
+  untyped(`flags.${MODULE_ID}.min.skill.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.skill.all`);
   Object.keys(GameSystemConfig.skills).concat(["all"]).forEach(skill => {
-    midiFlags.push(`flags.${MODULE_ID}.advantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.advantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.skill.${skill}`);
-    midiFlags.push(`flags.${MODULE_ID}.disadvantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.skill.${skill}`);
-    midiFlags.push(`flags.${MODULE_ID}.noAdvantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.skill.${skill}`);
-    midiFlags.push(`flags.${MODULE_ID}.noDisadvantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.skill.${skill}`);
-    midiFlags.push(`flags.${MODULE_ID}.fail.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.skill.${skill}`);
-    midiFlags.push(`flags.${MODULE_ID}.success.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.success.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.skill.${skill}`);
-    // midiFlags.push(`flags.${MODULE_ID}.max.skill.${skill}`); replaced by core
-    // midiFlags.push(`flags.${MODULE_ID}.min.skill.${skill}`); replaced by core
-    midiFlags.push(`flags.${MODULE_ID}.optional.NAME.skill.${skill}`);
+    // bs(`flags.${MODULE_ID}.max.skill.${skill}`); replaced by core
+    // bs(`flags.${MODULE_ID}.min.skill.${skill}`); replaced by core
+    untyped(`flags.${MODULE_ID}.optional.NAME.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.skill.${skill}`);
     // Per-skill grants flags
-    midiFlags.push(`flags.${MODULE_ID}.grants.advantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.skill.${skill}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.skill.${skill}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.skill.${skill}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${skill}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${skill}`);
-    const label = GameSystemConfig.skills[skill]?.label ?? (skill === "all" ? "All" : skill);
+    const label = () => GameSystemConfig.skills[skill]?.label ?? (skill === "all" ? "All" : skill);
     registerFlagLocalization(`flags.${MODULE_ID}.advantage.skill.${skill}`, "advantage.skill", label);
     registerFlagLocalization(`flags.${MODULE_ID}.disadvantage.skill.${skill}`, "disadvantage.skill", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noAdvantage.skill.${skill}`, "noAdvantage.skill", label);
@@ -1373,48 +1520,48 @@ function setupMidiFlags(DAEapi: any) {
     registerFlagLocalization(`flags.${MODULE_ID}.grants.noAdvantage.skill.${skill}`, "grants.noAdvantage.skill", label);
     registerFlagLocalization(`flags.${MODULE_ID}.grants.noDisadvantage.skill.${skill}`, "grants.noDisadvantage.skill", label);
   })
-  midiFlags.push(`flags.${MODULE_ID}.advantage.deathSave`);
+  booleanFormula(`flags.${MODULE_ID}.advantage.deathSave`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.deathSave`);
-  midiFlags.push(`flags.${MODULE_ID}.disadvantage.deathSave`);
+  booleanFormula(`flags.${MODULE_ID}.disadvantage.deathSave`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.deathSave`);
-  midiFlags.push(`flags.${MODULE_ID}.noAdvantage.deathSave`);
+  booleanFormula(`flags.${MODULE_ID}.noAdvantage.deathSave`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.deathSave`);
-  midiFlags.push(`flags.${MODULE_ID}.noDisadvantage.deathSave`);
+  booleanFormula(`flags.${MODULE_ID}.noDisadvantage.deathSave`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.deathSave`);
-  midiFlags.push(`flags.${MODULE_ID}.deathSaveBonus`);
+  untyped(`flags.${MODULE_ID}.deathSaveBonus`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.deathSaveBonus`);
-  midiFlags.push(`flags.${MODULE_ID}.fail.deathSave`);
+  booleanFormula(`flags.${MODULE_ID}.fail.deathSave`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.deathSave`);
-  midiFlags.push(`flags.${MODULE_ID}.success.deathSave`);
+  booleanFormula(`flags.${MODULE_ID}.success.deathSave`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.deathSave`);
   // All tool .all entries generated by tools loop with "all" key
   Object.keys(GameSystemConfig.tools).concat(["all"]).forEach(tool => {
-    midiFlags.push(`flags.${MODULE_ID}.advantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.advantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.tool.${tool}`);
-    midiFlags.push(`flags.${MODULE_ID}.disadvantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.disadvantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.tool.${tool}`);
-    midiFlags.push(`flags.${MODULE_ID}.noAdvantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.noAdvantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.tool.${tool}`);
-    midiFlags.push(`flags.${MODULE_ID}.noDisadvantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.noDisadvantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.tool.${tool}`);
-    midiFlags.push(`flags.${MODULE_ID}.fail.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.tool.${tool}`);
-    midiFlags.push(`flags.${MODULE_ID}.success.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.success.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.tool.${tool}`);
-    midiFlags.push(`flags.${MODULE_ID}.max.tool.${tool}`);
+    untyped(`flags.${MODULE_ID}.max.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.tool.${tool}`);
-    midiFlags.push(`flags.${MODULE_ID}.min.tool.${tool}`);
+    untyped(`flags.${MODULE_ID}.min.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.tool.${tool}`);
     // Per-tool grants flags
-    midiFlags.push(`flags.${MODULE_ID}.grants.advantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.advantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.tool.${tool}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.disadvantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.tool.${tool}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noAdvantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.tool.${tool}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.tool.${tool}`);
+    booleanFormula(`flags.${MODULE_ID}.grants.noDisadvantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.tool.${tool}`);
-    const label = tool === "all" ? "All" : ((globalThis.dnd5e?.documents.Trait.keyLabel(`tool:${tool}`) as string) ?? tool);
+    const label = () => tool === "all" ? "All" : ((globalThis.dnd5e?.documents.Trait.keyLabel(`tool:${tool}`) as string) ?? tool);
     registerFlagLocalization(`flags.${MODULE_ID}.advantage.tool.${tool}`, "advantage.tool", label);
     registerFlagLocalization(`flags.${MODULE_ID}.disadvantage.tool.${tool}`, "disadvantage.tool", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noAdvantage.tool.${tool}`, "noAdvantage.tool", label);
@@ -1430,89 +1577,83 @@ function setupMidiFlags(DAEapi: any) {
   });
   // fix for translations
   ["vocal", "somatic", "material"].forEach(comp => {
-    midiFlags.push(`flags.${MODULE_ID}.fail.spell.${comp.toLowerCase()}`);
+    booleanFormula(`flags.${MODULE_ID}.fail.spell.${comp.toLowerCase()}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.spell.${comp.toLowerCase()}`);
   });
-  midiFlags.push(`flags.${MODULE_ID}.DR.all`);
+  untyped(`flags.${MODULE_ID}.DR.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.all`);
 
-  midiFlags.push(`flags.${MODULE_ID}.DR.non-magical`);
+  untyped(`flags.${MODULE_ID}.DR.non-magical`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.non-magical`);
-  midiFlags.push(`flags.${MODULE_ID}.DR.non-magical-physical`);
+  untyped(`flags.${MODULE_ID}.DR.non-magical-physical`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.non-magical-physical`);
-  midiFlags.push(`flags.${MODULE_ID}.DR.non-silver`);
+  untyped(`flags.${MODULE_ID}.DR.non-silver`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.non-silver`);
-  midiFlags.push(`flags.${MODULE_ID}.DR.non-adamant`);
+  untyped(`flags.${MODULE_ID}.DR.non-adamant`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.non-adamant`);
-  midiFlags.push(`flags.${MODULE_ID}.DR.non-physical`);
+  untyped(`flags.${MODULE_ID}.DR.non-physical`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.non-physical`);
-  midiFlags.push(`flags.${MODULE_ID}.DR.final`);
+  untyped(`flags.${MODULE_ID}.DR.final`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.final`);
-  midiFlags.push(`flags.${MODULE_ID}.damage.reroll-kh`);
+  untyped(`flags.${MODULE_ID}.damage.reroll-kh`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.damage.reroll-kh`);
-  midiFlags.push(`flags.${MODULE_ID}.damage.reroll-kl`);
+  untyped(`flags.${MODULE_ID}.damage.reroll-kl`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.damage.reroll-kl`);
 
   Object.keys(GameSystemConfig.damageTypes).forEach(key => {
-    midiFlags.push(`flags.${MODULE_ID}.DR.${key}`);
+    untyped(`flags.${MODULE_ID}.DR.${key}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.${key}`);
-    const label = GameSystemConfig.damageTypes[key]?.label ?? key;
+    const label = () => GameSystemConfig.damageTypes[key]?.label ?? key;
     registerFlagLocalization(`flags.${MODULE_ID}.DR.${key}`, "DR.damageType", label);
   });
 
-  midiFlags.push(`flags.${MODULE_ID}.DR.healing`);
+  untyped(`flags.${MODULE_ID}.DR.healing`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.healing`);
-  midiFlags.push(`flags.${MODULE_ID}.DR.temphp`);
+  untyped(`flags.${MODULE_ID}.DR.temphp`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.temphp`);
 
   // optional.NAME.attack/damage/check/save/skill.all generated by attack types/abilities/skills loops
-  midiFlags.push(`flags.${MODULE_ID}.optional.NAME.displayBonusRolls`);
+  untyped(`flags.${MODULE_ID}.optional.NAME.displayBonusRolls`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.displayChatCard`);
-  midiFlags.push(`flags.${MODULE_ID}.optional.NAME.label`);
+  untyped(`flags.${MODULE_ID}.optional.NAME.label`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.label`);
-  midiFlags.push(`flags.${MODULE_ID}.optional.NAME.skill.fail.all`);
+  untyped(`flags.${MODULE_ID}.optional.NAME.skill.fail.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.skill.fail.all`);
-  midiFlags.push(`flags.${MODULE_ID}.optional.NAME.count`);
+  untyped(`flags.${MODULE_ID}.optional.NAME.count`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.count`);
-  midiFlags.push(`flags.${MODULE_ID}.optional.NAME.countAlt`);
+  untyped(`flags.${MODULE_ID}.optional.NAME.countAlt`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.countAlt`);
-  midiFlags.push(`flags.${MODULE_ID}.optional.NAME.ac`);
+  untyped(`flags.${MODULE_ID}.optional.NAME.ac`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.ac`);
-  midiFlags.push(`flags.${MODULE_ID}.optional.NAME.criticalDamage`);
+  untyped(`flags.${MODULE_ID}.optional.NAME.criticalDamage`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.criticalDamage`);
-  midiFlags.push(`flags.${MODULE_ID}.optional.NAME.activation`);
+  untyped(`flags.${MODULE_ID}.optional.NAME.activation`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.activation`);
-  midiFlags.push(`flags.${MODULE_ID}.optional.NAME.force`);
+  untyped(`flags.${MODULE_ID}.optional.NAME.force`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.force`);
 
-  midiFlags.push(`flags.${MODULE_ID}.uncanny-dodge`);
+  booleanFormula(`flags.${MODULE_ID}.uncanny-dodge`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.uncanny-dodge`);
-  midiFlags.push(`flags.${MODULE_ID}.OverTime`);
+  untyped(`flags.${MODULE_ID}.OverTime`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.OverTime`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.ActivityOverTime`);
-  midiFlags.push(`flags.${MODULE_ID}.inMotion`);
+  booleanFormula(`flags.${MODULE_ID}.inMotion`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.inMotion`);
-  const damageTypes = Object.keys(GameSystemConfig.damageTypes);
-  for (let key of damageTypes) {
-    midiFlags.push(`flags.${MODULE_ID}.absorption.${key}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.absorption.${key}`);
-    const label = GameSystemConfig.damageTypes[key]?.label ?? key;
-    registerFlagLocalization(`flags.${MODULE_ID}.absorption.${key}`, "absorption", label);
-  }
-  midiFlags.push(`flags.${MODULE_ID}.fail.disadvantage.heavy`);
+  booleanFormula(`flags.${MODULE_ID}.fail.disadvantage.heavy`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.disadvantage.heavy`);
-  midiFlags.push(`flags.${MODULE_ID}.canFlank`);
+  booleanFormula(`flags.${MODULE_ID}.canFlank`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.canFlank`);
   /*
-  midiFlags.push(`flags.${MODULE_ID}.grants.advantage.attack.all`);
-  midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.attack.all`);
-  midiFlags.push(``);
+  bs(`flags.${MODULE_ID}.grants.advantage.attack.all`);
+  bs(`flags.${MODULE_ID}.grants.disadvantage.attack.all`);
+  bs(``);
 
-  midiFlags.push(``);
-  midiFlags.push(``);
+  bs(``);
+  bs(``);
   */
-  DAEapi.addAutoFields(midiFlags);
+}
 
+function setupMidiFlagEditors(DAEapi: any) {
   // Register pluggable OverTime editor with DAE's field editor API
   if (DAEapi.registerFieldEditor) {
     DAEapi.registerFieldEditor({
@@ -1702,10 +1843,7 @@ export function setupMidiStatusEffects() {
       id: "flanking",
       _id: getStaticID("flanking"),
       name: i18n("midi-qol.Flanking"),
-      changes: [
-        { key: "flags.midi-qol.advantage.attack.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
-        { key: "flags.midi-qol.advantage.attack.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
-      ],
+      changes: getFlankingStatusChanges(),
       img: "icons/svg/sword.svg",
       // effectData: { transfer: false },
       flags: { dae: { specialDuration: ["combatEnd"] } }
@@ -1722,10 +1860,7 @@ export function setupMidiStatusEffects() {
       id: "flanked",
       _id: getStaticID("flanked"),
       name: i18n("midi-qol.Flanked"),
-      changes: [
-        { key: "flags.midi-qol.grants.advantage.attack.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
-        { key: "flags.midi-qol.grants.advantage.attack.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
-      ],
+      changes: getFlankedStatusChanges(),
       img: "modules/midi-qol/icons/encirclement.svg",
       // effectData: { transfer: false },
       flags: { dae: { specialDuration: ["combatEnd"] } }
@@ -1736,4 +1871,49 @@ export function setupMidiStatusEffects() {
     midiFlankedEffect = effect;
     globalThis.MidiQOL.midiFlankedEffect = effect;
   });
+}
+
+function getFlankingStatusChanges(): object[] {
+  const bonus = configSettings.optionalRules?.flankingBonus ?? "advantage";
+  if (bonus === "advantage") {
+    return [
+      { key: "flags.midi-qol.advantage.attack.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
+      { key: "flags.midi-qol.advantage.attack.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
+    ];
+  }
+  // Fixed bonus: flanking status is visual-only; bonus computed per-target in recordFlankingBonuses
+  return [];
+}
+
+function getFlankedStatusChanges(): object[] {
+  const bonus = configSettings.optionalRules?.flankingBonus ?? "advantage";
+  if (bonus === "advantage") {
+    return [
+      { key: "flags.midi-qol.grants.advantage.attack.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
+      { key: "flags.midi-qol.grants.advantage.attack.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
+    ];
+  }
+  // Fixed bonus: flanked status is visual-only; bonus computed per-target in recordFlankingBonuses
+  return [];
+}
+
+export function updateFlankingStatusEffects() {
+  const flanking = CONFIG.statusEffects.find(e => e.id === "flanking") as any;
+  const flanked = CONFIG.statusEffects.find(e => e.id === "flanked") as any;
+  if (flanking) flanking.changes = getFlankingStatusChanges();
+  if (flanked) flanked.changes = getFlankedStatusChanges();
+
+  // Rebuild cached effect instances (only if statuses have been registered)
+  if (flanking) {
+    ActiveEffect.implementation.fromStatusEffect("flanking").then(effect => {
+      midiFlankingEffect = effect;
+      globalThis.MidiQOL.midiFlankingEffect = effect;
+    });
+  }
+  if (flanked) {
+    ActiveEffect.implementation.fromStatusEffect("flanked").then(effect => {
+      midiFlankedEffect = effect;
+      globalThis.MidiQOL.midiFlankedEffect = effect;
+    });
+  }
 }

@@ -31,8 +31,16 @@ export declare function isAoETargetable(targetToken: Token.Implementation, optio
     AoETargetType?: string;
     autoTarget?: string;
 }): boolean;
-export declare function templateTokens(templateDetails: foundry.canvas.placeables.MeasuredTemplate.Implementation, selfTokenRef?: TokenOrDocument | string | null | undefined, ignoreSelf?: boolean, AoETargetType?: string, autoTarget?: string): Token.Implementation[];
-export declare function selectTargets(this: Workflow | Activity | undefined, templateDocument: MeasuredTemplateDocument, data?: unknown, userId?: string): true | undefined;
+export declare function selectTargetsFromTemplates(templates: (MeasuredTemplateDocument | string)[], selfTokenRef?: TokenOrDocument | string | null | undefined, ignoreSelf?: boolean, AoETargetType?: string, autoTarget?: string): Token.Implementation[];
+/**
+ * Returns tokens inside a template without modifying game.user.targets.
+ * Accepts a MeasuredTemplate placeable, a MeasuredTemplateDocument, or a UUID string.
+ * Handles WalledTemplates, VolumetricTemplates, and standard template targeting.
+ * Note: When VolumetricTemplates is active, game.user.targets may be modified as a
+ * side effect of compute3Dtemplate — the returned array is still the authoritative result.
+ */
+export declare function computeTargetsFromTemplate(template: foundry.canvas.placeables.MeasuredTemplate.Implementation | MeasuredTemplateDocument | string, selfTokenRef?: TokenOrDocument | string | null | undefined, ignoreSelf?: boolean, AoETargetType?: string, autoTarget?: string): Token.Implementation[];
+export declare function computeTargetsFromTemplates(templates: (MeasuredTemplateDocument | string)[], selfTokenRef?: TokenOrDocument | string | null | undefined, ignoreSelf?: boolean, AoETargetType?: string, autoTarget?: string): Token.Implementation[];
 /**
  * Get currently selected tokens in the scene or user's character's tokens.
  * @returns {Token5e[]}

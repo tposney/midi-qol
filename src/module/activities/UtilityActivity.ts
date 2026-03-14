@@ -4,7 +4,7 @@ import { debugEnabled, i18n, warn, error, GameSystemConfig } from "../../midi-qo
 import { AugmentedEvent, Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
-import { areMidiKeysPressed, asyncHooksCall, isAutoFastForward } from "../utils.js";
+import { areMidiKeysPressed, callActivityHooks, isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { displayDSNForRoll } from "../utils.js";
 
@@ -96,13 +96,11 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
         return;
       }
       config.midiOptions ??= {};
-      config.midiOptions.fastForward ??= isAutoFastForward("damage", { workflow })
+      config.midiOptions.fastForwardDamage ??= isAutoFastForward("damage", { workflow })
       if (debugEnabled > 0) {
         warn("MidiUtilityActivity | rollFormula | Called", config, dialog, message);
       }
-      if (await asyncHooksCall("midi-qol.preFormulaRoll", workflow) === false
-        || await asyncHooksCall(`midi-qol.preFormulaRoll.${this.item.uuid}`, workflow) === false
-        || await asyncHooksCall(`midi-qol.preFormulaRoll.${this.uuid}`, workflow) === false) {
+      if (await callActivityHooks(this, "midi-qol.preFormulaRoll", workflow) === false) {
         console.warn("midi-qol | UtilityActivity | Formula roll blocked via pre-hook");
         return;
       }
@@ -112,8 +110,19 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
       const keys = {
         normal: areKeysPressed(config.event, "skipDialogNormal") || areKeysPressed(config.event, "skipDialogAdvantage") || areKeysPressed(config.event, "skipDialogDisadvantage")
       };
-      if (Object.values(keys).some(k => k)) dialog.configure = this.midiProperties?.forceRollDialog !== "always";
-      else dialog.configure ??= !config.midiOptions.fastForward || this.midiProperties?.forceRollDialog === "always";
+      if (Object.values(keys).some((k) => k)) dialog.configure = this.midiProperties?.forceDamageDialog !== "always";
+      else if (dialog.configure === undefined) {
+          switch (this.midiProperties?.forceDamageDialog) {
+            case "always":
+              dialog.configure = true;
+              break;
+            case "never":
+              dialog.configure = false;
+              break;
+            default:
+              dialog.configure = !(config.midiOptions?.fastForwardDamage ?? config.workflow?.workflowOptions.fastForwardDamage ?? false);
+          }
+      }
       if (workflow.rollOptions?.rollToggle) dialog.configure = !!!dialog.configure;
       const rollToggle = areMidiKeysPressed(config.event, "RollToggle");
       if (workflow) workflow.rollOptions.rollToggle = rollToggle;

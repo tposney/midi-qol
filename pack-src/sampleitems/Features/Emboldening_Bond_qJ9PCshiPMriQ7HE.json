@@ -1,0 +1,379 @@
+{
+  "name": "Emboldening Bond",
+  "type": "feat",
+  "img": "icons/magic/control/silhouette-hold-change-blue.webp",
+  "effects": [
+    {
+      "_id": "ZjUL6z2dhutiFxRk",
+      "changes": [
+        {
+          "key": "macro.itemMacro",
+          "mode": 0,
+          "value": "",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": 600,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "origin": "Item.Ey9NYAkSKTs0Kpva",
+      "transfer": false,
+      "flags": {
+        "dae": {
+          "stackable": false,
+          "macroRepeat": "startEveryTurn",
+          "specialDuration": [],
+          "transfer": false
+        },
+        "ActiveAuras": {
+          "isAura": false,
+          "radius": null,
+          "aura": "None",
+          "alignment": "",
+          "type": "",
+          "ignoreSelf": false,
+          "height": false,
+          "hidden": false,
+          "hostile": false,
+          "onlyOnce": false
+        }
+      },
+      "tint": "#ffffff",
+      "name": "Emboldening Bond",
+      "description": "",
+      "statuses": [],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/control/silhouette-hold-change-blue.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!qJ9PCshiPMriQ7HE.ZjUL6z2dhutiFxRk"
+    }
+  ],
+  "flags": {
+    "midi-qol": {
+      "onUseMacroName": "[preActiveEffects]ItemMacro",
+      "effectActivation": false,
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "AoETargetType": "any",
+      "AoETargetTypeIncludeSelf": true,
+      "autoTarget": "default",
+      "removeAttackDamageButtons": "default"
+    },
+    "itemacro": {
+      "macro": {
+        "data": {
+          "_id": null,
+          "name": "Emboldening Bond",
+          "type": "script",
+          "author": "devnIbfBHb74U9Zv",
+          "img": "icons/svg/dice-target.svg",
+          "scope": "global",
+          "command": "const version = \"0.9.52\";\ntry {\n    const effectData = {\n        changes: [\n            {key: \"flags.midi-qol.optional.emboldeningBond.attack\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.save\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.check\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.label\", mode: 5, value: \"Emboldening Bond\", priority: \"20\"},\n        ],\n        disabled: false,\n        duration: {rounds: 1, seconds: undefined, startRound: undefined, startTime: undefined, startTurn: undefined, turns: undefined},\n        icon: \"icons/magic/control/silhouette-hold-change-blue.webp\",\n        label: \"Emboldening Bond Bonus\",\n        tint: null,\n        transfer: false,\n        flags: {dae : {specialDuration: [\"turnStart\"]}}\n    }\n    \n    \n    if (args[0] === \"each\" || args[0] === \"on\") {\n        token = await fromUuid(args[1].tokenUuid)\n        token.actor.createEmbeddedDocuments(\"ActiveEffect\", [effectData])\n    }\n} catch (err)  {\n    console.error(`${args[0].itemData.name} - Emboldening Bond ${version}`, err);\n}",
+          "folder": null,
+          "sort": 0,
+          "permission": {
+            "default": 0
+          },
+          "flags": {}
+        },
+        "name": "Emboldening Bond 10.0.10",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "const version = \"10.0.10\";\ntry {\n    const effectData = {\n        changes: [\n            {key: \"flags.midi-qol.optional.emboldeningBond.attack.all\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.save.all\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.check.all\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.label.all\", mode: 5, value: \"Emboldening Bond\", priority: \"20\"},\n        ],\n        disabled: false,\n        duration: {rounds: 1, seconds: undefined, startRound: undefined, startTime: undefined, startTurn: undefined, turns: undefined},\n        icon: \"icons/magic/control/silhouette-hold-change-blue.webp\",\n        label: \"Emboldening Bond Bonus\",\n        tint: null,\n        transfer: false,\n        flags: {dae : {specialDuration: [\"turnStart\"]}}\n    }\n    \n    \n    if (args[0] === \"each\" || args[0] === \"on\") {\n        token = await fromUuid(args[1].tokenUuid)\n        token.actor.createEmbeddedDocuments(\"ActiveEffect\", [effectData])\n    }\n} catch (err)  {\n    console.error(`${args[0].itemData.name} - Emboldening Bond ${version}`, err);\n}",
+        "sort": 0,
+        "ownership": {
+          "default": 0
+        },
+        "flags": {},
+        "_stats": {
+          "systemId": null,
+          "systemVersion": null,
+          "coreVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null
+        }
+      }
+    },
+    "core": {},
+    "magicitems": {
+      "enabled": false,
+      "equipped": false,
+      "attuned": false,
+      "charges": "0",
+      "chargeType": "c1",
+      "destroy": false,
+      "destroyFlavorText": "reaches 0 charges: it crumbles into ashes and is destroyed.",
+      "rechargeable": false,
+      "recharge": "0",
+      "rechargeType": "t1",
+      "rechargeUnit": "r1",
+      "sorting": "l"
+    },
+    "cf": {
+      "id": "temp_qt0kn9os0vl",
+      "color": "#000000"
+    },
+    "midiProperties": {
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "rollOther": false,
+      "critOther": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "offHandWeapon": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "always",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "spellTemplateManager": {
+      "stmData": {
+        "ignoreDuration": false,
+        "spellTexture": "",
+        "useTexture": false,
+        "alpha": 50,
+        "coneOrigin": 1,
+        "loopAnimations": true
+      }
+    },
+    "dnd5e": {
+      "persistSourceMigration": true,
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "tidy5e-sheet": {
+      "section": "",
+      "actionSection": ""
+    },
+    "dae": {
+      "macro": {
+        "name": "Emboldening Bond",
+        "img": "icons/magic/control/silhouette-hold-change-blue.webp",
+        "type": "script",
+        "scope": "global",
+        "command": "const version = \"12.4.7\";\ntry {\n    const effectData = {\n        changes: [\n            {key: \"flags.midi-qol.optional.emboldeningBond.attack.all\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.save.all\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.check.all\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.label\", mode: 5, value: `${macroItem.name} bonus`, priority: \"20\"},\n        ],\n        disabled: false,\n        duration: {rounds: 1, seconds: undefined, startRound: undefined, startTime: undefined, startTurn: undefined, turns: undefined},\n        icon: \"icons/magic/control/silhouette-hold-change-blue.webp\",\n        label: \"Emboldening Bond Bonus\",\n        tint: null,\n        transfer: false,\n        flags: {dae : {specialDuration: [\"turnStart\"]}}\n    }\n    \n    if (args[0].macroPass === \"preActiveEffects\") {\n        await macroItem.deleteAllDependents();\n    }\n    if (args[0] === \"each\" || args[0] === \"on\") {\n        token = await fromUuid(args[1].tokenUuid)\n        if (args[0] === \"on\") {\n            const effect = fromUuidSync(args[1].effectUuid);\n            macroItem.addDependent(effect);\n        }\n        const createdEffects = await token.actor.createEmbeddedDocuments(\"ActiveEffect\", [effectData]);\n        await macroItem.addDependent(...createdEffects)\n    }\n} catch (err)  {\n    console.error(`${args[0].itemData.name} - Emboldening Bond ${version}`, err);\n}",
+        "author": "Zl1BOUaPLwDEujaL",
+        "ownership": {
+          "default": 3
+        },
+        "_id": null,
+        "folder": null,
+        "sort": 0,
+        "flags": {},
+        "_stats": {
+          "coreVersion": "12.331",
+          "systemId": "dnd5e",
+          "systemVersion": "4.0.4",
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null,
+          "compendiumSource": null,
+          "duplicateSource": null
+        }
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>Emboldeing Bond is not SRD so you will need to populate the text.</p><p><br />Implemented:<br />Rolling the feature gives targeted tokens an effect that grants a one use bonus at the start of their turn to add 1d4 to any attack/save.check and is then removed until the start of their next turn.</p><p>dnd5e v4<br />Not implemented: <br />     needing another bondee within 30 feet.</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "Midi 12.4.7",
+      "revision": 1,
+      "rules": "2024",
+      "book": "",
+      "page": "",
+      "license": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "",
+      "subtype": ""
+    },
+    "requirements": "",
+    "activities": {
+      "dnd5eactivity000": {
+        "_id": "dnd5eactivity000",
+        "type": "utility",
+        "activation": {
+          "type": "action",
+          "value": 0,
+          "condition": "",
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "ZjUL6z2dhutiFxRk"
+          }
+        ],
+        "range": {
+          "units": "ft",
+          "special": "",
+          "override": false,
+          "value": "30"
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "30",
+            "width": "",
+            "height": "",
+            "units": "ft"
+          },
+          "affects": {
+            "count": "@prof",
+            "type": "creature",
+            "choice": true,
+            "special": ""
+          },
+          "prompt": true,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "name": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    },
+    "identifier": "emboldening-bond-10010",
+    "enchant": {},
+    "prerequisites": {
+      "level": null,
+      "repeatable": false
+    },
+    "properties": [],
+    "advancement": [],
+    "cover": null,
+    "crewed": false
+  },
+  "_stats": {
+    "compendiumSource": "Item.Ey9NYAkSKTs0Kpva",
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782991287,
+    "modifiedTime": 1744024412909,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
+  },
+  "folder": "fZIl4G4qj3C894LI",
+  "_id": "qJ9PCshiPMriQ7HE",
+  "sort": 2900000,
+  "ownership": {
+    "default": 0,
+    "Zl1BOUaPLwDEujaL": 3
+  },
+  "_key": "!items!qJ9PCshiPMriQ7HE"
+}

@@ -13,9 +13,22 @@
                 <div class="form-group">
                     <label>{{localize "midi-qol.CheckFlanking.Name"}}</label>
                     <select name="optionalRules.checkFlanking" data-dtype="String">
-                        {{selectOptions checkFlankingOptions selected=configSettings.optionalRules.checkFlanking localize=true}}
+                        {{midiSelectOptions checkFlankingOptions selected=configSettings.optionalRules.checkFlanking localize=true}}
                     </select>
                     <div class="notes midi-qol-faint">{{{localize "midi-qol.CheckFlanking.Hint"}}}</div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "midi-qol.FlankingBonus.Name"}}</label>
+                    <select name="optionalRules.flankingBonus" data-dtype="String">
+                        {{selectOptions flankingBonusOptions selected=configSettings.optionalRules.flankingBonus localize=true}}
+                    </select>
+                    <div class="notes midi-qol-faint">{{{localize "midi-qol.FlankingBonus.Hint"}}}</div>
+                </div>
+                <div class="form-group">
+                    <label>{{localize "midi-qol.ShowFlankingHighlight.Name"}}</label>
+                    <input type="checkbox" name="optionalRules.showFlankingHighlight" data-dtype="Boolean"
+                        {{checked configSettings.optionalRules.showFlankingHighlight}} />
+                    <div class="notes midi-qol-faint">{{{localize "midi-qol.ShowFlankingHighlight.Hint"}}}</div>
                 </div>
                 <div class="midi-qol-box">
                     <div class="form-group">
@@ -24,7 +37,8 @@
                             {{selectOptions InvisAdvantageOptions selected=configSettings.optionalRules.invisAdvantage localize=true}}
                         </select>
                         <ul>
-                            <li class="notes midi-qol-faint">{{{localize "midi-qol.InvisAdvantage.Hint"}}}</li>
+                            <li class="notes midi-qol-faint">{{{localize "midi-qol.RAW2014Invisible.Hint"}}}</li>
+                            <li class="notes midi-qol-faint">{{{localize "midi-qol.RAW2024Invisible.Hint"}}}</li>
                             <li class="notes midi-qol-faint">{{{localize "midi-qol.CantSeeAdvantage.Hint"}}}</li>
                         </ul>
                     </div>

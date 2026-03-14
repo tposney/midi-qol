@@ -1,8 +1,250 @@
+### 13.0.55
+* Added spell school-based advantage/disadvantage flags for attack rolls: `flags.midi-qol.advantage.attack.school.{school}`, `disadvantage.attack.school.{school}`, `noAdvantage.attack.school.{school}`, `noDisadvantage.attack.school.{school}`, and the corresponding `grants.*` variants. These complement the existing save school flags added in 13.0.52.
+
+### 13.0.54
+* Fix for AC display in hit card being incorrect for some flags affecting target ac/to hit bonuses.
+* Fixed fast-forward for utility rolls, fixed activity range when reach is overridden, use utility formula name if provided instead of activity title for roll result (MR !409). Thanks @elwin.
+
+### 13.0.53
+* Weapons attack single target setting now correctly enforces single target for weapons with no target specification
+* Fix false-positive Flash Rolls detection in getAdvantageSourceInfo (MR !406). Thanks @Carolingian.
+* Fix for error being thrown on CONFIG.specialStatusEffects.INVISIBLE being set to null.
+* Some changes to support the next version of macro autocomplete.
+
+
+### 13.0.52
+**Bug Fixes**
+* Fix for skill/tool checks when showing the configuration dialog to allow choosing the ability to use, matches dnd5e functionality.
+* For check activities you can now specify no skill/tool or ability, in which case midi will just do a normal d20 roll and compare against the dc.
+* If a utility activity has no damage, but the other activity does and the other activity condition prevents it from firing, midi would loop endlessly trying to roll damage until the failsafe cut in and the workflow is aborted.
+* Fix attack/save advantage mode label on chat cards showing the wrong mode after re-render. The displayed label now uses the resolved roll result rather than the pre-roll tracker state. (MR !407, @thatlonelybugbear).
+* The isAttacked special duration will only fire for activities that have an attack roll. It will now fire only when the attack roll completes, previously it was also checked at other points in the workflow, after the damage roll completed for example.
+* Reinstate gm sees all whispered messages setting, accidentally removed in 13.0.39.
+* Fix for another race condition in roll statistics that would cause some roll data to get dropped.
+* Fix for complete activity use returning early which could impact targeting for cast spells, especially AoE spells cast as a sequence of completeActivityUse or reaction spells cast from an item.
+* Fix for an error where midi's completeActivityUse was not clearing a timeout that would restore targets randomly after the activity completed.
+* If you are calling activity.use/item.use, setting config.midiOptions.spellLevel will now correctly cast the spell at the specified level.
+
+**New Features**
+* MidiQOL.sizeNumeric, which returns 0,1,2,3,4,5 for Tiny, Small, Medium, Large, Huge and Gargantuan sizes. 
+* Added sizeNumeric to getRollData. 
+* Also available in condition evaluation
+  sizeNumeric(traits.size) >= sizeNumeric("lg")
+  traits.sizeNumeric >= sizeNumeric("lg")
+  sizeNumeric(traits.size) >= sizeNumeric("large")
+  target.traits.sizeNumeric > sizeNumeric(traits.size) 
+* Added flags.midi-qol.advantage.save.school.nec, etc to allow saves against particular spell schools. Flags added are advantage/disadvantage/noAdvantage/noDisadvantage/fail/success,grants.advantage, grants.noAdvantage, grants.disadvantage, grants.noDisadvantage.
+* Added flags.midi-qol.bloodSense mode range. When enabled the creature with the flag set does **not** suffer disadvantage from hidden/invisible creatures if they are not at full hp and are withing the range (does not work with 2014 rules, where the invisible condition automatically grants disadvantage even if the target can be seen).
+* 13.0.52 is tentatively marked as compatible with dnd5e 5.3. It requires a dae update as well. Midi should automatically adapt if you 5.3 installed.
+- significant changes to damage handling (in dnd5e 5.3), so there might be bugs there.
+- support for damage to max hit points (tempmax).
+- change in the display of advantage rolls
+* Midi sample items now records version numbers which means it is compatible with CPR medkit (requires adding the midi sample items compendium to the search list in CPR) and will track changes to items when you medkit the item/actor.
+  - I'd recommend that you give midi's sample items a higher compendium search number than the rest of the automation libraries, since you probably want those items in preference to midi's sample items.
+* All sample spells are now 2024 versions, mostly rewritten.
+  - Added some spells for levels 7-9:
+    - **7th Level**: Delayed Blast Fireball, Divine Word, Finger of Death, Prismatic Spray, Regenerate, Reverse Gravity
+    - **8th Level**: Befuddlement, Power Word Stun
+    - **9th Level**: Foresight, Imprisonment, Meteor Swarm, Power Word Kill, Shapechange, Storm of Vengeance, True Polymorph, True Resurrection, Weird
+  - Notable: Finger of Death will summon the zombie if the target dies, Prismatic Spray handles all the colours, Storm of Vengeance fully automates rounds 1-10 (be warned the template it places is **HUGE**), Mass Heal allows proper apportionment of healing.
+
+**For developers**
+* Midi's sample items is now build from pack-src by default, I have also structured the items into a folder structure to make it easier for developers to submit changes/browse for items as needed
+* All midi-qol hooks, now call the preMades version as well. Also call the midi-qol hooks with the workflowId, which is almost always the chart card uuid.
+* Added four new hooks, midi-qol.preSetReactionUsed, midi-qol.preSetBonusActionUsed, midi-qol.setBonusReactionUsed, midi-qol.setReactionUsed, all pass the same args actor, reactionEffect. The reaction effect is "live" so modifications via updateSource will be applied to the effect when it is created on the actor and the hooks are called via aysncHooksCall so they can await actions, like doing a Roll.
+* `WorkflowOptions` now accepts `templateUuid` and `coverOrigin: { x, y, elevation? }`, both passable via `completeActivityUse` as `{ midiOptions: { workflowOptions: { templateUuid, coverOrigin } } }`.
+  - `templateUuid` sets the workflow's template UUID (e.g., for activities that reference a previously-placed template).
+  - `coverOrigin` sets the origin point for DEX save cover calculations, overriding both template center and caster position. Useful when the template may be deleted by the time saves are rolled.
+  
+### 13.0.51
+**Bug Fixes**
+* Fix for not respecting target type settings when using levels volumetric templates.
+* Fix for AoE templates setting targets for all players, not just the client that rolled the item.
+* Fix for some template placements incorrectly including some tokens in the cover save bonus.* Various other fixes for template targeting not correctly recording targets.
+* When rolling a self target feature (for example action surge) the user's targets switch to self, which breaks the usage pattern of attack, action surge, attack, since the second attack will target the attacker (targets get swapped to the action surger).
+  - Midi now reverts targets back to what they were before the slef target activity ran.
+  - Midi should now remember the target you had selected before doing action surge, allowing attack, action surge, attack without needing to retarget.
+* More changes to cover calculation.
+  - Midi will now always check the configured cover module and use the "best" cover of the token status and what the module returns.
+  - Fix for midi using simple cover to check if a token can be hit or not, midi was being more restrictive than the cover module setting. Mid defaults to using the cover module setting.
+  - Cover display on the hits result display has been changed. Reactions, cover and flanking are now indicated by icons.
+  - The AC display is now just the final AC and you can hover over the ac total to see the breakdown of the components.
+  - There seems to be an incompatibility between simplecover5e and levels that makes means midi gets the wrong cover values if wall-height is active and midi is using simplecover5e to determine cover.
+* Fix for not properly processing advantage/disadvantage set in the roll configuration dialog. If the player changes advantage/disadvantage in the dialog, midi now syncs the tracker with the player's choice.
+* Fix for advantage/disadvantage condition expressions using the actor's own token as `target` instead of the opposing entity (e.g., the defender for attacks, the caster for saves).
+* Fix for `fail.attack`, `success.attack`, and `grants.attack.success/fail` condition flags incorrectly seeing the attacker's data as `target` instead of the actual target in condition expressions.* Fix for flanked not correctly setting flanked on diagonals when using perimeter distance measurement.
+* Fix for roll statistics dropping some rolls from recording. Rewrote stats recording so that clients send raw roll data to the GM which applies increments to a single authoritative copy, eliminating race conditions when multiple players roll simultaneously.
+* Merged target confirmation improvements (MR !405) - thanks @Elwin
+  - Target validation now runs on initial render and on every target change, filtering out invalid targets (defeated, wrong disposition for enemy/ally-only activities, excluded targets from workflow options).
+  - Targets are no longer re-rendered if the target set hasn't actually changed.
+* Fix for perimeter distance LoS check being too permissive, allowing attacks through walls in some multi-square token configurations. Replaced custom extreme-point geometry with `testCollision` ray casting using 17 boundary test points from attacker center to target, matching Foundry's native `_canSenseModes` approach.
+* Fix for DummyWorkflow not storing the actor passed to its constructor, causing downstream errors when `this.actor` was accessed (the base Workflow getter derives actor from `this.activity` which can be undefined for DummyWorkflow).
+* Fix for `initializeVision` using `.set()` instead of `.add()` when attaching vision sources during canSee checks, which caused the vision source not to be marked as attached.
+* Fix for `setupCanSeeSense` skipping vision re-initialization for target tokens that had stale LoS data from prior workflow checks. Now only skips re-initialization for the attacker token; targets are always freshly initialized.
+
+**New Features**
+* Added Region as a supported parent type in the dependent document tracking system. Deleting a region now cascade-deletes its dependents, matching the existing behavior for templates, tokens, and lights.
+* Since dnd5e 2024 has dropped flanking/flanked as an optional rule, it seemed like a good idea to double down on flanking support by adding a new flanking mode; rather than giving advantage there is now an option for flanking to grant a numeric bonus to the attack roll, set in the optional rules tab.
+  - Since advantage applied to the attack roll it is an all or nothing process (all targets are attacked at advantage or none are).
+  - With a per token numeric value for flanked/flanking midi can apply the bonus per token when adjudicating hits, which is does by reducing the target AC by the flanking/flanked bonus.
+  - The hits display card indicates flanked/flanking for each target.
+  - I think the flanking solution with a fixed bonus (of your choice) is a much better solution than the advantage route, and makes advantage still a much better thing to get, and suggest trying it.
+  - If using CPR and apply midi effects and switching to a fixed bonus, you may need to edit the CPR effects for flanking/flanked to remove the advantage changes from the effect. CPR makes a copy of the effects and thereafter does not change them.
+* Added support (preliminary) for flanking on hex grids. Midi does not use the RAW dnd5e rules for flanking, it uses a simplified geometric approach which is nearly the same.
+* Added a flanking/flanked visualisation option to midi. If enabled (from the optional rules tab) when you target a creature and select an adjacent token midi will highlight the squares/hexes that would provide flanking/flanked if occupied by an ally.
+  - It's moderately expensive so not recommended for game play, but can be useful to adjudicate disputes in game. (i.e. the gm enables it and then can check what midi thinks the right squares for advantage are).
+
+**For developers**
+* Since midi defers creating the chat card when rolling saves/skill checks etc, rolls[0].parent will be undefined in the dnd5e.rollSavingThrow hook. I've updated midi so that for the saving throw chatCard, message.getOriginatingMessage() will now correctly return the message that triggered the save and for Hooks.on("dnd5e.rollSavingThrow", roll), roll.options.originatingMessage is the id of the chat card that caused the roll to be initiated.
+* Added MidiQOL.apps.xxxx which contains each of the midi-qol dialogs in case anyone needs to access them.
+* DummyWorkflow now correctly records the actor for the workflow, meaning that item macros in optional.name rolls will be able to proceed normally.
+
+**Breaking Changes**
+* sourceActor/sourceToken renamed to grantsActor, grantsToken to reflect what they are actually used for. The actor/token that should be used for grants flags, the target for attacks and the caster for saves.
+
+### 13.0.50
+**Bug Fixes**
+  * Fix for AoE targeting not respecting target restrictions (like enemy only).
+  * Switched the 'no reaction condition specified" from isAttacked to isHit which is probably better and will stop a pile of items not working properly anymore.
+  * For overtime effects that specify no saveCount or failCount, midi will default them to being saveCount=1- (i.e. remove on the first successful save)
+
+* Some more changes to cover....
+  - If an actor has a cover status [actor.statuses.has("coverHalf") or coverThreeQuarters or coverTotal] set midi does **no** cover calculations and assumes that that actor.coverBonus/attributes.ac.cover reflects the bonus and that dex saving throw bonus has been set as well.
+  - When a saving throw is made with cover the 1/2, 3/4 symbols will be added next to the saving throw total, like it does for attack roll ac.
+  - Midi now uses the values stored in CONFIG.DND5E.statusEffects coverHalf and coverThreeQuarters when applying cover values itself.
+
+### 13.0.49
+**Bug Fixes**
+* Fixed "Place Measured Template" button being hidden on chat cards after foundry reload. (dnd5e hides the button when canvas isn't ready; midi now overrides this to only check user permission.)
+* Improved unchecked checkbox visibility in dark theme.
+* Fix for troubleshooter overwriting settings throwing an error.
+* Fix for displaying Dice So Nice rolls twice in various circumstances. An accidental side effect of getting rid of the duplicate (Advantage) (Advantage) display.
+* Fixed a potential error with double counting cover. 
+  - If a module sets the cover status on an actor, dnd5e will return the adjusted ac in ac.value. Midi was ignoring that and going ahead and computing cover itself and potentially double counting the ac bonus. (SimpleCover5e is a module that set actor.statuses to reflect cover).
+  - If there is a cover status (coverHalf, coverThreeQuarters, or coverTotal) set on the actor midi no longer does any cover calculations on the actor assuming the ac value returned in flags.dnd5e.targets.ac is correct, i.e. includes cover. For "normal" cover situations that will be the case.
+  - Midi will take account of a cover value of null indicating full cover.
+  - Midi now records target AC on the dnd5e.postRollConfiguration hook, so if you are making changes to flags.dnd5e.targets you need to do so on a hook before then.
+* When displaying hits, if the target has 1/2, 3/4 or total cover status on an actor.status midi will flag that in the display, via 1/2 or 3/4 dnd5e icon on the left of the target AC and the infinity symbol if full cover.
+  - If midi calculates the cover bonus it will be displayed as if was before, i.e. AC +2/5/99 for 1/2, 3/4 or full cover. This is intentional so you can know how the cover value was chosen.
+* Fixed workflow actor being undefined when restoring a workflow from a chat card. The actor is now always derived from the workflow's activity rather than being stored separately.
+* Added missing compatibility layer for revised rollAbilitySaveV2 in GMAction.
+* Made the ability/skill/tool arrays optional, so you just need to pass the ones you need to pass.
+
+**Changes**
+* Non-AoE activities with formula-based target counts (e.g. Bless upcast: `3 + @scaling`) now defer target confirmation until after activity consumption, so the scaled target count is respected.
+* Fixed flag localization in the DAE effect editor — midi-qol flag names now display correctly.
+* Midi-qol boolean flags (advantage, disadvantage, fail, success, etc.) now use DAE's new `BooleanFormulaField` class instead of the removed `booleanString` type. Multiple active effects targeting the same flag now correctly compose with `||` (ADD/UPGRADE) and `&&` (MULTIPLY/DOWNGRADE). Requires DAE 13.0.22+.
+
+**Breaking Changes**
+* Removed deprecated `flags.midi-qol.absorption.{damageType}` flags. Use `system.traits.da.{damageType}` directly instead.
+* Removed deprecated `flags.midi-qol.advantage.ability.save.{ability}` and `flags.midi-qol.advantage.ability.check.{ability}` flags (and their disadvantage equivalents). Use `flags.midi-qol.advantage.save.{ability}` and `flags.midi-qol.advantage.check.{ability}` instead.
+  - The `.ability.` prefix was redundant and inconsistent with the attack/skill/tool flag naming pattern.
+  - DAE field mappings that silently remapped these flags have also been removed.
+* Reaction activities with no use condition now default to `reaction === "isAttacked"`, ensuring they only apply once. Activities with an explicit use condition are unchanged.
+
+### 13.0.48
+* Remove debug console.error statements left in by mistake. Thanks @Elwin
+
+### 13.0.47
+**Bug Fixes**
+* Fix for [object object] in some more drop down settings for midi-qol active effect panel.
+* Fix for optional bonus flags (optional.XXX.damage) being applied to other activity damage rolls as well as the primary damage roll, it is now only applied to the primary activity's damage roll.
+* Fix for some off by one errors wredhen placing templates at max range.
+* For cast activities, unless the cast activity overrides the activation type, the activation type of the linked spell will be used to determine reactions.
+  - The use condition of both the cast activity **and** the linked spell will be used to determine if the cast activity can fire or not.
+  - This means you can make a non-reaction spell in to a reaction cast activity, by overriding the activation type in the cast activity and setting it to reaction.
+  - You can turn a reaction spell into a non-reaction activity by overriding the activation type on the cast activity to "action" or similar.
+  - If you don't override the activation type in the cast activity, the activation type of the linked spell will be used **ignoring** the activation type on the cast activity. This ones for you @Moto
+
+**New Features**
+* Added half-grid/full-grid position snapping setting from template placement. Defaults to half-grid (1/2 a grid square, so centers grid intersections and 1/2 way along segments), but it seems RAW is full grid, however core foundry/dnd5e is to snap to half-grid.
+* Auto targeting now goes via a Hook which means it should play more nicely with other modules.
+  - This means you need to decide which module is responsible for template auto targeting.
+  - You need to set each module to do auto targeting as needed, usually just one module should do auto targeting.
+  - The one exception to this is walledTemplates. You can either just choose which modules has autTargeting enabled, or you can disable autoTargeting in walledTemplates and enable the walledTemplates setting in midi's workflow tab.
+* Cast activities now spawn a workflow. The workflow is very limited and only calls the "preTargeting", "preItemRoll" and "dnd5e.preActivityUse" hooks/macros, then hands off to the spell.use activity (via dnd5e's cast activity).
+  - Subject to feedback I can look at increasing the hooks being called, but remember hooks/macros may get called twice, once in each workflow.
+* Boolean-intent midi flags now compose when multiple active effects target the same flag using ADD or MULTIPLY mode. 
+  * Requires DAE 13.0.21 which implements support for boolean intent fields.
+  - ADD mode composes values with `||` (OR — either condition grants the flag).
+  - MULTIPLY mode composes values with `&&` (AND — all conditions required).
+  - Previously, Foundry's default string concatenation produced incorrect values like `"trueattributes.hp.value < 10"` instead of proper conditional expressions.
+  - For example 
+```
+    flags.midi-qol.advantage.all ADD attributes.hp.value === attributes.hp.max
+    flags.midi-qol.advantage.all ADD attributes.hp.value < 10
+```
+    will give advantage to all rolls if hp is at max or less than 10 and flags.midi-qol.advantage.all will be
+```
+    attributes.hp.value === attributes.hp.max || attributes.hp.value < 10
+```
+  - Probably more importantly you can compose effects that grants advantage to different creature types without having to create some omnibus feature to cover all of them.
+  - Affected flags: `advantage.*`, `disadvantage.*`, `noAdvantage.*`, `noDisadvantage.*`, `fail.*`, `success.*`, `critical.*`, `noCritical.*`, `fumble.*`, `noFumble.*`, `grants.advantage.*`, `grants.disadvantage.*`, `grants.noAdvantage.*`, `grants.noDisadvantage.*`, `grants.critical.*`, `grants.noCritical.*`, `grants.fumble.*`, `grants.noFumble.*`, `grants.attack.success.*`, `grants.attack.fail.*`, `magicResistance.*`, `magicVulnerability.*`, `superSaver.*`, `semiSuperSaver.*`, `absorption.*`, `potentCantrip`, `sculptSpells`, `carefulSpells`, `sharpShooter`, `ignoreNearbyFoes`, `neverTarget`, `uncanny-dodge`, `inMotion`, `canFlank`, `fail.spell.vocal/somatic/material`, `fail.disadvantage.heavy`, `initiativeAdv/Disadv/NoAdv/NoDisadv`, `advantage/disadvantage.concentration`, `noAdvantage/noDisadvantage.concentration`, `advantage/disadvantage.deathSave`, `noAdvantage/noDisadvantage.deathSave`, `fail/success.deathSave`.
+
+### 13.0.46
+**Bug Fixes**
+* Fix for [object object] in some drop down settings for midi-qol active effect panel.
+
+### 13.0.45
+**New Features**
+  * When placing templates for items that have a range specified, the movement of the template will be constrained to be no more that the range from the user of the item.
+	  - This is enabled via the same setting for constraining cone/rays to be anchored to the token, now renamed to Constrain Template Placement.
+  * Added some extended helper text for some select options, since the existing explanatory text is limited.
+    - Extended helper text is displayed when you hover over the option.
+    - This has not been implemented everywhere, so more changes over time.
+  * The saving throw results panel, now includes an ? if anything contributed to the target having advantage/disadvantage, much like on the attack roll display.
+
+**Bug Fixes**
+* Fix for player's damage card being shown to the GM.
+* Fix for Ability checks always adding save modifiers.
+* Fix for ignoring alt/ctl when rolling from the character sheet.
+* Fix for overtime effects not properly processing failCount.
+  - You can unset permanent from the overTime editor to make the effect "live" again.
+  - Fixed scrolling misbehaviour in the overtime editor.
+* Fix so that +self (include caster) and -self (exclude caster) in emanation no template spells work the way they are supposed to. 
+  - default is to include self if nothing is specified.
+* Overtime editor supports multi select for ability checks, like saves and skills.
+* Cleaned up overtime action save prompts to use the new multi select save/check/skill/tool dialog.
+* Added a field to the overtime properties on the midi-qol tab to support rolling the activity as either the source actor (the one who has the activity on one of their items) or as the target.
+* Added a deprecated getter for workflow.saveRolls to ease transition.
+
+**Experimental**
+* Some changes to measuring distance.... All settings now on the mechanics tab.
+  * Three modes, default (foundry token center to token center distance measure), Grid square center (measure from the center of all grid squares covered by the token) and token perimeter (distances are measured as the shortest distance between the the two token perimeter polygons that approximate the token shape - supports all foundry token shapes).
+    - If your core measurement setting is exact (whether on gridded or gridless scenes and independent of your gridded gridless setting) you should use token perimeter as your distance measure. The most noticeable outcome of using perimeter distance is for tokens that are touching on corners, when using exact measurement, both core foundry and center squares will report the tokens are out of range for a melee attack, with perimeter measurement they will be in range of each other, no fudge factor required. The fudge factor is just to allow for lazy placement; how close the tokens need to be before they are considered touching, instead of also accounting for diagonal measurement.
+    - If you play on gridded scenes (or gridless scenes with gridded gridless set) and equidistant core foundry distance measure (or similar), use grid square centers and no fudge factor. Midi will snap each point it considers to the nearest grid square which means a fudge factor is not required.
+    - If playing on gridless scenes without gridded gridless set use either foundry default or token perimeter (with a fudge factor). Token perimeter is "better" since it is closer to what you'd expect adjacent tokens to be
+  * When measuring where an anchored template (cone/ray) can be placed, or restricting how far a template can be placed from a token, token perimeter measurement is **always** used.
+  * Token perimeter will always return a minimum distance between tokens of 5 feet (or whatever the grid setting is) since adjacent tokens in dnd5e are considered to be 5 feet apart.
+* Added active modules tracking to troubleshooter/midi settings data.
+  - When loading settings midi will prompt you if any of the modules that were active when the data was saved are not active.
+  - Troubleshooter now has a review modules button that checks current versus saved modules.
+  - Looking for feedback on the value of this feature.
+
+### 13.0.44
+* Skipped because of the inadvertent release of a beta 13.0.44
+
 ### 13.0.43
+This is a fairly substantial update so don't update just before game time. You have been warned.
+
+**Oops** It turns out that a number of features listed in the 13.0.42 release in fact did not make it in due to an error on my part with the release process. My apologies. All of the 13.0.42 features/bug fixes are definitely in this release as well as a few more (see below).
+
 **New Features**
 * **Breaking** Auto fast forwarding rolls (skipping dialog) is now specified the same way for players and GMs on their own tab. There is a new multi select that lets you choose which rolls will be fastforwarded by default for both the player and the gm. Midi attempts to migrate your existing settings, but you should check.
   - I know a skill roll is a type of ability check, but having a separate setting gives you more control, so you need to set skill separately from ability roll.
-* New RAW (2024) invisibility advantage/disadvantage mode that only relies on being able to see the target.
+* Support for multiple saves, e.g. a save activity that specifies a dex or con save, or an athletics/acrobatics check. 
+  - If you are using 3rd party modules to roll the saves (Monks/Flash Rolls/Rippers Epic Rolls) this is unsupported and defaults to the first roll.
+  - If the player/gm is prompted for via a roll dialog in the workflow settings  there is a new drop down that allows selection of the desired roll.
+  - The roll with the highest modifier (includes advantage/disadvantage at +/-3.325) will be auto selected, so usually the player will usually just have to press the highlighted button, advantage/disadvantage/normal will be highlighted as required. 
+  - If the save is being auto rolled (no dialog) midi will select a roll with the highest modifier including advantage/disadvantage at +/- 3.325.
+  - Only supports saves of the same type, so you can't have a skill and a tool roll in the same save, multiple skills fine, multiple tools fine, multiple saves fine, but if mixed will select just the first in the list.
+  When there is a choice of rolls the roll tooltip (hover over the roll total on the saves display) will display the roll type that was used.
+* Support for multiple templates. Items that specify multiple templates (meteor storm etc) will now collect targets from each template placed. 
+  - Backing out of placing all templates will terminate the template placement and midi will wait until you successfully place all templates.
+  - A token can only be targeted once, no matter how many templates overlap on the token.
+  - This has required a significant refactor of the template placement code so there will be bugs.
+* New option, anchor ray/cone templates, default enabled. If enabled (on the misc tab) when you use an activity with a ray or cone template (range self) the template will be attached to the edge of your token. You can move the mouse to set the direction of the template, but it will always be anchored to the edge of your token.
+* New RAW (2024) invisibility advantage/disadvantage mode that only relies on being able to see the target - cheekily the same as the midi homebrew option.
 * Midi-qol tab property, force config dialog, now overrides the thrown weapon property check.
 * Revived the roll statistics function. Now accessible from the main midi-qol settings panel and tracks a few more things.
   - For multi target items, e.g. fireball, the total damage is the damage rolled * the number of targets and the average damage is the sum of the applied damage. So unlike weapon attacks which is effectively the damage per roll, AoE can have much higher damage due to the multiple targets.
@@ -11,29 +253,35 @@
 
 **Bug Fixes**
 * Advantage Attribution now follows the same visibility rules as the attack roll formula. If players are not allowed to see the formula, they can't see the attack advantage attribution.
+* Fix for some errors in the dnd5e damage drawer that had crept in.
+* Fix for deleting the wrong damage part when deleting a damage part from an attack activity.
+
+**Merged Contributions**
+* Allow easy logging of sandbox evaluation data via `MidiQOL.logEvaluationData = true` (MR !396, thanks @thatlonelybugbear).
+* Updated pt-BR localization (MR !398, thanks @Kharmans).
+* Optional Bonus Value: critical — allows optional bonuses to force critical on attacks, damage, checks, saves, and skills (MR !399, thanks @baconnugget).
+
+**Others**
+* Migrated several standalone module settings into the midi-qol config panel for easier discovery:
+  - **Preferred GM** moved to the GM tab.
+  - **Critical Damage** (player and GM) moved to the Workflow tab, Damage section.
+  - **Colored Borders** moved to the Misc tab, near the other highlighting/display settings.
+  - Existing values are automatically migrated on first load, I think, but you should check. The old settings are hidden from the Foundry module settings page.
+* A rework of advantage attribution display, uses a localized string explaining the source. Feedback on the string choices welcome.
+  - This reduces by several thousand the number of fields translators need to worry about.
+  - This feeds through to better/different explanatory text in the dae field browser.
+  - **Unless there is any major push back I plan to remove the legacy attribution in a soon to be forthcoming release**.
+* **Breaking** I've reworked the chat card persistence for workflows and some of the fields may have moved. If you are in the habit of checking the Chat Card for midi persisted fields you will need to review that code.
+
+**For Developers**
 * Fix for evaluating otherActivity.useCondition twice is some workflows.
 * Fix for checkAttackAdvantage not being called before calling preAttackRoll Hooks/macros.
   - checkAttackAdvantage is called again after the hooks/macros return. This means changes to actors advantage flags will be respected as they were prior to 13.0.40.
   - changes made to workflow.tracker.advantage etc will be overwritten.
   - if you want to make changes to the tracker that will be respected do so in the preAttackConfig Macro/Hooks.
   - I added a preAttackConfig Hook call as well as macro calls for the above.
-
-**Others**
-* A major rework of advantage attribution, now displays localized string explaining the source. Feedback on the string choices welcome.
-  - This reduces by several thousand the number of fields translators need to worry about.
-  - This feeds through to better/different explanatory text in the dae field browser.
-  - **Unless there is any major push back I plan to remove the legacy attribution in a soon to be forthcoming release**.
-* I've reworked the chat card persistence for workflows and some of the fields may have moved. If you are in the habit of checking the Chat Card for midi persisted fields you will need to review that code.
-* Migrated several standalone module settings into the midi-qol config panel for easier discovery:
-  - **Preferred GM** moved to the GM tab.
-  - **Critical Damage** (player and GM) moved to the Workflow tab, Damage section.
-  - **Colored Borders** moved to the Misc tab, near the other highlighting/display settings.
-  - Existing values are automatically migrated on first load, I think, but you should check. The old settings are hidden from the Foundry module settings page.
-
-**Merged Contributions**
-* Allow easy logging of sandbox evaluation data via `MidiQOL.logEvaluationData = true` (MR !396, thanks @thatlonelybugbear).
-* Updated pt-BR localization (MR !398, thanks @Kharmans).
-* Optional Bonus Value: critical — allows optional bonuses to force critical on attacks, damage, checks, saves, and skills (MR !399, thanks @baconnugget).
+* **Breaking** MidiQOL exports changed, the template targeting exports are now **only** selectTargetsFromTemplates (update game.user.targets for targets inside any of the array of templates) and computeTargetsFromTemplates, returns an array of tokens inside any of the passed templates.
+* **Breaking** I have removed workflow.saveRolls, since it's not used anywhere and not all that useful. If someone was using it and can't find an easier way let me know and I'll look at putting it back.
 
 ### 13.0.42
 * Just remove some spurious debug left in the code.

@@ -1,11 +1,10 @@
 import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, log, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { unTimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
-import { computeRollModifiers, applyRollModifiers, RollModifierFlags } from "../patching.js";
-import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags } from "../lib/RollModifierTracker.js";
+import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags } from "../lib/RollModifierTracker.js";
 import { MidiOptions } from "../utils.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
-import { addAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward } from "../utils.js";
+import { addAttribution, areMidiKeysPressed, callActivityHooks, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
@@ -68,32 +67,20 @@ let defineMidiAttackSheetClass = (baseClass: any) => {
         ui.notifications?.warn("Please update other activity. otherActivityUuid is deprecated");
         activity.otherActivityUuid = undefined;
       }
-      let indexOffset = 0;
-      if (activity.damage?.parts) {
-        const isCantrip = activity.item.type === "spell" && activity.item.system.level === 0;
-        const scalingOptions = [
-          { value: "", label: i18n("DND5E.DAMAGE.Scaling.None") },
-          //@ts-expect-error
-          ...Object.entries(GameSystemConfig.damageScalingModes).map(([value, config]) => ({ value, label: isCantrip ? config.labelCantrip : config.label }))
-        ];
-        const types = Object.entries(GameSystemConfig.healingTypes).concat(Object.entries(GameSystemConfig.damageTypes));
-        context.damageParts = activity.damage.parts.map((data, index) => {
-          if (data.base) indexOffset--;
-          const part = {
-            data,
-            fields: this.activity.schema.fields.damage.fields.parts.element.fields,
-            prefix: `damage.parts.${index + indexOffset}.`,
-            source: context.source.damage.parts[index + indexOffset] ?? data,
-            canScale: this.activity.canScaleDamage,
-            scalingOptions,
-            typeOptions: types.map(([value, config]) => ({
-              value, label: config.label, selected: data.types.has(value)
-            }))
-          };
-          // @ts-expect-error no dnd5e-types
-          if (foundry.utils.isNewerVersion(game.system.version, "5.0.2")) part.locked = data.locked || (index === undefined);
-          return this._prepareDamagePartContext(context, part);
-        })
+      // Add healing types to the existing damageParts typeOptions (dnd5e only includes damageTypes)
+      if (context.damageParts?.length) {
+        const healingTypes = Object.entries(GameSystemConfig.healingTypes).map(([value, config]) => ({
+          value, label: config.label, selected: false
+        }));
+        for (const part of context.damageParts) {
+          // Mark existing healing type selections (types may be a Set or undefined)
+          const typesSet = part.data?.types instanceof Set ? part.data.types : new Set();
+          for (const healingType of healingTypes) {
+            healingType.selected = typesSet.has(healingType.value);
+          }
+          // Add healing types to the end of typeOptions
+          part.typeOptions = [...(part.typeOptions ?? []), ...healingTypes.map(h => ({ ...h }))];
+        }
       }
       context.ConfirmTargetOptions = Object.entries(confirmTargetOptions).map(([value, label]) => ({ value, label }));
 
@@ -326,7 +313,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       let checkReaction = !usage.midiOptions.isTriggered; // first pass do reaction checks
       let checkBonusAction = !usage.midiOptions.isTriggered; // first pass do bonus action checks
       let targets: Set<foundry.canvas.placeables.Token.Implementation> | undefined;
-      const savedTargets = foundry.utils.deepClone(game.user?.targets);
+      const localSavedTargetIds = Array.from(game.user?.targets ?? []).map(t => t.id);
       if (usage.midiOptions.targetsToUse) targets = usage.midiOptions.targetsToUse;
       if (!targets) targets = new Set(game.user?.targets);
       for (let target of targets) {
@@ -346,7 +333,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         checkReaction = false;
         checkBonusAction = false;
       }
-      if (game.user && savedTargets) game.user.targets = savedTargets; // restore targets
+      updateUserTargets(localSavedTargetIds);
       return returnValue;
     }
 
@@ -430,8 +417,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
               return false;
             }
           } else if (!rollConfig.attackMode && dialogConfig.options?.attackModeOptions?.length) dialogConfig.configure = true;
-          const targetDescriptors = foundry.utils.getProperty(messageConfig, "data.flags.dnd5e.targets") as DND5ETargetDescriptor[] | undefined;
-          if (targetDescriptors && workflow) workflow.targetDescriptors = targetDescriptors as DND5ETargetDescriptor[];
 
           // Apply roll modifiers (auto-fail/success, min/max) for attack rolls
           const actType = this.actionType;
@@ -482,6 +467,16 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           }
           return true;
         })
+        // Capture target descriptors last, after all other modules have had a chance to modify AC (e.g. cover)
+        //@ts-expect-error dnd5e hook not in fvtt-types
+        hookIds["dnd5e.postRollConfiguration"] = Hooks.once("dnd5e.postRollConfiguration", (rolls, config, dialog, message) => {
+          const targetDescriptors = foundry.utils.getProperty(message, "data.flags.dnd5e.targets") as DND5ETargetDescriptor[] | undefined;
+          if (targetDescriptors && workflow) {
+            // Don't mutate td.ac — it's a shared reference with the chat message data.
+            // null AC (coverTotal) is handled downstream in checkHits() as auto-miss.
+            workflow.targetDescriptors = targetDescriptors as DND5ETargetDescriptor[];
+          }
+        });
         // Active defence resolves by triggering saving throws and returns early
         if (workflow.useActiveDefence) {
           message.create = false; // go through the roll process but don't show the attack roll.
@@ -517,6 +512,28 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         }
 
         if (workflow) {
+          // Sync tracker with what the player actually chose in the roll dialog
+          // @ts-expect-error CONFIG.Dice.D20Roll not typed
+          const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
+          const returnedAdvMode = rolls[0]?.options?.advantageMode;
+          if (returnedAdvMode !== undefined) {
+            const trackerMode = workflow.attackRollModifierTracker.advantageMode;
+            if (returnedAdvMode !== trackerMode) {
+              const label = i18n("midi-qol.ConfigButtons");
+              if (returnedAdvMode === ADV_MODE.ADVANTAGE) {
+                workflow.attackRollModifierTracker.advantage.setOverride("config-buttons", label);
+                workflow.attackRollModifierTracker.disadvantage.clearOverride();
+              } else if (returnedAdvMode === ADV_MODE.DISADVANTAGE) {
+                workflow.attackRollModifierTracker.disadvantage.setOverride("config-buttons", label);
+                workflow.attackRollModifierTracker.advantage.clearOverride();
+              } else {
+                // Player chose normal — clear any overrides
+                workflow.attackRollModifierTracker.advantage.clearOverride();
+                workflow.attackRollModifierTracker.disadvantage.clearOverride();
+              }
+            }
+          }
+
           workflow.attackMode = rolls[0].options.attackMode ?? config.attackMode;
           if (this.ammunition && !this.ammunitionItem) { // assume it was deleted
             const storedData = foundry.utils.getProperty(workflow.chatCard, "flags.midi-qol.ammunitionData") as any;
@@ -556,7 +573,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       config.midiOptions ??= {};
 
       if (debugEnabled > 1) debug("Entering configure attack roll", config.event, workflow, config.rollOptions);
-      await workflow.checkAttackAdvantage();
       if (workflow.workflowType === "BaseWorkflow") {
         if (workflow.attackRoll && workflow.currentAction === workflow.WorkflowState_Completed) {
           // This should not happen anymore
@@ -607,20 +623,15 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         }
       }
 
-      // checkAttackAdvantage() was already called in rollAttack - it handles all advantage sources
-      // and attributions (workflowOptions, rollOptions, flanking, flags, etc.)
-      if (await asyncHooksCall("midi-qol.preAttackRoll", workflow) === false
-        || await asyncHooksCall(`midi-qol.preAttackRoll.${this.item.uuid}`, workflow) === false
-        || await asyncHooksCall(`midi-qol.preAttackRoll.${this.uuid}`, workflow) === false) {
+      // preAttackRoll hooks may modify flags; checkAttackAdvantage() runs after them (below)
+      if (await callActivityHooks(this, "midi-qol.preAttackRoll", workflow) === false) {
         console.warn("midi-qol | attack roll blocked by preAttackRoll hook");
         return false;
       }
       await workflow.checkAttackAdvantage();
       // Process keyboard modifiers (ctrl/alt for advantage/disadvantage) after flag processing
       workflow.attackRollModifierTracker.processKeys(config);
-      if (await asyncHooksCall("midi-qol.preAttackRollConfig", workflow) === false
-        || await asyncHooksCall(`midi-qol.preAttackRollConfig.${this.item.uuid}`, workflow) === false
-        || await asyncHooksCall(`midi-qol.preAttackRollConfig.${this.uuid}`, workflow) === false) {
+      if (await callActivityHooks(this, "midi-qol.preAttackRollConfig", workflow) === false) {
         console.warn("midi-qol | attack roll blocked by preAttackRollConfig hook");
         return false;
       }
@@ -758,6 +769,10 @@ export async function computeAttackAdvantage(
 ): Promise<RollModifierTracker> {
   tracker ??= new RollModifierTracker();
 
+  // Spell school for school-specific attack flags
+  // @ts-expect-error no dnd5e-types
+  const attackSchool: string | undefined = options.item?.system?.school;
+
   // Define attack advantage flags
   const attackFlags: AdvantageFlags = {
     advantageFlags: [
@@ -765,57 +780,64 @@ export async function computeAttackAdvantage(
       "advantage.attack.all",
       `advantage.attack.${actionType}`,
       // Include ability-based attack flags if abilityId is provided
-      ...(abilityId ? [`advantage.attack.${abilityId}`] : [])
+      ...(abilityId ? [`advantage.attack.${abilityId}`] : []),
+      ...(attackSchool ? [`advantage.attack.school.${attackSchool}`] : [])
     ],
     disadvantageFlags: [
       "disadvantage.all",
       "disadvantage.attack.all",
       `disadvantage.attack.${actionType}`,
-      ...(abilityId ? [`disadvantage.attack.${abilityId}`] : [])
+      ...(abilityId ? [`disadvantage.attack.${abilityId}`] : []),
+      ...(attackSchool ? [`disadvantage.attack.school.${attackSchool}`] : [])
     ],
     noAdvantageFlags: [
       "noAdvantage.all",
       "noAdvantage.attack.all",
       `noAdvantage.attack.${actionType}`,
-      ...(abilityId ? [`noAdvantage.attack.${abilityId}`] : [])
+      ...(abilityId ? [`noAdvantage.attack.${abilityId}`] : []),
+      ...(attackSchool ? [`noAdvantage.attack.school.${attackSchool}`] : [])
     ],
     noDisadvantageFlags: [
       "noDisadvantage.all",
       "noDisadvantage.attack.all",
       `noDisadvantage.attack.${actionType}`,
-      ...(abilityId ? [`noDisadvantage.attack.${abilityId}`] : [])
+      ...(abilityId ? [`noDisadvantage.attack.${abilityId}`] : []),
+      ...(attackSchool ? [`noDisadvantage.attack.school.${attackSchool}`] : [])
     ],
     systemRollModeFields: [], // dnd5e doesn't have native attack roll modes at actor level
     // Target grants flags (checked on target actor)
     sourceAdvantageFlags: [
       "grants.advantage.all",
       "grants.advantage.attack.all",
-      `grants.advantage.attack.${actionType}`
+      `grants.advantage.attack.${actionType}`,
+      ...(attackSchool ? [`grants.advantage.attack.school.${attackSchool}`] : [])
     ],
     sourceDisadvantageFlags: [
       "grants.disadvantage.all",
       "grants.disadvantage.attack.all",
-      `grants.disadvantage.attack.${actionType}`
+      `grants.disadvantage.attack.${actionType}`,
+      ...(attackSchool ? [`grants.disadvantage.attack.school.${attackSchool}`] : [])
     ],
     sourceNoAdvantageFlags: [
       "grants.noAdvantage.attack.all",
-      `grants.noAdvantage.attack.${actionType}`
+      `grants.noAdvantage.attack.${actionType}`,
+      ...(attackSchool ? [`grants.noAdvantage.attack.school.${attackSchool}`] : [])
     ],
     sourceNoDisadvantageFlags: [
       "grants.noDisadvantage.attack.all",
-      `grants.noDisadvantage.attack.${actionType}`
+      `grants.noDisadvantage.attack.${actionType}`,
+      ...(attackSchool ? [`grants.noDisadvantage.attack.school.${attackSchool}`] : [])
     ]
   };
 
-  // For attacks, the "source" that grants advantage/disadvantage is the target
-  // So we pass the target actor as sourceActor
+  // For attacks, the entity that grants advantage/disadvantage is the defender (target)
   const targetToken = options.workflow?.targets?.first();
   const targetActor = targetToken?.actor ?? undefined;
 
   await computeAdvantageFlags(actor, attackFlags, {
     ...options,
-    sourceActor: targetActor,
-    sourceToken: targetToken
+    grantsActor: targetActor,
+    grantsToken: targetToken
   }, tracker);
 
   return tracker;

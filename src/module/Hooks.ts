@@ -1,21 +1,20 @@
-import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData } from "./utils.js";
-import { checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
-import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget } from "./utils.js";
+import { checkMechanic, checkRule, configSettings, dragDropTargeting, isDnd5e53, setDnd5e53 } from "./settings.js";
+import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook, getTemplateSourceToken } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { Workflow } from "./Workflow.js";
 import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
 import { installedModules } from "./setupModules.js";
-import { preActivityConsumptionHook, activityConsumptionHook } from "./activities/activityHelpers.js";
+import { preActivityConsumptionHook, activityConsumptionHook, selectTargetsFromTemplates, isAoETargetable } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
 import { MidiDependentsRegistry } from "./lib/MidiDependentsRegistry.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
-export var midiFlagTypes: {} = {};
 
 export let readyHooks = async () => {
   // Handle removing effects when the token is moved.
@@ -38,6 +37,13 @@ export let readyHooks = async () => {
   });
 
   Hooks.on("targetToken", foundry.utils.debounce(checkFlanking, 150));
+  Hooks.on("targetToken", (user, token, targeted) => onUserManualTarget(user));
+
+  // Flanking visualization — update when token selection, targeting, or position changes
+  const debouncedFlankingHighlight = foundry.utils.debounce(updateFlankingHighlight, 150);
+  Hooks.on("controlToken", debouncedFlankingHighlight);
+  Hooks.on("targetToken", debouncedFlankingHighlight);
+  Hooks.on("refreshToken", debouncedFlankingHighlight);
 
   //@ts-expect-error
   Hooks.on("ddb-game-log.pendingRoll", (data) => {
@@ -75,22 +81,86 @@ export let readyHooks = async () => {
 
   Hooks.on("deleteMeasuredTemplate", checkDeleteTemplate);
 
+  // Auto-target tokens when a template is refreshed (moved/reshaped during preview or after placement)
+  // Only the user who placed the template should update targeting, otherwise all clients
+  // would set their own game.user.targets causing every player to target the AoE tokens.
+  // @ts-expect-error fvtt-types missing flags parameter on refreshMeasuredTemplate hook
+  Hooks.on("refreshMeasuredTemplate", (template: foundry.canvas.placeables.MeasuredTemplate.Implementation, flags: Record<string, boolean>) => {
+    if (!flags.refreshPosition && !flags.refreshShape) return;
+    if (!canvas?.tokens) return;
+    if (template.document.author?.id !== game.user?.id) return;
+
+    // Only auto-target for templates created by dnd5e activities (midi or native).
+    // template.activity is set during preview; flags.dnd5e.origin is set after placement.
+    // Skip manually placed or non-activity templates entirely.
+    // @ts-expect-error no dnd5e-types
+    if (!template.activity && !template.document.flags?.dnd5e?.origin) return;
+
+    // @ts-expect-error no dnd5e-types
+    const autoTarget = getActivityAutoTargetAction(template.activity);
+    if (autoTarget === "none") return;
+
+    if (installedModules.get("levelsvolumetrictemplates") && autoTarget !== "walledtemplates") {
+      //@ts-expect-error CONFIG.Levels
+      const levelsTemplateData = CONFIG.Levels.handlers.TemplateHandler.getTemplateData(false);
+      if (template.document.elevation !== levelsTemplateData.elevation) {
+        template.document.elevation = levelsTemplateData.elevation;
+      }
+      // Resolve the activity and source token for disposition filtering
+      // @ts-expect-error no dnd5e-types
+      const activity = template.activity
+        ?? (template.document.flags?.dnd5e?.origin ? fromUuidSync(template.document.flags.dnd5e.origin) : undefined);
+      const sourceToken = getTemplateSourceToken(template.document);
+      const selfToken = sourceToken ?? undefined;
+      const AoETargetType = activity ? getAoETargetType(activity) : "any";
+      const ignoreSelf = activity
+        ? (activity?.target.affects.special ?? "").split(";").some((spec: string) => ["-self"].includes(spec))
+        : false;
+
+      // Filter which tokens to pass - not too far; wall blocking is left to levels.
+      let distance = template.document.distance;
+      const dimensions = canvas.dimensions || { size: 1, distance: 1 };
+      distance *= dimensions.size / dimensions.distance;
+      const tokensToCheck = canvas.tokens.placeables?.filter(tk => {
+        const r = new foundry.canvas.geometry.Ray(
+          { x: template.document?.x ?? template.x, y: template.document?.y ?? template.y },
+          { x: tk.x + tk.document.width * dimensions.size, y: tk.y + tk.document.height * dimensions.size }
+        );
+        const maxExtension = (1 + Math.max(tk.document.width, tk.document.height)) * dimensions.size;
+        if (r.distance > distance + maxExtension) return false;
+        if (!isAoETargetable(tk, { selfToken, ignoreSelf, AoETargetType, autoTarget })) return false;
+        return true;
+      });
+      if (tokensToCheck && tokensToCheck.length > 0) {
+        //@ts-expect-error VolumetricTemplates
+        VolumetricTemplates.compute3Dtemplate(template, tokensToCheck);
+      }
+    } else {
+      // template.activity is set by dnd5e on AbilityTemplate during preview, but not on
+      // the standard MeasuredTemplate created after placement. Fall back to looking up
+      // the activity from the template's dnd5e.origin flag (the activity UUID).
+      // @ts-expect-error no dnd5e-types
+      const activity = template.activity
+        ?? (template.document.flags?.dnd5e?.origin ? fromUuidSync(template.document.flags.dnd5e.origin) : undefined);
+      const sourceToken = getTemplateSourceToken(template.document);
+      if (activity && sourceToken) {
+        const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some((spec: string) => ["-self"].includes(spec));
+        selectTargetsFromTemplates([template], sourceToken, ignoreSelf, getAoETargetType(activity), autoTarget);
+      } else {
+        selectTargetsFromTemplates([template]);
+      }
+    }
+  });
+
   // Handle updates to the characters HP
-  // Handle concentration checks
+  // Note: Wounded/dead status is now handled by _onUpdate wrapper in patching.ts
+  // This hook handles zeroHPExpiry and concentration removal
   Hooks.on("updateActor", async (actor, update, options: any, user) => {
     if (user !== game.user?.id) return;
     const hpUpdate = foundry.utils.getProperty(update, "system.attributes.hp.value");
     const temphpUpdate = foundry.utils.getProperty(update, "system.attributes.hp.temp");
     if (hpUpdate !== undefined || temphpUpdate !== undefined) {
-      const hpUpdateFunc = async () => {
-        // Skip checkWounded if a vitality update is pending - the updateItem hook will handle it
-        // This prevents race conditions with concurrent toggleStatusEffect calls
-        if (!options.midiVitalityUpdatePending) {
-          await checkWounded(actor, update, options, user);
-        }
-        await zeroHPExpiry(actor, update, options, user);
-      }
-      await hpUpdateFunc();
+      await zeroHPExpiry(actor, update, options, user);
       // @ts-expect-error no dnd5e-types
       if (actor.system.attributes.hp.value <= 0 && configSettings.removeConcentration) {
         // @ts-expect-error no dnd5e-types
@@ -209,16 +279,60 @@ export let readyHooks = async () => {
             }
           }
         }
+        // transformedActorUuids stores the ORIGINAL (pre-transform) actor UUIDs.
+        // Find whatever polymorphed form currently exists for each original and revert it.
+        // Skip if the parent actor is being deleted (e.g., revertOriginalForm deletes the polymorphed
+        // actor, cascading to its effects — we don't want to re-enter the revert flow).
         let transformedActorUuids = foundry.utils.getProperty(deletedEffect, "flags.midi-qol.transformedActorUuids") as string[];
-        if (transformedActorUuids && transformedActorUuids.length > 0) {
+        const parentActor = deletedEffect.parent as Actor.Implementation;
+        const parentStillExists = parentActor?.id && (parentActor.isToken
+          ? canvas.scene?.tokens?.get(parentActor.token?.id ?? "")
+          : game.actors?.get(parentActor.id));
+        if (transformedActorUuids && transformedActorUuids.length > 0 && parentStillExists) {
           for (let uuid of transformedActorUuids) {
-            let actor = await fromUuid(uuid) as Actor.Implementation;
-            if (actor) {
+            let originalActor = await fromUuid(uuid) as Actor.Implementation;
+            if (!originalActor) continue;
+            const actorsToRevert: Actor.Implementation[] = [];
+            // Search game.actors for linked polymorphed actors referencing this original
+            for (const a of game.actors ?? []) {
+              //@ts-expect-error isPolymorphed - dnd5e property
+              if (a.isPolymorphed && a.getFlag("dnd5e", "originalActor") === originalActor.id) {
+                actorsToRevert.push(a);
+              }
+            }
+            // Search canvas tokens for unlinked polymorphed actors
+            if (canvas.ready) {
+              for (const token of canvas.scene?.tokens ?? []) {
+                //@ts-expect-error isPolymorphed - dnd5e property
+                if (token.actor?.isPolymorphed
+                  && token.actor?.getFlag("dnd5e", "originalActor") === originalActor.id
+                  && !actorsToRevert.some(a => a.id === token.actor!.id)) {
+                  actorsToRevert.push(token.actor);
+                }
+              }
+            }
+            for (const polyActor of actorsToRevert) {
               try {
                 //@ts-expect-error no dnd5e-types
-                await actor.revertOriginalForm({});
-              } catch (err) { // only here to deal with tidy throwing an error
-                console.error("Error reverting actor to original form", actor, err);
+                await polyActor.revertOriginalForm({});
+              } catch (err) {
+                console.error("Error reverting actor to original form", polyActor, err);
+              }
+            }
+            // After revert, clean up concentration on the restored original actor.
+            // transformInto() copies effects (including concentration) from original to
+            // polymorphed form, so the original still has its concentration effect.
+            if (actorsToRevert.length > 0) {
+              const restoredActor = await fromUuid(uuid) as Actor.Implementation;
+              if (restoredActor) {
+                const remainingConcentration = restoredActor.effects.filter(ef =>
+                  // @ts-expect-error no dnd5e-types
+                  ef.statuses?.has(CONFIG.specialStatusEffects.CONCENTRATING)
+                );
+                for (const ce of remainingConcentration) {
+                  // @ts-expect-error extra option silliness
+                  await ce.delete({ noConcentrationCheck: true });
+                }
               }
             }
           }
@@ -258,6 +372,13 @@ export let readyHooks = async () => {
     if (!preferredActiveGM()?.isSelf) return;
     if (options.undo) return;
     MidiDependentsRegistry.deleteDependents(deletedToken.uuid);
+  });
+
+  // Handle deletion of Regions - cascade delete dependents via MidiDependentsRegistry
+  Hooks.on("deleteRegion", (deletedRegion: any, options: any, user) => {
+    if (!preferredActiveGM()?.isSelf) return;
+    if (options.undo) return;
+    MidiDependentsRegistry.deleteDependents(deletedRegion.uuid);
   });
 
   // Hooks.on("restCompleted", restManager); I think this means 1.6 is required.
@@ -549,29 +670,31 @@ export function initHooks() {
               if (isRemove) {
                 expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:saveCount" });
               } else {
-                await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.permanent`, true);
-                await effect.update({ flags: effect.flags });
+                const permanentUpdate: Record<string, any> = { [`flags.${MODULE_ID}.overtime.permanent`]: true };
+                await effect.update(permanentUpdate);
               }
             } else {
               // Decrement counter on effect
               // If failCount is consecutive, a save resets the fail streak
+              const updates: Record<string, any> = {
+                [`flags.${MODULE_ID}.overtime.savesRemaining`]: savesRemaining
+              };
               if (failConsecutive && failCount !== undefined) {
-                foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`, failCount);
+                updates[`flags.${MODULE_ID}.overtime.failsRemaining`] = failCount;
               }
-              await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`, savesRemaining);
-              await effect.update({ flags: effect.flags });
+              await effect.update(updates);
             }
           } else {
-            // No saveCount or no save - original behavior (single save removes)
-            expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime" });
+            // No saveCount specified - check if effect is already permanent
+            const isAlreadyPermanent = !!effect.flags?.[MODULE_ID]?.overtime?.permanent;
+            if (!isAlreadyPermanent) {
+              // Original behavior: single save removes the effect
+              expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime" });
+            }
+            // If already permanent, do nothing - just let the overtime damage continue
           }
         } else if (failed && failCount !== undefined) {
           // Handle failCount - multiple fails trigger action
-          // If saveCount is consecutive, a failure resets the save streak
-          if (saveConsecutive && saveCount !== undefined) {
-            foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`, saveCount);
-          }
-
           let failsRemaining = foundry.utils.getProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`) as number | undefined;
           // Initialize if not set
           if (failsRemaining === undefined) failsRemaining = failCount;
@@ -590,18 +713,24 @@ export function initHooks() {
             if (isRemove) {
               expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:failCount" });
             } else {
-              await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.permanent`, true);
-              await effect.update({ flags: effect.flags });
+              const permanentUpdate: Record<string, any> = { [`flags.${MODULE_ID}.overtime.permanent`]: true };
+              await effect.update(permanentUpdate);
             }
           } else {
             // Decrement counter on effect
-            await foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.failsRemaining`, failsRemaining);
-            await effect.update({ flags: effect.flags });
+            // If saveCount is consecutive, a failure resets the save streak
+            const updates: Record<string, any> = {
+              [`flags.${MODULE_ID}.overtime.failsRemaining`]: failsRemaining
+            };
+            if (saveConsecutive && saveCount !== undefined) {
+              updates[`flags.${MODULE_ID}.overtime.savesRemaining`] = saveCount;
+            }
+            await effect.update(updates);
           }
         } else if (failed && saveConsecutive && saveCount !== undefined) {
           // Failed but no failCount to process — still need to reset consecutive save streak
-          foundry.utils.setProperty(effect, `flags.${MODULE_ID}.overtime.savesRemaining`, saveCount);
-          await effect.update({ flags: effect.flags });
+          const resetUpdate: Record<string, any> = { [`flags.${MODULE_ID}.overtime.savesRemaining`]: saveCount };
+          await effect.update(resetUpdate);
         }
       }
       delete savedOverTimeEffectsToDelete[activityUuid];
@@ -613,8 +742,6 @@ export function initHooks() {
     }
     if (debugEnabled > 1) debug("Finished the roll", activityUuid, workflow.id)
   });
-
-  setupMidiFlagTypes();
 
   Hooks.on("applyActiveEffect", midiCustomEffect);
   // Hooks.on("preCreateActiveEffect", checkImmunity); Disabled in lieu of having effect marked suppressed
@@ -700,7 +827,7 @@ export function initHooks() {
       },
       {
         label: i18n("midi-qol.buttons.roll"),
-        enabled: (params) => ["weapon", "spell", "power", "feat", "tool", "consumable"].includes(params.item.type),
+        enabled: (params) => ["weapon", "spell", "feat", "tool", "consumable"].includes(params.item.type),
         iconClass: 'fas fa-dice-d20',
         execute: (params) => {
           if (debugEnabled > 1) log('roll', params.item);
@@ -828,54 +955,18 @@ export function initHooks() {
     item?.use({ legacy: false }, {}, {});
     return true;
   })
-}
 
-function setupMidiFlagTypes() {
-  let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
-
-  attackTypes.forEach(at => {
-    midiFlagTypes[`flags.midi-qol.DR.${at}`] = "number"
-    //  midiFlagTypes[`flags.midi-qol.optional.NAME.attack.${at}`] = "string"
-    //  midiFlagTypes[`flags.midi-qol.optional.NAME.damage.${at}`] = "string"
-  });
-  midiFlagTypes["flags.midi-qol.onUseMacroName"] = "string";
-
-  Object.keys(GameSystemConfig.abilities).forEach(abl => {
-    // midiFlagTypes[`flags.midi-qol.optional.NAME.save.${abl}`] = "string";
-    // midiFlagTypes[`flags.midi-qol.optional.NAME.check.${abl}`] = "string";
-
-  })
-
-  Object.keys(GameSystemConfig.skills).forEach(skill => {
-    // midiFlagTypes[`flags.midi-qol.optional.NAME.skill.${skill}`] = "string";
-
-  })
-
-  if (game.system?.id === "dnd5e") {
-    midiFlagTypes[`flags.midi-qol.DR.all`] = "string";
-    midiFlagTypes[`flags.midi-qol.DR.non-magical`] = "string";
-    midiFlagTypes[`flags.midi-qol.DR.non-silver`] = "string";
-    midiFlagTypes[`flags.midi-qol.DR.non-adamant`] = "string";
-    midiFlagTypes[`flags.midi-qol.DR.non-physical`] = "string";
-    midiFlagTypes[`flags.midi-qol.DR.final`] = "number";
-
-    Object.keys(GameSystemConfig.damageTypes).forEach(dt => {
-      midiFlagTypes[`flags.midi-qol.DR.${dt}`] = "string";
-    })
+  // Set dnd5e version flag and register version-appropriate damage hooks
+  setDnd5e53(foundry.utils.isNewerVersion(game.system.version, "5.2.99"));
+  if (isDnd5e53) {
+    Hooks.on("dnd5e.preCalculateDamage", preCalculateDamageHandler_53);
+    Hooks.on("dnd5e.calculateDamage", calculateDamageHandler_53);
+  } else {
+    Hooks.on("dnd5e.preCalculateDamage", preCalculateDamageHandler);
+    Hooks.on("dnd5e.calculateDamage", calculateDamageHandler);
   }
-
-  // midiFlagTypes[`flags.midi-qol.optional.NAME.attack.all`] = "string";
-  // midiFlagTypes[`flags.midi-qol.optional.NAME.damage.all`] = "string";
-  // midiFlagTypes[`flags.midi-qol.optional.NAME.check.all`] = "string";
-  // midiFlagTypes[`flags.midi-qol.optional.NAME.save.all`] = "string";
-  // midiFlagTypes[`flags.midi-qol.optional.NAME.label`] = "string";
-  // midiFlagTypes[`flags.midi-qol.optional.NAME.skill.all`] = "string";
-  // midiFlagTypes[`flags.midi-qol.optional.NAME.count`] = "string";
-  // midiFlagTypes[`flags.midi-qol.optional.NAME.ac`] = "string";
-  // midiFlagTypes[`flags.midi-qol.optional.NAME.criticalDamage`] = "string";
-  // midiFlagTypes[`flags.midi-qol.OverTime`] = "string";
-
 }
+
 export function setupHooks() {
 }
 
@@ -891,405 +982,751 @@ Hooks.on("dnd5e.preRollDamage", (rollConfig, dialogConfig, messageConfig) => {
   return true;
 });
 
-Hooks.on("dnd5e.preCalculateDamage", (actor, damages, options) => {
-  try {
-    const downgrade = type => options.downgrade === true || options.downgrade?.has?.(type);
+
+/** Parameters passed to damage calculation functions */
+interface DamageCalcParams {
+  actor: Actor.Implementation;
+  sourceActor?: Actor.Implementation;
+  damages: DamageDescription[];
+  options: DamageApplicationOptions;
+}
+
+/** Source actor trait codes that can ignore target traits */
+const SOURCE_TRAIT_CONFIG: Record<string, string> = {
+  idi: "immunity",
+  idr: "resistance",
+  idv: "vulnerability",
+  ida: "absorption",
+  idm: "modification",
+};
+
+/** Custom resistance type matchers - maps custom resistance names to damage predicates */
+type DamagePredicate = (damage: DamageDescription, bypasses?: Set<string>) => boolean;
+
+const CUSTOM_RESISTANCE_MATCHERS: Record<string, { match: DamagePredicate; label: string }> = {
+  spell: {
+    match: (d) => d.properties?.has("spell") ?? false,
+    label: "midi-qol.SpellDamage",
+  },
+  "non-spell": {
+    match: (d) => !d.properties?.has("spell"),
+    label: "midi-qol.NonSpellDamage",
+  },
+  nonSpell: {
+    match: (d) => !d.properties?.has("spell"),
+    label: "midi-qol.NonSpellDamage",
+  },
+  magical: {
+    match: (d) => d.properties?.has("mgc") ?? false,
+    label: "midi-qol.Magical",
+  },
+  "non-magical": {
+    match: (d) => !d.properties?.has("mgc"),
+    label: "midi-qol.NonMagical",
+  },
+  nonMagical: {
+    match: (d) => !d.properties?.has("mgc"),
+    label: "midi-qol.NonMagical",
+  },
+  physical: {
+    match: (d, bypasses) => {
+      const bypassesPresent = (d.properties ?? new Set()).intersection(bypasses ?? new Set());
+      return (GameSystemConfig.damageTypes[d.type]?.isPhysical ?? false) && bypassesPresent.size === 0;
+    },
+    label: "midi-qol.Physical",
+  },
+  "non-physical": {
+    match: (d) => !GameSystemConfig.damageTypes[d.type]?.isPhysical,
+    label: "midi-qol.NonPhysical",
+  },
+  nonPhysical: {
+    match: (d) => !GameSystemConfig.damageTypes[d.type]?.isPhysical,
+    label: "midi-qol.NonPhysical",
+  },
+  "non-magical-physical": {
+    match: (d) => (GameSystemConfig.damageTypes[d.type]?.isPhysical ?? false) && !d.properties?.has("mgc"),
+    label: "midi-qol.NonMagicalPhysical",
+  },
+  nonMagicalPhysical: {
+    match: (d) => (GameSystemConfig.damageTypes[d.type]?.isPhysical ?? false) && !d.properties?.has("mgc"),
+    label: "midi-qol.NonMagicalPhysical",
+  },
+  "non-silver-physical": {
+    match: (d) => (GameSystemConfig.damageTypes[d.type]?.isPhysical ?? false) && !d.properties?.has("sil"),
+    label: "midi-qol.NonSilverPhysical",
+  },
+  nonSilverPhysical: {
+    match: (d) => (GameSystemConfig.damageTypes[d.type]?.isPhysical ?? false) && !d.properties?.has("sil"),
+    label: "midi-qol.NonSilverPhysical",
+  },
+  "non-adamant-physical": {
+    match: (d) => (GameSystemConfig.damageTypes[d.type]?.isPhysical ?? false) && !d.properties?.has("ada"),
+    label: "midi-qol.NonAdamantinePhysical",
+  },
+  nonAdamantPhysical: {
+    match: (d) => (GameSystemConfig.damageTypes[d.type]?.isPhysical ?? false) && !d.properties?.has("ada"),
+    label: "midi-qol.NonAdamantinePhysical",
+  },
+  mwak: {
+    match: (d, bypasses) => {
+      const bypassesPresent = (d.properties ?? new Set()).intersection(bypasses ?? new Set());
+      return (d.properties?.has("mwak") ?? false) && bypassesPresent.size === 0;
+    },
+    label: "mwak",
+  },
+  rwak: {
+    match: (d, bypasses) => {
+      const bypassesPresent = (d.properties ?? new Set()).intersection(bypasses ?? new Set());
+      return (d.properties?.has("rwak") ?? false) && bypassesPresent.size === 0;
+    },
+    label: "rwak",
+  },
+  msak: {
+    match: (d) => d.properties?.has("msak") ?? false,
+    label: "msak",
+  },
+  rsak: {
+    match: (d) => d.properties?.has("rsak") ?? false,
+    label: "rsak",
+  },
+  all: {
+    match: () => true,
+    label: "All",
+  },
+};
+
+function isDRType(type: string): boolean {
+  return ["none", "midi-none"].includes(type);
+}
+
+/**
+ * Set a boolean flag on damage.active in the version-appropriate structure.
+ * On dnd5e 5.3+, flags are nested under `type` or `all` (e.g., `active.type.resistance`).
+ * On dnd5e 5.2.x, flags are flat (e.g., `active.resistance`).
+ * `multiplier` and `threshold` remain flat in both versions — do NOT use this for those.
+ */
+function setDamageActiveFlag(damage: DamageDescription, flag: string, scope: "type" | "all" = "type"): void {
+  damage.active ??= {};
+  if (isDnd5e53) {
+    damage.active[scope] ??= {};
+    damage.active[scope]![flag] = true;
+  } else {
+    damage.active[flag] = true;
+  }
+}
+
+/** Read a boolean flag from damage.active in the version-appropriate structure. */
+function getDamageActiveFlag(damage: DamageDescription, flag: string): boolean {
+  if (isDnd5e53) {
+    return !!(damage.active?.type?.[flag] || damage.active?.all?.[flag]);
+  }
+  return !!damage.active?.[flag];
+}
+
+function shouldDowngrade(options: DamageApplicationOptions, type: string): boolean {
+  return options.downgrade === true || (options.downgrade as Set<string>)?.has?.(type) === true;
+}
+
+function shouldIgnore(
+  options: DamageApplicationOptions,
+  category: string,
+  type: string,
+  actorTraits?: any,
+  skipDowngrade = false
+): boolean {
+  if (options.ignore === true) return true;
+  if (options.ignore?.[category] === true) return true;
+  if (options.ignore?.[category]?.has?.(type)) return true;
+  if (options.ignore?.[category]?.has?.("all")) return true;
+  if (category === "immunity" && shouldDowngrade(options, type) && !skipDowngrade) return true;
+  if (category === "resistance" && shouldDowngrade(options, type)) {
+    if (actorTraits?.di?.value?.has(type)) return false;
+    return true;
+  }
+  return false;
+}
+
+function hasTraitEffect(
+  actorTraits: any,
+  category: string,
+  type: string,
+  properties?: Set<string>,
+  options?: DamageApplicationOptions
+): boolean {
+  if (category === "dr" && shouldDowngrade(options ?? {}, type)) {
+    if (hasTraitEffect(actorTraits, "di", type, properties) && !shouldIgnore(options ?? {}, "immunity", type, actorTraits, true)) {
+      return true;
+    }
+  }
+  const config = actorTraits[category];
+  if (!config?.value?.has(type)) return false;
+  if (!CONFIG.DND5E.damageTypes[type]?.isPhysical || !properties?.size) return true;
+  return !(config.bypasses?.intersection(properties)?.size);
+}
+
+function computeSourceIgnores({ actor, sourceActor, damages, options }: DamageCalcParams): void {
+  if (!sourceActor || options.midiIgnoreComputed) return;
+
+  //@ts-expect-error no dnd5e types
+  const actorTraits = actor.system?.traits ?? {};
+
+  for (const [traitCode, category] of Object.entries(SOURCE_TRAIT_CONFIG)) {
     //@ts-expect-error no dnd5e types
-    const traits = actor.system.traits ?? {};
+    const trait = sourceActor.system?.traits?.[traitCode];
+    if (!trait?.value?.size) continue;
 
-    const hasEffect = (category, type, properties?) => {
-      if ((category === "dr") && downgrade(type) && hasEffect("di", type, properties)
-        && !ignore("immunity", type, true)) return true;
-      const config = traits[category];
-      if (!config?.value.has(type)) return false;
-      if (!CONFIG.DND5E.damageTypes[type]?.isPhysical || !properties?.size) return true;
-      return !config.bypasses?.intersection(properties)?.size;
-    };
-    const ignore = (category, type, skipDowngrade) => {
-      return options.ignore === true
-        || options.ignore?.[category] === true
-        || options.ignore?.[category]?.has?.(type)
-        || ((category === "immunity") && downgrade(type) && !skipDowngrade)
-        || ((category === "resistance") && downgrade(type) && !hasEffect("di", type));
-    };
-    /*
-    "DRSaveDr": "dm.midi/dm -> Saves/(dr/dv/di)",
-    "SavesDRDr": "Saves -> dm.midi/dm -> (dr/dv/di)",
-    "SaveDrDR": "Saves -> dm -> (dr/dv/di) -> dm.midi"
-    */
-    const mo = options.midi;
-    if (mo?.noCalc) return true;
-    if (mo) {
-      if (configSettings.saveDROrder === "DRSaveDr" && options?.ignore !== true) {
-        if (!applyDamageReduction(actor, damages, options)) return false;
-        // Currently no way to disable just super saver and leave saver
-      } else if (["SaveDrDR", "SaveDRDr"].includes(configSettings.saveDROrder) && options.ignore !== true) {
-        applySavesToDamage(actor, damages, options);
-        if (configSettings.saveDROrder === "SaveDRDr") {
-          if (!applyDamageReduction(actor, damages, options)) return false;
+    if (!options.ignore?.[category]) {
+      foundry.utils.setProperty(options, `ignore.${category}`, new Set());
+    }
+
+    for (const dt of Object.keys(GameSystemConfig.damageTypes)) {
+      if (!damages.some(di => di.type === dt)) continue;
+      if (!trait.value.has(dt) && !trait.all) continue;
+
+      if (category === "immunity" && hasTraitEffect(actorTraits, "di", dt) && !hasTraitEffect(actorTraits, "dr", dt)) {
+        if (!(options.downgrade instanceof Set)) options.downgrade = new Set();
+        (options.downgrade as Set<string>).add(dt);
+      } else if (options.ignore) {
+        options.ignore[category].add(dt);
+      }
+    }
+  }
+  options.midiIgnoreComputed = true;
+}
+
+function applySaves({ damages, options }: DamageCalcParams): void {
+  const mo = options.midi;
+  if (!mo || options.ignore === true) return;
+
+  for (const damage of damages) {
+    if (isDRType(damage.type)) continue;
+
+    const ignoringSuperSaver = mo.superSaver && shouldIgnore(options, "superSaver", damage.type);
+    const ignoringSemiSuperSaver = mo.semiSuperSaver && shouldIgnore(options, "semiSuperSaver", damage.type);
+    const ignoringSaved = mo.saved && shouldIgnore(options, "saved", damage.type);
+
+    if (mo.superSaver && !ignoringSuperSaver) {
+      setDamageActiveFlag(damage, "superSaver");
+    }
+    if (mo.semiSuperSaver && !ignoringSemiSuperSaver && (mo.saveMultiplier ?? 1) !== 1) {
+      setDamageActiveFlag(damage, "semiSuperSaver");
+    }
+    if (mo.saved && !ignoringSaved && (mo.saveMultiplier ?? 1) !== 1) {
+      setDamageActiveFlag(damage, "saved");
+    }
+
+    if (mo.saved && !ignoringSaved) {
+      const multiplier = ignoringSuperSaver
+        ? configSettings.defaultSaveMultiplier
+        : (mo.superSaver ? 0 : (mo.saveMultiplier ?? 1));
+      damage.value = damage.value * multiplier;
+      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * multiplier);
+    } else if (mo.superSaver && !ignoringSuperSaver) {
+      damage.value = damage.value * configSettings.defaultSaveMultiplier;
+      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * configSettings.defaultSaveMultiplier);
+    }
+  }
+}
+
+function applyUncannyDodge({ actor, damages, options }: DamageCalcParams): void {
+  const mo = options.midi;
+  if (!mo?.uncannyDodge || options.ignore === true) return;
+
+  //@ts-expect-error no dnd5e types
+  const actorTraits = actor.system?.traits ?? {};
+
+  for (const damage of damages) {
+    if (shouldIgnore(options, "uncannyDodge", damage.type, actorTraits, true)) continue;
+    setDamageActiveFlag(damage, "uncannyDodge");
+    //@ts-expect-error multiplier exists
+    foundry.utils.setProperty(damage, "multiplier", (damage.multiplier ?? 1) * 0.5);
+    damage.value = damage.value * 0.5;
+  }
+}
+
+function applyTraitMultipliers({ actor, damages, options }: DamageCalcParams): void {
+  if (options.midi?.noCalc) return;
+
+  //@ts-expect-error no dnd5e types
+  const actorTraits = actor.system?.traits ?? {};
+
+  for (const damage of damages) {
+    if (damage.active?.resistance) {
+      damage.value = damage.value * 2 * configSettings.damageResistanceMultiplier;
+      damage.active.multiplier = (damage.active.multiplier ?? 1) * 2 * configSettings.damageResistanceMultiplier;
+    }
+    if (damage.active?.vulnerability) {
+      damage.active.multiplier = (damage.active.multiplier ?? 1) / 2 * configSettings.damageVulnerabilityMultiplier;
+      damage.value = damage.value / 2 * configSettings.damageVulnerabilityMultiplier;
+    }
+    const absorptionValue = actorTraits.da?.[damage.type];
+    if (absorptionValue !== undefined && !shouldIgnore(options, "absorption", damage.type, actorTraits)) {
+      const multiplier = Number(absorptionValue) ?? -1;
+      damage.active ??= {};
+      damage.active.multiplier = (damage.active.multiplier ?? 1) * multiplier;
+      damage.value *= multiplier;
+      damage.damage = damage.value;
+      damage.active.absorption = true;
+    }
+  }
+}
+
+function applyCustomResistances({ actor, damages, options }: DamageCalcParams): void {
+  const categories = { di: "immunity", dr: "resistance", dv: "vulnerability", da: "absorption" };
+  const traitMultipliers = {
+    dr: configSettings.damageResistanceMultiplier,
+    di: configSettings.damageImmunityMultiplier,
+    da: -1,
+    dv: configSettings.damageVulnerabilityMultiplier,
+  };
+
+  //@ts-expect-error no dnd5e types
+  const actorTraits = actor.system?.traits ?? {};
+
+  for (const trait of ["da", "dv", "di", "dr"] as const) {
+    const traitData = actorTraits[trait];
+    if (!traitData) continue;
+
+    const bypasses = traitData.bypasses ?? new Set();
+    const customs = [
+      ...((traitData.custom ?? "").split(";").map((s: string) => s.trim())),
+      ...Object.keys(traitData.midi ?? {}),
+    ].filter((c: string) => c !== "");
+
+    for (let custom of customs) {
+      const normalizedCustom = Object.keys(GameSystemConfig.customDamageResistanceTypes ?? {})
+        .find(key => (GameSystemConfig.customDamageResistanceTypes[key] as string).toLowerCase() === custom.toLowerCase()) ?? custom;
+
+      const matcher = CUSTOM_RESISTANCE_MATCHERS[custom] ?? CUSTOM_RESISTANCE_MATCHERS[normalizedCustom];
+
+      for (const damage of damages) {
+        if (damage.active?.[categories[trait]]) continue;
+        if (damage.type === "midi-none") continue;
+        if (GameSystemConfig.healingTypes[damage.type]) continue;
+        if (shouldIgnore(options, categories[trait], damage.type, actorTraits)) continue;
+        if (shouldIgnore(options, custom, damage.type, actorTraits) || damage.active?.[custom]) continue;
+
+        const matches = matcher
+          ? matcher.match(damage, bypasses)
+          : damage.properties?.has(custom);
+
+        if (!matches) continue;
+
+        damage.active ??= {};
+        damage.active[GameSystemConfig.customDamageResistanceTypes?.[normalizedCustom] ?? custom] = true;
+        damage.active[categories[trait]] = true;
+
+        let multiplier = traitMultipliers[trait];
+        const daOverride = actorTraits.da?.midi?.[custom] ?? actorTraits.da?.midi?.all;
+        if (daOverride && Number.isNumeric(daOverride)) {
+          multiplier = Number(daOverride);
         }
+
+        damage.active.multiplier = (damage.active.multiplier ?? 1) * multiplier;
+        damage.value = damage.value * multiplier;
+        damage.damage = damage.value;
+      }
+    }
+  }
+}
+
+function applyDamageReduction({ actor, damages, options }: DamageCalcParams): boolean {
+  if (options.ignore === true) return true;
+  if (options.ignore?.DR?.has("none") || options.ignore?.DR?.has("all")) return true;
+
+  //@ts-expect-error no dnd5e types
+  const actorTraits = actor.system?.traits ?? {};
+  const specials = Object.keys(actorTraits?.dm?.midi ?? {});
+  if (!specials.length) return true;
+
+  let drAllActives: string[] = [];
+  let dmAll = 0;
+
+  const selectDamages = (predicate: (d: DamageDescription, bypasses?: Set<string>) => boolean): number => {
+    const bypasses = actorTraits.dm?.bypasses ?? new Set();
+    return damages.reduce((total, damage) => {
+      if (isDRType(damage.type)) return total;
+      return total + (predicate(damage, bypasses) ? damage.value : 0);
+    }, 0);
+  };
+
+  for (const special of specials) {
+    if (options.ignore?.modification === true) continue;
+    if (options.ignore?.modification?.has?.(special)) continue;
+
+    const bypasses = actorTraits.dm?.bypasses ?? new Set();
+    const dmRoll = new Roll(`${actorTraits.dm.midi[special]}`, actor.getRollData() as any);
+    const dm = doSyncRoll(dmRoll, `traits.dm.midi.${special}`)?.total ?? 0;
+
+    if (!dm) continue;
+
+    const matcher = CUSTOM_RESISTANCE_MATCHERS[special];
+    let selectedDamage: number;
+    let dmActive = "";
+
+    if (matcher) {
+      selectedDamage = selectDamages((d) => !GameSystemConfig.healingTypes[d.type] && matcher.match(d, bypasses));
+      if (selectedDamage > 0) dmActive = i18n(matcher.label);
+    } else {
+      selectedDamage = 0;
+    }
+
+    if (selectedDamage > 0 && dm) {
+      let appliedDm = dm;
+      if (Math.sign(selectedDamage + appliedDm) !== Math.sign(selectedDamage)) {
+        appliedDm = -selectedDamage;
       }
 
-      if (!options.midiIgnoreComputed) {
-        const categories = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption", "idm": "modification" };
-        if (mo?.sourceActorUuid) {
-          const sourceActor = fromUuidSync(mo.sourceActorUuid) as Actor.Implementation | undefined;
-          for (let key of ["idi", "idr", "idv", "ida", "idm"]) {
-            //@ts-expect-error no dnd5e types
-            if (sourceActor && foundry.utils.getProperty(sourceActor, `system.traits.${key}`) && sourceActor.system.traits[key]?.value.size > 0) {
-              const trait = foundry.utils.getProperty(sourceActor, `system.traits.${key}`) as any;
-              if (!options.ignore?.[categories[key]]) foundry.utils.setProperty(options, `ignore.${categories[key]}`, new Set())
-              for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
-                if (!damages.some(di => di.type === dt)) continue;
-                if (trait.value.has(dt) || trait.all) {
-                  if (categories[key] === "immunity" && hasEffect("di", dt) && !hasEffect("dr", dt)) {
-                    if (!(options.downgrade instanceof Set)) options.downgrade = new Set();
-                    options.downgrade.add(dt);
-                  } else if (options.ignore) options.ignore[categories[key]].add(dt);
-                }
-              }
-            }
-          }
-        }
+      if (checkRule("maxDRValue") && (appliedDm < dmAll || dmAll === 0)) {
+        dmAll = appliedDm;
+        drAllActives = [dmActive];
+      } else if (!checkRule("maxDRValue")) {
+        drAllActives.push(dmActive);
+        dmAll += appliedDm;
       }
-      options.midiIgnoreComputed = true;
-      //@ts-expect-error no dnd5e types
-      const actorTraits: any = actor.system.traits;
-      // For damage absorption ignore other immunity/resistance/vulnerability
-      // if (actorTraits?.da && false) { // not doing this makes absorbing tattoos much easier to implement
-      //   for (let damage of damages) {
-      //     if (ignore("absorption", damage.type, false)) continue;
-      //     if (actorTraits?.da?.value?.has(damage.type) || actorTraits?.da?.all) {
-      //       if (!options?.ignore?.immunity) foundry.utils.setProperty(options, "ignore.immunity", new Set())
-      //       if (!options?.ignore?.resistance) foundry.utils.setProperty(options, "ignore.resistance", new Set())
-      //       if (!options?.ignore?.vulnerability) foundry.utils.setProperty(options, "ignore.vulnerability", new Set())
-      //       if (actorTraits?.di.value.has(damage.type)) options.ignore.immunity.add(damage.type);
-      //       if (actorTraits?.dr.value.has(damage.type)) options.ignore.resistance.add(damage.type);
-      //       if (actorTraits?.dv.value.has(damage.type)) options.ignore.vulnerability.add(damage.type);
-      //     }
-      //   }
-      // }
-      if ((mo?.uncannyDodge)) {
-        for (let damage of damages) {
-          if (ignore("uncannyDodge", damage.type, true)) continue;
-          foundry.utils.setProperty(damage, "active.uncannyDodge", true);
-          // @ts-expect-error TODO: Should this be `damage.active.multiplier`?
-          foundry.utils.setProperty(damage, "multiplier", (damage.multiplier ?? 1) * 0.5);
-          damage.value = damage.value * 0.5;
+    }
+  }
+
+  if (!dmAll) return true;
+
+  const { totalDamage } = damages.reduce((acc, d) => {
+    if (d.type === "temphp") acc.temp += d.value;
+    else if (!["midi-none", "vitality"].includes(d.type)) acc.totalDamage += d.value;
+    return acc;
+  }, { totalDamage: 0, temp: 0 });
+
+  if (Math.sign(totalDamage) !== Math.sign(dmAll + totalDamage)) {
+    dmAll = -totalDamage;
+  }
+
+  if (dmAll) {
+    const drEntry: DamageDescription = {
+      type: "none",
+      value: dmAll,
+      active: { multiplier: 1 },
+      allActives: drAllActives,
+      properties: new Set(),
+    };
+    setDamageActiveFlag(drEntry, "DR");
+    damages.push(drEntry);
+  }
+
+  for (let i = damages.length - 1; i >= 0; i--) {
+    if (damages[i].type === "midi-none") {
+      damages.splice(i, 1);
+    }
+  }
+  return true;
+}
+
+function recalculateTotals({ damages }: DamageCalcParams): void {
+  //@ts-expect-error amount exists on damages array
+  damages.amount = 0;
+  //@ts-expect-error temp exists on damages array
+  damages.temp = 0;
+
+  for (const damage of damages) {
+    if (damage.type === "temphp") {
+      //@ts-expect-error
+      damages.temp += damage.value;
+    } else {
+      //@ts-expect-error
+      damages.amount += damage.value;
+    }
+  }
+
+  //@ts-expect-error
+  damages.amount = damages.amount > 0 ? Math.floor(damages.amount) : Math.ceil(damages.amount);
+
+  //@ts-expect-error
+  if (damages.amount < 0) {
+    for (const damage of damages) {
+      if (damage.type === "none" && damage.active?.DR) {
+        //@ts-expect-error
+        damage.value -= damages.amount;
+        //@ts-expect-error
+        damages.amount = 0;
+        break;
+      }
+    }
+  }
+}
+
+function calculateTotalDamage({ damages, options }: DamageCalcParams): number {
+  return damages.reduce((total, damage) => {
+    let value = damage.value;
+    if (options.invertHealing !== false && damage.type === "healing") value = -value;
+    if (["temphp", "midi-none"].includes(damage.type)) value = 0;
+    return total + value;
+  }, 0);
+}
+
+// --- dnd5e 5.3+ variants ---
+
+function applyTraitMultipliers_53({ actor, damages, options }: DamageCalcParams): void {
+  if (options.midi?.noCalc) return;
+
+  //@ts-expect-error no dnd5e types
+  const actorTraits = actor.system?.traits ?? {};
+
+  for (const damage of damages) {
+    const hasResistance = damage.active?.type?.resistance || damage.active?.all?.resistance;
+    const hasVulnerability = damage.active?.type?.vulnerability || damage.active?.all?.vulnerability;
+    if (hasResistance) {
+      damage.value = damage.value * 2 * configSettings.damageResistanceMultiplier;
+      damage.active ??= {};
+      damage.active.multiplier = (damage.active.multiplier ?? 1) * 2 * configSettings.damageResistanceMultiplier;
+    }
+    if (hasVulnerability) {
+      damage.active ??= {};
+      damage.active.multiplier = (damage.active.multiplier ?? 1) / 2 * configSettings.damageVulnerabilityMultiplier;
+      damage.value = damage.value / 2 * configSettings.damageVulnerabilityMultiplier;
+    }
+    const absorptionValue = actorTraits.da?.[damage.type];
+    if (absorptionValue !== undefined && !shouldIgnore(options, "absorption", damage.type, actorTraits)) {
+      const multiplier = Number(absorptionValue) ?? -1;
+      damage.active ??= {};
+      damage.active.multiplier = (damage.active.multiplier ?? 1) * multiplier;
+      damage.value *= multiplier;
+      damage.damage = damage.value;
+      setDamageActiveFlag(damage, "absorption");
+    }
+  }
+}
+
+function applyCustomResistances_53({ actor, damages, options }: DamageCalcParams): void {
+  const categories = { di: "immunity", dr: "resistance", dv: "vulnerability", da: "absorption" };
+  const traitMultipliers = {
+    dr: configSettings.damageResistanceMultiplier,
+    di: configSettings.damageImmunityMultiplier,
+    da: -1,
+    dv: configSettings.damageVulnerabilityMultiplier,
+  };
+
+  //@ts-expect-error no dnd5e types
+  const actorTraits = actor.system?.traits ?? {};
+
+  for (const trait of ["da", "dv", "di", "dr"] as const) {
+    const traitData = actorTraits[trait];
+    if (!traitData) continue;
+
+    const bypasses = traitData.bypasses ?? new Set();
+    const customs = [
+      ...((traitData.custom ?? "").split(";").map((s: string) => s.trim())),
+      ...Object.keys(traitData.midi ?? {}),
+    ].filter((c: string) => c !== "");
+
+    for (let custom of customs) {
+      const normalizedCustom = Object.keys(GameSystemConfig.customDamageResistanceTypes ?? {})
+        .find(key => (GameSystemConfig.customDamageResistanceTypes[key] as string).toLowerCase() === custom.toLowerCase()) ?? custom;
+
+      const matcher = CUSTOM_RESISTANCE_MATCHERS[custom] ?? CUSTOM_RESISTANCE_MATCHERS[normalizedCustom];
+
+      for (const damage of damages) {
+        // Check nested (dnd5e 5.3+) active keys using helper
+        if (getDamageActiveFlag(damage, categories[trait])) continue;
+        if (damage.type === "midi-none") continue;
+        if (GameSystemConfig.healingTypes[damage.type]) continue;
+        if (shouldIgnore(options, categories[trait], damage.type, actorTraits)) continue;
+        if (shouldIgnore(options, custom, damage.type, actorTraits) || getDamageActiveFlag(damage, custom)) continue;
+
+        const matches = matcher
+          ? matcher.match(damage, bypasses)
+          : damage.properties?.has(custom);
+
+        if (!matches) continue;
+
+        setDamageActiveFlag(damage, GameSystemConfig.customDamageResistanceTypes?.[normalizedCustom] ?? custom);
+        setDamageActiveFlag(damage, categories[trait]);
+
+        damage.active ??= {};
+        let multiplier = traitMultipliers[trait];
+        const daOverride = actorTraits.da?.midi?.[custom] ?? actorTraits.da?.midi?.all;
+        if (daOverride && Number.isNumeric(daOverride)) {
+          multiplier = Number(daOverride);
         }
+
+        damage.active.multiplier = (damage.active.multiplier ?? 1) * multiplier;
+        damage.value = damage.value * multiplier;
+        damage.damage = damage.value;
+      }
+    }
+  }
+}
+
+function recalculateTotals_53({ damages }: DamageCalcParams): void {
+  //@ts-expect-error amount exists on damages array
+  damages.amount = 0;
+  //@ts-expect-error temp exists on damages array
+  damages.temp = 0;
+  //@ts-expect-error tempMax exists on damages array
+  damages.tempMax = 0;
+
+  for (const damage of damages) {
+    if (damage.type === "temphp") {
+      //@ts-expect-error
+      damages.temp += damage.value;
+    } else if (damage.type === "maximum") {
+      //@ts-expect-error
+      damages.tempMax += damage.value;
+    } else {
+      //@ts-expect-error
+      damages.amount += damage.value;
+    }
+  }
+
+  //@ts-expect-error
+  damages.amount = damages.amount > 0 ? Math.floor(damages.amount) : Math.ceil(damages.amount);
+
+  //@ts-expect-error
+  if (damages.amount < 0) {
+    for (const damage of damages) {
+      if (damage.type === "none" && getDamageActiveFlag(damage, "DR")) {
+        //@ts-expect-error
+        damage.value -= damages.amount;
+        //@ts-expect-error
+        damages.amount = 0;
+        break;
+      }
+    }
+  }
+}
+
+function calculateTotalDamage_53({ damages, options }: DamageCalcParams): number {
+  return damages.reduce((total, damage) => {
+    let value = damage.value;
+    if (options.invertHealing !== false && damage.type === "healing") value = -value;
+    if (["temphp", "midi-none", "maximum"].includes(damage.type)) value = 0;
+    return total + value;
+  }, 0);
+}
+
+function preCalculateDamageHandler(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {
+  try {
+    if (options.midi?.noCalc) return true;
+
+    const sourceActor = options.midi?.sourceActorUuid
+      ? fromUuidSync(options.midi.sourceActorUuid) as Actor.Implementation | undefined
+      : undefined;
+    const params = { actor, sourceActor, damages, options };
+
+    const saveDROrder = configSettings.saveDROrder;
+    computeSourceIgnores(params);
+    applyUncannyDodge(params);
+
+    // Apply saves and/or DR based on order setting
+    if (saveDROrder === "DRSaveDr") {
+      if (!applyDamageReduction(params)) return false;
+    } else if (["SaveDrDR", "SaveDRDr"].includes(saveDROrder)) {
+      applySaves(params);
+      if (saveDROrder === "SaveDRDr") {
+        if (!applyDamageReduction(params)) return false;
       }
     }
 
-    const totalDamage = damages.reduce((a, b) => {
-      let value = b.value;
-      if (options.invertHealing !== false && b.type === "healing") value = b.value * -1;
-      if (["temphp", "midi-none"].includes(b.type)) value = 0;
-      return a + value;
-    }
-      , 0);
-    foundry.utils.setProperty(options, "midi.totalDamage", totalDamage);
+    foundry.utils.setProperty(options, "midi.totalDamage", calculateTotalDamage(params));
     if (Hooks.call("midi-qol.dnd5ePreCalculateDamage", actor, damages, options) === false) return false;
   } catch (err) {
     const message = `Error in preCalculateDamage`;
     error(message, err);
     TroubleShooter.recordError(err, message);
-  } finally {
-    return true;
   }
-});
+  return true;
+}
 
-// TODO (Michael) re-evaluate the typing here
-Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
+function calculateDamageHandler(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {
   try {
-    const downgrade = type => options.downgrade === true || options.downgrade?.has?.(type);
-    const ignore = (category, type, skipDowngrade) => {
-      return options.ignore === true
-        || options.ignore?.[category] === true
-        || options.ignore?.[category]?.has?.(type)
-        || ((category === "immunity") && downgrade(type) && !skipDowngrade)
-        || ((category === "resistance") && downgrade(type))
-    };
-    const mo = options.midi;
-    if (configSettings.saveDROrder === "DRSaveDr" && options?.ignore !== true) {
-      applySavesToDamage(actor, damages, options);
-    }
-    //@ts-expect-error no dnd5e types
-    const actorTraits: any = actor.system.traits;
-    if (mo?.noCalc) return true;
-    for (let damage of damages) {
-      // not sure how to do this. if (damage.active.immunity) damage.multiplier = configSettings.damageImmunityMultiplier;
-      if (damage.active?.resistance) {
-        damage.value = damage.value * 2 * configSettings.damageResistanceMultiplier;
-        damage.active.multiplier = (damage.active.multiplier ?? 1) * 2 * configSettings.damageResistanceMultiplier;
-      }
-      if (damage.active?.vulnerability) {
-        damage.active.multiplier = (damage.active.multiplier ?? 1) / 2 * configSettings.damageVulnerabilityMultiplier;
-        damage.value = damage.value / 2 * configSettings.damageVulnerabilityMultiplier;
-      }
-      if (actorTraits.da?.[damage.type] !== undefined && !ignore("absorption", damage.type, false)) {
-        const multiplier = Number(actorTraits.da?.[damage.type]) ?? -1;
-        damage.active ??= {};
-        damage.active.multiplier ??= 1;
-        damage.active.multiplier *= multiplier;
-        damage.value *= multiplier;
-        damage.damage = damage.value; // for backwards compatibility
-        damage.active.absorption = true;
-      }
+    if (options.midi?.noCalc) return true;
+
+    const sourceActor = options.midi?.sourceActorUuid
+      ? fromUuidSync(options.midi.sourceActorUuid) as Actor.Implementation | undefined
+      : undefined;
+    const params = { actor, sourceActor, damages, options };
+
+    const saveDROrder = configSettings.saveDROrder;
+
+    // Apply saves if not already done
+    if (saveDROrder === "DRSaveDr") {
+      applySaves(params);
     }
 
-    let customs: string[] = [];
-    const categories = { "di": "immunity", "dr": "resistance", "dv": "vulnerability", "da": "absorption" };
-    const traitMultipliers = { "dr": configSettings.damageResistanceMultiplier, "di": configSettings.damageImmunityMultiplier, "da": -1, "dv": configSettings.damageVulnerabilityMultiplier };
-    // Handle custom immunities
-    for (let trait of ["da", "dv", "di", "dr"]) {
-      const bypasses = actorTraits[trait].bypasses;
-      customs = (actorTraits[trait].custom ?? "").split(";").map(s => s.trim());
-      customs = [...customs, ...Object.keys((actorTraits[trait].midi ?? {}))];
-      for (let custom of customs) {
-        if (custom === "") continue;
-        let bypassesPresent;
-        for (let damage of damages) {
-          if (damage.active?.[categories[trait]]) continue; // only one dr/di/dv allowed
-          if (damage.type === "midi-none") continue;
-          if (GameSystemConfig.healingTypes[damage.type]) continue;
-          if (ignore(categories[trait], damage.type, false)) {
-            continue;
-          }
-          if (ignore(custom, damage.type, false) || damage.active?.[custom]) {
-            continue;
-          }
-          if (!GameSystemConfig.customDamageResistanceTypes[custom])
-            custom = Object.keys(GameSystemConfig.customDamageResistanceTypes).find(key => GameSystemConfig.customDamageResistanceTypes[key].toLocaleLowerCase() === custom.toLocaleLowerCase()) ?? custom;
-          switch (custom) {
-            case "spell": if (!damage.properties?.has("spell")) continue; break;
-            case "nonSpell":
-            case "non-spell":
-              if (damage.properties?.has("spell")) continue; break;
-            case "magical": if (!damage.properties?.has("mgc")) continue; break;
-            case "nonMagical":
-            case "non-magical":
-              if (damage.properties?.has("mgc")) continue; break;
-            case "physical":
-              bypassesPresent = damage.properties?.intersection(bypasses);
-              if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || bypassesPresent.size > 0) continue;
-              break;
-            case "nonPhysical":
-            case "non-physical":
-              if (GameSystemConfig.damageTypes[damage.type]?.isPhysical) continue; break;
-            case "nonMagicalPhysical":
-            case "non-magical-physical":
-              if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || damage.properties?.has("mgc")) continue; break;
-            case "nonSilverPhysical":
-            case "non-silver-physical":
-              if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || damage.properties?.has("sil")) continue;
-              break;
-            case "nonAdamantPhysical":
-            case "non-adamant-physical":
-              if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || damage.properties?.has("ada")) continue;
-              break;
-            case "mwak":
-            case "rwak":
-              bypassesPresent = damage.properties?.intersection(bypasses);
-              if (!damage.properties?.has(custom) || bypassesPresent.size > 0) continue;
-              break;
-            case "all": if (damage.type === "midi-none") continue; break;
-            default: if (!damage.properties?.has(custom)) continue; break;
-          }
-          damage.active ??= {};
-          damage.active[GameSystemConfig.customDamageResistanceTypes[custom] ?? custom] = true;
-          damage.active[categories[trait]] = true;
-          let multiplier = traitMultipliers[trait];
-          const da = actorTraits?.da?.midi?.[custom] || actorTraits?.da?.midi?.all;
-          if (da && Number.isNumeric(da)) {
-            multiplier = Number(da);
-          }
-          damage.active.multiplier = (damage.active.multiplier ?? 1) * multiplier;
-          damage.value = damage.value * multiplier;
-          damage.damage = damage.value; // for backwards compatibility
-        }
-      }
+    applyTraitMultipliers(params);
+    applyCustomResistances(params);
+
+    // Apply DR if not already done
+    if (saveDROrder === "SaveDrDR") {
+      if (!applyDamageReduction(params)) return false;
     }
-    if (configSettings.saveDROrder === "SaveDrDR" && options?.ignore !== true) {
-      if (!applyDamageReduction(actor, damages, options)) return false;
-    }
-    // correct for possibly excessive damage modification - due to midi dm happening before the per type dm
-    //@ts-expect-error
-    if (damages.amount < 0) {
-      for (let damage of damages) {
-        if (damage.type === "none" && damage.active?.DR) {
-          //@ts-expect-error
-          damage.value -= damages.amount;
-          //@ts-expect-error
-          damages.amount = 0;
-          break;
-        }
-      }
-    }
+
+    recalculateTotals(params);
     if (Hooks.call("midi-qol.dnd5eCalculateDamage", actor, damages, options) === false) return false;
   } catch (err) {
     error(err);
   }
   return true;
-});
-
-function applySavesToDamage(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {
-  const mo = options.midi;
-  for (let damage of damages) {
-    if (options.ignore === true) continue;
-    if (mo?.superSaver && (options?.ignore?.superSaver === true || options?.ignore?.superSaver?.has(damage.type))) continue;
-    if (mo?.semiSuperSaver && (options?.ignore?.semiSuperSaver === true || options?.ignore?.semiSuperSaver?.has(damage.type))) continue;
-    if (mo?.saved && (options?.ignore?.saved === true || options?.ignore?.saved?.has(damage.type))) continue;
-    if (mo?.superSaver) {
-      mo.saveMultiplier = 0.0;
-      foundry.utils.setProperty(damage, "active.superSaver", true);
-    } else if (mo?.semiSuperSaver && (mo.saveMultiplier ?? 1) !== 1) {
-      foundry.utils.setProperty(damage, "active.semiSuperSaver", true);
-    } else if (mo?.saved && (mo.saveMultiplier ?? 1) !== 1) {
-      foundry.utils.setProperty(damage, "active.saved", true);
-    }
-    if (mo?.saved) {
-      damage.value = damage.value * (mo?.saveMultiplier ?? 1);
-      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * (mo?.saveMultiplier ?? 1));
-    } else if (mo?.superSaver) {
-      damage.value = damage.value * configSettings.defaultSaveMultiplier * (damage.active?.multiplier ?? 1);
-      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * configSettings.defaultSaveMultiplier);
-    }
-  }
 }
-function applyDamageReduction(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions): boolean {
-  function selectDamages(damages: DamageDescription[], selectDamage: (damage: DamageDescription) => boolean) {
-    return damages.reduce((total, damage) => {
-      // if (!GameSystemConfig.damageTypes[damage.type]) return total;
-      if (["none", "midi-none"].includes(damage.type)) return total;
-      return total + (selectDamage(damage) ? damage.value : 0);
-    }, 0);
+
+function preCalculateDamageHandler_53(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {
+  try {
+    if (options.midi?.noCalc) return true;
+
+    const sourceActor = options.midi?.sourceActorUuid
+      ? fromUuidSync(options.midi.sourceActorUuid) as Actor.Implementation | undefined
+      : undefined;
+    const params = { actor, sourceActor, damages, options };
+
+    const saveDROrder = configSettings.saveDROrder;
+    computeSourceIgnores(params);
+    applyUncannyDodge(params);
+
+    // Apply saves and/or DR based on order setting
+    if (saveDROrder === "DRSaveDr") {
+      if (!applyDamageReduction(params)) return false;
+    } else if (["SaveDrDR", "SaveDRDr"].includes(saveDROrder)) {
+      applySaves(params);
+      if (saveDROrder === "SaveDRDr") {
+        if (!applyDamageReduction(params)) return false;
+      }
+    }
+
+    foundry.utils.setProperty(options, "midi.totalDamage", calculateTotalDamage_53(params));
+    if (Hooks.call("midi-qol.dnd5ePreCalculateDamage", actor, damages, options) === false) return false;
+  } catch (err) {
+    const message = `Error in preCalculateDamage`;
+    error(message, err);
+    TroubleShooter.recordError(err, message);
   }
-  //@ts-expect-error no dnd5e types
-  const actorTraits: any = actor.system.traits;
+  return true;
+}
 
-  if (options.ignore !== true && !options.ignore?.DR?.has("none") && !options.ignore?.DR?.has("all")) {
-    let drAllActives: string[] = [];
-    // Insert DR.ALL as a -ve damage value maxed at the total damage.
-    let dmAll: number = 0;
-    // think about how to do custom dm.const specials = [...(actorTraits.dm.custom ?? []).split(";"), ...Object.keys(actorTraits.dm?.midi ?? {})];
-    const specials = Object.keys(actorTraits?.dm?.midi ?? {});
-    for (let special of specials) {
-      let selectedDamage: number;
-      let dmActive: string = "";
-      let dmRoll = new Roll(`${actorTraits?.dm.midi?.[special]}`, actor.getRollData() as any)
-      let dm = doSyncRoll(dmRoll, `traits.dm.midi.${special}`)?.total ?? 0;
-      const bypasses = actorTraits["dm"].bypasses ?? new Set();
-      if (options.ignore?.modification === true) continue;
+function calculateDamageHandler_53(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {
+  try {
+    if (options.midi?.noCalc) return true;
 
-      switch (special) {
-        case "all":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type]);
-          if (selectedDamage > 0) dmActive = i18n("All");
-          break;
+    const sourceActor = options.midi?.sourceActorUuid
+      ? fromUuidSync(options.midi.sourceActorUuid) as Actor.Implementation | undefined
+      : undefined;
+    const params = { actor, sourceActor, damages, options };
 
-        case "mwak":
-        case "rwak":
-          if (options.ignore?.modification?.has(special)) continue;
-          selectedDamage = selectDamages(damages, (damage) => {
-            const bypassesPresent = (damage.properties ?? new Set()).intersection(bypasses) ?? new Set();
-            return !GameSystemConfig.healingTypes[damage.type]
-              && damage.properties?.has(special)
-              && bypassesPresent.size === 0
-          });
-          if (selectedDamage > 0) dmActive = i18n(special);
-          break;
-        case "msak":
-        case "rsak":
-          if (options.ignore?.modification?.has(special)) continue;
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties?.has(special));
-          if (selectedDamage > 0) dmActive = i18n(special);
-          break;
+    const saveDROrder = configSettings.saveDROrder;
 
-        case "magical":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties?.has("mgc"));
-          if (selectedDamage > 0) dmActive = i18n("midi-qol.Magical");
-          break;
-        case "non-magical":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && !damage.properties?.has("mgc"));
-          if (selectedDamage > 0) dmActive = i18n("midi-qol.NonMagical")
-          break;
-        case "non-magical-physical":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties?.has("mgc"));
-          if (selectedDamage > 0) dmActive = i18n("midi-qol.NonMagicalPhysical");
-          break;
-
-        case "non-silver-physical":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties?.has("sil"));
-          if (selectedDamage > 0) dmActive = i18n("midi-qol.NonSilverPhysical");
-          break;
-
-        case "non-adamant-physical":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && GameSystemConfig.damageTypes[damage.type]?.isPhysical && !damage.properties?.has("ada"));
-          if (selectedDamage > 0) dmActive = i18n("midi-qol.NonAdamantinePhysical");
-          break;
-
-        case "non-physical":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && !GameSystemConfig.damageTypes[damage.type]?.isPhysical);
-          if (selectedDamage > 0) dmActive = i18n("midi-qol.NonPhysical");
-          break;
-
-        case "physical":
-          selectedDamage = selectDamages(damages, (damage) => {
-            const bypassesPresent = (damage.properties ?? new Set()).intersection(bypasses);
-            return !GameSystemConfig.healingTypes[damage.type]
-              && GameSystemConfig.damageTypes[damage.type]?.isPhysical
-              && bypassesPresent.size === 0;
-          });
-          if (selectedDamage > 0) dmActive = i18n("midi-qol.Physical");
-          break;
-
-        case "spell":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && damage.properties?.has("spell"));
-          if (selectedDamage > 0) dmActive = i18n("midi-qol.SpellDamage");
-          break;
-
-        case "non-spell":
-          selectedDamage = selectDamages(damages, (damage) => !GameSystemConfig.healingTypes[damage.type] && !damage.properties?.has("spell"));
-          if (selectedDamage > 0) dmActive = i18n("midi-qol.NonSpellDamage");
-          break;
-
-        default: dm = 0; selectedDamage = 0; break;
-      }
-      if (dm) {
-        if (Math.sign(selectedDamage + dm) !== Math.sign(selectedDamage)) {
-          dm = -selectedDamage
-        }
-        if (checkRule("maxDRValue") && (dm < dmAll || dmAll === undefined)) {
-          dmAll = dm;
-          drAllActives = [dmActive];
-        } else if (!checkRule("maxDRValue")) {
-          drAllActives.push(dmActive);
-          dmAll = (dmAll ?? 0) + dm;
-        }
-      }
+    // Apply saves if not already done
+    if (saveDROrder === "DRSaveDr") {
+      applySaves(params);
     }
-    let { totalDamage, temp } = damages.reduce((acc, d) => {
-      if (d.type === "temphp") acc.temp += d.value;
-      else if (!["midi-none", "vitality"].includes(d.type)) acc.totalDamage += d.value; // Exclude vitality from HP damage
-      return acc;
-    }, { totalDamage: 0, temp: 0 });
-    // const totalDamage = damages.reduce((a, b) => a + b.value, 0);
-    if (!dmAll) dmAll = 0;
 
-    // dnd5e now does damage threshold so need to account for that
-    if (Math.sign(totalDamage) !== Math.sign(dmAll + totalDamage)) {
-      dmAll = -totalDamage;
+    applyTraitMultipliers_53(params);
+    applyCustomResistances_53(params);
+
+    // Apply DR if not already done
+    if (saveDROrder === "SaveDrDR") {
+      if (!applyDamageReduction(params)) return false;
     }
-    if (dmAll) {
-      damages.push({ type: "none", value: dmAll, active: { DR: true, multiplier: 1 }, allActives: drAllActives, properties: new Set() });
-    }
-    while (damages.find((di, idx) => {
-      if (di.type === "midi-none") {
-        damages.splice(idx, 1);
-        return true;
-      }
-      return false;
-    }));
+
+    recalculateTotals_53(params);
+    if (Hooks.call("midi-qol.dnd5eCalculateDamage", actor, damages, options) === false) return false;
+  } catch (err) {
+    error(err);
   }
   return true;
 }
@@ -1342,46 +1779,10 @@ Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
 });
 
 Hooks.on("dnd5e.preRollConcentration", (rollConfig, dialogConfig, messageConfig) => {
-  if (!rollConfig.subject) return true;
-  const actor = rollConfig.subject as Actor.Implementation;
+  // Advantage/disadvantage for concentration saves is now handled by rollTypeHandlers["concentration"]
+  // in patching.ts, which composes with the save handler and adds concentration-specific flags.
+  // This hook only needs to handle the noConcentrationCheck workflow option.
   if (rollConfig.workflowOptions?.noConcentrationCheck) return false;
-
-  const concAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.advantage.concentration`);
-  const concDisAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.disadvantage.concentration`);
-  const concNoAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.noAdvantage.concentration`);
-  const concNoDisAdvFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.noDisadvantage.concentration`);
-  const noAdvAllFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.noAdvantage.all`);
-  const noDisAdvAllFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.noDisadvantage.all`);
-
-  if (concAdvFlag || concDisAdvFlag || concNoAdvFlag || concNoDisAdvFlag || noAdvAllFlag || noDisAdvAllFlag) {
-    const conditionData = createConditionData({ workflow: undefined, target: undefined, actor });
-
-    let advantageCount = (concAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.advantage.concentration`, conditionData)) ? 1 : 0;
-    let disadvantageCount = (concDisAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.disadvantage.concentration`, conditionData)) ? 1 : 0;
-
-    // Check noAdvantage/noDisadvantage flags
-    const advantageSuppressed = (noAdvAllFlag && evalAllConditions(actor, `flags.${MODULE_ID}.noAdvantage.all`, conditionData))
-      || (concNoAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.noAdvantage.concentration`, conditionData));
-    const disadvantageSuppressed = (noDisAdvAllFlag && evalAllConditions(actor, `flags.${MODULE_ID}.noDisadvantage.all`, conditionData))
-      || (concNoDisAdvFlag && evalAllConditions(actor, `flags.${MODULE_ID}.noDisadvantage.concentration`, conditionData));
-
-    // Combine midi-qol flags with dnd5e's native roll mode
-    const { advantage, disadvantage } = globalThis.dnd5e.dataModels.fields.AdvantageModeField.combineFields(
-      actor.system,
-      (advantageSuppressed || disadvantageSuppressed) ? [] : ["attributes.concentration.roll.mode"],
-      {
-        advantages: { count: advantageCount, suppressed: advantageSuppressed },
-        disadvantages: { count: disadvantageCount, suppressed: disadvantageSuppressed }
-      }
-    );
-
-    // Update the roll options
-    if (rollConfig.rolls?.[0]?.options) {
-      rollConfig.rolls[0].options.advantage = advantageSuppressed ? false : advantage;
-      rollConfig.rolls[0].options.disadvantage = disadvantageSuppressed ? false : disadvantage;
-    }
-  }
-
   return true;
 })
 
@@ -1414,10 +1815,87 @@ Hooks.on("dnd5e.rollConcentration", (rolls, { subject }) => {
   }
 });
 
-// Make activity templates a tiny bit bigger so that the off by one pixel errors don't happen.
+// Set midi-qol flags on activity templates for use during preview and placement.
+// When constrainTemplatePlacement is enabled:
+// - Sets sourceTokenUuid for all templates
+// - Sets maxRange for templates with limited range (clamps placement during preview)
+// - Sets anchorToToken for cone/ray templates with range Self/None
 Hooks.on("dnd5e.preCreateActivityTemplate", (activity, templateData) => {
   templateData.distance! += 0.000001; // Make the template fractionally larger to avoid rounding errors
+
+  if (!configSettings.constrainTemplatePlacement) return true;
+
+  // Get the caster's token and store its UUID for later use
+  const actor = activity.actor;
+  const token = actor ? tokenForActor(actor) : undefined;
+  if (token) {
+    foundry.utils.setProperty(templateData, "flags.midi-qol.sourceTokenUuid", token.document.uuid);
+  }
+
+  const range = activity.range;
+  const rangeUnits = range?.units;
+
+  // Calculate and store max range for templates that should be range-limited
+  // Only set maxRange for range types that should be limited (not self/none/any)
+  if (rangeUnits && rangeUnits !== "self" && rangeUnits !== "none" && rangeUnits !== "any") {
+    let maxRange = range.long || range.value;
+    if (maxRange && maxRange > 0) {
+      // Convert touch range to a small distance
+      if (rangeUnits === "touch") {
+        maxRange = canvas?.dimensions?.distance ?? 5;
+      }
+      foundry.utils.setProperty(templateData, "flags.midi-qol.maxRange", maxRange);
+    }
+  }
+
+  // Check if this template should be anchored to the caster's token
+  // Cones and rays with range self/none/0 should be anchored
+  const templateType = templateData.t;
+  if (templateType === "cone" || templateType === "ray") {
+    const isSelfRange = rangeUnits === "self"
+      || rangeUnits === "none"
+      || (!range?.value && !range?.long && rangeUnits !== "touch");
+
+    if (isSelfRange) {
+      foundry.utils.setProperty(templateData, "flags.midi-qol.anchorToToken", true);
+    }
+  }
   return true;
+});
+
+// Check template placement range - prevent placing templates beyond the activity's range
+// This is a safety check - the preview movement should already clamp position within range
+Hooks.on("preCreateMeasuredTemplate", (templateDoc: MeasuredTemplateDocument.Implementation, templateData: MeasuredTemplateDocument.CreateData, options: object, userId: string) => {
+  if (userId !== game.user?.id) return true;
+
+  // Use pre-set midi-qol flags from preCreateActivityTemplate hook
+  const midiFlags = templateDoc.flags?.[MODULE_ID] as { maxRange?: number, sourceTokenUuid?: string } | undefined;
+  const maxRange = midiFlags?.maxRange;
+  if (!maxRange) return true;
+
+  const sourceTokenUuid = midiFlags?.sourceTokenUuid;
+  if (!sourceTokenUuid) return true;
+
+  // Get the source token
+  const tokenDoc = fromUuidSync(sourceTokenUuid) as TokenDocument.Implementation | null;
+  const token = tokenDoc?.object;
+  if (!token) return true;
+
+  // Calculate raw grid distance from token perimeter to template position
+  const templateX = templateDoc.x;
+  const templateY = templateDoc.y;
+  if (templateX === undefined || templateY === undefined) return true;
+
+  const poly = getTokenPerimeterPolygon(token);
+  const closest = closestPointOnPerimeter(poly, templateX, templateY);
+  const distance = measurePointDistance(closest, { x: templateX, y: templateY });
+  // Allow half a grid square tolerance for grid snapping moving the position slightly beyond range
+  const tolerance = (canvas?.dimensions?.distance ?? 5) / 2;
+  if (distance <= maxRange + tolerance) return true;
+
+  // Out of range - notify and cancel
+  ui.notifications?.warn(i18n("midi-qol.TemplateOutOfRange"));
+  return false;
 });
 
 // insert midi initiative changes into the initiative config.
@@ -1429,16 +1907,16 @@ Hooks.on("dnd5e.preConfigureInitiative", (actor, rollConfig) => {
 
   // Check for advantage
   if (evalAllConditions(actor, "flags.midi-qol.advantage.all", conditionData)
-    || evalAllConditions(actor, "flags.midi-qol.advantage.ability.check.all", conditionData)
-    || evalAllConditions(actor, `flags.midi-qol.advantage.ability.check.${init}`, conditionData)
+    || evalAllConditions(actor, "flags.midi-qol.advantage.check.all", conditionData)
+    || evalAllConditions(actor, `flags.midi-qol.advantage.check.${init}`, conditionData)
     || evalAllConditions(actor, `flags.${game.system?.id}.initiativeAdv`, conditionData)) {
     options.advantage ||= true;
   }
 
   // Check for disadvantage
   if (evalAllConditions(actor, "flags.midi-qol.disadvantage.all", conditionData)
-    || evalAllConditions(actor, "flags.midi-qol.disadvantage.ability.check.all", conditionData)
-    || evalAllConditions(actor, `flags.midi-qol.disadvantage.ability.check.${init}`, conditionData)
+    || evalAllConditions(actor, "flags.midi-qol.disadvantage.check.all", conditionData)
+    || evalAllConditions(actor, `flags.midi-qol.disadvantage.check.${init}`, conditionData)
     || evalAllConditions(actor, `flags.${game.system?.id}.initiativeDisadv`, conditionData)) {
     options.disadvantage ||= true;
   }

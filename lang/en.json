@@ -139,6 +139,7 @@
   "midi-qol.AddSheetButtons.Hint": "Add quick roll buttons (Info, Attack, Damage) to items and activities on character sheets",
   "midi-qol.DisplayItemProperties.Name": "Display Item Properties",
   "midi-qol.DisplayItemProperties.Hint": "Display item properties in the chat card. Disabling saves some chat card space.",
+  "midi-qol.ConfigButtons": "Roll Dialog",
   "midi-qol.ConfigTitle": "Midi-QOL Configuration",
   "midi-qol.WorkflowSettings": "Workflow Settings",
   "midi-qol.CheckSaveText.Name": "Search item description",
@@ -148,7 +149,11 @@
   "midi-qol.saving-throw": "Saving Throw",
   "midi-qol.ability-check": "Ability Check",
   "midi-qol.ability-checks": "Ability Checks",
+  "midi-qol.plain-d20-roll": "d20 Roll",
+  "midi-qol.RollChoice": "Choose Ability",
+  "midi-qol.or": "or",
   "midi-qol.skill-check": "Skill Check",
+  "midi-qol.tool-check": "Tool Check",
   "midi-qol.noAttackRoll": "You must roll the attack before rolling the damage",
   "midi-qol.config": "Midi QoL config",
   "midi-qol.Hint": "Configure the various workflow settings for midi-qol. Be warned there are lots of them",
@@ -204,7 +209,13 @@
     "none": "None",
     "all": "Check - all see result",
     "whisper": "Check - only GM sees results",
-    "gmOnly": "Check - only GM sees anything"
+    "gmOnly": "Check - only GM sees anything",
+    "expandedHints": {
+      "none": "No automatic hit checking. Hits must be adjudicated manually by the GM.",
+      "all": "Midi-qol automatically checks attack rolls against target AC. All players see hit/miss results.",
+      "whisper": "Midi-qol automatically checks attack rolls against target AC. Only the GM sees hit/miss results.",
+      "gmOnly": "Midi-qol automatically checks attack rolls against target AC. Only the GM sees the attack roll and results."
+    }
   },
   "midi-qol.clickOptions": {
     "off": "Off",
@@ -226,7 +237,17 @@
     "wallsBlock": "Walls Block",
     "wallsBlockIgnoreIncapacitated": "Walls Block - Ignore Incapacitated/Dead",
     "wallsBlockIgnoreDefeated": "Walls Block - Ignore Dead",
-    "walledtemplates": "Use Walled Templates"
+    "walledtemplates": "Use Walled Templates",
+    "expandedHints": {
+      "none": "Templates do not auto-target tokens. Players must select targets manually.",
+      "always": "All tokens within the template area are automatically targeted, regardless of walls.",
+      "alwaysIgnoreIncapacitated": "All tokens within the template area are targeted, but incapacitated and dead tokens are excluded.",
+      "alwaysIgnoreDefeated": "All tokens within the template area are targeted, but dead/defeated tokens are excluded.",
+      "wallsBlock": "Tokens within the template area are targeted only if there is no wall between the template origin and the token.",
+      "wallsBlockIgnoreIncapacitated": "Tokens are targeted if no wall blocks them from the template origin. Incapacitated and dead tokens are excluded.",
+      "wallsBlockIgnoreDefeated": "Tokens are targeted if no wall blocks them from the template origin. Dead/defeated tokens are excluded.",
+      "walledtemplates": "Delegates targeting to the Walled Templates module, which reshapes the template area around walls. Requires the Walled Templates module."
+    }
   },
   "midi-qol.autoCheckSavesOptions": {
     "none": "Off",
@@ -234,7 +255,15 @@
     "all": "Save - All see result + save total",
     "allShow": "Save - All see Result + Rolls",
     "whisper": "Save - only GM sees results + rolls",
-    "gmOnly": "Save - only GM sees anything"
+    "gmOnly": "Save - only GM sees anything",
+    "expandedHints": {
+      "none": "No automatic saving throws. Saves must be rolled manually.",
+      "allNoRoll": "Midi-qol auto-rolls saving throws. All players see pass/fail results but not the roll total.",
+      "all": "Midi-qol auto-rolls saving throws. All players see pass/fail results and the save total.",
+      "allShow": "Midi-qol auto-rolls saving throws. All players see pass/fail results, save total, and the full roll breakdown.",
+      "whisper": "Midi-qol auto-rolls saving throws. Only the GM sees the results and roll details.",
+      "gmOnly": "Midi-qol auto-rolls saving throws. Only the GM sees anything related to saving throws."
+    }
   },
   "midi-qol.rangeTargetOptions": {
     "none": "None",
@@ -295,7 +324,15 @@
     "autoDialog": "Auto roll and show roll dialog",
     "mtb": "Monks Token Bar",
     "ftb": "Flash Token Bar",
-    "rer": "Rippers Epic Rolls"
+    "rer": "Rippers Epic Rolls",
+    "expandedHints": {
+      "none": "GM is prompted to roll saves via a chat message button.",
+      "auto": "Saves are auto-rolled with no GM interaction.",
+      "autoDialog": "Saves are auto-rolled but the roll configuration dialog is shown first, allowing modification.",
+      "mtb": "Saves are rolled via the Monks Token Bar interface. Requires the Monks Token Bar module.",
+      "ftb": "Saves are rolled via the Flash Token Bar pop-up. Requires the Flash Rolls 5e module.",
+      "rer": "Saves are rolled via Ripper's Epic Rolls interface. Requires the Epic Rolls 5e module."
+    }
   },
   "midi-qol.playerRollSavesOptions": {
     "none": "None (private roll)",
@@ -307,7 +344,19 @@
     "chat": "Chat Message",
     "mtb": "Monks Token Bar",
     "ftb": "Flash Token Bar",
-    "rer": "Rippers Epic Rolls"
+    "rer": "Rippers Epic Rolls",
+    "expandedHints": {
+      "none": "Saves are auto-rolled with no player interaction. Roll shown privately (GM only).",
+      "nonePublic": "Saves are auto-rolled with no player interaction. Roll shown publicly to all players.",
+      "noneDialogPublic": "Saves are auto-rolled but the roll configuration dialog is shown first, allowing modification. Roll shown publicly.",
+      "noneDialogPrivate": "Saves are auto-rolled but the roll configuration dialog is shown first, allowing modification. Roll shown privately (GM only).",
+      "noneDialogSelf": "Saves are auto-rolled but the roll configuration dialog is shown first, allowing modification. Roll shown only to the rolling player.",
+      "noneDialogBlind": "Saves are auto-rolled but the roll configuration dialog is shown first, allowing modification. Roll sent as a blind roll.",
+      "chat": "Players are prompted to roll saves via a chat message button.",
+      "mtb": "Players roll saves via the Monks Token Bar interface. Requires the Monks Token Bar module.",
+      "ftb": "Players roll saves via the Flash Token Bar pop-up. Requires the Flash Rolls 5e module.",
+      "rer": "Players roll saves via Ripper's Epic Rolls interface. Requires the Epic Rolls 5e module."
+    }
   },
   "midi-qol.playerRollSavesOptionsReduced": {
     "none": "None",
@@ -334,7 +383,18 @@
     "hitCriticalDamage": "Show Hit/Miss/Critical/Fumble + damage total",
     "attackTotalOnly": "Show the attack roll total only",
     "d20AttackOnly": "Show attack D20 Only",
-    "all": "Entire Roll"
+    "all": "Entire Roll",
+    "expandedHints": {
+      "none": "Hide nothing — players see all roll details.",
+      "detailsDSN": "Hide the roll formulas but still roll DSN dice so players see the animation.",
+      "details": "Hide the roll formula and don't show DSN dice.",
+      "d20Only": "Show the attack d20 roll and damage total only.",
+      "hitDamage": "Show hit/miss plus the damage total.",
+      "hitCriticalDamage": "Show hit/miss/critical/fumble plus the damage total.",
+      "attackTotalOnly": "Show the attack roll total only.",
+      "d20AttackOnly": "Show the d20 attack dice only.",
+      "all": "Hide all roll details from the players."
+    }
   },
   "midi-qol.RollOtherDamageOptions": {
     "none": "Off",
@@ -345,15 +405,6 @@
   "midi-qol.potion": "Potion",
   "midi-qol.HideRollDetails.Name": "GM Roll details hiding",
   "midi-qol.HideRollDetails.Hint": "Choose how much of GM rolls to hide/show to players",
-  "midi-qol.HideRollDetails.HintLong": {
-    "none": "<strong>None</strong>: Hide nothing",
-    "detailsDSN": "<strong>Roll Formula but show DSN</strong>: Hide the roll formulas but still roll DSN dice",
-    "details": "<strong>Roll Formula</strong>: hide the roll formula and don't show DSN dice",
-    "d20Only": "<strong>Show Attack d20 + damage total</strong>: Show the attack d20 Roll and damage total only",
-    "hitDamage": "<strong>Show Hit/Miss + damage total</strong>: Show hit/miss plus the damage total",
-    "d20attackOnly": "<strong>Show attack D20 Only</strong>: Show the d20 attack dice only",
-    "all": "<strong>Entire Roll</strong>: hide all roll details from the players"
-  },
   "midi-qol.DiceRolled": "<div>Rolled</div>",
   "midi-qol.ForceHideRoll.Name": "Really Hide private/blind/self-rolls",
   "midi-qol.ForceHideRoll.Hint": "Display nothing to non-recipients for private/blind/self-rolls. Thanks to felix.mueller.86@web.de",
@@ -466,7 +517,8 @@
   "midi-qol.OptionalRules.Name": "Optional Game Rules",
   "midi-qol.OptionalRules.Hint": "DND5E Game rules that you may wish to enable. Generally, don't work with better rolls.",
   "midi-qol.InvisAdvantage.Name": "Unseen/Invisible attackers have advantage/disadvantage on attacks",
-  "midi-qol.InvisAdvantage.Hint": "<strong>RAW (2014)</strong> Invisible condition always grants adv/disadv; other senses (blindsight, tremorsense) negate unseen adv/disadv. <strong>RAW (2024)</strong> Only grants adv/disadv if the other creature cannot <em>see</em> you — blindsight/truesight negate, but tremorsense does not.",
+  "midi-qol.RAW2014Invisible.Hint": "<strong>RAW (2014)</strong> Invisible condition always grants adv/disadv; other senses (blindsight, tremorsense) negate unseen adv/disadv.",
+  "midi-qol.RAW2024Invisible.Hint": "<strong>RAW (2024)</strong> Only grants adv/disadv if the other creature cannot <em>see</em> you — blindsight/truesight negate, but tremorsense does not.",
   "midi-qol.InvisAdvantageOptions": {
     "none": "Do not apply",
     "RAW2014": "RAW (2014)",
@@ -491,11 +543,7 @@
   },
   "midi-qol.NearbyFoe.Name": "Ranged attacks when a foe is closer than this have disadvantage. 0 disables",
   "midi-qol.WallsBlockRange.Name": "Walls block ranged attacks",
-  "midi-qol.WallsBlockRange.Hint1": "No = wall do not block range checks",
-  "midi-qol.WallsBlockRange.Hint2": "center = check center to center line",
-  "midi-qol.WallsBlockRange.Hint3": "center + Levels = center check but use the 'levels' module to determine wall blocking LOS. Also use levels volumetric templates for template targeting",
-  "midi-qol.WallsBlockRange.Hint4": "levels Auto Cover = Use levelsautocover to test and block for full cover",
-  "midi-qol.WallsBlockRange.Hint5": "Alternative Token Visibility = Use Alternative Token Visibility to test and block for full cover",
+  "midi-qol.WallsBlockRange.Hint": "If a cover module determines total cover, the attack is blocked.",
   "midi-qol.WallsBlockRangeOptionsNew": {
     "none": "No",
     "center": "Center Check",
@@ -503,8 +551,16 @@
     "levelsautocover": "Levels Auto Cover",
     "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "tokencover": "Alternative Token Cover",
-    "tokenvisibility": "Alternative Token Visibility - deprecated",
-    "simplecover5e": "Simple Cover 5e"
+    "simplecover5e": "Simple Cover 5e",
+    "expandedHints": {
+      "none": "Walls do not block ranged attack checks.",
+      "center": "Check line of sight from token center to target center. If a wall blocks the line, the attack is blocked.",
+      "centerLevels": "Center-to-center check using the Levels module to determine wall blocking LOS. Also uses Levels volumetric templates for template targeting. Requires the Levels module.",
+      "levelsautocover": "Use the Levels Auto Cover module to calculate cover. Total cover blocks the attack. Requires the Levels Auto Cover module.",
+      "simbuls-cover-calculator": "Use Simbul's Cover Calculator module to calculate cover. Total cover blocks the attack. Requires the Simbul's Cover Calculator module.",
+      "tokencover": "Use the Alternative Token Cover module to calculate cover. Total cover blocks the attack. Requires the Alternative Token Cover module.",
+      "simplecover5e": "Use the Simple Cover 5e module to calculate cover. Total cover blocks the attack. Requires the Simple Cover 5e module."
+    }
   },
   "midi-qol.NearbyAllyRanged.Name": "(House Rule) Ranged Attacks at foes near allies have disadvantage",
   "midi-qol.WallsBlockRangeOptions": {
@@ -519,8 +575,7 @@
     "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "simplecover5e": "Simple Cover 5e",
     "levelsautocover": "Levels Auto Cover",
-    "tokencover": "Alternative Token Cover",
-    "tokenvisibility": "Alternative Token Visibility - deprecated"
+    "tokencover": "Alternative Token Cover"
   },
   "midi-qol.NearbyAllyRanged.Hint": "Ranged Attacks with allies nearby (5 feet) to the target have disadvantage for targets smaller than this (w*h). 0 disables",
   "midi-qol.Incapacitated.Name": "When an Incapacitated actor takes an action, MidiQOL should",
@@ -617,8 +672,16 @@
   "midi-qol.UsePlayerPortrait.Name": "Use Actor portrait in chat cards",
   "midi-qol.UsePlayerPortrait.Hint": "For Actors of type character use the actor portrait instead of the token image in midi-qol chat cards",
   "midi-qol.DistanceIncludesHeight.Name": "Include height difference in distance calculations",
+  "midi-qol.DistanceMeasurement.Name": "Distance measurement method",
+  "midi-qol.DistanceMeasurement.Hint": "How to measure distance between tokens. 'Default' uses Foundry's core measurement (center-to-center via measurePath). 'Grid Square Centers' uses the closest grid square centers with midi-qol processing. 'Token Perimeters' uses the closest points on token edges (more accurate for large tokens).",
+  "midi-qol.DistanceMeasurementOptions.default": "Default (Foundry Core)",
+  "midi-qol.DistanceMeasurementOptions.center": "Grid Square Centers",
+  "midi-qol.DistanceMeasurementOptions.perimeter": "Token Perimeters",
   "midi-qol.NoSocketLib": "Midi-qol requires socketlib installed and enabled",
-  "midi-qol.chatlogPruneDeprecated": "Midi-qol's built-in chat log pruning is deprecated. Please install and activate the 'chatlog-prune' module. This feature will be removed in midi-qol v14.",
+  "midi-qol.chatlogPruneWarning": "Warning",
+  "midi-qol.chatlogPruneDeprecated": "Midi-qol's built-in chat log pruning is deprecated. It will be removed in version 13.1.",
+  "midi-qol.chatlogPruneInstallHint": "Please install and activate the 'chatlog-prune' module. Remember to activate chat log pruning in the module settings.",
+  "midi-qol.chatlogPruneEnableHint": "The 'chatlog-prune' module is installed but chat log pruning is not enabled. Please activate it in the chatlog-prune module settings.",
   "midi-qol.confirm": "Confirmation Dialog",
   "midi-qol.ExportConfig": "Export midi-qol settings to json file",
   "midi-qol.ImportConfig": "Import midi-qol settings from json file",
@@ -744,12 +807,7 @@
   "midi-qol.FixStickyKeys.Name": "Fix sticky alt/ctrl/shift",
   "midi-qol.FixStickyKeys.Hint": "If set midi will attempt to resolve alt/ctrl/shift being stuck 'on'",
   "midi-qol.DisplaySaveAdvantage.Name": "Display if save had Advantage/Disadvantage",
-  "midi-qol.QuickSettingsBlurb": {
-    "1": "Quick settings let you set a combination of settings at once.",
-    "2": "When one of the buttons below is pushed the changes are immediately made to your settings",
-    "3": "A list of changes is displayed once the application is complete",
-    "4": "Suggestions for improvements welcome"
-  },
+  "midi-qol.QuickSettingsBlurb": "Quick settings let you set a combination of settings at once.<br>When one of the buttons below is pushed the changes are immediately made to your settings<br>A list of changes is displayed once the application is complete<br>Suggestions for improvements welcome",
   "midi-qol.Reaction.Title": "Reaction Processing",
   "midi-qol.GMDoReactionsOptions": {
     "all": "On",
@@ -803,12 +861,7 @@
   "midi-qol.LaunchSetupWizard.Name": "Setup Wizard",
   "midi-qol.LaunchSetupWizard.Label": "Launch Setup Wizard",
   "midi-qol.LaunchSetupWizard.Hint": "Opens the step-by-step midi-qol configuration wizard",
-  "midi-qol.SoundSettingsBlurb": {
-    "1": "Getting started...",
-    "2": "Choose 'Create Sample playlist, which will create a playlist 'Midi Item Sounds' with a few sounds",
-    "3": "Choose `Basic Settings` and tinker",
-    "4": "The other create setting add more details/complexity"
-  },
+  "midi-qol.SoundSettingsBlurb": "Getting started...<br>Choose 'Create Sample playlist, which will create a playlist 'Midi Item Sounds' with a few sounds<br>Choose `Basic Settings` and tinker<br>The other create setting add more details/complexity",
   "midi-qol.AddRow": "Add Row",
   "midi-qol.CheckFlanking.Name": "Check Flanking",
   "midi-qol.CheckFlanking.Hint": "Check if you and your allies flank the opponent. Gives attacker advantage, applies <strong>Flanking</strong> condition to attacker, or applies <strong>Flanked</strong> condition to <em>target</em>. Requires restart if changing to use one of the Midi options.",
@@ -820,10 +873,33 @@
     "ceflanked": "Convenient Effects Flanked",
     "midiFlanked": "Midi Flanked effect",
     "ceflankedNoconga": "Convenient Effects Flanked + no conga line",
-    "midiFlankedNoConga": "Midi Flanked + no conga line"
+    "midiFlankedNoConga": "Midi Flanked + no conga line",
+    "expandedHints": {
+      "off": "No flanking automation.",
+      "advonly": "Flanking grants advantage on melee attacks. No effect or condition is applied to either token.",
+      "ceonly": "Apply the Convenient Effects 'Flanking' effect to the attacker. Only that attacker gains advantage — other attackers of the same target do not.",
+      "midiFlanking": "Apply midi-qol's 'Flanking' effect to the attacker. Only that attacker gains advantage — other attackers of the same target do not.",
+      "ceflanked": "Apply the Convenient Effects 'Flanked' effect to the target. All attackers making melee attacks against the flanked target gain advantage.",
+      "midiFlanked": "Apply midi-qol's 'Flanked' effect to the target. All attackers making melee attacks against the flanked target gain advantage.",
+      "ceflankedNoconga": "Apply the Convenient Effects 'Flanked' effect to the target. All melee attackers gain advantage. Already-flanked tokens cannot count as flanking allies (prevents conga lines).",
+      "midiFlankedNoConga": "Apply midi-qol's 'Flanked' effect to the target. All melee attackers gain advantage. Already-flanked tokens cannot count as flanking allies (prevents conga lines)."
+    }
   },
   "midi-qol.Flanked": "Flanked",
   "midi-qol.Flanking": "Flanking",
+  "midi-qol.FlankingBonus.Name": "Flanking Bonus Type",
+  "midi-qol.FlankingBonus.Hint": "When flanking is detected, grant advantage (default) or reduce the target's effective AC by a fixed amount.",
+  "midi-qol.SharpShooter": "Sharpshooter",
+  "midi-qol.SpellSniper": "Spell Sniper",
+  "midi-qol.ShowFlankingHighlight.Name": "Show Flanking Positions",
+  "midi-qol.ShowFlankingHighlight.Hint": "Highlight grid cells where an ally would create flanking against your current target.",
+  "midi-qol.FlankingBonusOptions.advantage": "Advantage",
+  "midi-qol.FlankingBonusOptions.1": "+1 to hit",
+  "midi-qol.FlankingBonusOptions.2": "+2 to hit",
+  "midi-qol.FlankingBonusOptions.3": "+3 to hit",
+  "midi-qol.FlankingBonusOptions.4": "+4 to hit",
+  "midi-qol.FlankingBonusOptions.5": "+5 to hit",
+  "midi-qol.FlankingLabel": "Flanking",
   "midi-qol.RollAlternate.Name": "Move roll formula to tooltip",
   "midi-qol.RollAlternate.Hint": "Use alternate roll display on merge card moving the roll formula to the tooltip and optionally add advantage attribution",
   "midi-qol.RollAlternateOptions": {
@@ -940,7 +1016,9 @@
       "modules": "All Modules"
     },
     "ClearErrors": "Clear Errors",
-    "Overwrite": "Overwrite Midi Settings"
+    "Overwrite": "Overwrite Midi Settings",
+    "ReviewModules": "Review Modules",
+    "NoModuleData": "No module data available."
   },
   "midi-qol.Inactive": "Inactive",
   "midi-qol.Active": "Active",
@@ -985,6 +1063,7 @@
   "midi-qol.TargetConfirmationMixedDisposition": "Confirm targets if targeting allies and hostiles",
   "midi-qol.TargetConfirmationAllies": "Confirm targets if any target is an ally",
   "midi-qol.OutOfRange": "Out of Range",
+  "midi-qol.TemplateOutOfRange": "Template placement is out of range",
   "midi-qol.SaveDROrder.Name": "Damage Reduction Save Order",
   "midi-qol.SaveDROrder.Hint": "Order in which damage reduction is applied.<br>dm.midi is midi specific damage reduction. <br>dm is dnd5e damage reduction",
   "midi-qol.SaveDROrderOptions": {
@@ -1012,6 +1091,12 @@
   "midi-qol.AutoCompleteWorkflow.Hint": "Workflows will be marked as complete if rolled before completion, no extra rolls will be performed",
   "midi-qol.SavesBeforeDamage.Name": "Roll saves before damage (Experimental)",
   "midi-qol.SavesBeforeDamage.Hint": "If enabled saves are rolled before damage is rolled otherwise saves are rolled after damage is rolled",
+  "midi-qol.ConstrainTemplatePlacement.Name": "Constrain Template Placement",
+  "midi-qol.ConstrainTemplatePlacement.Hint": "Constrains template placement: Cone/ray templates with range Self/None are anchored to the caster's token border. All templates are clamped to stay within the activity's range during preview.",
+  "midi-qol.TemplateSnapping.Name": "Template Grid Snapping",
+  "midi-qol.TemplateSnapping.Hint": "Controls grid snapping when placing templates. Full grid snaps to grid intersections only. Half grid also snaps to grid square centers and side midpoints.",
+  "midi-qol.TemplateSnapping.Full": "Full Grid",
+  "midi-qol.TemplateSnapping.Half": "Half Grid",
   "midi-qol.emanationNoTemplate": "Emanation/Radius - No Template",
   "midi-qol.emanationTemplate.counted.one": "Emanation No Template",
   "midi-qol.emanationTemplate.counted.other": "Emanation No Template",
@@ -1025,9 +1110,9 @@
   "DND5E.DamageApplication.Change.Spell": "Custom Spell",
   "DND5E.DamageApplication.Change.Magic": "Custom Magical",
   "DND5E.DamageApplication.Change.Nonmagic": "Custom Non Magical",
-  "DND5E.DamageApplication.Change.Saved": "Saved {type}",
-  "DND5E.DamageApplication.Change.SuperSaver": "1/2 or no damage save {type}",
-  "DND5E.DamageApplication.Change.SemiSuperSaver": "Full or no damage save {type}",
+  "DND5E.DamageApplication.Change.Saved": "Saved",
+  "DND5E.DamageApplication.Change.SuperSaver": "Super Saver",
+  "DND5E.DamageApplication.Change.SemiSuperSaver": "Semi Super Saver",
   "DND5E.DamageApplication.Change.UncannyDodge": "Uncanny Dodge {type}",
   "DND5E.DamageApplication.Change.DR": "DR",
   "midi-qol.SettingsSearch": "Search Settings",
@@ -1044,8 +1129,10 @@
   "midi-qol.ConfirmAmmunition.Name": "Confirm Ammunition choice when rolling attack - shows attack roll configuration",
   "midi-qol.ActivityNamePrefix.Name": "Activity Prefix",
   "midi-qol.ActivityNamePrefix.Hint": "Prefix midi-qol activities name with Midi. Change requires reload",
+  "midi-qol.ConditionEditorEnabled.Name": "Condition Editor",
+  "midi-qol.ConditionEditorEnabled.Hint": "Show condition editor button on condition fields in activity sheets",
   "midi-qol.AoETargetTypeOptions": {
-    "any": "Any",
+    "any": "Activity/Item Settings",
     "ally": "Ally",
     "notAlly": "Non Ally",
     "enemy": "Enemy",
@@ -1198,6 +1285,14 @@
           "label": "Roll as",
           "hint": "Roll the activity as if owned by..."
         },
+        "triggeredActivityConsume": {
+          "label": "Consume Resources",
+          "hint": "Consume spell slots and resources when the triggered activity runs"
+        },
+        "triggeredActivityConfigure": {
+          "label": "Show Configure Dialog",
+          "hint": "Show the configuration/consume dialog when the triggered activity runs"
+        },
         "otherActivityCompatible": {
           "label": "Other Activity Compatible",
           "hint": "Can be used as an other activity"
@@ -1269,6 +1364,12 @@
           "hint": "Start or end of turn",
           "start": "Start of Turn",
           "end": "End of Turn"
+        },
+        "rollAs": {
+          "label": "Roll As",
+          "hint": "Who rolls the overtime activity",
+          "target": "Effect Token",
+          "source": "Source Token"
         },
         "saveRemoves": {
           "label": "Save Removes",
@@ -1408,6 +1509,12 @@
       "saveRemoves": {
         "label": "Save Removes",
         "hint": "Save removes effect"
+      },
+      "rollAs": {
+        "label": "Roll As",
+        "hint": "Who rolls the overtime activity",
+        "target": "Effect Token",
+        "source": "Source Token"
       },
       "removeConditionBeforeActivity": {
         "label": "Remove effect before rolling",
@@ -1576,6 +1683,42 @@
   "midi-qol.flagTemplate.advantage.save.description": "Advantage on {label} saving throws.",
   "midi-qol.flagTemplate.disadvantage.save.name": "Disadvantage ({label} Saves)",
   "midi-qol.flagTemplate.disadvantage.save.description": "Disadvantage on {label} saving throws.",
+  "midi-qol.flagTemplate.advantage.save.school.name": "Advantage (Saves vs {label} spells)",
+  "midi-qol.flagTemplate.advantage.save.school.description": "Advantage on saving throws against {label} spells.",
+  "midi-qol.flagTemplate.disadvantage.save.school.name": "Disadvantage (Saves vs {label} spells)",
+  "midi-qol.flagTemplate.disadvantage.save.school.description": "Disadvantage on saving throws against {label} spells.",
+  "midi-qol.flagTemplate.noAdvantage.save.school.name": "No Advantage (Saves vs {label} spells)",
+  "midi-qol.flagTemplate.noAdvantage.save.school.description": "Advantage cannot apply to saving throws against {label} spells.",
+  "midi-qol.flagTemplate.noDisadvantage.save.school.name": "No Disadvantage (Saves vs {label} spells)",
+  "midi-qol.flagTemplate.noDisadvantage.save.school.description": "Disadvantage cannot apply to saving throws against {label} spells.",
+  "midi-qol.flagTemplate.fail.save.school.name": "Fail (Saves vs {label} spells)",
+  "midi-qol.flagTemplate.fail.save.school.description": "Saving throws against {label} spells automatically fail.",
+  "midi-qol.flagTemplate.success.save.school.name": "Success (Saves vs {label} spells)",
+  "midi-qol.flagTemplate.success.save.school.description": "Saving throws against {label} spells automatically succeed.",
+  "midi-qol.flagTemplate.grants.advantage.save.school.name": "Grants Advantage (Saves vs {label} spells)",
+  "midi-qol.flagTemplate.grants.advantage.save.school.description": "Targets get advantage on saving throws against this actor's {label} spells.",
+  "midi-qol.flagTemplate.grants.disadvantage.save.school.name": "Grants Disadvantage (Saves vs {label} spells)",
+  "midi-qol.flagTemplate.grants.disadvantage.save.school.description": "Targets get disadvantage on saving throws against this actor's {label} spells.",
+  "midi-qol.flagTemplate.grants.noAdvantage.save.school.name": "Grants No Advantage (Saves vs {label} spells)",
+  "midi-qol.flagTemplate.grants.noAdvantage.save.school.description": "Saves against this actor's {label} spells will not have advantage.",
+  "midi-qol.flagTemplate.grants.noDisadvantage.save.school.name": "Grants No Disadvantage (Saves vs {label} spells)",
+  "midi-qol.flagTemplate.grants.noDisadvantage.save.school.description": "Saves against this actor's {label} spells will not have disadvantage.",
+  "midi-qol.flagTemplate.advantage.attack.school.name": "Advantage (Attacks with {label} spells)",
+  "midi-qol.flagTemplate.advantage.attack.school.description": "Advantage on attack rolls with {label} spells.",
+  "midi-qol.flagTemplate.disadvantage.attack.school.name": "Disadvantage (Attacks with {label} spells)",
+  "midi-qol.flagTemplate.disadvantage.attack.school.description": "Disadvantage on attack rolls with {label} spells.",
+  "midi-qol.flagTemplate.noAdvantage.attack.school.name": "No Advantage (Attacks with {label} spells)",
+  "midi-qol.flagTemplate.noAdvantage.attack.school.description": "Advantage cannot apply to attack rolls with {label} spells.",
+  "midi-qol.flagTemplate.noDisadvantage.attack.school.name": "No Disadvantage (Attacks with {label} spells)",
+  "midi-qol.flagTemplate.noDisadvantage.attack.school.description": "Disadvantage cannot apply to attack rolls with {label} spells.",
+  "midi-qol.flagTemplate.grants.advantage.attack.school.name": "Grants Advantage (Attacks with {label} spells)",
+  "midi-qol.flagTemplate.grants.advantage.attack.school.description": "Targets get advantage on attack rolls against this actor with {label} spells.",
+  "midi-qol.flagTemplate.grants.disadvantage.attack.school.name": "Grants Disadvantage (Attacks with {label} spells)",
+  "midi-qol.flagTemplate.grants.disadvantage.attack.school.description": "Targets get disadvantage on attack rolls against this actor with {label} spells.",
+  "midi-qol.flagTemplate.grants.noAdvantage.attack.school.name": "Grants No Advantage (Attacks with {label} spells)",
+  "midi-qol.flagTemplate.grants.noAdvantage.attack.school.description": "Attack rolls against this actor with {label} spells will not have advantage.",
+  "midi-qol.flagTemplate.grants.noDisadvantage.attack.school.name": "Grants No Disadvantage (Attacks with {label} spells)",
+  "midi-qol.flagTemplate.grants.noDisadvantage.attack.school.description": "Attack rolls against this actor with {label} spells will not have disadvantage.",
   "midi-qol.flagTemplate.noAdvantage.check.name": "No Advantage ({label} Checks)",
   "midi-qol.flagTemplate.noAdvantage.check.description": "Advantage cannot apply to {label} ability checks.",
   "midi-qol.flagTemplate.noAdvantage.save.name": "No Advantage ({label} Saves)",
@@ -1696,17 +1839,7 @@
   "midi-qol.flagTemplate.grants.noDisadvantage.tool.description": "{label} checks will not have disadvantage.",
   "midi-qol.flagTemplate.DR.damageType.name": "Damage Reduction ({label})",
   "midi-qol.flagTemplate.DR.damageType.description": "{label} Damage Reduction.",
-  "midi-qol.flagTemplate.absorption.name": "Absorption ({label})",
-  "midi-qol.flagTemplate.absorption.description": "Converts {label} Damage taken to healing.",
   "dae.MidiQOL.fieldData": {
-    "flags.midi-qol.absorption.midi-none": {
-      "name": "Absorption None",
-      "description": ""
-    },
-    "flags.midi-qol.absorption.none": {
-      "name": "No Absorption",
-      "description": ""
-    },
     "flags.midi-qol.advantage.ability.all": {
       "name": "Advantage All Ability",
       "description": "Advantage on all saves, ability checks and skills."
@@ -1717,7 +1850,7 @@
     },
     "flags.midi-qol.fail.disadvantage.heavy": {
       "name": "Fail Disadvantage Heavy",
-      "description": "Disadvantage on stealth because of heavy armor"
+      "description": "Disadvantage on attack rolls because of heavy weapon"
     },
     "flags.midi-qol.": {
       "name": "MIDI-QOL Flags",
@@ -1874,6 +2007,10 @@
     "flags.midi-qol.grants.criticalThreshold": {
       "name": "Critical Hit Threshold",
       "description": ""
+    },
+    "flags.midi-qol.bloodsense": {
+      "name": "Blood Sense (Range)",
+      "description": "Blindsight within this range for wounded creatures (missing any HP). Negates advantage from not being able to detect the target if it is within the specified range. Does not affect the tokens actual vision"
     },
     "flags.midi-qol.ignoreNearbyFoes": {
       "name": "Ignore Nearby Foes",
@@ -2058,5 +2195,19 @@
   "midi-qol.OverTimeEditor.Cancel": "Cancel",
   "midi-qol.OverTimeEditor.UnsavedTitle": "Unsaved Changes",
   "midi-qol.OverTimeEditor.UnsavedContent": "You have unsaved changes. Close without saving?",
-  "midi-qol.OverTimeEditor.CloseWithoutSaving": "Discard Changes"
+  "midi-qol.OverTimeEditor.CloseWithoutSaving": "Discard Changes",
+  "midi-qol.OverTimeEditor.RuntimeSection": "Runtime State",
+  "midi-qol.OverTimeEditor.Permanent": "Marked Permanent",
+  "midi-qol.OverTimeEditor.PermanentHint": "When checked, no further saves are processed. Set by saveCount/failCount when count reaches zero with '+' mode.",
+  "midi-qol.ModuleReview.Title": "Module Review — Imported Settings",
+  "midi-qol.ModuleReview.Description": "The imported settings were saved with the following modules active. Modules that were active but are not active are <strong>highlighted</strong>. Check the modules you want to activate.",
+  "midi-qol.ModuleReview.MissingWarning": "Some modules from the saved settings are not installed and cannot be activated.",
+  "midi-qol.ModuleReview.SelectAll": "Select All",
+  "midi-qol.ModuleReview.DeselectAll": "Deselect All",
+  "midi-qol.ModuleReview.Apply": "Activate Selected & Reload",
+  "midi-qol.ModuleReview.Active": "Active",
+  "midi-qol.ModuleReview.Installed": "Installed",
+  "midi-qol.ModuleReview.NotInstalled": "Not Installed",
+  "midi-qol.ModuleReview.NoChanges": "All selected modules are already active.",
+  "midi-qol.ModuleReview.ReloadPrompt": "Module configuration updated. Reloading world."
 }

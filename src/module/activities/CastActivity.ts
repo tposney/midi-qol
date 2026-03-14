@@ -41,9 +41,132 @@ let defineMidiCastActivityClass =  <T extends Activity>(ActivityClass: T) => {
         },
       }, { inplace: false, insertKeys: true, insertValues: true });
 
-    async use(usage?: ActivityUseConfiguration, dialog?: RollDialogConfig, message?: RollMessageConfig) {
+    /** Resolve the effective activation type for Cast activities.
+     *  1. If activation.override is set, use the Cast activity's own activation type.
+     *  2. Otherwise, use the linked spell's first usable activity's activation type.
+     *  3. Fall back to the parent item's activation type.
+     */
+    get effectiveActivationType(): string | undefined {
+      // @ts-expect-error activation.override exists on dnd5e activities but not typed
+      if (this.activation?.override) return this.activation.type;
+      const spell = this.cachedSpell;
+      if (spell) {
+        const spellActivity = spell.system?.activities?.filter((a: any) => a.canUse)?.[0];
+        if (spellActivity?.activation?.type) return spellActivity.activation.type;
+      }
+      // @ts-expect-error item.system.activation not typed
+      return this.item?.system?.activation?.type ?? this.activation?.type;
+    }
+
+    async use(usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
+      if (!this.item.isEmbedded || !this.item.isOwner || !this.canUse) {
+        // @ts-expect-error
+        return ActivityClass.prototype.use.bind(this)(usage, dialog, message);
+      }
+
+      usage.midiOptions ??= {};
+      usage.midiOptions.workflowOptions ??= {};
+      usage.midiOptions.proceedChecks ??= {};
+
+      // Create a temporary workflow so pre-checks (hooks, macros, reaction/bonus enforcement) can run
+      const speaker = ChatMessage.getSpeaker({ actor: this.item.actor });
+      const tempWorkflow = new Workflow(this.actor ?? null, this, speaker, null, { storeWorkflow: false });
+      usage.workflow = tempWorkflow;
+
+      try {
+        // Run preTargetingChecks (incapacitated, preTargeting hooks/macros)
+        if (!await this.preTargetingChecks(usage, dialog, message)) return false;
+
+        // Run preChatChecks for the Cast activity (hooks, macros, reaction/bonus enforcement)
+        // Skip spell component checks — those apply to the spell, not the Cast activity
+        if (!await this.preChatChecks(usage, dialog, message, { checkComponents: false })) return false;
+
+        // Extract reaction/bonus action state determined by preChatChecks
+        const castUsesReaction = tempWorkflow.itemUsesReaction;
+        const castUsesBonusAction = tempWorkflow.itemUsesBonusAction;
+
+        // Clean up the temporary workflow before delegating to dnd5e CastActivity
+        Workflow.removeWorkflow(tempWorkflow.id);
+        delete usage.workflow;
+
+        // Tell the downstream spell activity's preChatChecks to skip reaction/bonus re-checking
+        usage.midiOptions.proceedChecks.checkReaction = false;
+        usage.midiOptions.proceedChecks.checkBonusAction = false;
+
+        // Pass Cast activity's enforcement results so the spell workflow can mark them as used
+        usage.midiOptions.workflowOptions.castUsesReaction = castUsesReaction;
+        usage.midiOptions.workflowOptions.castUsesBonusAction = castUsesBonusAction;
+      } catch (err) {
+        Workflow.removeWorkflow(tempWorkflow.id);
+        delete usage.workflow;
+        throw err;
+      }
+      // Delegate to dnd5e CastActivity.use() which fetches/creates the cached spell and calls spell.use()
       // @ts-expect-error
       return ActivityClass.prototype.use.bind(this)(usage, dialog, message);
+    }
+
+    prepareFinalData(rollData: any) {
+      super.prepareFinalData(rollData);
+      // When the cast activity doesn't override a field (override is false/absent),
+      // inherit the spell's values so callers see the correct data without needing
+      // CastActivity-specific checks (e.g. completeActivityUse self-target detection,
+      // range calculations, activation type).
+      const spell = this.cachedSpell ?? fromUuidSync(this.spell?.uuid);
+      if (!spell) return;
+      const spellActivity = spell.system?.activities?.filter((a: any) => a.canUse)?.[0]
+        ?? spell.system?.activities?.contents?.[0];
+      if (!spellActivity) return;
+
+      // Target: inherit affects and template data from spell activity
+      if (!this._source.target?.override) {
+        if (spellActivity.target?.affects?.type) {
+          this.target.affects.type = spellActivity.target.affects.type;
+        }
+        if (spellActivity.target?.affects?.count) {
+          this.target.affects.count = spellActivity.target.affects.count;
+        }
+        if (spellActivity.target?.template?.type) {
+          foundry.utils.mergeObject(this.target.template, spellActivity.target.template);
+        }
+      }
+
+      // Range: inherit range data from spell activity
+      if (!this._source.range?.override && this.range) {
+        if (spellActivity.range?.value !== undefined && spellActivity.range?.value !== null) {
+          this.range.value = spellActivity.range.value;
+        }
+        if (spellActivity.range?.units) {
+          this.range.units = spellActivity.range.units;
+        }
+        if ((spellActivity.range as any)?.special) {
+          (this.range as any).special = (spellActivity.range as any).special;
+        }
+      }
+
+      // Activation: inherit activation data from spell activity
+      if (!this._source.activation?.override) {
+        if (spellActivity.activation?.type) {
+          this.activation.type = spellActivity.activation.type;
+        }
+        if (spellActivity.activation?.value !== undefined && spellActivity.activation?.value !== null) {
+          this.activation.value = spellActivity.activation.value;
+        }
+        if (spellActivity.activation?.condition) {
+          this.activation.condition = spellActivity.activation.condition;
+        }
+      }
+
+      // Duration: inherit duration data from spell activity (falls through to spell item system data)
+      if (!this._source.duration?.override) {
+        const spellDuration = spell.system?.duration;
+        if (spellDuration?.value) {
+          this.duration.value = spellDuration.value;
+        }
+        if (spellDuration?.units) {
+          this.duration.units = spellDuration.units;
+        }
+      }
     }
 
     get possibleOtherActivity() {

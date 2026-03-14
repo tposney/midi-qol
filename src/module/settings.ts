@@ -1,11 +1,13 @@
-import { debug, setDebugLevel, i18n, debugEnabled, error, gameStats } from "../midi-qol.js";
+import { debug, setDebugLevel, i18n, debugEnabled, error, gameStats, updateFlankingStatusEffects } from "../midi-qol.js";
 import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { DependentsExplorer } from "./apps/DependentsExplorer.js";
+import { ModuleReviewDialog } from "./apps/ModuleReviewDialog.js";
 import { RollStatsDisplay } from "./apps/RollStatsDisplay.js";
 import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { TargetConfirmationConfig } from "./apps/TargetConfirmationConfig.js";
 import { Workflow } from "./Workflow.js";
+import type { SelectOptions } from "../globals.js";
 
 // Dummy FormApplication that launches the setup wizard via hook (can't be eliminated - fires a hook, not an app)
 class LaunchWizardSubmenu extends FormApplication {
@@ -78,6 +80,8 @@ export let nsaFlag: boolean;
 export let playerControlsInvisibleTokens: boolean = false;
 export let pruneChatLog: boolean = true;
 export let replaceDefaultActivities: boolean = true;
+export let isDnd5e53: boolean = false;
+export function setDnd5e53(value: boolean) { isDnd5e53 = value; }
 export let saveRequests = {};
 export let saveTimeouts = {};
 export let saveToChatCard: boolean = false;
@@ -135,6 +139,7 @@ class ConfigSettings {
   addWounded: number = 0;
   addWoundedStyle: string = "none";
   activityNamePrefix: boolean = true;
+  conditionEditorEnabled: boolean = true;
   activationAutomation: string = "chat";
   midiWoundedCondition: string = "none";
   midiDeadCondition: string = "none";
@@ -156,6 +161,8 @@ class ConfigSettings {
   autoUndoTransformations: boolean = false;
   autoRemoveTemplate: boolean = true;
   autoRemoveInstantaneousTemplate: boolean = false;
+  constrainTemplatePlacement: boolean = true;
+  templateSnapping: string = "full";
   autoRollAttack: boolean = false;
   autoRollDamage: string = "none";
   autoCompleteWorkflow = true;
@@ -278,12 +285,15 @@ class ConfigSettings {
     autoRerollInitiative: false,
     challengeModeArmor: "none",
     checkFlanking: "off",
+    flankingBonus: "advantage" as string,
+    showFlankingHighlight: false,
     checkRange: "longFail",
     coverCalculation: "none",
     criticalNat20: false,
     criticalSaves: false,
     displayBonusRolls: true,
     distanceIncludesHeight: false,
+    distanceMeasurement: "center", // "center" = grid square centers, "perimeter" = token perimeters
     DRAllPerDamageDetail: true,
     hiddenAdvantage: "none",
     incapacitated: "nothing",
@@ -365,7 +375,6 @@ export const checkedModuleList = [
   "dae",
   "ddb-importer",
   "ddb-game-log",
-  "df-templates",
   "dice-so-nice",
   "effectmacro",
   "gambits-premades",
@@ -429,13 +438,37 @@ export function collectSettingData() {
   };
   return data;
 }
+export function collectModuleData(): Record<string, any> {
+  const modules: Record<string, any> = {};
+  for (const moduleData of game.modules ?? []) {
+    const mod: any = moduleData;
+    if (!mod.active && !checkedModuleList.includes(mod.id)) continue;
+    let idToUse = mod.id;
+    let titleToUse = mod.title;
+    if (idToUse.match(/plutonium/i) || titleToUse.match(/plutonium/i)) {
+      idToUse = idToUse.replace(/plutonium/i, "xxxxxxxxx");
+      titleToUse = titleToUse.replace(/plutonium/i, "xxxxxxxxx");
+    }
+    modules[idToUse] = {
+      title: titleToUse,
+      active: mod.active,
+      installed: true,
+      version: mod.version,
+      compatibility: mod.compatibility?.verified
+    };
+  }
+  return modules;
+}
+
 export function exportSettingsToJSON() {
+  const data = collectSettingData();
+  (data as any).modules = collectModuleData();
   const filename = `fvtt-midi-qol-settings.json`;
-  foundry.utils.saveDataToFile(JSON.stringify(collectSettingData(), null, 2), "text/json", filename);
+  foundry.utils.saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
 }
 
 function removeOldValues(theObject: any) {
-  if (typeof theObject !== "object") return theObject;
+  if (theObject == null || typeof theObject !== "object") return theObject;
   Object.keys(theObject).forEach(key => {
     if (theObject[key]?.newValue !== undefined) {
       theObject[key] = theObject[key].newValue;
@@ -502,9 +535,17 @@ export async function importSettingsFromJSON(json) {
   let requiresReload = false;
   if (typeof json === "string")
     json = JSON.parse(json);
-  if (json.midiSettings) { // this is a trouble shooter file
-    json = json.midiSettings;
+
+  // Extract modules data before unwrapping TroubleShooter format
+  let savedModules = json.modules;  // Regular export or TroubleShooter top-level
+  if (json.midiSettings) {
+    // TroubleShooter format — prefer top-level modules (has settings/incompatible augmentation)
+    // but fall back to midiSettings.modules for newer regular exports
+    savedModules = savedModules ?? json.midiSettings.modules;
+    json = json.midiSettings;  // existing unwrap
   }
+  // Also check unwrapped json.modules for regular settings exports
+  savedModules = savedModules ?? json.modules;
 
   // Handle migration of deprecated displaySaveDC field
   const importedConfigSettings = removeOldValues(json.configSettings);
@@ -576,6 +617,24 @@ export async function importSettingsFromJSON(json) {
   if (settingsAppId) foundry.applications.instances.get(settingsAppId)?.render(true);
   const exportSource = json.flags?.exportSource;
   ui.notifications?.notify(`Importing settings from foundry version ${exportSource?.coreVersion} dnd ${exportSource?.systemVersion} midi ${exportSource?.midiVersion}`);
+
+  // Show module review dialog if saved modules include modules not active or with lower installed versions
+  if (savedModules && Object.keys(savedModules).length > 0) {
+    const activeModules = Object.fromEntries(
+      Object.entries(savedModules).filter(([_, mod]: [string, any]) => mod.active)
+    );
+    const hasMismatch = Object.entries(activeModules).some(([id, mod]: [string, any]) => {
+      const current = game.modules.get(id);
+      if (!current?.active) return true;
+      // Check if installed version is lower than saved version
+      if (current.version && mod.version && foundry.utils.isNewerVersion(mod.version, current.version)) return true;
+      return false;
+    });
+    if (hasMismatch) {
+      new ModuleReviewDialog(activeModules).render(true);
+    }
+  }
+
   if (requiresReload) {
   //@ts-expect-error
     foundry.applications.settings.SettingsConfig.reloadConfirm({ world: true });
@@ -679,12 +738,14 @@ export let fetchParams = () => {
     challengeModeArmor: "none",
     challengeModeArmorScale: false,
     checkFlanking: "off",
+    flankingBonus: "advantage",
     checkRange: "longfail",
     coverCalculation: "none",
     displayBonusRolls: true,
     criticalNat20: false,
     criticalSaves: false,
     distanceIncludesHeight: false,
+    distanceMeasurement: "center",
     incapacitated: "nothing",
     invisAdvantage: "RAW2024",
     hiddenAdvantage: "none",
@@ -839,8 +900,6 @@ export let fetchParams = () => {
           if (!configSettings.gmAutoFastForward.includes(rollType)) configSettings.gmAutoFastForward.push(rollType);
         }
         needsFastForwardMigration = true;
-        // Reset the old setting so migration only runs once
-        game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", false);
       }
     } catch (e) {
       // Setting may not be registered yet or already removed - that's fine
@@ -851,7 +910,13 @@ export let fetchParams = () => {
         `\n  GM gmAutoFastForwardAttack: ${oldGmFfAttack ?? "(already migrated)"}, gmAutoFastForwardDamage: ${oldGmFfDamage ?? "(already migrated)"} → gmAutoFastForward: [${configSettings.gmAutoFastForward.join(", ")}]`,
         `\n  AutoFastForwardAbilityRolls: ${oldAbilityRolls ?? false}`
       );
-      game.settings.set("midi-qol", "ConfigSettings", configSettings);
+      // Defer settings writes until game is ready (fetchParams may be called from init/setup hooks)
+      const persistMigration = () => {
+        game.settings.set("midi-qol", "ConfigSettings", configSettings);
+        if (oldAbilityRolls) game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", false);
+      };
+      if (game.ready) persistMigration();
+      else Hooks.once("ready", persistMigration);
     }
     fastForwardMigrationDone = true;
   }
@@ -965,6 +1030,7 @@ export let fetchParams = () => {
     });
   }
 
+  updateFlankingStatusEffects();
   Hooks.callAll("midi-qol.ConfigSettingsChanged");
 }
 
@@ -981,8 +1047,15 @@ export function readySettingsSetup() {
   });
 }
 
-function keysToOptionsObj(prefix: string, keys: string[]) {
+function keysToOptionsObj(prefix: string, keys: string[]): Record<string, string> {
   return Object.fromEntries(keys.map(key => [key, `midi-qol.${prefix}.${key}`]));
+}
+
+function keysToExtendedOptionsObj(prefix: string, keys: string[]): SelectOptions {
+  return Object.fromEntries(keys.map(key => [key, {
+    label: `midi-qol.${prefix}.${key}`,
+    hint: `midi-qol.${prefix}.expandedHints.${key}`
+  }]));
 }
 
 export const criticalDamageChoices = keysToOptionsObj("CriticalDamageChoices", [
@@ -1001,7 +1074,7 @@ export const criticalDamageChoices = keysToOptionsObj("CriticalDamageChoices", [
   "bestOfTwo"
 ]);
 
-export const addChatDamageButtonsOptions = keysToOptionsObj("AddChatDamageButtonsOptions", [
+export const addChatDamageButtonsOptions = keysToExtendedOptionsObj("AddChatDamageButtonsOptions", [
   "none",
   "gm",
   "pc",
@@ -1029,28 +1102,29 @@ export const debugOptions = keysToOptionsObj("DebugOptions", [
   "all"
 ]);
 
-export const autoRollDamageOptions = keysToOptionsObj("autoRollDamageOptions", [
+export const autoRollDamageOptions = keysToExtendedOptionsObj("autoRollDamageOptions", [
   "none",
   "always",
   "saveOnly",
   "onHit"
 ]);
 
-export const autoCheckHitOptions = keysToOptionsObj("autoCheckHitOptions", [
+export const autoCheckHitOptions = keysToExtendedOptionsObj("autoCheckHitOptions", [
   "none",
   "all",
   "whisper",
   "gmOnly"
 ]);
 
-export const clickOptions = keysToOptionsObj("clickOptions", [
+
+export const clickOptions = keysToExtendedOptionsObj("clickOptions", [
   "off",
   "attack",
   "damage",
   "all"
 ]);
 
-export const autoTargetOptions = keysToOptionsObj("autoTargetOptions", [
+export const autoTargetOptions = keysToExtendedOptionsObj("autoTargetOptions", [
   "none",
   "always",
   "alwaysIgnoreIncapacitated",
@@ -1061,7 +1135,8 @@ export const autoTargetOptions = keysToOptionsObj("autoTargetOptions", [
   "walledtemplates"
 ]);
 
-export const autoCheckSavesOptions = keysToOptionsObj("autoCheckSavesOptions", [
+
+export const autoCheckSavesOptions = keysToExtendedOptionsObj("autoCheckSavesOptions", [
   "none",
   "allNoRoll",
   "all",
@@ -1070,7 +1145,8 @@ export const autoCheckSavesOptions = keysToOptionsObj("autoCheckSavesOptions", [
   "gmOnly",
 ]);
 
-export const rangeTargetOptions = keysToOptionsObj("rangeTargetOptions", [
+
+export const rangeTargetOptions = keysToExtendedOptionsObj("rangeTargetOptions", [
   "none",
   "always",
   "alwaysIgnoreIncapacitated",
@@ -1080,7 +1156,8 @@ export const rangeTargetOptions = keysToOptionsObj("rangeTargetOptions", [
   "wallsBlockIgnoreDefeated"
 ]);
 
-export const autoApplyDamageOptions = keysToOptionsObj("autoApplyDamageOptions", [
+
+export const autoApplyDamageOptions = keysToExtendedOptionsObj("autoApplyDamageOptions", [
   "none",
   "noCard",
   "noCardMisses",
@@ -1090,12 +1167,13 @@ export const autoApplyDamageOptions = keysToOptionsObj("autoApplyDamageOptions",
   "yesCardNPC"
 ]);
 
-export const damageCardStyleOptions = keysToOptionsObj("damageCardStyleOptions", [
+
+export const damageCardStyleOptions = keysToExtendedOptionsObj("damageCardStyleOptions", [
   "flexbox",
   "classic"
 ]);
 
-export const playerDamageCardOptions = keysToOptionsObj("playerDamageCardOptions", [
+export const playerDamageCardOptions = keysToExtendedOptionsObj("playerDamageCardOptions", [
   "none",
   "playerresults",
   "playerbuttons",
@@ -1111,20 +1189,20 @@ export const removeButtonsOptions = keysToOptionsObj("removeButtonsOptions", [
   "everything"
 ]);
 
-export const damageImmunitiesOptions = keysToOptionsObj("damageImmunitiesOptions", [
+export const damageImmunitiesOptions = keysToExtendedOptionsObj("damageImmunitiesOptions", [
   "none",
   "immunityDefault",
   "immunityPhysical"
 ]);
 
-export const showItemDetailsOptions = keysToOptionsObj("showItemDetailsOptions", [
+export const showItemDetailsOptions = keysToExtendedOptionsObj("showItemDetailsOptions", [
   "none",
   "cardOnly",
   "pc",
   "all"
 ]);
 
-export const rollNPCSavesOptions = keysToOptionsObj("rollNPCSavesOptions", [
+export const rollNPCSavesOptions = keysToExtendedOptionsObj("rollNPCSavesOptions", [
   "none",
   "auto",
   "autoDialog",
@@ -1133,7 +1211,7 @@ export const rollNPCSavesOptions = keysToOptionsObj("rollNPCSavesOptions", [
   "rer"
 ]);
 
-export const playerRollSavesOptions = keysToOptionsObj("playerRollSavesOptions", [
+export const playerRollSavesOptions = keysToExtendedOptionsObj("playerRollSavesOptions", [
   "none",
   "nonePublic",
   "noneDialogPublic",
@@ -1146,12 +1224,12 @@ export const playerRollSavesOptions = keysToOptionsObj("playerRollSavesOptions",
   "rer"
 ]);
 
-export const playerRollSavesOptionsReduced = keysToOptionsObj("playerRollSavesOptionsReduced", [
+export const playerRollSavesOptionsReduced = keysToExtendedOptionsObj("playerRollSavesOptionsReduced", [
   "none",
   "chat"
 ]);
 
-export const hideRollDetailsOptions = keysToOptionsObj("hideRollDetailsOptions", [
+export const hideRollDetailsOptions = keysToExtendedOptionsObj("hideRollDetailsOptions", [
   "none",
   "detailsDSN",
   "details",
@@ -1163,21 +1241,21 @@ export const hideRollDetailsOptions = keysToOptionsObj("hideRollDetailsOptions",
   "all"
 ]);
 
-export const rollOtherDamageOptions = keysToOptionsObj("RollOtherDamageOptions", [
+export const rollOtherDamageOptions = keysToExtendedOptionsObj("RollOtherDamageOptions", [
   "none",
   "always",
   "condition",
   "ifSave"
 ]);
 
-export const showReactionAttackRollOptions = keysToOptionsObj("ShowReactionAttackRollOptions", [
+export const showReactionAttackRollOptions = keysToExtendedOptionsObj("ShowReactionAttackRollOptions", [
   "none",
   "d20",
   "all",
   "allCrit"
 ]);
 
-export const onUseMacroOptions = keysToOptionsObj("onUseMacroOptions", [
+export const onUseMacroOptions = keysToExtendedOptionsObj("onUseMacroOptions", [
   "preTargeting",
   "preItemRoll",
   "templatePlaced",
@@ -1317,98 +1395,92 @@ export const aoeTargetTypeOptions = keysToOptionsObj("AoETargetTypeOptions", [
   "notFriendly"
 ]);
 
-export const autoCEEffectsOptions = keysToOptionsObj("AutoCEEffectsOptions", [
+export const autoCEEffectsOptions = keysToExtendedOptionsObj("AutoCEEffectsOptions", [
   "none",
   "itempri",
   "cepri",
   "both"
 ]);
 
-export const wallsBlockRangeOptionsNew = keysToOptionsObj("WallsBlockRangeOptionsNew", [
+
+export const wallsBlockRangeOptionsNew = keysToExtendedOptionsObj("WallsBlockRangeOptionsNew", [
   "none",
   "center",
   "centerLevels",
   "levelsautocover",
   "simbuls-cover-calculator",
   "tokencover",
-  "tokenvisibility",
   "simplecover5e"
 ]);
 
-export const coverCalculationOptions = keysToOptionsObj("CoverCalculationOptions", [
+export const coverCalculationOptions = keysToExtendedOptionsObj("CoverCalculationOptions", [
   "none",
   "simbuls-cover-calculator",
   "simplecover5e",
   "levelsautocover",
-  "tokencover",
-  "tokenvisibility"
+  "tokencover"
 ]);
 
-export const hiddenAdvantageOptions = keysToOptionsObj("HiddenAdvantageOptions", [
+
+export const hiddenAdvantageOptions = keysToExtendedOptionsObj("HiddenAdvantageOptions", [
   "none",
   "effect",
   "perceptive"
 ]);
 
-export const addDeadOptions = keysToOptionsObj("AddDeadOptions", [
+export const addDeadOptions = keysToExtendedOptionsObj("AddDeadOptions", [
   "none",
   "overlay",
   "normal"
 ]);
 
-export const quickSettingsBlurb = keysToOptionsObj("QuickSettingsBlurb", [
-  "1",
-  "2",
-  "3",
-  "4"
-]);
-
-export const requiresTargetsOptions = keysToOptionsObj("requiresTargetsOptions", [
+export const requiresTargetsOptions = keysToExtendedOptionsObj("requiresTargetsOptions", [
   "none",
   "combat",
   "tokens",
   "always"
 ]);
 
-export const doReactionsOptions = keysToOptionsObj("DoReactionsOptions", [
+export const doReactionsOptions = keysToExtendedOptionsObj("DoReactionsOptions", [
   "all",
   "allMI",
   "none"
 ]);
 
-export const gmDoReactionsOptions = keysToOptionsObj("GMDoReactionsOptions", [
+export const gmDoReactionsOptions = keysToExtendedOptionsObj("GMDoReactionsOptions", [
   "all",
   "allMI",
   "none"
 ]);
 
-export const recordAOOOptions = keysToOptionsObj("RecordAOOOptions", [
+export const recordAOOOptions = keysToExtendedOptionsObj("RecordAOOOptions", [
   "none",
   "character",
   "all"
 ]);
 
-export const EnforceReactionsOptions = keysToOptionsObj("EnforceReactionsOptions", [
+export const EnforceReactionsOptions = keysToExtendedOptionsObj("EnforceReactionsOptions", [
   "none",
   "displayOnly",
   "character",
   "all"
 ]);
 
-export const autoEffectsOptions = keysToOptionsObj("AutoEffectsOptions", [
+export const autoEffectsOptions = keysToExtendedOptionsObj("AutoEffectsOptions", [
   "off",
   "applyNoButton",
   "applyRemove",
   "applyLeave"
 ]);
 
-export const requireMagicalOptions = keysToOptionsObj("RequireMagicalOptions", [
+
+export const requireMagicalOptions = keysToExtendedOptionsObj("RequireMagicalOptions", [
   "off",
   "nonspell",
   "allitems"
 ]);
 
-export const checkFlankingOptions = keysToOptionsObj("CheckFlankingOptions", [
+export const checkFlankingOptions = keysToExtendedOptionsObj("CheckFlankingOptions", [
   "off",
   "advonly",
   "ceonly",
@@ -1419,82 +1491,87 @@ export const checkFlankingOptions = keysToOptionsObj("CheckFlankingOptions", [
   "midiFlankedNoConga"
 ]);
 
-export const hideRollDetailsHintLongOptions = keysToOptionsObj("HideRollDetails.HintLong", [
-  "none",
-  "detailsDSN",
-  "details",
-  "d20Only",
-  "hitDamage",
-  "d20attackOnly",
-  "all"
-]);
+export const flankingBonusOptions = {
+  "advantage": "midi-qol.FlankingBonusOptions.advantage",
+  "1": "midi-qol.FlankingBonusOptions.1",
+  "2": "midi-qol.FlankingBonusOptions.2",
+  "3": "midi-qol.FlankingBonusOptions.3",
+  "4": "midi-qol.FlankingBonusOptions.4",
+  "5": "midi-qol.FlankingBonusOptions.5",
+};
 
-export const rollAlternateOptions = keysToOptionsObj("RollAlternateOptions", [
+export const rollAlternateOptions = keysToExtendedOptionsObj("RollAlternateOptions", [
   "off",
   "formula",
   "adv",
   "formulaadv"
 ]);
 
-export const consumeResourceOptions = keysToOptionsObj("ConsumeResourceOptions", [
+export const consumeResourceOptions = keysToExtendedOptionsObj("ConsumeResourceOptions", [
   "none",
   "spell",
   "item",
   "both"
 ]);
 
-export const averageDamageOptions = keysToOptionsObj("AverageDamageOptions", [
+export const averageDamageOptions = keysToExtendedOptionsObj("AverageDamageOptions", [
   "none",
   "npc",
   "character",
   "all"
 ]);
 
-export const removeConcentrationEffectsOptions = keysToOptionsObj("RemoveConcentrationEffectsOptions", [
+export const removeConcentrationEffectsOptions = keysToExtendedOptionsObj("RemoveConcentrationEffectsOptions", [
   "none",
   "effects",
   "effectsTemplates"
 ]);
 
-export const incapacitatedOptions = keysToOptionsObj("IncapacitatedOptions", [
+export const incapacitatedOptions = keysToExtendedOptionsObj("IncapacitatedOptions", [
   "nothing",
   "enforce",
   "warn"
 ]);
 
-export const checkRangeOptions = keysToOptionsObj("CheckRangeOptions", [
+export const checkRangeOptions = keysToExtendedOptionsObj("CheckRangeOptions", [
   "none",
   "longfail",
   "longdisadv"
 ]);
 
-export const invisAdvantageOptions = keysToOptionsObj("InvisAdvantageOptions", [
+export const distanceMeasurementOptions = keysToExtendedOptionsObj("DistanceMeasurementOptions", [
+  "default",
+  "center",
+  "perimeter"
+]);
+
+export const invisAdvantageOptions = keysToExtendedOptionsObj("InvisAdvantageOptions", [
   "none",
   "RAW2014",
   "RAW2024",
   "vision"
 ]);
 
-export const confirmAttackDamageOptions = keysToOptionsObj("ConfirmAttackDamageOptions", [
+export const confirmAttackDamageOptions = keysToExtendedOptionsObj("ConfirmAttackDamageOptions", [
   "none",
   "gmOnly",
   "GMPlayer"
 ]);
 
-export const challengeModeArmorOptions = keysToOptionsObj("ChallengeModeArmorOptions", [
+export const challengeModeArmorOptions = keysToExtendedOptionsObj("ChallengeModeArmorOptions", [
   "none",
   "challenge",
   "scale",
   "scaleNoAR"
 ]);
 
-export const saveDROrderOptions = keysToOptionsObj("SaveDROrderOptions", [
+export const saveDROrderOptions = keysToExtendedOptionsObj("SaveDROrderOptions", [
   "DRSaveDr",
   "SaveDRDr",
   "SaveDrDR"
 ]);
 
-export const doConcentrationCheckOptions = keysToOptionsObj("DoConcentrationCheckOptions", [
+export const doConcentrationCheckOptions = keysToExtendedOptionsObj("DoConcentrationCheckOptions", [
   "none",
   "chatOnly",
   "chat",
@@ -1505,13 +1582,6 @@ export const activationAutomationOptions = keysToOptionsObj("ActivationAutomatio
   "none",
   "chat",
   "auto"
-]);
-
-export const soundSettingsBlurb = keysToOptionsObj("SoundSettingsBlurb", [
-  "1",
-  "2",
-  "3",
-  "4"
 ]);
 
 export const rollConfigOptions = keysToOptionsObj("ConfigDialogOptions", [
@@ -1566,7 +1636,12 @@ export const registerSettings = function () {
     type: Object,
     config: false,
     onChange: () => {
-      gameStats.fetchStats();
+      // Only non-GM clients should reload stats from the database.
+      // The GM's in-memory currentStats is the authoritative copy;
+      // reloading here would overwrite unsaved increments (race condition).
+      if (!game.user?.isGM) {
+        gameStats.fetchStats();
+      }
       Hooks.callAll("midi-qol.StatsUpdated");
     }
   });
@@ -1575,14 +1650,6 @@ export const registerSettings = function () {
     scope: "client",
     type: Object,
     default: defaultTargetConfirmationSettings,
-    config: false,
-    onChange: fetchParams
-  });
-
-  game.settings.register("midi-qol", "showGM", {
-    scope: "world",
-    default: false,
-    type: Boolean,
     config: false,
     onChange: fetchParams
   });
@@ -1659,6 +1726,16 @@ export const registerSettings = function () {
     config: false,
   });
 
+  game.settings.register("midi-qol", "showGM", {
+    name: i18n("midi-qol.showGM.Name"),
+    hint: i18n("midi-qol.showGM.Hint"),
+    scope: "world",
+    default: false,
+    type: Boolean,
+    config: true,
+    onChange: fetchParams
+  });
+  
   game.settings.register("midi-qol", "ForceHideRoll", {
     name: i18n("midi-qol.ForceHideRoll.Name"),
     hint: i18n("midi-qol.ForceHideRoll.Hint"),

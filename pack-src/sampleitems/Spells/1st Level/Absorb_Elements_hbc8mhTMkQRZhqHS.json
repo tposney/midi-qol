@@ -1,0 +1,383 @@
+{
+  "name": "Absorb Elements",
+  "type": "spell",
+  "img": "icons/magic/defensive/shield-barrier-flaming-diamond-red.webp",
+  "effects": [
+    {
+      "_id": "iJ9E4fnIwXjfi1TP",
+      "name": "Absorb Elements",
+      "description": "",
+      "origin": "Item.hbc8mhTMkQRZhqHS",
+      "transfer": false,
+      "disabled": false,
+      "changes": [
+        {
+          "key": "system.bonuses.msak.damage",
+          "mode": 0,
+          "value": "0",
+          "priority": 20
+        },
+        {
+          "key": "system.bonuses.mwak.damage",
+          "mode": 0,
+          "value": "0",
+          "priority": 20
+        }
+      ],
+      "duration": {
+        "startTime": null,
+        "rounds": 2,
+        "startTurn": 1,
+        "seconds": null,
+        "combat": null,
+        "turns": null,
+        "startRound": null
+      },
+      "tint": "#ffffff",
+      "statuses": [],
+      "flags": {
+        "dae": {
+          "stackable": "none",
+          "macroRepeat": "none",
+          "specialDuration": [
+            "DamageDealt",
+            "turnEnd"
+          ],
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "durationExpression": "",
+          "enableCondition": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "dontApply": false,
+          "showIcon": false
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/defensive/shield-barrier-flaming-diamond-red.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!hbc8mhTMkQRZhqHS.iJ9E4fnIwXjfi1TP"
+    },
+    {
+      "_id": "8r9eWcqP6QyIbPWU",
+      "name": "Absorb Elements Resistance",
+      "description": "",
+      "origin": "Item.hbc8mhTMkQRZhqHS",
+      "transfer": false,
+      "disabled": false,
+      "changes": [
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "fire",
+          "priority": 20
+        }
+      ],
+      "duration": {
+        "rounds": 2,
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "tint": "#ffffff",
+      "statuses": [],
+      "flags": {
+        "dae": {
+          "stackable": "none",
+          "macroRepeat": "none",
+          "specialDuration": [
+            "turnEnd"
+          ],
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "durationExpression": "",
+          "enableCondition": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "dontApply": false,
+          "showIcon": false
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/defensive/shield-barrier-flaming-diamond-red.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!hbc8mhTMkQRZhqHS.8r9eWcqP6QyIbPWU"
+    }
+  ],
+  "flags": {
+    "midi-qol": {
+      "onUseMacroName": "[postActiveEffects]ItemMacro",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "reactionCondition": "",
+      "effectCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "midiProperties": {
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "rollOther": false,
+      "critOther": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "offHandWeapon": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "dae": {
+      "macro": {
+        "name": "Absorb Elements",
+        "img": "icons/magic/defensive/shield-barrier-flaming-diamond-red.webp",
+        "type": "script",
+        "scope": "global",
+        "command": "const version = \"13.0.52\";\ntry {\n  let tactor;\n  let itemName = args[0].itemData.name;\n  if (args[0].tokenUuid) tactor = (await fromUuid(args[0].tokenUuid)).actor;\n  else tactor = game.actors.get(args[0].actorId);\n\n  let dialog = new Promise((resolve, reject) => {\n      new Dialog({\n          title: 'Choose a damage type',\n          content: `\n            <form class=\"flexcol\">\n              <div class=\"form-group\">\n                <select id=\"element\">\n                  <option value=\"acid\">Acid</option>\n                  <option value=\"cold\">Cold</option>\n                  <option value=\"fire\">Fire</option>\n                  <option value=\"lightning\">Lightning</option>\n                  <option value=\"thunder\">Thunder</option>\n                </select>\n              </div>\n            </form>\n          `,\n          buttons: {\n              yes: {\n                  icon: '<i class=\"fas fa-bolt\"></i>',\n                  label: 'Select',\n                  callback: async (html) => {\n                      let element = html.find('#element').val();\n                      let effect = tactor.effects.find(i => i.name === itemName);\n                      let changes = foundry.utils.duplicate(effect.changes);\n                      changes[0].value = `${Math.max(1, args[0].spellLevel)}d6[${element}]`;\n                      changes[1].value = `${Math.max(1, args[0].spellLevel)}d6[${element}]`;\n                      await effect.update({changes});\n                      effect = tactor.effects.find(i => i.name === `${itemName} Resistance`);\n                      changes = foundry.utils.duplicate(effect.changes);\n                      changes[0].value = element;\n                      await effect.update({changes});\n                      resolve();\n                  },\n              },\n          }\n      }).render(true);\n  })\n  await dialog;\n} catch (err) {\n    console.error(`${args[0].itemData.name} - Absorb Elements ${version}`, err);\n}",
+        "author": "Zl1BOUaPLwDEujaL",
+        "ownership": {
+          "default": 3
+        },
+        "_id": null,
+        "folder": null,
+        "sort": 0,
+        "flags": {},
+        "_stats": {
+          "coreVersion": null,
+          "systemId": null,
+          "systemVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null,
+          "compendiumSource": null,
+          "duplicateSource": null
+        }
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>The description for this spell is not in the SRD. When you take acid, cold, fire, lightning, or thunder damage, you can use your reaction to capture some of the incoming energy and gain resistance to the triggering damage type until the start of your next turn. Your first melee attack on your next turn deals an extra 1d6 damage of the triggering type.</p><p><strong>At Higher Levels.</strong> The extra damage increases by 1d6 for each slot level above 1st.</p>\n<p><strong>midi-qol</strong>: Uses a <code>[postActiveEffects]ItemMacro</code> that presents a dialog to choose the element type (acid, cold, fire, lightning, thunder), then updates the Absorb Elements effect's bonus damage and the Resistance effect's damage type accordingly. The damage scales with spell level.</p>",
+      "chat": "<p>The description for this spell is not in the SRD. When you take acid, cold, fire, lightning, or thunder damage, you can use your reaction to capture some of the incoming energy and gain resistance to the triggering damage type until the start of your next turn. Your first melee attack on your next turn deals an extra 1d6 damage of the triggering type.</p><p><strong>At Higher Levels.</strong> The extra damage increases by 1d6 for each slot level above 1st.</p>"
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2014",
+      "book": "",
+      "page": "",
+      "license": ""
+    },
+    "activation": {
+      "type": "reaction",
+      "condition": "which you take when you take acid, cold, fire, lightning, or thunder damage",
+      "value": 1
+    },
+    "duration": {
+      "value": "1",
+      "units": "round"
+    },
+    "target": {
+      "affects": {
+        "type": "self",
+        "choice": false,
+        "special": ""
+      },
+      "template": {
+        "units": "",
+        "contiguous": false,
+        "type": ""
+      }
+    },
+    "range": {
+      "units": "self",
+      "special": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "ability": "",
+    "level": 1,
+    "school": "abj",
+    "materials": {
+      "value": "",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "preparation": {
+      "mode": "prepared",
+      "prepared": false
+    },
+    "properties": [
+      "somatic"
+    ],
+    "activities": {
+      "dnd5eactivity000": {
+        "_id": "dnd5eactivity000",
+        "type": "utility",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "iJ9E4fnIwXjfi1TP"
+          },
+          {
+            "_id": "8r9eWcqP6QyIbPWU"
+          }
+        ],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "name": "",
+        "sort": 0,
+        "useConditionText": "reaction === \"isDamaged\"",
+        "effectConditionText": "",
+        "useConditionReason": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    },
+    "identifier": "absorb-elements",
+    "sourceClass": ""
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "folder": "SpellFldr1stLevl",
+  "_id": "hbc8mhTMkQRZhqHS",
+  "sort": 1400000,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!hbc8mhTMkQRZhqHS"
+}

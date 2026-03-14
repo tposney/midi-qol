@@ -44,6 +44,7 @@ When triggering via UI or passing an event, key accelerators work as follows (ba
 ### Legacy Support
 - `item.roll()` still works but is deprecated in favor of `activity.use()`
 - `MidiQOL.applyTokenDamage` is exported
+- `MidiQOL.applyTokenDamageMany` is exported — applies different damage amounts per target with a single damage card
 
 ### Roll Complete Hooks
 If you have macros that depend on being called when the roll is complete:

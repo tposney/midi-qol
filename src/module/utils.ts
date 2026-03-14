@@ -4,12 +4,12 @@ import { log } from "../midi-qol.js";
 import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
-import { concentrationCheckItemDisplayName, midiFlagTypes } from "./Hooks.js";
+import { concentrationCheckItemDisplayName } from "./Hooks.js";
 
 import { OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
-import { Activity, ActivityUseConfiguration, CalcDamageOptions, DamageDescription, DamageListEntry, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor } from "../globals.js";
+import { Activity, ActivityUseConfiguration, CalcDamageOptions, DamageDescription, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails } from "../globals.js";
 
 import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject, AnyObject } from "fvtt-types/utils";
@@ -205,10 +205,6 @@ export let getTraitMult = (actor: Actor.Implementation, dmgTypeString: string, i
         else if (item?.type === "spell" && trait.has("spell")) {
           totalMult = totalMult * mult;
           continue;
-          // @ts-expect-error no dnd5e-types
-        } else if (item?.type === "power" && trait.has("power")) {
-          totalMult = totalMult * mult;
-          continue;
         }
         if (customs.length > 0) {
           if (!magicalDamage && (customs.includes("nonmagic") || customs.includes(GameSystemConfig.customDamageResistanceTypes?.nonmagic))) {
@@ -222,10 +218,6 @@ export let getTraitMult = (actor: Actor.Implementation, dmgTypeString: string, i
             continue;
             // @ts-expect-error no dnd5e-types
           } else if (item?.type === "spell" && (customs.includes("spell") || customs.includes(GameSystemConfig.customDamageResistanceTypes.spell))) {
-            totalMult = totalMult * mult;
-            continue;
-            // @ts-expect-error no dnd5e-types
-          } else if (item?.type === "power" && (customs.includes("power") || customs.includes(GameSystemConfig.customDamageResistanceTypes.power))) {
             totalMult = totalMult * mult;
             continue;
           }
@@ -339,6 +331,93 @@ export async function applyTokenDamage(
       superSaver,
       totalDamage,
       targetUuid: token.document.uuid,
+    }, "combinedDamage", actor);
+    if (fullDamage) allDamages[actor.uuid] = fullDamage;
+  }
+
+  if (!options.updateOptions?.awaitDamageApplication) {
+    options.updateOptions ??= {};
+    options.updateOptions.awaitDamageApplication = true;
+  }
+  const cardIds: string[] = await timedAwaitExecuteAsGM("createReverseDamageCard", {
+    autoApplyDamage: configSettings.autoApplyDamage,
+    sender: game.user?.name,
+    actorId: workflow?.actor?.id,
+    actorUuid: workflow?.actor?.uuid,
+    charName: workflow?.token?.name ?? workflow?.actor?.name ?? game.user?.name,
+    damageList: prepareDamageListToJSON(Object.values(allDamages)),
+    chatCardUuid: workflow?.itemCardUuid,
+    flagTags: workflow?.flagTags,
+    updateOptions: options.updateOptions,
+    forceApply: options.forceApply,
+  });
+  return cardIds;
+}
+
+/**
+ * Apply different damage/healing amounts to multiple targets, producing a single damage card.
+ * Each entry specifies a token and its own damageDetail/totalDamage.
+ * @param targetDamages Array of per-target damage specifications
+ * @param item The item responsible for the damage (used for card display)
+ * @param options Same options as applyTokenDamage (workflow, forceApply, updateOptions, etc.)
+ */
+export async function applyTokenDamageMany(
+  targetDamages: { token: Token.Implementation, damageDetail: DamageDescription[], totalDamage: number }[],
+  item: Item.Implementation | null | undefined,
+  options: any = {
+    workflow: undefined,
+    updateOptions: { awaitDamageApplication: configSettings.waitForDamageApplication },
+    forceApply: false,
+  }
+): Promise<any[]> {
+  let allDamages: Record<string, DamageListEntry> = {};
+  let workflow: Workflow | undefined = options.workflow;
+  if (item && !options.workflow) workflow = Workflow.getWorkflow(item.uuid);
+
+  for (const entry of targetDamages) {
+    const actor = entry.token.actor;
+    if (!actor) continue;
+    const damageDetail = entry.damageDetail.map(de => ({ ...de, value: (de.value ?? de.damage) }));
+    const calcDamageOptions = {
+      invertHealing: true,
+      multiplier: 1,
+      midi: {
+        saved: false,
+        itemType: item?.type,
+        saveMultiplier: 1,
+        isHit: true,
+        superSaver: false,
+        semiSuperSaver: false,
+        sourceActorUuid: actor?.uuid,
+        uncannyDodge: false,
+        save: false,
+        targetUuid: entry.token?.document.uuid,
+        fumbleSave: false,
+        criticalSave: false,
+        isCritical: false,
+        isFumble: false
+      }
+    };
+    // @ts-expect-error no dnd5e-types
+    const combinedDamage: DamageDescription[] = foundry.utils.deepClone(actor.calculateDamage(damageDetail, calcDamageOptions));
+    const fullDamage = setupDamageDetails({
+      actorId: actor.id!,
+      actorUuid: actor.uuid,
+      critical: false,
+      damageDetail: combinedDamage,
+      damageDetails: {
+        combinedDamage,
+        rawcombinedDamage: damageDetail,
+        calcDamageOptions: { combinedDamage: calcDamageOptions }
+      },
+      isHit: true,
+      rawDamageDetail: damageDetail,
+      saved: false,
+      sceneId: canvas.scene?.id ?? "",
+      semiSuperSaver: false,
+      superSaver: false,
+      totalDamage: entry.totalDamage,
+      targetUuid: entry.token.document.uuid,
     }, "combinedDamage", actor);
     if (fullDamage) allDamages[actor.uuid] = fullDamage;
   }
@@ -709,6 +788,9 @@ export interface pcSaveOptions {
   requestId: string,
   GMprompt,
   isMagicSave: boolean,
+  rollAbilities?: string[],
+  rollSkills?: string[],
+  rollTools?: string[],
   saveDetails: {
     advantage: boolean | undefined,
     disadvantage: boolean | undefined,
@@ -723,15 +805,109 @@ export interface pcSaveOptions {
     itemCardUuid: string
   }
 };
+
+/**
+ * Get the localized label for a tool from the compendium index.
+ * dnd5e tools don't have a static `label` property like skills/abilities - their names come from compendium items.
+ * @param toolId The tool identifier (e.g., "alchemist", "thief")
+ * @returns The tool name, or the toolId as fallback if not found
+ */
+export function getToolLabel(toolId: string): string {
+  const toolUUID = GameSystemConfig.tools[toolId]?.id;
+  //@ts-expect-error no dnd5e-types
+  const toolIndex = toolUUID ? dnd5e.documents.Trait.getBaseItem(toolUUID, { indexOnly: true }) : null;
+  return toolIndex?.name ?? toolId;
+}
+
+/**
+ * Build an array of choice options for a multi-ability save/check dialog.
+ * Each entry includes the ability ID, localized label, and formatted modifier string.
+ */
+export function buildRollChoices(
+  actor: Actor.Implementation,
+  rollType: "save" | "check" | "skill" | "tool",
+  ids: string[]
+): { value: string, label: string, modifier: string }[] {
+  if (rollType === "skill") {
+    return ids.map(skillId => {
+      const label = GameSystemConfig.skills[skillId]?.label ?? skillId;
+      //@ts-expect-error no dnd5e-types
+      const total: number = actor.system.skills?.[skillId]?.total ?? 0;
+      const modifier = total >= 0 ? `+${total}` : `${total}`;
+      return { value: skillId, label, modifier };
+    });
+  }
+  if (rollType === "tool") {
+    return ids.map(toolId => {
+      const label = getToolLabel(toolId);
+      //@ts-expect-error no dnd5e-types
+      const total: number = actor.system.tools?.[toolId]?.total ?? 0;
+      const modifier = total >= 0 ? `+${total}` : `${total}`;
+      return { value: toolId, label, modifier };
+    });
+  }
+  return ids.map(abilityId => {
+    const label = GameSystemConfig.abilities[abilityId]?.label ?? abilityId;
+    let total: number;
+    //@ts-expect-error no dnd5e-types
+    const abilityData = actor.system.abilities?.[abilityId];
+    if (rollType === "save") {
+      total = abilityData?.save?.value ?? abilityData?.mod ?? 0;
+    } else {
+      total = (abilityData?.mod ?? 0) + (abilityData?.checkBonus ?? 0);
+    }
+    const modifier = total >= 0 ? `+${total}` : `${total}`;
+    return { value: abilityId, label, modifier };
+  });
+}
+
+export function selectBestRollChoice(
+  rollChoices: { value: string; label: string; modifier: string }[],
+  advantageMap?: Record<string, { hasAdvantage: boolean; hasDisadvantage: boolean }>
+): { value: string; label: string; modifier: string } | undefined {
+  if (rollChoices.length === 0) return undefined;
+  if (rollChoices.length === 1) return rollChoices[0];
+
+  // Calculate effective value: modifier + advantage adjustment (+3.325 for adv, -3.325 for disadv)
+  const getEffectiveValue = (choice: typeof rollChoices[0]) => {
+    const mod = parseInt(choice.modifier) || 0;
+    const advData = advantageMap?.[choice.value];
+    if (advData?.hasAdvantage && !advData?.hasDisadvantage) return mod + 3.325;
+    if (advData?.hasDisadvantage && !advData?.hasAdvantage) return mod - 3.325;
+    return mod; // normal or both cancel out
+  };
+
+  return rollChoices.reduce((a, b) => getEffectiveValue(b) > getEffectiveValue(a) ? b : a);
+}
+
 export function requestPCSave(ability: string, rollType: string | undefined, player: string, actor: Actor.Implementation | null, options: pcSaveOptions): Promise<ChatMessage.Implementation | undefined> | undefined {
   try {
     // display a chat message to the user telling them to save
     const actorName = actor?.name ?? "Unknown";
-    let abilityString = ability;
-    let abilityDetails = GameSystemConfig.abilities[ability];
-    if (!abilityDetails) abilityDetails = { ...GameSystemConfig.tools[ability], label: "" };
-    if (abilityDetails?.label) abilityString = abilityDetails.label;
-    let content = ` ${actorName} ${shouldDisplaySaveDC() ? "DC " + options.saveDetails.rollDC : ""} ${abilityString} ${i18n("midi-qol.saving-throw")}`;
+    // Build display string - show all choices if multiple abilities or skills available
+    let abilityString: string;
+    const rollAbilities = options.rollAbilities;
+    const rollSkills = options.rollSkills;
+    const rollTools = options.rollTools;
+    if (rollTools && rollTools.length > 0) {
+      const labels = rollTools.map(t => getToolLabel(t));
+      abilityString = labels.join(` ${i18n("midi-qol.or")} `);
+    } else if (rollSkills && rollSkills.length > 0) {
+      const labels = rollSkills.map(s => GameSystemConfig.skills[s]?.label ?? s);
+      abilityString = labels.join(` ${i18n("midi-qol.or")} `);
+    } else if (rollAbilities && rollAbilities.length > 0) {
+      const labels = rollAbilities.map(a => GameSystemConfig.abilities[a]?.label ?? a);
+      abilityString = labels.join(` ${i18n("midi-qol.or")} `);
+    } else {
+      // Fallback when no arrays provided (e.g., external callers)
+      abilityString = ability || i18n("midi-qol.plain-d20-roll");
+      let abilityDetails = GameSystemConfig.abilities[ability];
+      if (!abilityDetails) abilityDetails = { ...GameSystemConfig.skills[ability], label: "" };
+      if (!abilityDetails) abilityDetails = { ...GameSystemConfig.tools[ability], label: "" };
+      if (abilityDetails?.label) abilityString = abilityDetails.label;
+    }
+    const rollLabel = rollType === "tool" ? i18n("midi-qol.tool-check") : rollType === "skill" ? i18n("midi-qol.skill-check") : rollType === "check" ? i18n("midi-qol.ability-check") : i18n("midi-qol.saving-throw");
+    let content = ` ${actorName} ${shouldDisplaySaveDC() ? "DC " + options.saveDetails.rollDC : ""} ${abilityString} ${rollLabel}`;
     if (options.saveDetails.advantage && !options.saveDetails.disadvantage) content = content + ` (${i18n("DND5E.Advantage")}) - ${options.flavor})`;
     else if (!options.saveDetails.advantage && options.saveDetails.disadvantage) content = content + ` (${i18n("DND5E.Disadvantage")}) - ${options.flavor})`;
     else content + ` - ${options.flavor})`;
@@ -778,6 +954,32 @@ export function requestPCActiveDefence(player: User, actor: Actor, saveItemName:
     } catch (err) { returnValue = {} }
     handler(returnValue);
   });
+}
+
+// ==================== Midi Flag Types ====================
+// Maps flag keys to their value types for effect processing in midiCustomEffect
+export var midiFlagTypes: Record<string, string> = {};
+
+export function setupMidiFlagTypes() {
+  let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
+
+  attackTypes.forEach(at => {
+    midiFlagTypes[`flags.midi-qol.DR.${at}`] = "number"
+  });
+  midiFlagTypes["flags.midi-qol.onUseMacroName"] = "string";
+
+  if (game.system?.id === "dnd5e") {
+    midiFlagTypes[`flags.midi-qol.DR.all`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-magical`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-silver`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-adamant`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-physical`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.final`] = "number";
+
+    Object.keys(GameSystemConfig.damageTypes).forEach(dt => {
+      midiFlagTypes[`flags.midi-qol.DR.${dt}`] = "string";
+    })
+  }
 }
 
 export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffect.ChangeData & { effect?: ActiveEffect.Implementation }, current: unknown, delta: unknown, changes: unknown) {
@@ -994,20 +1196,25 @@ export async function doActivityOverTimeEffect(actor: Actor.Implementation, effe
 }
 
 async function getOvertimeActivity(actor: Actor.Implementation, effect: ActiveEffect.Implementation, change: ActiveEffect.ChangeData, startTurn: boolean) {
-  let activity /* MidiActivityMixin */ = await fromUuid(change.value) as Activity | null;
+  const changeValue = String(change.value ?? "");
+  let activity /* MidiActivityMixin */ = await fromUuid(changeValue) as Activity | null;
   if (!activity && effect.transfer) {
     //@ts-expect-error no dnd5e-types
-    activity = effect.parent?.system.activities?.find(a => a.identifier === change.value);
+    activity = effect.parent?.system.activities?.find(a => a.identifier === changeValue);
   }
   if (!activity && effect.origin) {
     const originItem = getItemFromEffectOrigin(effect.origin);
-    // @ts-expect-error no dnd5e-types
-    if (originItem) activity = originItem.system.activities.find(a => a.identifier === change.value);
+    if (originItem) {
+      // @ts-expect-error no dnd5e-types
+      activity = originItem.system.activities.find(a => a.identifier === changeValue);
+    }
   }
   if (!activity) {
+    console.error(`getOvertimeActivity | activity not found for changeValue: "${changeValue}"`);
     return undefined;
   }
   const turnChoice = activity.overTimeProperties?.turnChoice ?? "start";
+  console.error(`getOvertimeActivity | found activity: ${activity.name}, turnChoice: ${turnChoice}, startTurn: ${startTurn}`);
   // Check start/end turn
   if (turnChoice === "start" && !startTurn) return undefined;
   if (turnChoice === "end" && startTurn) return undefined;
@@ -1026,18 +1233,20 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
       console.warn(`midi-qol | localActivityOverTime | for actor ${actor} activity ${change.value} not found or not overTime`);
       continue;
     }
-    // Create an item owned by the target actor which has all of the details
+    // Determine which actor should roll the overtime activity
+    const rollAsChoice = activity.overTimeProperties?.rollAs ?? "target";
+    let rollActor = actor; // default: target actor (the actor bearing the effect)
+    if (rollAsChoice === "source") {
+      const originItem = getItemFromEffectOrigin(effect.origin ?? "");
+      if (originItem?.actor) rollActor = originItem.actor;
+    }
+
+    // Create an item owned by the rolling actor which has all of the details
     const itemData: any = activity.item.toObject();
     if (castLevel > spellLevel) foundry.utils.setProperty(itemData, "flags.dnd5e.scaling", castLevel - spellLevel);
     foundry.utils.setProperty(itemData, "system.properties", itemData.system.properties.filter(p => p !== "concentration"));
-    let itemActor = activity.item?.actor;
-    if (!itemActor) {
-      const origin = getItemFromEffectOrigin(effect.origin ?? "");
-      // @ts-expect-error types thinks item parent can only ever be actor, not AE... that seems accurate tbh
-      if (origin) itemActor = origin.parent instanceof ActiveEffect ? origin.parent.actor : origin.actor;
-    }
     foundry.utils.setProperty(itemData, "flags.midi-qol.syntheticItem", true);
-    const newItem = new CONFIG.Item.documentClass(itemData, { parent: itemActor ?? actor });
+    const newItem = new CONFIG.Item.documentClass(itemData, { parent: rollActor });
     newItem.prepareData();
     // @ts-expect-error no dnd5e-types
     newItem.prepareFinalAttributes(); // since the actor prepareData is not being called need to call this by hand
@@ -1046,27 +1255,26 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
 
     // Check remove Condition
     if ((overTimeActivity.overTimeProperties?.preRemoveConditionText ?? "") !== "" && overTimeActivity.overTimeProperties!.removeConditionBeforeActivity) {
-      const conditionData = createConditionData({ actor, workflow: undefined, target: actor });
+      const conditionData = createConditionData({ actor, workflow: undefined, target: actor, effect });
       if (await evalCondition(activity.overTimeProperties?.preRemoveConditionText ?? "false", conditionData, { async: true })) {
         await effect.delete();
         return;
       }
     }
     if ((overTimeActivity?.useCondition ?? "") !== "") {
-      const conditionData = createConditionData({ actor, workflow: undefined, target: actor });
+      const conditionData = createConditionData({ actor, workflow: undefined, target: actor, effect });
       if (!await evalCondition(activity.useCondition ?? "true", conditionData, { async: true, errorReturn: true })) {
         return; // use condition failed but don't want to thrown an notification warning
       }
     }
     let targetsToUse: Set<Token> | undefined = undefined;
-    if (["self", ""].includes(overTimeActivity.target?.affects?.type)) {
-      overTimeActivity = foundry.utils.deepClone(overTimeActivity);
-      const token = tokenForActor(actor);
-      if (token) targetsToUse = new Set([token])
-      overTimeActivity.target.affects.type = "";
-    }
+    const checkGMstatus = rollAsChoice === "source" && rollActor !== actor && !rollActor.isOwner;
+    // Overtime effects always target the actor bearing the effect
+    const token = tokenForActor(actor);
+    if (token) targetsToUse = new Set([token]);
+
     const overTimeWorkflow: Workflow = await completeActivityUse(overTimeActivity,
-      { midiOptions: { targetsToUse, workflowOptions: { noProvokeReaction: true, autoConsumeResource: "both" } } },
+      { midiOptions: { targetsToUse, checkGMstatus, workflowOptions: { noProvokeReaction: true, autoConsumeResource: "both" } } },
       { configure: overTimeActivity.consumption?.spellSlot === true },
       { create: true }) as Workflow;
 
@@ -1077,7 +1285,7 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
     }
     // Check remove condition
     if ((activity.overTimeProperties?.postRemoveConditionText ?? "") !== "" && !activity.overTimeProperties!.removeConditionBeforeActivity) {
-      const conditionData = createConditionData({ actor, workflow: overTimeWorkflow, target: actor });
+      const conditionData = createConditionData({ actor, workflow: overTimeWorkflow, target: actor, effect });
       if (await evalCondition(activity.overTimeProperties!.postRemoveConditionText ?? "false", conditionData, { async: true })) {
         await effect.delete();
         return;
@@ -1355,45 +1563,60 @@ interface ActionSaveContext {
  * @returns true if effect should be processed further, false to skip
  */
 async function handleActionSaveDialog(ctx: ActionSaveContext): Promise<boolean> {
-  const { actor, effect, details, owner, messageFlavor } = ctx;
-  const { label, saveDC, saveAbility, saveMagic, rollMode, rollTypeString } = details;
+  const { actor, effect, details, owner } = ctx;
+  const { saveDC, saveAbility, saveMagic, rollMode, rollTypeString } = details;
 
   if (!owner?.active) {
     error(`No active owner to request overtime save for ${actor.name} ${effect.name}`);
     return false;
   }
 
-  let saveResult: any = await new Promise(async (resolve, reject) => {
-    let timeoutId: NodeJS.Timeout | undefined;
-    if (configSettings.playerSaveTimeout) timeoutId = setTimeout(() => resolve(undefined), configSettings.playerSaveTimeout * 1000);
-    const content = `${actor.name} use your action to overcome ${label}`;
-    const result = await socketlibSocket.executeAsUser("rollActionSave", owner?.id, {
-      title: `${actor.name} Action: ${label}`,
-      content,
-      actorUuid: actor.uuid,
-      request: rollTypeString,
-      abilities: saveAbility,
-      saveDC,
-      actionSave: "dialog",
-      options: {
-        simulate: false,
-        targetValue: saveDC,
-        messageData: { user: owner?.id, flavor: `${label} ${i18n(messageFlavor[details.rollType])}` },
-        chatMessage: true,
-        rollMode,
-        mapKeys: false,
-        fastForward: false,
-        isMagicSave: saveMagic,
-        isConcentrationCheck: false
-      }
-    });
-    if (timeoutId) clearTimeout(timeoutId);
-    resolve(result);
+  // Build SaveDetails with ALL abilities — doRollAbility/setupChoiceDialog handles the choice UI
+  const saveDetails: SaveDetails = {
+    actorUuid: actor.uuid,
+    advantage: undefined,
+    disadvantage: undefined,
+    modifierTracker: undefined,
+    isFriendly: false,
+    isMagicSave: saveMagic,
+    isConcentrationCheck: false,
+    rollDC: saveDC,
+    saveItemUuid: "",
+    workflowId: "",
+    itemCardUuid: "",
+    workflowOptions: {},
+    rollType: rollTypeString,
+    rollAbilities: rollTypeString !== "skill" ? saveAbility : [],
+    rollSkills: rollTypeString === "skill" ? saveAbility : [],
+    rollTools: [],
+    itemId: "",
+  };
+
+  // Prompt player for confirmation, then roll via rollAbility on their client
+  let saveResult: any = await socketlibSocket.executeAsUser("rollActionSave", owner?.id, {
+    actorUuid: actor.uuid,
+    effectName: effect.name,
+    saveDetails,
+    displayOptions: {
+      fastForward: false,
+      chatMessage: true,
+      showTargetDC: true,
+      rollMode,
+    }
   });
 
-  if (saveResult instanceof Array) saveResult = saveResult[0];
-  if (saveResult?.class) saveResult = JSON.parse(JSON.stringify(saveResult));
-  const success = saveResult?.options?.success || saveResult?.total >= saveDC;
+  // Reconstruct Roll from socketlib serialization — same pattern as normalizeRollResults in checkSaves
+  //@ts-expect-error no dnd5e types
+  const D20Roll = CONFIG.Dice.D20Roll;
+  let roll: Roll | undefined;
+  if (saveResult instanceof Array) {
+    roll = saveResult[0] instanceof Roll ? saveResult[0] : D20Roll.fromJSON(JSON.stringify(saveResult[0]));
+  } else if (saveResult && !(saveResult instanceof Roll)) {
+    roll = D20Roll.fromJSON(JSON.stringify(saveResult));
+  } else {
+    roll = saveResult;
+  }
+  const success = roll?.total !== undefined && roll.total >= saveDC;
   foundry.utils.setProperty(effect, `flags.${MODULE_ID}.actionSaveSuccess`, success === true);
   return true;
 }
@@ -1660,11 +1883,6 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
       saveCount = parseCountAction(raw.saveRemove, "remove");
     }
   }
-  // Default: remove on first save if no damage on save (only when neither saveCount nor saveRemove specified)
-  if (saveCount === undefined && raw.saveDamage === "nodamage" && saveDC > -1) {
-    saveCount = { count: 1, mode: "remove", consecutive: false };
-  }
-
   // Handle failCount parameter
   if (raw.failCount !== undefined) {
     failCount = parseCountAction(raw.failCount, "permanent");
@@ -1674,6 +1892,12 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
     foundry.utils.logCompatibilityWarning(`midi-qol | parseOvertimeDetails | failRemove is deprecated, use failCount instead (failRemove=${raw.failRemove})`,
       { since: "midi-qol 13.0.43", until: "midi-qol 13.1.0" });
     failCount = parseCountAction(raw.failRemove, "permanent");
+  }
+
+  // Default: if neither saveCount nor failCount is specified and there's a valid saveDC,
+  // remove the effect on a single successful save.
+  if (saveCount === undefined && failCount === undefined && saveDC > -1) {
+    saveCount = { count: 1, mode: "remove", consecutive: false };
   }
 
   return {
@@ -1799,7 +2023,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
   if (effect.disabled || effect.isSuppressed) return;
   const auraFlags = effect.flags?.ActiveAuras ?? {};
   if (auraFlags.isAura && auraFlags.ignoreSelf) return;
-  const rollData = createConditionData({ actor, workflow: undefined, target: actor });
+  const rollData = createConditionData({ actor, workflow: undefined, target: actor, effect });
   if (!rollData.flags) rollData.flags = actor.flags;
   rollData.flags.midiqol = rollData.flags[MODULE_ID];
   const changes = effect.changes.filter(change => change.key.startsWith(`flags.${MODULE_ID}.OverTime`));
@@ -1885,13 +2109,15 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
       if (debugEnabled > 0) warn(`gmOverTimeEffect | OverTime label=${label} startTurn=${startTurn} endTurn=${endTurn} damageBeforeSave=${damageBeforeSave} saveDC=${saveDC} saveAbility=${saveAbility} damageRoll=${damageRoll} damageType=${damageType}`);
 
       // Build item and activity data using helper function
-      const isPermanent = !!actionSave; // actionSave items don't need save/check activity type
+      // isPermanent is true for actionSave items OR if effect was marked permanent by saveCount/failCount
+      const effectMarkedPermanent = !!effect.flags?.[MODULE_ID]?.overtime?.permanent;
+      const isPermanent = !!actionSave || effectMarkedPermanent;
       const { itemData, activityData } = await buildOvertimeItemData({ actor, effect, details, label, isPermanent });
 
       // roll the damage and save....
       const theTargetToken = getOrCreateTokenForActor(actor)!;
-      const theTargetId = theTargetToken?.document.id;
-      if (game.user && theTargetId) updateUserTargets([theTargetId]);
+      // Target is passed via targetsToUse in the options below — no need to modify game.user.targets
+      // which would clobber the GM's real targets before completeActivityUse can save them.
 
       // Handle stacking damage rolls
       if (damageRoll && activityData.damage?.parts?.[0]) {
@@ -1927,7 +2153,8 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
       // @ts-expect-error no dnd5e-types
       ownedItem.prepareFinalAttributes();
       // Register effect for save/fail count tracking if either is specified
-      if (!actionSave && (saveCount || failCount) && saveDC > -1) {
+      // Skip registration if effect is already permanent (no save processing needed)
+      if (!actionSave && !isPermanent && (saveCount || failCount) && saveDC > -1) {
         // @ts-expect-error no dnd5e-types
         const activityUuid = ownedItem.system.activities.contents[0].uuid;
         savedOverTimeEffectsToDelete[activityUuid] = {
@@ -2043,11 +2270,6 @@ export async function _processOverTime(combat: Combat.Implementation, data: Comb
   let testTurn = combat.previous?.turn ?? 0;
   let testRound = combat.previous?.round ?? 0;
   const last = (data.round ?? combat.current.round ?? 0) * 100 + (data.turn ?? combat.current.turn ?? 0);
-  // These changed since overtime moved to _preUpdate function instead of hook
-  // const prev = (combat.previous.round ?? 0) * 100 + (combat.previous.turn ?? 0);
-  // let testTurn = combat.previous.turn ?? 0;
-  // let testRound = combat.previous.round ?? 0;
-  // const last = (combat.current.round ?? 0) * 100 + (combat.current.turn ?? 0);
 
   let toTest = prev;
   let count = 0;
@@ -2117,14 +2339,16 @@ export async function completeActivityUse(activityRef: Activity | string | undef
   if (localRoll) {
     return await new Promise((resolve) => {
       const maxWait = 90; // If the activity usage doesn't complete in 90 seconds then we have a problem
-      let saveTargets = Array.from(game.user?.targets ?? []).map(t => { return t.id });
+      // Local save of current targets — restored on cleanup
+      const localSavedTargetIds = Array.from(game.user?.targets ?? []).map(t => t.id);
       if (usage.midiOptions!.ignoreUserTargets) updateUserTargets([]);
       if (game.user && targetsToUse.size === 0 && activity.target?.affects?.type === "self") {
-        updateUserTargets([]);
         const selfTarget = getToken(activity.item.actor);
         if (selfTarget) {
-          selfTarget.setTarget(true, { user: game.user, releaseOthers: false, groupSelection: true });
+          updateUserTargets([selfTarget.id]);
           targetsToUse = new Set([selfTarget]);
+        } else {
+          updateUserTargets([]);
         }
       } else if (targetsToUse.size === 0 && !usage.midiOptions!.ignoreUserTargets) {
         targetsToUse = new Set(game.user?.targets);
@@ -2136,69 +2360,47 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         abortHookName = "midi-qol.preAbort";
       }
       usage.sequenceId = foundry.utils.randomID();
-      const castHookName = "dnd5e.postUseLinkedSpell";
-      const castHookId = Hooks.on(castHookName, (activity, activityUsage, results) => {
-        // dependent activity fired
-        if (usage.sequenceId !== activityUsage.sequenceId) return;
-        Hooks.off(castHookName, castHookId);
-        //@ts-expect-error
-        Hooks.off(abortHookName, abortHookId);
-        //@ts-expect-error
-        Hooks.off(completeHookName, completeHookId);
-        if (debugEnabled > 0) warn(`spell use hook fired: ${activity.item?.name} ${completeHookName}`)
-        updateUserTargets(saveTargets);
-        resolve(usage.workflow);
-      });
-      //@ts-expect-error
-      const abortHookId = Hooks.on(abortHookName, (workflow) => {
-        if (workflow.sequenceId !== usage.sequenceId) return;
-        //@ts-expect-error
-        Hooks.off(abortHookName, abortHookId);
-        //@ts-expect-error
-        Hooks.off(completeHookName, completeHookId);
-        Hooks.off(castHookName, castHookId);
-        if (debugEnabled > 0) warn(`completeItemUse abort hook fired: ${workflow.workflowName} ${abortHookName}`)
-        updateUserTargets(saveTargets);
-        resolve(workflow);
-      });
-
       let completeHookName = `midi-qol.postCleanup.${activity.uuid}`;
       // @ts-expect-error no clue
-      if (!activity || activity.activity?.id) {
+      if (!activity || activity.activity?.id || activity.type === "cast") {
         // Magic items create a pseudo item when doing the roll so have to hope we get the right completion
-        // forward activities wont call the expected postCleanup Hook
+        // Forward activities and CastActivity won't fire postCleanup with the cast activity's UUID —
+        // the spell workflow fires it with the spell activity's UUID instead.
+        // Use the generic hook and rely on sequenceId gating to match the correct workflow.
         completeHookName = "midi-qol.postCleanup";
       }
-      //@ts-expect-error
-      const completeHookId = Hooks.on(completeHookName, (workflow) => {
+
+      // Both hooks and the timeout do the same cleanup: unregister hooks, restore targets, resolve.
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const cleanupAndResolve = (result: any, source?: string) => {
+        if (timeoutId !== undefined) { clearTimeout(timeoutId); timeoutId = undefined; }
+        //@ts-expect-error dynamic hook name
+        Hooks.off(abortHookName, abortHookId);
+        //@ts-expect-error dynamic hook name
+        Hooks.off(completeHookName, completeHookId);
+        if (source && debugEnabled > 0) warn(`completeActivityUse ${source}: ${activity?.item?.name} ${completeHookName}`);
+        updateUserTargets(localSavedTargetIds);
+        resolve(result);
+      };
+
+      //@ts-expect-error dynamic hook name
+      const abortHookId = Hooks.on(abortHookName, (workflow: Workflow) => {
         if (workflow.sequenceId !== usage.sequenceId) return;
-        //@ts-expect-error
-        Hooks.off(completeHookName, completeHookId);
-        //@ts-expect-error
-        Hooks.off(abortHookName, abortHookId);
-        Hooks.off(castHookName, castHookId);
-        if (debugEnabled > 0) warn(`completeActivityUse complete hook fired: ${workflow.workflowName} ${completeHookName}`)
-        updateUserTargets(saveTargets);
-        resolve(workflow);
+        cleanupAndResolve(workflow, "preAbort");
       });
-      setTimeout(() => {
-        //@ts-expect-error
-        Hooks.off(abortHookName, abortHookId);
-        //@ts-expect-error
-        Hooks.off(completeHookName, completeHookId);
-        Hooks.off(castHookName, castHookId);
-        resolve(undefined);
+      //@ts-expect-error dynamic hook name
+      const completeHookId = Hooks.on(completeHookName, (workflow: Workflow) => {
+        if (workflow.sequenceId !== usage.sequenceId) return;
+        cleanupAndResolve(workflow, "postCleanup");
+      });
+      timeoutId = setTimeout(() => {
+        cleanupAndResolve(undefined, "timeout");
       }, maxWait * 1000);
       usage.midiOptions!.targetsToUse = targetsToUse;
       // @ts-expect-error no dnd5e-types
       activity.use(usage, dialog, message).then(result => {
         if (!result) {
-          //@ts-expect-error
-          Hooks.off(abortHookName, abortHookId);
-          //@ts-expect-error
-          Hooks.off(completeHookName, completeHookId);
-          Hooks.off(castHookName, castHookId);
-          resolve(result)
+          cleanupAndResolve(result);
         }
       });
     });
@@ -2238,7 +2440,7 @@ export type MidiOptions = {
   fastForwardHeal?: boolean;
   fastForwardSet?: boolean;
   fumble?: boolean | number;
-  ignorePreComputedAdvantage?: boolean;
+  recomputeAdvantage?: boolean;
   ignoreUserTargets?: boolean;
   isConcentrationCheck?: boolean;
   isCritical?: boolean;
@@ -2247,6 +2449,7 @@ export type MidiOptions = {
   isMagicSave?: boolean;
   isTriggered?: boolean;
   item?: Item.Implementation;
+  itemCardUuid?: string;
   itemUuid?: string;
   noUseWarning?: boolean;
   parts?: string[];
@@ -2261,21 +2464,32 @@ export type MidiOptions = {
   saveItem?: Item.Implementation;
   saveItemUuid?: string;
   simulate?: boolean;
-  // sourceActor/sourceToken: Who grants advantage/disadvantage (explicit, not derived from workflow.actor)
-  // For saves/checks: typically workflow.actor (caster)
-  // For attacks: would be target.actor (defender)
-  sourceActor?: Actor.Implementation;
-  sourceToken?: Token.Implementation;
+  // grantsActor/grantsToken: The opposing entity that grants advantage/disadvantage.
+  // For attacks: the defender (target). For saves/checks: the caster (workflow.actor).
+  // Falls back to the actor themselves when there is no opposing entity.
+  grantsActor?: Actor.Implementation;
+  grantsToken?: Token.Implementation;
   spellLevel?: number;
   target?: number;
   targets?: Set<foundry.canvas.placeables.Token.Implementation>;
   targetsToUse?: Set<foundry.canvas.placeables.Token.Implementation>;
   targetUuids?: string[];
   triggeredActivity?: boolean;
+  addOptionalBonuses?: boolean;
   updateWorkflow?: boolean;
   workflow?: Workflow;
   workflowId?: string;
   workflowOptions?: WorkflowOptions;
+  /** Multiple abilities available for a save/check (e.g., ["str", "dex"]) */
+  rollAbilities?: string[];
+  /** Multiple skills available for a skill check (e.g., ["ath", "acr"]) */
+  rollSkills?: string[];
+  /** Multiple tools available for a tool check (e.g., ["thief", "smith"]) */
+  rollTools?: string[];
+  /** Pre-computed advantage data per choice (ability/skill/tool), populated by Workflow.ts and deserialized by GMAction.
+   *  A roll is always ONE type, so one object suffices for abilities, skills, or tools.
+   */
+  advantageByChoice?: Record<string, PreComputedAdvantageData>;
 };
 type SerializedMidiOptions = Omit<MidiOptions, "targetsToUse" | "rollAs" | "asUser"> & {
   targetsToUse?: string[];
@@ -2506,34 +2720,644 @@ export function distancePointToken({ x, y, elevation = 0 }, token, wallblocking 
 
 export function checkDistance(t1: any, t2: any, distance: number, options: { wallsBlock?: boolean, includeCover?: boolean } = { wallsBlock: false, includeCover: true }): boolean {
   const { wallsBlock = false, includeCover = true } = options;
-  const dist = computeDistance(t1, t2, { wallsBlock, includeCover });
+  const dist = getDistance(t1, t2, { wallsBlock, includeCover });
   return 0 <= dist && dist <= distance;
+}
+
+// ==================== PERIMETER DISTANCE HELPERS ====================
+// These functions compute the minimum distance between token perimeters (actual shapes)
+// rather than between grid square centers. Supports all v13 token shapes:
+// rectangles, hexagonal polygons, circles, and ellipses.
+
+/**
+ * Get a token's perimeter as a PIXI.Polygon in world coordinates.
+ * Uses token.getShape() for the actual shape (hex, circle, ellipse, rectangle)
+ * and translates from local to world coordinates.
+ */
+export function getTokenPerimeterPolygon(token: Token): PIXI.Polygon {
+  const shape = token.getShape();
+  const { x, y } = token.document;
+
+  let polygon: PIXI.Polygon;
+  if (shape instanceof PIXI.Polygon) {
+    polygon = shape;
+  } else if (shape instanceof PIXI.Circle) {
+    //@ts-expect-error Foundry extends PIXI.Circle with toPolygon()
+    polygon = shape.toPolygon();
+  } else if (shape instanceof PIXI.Ellipse) {
+    polygon = ellipseToPolygon(shape);
+  } else {
+    // PIXI.Rectangle — Foundry extends with toPolygon()
+    polygon = (shape as any).toPolygon();
+  }
+
+  // Translate from local (origin 0,0) to world coordinates
+  const pts = polygon.points;
+  const worldPts: number[] = new Array(pts.length);
+  for (let i = 0; i < pts.length; i += 2) {
+    worldPts[i] = pts[i] + x;
+    worldPts[i + 1] = pts[i + 1] + y;
+  }
+  return new PIXI.Polygon(worldPts);
+}
+
+/**
+ * Approximate a PIXI.Ellipse as a PIXI.Polygon.
+ * Foundry provides toPolygon() for Circle and Rectangle but not Ellipse.
+ */
+function ellipseToPolygon(ellipse: PIXI.Ellipse, segments: number = 24): PIXI.Polygon {
+  const pts: number[] = [];
+  // PIXI.Ellipse stores half-widths in .width and .height properties
+  for (let i = 0; i < segments; i++) {
+    const angle = (2 * Math.PI * i) / segments;
+    pts.push(ellipse.x + ellipse.width * Math.cos(angle));
+    pts.push(ellipse.y + ellipse.height * Math.sin(angle));
+  }
+  return new PIXI.Polygon(pts);
+}
+
+/**
+ * Find the closest point on a polygon's perimeter to a given point.
+ * Uses foundry.utils.closestPointToSegment for each edge.
+ * @param polygon - The polygon (in world coordinates, closed or open)
+ * @param px - X coordinate of the point
+ * @param py - Y coordinate of the point
+ * @returns The closest point on the polygon's perimeter
+ */
+export function closestPointOnPerimeter(polygon: PIXI.Polygon, px: number, py: number): { x: number, y: number } {
+  const pts = polygon.points;
+  const numPts = pts.length;
+  if (numPts < 4) return { x: px, y: py };
+
+  const c = { x: px, y: py };
+  let bestDistSq = Infinity;
+  let best = { x: px, y: py };
+
+  for (let i = 0; i < numPts; i += 2) {
+    const ni = (i + 2) % numPts;
+    const a = { x: pts[i], y: pts[i + 1] };
+    const b = { x: pts[ni], y: pts[ni + 1] };
+    // Skip degenerate zero-length edges
+    if (a.x === b.x && a.y === b.y) continue;
+    const closest = foundry.utils.closestPointToSegment(c, a, b);
+    const dx = closest.x - px;
+    const dy = closest.y - py;
+    const distSq = dx * dx + dy * dy;
+    if (distSq < bestDistSq) {
+      bestDistSq = distSq;
+      best = closest;
+    }
+  }
+  return best;
+}
+
+/**
+ * Compute the closest points on two polygon perimeters.
+ * @param poly1 - First polygon (in world coordinates)
+ * @param poly2 - Second polygon (in world coordinates)
+ * @returns The closest points on each polygon's perimeter
+ */
+export function closestPerimeterPoints(poly1: PIXI.Polygon, poly2: PIXI.Polygon): { p1: { x: number, y: number }, p2: { x: number, y: number } } {
+  // Quick overlap check using bounding boxes
+  const b1 = poly1.getBounds();
+  const b2 = poly2.getBounds();
+  const overlapX = b1.left < b2.right && b1.right > b2.left;
+  const overlapY = b1.top < b2.bottom && b1.bottom > b2.top;
+
+  if (overlapX && overlapY) {
+    // Bounding boxes overlap — check if polygons actually overlap
+    // Use centroid containment as a fast check for convex shapes
+    const c1 = polygonCentroid(poly1);
+    const c2 = polygonCentroid(poly2);
+    if (poly1.contains(c2.x, c2.y) || poly2.contains(c1.x, c1.y)) {
+      const midX = (c1.x + c2.x) / 2;
+      const midY = (c1.y + c2.y) / 2;
+      return { p1: { x: midX, y: midY }, p2: { x: midX, y: midY } };
+    }
+  }
+
+  // Iterative closest-point refinement (converges for convex shapes)
+  const c2 = polygonCentroid(poly2);
+  let p1 = closestPointOnPerimeter(poly1, c2.x, c2.y);
+  let p2 = closestPointOnPerimeter(poly2, p1.x, p1.y);
+  p1 = closestPointOnPerimeter(poly1, p2.x, p2.y);
+  p2 = closestPointOnPerimeter(poly2, p1.x, p1.y);
+
+  return { p1, p2 };
+}
+
+/**
+ * Get the centroid of a polygon.
+ */
+function polygonCentroid(poly: PIXI.Polygon): { x: number, y: number } {
+  const pts = poly.points;
+  let cx = 0, cy = 0;
+  const count = pts.length / 2;
+  for (let i = 0; i < pts.length; i += 2) {
+    cx += pts[i];
+    cy += pts[i + 1];
+  }
+  return { x: cx / count, y: cy / count };
+}
+
+
+
+/**
+ * Options for wall collision checking.
+ */
+export interface WallCollisionOptions {
+  /** Source document for the collision check (typically token document) */
+  source?: any;
+  /** The wallsBlockRange setting value */
+  wallsBlockRange: string;
+  /** Pre-computed cover visibility (from external modules like simbuls, levelsautocover) */
+  coverVisible?: boolean;
+  /** Origin point elevation (for Levels API) */
+  originElevation?: number;
+  /** Destination point elevation (for Levels API) */
+  destElevation?: number;
+  /** Origin top elevation (for Levels API) */
+  originTopElevation?: number;
+  /** Destination top elevation (for Levels API) */
+  destTopElevation?: number;
+}
+
+/**
+ * Check if a wall blocks the path between two points.
+ * Respects the wallsBlockRange setting and handles different collision modes.
+ *
+ * @param origin - Starting point {x, y}
+ * @param dest - Destination point {x, y}
+ * @param options - Collision check options
+ * @returns true if collision detected (path blocked), false if clear
+ */
+export function checkWallCollision(
+  origin: { x: number, y: number },
+  dest: { x: number, y: number },
+  options: WallCollisionOptions
+): boolean {
+  const { wallsBlockRange, coverVisible, source } = options;
+  let blocked: boolean;
+
+  switch (wallsBlockRange) {
+    case "center": {
+      blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
+        source,
+        mode: "any",
+        type: "sight"
+      });
+      return blocked;
+    }
+
+    case "centerLevels":
+    case "levelsautocover":
+      if (installedModules.get("levels")) {
+        if (coverVisible === false) {
+          return true;
+        }
+        if (coverVisible === undefined) {
+          const p1 = { x: origin.x, y: origin.y, z: options.originElevation ?? 0 };
+          const p2 = { x: dest.x, y: dest.y, z: options.destElevation ?? 0 };
+          //@ts-expect-error Levels API not typed
+          const baseToBase = CONFIG.Levels.API.testCollision(p1, p2, "collision");
+          const p1Top = { x: origin.x, y: origin.y, z: options.originTopElevation ?? p1.z };
+          const p2Top = { x: dest.x, y: dest.y, z: options.destTopElevation ?? p2.z };
+          //@ts-expect-error Levels API not typed
+          const topToBase = CONFIG.Levels.API.testCollision(p1Top, p2Top, "collision");
+          blocked = baseToBase && topToBase;
+          return blocked;
+        }
+        return false;
+      }
+      // Fallback to basic check if Levels not installed
+      blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
+        source,
+        mode: "any",
+        type: "sight"
+      });
+      return blocked;
+
+    case "alternative":
+    case "simbuls-cover-calculator":
+      if (coverVisible === undefined) {
+        blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
+          source,
+          mode: "any",
+          type: "sight"
+        });
+        return blocked;
+      }
+      return false;
+
+    case "simplecover5e":
+      // simplecover5e wall blocking is handled entirely by the pre-check (getCover with losCheck: true)
+      // No per-ray fallback — if the pre-check didn't resolve, we don't block
+      return false;
+
+    case "tokencover":
+      // tokencover is handled entirely by pre-check, no per-segment check needed
+      return false;
+
+    case "none":
+    default:
+      return false;
+  }
+}
+
+/**
+ * Compute the minimum grid distance between two token perimeters.
+ * This finds the closest points on each token's bounding rectangle perimeter
+ * and measures the grid distance between them.
+ *
+ * @param t1 - First token (or token reference)
+ * @param t2 - Second token (or token reference)
+ * @param options - Options for distance calculation
+ * @returns The grid distance between perimeters, or -1 if blocked/invalid
+ */
+/**
+ * Check if two token shapes overlap.
+ * Uses bounding box check then centroid containment for convex shapes.
+ */
+function shapesOverlap(poly1: PIXI.Polygon, poly2: PIXI.Polygon): boolean {
+  const b1 = poly1.getBounds();
+  const b2 = poly2.getBounds();
+  if (b1.right < b2.left || b1.left > b2.right || b1.bottom < b2.top || b1.top > b2.bottom) return false;
+  const c1 = polygonCentroid(poly1);
+  const c2 = polygonCentroid(poly2);
+  return poly1.contains(c2.x, c2.y) || poly2.contains(c1.x, c1.y);
+}
+
+/**
+ * Run module-level pre-checks (levelsautocover, simbuls, tokencover, simplecover5e)
+ * to determine if a target is fully blocked before doing per-ray wall checks.
+ * Returns { blocked: true } if the module says total cover,
+ * or { coverVisible } to pass through to per-ray checks.
+ */
+function computeWallBlockPreCheck(
+  t1: Token.Implementation,
+  t2: Token.Implementation,
+  wallsBlock: boolean,
+  includeCover: boolean
+): { blocked: boolean, coverVisible?: boolean | undefined } {
+  const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
+  //@ts-expect-error
+  if (installedModules.get("levelsautocover") && game.settings.get("levelsautocover", "apiMode") && wallsBlock && wallsBlockRange === "levelsautocover" && includeCover) {
+    //@ts-expect-error
+    const levelsautocoverData = AutoCover.calculateCover(t1, t2, getLevelsAutoCoverOptions());
+    const coverVisible = levelsautocoverData.rawCover > 0;
+    const result = coverVisible ? { blocked: false, coverVisible: true } : { blocked: true };
+    return result;
+  } else if (globalThis.CoverCalculator && wallsBlockRange === "simbuls-cover-calculator" && includeCover) {
+    if (t1 === t2) return { blocked: false, coverVisible: undefined };
+    const coverData = globalThis.CoverCalculator.Cover(t1, t2);
+    if (debugEnabled > 0) warn("wallBlockPreCheck | simbuls cover calculator ", t1.name, t2.name, coverData);
+    const result = (coverData?.data.results.cover === 3 && wallsBlock) ? { blocked: true } : { blocked: false, coverVisible: true };
+    return result;
+  } else if (installedModules.get("tokencover") && wallsBlockRange === "tokencover" && includeCover) {
+    const coverValue = calcTokenCover(t1, t2);
+    const result = (coverValue === 3 && wallsBlock) ? { blocked: true } : { blocked: false, coverVisible: true };
+    return result;
+  } else if (installedModules.get("simplecover5e") && wallsBlockRange === "simplecover5e" && wallsBlock) {
+    //@ts-expect-error
+    const simpleCoverApi = game.modules.get("simplecover5e")?.api;
+    if (simpleCoverApi) {
+      // If we're using simple cover to determine walls block have to use losCheck: true, otherwise will never return more than 3/4 cover
+      // const losCheck = !!safeGetGameSetting("simplecover5e", "losCheck");
+      const coverResult = simpleCoverApi.getCover({
+        attacker: t1,
+        target: t2,
+        scene: t1.scene,
+        losCheck: true
+      });
+      const result = (coverResult?.bonus === null || coverResult?.cover === "total") ? { blocked: true } : { blocked: false, coverVisible: true };
+      return result;
+    }
+  }
+  return { blocked: false, coverVisible: undefined };
+}
+
+
+export function computePerimeterDistance(
+  t1: any,
+  t2: any,
+  options: DistanceOptions = {}
+): number {
+  let { wallsBlock = false, includeElevation = true, includeCover = true } = options;
+
+  if (!canvas?.scene || !canvas.grid || !canvas.dimensions) return -1;
+
+  const token1 = getPlaceable(t1);
+  const token2 = getPlaceable(t2);
+  if (!token1 || !token2) return -1;
+
+  // Same token - distance is 0
+  if (token1 === token2) return 0;
+
+  // Check ignoreWalls flag
+  const actor = (token1 as Token).actor;
+  const ignoreWallsFlag = actor ? foundry.utils.getProperty(actor, `flags.${MODULE_ID}.ignoreWalls`) : false;
+  if (ignoreWallsFlag) {
+    wallsBlock = false;
+  }
+
+  const poly1 = getTokenPerimeterPolygon(token1 as Token);
+  const poly2 = getTokenPerimeterPolygon(token2 as Token);
+
+  const gridDistance = canvas.dimensions.distance; // typically 5 feet
+
+  // Check if tokens overlap - if so, distance is 0
+  if (shapesOverlap(poly1, poly2)) {
+    return 0;
+  }
+
+  // Find the closest points on each perimeter
+  const { p1, p2 } = closestPerimeterPoints(poly1, poly2);
+
+  // Convert to PIXI.Point to match computeDistance behavior
+  const origin = new PIXI.Point(p1.x, p1.y);
+  const dest = new PIXI.Point(p2.x, p2.y);
+
+  // Check for walls blocking if requested
+  if (wallsBlock) {
+    const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
+    if (wallsBlockRange !== "none") {
+      // Run module pre-checks (simplecover5e, levelsautocover, simbuls, tokencover)
+      const preCheck = computeWallBlockPreCheck(token1 as Token, token2 as Token, wallsBlock, includeCover);
+      if (preCheck.blocked) return -1;
+
+      // If no module pre-check resolved it, cast rays from attacker center to
+      // a grid of 17 boundary test points on the target (same pattern as _canSenseModes).
+      // Block only if ALL rays are blocked by walls.
+      if (preCheck.coverVisible === undefined) {
+        const srcCenter = (token1 as Token).center;
+        const tgtCenter = (token2 as Token).center;
+        const t = Math.min((token2 as Token).w, (token2 as Token).h) / 4;
+        const t2 = Math.min((token2 as Token).w, (token2 as Token).h) / 2 - 2;
+        const offsets = t > 0 ? [
+          [0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t],
+          [-t2, -t2], [-t2, t2], [t2, t2], [t2, -t2], [-t2, 0], [t2, 0], [0, -t2], [0, t2]
+        ] : [[0, 0]];
+        const testPoints = offsets.map(o => new PIXI.Point(tgtCenter.x + o[0], tgtCenter.y + o[1]));
+        const srcOrigin = new PIXI.Point(srcCenter.x, srcCenter.y);
+
+        let allBlocked = true;
+        for (const tgtPt of testPoints) {
+          const collision = CONFIG.Canvas.polygonBackends.sight.testCollision(
+            srcOrigin, tgtPt,
+            { type: "sight", mode: "any" }
+          );
+          if (!collision) { allBlocked = false; break; }
+        }
+        if (allBlocked) {
+          return -1;
+        }
+      }
+      // coverVisible === true means module says not blocked — continue to distance calc
+    }
+  }
+
+  // Calculate raw distance between closest perimeter points
+  // The approach depends on the grid type and diagonal mode setting
+  const isGridless = canvas.grid.isGridless;
+  const useGriddedGridless = isGridless && configSettings.griddedGridless;
+
+  let distance: number;
+
+  if (isGridless && !useGriddedGridless) {
+    // Pure gridless: calculate raw euclidean distance directly
+    const dx = dest.x - origin.x;
+    const dy = dest.y - origin.y;
+    const pixelDistance = Math.sqrt(dx * dx + dy * dy);
+    const gridSize = canvas.dimensions?.size ?? 100;
+    distance = (pixelDistance / gridSize) * gridDistance;
+  } else if (useGriddedGridless) {
+    // Gridless with griddedGridless: use proxy to treat as SquareGrid
+    // measurePath on the proxy will use SquareGrid's _measurePath which respects diagonal mode
+    const canvasGridProxy = createSquareGridProxy();
+    const result = canvasGridProxy.measurePath([origin, dest], {});
+    distance = result?.distance ?? 0;
+  } else {
+    // Gridded scene: measurePath calculates distance respecting diagonal mode
+    const result = canvas.grid.measurePath([origin, dest], {});
+    distance = result?.distance ?? 0;
+  }
+
+  // Include elevation difference if requested, using diagonal-aware combination
+  if (includeElevation) {
+    const heightDifference = computeTokenHeightDifference(token1 as Token, token2 as Token);
+    distance = combineDistanceWithHeight(distance, heightDifference);
+  }
+
+  return distance;
+}
+
+/**
+ * Measure point-to-point distance using the current grid mode.
+ * On gridless scenes with griddedGridless enabled, uses the SquareGrid proxy.
+ * Otherwise uses canvas.grid.measurePath directly.
+ */
+export function measurePointDistance(p1: { x: number, y: number }, p2: { x: number, y: number }): number {
+  if (!canvas?.grid) return 0;
+  const isGridless = canvas.grid.isGridless;
+  if (isGridless && configSettings.griddedGridless) {
+    const proxy = createSquareGridProxy();
+    return proxy.measurePath([p1, p2], {})?.distance ?? 0;
+  }
+  return canvas.grid.measurePath([p1, p2], {})?.distance ?? 0;
+}
+
+/**
+ * Measure distance from a token to a point using perimeter mode.
+ * Finds the closest point on the token's perimeter polygon to the destination point,
+ * then measures the grid distance between them.
+ */
+function measureTokenToPointPerimeter(token: Token, destPoint: { x: number, y: number }): number {
+  if (!canvas?.grid || !canvas.dimensions) return -1;
+  const poly = getTokenPerimeterPolygon(token);
+
+  // Check if the point is inside the token's perimeter
+  if (poly.contains(destPoint.x, destPoint.y)) return 0;
+
+  // Find closest point on the token perimeter to the destination
+  const closest = closestPointOnPerimeter(poly, destPoint.x, destPoint.y);
+  return measurePointDistance(closest, destPoint);
+}
+
+/**
+ * Get the perimeter-based distance from a token to a point, with gridification.
+ * This applies the same gridification formula as getDistance in perimeter mode:
+ *   distance = gridDistance + max(0, rawDistance - fudgeFactor)
+ * Used for template placement range checks and clamping, always measuring from perimeter.
+ * @param token - The token to measure from
+ * @param point - The destination point
+ * @returns The gridified distance, or -1 if invalid, or 0 if point is inside the token
+ */
+export function getPerimeterDistanceToPoint(token: Token, point: { x: number, y: number }): number {
+  if (!canvas?.grid || !canvas.dimensions) return -1;
+  const rawDistance = measureTokenToPointPerimeter(token, point);
+  if (rawDistance < 0) return -1;
+  if (rawDistance === 0) return 0;
+  const gridDistance = canvas.dimensions.distance;
+  const fudgeFactor = configSettings.gridlessFudge ?? 0;
+  return gridDistance + Math.max(0, rawDistance - fudgeFactor);
+}
+
+export interface DistanceOptions {
+  /** If true, return -1 if walls block line of sight between closest points */
+  wallsBlock?: boolean;
+  /** If true, include cover calculations (for modules like levelsautocover) */
+  includeCover?: boolean;
+  /** If true, include elevation difference in distance calculation */
+  includeElevation?: boolean;
+}
+
+/**
+ * Get the distance between two tokens using the configured measurement method.
+ * This is the main token-to-token distance function used throughout midi-qol.
+ * It respects the configSettings.optionalRules.distanceMeasurement setting.
+ *
+ * For token-to-point distance (e.g. template placement), use getPerimeterDistanceToPoint() instead.
+ *
+ * @param t1 - First token (or token reference)
+ * @param t2 - Second token (or token reference)
+ * @param options - Options for distance calculation
+ * @returns The distance between the tokens, or -1 if invalid/blocked
+ */
+export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): number {
+  const { wallsBlock = false, includeCover = true, includeElevation = configSettings.optionalRules.distanceIncludesHeight } = options;
+  const measurementMode = configSettings.optionalRules.distanceMeasurement ?? "center";
+  const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
+  const gridDistance = canvas?.dimensions?.distance ?? 5;
+  const fudgeFactor = configSettings.gridlessFudge ?? 0;
+
+  let distance: number = 0;
+
+  if (measurementMode === "default") {
+    // Default: use Foundry's core measurePath between token centers
+    const token1 = getPlaceable(t1);
+    const token2 = getPlaceable(t2);
+    if (!token1 || !token2 || !canvas?.grid) return -1;
+    if (token1 === token2) return 0;
+    // Still run wall blocking checks even in default mode
+    if (wallsBlock) {
+      const preCheck = computeWallBlockPreCheck(token1 as Token.Implementation, token2 as Token.Implementation, wallsBlock, includeCover);
+      if (preCheck.blocked) return -1;
+      // If no module pre-check resolved (coverVisible is undefined), do a basic center-to-center sight check
+      if (preCheck.coverVisible === undefined) {
+        const origin = new PIXI.Point(token1.center.x, token1.center.y);
+        const dest = new PIXI.Point(token2.center.x, token2.center.y);
+        const collision = checkWallCollision(origin, dest, {
+          source: token1.document,
+          wallsBlockRange: configSettings.optionalRules.wallsBlockRange,
+          coverVisible: undefined,
+          originElevation: (token1.document as TokenDocument).elevation ?? 0,
+          destElevation: (token2.document as TokenDocument).elevation ?? 0,
+        });
+        if (collision) return -1;
+      }
+    }
+    const result = canvas.grid.measurePath([token1.center, token2.center], {});
+    distance = result?.distance ?? 0;
+  } else if (measurementMode === "center") {
+    distance = computeDistance(t1, t2, { wallsBlock, includeCover, includeElevation });
+  } else if (measurementMode === "perimeter") {
+    // computePerimeterDistance returns raw perimeter-to-perimeter distance (0 for adjacent/overlapping)
+    const rawPerimeterDistance = computePerimeterDistance(t1, t2, {
+      wallsBlock,
+      includeCover,
+      includeElevation
+    });
+
+    if (rawPerimeterDistance < 0) {
+      distance = -1;
+    } else {
+      // 0 to fudgeFactor → 5 feet (one grid unit)
+      // >fudgeFactor → 5 + (rawDistance - fudgeFactor)
+      distance = gridDistance + Math.max(0, rawPerimeterDistance - fudgeFactor);
+    }
+  }
+  return distance;
+}
+
+/**
+ * Compute the height difference between two tokens, accounting for token volume.
+ * Returns 0 if elevation ranges overlap, otherwise the gap plus one grid unit.
+ */
+function computeTokenHeightDifference(token1: Token, token2: Token): number {
+  if (!canvas?.dimensions) return 0;
+  const gridDistance = canvas.dimensions.distance ?? 5;
+
+  const t1Elevation = token1.document.elevation ?? 0;
+  const t2Elevation = token2.document.elevation ?? 0;
+  const t1DocWidth = token1.document.width ?? 1;
+  const t1DocHeight = token1.document.height ?? 1;
+  const t2DocWidth = token2.document.width ?? 1;
+  const t2DocHeight = token2.document.height ?? 1;
+  const t1TopElevation = t1Elevation + Math.max(t1DocHeight, t1DocWidth) * gridDistance;
+  const t2TopElevation = t2Elevation + Math.min(t2DocHeight, t2DocWidth) * gridDistance;
+
+  // If bottom elevation of either token is within the other's elevation range, no height difference
+  if ((t2Elevation > t1Elevation && t2Elevation < t1TopElevation) || (t1Elevation > t2Elevation && t1Elevation < t2TopElevation)) {
+    return 0;
+  }
+  if (t1Elevation < t2Elevation) { // t2 above t1
+    return Math.max(0, t2Elevation - t1TopElevation) + gridDistance;
+  }
+  if (t1Elevation > t2Elevation) { // t1 above t2
+    return Math.max(0, t1Elevation - t2TopElevation) + gridDistance;
+  }
+  return 0;
+}
+
+/**
+ * Combine a flat (horizontal) distance with a height difference using the
+ * current diagonal movement rule. Treats the shorter of the two as the
+ * "diagonal" component and the remainder as the "straight" component.
+ */
+function combineDistanceWithHeight(distance: number, heightDifference: number): number {
+  if (heightDifference <= 0) return distance;
+
+  let nd = Math.min(distance, heightDifference);
+  let ns = Math.abs(distance - heightDifference);
+  const diagonals = safeGetGameSetting("core", "gridDiagonals");
+  const GRID_DIAGONALS = CONST.GRID_DIAGONALS;
+
+  let cd: number;
+  switch (diagonals) {
+    case GRID_DIAGONALS.EQUIDISTANT: cd = nd; break;
+    case GRID_DIAGONALS.EXACT: cd = Math.SQRT2 * nd; break;
+    case GRID_DIAGONALS.APPROXIMATE: cd = 1.5 * nd; break;
+    case GRID_DIAGONALS.RECTILINEAR: cd = 2 * nd; break;
+    case GRID_DIAGONALS.ALTERNATING_1:
+      cd = ((nd + 1) & -2) + (nd >> 1);
+      break;
+    case GRID_DIAGONALS.ALTERNATING_2:
+      cd = ((nd + 1) & -2) + (nd >> 1);
+      break;
+    case GRID_DIAGONALS.ILLEGAL:
+      cd = 2 * nd;
+      nd = 0;
+      ns = distance + heightDifference;
+      break;
+    default:
+      cd = nd;
+      break;
+  }
+  return ns + cd;
 }
 
 /** takes two tokens of any size and calculates the distance between them
 *** gets the shortest distance betwen two tokens taking into account both tokens size
 *** if wallblocking is set then wall are checked
 **/
-// TODO: this monster
-export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: boolean | { wallsBlock?: boolean, includeCover?: boolean } = { wallsBlock: false, includeCover: true }): number {
-  if (!canvas || !canvas.scene) return -1;
-  if (!canvas.grid || !canvas.dimensions) return -1;
+export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: { wallsBlock?: boolean, includeCover?: boolean, includeElevation?: boolean } = { wallsBlock: false, includeCover: true }): number {
+  if (!canvas?.scene || !canvas.grid || !canvas.dimensions) return -1;
   t1 = getPlaceable(t1);
   t2 = getPlaceable(t2);
   if (!t1 || !t2) return -1;
-  if (!canvas || !canvas.grid || !canvas.dimensions) return -1;
-  let wallsBlock: boolean, includeCover: boolean;
-  if (typeof options === "boolean") {
-    wallsBlock = options;
-    includeCover = true;
-    foundry.utils.logCompatibilityWarning("computeDistance(t1, t2, wallsBlock?: boolean) is deprecated in favor of computeDistance(t1, t2, { wallsBlock: boolean, includeCover: boolean }).", { since: "11.6.26", until: "12.5.0" });
-  }
-  else {
-    ({ wallsBlock = false, includeCover = true } = options);
-  }
+  let { wallsBlock = false, includeCover = true, includeElevation = configSettings.optionalRules.distanceIncludesHeight } = options;
   const actor = t1.actor;
   const ignoreWallsFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.ignoreWalls`);
-  // get condition data & eval the property
   if (ignoreWallsFlag) {
     wallsBlock = false;
   }
@@ -2550,130 +3374,48 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
   const t2Elevation = t2.document.elevation ?? 0;
   const t1TopElevation = t1Elevation + Math.max(t1DocHeight, t1DocWidth) * (canvas.dimensions?.distance ?? 5);
   const t2TopElevation = t2Elevation + Math.min(t2DocHeight, t2DocWidth) * (canvas.dimensions?.distance ?? 5); // assume t2 is trying to make itself small
-  let coverVisible;
-  // For levels autocover and simbul's cover calculator pre-compute token cover - full cover means no attack and so return -1
-  // otherwise don't bother doing los checks they are overruled by the cover check
-  //@ts-expect-error
-  if (installedModules.get("levelsautocover") && game.settings.get("levelsautocover", "apiMode") && wallsBlock && configSettings.optionalRules.wallsBlockRange === "levelsautocover" && includeCover) {
-    //@ts-expect-error
-    const levelsautocoverData = AutoCover.calculateCover(t1, t2, getLevelsAutoCoverOptions());
-    coverVisible = levelsautocoverData.rawCover > 0;
-    if (!coverVisible) return -1;
-  } else if (globalThis.CoverCalculator && configSettings.optionalRules.wallsBlockRange === "simbuls-cover-calculator" && includeCover) {
-    if (t1 === t2) return 0; // Simbul's throws an error when calculating cover for the same token
-    const coverData = globalThis.CoverCalculator.Cover(t1, t2);
-    if (debugEnabled > 0) warn("computeDistance | simbuls cover calculator ", t1.name, t2.name, coverData);
-    if (coverData?.data.results.cover === 3 && wallsBlock) return -1;
-    coverVisible = true;
-  } else if (installedModules.get("tokencover") && configSettings.optionalRules.wallsBlockRange === "tokencover" && includeCover) {
-    const coverValue = calcTokenCover(t1, t2);
-    if (coverValue === 3 && wallsBlock) return -1;
-    coverVisible = true;
-  } else if (installedModules.get("simplecover5e") && configSettings.optionalRules.wallsBlockRange === "simplecover5e" && wallsBlock) {
-    // Use Simple Cover 5e's LoS check - total cover (bonus === null) means no LoS
-    //@ts-expect-error
-    const simpleCoverApi = game.modules.get("simplecover5e")?.api;
-    if (simpleCoverApi) {
-      const coverResult = simpleCoverApi.getCover({
-        attacker: t1,
-        target: t2,
-        scene: t1.scene,
-        losCheck: true
-      });
-      // If total cover (no LoS), return -1 to indicate blocked
-      if (coverResult?.bonus === null || coverResult?.cover === "total") {
-        return -1;
-      }
-      coverVisible = true;
-    }
-  }
+  const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
+  // Module pre-check: full cover means no attack, otherwise skip per-ray los checks
+  const preCheck = wallsBlock ? computeWallBlockPreCheck(t1, t2, wallsBlock, includeCover) : { blocked: false, coverVisible: undefined };
+  if (preCheck.blocked) return -1;
+  const coverVisible = preCheck.coverVisible;
 
-  var x, x1, y, y1, d, r, segments: { ray: Ray }[] = [], rayDistance, distance;
+  let segments: { ray: Ray }[] = [];
+  let rayDistance, distance;
   let heightDifference = 0;
   if (!(t2.document instanceof WallDocument)) {
-    for (x = t1StartX; x < t1DocWidth; x++) {
-      for (y = t1StartY; y < t1DocHeight; y++) {
+    for (let x = t1StartX; x < t1DocWidth; x++) {
+      for (let y = t1StartY; y < t1DocHeight; y++) {
         if (y === t1StartY + 1) {
           if (x > t1StartX && x < t1DocWidth - t1StartX) {
             // skip to the last y position;
             y = t1DocHeight - t1StartY;
           }
         }
-        let origin;
-        const point = canvas.grid.getCenterPoint({ x: Math.round(t1.document.x + (canvas.dimensions.size * x)), y: Math.round(t1.document.y + (canvas.dimensions.size * y)) });
-        origin = new PIXI.Point(point.x, point.y);
-        for (x1 = t2StartX; x1 < t2DocWidth; x1++) {
-          for (y1 = t2StartY; y1 < t2DocHeight; y1++) {
+        const point1 = canvas.grid.getCenterPoint({ x: Math.round(t1.document.x + (canvas.dimensions.size * x)), y: Math.round(t1.document.y + (canvas.dimensions.size * y)) });
+        const origin = new PIXI.Point(point1.x, point1.y);
+        for (let x1 = t2StartX; x1 < t2DocWidth; x1++) {
+          for (let y1 = t2StartY; y1 < t2DocHeight; y1++) {
             if (y1 === t2StartY + 1) {
               if (x1 > t2StartX && x1 < t2DocWidth - t2StartX) {
                 // skip to the last y position;
                 y1 = t2DocHeight - t2StartY;
               }
             }
-            const point = canvas.grid.getCenterPoint({ x: Math.round(t2.document.x + (canvas.dimensions.size * x1)), y: Math.round(t2.document.y + (canvas.dimensions.size * y1)) });
-            let dest = new PIXI.Point(point.x, point.y);
+            const point2 = canvas.grid.getCenterPoint({ x: Math.round(t2.document.x + (canvas.dimensions.size * x1)), y: Math.round(t2.document.y + (canvas.dimensions.size * y1)) });
+            const dest = new PIXI.Point(point2.x, point2.y);
             const r = new foundry.canvas.geometry.Ray(origin, dest);
             if (wallsBlock) {
-              switch (configSettings.optionalRules.wallsBlockRange) {
-                case "center":
-                  let collisionCheck;
-
-                  collisionCheck = CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, { source: t1.document, mode: "any", type: "sight" })
-                  if (collisionCheck) continue;
-                  break;
-                case "centerLevels":
-                case "levelsautocover":
-                  // //@ts-expect-error
-                  // TODO include auto cover calcs in checking console.error(AutoCover.calculateCover(t1, t2));
-                  if (installedModules.get("levels")) {
-                    if (coverVisible === false) continue;
-                    if (coverVisible === undefined) {
-                      let p1 = {
-                        x: origin.x,
-                        y: origin.y,
-                        z: t1Elevation
-                      }
-                      let p2 = {
-                        x: dest.x,
-                        y: dest.y,
-                        z: t2Elevation
-                      }
-                      //@ts-expect-error
-                      const baseToBase = CONFIG.Levels.API.testCollision(p1, p2, "collision");
-                      p1.z = t1TopElevation;
-                      p2.z = t2TopElevation;
-                      //@ts-expect-error
-                      const topToBase = CONFIG.Levels.API.testCollision(p1, p2, "collision");
-                      if (baseToBase && topToBase) continue;
-                    }
-                  } else {
-                    let collisionCheck;
-                    collisionCheck = CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, { source: t1.document, mode: "any", type: "sight" })
-                    if (collisionCheck) continue;
-                  }
-                  break;
-                case "alternative":
-                case "simbuls-cover-calculator":
-                  if (coverVisible === undefined) {
-                    let collisionCheck;
-                    collisionCheck = CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, { source: t1.document, mode: "any", type: "sight" })
-                    if (collisionCheck) continue;
-                  }
-                  break;
-
-                case "simplecover5e":
-                  // Pre-check already handled LoS via Simple Cover 5e API
-                  // If coverVisible is undefined (pre-check didn't run), fall back to basic collision check
-                  if (coverVisible === undefined) {
-                    let collisionCheck;
-                    collisionCheck = CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, { source: t1.document, mode: "any", type: "sight" })
-                    if (collisionCheck) continue;
-                  }
-                  break;
-
-                case "none":
-                default:
-              }
+              const collision = checkWallCollision(origin, dest, {
+                source: t1.document,
+                wallsBlockRange: configSettings.optionalRules.wallsBlockRange,
+                coverVisible,
+                originElevation: t1Elevation,
+                destElevation: t2Elevation,
+                originTopElevation: t1TopElevation,
+                destTopElevation: t2TopElevation
+              });
+              if (collision) continue;
             }
             segments.push({ ray: r });
           }
@@ -2685,24 +3427,14 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
     }
     rayDistance = segments.map(ray => midiMeasureDistances([ray], { gridSpaces: true }));
     distance = Math.min(...rayDistance);
-    if (configSettings.optionalRules.distanceIncludesHeight) {
-      let t1ElevationRange = Math.max(t1DocHeight, t1DocWidth) * (canvas.dimensions?.distance ?? 5);
-      if ((t2Elevation > t1Elevation && t2Elevation < t1TopElevation) || (t1Elevation > t2Elevation && t1Elevation < t2TopElevation)) {
-        //check if bottom elevation of each token is within the other token's elevation space, if so make the height difference 0
-        heightDifference = 0;
-      }
-      else if (t1Elevation < t2Elevation) { // t2 above t1
-        heightDifference = Math.max(0, t2Elevation - t1TopElevation) + (canvas.dimensions?.distance ?? 5);
-      }
-      else if (t1Elevation > t2Elevation) { // t1 above t2
-        heightDifference = Math.max(0, t1Elevation - t2TopElevation) + (canvas.dimensions?.distance ?? 5);
-      }
+    if (includeElevation) {
+      heightDifference = computeTokenHeightDifference(t1 as Token, t2 as Token);
     }
   } else {
     const w = t2.document
-    let closestPoint = foundry.utils.closestPointToSegment(t1.center, w.object.edge.a, w.object.edge.b);
+    const closestPoint = foundry.utils.closestPointToSegment(t1.center, w.object.edge.a, w.object.edge.b);
     distance = midiMeasureDistances([{ ray: new foundry.canvas.geometry.Ray(t1.center, closestPoint) }], { gridSpaces: true });
-    if (configSettings.optionalRules.distanceIncludesHeight) {
+    if (includeElevation) {
       if (!w.flags?.["wall-height"]) heightDifference = 0;
       else {
         const wh = w.flags?.["wall-height"]
@@ -2713,46 +3445,11 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
       }
     }
   }
-  if (configSettings.optionalRules.distanceIncludesHeight) {
-
-    // TODO experimental
-    let nd = Math.min(distance, heightDifference);
-    let ns = Math.abs(distance - heightDifference);
-    // distance = nd + ns;
-    let dimension = canvas.dimensions?.distance ?? 5;
-    let diagonals = safeGetGameSetting("core", "gridDiagonals");
-    const GRID_DIAGONALS = CONST.GRID_DIAGONALS;
-    // Determine the offset distance of the diagonal moves
-    let cd;
-    switch (diagonals) {
-      case GRID_DIAGONALS.EQUIDISTANT: cd = nd; break;
-      case GRID_DIAGONALS.EXACT: cd = Math.SQRT2 * nd; break;
-      case GRID_DIAGONALS.APPROXIMATE: cd = 1.5 * nd; break;
-      case GRID_DIAGONALS.RECTILINEAR: cd = 2 * nd; break;
-      case GRID_DIAGONALS.ALTERNATING_1:
-        // TODO get the diagonals return from MidiMeasureDistances
-        // if ( result.diagonals & 1 ) cd = ((nd + 1) & -2) + (nd >> 1);
-        // else cd = (nd & -2) + ((nd + 1) >> 1);
-        cd = ((nd + 1) & -2) + (nd >> 1);
-        break;
-      case GRID_DIAGONALS.ALTERNATING_2:
-        // TODO get the diagonals return from MidiMeasureDistances
-        // if ( result.diagonals & 1 ) cd = (nd & -2) + ((nd + 1) >> 1);
-        //  else cd = ((nd + 1) & -2) + (nd >> 1);
-        cd = ((nd + 1) & -2) + (nd >> 1);
-        break;
-      case GRID_DIAGONALS.ILLEGAL:
-        // Don't think I want this to be done
-        cd = 2 * nd;
-        nd = 0;
-        // n = di + dj;
-        ns = distance + heightDifference;
-        break;
-    }
-    distance = ns + cd;
+  if (includeElevation) {
+    distance = combineDistanceWithHeight(distance, heightDifference);
   }
   return Math.max(distance, 0);
-};
+}
 
 let pointWarn = foundry.utils.debounce(() => {
   ui.notifications?.warn("4 Point LOS check selected but dnd5e-helpers not installed")
@@ -2779,7 +3476,8 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
 
     let actor = token.actor;
     // look at undefined versus !
-    if (!(activity.range.value ?? activity.range.reach) && !activity.range.long && activity.range.units !== "touch") return {
+    // Note: currently dnd5e can set value to an empty string instead of a number
+    if (!(activity.range.value || activity.range.reach) && !activity.range.long && activity.range.units !== "touch") return {
       result: "normal",
       reason: "no range specified"
     };
@@ -2795,7 +3493,7 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
     };
 
     const attackType = activity.actionType;
-    let range = (activity.range?.value ?? activity.range?.reach ?? 0);
+    let range = ((activity.range?.value || activity.range?.reach) ?? 0);
     let longRange = (activity.range?.long ?? 0);
     if (activity.actor?.system) { // TODO revisit when/if flags move to activities
       let conditionData;
@@ -2861,7 +3559,7 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
       longRange = 0;
     }
 
-    const meleeActions = new Set(["mwak", "msak", "mpak"]);
+    const meleeActions = new Set(["mwak", "msak"]);
     const isMeleeAttack = meleeActions.has(activity.actionType);
     // @ts-expect-error no dnd5e-types
     const hasThrownProperty = activity.item.labels.properties?.some(p => p.abbr === "thr");
@@ -2871,8 +3569,6 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
     }
 
     const isMetric = game.settings.get("dnd5e", "metricLengthUnits") ?? false;
-    let isGridless = canvas.grid?.constructor.name === "GridlessGrid";
-    const fudgeFactor = configSettings.gridlessFudge ?? 0;
 
     for (let target of targets) {
       if (target === token) continue;
@@ -2890,19 +3586,29 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
       const ignoreTotalCover = activity.midiProperties?.ignoreFullCover;
 
       const coverOptions = {
-        wallsBlock: !!configSettings.optionalRules.wallsBlockRange && !ignoreTotalCover,
+        wallsBlock: configSettings.optionalRules.wallsBlockRange !== "none" && !ignoreTotalCover,
         includeCover: !ignoreTotalCover,
       };
 
-      const rawDistance = computeDistance(token, target, coverOptions);
-      let distance;
-      if (isGridless && rawDistance >= 0)
-        distance = Math.max(0, parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor);
-      else
-        distance = parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor;
+      const rawDistance = getDistance(token, target, coverOptions);
+
+      // Wall blocking is indicated by rawDistance < 0, check it first before applying fudge factor
+      if (rawDistance < 0) {
+        log(`${target.name} is blocked by a wall`)
+        return {
+          result: "fail",
+          reason: `${actor?.name}'s target is blocked by a wall`,
+          range,
+          longRange
+        }
+      }
+
+      // Fudge factor is applied in getDistance - no additional adjustment needed here
+      const distance = Math.max(0, parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)));
+
       if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
         log(`${target.name} is too far ${distance} from your character you cannot hit`)
-        if (checkMechanic("checkRange") === "longdisadv" && ["rwak", "rsak", "rpak"].includes(activity.actionType)) {
+        if (checkMechanic("checkRange") === "longdisadv" && ["rwak", "rsak"].includes(activity.actionType)) {
           return {
             result: "dis",
             reason: `${actor?.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`,
@@ -2923,15 +3629,6 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
         reason: `${actor?.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`,
         range,
         longRange
-      }
-      if (distance < 0) {
-        log(`${target.name} is blocked by a wall`)
-        return {
-          result: "fail",
-          reason: `${actor?.name}'s target is blocked by a wall`,
-          range,
-          longRange
-        }
       }
     }
     return {
@@ -3007,23 +3704,58 @@ function getLevelsAutoCoverOptions() {
   return options;
 }
 
-export const FULL_COVER = 999;
-export const THREE_QUARTERS_COVER = 5;
-export const HALF_COVER = 2;
+export const TOTAL_COVER = Infinity;
+// Initialized from CONFIG.DND5E.statusEffects in initCoverConstants(), fallback to dnd5e 2024 defaults
+export let THREE_QUARTERS_COVER: number = 5;
+export let HALF_COVER: number = 2;
 
+/** Initialize cover constants from CONFIG.DND5E.statusEffects. Call after dnd5e init. */
+export function initCoverConstants() {
+  //@ts-expect-error CONFIG.DND5E not typed
+  THREE_QUARTERS_COVER = CONFIG.DND5E?.statusEffects?.coverThreeQuarters?.coverBonus ?? 5;
+  //@ts-expect-error CONFIG.DND5E not typed
+  HALF_COVER = CONFIG.DND5E?.statusEffects?.coverHalf?.coverBonus ?? 2;
+}
+
+/** Check if an actor has any dnd5e cover status (coverHalf, coverThreeQuarters, or coverTotal). */
+export function hasCoverStatus(actor: Actor | null | undefined): boolean {
+  const statuses = actor?.statuses;
+  return !!(statuses?.has("coverHalf") || statuses?.has("coverThreeQuarters") || statuses?.has("coverTotal"));
+}
+
+/** Check if an actor has the coverTotal status (impossible to hit). */
+export function hasCoverTotal(actor: Actor | null | undefined): boolean {
+  return !!actor?.statuses?.has("coverTotal");
+}
+
+/**
+ * Get the effective cover bonus for a target, from any source.
+ * Returns the higher of the dnd5e status-based cover and the module-computed cover.
+ */
+export function getCoverBonus(attacker: TokenOrDocument, target: TokenOrDocument, activity?: Activity): number {
+  const targetActor = target instanceof TokenDocument ? target.actor : (target as Token)?.actor;
+  if (hasCoverTotal(targetActor)) return TOTAL_COVER;
+  //@ts-expect-error no dnd5e-types
+  const statusCoverBonus: number = targetActor?.system?.attributes?.ac?.cover ?? 0;
+  const moduleCoverBonus = computeCoverBonus(attacker, target, activity);
+  return Math.max(statusCoverBonus, moduleCoverBonus);
+}
+
+/**
+ * Returns the raw cover bonus from the configured cover module.
+ * Does NOT check cover statuses, apply attack-specific reductions (sharpshooter, etc.),
+ * or reconcile with status-based cover.
+ */
 export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOrDocument, activity?: Activity): number {
   const attacker = attackerIn instanceof TokenDocument ? attackerIn.object : attackerIn;
   const target = targetIn instanceof TokenDocument ? targetIn.object : targetIn;
-  let existingCoverBonus = target?.actor?.flags?.[MODULE_ID]?.acBonus ?? 0;
-  let item: Item.Implementation | undefined;
   if (activity instanceof Item) {
-    item = activity;
+    const item = activity;
     activity = undefined;
-    foundry.utils.logCompatibilityWarning("computeCoverBonus(attacker, target, item) is deprecated in favor of computeCoverBonus(attacker, target, activity");
-  } else if (activity) {
-    item = activity.item;
+    foundry.utils.logCompatibilityWarning("computeCoverBonus(attacker, target, item) is deprecated in favor of computeCoverBonus(attacker, target, activity)");
   }
-  if (!attacker || !target) return existingCoverBonus;
+  if (!attacker || !target) return 0;
+
   let coverBonus = 0;
   try {
     switch (configSettings.optionalRules.coverCalculation) {
@@ -3032,16 +3764,15 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
         if (!installedModules.get("levelsautocover") || !game.settings.get("levelsautocover", "apiMode") || !AutoCover) return 0;
         //@ts-expect-error
         const coverData = AutoCover.calculateCover(attacker, target);
-        // const coverData = AutoCover.calculateCover(attacker, target, {DEBUG: true});
         //@ts-expect-error
         const coverDetail = AutoCover.getCoverData();
-        if (coverData.rawCover === 0) coverBonus = FULL_COVER;
+        if (coverData.rawCover === 0) coverBonus = TOTAL_COVER;
         else if (coverData.rawCover > coverDetail[1].percent) coverBonus = 0;
         else if (coverData.rawCover < coverDetail[0].percent) coverBonus = THREE_QUARTERS_COVER;
         else if (coverData.rawCover < coverDetail[1].percent) coverBonus = HALF_COVER;
         if (coverData.obstructingToken) coverBonus = Math.max(2, coverBonus);
-        console.log("midi-qol | ComputerCoverBonus - For token ", attacker.name, " attacking ", target.name, " cover data is ", coverBonus, coverData, coverDetail)
         break;
+
       case "simbuls-cover-calculator":
         if (!installedModules.get("simbuls-cover-calculator")) return 0;
         if (globalThis.CoverCalculator) {
@@ -3050,64 +3781,40 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
             coverBonus = 0;
             break;
           }
-          if (coverData?.data?.results.cover === 3) coverBonus = FULL_COVER;
+          if (coverData?.data?.results.cover === 3) coverBonus = TOTAL_COVER;
           else coverBonus = -coverData?.data?.results.value || 0;
-          console.log("midi-qol | ComputeCover Bonus - For token ", attacker.name, " attacking ", target.name, " cover data is ", coverBonus, coverData)
         }
         break;
+        
       case "simplecover5e":
         //@ts-expect-error
         const simpleCoverApi = game.modules.get("simplecover5e")?.api;
-        if (!installedModules.get("simplecover5e") || !simpleCoverApi) coverBonus = 0;
-        else {
-          // Enable LoS check when wallsBlockRange is set to simplecover5e
-          const losCheck = configSettings.optionalRules.wallsBlockRange === "simplecover5e";
+        if (!installedModules.get("simplecover5e") || !simpleCoverApi) return 0;
+          // simplecover5e caps at 3/4 cover from occluders — check LOS first via wallsBlockRange
+          if (attacker !== target && configSettings.optionalRules.wallsBlockRange !== "none") {
+            const preCheck = computeWallBlockPreCheck(attacker as Token.Implementation, target as Token.Implementation, true, true);
+            if (preCheck.blocked) {
+              coverBonus = TOTAL_COVER;
+              break;
+            }
+          }
           const coverOptions: any = {
             attacker,
             target,
             scene: attacker.scene,
-            losCheck   // Check LoS - blocked LoS treated as total cover
+            losCheck: true
           };
-          // Only pass activity if defined (for cover rules ignore/override logic)
           if (activity) coverOptions.activity = activity;
           const coverResult = simpleCoverApi.getCover(coverOptions);
-          // getCover returns null if attacker, target, or scene is missing
-          if (!coverResult) {
-            coverBonus = 0;
-            break;
-          }
-          // Use bonus value if available (new API), otherwise fall back to cover string (old API)
-          if (coverResult.bonus !== undefined) {
-            // New API: bonus is 0=none, 2=half, 5=threeQuarters, null=total
-            if (coverResult.bonus === null) {
-              coverBonus = FULL_COVER;
-            } else {
-              coverBonus = coverResult.bonus;
-            }
-          } else {
-            // Fallback to original string-based cover level
-            switch (coverResult.cover) {
-              case "none":
-                coverBonus = 0;
-                break;
-              case "half":
-                coverBonus = HALF_COVER;
-                break;
-              case "threeQuarters":
-                coverBonus = THREE_QUARTERS_COVER;
-                break;
-              default:
-                coverBonus = FULL_COVER;
-            }
-          }
-        };
+          if (!coverResult || coverResult.bonus == null) return TOTAL_COVER;
+          coverBonus = coverResult.bonus;
         break;
 
       case "tokencover":
         if (!installedModules.get("tokencover")) coverBonus = 0;
         else {
           const coverValue = calcTokenCover(attacker, target);
-          if (coverValue === 4 || coverValue === 3) coverBonus = FULL_COVER;
+          if (coverValue === 4 || coverValue === 3) coverBonus = TOTAL_COVER;
           else if (coverValue === 2) coverBonus = THREE_QUARTERS_COVER;
           else if (coverValue === 1) coverBonus = HALF_COVER;
           else coverBonus = 0;
@@ -3118,32 +3825,6 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
         coverBonus = 0;
         break;
     }
-
-    //TODO is this right or should it be the same as non-spell?
-    // @ts-expect-error no dnd5e-types
-    if ((activity?.midiProperties?.ignoreFullCover) && item?.type === "spell") coverBonus = 0;
-    else if ((activity?.midiProperties?.ignoreFullCover) && coverBonus === FULL_COVER) coverBonus = THREE_QUARTERS_COVER;
-
-    // @ts-expect-error no dnd5e-types
-    if ((activity?.actionType ?? item?.system.actionType) === "rwak" && attacker.actor && coverBonus !== FULL_COVER && coverBonus !== 0
-      && (attacker.actor?.flags?.[MODULE_ID]?.sharpShooter || attacker.actor?.flags?.dnd5e?.sharpShooter)) {
-      const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
-      let sharpShooterEnabled = evalCondition(attacker.actor?.flags?.dnd5e?.sharpShooter, conditionData);
-      sharpShooterEnabled ||= evalCondition(attacker.actor?.flags?.[MODULE_ID]?.sharpShooter, conditionData);
-      if (sharpShooterEnabled) coverBonus = 0;
-    }
-    // @ts-expect-error no dnd5e-types
-    if (["rsak"/*, "rpak"*/].includes((activity?.actionType ?? item?.system.actionType))
-      && attacker.actor
-      && (attacker.actor.flags?.dnd5e?.spellSniper)
-      && coverBonus !== FULL_COVER && coverBonus !== 0) {
-      const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
-      let spellSniperEnabled: boolean | undefined = evalCondition(attacker.actor.flags.dnd5e.spellSniper, conditionData);
-      if (spellSniperEnabled) coverBonus = 0;
-    }
-    if (target.actor && coverBonus > existingCoverBonus)
-      foundry.utils.setProperty(target.actor, `flags.${MODULE_ID}.acBonus`, coverBonus);
-    else coverBonus = existingCoverBonus;
     return coverBonus;
   } catch (err) {
     const message = "Error in computeCoverBonus";
@@ -3151,6 +3832,140 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
     TroubleShooter.recordError(err, message)
     return 0;
   }
+}
+
+/**
+ * Result of computing the effective AC for a target in an attack.
+ */
+export interface TargetACResult {
+  effectiveAC: number;          // Final AC to compare against attack roll
+  baseAC: number;               // ac.value minus status cover
+  statusCoverBonus: number;     // From dnd5e cover status (already baked into ac.value)
+  moduleCoverBonus: number;     // Raw value from cover module
+  appliedCoverDelta: number;    // Extra cover added beyond status (module - status, if positive)
+  effectiveCoverBonus: number;  // Total effective cover after reductions (0 if ignored)
+  coverIgnored: boolean;        // Whether cover was stripped by a feat/flag
+  flankingMod: number;          // Flanking reduction
+  targetACMod: number;          // From targetDescriptors
+}
+
+/**
+ * Compute the effective AC for a target, reconciling status-based cover with module-computed
+ * cover (status acts as minimum), applying attack-specific reductions (ignoreFullCover,
+ * sharpShooter, spellSniper, ignoreCover), and incorporating flanking and targetACMod.
+ */
+export function computeTargetAC(
+  attacker: Token,
+  target: Token,
+  activity: Activity | undefined,
+  options: {
+    ignoreCover?: boolean;
+    flankingMod?: number;
+    targetACMod?: number;
+  } = {}
+): TargetACResult {
+  const targetActor = target.actor;
+  const item = activity?.item;
+  const { ignoreCover = false, flankingMod = 0, targetACMod = 0 } = options;
+
+  //@ts-expect-error no dnd5e-types
+  const acValue: number = targetActor?.system?.attributes?.ac?.value ?? 10;
+  //@ts-expect-error no dnd5e-types
+  let statusCoverBonus: number = targetActor?.system?.attributes?.ac?.cover ?? 0;
+  const baseAC = acValue - statusCoverBonus;
+
+  // TOTAL_COVER not set by dnd5e for tokens with total cover
+  if (hasCoverTotal(targetActor)) statusCoverBonus = TOTAL_COVER;
+
+  // Get raw module cover
+  const moduleCoverBonus = computeCoverBonus(attacker, target, activity);
+
+  // Effective cover is the higher of status vs module
+  let effectiveCoverBonus = Math.max(statusCoverBonus, moduleCoverBonus);
+  // Delta is what we need to ADD beyond what dnd5e already baked into ac.value
+  let appliedCoverDelta = Math.max(moduleCoverBonus - statusCoverBonus, 0);
+
+  // --- Attack-specific reductions ---
+
+  // ignoreFullCover (midi property on activity)
+  if (activity?.midiProperties?.ignoreFullCover) {
+    //@ts-expect-error item.type includes dnd5e subtypes
+    if (item?.type === "spell") {
+      // Spells with ignoreFullCover: ignore all cover
+      effectiveCoverBonus = 0;
+      appliedCoverDelta = 0;
+    } else if (effectiveCoverBonus === TOTAL_COVER) {
+      // Non-spells: downgrade total cover to three-quarters
+      effectiveCoverBonus = THREE_QUARTERS_COVER;
+      appliedCoverDelta = Math.max(THREE_QUARTERS_COVER - statusCoverBonus, 0);
+    }
+  }
+
+  // Sharpshooter (rwak only, not total cover)
+  //@ts-expect-error no dnd5e-types
+  if ((activity?.actionType ?? item?.system?.actionType) === "rwak"
+    && attacker.actor
+    && effectiveCoverBonus !== TOTAL_COVER && effectiveCoverBonus !== 0
+    && (attacker.actor.flags?.[MODULE_ID]?.sharpShooter || attacker.actor.flags?.dnd5e?.sharpShooter)) {
+    const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
+    let enabled = evalCondition(attacker.actor.flags?.dnd5e?.sharpShooter, conditionData);
+    enabled ||= evalCondition(attacker.actor.flags?.[MODULE_ID]?.sharpShooter, conditionData);
+    if (enabled) {
+      effectiveCoverBonus = 0;
+      appliedCoverDelta = 0;
+    }
+  }
+
+  // Spell Sniper (rsak only, not total cover)
+  //@ts-expect-error no dnd5e-types
+  if (["rsak"].includes(activity?.actionType ?? item?.system?.actionType)
+    && attacker.actor
+    && attacker.actor.flags?.dnd5e?.spellSniper
+    && effectiveCoverBonus !== TOTAL_COVER && effectiveCoverBonus !== 0) {
+    const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
+    const enabled: boolean | undefined = evalCondition(attacker.actor.flags.dnd5e.spellSniper, conditionData);
+    if (enabled) {
+      effectiveCoverBonus = 0;
+      appliedCoverDelta = 0;
+    }
+  }
+
+  // ignoreCover flag (from midi flag evaluation in checkHits)
+  let coverIgnored = false;
+  if (ignoreCover && effectiveCoverBonus < TOTAL_COVER) {
+    coverIgnored = true;
+    effectiveCoverBonus = 0;
+    appliedCoverDelta = 0;
+  }
+
+  // Final AC: start from ac.value (includes status cover except total covere),
+  // add delta (module cover above status), subtract status if cover ignored,
+  // add targetACMod, subtract flanking
+  let effectiveAC = acValue + targetACMod;
+  if (coverIgnored) {
+    // Remove the status cover baked into ac.value
+    effectiveAC -= statusCoverBonus;
+  } else {
+    // Add any module cover above the status
+    effectiveAC += appliedCoverDelta;
+  }
+  effectiveAC -= flankingMod;
+
+  // Total cover from module/status → auto-miss
+  if (effectiveCoverBonus === TOTAL_COVER) effectiveAC = Infinity;
+
+  const result = {
+    effectiveAC,
+    baseAC,
+    statusCoverBonus,
+    moduleCoverBonus,
+    appliedCoverDelta,
+    effectiveCoverBonus,
+    coverIgnored,
+    flankingMod,
+    targetACMod
+  };
+  return result;
 }
 export type FastForwardRollType = "attack" | "damage" | "check" | "save" | "skill" | "tool";
 
@@ -3170,6 +3985,20 @@ export function isAutoFastForward(rollType: FastForwardRollType, { workflow, use
 export function autoConsumeResource(workflow?: Workflow): string {
   if (workflow?.workflowOptions?.autoConsumeResource !== undefined) return workflow.workflowOptions.autoConsumeResource;
   return game.user?.isGM ? configSettings.gmConsumeResource : configSettings.consumeResource;
+}
+
+/**
+ * Retrieve consumption deltas from a ChatMessage or a messageConfig object.
+ * dnd5e 5.3+ stores consumption in system.deltas / data.system.deltas.
+ * dnd5e 5.2.x stored consumption in flags.dnd5e.use.consumed / data.flags.dnd5e.use.consumed.
+ */
+export function getConsumptionData(source: any): any {
+  if (!source) return undefined;
+  // ChatMessage case
+  if (source.system?.deltas != null) return source.system.deltas;
+  if (typeof source.getFlag === "function") return source.getFlag("dnd5e", "use.consumed");
+  // messageConfig case (plain object with .data passed to activity.consume())
+  return source.data?.system?.deltas ?? source.data?.flags?.dnd5e?.use?.consumed;
 }
 
 export function getAutoRollDamage(workflow?: Workflow): string {
@@ -3408,7 +4237,7 @@ export function findNearby(
       if (t.actor &&
         (t.id !== token.id || options?.includeToken) && // not the token
         (disposition === null || targetDisposition.includes(t.document.disposition))) {
-        const tokenDistance = computeDistance(t, token, { wallsBlock: true });
+        const tokenDistance = getDistance(t, token, { wallsBlock: true });
         inRange = 0 <= tokenDistance && tokenDistance <= distance
       } else return false; // wrong disposition
       if (inRange && options.canSee && !canSense(t, token)) return false; // Only do the canSee check if the token is inRange
@@ -3513,8 +4342,9 @@ export async function removeInvisibleCondition(tokenRef?: TokenOrDocument | stri
 
   await removeTokenConditionEffect(token, i18n(`midi-qol.invisible`) ?? "");
 
-  if (CONFIG.statusEffects.find(se => se.id === (CONFIG.specialStatusEffects.INVISIBLE ?? "invisible"))) {
-    await (token.actor)?.toggleStatusEffect(CONFIG.specialStatusEffects.INVISIBLE, { active: false })
+  const invisId = CONFIG.specialStatusEffects.INVISIBLE ?? "invisible";
+  if (CONFIG.statusEffects.find(se => se.id === invisId)) {
+    await (token.actor)?.toggleStatusEffect(invisId, { active: false })
   }
   if (debugEnabled > 0) log(`Invisibility removed for ${token.name}`)
 }
@@ -3553,6 +4383,8 @@ export async function removeTokenConditionEffect(token: Token.Implementation, co
 }
 
 export async function expireMyEffects(this: Workflow, effectsToExpire: string[]) {
+  // Concentration checks are automated system responses, not player actions — don't expire effects.
+  if (this.item?.flags?.[MODULE_ID]?.isConcentrationCheck) return;
   const expireHit = effectsToExpire.includes("1Hit") && !this.effectsAlreadyExpired.includes("1Hit");
   const expireCritical = effectsToExpire.includes("1Critical") && !this.effectsAlreadyExpired.includes("1Critical");
   const expireFumble = effectsToExpire.includes("1Fumble") && !this.effectsAlreadyExpired.includes("1Fumble");
@@ -3652,7 +4484,7 @@ export function actorFromUuid(uuid?: string): any {
 }
 
 // TODO: This
-class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) {
+export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   rollExpanded: boolean;
   timeRemaining: number;
   timeoutId: NodeJS.Timeout | undefined;
@@ -4560,7 +5392,7 @@ export function reactionTriggerLabelFor(triggerType: string): string {
   return "reactionHit";
 }
 
-export async function doReactions(targetRef: TokenOrDocument | string, triggerTokenUuid: string | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options: any = {}): Promise<{ name?: string, uuid?: string, ac?: number }> {
+export async function doReactions(targetRef: TokenOrDocument | string, triggerTokenUuid: string | undefined, triggeringRoll: Roll | null | undefined, triggerType: string, options: any = {}): Promise<{ name?: string, uuid?: string, ac?: number, itemName?: string }> {
   const target = getToken(targetRef);
   try {
     const noResult = { name: undefined, uuid: undefined, ac: undefined };
@@ -4589,12 +5421,10 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
         if (!!item.getFlag("dnd5e", "cachedFor")) continue;
         // @ts-expect-error no dnd5e-types
         for (let activity of theItem.system.activities) {
-          // @ts-expect-error no dnd5e-types
-          const activationType = item.system.linkedActivity?.activation.type ??
-            activity.activation?.type;
+          const activationType = activity.effectiveActivationType ?? activity.activation?.type;
           if (!activationType?.includes("reaction")) continue;
           if (activationType !== "reaction") {
-            console.warn(`midi-qol | itemReaction | item ${item.name} ${activity.name} has a reaction type of ${activity.activation.type} which is deprecated - please update to reaction and reaction conditions`)
+            console.warn(`midi-qol | itemReaction | item ${item.name} ${activity.name} has a reaction type of ${activationType} which is deprecated - please update to reaction and reaction conditions`)
           }
           // Item uses a reaction and actor has used a reaction.
           if ((activity.activation?.value ?? 1) > 0 && usedReaction) continue; // TODO can't specify 0 cost reactions in dnd5e 4.x - have to find another way
@@ -4606,7 +5436,12 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
             const spell = activity.cachedSpell;
             // Get the first usable activity - this is what spell.use() will use
             const spellActivity = spell.system?.activities?.filter((a: any) => a.canUse)?.[0];
-            reactionCondition = `(${reactionCondition || "true"}) && (${spellActivity.reactionCondition || "true"})`;
+            const spellCondition = spellActivity?.reactionCondition || "";
+            if (reactionCondition && spellCondition) {
+              reactionCondition = `(${reactionCondition}) && (${spellCondition})`;
+            } else {
+              reactionCondition = reactionCondition || spellCondition;
+            }
           }
           // @ts-expect-error no dnd5e-types
           if (item.type === "spell") {
@@ -4627,16 +5462,13 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
           const config = activity._prepareUsageConfig({ create: false });
           const canUse = await activity._prepareUsageUpdates(config, { returnErrors: true });
           if (canUse instanceof Array) continue; // insufficient uses available
-          if (reactionCondition) {
-            const returnvalue = await evalReactionActivationCondition(options.workflow, reactionCondition, target, { async: true, extraData: { reaction: reactionTriggerLabelFor(triggerType) } });
-            if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using condition ${reactionCondition} condition ${returnvalue}`, options.workflow?.conditionData);
-
-            if (!returnvalue) continue;
-          } else {
-            if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using ${triggerType} filter`);
-            if (!(activity.activation?.type === triggerType || (triggerType === "reactionhit" && activity.activation?.type === "reaction")))
-              continue;
+          // If no condition is specified, default to requiring isHit
+          if (!reactionCondition) {
+            reactionCondition = 'reaction === "isHit"';
           }
+          const returnvalue = await evalReactionActivationCondition(options.workflow, reactionCondition, target, { async: true, extraData: { reaction: reactionTriggerLabelFor(triggerType) } });
+          if (debugEnabled > 0) warn(`for ${target.actor.name} ${theItem.name} using condition ${reactionCondition} condition ${returnvalue}`, options.workflow?.conditionData);
+          if (!returnvalue) continue;
           reactions.push(activity);
         }
       };
@@ -4860,7 +5692,11 @@ export async function promptReactions(
       const newAC = await bonusDialog.bind(data)(validFlags, "ac", displayBonusRolls !== false, `${actor.name} - ${i18n("DND5E.AC")} ${actor.system.attributes.ac.value}`, acRoll, "roll");
       const endTime = Date.now();
       if (debugEnabled > 0) warn("promptReactions | returned via bonus dialog ", endTime - startTime)
-      return { name: actor.name, uuid: actor.uuid, ac: newAC?.total };
+      // Only return the AC result if the user actually used an optional bonus (AC changed)
+      if (newAC?.total !== acRoll.total) {
+        return { name: actor.name, uuid: actor.uuid, ac: newAC?.total };
+      }
+      return { name: "None" };
     }
     const endTime = Date.now();
     if (debugEnabled > 0) warn("promptReactions | returned no result ", endTime - startTime)
@@ -4973,7 +5809,7 @@ export async function reactionDialog(
 }
 
 // TODO: Probably this
-class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
+export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   startTime: number;
   endTime: number;
   timeoutId: any;
@@ -5187,6 +6023,7 @@ async function asyncMySafeEval(expression: string, sandbox: AnyMutableObject, on
       combat: game.combat,
       evalRaceOrType: raceOrType,
       evalTypeOrRace: typeOrRace,
+      sizeNumeric,
       error: console.error,
       warn: console.warn,
       log: console.log
@@ -5237,7 +6074,8 @@ function mySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn
       nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid,
       combat: game.combat,
       evalRaceOrType: raceOrType,
-      evalTypeOrRaceEval: typeOrRace
+      evalTypeOrRaceEval: typeOrRace,
+      sizeNumeric
     });
 
     const sandboxProxy = new Proxy(sandbox, {
@@ -5259,17 +6097,17 @@ function mySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn
   return result;
 };
 
-export function evalReactionActivationCondition(workflow: Workflow, condition: string | undefined | boolean, target: TokenOrDocument, options: any = {}): boolean {
+export async function evalReactionActivationCondition(workflow: Workflow, condition: string | undefined | boolean, target: TokenOrDocument, options: any = {}): Promise<boolean> {
   if (options.errorReturn === undefined) options.errorReturn = false
   // if (condition === undefined || condition === "" || condition === false) return false;
   return evalActivationCondition(workflow, condition, target, options);
 }
-export function evalActivationCondition(workflow: Workflow | undefined, condition: string | undefined | boolean, target?: TokenOrDocument, options: any = {}): boolean {
+export async function evalActivationCondition(workflow: Workflow | undefined, condition: string | undefined | boolean, target?: TokenOrDocument, options: any = {}): Promise<boolean> {
   if (condition === undefined || condition === "" || condition === true) return true;
   if (condition === false) return false;
   const conditionData = createConditionData({ workflow, target, actor: workflow?.actor, extraData: options?.extraData, item: options.item });
   options.errorReturn ??= true;
-  const returnValue = evalCondition(condition, workflow?.conditionData, options);
+  const returnValue = await evalCondition(condition, conditionData, options);
   return returnValue;
 }
 
@@ -5282,6 +6120,19 @@ export function typeOrRace(entity: TokenOrDocument | Actor | string): string {
   // cater to dnd5e 2.4+ where race can be a string or an Item
   // @ts-expect-error no dnd5e-types
   else return (systemData.details?.race?.name ?? systemData.details?.race)?.toLocaleLowerCase() ?? "";
+}
+
+export function sizeNumeric(size: string): number | undefined {
+  const s = size?.toLowerCase();
+  if (!s) return undefined;
+  const actorSizes = GameSystemConfig.actorSizes;
+  // Direct key match (e.g. "sm", "lg", "grg")
+  if (actorSizes[s]?.numerical !== undefined) return actorSizes[s].numerical;
+  // Long form match (e.g. "small", "gargantuan") — compare against labels
+  for (const [, config] of Object.entries(actorSizes)) {
+    if (game.i18n!.localize(config.label).toLowerCase() === s) return config.numerical;
+  }
+  return undefined;
 }
 
 export function raceOrType(entity: TokenOrDocument | Actor | string): string {
@@ -5425,7 +6276,8 @@ export function createConditionData(data: {
   tokenUuid?: string,
   targetUuid?: string,
   options?: any | undefined,
-  token?: TokenOrDocument // pretty sure this never actually gets passed but eh
+  token?: TokenOrDocument, // pretty sure this never actually gets passed but eh
+  effect?: ActiveEffect.Implementation,
 }) {
   const actor = data.workflow?.actor ?? data.actor;
   let item: Item.Implementation | undefined;
@@ -5510,6 +6362,9 @@ export function createConditionData(data: {
       // define like this so it's only called if needed to avoid deprecation warnings
       // @ts-expect-error no dnd5e-types
       Object.defineProperty(rollData.item, "actionType", { get() { return item.system.actionType } });
+    }
+    if (data.effect) {
+      rollData.effect = data.effect;
     }
     if (game.combat) {
       const combat = game.combat;
@@ -5825,7 +6680,9 @@ export async function setReactionUsed(actor: Actor.Implementation, active: boole
     if (actions?.reactionsReset === "never") {
       effect.updateSource({ flags: { dae: { specialDuration: [] } } });
     }
+    if (await asyncHooksCall("midi-qol.preSetReactionUsed", actor, effect) === false) return;
     await ActiveEffect.implementation.create(effect.toObject(), { parent: actor, keepId: true });
+    await asyncHooksCallAll("midi-qol.setReactionUsed", actor, effect);
   }
 }
 
@@ -5859,7 +6716,9 @@ export async function setBonusActionUsed(actor: Actor.Implementation) {
   }
   effect.origin = actor.uuid;
 
+  if (await asyncHooksCall("midi-qol.preSetBonusActionUsed", actor, effect) === false) return;
   await ActiveEffect.implementation.create(effect as any, { parent: actor, keepId: true });
+  await asyncHooksCallAll("midi-qol.setBonusActionUsed", actor, effect);
 }
 
 export async function removeActionUsed(actor: Actor.Implementation) {
@@ -5983,6 +6842,22 @@ export async function asyncHooksCallAll(hook: string, ...args): Promise<boolean 
   return true;
 }
 
+/**
+ * Call a cancellable midi hook with all standard variants:
+ * base, .item.uuid, .activity.uuid, and premades equivalents.
+ * Returns false if any hook returns false (short-circuits).
+ */
+export async function callActivityHooks(activity: { uuid: string; item: { uuid: string } }, hookName: string, ...args): Promise<boolean> {
+  if (await asyncHooksCall(hookName, ...args) === false) return false;
+  if (await asyncHooksCall(`${hookName}.${activity.item.uuid}`, ...args) === false) return false;
+  if (await asyncHooksCall(`${hookName}.${activity.uuid}`, ...args) === false) return false;
+  const premadesHook = hookName.replace("midi-qol.", "midi-qol.premades.");
+  if (await asyncHooksCall(premadesHook, ...args) === false) return false;
+  if (await asyncHooksCall(`${premadesHook}.${activity.item.uuid}`, ...args) === false) return false;
+  if (await asyncHooksCall(`${premadesHook}.${activity.uuid}`, ...args) === false) return false;
+  return true;
+}
+
 export async function asyncHooksCall(hook: string, ...args): Promise<boolean | undefined> {
   if (CONFIG.debug.hooks) {
     console.log(`DEBUG | midi-qol async Calling ${hook} hook with args:`);
@@ -6078,14 +6953,15 @@ export function addAttribution(roll: Roll, attributions: AttributionMap) {
 }
 
 /**
- * Get the localized title for an advantage mode (Advantage/Disadvantage/Normal).
- * @param hasAdvantage - Whether there is effective advantage
- * @param hasDisadvantage - Whether there is effective disadvantage
+ * Get localized title for a resolved d20 advantage mode.
+ * @param mode - Resolved roll advantage mode (`-1` DIS, `0` NORMAL, `1` ADV)
  * @returns Localized title string
  */
-export function getAdvantageModeTitle(hasAdvantage: boolean | undefined, hasDisadvantage: boolean | undefined): string {
-  if (hasAdvantage && !hasDisadvantage) return i18n("DND5E.Advantage");
-  if (hasDisadvantage && !hasAdvantage) return i18n("DND5E.Disadvantage");
+export function getAdvantageModeTitle(mode: number | null | undefined): string {
+  // @ts-expect-error CONFIG.Dice.D20Roll not typed
+  const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
+  if (mode === ADV_MODE.ADVANTAGE) return i18n("DND5E.Advantage");
+  if (mode === ADV_MODE.DISADVANTAGE) return i18n("DND5E.Disadvantage");
   return i18n("DND5E.Normal");
 }
 
@@ -6196,7 +7072,6 @@ export function midiRenderFormulaRoll(roll: Roll, options?: any) {
 
 export async function midiRenderTemplateRoll(roll: Roll | undefined, template: string, options?: any) {
   if (!roll) return "";
-  // @ts-expect-error no dnd5e-types - advantageMode: 1 = advantage, -1 = disadvantage, 0 = normal
   const advantageMode = roll.options?.advantageMode;
   let advantageModeStr: string | undefined;
   if (advantageMode === 1) advantageModeStr = "advantage";
@@ -6246,15 +7121,145 @@ export function heightIntersects(targetDocument: TokenDocument.Implementation, f
   if (flankerTopElevation < targetElevation || flankerElevation > targetTopElevation) return false;
   return true;
 }
-export function findPotentialFlankers(target: Token.Implementation) {
-  const allies = findNearby(-1, target, (canvas.dimensions?.distance ?? 5));
-  const reachAllies = findNearby(-1, target, 2 * (canvas.dimensions?.distance ?? 5)).filter(
-    ally => !(allies.some(tk => tk === ally)) &&
-      //@ts-expect-error no dnd5e-types
-      ally.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)
-  );
-  return allies.concat(reachAllies);
+/**
+ * Check if a grid cell (identified by pixel coordinates of a point within it) is adjacent to a target token,
+ * using purely geometric bounding-box distance. This avoids measurement-mode-dependent calculations
+ * (center vs perimeter) that cause inconsistencies with diagonal adjacency under different grid diagonal settings.
+ *
+ * @param cellPoint - A point within the candidate grid cell (e.g. a token's grid-square center)
+ * @param target - The target token to check adjacency against
+ * @param maxDistCells - Maximum distance in grid cells (1 for adjacent/5ft, 2 for reach/10ft)
+ * @returns true if the cell's bounding box is within maxDistCells of the target's bounding box
+ */
+function isCellAdjacentToToken(cellPoint: { x: number; y: number }, target: Token.Implementation, maxDistCells: number = 1): boolean {
+  if (!canvas?.grid) return false;
+  const gridW = canvas.grid.sizeX;
+  const gridH = canvas.grid.sizeY;
+
+  // Get the cell's top-left from the point, then compute its bounding box
+  const cellTopLeft = canvas.grid.getTopLeftPoint(cellPoint);
+  const cellLeft = cellTopLeft.x;
+  const cellTop = cellTopLeft.y;
+  const cellRight = cellLeft + gridW;
+  const cellBottom = cellTop + gridH;
+
+  // Target bounding box
+  const targetLeft = target.x;
+  const targetTop = target.y;
+  const targetRight = target.x + target.document.width * gridW;
+  const targetBottom = target.y + target.document.height * gridH;
+
+  // Compute the gap between the two bounding boxes along each axis
+  const dx = Math.max(0, cellLeft - targetRight, targetLeft - cellRight);
+  const dy = Math.max(0, cellTop - targetBottom, targetTop - cellBottom);
+
+  // For adjacent cells (maxDistCells=1), gap must be 0 (touching/overlapping)
+  // For reach cells (maxDistCells=2), gap must be at most 1 grid cell
+  const maxGap = (maxDistCells - 1) * Math.max(gridW, gridH);
+  // Use Chebyshev-style check: both dx and dy must be within maxGap
+  // (since grid adjacency is 8-directional, not Euclidean)
+  return dx <= maxGap && dy <= maxGap;
 }
+
+/**
+ * Get the distance between two tokens for flanking purposes.
+ * On gridless scenes, always uses perimeter measurement so that tokens
+ * whose borders are close together are correctly identified as adjacent,
+ * even when their centers are far apart (e.g. large tokens).
+ */
+function getFlankingDistance(t1: Token.Implementation, t2: Token.Implementation): number {
+  const gridDist = canvas?.dimensions?.distance ?? 5;
+  const fudge = configSettings.gridlessFudge ?? 0;
+  if (canvas?.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS) {
+    const raw = computePerimeterDistance(t1, t2, { wallsBlock: true, includeElevation: false });
+    if (raw < 0) return -1;
+    return gridDist + Math.max(0, raw - fudge);
+  }
+  return getDistance(t1, t2, { wallsBlock: true });
+}
+
+export function findPotentialFlankers(target: Token.Implementation) {
+  const gridDist = canvas?.dimensions?.distance ?? 5;
+  const isGridless = canvas?.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS;
+
+  let allies: Token.Implementation[];
+  let reachAllies: Token.Implementation[];
+
+  if (isGridless) {
+    // On gridless, use perimeter-based distance for finding nearby flankers
+    const canvasPlaceables = canvas?.tokens?.placeables ?? [];
+    const allNearby = canvasPlaceables.filter(t => {
+      if (!isValidTarget(t)) return false;
+      if (!t.actor) return false;
+      if (t.id === target.id) return false;
+      if (checkIncapacitated(t.actor, debugEnabled > 0, false)) return false;
+      // Check disposition: must be hostile to target
+      if (t.document.disposition === target.document.disposition) return false;
+      const dist = getFlankingDistance(t, target);
+      return dist >= 0 && dist <= gridDist;
+    });
+    const reachNearby = canvasPlaceables.filter(t => {
+      if (!isValidTarget(t)) return false;
+      if (!t.actor) return false;
+      if (t.id === target.id) return false;
+      if (checkIncapacitated(t.actor, debugEnabled > 0, false)) return false;
+      if (t.document.disposition === target.document.disposition) return false;
+      if (allNearby.some(a => a === t)) return false;
+      //@ts-expect-error no dnd5e-types
+      if (!t.actor.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)) return false;
+      const dist = getFlankingDistance(t, target);
+      return dist >= 0 && dist <= 2 * gridDist;
+    });
+    allies = allNearby.concat(reachNearby);
+  } else {
+    allies = findNearby(-1, target, gridDist);
+    reachAllies = findNearby(-1, target, 2 * gridDist).filter(
+      ally => !(allies.some(tk => tk === ally)) &&
+        //@ts-expect-error no dnd5e-types
+        ally.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)
+    );
+    allies = allies.concat(reachAllies);
+  }
+  return allies;
+}
+
+/**
+ * Compute the centroid (average pixel position) of a token's occupied hex centers.
+ * Falls back to token.center if the grid is not hexagonal or offsets can't be obtained.
+ */
+function getHexCentroid(target: Token.Implementation): { x: number; y: number } {
+  if (!canvas?.grid?.isHexagonal) return target.center;
+  const offsets = target.document.getOccupiedGridSpaceOffsets();
+  if (!offsets.length) return target.center;
+  let sumX = 0, sumY = 0;
+  for (const offset of offsets) {
+    const center = canvas.grid.getCenterPoint(offset);
+    sumX += center.x;
+    sumY += center.y;
+  }
+  return { x: sumX / offsets.length, y: sumY / offsets.length };
+}
+
+/**
+ * Angle-based flanking test: checks if token and ally are >= 150° apart
+ * as seen from a reference point (centroid for hex, center for gridless).
+ * Used for hex grids and gridless scenes where ray-through-edges doesn't apply.
+ */
+function isAngleFlanking(
+  token: Token.Implementation,
+  ally: Token.Implementation,
+  target: Token.Implementation
+): boolean {
+  // Use hex centroid for hex grids, target center for gridless
+  const referencePoint = canvas?.grid?.isHexagonal ? getHexCentroid(target) : target.center;
+  const angleToken = Math.atan2(token.center.y - referencePoint.y, token.center.x - referencePoint.x);
+  const angleAlly = Math.atan2(ally.center.y - referencePoint.y, ally.center.x - referencePoint.x);
+  let diff = Math.abs(angleToken - angleAlly);
+  if (diff > Math.PI) diff = 2 * Math.PI - diff; // normalize to [0, π]
+  const MIN_FLANKING_ANGLE = (150 / 180) * Math.PI; // 150° in radians
+  return diff >= MIN_FLANKING_ANGLE;
+}
+
 
 // TODO: Can definitely probably clean this up some
 export async function computeFlankedStatus(target: Token.Implementation): Promise<boolean> {
@@ -6291,7 +7296,8 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
       if (tokenCanFlank === false) continue;
     }
     // Loop through each square covered by attacker and ally
-    let maxDist = (canvas.dimensions?.distance ?? 5);
+    // Use geometric bounding-box adjacency instead of distancePointToken to avoid
+    // measurement-mode-dependent distance calculations (center vs perimeter)
     const tokenStartX = -Math.max(0, token.document.width / 2 - 0.5);
     const tokenStartY = -Math.max(0, token.document.height / 2 - 0.5);
     const tokenPoints: any[] = [];
@@ -6299,15 +7305,10 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
       for (let y = tokenStartY; y < token.document.height / 2; y++) {
         let tx = token.center.x + x * gridW;
         let ty = token.center.y + y * gridH;
-        if ((distancePointToken({ x: tx, y: ty, elevation: token.document.elevation }, target) ?? +Infinity) > maxDist) {
-          // console.error("Too far away", tx, ty, ax, ay, token.center, ally.center, target.center);
-          continue;
-        }
+        if (!isCellAdjacentToToken({ x: tx, y: ty }, target)) continue;
         tokenPoints.push({ x: tx, y: ty });
       }
     }
-    // @ts-expect-error not in types yet
-    if (game.settings.get("core", "gridDiagonals") === 1) maxDist *= Math.sqrt(2);
     for (let ally of allies) {
       if (ally.document.uuid === token.document.uuid) continue;
       const actor: any = ally.actor;
@@ -6323,6 +7324,11 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
         const hasFlanked = hasCondition(actor, "flanked");
         if (hasFlanked) continue
       }
+      // Hex grid or gridless: use angle-based flanking instead of ray-edge intersection
+      if (canvas.grid?.isHexagonal || canvas.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS) {
+        if (isAngleFlanking(token, ally, target)) return true;
+        continue;
+      }
       const allyStartX = -Math.max(0, ally.document.width / 2 - 0.5);
       const allyStartY = -Math.max(0, ally.document.height / 2 - 0.5);
       const allyPoints: any[] = [];
@@ -6330,9 +7336,7 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
         for (let y1 = allyStartY; y1 < ally.document.height / 2; y1++) {
           let ax = ally.center.x + x1 * gridW;
           let ay = ally.center.y + y1 * gridH;
-          if ((distancePointToken({ x: ax, y: ay, elevation: ally.document.elevation }, target) ?? +Infinity) > maxDist) {
-            continue;
-          }
+          if (!isCellAdjacentToToken({ x: ax, y: ay }, target)) continue;
           allyPoints.push({ x: ax, y: ay });
         }
       }
@@ -6368,7 +7372,7 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
   if (token.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)) {
     range = 2;
   }
-  if (computeDistance(token, target, { wallsBlock: true }) > range * (canvas.dimensions?.distance ?? 5)) return false;
+  if (getFlankingDistance(token, target) > range * (canvas.dimensions?.distance ?? 5)) return false;
   // an enemy's enemies are my friends.
   const allies = findPotentialFlankers(target)
 
@@ -6376,9 +7380,6 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
   if (allies.length <= 1) return false; // length 1 means no other allies nearby
   const gridW = canvas.grid?.sizeX ?? 100;
   const gridH = canvas.grid?.sizeY ?? 100;
-  let maxDist = (canvas.dimensions?.distance ?? 5);
-  //@ts-expect-error
-  if (game.settings.get("core", "gridDiagonals") === 1) maxDist *= Math.sqrt(2);
   const tl = { x: target.x, y: target.y };
   const tr = { x: target.x + target.document.width * gridW, y: target.y };
   const bl = { x: target.x, y: target.y + target.document.height * gridH };
@@ -6389,6 +7390,8 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
   const right: [x0: number, y0: number, x1: number, y1: number] = [tr.x, tr.y, br.x, br.y];
 
   // Loop through each square covered by attacker and ally
+  // Use geometric bounding-box adjacency instead of distancePointToken to avoid
+  // measurement-mode-dependent distance calculations (center vs perimeter)
   const tokenStartX = -Math.max(0, token.document.width / 2 - 0.5);
   const tokenStartY = -Math.max(0, token.document.height / 2 - 0.5);
   const tokenPoints: any[] = [];
@@ -6396,10 +7399,7 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
     for (let y = tokenStartY; y < token.document.height / 2; y++) {
       let tx = token.center.x + x * gridW;
       let ty = token.center.y + y * gridH;
-      if ((distancePointToken({ x: tx, y: ty, elevation: token.document.elevation }, target) ?? +Infinity) > maxDist) {
-        // console.error("Too far away", tx, ty, ax, ay, token.center, ally.center, target.center);
-        continue;
-      }
+      if (!isCellAdjacentToToken({ x: tx, y: ty }, target)) continue;
       tokenPoints.push({ x: tx, y: ty });
     }
   }
@@ -6414,6 +7414,11 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
       const allyCanFlank = await evalCondition(ally.actor.flags[MODULE_ID]?.canFlank, conditionData, undefined);
       if (allyCanFlank === false) continue;
     }
+    // Hex grid or gridless: use angle-based flanking instead of ray-edge intersection
+    if (canvas.grid?.isHexagonal || canvas.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS) {
+      if (isAngleFlanking(token, ally, target)) return true;
+      continue;
+    }
     const allyStartX = -Math.max(0, ally.document.width / 2 - 0.5);
     const allyStartY = -Math.max(0, ally.document.height / 2 - 0.5);
 
@@ -6422,7 +7427,7 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
       for (let y1 = allyStartY; y1 < ally.document.height / 2; y1++) {
         let ax = ally.center.x + x1 * gridW;
         let ay = ally.center.y + y1 * gridH;
-        if ((distancePointToken({ x: ax, y: ay, elevation: ally.document.elevation }, target) ?? +Infinity) > maxDist) {
+        if (!isCellAdjacentToToken({ x: ax, y: ay }, target)) {
           continue;
         }
         allyPoints.push({ x: ax, y: ay });
@@ -6471,73 +7476,79 @@ export function getIncapacitatedStatusEffect() {
 }
 
 export async function markFlanking(token?: Token.Implementation | null, target?: Token.Implementation | null): Promise<boolean> {
-  // checkFlankingStatus requires a flanking token (token) and a target
-  // checkFlankedStatus requires only a target token
   if (!canvas) return false;
-  let needsFlanking = false;
   if (!target || !target?.actor) return false;
-  if (!checkRule("checkFlanking") || checkRule("checkFlanking") === "off") return false;
-  if (["ceonly"].includes(checkRule("checkFlanking") as string)) {
+  const flankingMode = checkRule("checkFlanking") as string;
+  if (!flankingMode || flankingMode === "off") return false;
+
+  const isFlankingMode = ["advonly", "ceonly", "midiFlanking"].includes(flankingMode);
+  const isFlankedMode = ["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(flankingMode);
+  const skipAttackerStatus = (configSettings.optionalRules?.flankingBonus ?? "advantage") !== "advantage";
+
+  if (isFlankingMode) {
+    // Attacker-side flanking: requires both token and target
     if (!token || token === target) return false;
-    needsFlanking = await computeFlankingStatus(token, target);
-    if (installedModules.get("dfreds-convenient-effects")) {
-      let CEFlanking = getFlankingEffect();
-      if (!CEFlanking) return needsFlanking;
-      const hasFlanking = CEHasEffectApplied({ effectName: CEFlanking.name ?? "Flanking", uuid: token.actor?.uuid ?? "" });
-      if (needsFlanking && !hasFlanking && token.actor) {
-        await CEAddEffectWith({ effectName: CEFlanking.name ?? "Flanking", uuid: token.actor.uuid, overlay: false });
-      } else if (!needsFlanking && hasFlanking && token.actor) {
-        await CERemoveEffect({ effectName: CEFlanking.name ?? "Flanking", uuid: token.actor.uuid });
+    const needsFlanking = await computeFlankingStatus(token, target);
+    if (skipAttackerStatus) return needsFlanking;
+
+    // Apply flanking status to attacker (advantage mode only)
+    if (flankingMode === "ceonly") {
+      if (installedModules.get("dfreds-convenient-effects")) {
+        let CEFlanking = getFlankingEffect();
+        if (!CEFlanking) return needsFlanking;
+        const hasFlanking = CEHasEffectApplied({ effectName: CEFlanking.name ?? "Flanking", uuid: token.actor?.uuid ?? "" });
+        if (needsFlanking && !hasFlanking && token.actor) {
+          await CEAddEffectWith({ effectName: CEFlanking.name ?? "Flanking", uuid: token.actor.uuid, overlay: false });
+        } else if (!needsFlanking && hasFlanking && token.actor) {
+          await CERemoveEffect({ effectName: CEFlanking.name ?? "Flanking", uuid: token.actor.uuid });
+        }
+      }
+    } else if (flankingMode === "midiFlanking") {
+      const MidiFlanking: any = CONFIG.statusEffects.find(se => se.id === "flanking");
+      if (!MidiFlanking) return false;
+      let cprEffect: ActiveEffect | undefined = getCPREffect(MidiFlanking?._id as string)
+      if (!cprEffect) {
+        if (!token.actor?.isOwner) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: token.actor?.uuid, statusId: MidiFlanking.id, options: { active: needsFlanking } });
+        else await token.actor.toggleStatusEffect(MidiFlanking.id, { active: needsFlanking });
+      } else if (needsFlanking) {
+        if (!token.actor?.effects.get(cprEffect.id!)) {
+          if (!token.actor?.isOwner) await unTimedExecuteAsGM("createEffects", { actorUuid: token.actor?.uuid, effects: [cprEffect.toObject()], options: { keepId: true } });
+          else await token.actor.createEmbeddedDocuments("ActiveEffect", [cprEffect.toObject()], { keepId: true });
+        }
+      } else {
+        if (token.actor?.effects.get(cprEffect.id!)) {
+          if (!target.actor.isOwner) await unTimedExecuteAsGM("removeEffects", { actorUuid: token.actor.uuid, effects: [cprEffect.id], options: {} });
+          await token.actor.deleteEmbeddedDocuments("ActiveEffect", [cprEffect.id!]);
+        }
       }
     }
-  } else if (checkRule("checkFlanking") === "midiFlanking") {
-    if (!token || token === target) return false;
-    needsFlanking = await computeFlankingStatus(token, target);
-    const MidiFlanking: any = CONFIG.statusEffects.find(se => se.id === "flanking");
-    if (!MidiFlanking) return false;
-    let cprEffect: ActiveEffect | undefined = getCPREffect(MidiFlanking?._id as string)
-    if (!cprEffect) {
-      if (!token.actor?.isOwner) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: token.actor?.uuid, statusId: MidiFlanking.id, options: { active: needsFlanking } });
-      else await token.actor.toggleStatusEffect(MidiFlanking.id, { active: needsFlanking });
-    } else if (needsFlanking) {
-      if (!token.actor?.effects.get(cprEffect.id!)) {
-        if (!token.actor?.isOwner) await unTimedExecuteAsGM("createEffects", { actorUuid: token.actor?.uuid, effects: [cprEffect.toObject()], options: { keepId: true } });
-        else await token.actor.createEmbeddedDocuments("ActiveEffect", [cprEffect.toObject()], { keepId: true });
-      }
-    } else {
-      if (token.actor?.effects.get(cprEffect.id!)) {
-        if (!target.actor.isOwner) await unTimedExecuteAsGM("removeEffects", { actorUuid: token.actor.uuid, effects: [cprEffect.id], options: {} });
-        await token.actor.deleteEmbeddedDocuments("ActiveEffect", [cprEffect.id!]);
-      }
-    }
-  } else if (checkRule("checkFlanking") === "advonly") {
-    if (!token) return false;
-    needsFlanking = await computeFlankingStatus(token, target);
-  } else if (["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking") as string)) {
+    // advonly: no status to apply
+    return needsFlanking;
+
+  } else if (isFlankedMode) {
+    // Target-side flanked: applies status to target
     if (!target.actor) return false;
-    if (installedModules.get("dfreds-convenient-effects")) {
-      let CEFlanked = getFlankedEffect();
-      if (!CEFlanked) return false;
-      const needsFlanked = await computeFlankedStatus(target);
-      const hasFlanked = CEHasEffectApplied({ effectName: CEFlanked.name ?? "Flanked", uuid: target.actor.uuid });
-      if (needsFlanked && !hasFlanked && target.actor) {
-        await CEAddEffectWith({ effectName: CEFlanked.name ?? "Flanked", uuid: target.actor.uuid, overlay: false });
-      } else if (!needsFlanked && hasFlanked && token?.actor) {
-        await CERemoveEffect({ effectName: CEFlanked.name ?? "Flanked", uuid: target.actor.uuid });
-      }
-      return false;
-    }
-  } else if (["midiFlanked", "midiFlankedNoConga"].includes(checkRule("checkFlanking") as string)) {
-    if (!target.actor) return false;
-    const MidiFlanked = CONFIG.statusEffects.find(se => se.id === "flanked");
-    if (!MidiFlanked) return false;
-    const cprEffect: ActiveEffect | undefined = getCPREffect(MidiFlanked?._id as string)
     const needsFlanked = await computeFlankedStatus(target);
-    if (!cprEffect) {
-      if (!target.actor.isOwner) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: target.actor.uuid, statusId: MidiFlanked.id, options: { active: needsFlanked } });
-      else await target.actor.toggleStatusEffect(MidiFlanked.id, { active: needsFlanked });
-    } else {
-      if (needsFlanked) {
+
+    if (["ceflanked", "ceflankedNoconga"].includes(flankingMode)) {
+      if (installedModules.get("dfreds-convenient-effects")) {
+        let CEFlanked = getFlankedEffect();
+        if (!CEFlanked) return false;
+        const hasFlanked = CEHasEffectApplied({ effectName: CEFlanked.name ?? "Flanked", uuid: target.actor.uuid });
+        if (needsFlanked && !hasFlanked && target.actor) {
+          await CEAddEffectWith({ effectName: CEFlanked.name ?? "Flanked", uuid: target.actor.uuid, overlay: false });
+        } else if (!needsFlanked && hasFlanked && token?.actor) {
+          await CERemoveEffect({ effectName: CEFlanked.name ?? "Flanked", uuid: target.actor.uuid });
+        }
+      }
+    } else if (["midiFlanked", "midiFlankedNoConga"].includes(flankingMode)) {
+      const MidiFlanked = CONFIG.statusEffects.find(se => se.id === "flanked");
+      if (!MidiFlanked) return false;
+      const cprEffect: ActiveEffect | undefined = getCPREffect(MidiFlanked?._id as string)
+      if (!cprEffect) {
+        if (!target.actor.isOwner) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: target.actor.uuid, statusId: MidiFlanked.id, options: { active: needsFlanked } });
+        else await target.actor.toggleStatusEffect(MidiFlanked.id, { active: needsFlanked });
+      } else if (needsFlanked) {
         if (!target.actor.effects.get(cprEffect.id!)) {
           if (!target.actor.isOwner) await unTimedExecuteAsGM("createEffects", { actorUuid: target.actor.uuid, effects: [cprEffect.toObject()], options: { keepId: true } });
           else await target.actor.createEmbeddedDocuments("ActiveEffect", [cprEffect.toObject()], { keepId: true });
@@ -6550,7 +7561,7 @@ export async function markFlanking(token?: Token.Implementation | null, target?:
       }
     }
   }
-  return needsFlanking;
+  return false;
 }
 
 export async function chackFlanking(user: User.Implementation, target: Token.Implementation, targeted: boolean): Promise<boolean> {
@@ -6559,6 +7570,207 @@ export async function chackFlanking(user: User.Implementation, target: Token.Imp
   if (user.targets.size === 1) return markFlanking(token, target);
   return false
 
+}
+
+let flankingHighlightContainer: PIXI.Container | null = null;
+
+/**
+ * Get the flanking icon path based on the current flanking mode.
+ */
+function getFlankingHighlightIcon(): string {
+  const flankingMode = checkRule("checkFlanking") as string;
+  const isFlankedMode = ["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(flankingMode);
+  return isFlankedMode ? "modules/midi-qol/icons/encirclement.svg" : "icons/svg/sword.svg";
+}
+
+/**
+ * Update the flanking highlight overlay. Called when token selection or targeting changes.
+ * Highlights grid cells around the current target where an ally could stand to create
+ * a flanking condition with the currently selected token using icon sprites.
+ */
+export async function updateFlankingHighlight(): Promise<void> {
+  if (!canvas?.grid || !canvas.interface?.grid) return;
+
+  // Clear previous sprites
+  if (flankingHighlightContainer) {
+    flankingHighlightContainer.destroy({ children: true });
+    flankingHighlightContainer = null;
+  }
+
+  // Early exits: setting disabled, flanking mode off, gridless (no cells to highlight)
+  if (!configSettings.optionalRules?.showFlankingHighlight) return;
+  const flankingMode = checkRule("checkFlanking") as string;
+  if (!flankingMode || flankingMode === "off") return;
+  if (canvas.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS) return;
+
+  // Need exactly one controlled token and one target
+  const token = canvas.tokens?.controlled?.[0];
+  const target = game.user?.targets?.first();
+  if (!token || !target || token === target) return;
+  if (!canvas.dimensions) return;
+
+  // Check selected token is within melee range of target (allow reach if equipped)
+  const gridDist = canvas.dimensions.distance ?? 5;
+  let tokenRange = 1;
+  // @ts-expect-error no dnd5e-types
+  if (token.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)) {
+    tokenRange = 2;
+  }
+  const tokenDist = getDistance(token, target, { wallsBlock: true });
+  if (tokenDist > tokenRange * gridDist) return;
+
+  const gridW = canvas.grid.sizeX ?? 100;
+  const gridH = canvas.grid.sizeY ?? 100;
+
+  // Adjacency distance — matches computeFlankingStatus logic
+  let maxDist = gridDist;
+  // @ts-expect-error not in types yet
+  if (game.settings.get("core", "gridDiagonals") === 1) maxDist *= Math.sqrt(2);
+
+  // Get target's occupied offsets and their centers for adjacency checks
+  const targetOffsets = target.document.getOccupiedGridSpaceOffsets();
+  const targetOffsetSet = new Set(targetOffsets.map((o: {i: number, j: number}) => `${o.i},${o.j}`));
+  const targetCellCenters = targetOffsets.map((o: {i: number, j: number}) => canvas.grid!.getCenterPoint(o));
+
+  // Expand target bounds by 2 cells in each direction to find candidate cells
+  const bounds = {
+    x: target.x - 2 * gridW,
+    y: target.y - 2 * gridH,
+    width: target.document.width * gridW + 4 * gridW,
+    height: target.document.height * gridH + 4 * gridH,
+  };
+  const [i0, j0, i1, j1] = canvas.grid.getOffsetRange(bounds);
+
+  // Build target edge segments for square grid ray testing
+  let top: [number, number, number, number] | undefined;
+  let bottom: [number, number, number, number] | undefined;
+  let left: [number, number, number, number] | undefined;
+  let right: [number, number, number, number] | undefined;
+
+  if (!canvas.grid.isHexagonal) {
+    const tl = { x: target.x, y: target.y };
+    const tr = { x: target.x + target.document.width * gridW, y: target.y };
+    const bl = { x: target.x, y: target.y + target.document.height * gridH };
+    const br = { x: target.x + target.document.width * gridW, y: target.y + target.document.height * gridH };
+    top = [tl.x, tl.y, tr.x, tr.y];
+    bottom = [bl.x, bl.y, br.x, br.y];
+    left = [tl.x, tl.y, bl.x, bl.y];
+    right = [tr.x, tr.y, br.x, br.y];
+  }
+
+  // Build token grid points (same multi-square logic as computeFlankingStatus)
+  // Use measurePath against target cell centers for hex-grid compatibility
+  const tokenPoints: { x: number; y: number }[] = [];
+  const tokenStartX = -Math.max(0, token.document.width / 2 - 0.5);
+  const tokenStartY = -Math.max(0, token.document.height / 2 - 0.5);
+  const tokenMaxDist = tokenRange * maxDist + 1; // +1 tolerance for hex precision
+  for (let x = tokenStartX; x < token.document.width / 2; x++) {
+    for (let y = tokenStartY; y < token.document.height / 2; y++) {
+      const tx = token.center.x + x * gridW;
+      const ty = token.center.y + y * gridH;
+      let closeEnough = false;
+      for (const tc of targetCellCenters) {
+        const d = canvas.grid.measurePath([{ x: tx, y: ty }, tc], {}).distance;
+        if (d <= tokenMaxDist) { closeEnough = true; break; }
+      }
+      if (!closeEnough) continue;
+      tokenPoints.push({ x: tx, y: ty });
+    }
+  }
+  if (tokenPoints.length === 0) return;
+
+  // Hex flanking uses centroid + angle
+  const centroid = canvas.grid.isHexagonal ? getHexCentroid(target) : undefined;
+  const MIN_FLANKING_ANGLE = (150 / 180) * Math.PI;
+
+  // Collect valid cell positions
+  const validCells: { i: number; j: number }[] = [];
+  for (let i = i0; i <= i1; i++) {
+    for (let j = j0; j <= j1; j++) {
+      // Skip cells occupied by the target
+      if (targetOffsetSet.has(`${i},${j}`)) continue;
+
+      const cellCenter = canvas.grid.getCenterPoint({ i, j });
+
+      // Check candidate is adjacent to target using measurePath against occupied cell centers
+      // Add small tolerance (1ft) for floating-point imprecision in hex center coordinates
+      let isAdjacent = false;
+      for (const tc of targetCellCenters) {
+        const d = canvas.grid.measurePath([cellCenter, tc], {}).distance;
+        if (d > 0 && d <= maxDist + 1) { isAdjacent = true; break; }
+      }
+      if (!isAdjacent) continue;
+
+      let isValid = false;
+
+      if (canvas.grid.isHexagonal && centroid) {
+        // Hex flanking: check angle from centroid
+        for (const tp of tokenPoints) {
+          const tokenCenter = canvas.grid.getCenterPoint(tp);
+          const angleToken = Math.atan2(tokenCenter.y - centroid.y, tokenCenter.x - centroid.x);
+          const angleCandidate = Math.atan2(cellCenter.y - centroid.y, cellCenter.x - centroid.x);
+          let diff = Math.abs(angleToken - angleCandidate);
+          if (diff > Math.PI) diff = 2 * Math.PI - diff;
+          if (diff >= MIN_FLANKING_ANGLE) {
+            isValid = true;
+            break;
+          }
+        }
+      } else if (top && bottom && left && right) {
+        // Square grid: ray through opposite edges test
+        for (const tp of tokenPoints) {
+          const p1 = canvas.grid.getCenterPoint(tp);
+          const p2 = cellCenter;
+          const ray = new foundry.canvas.geometry.Ray(p1, p2);
+          const throughTopBottom = ray.intersectSegment(top) && ray.intersectSegment(bottom);
+          const throughLeftRight = ray.intersectSegment(left) && ray.intersectSegment(right);
+          if (throughTopBottom || throughLeftRight) {
+            isValid = true;
+            break;
+          }
+        }
+      }
+
+      if (isValid) validCells.push({ i, j });
+    }
+  }
+
+  if (validCells.length === 0) return;
+
+  // Load the flanking icon texture and place sprites
+  const iconPath = getFlankingHighlightIcon();
+  let texture: PIXI.Texture;
+  try {
+    texture = await PIXI.Assets.load(iconPath);
+  } catch {
+    return;
+  }
+  if (!texture?.valid) return;
+
+  // Re-check state after async load — selection/target may have changed
+  if (!canvas?.interface?.grid) return;
+  if (canvas.tokens?.controlled?.[0] !== token) return;
+  if (game.user?.targets?.first() !== target) return;
+
+  flankingHighlightContainer = new PIXI.Container();
+  flankingHighlightContainer.name = "midi-qol-flanking-highlight";
+  flankingHighlightContainer.zIndex = (CONFIG.Canvas.groups.interface.zIndexScrollingText ?? 1100) - 1;
+  flankingHighlightContainer.sortableChildren = false;
+  flankingHighlightContainer.eventMode = "none";
+  canvas.interface.addChild(flankingHighlightContainer);
+
+  const spriteSize = Math.min(gridW, gridH) * 0.8;
+  for (const { i, j } of validCells) {
+    const center = canvas.grid.getCenterPoint({ i, j });
+    const sprite = new PIXI.Sprite(texture);
+    sprite.anchor.set(0.5);
+    sprite.position.set(center.x, center.y);
+    sprite.width = spriteSize;
+    sprite.height = spriteSize;
+    sprite.alpha = 0.6;
+    sprite.tint = 0xFF6600;
+    flankingHighlightContainer.addChild(sprite);
+  }
 }
 
 export function getChanges(actorOrItem: Actor.Implementation | Item.Implementation, key: string) {
@@ -6622,9 +7834,7 @@ export function initializeVision(tk: Token.Implementation, force = false) {
     tk.vision.los = tk.vision.shape;
   }
   if (tk.vision.visionMode) tk.vision.visionMode.animated = false;
-  // @ts-expect-error TODO find out why this is an error
-  canvas.effects?.visionSources.set(sourceId, tk.vision);
-  // tk.document.sight.enabled = sightEnabled;
+  tk.vision.add();
   return true;
 }
 export function _canSenseModes(token: Token.Implementation, target: Token.Implementation, validModesParam: Array<string> = ["all"]): Array<string> {
@@ -6635,10 +7845,17 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   if (!token.hasSight && !configSettings.optionalRules.invisVision) return ["senseAll"];
   if ((!token.vision || !token.vision.los) && !initializeVision(token)) return ["noSight"];
   const matchedModes: Set<string> = new Set();
-  // Determine the array of offset points to test
+  // Determine the array of offset points to test.
+  // Inner ring at t (min dimension / 4) matches Foundry's standard tolerance.
+  // Outer ring at t2 (min dimension / 2 - 2) tests near the token boundary,
+  // catching narrow visible slivers that the inner ring misses.
   const t = Math.min(target.w, target.h) / 4;
+  const t2 = Math.min(target.w, target.h) / 2 - 2;
   const targetPoint = target.center;
-  const offsets = t > 0 ? [[0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t]] : [[0, 0]];
+  const offsets = t > 0 ? [
+    [0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t],
+    [-t2, -t2], [-t2, t2], [t2, t2], [t2, -t2], [-t2, 0], [t2, 0], [0, -t2], [0, t2]
+  ] : [[0, 0]];
   const tests = offsets.map(o => ({
     point: new PIXI.Point(targetPoint.x + o[0], targetPoint.y + o[1]),
     elevation: target?.document.elevation ?? 0,
@@ -6648,6 +7865,23 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   const tokenDetectionModes = token.detectionModes;
   const modes = CONFIG.Canvas.detectionModes;
   let validModes = new Set(validModesParam);
+
+  // Pre-populate the LOS cache using direct ray casting against walls.
+  // This is more precise than visionSource.los.contains() which uses a polygon
+  // approximation (ClockwiseSweepPolygon) that can miss narrow visible corridors
+  // through wall gaps. Foundry uses this same testCollision approach for restricted
+  // vision angles; we extend it to 360° vision for accuracy.
+  if (token.vision) {
+    const origin = { x: token.vision.x, y: token.vision.y };
+    for (const test of tests) {
+      const collision = CONFIG.Canvas.polygonBackends.sight.testCollision(
+        origin,
+        test.point,
+        { type: "sight", mode: "any", source: token.vision, useThreshold: true, priority: token.vision.priority }
+      );
+      test.los.set(token.vision, !collision);
+    }
+  }
 
   const lightSources = canvas.effects?.lightSources;
   for (const lightSource of (lightSources ?? [])) {
@@ -6659,7 +7893,6 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
 
   const lightPerception = tokenDetectionModes.find(m => m.id === modes.lightPerception?.id);
   if (lightPerception && ["lightPerception", "all"].some(mode => validModes.has(mode))) {
-    // const result = modes.lightPerception.testVisibility(token.vision, basic, config);
     // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
     const result = (lightPerception && token.vision) ? modes.lightPerception.testVisibility(token.vision, lightPerception, config) : false;
     if (result === true)
@@ -7024,23 +8257,61 @@ export async function contestedRoll(data: {
   let player2 = playerFor(targetToken);
   if (!player2?.active) player2 = preferredActiveGM();
   if (!player1 || !player2) return { result: undefined, rolls: [] };
-  const sourceFlavor = contestedRollFlavor(flavor, source.rollType, source.ability)
-  const sourceOptions = foundry.utils.mergeObject(foundry.utils.duplicate(source.rollOptions ?? rollOptions ?? {}), {
-    mapKeys: false,
-    flavor: sourceFlavor,
-    title: `${sourceFlavor}: ${sourceToken?.name} vs ${targetToken?.name}`
-  });
-  const targetFlavor = contestedRollFlavor(flavor, target.rollType, target.ability);
-  const targetOptions = foundry.utils.mergeObject(foundry.utils.duplicate(target.rollOptions ?? rollOptions ?? {}), {
-    mapKeys: false,
-    flavor: targetFlavor,
-    title: `${targetFlavor}: ${targetToken?.name} vs ${sourceToken?.name}`
-  });
-  const sourceConfig = { request: source.rollType.trim(), targetUuid: sourceDocument?.uuid, options: sourceOptions, [source.rollType === "skill" ? "skill" : "ability"]: source.ability.trim() };
-  const targetConfig = { request: target.rollType.trim(), targetUuid: targetDocument?.uuid, options: targetOptions, [target.rollType === "skill" ? "skill" : "ability"]: target.ability.trim() };
+  // Normalize roll types for SaveDetails
+  const normalizeRollType = (rt: string): string => {
+    if (rt === "abil" || rt === "test") return "check";
+    return rt.trim();
+  };
+
+  // Build SaveDetails for each participant
+  const buildContestedSaveDetails = (
+    actorUuid: string,
+    rollType: string,
+    abilityOrSkill: string
+  ): SaveDetails => {
+    const normalizedType = normalizeRollType(rollType);
+    const isSkill = rollType === "skill";
+    return {
+      actorUuid,
+      advantage: undefined,
+      disadvantage: undefined,
+      modifierTracker: undefined,
+      isFriendly: false,
+      isMagicSave: false,
+      isConcentrationCheck: undefined,
+      rollDC: 0,
+      saveItemUuid: "",
+      workflowId: "",
+      itemCardUuid: itemCardUuid ?? "",
+      workflowOptions: {},
+      rollType: normalizedType,
+      rollAbilities: isSkill ? [] : [abilityOrSkill.trim()],
+      rollSkills: isSkill ? [abilityOrSkill.trim()] : [],
+      rollTools: [],
+      itemId: "",
+    };
+  };
+
+  const sourceSaveDetails = buildContestedSaveDetails(
+    sourceDocument?.actor?.uuid ?? "",
+    source.rollType,
+    source.ability
+  );
+  const targetSaveDetails = buildContestedSaveDetails(
+    targetDocument?.actor?.uuid ?? "",
+    target.rollType,
+    target.ability
+  );
+
   const resultPromises = [
-    socketlibSocket.executeAsUser("rollAbility", player1.id, sourceConfig),
-    socketlibSocket.executeAsUser("rollAbility", player2.id, targetConfig),
+    socketlibSocket.executeAsUser("rollAbility", player1.id, {
+      saveDetails: sourceSaveDetails,
+      displayOptions: { chatMessage: true }
+    }),
+    socketlibSocket.executeAsUser("rollAbility", player2.id, {
+      saveDetails: targetSaveDetails,
+      displayOptions: { chatMessage: true }
+    }),
   ];
 
   let results = await Promise.all(resultPromises);
@@ -7193,15 +8464,16 @@ export function getIconFreeLink(entity?: TokenOrDocument | Item | Actor | null) 
   }
 }
 
-export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}) {
-  let isGridless = canvas.grid?.constructor.name === "GridlessGrid";
-  if (!isGridless || !options.gridSpaces || !configSettings.griddedGridless || !canvas.grid) {
-    return segments.map(s => canvas.grid?.measurePath([s.ray.A, s.ray.B], {})).map(d => d?.distance ?? 0);
-  }
-  if (!canvas.grid) return [0];
+/**
+ * Creates a proxy around canvas.grid that makes it behave like a SquareGrid.
+ * Used for griddedGridless mode to apply square grid measurement rules to gridless scenes.
+ * @returns A proxy that redirects grid methods to SquareGrid.prototype
+ */
+export function createSquareGridProxy(): foundry.grid.BaseGrid {
+  if (!canvas.grid) throw new Error("createSquareGridProxy called without canvas.grid");
   const diagonals = safeGetGameSetting("core", "gridDiagonals");
-  const canvasGridProxy = new Proxy(canvas.grid, {
-    get: function (target, prop, receiver) {
+  const canvasGridProxy: foundry.grid.BaseGrid = new Proxy(canvas.grid, {
+    get: function (target, prop, _receiver) {
       if (foundry.grid.SquareGrid.prototype[prop] instanceof Function) {
         return foundry.grid.SquareGrid.prototype[prop].bind(canvasGridProxy);
       } else if (prop === "diagonals") {
@@ -7212,6 +8484,17 @@ export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}
       return Reflect.get(target, prop);
     }
   });
+  return canvasGridProxy;
+}
+
+export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}) {
+  let isGridless = canvas.grid?.constructor.name === "GridlessGrid";
+  if (!isGridless || !options.gridSpaces || !configSettings.griddedGridless || !canvas.grid) {
+    return segments.map(s => canvas.grid?.measurePath([s.ray.A, s.ray.B], {})).map(d => d?.distance ?? 0);
+  }
+  if (!canvas.grid) return [0];
+  const diagonals = safeGetGameSetting("core", "gridDiagonals");
+  const canvasGridProxy = createSquareGridProxy();
   const GridDiagonals = CONST.GRID_DIAGONALS;
   // First snap the poins to the nearest center point for equidistant/1,2,1/2,1,2
   // I expected this would happen automatically in the proxy call - but didn't and not sure why.
@@ -7328,7 +8611,6 @@ export function addRollTo(roll: Roll, bonusRoll: Roll | Roll.Evaluated<Roll.Any>
   return newRoll;
 }
 
-// TODO: Make this its own application
 export async function chooseEffect({ actor, token, item, workflow, options }: {
   actor: Actor.Implementation;
   token: Token.Implementation;
@@ -7339,8 +8621,6 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
     timeout?: number;
   }
 }) {
-  let second1TimeoutId: NodeJS.Timeout;
-  let timeRemaining: number;
   if (!item) return false;
   const effects = item.effects.filter(
     (e) => !e.transfer && !!(options?.chooseAll || e.flags?.dae?.dontApply)
@@ -7356,142 +8636,94 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
     origin = workflow.actor.effects.get(workflow.chatCard.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid ?? item?.uuid;
   }
   if (!targets || targets.size === 0) return;
-  let returnValue = new Promise((resolve, reject) => {
-    const callback = async function (this: ActiveEffect) {
-      clearTimeout(timeoutId);
-      const effectData = this.toObject();
-      effectData.origin = item.uuid;
-      foundry.utils.setProperty(effectData, "flags.dae.dontApply", false);
-      const applyItem = item.clone({ effects: [effectData] }, { keepId: true })
-      await globalThis.DAE.doEffects(
-        applyItem, true, targets, {
-        damageTotal: 0,
-        origin,
-        critical: false,
-        fumble: false,
-        itemCardUuid: "",
-        metaData: {},
-        selfEffects: "none",
-        // @ts-expect-error no dnd5e-types
-        spellLevel: (workflow?.spellLevel ?? applyItem.level ?? 0),
-        toggleEffect: workflow?.activity.midiProperties?.toggleEffect, //TODO Check this
-        tokenUuid: token.document.uuid,
-        actorUuid: actor.uuid,
-        whisper: false,
-        workflowOptions: workflow?.workflowOptions,
-        context: {
-        }
-      });
-      if (this.toObject()) {
-        if (debugEnabled)
-          warn(
-            `chooseEffect | applying effect ${this.name} to ${targets.size} targets`,
-            targets
-          );/*
-        for (let target of targets) {
-          await target.actor.createEmbeddedDocuments('ActiveEffect', [
-            effectData,
-          ]);
-        }*/
-      }
-      resolve(this);
-    };
 
-    const style = `
-      <style>
-        .dnd5e2.effectNoTarget.dialog {
-          max-height: 800px;
-          .window-content {
-            overflow: auto;
-          }
-          .dialog-content {
-            display: none;
-          }
-          .dialog-buttons {
-            flex-direction: column;
-            button.dialog-button {
-              border: 5px;
-              margin: 0;
-              display: grid;			
-              grid-template-columns: 40px 150px;
-              grid-gap: 5px;
-              span {
-                overflow: hidden;
-                text-overflow: ellipsis;
-              }
-            }
-          }
-        }
-        .dnd5e2.effectNoTarget.dialog .window-header .window-title {
-          visibility: visible;
-          color: initial;
-          text-align: center;
-          font-weight: bold;
-        }
-      </style>`;
-    function render([html]) {
-      html.parentElement.querySelectorAll('.dialog-button').forEach((n) => {
+  const { DialogV2 } = foundry.applications.api;
+  const timeout = options?.timeout ?? configSettings.reactionTimeout ?? defaultTimeout;
+  let timeRemaining = timeout;
+  let second1TimeoutId: NodeJS.Timeout;
+  let timeoutId: NodeJS.Timeout;
+
+  const titleBase = `${i18n('CONTROLS.CommonSelect')} ${i18n('DOCUMENT.ActiveEffect')}`;
+  const targetContent = `<p style="text-align:center"><b>${i18n('EFFECT.StatusTarget')}: [</b>${[...targets].map((t) => t.name)}<b>]</b></p>`;
+
+  const buttons = effects.map(effect => ({
+    action: effect.uuid,
+    label: effect.name,
+    callback: () => effect,
+  }));
+
+  const chosenEffect = await DialogV2.wait({
+    window: { title: `${titleBase}: ${timeRemaining}s` },
+    classes: ["midi-qol-choose-effect"],
+    position: { width: 220 },
+    content: targetContent,
+    buttons,
+    render: (_event, dialog) => {
+      dialog.element.querySelectorAll<HTMLButtonElement>(".form-footer button").forEach((btn) => {
+        const eff = fromUuidSync(btn.dataset.action ?? "") as ActiveEffect;
+        if (!eff) return;
         const img = document.createElement('img');
-        const eff = fromUuidSync(n.dataset.button) as ActiveEffect;
         img.src = eff.img as string;
-        const effNameSpan = document.createElement('span');
-        effNameSpan.textContent = eff.name;
-        n.innerHTML = '';
-        n.appendChild(img);
-        n.appendChild(effNameSpan);
-        n.dataset.tooltip = eff.name;
+        const span = btn.querySelector("span");
+        if (span) span.dataset.tooltip = eff.name;
+        btn.prepend(img);
       });
-    }
-    let buttons = {};
-    for (let effect of effects) {
-      buttons[effect.uuid] = {
-        label: effect.name,
-        callback: callback.bind(effect),
+      // Start countdown timer
+      const titleEl = dialog.element.querySelector(".window-title");
+      const set1SecondTimeout = function () {
+        second1TimeoutId = setTimeout(() => {
+          if (!timeoutId) return;
+          timeRemaining -= 1;
+          if (titleEl) titleEl.textContent = `${titleBase}: ${timeRemaining}s`;
+          if (timeRemaining > 0) set1SecondTimeout();
+        }, 1000);
       };
-    }
-    let timeout = options?.timeout ?? configSettings.reactionTimeout ?? defaultTimeout;
-    timeRemaining = timeout;
-    //@ts-expect-error game.system.applications
-    const Mixin = game.system?.applications.DialogMixin(foundry.appv1.api.Dialog);
-    const dialogOptions = {
-      classes: ['dnd5e2', 'effectNoTarget', 'dialog'],
-      width: 220,
-      height: 'auto',
-    };
-    const data = {
-      title: `${i18n('CONTROLS.CommonSelect')} ${i18n(
-        'DOCUMENT.ActiveEffect'
-      )}: ${timeRemaining}s`,
-      content: `<center><b>${i18n('EFFECT.StatusTarget')}: [</b>${[
-        ...targets,
-      ].map((t) => t.name)}<b>]</b></center> ${style}`,
-      buttons,
-      render,
-    };
-
-    let dialog = new Mixin(data, dialogOptions);
-    dialog.render(true);
-    const set1SecondTimeout = function () {
-      second1TimeoutId = setTimeout(() => {
-        if (!timeoutId) return;
-        timeRemaining -= 1;
-        dialog.data.title = `${i18n('CONTROLS.CommonSelect')} ${i18n(
-          'DOCUMENT.ActiveEffect'
-        )}: ${timeRemaining}s`;
-        const title = dialog.element[0]?.querySelector(".window-title");
-        if (title) title.textContent = dialog.data.title;
-        if (timeRemaining > 0) set1SecondTimeout();
-      }, 1000);
-    };
-    let timeoutId = setTimeout(() => {
-      if (debugEnabled > 0) warn(`chooseEffect | timeout fired closing dialog`);
+      timeoutId = setTimeout(() => {
+        if (debugEnabled > 0) warn(`chooseEffect | timeout fired closing dialog`);
+        clearTimeout(second1TimeoutId);
+        dialog.close();
+      }, timeout * 1000);
+      set1SecondTimeout();
+    },
+    close: () => {
+      clearTimeout(timeoutId);
       clearTimeout(second1TimeoutId);
-      dialog.close();
-      reject('timeout');
-    }, timeout * 1000);
-    set1SecondTimeout();
+    },
   });
-  return await returnValue;
+
+  if (!chosenEffect || !(chosenEffect instanceof ActiveEffect)) return false;
+
+  const effectData = chosenEffect.toObject();
+  effectData.origin = item.uuid;
+  foundry.utils.setProperty(effectData, "flags.dae.dontApply", false);
+  const applyItem = item.clone({ effects: [effectData] }, { keepId: true })
+  await globalThis.DAE.doEffects(
+    applyItem, true, targets, {
+    damageTotal: 0,
+    origin,
+    critical: false,
+    fumble: false,
+    itemCardUuid: "",
+    metaData: {},
+    selfEffects: "none",
+    // @ts-expect-error no dnd5e-types
+    spellLevel: (workflow?.spellLevel ?? applyItem.level ?? 0),
+    toggleEffect: workflow?.activity.midiProperties?.toggleEffect,
+    tokenUuid: token.document.uuid,
+    actorUuid: actor.uuid,
+    whisper: false,
+    workflowOptions: workflow?.workflowOptions,
+    context: {
+    }
+  });
+  if (chosenEffect.toObject()) {
+    if (debugEnabled)
+      warn(
+        `chooseEffect | applying effect ${chosenEffect.name} to ${targets.size} targets`,
+        targets
+      );
+  }
+  return chosenEffect;
 }
 
 export function canSee(tokenEntity: TokenOrDocument, targetEntity: TokenOrDocument) {
@@ -7652,12 +8884,6 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
   return { deleted: actorEffectsToDelete, disabled: effectsToDisable, itemEffects: effectsToDelete };
 }
 
-export function blankOrUndefinedDamageType(s: string | undefined): string {
-  if (!s) return "none";
-  if (s === "") return "none";
-  return s;
-}
-
 export function processConcentrationRequestMessage(message: ChatMessage.Implementation, html: HTMLElement, data) {
   if (configSettings.doConcentrationCheck !== "chat") return;
   let elt = html.querySelectorAll<HTMLElement>("[data-action=concentration]");
@@ -7816,12 +9042,6 @@ export function getActivityDefaultDamageType(workflow: Workflow): string {
   if (workflow.defaultDamageType) defaultDamageType = workflow.defaultDamageType;
   if (!defaultDamageType) defaultDamageType = MidiQOL.MQdefaultDamageType;
   return defaultDamageType;
-}
-
-export function getDefaultDamageType(item: Item.Implementation): string {
-  // @ts-expect-error no dnd5e-types
-  const activity = item.system.activities.get("dnd5eactivity000");
-  return activity?.damage?.parts[0]?.types.first() ?? MidiQOL.MQdefaultDamageType;
 }
 
 export function activityHasAreaTarget(activity?: Activity): boolean {
@@ -8002,12 +9222,11 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
   let minDist = targetDetails.template.size;
   const targetIds: string[] = [];
   const maxTargets = targetDetails.affects?.count;
-  // ignoreToken set to null if special target include "self" - otherwise set to token
   // TODO (Michael): HERE! RIGHT HERE!
-  let ignoreToken = (targetDetails.affects.special ?? "").split(";").some(spec => ["self", "-self"].includes(spec)) ? null : tokenToUse;
-  if ((targetDetails.affects.special ?? "").split(";").some(spec => ["self"].includes(spec))) {
+  let ignoreToken = (targetDetails.affects.special ?? "").split(";").some(spec => ["-self"].includes(spec)) ? tokenToUse : null;
+  if ((targetDetails.affects.special ?? "").split(";").some(spec => "self" === spec)) {
     foundry.utils.logCompatibilityWarning("midi-qol | target specials includes 'self'. Use '-self' to exclude the caster",
-      { since: "midi-qol 13.0.19", until: "31.1.0" });
+      { since: "midi-qol 13.0.19", until: "13.1.0" });
   }
   if (canvas.tokens?.placeables && canvas.grid) {
     const canvasTokens = canvas.tokens?.placeables;
@@ -8029,7 +9248,7 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
         if (ignoreToken?.document.uuid === target.document.uuid) {
           inRange = false;
         }
-        const distance = computeDistance(target, tokenToUse, { wallsBlock });
+        const distance = getDistance(target, tokenToUse, { wallsBlock });
         inRange = inRange && distance >= 0 && distance <= Number(minDist);
       }
       if (inRange) {
@@ -8054,9 +9273,65 @@ function getCPREffect(id: string): ActiveEffect.Implementation | undefined {
   return cprItem?.effects.get(id) as ActiveEffect;
 }
 
+// --- Target save/restore ---
+
 export function updateUserTargets(targetIds: string[]) {
   // @ts-expect-error not in v13 yet
   canvas.tokens?.setTargets(targetIds);
+}
+
+/**
+ * Module-level target save/restore for self-target workflows only.
+ * - pushTargetSave(): captures targets when depth goes from 0→1
+ * - popTargetSave(): restores targets when depth goes from 1→0
+ * - clearTargetSave(): discards saved state (called when non-self-target
+ *   workflow starts, or when user manually retargets)
+ *
+ * User-initiated retargeting is detected via libWrapper patches on
+ * Token._onClickLeft, Token._onClickRight2, and TokenLayer.selectObjects
+ * (registered in patching.ts). These set _userInitiatedTarget = true before
+ * the wrapped call, and the targetToken hook checks this flag.
+ */
+let _savedTargetIds: string[] | null = null;
+let _targetSaveDepth = 0;
+
+/** Set by libWrapper patches in patching.ts around user-initiated targeting actions. */
+export let _userInitiatedTarget = false;
+export function setUserInitiatedTarget(value: boolean) { _userInitiatedTarget = value; }
+
+export function pushTargetSave() {
+  if (_targetSaveDepth === 0) {
+    _savedTargetIds = Array.from(game.user?.targets ?? []).map(t => t.id);
+  }
+  _targetSaveDepth++;
+
+}
+
+export function popTargetSave() {
+  _targetSaveDepth--;
+  const willRestore = _targetSaveDepth <= 0 && _savedTargetIds !== null;
+
+  if (willRestore) {
+    updateUserTargets(_savedTargetIds!);
+    _savedTargetIds = null;
+    _targetSaveDepth = 0;
+  }
+}
+
+export function clearTargetSave() {
+
+  _savedTargetIds = null;
+  _targetSaveDepth = 0;
+}
+
+/**
+ * Called from the targetToken hook. If the user manually changed targets
+ * (via click/right-click/box-select), discard any pending self-target save.
+ */
+export function onUserManualTarget(user: User) {
+  if (user === game.user && _userInitiatedTarget) {
+    clearTargetSave();
+  }
 }
 
 export async function cleanCPRFlanked() {
@@ -8081,16 +9356,28 @@ export async function cleanCPRFlanked() {
   }
   cprEffect = getCPREffect(flankedId);
 }
-function getItemFromEffectOrigin(origin: string, alreadyVisited: string[] = []): Item.Implementation | undefined {
+export function getItemFromEffectOrigin(origin: string, alreadyVisited: string[] = []): Item.Implementation | undefined {
   let originItem: Item.Implementation | undefined;
   if (alreadyVisited.includes(origin)) return;
   const originEffectOrItem = fromUuidSync(origin) as ActiveEffect.Implementation | Item.Implementation | undefined;
   if (originEffectOrItem instanceof Item) return originEffectOrItem;
-  if (originEffectOrItem?.origin) {
-    if (originEffectOrItem.parent instanceof Item) {
-      originItem = originEffectOrItem.parent;
-    } else originItem = getItemFromEffectOrigin(originEffectOrItem.origin, [...alreadyVisited, origin]);
+  if (originEffectOrItem?.parent instanceof Item) {
+    originItem = originEffectOrItem.parent;
+  } else if (originEffectOrItem?.origin) {
+    originItem = getItemFromEffectOrigin(originEffectOrItem.origin, [...alreadyVisited, origin]);
     // recursive so @michael can feel fancy
+  }
+  // Fallback: if we couldn't resolve to an Item (e.g. grandchild embedded docs on synthetic actors),
+  // try stripping the ActiveEffect segment to resolve the parent Item directly
+  if (!originItem && origin.includes(".ActiveEffect.")) {
+    const itemUuid = origin.replace(/\.ActiveEffect\.[^.]+$/, "");
+    let item = fromUuidSync(itemUuid);
+    // If the UUID contains .Actor. segment (synthetic token), try without it
+    if (!(item instanceof Item) && itemUuid.includes(".Actor.")) {
+      const withoutActor = itemUuid.replace(/\.Actor\.[^.]+/, "");
+      item = fromUuidSync(withoutActor);
+    }
+    if (item instanceof Item) originItem = item;
   }
   return originItem;
 }

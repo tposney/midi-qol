@@ -1,0 +1,500 @@
+{
+  "name": "Spirit Guardians",
+  "type": "spell",
+  "img": "icons/magic/light/orb-hands-humanoid-yellow.webp",
+  "effects": [
+    {
+      "_id": "sgGuardiansEff00",
+      "changes": [
+        {
+          "key": "macro.itemMacro",
+          "mode": 0,
+          "value": "",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "transfer": false,
+      "flags": {
+        "dae": {
+          "stackable": "none",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "transfer": false,
+          "dontApply": false,
+          "selfTarget": true,
+          "selfTargetAlways": true,
+          "showIcon": true
+        }
+      },
+      "tint": "#ffffff",
+      "name": "Spirit Guardians",
+      "description": "<p>Enemies within 15 feet have their speed halved and must save against Radiant or Necrotic damage at the start of each turn and when entering the emanation.</p>",
+      "statuses": [],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/light/orb-hands-humanoid-yellow.webp",
+      "type": "auraeffects.aura",
+      "system": {
+        "distanceFormula": "15",
+        "disposition": -1,
+        "applyToSelf": true,
+        "collisionTypes": [
+          "move"
+        ],
+        "canStack": false,
+        "combatOnly": false,
+        "disableOnHidden": true
+      },
+      "sort": 0,
+      "_key": "!items.effects!cQRmwQcPULIjCach.sgGuardiansEff00"
+    },
+    {
+      "_id": "sgGuardiansDmg00",
+      "changes": [
+        {
+          "key": "flags.midi-qol.guardiansDamage",
+          "mode": 5,
+          "value": "1",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": null,
+        "turns": 1,
+        "startRound": null,
+        "startTurn": null
+      },
+      "transfer": false,
+      "flags": {
+        "dae": {
+          "stackable": "none",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "transfer": false,
+          "dontApply": false,
+          "showIcon": false
+        }
+      },
+      "tint": "#ffffff",
+      "name": "Guardians Damage",
+      "description": "<p>This creature has already been damaged by Spirit Guardians this turn.</p>",
+      "statuses": [],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/light/orb-hands-humanoid-yellow.webp",
+      "type": "base",
+      "system": {},
+      "sort": 100,
+      "_key": "!items.effects!cQRmwQcPULIjCach.sgGuardiansDmg00"
+    }
+  ],
+  "flags": {
+    "midiProperties": {
+      "magicdam": true,
+      "magiceffect": true,
+      "concentration": true,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "dae": {
+      "macro": {
+        "name": "Spirit Guardians",
+        "img": "icons/magic/light/orb-hands-humanoid-yellow.webp",
+        "type": "script",
+        "scope": "global",
+        "command": "const version = \"13.0.52\";\ntry {\n    const lastArg = args[args.length - 1];\n    if (args[0] !== \"on\") return;\n    const effect = actor.effects.get(lastArg.effectId);\n    if (!effect) return;\n    // Source aura on the caster — nothing to do\n    if (!effect.flags?.auraeffects?.fromAura) return;\n    // Aura copy on another token — check disposition\n    const caster = macroItem?.parent;\n    const casterToken = caster?.getActiveTokens(false, true)?.[0];\n    const targetToken = canvas.tokens.get(lastArg.tokenId);\n    if (!targetToken || !casterToken) return;\n    if (targetToken.document.disposition === casterToken.disposition) return;\n    // Read cast level from effect flags (set by midi-qol when applying effects)\n    const castLevel = effect.flags?.[\"midi-qol\"]?.castData?.castLevel ?? macroItem.system.level;\n    const baseLevel = macroItem.system.level;\n    // Create dependent effect for movement reduction and overtime\n    await actor.createEmbeddedDocuments(\"ActiveEffect\", [{\n        name: \"Spirit Guardians\",\n        img: macroItem.img,\n        origin: macroItem.uuid,\n        changes: [\n            { key: \"system.attributes.movement.all\", mode: 0, value: \"/2\", priority: 20 },\n            { key: \"flags.midi-qol.ActivityOverTime\", mode: 5, value: \"guardiansDamage\", priority: 20 }\n        ],\n        flags: {\n            dnd5e: { dependentOn: effect.uuid },\n            \"midi-qol\": { castData: { castLevel, baseLevel } },\n            dae: { showIcon: false, stackable: \"none\", macroRepeat: \"none\" }\n        }\n    }]);\n    // Trigger immediate save — midiOptions.spellLevel handled by _prepareUsageScaling override\n    const saveActivity = macroItem?.system?.activities?.find(a => a.identifier === \"guardiansDamage\");\n    if (!saveActivity) return;\n    await MidiQOL.completeActivityUse(saveActivity, {midiOptions: {spellLevel: castLevel, noUseWarning: true, targetUuids: [targetToken.document.uuid]}});\n} catch (err) {\n    console.error(`Spirit Guardians ${version}`, err);\n}",
+        "author": "Zl1BOUaPLwDEujaL",
+        "ownership": {
+          "default": 3
+        },
+        "_id": null,
+        "folder": null,
+        "sort": 0,
+        "flags": {},
+        "_stats": {
+          "coreVersion": null,
+          "systemId": null,
+          "systemVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null,
+          "compendiumSource": null,
+          "duplicateSource": null
+        }
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.52"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>Protective spirits flit around you in a 15-foot Emanation for the duration. If you are good or neutral, their spectral form appears angelic or fey (your choice). If you are evil, they appear fiendish.</p><p>When you cast this spell, you can designate creatures to be unaffected by it. Any other creature's Speed is halved in the Emanation, and whenever the Emanation enters a creature's space and whenever a creature enters the Emanation or ends its turn there, the creature must make a Wisdom saving throw. On a failed save, the creature takes 3d8 Radiant damage (if you are good or neutral) or 3d8 Necrotic damage (if you are evil). On a successful save, the creature takes half as much damage. A creature makes this save only once per turn.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d8 for each spell slot level above 3.</p><p><strong>midi-qol</strong>: Requires <strong>Aura Effects</strong> module and an <strong>active combat</strong>. The Cast activity applies the Spirit Guardians aura effect to the caster (<code>selfTargetAlways</code>). Aura Effects spreads copies to enemies within 15 feet. The <code>on</code> macro creates a dependent effect on each enemy with speed halved and <code>ActivityOverTime</code> (Emanation Save at start of turn). The macro also immediately triggers the Emanation Save when the aura copy first applies (entering the emanation). Spell scaling supported (+1d8 per slot above 3). Concentration removal ends all effects.</p>",
+      "chat": "<p>Protective spirits flit around you in a 15-foot Emanation for the duration. If you are good or neutral, their spectral form appears angelic or fey (your choice). If you are evil, they appear fiendish.</p><p>When you cast this spell, you can designate creatures to be unaffected by it. Any other creature's Speed is halved in the Emanation, and whenever the Emanation enters a creature's space and whenever a creature enters the Emanation or ends its turn there, the creature must make a Wisdom saving throw. On a failed save, the creature takes 3d8 Radiant damage (if you are good or neutral) or 3d8 Necrotic damage (if you are evil). On a successful save, the creature takes half as much damage. A creature makes this save only once per turn.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d8 for each spell slot level above 3.</p>"
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
+    },
+    "activation": {
+      "type": "action",
+      "condition": "",
+      "value": 1
+    },
+    "duration": {
+      "value": "10",
+      "units": "minute"
+    },
+    "target": {
+      "affects": {
+        "type": "self",
+        "count": "",
+        "choice": false,
+        "special": ""
+      },
+      "template": {
+        "units": "",
+        "contiguous": false,
+        "type": ""
+      }
+    },
+    "range": {
+      "units": "self",
+      "special": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "ability": "",
+    "level": 3,
+    "school": "con",
+    "materials": {
+      "value": "a prayer scroll",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "preparation": {
+      "mode": "prepared",
+      "prepared": false
+    },
+    "properties": [
+      "vocal",
+      "somatic",
+      "material",
+      "concentration"
+    ],
+    "activities": {
+      "dnd5eactivity000": {
+        "_id": "dnd5eactivity000",
+        "type": "utility",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": true,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "sgGuardiansEff00"
+          }
+        ],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "name": "",
+        "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      },
+      "sgEmanationSave0": {
+        "_id": "sgEmanationSave0",
+        "type": "save",
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": true,
+          "condition": ""
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": true,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": true
+        },
+        "effects": [
+          {
+            "_id": "sgGuardiansDmg00"
+          }
+        ],
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": true
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "type": "",
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false,
+            "special": ""
+          },
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "damage": {
+          "onSave": "half",
+          "parts": [
+            {
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "number": 3,
+              "denomination": 8,
+              "bonus": "",
+              "types": [
+                "radiant"
+              ],
+              "scaling": {
+                "mode": "whole",
+                "number": 1,
+                "formula": ""
+              }
+            }
+          ]
+        },
+        "save": {
+          "ability": [
+            "wis"
+          ],
+          "dc": {
+            "calculation": "spellcasting",
+            "formula": ""
+          }
+        },
+        "name": "Guardian's Damage",
+        "sort": 200,
+        "useConditionText": "target.flags[\"midi-qol\"].guardiansDamage !== 1",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "forceConsumeDialog": "never",
+          "confirmTargets": "never",
+          "automationOnly": true,
+          "identifier": "guardiansDamage",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": true,
+        "overTimeProperties": {
+          "turnChoice": "start",
+          "saveRemoves": false,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    },
+    "identifier": "spirit-guardians",
+    "sourceClass": ""
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "folder": "SpellFldr3rdLevl",
+  "_id": "cQRmwQcPULIjCach",
+  "sort": 800000,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!cQRmwQcPULIjCach"
+}

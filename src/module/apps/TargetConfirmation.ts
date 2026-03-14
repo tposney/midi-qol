@@ -1,7 +1,7 @@
 import { Activity } from "../../globals.js";
 import { i18n, error, i18nFormat } from "../../midi-qol.js";
 import { checkMechanic, checkRule, configSettings, targetConfirmation } from "../settings.js";
-import { FULL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, computeCoverBonus, computeFlankingStatus, getToken, isInCombat, isValidTarget, markFlanking, tokenForActor, updateUserTargets, getTokenName } from "../utils.js";
+import { TOTAL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, getCoverBonus, computeFlankingStatus, getToken, isInCombat, isValidTarget, markFlanking, tokenForActor, updateUserTargets, getTokenName } from "../utils.js";
 import { shouldEnforceSingleTarget } from "../activities/activityHelpers.js";
 import { getTokenPlayerName } from "../utils.js";
 import { TroubleShooter } from "./TroubleShooter.js";
@@ -44,6 +44,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       foundry.utils.setProperty(options, "workflowOptions.fastForward", options.workflowOptions?.fastForward);
       return options.callback ? options.callback(value) : value;
     }
+    // Make sure the current targets respect the targeting rules of the activity
+    this.validateAndUpdateTargets();
+ 
     if (["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(checkRule("checkFlanking") as string) && game.user?.targets) {
       const actor = this.data.activity.actor;
       const token = tokenForActor(actor);
@@ -54,18 +57,19 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     // this.callback = options.callback;
     this.hookId = Hooks.on("targetToken", (user, token, targeted) => {
       if (user !== game.user) return;
+      if (game.user.targets) {
+        this.validateAndUpdateTargets();
+      }
+      // Validate max number of targets after target validation, so that invalid targets can be removed without triggering a warning
       if (this.data.maxTargets && game.user.targets?.size > this.data.maxTargets)
         ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets: this.data.maxTargets }));
-      if (game.user.targets) {
-        const validTargets: Array<string> = [];
-        for (let target of game.user.targets) {
-          // if (maxTargets && validTargets.length >= maxTargets) break;
-          if (isValidTarget(target)) validTargets.push(target.id);
-        }
-        updateUserTargets(validTargets);
+
+      const newTargets = Array.from(game.user.targets ?? []);
+      // Do not re-render if the targets have not changed
+      if (!newTargets.equals(this.data.targets ?? [])) {
+        this.data.targets = newTargets;
+        this.render();
       }
-      this.data.targets = Array.from(game.user.targets ?? []);
-      this.render();
     });
     return this;
   }
@@ -126,6 +130,33 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     }
   };
 
+  validateAndUpdateTargets() {
+    const targets = Array.from(game.user?.targets ?? []);
+    const actor = this.data.activity.actor;
+    const attackerToken = tokenForActor(actor);
+    let validTargets: Array<string> = [];
+    for (let target of targets) {
+      // Skip invalid targets
+      if (!isValidTarget(target)) continue;
+
+      // Skip targets that are excluded by workflow options (if present)
+      if (this.data.options?.workflowOptions?.excludeTargets && this.data.options.workflowOptions.excludeTargets?.includes(target.document.uuid)) continue;
+
+      // Skip targets that do not match the activity's target type
+      switch (this.data.activity.target?.affects?.type ?? "any") {
+        case "enemy":
+          if ((attackerToken?.document?.disposition ?? 1) * target.document.disposition >= 0) continue;
+          break;
+        case "ally":
+          if ((attackerToken?.document?.disposition ?? 1) * target.document.disposition < 0) continue;
+          break;
+        default: break;
+      }
+      validTargets.push(target.id);
+    }
+    updateUserTargets(validTargets);
+  }
+
   async _prepareContext(options: ApplicationV2.RenderOptions) {
     let context: Omit<typeof this.data, 'targets'> & ApplicationV2.RenderContext & {
       blurb?: string;
@@ -150,15 +181,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     const token = tokenForActor(actor);
     for (let target of targets) {
       // if (maxTargets && data.targets.length >= maxTargets) break;
-      switch (this.data.activity.target?.affects?.type ?? "any") {
-        case "enemy":
-          if ((token?.document?.disposition ?? 1) * target.document.disposition >= 0) continue;
-          break;
-        case "ally":
-          if ((token?.document?.disposition ?? 1) * target.document.disposition < 0) continue;
-          break;
-        default: break;
-      }
+
+      // Note: no need to revaldiate targets, they are filtered before first render and each time token selection changes
+
       let img = target.document.texture.src as string;
       if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
         img = await game.video?.createThumbnail(img as string, { width: 50, height: 50 }) ?? "";
@@ -170,7 +195,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       }
 
       let attackerToken = token;
-      if (token && checkMechanic("checkRange") !== "none" && (["mwak", "msak", "mpak", "rwak", "rsak", "rpak", "utility", "check", "save", "damage"].includes(this.data.activity.actionType))) {
+      if (token && checkMechanic("checkRange") !== "none" && (["mwak", "msak", "rwak", "rsak", "utility", "check", "save", "damage"].includes(this.data.activity.actionType))) {
         const { result, attackingToken } = checkActivityRange(this.data.activity, token, new Set([target]), false);
         if (attackingToken) attackerToken = attackingToken;
         switch (result) {
@@ -185,10 +210,11 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
             break;
         }
       }
-      // TODO look at doing save cover bonus calculations here - need the template
-      if (typeof configSettings.optionalRules.coverCalculation === "string" && configSettings.optionalRules.coverCalculation !== "none") {
-        if (!activityHasAreaTarget(this.data.activity)) {
-          const targetCover = attackerToken ? computeCoverBonus(attackerToken, target, this.data.activity) : 0;
+      // Cover display: always check status-based cover (coverTotal etc.); only show "No Cover" when a cover module is configured
+      if (!activityHasAreaTarget(this.data.activity)) {
+        const hasCoverModule = typeof configSettings.optionalRules.coverCalculation === "string" && configSettings.optionalRules.coverCalculation !== "none";
+        const targetCover = attackerToken ? getCoverBonus(attackerToken, target, this.data.activity) : 0;
+        if (targetCover > 0 || hasCoverModule) {
           switch (targetCover) {
             case HALF_COVER:
               details.push(`${i18n("DND5E.CoverHalf")} ${i18n("DND5E.Cover")}`);
@@ -196,11 +222,14 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
             case THREE_QUARTERS_COVER:
               details.push(`${i18n("DND5E.CoverThreeQuarters")} ${i18n("DND5E.Cover")}`);
               break;
-            case FULL_COVER:
+            case TOTAL_COVER:
               details.push(`${i18n("DND5E.CoverTotal")} ${i18n("DND5E.Cover")}`);
               break;
-            default:
+            case 0:
               details.push(`${i18n("No")} ${i18n("DND5E.Cover")}`);
+              break;
+            default:
+              details.push(`+${targetCover} ${i18n("DND5E.Cover")}`);
               break;
           }
         }

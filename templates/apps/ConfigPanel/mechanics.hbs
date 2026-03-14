@@ -102,14 +102,38 @@
   </div>
   <div class="midi-qol-box">
     <div class="form-group">
-      <label>{{localize "midi-qol.GridlessFudge.Name"}}</label>
-      <input type="number" step="0.1" name="gridlessFudge" value="{{configSettings.gridlessFudge}}" />
+      <label>{{localize "midi-qol.DistanceMeasurement.Name"}}</label>
+      <select name="optionalRules.distanceMeasurement" data-dtype="String">
+        {{selectOptions distanceMeasurementOptions selected=configSettings.optionalRules.distanceMeasurement localize=true}}
+      </select>
+      <div class="notes midi-qol-faint">{{localize "midi-qol.DistanceMeasurement.Hint"}}</div>
     </div>
-    <div class="notes midi-qol-faint">{{localize "midi-qol.GridlessFudge.Hint"}}</div>
     <div class="form-group">
       <label>{{localize "midi-qol.GriddedGridless.Name"}}</label>
       <input type="checkbox" name="griddedGridless" data-dtype="Boolean" {{checked configSettings.griddedGridless}} />
       <div class="notes midi-qol-faint">{{localize "midi-qol.GriddedGridless.Hint"}}</div>
+    </div>
+    <div class="form-group">
+      <label>{{localize "midi-qol.GridlessFudge.Name"}}</label>
+      <input type="number" step="0.1" name="gridlessFudge" value="{{configSettings.gridlessFudge}}" />
+      <div class="notes midi-qol-faint">{{localize "midi-qol.GridlessFudge.Hint"}}</div>
+    </div>
+    <div class="form-group">
+      <label>{{localize "midi-qol.DistanceIncludesHeight.Name"}}</label>
+      <input type="checkbox" name="optionalRules.distanceIncludesHeight" data-dtype="Boolean" {{checked
+        configSettings.optionalRules.distanceIncludesHeight}} />
+    </div>
+    <div class="form-group">
+      <label>{{{localize "midi-qol.ConstrainTemplatePlacement.Name"}}}</label>
+      <input type="checkbox" name="constrainTemplatePlacement" data-dtype="Boolean" {{checked configSettings.constrainTemplatePlacement}} />
+      <div class="notes midi-qol-faint">{{{localize "midi-qol.ConstrainTemplatePlacement.Hint"}}}</div>
+    </div>
+    <div class="form-group">
+      <label>{{{localize "midi-qol.TemplateSnapping.Name"}}}</label>
+      <select name="templateSnapping" data-dtype="String">
+        {{selectOptions templateSnappingOptions selected=configSettings.templateSnapping}}
+      </select>
+      <div class="notes midi-qol-faint">{{{localize "midi-qol.TemplateSnapping.Hint"}}}</div>
     </div>
   </div>
 

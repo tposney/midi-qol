@@ -3,7 +3,7 @@
  */
 
 import { RollDialogConfig, RollProcessConfig } from "../../globals.js";
-import { GameSystemConfig, i18n } from "../../midi-qol.js";
+import { GameSystemConfig, i18n, i18nFormat } from "../../midi-qol.js";
 import { createConditionData, evalAllConditions, evalAllConditionsAsync, tokenForActor, MidiOptions } from "../utils.js";
 
 /** Attribution types for roll modifier tracking */
@@ -49,8 +49,6 @@ export interface AdvantageFlags {
   sourceDisadvantageFlags?: string[];
   sourceNoAdvantageFlags?: string[];
   sourceNoDisadvantageFlags?: string[];
-  // Track deprecated flags for warning generation
-  deprecatedFlags?: Set<string>;
 }
 
 // Helper to get flag path with midi-qol prefix
@@ -58,19 +56,6 @@ function midiFlag(flag: string): string {
   return `flags.midi-qol.${flag}`;
 }
 
-// Helper to emit deprecation warning for deprecated midi-qol flags
-function emitDeprecatedFlagWarning(flag: string): void {
-  const newFlag = flag
-    .replace("advantage.ability.save.", "advantage.save.")
-    .replace("advantage.ability.check.", "advantage.check.")
-    .replace("disadvantage.ability.save.", "disadvantage.save.")
-    .replace("disadvantage.ability.check.", "disadvantage.check.");
-
-  foundry.utils.logCompatibilityWarning(
-    `midi-qol | The flag "flags.midi-qol.${flag}" is deprecated. Use "flags.midi-qol.${newFlag}" instead.`,
-    { since: "13.0.38", until: "14", once: true }
-  );
-}
 
 // Helper to resolve a short key (e.g., "mwak", "str", "acr") to a human-readable label
 function resolveKeyLabel(key: string): string {
@@ -114,7 +99,7 @@ export function getFlagDisplayName(flag: string): string {
     const prefixResult = game.i18n.localize(prefixKey);
     if (prefixResult !== prefixKey) {
       const label = resolveKeyLabel(lastElement);
-      return game.i18n.format(prefixKey, { label });
+      return i18nFormat(prefixKey, { label });
     }
   }
 
@@ -741,9 +726,14 @@ export async function computeAdvantageFlags(
     tracker.disadvantage.add("options", "Options");
   }
 
+  // The opposing entity that grants advantage/disadvantage.
+  // For attacks: the defender. For saves: the caster. Falls back to actor's own token.
+  const grantsActor = options.grantsActor ?? options.workflow?.actor;
+  const grantsToken = options.grantsToken ?? (grantsActor ? tokenForActor(grantsActor) : undefined);
+
   const conditionData = createConditionData({
     workflow: options.workflow,
-    target: tokenForActor(actor),
+    target: grantsToken ?? tokenForActor(actor),
     actor,
     item: options.item ?? options.itemUuid ?? options.saveItem ?? options.saveItemUuid
   });
@@ -751,9 +741,6 @@ export async function computeAdvantageFlags(
   // Check actor's advantage flags
   for (const flag of flags.advantageFlags) {
     if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-      if (flags.deprecatedFlags?.has(flag)) {
-        emitDeprecatedFlagWarning(flag);
-      }
       const source = flag.replace(/^advantage\./, '');
       tracker.advantage.add(source, getFlagDisplayName(flag));
       break;
@@ -763,9 +750,6 @@ export async function computeAdvantageFlags(
   // Check actor's disadvantage flags
   for (const flag of flags.disadvantageFlags) {
     if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-      if (flags.deprecatedFlags?.has(flag)) {
-        emitDeprecatedFlagWarning(flag);
-      }
       const source = flag.replace(/^disadvantage\./, '');
       tracker.disadvantage.add(source, getFlagDisplayName(flag));
       break;
@@ -773,8 +757,6 @@ export async function computeAdvantageFlags(
   }
 
   // Check source actor grants flags
-  const sourceActor = options.sourceActor ?? options.workflow?.actor;
-  const sourceToken = options.sourceToken ?? (sourceActor ? tokenForActor(sourceActor) : undefined);
 
   // Check actor's noAdvantage flags
   if (flags.noAdvantageFlags?.length) {
@@ -796,21 +778,21 @@ export async function computeAdvantageFlags(
     }
   }
 
-  if (sourceActor) {
-    const sourceConditionData = createConditionData({
+  if (grantsActor) {
+    const grantsConditionData = createConditionData({
       workflow: options.workflow,
       target: tokenForActor(actor),
-      actor: sourceActor,
-      token: sourceToken,
+      actor: grantsActor,
+      token: grantsToken,
       item: options.item ?? options.itemUuid ?? options.saveItem ?? options.saveItemUuid
     });
 
-    const sourceName = sourceToken?.name ?? sourceActor.name ?? "";
+    const grantsName = grantsToken?.name ?? grantsActor.name ?? "";
 
     if (flags.sourceAdvantageFlags?.length) {
       for (const flag of flags.sourceAdvantageFlags) {
-        if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.advantage.add(`${flag} ${sourceName}`, `${getFlagDisplayName(flag)} (${sourceName})`);
+        if (await evalAllConditionsAsync(grantsActor, midiFlag(flag), grantsConditionData, false)) {
+          tracker.advantage.add(`${flag} ${grantsName}`, `${getFlagDisplayName(flag)} (${grantsName})`);
           break;
         }
       }
@@ -818,8 +800,8 @@ export async function computeAdvantageFlags(
 
     if (flags.sourceDisadvantageFlags?.length) {
       for (const flag of flags.sourceDisadvantageFlags) {
-        if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.disadvantage.add(`${flag} ${sourceName}`, `${getFlagDisplayName(flag)} (${sourceName})`);
+        if (await evalAllConditionsAsync(grantsActor, midiFlag(flag), grantsConditionData, false)) {
+          tracker.disadvantage.add(`${flag} ${grantsName}`, `${getFlagDisplayName(flag)} (${grantsName})`);
           break;
         }
       }
@@ -827,8 +809,8 @@ export async function computeAdvantageFlags(
 
     if (flags.sourceNoAdvantageFlags?.length) {
       for (const flag of flags.sourceNoAdvantageFlags) {
-        if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.advantage.suppress(`${flag} ${sourceName}`, `${getFlagDisplayName(flag)} (${sourceName})`);
+        if (await evalAllConditionsAsync(grantsActor, midiFlag(flag), grantsConditionData, false)) {
+          tracker.advantage.suppress(`${flag} ${grantsName}`, `${getFlagDisplayName(flag)} (${grantsName})`);
           break;
         }
       }
@@ -836,8 +818,8 @@ export async function computeAdvantageFlags(
 
     if (flags.sourceNoDisadvantageFlags?.length) {
       for (const flag of flags.sourceNoDisadvantageFlags) {
-        if (await evalAllConditionsAsync(sourceActor, midiFlag(flag), sourceConditionData, false)) {
-          tracker.disadvantage.suppress(`${flag} ${sourceName}`, `${getFlagDisplayName(flag)} (${sourceName})`);
+        if (await evalAllConditionsAsync(grantsActor, midiFlag(flag), grantsConditionData, false)) {
+          tracker.disadvantage.suppress(`${flag} ${grantsName}`, `${getFlagDisplayName(flag)} (${grantsName})`);
           break;
         }
       }
@@ -1035,11 +1017,11 @@ export async function computeTargetCriticalModifiers(
   targetName: string,
   flags: CriticalModifierFlags,
   tracker: RollModifierTracker,
-  options?: { workflow?: any, sourceActor?: Actor.Implementation }
+  options?: { workflow?: any, grantsActor?: Actor.Implementation }
 ): Promise<void> {
   const conditionData = createConditionData({
     workflow: options?.workflow,
-    actor: options?.sourceActor,
+    actor: options?.grantsActor,
     target: tokenForActor(targetActor)
   });
 

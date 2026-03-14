@@ -1,0 +1,247 @@
+{
+  "name": "Mass Heal",
+  "type": "spell",
+  "img": "icons/magic/life/heart-cross-strong-flame-green.webp",
+  "effects": [],
+  "flags": {
+    "midiProperties": {
+      "magicdam": false,
+      "magiceffect": true,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "[postActiveEffects]ItemMacro",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "itemacro": {
+      "macro": {
+        "name": "Mass Heal",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "// Mass Heal — apportion up to 700 HP of healing among targets\nconst totalPool = 700;\nconst targets = Array.from(workflow.targets);\nconst validTargets = targets.filter(t => {\n  const type = t.actor?.system?.details?.type?.value?.toLowerCase() ?? \"\";\n  return type !== \"undead\" && type !== \"construct\";\n});\nif (!validTargets.length) {\n  ui.notifications.warn(\"Mass Heal: No valid targets (undead and constructs are unaffected).\");\n  return;\n}\nconst data = validTargets.map((t, i) => {\n  const hp = t.actor.system.attributes.hp;\n  return { token: t, name: t.name, i, missing: Math.max(0, hp.max - hp.value), max: hp.max, current: hp.value };\n});\nlet formContent = `<p>Distribute up to <strong>${totalPool}</strong> HP of healing. Remaining: <strong><span id=\"mh-pool\">${totalPool}</span></strong></p>`;\nformContent += \"<table style='width:100%'><tr><th style='text-align:left'>Target</th><th>HP</th><th>Missing</th><th style='text-align:center'>Heal</th></tr>\";\nfor (const d of data) {\n  formContent += `<tr><td>${d.name}</td><td style='text-align:center'>${d.current}/${d.max}</td><td style='text-align:center'>${d.missing}</td>`;\n  formContent += `<td><span style='display:inline-flex;align-items:center;gap:4px;justify-content:center;width:100%'>`;\n  formContent += `<button type=\"button\" class=\"mh-adj\" data-idx=\"${d.i}\" data-dir=\"-1\" style=\"width:24px;height:24px;padding:0;line-height:24px;text-align:center;font-weight:bold;flex-shrink:0;\">&minus;</button>`;\n  formContent += `<input type=\"number\" name=\"h${d.i}\" value=\"${d.missing}\" min=\"0\" max=\"${d.missing}\" data-max=\"${d.missing}\" style=\"width:55px;text-align:center\">`;\n  formContent += `<button type=\"button\" class=\"mh-adj\" data-idx=\"${d.i}\" data-dir=\"1\" style=\"width:24px;height:24px;padding:0;line-height:24px;text-align:center;font-weight:bold;flex-shrink:0;\">+</button>`;\n  formContent += `</span></td></tr>`;\n}\nformContent += \"</table>\";\nconst { DialogV2 } = foundry.applications.api;\nconst formValues = await DialogV2.wait({\n  window: { title: \"Mass Heal\" },\n  content: formContent,\n  rejectClose: false,\n  render: (event, el) => {\n    const form = el.querySelector ? el : el.element;\n    const updatePool = () => {\n      let used = 0;\n      form.querySelectorAll('input[type=number]').forEach(inp => { used += parseInt(inp.value) || 0; });\n      const poolEl = form.querySelector('#mh-pool');\n      if (poolEl) poolEl.textContent = String(totalPool - used);\n    };\n    form.querySelectorAll('input[type=number]').forEach(inp => {\n      inp.addEventListener('change', () => {\n        const max = parseInt(inp.dataset.max) || 0;\n        inp.value = Math.max(0, Math.min(max, parseInt(inp.value) || 0));\n        updatePool();\n      });\n      inp.addEventListener('input', () => {\n        const max = parseInt(inp.dataset.max) || 0;\n        inp.value = Math.max(0, Math.min(max, parseInt(inp.value) || 0));\n        updatePool();\n      });\n    });\n    form.querySelectorAll('.mh-adj').forEach(btn => {\n      btn.addEventListener('click', (e) => {\n        e.preventDefault();\n        const idx = btn.dataset.idx;\n        const dir = parseInt(btn.dataset.dir);\n        const inp = form.querySelector(`[name=h${idx}]`);\n        const max = parseInt(inp.dataset.max) || 0;\n        inp.value = Math.max(0, Math.min(max, (parseInt(inp.value) || 0) + dir));\n        updatePool();\n      });\n    });\n    updatePool();\n  },\n  buttons: [\n    { action: \"heal\", label: \"Heal\", default: true, callback: (event, button, dialog) => {\n      const result = {};\n      const form = button.form;\n      form.querySelectorAll('input[type=number]').forEach(inp => { result[inp.name] = parseInt(inp.value) || 0; });\n      return result;\n    }},\n    { action: \"cancel\", label: \"Cancel\" }\n  ]\n});\nif (!formValues) return;\nlet pool = totalPool;\nconst targetDamages = [];\nfor (const d of data) {\n  let heal = Math.min(formValues[`h${d.i}`] || 0, d.missing, pool);\n  if (heal <= 0) continue;\n  pool -= heal;\n  targetDamages.push({token: d.token, damageDetail: [{value: heal, type: \"healing\", properties: new Set([\"mgc\"])}], totalDamage: -heal});\n  await d.token.actor.toggleStatusEffect(\"blinded\", { active: false });\n  await d.token.actor.toggleStatusEffect(\"deafened\", { active: false });\n}\nif (targetDamages.length) {\n  await MidiQOL.applyTokenDamageMany(targetDamages, workflow.item, {workflow, forceApply: true});\n}",
+        "sort": 0,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {},
+        "_stats": {
+          "systemId": null,
+          "systemVersion": null,
+          "coreVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null
+        },
+        "_id": null,
+        "folder": null
+      }
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>A flood of Healing energy flows from you into injured creatures around you. You restore up to 700 Hit Points, divided as you choose among any number of creatures that you can see within range. Creatures healed by this spell are also cured of all Diseases and any effect making them Blinded or Deafened. This spell has no effect on Undead or constructs.</p>\n<p><strong>midi-qol</strong>: Select targets and confirm. A dialog appears to apportion the 700 HP healing pool among selected targets (pre-filled with each target's missing HP, with +/- buttons). Uses <code>applyTokenDamageMany</code> to produce a single reversible damage card for all healed targets. Automatically removes blinded and deafened conditions. Undead and constructs are filtered out.</p>",
+      "chat": "<p>A flood of Healing energy flows from you into injured creatures around you. You restore up to 700 Hit Points, divided as you choose among any number of creatures that you can see within range. Creatures healed by this spell are also cured of all Diseases and any effect making them Blinded or Deafened. This spell has no effect on Undead or constructs.</p>"
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2014"
+    },
+    "activation": {
+      "type": "action",
+      "condition": "",
+      "value": 1
+    },
+    "duration": {
+      "value": "",
+      "units": "inst"
+    },
+    "target": {
+      "affects": {
+        "type": "ally",
+        "count": "",
+        "choice": false,
+        "special": ""
+      },
+      "template": {
+        "units": "ft",
+        "contiguous": false,
+        "type": "radius",
+        "size": "60"
+      }
+    },
+    "range": {
+      "units": "self",
+      "special": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "ability": "",
+    "level": 9,
+    "school": "evo",
+    "materials": {
+      "value": "",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "preparation": {
+      "mode": "prepared",
+      "prepared": false
+    },
+    "properties": [
+      "vocal",
+      "somatic"
+    ],
+    "activities": {
+      "dnd5eactivity000": {
+        "_id": "dnd5eactivity000",
+        "type": "utility",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "type": "radius",
+            "size": "60",
+            "units": "ft"
+          },
+          "affects": {
+            "type": "ally",
+            "choice": false
+          },
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "name": "",
+        "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "always",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    },
+    "identifier": "mass-heal",
+    "sourceClass": ""
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "folder": "SpellFldr9thLevl",
+  "_id": "MassHeal00000000",
+  "sort": 700000,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!MassHeal00000000"
+}

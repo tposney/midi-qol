@@ -71,5 +71,27 @@ let defineMidiSummonActivityClass = <T extends Activity>(ActivityClass: T) => {
 
     async _triggerSubsequentActions(config, results) {
     }
+
+    async getPlacement(token, profile, options) {
+      if (options?.placements?.length) {
+        // Apply creature size overrides (same as dnd5e base)
+        if (this.creatureSizes.size) {
+          const size = this.creatureSizes.has(options.creatureSize)
+            ? options.creatureSize : this.creatureSizes.first();
+          const config = CONFIG.DND5E.actorSizes[size];
+          if (config) token = token.clone({ width: config.token ?? 1, height: config.token ?? 1 });
+        }
+        return options.placements.map((p, i) => ({
+          prototypeToken: token,
+          x: p.x,
+          y: p.y,
+          elevation: p.elevation ?? this.getUsageToken()?.elevation ?? 0,
+          rotation: p.rotation ?? 0,
+          index: { total: i, unique: i }
+        }));
+      }
+      // Fall back to dnd5e interactive placement
+      return super.getPlacement(token, profile, options);
+    }
   }
 }

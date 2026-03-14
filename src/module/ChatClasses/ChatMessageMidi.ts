@@ -475,9 +475,10 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         return;
       }
 
-      // Strip save attribution tooltip when players can't see save details
+      // Strip save attribution tooltip and info icons when players can't see save details
       if (!["all", "allShow"].includes(autoCheckSaves)) {
         html.querySelectorAll(".midi-qol-target-name[data-tooltip-html]")?.forEach(el => el.removeAttribute("data-tooltip-html"));
+        removeAll(html, ".midi-save-attribution-info");
       }
 
       const dcHidden = shouldDisplayChallenge === "player" && !(messageActor as any)?.hasPlayerOwner;
@@ -532,8 +533,11 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     _enrichChatCard(html: HTMLElement) {
-      // @ts-expect-error no dnd5e-types
-      if (!this.flags?.[MODULE_ID]?.messageType) return super._enrichChatCard(html);
+      if (!this.flags?.[MODULE_ID]?.messageType) {
+        this.applyChatVisibility(html);
+        // @ts-expect-error no dnd5e-types
+        return super._enrichChatCard(html);
+      }
       if (debugEnabled > 1) log("Enriching chat card", Date.now(), this.id);
       this.maskAttackRolls(html); // This has to run first to stop errors when ChatMessage5e._enrichDamageTooltip runs
 

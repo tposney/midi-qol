@@ -1,0 +1,410 @@
+{
+  "name": "Warding Bond",
+  "type": "spell",
+  "img": "icons/magic/movement/abstract-ribbons-red-orange.webp",
+  "effects": [
+    {
+      "_id": "wbBondedEffect00",
+      "changes": [
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "acid",
+          "priority": null
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "bludgeoning",
+          "priority": null
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "cold",
+          "priority": null
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "fire",
+          "priority": null
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "force",
+          "priority": null
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "lightning",
+          "priority": null
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "necrotic",
+          "priority": null
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "piercing",
+          "priority": null
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "poison",
+          "priority": null
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "psychic",
+          "priority": null
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "radiant",
+          "priority": null
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "slashing",
+          "priority": null
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "thunder",
+          "priority": null
+        },
+        {
+          "key": "system.attributes.ac.bonus",
+          "mode": 2,
+          "value": "1",
+          "priority": null
+        },
+        {
+          "key": "system.bonuses.abilities.save",
+          "mode": 2,
+          "value": "1",
+          "priority": null
+        },
+        {
+          "key": "flags.dae.onUpdateTarget",
+          "mode": 0,
+          "value": "Warding Bond, ItemMacro, system.attributes.hp.value",
+          "priority": 20
+        },
+        {
+          "key": "flags.dae.onUpdateSource",
+          "mode": 0,
+          "value": "Warding Bond, ItemMacro, system.attributes.hp.value",
+          "priority": 20
+        },
+        {
+          "key": "macro.itemMacro",
+          "mode": 0,
+          "value": "",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": 3600,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "transfer": false,
+      "flags": {
+        "dae": {
+          "stackable": false,
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "transfer": false,
+          "dontApply": false,
+          "showIcon": true
+        }
+      },
+      "tint": "#ffffff",
+      "name": "Bonded",
+      "description": "<p>While within 60 feet of the caster, you gain a +1 bonus to AC and saving throws, and you have Resistance to all damage. Each time you take damage, the caster takes the same amount of damage.</p><p>The spell ends if the caster drops to 0 Hit Points or if you and the caster become separated by more than 60 feet. It also ends if the spell is cast again on either of the connected creatures.</p>",
+      "statuses": [],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/equipment/finger/ring-band-engraved-scrolls-silver.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!INfoostPYhvVepHc.wbBondedEffect00"
+    }
+  ],
+  "flags": {
+    "midiProperties": {
+      "magicdam": false,
+      "magiceffect": true,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "dae": {
+      "macro": {
+        "name": "Warding Bond",
+        "img": "icons/magic/movement/abstract-ribbons-red-orange.webp",
+        "type": "script",
+        "scope": "global",
+        "command": "const version = \"13.0.52\";\ntry {\n    const lastArg = args[args.length - 1];\n    if (args[0] === \"on\") {\n        const caster = macroItem?.actor;\n        if (!caster) return;\n        const targetEffect = actor.effects.get(lastArg.effectId);\n        if (!targetEffect) return;\n        const linkEffects = async (mirroredEffect) => {\n            await mirroredEffect.update({\"flags.dnd5e.dependentOn\": targetEffect.uuid});\n            await targetEffect.update({\"flags.dnd5e.dependentOn\": mirroredEffect.uuid});\n        };\n        const mirrored = caster.appliedEffects.find(e => e.name === \"Bonded\" && e.origin?.includes(macroItem.uuid));\n        if (mirrored) {\n            await linkEffects(mirrored);\n        } else {\n            const hookId = Hooks.on(\"createActiveEffect\", async (effect) => {\n                if (effect.parent !== caster || !effect.origin?.includes(macroItem.uuid)) return;\n                Hooks.off(\"createActiveEffect\", hookId);\n                await linkEffects(effect);\n            });\n            setTimeout(() => Hooks.off(\"createActiveEffect\", hookId), 10000);\n        }\n        return;\n    }\n    // Check >60ft separation — ends the spell\n    if (lastArg.sourceToken && lastArg.targetToken) {\n        const distance = MidiQOL.computeDistance(lastArg.sourceToken, lastArg.targetToken, {wallsBlock: false});\n        if (distance > 60) {\n            await ChatMessage.create({content: `${macroItem.name} ends — caster and target are more than 60 feet apart (${distance} ft).`});\n            const effectToDelete = lastArg.actor?.appliedEffects.find(e => e.name === \"Bonded\" && e.origin?.includes(macroItem.uuid));\n            if (effectToDelete) await effectToDelete.delete();\n            return;\n        }\n    }\n    const newHp = foundry.utils.getProperty(lastArg.updates, \"system.attributes.hp.value\");\n    if (newHp === undefined) return;\n    const isCasterUpdate = lastArg.actor === macroItem?.actor;\n    if (!isCasterUpdate) {\n        const oldHp = lastArg.actor.system.attributes.hp.value;\n        if (newHp < oldHp) {\n            const damage = oldHp - newHp;\n            await ChatMessage.create({content: `${macroItem.name} deals ${damage} damage to ${lastArg.sourceActor.name}`});\n            MidiQOL.applyTokenDamage([{damage: damage, type: \"none\"}], damage, new Set([lastArg.sourceToken]), undefined, new Set(), {existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined, updateContext: {onUpdateCalled: true}});\n        }\n    } else if (newHp <= 0) {\n        const casterEffect = lastArg.actor?.appliedEffects.find(e => e.name === \"Bonded\" && e.origin?.includes(macroItem.uuid));\n        if (casterEffect) await casterEffect.delete();\n    }\n} catch (err) {\n    console.error(`Warding Bond ${version}`, err);\n}",
+        "author": "Zl1BOUaPLwDEujaL",
+        "ownership": {
+          "default": 3
+        },
+        "_id": null,
+        "folder": null,
+        "sort": 0,
+        "flags": {},
+        "_stats": {
+          "coreVersion": null,
+          "systemId": null,
+          "systemVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null,
+          "compendiumSource": null,
+          "duplicateSource": null
+        }
+      }
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.51"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>You touch another creature that is willing and create a mystic connection between you and the target until the spell ends. While the target is within 60 feet of you, it gains a +1 bonus to AC and saving throws, and it has Resistance to all damage. Also, each time it takes damage, you take the same amount of damage.</p><p>The spell ends if you drop to 0 Hit Points or if you and the target become separated by more than 60 feet. It also ends if the spell is cast again on either of the connected creatures.</p><p><strong>midi-qol</strong>: Utility activity applies Bonded effect granting +1 AC, +1 saves, and resistance to all damage types. Uses <code>flags.dae.onUpdateTarget</code> to monitor the target's HP — when the target takes damage, the macro automatically applies the same amount of untyped damage to the caster via <code>applyTokenDamage</code>. Uses <code>flags.dae.onUpdateSource</code> to monitor the caster's HP — if the caster drops to 0 HP, the Bonded effect is automatically removed. The <code>on</code> macro sets up mutual <code>dependentOn</code> between caster and target effects so deleting either cascades. Distance &gt;60ft is checked on each HP update and ends the spell if exceeded.</p>",
+      "chat": "<p>You touch another creature that is willing and create a mystic connection between you and the target until the spell ends. While the target is within 60 feet of you, it gains a +1 bonus to AC and saving throws, and it has Resistance to all damage. Also, each time it takes damage, you take the same amount of damage.</p><p>The spell ends if you drop to 0 Hit Points or if you and the target become separated by more than 60 feet. It also ends if the spell is cast again on either of the connected creatures.</p>"
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
+    },
+    "activation": {
+      "type": "action",
+      "condition": "",
+      "value": 1
+    },
+    "duration": {
+      "value": "1",
+      "units": "hour"
+    },
+    "target": {
+      "affects": {
+        "type": "willing",
+        "count": "1",
+        "choice": false,
+        "special": ""
+      },
+      "template": {
+        "units": "",
+        "contiguous": false,
+        "type": ""
+      }
+    },
+    "range": {
+      "value": "",
+      "units": "touch",
+      "special": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "ability": "",
+    "level": 2,
+    "school": "abj",
+    "materials": {
+      "value": "a pair of platinum rings worth 50+ GP each, which you and the target must wear for the duration",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "preparation": {
+      "mode": "prepared",
+      "prepared": false
+    },
+    "properties": [
+      "vocal",
+      "somatic",
+      "material"
+    ],
+    "activities": {
+      "dnd5eactivity000": {
+        "_id": "dnd5eactivity000",
+        "type": "utility",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "hour",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "wbBondedEffect00"
+          }
+        ],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "name": "",
+        "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    },
+    "identifier": "warding-bond",
+    "sourceClass": ""
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "folder": "SpellFldr2ndLevl",
+  "_id": "INfoostPYhvVepHc",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!INfoostPYhvVepHc"
+}
