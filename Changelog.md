@@ -1,12 +1,16 @@
+### 13.0.55
+* Added spell school-based advantage/disadvantage flags for attack rolls: `flags.midi-qol.advantage.attack.school.{school}`, `disadvantage.attack.school.{school}`, `noAdvantage.attack.school.{school}`, `noDisadvantage.attack.school.{school}`, and the corresponding `grants.*` variants. These complement the existing save school flags added in 13.0.52.
+
 ### 13.0.54
 * Fix for AC display in hit card being incorrect for some flags affecting target ac/to hit bonuses.
+* Fixed fast-forward for utility rolls, fixed activity range when reach is overridden, use utility formula name if provided instead of activity title for roll result (MR !409). Thanks @elwin.
 
 ### 13.0.53
 * Weapons attack single target setting now correctly enforces single target for weapons with no target specification
 * Fix false-positive Flash Rolls detection in getAdvantageSourceInfo (MR !406). Thanks @Carolingian.
 * Fix for error being thrown on CONFIG.specialStatusEffects.INVISIBLE being set to null.
 * Some changes to support the next version of macro autocomplete.
-* Fixed fast-forward for utility rolls, fixed activity range when reach is overridden, use utility formula name if provided instead of activity title for roll result (MR !409). Thanks @pgervais70.
+
 
 ### 13.0.52
 **Bug Fixes**

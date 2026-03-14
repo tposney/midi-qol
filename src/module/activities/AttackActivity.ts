@@ -769,6 +769,10 @@ export async function computeAttackAdvantage(
 ): Promise<RollModifierTracker> {
   tracker ??= new RollModifierTracker();
 
+  // Spell school for school-specific attack flags
+  // @ts-expect-error no dnd5e-types
+  const attackSchool: string | undefined = options.item?.system?.school;
+
   // Define attack advantage flags
   const attackFlags: AdvantageFlags = {
     advantageFlags: [
@@ -776,45 +780,53 @@ export async function computeAttackAdvantage(
       "advantage.attack.all",
       `advantage.attack.${actionType}`,
       // Include ability-based attack flags if abilityId is provided
-      ...(abilityId ? [`advantage.attack.${abilityId}`] : [])
+      ...(abilityId ? [`advantage.attack.${abilityId}`] : []),
+      ...(attackSchool ? [`advantage.attack.school.${attackSchool}`] : [])
     ],
     disadvantageFlags: [
       "disadvantage.all",
       "disadvantage.attack.all",
       `disadvantage.attack.${actionType}`,
-      ...(abilityId ? [`disadvantage.attack.${abilityId}`] : [])
+      ...(abilityId ? [`disadvantage.attack.${abilityId}`] : []),
+      ...(attackSchool ? [`disadvantage.attack.school.${attackSchool}`] : [])
     ],
     noAdvantageFlags: [
       "noAdvantage.all",
       "noAdvantage.attack.all",
       `noAdvantage.attack.${actionType}`,
-      ...(abilityId ? [`noAdvantage.attack.${abilityId}`] : [])
+      ...(abilityId ? [`noAdvantage.attack.${abilityId}`] : []),
+      ...(attackSchool ? [`noAdvantage.attack.school.${attackSchool}`] : [])
     ],
     noDisadvantageFlags: [
       "noDisadvantage.all",
       "noDisadvantage.attack.all",
       `noDisadvantage.attack.${actionType}`,
-      ...(abilityId ? [`noDisadvantage.attack.${abilityId}`] : [])
+      ...(abilityId ? [`noDisadvantage.attack.${abilityId}`] : []),
+      ...(attackSchool ? [`noDisadvantage.attack.school.${attackSchool}`] : [])
     ],
     systemRollModeFields: [], // dnd5e doesn't have native attack roll modes at actor level
     // Target grants flags (checked on target actor)
     sourceAdvantageFlags: [
       "grants.advantage.all",
       "grants.advantage.attack.all",
-      `grants.advantage.attack.${actionType}`
+      `grants.advantage.attack.${actionType}`,
+      ...(attackSchool ? [`grants.advantage.attack.school.${attackSchool}`] : [])
     ],
     sourceDisadvantageFlags: [
       "grants.disadvantage.all",
       "grants.disadvantage.attack.all",
-      `grants.disadvantage.attack.${actionType}`
+      `grants.disadvantage.attack.${actionType}`,
+      ...(attackSchool ? [`grants.disadvantage.attack.school.${attackSchool}`] : [])
     ],
     sourceNoAdvantageFlags: [
       "grants.noAdvantage.attack.all",
-      `grants.noAdvantage.attack.${actionType}`
+      `grants.noAdvantage.attack.${actionType}`,
+      ...(attackSchool ? [`grants.noAdvantage.attack.school.${attackSchool}`] : [])
     ],
     sourceNoDisadvantageFlags: [
       "grants.noDisadvantage.attack.all",
-      `grants.noDisadvantage.attack.${actionType}`
+      `grants.noDisadvantage.attack.${actionType}`,
+      ...(attackSchool ? [`grants.noDisadvantage.attack.school.${attackSchool}`] : [])
     ]
   };
 

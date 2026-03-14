@@ -24,7 +24,13 @@ midi-qol is a Foundry VTT module that enhances the dnd5e system with automated a
 
 ### Editable Related Module Source
 - **times-up-10x**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/times-up-10x/src` — effect duration management
-- **dae-10x**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/dae-10x/src/module` — Dynamic Active Effects
+- **dae-10x**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/dae-10x/src/module` — Dynamic Active Effects (v13, branch `v13`)
+- **dae-14x**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/dae-14x/src/module` — Dynamic Active Effects (v14, branch `v14`)
+
+### Foundry v14 Investigation
+- **Investigation doc**: `/home/timp/Documents/foundryv14-investigation-2026-03-13.md`
+- **Foundry v14 core**: `/home/timp/foundryv14/resources/app/`
+- **Branch management**: Use `dae-14x` (branch `v14`) for v14 work, `dae-10x` (branch `v13`) for v13 fixes. Each directory stays on its respective branch — no need to switch branches.
 
 ### Tidy5e-sheet
 Source: `/home/timp/foundry-data/foundryv13/Data/modules/tidy5e-sheet` (minified Svelte, use `.js.map` for source mapping)
