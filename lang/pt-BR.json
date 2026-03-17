@@ -1826,15 +1826,15 @@
   "dae.MidiQOL.fieldData": {
     "flags.midi-qol.advantage.ability.all": {
       "name": "Vantagem Atributo (Todos)",
-      "description": "Vantagem em todas as salvaguardas, testes de atributo e perícias" 
+      "description": "Vantagem em todas as salvaguardas, testes de atributo e perícias." 
     },
     "flags.midi-qol.advantage.all": {
       "name": "Vantagem Todos Dados",
-      "description": "Vantagem em todas as jogadas de d20" 
+      "description": "Vantagem em todas as jogadas de d20." 
     },
     "flags.midi-qol.fail.disadvantage.heavy": {
       "name": "Falha Desvantagem Pesado",
-      "description": "Desvantagem em testes de Furtividade por usar Armadura Pesada" 
+      "description": "Desvantagem em jogadas de ataque por conta da propriedade Pesado das armas." 
     },
     "flags.midi-qol.": {
       "name": "Flags Midi QOL",
@@ -1890,11 +1890,11 @@
     },
     "flags.midi-qol.advantage.concentration": {
       "name": "Vantagem (Concentração)",
-      "description": "Vantagem em salvaguardas de Concentração" 
+      "description": "Vantagem em salvaguardas de Concentração." 
     },
     "flags.midi-qol.advantage.deathSave": {
       "name": "Vantagem (Salvaguarda Contra Morte)",
-      "description": "Vantagem em Salvaguardas Contra Morte" 
+      "description": "Vantagem em Salvaguardas Contra Morte." 
     },
     "flags.midi-qol.carefulSpells": {
       "name": "Magia Cuidadosa",
