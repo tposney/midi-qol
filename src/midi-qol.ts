@@ -282,6 +282,7 @@ Object.assign(globalThis.MidiQOL, {
   sizeNumeric,
   showUndoQueue,
   showUndoWorkflowApp,
+  teleportToken,
   testfunc,
   tokenForActor,
   TrapWorkflow,
@@ -874,7 +875,7 @@ import { MidiForwardActivity, setupForwardActivity } from './module/activities/F
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';
 import { MidiTransformActivity, setupTransformActivity } from './module/activities/TransformActivity.js';
 import { MidiCombat5e } from './module/MidiCombat5e.js';
-import { TokenOrDocument, SelectOptionValue } from './globals.js';
+import { MoveTokenOptions, TeleportTokenDestination, TokenOrDocument, SelectOptionValue } from './globals.js';
 import { DamageApplicationElementMidi } from './module/ChatClasses/DamageApplicationElementMidi.js';
 
 // Add any additional hooks if necessary
@@ -984,15 +985,20 @@ export function testfunc(...args: any[]) {
   console.warn("MidiQOL testfunc called ", ...args)
 }
 
-export async function moveToken(tokenRef: TokenOrDocument | string, newCenter: { x: number, y: number }, animate: boolean = true) {
+export async function moveToken(tokenRef: TokenOrDocument | string, newCenter: { x: number, y: number }, animate: boolean = true, options?: MoveTokenOptions) {
   const tokenUuid = getTokenDocument(tokenRef)?.uuid;
-  if (tokenUuid) return unTimedExecuteAsGM("moveToken", { tokenUuid, newCenter, animate });
+  if (tokenUuid) return unTimedExecuteAsGM("moveToken", { tokenUuid, newCenter, animate, options });
 }
 
-export async function moveTokenAwayFromPoint(targetRef: TokenOrDocument | string, distance: number, point: { x: number, y: number }, animate: boolean = true, checkCollision: boolean = false) {
+export async function moveTokenAwayFromPoint(targetRef: TokenOrDocument | string, distance: number, point: { x: number, y: number }, animate: boolean = true, checkCollision: boolean = false, options?: MoveTokenOptions) {
   const targetUuid = getTokenDocument(targetRef)?.uuid;
   if (point && targetUuid && distance)
-    return unTimedExecuteAsGM("moveTokenAwayFromPoint", { targetUuid, distance, point, animate, checkCollision })
+    return unTimedExecuteAsGM("moveTokenAwayFromPoint", { targetUuid, distance, point, animate, checkCollision, options })
+}
+
+export async function teleportToken(tokenRef: TokenOrDocument | string, destination: TeleportTokenDestination) {
+  const tokenUuid = getTokenDocument(tokenRef)?.uuid;
+  if (tokenUuid) return unTimedExecuteAsGM("teleportToken", { tokenUuid, destination });
 }
 
 export async function createEffects(data: { actorUuid: string, effects: ActiveEffect.CreateData[], options: { keepId: boolean } }) {

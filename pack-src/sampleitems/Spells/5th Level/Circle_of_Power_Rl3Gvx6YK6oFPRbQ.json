@@ -67,7 +67,9 @@
         "distanceFormula": "30",
         "disposition": 1,
         "applyToSelf": true,
-        "collisionTypes": ["move"],
+        "collisionTypes": [
+          "move"
+        ],
         "script": "",
         "canStack": false,
         "combatOnly": false,
@@ -115,7 +117,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.54"
       }
     }
   },

@@ -23,7 +23,7 @@ import { MidiActivityMixin } from "./module/activities/MidiActivityMixin";
 import * as undo from "./module/undo";
 import * as patching from "./module/patching";
 import { ConfigPanel } from "./module/apps/ConfigPanel";
-import { createEffects, debug, log, moveToken, moveTokenAwayFromPoint, removeEffects, updateEffects, warn } from "./midi-qol";
+import { createEffects, debug, log, moveToken, moveTokenAwayFromPoint, teleportToken, removeEffects, updateEffects, warn } from "./midi-qol";
 import { TargetConfirmationDialog } from "./module/apps/TargetConfirmation";
 import { MidiSounds } from "./module/midi-sounds";
 import { computeTargetsFromTemplates, resolveTargetConfirmation, selectTargetsFromTemplates } from "./module/activities/activityHelpers";
@@ -747,6 +747,7 @@ declare global {
     modifyDamageBy: typeof utils.modifyDamageBy;
     moveToken: typeof moveToken;
     moveTokenAwayFromPoint: typeof moveTokenAwayFromPoint;
+    teleportToken: typeof teleportToken;
     MQdefaultDamageType: string;
     MQfromActorUuid: typeof utils.fromActorUuid;
     MQfromUuid: typeof fromUuidSync;
@@ -920,6 +921,24 @@ export type SelectOptionValue = string | { label: string; hint: string };
 export type SelectOptions = Record<string, SelectOptionValue>;
 
 export type TokenOrDocument = foundry.canvas.placeables.Token.Implementation | TokenDocument.Implementation;
+
+export interface MoveTokenOptions {
+  /** Instant movement, no animation, ignores walls (default: false) */
+  teleport?: boolean;
+  /** Ignore wall collisions during movement (default: true — preserves legacy behavior) */
+  ignoreWalls?: boolean;
+}
+
+export interface TeleportTokenDestination {
+  /** Center x in canvas pixels */
+  x: number;
+  /** Center y in canvas pixels */
+  y: number;
+  /** Elevation in grid units */
+  elevation?: number;
+  /** Destination scene UUID (omit for same scene) */
+  sceneUuid?: string;
+}
 
 /**
  * Generic constructor type for mixin patterns.

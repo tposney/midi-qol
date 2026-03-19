@@ -23,9 +23,10 @@ midi-qol is a Foundry VTT module that enhances the dnd5e system with automated a
 - **3rd-party modules** (chris-premades, dae, times-up, etc.): `/home/timp/foundry-data/foundryv13/Data/modules`
 
 ### Editable Related Module Source
-- **times-up-10x**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/times-up-10x/src` — effect duration management
+- **times-up-10x**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/times-up-10x/src` — effect duration management (v13 only; v14 duration management moved to DAE)
+- **times-up-14x**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/times-up-14x/src` — stub module (v14); all duration management moved to dae-14x
 - **dae-10x**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/dae-10x/src/module` — Dynamic Active Effects (v13, branch `v13`)
-- **dae-14x**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/dae-14x/src/module` — Dynamic Active Effects (v14, branch `v14`)
+- **dae-14x**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/dae-14x/src/module` — Dynamic Active Effects + duration management (v14, branch `v14`)
 
 ### Foundry v14 Investigation
 - **Investigation doc**: `/home/timp/Documents/foundryv14-investigation-2026-03-13.md`
@@ -163,6 +164,16 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
 
 13. **Spell scaling via `midiOptions.spellLevel`** — dnd5e's `_prepareUsageScaling` derives scaling from `actor.system.spells[usageConfig.spell.slot].level`. When calling `completeActivityUse` programmatically, midi sets `usage.spell.slot = "spell${midiOptions.spellLevel}"` before `super.use()` so dnd5e's scaling logic works without consuming a slot.
 
+14. **Duration management moved from times-up to DAE (v14)**
+    - In v14, all duration management (seconds↔rounds conversion, transfer effect disable-on-expiry, effect creation setup, combat start/end handling) lives in `dae-14x/src/module/specialDurations.ts`.
+    - times-up-14x is a stub — its `handleUpdates.ts` re-exports utility functions for backward compat only.
+    - DAE settings: `durationManagementEnabled`, `enablePassiveEffects`, `updatePassiveEffects`, `expireRoundEffectsOnCombatEnd` (registered under `"dae"` namespace).
+    - DAE's `maxShortDuration` (seconds, default 600) replaces times-up's `MaxRoundsToConvert` (rounds).
+    - `CONFIG.ActiveEffect.expiryAction = "delete"` is now set by DAE's init hook.
+    - `flags.times-up.durationSeconds` flag path kept for backward compat with existing effects.
+    - DAE API (`game.modules.get("dae").api`) exports: `expireEffect`, `isEffectExpired`, `isTransferEffect`, `hasDuration`, `hasExpiry`.
+    - One-time migration from times-up settings runs at `ready` via `migrateTimesUpSettings()`.
+
 ## Testing
 
 Tests use the Quench framework in a separate module:
@@ -194,6 +205,9 @@ npx gulp devWatch  # Watch mode
 ```
 
 ## Planned Refactors
+
+### Cross-Scene Teleport (Review on Foundry Upgrades)
+`_teleportToken` in GMAction.ts reimplements Foundry's cross-scene teleport pattern (create token, migrate combatants, delete origin, pull user) because Foundry's teleport API (`TeleportTokenRegionBehaviorType._teleportToken`) is region-based and requires a `RegionDocument` destination — there's no coordinate-based teleport API. If Foundry adds a public coordinate-based teleport or changes the region teleport behavior (e.g., new hooks, data migration steps), update `_teleportToken` to match. Reference: `foundryv13/resources/app/client-esm/data/region-behaviors/teleport-token.mjs`.
 
 ### Advantage Refactor
 Migrate `checkAttackAdvantage()` and `checkTargetAdvantage()` (~15 separate eval calls in Workflow.ts:3581-4020) to use centralized `computeAdvantageFlags()` from patching.ts. Keep geometric/rule-based checks (flanking, visibility, nearby foe, heavy weapon) separate. See `patching.ts` for the pattern used by saves/death saves/ability checks.

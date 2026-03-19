@@ -8953,7 +8953,7 @@ export function setRollMaxDiceTerm(roll: Roll, maxValue: number, count = 1) {
   return roll;
 }
 
-export function addDependent(document: foundry.abstract.Document.Any, dependent: foundry.abstract.Document.Any) {
+export async function addDependent(document: foundry.abstract.Document.Any, dependent: foundry.abstract.Document.Any) {
   if (!document?.uuid) {
     error(`midi-addDependent | document ${document?.name} does not have an uuid`);
     return;
@@ -8966,9 +8966,9 @@ export function addDependent(document: foundry.abstract.Document.Any, dependent:
   // Always use dnd5e's dependent system - dnd5e's DependentDocumentMixin handles tracking
   // When the parent (Actor/Item/Effect/Template) is deleted, midi-qol's hooks handle cleanup
   //@ts-expect-error
-  if (game.user?.isGM || document.isOwner) {
+  if (game.user?.isGM || dependent.isOwner) {
     //@ts-expect-error
-    dependent.setFlag("dnd5e", "dependentOn", document.uuid);
+    return dependent.setFlag("dnd5e", "dependentOn", document.uuid);
   } else {
     return unTimedExecuteAsGM("addDependent", { documentUuid: document.uuid, dependentUuid: dependent.uuid });
   }

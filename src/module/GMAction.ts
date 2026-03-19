@@ -9,7 +9,7 @@ import { queueUndoData, startUndoWorkflow, updateUndoChatCardUuids, _removeMostR
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { installedModules } from "./setupModules.js";
 import { StatUpdateMessage } from "./RollStats.js";
-import { DamageApplicationOptions, DamageDescription, DamageListEntry, MonksTokenBarRequest, RollDialogConfig, RollMessageConfig, RollProcessConfig, SaveDetails } from "../globals.js";
+import { DamageApplicationOptions, DamageDescription, DamageListEntry, MonksTokenBarRequest, MoveTokenOptions, RollDialogConfig, RollMessageConfig, RollProcessConfig, SaveDetails, TeleportTokenDestination } from "../globals.js";
 
 export let socketlibSocket: any = undefined;
 let traitList = { di: "", dr: "", dv: "", dm: "", da: "" };
@@ -47,6 +47,7 @@ export let setupSocket = () => {
   socketlibSocket.register("flashTokenBarSaves", flashTokenBarSaves);
   socketlibSocket.register("moveToken", _moveToken);
   socketlibSocket.register("moveTokenAwayFromPoint", _moveTokenAwayFromPoint);
+  socketlibSocket.register("teleportToken", _teleportToken);
   socketlibSocket.register("queueUndoData", queueUndoData);
   socketlibSocket.register("queueUndoDataDirect", _queueUndoDataDirect);
   socketlibSocket.register("removeEffect", _removeEffect);
@@ -105,6 +106,7 @@ export class SaferSocket {
       case "flashTokenBarSaves":
       case "moveToken":
       case "moveTokenAwayFromPoint":
+      case "teleportToken":
       case "removeWorkflow":
       case "rollAbility":
       case "rollAbilityV2":
@@ -2300,40 +2302,91 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
   return true;
 }
 
-async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: number }, animate: boolean }): Promise<any> {
+async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: number }, animate: boolean, options?: MoveTokenOptions }): Promise<any> {
   const tokenDocument = fromUuidSync(data.tokenUuid) as TokenDocument.Implementation | undefined;
   if (!tokenDocument || !canvas.grid || !tokenDocument.object) return;
   const targetToken = tokenDocument.object;
-  const newCenter = canvas.grid.getSnappedPoint(data.newCenter, { mode: CONST.GRID_SNAPPING_MODES.CENTER });
-  const newPosition = { x: data.newCenter.x - targetToken.w / 2, y: data.newCenter.y - targetToken.h / 2 };
-  return tokenDocument.update(newPosition, { animate: data.animate ?? true });
+  const animate = data.animate ?? true;
+  const teleport = data.options?.teleport ?? false;
+  const ignoreWalls = data.options?.ignoreWalls ?? true;
+  const snappedCenter = canvas.grid.getSnappedPoint(data.newCenter, { mode: CONST.GRID_SNAPPING_MODES.CENTER });
+  const newPosition = { x: snappedCenter.x - targetToken.w / 2, y: snappedCenter.y - targetToken.h / 2 };
+  // Use "displace" action for instant movement (no animation) or explicit teleport
+  // Note: waypoint.teleport is stripped during normalization — use action: "displace" directly
+  // Also pass animation: {duration: 0} to ensure no animation regardless of distance
+  const useTeleport = teleport || !animate;
+  const action = useTeleport ? "displace" : CONFIG.Token.movement.defaultAction;
+  const waypoint = { ...newPosition, action, forced: true, snapped: true };
+  const moveOptions: Record<string, any> = { constrainOptions: { ignoreWalls: useTeleport || ignoreWalls, ignoreCost: true }, autoRotate: false };
+  if (useTeleport) moveOptions.animation = { duration: 0 };
+  return tokenDocument.move(waypoint, moveOptions);
 }
 
 
-async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: number, y: number }, distance: number, animate: boolean, checkCollision: boolean }): Promise<void> {
+async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: number, y: number }, distance: number, animate: boolean, checkCollision: boolean, options?: MoveTokenOptions }): Promise<void> {
   const targetToken = getToken(data.targetUuid);
   const targetTokenDocument = getTokenDocument(targetToken);
   if (!canvas || !canvas.dimensions || !canvas.grid || !targetToken || !data.point || !targetTokenDocument) return;
-  let ray = new foundry.canvas.geometry.Ray(data.point, targetToken.center);
-  let distance = data.distance / canvas.dimensions.distance * canvas.dimensions.size;
-  let newCenter = ray.project(1 + distance / ray.distance);
-  const M = CONST.GRID_SNAPPING_MODES;
-  newCenter = newCenter = canvas.grid.getSnappedPoint(newCenter, { mode: M.CENTER });
+  const ray = new foundry.canvas.geometry.Ray(data.point, targetToken.center);
+  const pixelDistance = data.distance / canvas.dimensions.distance * canvas.dimensions.size;
+  const newCenter = ray.project(1 + pixelDistance / ray.distance);
+  // Translate checkCollision to ignoreWalls default; explicit options.ignoreWalls overrides via spread
+  const options: MoveTokenOptions = { ignoreWalls: !data.checkCollision, ...data.options };
+  return void _moveToken({ tokenUuid: targetTokenDocument.uuid, newCenter, animate: data.animate, options });
+}
 
-  if (data.checkCollision) {
-    const testCollision = CONFIG.Canvas.polygonBackends.move.testCollision(targetToken.center, newCenter, { type: "move", mode: "closest" });
-    if (testCollision) {
-      const collisionPoint = { x: testCollision.x, y: testCollision.y };
-      const getCenterCollisionPoint = canvas.grid.getCenterPoint(collisionPoint);
-      if (Math.sign(ray.dx) > 0) getCenterCollisionPoint.x -= canvas.grid.sizeX;
-      if (Math.sign(ray.dy) > 0) getCenterCollisionPoint.y -= canvas.grid.sizeY;
-      const newPosition = canvas.grid.getSnappedPoint({ x: getCenterCollisionPoint.x - Math.sign(ray.dx) * targetToken.w / 2, y: getCenterCollisionPoint.y - Math.sign(ray.dy) * targetToken.h / 2 }, { mode: M.TOP_LEFT_VERTEX });
-      return void targetTokenDocument.update(newPosition, { animate: data.animate ?? true });
-    }
+async function _teleportToken(data: { tokenUuid: string, destination: TeleportTokenDestination }): Promise<void> {
+  const originToken = fromUuidSync(data.tokenUuid) as TokenDocument.Implementation | undefined;
+  if (!originToken?.object || !canvas.grid) return;
+  const dest = data.destination;
+  const originScene = originToken.parent;
+  if (!originScene) return;
+  const destScene = dest.sceneUuid ? fromUuidSync(dest.sceneUuid) as Scene.Implementation | undefined : originScene;
+  if (!destScene) {
+    error(`teleportToken: destination scene ${dest.sceneUuid} not found`);
+    return;
   }
-  const newX = targetToken.position.x + newCenter.x - targetToken.center.x;
-  const newY = targetToken.position.y + newCenter.y - targetToken.center.y;
-  return void targetTokenDocument.update({ x: newX, y: newY }, { animate: data.animate ?? true });
+  const sameScene = !dest.sceneUuid || destScene.id === originScene.id;
+  if (sameScene) {
+    // Same-scene teleport: delegate to _moveToken with teleport: true
+    await _moveToken({ tokenUuid: data.tokenUuid, newCenter: { x: dest.x, y: dest.y }, animate: false, options: { teleport: true } });
+    return;
+  }
+  // Cross-scene teleport following Foundry's TeleportTokenRegionBehaviorType._teleportToken pattern.
+  // Foundry's teleport API is region-based (requires a RegionDocument destination, not coordinates),
+  // so we reimplement the steps here. Review on Foundry version upgrades:
+  // see foundryv13/resources/app/client-esm/data/region-behaviors/teleport-token.mjs
+  const targetToken = originToken.object;
+  const snappedCenter = canvas.grid.getSnappedPoint({ x: dest.x, y: dest.y }, { mode: CONST.GRID_SNAPPING_MODES.CENTER });
+  const topLeft = { x: snappedCenter.x - targetToken.w / 2, y: snappedCenter.y - targetToken.h / 2 };
+  const tokenData = originToken.toObject();
+  delete (tokenData as any)._id;
+  tokenData.x = topLeft.x;
+  tokenData.y = topLeft.y;
+  if (dest.elevation !== undefined) tokenData.elevation = dest.elevation;
+  // Create token on destination scene
+  const newToken = await TokenDocument.implementation.create(tokenData, { parent: destScene, keepId: false });
+  if (!newToken) {
+    error("teleportToken: failed to create token on destination scene");
+    return;
+  }
+  // Migrate combatants
+  for (const combat of game.combats ?? []) {
+    const toUpdate: { _id: string, sceneId: string, tokenId: string }[] = [];
+    for (const combatant of combat.combatants) {
+      if (combatant.sceneId === originScene.id && combatant.tokenId === originToken.id) {
+        toUpdate.push({ _id: combatant.id!, sceneId: destScene.id!, tokenId: newToken.id! });
+      }
+    }
+    if (toUpdate.length) await combat.updateEmbeddedDocuments("Combatant", toUpdate);
+  }
+  // Delete origin token
+  await originToken.delete();
+  // Pull the owning user to the destination scene
+  const ownerUser = game.users?.find(u => u.active && !u.isGM && u.character?.id === originToken.actorId);
+  if (ownerUser && ownerUser.viewedScene === originScene.id) {
+    (game.socket as any).emit("pullToScene", destScene.id, ownerUser.id);
+  }
 }
 
 async function rollActionSave(data: { actorUuid: string; effectName: string; saveDetails: SaveDetails; displayOptions: object }) {

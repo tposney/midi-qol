@@ -1180,8 +1180,8 @@ function computeSourceIgnores({ actor, sourceActor, damages, options }: DamageCa
     }
 
     for (const dt of Object.keys(GameSystemConfig.damageTypes)) {
-      if (!damages.some(di => di.type === dt)) continue;
       if (!trait.value.has(dt) && !trait.all) continue;
+      if (!damages.some(di => di.type === dt)) continue;
 
       if (category === "immunity" && hasTraitEffect(actorTraits, "di", dt) && !hasTraitEffect(actorTraits, "dr", dt)) {
         if (!(options.downgrade instanceof Set)) options.downgrade = new Set();
@@ -1300,11 +1300,12 @@ function applyCustomResistances({ actor, damages, options }: DamageCalcParams): 
       const matcher = CUSTOM_RESISTANCE_MATCHERS[custom] ?? CUSTOM_RESISTANCE_MATCHERS[normalizedCustom];
 
       for (const damage of damages) {
-        if (damage.active?.[categories[trait]]) continue;
         if (damage.type === "midi-none") continue;
         if (GameSystemConfig.healingTypes[damage.type]) continue;
+        if (damage.active?.[categories[trait]]) continue;
+        if (damage.active?.[custom]) continue;
         if (shouldIgnore(options, categories[trait], damage.type, actorTraits)) continue;
-        if (shouldIgnore(options, custom, damage.type, actorTraits) || damage.active?.[custom]) continue;
+        if (shouldIgnore(options, custom, damage.type, actorTraits)) continue;
 
         const matches = matcher
           ? matcher.match(damage, bypasses)
@@ -1345,7 +1346,7 @@ function applyDamageReduction({ actor, damages, options }: DamageCalcParams): bo
   const selectDamages = (predicate: (d: DamageDescription, bypasses?: Set<string>) => boolean): number => {
     const bypasses = actorTraits.dm?.bypasses ?? new Set();
     return damages.reduce((total, damage) => {
-      if (isDRType(damage.type)) return total;
+      if (damage.value === 0 || isDRType(damage.type)) return total;
       return total + (predicate(damage, bypasses) ? damage.value : 0);
     }, 0);
   };
@@ -1391,7 +1392,7 @@ function applyDamageReduction({ actor, damages, options }: DamageCalcParams): bo
 
   const { totalDamage } = damages.reduce((acc, d) => {
     if (d.type === "temphp") acc.temp += d.value;
-    else if (!["midi-none", "vitality"].includes(d.type)) acc.totalDamage += d.value;
+    else if (d.type !== "midi-none" && d.type !== "vitality") acc.totalDamage += d.value;
     return acc;
   }, { totalDamage: 0, temp: 0 });
 
@@ -1523,12 +1524,13 @@ function applyCustomResistances_53({ actor, damages, options }: DamageCalcParams
       const matcher = CUSTOM_RESISTANCE_MATCHERS[custom] ?? CUSTOM_RESISTANCE_MATCHERS[normalizedCustom];
 
       for (const damage of damages) {
-        // Check nested (dnd5e 5.3+) active keys using helper
-        if (getDamageActiveFlag(damage, categories[trait])) continue;
         if (damage.type === "midi-none") continue;
         if (GameSystemConfig.healingTypes[damage.type]) continue;
+        // Check nested (dnd5e 5.3+) active keys using helper
+        if (getDamageActiveFlag(damage, categories[trait])) continue;
+        if (getDamageActiveFlag(damage, custom)) continue;
         if (shouldIgnore(options, categories[trait], damage.type, actorTraits)) continue;
-        if (shouldIgnore(options, custom, damage.type, actorTraits) || getDamageActiveFlag(damage, custom)) continue;
+        if (shouldIgnore(options, custom, damage.type, actorTraits)) continue;
 
         const matches = matcher
           ? matcher.match(damage, bypasses)
