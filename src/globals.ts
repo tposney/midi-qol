@@ -923,10 +923,16 @@ export type SelectOptions = Record<string, SelectOptionValue>;
 export type TokenOrDocument = foundry.canvas.placeables.Token.Implementation | TokenDocument.Implementation;
 
 export interface MoveTokenOptions {
-  /** Instant movement, no animation, ignores walls (default: false) */
+  /** Animate the movement (default: true). When false, movement is instant but still respects wall/token constraints. */
+  animate?: boolean;
+  /** Instant movement, ignores walls and tokens (default: false). Implies animate: false. */
   teleport?: boolean;
-  /** Ignore wall collisions during movement (default: true — preserves legacy behavior) */
+  /** Ignore wall collisions during movement (default: false) */
   ignoreWalls?: boolean;
+  /** Ignore token-token blocking during movement (default: false). Passed to dnd5e's constrainMovementPath. */
+  ignoreTokens?: boolean;
+  /** Rotate token to face movement direction (default: false) */
+  autoRotate?: boolean;
 }
 
 export interface TeleportTokenDestination {
@@ -1319,6 +1325,7 @@ export type DamageDescription = {
     // midi additions (always flat, set by midi-qol in both versions)
     absorption?: boolean;
     DR?: boolean;
+    inlined?: boolean; // display-only DR entry; effect already distributed into individual entries
     spell?: boolean;
     magic?: boolean;
     nonmagic?: boolean;
@@ -1331,6 +1338,7 @@ export type DamageDescription = {
   damage?: number;
   formula?: string;
   allActives?: string[];
+  displayValue?: number; // original DR amount for tooltip display (when inlined)
 };
 
 type BasicRollConfig = {

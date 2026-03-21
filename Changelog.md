@@ -1,21 +1,39 @@
-### 13.0.56
-* `MidiQOL.moveToken(tokenRef, newCenter, animate?, options?)` now accepts an optional `options` parameter: `{ teleport?: boolean, ignoreWalls?: boolean }`.
-  - `teleport: true` — instant movement, ignores walls
-  - `ignoreWalls` — controls wall collision checking (defaults to `true`, preserving existing behavior)
-  - When `animate` is `false`, movement is now treated as a teleport (instant positioning)
-* `MidiQOL.moveTokenAwayFromPoint(targetRef, distance, point, animate?, checkCollision?, options?)` now accepts the same `options` parameter. The `checkCollision` parameter still works but can be overridden by `options.ignoreWalls`.
-* New `MidiQOL.teleportToken(tokenRef, destination)` for same-scene and cross-scene teleportation.
+### 13.0.55
+**Bug Fixes**
+* Added spell school-based advantage/disadvantage flags for attack rolls: `flags.midi-qol.advantage.attack.school.{school}`, `disadvantage.attack.school.{school}`, `noAdvantage.attack.school.{school}`, `noDisadvantage.attack.school.{school}`, and the corresponding `grants.*` variants. These complement the existing save school flags added in 13.0.52.
+* Fix for MidiQOL.addDependents throwing a permission error.
+* Fix for damage application when using system.traits.dm.midi.xxx. Previously these were always applied after saves/resistances no matter what the setting. They are now pro-rata applied prior to saves/resistances according to the midi-qol settings.
+
+**New Features**
+* Updated Guidance sample item to allow rolling when the caster does not have a token on the map, i.e. always applies to self as a optional bonus action.
+
+**Movement API overhaul** — `moveToken`, `moveTokenAwayFromPoint`, and new `teleportToken` now use Foundry's `TokenDocument.move()` API, which means they properly trigger movement hooks and region events (e.g., `isMoved` specialDuration now fires correctly).
+
+**For developers**
+* **`MidiQOL.moveToken(tokenRef, newCenter, options?)`** — new signature:
+  - `tokenRef` — Token, TokenDocument, or UUID string
+  - `newCenter: { x, y, elevation? }` — canvas center coordinates; `elevation` sets the token's elevation in grid units (omit to leave unchanged)
+  - `options: MoveTokenOptions`:
+    - `animate` — animate the movement (default: `true`); when `false`, movement is instant but still respects wall/token constraints
+    - `teleport` — instant movement, ignores walls and tokens (default: `false`); implies `animate: false`
+    - `ignoreWalls` — ignore wall collisions during movement (default: `false`)
+    - `ignoreTokens` — ignore token-token blocking during movement (default: `false`); passed to dnd5e's `constrainMovementPath` override
+    - `autoRotate` — rotate token to face movement direction (default: `true`)
+  - **Backward compatible**: the old `moveToken(tokenRef, newCenter, animate: boolean, options?)` signature is still accepted. A boolean third argument is detected and converted: `animate: false` maps to `{ teleport: true }`. A deprecation warning is logged; update to the new options-based signature before v14.
+
+* **`MidiQOL.moveTokenAwayFromPoint(targetRef, distance, point, options?)`** — new signature:
+  - `targetRef` — Token, TokenDocument, or UUID string
+  - `distance` — push distance in feet
+  - `point: { x, y }` — the point to push away from
+  - `options: MoveTokenOptions` — same options as `moveToken` above
+  - **Backward compatible**: the old `moveTokenAwayFromPoint(targetRef, distance, point, animate: boolean, checkCollision: boolean, options?)` signature is still accepted. When a boolean fourth argument is detected: `animate: false` maps to `teleport: true`; `checkCollision: true` maps to `ignoreWalls: false, ignoreTokens: false` (and vice versa). A deprecation warning is logged; update to the new options-based signature before v14.
+
+* **`MidiQOL.teleportToken(tokenRef, destination)`** — new function:
   - `destination: { x: number, y: number, elevation?: number, sceneUuid?: string }`
   - Omit `sceneUuid` for same-scene teleport
   - Cross-scene teleport creates the token on the destination scene, migrates any combat tracker entries, deletes the origin token, and pulls the owning user to the destination scene
-* `moveToken` and `moveTokenAwayFromPoint` now use Foundry's `TokenDocument.move()` API, which means they properly trigger movement hooks and region events (e.g., `isMoved` specialDuration now fires correctly).
-* Fixed a grid-snapping bug in `moveToken` where the snapped position was computed but not used.
-* Updated Shove sample item macro to use `DialogV2` and pass `{ignoreWalls: false}` to `moveTokenAwayFromPoint`.
 
-### 13.0.55
-* Added spell school-based advantage/disadvantage flags for attack rolls: `flags.midi-qol.advantage.attack.school.{school}`, `disadvantage.attack.school.{school}`, `noAdvantage.attack.school.{school}`, `noDisadvantage.attack.school.{school}`, and the corresponding `grants.*` variants. These complement the existing save school flags added in 13.0.52.
-* Fix for MidiQOL.addDependents throwing a permission error.
-* Updated Guidance sample item to allow rolling when the caster does not have a token on the map, i.e. always applies to self as a optional bonus action.
+* Updated Shove sample item macro to use `DialogV2` and pass `{ignoreWalls: false, ignoreTokens: false}` to `moveTokenAwayFromPoint`.
 
 ### 13.0.54
 * Fix for AC display in hit card being incorrect for some flags affecting target ac/to hit bonuses.

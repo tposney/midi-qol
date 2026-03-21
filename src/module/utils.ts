@@ -4576,6 +4576,9 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     this.data.buttons = this.data.flags.reduce((obj, flag) => {
       let flagData: any = foundry.utils.getProperty(this.data.actor ?? {}, flag) as any; // TODO This should be tightened up
       let value: string | undefined = foundry.utils.getProperty(flagData ?? {}, this.data.flagSelector) as string;
+      // Skip object values — can happen if a flag key like "damage.save" gets an extra ".all"
+      // appended by DAE deprecation logic, creating a nested object instead of a string
+      if (typeof value === "object") value = undefined;
       let icon = "fas fa-dice-d20";
       if (value !== undefined) {
         let labelDetail;
@@ -4616,6 +4619,7 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
         selector[selector.length - 1] = "all";
         const allSelector = selector.join(".");
         value = foundry.utils.getProperty(flagData ?? {}, allSelector) as string | undefined;
+        if (typeof value === "object") value = undefined;
         if (value !== undefined) {
           if (typeof value !== "string") value = `${value}`
           let labelDetail = Roll.replaceFormulaData(value, this.data.actor.getRollData() as Record<string, unknown>);

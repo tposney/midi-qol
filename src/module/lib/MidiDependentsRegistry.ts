@@ -56,7 +56,7 @@ export class MidiDependentsRegistry {
     const isNewDependent = !dependentSet.has(dependent.uuid);
     if (!isNewDependent) return; // Already tracking this dependent
     dependentSet.add(dependent.uuid);
-    if (debugEnabled > 0) log(`MidiDependentsRegistry | TRACK: ${(dependent as any).name} (${dependent.uuid}) depends on ${parentUuid}`);
+    if (debugEnabled > 0) log(`MidiDependentsRegistry | TRACK: ${("name" in dependent ? dependent.name : "")} (${dependent.uuid}) depends on ${parentUuid}`);
     Hooks.callAll("midi-qol.dependentsRegistryChanged", { type: "track", parentUuid, dependentUuid: dependent.uuid } as RegistryChangeEvent);
   }
 
@@ -72,7 +72,7 @@ export class MidiDependentsRegistry {
     dependentSet.delete(dependent.uuid);
     // Clean up empty parent entries
     if (dependentSet.size === 0) this.#dependents.delete(parentUuid);
-    if (debugEnabled > 0) log(`MidiDependentsRegistry | UNTRACK: ${(dependent as any).name} (${dependent.uuid}) no longer depends on ${parentUuid}`);
+    if (debugEnabled > 0) log(`MidiDependentsRegistry | UNTRACK: ${("name" in dependent ? dependent.name : "")} (${dependent.uuid}) no longer depends on ${parentUuid}`);
     Hooks.callAll("midi-qol.dependentsRegistryChanged", { type: "untrack", parentUuid, dependentUuid: dependent.uuid } as RegistryChangeEvent);
   }
 
@@ -148,7 +148,19 @@ export class MidiDependentsRegistry {
  * @returns The extended document class with midi-qol dependent tracking
  * @mixin
  */
-export function MidiDependentDocumentMixin<T extends new (...args: any[]) => any>(Base: T) {
+/** Minimal interface for document instances used by the mixin — uuid, flags, and name are present on all Foundry documents */
+interface MixinDocumentInstance {
+  uuid: string;
+  name: string;
+  flags: Record<string, any>;
+  prepareData(): void;
+  _onCreate(data: object, options: object, userId: string): void;
+  _preUpdate(changed: object, options: object, user: User): Promise<any>;
+  _onUpdate(changed: object, options: object, userId: string): void;
+  _onDelete(options: object, userId: string): void;
+}
+
+export function MidiDependentDocumentMixin<T extends new (...args: any[]) => MixinDocumentInstance>(Base: T) {
   class MidiDependentDocument extends Base {
     /** @inheritDoc */
     prepareData() {
@@ -157,9 +169,9 @@ export function MidiDependentDocumentMixin<T extends new (...args: any[]) => any
       // After game is ready, _onCreate() handles tracking for newly created documents
       if (game.ready) return;
       try {
-        const dependentOn = (this as any).flags?.dnd5e?.dependentOn;
-        if (dependentOn && (this as any).uuid) {
-          MidiDependentsRegistry.track(dependentOn, this as any);
+        const dependentOn = this.flags?.dnd5e?.dependentOn;
+        if (dependentOn && this.uuid) {
+          MidiDependentsRegistry.track(dependentOn, this as unknown as foundry.abstract.Document.Any);
         }
       } catch (err) {
         const message = `MidiDependentsRegistry.prepareData`;
@@ -173,9 +185,9 @@ export function MidiDependentDocumentMixin<T extends new (...args: any[]) => any
       const returnValue = super._onCreate(data, options, userId);
       try {
         // Track newly created documents if they have the flag set at creation
-        const dependentOn = (this as any).flags?.dnd5e?.dependentOn;
-        if (dependentOn && (this as any).uuid) {
-          MidiDependentsRegistry.track(dependentOn, this as any);
+        const dependentOn = this.flags?.dnd5e?.dependentOn;
+        if (dependentOn && this.uuid) {
+          MidiDependentsRegistry.track(dependentOn, this as unknown as foundry.abstract.Document.Any);
         }
       } catch (err) {
         const message = `MidiDependentsRegistry._onCreate`;
@@ -190,14 +202,13 @@ export function MidiDependentDocumentMixin<T extends new (...args: any[]) => any
       const allowed = await super._preUpdate(changed, options, user);
       try {
         // Check if dependentOn flag is being changed/deleted
-        // TODO: Confirm that -= is still the right way for deletions
-        const dnd5eFlags = (changed as any).flags?.dnd5e;
+        const dnd5eFlags = (changed as Record<string, any>).flags?.dnd5e;
         if (!dnd5eFlags) return true;
         if (!("dependentOn" in dnd5eFlags || "-=dependentOn" in dnd5eFlags)) return true;
 
-        const oldParent = (this as any).flags?.dnd5e?.dependentOn;
-        if (oldParent && (this as any).uuid) {
-          MidiDependentsRegistry.untrack(oldParent, this as any);
+        const oldParent = this.flags?.dnd5e?.dependentOn;
+        if (oldParent && this.uuid) {
+          MidiDependentsRegistry.untrack(oldParent, this as unknown as foundry.abstract.Document.Any);
         }
       } catch (err) {
         const message = `MidiDependentsRegistry._preUpdate`;
@@ -212,12 +223,12 @@ export function MidiDependentDocumentMixin<T extends new (...args: any[]) => any
       super._onUpdate(changed, options, userId);
       try {
         // Handle dependentOn flag being added or changed
-        const dnd5eFlags = (changed as any).flags?.dnd5e;
+        const dnd5eFlags = (changed as Record<string, any>).flags?.dnd5e;
         if (!dnd5eFlags || !("dependentOn" in dnd5eFlags)) return;
 
-        const newParent = (this as any).flags?.dnd5e?.dependentOn;
-        if (newParent && (this as any).uuid) {
-          MidiDependentsRegistry.track(newParent, this as any);
+        const newParent = this.flags?.dnd5e?.dependentOn;
+        if (newParent && this.uuid) {
+          MidiDependentsRegistry.track(newParent, this as unknown as foundry.abstract.Document.Any);
         }
       } catch (err) {
         const message = `MidiDependentsRegistry._onUpdate`;
@@ -231,9 +242,9 @@ export function MidiDependentDocumentMixin<T extends new (...args: any[]) => any
       super._onDelete(options, userId);
       try {
         // Read dnd5e.dependentOn flag
-        const dependentOn = (this as any).flags?.dnd5e?.dependentOn;
-        if (dependentOn && (this as any).uuid) {
-          MidiDependentsRegistry.untrack(dependentOn, this as any);
+        const dependentOn = this.flags?.dnd5e?.dependentOn;
+        if (dependentOn && this.uuid) {
+          MidiDependentsRegistry.untrack(dependentOn, this as unknown as foundry.abstract.Document.Any);
         }
       } catch (err) {
         const message = `MidiDependentsRegistry._onDelete`;

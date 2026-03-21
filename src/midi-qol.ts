@@ -985,15 +985,39 @@ export function testfunc(...args: any[]) {
   console.warn("MidiQOL testfunc called ", ...args)
 }
 
-export async function moveToken(tokenRef: TokenOrDocument | string, newCenter: { x: number, y: number }, animate: boolean = true, options?: MoveTokenOptions) {
+export async function moveToken(tokenRef: TokenOrDocument | string, newCenter: { x: number, y: number, elevation?: number }, options?: MoveTokenOptions | boolean, legacyOptions?: MoveTokenOptions) {
+  // Backward compatibility: moveToken(token, center, animate: boolean, options?)
+  let resolvedOptions: MoveTokenOptions | undefined;
+  if (typeof options === "boolean") {
+    foundry.utils.logCompatibilityWarning("MidiQOL.moveToken: passing 'animate' as a boolean third argument is deprecated. Use options: { animate: false } or { teleport: true } instead.", { since: "13.0.56", until: "14.0.0" });
+    resolvedOptions = { ...legacyOptions, teleport: !options ? true : (legacyOptions?.teleport ?? false) };
+  } else {
+    resolvedOptions = options;
+  }
   const tokenUuid = getTokenDocument(tokenRef)?.uuid;
-  if (tokenUuid) return unTimedExecuteAsGM("moveToken", { tokenUuid, newCenter, animate, options });
+  if (tokenUuid) return unTimedExecuteAsGM("moveToken", { tokenUuid, newCenter, options: resolvedOptions });
 }
 
-export async function moveTokenAwayFromPoint(targetRef: TokenOrDocument | string, distance: number, point: { x: number, y: number }, animate: boolean = true, checkCollision: boolean = false, options?: MoveTokenOptions) {
+export async function moveTokenAwayFromPoint(targetRef: TokenOrDocument | string, distance: number, point: { x: number, y: number }, options?: MoveTokenOptions | boolean, legacyCheckCollision?: boolean, legacyOptions?: MoveTokenOptions) {
+  // Backward compatibility: moveTokenAwayFromPoint(target, distance, point, animate: boolean, checkCollision: boolean, options?)
+  let resolvedOptions: MoveTokenOptions | undefined;
+  if (typeof options === "boolean") {
+    foundry.utils.logCompatibilityWarning("MidiQOL.moveTokenAwayFromPoint: passing 'animate' and 'checkCollision' as positional arguments is deprecated. Use options: { animate, ignoreWalls, ignoreTokens } instead.", { since: "13.0.56", until: "14.0.0" });
+    const animate = options;
+    const checkCollision = legacyCheckCollision ?? false;
+    resolvedOptions = {
+      ...legacyOptions,
+      animate: legacyOptions?.animate ?? animate,
+      teleport: !animate ? true : (legacyOptions?.teleport ?? false),
+      ignoreWalls: legacyOptions?.ignoreWalls ?? !checkCollision,
+      ignoreTokens: legacyOptions?.ignoreTokens ?? !checkCollision,
+    };
+  } else {
+    resolvedOptions = options;
+  }
   const targetUuid = getTokenDocument(targetRef)?.uuid;
   if (point && targetUuid && distance)
-    return unTimedExecuteAsGM("moveTokenAwayFromPoint", { targetUuid, distance, point, animate, checkCollision, options })
+    return unTimedExecuteAsGM("moveTokenAwayFromPoint", { targetUuid, distance, point, options: resolvedOptions })
 }
 
 export async function teleportToken(tokenRef: TokenOrDocument | string, destination: TeleportTokenDestination) {

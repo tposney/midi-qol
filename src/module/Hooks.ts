@@ -1340,6 +1340,12 @@ function applyDamageReduction({ actor, damages, options }: DamageCalcParams): bo
   const specials = Object.keys(actorTraits?.dm?.midi ?? {});
   if (!specials.length) return true;
 
+  // For DRSaveDr, distribute DR proportionally into individual damage entries
+  // so that subsequent saves and resistance/vulnerability see reduced values.
+  if (configSettings.saveDROrder === "DRSaveDr") {
+    return applyDamageReductionInline({ actor, damages, options }, specials, actorTraits);
+  }
+
   let drAllActives: string[] = [];
   let dmAll = 0;
 
@@ -1420,6 +1426,147 @@ function applyDamageReduction({ actor, damages, options }: DamageCalcParams): bo
   return true;
 }
 
+/**
+ * For DRSaveDr mode: distribute DR proportionally across individual damage entries
+ * rather than pushing a separate "none" entry. This ensures saves and resistance/vulnerability
+ * applied afterward operate on the already-reduced per-type values.
+ *
+ * Two passes: specific DRs first (non-"all"), then dm.midi.all on remaining values.
+ */
+function applyDamageReductionInline(
+  { actor, damages, options }: DamageCalcParams,
+  specials: string[],
+  actorTraits: any
+): boolean {
+  const useMaxDR = checkRule("maxDRValue");
+  let totalDRApplied = 0;
+  const drAllActives: string[] = [];
+
+  /** Distribute drAmount (negative) proportionally across matching damage entries. Returns actual (negative) amount applied. */
+  function distributeProportionally(drLabel: string, drAmount: number, predicate: (d: DamageDescription, bypasses?: Set<string>) => boolean): number {
+    const bypasses = actorTraits.dm?.bypasses ?? new Set();
+    const matching = damages.filter(d =>
+      d.value > 0 && !isDRType(d.type) && !GameSystemConfig.healingTypes[d.type] && predicate(d, bypasses)
+    );
+    const totalMatching = matching.reduce((sum, d) => sum + d.value, 0);
+    if (totalMatching <= 0 || drAmount >= 0) return 0;
+
+    let effectiveDR = drAmount;
+    if (Math.abs(effectiveDR) > totalMatching) effectiveDR = -totalMatching;
+
+    for (const entry of matching) {
+      const share = (entry.value / totalMatching) * Math.abs(effectiveDR);
+      entry.value -= share;
+    }
+    return effectiveDR;
+  }
+
+  function computeDR(special: string): number {
+    if (options.ignore === true) return 0;
+    if (options.ignore?.modification === true) return 0;
+    if (options.ignore?.modification?.has?.(special)) return 0;
+    const dmRoll = new Roll(`${actorTraits.dm.midi[special]}`, actor.getRollData() as any);
+    return doSyncRoll(dmRoll, `traits.dm.midi.${special}`)?.total ?? 0;
+  }
+
+  // --- Pass 1: Specific DRs (non-"all") ---
+  const specificSpecials = specials.filter(s => s !== "all");
+
+  if (useMaxDR) {
+    // Pick the specific DR with greatest effective impact
+    let bestDR = 0;
+    let bestSpecial = "";
+    let bestMatcher: { match: DamagePredicate; label: string } | undefined;
+
+    for (const special of specificSpecials) {
+      const dm = computeDR(special);
+      if (!dm) continue;
+      const matcher = CUSTOM_RESISTANCE_MATCHERS[special];
+      if (!matcher) continue;
+
+      const bypasses = actorTraits.dm?.bypasses ?? new Set();
+      const selectedDamage = damages
+        .filter(d => d.value > 0 && !isDRType(d.type) && !GameSystemConfig.healingTypes[d.type] && matcher.match(d, bypasses))
+        .reduce((sum, d) => sum + d.value, 0);
+
+      const effectiveImpact = Math.min(Math.abs(dm), selectedDamage);
+      if (effectiveImpact > Math.abs(bestDR)) {
+        bestDR = dm;
+        bestSpecial = special;
+        bestMatcher = matcher;
+      }
+    }
+
+    if (bestDR && bestMatcher) {
+      const applied = distributeProportionally(bestSpecial, bestDR, (d, bypasses) => bestMatcher!.match(d, bypasses));
+      totalDRApplied += Math.abs(applied);
+      drAllActives.push(i18n(bestMatcher.label));
+    }
+  } else {
+    // Stack all specific DRs sequentially (each sees values left by previous)
+    for (const special of specificSpecials) {
+      const dm = computeDR(special);
+      if (!dm) continue;
+      const matcher = CUSTOM_RESISTANCE_MATCHERS[special];
+      if (!matcher) continue;
+
+      const applied = distributeProportionally(special, dm, (d, bypasses) => matcher.match(d, bypasses));
+      if (applied) {
+        totalDRApplied += Math.abs(applied);
+        drAllActives.push(i18n(matcher.label));
+      }
+    }
+  }
+
+  // --- Pass 2: dm.midi.all (after specifics) ---
+  if (specials.includes("all")) {
+    const dm = computeDR("all");
+    if (dm) {
+      if (useMaxDR) {
+        // Compare effective impact of "all" against already-applied specific DR
+        const remaining = damages
+          .filter(d => d.value > 0 && !isDRType(d.type) && !GameSystemConfig.healingTypes[d.type])
+          .reduce((sum, d) => sum + d.value, 0);
+        const allImpact = Math.min(Math.abs(dm), remaining);
+
+        if (allImpact > totalDRApplied) {
+          // "all" provides more reduction — apply the difference as top-up
+          const topUp = -(allImpact - totalDRApplied);
+          const applied = distributeProportionally("all (top-up)", topUp, () => true);
+          totalDRApplied += Math.abs(applied);
+          drAllActives.push(i18n(CUSTOM_RESISTANCE_MATCHERS["all"].label));
+        }
+      } else {
+        // Stack: apply "all" on remaining values
+        const applied = distributeProportionally("all", dm, () => true);
+        if (applied) {
+          totalDRApplied += Math.abs(applied);
+          drAllActives.push(i18n(CUSTOM_RESISTANCE_MATCHERS["all"].label));
+        }
+      }
+    }
+  }
+
+  // Push display-only entry so the damage card/tooltip shows the DR amount
+  if (totalDRApplied) {
+    const drEntry: DamageDescription = {
+      type: "none",
+      value: 0,
+      active: { multiplier: 1, inlined: true },
+      allActives: drAllActives,
+      properties: new Set(),
+      displayValue: -totalDRApplied,
+    };
+    setDamageActiveFlag(drEntry, "DR");
+    damages.push(drEntry);
+  }
+
+  for (let i = damages.length - 1; i >= 0; i--) {
+    if (damages[i].type === "midi-none") damages.splice(i, 1);
+  }
+  return true;
+}
+
 function recalculateTotals({ damages }: DamageCalcParams): void {
   //@ts-expect-error amount exists on damages array
   damages.amount = 0;
@@ -1427,6 +1574,7 @@ function recalculateTotals({ damages }: DamageCalcParams): void {
   damages.temp = 0;
 
   for (const damage of damages) {
+    if (damage.active?.inlined) continue;
     if (damage.type === "temphp") {
       //@ts-expect-error
       damages.temp += damage.value;
@@ -1442,7 +1590,7 @@ function recalculateTotals({ damages }: DamageCalcParams): void {
   //@ts-expect-error
   if (damages.amount < 0) {
     for (const damage of damages) {
-      if (damage.type === "none" && damage.active?.DR) {
+      if (damage.type === "none" && damage.active?.DR && !damage.active?.inlined) {
         //@ts-expect-error
         damage.value -= damages.amount;
         //@ts-expect-error
@@ -1455,9 +1603,10 @@ function recalculateTotals({ damages }: DamageCalcParams): void {
 
 function calculateTotalDamage({ damages, options }: DamageCalcParams): number {
   return damages.reduce((total, damage) => {
+    if (damage.active?.inlined) return total;
     let value = damage.value;
     if (options.invertHealing !== false && damage.type === "healing") value = -value;
-    if (["temphp", "midi-none"].includes(damage.type)) value = 0;
+    if (damage.type === "temphp" || damage.type === "midi-none") value = 0;
     return total + value;
   }, 0);
 }
@@ -1565,6 +1714,7 @@ function recalculateTotals_53({ damages }: DamageCalcParams): void {
   damages.tempMax = 0;
 
   for (const damage of damages) {
+    if (damage.active?.inlined) continue;
     if (damage.type === "temphp") {
       //@ts-expect-error
       damages.temp += damage.value;
@@ -1583,7 +1733,7 @@ function recalculateTotals_53({ damages }: DamageCalcParams): void {
   //@ts-expect-error
   if (damages.amount < 0) {
     for (const damage of damages) {
-      if (damage.type === "none" && getDamageActiveFlag(damage, "DR")) {
+      if (damage.type === "none" && getDamageActiveFlag(damage, "DR") && !damage.active?.inlined) {
         //@ts-expect-error
         damage.value -= damages.amount;
         //@ts-expect-error
@@ -1596,9 +1746,10 @@ function recalculateTotals_53({ damages }: DamageCalcParams): void {
 
 function calculateTotalDamage_53({ damages, options }: DamageCalcParams): number {
   return damages.reduce((total, damage) => {
+    if (damage.active?.inlined) return total;
     let value = damage.value;
     if (options.invertHealing !== false && damage.type === "healing") value = -value;
-    if (["temphp", "midi-none", "maximum"].includes(damage.type)) value = 0;
+    if (damage.type === "temphp" || damage.type === "midi-none" || damage.type === "maximum") value = 0;
     return total + value;
   }, 0);
 }

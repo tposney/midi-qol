@@ -1335,14 +1335,15 @@ function generateDamageTooltip(damageItem: DamageListEntry, tokenName?: string):
     } else {
       // 5.2.x: all keys flat
       allMods = Object.keys(di.active ?? {}).reduce((acc: string[], k) => {
-        if (["semiSuperSaver", "superSaver"].includes(k)) return acc;
+        if (k === "semiSuperSaver" || k === "superSaver" || k === "inlined") return acc;
         if (di.active?.[k] && k !== "multiplier") acc.push(k);
         return acc;
       }, []);
     }
     if ((di.allActives?.length ?? 0) > 0) allMods = allMods.concat(di.allActives!);
     let mods = (allMods.length > 0) ? `| ${allMods.join(",")}` : "";
-    return `${di.value > 0 ? Math.floor(di.value) : Math.ceil(di.value)} ${{ ...GameSystemConfig.damageTypes, ...GameSystemConfig.healingTypes }[di.type === "" ? "none" : di.type]?.label ?? "none"} ${mods}`
+    const displayVal = di.displayValue ?? di.value;
+    return `${displayVal > 0 ? Math.floor(displayVal) : Math.ceil(displayVal)} ${{ ...GameSystemConfig.damageTypes, ...GameSystemConfig.healingTypes }[di.type === "" ? "none" : di.type]?.label ?? "none"} ${mods}`
   }).map(s => s.replaceAll(",,", ",").replaceAll(",,", ","));
 
   const toolTipHeader: string[] = [];
@@ -2302,54 +2303,71 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
   return true;
 }
 
-async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: number }, animate: boolean, options?: MoveTokenOptions }): Promise<any> {
+async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: number, elevation?: number }, options?: MoveTokenOptions }): Promise<any> {
   const tokenDocument = fromUuidSync(data.tokenUuid) as TokenDocument.Implementation | undefined;
-  if (!tokenDocument || !canvas.grid || !tokenDocument.object) return;
+  if (!tokenDocument || !canvas.grid || !tokenDocument.object) {
+    const message = `moveToken | token not found or canvas not ready: ${data.tokenUuid}`;
+    error(message);
+    TroubleShooter.recordError(new Error("moveToken failed"), message);
+    return;
+  }
   const targetToken = tokenDocument.object;
-  const animate = data.animate ?? true;
-  const teleport = data.options?.teleport ?? false;
-  const ignoreWalls = data.options?.ignoreWalls ?? true;
+  const { animate = true, teleport = false, ignoreWalls = false, ignoreTokens = false, autoRotate = true } = data.options ?? {};
   const snappedCenter = canvas.grid.getSnappedPoint(data.newCenter, { mode: CONST.GRID_SNAPPING_MODES.CENTER });
-  const newPosition = { x: snappedCenter.x - targetToken.w / 2, y: snappedCenter.y - targetToken.h / 2 };
-  // Use "displace" action for instant movement (no animation) or explicit teleport
-  // Note: waypoint.teleport is stripped during normalization — use action: "displace" directly
-  // Also pass animation: {duration: 0} to ensure no animation regardless of distance
-  const useTeleport = teleport || !animate;
-  const action = useTeleport ? "displace" : CONFIG.Token.movement.defaultAction;
+  const newPosition: Record<string, any> = { x: snappedCenter.x - targetToken.w / 2, y: snappedCenter.y - targetToken.h / 2 };
+  if (data.newCenter.elevation !== undefined) newPosition.elevation = data.newCenter.elevation;
+  // teleport uses "displace" action: instant, ignores walls/tokens
+  // animate: false uses normal action but with duration 0 (still respects constraints)
+  const action = teleport ? "displace" : CONFIG.Token.movement.defaultAction;
   const waypoint = { ...newPosition, action, forced: true, snapped: true };
-  const moveOptions: Record<string, any> = { constrainOptions: { ignoreWalls: useTeleport || ignoreWalls, ignoreCost: true }, autoRotate: false };
-  if (useTeleport) moveOptions.animation = { duration: 0 };
+  const moveOptions: Record<string, any> = { constrainOptions: { ignoreWalls: teleport || ignoreWalls, ignoreCost: true, ignoreTokens: teleport || ignoreTokens }, autoRotate };
+  if (teleport || !animate) moveOptions.animation = { duration: 0 };
   return tokenDocument.move(waypoint, moveOptions);
 }
 
 
-async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: number, y: number }, distance: number, animate: boolean, checkCollision: boolean, options?: MoveTokenOptions }): Promise<void> {
+async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: number, y: number }, distance: number, options?: MoveTokenOptions }): Promise<void> {
   const targetToken = getToken(data.targetUuid);
   const targetTokenDocument = getTokenDocument(targetToken);
-  if (!canvas || !canvas.dimensions || !canvas.grid || !targetToken || !data.point || !targetTokenDocument) return;
+  if (!canvas || !canvas.dimensions || !canvas.grid || !targetToken || !data.point || !targetTokenDocument) {
+    const message = `moveTokenAwayFromPoint | token not found or canvas not ready: ${data.targetUuid}`;
+    error(message);
+    TroubleShooter.recordError(new Error("moveTokenAwayFromPoint failed"), message);
+    return;
+  }
   const ray = new foundry.canvas.geometry.Ray(data.point, targetToken.center);
   const pixelDistance = data.distance / canvas.dimensions.distance * canvas.dimensions.size;
   const newCenter = ray.project(1 + pixelDistance / ray.distance);
-  // Translate checkCollision to ignoreWalls default; explicit options.ignoreWalls overrides via spread
-  const options: MoveTokenOptions = { ignoreWalls: !data.checkCollision, ...data.options };
-  return void _moveToken({ tokenUuid: targetTokenDocument.uuid, newCenter, animate: data.animate, options });
+  return void _moveToken({ tokenUuid: targetTokenDocument.uuid, newCenter, options: data.options });
 }
 
 async function _teleportToken(data: { tokenUuid: string, destination: TeleportTokenDestination }): Promise<void> {
   const originToken = fromUuidSync(data.tokenUuid) as TokenDocument.Implementation | undefined;
-  if (!originToken?.object || !canvas.grid) return;
+  if (!originToken?.object || !canvas.grid) {
+    const message = `teleportToken | token not found or canvas not ready: ${data.tokenUuid}`;
+    error(message);
+    TroubleShooter.recordError(new Error("teleportToken failed"), message);
+    return;
+  }
   const dest = data.destination;
   const originScene = originToken.parent;
-  if (!originScene) return;
+  if (!originScene) {
+    const message = `teleportToken | token has no parent scene: ${data.tokenUuid}`;
+    error(message);
+    TroubleShooter.recordError(new Error("teleportToken failed"), message);
+    return;
+  }
   const destScene = dest.sceneUuid ? fromUuidSync(dest.sceneUuid) as Scene.Implementation | undefined : originScene;
   if (!destScene) {
-    error(`teleportToken: destination scene ${dest.sceneUuid} not found`);
+    const message = `teleportToken | destination scene not found: ${dest.sceneUuid}`;
+    error(message);
+    TroubleShooter.recordError(new Error("teleportToken failed"), message);
     return;
   }
   const sameScene = !dest.sceneUuid || destScene.id === originScene.id;
   if (sameScene) {
     // Same-scene teleport: delegate to _moveToken with teleport: true
-    await _moveToken({ tokenUuid: data.tokenUuid, newCenter: { x: dest.x, y: dest.y }, animate: false, options: { teleport: true } });
+    await _moveToken({ tokenUuid: data.tokenUuid, newCenter: { x: dest.x, y: dest.y, elevation: dest.elevation }, options: { teleport: true } });
     return;
   }
   // Cross-scene teleport following Foundry's TeleportTokenRegionBehaviorType._teleportToken pattern.
@@ -2367,7 +2385,9 @@ async function _teleportToken(data: { tokenUuid: string, destination: TeleportTo
   // Create token on destination scene
   const newToken = await TokenDocument.implementation.create(tokenData, { parent: destScene, keepId: false });
   if (!newToken) {
-    error("teleportToken: failed to create token on destination scene");
+    const message = `teleportToken | failed to create token on destination scene: ${destScene.uuid}`;
+    error(message);
+    TroubleShooter.recordError(new Error("teleportToken failed"), message);
     return;
   }
   // Migrate combatants

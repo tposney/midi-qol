@@ -36,6 +36,26 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
   get message(): any { return super.message; }
   get rolls(): any { return super.rolls; }
 
+  /** Typed access to our custom options (ApplicationV2 options are untyped) */
+  get midiOptions(): { rollChoices: RollChoice[], choiceType: string, advantageByChoice?: Record<string, PreComputedAdvantage> } {
+    const opts = (this as any).options;
+    return {
+      rollChoices: opts.rollChoices ?? [],
+      choiceType: opts.choiceType ?? "ability",
+      advantageByChoice: opts.advantageByChoice
+    };
+  }
+
+  /** Typed wrapper for ApplicationV2._updateFrame (protected method) */
+  private _midiUpdateFrame(options: { window: { title: string } }): void {
+    (this as any)._updateFrame(options);
+  }
+
+  /** Typed wrapper for ApplicationV2.render with parts */
+  private _midiRenderParts(parts: string[]): void {
+    (this as any).render({ parts });
+  }
+
   /** Mutable default button override — options are frozen by ApplicationV2, so we track it here instead */
   _midiDefaultButton: string | undefined;
 
@@ -73,8 +93,7 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
   /** @override */
   async _prepareConfigurationContext(context, options) {
     context = await super._prepareConfigurationContext(context, options);
-    const choices: RollChoice[] = (this as any).options.rollChoices;
-    const choiceType: string = (this as any).options.choiceType ?? "ability";
+    const { rollChoices: choices, choiceType } = this.midiOptions;
 
     // For skill/tool rolls, add the ability dropdown (replicates SkillToolRollConfigurationDialog)
     // so the player can change which ability is used for the check.
@@ -113,7 +132,7 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
   /** @override */
   _onChangeForm(formConfig, event) {
     super._onChangeForm(formConfig, event);
-    const choiceType: string = (this as any).options.choiceType ?? "ability";
+    const { choiceType, advantageByChoice } = this.midiOptions;
 
     // Handle ability change on skill/tool rolls (replicates SkillToolRollConfigurationDialog)
     if ((choiceType === "skill" || choiceType === "tool") && event.target?.name === "ability") {
@@ -123,7 +142,7 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
         const abilityLabel = GameSystemConfig.abilities[ability]?.label ?? "";
         const flavor = i18nFormat("DND5E.SkillPromptTitle", { skill: skillLabel, ability: abilityLabel });
         foundry.utils.setProperty(this.message, "data.flavor", flavor);
-        (this as any)._updateFrame({ window: { title: flavor } });
+        this._midiUpdateFrame({ window: { title: flavor } });
       }
     }
 
@@ -136,7 +155,7 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
         const toolLabel = getToolLabel(newValue);
         const flavor = i18nFormat("DND5E.ToolPromptTitle", { tool: toolLabel });
         foundry.utils.setProperty(this.message, "data.flavor", flavor);
-        (this as any)._updateFrame({ window: { title: flavor } });
+        this._midiUpdateFrame({ window: { title: flavor } });
       } else if (choiceType === "skill") {
         // Skill change: update config.skill and window title
         this.config.skill = newValue;
@@ -144,23 +163,22 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
         const abilityLabel = GameSystemConfig.abilities[this.config.ability]?.label ?? "";
         const flavor = i18nFormat("DND5E.SkillPromptTitle", { skill: skillLabel, ability: abilityLabel });
         foundry.utils.setProperty(this.message, "data.flavor", flavor);
-        (this as any)._updateFrame({ window: { title: flavor } });
+        this._midiUpdateFrame({ window: { title: flavor } });
       } else {
         // Ability change (save): update config.ability and window title
         this.config.ability = newValue;
         const abilityLabel = GameSystemConfig.abilities[newValue]?.label ?? "";
         const flavor = i18nFormat("DND5E.SavePromptTitle", { ability: abilityLabel });
         foundry.utils.setProperty(this.message, "data.flavor", flavor);
-        (this as any)._updateFrame({ window: { title: flavor } });
+        this._midiUpdateFrame({ window: { title: flavor } });
       }
 
       // Update advantage/disadvantage from pre-computed object
-      const advantageMap: Record<string, PreComputedAdvantage> | undefined = (this as any).options.advantageByChoice;
-      const preComputed = advantageMap?.[newValue];
+      const preComputed = advantageByChoice?.[newValue];
       if (preComputed) {
         this._midiDefaultButton = preComputed.defaultButton;
         // Re-render buttons to reflect new advantage state
-        (this as any).render({ parts: ["buttons"] });
+        this._midiRenderParts(["buttons"]);
       }
     }
   }

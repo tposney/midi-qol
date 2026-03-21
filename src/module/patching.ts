@@ -1514,8 +1514,8 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
   if (rollType === "save" && saveSchool) {
     abilityFlags.advantageFlags.push(`advantage.save.school.${saveSchool}`);
     abilityFlags.disadvantageFlags.push(`disadvantage.save.school.${saveSchool}`);
-    abilityFlags.noAdvantageFlags.push(`noAdvantage.save.school.${saveSchool}`);
-    abilityFlags.noDisadvantageFlags.push(`noDisadvantage.save.school.${saveSchool}`);
+    abilityFlags.noAdvantageFlags?.push(`noAdvantage.save.school.${saveSchool}`);
+    abilityFlags.noDisadvantageFlags?.push(`noDisadvantage.save.school.${saveSchool}`);
   }
 
   // Add source actor grants flags for saves and checks
@@ -2726,6 +2726,7 @@ function actorGetRollData(this: Actor.Implementation, wrapped, ...args) {
   data.cfg.actorSizes = GameSystemConfig.actorSizes;
   data.cfg.skills = GameSystemConfig.skills;
   if (data.traits) {
+    // @ts-expect-error no dnd5e types
     data.traits.sizeNumeric = GameSystemConfig.actorSizes[this.system.traits?.size]?.numerical ?? 2;
   }
   return data;

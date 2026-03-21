@@ -1,6 +1,6 @@
-# Claude Code Session Notes for midi-qol
+# CLAUDE.md
 
-**Important**: Read this file at the start of each session to recover context and follow established conventions.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 **When to update this file**: After fixing a non-obvious bug or making a design decision that:
 - Required multiple attempts to get right
@@ -11,7 +11,40 @@ Document the **what** and **why** so the same mistake isn't repeated in future s
 
 ## Project Context
 
-midi-qol is a Foundry VTT module that enhances the dnd5e system with automated attack rolls, damage application, saving throws, and workflow management.
+midi-qol is a Foundry VTT module that enhances the dnd5e system with automated attack rolls, damage application, saving throws, and workflow management. Compatibility: Foundry v13, dnd5e 5.2.4–5.3.x. Required modules: socketlib, lib-wrapper, dae.
+
+## Architecture
+
+The module is **workflow-centric**. The `Workflow` class in `Workflow.ts` orchestrates the entire attack→target→save→damage pipeline. All other systems feed into or extend this pipeline.
+
+### Key Source Files (`src/module/`)
+
+| File | Role |
+|------|------|
+| **Workflow.ts** (~9K lines) | Core workflow orchestration — attack/damage/save rolls, effect application, targeting |
+| **utils.ts** (~9.5K lines) | Utilities: target validation, advantage computation, damage application, roll rendering |
+| **patching.ts** (~2.7K lines) | Monkey-patches dnd5e via lib-wrapper (actor rolls, vision, ability checks, death saves) |
+| **Hooks.ts** | Foundry hook handlers (init, ready, setup), socket registration, flanking, concentration, over-time effects |
+| **GMAction.ts** | Socket communication — GM-only actions via socketlib (damage application, effect creation, token movement) |
+| **settings.ts** | Module settings registration (`checkRule`, `configSettings`) |
+| **chatMessageHandling.ts** | Chat log filtering, damage card processing |
+
+### Subdirectories (`src/module/`)
+
+- **`activities/`** — Activity type implementations for dnd5e 5.3+. `MidiActivityMixin.ts` (112KB) patches all activity types; `AttackActivity.ts`, `SaveActivity.ts`, etc. handle specific types. `activityHelpers.ts` manages template targeting and confirmation dialogs.
+- **`apps/`** — UI components (all ApplicationV2-based): `ConfigPanel.ts`, `TroubleShooter.ts`, `TargetConfirmation.ts`, `ConditionEditor.ts`, etc.
+- **`ChatClasses/`** — Chat message/log overrides: `ChatMessageMidi.ts` (damage buttons), `ChatLogMidi.ts` (filtering), `DamageApplicationElementMidi.ts`
+- **`lib/`** — Internal utilities: `midiCompletions.ts` (macro autocomplete), `RollModifierTracker.ts` (advantage/disadvantage flags), `MidiDependentsRegistry.ts` (effect dependencies)
+
+### Entry Point
+
+`src/midi-qol.ts` exports 70+ functions/classes to `globalThis.MidiQOL`. Key exports: `Workflow`, `TrapWorkflow`, `completeItemUse`, `completeActivityUse`, `applyTokenDamage`, `hasCondition`, `createEffects`. Types are declared in `src/globals.ts`.
+
+### Patterns
+
+- **Hook-driven**: ~100 custom hooks (`midi-qol.preItemRoll`, `midi-qol.AttackRollComplete`, etc.) allow other modules to extend behavior
+- **Socket communication**: socketlib for GM-only operations — players request via socket, GM validates and executes
+- **lib-wrapper patching**: Safe monkey-patching of dnd5e methods without direct modification
 
 ## Key Resources
 
@@ -90,9 +123,14 @@ Note: This approach doesn't handle embedded document hierarchy (effects stored a
 - **NEVER run `git checkout` without explicit user approval** — can destroy uncommitted work
 
 ### Coding Conventions
+- **Comments**: Use sparingly. Only comment complex or non-obvious code.
 - **Transient debug**: Always use `console.error()`, never `log()`/`warn()`/midi logging. Never wrap in `if (debugEnabled)`.
 - **Imports**: Always use ES module imports, NOT `globalThis.MidiQOL` (except in test suite where direct imports aren't available)
 - **TypeScript**: Avoid `as any` / `: any` — check `globals.ts` and fvtt-types first. Query user before creating new types in globals.ts. Prefer updating globals.ts hooks namespace over `@ts-expect-error`.
+  - **NEVER add `as any` casts without explicit user approval.** Always propose alternatives first (globals.ts types, `@ts-expect-error`, interface augmentation).
+  - **NEVER add `@ts-expect-error` without explicit user approval.** The error may be solvable via globals.ts type definitions. Present the error and proposed solutions to the user.
+  - For dnd5e-specific properties on `actor.system` / `item.system` that lack types, use `@ts-expect-error no dnd5e types` — but still ask first.
+  - These rules apply to midi-qol, dae, and all related modules.
 - **CSS classes**: Never invent class names — always verify they exist in templates/stylesheets
 - **Document type checking**: Use `instanceof Item` not `doc.documentName === "Item"` — applies to all base document types
 - **External API calls**: Search midi-qol codebase for existing usage FIRST, then dnd5e source. Never assume methods exist.
@@ -199,9 +237,16 @@ Tests use the Quench framework in a separate module:
 ## Build Commands
 
 ```bash
-npm run build      # Production: typeCheck + esbuild → single midi-qol.js
-npm run devbuild   # Development: outputs to devDir in package.json
-npx gulp devWatch  # Watch mode
+npm run build        # Production: typeCheck + esbuild → single midi-qol.js
+npm run devbuild     # Development: outputs to devDir in package.json
+npx gulp devWatch    # Watch mode
+npm run compilePacks # JSON (pack-src/) → LevelDB (packs/) for sample items
+npm run extractPacks # LevelDB → JSON with ID generation
+```
+
+Tests are in a separate module:
+```bash
+cd /home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-tests && npm run build
 ```
 
 ## Planned Refactors
