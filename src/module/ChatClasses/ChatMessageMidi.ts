@@ -275,12 +275,21 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
             ${tooltipContents}
           </div>
         </div>
-        <h4 class="dice-total">${total}</h4>
+        <h4 class="dice-total">${total}${this._buildDamageTypeIcons(breakdown)}</h4>
       </div>
     `;
         returns.push(roll);
       }
       return returns;
+    }
+
+    _buildDamageTypeIcons(breakdown: { type: string }[]): string {
+      const uniqueTypes = [...new Set(breakdown.map(b => b.type).filter(Boolean))];
+      return uniqueTypes.map(type => {
+        const config = GameSystemConfig.damageTypes[type] ?? GameSystemConfig.healingTypes?.[type];
+        if (!config?.icon) return "";
+        return `<img class="midi-damage-type-icon" src="${config.icon}" alt="${config.label ?? ""}" data-tooltip="${config.label ?? ""}" />`;
+      }).join("");
     }
 
     _enrichUsageEffects(html: HTMLLIElement) {
@@ -536,7 +545,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (!this.flags?.[MODULE_ID]?.messageType) {
         this.applyChatVisibility(html);
         // @ts-expect-error no dnd5e-types
-        return super._enrichChatCard(html);
+        super._enrichChatCard(html);
+        this._addMarkerClasses(html);
+        return;
       }
       if (debugEnabled > 1) log("Enriching chat card", Date.now(), this.id);
       this.maskAttackRolls(html); // This has to run first to stop errors when ChatMessage5e._enrichDamageTooltip runs
@@ -544,7 +555,21 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       // @ts-expect-error no dnd5e-types
       super._enrichChatCard(html);
       this.applyChatVisibility(html);
+      this._addMarkerClasses(html);
       if (debugEnabled > 1) log("Finished enriching chat card", Date.now(), this.id);
+    }
+
+    /** Add CSS marker classes to avoid expensive :has() selectors during layout */
+    _addMarkerClasses(html: HTMLElement) {
+      if (html.querySelector(".midi-qol-tooltiptext")) {
+        html.querySelector(".message-content")?.classList.add("midi-qol-has-tooltip");
+      }
+      if (html.querySelector(".xmidi-qol-flex-container")) {
+        html.classList.add("midi-qol-dmg-app-msg");
+      }
+      if (html.querySelector(".midi-qol-player-damage-card")) {
+        html.classList.add("midi-qol-player-dmg-msg");
+      }
     }
 
     noDiceClicks(event: Event) {

@@ -4802,10 +4802,10 @@ return {
     if (chatMessage?.content) { // display the attack roll
       const utilityRoll = this.utilityRoll; // will concat as needed
       //let searchRe = /<div class="midi-qol-attack-roll">.*?<\/div>/;
-      let searchRe = /<div class="midi-qol-utility-roll"[\s\S]*?<div class="end-midi-qol-utility-roll">/
+      let searchRe = /<div[^>]*?class="midi-qol-utility-roll[^"]*"[\s\S]*?<div class="end-midi-qol-utility-roll">/
       // Display roll name if available, otherwise default to utility activity type title
       const rollString = this.activity?.roll?.name || i18n("DND5E.UTILITY.Title");
-      let replaceString = `<div class="midi-qol-utility-roll"><div style="text-align:center" >${rollString}</div>${this.utilityRollHTML}<div class="end-midi-qol-utility-roll">`
+      let replaceString = `<div class="midi-qol-utility-roll"><div class="midi-roll-label">${rollString}</div>${this.utilityRollHTML}<div class="end-midi-qol-utility-roll">`
       content = chatMessage.content.replace(searchRe, replaceString);
       if (debugEnabled > 0) warn("displayUtilityRoll |", this.utilityRoll)
       newFlags = {
@@ -4830,7 +4830,7 @@ return {
     let content;
     if (chatMessage?.content) { // display the attack roll
       content = chatMessage.content;
-      let searchRe = /<div class="midi-qol-attack-roll"[\s\S]*?<div class="end-midi-qol-attack-roll">/
+      let searchRe = /<div[^>]*?class="midi-qol-attack-roll[^"]*"[\s\S]*?<div class="end-midi-qol-attack-roll">/
       // Determine attack label based on attackRollModifierTracker.advantageMode
       let attackString: string;
       const mode = this.attackRoll?.options?.advantageMode ?? this.attackRollModifierTracker.advantageMode ?? ADV_MODE.NORMAL;
@@ -4853,7 +4853,7 @@ return {
         }
       }
 
-      let replaceString = `<div class="midi-qol-attack-roll"><div style="text-align:center" >${attackString}${attributionIcon}</div>${this.attackRollHTML}<div class="end-midi-qol-attack-roll">`
+      let replaceString = `<div class="midi-qol-attack-roll midi-qol-section-filled"><div class="midi-roll-label">${attackString}${attributionIcon}</div>${this.attackRollHTML}<div class="end-midi-qol-attack-roll">`
 
       content = content.replace(searchRe, replaceString);
       if (this.attackRollCount > 1) {
@@ -4924,33 +4924,33 @@ return {
     if (chatMessage) {
       if (this.damageRollHTML) {
         if (!this.useOther) {
-          const searchRe = /<div[^>]*?class="midi-qol-damage-roll"[\s\S]*?<div class="end-midi-qol-damage-roll">/;
-          const replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center">${this.damageFlavor}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-damage-roll">`
+          const searchRe = /<div[^>]*?class="midi-qol-damage-roll[^"]*"[\s\S]*?<div class="end-midi-qol-damage-roll">/;
+          const replaceString = `<div class="midi-qol-damage-roll midi-qol-section-filled"><div class="midi-roll-label">${this.damageFlavor}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-damage-roll">`
           content = content.replace(searchRe, replaceString);
         } else {
-          const otherSearchRe = /<div[^>]*? class="midi-qol-other-damage-roll"[\s\S]*?<div class="end-midi-qol-other-damage-roll">/;
-          const otherReplaceString = `<div class="midi-qol-other-damage-roll"><div style="text-align:center">${this.damageFlavor}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-other-damage-roll">`
+          const otherSearchRe = /<div[^>]*?class="midi-qol-other-damage-roll[^"]*"[\s\S]*?<div class="end-midi-qol-other-damage-roll">/;
+          const otherReplaceString = `<div class="midi-qol-other-damage-roll midi-qol-section-filled"><div class="midi-roll-label">${this.damageFlavor}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-other-damage-roll">`
           content = content.replace(otherSearchRe, otherReplaceString);
         }
         if (this.otherDamageRollHTML) {
-          const otherSearchRe = /<div[^>]*?class="midi-qol-other-damage-roll"[\s\S]*?<div class="end-midi-qol-other-damage-roll">/;
-          const otherReplaceString = `<div class="midi-qol-other-damage-roll"><div style="text-align:center" >${this.otherDamageFlavor}${this.otherDamageRollHTML || ""}</div><div class="end-midi-qol-other-damage-roll">`
+          const otherSearchRe = /<div[^>]*?class="midi-qol-other-damage-roll[^"]*"[\s\S]*?<div class="end-midi-qol-other-damage-roll">/;
+          const otherReplaceString = `<div class="midi-qol-other-damage-roll midi-qol-section-filled"><div class="midi-roll-label">${this.otherDamageFlavor}${this.otherDamageRollHTML || ""}</div><div class="end-midi-qol-other-damage-roll">`
           content = content.replace(otherSearchRe, otherReplaceString);
         }
         if (this.bonusDamageRolls) {
-          const bonusSearchRe = /<div[^>]*?class="midi-qol-bonus-damage-roll"[\s\S]*?<div class="end-midi-qol-bonus-damage-roll">/;
-          const bonusReplaceString = `<div class="midi-qol-bonus-damage-roll"><div style="text-align:center" >${this.bonusDamageFlavor}${this.bonusDamageHTML || ""}</div><div class="end-midi-qol-bonus-damage-roll">`
+          const bonusSearchRe = /<div[^>]*?class="midi-qol-bonus-damage-roll[^"]*"[\s\S]*?<div class="end-midi-qol-bonus-damage-roll">/;
+          const bonusReplaceString = `<div class="midi-qol-bonus-damage-roll midi-qol-section-filled"><div class="midi-roll-label">${this.bonusDamageFlavor}${this.bonusDamageHTML || ""}</div><div class="end-midi-qol-bonus-damage-roll">`
           content = content.replace(bonusSearchRe, bonusReplaceString);
         }
       } else {
         if (this.otherDamageRollHTML) {
-          const otherSearchRe = /<div[^>]*?class="midi-qol-damage-roll"[\s\S]*?<div class="end-midi-qol-damage-roll">/;
-          const otherReplaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center">${this.otherDamageFlavor}</div>${this.otherDamageRollHTML || ""}<div class="end-midi-qol-damage-roll">`
+          const otherSearchRe = /<div[^>]*?class="midi-qol-damage-roll[^"]*"[\s\S]*?<div class="end-midi-qol-damage-roll">/;
+          const otherReplaceString = `<div class="midi-qol-damage-roll midi-qol-section-filled"><div class="midi-roll-label">${this.otherDamageFlavor}</div>${this.otherDamageRollHTML || ""}<div class="end-midi-qol-damage-roll">`
           content = content.replace(otherSearchRe, otherReplaceString);
         }
         if (this.bonusDamageRolls) {
-          const bonusSearchRe = /<div[^>]*?class="midi-qol-bonus-damage-roll"[\s\S]*?<div class="end-midi-qol-bonus-damage-roll">/;
-          const bonusReplaceString = `<div class="midi-qol-bonus-damage-roll"><div style="text-align:center" >${this.bonusDamageFlavor}</div>${this.bonusDamageHTML || ""}<div class="end-midi-qol-bonus-damage-roll">`
+          const bonusSearchRe = /<div[^>]*?class="midi-qol-bonus-damage-roll[^"]*"[\s\S]*?<div class="end-midi-qol-bonus-damage-roll">/;
+          const bonusReplaceString = `<div class="midi-qol-bonus-damage-roll midi-qol-section-filled"><div class="midi-roll-label">${this.bonusDamageFlavor}</div>${this.bonusDamageHTML || ""}<div class="end-midi-qol-bonus-damage-roll">`
           content = content.replace(bonusSearchRe, bonusReplaceString);
         }
       }
@@ -5042,8 +5042,8 @@ return {
     const chatMessage = this.chatCard;
 
     if (chatMessage?.content) {
-      let searchString = /<div[^>]*?class="midi-qol-hits-display">[\s\S]*?<div class="end-midi-qol-hits-display">/;
-      let replaceString = `<div class="midi-qol-hits-display">${hitContent}<div class="end-midi-qol-hits-display">`
+      let searchString = /<div[^>]*?class="midi-qol-hits-display[^"]*"[\s\S]*?<div class="end-midi-qol-hits-display">/;
+      let replaceString = `<div class="midi-qol-hits-display midi-qol-section-filled">${hitContent}<div class="end-midi-qol-hits-display">`
       let content = chatMessage.content.replace(searchString, replaceString);
 
       const update = {
@@ -6877,7 +6877,7 @@ return {
       let content = chatMessage.content;
       data = chatMessage!.toObject();
       content = data.content || "";
-      let searchRe = /<div[^>]*?class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
+      let searchRe = /<div[^>]*?class="midi-qol-damage-roll[^"]*"[\s\S]*?<div class="end-midi-qol-damage-roll">/;
       let replaceString = `<div class="midi-qol-damage-roll"><div class="end-midi-qol-damage-roll">`
       content = content.replace(searchRe, replaceString);
       searchRe = /<div[^>]*?class="midi-qol-other-roll"[\s\S]*?<div class="end-midi-qol-other-roll">/;
@@ -7172,11 +7172,14 @@ return {
 
   protected recordAttackStats() {
     if (!configSettings.keepRollStats || !this.item || !this.attackRoll) return;
+    // @ts-expect-error CONFIG.Dice.D20Roll.ADV_MODE not typed
+    const ADV_MODE = CONFIG.Dice.D20Roll.ADV_MODE;
     gameStats.addAttackRoll({
       rawRoll: this.diceRoll,
       fumble: this.isFumble,
       critical: this.isCritical,
-      total: this.attackTotal
+      total: this.attackTotal,
+      advantageMode: this.attackRoll.options?.advantageMode ?? ADV_MODE.NORMAL
     }, this.item);
   }
 
@@ -7219,7 +7222,7 @@ return {
       }
     }
 
-    gameStats.addDamage(totalHpDamage, totalDamage, this.item, maxDamage, healingDone, kills);
+    gameStats.addDamage(totalHpDamage, totalDamage, this.item, maxDamage, healingDone, kills, this.isCritical);
 
     // Aggregate damage dealt by type across all targets (attacker-side stats), excluding healing types
     const dealtByType: Record<string, number> = {};
@@ -7270,7 +7273,7 @@ return {
     if (this.targets.size === 1) {
       // @ts-expect-error no dnd5e-types
       const targetAC = this.targets.first()!.actor?.system.attributes.ac.value;
-      this.processAttackRoll();
+      await this.processAttackRoll();
       const isMiss = this.isFumble || (this.attackRoll!.total ?? 0) < targetAC;
       if (isMiss) {
         attackBonus = "attack.fail.all"
@@ -8320,11 +8323,11 @@ export class ActiveDefenceWorkflow extends Workflow {
   async displayAttackRoll() {
     const chatMessage = this.chatCard;
     let newFlags = {};
-    const searchRe = /<div class="midi-qol-attack-roll"[\s\S]*?<div class="end-midi-qol-attack-roll">/;
+    const searchRe = /<div[^>]*?class="midi-qol-attack-roll[^"]*"[\s\S]*?<div class="end-midi-qol-attack-roll">/;
     let DCString = "DC";
     DCString = i18n("DND5E.AbbreviationDC") ?? "DC";
     const attackString = `<label class="midi-qol-active-defence-dc">${DCString} ${this.activeDefenceDC}</label> ${i18n("midi-qol.ActiveDefenceString")}`;
-    const replaceString = `<div class="midi-qol-attack-roll"> <div style="text-align:center"> ${attackString} </div><div class="end-midi-qol-attack-roll">`;
+    const replaceString = `<div class="midi-qol-attack-roll midi-qol-section-filled"><div class="midi-roll-label">${attackString}</div><div class="end-midi-qol-attack-roll">`;
     let content = chatMessage?.content.replace(searchRe, replaceString) ?? "";
     newFlags = {
       "midi-qol":

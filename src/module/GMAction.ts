@@ -2317,11 +2317,12 @@ async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: 
   const newPosition: Record<string, any> = { x: snappedCenter.x - targetToken.w / 2, y: snappedCenter.y - targetToken.h / 2 };
   if (data.newCenter.elevation !== undefined) newPosition.elevation = data.newCenter.elevation;
   // teleport uses "displace" action: instant, ignores walls/tokens
-  // animate: false uses normal action but with duration 0 (still respects constraints)
   const action = teleport ? "displace" : CONFIG.Token.movement.defaultAction;
   const waypoint = { ...newPosition, action, forced: true, snapped: true };
   const moveOptions: Record<string, any> = { constrainOptions: { ignoreWalls: teleport || ignoreWalls, ignoreCost: true, ignoreTokens: teleport || ignoreTokens }, autoRotate };
-  if (teleport || !animate) moveOptions.animation = { duration: 0 };
+  // Use animate: false for instant moves — this skips Foundry's #onUpdateAnimation entirely,
+  // avoiding a Foundry core crash when the animation path is empty (e.g. movement fully blocked)
+  if (teleport || !animate) moveOptions.animate = false;
   return tokenDocument.move(waypoint, moveOptions);
 }
 

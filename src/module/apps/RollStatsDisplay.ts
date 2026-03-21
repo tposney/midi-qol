@@ -59,7 +59,7 @@ export class RollStatsDisplay extends HandlebarsApplicationMixin(ApplicationV2) 
   static override PARTS = {
     tabs: {template: "templates/generic/tab-navigation.hbs"},
     stats: {template: "modules/midi-qol/templates/apps/RollStatsDisplay/stats.hbs", scrollable: ["", ".midi-stats-card-body"]},
-    config: {template: "modules/midi-qol/templates/apps/RollStatsDisplay/config.hbs"}
+    config: {template: "modules/midi-qol/templates/apps/RollStatsDisplay/config.hbs", scrollable: [""]}
   }
 
   tabGroups = {

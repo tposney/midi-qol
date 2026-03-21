@@ -6,10 +6,13 @@
 
 **New Features**
 * Updated Guidance sample item to allow rolling when the caster does not have a token on the map, i.e. always applies to self as a optional bonus action.
+* Some minor styling changes on the chat card.
+* Added a few additonal fields in roll statistics tracking
 
 **Movement API overhaul** — `moveToken`, `moveTokenAwayFromPoint`, and new `teleportToken` now use Foundry's `TokenDocument.move()` API, which means they properly trigger movement hooks and region events (e.g., `isMoved` specialDuration now fires correctly).
 
 **For developers**
+* Some cleanup of inline styles.
 * **`MidiQOL.moveToken(tokenRef, newCenter, options?)`** — new signature:
   - `tokenRef` — Token, TokenDocument, or UUID string
   - `newCenter: { x, y, elevation? }` — canvas center coordinates; `elevation` sets the token's elevation in grid units (omit to leave unchanged)

@@ -8,6 +8,9 @@ const blankStat = {
   numAttack20: 0,
   numAttackFumble: 0,
   numAttackCritical: 0,
+  numAttackAdvantage: 0,
+  numAttackDisadvantage: 0,
+  criticalDamageTotal: 0,
   numAttackMisses: 0,
   attackRollsDiceTotal: 0,
   attackRollTotal: 0,
@@ -48,8 +51,8 @@ let blankStats = {
  * increments to its authoritative copy.
  */
 export type StatUpdateMessage =
-  | { type: "attackRoll"; actorId: string; userId: string | undefined; itemName: string; rawRoll: number; fumble: boolean; critical: boolean; total: number }
-  | { type: "damage"; actorId: string; userId: string | undefined; itemName: string; hpDamage: number; totalDamage: number; maxDamage: number; healingDone: number; kills: number; hasAttackActivity: boolean }
+  | { type: "attackRoll"; actorId: string; userId: string | undefined; itemName: string; rawRoll: number; fumble: boolean; critical: boolean; total: number; advantageMode: number }
+  | { type: "damage"; actorId: string; userId: string | undefined; itemName: string; hpDamage: number; totalDamage: number; maxDamage: number; healingDone: number; kills: number; hasAttackActivity: boolean; critical: boolean }
   | { type: "saveResult"; actorId: string; userId: string | undefined; itemName: string; numSaves: number; numSuccess: number; numFail: number }
   | { type: "damageTaken"; actorId: string; hpDamage: number; damageByType: Record<string, number> }
   | { type: "damageDealtByType"; actorId: string; userId: string | undefined; dealtByType: Record<string, number>; appliedByType: Record<string, number> }
@@ -95,12 +98,17 @@ export class RollStats {
 
       lifetime.hitRate = this.toPrecision(lifetime.numDamageRolls / (lifetime.numAttacks || 1) * 100, 0);
       session.hitRate = this.toPrecision(session.numDamageRolls / (session.numAttacks || 1) * 100, 0);
+
+      lifetime.criticalDamageAverage = this.toPrecision(lifetime.criticalDamageTotal / (lifetime.numAttackCritical || 1), 1);
+      session.criticalDamageAverage = this.toPrecision(session.criticalDamageTotal / (session.numAttackCritical || 1), 1);
+
       Object.keys(actStats.itemStats).forEach(iid => {
         for (const itemStats of [actStats.itemStats[iid].session, actStats.itemStats[iid].lifetime]) {
           if (!itemStats) continue;
           itemStats.attackRollAverage = this.toPrecision(itemStats.attackRollTotal / (itemStats.numAttacks || 1), 1);
           itemStats.damageTotalAverage = this.toPrecision(itemStats.damageTotal / (itemStats.numAttacks || 1), 1);
           itemStats.damageAppliedAverage = this.toPrecision(itemStats.damageApplied / (itemStats.numAttacks || 1), 1);
+          itemStats.criticalDamageAverage = this.toPrecision(itemStats.criticalDamageTotal / (itemStats.numAttackCritical || 1), 1);
         }
       })
     });
@@ -175,7 +183,7 @@ export class RollStats {
   // These send raw roll data to the GM via socket. The GM applies
   // the increments to its authoritative copy (see GMrecordStats).
 
-  public addDamage(hpDamage: number, totalDamage: number, item: Item.Implementation | undefined, maxDamage: number = 0, healingDone: number = 0, kills: number = 0) {
+  public addDamage(hpDamage: number, totalDamage: number, item: Item.Implementation | undefined, maxDamage: number = 0, healingDone: number = 0, kills: number = 0, critical: boolean = false) {
     const actorId = item?.actor?.id;
     if (!actorId) return;
     // @ts-expect-error no dnd5e-types for activities
@@ -183,7 +191,7 @@ export class RollStats {
     const userId = (game.user && item!.actor!.testUserPermission(game.user, "OWNER")) ? game.user.id : undefined;
     timedExecuteAsGM("recordStats", {
       type: "damage", actorId, userId, itemName: item?.name ?? "",
-      hpDamage, totalDamage, maxDamage, healingDone, kills, hasAttackActivity
+      hpDamage, totalDamage, maxDamage, healingDone, kills, hasAttackActivity, critical
     } satisfies StatUpdateMessage);
     Hooks.callAll("midi-qol.StatsUpdated");
   }
@@ -199,13 +207,13 @@ export class RollStats {
     Hooks.callAll("midi-qol.StatsUpdated");
   }
 
-  public addAttackRoll({ rawRoll, fumble, critical, total }: { rawRoll: number; fumble: boolean; critical: boolean; total: number}, item: Item.Implementation) {
+  public addAttackRoll({ rawRoll, fumble, critical, total, advantageMode }: { rawRoll: number; fumble: boolean; critical: boolean; total: number; advantageMode: number }, item: Item.Implementation) {
     const actorId = item.actor?.id;
     if (!actorId) return;
     const userId = (game.user && item.actor?.testUserPermission(game.user, "OWNER")) ? game.user.id : undefined;
     timedExecuteAsGM("recordStats", {
       type: "attackRoll", actorId, userId, itemName: item.name,
-      rawRoll, fumble, critical, total
+      rawRoll, fumble, critical, total, advantageMode
     } satisfies StatUpdateMessage);
     Hooks.callAll("midi-qol.StatsUpdated");
   }
@@ -314,6 +322,8 @@ export class RollStats {
         if (msg.fumble) s.numAttackFumble += 1;
         s.attackRollsDiceTotal += msg.rawRoll;
         s.attackRollTotal += msg.total;
+        if (msg.advantageMode === 1) s.numAttackAdvantage += 1;
+        else if (msg.advantageMode === -1) s.numAttackDisadvantage += 1;
       }
     }
   }
@@ -337,6 +347,7 @@ export class RollStats {
           s.damageApplied += msg.hpDamage;
           s.damageTotal += msg.totalDamage;
           s.maxDamage = Math.max(s.maxDamage, msg.maxDamage);
+          if (msg.critical) s.criticalDamageTotal += msg.totalDamage;
         } else if (msg.healingDone > 0 && isItemStats) {
           s.numDamageRolls += 1;
           s.damageApplied -= msg.healingDone;
@@ -436,9 +447,9 @@ export class RollStats {
     foundry.utils.saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
   }
 
-  public headerLine: string = `"Actor", "Item Name", "#Attacks", "# Nat20", "#Fumbles", "#Critical", "Attack Roll Dice Total", "Attack Roll Total", "Damage Rolls", "Total Damage Applied", "Damage Total", "#Saves", "#Save Success", "#Save Fail", "Max Damage", "Max Heal", "Kills", "Damage Taken", "Healing Received", "#Conc Saves", "#Conc Success", "#Conc Fail", "#Death Saves", "#Death Save Success", "#Death Save Fail"`;
+  public headerLine: string = `"Actor", "Item Name", "#Attacks", "# Nat20", "#Fumbles", "#Critical", "#Advantage", "#Disadvantage", "Critical Damage Total", "Attack Roll Dice Total", "Attack Roll Total", "Damage Rolls", "Total Damage Applied", "Damage Total", "#Saves", "#Save Success", "#Save Fail", "Max Damage", "Max Heal", "Kills", "Damage Taken", "Healing Received", "#Conc Saves", "#Conc Success", "#Conc Fail", "#Death Saves", "#Death Save Success", "#Death Save Fail"`;
   dumpStatLine(actorName: string, itemName: string, stats: InnerStats): string {
-    return `"${actorName}","${itemName}", ${stats.numAttacks || 0}, ${stats.numAttack20 || 0}, ${stats.numAttackFumble || 0}, ${stats.numAttackCritical || 0}, ${stats.attackRollsDiceTotal || 0}, ${stats.attackRollTotal || 0}, ${stats.numDamageRolls || 0}, ${stats.damageApplied || 0}, ${stats.damageTotal || 0}, ${stats.numSaves || 0}, ${stats.numSaveSuccess || 0}, ${stats.numSaveFail || 0}, ${stats.maxDamage || 0}, ${stats.healingDone || 0}, ${stats.kills || 0}, ${stats.damageTaken || 0}, ${stats.healingReceived || 0}, ${stats.numConcentrationSaves || 0}, ${stats.numConcentrationSuccess || 0}, ${stats.numConcentrationFail || 0}, ${stats.numDeathSaves || 0}, ${stats.numDeathSaveSuccess || 0}, ${stats.numDeathSaveFail || 0}`
+    return `"${actorName}","${itemName}", ${stats.numAttacks || 0}, ${stats.numAttack20 || 0}, ${stats.numAttackFumble || 0}, ${stats.numAttackCritical || 0}, ${stats.numAttackAdvantage || 0}, ${stats.numAttackDisadvantage || 0}, ${stats.criticalDamageTotal || 0}, ${stats.attackRollsDiceTotal || 0}, ${stats.attackRollTotal || 0}, ${stats.numDamageRolls || 0}, ${stats.damageApplied || 0}, ${stats.damageTotal || 0}, ${stats.numSaves || 0}, ${stats.numSaveSuccess || 0}, ${stats.numSaveFail || 0}, ${stats.maxDamage || 0}, ${stats.healingDone || 0}, ${stats.kills || 0}, ${stats.damageTaken || 0}, ${stats.healingReceived || 0}, ${stats.numConcentrationSaves || 0}, ${stats.numConcentrationSuccess || 0}, ${stats.numConcentrationFail || 0}, ${stats.numDeathSaves || 0}, ${stats.numDeathSaveSuccess || 0}, ${stats.numDeathSaveFail || 0}`
   }
   public exportToCSV() {
     let csvText: string = foundry.utils.duplicate(this.headerLine) + "\n";
@@ -473,6 +484,9 @@ type InnerStats = {
   numAttack20: number;
   numAttackFumble: number;
   numAttackCritical: number;
+  numAttackAdvantage: number;
+  numAttackDisadvantage: number;
+  criticalDamageTotal: number;
   numAttackMisses: number;
   attackRollsDiceTotal: number;
   attackRollTotal: number;
@@ -497,6 +511,7 @@ type InnerStats = {
   attackRollAverage?: number;
   damageTotalAverage?: number;
   damageAppliedAverage?: number;
+  criticalDamageAverage?: number;
   hitRate?: number;
 };
 type ItemStats = {

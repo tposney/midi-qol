@@ -161,8 +161,8 @@
   visibility: visible;
 }
 
-/* Show full damage tooltip */
-.message-content:has(.midi-qol-tooltiptext) {
+/* Show full damage tooltip — marker class added by ChatMessageMidi._addMarkerClasses */
+.midi-qol-has-tooltip {
   overflow: visible;
   table {
     overflow: visible;
@@ -323,7 +323,6 @@
   order: unset;
   display: block;
   overflow: hidden;
-  transition: all 250ms ease;
 
   .tooltip-part {
     border-bottom: 1px solid var(--color-border-light-1);
@@ -481,7 +480,8 @@
     gap: 0.15rem;
     margin-bottom: 0.25rem;
 
-    .midi-qol.target > img {
+    .midi-qol.target > img,
+    .midi-qol.target > img.midi-qol-target-img {
       width: 22px !important;
       height: 22px !important;
       object-fit: cover;
@@ -521,7 +521,7 @@
     }
   }
 
-  .message:has(.midi-qol-player-damage-card) {
+  .midi-qol-player-dmg-msg {
     padding: 0;
     border: none;
     border-left: 0.2rem solid var(--user-color);
@@ -625,13 +625,50 @@
   white-space: nowrap;
 }
 
-.midi-qol-attack-roll > div:nth-child(1),
-.midi-qol-damage-roll > div:nth-child(1),
-.midi-qol-other-damage-roll > div:nth-child(1),
-.midi-qol-utility-roll > div:nth-child(1) {
+.midi-roll-label {
+  text-align: center;
   text-transform: uppercase;
   font-size: 10px;
   font-weight: bold;
+}
+
+.midi-qol-ac {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  background: var(--dnd5e-background-5, rgba(0, 0, 0, 0.06));
+  font-size: var(--font-size-11);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.midi-qol-ac .fa-shield-halved {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.midi-qol-ac-value {
+  font-weight: bold;
+}
+
+/* Damage type icon next to total */
+.midi-damage-type-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  vertical-align: -0.15em;
+  margin-left: 0.25em;
+  border: none;
+  opacity: 0.7;
+}
+
+/* Section separators between filled sections */
+.midi-results > .midi-qol-section-filled ~ .midi-qol-section-filled {
+  border-top: 1px solid var(--color-border-light-1, rgba(0, 0, 0, 0.1));
+  padding-top: 0.15rem;
 }
 
 .midi-qol-tooltiptext {
@@ -643,7 +680,8 @@
 /* ----------------------------------------- */
 /* xmidi-qol-flex-container (Damage Application Card)
 /* ----------------------------------------- */
-.chat-message.message.flexcol:has(.xmidi-qol-flex-container) {
+/* Marker class added by ChatMessageMidi._addMarkerClasses */
+.midi-qol-dmg-app-msg {
   /* Hides the header */
   .message-header {
     display: none;
@@ -773,7 +811,7 @@
 }
 
 /* Message container for xmidi-qol-flex-container */
-:is(.chat-popout, #chat-log, .chat-log) .message:has(.xmidi-qol-flex-container) {
+:is(.chat-popout, #chat-log, .chat-log) .midi-qol-dmg-app-msg {
   padding: 0;
   border: none;
   border-left: 0.2rem solid var(--user-color);
@@ -861,7 +899,7 @@ section.midi-qol.tab {
 }
 
 /* Hide message header for player damage cards */
-.chat-message.message.flexcol:has(.midi-qol-player-damage-card) .message-header {
+.midi-qol-player-dmg-msg .message-header {
   display: none;
 }
 
@@ -1028,29 +1066,11 @@ section.midi-qol.tab {
 /* Advantage/Disadvantage Indicator
 /* ----------------------------------------- */
 /* Attribution info icon - shows tooltip with advantage/disadvantage sources */
-.midi-attribution-info {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: 0.3em;
-  font-size: 0.75em;
-  cursor: help;
-  vertical-align: middle;
-  color: var(--color-text-light-6, #888);
-  opacity: 0.7;
-}
-
-.midi-attribution-info:hover {
-  opacity: 1;
-  color: var(--color-text-light-highlight, #fff);
-}
-
-/* Save attribution info icon - same style, positioned before save total */
+.midi-attribution-info,
 .midi-save-attribution-info {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-right: 0.3em;
   font-size: 0.75em;
   cursor: help;
   vertical-align: middle;
@@ -1058,6 +1078,10 @@ section.midi-qol.tab {
   opacity: 0.7;
 }
 
+.midi-attribution-info { margin-left: 0.3em; }
+.midi-save-attribution-info { margin-right: 0.3em; }
+
+.midi-attribution-info:hover,
 .midi-save-attribution-info:hover {
   opacity: 1;
   color: var(--color-text-light-highlight, #fff);
@@ -1096,26 +1120,20 @@ section.midi-qol.tab {
 }
 
 .midi-attribution-tooltip .attribution-type-ADV,
-.midi-attribution-tooltip .attribution-type-SUCCESS {
+.midi-attribution-tooltip .attribution-type-SUCCESS,
+.midi-attribution-tooltip .attribution-type-MIN {
   color: #22aa44;
 }
 
 .midi-attribution-tooltip .attribution-type-DIS,
-.midi-attribution-tooltip .attribution-type-FAIL {
+.midi-attribution-tooltip .attribution-type-FAIL,
+.midi-attribution-tooltip .attribution-type-MAX {
   color: #cc4444;
 }
 
 .midi-attribution-tooltip .attribution-type-NOADV,
 .midi-attribution-tooltip .attribution-type-NODIS {
   color: #888888;
-}
-
-.midi-attribution-tooltip .attribution-type-MIN {
-  color: #22aa44;
-}
-
-.midi-attribution-tooltip .attribution-type-MAX {
-  color: #cc4444;
 }
 
 .midi-attribution-tooltip .attribution-type-CRIT {
@@ -1339,8 +1357,9 @@ section.midi-qol.tab {
   background: var(--color-hover-bg, rgba(0, 0, 0, 0.1));
 }
 
-/* Stats tab fills available space in the flex column */
-#midi-stats-stats-tab {
+/* Stats/Config tabs fill available space in the flex column */
+#midi-stats-stats-tab,
+#midi-stats-config-tab {
   flex: 1;
   min-height: 0;
 }
@@ -1728,21 +1747,17 @@ section.midi-qol.tab {
 }
 
 /* AC modifier icons in hit/save display (cover, flanking, reaction, grants) */
-.midi-qol-ac-icon {
-  display: inline !important;
-  width: 14px !important;
-  height: 14px !important;
-  vertical-align: -0.125em;
-  margin-right: 1px;
-  filter: brightness(0);
-}
-
+.midi-qol-ac-icon,
 .midi-qol-ac-icon-no-filter {
   display: inline !important;
   width: 14px !important;
   height: 14px !important;
   vertical-align: -0.125em;
   margin-right: 1px;
+}
+
+.midi-qol-ac-icon {
+  filter: brightness(0);
 }
 
 .midi-qol-ac-icon-fa {

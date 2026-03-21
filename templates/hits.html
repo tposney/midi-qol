@@ -17,8 +17,7 @@
           <li data-uuid="{{actorUuid}}" data-id="{{hit.target.id}}"
             class="target {{hit.hitClass}} midi-qol midi-qol-hit-class midi-qol-target-select">
             <i class="midi-qol-hit-symbol fas {{hit.hitSymbol}}"></i>
-            <img src="{{hit.img}}"
-              style="background-color: var(--dnd5e-background-10); width: 22px !important; height: 22px !important;" />
+            <img class="midi-qol-target-img" src="{{hit.img}}" />
             <div class="name-stacked">
               <span class="midi-qol-target-name title midi-qol-gmTokenName" id="{{hit.target.id}}">
                 {{{hit.gmName}}}
@@ -36,7 +35,7 @@
             <div class="midi-qol-ac {{hit.acClass}}" {{#if hit.acTooltip}}data-tooltip="{{hit.acTooltip}}"{{/if}}>
               <span>
                 <i class="fas fa-shield-halved"></i>
-                <span style="font-weight: bold;">{{hit.acDisplay}}</span>
+                <span class="midi-qol-ac-value">{{hit.acDisplay}}</span>
               </span>
             </div>
             {{/if}}

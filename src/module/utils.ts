@@ -7098,6 +7098,13 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
     );
   }
 
+  // Extract damage type icon for display next to total
+  // @ts-expect-error no dnd5e types
+  const damageType: string | undefined = roll.options?.type;
+  const damageConfig = damageType
+    ? (GameSystemConfig.damageTypes[damageType] ?? GameSystemConfig.healingTypes?.[damageType])
+    : undefined;
+
   const chatData = {
     formula: roll.formula,
     user: game.user?.id,
@@ -7107,7 +7114,9 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
     flavor: options?.flavor ?? roll.options?.flavor,
     total: (roll.total !== undefined) ? Math.round((roll.total) * 100) / 100 : "???",
     advantageMode: advantageModeStr,
-    attributionTooltip
+    attributionTooltip,
+    damageTypeIcon: damageConfig?.icon,
+    damageTypeLabel: damageConfig?.label
   };
   return foundry.applications.handlebars.renderTemplate(template, chatData);
 }

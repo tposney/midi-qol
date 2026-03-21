@@ -6,6 +6,8 @@
     <td>{{stats.numAttacks}}</td>
     <td>{{stats.numAttackCritical}}</td>
     <td>{{stats.numAttackFumble}}</td>
+    <td>{{stats.numAttackAdvantage}}</td>
+    <td>{{stats.numAttackDisadvantage}}</td>
     <td>{{stats.numDamageRolls}}</td>
     <td>{{stats.numAttack20}}</td>
     <td>{{stats.attackRollAverage}}</td>
@@ -18,6 +20,7 @@
     <td></td>
     <td>{{stats.damageTotalAverage}}</td>
     <td>{{stats.damageAppliedAverage}}</td>
+    <td>{{stats.criticalDamageAverage}}</td>
     <td>{{stats.maxDamage}}</td>
     <td>{{stats.healingDone}}</td>
     <td>{{stats.kills}}</td>
@@ -62,6 +65,8 @@
                             <th>{{localize "midi-qol.stats.Rolls"}}</th>
                             <th>{{localize "midi-qol.stats.Crits"}}</th>
                             <th>{{localize "midi-qol.stats.fumbles"}}</th>
+                            <th>{{localize "midi-qol.stats.Adv"}}</th>
+                            <th>{{localize "midi-qol.stats.Dis"}}</th>
                             <th>{{localize "midi-qol.stats.Hits"}}</th>
                             <th>{{localize "midi-qol.stats.nat20s"}}</th>
                             <th>{{localize "midi-qol.stats.avgRoll"}}</th>
@@ -78,6 +83,7 @@
                             <th class="midi-stats-panel-name"><i class="fas fa-burst"></i> {{localize "midi-qol.stats.Damage"}}</th>
                             <th>{{localize "midi-qol.stats.Avg"}}</th>
                             <th>{{localize "midi-qol.stats.AppliedShort"}}</th>
+                            <th>{{localize "midi-qol.stats.avgCrit"}}</th>
                             <th>{{localize "midi-qol.stats.maxHit"}}</th>
                             <th>{{localize "midi-qol.stats.healed"}}</th>
                             <th>{{localize "midi-qol.stats.kills"}}</th>
@@ -123,7 +129,10 @@
                                             <th>{{localize "midi-qol.stats.Rolls"}}</th>
                                             <th>{{localize "midi-qol.stats.Hits"}}</th>
                                             <th>{{localize "midi-qol.stats.Crits"}}</th>
+                                            <th>{{localize "midi-qol.stats.Adv"}}</th>
+                                            <th>{{localize "midi-qol.stats.Dis"}}</th>
                                             <th>{{localize "midi-qol.stats.AvgDmg"}}</th>
+                                            <th>{{localize "midi-qol.stats.avgCrit"}}</th>
                                             <th>{{localize "midi-qol.stats.AppliedShort"}}</th>
                                             <th>{{localize "midi-qol.stats.kills"}}</th>
                                             <th>{{localize "midi-qol.stats.SavesCol"}}</th>
@@ -136,7 +145,10 @@
                                                 <td>{{this.session.numAttacks}}</td>
                                                 <td>{{this.session.numDamageRolls}}</td>
                                                 <td>{{this.session.numAttackCritical}}</td>
+                                                <td>{{this.session.numAttackAdvantage}}</td>
+                                                <td>{{this.session.numAttackDisadvantage}}</td>
                                                 <td>{{this.session.damageTotalAverage}}</td>
+                                                <td>{{this.session.criticalDamageAverage}}</td>
                                                 <td>{{this.session.damageAppliedAverage}}</td>
                                                 <td>{{this.session.kills}}</td>
                                                 <td>{{this.session.numSaveSuccess}}/{{this.session.numSaves}}</td>
@@ -146,7 +158,10 @@
                                                 <td>{{this.lifetime.numAttacks}}</td>
                                                 <td>{{this.lifetime.numDamageRolls}}</td>
                                                 <td>{{this.lifetime.numAttackCritical}}</td>
+                                                <td>{{this.lifetime.numAttackAdvantage}}</td>
+                                                <td>{{this.lifetime.numAttackDisadvantage}}</td>
                                                 <td>{{this.lifetime.damageTotalAverage}}</td>
+                                                <td>{{this.lifetime.criticalDamageAverage}}</td>
                                                 <td>{{this.lifetime.damageAppliedAverage}}</td>
                                                 <td>{{this.lifetime.kills}}</td>
                                                 <td>{{this.lifetime.numSaveSuccess}}/{{this.lifetime.numSaves}}</td>
