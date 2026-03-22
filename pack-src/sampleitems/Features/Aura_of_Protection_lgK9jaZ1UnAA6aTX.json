@@ -25,26 +25,9 @@
           "overlay": false
         }
       },
-      "changes": [
-        {
-          "key": "system.bonuses.abilities.save",
-          "mode": 0,
-          "value": "+@abilities.cha.mod",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "origin": "Compendium.midi-qol.midiqol-sample-items.Item.qX0OnNxcPebyZUtG",
-      "tint": "#ffffff",
       "transfer": true,
       "name": "Aura of Protection",
       "description": "",
@@ -74,7 +57,15 @@
         "combatOnly": false,
         "disableOnHidden": true,
         "evaluatePreApply": true,
-        "showRadius": false
+        "showRadius": false,
+        "changes": [
+          {
+            "key": "system.bonuses.abilities.save",
+            "value": "+@abilities.cha.mod",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
       },
       "sort": 0,
       "_key": "!items.effects!lgK9jaZ1UnAA6aTX.9OFOAQENA1VYGc7T"

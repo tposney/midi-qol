@@ -30,37 +30,8 @@
           "onlyOnce": false
         }
       },
-      "changes": [
-        {
-          "key": "system.bonuses.rwak.damage",
-          "mode": 0,
-          "value": "+2",
-          "priority": 20
-        },
-        {
-          "key": "system.traits.weaponProf.value",
-          "mode": 2,
-          "value": "shortbow",
-          "priority": 20
-        },
-        {
-          "key": "system.traits.weaponProf.value",
-          "mode": 2,
-          "value": "longbow",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": 47178646117,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": 249,
-        "startTurn": 0
-      },
-      "tint": "#ffffff",
+      "duration": {},
       "transfer": true,
       "origin": "Actor.BogmFuNh1wswTouJ.Item.bxygzHyGsUWztdkU",
       "name": "Bracers of Archery",
@@ -79,9 +50,36 @@
       },
       "img": "icons/equipment/wrist/bracer-studded-leather-steel.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "system.bonuses.rwak.damage",
+            "value": "+2",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "system.traits.weaponProf.value",
+            "value": "shortbow",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.weaponProf.value",
+            "value": "longbow",
+            "priority": 20,
+            "type": "add"
+          }
+        ]
+      },
       "sort": 0,
-      "_key": "!items.effects!PK7zGIdSuauon3TR.5YQAiFBcKFBjPEnq"
+      "_key": "!items.effects!PK7zGIdSuauon3TR.5YQAiFBcKFBjPEnq",
+      "start": {
+        "time": 47178646117,
+        "round": 249,
+        "turn": 0,
+        "combat": null
+      }
     }
   ],
   "flags": {

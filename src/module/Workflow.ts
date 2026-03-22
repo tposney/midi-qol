@@ -2152,21 +2152,22 @@ export class Workflow {
 
     // Set duration based on converted duration
     if (converted.type === "seconds") {
-      effectData.duration = { startTime: game.time?.worldTime };
       if (converted.seconds !== undefined) {
-        effectData.duration.seconds = converted.seconds;
+        // @ts-expect-error fvtt-types v14 duration
+        effectData.duration = { value: converted.seconds, units: "seconds" };
       }
+      // @ts-expect-error fvtt-types v14 duration
+      effectData.start = { time: game.time?.worldTime ?? 0 };
     } else if (converted.type === "turns") {
-      effectData.duration = {
-        startRound: game.combat?.round,
-        startTurn: game.combat?.turn,
-      };
-      if (converted.rounds !== undefined) {
-        effectData.duration.rounds = converted.rounds;
+      if ((converted.rounds ?? 0) > 0) {
+        // @ts-expect-error fvtt-types v14 duration
+        effectData.duration = { value: converted.rounds, units: "rounds" };
+      } else if ((converted.turns ?? 0) > 0) {
+        // @ts-expect-error fvtt-types v14 duration
+        effectData.duration = { value: Math.max(converted.turns ?? 1, 1), units: "turns" };
       }
-      if (converted.turns !== undefined) {
-        effectData.duration.turns = converted.turns;
-      }
+      // @ts-expect-error fvtt-types v14 duration
+      effectData.start = { round: game.combat?.round ?? 0, turn: game.combat?.turn ?? 0 };
     }
 
     const effects = await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
@@ -3190,9 +3191,10 @@ export class Workflow {
                 await CERemoveEffect({ effectName: ceEffect.name, uuid: token.actor.uuid, origin });
               }
               const effectData = foundry.utils.mergeObject(ceEffect.toObject(), metaData);
-              if (isInCombat(token.actor) && (effectData.duration?.seconds ?? 0) <= 60) {
-                effectData.duration.rounds = effectData.duration.rounds ?? Math.ceil((effectData.duration?.seconds ?? 0) / CONFIG.time.roundTime);
-                delete effectData.duration.seconds;
+              // @ts-expect-error fvtt-types v14 duration
+              if (isInCombat(token.actor) && effectData.duration?.units === "seconds" && (effectData.duration?.value ?? 0) <= 60) {
+                  // @ts-expect-error fvtt-types v14 duration
+                effectData.duration = { value: Math.ceil((effectData.duration.value ?? 0) / CONFIG.time.roundTime), units: "rounds" };
               }
               effectData.origin = origin ?? this.activity.uuid ?? this.activity.item.uuid;
               const concentrationUuid = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId")??"")?.uuid;
@@ -3554,20 +3556,23 @@ export class Workflow {
           const converted = convertDuration(activityDuration, inCombat);
           if (converted.type === "none") {
             // Permanent/special duration - no expiry
-            effectData.duration = {
-              startRound: game.combat?.round,
-              startTurn: game.combat?.turn,
-              startTime: game.time?.worldTime
-            }
+            // @ts-expect-error fvtt-types v14 duration
+            effectData.start = { time: game.time?.worldTime ?? 0, round: game.combat?.round ?? 0, turn: game.combat?.turn ?? 0 };
           } else if (converted.type === "seconds") {
-            effectData.duration = { seconds: Math.max(converted.seconds ?? 1, 1), startTime: game.time?.worldTime }
+            // @ts-expect-error fvtt-types v14 duration
+            effectData.duration = { value: Math.max(converted.seconds ?? 1, 1), units: "seconds" };
+            // @ts-expect-error fvtt-types v14 duration
+            effectData.start = { time: game.time?.worldTime ?? 0 };
           } else if (converted.type === "turns") {
-            effectData.duration = {
-              rounds: converted.rounds,
-              turns: (converted.rounds ?? 0) > 0 ? converted.turns : Math.max(converted.turns ?? 1, 1),
-              startRound: game.combat?.round,
-              startTurn: game.combat?.turn,
+            if ((converted.rounds ?? 0) > 0) {
+              // @ts-expect-error fvtt-types v14 duration
+              effectData.duration = { value: converted.rounds, units: "rounds" };
+            } else {
+              // @ts-expect-error fvtt-types v14 duration
+              effectData.duration = { value: Math.max(converted.turns ?? 1, 1), units: "turns" };
             }
+            // @ts-expect-error fvtt-types v14 duration
+            effectData.start = { round: game.combat?.round ?? 0, turn: game.combat?.turn ?? 0 };
           }
           const effects = await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
           if (effects.length > 0) {
@@ -3620,29 +3625,29 @@ export class Workflow {
           const inCombat = !!(game.combat?.turns.some(combatant => combatant.token?.id === selfTarget?.id));
           if (activityDuration?.units === "inst") {
             // This seems wrong, however lots of dnd5e summons activities have a duration of inst - e.g. find familiar
-            effectData.duration = {
-              startRound: game.combat?.round,
-              startTurn: game.combat?.turn,
-              startTime: game.time?.worldTime
-            }
+            // @ts-expect-error fvtt-types v14 duration
+            effectData.start = { time: game.time?.worldTime ?? 0, round: game.combat?.round ?? 0, turn: game.combat?.turn ?? 0 };
             //@ts-expect-error CONFIG.DND5E
           } else if (CONFIG.DND5E.permanentTimePeriods[activityDuration.units]) {
-            effectData.duration = {
-              startRound: game.combat?.round,
-              startTurn: game.combat?.turn,
-              startTime: game.time?.worldTime
-            }
+            // @ts-expect-error fvtt-types v14 duration
+            effectData.start = { time: game.time?.worldTime ?? 0, round: game.combat?.round ?? 0, turn: game.combat?.turn ?? 0 };
           } else {
             const convertedDuration = convertDuration(activityDuration, inCombat);
             if (convertedDuration.type === "seconds") {
-              effectData.duration = { seconds: Math.max(convertedDuration.seconds ?? 1, 1), startTime: game.time?.worldTime }
+              // @ts-expect-error fvtt-types v14 duration
+              effectData.duration = { value: Math.max(convertedDuration.seconds ?? 1, 1), units: "seconds" };
+              // @ts-expect-error fvtt-types v14 duration
+              effectData.start = { time: game.time?.worldTime ?? 0 };
             } else if (convertedDuration.type === "turns") {
-              effectData.duration = {
-                rounds: convertedDuration.rounds,
-                turns: (convertedDuration.rounds ?? 0) > 0 ? convertedDuration.turns : Math.max(convertedDuration.turns ?? 1, 1),
-                startRound: game.combat?.round,
-                startTurn: game.combat?.turn,
+              if ((convertedDuration.rounds ?? 0) > 0) {
+                // @ts-expect-error fvtt-types v14 duration
+                effectData.duration = { value: convertedDuration.rounds, units: "rounds" };
+              } else {
+                // @ts-expect-error fvtt-types v14 duration
+                effectData.duration = { value: Math.max(convertedDuration.turns ?? 1, 1), units: "turns" };
               }
+              // @ts-expect-error fvtt-types v14 duration
+              effectData.start = { round: game.combat?.round ?? 0, turn: game.combat?.turn ?? 0 };
             }
           }
           await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
@@ -7700,7 +7705,8 @@ return {
       if (attackBonus) {
         const grantsFlagKey = `flags.${MODULE_ID}.grants.attack.bonus`;
         const grantsEffectNames = targetActor.allApplicableEffects()
-          .filter(e => !e.disabled && e.changes?.some(c => c.key.startsWith(grantsFlagKey)))
+          // @ts-expect-error fvtt-types v14 ActiveEffect
+          .filter(e => !e.disabled && e.system.changes?.some(c => c.key.startsWith(grantsFlagKey)))
           .map(e => e.name)
           .toArray();
         if (grantsEffectNames.length) {

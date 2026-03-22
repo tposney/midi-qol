@@ -149,25 +149,11 @@
     {
       "origin": "Actor.DMTSWfQs8whM5FtE.Item.LNzob6K0PuEQNGzs",
       "duration": {
-        "rounds": 1,
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 1,
+        "units": "rounds"
       },
       "disabled": false,
       "_id": "q0pZueCSzox6d3Ph",
-      "changes": [
-        {
-          "key": "flags.midi-qol.grants.attack.fail.all",
-          "mode": 0,
-          "value": "1",
-          "priority": 20
-        }
-      ],
-      "tint": "#ffffff",
       "transfer": false,
       "flags": {
         "dfreds-convenient-effects": {
@@ -224,7 +210,16 @@
       },
       "img": "icons/magic/air/air-burst-spiral-blue-gray.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.grants.attack.fail.all",
+            "value": "1",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!9fodGMwR2wacWJlF.q0pZueCSzox6d3Ph"
     }

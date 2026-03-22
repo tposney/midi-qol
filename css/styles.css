@@ -1,3 +1,5 @@
+@layer modules {
+
 .dnd5e.sheet .item-buttons button {
   font-size: 10px;
   line-height: 12px;
@@ -1795,3 +1797,5 @@ body.theme-dark input[type="checkbox"] {
   text-overflow: ellipsis;
   text-align: left;
 }
+
+} /* @layer modules */

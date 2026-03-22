@@ -5,16 +5,10 @@
   "effects": [
     {
       "_id": "invisibleEffct00",
-      "changes": [],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 3600,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 3600,
+        "units": "seconds"
       },
       "origin": null,
       "transfer": false,
@@ -37,7 +31,6 @@
           "showIcon": true
         }
       },
-      "tint": "#ffffff",
       "name": "Invisible",
       "description": "<p>The spell ends early immediately after the target makes an attack roll, deals damage, or casts a spell.</p>",
       "statuses": [
@@ -56,7 +49,9 @@
       },
       "img": "systems/dnd5e/icons/svg/statuses/invisible.svg",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": []
+      },
       "sort": 0,
       "_key": "!items.effects!NPEybW5XcLouBuFX.invisibleEffct00"
     }

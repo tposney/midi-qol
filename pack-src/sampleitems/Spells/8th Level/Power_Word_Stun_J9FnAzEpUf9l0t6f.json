@@ -10,27 +10,19 @@
       "transfer": false,
       "_id": "pwsStunnedEff000",
       "type": "base",
-      "system": {},
-      "changes": [
-        {
-          "key": "flags.midi-qol.OverTime",
-          "mode": 5,
-          "value": "turn=end,\nsaveDC=20,\nsaveAbility=con,\nsaveRemove=true,\nallowIncapacitated=true,\nlabel=Save to overcome Stun",
-          "priority": 20
-        }
-      ],
-      "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.OverTime",
+            "value": "turn=end,\nsaveDC=20,\nsaveAbility=con,\nsaveRemove=true,\nallowIncapacitated=true,\nlabel=Save to overcome Stun",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
       },
+      "disabled": false,
+      "duration": {},
       "description": "<p>The stunned target makes a Constitution saving throw at the end of each of its turns, ending the condition on itself on a success.</p>",
-      "tint": "#ffffff",
       "statuses": [
         "stunned"
       ],
@@ -70,51 +62,46 @@
       "transfer": false,
       "_id": "pwsNoMoveEff0000",
       "type": "base",
-      "system": {},
-      "changes": [
-        {
-          "key": "system.attributes.movement.walk",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        },
-        {
-          "key": "system.attributes.movement.climb",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        },
-        {
-          "key": "system.attributes.movement.swim",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        },
-        {
-          "key": "system.attributes.movement.fly",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        },
-        {
-          "key": "system.attributes.movement.burrow",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        }
-      ],
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.movement.walk",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          },
+          {
+            "key": "system.attributes.movement.climb",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          },
+          {
+            "key": "system.attributes.movement.swim",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          },
+          {
+            "key": "system.attributes.movement.fly",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          },
+          {
+            "key": "system.attributes.movement.burrow",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          }
+        ]
+      },
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": 1,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 1,
+        "units": "rounds"
       },
       "description": "<p>The target's Speed is 0 until the start of your next turn.</p>",
-      "tint": "#ffffff",
       "statuses": [],
       "sort": 0,
       "flags": {

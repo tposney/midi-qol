@@ -5,16 +5,10 @@
   "effects": [
     {
       "_id": "stormDeafenedEf0",
-      "changes": [],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 60,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 60,
+        "units": "seconds"
       },
       "transfer": false,
       "flags": {
@@ -27,7 +21,6 @@
           "showIcon": true
         }
       },
-      "tint": "#ffffff",
       "name": "Storm of Vengeance (Deafened)",
       "description": "<p>Deafened by the initial thunderclap of the Storm of Vengeance for the spell's duration.</p>",
       "statuses": [
@@ -46,29 +39,18 @@
       },
       "img": "icons/magic/lightning/bolt-cloud-sky-white.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": []
+      },
       "sort": 0,
       "_key": "!items.effects!StormVengeance00.stormDeafenedEf0"
     },
     {
       "_id": "stormTrackerEff0",
-      "changes": [
-        {
-          "key": "macro.itemMacro",
-          "mode": 0,
-          "value": "",
-          "priority": 20
-        }
-      ],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 60,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 60,
+        "units": "seconds"
       },
       "transfer": false,
       "flags": {
@@ -83,7 +65,6 @@
           "selfTargetAlways": true
         }
       },
-      "tint": "#ffffff",
       "name": "Storm of Vengeance (Tracker)",
       "description": "<p>Tracks the current round of the Storm of Vengeance spell and triggers the appropriate activity at the start of each caster turn.</p>",
       "statuses": [],
@@ -100,7 +81,16 @@
       },
       "img": "icons/magic/lightning/bolt-cloud-sky-white.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "macro.itemMacro",
+            "value": "",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 100,
       "_key": "!items.effects!StormVengeance00.stormTrackerEff0"
     }

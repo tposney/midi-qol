@@ -1833,10 +1833,12 @@ export function setupMidiStatusEffects() {
         id: "bonusaction",
         _id: getStaticID("bonusaction"),
         name: i18n("midi-qol.bonusActionUsed"),
-        changes: [
-          { key: "flags.midi-qol.actions.bonus", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
-          { key: "Flags.midi-qol.actions.bonusActionsUsed", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "1", priority: 20 }
-        ],
+        system: {
+          changes: [
+            { key: "flags.midi-qol.actions.bonus", type: "custom", value: "true" },
+            { key: "Flags.midi-qol.actions.bonusActionsUsed", type: "add", value: "1", priority: 20 }
+          ]
+        },
         img: "modules/midi-qol/icons/bonus-action.svg",
 
         flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } }
@@ -1854,10 +1856,12 @@ export function setupMidiStatusEffects() {
         id: "reaction",
         _id: getStaticID("reaction"),
         name: i18n("midi-qol.reactionUsed"),
-        changes: [
-          { key: "flags.midi-qol.actions.reaction", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
-          { key: "Flags.midi-qol.actions.reactionsUsed", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "1", priority: 20 }
-        ],
+        system: {
+          changes: [
+            { key: "flags.midi-qol.actions.reaction", type: "custom", value: "true" },
+            { key: "Flags.midi-qol.actions.reactionsUsed", type: "add", value: "1", priority: 20 }
+          ]
+        },
         img: "modules/midi-qol/icons/reaction.svg",
         // effectData: { transfer: false },
         flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } }
@@ -1873,7 +1877,7 @@ export function setupMidiStatusEffects() {
       id: "flanking",
       _id: getStaticID("flanking"),
       name: i18n("midi-qol.Flanking"),
-      changes: getFlankingStatusChanges(),
+      system: { changes: getFlankingStatusChanges() },
       img: "icons/svg/sword.svg",
       // effectData: { transfer: false },
       flags: { dae: { specialDuration: ["combatEnd"] } }
@@ -1890,7 +1894,7 @@ export function setupMidiStatusEffects() {
       id: "flanked",
       _id: getStaticID("flanked"),
       name: i18n("midi-qol.Flanked"),
-      changes: getFlankedStatusChanges(),
+      system: { changes: getFlankedStatusChanges() },
       img: "modules/midi-qol/icons/encirclement.svg",
       // effectData: { transfer: false },
       flags: { dae: { specialDuration: ["combatEnd"] } }
@@ -1907,8 +1911,8 @@ function getFlankingStatusChanges(): object[] {
   const bonus = configSettings.optionalRules?.flankingBonus ?? "advantage";
   if (bonus === "advantage") {
     return [
-      { key: "flags.midi-qol.advantage.attack.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
-      { key: "flags.midi-qol.advantage.attack.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
+      { key: "flags.midi-qol.advantage.attack.mwak", type: "custom", value: "true" },
+      { key: "flags.midi-qol.advantage.attack.msak", type: "custom", value: "true" }
     ];
   }
   // Fixed bonus: flanking status is visual-only; bonus computed per-target in recordFlankingBonuses
@@ -1919,8 +1923,8 @@ function getFlankedStatusChanges(): object[] {
   const bonus = configSettings.optionalRules?.flankingBonus ?? "advantage";
   if (bonus === "advantage") {
     return [
-      { key: "flags.midi-qol.grants.advantage.attack.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
-      { key: "flags.midi-qol.grants.advantage.attack.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
+      { key: "flags.midi-qol.grants.advantage.attack.mwak", type: "custom", value: "true" },
+      { key: "flags.midi-qol.grants.advantage.attack.msak", type: "custom", value: "true" }
     ];
   }
   // Fixed bonus: flanked status is visual-only; bonus computed per-target in recordFlankingBonuses
@@ -1930,8 +1934,8 @@ function getFlankedStatusChanges(): object[] {
 export function updateFlankingStatusEffects() {
   const flanking = CONFIG.statusEffects.find(e => e.id === "flanking") as any;
   const flanked = CONFIG.statusEffects.find(e => e.id === "flanked") as any;
-  if (flanking) flanking.changes = getFlankingStatusChanges();
-  if (flanked) flanked.changes = getFlankedStatusChanges();
+  if (flanking) flanking.system = { changes: getFlankingStatusChanges() };
+  if (flanked) flanked.system = { changes: getFlankedStatusChanges() };
 
   // Rebuild cached effect instances (only if statuses have been registered)
   if (flanking) {

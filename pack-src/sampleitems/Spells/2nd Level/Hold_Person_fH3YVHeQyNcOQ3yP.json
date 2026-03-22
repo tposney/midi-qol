@@ -10,27 +10,22 @@
       "transfer": false,
       "_id": "hpParalyzedEff00",
       "type": "base",
-      "system": {},
-      "changes": [
-        {
-          "key": "flags.midi-qol.OverTime",
-          "mode": 5,
-          "value": "turn=end,\nsaveDC=@attributes.spell.dc,\nsaveAbility=wis,\nlabel=Hold Person (WIS save)",
-          "priority": 20
-        }
-      ],
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.OverTime",
+            "value": "turn=end,\nsaveDC=@attributes.spell.dc,\nsaveAbility=wis,\nlabel=Hold Person (WIS save)",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 60,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 60,
+        "units": "seconds"
       },
       "description": "<p>The target has the Paralyzed condition. At the end of each of its turns, the target repeats the save, ending the spell on itself on a success.</p>",
-      "tint": "#ffffff",
       "statuses": [
         "paralyzed"
       ],

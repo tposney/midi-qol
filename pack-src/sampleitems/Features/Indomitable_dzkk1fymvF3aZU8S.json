@@ -5,38 +5,9 @@
   "effects": [
     {
       "_id": "SHvyJB88YUaHZah1",
-      "changes": [
-        {
-          "key": "flags.midi-qol.optional.indomitable.save.fail.all",
-          "mode": 0,
-          "value": "reroll",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.indomitable.count",
-          "mode": 5,
-          "value": "ItemUses.Indomitable",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.indomitable.label",
-          "mode": 5,
-          "value": "Indomitable",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "startTurn": 0,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": 214
-      },
+      "duration": {},
       "origin": "Actor.0JQrDYF3Qxs2RV8x.Item.DFCCgwJEG9bgyyAp",
-      "tint": "#ffffff",
       "transfer": true,
       "flags": {
         "dae": {
@@ -93,9 +64,36 @@
       },
       "img": "icons/magic/fire/flame-burning-fist-strike.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.optional.indomitable.save.fail.all",
+            "value": "reroll",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "flags.midi-qol.optional.indomitable.count",
+            "value": "ItemUses.Indomitable",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.indomitable.label",
+            "value": "Indomitable",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "sort": 0,
-      "_key": "!items.effects!dzkk1fymvF3aZU8S.SHvyJB88YUaHZah1"
+      "_key": "!items.effects!dzkk1fymvF3aZU8S.SHvyJB88YUaHZah1",
+      "start": {
+        "time": null,
+        "round": 214,
+        "turn": 0,
+        "combat": null
+      }
     }
   ],
   "flags": {

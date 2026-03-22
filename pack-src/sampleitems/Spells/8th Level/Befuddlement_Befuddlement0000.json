@@ -5,24 +5,8 @@
   "effects": [
     {
       "_id": "befuddledEffect0",
-      "changes": [
-        {
-          "key": "flags.midi-qol.onUseMacroName",
-          "mode": 0,
-          "value": "ItemMacro, preItemRoll",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "transfer": false,
       "flags": {
         "dae": {
@@ -34,7 +18,6 @@
           "showIcon": true
         }
       },
-      "tint": "#ffffff",
       "name": "Befuddled",
       "description": "<p>Befuddled by the Befuddlement spell. The creature can't cast spells or take the Magic action. At the end of every 30 days, the creature can repeat the Intelligence saving throw, ending the effect on a success. The effect can also be ended by Greater Restoration, Heal, or Wish.</p>",
       "statuses": [],
@@ -51,7 +34,16 @@
       },
       "img": "icons/skills/trades/academics-investigation-puzzles.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ItemMacro, preItemRoll",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!Befuddlement0000.befuddledEffect0"
     }

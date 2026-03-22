@@ -10,24 +10,7 @@
       "origin": "Item.Eb2MnoKGAh3XbgH9",
       "transfer": true,
       "disabled": false,
-      "changes": [
-        {
-          "key": "flags.dnd5e.DamageBonusMacro",
-          "mode": 0,
-          "value": "ItemMacro",
-          "priority": 20
-        }
-      ],
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
-      "tint": "#ffffff",
+      "duration": {},
       "statuses": [],
       "flags": {
         "dae": {
@@ -57,7 +40,16 @@
       },
       "img": "icons/skills/melee/strike-flail-destructive-yellow.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.dnd5e.DamageBonusMacro",
+            "value": "ItemMacro",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!Eb2MnoKGAh3XbgH9.dsSmiteReady0000"
     }

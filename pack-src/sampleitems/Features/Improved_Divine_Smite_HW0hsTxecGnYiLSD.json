@@ -39,27 +39,10 @@
           "statuses": []
         }
       },
-      "changes": [
-        {
-          "key": "system.bonuses.mwak.damage",
-          "mode": 0,
-          "value": "1d8[radiant]",
-          "priority": 0
-        }
-      ],
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "transfer": true,
       "disabled": false,
       "origin": "Compendium.midi-qol.midiqol-sample-items.Item.HW0hsTxecGnYiLSD",
-      "tint": "#ffffff",
       "name": "Improved Divine Smite",
       "description": "",
       "statuses": [],
@@ -76,7 +59,16 @@
       },
       "img": "icons/magic/symbols/cog-shield-white-blue.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "system.bonuses.mwak.damage",
+            "value": "1d8[radiant]",
+            "priority": 0,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!HW0hsTxecGnYiLSD.9fxlvxN5rkcl9fvW"
     }

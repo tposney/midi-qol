@@ -5,23 +5,10 @@
   "effects": [
     {
       "_id": "BqzfX8p9NqtZ1Qxx",
-      "changes": [
-        {
-          "key": "macro.itemMacro",
-          "mode": 0,
-          "value": "0",
-          "priority": 20
-        }
-      ],
       "disabled": false,
       "duration": {
-        "rounds": 99,
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 99,
+        "units": "rounds"
       },
       "origin": "Item.W4NUvzHSxGWmNa8Z",
       "transfer": false,
@@ -109,7 +96,6 @@
           ]
         }
       },
-      "tint": "#ffffff",
       "name": "Wounded",
       "description": "",
       "statuses": [],
@@ -126,7 +112,16 @@
       },
       "img": "icons/magic/water/heart-ice-freeze.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "macro.itemMacro",
+            "value": "0",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!1zySwsdhrnK1xOUy.BqzfX8p9NqtZ1Qxx"
     }
@@ -142,7 +137,7 @@
           "author": "devnIbfBHb74U9Zv",
           "img": "icons/svg/dice-target.svg",
           "scope": "global",
-          "command": "//\nconst lastArg = args[args.length - 1];\nlet ttoken = await fromUuid(lastArg.tokenUuid);\nconst tactor = ttoken?.actor;\nconst item = await fromUuid(lastArg.origin);\nif (args[0] === \"on\") {\n  const sourceActor = item.parent;\n\n  const combatTime = game.combat.round + game.combat.turn / 100;\n  const lastTime = getProperty(sourceActor.data.flags, \"midi-qol.woundedTime\");\n  lastArg.canWound = !game.combat || (combatTime !== lastTime);\n  if (game.combat && lastArg.canWound) {\n    let combatTime = game.combat.round + game.combat.turn / 100;\n    let lastTime = getProperty(sourceActor.data.flags, \"midi-qol.woundedTime\");\n    if (combatTime !== lastTime) {\n      setProperty(sourceActor.data.flags, \"midi-qol.woundedTime\", combatTime)\n    }\n  } \n  if (!lastArg.canWound) {\n    const stacks = getProperty(lastArg.efData, \"flags.dae.stacks\") || 1;\n    const label = lastArg.efData.label.replace(/\\s+\\(\\d*\\)/, \"\") +` (${stacks - 1})`;\n    Hooks.once(\"midi-qol.RollComplete\", () => {\n    tactor.updateEmbeddedDocuments(\"ActiveEffect\", [{ _id: lastArg.efData._id, \"flags.dae.stacks\": stacks - 1, \"label\": label }]);\n    });\n  }\n} else if (args[0] === \"each\") {\n  const woundCount = getProperty(lastArg.efData, \"flags.dae.stacks\");\n  if (!woundCount) return;\n  const saveType = \"con\";\n  const DC = 15;\n  const flavor = `${CONFIG.DND5E.abilities[saveType]} DC${DC} ${item?.name || \"\"}`;\n  let save = (await tactor.rollAbilitySave(saveType, { flavor, fastForward: true })).total;\n  if (save >= DC) {\n    const effectsToDelete = tactor.effects.filter(ef => ef.data.origin === lastArg.origin).map(ef => ef.id);\n    ChatMessage.create({content: \"Save was made\"});\n    await MidiQOL.socket().executeAsGM(\"removeEffects\", { actorUuid: tactor.uuid, effects: [lastArg.effectId] })\n  } else {\n    let damageRoll = new Roll(`${woundCount}d4[necrotic]`).roll(); // could be argument\n    new MidiQOL.DamageOnlyWorkflow(tactor, ttoken, damageRoll.total, \"necrotic\", [ttoken], damageRoll, { flavor: `Failed Save for ${item.name}`, itemData: item?.toObject(), itemCardId: \"new\", useOther: true })\n  }\n} else if (args[0] === \"off\") {\n  // do any clean up\n}",
+          "command": "//\nconst lastArg = args[args.length - 1];\nlet ttoken = await fromUuid(lastArg.tokenUuid);\nconst tactor = ttoken?.actor;\nconst item = await fromUuid(lastArg.origin);\nif (args[0] === \"on\") {\n  const sourceActor = item.parent;\n\n  const combatTime = game.combat.round + game.combat.turn / 100;\n  const lastTime = foundry.utils.getProperty(sourceActor.data.flags, \"midi-qol.woundedTime\");\n  lastArg.canWound = !game.combat || (combatTime !== lastTime);\n  if (game.combat && lastArg.canWound) {\n    let combatTime = game.combat.round + game.combat.turn / 100;\n    let lastTime = foundry.utils.getProperty(sourceActor.data.flags, \"midi-qol.woundedTime\");\n    if (combatTime !== lastTime) {\n      foundry.utils.setProperty(sourceActor.data.flags, \"midi-qol.woundedTime\", combatTime)\n    }\n  } \n  if (!lastArg.canWound) {\n    const stacks = foundry.utils.getProperty(lastArg.efData, \"flags.dae.stacks\") || 1;\n    const label = lastArg.efData.label.replace(/\\s+\\(\\d*\\)/, \"\") +` (${stacks - 1})`;\n    Hooks.once(\"midi-qol.RollComplete\", () => {\n    tactor.updateEmbeddedDocuments(\"ActiveEffect\", [{ _id: lastArg.efData._id, \"flags.dae.stacks\": stacks - 1, \"label\": label }]);\n    });\n  }\n} else if (args[0] === \"each\") {\n  const woundCount = foundry.utils.getProperty(lastArg.efData, \"flags.dae.stacks\");\n  if (!woundCount) return;\n  const saveType = \"con\";\n  const DC = 15;\n  const flavor = `${CONFIG.DND5E.abilities[saveType]} DC${DC} ${item?.name || \"\"}`;\n  let save = (await tactor.rollAbilitySave(saveType, { flavor, fastForward: true })).total;\n  if (save >= DC) {\n    const effectsToDelete = tactor.effects.filter(ef => ef.data.origin === lastArg.origin).map(ef => ef.id);\n    ChatMessage.create({content: \"Save was made\"});\n    await MidiQOL.socket().executeAsGM(\"removeEffects\", { actorUuid: tactor.uuid, effects: [lastArg.effectId] })\n  } else {\n    let damageRoll = new Roll(`${woundCount}d4[necrotic]`).roll(); // could be argument\n    new MidiQOL.DamageOnlyWorkflow(tactor, ttoken, damageRoll.total, \"necrotic\", [ttoken], damageRoll, { flavor: `Failed Save for ${item.name}`, itemData: item?.toObject(), itemCardId: \"new\", useOther: true })\n  }\n} else if (args[0] === \"off\") {\n  // do any clean up\n}",
           "folder": null,
           "sort": 0,
           "permission": {
@@ -154,7 +149,7 @@
         "type": "script",
         "img": "icons/svg/dice-target.svg",
         "scope": "global",
-        "command": "const version = \"10.0.10\";\ntry {\n  const lastArg = args[args.length - 1];\n  let ttoken = await fromUuid(lastArg.tokenUuid);\n  const tactor = ttoken?.actor;\n  const item = await fromUuid(lastArg.origin);\n  if (args[0] === \"on\") {\n    const sourceActor = item.parent;\n    const combatTime = game.combat.round + game.combat.turn / 100;\n    const lastTime = getProperty(sourceActor.flags, \"midi-qol.woundedTime\");\n    lastArg.canWound = !game.combat || (combatTime !== lastTime);\n    if (game.combat && lastArg.canWound) {\n      let combatTime = game.combat.round + game.combat.turn / 100;\n      let lastTime = getProperty(sourceActor.flags, \"midi-qol.woundedTime\");\n      if (combatTime !== lastTime) {\n        setProperty(sourceActor.flags, \"midi-qol.woundedTime\", combatTime)\n      }\n    } \n    if (!lastArg.canWound) {\n      const stacks = getProperty(lastArg.efData, \"flags.dae.stacks\") || 1;\n      const label = lastArg.efData.label.replace(/\\s+\\(\\d*\\)/, \"\") +` (${stacks - 1})`;\n      Hooks.once(\"midi-qol.RollComplete\", () => {\n      tactor.updateEmbeddedDocuments(\"ActiveEffect\", [{ _id: lastArg.efData._id, \"flags.dae.stacks\": stacks - 1, \"label\": label }]);\n      });\n    }\n  } else if (args[0] === \"each\") {\n    const woundCount = getProperty(lastArg.efData, \"flags.dae.stacks\");\n    if (!woundCount) return;\n    const saveType = \"con\";\n    const DC = 15;\n    const flavor = `${CONFIG.DND5E.abilities[saveType]} DC${DC} ${item?.name || \"\"}`;\n    let save = (await tactor.rollAbilitySave(saveType, { flavor, fastForward: true })).total;\n    if (save >= DC) {\n      const effectsToDelete = tactor.effects.filter(ef => ef.origin === lastArg.origin).map(ef => ef.id);\n      ChatMessage.create({content: \"Save was made\"});\n      await MidiQOL.socket().executeAsGM(\"removeEffects\", { actorUuid: tactor.uuid, effects: [lastArg.effectId] })\n    } else {\n      let damageRoll = await new Roll(`${woundCount}d4[necrotic]`).roll({async: true}); // could be argument\n      new MidiQOL.DamageOnlyWorkflow(tactor, ttoken, damageRoll.total, \"necrotic\", [ttoken], damageRoll, { flavor: `Failed Save for ${item.name}`, itemData: item?.toObject(false), itemCardId: \"new\", useOther: true })\n    }\n  } else if (args[0] === \"off\") {\n    // do any clean up\n  }\n} catch (err)  {\n    console.error(`Greatsword of Wounding ${version}`, err);\n}",
+        "command": "const version = \"10.0.10\";\ntry {\n  const lastArg = args[args.length - 1];\n  let ttoken = await fromUuid(lastArg.tokenUuid);\n  const tactor = ttoken?.actor;\n  const item = await fromUuid(lastArg.origin);\n  if (args[0] === \"on\") {\n    const sourceActor = item.parent;\n    const combatTime = game.combat.round + game.combat.turn / 100;\n    const lastTime = foundry.utils.getProperty(sourceActor.flags, \"midi-qol.woundedTime\");\n    lastArg.canWound = !game.combat || (combatTime !== lastTime);\n    if (game.combat && lastArg.canWound) {\n      let combatTime = game.combat.round + game.combat.turn / 100;\n      let lastTime = foundry.utils.getProperty(sourceActor.flags, \"midi-qol.woundedTime\");\n      if (combatTime !== lastTime) {\n        foundry.utils.setProperty(sourceActor.flags, \"midi-qol.woundedTime\", combatTime)\n      }\n    } \n    if (!lastArg.canWound) {\n      const stacks = foundry.utils.getProperty(lastArg.efData, \"flags.dae.stacks\") || 1;\n      const label = lastArg.efData.label.replace(/\\s+\\(\\d*\\)/, \"\") +` (${stacks - 1})`;\n      Hooks.once(\"midi-qol.RollComplete\", () => {\n      tactor.updateEmbeddedDocuments(\"ActiveEffect\", [{ _id: lastArg.efData._id, \"flags.dae.stacks\": stacks - 1, \"label\": label }]);\n      });\n    }\n  } else if (args[0] === \"each\") {\n    const woundCount = foundry.utils.getProperty(lastArg.efData, \"flags.dae.stacks\");\n    if (!woundCount) return;\n    const saveType = \"con\";\n    const DC = 15;\n    const flavor = `${CONFIG.DND5E.abilities[saveType]} DC${DC} ${item?.name || \"\"}`;\n    let save = (await tactor.rollAbilitySave(saveType, { flavor, fastForward: true })).total;\n    if (save >= DC) {\n      const effectsToDelete = tactor.effects.filter(ef => ef.origin === lastArg.origin).map(ef => ef.id);\n      ChatMessage.create({content: \"Save was made\"});\n      await MidiQOL.socket().executeAsGM(\"removeEffects\", { actorUuid: tactor.uuid, effects: [lastArg.effectId] })\n    } else {\n      let damageRoll = await new Roll(`${woundCount}d4[necrotic]`).roll({async: true}); // could be argument\n      new MidiQOL.DamageOnlyWorkflow(tactor, ttoken, damageRoll.total, \"necrotic\", [ttoken], damageRoll, { flavor: `Failed Save for ${item.name}`, itemData: item?.toObject(false), itemCardId: \"new\", useOther: true })\n    }\n  } else if (args[0] === \"off\") {\n    // do any clean up\n  }\n} catch (err)  {\n    console.error(`Greatsword of Wounding ${version}`, err);\n}",
         "sort": 0,
         "ownership": {
           "default": 0

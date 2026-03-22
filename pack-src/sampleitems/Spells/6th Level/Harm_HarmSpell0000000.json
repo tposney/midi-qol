@@ -10,27 +10,19 @@
       "transfer": false,
       "_id": "harmHpMaxReduce0",
       "type": "base",
-      "system": {},
-      "changes": [
-        {
-          "key": "system.attributes.hp.tempmax",
-          "mode": 2,
-          "value": "-@damageTotal",
-          "priority": 20
-        }
-      ],
-      "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.hp.tempmax",
+            "value": "-@damageTotal",
+            "priority": 20,
+            "type": "add"
+          }
+        ]
       },
+      "disabled": false,
+      "duration": {},
       "description": "<p>Hit Point maximum is reduced by an amount equal to the Necrotic damage taken. This reduction lasts until the target finishes a Long Rest.</p>",
-      "tint": "#ffffff",
       "statuses": [],
       "sort": 0,
       "flags": {

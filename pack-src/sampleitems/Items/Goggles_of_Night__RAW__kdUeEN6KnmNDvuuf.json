@@ -167,26 +167,9 @@
   "effects": [
     {
       "origin": "Actor.BogmFuNh1wswTouJ.Item.WMbFvwLw8edW0AbC",
-      "duration": {
-        "rounds": null,
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": 251,
-        "startTurn": 7
-      },
+      "duration": {},
       "disabled": false,
       "_id": "SBijQy1quToXi2F9",
-      "changes": [
-        {
-          "key": "macro.itemMacro",
-          "mode": 0,
-          "value": "",
-          "priority": 20
-        }
-      ],
-      "tint": "#ffffff",
       "transfer": false,
       "flags": {
         "dae": {
@@ -242,9 +225,24 @@
       },
       "img": "icons/magic/control/hypnosis-mesmerism-eye.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "macro.itemMacro",
+            "value": "",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
-      "_key": "!items.effects!kdUeEN6KnmNDvuuf.SBijQy1quToXi2F9"
+      "_key": "!items.effects!kdUeEN6KnmNDvuuf.SBijQy1quToXi2F9",
+      "start": {
+        "time": null,
+        "round": 251,
+        "turn": 7,
+        "combat": null
+      }
     }
   ],
   "flags": {

@@ -144,26 +144,10 @@
     {
       "name": "Multiattack Automation",
       "origin": "Scene.VUTmnLQOHLsSo5lF.Token.0QV516zWRJWLOOeG.Actor.iNIPR1veVsbKUuXC.Item.cj8OhgNvNkGybtnT",
-      "duration": {
-        "rounds": null,
-        "startTime": 1699204363,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "transfer": true,
       "disabled": false,
       "_id": "uigNxYka2k5vTHIe",
-      "changes": [
-        {
-          "key": "flags.midi-qol.onUseMacroName",
-          "mode": 0,
-          "value": "ItemMacro, preCompleted",
-          "priority": 20
-        }
-      ],
       "description": "",
       "statuses": [],
       "flags": {
@@ -199,7 +183,6 @@
         },
         "core": {}
       },
-      "tint": "#ffffff",
       "_stats": {
         "compendiumSource": "Scene.VUTmnLQOHLsSo5lF.Token.IyRV8LwSCk1FiSWh.Actor.K58INTSFII9dCu9i.Item.FXy68z4tsAoyYBv2.ActiveEffect.Eb9vz83kYdtdho2B",
         "duplicateSource": null,
@@ -213,9 +196,24 @@
       },
       "img": "icons/skills/melee/blade-tips-triple-steel.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ItemMacro, preCompleted",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
-      "_key": "!items.effects!BtmYJunrUgd9fXao.uigNxYka2k5vTHIe"
+      "_key": "!items.effects!BtmYJunrUgd9fXao.uigNxYka2k5vTHIe",
+      "start": {
+        "time": 1699204363,
+        "round": null,
+        "turn": null,
+        "combat": null
+      }
     }
   ],
   "folder": "fZIl4G4qj3C894LI",

@@ -5,48 +5,8 @@
   "effects": [
     {
       "_id": "GrZ2AlujZEWCppJt",
-      "changes": [
-        {
-          "key": "flags.midi-qol.optional.BardicInspiration.attack.all",
-          "mode": 5,
-          "value": "1@scale.bard.inspiration",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.BardicInsiration.save.all",
-          "mode": 5,
-          "value": "1@scale.bard.inspiration",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.BardicInspiration.check.all",
-          "mode": 5,
-          "value": "1@scale.bard.inspiration",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.BardicInspiration.label",
-          "mode": 5,
-          "value": "Bardic Inspiration",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.BardicInspiration.skill.all",
-          "mode": 2,
-          "value": "1@scale.bard.inspiration",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "origin": "Item.dQvh9dejF0s0d9nk",
       "transfer": false,
       "flags": {
@@ -79,7 +39,6 @@
           "rest-effect": "Ignore"
         }
       },
-      "tint": "#ffffff",
       "name": "Inspired",
       "description": "",
       "statuses": [],
@@ -96,7 +55,40 @@
       },
       "img": "icons/skills/melee/unarmed-punch-fist.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.optional.BardicInspiration.attack.all",
+            "value": "1@scale.bard.inspiration",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.BardicInsiration.save.all",
+            "value": "1@scale.bard.inspiration",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.BardicInspiration.check.all",
+            "value": "1@scale.bard.inspiration",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.BardicInspiration.label",
+            "value": "Bardic Inspiration",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.BardicInspiration.skill.all",
+            "value": "1@scale.bard.inspiration",
+            "priority": 20,
+            "type": "add"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!cNmGiVj5jPFLV693.GrZ2AlujZEWCppJt"
     }

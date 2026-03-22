@@ -155,25 +155,8 @@
     {
       "origin": "Actor.DMTSWfQs8whM5FtE.Item.ptRkrLPyRlajMmwz",
       "_id": "JINZvpJWYU63LMv9",
-      "changes": [
-        {
-          "key": "flags.midi-qol.grants.disadvantage.attack.all",
-          "mode": 0,
-          "value": "1",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
-      "tint": "#ffffff",
+      "duration": {},
       "transfer": false,
       "flags": {
         "dae": {
@@ -222,7 +205,16 @@
       },
       "img": "icons/magic/light/hand-sparks-glow-yellow.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.grants.disadvantage.attack.all",
+            "value": "1",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!HjNkcVje0brf07RH.JINZvpJWYU63LMv9"
     }

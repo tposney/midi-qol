@@ -1137,7 +1137,8 @@ export let MidiActivityMixin = Base => {
       const changes: any[] = [];
       if (this.actor) for (let effect of this.actor.allApplicableEffects()) {
         if (effect.disabled || effect.isSuppressed) continue;
-        for (let change of effect.changes) {
+        // @ts-expect-error fvtt-types v14 ActiveEffect
+        for (let change of effect.system.changes) {
           if (!change.key.startsWith("flags.midi-qol.rollModifiers.damage.")) continue;
           changes.push(change);
         }

@@ -206,27 +206,19 @@
       "transfer": true,
       "_id": "K6NAHny5znkioCPj",
       "type": "base",
-      "system": {},
-      "changes": [
-        {
-          "key": "flags.midi-qol.ActivityOverTime",
-          "mode": 5,
-          "value": "heal",
-          "priority": 20
-        }
-      ],
-      "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.ActivityOverTime",
+            "value": "heal",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
       },
+      "disabled": false,
+      "duration": {},
       "description": "",
-      "tint": "#ffffff",
       "statuses": [],
       "sort": 0,
       "flags": {

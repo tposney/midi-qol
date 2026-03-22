@@ -10,20 +10,15 @@
       "transfer": false,
       "_id": "eyeAsleepEff0000",
       "type": "base",
-      "system": {},
-      "changes": [],
+      "system": {
+        "changes": []
+      },
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 60,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 60,
+        "units": "seconds"
       },
       "description": "<p>The target has the Unconscious condition. It wakes up if it takes any damage or if another creature takes an action to shake it awake.</p>",
-      "tint": "#ffffff",
       "statuses": [
         "unconscious"
       ],
@@ -65,20 +60,15 @@
       "transfer": false,
       "_id": "eyePanickedEff00",
       "type": "base",
-      "system": {},
-      "changes": [],
+      "system": {
+        "changes": []
+      },
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 60,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 60,
+        "units": "seconds"
       },
       "description": "<p>The target has the Frightened condition. On each of its turns, the Frightened target must take the Dash action and move away from you by the safest and shortest route available. If the target moves to a space at least 60 feet away from you where it can't see you, this effect ends.</p>",
-      "tint": "#ffffff",
       "statuses": [
         "frightened"
       ],
@@ -118,20 +108,15 @@
       "transfer": false,
       "_id": "eyeSickenedEff00",
       "type": "base",
-      "system": {},
-      "changes": [],
+      "system": {
+        "changes": []
+      },
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 60,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 60,
+        "units": "seconds"
       },
       "description": "<p>The target has the Poisoned condition.</p>",
-      "tint": "#ffffff",
       "statuses": [
         "poisoned"
       ],

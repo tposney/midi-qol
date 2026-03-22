@@ -7,25 +7,12 @@
       "name": "Blessed",
       "origin": "Item.o3BiQo12if2yjgff",
       "duration": {
-        "rounds": 1,
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 1,
+        "units": "rounds"
       },
       "transfer": false,
       "disabled": false,
       "_id": "Q0havLsLloUiTB8e",
-      "changes": [
-        {
-          "key": "StatusEffect",
-          "mode": 0,
-          "value": "bleeding",
-          "priority": 20
-        }
-      ],
       "description": "",
       "statuses": [],
       "flags": {
@@ -43,7 +30,6 @@
           "disableCondition": ""
         }
       },
-      "tint": "#ffffff",
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
@@ -57,7 +43,16 @@
       },
       "img": "icons/magic/control/buff-flight-wings-blue.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "StatusEffect",
+            "value": "bleeding",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!o3BiQo12if2yjgff.Q0havLsLloUiTB8e"
     },
@@ -65,25 +60,12 @@
       "name": "Ethereal",
       "origin": "Item.o3BiQo12if2yjgff",
       "duration": {
-        "rounds": 1,
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 1,
+        "units": "rounds"
       },
       "transfer": false,
       "disabled": false,
       "_id": "l0zLtfBsYQBtiBPN",
-      "changes": [
-        {
-          "key": "StatusEffect",
-          "mode": 0,
-          "value": "ethereal",
-          "priority": 20
-        }
-      ],
       "description": "",
       "statuses": [],
       "flags": {
@@ -101,7 +83,6 @@
           "disableCondition": ""
         }
       },
-      "tint": "#ffffff",
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
@@ -115,7 +96,16 @@
       },
       "img": "icons/magic/control/buff-flight-wings-blue.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "StatusEffect",
+            "value": "ethereal",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!o3BiQo12if2yjgff.l0zLtfBsYQBtiBPN"
     },
@@ -123,25 +113,12 @@
       "name": "Invisible",
       "origin": "Item.o3BiQo12if2yjgff",
       "duration": {
-        "rounds": 1,
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 1,
+        "units": "rounds"
       },
       "transfer": false,
       "disabled": false,
       "_id": "BKllJaSYjW5sZOjV",
-      "changes": [
-        {
-          "key": "StatusEffect",
-          "mode": 0,
-          "value": "invisible",
-          "priority": 20
-        }
-      ],
       "description": "",
       "statuses": [],
       "flags": {
@@ -159,7 +136,6 @@
           "disableCondition": ""
         }
       },
-      "tint": "#ffffff",
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
@@ -173,7 +149,16 @@
       },
       "img": "icons/magic/control/buff-flight-wings-blue.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "StatusEffect",
+            "value": "invisible",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!o3BiQo12if2yjgff.BKllJaSYjW5sZOjV"
     }

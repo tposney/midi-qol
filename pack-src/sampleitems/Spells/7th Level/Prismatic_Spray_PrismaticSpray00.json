@@ -5,24 +5,8 @@
   "effects": [
     {
       "_id": "prsmtcRestrained",
-      "changes": [
-        {
-          "key": "flags.midi-qol.OverTime",
-          "mode": 5,
-          "value": "turn=end,saveAbility=con,saveDC=@activity.save.dc.value,saveMagic=true,saveCount=3-,failCount=3-petrified,label=Prismatic Spray (Indigo)",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "transfer": false,
       "flags": {
         "dae": {
@@ -34,7 +18,6 @@
           "showIcon": true
         }
       },
-      "tint": "#ffffff",
       "name": "Prismatic Spray (Indigo - Restrained)",
       "description": "<p>Restrained by the indigo ray of Prismatic Spray. At the end of each turn, the target makes a Constitution saving throw. Three successful saves end the effect. Three failures result in the target being permanently Petrified. The successes and failures need not be consecutive.</p>",
       "statuses": [
@@ -53,29 +36,25 @@
       },
       "img": "icons/magic/defensive/armor-stone-skin.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.OverTime",
+            "value": "turn=end,saveAbility=con,saveDC=@activity.save.dc.value,saveMagic=true,saveCount=3-,failCount=3-petrified,label=Prismatic Spray (Indigo)",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!PrismaticSpray00.prsmtcRestrained"
     },
     {
       "_id": "prsmtcBlinded000",
-      "changes": [
-        {
-          "key": "flags.midi-qol.OverTime",
-          "mode": 5,
-          "value": "turn=start,saveAbility=wis,saveDC=@activity.save.dc.value,saveMagic=true,saveCount=1-,label=Prismatic Spray (Violet)",
-          "priority": 20
-        }
-      ],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": 1,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 1,
+        "units": "rounds"
       },
       "transfer": false,
       "flags": {
@@ -88,7 +67,6 @@
           "showIcon": true
         }
       },
-      "tint": "#ffffff",
       "name": "Prismatic Spray (Violet - Blinded)",
       "description": "<p>Blinded by the violet ray of Prismatic Spray. At the start of your next turn, make a Wisdom saving throw. On a success, the blindness ends. On a failure, you are teleported to another plane of existence (DM's choice) and the blindness ends.</p>",
       "statuses": [
@@ -107,7 +85,16 @@
       },
       "img": "icons/magic/control/silhouette-grow-shrink-blue.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.OverTime",
+            "value": "turn=start,saveAbility=wis,saveDC=@activity.save.dc.value,saveMagic=true,saveCount=1-,label=Prismatic Spray (Violet)",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "sort": 100,
       "_key": "!items.effects!PrismaticSpray00.prsmtcBlinded000"
     }

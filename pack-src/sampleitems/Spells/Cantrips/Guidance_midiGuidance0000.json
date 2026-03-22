@@ -8,41 +8,36 @@
       "name": "Guidance",
       "img": "icons/sundries/lights/candle-lit-angelic.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.optional.guidance.skill.all",
+            "value": "1d4",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.guidance.label",
+            "value": "Guidance (+1d4)",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.guidance.count",
+            "value": "1",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "description": "<p>You may add 1d4 to one skill check. The effect is then consumed and concentration ends.</p>",
       "origin": "Item.midiGuidance0000",
       "transfer": false,
       "disabled": false,
-      "changes": [
-        {
-          "key": "flags.midi-qol.optional.guidance.skill.all",
-          "mode": 5,
-          "value": "1d4",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.guidance.label",
-          "mode": 5,
-          "value": "Guidance (+1d4)",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.guidance.count",
-          "mode": 5,
-          "value": "1",
-          "priority": 20
-        }
-      ],
       "duration": {
-        "startTime": null,
-        "seconds": 60,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 60,
+        "units": "seconds"
       },
-      "tint": "#ffffff",
       "statuses": [],
       "sort": 0,
       "flags": {
@@ -78,47 +73,39 @@
       "name": "Guidance Self",
       "img": "icons/sundries/lights/candle-lit-angelic.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.optional.guidanceSelf.skill.all",
+            "value": "1d4",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.guidanceSelf.label",
+            "value": "Guidance Self (+1d4)",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.guidanceSelf.count",
+            "value": "every",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.guidanceSelf.macroToCall",
+            "value": "ItemMacro.Guidance",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "description": "<p>When you make a skill check, you are prompted to add 1d4 to the roll. If you are also concentrating on Guidance (cast on another target), using this self-guidance ends that concentration.</p>",
       "origin": "Item.midiGuidance0000",
       "transfer": true,
       "disabled": false,
-      "changes": [
-        {
-          "key": "flags.midi-qol.optional.guidanceSelf.skill.all",
-          "mode": 5,
-          "value": "1d4",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.guidanceSelf.label",
-          "mode": 5,
-          "value": "Guidance Self (+1d4)",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.guidanceSelf.count",
-          "mode": 5,
-          "value": "every",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.guidanceSelf.macroToCall",
-          "mode": 5,
-          "value": "ItemMacro.Guidance",
-          "priority": 20
-        }
-      ],
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
-      "tint": "#ffffff",
+      "duration": {},
       "statuses": [],
       "sort": 100,
       "flags": {

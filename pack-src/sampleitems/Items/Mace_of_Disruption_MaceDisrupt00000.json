@@ -5,16 +5,10 @@
   "effects": [
     {
       "_id": "frightenedEffct0",
-      "changes": [],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": 1,
-        "turns": 1,
-        "startRound": null,
-        "startTurn": null
+        "value": 1,
+        "units": "rounds"
       },
       "transfer": false,
       "flags": {
@@ -29,7 +23,6 @@
           "showIcon": true
         }
       },
-      "tint": "#ffffff",
       "name": "Frightened (Mace of Disruption)",
       "description": "<p>Frightened by the Mace of Disruption until the end of the wielder's next turn.</p>",
       "statuses": [
@@ -48,7 +41,9 @@
       },
       "img": "icons/weapons/maces/shortmace-ornate-gold.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": []
+      },
       "sort": 0,
       "_key": "!items.effects!MaceDisrupt00000.frightenedEffct0"
     }

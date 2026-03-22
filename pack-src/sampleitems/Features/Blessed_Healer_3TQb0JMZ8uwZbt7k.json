@@ -5,24 +5,8 @@
   "effects": [
     {
       "_id": "r24ao66frio1l5rw",
-      "changes": [
-        {
-          "key": "flags.midi-qol.onUseMacroName",
-          "mode": 0,
-          "value": "ItemMacro, postActiveEffects",
-          "priority": 50
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": 47178635017,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": 199,
-        "startTurn": 0
-      },
+      "duration": {},
       "origin": "Actor.BogmFuNh1wswTouJ.Item.KJ8EsMStDCykzHEq",
       "transfer": true,
       "flags": {
@@ -59,7 +43,6 @@
           "rest-effect": "Ignore"
         }
       },
-      "tint": "#ffffff",
       "name": "Blessed Healer",
       "description": "",
       "statuses": [],
@@ -76,9 +59,24 @@
       },
       "img": "icons/magic/light/orbs-hand-gray.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ItemMacro, postActiveEffects",
+            "priority": 50,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
-      "_key": "!items.effects!3TQb0JMZ8uwZbt7k.r24ao66frio1l5rw"
+      "_key": "!items.effects!3TQb0JMZ8uwZbt7k.r24ao66frio1l5rw",
+      "start": {
+        "time": 47178635017,
+        "round": 199,
+        "turn": 0,
+        "combat": null
+      }
     }
   ],
   "flags": {

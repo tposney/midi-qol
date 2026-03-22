@@ -5,48 +5,8 @@
   "effects": [
     {
       "_id": "GrZ2AlujZEWCppJt",
-      "changes": [
-        {
-          "key": "flags.midi-qol.optional.lucky.attack.all",
-          "mode": 5,
-          "value": "reroll-kh",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.lucky.label",
-          "mode": 5,
-          "value": "Lucky",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.lucky.save.all",
-          "mode": 5,
-          "value": "reroll-kh",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.lucky.check.all",
-          "mode": 5,
-          "value": "reroll-kh",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.lucky.count",
-          "mode": 5,
-          "value": "ItemUses.Lucky",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": 47180419488,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": 260,
-        "startTurn": 1
-      },
+      "duration": {},
       "origin": "Actor.DNO1UrgtFOtnRg52.Item.CoW4eB1z7ZLPyOLz",
       "transfer": true,
       "flags": {
@@ -82,7 +42,6 @@
           "rest-effect": "Ignore"
         }
       },
-      "tint": "#ffffff",
       "name": "Luck Point",
       "description": "",
       "statuses": [],
@@ -99,9 +58,48 @@
       },
       "img": "icons/magic/light/hand-sparks-glow-yellow.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.optional.lucky.attack.all",
+            "value": "reroll-kh",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.lucky.label",
+            "value": "Lucky",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.lucky.save.all",
+            "value": "reroll-kh",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.lucky.check.all",
+            "value": "reroll-kh",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.lucky.count",
+            "value": "ItemUses.Lucky",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "sort": 0,
-      "_key": "!items.effects!vbNvUzzpmYro54mP.GrZ2AlujZEWCppJt"
+      "_key": "!items.effects!vbNvUzzpmYro54mP.GrZ2AlujZEWCppJt",
+      "start": {
+        "time": 47180419488,
+        "round": 260,
+        "turn": 1,
+        "combat": null
+      }
     }
   ],
   "flags": {

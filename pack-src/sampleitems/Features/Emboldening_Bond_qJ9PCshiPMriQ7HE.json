@@ -5,23 +5,10 @@
   "effects": [
     {
       "_id": "ZjUL6z2dhutiFxRk",
-      "changes": [
-        {
-          "key": "macro.itemMacro",
-          "mode": 0,
-          "value": "",
-          "priority": 20
-        }
-      ],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 600,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 600,
+        "units": "seconds"
       },
       "origin": "Item.Ey9NYAkSKTs0Kpva",
       "transfer": false,
@@ -45,7 +32,6 @@
           "onlyOnce": false
         }
       },
-      "tint": "#ffffff",
       "name": "Emboldening Bond",
       "description": "",
       "statuses": [],
@@ -62,7 +48,16 @@
       },
       "img": "icons/magic/control/silhouette-hold-change-blue.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "macro.itemMacro",
+            "value": "",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!qJ9PCshiPMriQ7HE.ZjUL6z2dhutiFxRk"
     }
@@ -90,7 +85,7 @@
           "author": "devnIbfBHb74U9Zv",
           "img": "icons/svg/dice-target.svg",
           "scope": "global",
-          "command": "const version = \"0.9.52\";\ntry {\n    const effectData = {\n        changes: [\n            {key: \"flags.midi-qol.optional.emboldeningBond.attack\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.save\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.check\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.label\", mode: 5, value: \"Emboldening Bond\", priority: \"20\"},\n        ],\n        disabled: false,\n        duration: {rounds: 1, seconds: undefined, startRound: undefined, startTime: undefined, startTurn: undefined, turns: undefined},\n        icon: \"icons/magic/control/silhouette-hold-change-blue.webp\",\n        label: \"Emboldening Bond Bonus\",\n        tint: null,\n        transfer: false,\n        flags: {dae : {specialDuration: [\"turnStart\"]}}\n    }\n    \n    \n    if (args[0] === \"each\" || args[0] === \"on\") {\n        token = await fromUuid(args[1].tokenUuid)\n        token.actor.createEmbeddedDocuments(\"ActiveEffect\", [effectData])\n    }\n} catch (err)  {\n    console.error(`${args[0].itemData.name} - Emboldening Bond ${version}`, err);\n}",
+          "command": "const version = \"0.9.52\";\ntry {\n    const effectData = {\n        changes: [\n            {key: \"flags.midi-qol.optional.emboldeningBond.attack\", type: \"override\", value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.save\", type: \"override\", value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.check\", type: \"override\", value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.label\", type: \"override\", value: \"Emboldening Bond\", priority: \"20\"},\n        ],\n        disabled: false,\n        duration: {rounds: 1, seconds: undefined, startRound: undefined, startTime: undefined, startTurn: undefined, turns: undefined},\n        img: \"icons/magic/control/silhouette-hold-change-blue.webp\",\n        name: \"Emboldening Bond Bonus\",\n        tint: null,\n        transfer: false,\n        flags: {dae : {specialDuration: [\"turnStart\"]}}\n    }\n    \n    \n    if (args[0] === \"each\" || args[0] === \"on\") {\n        token = await fromUuid(args[1].tokenUuid)\n        token.actor.createEmbeddedDocuments(\"ActiveEffect\", [effectData])\n    }\n} catch (err)  {\n    console.error(`${args[0].itemData.name} - Emboldening Bond ${version}`, err);\n}",
           "folder": null,
           "sort": 0,
           "permission": {
@@ -102,7 +97,7 @@
         "type": "script",
         "img": "icons/svg/dice-target.svg",
         "scope": "global",
-        "command": "const version = \"10.0.10\";\ntry {\n    const effectData = {\n        changes: [\n            {key: \"flags.midi-qol.optional.emboldeningBond.attack.all\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.save.all\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.check.all\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.label.all\", mode: 5, value: \"Emboldening Bond\", priority: \"20\"},\n        ],\n        disabled: false,\n        duration: {rounds: 1, seconds: undefined, startRound: undefined, startTime: undefined, startTurn: undefined, turns: undefined},\n        icon: \"icons/magic/control/silhouette-hold-change-blue.webp\",\n        label: \"Emboldening Bond Bonus\",\n        tint: null,\n        transfer: false,\n        flags: {dae : {specialDuration: [\"turnStart\"]}}\n    }\n    \n    \n    if (args[0] === \"each\" || args[0] === \"on\") {\n        token = await fromUuid(args[1].tokenUuid)\n        token.actor.createEmbeddedDocuments(\"ActiveEffect\", [effectData])\n    }\n} catch (err)  {\n    console.error(`${args[0].itemData.name} - Emboldening Bond ${version}`, err);\n}",
+        "command": "const version = \"10.0.10\";\ntry {\n    const effectData = {\n        changes: [\n            {key: \"flags.midi-qol.optional.emboldeningBond.attack.all\", type: \"override\", value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.save.all\", type: \"override\", value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.check.all\", type: \"override\", value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.label.all\", type: \"override\", value: \"Emboldening Bond\", priority: \"20\"},\n        ],\n        disabled: false,\n        duration: {rounds: 1, seconds: undefined, startRound: undefined, startTime: undefined, startTurn: undefined, turns: undefined},\n        img: \"icons/magic/control/silhouette-hold-change-blue.webp\",\n        name: \"Emboldening Bond Bonus\",\n        tint: null,\n        transfer: false,\n        flags: {dae : {specialDuration: [\"turnStart\"]}}\n    }\n    \n    \n    if (args[0] === \"each\" || args[0] === \"on\") {\n        token = await fromUuid(args[1].tokenUuid)\n        token.actor.createEmbeddedDocuments(\"ActiveEffect\", [effectData])\n    }\n} catch (err)  {\n    console.error(`${args[0].itemData.name} - Emboldening Bond ${version}`, err);\n}",
         "sort": 0,
         "ownership": {
           "default": 0
@@ -185,7 +180,7 @@
         "img": "icons/magic/control/silhouette-hold-change-blue.webp",
         "type": "script",
         "scope": "global",
-        "command": "const version = \"12.4.7\";\ntry {\n    const effectData = {\n        changes: [\n            {key: \"flags.midi-qol.optional.emboldeningBond.attack.all\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.save.all\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.check.all\", mode: 5, value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.label\", mode: 5, value: `${macroItem.name} bonus`, priority: \"20\"},\n        ],\n        disabled: false,\n        duration: {rounds: 1, seconds: undefined, startRound: undefined, startTime: undefined, startTurn: undefined, turns: undefined},\n        icon: \"icons/magic/control/silhouette-hold-change-blue.webp\",\n        label: \"Emboldening Bond Bonus\",\n        tint: null,\n        transfer: false,\n        flags: {dae : {specialDuration: [\"turnStart\"]}}\n    }\n    \n    if (args[0].macroPass === \"preActiveEffects\") {\n        await macroItem.deleteAllDependents();\n    }\n    if (args[0] === \"each\" || args[0] === \"on\") {\n        token = await fromUuid(args[1].tokenUuid)\n        if (args[0] === \"on\") {\n            const effect = fromUuidSync(args[1].effectUuid);\n            macroItem.addDependent(effect);\n        }\n        const createdEffects = await token.actor.createEmbeddedDocuments(\"ActiveEffect\", [effectData]);\n        await macroItem.addDependent(...createdEffects)\n    }\n} catch (err)  {\n    console.error(`${args[0].itemData.name} - Emboldening Bond ${version}`, err);\n}",
+        "command": "const version = \"12.4.7\";\ntry {\n    const effectData = {\n        changes: [\n            {key: \"flags.midi-qol.optional.emboldeningBond.attack.all\", type: \"override\", value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.save.all\", type: \"override\", value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.check.all\", type: \"override\", value: \"1d4\", priority: \"20\"},\n            {key: \"flags.midi-qol.optional.emboldeningBond.label\", type: \"override\", value: `${macroItem.name} bonus`, priority: \"20\"},\n        ],\n        disabled: false,\n        duration: {rounds: 1, seconds: undefined, startRound: undefined, startTime: undefined, startTurn: undefined, turns: undefined},\n        img: \"icons/magic/control/silhouette-hold-change-blue.webp\",\n        name: \"Emboldening Bond Bonus\",\n        tint: null,\n        transfer: false,\n        flags: {dae : {specialDuration: [\"turnStart\"]}}\n    }\n    \n    if (args[0].macroPass === \"preActiveEffects\") {\n        await macroItem.deleteAllDependents();\n    }\n    if (args[0] === \"each\" || args[0] === \"on\") {\n        token = await fromUuid(args[1].tokenUuid)\n        if (args[0] === \"on\") {\n            const effect = fromUuidSync(args[1].effectUuid);\n            macroItem.addDependent(effect);\n        }\n        const createdEffects = await token.actor.createEmbeddedDocuments(\"ActiveEffect\", [effectData]);\n        await macroItem.addDependent(...createdEffects)\n    }\n} catch (err)  {\n    console.error(`${args[0].itemData.name} - Emboldening Bond ${version}`, err);\n}",
         "author": "Zl1BOUaPLwDEujaL",
         "ownership": {
           "default": 3

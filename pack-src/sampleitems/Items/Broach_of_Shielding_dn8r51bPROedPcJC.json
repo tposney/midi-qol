@@ -67,32 +67,9 @@
   "effects": [
     {
       "origin": "Scene.GO63mgFDMhBfPVWf.Token.y8rDGEEuPTa8Oz4m.Actor.2W8ip8j0hvK2pQ7V.Item.GwIHAhyeTzBJUWil",
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": 249,
-        "startTurn": 0
-      },
+      "duration": {},
       "disabled": false,
       "_id": "vfDPES065i7GQdeK",
-      "changes": [
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "force",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.onUseMacroName",
-          "mode": 0,
-          "value": "ItemMacro, preTargetDamageApplication",
-          "priority": 20
-        }
-      ],
-      "tint": "#ffffff",
       "transfer": true,
       "flags": {
         "dfreds-convenient-effects": {
@@ -145,9 +122,30 @@
       },
       "img": "icons/equipment/neck/pendant-bronze-gem-blue.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "system.traits.dr.value",
+            "value": "force",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ItemMacro, preTargetDamageApplication",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
-      "_key": "!items.effects!dn8r51bPROedPcJC.vfDPES065i7GQdeK"
+      "_key": "!items.effects!dn8r51bPROedPcJC.vfDPES065i7GQdeK",
+      "start": {
+        "time": null,
+        "round": 249,
+        "turn": 0,
+        "combat": null
+      }
     }
   ],
   "flags": {

@@ -5,24 +5,8 @@
   "effects": [
     {
       "_id": "sgGuardiansEff00",
-      "changes": [
-        {
-          "key": "macro.itemMacro",
-          "mode": 0,
-          "value": "",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "transfer": false,
       "flags": {
         "dae": {
@@ -36,7 +20,6 @@
           "showIcon": true
         }
       },
-      "tint": "#ffffff",
       "name": "Spirit Guardians",
       "description": "<p>Enemies within 15 feet have their speed halved and must save against Radiant or Necrotic damage at the start of each turn and when entering the emanation.</p>",
       "statuses": [],
@@ -62,30 +45,25 @@
         ],
         "canStack": false,
         "combatOnly": false,
-        "disableOnHidden": true
+        "disableOnHidden": true,
+        "changes": [
+          {
+            "key": "macro.itemMacro",
+            "value": "",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
       },
       "sort": 0,
       "_key": "!items.effects!cQRmwQcPULIjCach.sgGuardiansEff00"
     },
     {
       "_id": "sgGuardiansDmg00",
-      "changes": [
-        {
-          "key": "flags.midi-qol.guardiansDamage",
-          "mode": 5,
-          "value": "1",
-          "priority": 20
-        }
-      ],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": 1,
-        "startRound": null,
-        "startTurn": null
+        "value": 1,
+        "units": "turns"
       },
       "transfer": false,
       "flags": {
@@ -98,7 +76,6 @@
           "showIcon": false
         }
       },
-      "tint": "#ffffff",
       "name": "Guardians Damage",
       "description": "<p>This creature has already been damaged by Spirit Guardians this turn.</p>",
       "statuses": [],
@@ -115,7 +92,16 @@
       },
       "img": "icons/magic/light/orb-hands-humanoid-yellow.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.guardiansDamage",
+            "value": "1",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "sort": 100,
       "_key": "!items.effects!cQRmwQcPULIjCach.sgGuardiansDmg00"
     }
@@ -163,7 +149,7 @@
         "img": "icons/magic/light/orb-hands-humanoid-yellow.webp",
         "type": "script",
         "scope": "global",
-        "command": "const version = \"13.0.52\";\ntry {\n    const lastArg = args[args.length - 1];\n    if (args[0] !== \"on\") return;\n    const effect = actor.effects.get(lastArg.effectId);\n    if (!effect) return;\n    // Source aura on the caster — nothing to do\n    if (!effect.flags?.auraeffects?.fromAura) return;\n    // Aura copy on another token — check disposition\n    const caster = macroItem?.parent;\n    const casterToken = caster?.getActiveTokens(false, true)?.[0];\n    const targetToken = canvas.tokens.get(lastArg.tokenId);\n    if (!targetToken || !casterToken) return;\n    if (targetToken.document.disposition === casterToken.disposition) return;\n    // Read cast level from effect flags (set by midi-qol when applying effects)\n    const castLevel = effect.flags?.[\"midi-qol\"]?.castData?.castLevel ?? macroItem.system.level;\n    const baseLevel = macroItem.system.level;\n    // Create dependent effect for movement reduction and overtime\n    await actor.createEmbeddedDocuments(\"ActiveEffect\", [{\n        name: \"Spirit Guardians\",\n        img: macroItem.img,\n        origin: macroItem.uuid,\n        changes: [\n            { key: \"system.attributes.movement.all\", mode: 0, value: \"/2\", priority: 20 },\n            { key: \"flags.midi-qol.ActivityOverTime\", mode: 5, value: \"guardiansDamage\", priority: 20 }\n        ],\n        flags: {\n            dnd5e: { dependentOn: effect.uuid },\n            \"midi-qol\": { castData: { castLevel, baseLevel } },\n            dae: { showIcon: false, stackable: \"none\", macroRepeat: \"none\" }\n        }\n    }]);\n    // Trigger immediate save — midiOptions.spellLevel handled by _prepareUsageScaling override\n    const saveActivity = macroItem?.system?.activities?.find(a => a.identifier === \"guardiansDamage\");\n    if (!saveActivity) return;\n    await MidiQOL.completeActivityUse(saveActivity, {midiOptions: {spellLevel: castLevel, noUseWarning: true, targetUuids: [targetToken.document.uuid]}});\n} catch (err) {\n    console.error(`Spirit Guardians ${version}`, err);\n}",
+        "command": "const version = \"13.0.52\";\ntry {\n    const lastArg = args[args.length - 1];\n    if (args[0] !== \"on\") return;\n    const effect = actor.effects.get(lastArg.effectId);\n    if (!effect) return;\n    // Source aura on the caster — nothing to do\n    if (!effect.flags?.auraeffects?.fromAura) return;\n    // Aura copy on another token — check disposition\n    const caster = macroItem?.parent;\n    const casterToken = caster?.getActiveTokens(false, true)?.[0];\n    const targetToken = canvas.tokens.get(lastArg.tokenId);\n    if (!targetToken || !casterToken) return;\n    if (targetToken.document.disposition === casterToken.disposition) return;\n    // Read cast level from effect flags (set by midi-qol when applying effects)\n    const castLevel = effect.flags?.[\"midi-qol\"]?.castData?.castLevel ?? macroItem.system.level;\n    const baseLevel = macroItem.system.level;\n    // Create dependent effect for movement reduction and overtime\n    await actor.createEmbeddedDocuments(\"ActiveEffect\", [{\n        name: \"Spirit Guardians\",\n        img: macroItem.img,\n        origin: macroItem.uuid,\n        changes: [\n            { key: \"system.attributes.movement.all\", type: \"custom\", value: \"/2\", priority: 20 },\n            { key: \"flags.midi-qol.ActivityOverTime\", type: \"override\", value: \"guardiansDamage\", priority: 20 }\n        ],\n        flags: {\n            dnd5e: { dependentOn: effect.uuid },\n            \"midi-qol\": { castData: { castLevel, baseLevel } },\n            dae: { showIcon: false, stackable: \"none\", macroRepeat: \"none\" }\n        }\n    }]);\n    // Trigger immediate save — midiOptions.spellLevel handled by _prepareUsageScaling override\n    const saveActivity = macroItem?.system?.activities?.find(a => a.identifier === \"guardiansDamage\");\n    if (!saveActivity) return;\n    await MidiQOL.completeActivityUse(saveActivity, {midiOptions: {spellLevel: castLevel, noUseWarning: true, targetUuids: [targetToken.document.uuid]}});\n} catch (err) {\n    console.error(`Spirit Guardians ${version}`, err);\n}",
         "author": "Zl1BOUaPLwDEujaL",
         "ownership": {
           "default": 3

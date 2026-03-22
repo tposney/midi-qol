@@ -214,62 +214,9 @@
           ]
         }
       },
-      "changes": [
-        {
-          "key": "system.bonuses.mwak.damage",
-          "mode": 2,
-          "value": "+@scale.barbarian.rage-damage",
-          "priority": 20
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "slashing",
-          "priority": 20
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "piercing",
-          "priority": 20
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "bludgeoning",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.fail.spell.vocal",
-          "mode": 5,
-          "value": "1",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.fail.spell.somatic",
-          "mode": 5,
-          "value": "1",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.fail.spell.vocal",
-          "mode": 5,
-          "value": "1",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "rounds": null,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "origin": "Item.bdfYHJstcltQC7SZ",
-      "tint": "#ffffff",
       "transfer": false,
       "name": "Rage",
       "description": "",
@@ -287,7 +234,52 @@
       },
       "img": "icons/creatures/abilities/mouth-teeth-human.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "system.bonuses.mwak.damage",
+            "value": "+@scale.barbarian.rage-damage",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "slashing",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "piercing",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "bludgeoning",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "flags.midi-qol.fail.spell.vocal",
+            "value": "1",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.fail.spell.somatic",
+            "value": "1",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.fail.spell.vocal",
+            "value": "1",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!w0yJ5NSbqGGyWhsC.eWhL8hUr0c2ujDUm"
     }

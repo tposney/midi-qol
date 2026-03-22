@@ -10,27 +10,22 @@
       "transfer": false,
       "_id": "ftsRestrained000",
       "type": "base",
-      "system": {},
-      "changes": [
-        {
-          "key": "flags.midi-qol.OverTime",
-          "mode": 5,
-          "value": "turn=end,\nsaveDC=@attributes.spell.dc,\nsaveAbility=con,\nsaveCount=3-,\nfailCount=2-petrified,\nrollAs=origin,\nlabel=Flesh to Stone (CON save)",
-          "priority": 20
-        }
-      ],
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.OverTime",
+            "value": "turn=end,\nsaveDC=@attributes.spell.dc,\nsaveAbility=con,\nsaveCount=3-,\nfailCount=2-petrified,\nrollAs=origin,\nlabel=Flesh to Stone (CON save)",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 60,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 60,
+        "units": "seconds"
       },
       "description": "<p>The target has the Restrained condition. At the end of each turn it makes a Constitution saving throw. Three failed saves (including the initial): Petrified. Three successful saves: spell ends. The successes and failures needn't be consecutive.</p>",
-      "tint": "#ffffff",
       "statuses": [
         "restrained"
       ],

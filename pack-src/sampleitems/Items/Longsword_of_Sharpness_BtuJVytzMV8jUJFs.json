@@ -5,30 +5,8 @@
   "effects": [
     {
       "_id": "4X2IaiMLJjtZdx6w",
-      "changes": [
-        {
-          "key": "ATL.dimLight",
-          "mode": 2,
-          "value": "20",
-          "priority": 20
-        },
-        {
-          "key": "ATL.brightLight",
-          "mode": 2,
-          "value": "10",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": 47178646213,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": 265,
-        "startTurn": 5
-      },
+      "duration": {},
       "origin": "Actor.BogmFuNh1wswTouJ.Item.CBdCa46auIpqxo2m",
       "transfer": true,
       "flags": {
@@ -54,7 +32,6 @@
           "onlyOnce": false
         }
       },
-      "tint": "#ffffff",
       "name": "Light",
       "description": "",
       "statuses": [],
@@ -71,26 +48,38 @@
       },
       "img": "icons/skills/wounds/bone-broken-knee-beam.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "ATL.dimLight",
+            "value": "20",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "ATL.brightLight",
+            "value": "10",
+            "priority": 20,
+            "type": "add"
+          }
+        ]
+      },
       "sort": 0,
-      "_key": "!items.effects!BtuJVytzMV8jUJFs.4X2IaiMLJjtZdx6w"
+      "_key": "!items.effects!BtuJVytzMV8jUJFs.4X2IaiMLJjtZdx6w",
+      "start": {
+        "time": 47178646213,
+        "round": 265,
+        "turn": 5,
+        "combat": null
+      }
     },
     {
       "name": "Severed Limb",
       "origin": "Item.we5KTHk3VjesXFkZ",
-      "duration": {
-        "rounds": null,
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "transfer": false,
       "disabled": false,
       "_id": "tTAx1lkzPXjzwxas",
-      "changes": [],
       "description": "",
       "statuses": [],
       "flags": {
@@ -130,7 +119,6 @@
           "overlay": false
         }
       },
-      "tint": "#ffffff",
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
@@ -144,7 +132,9 @@
       },
       "img": "icons/skills/wounds/bone-broken-knee-beam.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": []
+      },
       "sort": 0,
       "_key": "!items.effects!BtuJVytzMV8jUJFs.tTAx1lkzPXjzwxas"
     }

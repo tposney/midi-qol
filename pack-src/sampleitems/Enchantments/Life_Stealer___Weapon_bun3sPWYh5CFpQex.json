@@ -323,51 +323,43 @@
       "img": "systems/dnd5e/icons/spell-tiers/spell3.webp",
       "disabled": true,
       "_id": "ZveR6kPKafjcwQdY",
-      "system": {},
-      "changes": [
-        {
-          "key": "name",
-          "mode": 5,
-          "value": "{} of Life Stealing",
-          "priority": 50
-        },
-        {
-          "key": "system.properties",
-          "mode": 2,
-          "value": "mgc",
-          "priority": 20
-        },
-        {
-          "key": "system.magicalBonus",
-          "mode": 4,
-          "value": "1",
-          "priority": 40
-        },
-        {
-          "key": "flags.midi-qol.onUseMacroName",
-          "mode": 0,
-          "value": "ActivityMacro.life-stealer, postActiveEffects",
-          "priority": 50
-        },
-        {
-          "key": "system.attunement",
-          "mode": 5,
-          "value": "required",
-          "priority": 20
-        }
-      ],
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+      "system": {
+        "changes": [
+          {
+            "key": "name",
+            "value": "{} of Life Stealing",
+            "priority": 50,
+            "type": "override"
+          },
+          {
+            "key": "system.properties",
+            "value": "mgc",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.magicalBonus",
+            "value": "1",
+            "priority": 40,
+            "type": "upgrade"
+          },
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ActivityMacro.life-stealer, postActiveEffects",
+            "priority": 50,
+            "type": "custom"
+          },
+          {
+            "key": "system.attunement",
+            "value": "required",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
       },
+      "duration": {},
       "description": "",
       "origin": null,
-      "tint": "#ffffff",
       "transfer": false,
       "statuses": [],
       "sort": 0,

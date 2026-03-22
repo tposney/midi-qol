@@ -10,75 +10,70 @@
       "transfer": false,
       "_id": "irdDanceEff00000",
       "type": "base",
-      "system": {},
-      "changes": [
-        {
-          "key": "flags.midi-qol.disadvantage.attack.all",
-          "mode": 0,
-          "value": "1",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.disadvantage.save.dex",
-          "mode": 0,
-          "value": "1",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.grants.advantage.attack.all",
-          "mode": 0,
-          "value": "1",
-          "priority": 20
-        },
-        {
-          "key": "system.attributes.movement.walk",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        },
-        {
-          "key": "system.attributes.movement.fly",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        },
-        {
-          "key": "system.attributes.movement.swim",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        },
-        {
-          "key": "system.attributes.movement.climb",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        },
-        {
-          "key": "system.attributes.movement.burrow",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        },
-        {
-          "key": "flags.midi-qol.OverTime",
-          "mode": 5,
-          "value": "turn=end,\nsaveDC=@attributes.spell.dc,\nsaveAbility=wis,\nsaveRemove=true,\nrollAs=origin,\nlabel=Collect yourself (repeat Wisdom save)",
-          "priority": 20
-        }
-      ],
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.disadvantage.attack.all",
+            "value": "1",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "flags.midi-qol.disadvantage.save.dex",
+            "value": "1",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "flags.midi-qol.grants.advantage.attack.all",
+            "value": "1",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "system.attributes.movement.walk",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          },
+          {
+            "key": "system.attributes.movement.fly",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          },
+          {
+            "key": "system.attributes.movement.swim",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          },
+          {
+            "key": "system.attributes.movement.climb",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          },
+          {
+            "key": "system.attributes.movement.burrow",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          },
+          {
+            "key": "flags.midi-qol.OverTime",
+            "value": "turn=end,\nsaveDC=@attributes.spell.dc,\nsaveAbility=wis,\nsaveRemove=true,\nrollAs=origin,\nlabel=Collect yourself (repeat Wisdom save)",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 60,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 60,
+        "units": "seconds"
       },
       "description": "<p>While Charmed, the target dances comically, must use all its movement to dance in place, and has Disadvantage on Dexterity saving throws and attack rolls, and other creatures have Advantage on attack rolls against it. On each of its turns, the target can take an action to collect itself and repeat the save, ending the spell on itself on a success.</p>",
-      "tint": "#ffffff",
       "statuses": [
         "charmed"
       ],
@@ -118,51 +113,46 @@
       "transfer": false,
       "_id": "irdShortDance000",
       "type": "base",
-      "system": {},
-      "changes": [
-        {
-          "key": "system.attributes.movement.walk",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        },
-        {
-          "key": "system.attributes.movement.fly",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        },
-        {
-          "key": "system.attributes.movement.swim",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        },
-        {
-          "key": "system.attributes.movement.climb",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        },
-        {
-          "key": "system.attributes.movement.burrow",
-          "mode": 3,
-          "value": "0",
-          "priority": null
-        }
-      ],
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.movement.walk",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          },
+          {
+            "key": "system.attributes.movement.fly",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          },
+          {
+            "key": "system.attributes.movement.swim",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          },
+          {
+            "key": "system.attributes.movement.climb",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          },
+          {
+            "key": "system.attributes.movement.burrow",
+            "value": "0",
+            "priority": null,
+            "type": "downgrade"
+          }
+        ]
+      },
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": 1,
-        "startRound": null,
-        "startTurn": null
+        "value": 1,
+        "units": "turns"
       },
       "description": "<p>The target dances comically until the end of its next turn, during which it must spend all its movement to dance in place.</p>",
-      "tint": "#ffffff",
       "statuses": [],
       "sort": 0,
       "flags": {

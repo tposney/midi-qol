@@ -5,24 +5,8 @@
   "effects": [
     {
       "_id": "TJteucmq1pmKCCkc",
-      "changes": [
-        {
-          "key": "system.traits.ci.value",
-          "mode": 2,
-          "value": "frightened",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": 179,
-        "startTurn": 0
-      },
+      "duration": {},
       "origin": "Scene.GO63mgFDMhBfPVWf.Token.2BFoIlsa0qXYk1Ps.Actor.qP08yt0jURaNyOfb.Item.uN94wSsYpei9Ggnj",
       "transfer": true,
       "flags": {
@@ -42,7 +26,6 @@
           "overlay": false
         }
       },
-      "tint": "#ffffff",
       "name": "Aura of Courage",
       "description": "",
       "statuses": [],
@@ -71,10 +54,24 @@
         "combatOnly": false,
         "disableOnHidden": true,
         "evaluatePreApply": false,
-        "showRadius": false
+        "showRadius": false,
+        "changes": [
+          {
+            "key": "system.traits.ci.value",
+            "value": "frightened",
+            "priority": 20,
+            "type": "add"
+          }
+        ]
       },
       "sort": 0,
-      "_key": "!items.effects!HNeqAtPkcUqfI2mQ.TJteucmq1pmKCCkc"
+      "_key": "!items.effects!HNeqAtPkcUqfI2mQ.TJteucmq1pmKCCkc",
+      "start": {
+        "time": null,
+        "round": 179,
+        "turn": 0,
+        "combat": null
+      }
     }
   ],
   "flags": {

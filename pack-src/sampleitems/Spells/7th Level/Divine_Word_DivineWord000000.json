@@ -5,16 +5,10 @@
   "effects": [
     {
       "_id": "dvnWrdDeafened00",
-      "changes": [],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 60,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 60,
+        "units": "seconds"
       },
       "transfer": false,
       "flags": {
@@ -27,7 +21,6 @@
           "showIcon": true
         }
       },
-      "tint": "#ffffff",
       "name": "Divine Word (Deafened)",
       "description": "<p>Deafened by Divine Word for 1 minute (41-50 HP when struck).</p>",
       "statuses": [
@@ -46,22 +39,18 @@
       },
       "img": "icons/magic/holy/projectiles-blades-salvo-yellow.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": []
+      },
       "sort": 0,
       "_key": "!items.effects!DivineWord000000.dvnWrdDeafened00"
     },
     {
       "_id": "dvnWrdBlndDeaf00",
-      "changes": [],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 600,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 600,
+        "units": "seconds"
       },
       "transfer": false,
       "flags": {
@@ -74,7 +63,6 @@
           "showIcon": true
         }
       },
-      "tint": "#ffffff",
       "name": "Divine Word (Blinded & Deafened)",
       "description": "<p>Blinded and Deafened by Divine Word for 10 minutes (31-40 HP when struck).</p>",
       "statuses": [
@@ -94,22 +82,18 @@
       },
       "img": "icons/magic/holy/projectiles-blades-salvo-yellow.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": []
+      },
       "sort": 0,
       "_key": "!items.effects!DivineWord000000.dvnWrdBlndDeaf00"
     },
     {
       "_id": "dvnWrdAllThree00",
-      "changes": [],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 3600,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 3600,
+        "units": "seconds"
       },
       "transfer": false,
       "flags": {
@@ -122,7 +106,6 @@
           "showIcon": true
         }
       },
-      "tint": "#ffffff",
       "name": "Divine Word (Blinded, Deafened & Stunned)",
       "description": "<p>Blinded, Deafened, and Stunned by Divine Word for 1 hour (21-30 HP when struck).</p>",
       "statuses": [
@@ -143,7 +126,9 @@
       },
       "img": "icons/magic/holy/projectiles-blades-salvo-yellow.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": []
+      },
       "sort": 0,
       "_key": "!items.effects!DivineWord000000.dvnWrdAllThree00"
     }

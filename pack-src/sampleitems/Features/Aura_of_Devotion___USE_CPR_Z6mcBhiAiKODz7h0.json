@@ -22,27 +22,10 @@
           "overlay": false
         }
       },
-      "changes": [
-        {
-          "key": "system.traits.ci.value",
-          "mode": 2,
-          "value": "charmed",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "origin": "Compendium.midi-qol.midiqol-sample-items.Item.Z6mcBhiAiKODz7h0",
       "transfer": true,
-      "tint": "#ffffff",
       "name": "Aura of Devotion",
       "description": "",
       "statuses": [],
@@ -71,7 +54,15 @@
         "combatOnly": false,
         "disableOnHidden": true,
         "evaluatePreApply": false,
-        "showRadius": false
+        "showRadius": false,
+        "changes": [
+          {
+            "key": "system.traits.ci.value",
+            "value": "charmed",
+            "priority": 20,
+            "type": "add"
+          }
+        ]
       },
       "sort": 0,
       "_key": "!items.effects!Z6mcBhiAiKODz7h0.ZBApXapUUQs7zxcY"

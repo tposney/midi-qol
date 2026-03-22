@@ -28,38 +28,9 @@
           "description": ""
         }
       },
-      "changes": [
-        {
-          "key": "system.traits.ci.value",
-          "mode": 0,
-          "value": "unconscious",
-          "priority": 20
-        },
-        {
-          "key": "system.traits.languages.value",
-          "mode": 2,
-          "value": "elvish",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.onUseMacroName",
-          "mode": 0,
-          "value": "ItemMacro, preTargetSave",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "origin": "Item.NpbMHuHRuBS3ntJA",
-      "tint": "#ffffff",
       "transfer": true,
       "name": "Fey Ancestry",
       "description": "",
@@ -77,7 +48,28 @@
       },
       "img": "icons/creatures/mammals/elk-moose-marked-green.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "system.traits.ci.value",
+            "value": "unconscious",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "system.traits.languages.value",
+            "value": "elvish",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ItemMacro, preTargetSave",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!j5XfwKQG9CkyrzxH.xztigTbGnhDHw7of"
     }
@@ -112,7 +104,7 @@
         "type": "script",
         "img": "icons/svg/dice-target.svg",
         "scope": "global",
-        "command": "const {item: attackingItem, saveDetails: saveDetails} = wsorkflow;\nconsole.error(attackingItem, saveDetails)\nif (!attackingItem || !saveDetails) return;\nif (attackingItem.effects.some(eff=>eff.label === \"Charmed\") \n    || attackingItem.effects.some(eff=>eff.changes.some(c=>[\"Charmed (CE)\", \"Charmed\"].some(con=>c.value.includes(con)))))\n    saveDetails.advantage = true;",
+        "command": "const {item: attackingItem, saveDetails: saveDetails} = wsorkflow;\nconsole.error(attackingItem, saveDetails)\nif (!attackingItem || !saveDetails) return;\nif (attackingItem.effects.some(eff=>eff.label === \"Charmed\") \n    || attackingItem.effects.some(eff=>eff.system.changes.some(c=>[\"Charmed (CE)\", \"Charmed\"].some(con=>c.value.includes(con)))))\n    saveDetails.advantage = true;",
         "sort": 0,
         "ownership": {
           "default": 0

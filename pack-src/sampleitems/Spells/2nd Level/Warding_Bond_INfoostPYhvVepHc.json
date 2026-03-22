@@ -5,125 +5,10 @@
   "effects": [
     {
       "_id": "wbBondedEffect00",
-      "changes": [
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "acid",
-          "priority": null
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "bludgeoning",
-          "priority": null
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "cold",
-          "priority": null
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "fire",
-          "priority": null
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "force",
-          "priority": null
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "lightning",
-          "priority": null
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "necrotic",
-          "priority": null
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "piercing",
-          "priority": null
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "poison",
-          "priority": null
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "psychic",
-          "priority": null
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "radiant",
-          "priority": null
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "slashing",
-          "priority": null
-        },
-        {
-          "key": "system.traits.dr.value",
-          "mode": 2,
-          "value": "thunder",
-          "priority": null
-        },
-        {
-          "key": "system.attributes.ac.bonus",
-          "mode": 2,
-          "value": "1",
-          "priority": null
-        },
-        {
-          "key": "system.bonuses.abilities.save",
-          "mode": 2,
-          "value": "1",
-          "priority": null
-        },
-        {
-          "key": "flags.dae.onUpdateTarget",
-          "mode": 0,
-          "value": "Warding Bond, ItemMacro, system.attributes.hp.value",
-          "priority": 20
-        },
-        {
-          "key": "flags.dae.onUpdateSource",
-          "mode": 0,
-          "value": "Warding Bond, ItemMacro, system.attributes.hp.value",
-          "priority": 20
-        },
-        {
-          "key": "macro.itemMacro",
-          "mode": 0,
-          "value": "",
-          "priority": 20
-        }
-      ],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 3600,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 3600,
+        "units": "seconds"
       },
       "transfer": false,
       "flags": {
@@ -136,7 +21,6 @@
           "showIcon": true
         }
       },
-      "tint": "#ffffff",
       "name": "Bonded",
       "description": "<p>While within 60 feet of the caster, you gain a +1 bonus to AC and saving throws, and you have Resistance to all damage. Each time you take damage, the caster takes the same amount of damage.</p><p>The spell ends if the caster drops to 0 Hit Points or if you and the caster become separated by more than 60 feet. It also ends if the spell is cast again on either of the connected creatures.</p>",
       "statuses": [],
@@ -153,7 +37,118 @@
       },
       "img": "icons/equipment/finger/ring-band-engraved-scrolls-silver.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "system.traits.dr.value",
+            "value": "acid",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "bludgeoning",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "cold",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "fire",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "force",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "lightning",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "necrotic",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "piercing",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "poison",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "psychic",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "radiant",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "slashing",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "thunder",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "system.attributes.ac.bonus",
+            "value": "1",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "system.bonuses.abilities.save",
+            "value": "1",
+            "priority": null,
+            "type": "add"
+          },
+          {
+            "key": "flags.dae.onUpdateTarget",
+            "value": "Warding Bond, ItemMacro, system.attributes.hp.value",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "flags.dae.onUpdateSource",
+            "value": "Warding Bond, ItemMacro, system.attributes.hp.value",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "macro.itemMacro",
+            "value": "",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!INfoostPYhvVepHc.wbBondedEffect00"
     }

@@ -5,23 +5,10 @@
   "effects": [
     {
       "_id": "dbfChargingEff00",
-      "changes": [
-        {
-          "key": "macro.itemMacro",
-          "mode": 0,
-          "value": "",
-          "priority": 20
-        }
-      ],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 60,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 60,
+        "units": "seconds"
       },
       "transfer": false,
       "flags": {
@@ -35,7 +22,6 @@
           "selfTarget": true
         }
       },
-      "tint": "#ffffff",
       "name": "Delayed Blast Fireball (Charging)",
       "description": "<p>A glowing bead of energy is building power. At the end of each of the caster's turns, the accumulated damage increases by 1d6. When the bead detonates, it deals 12d6 + the accumulated bonus as fire damage in a 20-foot sphere.</p>",
       "statuses": [],
@@ -52,7 +38,16 @@
       },
       "img": "icons/magic/fire/explosion-flame-blue.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "macro.itemMacro",
+            "value": "",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!DelayBlstFrball0.dbfChargingEff00"
     }

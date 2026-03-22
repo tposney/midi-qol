@@ -176,28 +176,11 @@
   },
   "effects": [
     {
-      "changes": [
-        {
-          "key": "flags.midi-qol.onUseMacroName",
-          "mode": 0,
-          "value": "ItemMacro,preTargetSave",
-          "priority": 20
-        }
-      ],
       "transfer": false,
       "_id": "dmXIoxCscoqGbIYm",
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "origin": null,
-      "tint": "#ffffff",
       "flags": {
         "dfreds-convenient-effects": {
           "description": ""
@@ -243,7 +226,16 @@
       },
       "img": "icons/consumables/potions/bottle-round-corked-pink.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ItemMacro,preTargetSave",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!bIVzHw94NXZwFAso.dmXIoxCscoqGbIYm"
     }
@@ -261,7 +253,7 @@
         "name": "Antitoxin",
         "type": "script",
         "scope": "global",
-        "command": "// Original macro from @thatlonelybugbear\nconst { options: {token:defenderToken, actor:defenderActor }, actor:attackerActor, workflow: {item: attackingItem, saveDetails: saveDetails} } = args[0] ?? {};\nif (!attackerActor || !defenderToken || !defenderActor || !attackingItem || !saveDetails) return;\nif (attackingItem.system.formula.includes(\"poison\")\n    || attackingItem.effects.some(eff=>eff.label === \"Poisoned\") \n    || attackingItem.effects.some(eff=>eff.changes.some(c=>[\"Poisoned (CE)\", \"Poisoned\"].some(con=>c.value.includes(con)))))\n    saveDetails.advantage = true;",
+        "command": "// Original macro from @thatlonelybugbear\nconst { options: {token:defenderToken, actor:defenderActor }, actor:attackerActor, workflow: {item: attackingItem, saveDetails: saveDetails} } = args[0] ?? {};\nif (!attackerActor || !defenderToken || !defenderActor || !attackingItem || !saveDetails) return;\nif (attackingItem.system.formula.includes(\"poison\")\n    || attackingItem.effects.some(eff=>eff.label === \"Poisoned\") \n    || attackingItem.effects.some(eff=>eff.system.changes.some(c=>[\"Poisoned (CE)\", \"Poisoned\"].some(con=>c.value.includes(con)))))\n    saveDetails.advantage = true;",
         "author": "oKTPW6AHSqX8CsNe",
         "_id": null,
         "img": "icons/svg/dice-target.svg",

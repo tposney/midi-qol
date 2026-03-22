@@ -29,38 +29,9 @@
         },
         "core": {}
       },
-      "changes": [
-        {
-          "key": "system.traits.ci.value",
-          "value": "diseased",
-          "mode": 2,
-          "priority": 20
-        },
-        {
-          "key": "system.traits.ci.value",
-          "value": "poisoned",
-          "mode": 2,
-          "priority": 20
-        },
-        {
-          "key": "system.traits.di.value",
-          "value": "poison",
-          "mode": 2,
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "origin": "Item.UWivBxTGcLzlnY8G",
-      "tint": "#ffffff",
       "transfer": true,
       "name": "Nature's Ward",
       "description": "",
@@ -78,7 +49,28 @@
       },
       "img": "icons/commodities/flowers/lotus-pink.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "system.traits.ci.value",
+            "value": "diseased",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.ci.value",
+            "value": "poisoned",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.di.value",
+            "value": "poison",
+            "priority": 20,
+            "type": "add"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!A6fVeyfHvnmYVONs.RZ2jmcmhFX8uMrPN"
     }

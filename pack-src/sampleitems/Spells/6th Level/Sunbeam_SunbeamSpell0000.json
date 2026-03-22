@@ -10,20 +10,15 @@
       "transfer": false,
       "_id": "sunBlindedEff000",
       "type": "base",
-      "system": {},
-      "changes": [],
+      "system": {
+        "changes": []
+      },
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": 1,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 1,
+        "units": "rounds"
       },
       "description": "<p>The target has the Blinded condition until the start of your next turn.</p>",
-      "tint": "#ffffff",
       "statuses": [
         "blinded"
       ],

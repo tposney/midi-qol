@@ -10,27 +10,22 @@
       "transfer": false,
       "_id": "ctBlockedHeal000",
       "type": "base",
-      "system": {},
-      "changes": [
-        {
-          "key": "system.traits.di.value",
-          "mode": 0,
-          "value": "healing",
-          "priority": 20
-        }
-      ],
+      "system": {
+        "changes": [
+          {
+            "key": "system.traits.di.value",
+            "value": "healing",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": 1,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 1,
+        "units": "rounds"
       },
       "description": "<p>The target can't regain Hit Points until the end of your next turn.</p>",
-      "tint": "#ffffff",
       "statuses": [],
       "sort": 0,
       "flags": {

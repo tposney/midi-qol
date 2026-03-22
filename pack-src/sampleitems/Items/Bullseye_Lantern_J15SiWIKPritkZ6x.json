@@ -171,25 +171,11 @@
     {
       "origin": "Actor.DMTSWfQs8whM5FtE.Item.Vpfi0yz4PijHLv9w",
       "duration": {
-        "seconds": 21600,
-        "startTime": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 21600,
+        "units": "seconds"
       },
       "disabled": false,
       "_id": "1alY3YZuyczKY8Ly",
-      "changes": [
-        {
-          "key": "macro.itemMacro",
-          "mode": 2,
-          "value": "",
-          "priority": 20
-        }
-      ],
-      "tint": "#ffffff",
       "transfer": false,
       "flags": {
         "dae": {
@@ -220,7 +206,16 @@
       },
       "img": "icons/sundries/lights/lantern-iron-yellow.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "macro.itemMacro",
+            "value": "",
+            "priority": 20,
+            "type": "add"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!J15SiWIKPritkZ6x.1alY3YZuyczKY8Ly"
     }

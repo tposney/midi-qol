@@ -8,13 +8,8 @@
       "name": "Banished",
       "origin": "",
       "duration": {
-        "startTime": null,
-        "seconds": 60,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 60,
+        "units": "seconds"
       },
       "disabled": false,
       "transfer": false,
@@ -35,17 +30,17 @@
         }
       },
       "img": "icons/creatures/unholy/demon-fire-horned-clawed.webp",
-      "tint": "#ffffff",
       "type": "base",
-      "system": {},
-      "changes": [
-        {
-          "key": "macro.itemMacro",
-          "mode": 0,
-          "value": "",
-          "priority": 20
-        }
-      ],
+      "system": {
+        "changes": [
+          {
+            "key": "macro.itemMacro",
+            "value": "",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "description": "<p>The target is transported to a harmless demiplane and has the &amp;Reference[Incapacitated]{Incapacitated} condition. When the spell ends, the target reappears in the space it left or in the nearest unoccupied space if that space is occupied.</p><p>If the target is an Aberration, a Celestial, an Elemental, a Fey, or a Fiend, the target doesn't return if the spell lasts for 1 minute. The target is instead transported to a random location on a plane associated with its creature type.</p>",
       "statuses": [
         "incapacitated"

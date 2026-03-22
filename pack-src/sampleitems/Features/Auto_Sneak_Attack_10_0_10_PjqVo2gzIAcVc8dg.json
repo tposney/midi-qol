@@ -31,26 +31,9 @@
         },
         "core": {}
       },
-      "changes": [
-        {
-          "key": "flags.dae",
-          "mode": 0,
-          "value": "autoSneak 1",
-          "priority": 10
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "origin": "Item.Dnn0xuVqFSATQipk",
-      "tint": "#ffffff",
       "transfer": true,
       "name": "Auto Sneak Attack",
       "description": "",
@@ -68,7 +51,16 @@
       },
       "img": "icons/skills/melee/strike-dagger-arcane-pink.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.dae",
+            "value": "autoSneak 1",
+            "priority": 10,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!PjqVo2gzIAcVc8dg.B9dVucVVEOX26bAy"
     }

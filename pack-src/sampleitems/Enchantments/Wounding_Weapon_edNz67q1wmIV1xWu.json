@@ -311,57 +311,49 @@
       "img": "icons/magic/water/heart-ice-freeze.webp",
       "disabled": false,
       "_id": "ZveR6kPKafjcwQdY",
-      "system": {},
-      "changes": [
-        {
-          "key": "name",
-          "mode": 5,
-          "value": "{} of Wounding",
-          "priority": 50
-        },
-        {
-          "key": "system.rarity",
-          "mode": 5,
-          "value": "rare",
-          "priority": 50
-        },
-        {
-          "key": "system.properties",
-          "mode": 2,
-          "value": "mgc",
-          "priority": 20
-        },
-        {
-          "key": "system.magicalBonus",
-          "mode": 4,
-          "value": "1",
-          "priority": 40
-        },
-        {
-          "key": "system.attunement",
-          "mode": 5,
-          "value": "required",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.onUseMacroName",
-          "mode": 0,
-          "value": "ActivityMacro.Wounding, postActiveEffects",
-          "priority": 20
-        }
-      ],
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+      "system": {
+        "changes": [
+          {
+            "key": "name",
+            "value": "{} of Wounding",
+            "priority": 50,
+            "type": "override"
+          },
+          {
+            "key": "system.rarity",
+            "value": "rare",
+            "priority": 50,
+            "type": "override"
+          },
+          {
+            "key": "system.properties",
+            "value": "mgc",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.magicalBonus",
+            "value": "1",
+            "priority": 40,
+            "type": "upgrade"
+          },
+          {
+            "key": "system.attunement",
+            "value": "required",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ActivityMacro.Wounding, postActiveEffects",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
       },
+      "duration": {},
       "description": "",
       "origin": null,
-      "tint": "#ffffff",
       "transfer": false,
       "statuses": [],
       "sort": 0,
@@ -410,23 +402,10 @@
     },
     {
       "_id": "MpSL19PAvrQTJZTG",
-      "changes": [
-        {
-          "key": "macro.activityMacro",
-          "mode": 0,
-          "value": "0",
-          "priority": 20
-        }
-      ],
       "disabled": false,
       "duration": {
-        "rounds": 999,
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 999,
+        "units": "rounds"
       },
       "origin": "Item.AHBtevoHo5K46Y7F",
       "transfer": false,
@@ -468,7 +447,6 @@
           "overlay": false
         }
       },
-      "tint": "#ffffff",
       "name": "Wounded",
       "description": "",
       "statuses": [],
@@ -485,7 +463,16 @@
       },
       "img": "icons/magic/water/heart-ice-freeze.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "macro.activityMacro",
+            "value": "0",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!edNz67q1wmIV1xWu.MpSL19PAvrQTJZTG"
     }

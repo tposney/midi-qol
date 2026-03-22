@@ -6,32 +6,10 @@
     {
       "name": "Circle of Power",
       "origin": "Item.Rl3Gvx6YK6oFPRbQ",
-      "duration": {
-        "rounds": null,
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "transfer": false,
       "disabled": false,
       "_id": "YORAdBBkqyYwsqFa",
-      "changes": [
-        {
-          "key": "flags.midi-qol.advantage.save.all",
-          "mode": 0,
-          "value": "item.type === \"spell\" || item.flags?.midiProperties?.magiceffect",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.superSaver.all",
-          "mode": 0,
-          "value": "item.type === \"spell\" || item.flags?.midiProperties?.magiceffect",
-          "priority": 20
-        }
-      ],
       "description": "",
       "statuses": [],
       "flags": {
@@ -49,7 +27,6 @@
           "disableCondition": ""
         }
       },
-      "tint": "#ffffff",
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
@@ -75,7 +52,21 @@
         "combatOnly": false,
         "disableOnHidden": true,
         "evaluatePreApply": false,
-        "showRadius": false
+        "showRadius": false,
+        "changes": [
+          {
+            "key": "flags.midi-qol.advantage.save.all",
+            "value": "item.type === \"spell\" || item.flags?.midiProperties?.magiceffect",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "flags.midi-qol.superSaver.all",
+            "value": "item.type === \"spell\" || item.flags?.midiProperties?.magiceffect",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
       },
       "sort": 0,
       "_key": "!items.effects!Rl3Gvx6YK6oFPRbQ.YORAdBBkqyYwsqFa"

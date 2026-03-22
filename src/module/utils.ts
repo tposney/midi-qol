@@ -1095,7 +1095,11 @@ export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffe
        } else foundry.utils.setProperty(actor, change.key, change.value);
      } */
   } else if (deferredEvaluation.some(k => change.key.startsWith(k))) {
-    if (typeof change.value !== "string") foundry.utils.setProperty(actor, change.key, change.value);
+    // v14 migrateChangeValue converts "0"→0, "1"→1, "true"→true, "false"→false via JSON.parse
+    if (typeof change.value === "boolean") foundry.utils.setProperty(actor, change.key, change.value);
+    else if (change.value === 0) foundry.utils.setProperty(actor, change.key, false);
+    else if (change.value === 1) foundry.utils.setProperty(actor, change.key, true);
+    else if (typeof change.value !== "string") foundry.utils.setProperty(actor, change.key, change.value);
     else if (["true", "1"].includes(change.value.trim())) foundry.utils.setProperty(actor, change.key, true);
     else if (["false", "0"].includes(change.value.trim())) foundry.utils.setProperty(actor, change.key, false);
     else foundry.utils.setProperty(actor, change.key, change.value);
@@ -1178,7 +1182,8 @@ export async function doActivityOverTimeEffect(actor: Actor.Implementation, effe
   if (auraFlags.isAura && auraFlags.ignoreSelf) return;
   const ROLL_MODES = CONST.DICE_ROLL_MODES;
   const owner = playerForActor(actor);
-  const changes = effect.changes;
+  // @ts-expect-error fvtt-types v14 ActiveEffect
+  const changes = effect.system.changes;
   let requiresUserExecution = false;
   for (let change of changes) {
     const activity = await getOvertimeActivity(actor, effect, change, startTurn);
@@ -1223,7 +1228,8 @@ async function getOvertimeActivity(actor: Actor.Implementation, effect: ActiveEf
 }
 export async function localActivityOverTimeEffect(actor: Actor.Implementation, effect: ActiveEffect.Implementation, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined, rollMode: undefined }) {
   // Get the activity
-  let changes = effect.changes.filter(change => change.key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`));
+  // @ts-expect-error fvtt-types v14 ActiveEffect
+  let changes = effect.system.changes.filter(change => change.key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`));
   changes = changes.sort((c1, c2) => (c1.priority ?? 10) - (c2.priority ?? 10));
   const castLevel = effect.flags?.[MODULE_ID]?.castData?.castLevel ?? 0;
   const spellLevel = effect.flags?.[MODULE_ID]?.castData?.baseLevel ?? 0;
@@ -2026,7 +2032,8 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
   const rollData = createConditionData({ actor, workflow: undefined, target: actor, effect });
   if (!rollData.flags) rollData.flags = actor.flags;
   rollData.flags.midiqol = rollData.flags[MODULE_ID];
-  const changes = effect.changes.filter(change => change.key.startsWith(`flags.${MODULE_ID}.OverTime`));
+  // @ts-expect-error fvtt-types v14 ActiveEffect
+  const changes = effect.system.changes.filter(change => change.key.startsWith(`flags.${MODULE_ID}.OverTime`));
   if (changes.length > 0) for (let change of changes) {
     // flags.midi-qol.OverTime turn=start/end, damageRoll=rollspec, damageType=string, saveDC=number, saveAbility=str/dex/etc, damageBeforeSave=true/[false], label="String"
     const details = parseOvertimeDetails(change.value, rollData, effect.name);
@@ -2251,7 +2258,8 @@ export async function _processActivityOverTime(combat: Combat.Implementation, da
     const startTurn = toTest > prev || combatStart;
 
     if (actor) for (let effect of actor.appliedEffects) {
-      if (effect.changes.some(change => change.key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`))) {
+      // @ts-expect-error fvtt-types v14 ActiveEffect
+      if (effect.system.changes.some(change => change.key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`))) {
         await doActivityOverTimeEffect(actor, effect, startTurn);
       }
     }
@@ -2292,7 +2300,8 @@ export async function _processOverTime(combat: Combat.Implementation, data: Comb
     }
 
     if (actor) for (let effect of actor.appliedEffects) {
-      if (effect.changes.some(change => change.key.startsWith(`flags.${MODULE_ID}.OverTime`))) {
+      // @ts-expect-error fvtt-types v14 ActiveEffect
+      if (effect.system.changes.some(change => change.key.startsWith(`flags.${MODULE_ID}.OverTime`))) {
         await doOverTimeEffect(actor, effect, startTurn);
       }
     }
@@ -5260,12 +5269,13 @@ export function getOptionalCountRemaining(actor: Actor.Implementation, flag: str
 }
 
 export async function removeEffectGranting(actor: Actor.Implementation, changeKey: string) {
-  const effect = actor.appliedEffects.find(ef => ef.changes.some(c => c.key.includes(changeKey)))
+  // @ts-expect-error fvtt-types v14 ActiveEffect
+  const effect = actor.appliedEffects.find(ef => ef.system.changes.some(c => c.key.includes(changeKey)))
   if (effect === undefined) return;
   const effectData = effect.toObject();
 
-  const count = effectData.changes.find(c => c.key.includes(changeKey) && c.key.endsWith(".count"));
-  const countAlt = effectData.changes.find(c => c.key.includes(changeKey) && c.key.endsWith(".countAlt"));
+  const count = effectData.system.changes.find(c => c.key.includes(changeKey) && c.key.endsWith(".count"));
+  const countAlt = effectData.system.changes.find(c => c.key.includes(changeKey) && c.key.endsWith(".countAlt"));
   if (!count) {
     return expireEffects(actor, [effect], { "expiry-reason": "midi-qol:optionalConsumed" })
   }
@@ -5277,7 +5287,8 @@ export async function removeEffectGranting(actor: Actor.Implementation, changeKe
     } else if (Number.isNumeric(countAlt?.value)) {
       countAlt!.value = `${Number(countAlt!.value) - 1}`; // must be a string
     }
-    await effect.update({ changes: effectData.changes });
+    // @ts-expect-error fvtt-types v14 ActiveEffect
+    await effect.update({ "system.changes": effectData.system.changes });
   }
   if (typeof count.value === "string" && count.value.startsWith("ItemUses.")) {
     const item = getOptionalItemUsesItemMatch(actor, count.value, true);
@@ -6402,14 +6413,16 @@ export async function evalAllConditionsAsync(
   if (!flag) return errorReturn;
   let actor = getActor(actorRef);
   if (!actor) return errorReturn;
-  const effects = actor.appliedEffects.filter(ef => ef.changes.some(change => change.key === flag));
+  // @ts-expect-error fvtt-types v14 ActiveEffect
+  const effects = actor.appliedEffects.filter(ef => ef.system.changes.some(change => change.key === flag));
   let keyToUse = flag.replace(`flags.${MODULE_ID}.`, "flags.midi.evaluated.");
   keyToUse = keyToUse.replace("flags.dnd5e.", "flags.midi.evaluated.dnd5e.");
   let returnValue = errorReturn;
   foundry.utils.setProperty(actor, `${keyToUse}.value`, false);
   foundry.utils.setProperty(actor, `${keyToUse}.effects`, [])
   for (let effect of effects) {
-    for (let change of effect.changes) {
+    // @ts-expect-error fvtt-types v14 ActiveEffect
+    for (let change of effect.system.changes) {
       if (change.key === flag) {
         const condValue = await evalCondition(change.value, conditionData, { errorReturn, async: true });
         if (debugEnabled > 0) warn("evalAllConditions Async", actor.name, flag, change.value, condValue, conditionData, errorReturn);
@@ -6440,14 +6453,16 @@ export function evalAllConditions(
   if (!flag) return errorReturn;
   let actor = getActor(actorRef);
   if (!actor) return errorReturn;
-  const effects = actor.appliedEffects.filter(ef => ef.changes.some(change => change.key === flag));
+  // @ts-expect-error fvtt-types v14 ActiveEffect
+  const effects = actor.appliedEffects.filter(ef => ef.system.changes.some(change => change.key === flag));
   let keyToUse = flag.replace(`flags.${MODULE_ID}.`, "flags.midi.evaluated.");
   keyToUse = keyToUse.replace("flags.dnd5e.", "flags.midi.evaluated.dnd5e.");
   let returnValue = errorReturn;
   foundry.utils.setProperty(actor, `${keyToUse}.value`, false);
   foundry.utils.setProperty(actor, `${keyToUse}.effects`, [])
   for (let effect of effects) {
-    for (let change of effect.changes) {
+    // @ts-expect-error fvtt-types v14 ActiveEffect
+    for (let change of effect.system.changes) {
       if (change.key === flag) {
         const condValue = evalCondition(change.value, conditionData, { errorReturn, async: false });
         if (debugEnabled > 0) warn("evalAllConditions ", actor.name, flag, change.value, condValue, conditionData, errorReturn);
@@ -6669,14 +6684,16 @@ export async function setReactionUsed(actor: Actor.Implementation, active: boole
     if (!effect) return;
     effect.updateSource({
       origin: actor.uuid,
-      changes: [
-        { key: 'flags.midi-qol.actions.reaction', mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: String(allReactionsUsed) },
-        { key: 'flags.midi-qol.actions.reactionsUsed', mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: String(newCount) },
-        { key: 'flags.midi-qol.actions.reactionCombatRound', mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: String(game.combat?.round ?? false) }
+      // @ts-expect-error fvtt-types v14 ActiveEffect
+      "system.changes": [
+        { key: 'flags.midi-qol.actions.reaction', type: "override", value: String(allReactionsUsed) },
+        { key: 'flags.midi-qol.actions.reactionsUsed', type: "override", value: String(newCount) },
+        { key: 'flags.midi-qol.actions.reactionCombatRound', type: "override", value: String(game.combat?.round ?? false) }
       ]
     });
     if (actions?.reactionsReset === "eachTurn") {
-      effect.updateSource({ duration: { turns: 1 } })
+      // @ts-expect-error fvtt-types v14 duration
+      effect.updateSource({ duration: { value: 1, units: "turns" } })
     }
     if (actions?.reactionsReset === "rest") {
       effect.updateSource({ flags: { dae: { specialDuration: ["shortRest"] } } });
@@ -6703,14 +6720,16 @@ export async function setBonusActionUsed(actor: Actor.Implementation) {
   if (!effect) return;
   effect.updateSource({
     origin: actor.uuid,
-    changes: [
-      { key: 'flags.midi-qol.actions.bonus', mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: String(allBonusActionsUsed) },
-      { key: 'flags.midi-qol.actions.bonusActionsUsed', mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: String(newCount) },
-      { key: 'flags.midi-qol.actions.bonusActionCombatRound', mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: String(game.combat?.round ?? false) }
+    // @ts-expect-error fvtt-types v14 ActiveEffect
+    "system.changes": [
+      { key: 'flags.midi-qol.actions.bonus', type: "override", value: String(allBonusActionsUsed) },
+      { key: 'flags.midi-qol.actions.bonusActionsUsed', type: "override", value: String(newCount) },
+      { key: 'flags.midi-qol.actions.bonusActionCombatRound', type: "override", value: String(game.combat?.round ?? false) }
     ]
   });
   if (actions?.bonusActionsReset === "eachTurn") {
-    effect.updateSource({ duration: { turns: 1 } })
+    // @ts-expect-error fvtt-types v14 duration
+    effect.updateSource({ duration: { value: 1, units: "turns" } })
   }
   if (actions?.bonusActionsReset === "rest") {
     effect.updateSource({ flags: { dae: { specialDuration: ["shortRest"] } } });
@@ -6769,7 +6788,8 @@ export async function expirePerTurnBonusActions(
     if (!actor) continue;
     const actorAllApplicableEffects = actor.allApplicableEffects();
     for (let effect of actorAllApplicableEffects) {
-      for (let change of effect.changes) {
+      // @ts-expect-error fvtt-types v14 ActiveEffect
+      for (let change of effect.system.changes) {
         if (change.key.match(optionalFlagRe)
           && ((change.value === "each-turn")
             || (change.value === "each-round" && data.round !== combat.round))
@@ -7904,7 +7924,7 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
     if (result === true) matchedModes.add(detectionModes.lightPerception?.id ?? DetectionModeCONST.BASIC_MODE_ID);
   }
 
-  const lightPerception = tokenDetectionModes.find(m => m.id === modes.lightPerception?.id);
+  const lightPerception = tokenDetectionModes.lightPerception;
   if (lightPerception && ["lightPerception", "all"].some(mode => validModes.has(mode))) {
     // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
     const result = (lightPerception && token.vision) ? modes.lightPerception.testVisibility(token.vision, lightPerception, config) : false;
@@ -7912,22 +7932,22 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
       matchedModes.add(detectionModes.lightPerception?.id ?? DetectionModeCONST.BASIC_MODE_ID);
   }
 
-  const basic = tokenDetectionModes.find(m => m.id === DetectionModeCONST.BASIC_MODE_ID);
+  const basic = tokenDetectionModes[DetectionModeCONST.BASIC_MODE_ID];
   if (basic && ["basicSight", "all"].some(mode => validModes.has(mode))) {
     // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
     const result = token.vision ? modes.basicSight.testVisibility(token.vision, basic, config) : false;
     if (result === true)
       matchedModes.add(detectionModes.basicSight?.id ?? DetectionModeCONST.BASIC_MODE_ID);
   }
-  for (const detectionMode of tokenDetectionModes) {
-    if (detectionMode.id === DetectionModeCONST.BASIC_MODE_ID) continue;
+  for (const [modeId, detectionMode] of Object.entries(tokenDetectionModes)) {
+    if (modeId === DetectionModeCONST.BASIC_MODE_ID) continue;
     if (!detectionMode.enabled) continue;
-    const dm = modes[detectionMode.id as string];
-    if (validModes.has("all") || validModes.has(detectionMode.id as string)) {
+    const dm = modes[modeId];
+    if (validModes.has("all") || validModes.has(modeId)) {
       // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
       const result = token.vision ? dm?.testVisibility(token.vision, detectionMode, config) : false;
       if (result === true) {
-        matchedModes.add(detectionMode.id as string);
+        matchedModes.add(modeId);
       }
     }
   }
@@ -8869,7 +8889,7 @@ export function isEffectExpired(effect: ActiveEffect.Implementation): boolean {
 
 export async function expireEffects(actor: Actor.Implementation, effects: ActiveEffect.Implementation[], options: any): Promise<any> {
   if (!effects) return {};
-  const actorEffectsToDelete: string[] = [];
+  const actorEffectsToExpire: string[] = [];
   const effectsToDelete: ActiveEffect[] = [];
   const effectsToDisable: ActiveEffect[] = [];
   for (let effect of effects) {
@@ -8878,12 +8898,22 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
     if (effect.transfer)
       effectsToDisable.push(effect);
     else if (effect.parent instanceof Actor)
-      actorEffectsToDelete.push(effect.id);
+      actorEffectsToExpire.push(effect.id);
     else if (effect.parent instanceof Item) // this should be enchantments
       effectsToDelete.push(effect);
   }
-  if (actorEffectsToDelete.length > 0) {
-    await actor.deleteEmbeddedDocuments("ActiveEffect", actorEffectsToDelete, options);
+  if (actorEffectsToExpire.length > 0) {
+    // Resolve DAE's special duration expiry action: "default" falls through to core config
+    // @ts-expect-error dae setting not in midi-qol types
+    const daeSetting: string = game.settings.get("dae", "expiryAction");
+    // @ts-expect-error v14 CONFIG.ActiveEffect.expiryAction
+    const expiryAction = (daeSetting === "delete" || daeSetting === "update") ? daeSetting : (CONFIG.ActiveEffect.expiryAction ?? "update");
+    if (expiryAction === "delete") {
+      await actor.deleteEmbeddedDocuments("ActiveEffect", actorEffectsToExpire, options);
+    } else {
+      const updates = actorEffectsToExpire.map(id => ({ _id: id, "duration.expired": true }));
+      await actor.updateEmbeddedDocuments("ActiveEffect", updates, options);
+    }
   }
   if (effectsToDisable.length > 0) {
     for (let effect of effectsToDisable) {
@@ -8894,7 +8924,7 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
     for (let effect of effectsToDelete)
       await effect.delete(options);
   }
-  return { deleted: actorEffectsToDelete, disabled: effectsToDisable, itemEffects: effectsToDelete };
+  return { expired: actorEffectsToExpire, disabled: effectsToDisable, itemEffects: effectsToDelete };
 }
 
 export function processConcentrationRequestMessage(message: ChatMessage.Implementation, html: HTMLElement, data) {

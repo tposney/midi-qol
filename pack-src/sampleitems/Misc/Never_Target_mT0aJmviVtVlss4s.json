@@ -38,26 +38,10 @@
     {
       "name": "Never Target",
       "origin": "Actor.iopoKepLLnHshdBA.Item.BW7ugXqhcSO5XeJX",
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "transfer": true,
       "disabled": false,
       "_id": "jFKhp34XZd32ryYT",
-      "changes": [
-        {
-          "key": "flags.midi-qol.neverTarget",
-          "mode": 0,
-          "value": "true",
-          "priority": 20
-        }
-      ],
       "description": "",
       "statuses": [],
       "flags": {
@@ -73,7 +57,6 @@
           "specialDuration": []
         }
       },
-      "tint": "#ffffff",
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
@@ -87,7 +70,16 @@
       },
       "img": "icons/magic/perception/shadow-stealth-eyes-purple.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.neverTarget",
+            "value": "true",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!mT0aJmviVtVlss4s.jFKhp34XZd32ryYT"
     }

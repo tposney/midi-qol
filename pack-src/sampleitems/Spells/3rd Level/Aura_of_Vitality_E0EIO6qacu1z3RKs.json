@@ -10,17 +10,7 @@
       "origin": "Item.E0EIO6qacu1z3RKs",
       "transfer": false,
       "disabled": false,
-      "changes": [],
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
-      "tint": "#ffffff",
+      "duration": {},
       "statuses": [],
       "flags": {
         "dae": {
@@ -50,7 +40,9 @@
       },
       "img": "icons/magic/holy/barrier-shield-winged-blue.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": []
+      },
       "sort": 0,
       "_key": "!items.effects!E0EIO6qacu1z3RKs.l6ntxjpimprip38b"
     }

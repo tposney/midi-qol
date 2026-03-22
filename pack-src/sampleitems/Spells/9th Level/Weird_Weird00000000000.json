@@ -5,23 +5,10 @@
   "effects": [
     {
       "_id": "weirdOvertimeEf0",
-      "changes": [
-        {
-          "key": "flags.midi-qol.OverTime",
-          "mode": 5,
-          "value": "turn=end,\nrollType=save,\nsaveAbility=wis,\nsaveDC=@activity.save.dc.value,\nsaveRemove=true,\ndamageRoll=4d10,\ndamageType=psychic,\nsaveDamage=nodamage,\nlabel=Weird (Frightened)",
-          "priority": 20
-        }
-      ],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 60,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 60,
+        "units": "seconds"
       },
       "transfer": false,
       "flags": {
@@ -34,7 +21,6 @@
           "showIcon": true
         }
       },
-      "tint": "#ffffff",
       "name": "Weird",
       "description": "<p>Frightened by illusory nightmares. At the end of each turn, make a Wisdom save or take 4d10 psychic damage. On success, the spell ends.</p>",
       "statuses": [
@@ -53,7 +39,16 @@
       },
       "img": "icons/magic/control/fear-fright-monster-grin-green.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.OverTime",
+            "value": "turn=end,\nrollType=save,\nsaveAbility=wis,\nsaveDC=@activity.save.dc.value,\nsaveRemove=true,\ndamageRoll=4d10,\ndamageType=psychic,\nsaveDamage=nodamage,\nlabel=Weird (Frightened)",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!Weird00000000000.weirdOvertimeEf0"
     }

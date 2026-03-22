@@ -5,23 +5,10 @@
   "effects": [
     {
       "_id": "regenerateOTEff0",
-      "changes": [
-        {
-          "key": "flags.midi-qol.OverTime",
-          "mode": 5,
-          "value": "turn=start, damageRoll=1, damageType=healing, label=Regenerate (1 HP/turn)",
-          "priority": 20
-        }
-      ],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 3600,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 3600,
+        "units": "seconds"
       },
       "transfer": false,
       "flags": {
@@ -34,7 +21,6 @@
           "showIcon": true
         }
       },
-      "tint": "#ffffff",
       "name": "Regenerate",
       "description": "<p>Regenerating: regains 1 Hit Point at the start of each turn for 1 hour. Any severed body parts regrow after 2 minutes.</p>",
       "statuses": [],
@@ -51,7 +37,16 @@
       },
       "img": "icons/magic/life/cross-explosion-burst-green.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.OverTime",
+            "value": "turn=start, damageRoll=1, damageType=healing, label=Regenerate (1 HP/turn)",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!Regenerate000000.regenerateOTEff0"
     }

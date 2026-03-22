@@ -25,26 +25,9 @@
         },
         "core": {}
       },
-      "changes": [
-        {
-          "key": "system.attributes.movement.walk",
-          "value": "35",
-          "mode": 4,
-          "priority": 5
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "origin": "Actor.ZaVJJWXkzU603fLE.Item.TtkLUp5AChMw5QLe",
-      "tint": "#ffffff",
       "transfer": true,
       "name": "Fleet of Foot",
       "description": "",
@@ -62,7 +45,16 @@
       },
       "img": "icons/equipment/feet/boots-collared-simple-leather.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.movement.walk",
+            "value": "35",
+            "priority": 5,
+            "type": "upgrade"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!k4v75aYkFEsddzN4.xSoG3K2m1roXbzcS"
     }

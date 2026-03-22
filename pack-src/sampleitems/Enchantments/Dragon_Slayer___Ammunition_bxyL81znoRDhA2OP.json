@@ -345,33 +345,25 @@
       "img": "systems/dnd5e/icons/spell-tiers/spell3.webp",
       "disabled": true,
       "_id": "ZveR6kPKafjcwQdY",
-      "system": {},
-      "changes": [
-        {
-          "key": "name",
-          "mode": 5,
-          "value": "{} of Dragon SLaying",
-          "priority": 50
-        },
-        {
-          "key": "system.properties",
-          "mode": 2,
-          "value": "mgc",
-          "priority": 20
-        }
-      ],
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+      "system": {
+        "changes": [
+          {
+            "key": "name",
+            "value": "{} of Dragon SLaying",
+            "priority": 50,
+            "type": "override"
+          },
+          {
+            "key": "system.properties",
+            "value": "mgc",
+            "priority": 20,
+            "type": "add"
+          }
+        ]
       },
+      "duration": {},
       "description": "",
       "origin": null,
-      "tint": "#ffffff",
       "transfer": false,
       "statuses": [],
       "sort": 0,

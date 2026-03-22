@@ -33,38 +33,9 @@
           "onlyOnce": false
         }
       },
-      "changes": [
-        {
-          "key": "ATL.sight.visionMode",
-          "mode": 5,
-          "value": "darkvision",
-          "priority": 40
-        },
-        {
-          "key": "ATL.sight.range",
-          "mode": 5,
-          "value": "60",
-          "priority": 40
-        },
-        {
-          "key": "ATL.sight.enabled",
-          "mode": 5,
-          "value": "true",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "origin": "Item.wV8s4Ac0vXNTK2bZ",
-      "tint": "#ffffff",
       "transfer": true,
       "name": "Darkvision (60 ft)",
       "description": "",
@@ -82,7 +53,28 @@
       },
       "img": "icons/magic/perception/eye-ringed-glow-angry-red.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "ATL.sight.visionMode",
+            "value": "darkvision",
+            "priority": 40,
+            "type": "override"
+          },
+          {
+            "key": "ATL.sight.range",
+            "value": "60",
+            "priority": 40,
+            "type": "override"
+          },
+          {
+            "key": "ATL.sight.enabled",
+            "value": "true",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!ZjehXF1SpB8TFAO6.pd6hlVPQZRpF1J40"
     }

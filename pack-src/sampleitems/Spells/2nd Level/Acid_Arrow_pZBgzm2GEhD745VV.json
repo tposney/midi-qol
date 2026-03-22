@@ -8,30 +8,25 @@
       "name": "Acid Arrow",
       "img": "icons/skills/ranged/arrow-flying-poisoned-green.webp",
       "type": "base",
-      "system": {},
-      "changes": [
-        {
-          "key": "flags.midi-qol.ActivityOverTime",
-          "mode": 5,
-          "value": "deferredDamage",
-          "priority": 20
-        }
-      ],
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.ActivityOverTime",
+            "value": "deferredDamage",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": 2,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 2,
+        "units": "rounds"
       },
       "description": "<p>On a hit, the target takes 4d4 Acid damage and 2d4 Acid damage at the end of its next turn.</p>",
       "origin": "",
       "transfer": false,
       "statuses": [],
-      "tint": "#ffffff",
       "sort": 0,
       "flags": {
         "dae": {

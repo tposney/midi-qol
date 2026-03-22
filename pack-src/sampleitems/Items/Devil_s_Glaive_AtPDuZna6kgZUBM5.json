@@ -44,26 +44,12 @@
           "overlay": false
         }
       },
-      "changes": [
-        {
-          "key": "flags.midi-qol.OverTime",
-          "mode": 5,
-          "value": "turn=end,\ndamageRoll=1d10,\ntype=slashing,\nactionSave=dialog,\nrollType=skill,\nsaveDC=12,\nsaveAbility=med,\nlabel=Infernal Wound",
-          "priority": 20
-        }
-      ],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "rounds": 99,
-        "seconds": null,
-        "combat": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 99,
+        "units": "rounds"
       },
       "origin": "Actor.A4wkHpF2qMwjyP1D.Item.tfAshukITeyA5QKb",
-      "tint": "#ffffff",
       "transfer": false,
       "name": "Infernal Wound",
       "description": "",
@@ -81,7 +67,16 @@
       },
       "img": "icons/weapons/polearms/halberd-crescent-glowing.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.OverTime",
+            "value": "turn=end,\ndamageRoll=1d10,\ntype=slashing,\nactionSave=dialog,\nrollType=skill,\nsaveDC=12,\nsaveAbility=med,\nlabel=Infernal Wound",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!AtPDuZna6kgZUBM5.JL0UfgqJsGSpflvT"
     }

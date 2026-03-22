@@ -8,17 +8,13 @@
       "name": "Hunter's Mark",
       "img": "icons/skills/targeting/crosshair-scope-sniper-green.webp",
       "type": "base",
-      "system": {},
-      "changes": [],
+      "system": {
+        "changes": []
+      },
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 3600,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 3600,
+        "units": "seconds"
       },
       "description": "<p>This creature is marked. The caster deals an extra 1d6 Force damage to it whenever they hit it with an attack roll.</p>",
       "origin": "Item.7jMEN36K5VvR3lxT",
@@ -26,7 +22,6 @@
       "statuses": [
         "marked"
       ],
-      "tint": "#ffffff",
       "sort": 0,
       "flags": {
         "dae": {
@@ -62,29 +57,21 @@
       "name": "Hunter's Mark",
       "img": "icons/skills/targeting/crosshair-scope-sniper-green.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.dnd5e.DamageBonusMacro",
+            "value": "ItemMacro",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "description": "<p>When you hit an attack roll against the marked target, deal an extra 1d6 Force damage.</p>",
       "origin": "Item.7jMEN36K5VvR3lxT",
       "transfer": true,
       "disabled": false,
-      "changes": [
-        {
-          "key": "flags.dnd5e.DamageBonusMacro",
-          "mode": 0,
-          "value": "ItemMacro",
-          "priority": 20
-        }
-      ],
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
-      "tint": "#ffffff",
+      "duration": {},
       "statuses": [],
       "sort": 100,
       "flags": {

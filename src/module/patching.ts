@@ -620,7 +620,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     if (message.create !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
-        messageData.rolls = result;
+        messageData.rolls = [...result];
         const chatMsg = await ChatMessage.create(messageData, { rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
         if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
@@ -1297,7 +1297,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     if (message.create !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
-        messageData.rolls = result;
+        messageData.rolls = [...result];
         const chatMsg = await ChatMessage.create(messageData, { rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
         if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
@@ -2149,7 +2149,8 @@ function getAttackModifiers(roll: Roll /* D20Roll */): string[] {
   const changes: any[] = [];
   for (let effect of actor.allApplicableEffects()) {
     if (effect.disabled || effect.isSuppressed) continue;
-    for (let change of effect.changes) {
+    // @ts-expect-error fvtt-types v14 ActiveEffect
+    for (let change of effect.system.changes) {
       if (change.key.startsWith("flags.midi-qol.rollModifiers.attack.")) changes.push(change);
     }
   }
@@ -2175,12 +2176,13 @@ export function actorPrepareData(this: Actor.Implementation, wrapped) {
   try {
     foundry.utils.setProperty(this, "flags.midi-qol.onUseMacroName", this._source.flags?.[MODULE_ID]?.onUseMacroName);
     if (debugEnabled > 0) for (let effect of this.appliedEffects) {
-      for (let change of effect.changes) {
+      // @ts-expect-error fvtt-types v14 ActiveEffect
+      for (let change of effect.system.changes) {
         if (change.key === "flags.midi-qol.onUseMacroName") {
-          if (change.mode !== CONST.ACTIVE_EFFECT_MODES.CUSTOM) {
+          if (change.type !== "custom") {
             error("onUseMacro effect mode is not custom", `Actor ${this.name} Effect: ${effect.name} ${this.uuid}`);
             TroubleShooter.recordError(new Error("onUseMacro effect mode is not custom"), `Actor ${this.name} Effect: ${effect.name} ${this.uuid} `);
-            change.mode = CONST.ACTIVE_EFFECT_MODES.CUSTOM;
+            change.type = "custom";
           }
         }
       }
@@ -2206,12 +2208,13 @@ export function itemPrepareData(this: Item.Implementation, wrapped) {
     }
   }
   if (debugEnabled > 0) for (let effect of this.effects) {
-    for (let change of effect.changes) {
+    // @ts-expect-error fvtt-types v14 ActiveEffect
+    for (let change of effect.system.changes) {
       if (change.key === "flags.midi-qol.onUseMacroName") {
-        if (change.mode !== CONST.ACTIVE_EFFECT_MODES.CUSTOM) {
+        if (change.type !== "custom") {
           error("onUseMacro effect mode is not custom", `Actor: ${this.parent?.name} Item: ${this.name} Effect: ${effect.name} ${this.uuid} `);
           TroubleShooter.recordError(new Error("onUseMacro effect mode is not custom - mode treated as custom"), `Actor: ${this.parent?.name} Item: ${this.name} Effect: ${effect.name} ${this.uuid} `);
-          change.mode = CONST.ACTIVE_EFFECT_MODES.CUSTOM;
+          change.type = "custom";
         }
       }
     }
@@ -2552,7 +2555,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     if (chatMessage !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
-        messageData.rolls = result;
+        messageData.rolls = [...result];
         const chatMsg = await ChatMessage.create(messageData, { rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
         if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);

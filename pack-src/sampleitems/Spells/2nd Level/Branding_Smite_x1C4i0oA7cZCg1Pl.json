@@ -10,30 +10,7 @@
       "origin": "Item.x1C4i0oA7cZCg1Pl",
       "transfer": false,
       "disabled": false,
-      "changes": [
-        {
-          "key": "flags.dnd5e.DamageBonusMacro",
-          "mode": 0,
-          "value": "ItemMacro",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.brandingSmite.level",
-          "mode": 5,
-          "value": "@item.level",
-          "priority": 20
-        }
-      ],
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
-      "tint": "#ffffff",
+      "duration": {},
       "statuses": [],
       "flags": {
         "dae": {
@@ -65,7 +42,22 @@
       },
       "img": "icons/magic/fire/dagger-rune-enchant-flame-orange.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.dnd5e.DamageBonusMacro",
+            "value": "ItemMacro",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "flags.midi-qol.brandingSmite.level",
+            "value": "@item.level",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "sort": 0,
       "_key": "!items.effects!x1C4i0oA7cZCg1Pl.6hAZJkE4UfjO7Adp"
     }
@@ -113,7 +105,7 @@
         "img": "icons/magic/fire/dagger-rune-enchant-flame-orange.webp",
         "type": "script",
         "scope": "global",
-        "command": "const version = \"13.0.52\";\ntry {\n    if (![\"mwak\",\"rwak\"].includes(activity.actionType)) return {}; \n    if (workflow.hitTargets.size === 0) return {};\n    for (let target of workflow.hitTargets) {\n        const targetActor = target.actor;\n        if (!targetActor) continue;\n        const effects = targetActor?.effects.filter(ef => ef.name === game.i18n.localize(\"midi-qol.invisible\")).map(ef => ef.id);\n        if (effects?.length) await MidiQOL.socket().executeAsGM(\"removeEffects\", {actorUuid: targetActor.uuid, effects});\n        let bsEffect = new ActiveEffect({name: \"Branding Smite\", icon: \"icons/magic/fire/dagger-rune-enchant-flame-orange.webp\", changes: [{value: 5, mode: CONST.ACTIVE_EFFECT_MODES.UPGRADE, priority: 20, key: \"ATL.light.dim\"}], duration: {seconds: 60}});\n        await MidiQOL.socket().executeAsGM(\"createEffects\", {actorUuid: targetActor.uuid, effects: [bsEffect.toObject()]});\n    }\n    const spellLevel = actor.flags[\"midi-qol\"].brandingSmite.level;\n    Hooks.once(\"midi-qol.RollComplete\", (workflow) => {\n        const effect = MidiQOL.getConcentrationEffect(actor);\n        if (effect) effect.delete();\n        return true;\n    });\n    return {damageRoll: `${spellLevel}d6[radiant]`, flavor: \"Branding Smite\"};\n} catch (err) {\n    console.error(`${rolledItem.name} - ${version}`, err);\n}",
+        "command": "const version = \"13.0.52\";\ntry {\n    if (![\"mwak\",\"rwak\"].includes(activity.actionType)) return {}; \n    if (workflow.hitTargets.size === 0) return {};\n    for (let target of workflow.hitTargets) {\n        const targetActor = target.actor;\n        if (!targetActor) continue;\n        const effects = targetActor?.effects.filter(ef => ef.name === game.i18n.localize(\"midi-qol.invisible\")).map(ef => ef.id);\n        if (effects?.length) await MidiQOL.socket().executeAsGM(\"removeEffects\", {actorUuid: targetActor.uuid, effects});\n        let bsEffect = new ActiveEffect({name: \"Branding Smite\", img: \"icons/magic/fire/dagger-rune-enchant-flame-orange.webp\", changes: [{value: 5, mode: CONST.ACTIVE_EFFECT_MODES.UPGRADE, priority: 20, key: \"ATL.light.dim\"}], duration: {seconds: 60}});\n        await MidiQOL.socket().executeAsGM(\"createEffects\", {actorUuid: targetActor.uuid, effects: [bsEffect.toObject()]});\n    }\n    const spellLevel = actor.flags[\"midi-qol\"].brandingSmite.level;\n    Hooks.once(\"midi-qol.RollComplete\", (workflow) => {\n        const effect = MidiQOL.getConcentrationEffect(actor);\n        if (effect) effect.delete();\n        return true;\n    });\n    return {damageRoll: `${spellLevel}d6[radiant]`, flavor: \"Branding Smite\"};\n} catch (err) {\n    console.error(`${rolledItem.name} - ${version}`, err);\n}",
         "author": "Zl1BOUaPLwDEujaL",
         "ownership": {
           "default": 3

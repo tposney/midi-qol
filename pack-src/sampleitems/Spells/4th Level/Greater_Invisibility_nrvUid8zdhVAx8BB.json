@@ -21,19 +21,12 @@
           "showIcon": true
         }
       },
-      "changes": [],
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 60,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 60,
+        "units": "seconds"
       },
       "origin": null,
-      "tint": "#ffffff",
       "transfer": false,
       "name": "Invisible",
       "description": "",
@@ -53,7 +46,9 @@
       },
       "img": "systems/dnd5e/icons/svg/statuses/invisible.svg",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": []
+      },
       "sort": 0,
       "_key": "!items.effects!nrvUid8zdhVAx8BB.grInvisibleEff00"
     }

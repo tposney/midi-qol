@@ -366,20 +366,15 @@
       "origin": "Scene.GO63mgFDMhBfPVWf.Token.2BFoIlsa0qXYk1Ps.Actor.qP08yt0jURaNyOfb.Item.SuRAERXystPvC7Ci",
       "_id": "d23QTwP434lw72W2",
       "type": "base",
-      "system": {},
-      "changes": [],
+      "system": {
+        "changes": []
+      },
       "disabled": false,
       "duration": {
-        "startTime": null,
-        "seconds": 3600,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
+        "value": 3600,
+        "units": "seconds"
       },
       "description": "",
-      "tint": "#ffffff",
       "transfer": false,
       "statuses": [
         "paralyzed",
