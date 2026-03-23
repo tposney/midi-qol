@@ -20,7 +20,6 @@ import { TargetConfirmationDialog } from './module/apps/TargetConfirmation.js';
 import { TargetConfirmationConfig } from './module/apps/TargetConfirmationConfig.js';
 import { MidiAttackActivity, setupAttackActivity } from './module/activities/AttackActivity.js';
 import { RollModifierTracker } from './module/lib/RollModifierTracker.js';
-import { ChatLogMidi } from './module/ChatClasses/ChatLogMidi.js';
 import { injectMidiCompletions } from './module/lib/midiCompletions.js';
 import { OverTimeEditor } from './module/apps/OverTimeEditor.js';
 import { ConditionEditor } from './module/apps/ConditionEditor.js';
@@ -82,7 +81,6 @@ export let ceInterface: {
   }) => Promise<void>
 } | undefined;
 
-export let BaseChatLogClass;
 export let debugEnabled = 0;
 // 0 = none, warnings = 1, debug = 2, all = 3
 export let debug = (...args: any[]) => { if (debugEnabled > 1) console.log("DEBUG: midi-qol | ", ...args) };
@@ -296,7 +294,6 @@ Object.assign(globalThis.MidiQOL, {
   workflowClass: Workflow,
   Workflows: { "Workflow": Workflow, "DamageOnlyWorkflow": DamageOnlyWorkflow, "TrapWorkflow": TrapWorkflow, "DummyWorkflow": DummyWorkflow, "DDBGameLogWorkflow": DDBGameLogWorkflow },
   ChatClasses: {
-    ChatLogMidi,
     ChatMessageMidi,
     DamageApplicationElementMidi
   },
@@ -373,16 +370,6 @@ Hooks.once('init', async function () {
   log('Initializing midi-qol');
   window.customElements.define("midi-damage-application", DamageApplicationElementMidi as unknown as CustomElementConstructor);
   setupActivities();
-  // Only install ChatLogMidi if chatlog-prune module is not active
-  if (game.settings.get("midi-qol", "pruneChatLog") && !game.modules.get("chatlog-prune")?.active) {
-    foundry.utils.logCompatibilityWarning(
-      "midi-qol | Built-in chat log pruning is deprecated. Please install and activate the 'chatlog-prune' module instead.",
-      { since: "13.0.37", until: "13.1.0" }
-    );
-    BaseChatLogClass = CONFIG.ui.chat;
-    //@ts-expect-error - lots of incorrect missing elements from the class
-    CONFIG.ui.chat = ChatLogMidi;
-  }
 
   // @ts-expect-error no dnd5e-types
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;
@@ -445,9 +432,9 @@ Hooks.once('init', async function () {
 });
 //@ts-expect-error
 Hooks.on("dae.modifySpecials", (specKey, specials, _characterSpec) => {
-  specials[`flags.${MODULE_ID}.onUseMacroName`] = [new StringField(), CONST.ACTIVE_EFFECT_MODES.CUSTOM];
+  specials[`flags.${MODULE_ID}.onUseMacroName`] = [new StringField(), "custom"];
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.onUseMacroName`);
-  specials[`flags.${MODULE_ID}.optional.NAME.macroToCall`] = [new StringField(), CONST.ACTIVE_EFFECT_MODES.CUSTOM];
+  specials[`flags.${MODULE_ID}.optional.NAME.macroToCall`] = [new StringField(), "custom"];
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.macroToCall`);
   for (let type of ["dm", "da", "di", "dv", "dr"]) {
     // specials[`system.traits.${type}.midi.all`] = [new StringField(), -1];

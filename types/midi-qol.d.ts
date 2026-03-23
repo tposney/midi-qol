@@ -35,7 +35,6 @@ export declare let ceInterface: {
         origin?: string | null;
     }) => Promise<void>;
 } | undefined;
-export declare let BaseChatLogClass: any;
 export declare let debugEnabled: number;
 export declare let debug: (...args: any[]) => void;
 export declare let log: (...args: any[]) => void;

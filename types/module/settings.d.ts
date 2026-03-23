@@ -12,18 +12,12 @@ export declare let midiSoundSettings: any;
 export declare let midiSoundSettingsBackup: any;
 export declare let nsaFlag: boolean;
 export declare let playerControlsInvisibleTokens: boolean;
-export declare let pruneChatLog: boolean;
 export declare let replaceDefaultActivities: boolean;
 export declare let saveRequests: {};
 export declare let saveTimeouts: {};
 export declare let saveToChatCard: boolean;
 export declare let targetConfirmation: typeof defaultTargetConfirmationSettings;
 export declare let useWeakReferences: boolean;
-/**
- * Syncs the chatlog-prune module's "enabled" setting with midi-qol's pruneChatLog setting.
- * Only runs if chatlog-prune module is active.
- */
-export declare function syncChatlogPruneSetting(enabled: boolean): void;
 export declare const defaultTargetConfirmationSettings: {
     enabled: boolean;
     always: boolean;
@@ -422,7 +416,6 @@ export declare function collectSettingData(): {
     nsaFlag: boolean;
     saveToChatCard: boolean;
     playerControlsInvisibleTokens: boolean;
-    pruneChatLog: boolean;
     replaceDefaultActivities: boolean;
     targetConfirmation: {
         enabled: boolean;

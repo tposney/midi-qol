@@ -560,10 +560,15 @@ export class Workflow {
     this.persistFields({ templateUuid, templateUuids: this.templateUuids });
   }
 
-  get template(): MeasuredTemplateDocument.Implementation | undefined {
-    return this.templateUuid ? fromUuidSync(this.templateUuid) as MeasuredTemplateDocument.Implementation : undefined;
+  // v14: templates are backed by Regions — this may return either a MeasuredTemplateDocument or RegionDocument
+  get template(): MeasuredTemplateDocument.Implementation | RegionDocument.Implementation | undefined {
+    if (!this.templateUuid) return undefined;
+    const doc = fromUuidSync(this.templateUuid);
+    if (doc instanceof MeasuredTemplateDocument) return doc;
+    if (doc instanceof RegionDocument) return doc;
+    return undefined;
   }
-  set template(template: MeasuredTemplateDocument.Implementation | undefined) {
+  set template(template: MeasuredTemplateDocument.Implementation | RegionDocument.Implementation | undefined) {
     if (template?.uuid) this.templateUuid = template.uuid;
   }
 
@@ -2037,9 +2042,12 @@ export class Workflow {
     }
 
     // Set midi-qol flags on each template and register cleanup
+    // v14: resolve proxy MeasuredTemplateDocuments to actual RegionDocuments
     for (const tDoc of templates) {
-      this.templateUuid = tDoc.uuid;  // setter pushes to array + persists
-      await this.setupTemplateCleanup(tDoc);
+      const regionDoc = tDoc._id ? canvas.scene?.regions.get(tDoc._id) : undefined;
+      const docToStore = regionDoc ?? tDoc;
+      this.templateUuid = docToStore.uuid;  // setter pushes to array + persists
+      await this.setupTemplateCleanup(docToStore);
     }
     this.placedTemplateCount = templates.length;
 
@@ -2089,9 +2097,13 @@ export class Workflow {
    * @param templateDocument The template document to set up cleanup for
    * @returns true if a cleanup mechanism was set up, false otherwise
    */
-  async setupTemplateCleanup(templateDocument: MeasuredTemplateDocument): Promise<boolean> {
+  async setupTemplateCleanup(templateDocument: MeasuredTemplateDocument | RegionDocument.Implementation): Promise<boolean> {
     // Skip if no template
     if (!templateDocument) return false;
+
+    // Cast for flag operations — both MeasuredTemplateDocument and RegionDocument support
+    // setFlag/getFlag with identical runtime behavior, but TS can't unify overloaded signatures
+    const flagDoc = templateDocument as MeasuredTemplateDocument;
 
     // Skip if template will be auto-removed for instantaneous spells
     if (configSettings.autoRemoveInstantaneousTemplate &&
@@ -2102,7 +2114,7 @@ export class Workflow {
     // Check for concentration effect first
     const concentrationEffect = getConcentrationEffect(this.actor, this.item);
     if (concentrationEffect) {
-      await templateDocument.setFlag("dnd5e", "dependentOn", concentrationEffect.uuid);
+      await flagDoc.setFlag("dnd5e", "dependentOn", concentrationEffect.uuid);
       return true;
     }
 
@@ -2119,7 +2131,7 @@ export class Workflow {
     );
 
     if (existingEffect) {
-      await templateDocument.setFlag("dnd5e", "dependentOn", existingEffect.uuid);
+      await flagDoc.setFlag("dnd5e", "dependentOn", existingEffect.uuid);
       return true;
     }
 
@@ -2172,7 +2184,7 @@ export class Workflow {
 
     const effects = await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
     if (effects.length > 0) {
-      await templateDocument.setFlag("dnd5e", "dependentOn", effects[0].uuid);
+      await flagDoc.setFlag("dnd5e", "dependentOn", effects[0].uuid);
       return true;
     }
 
@@ -3300,13 +3312,11 @@ export class Workflow {
           let timeout = AAActive ? Math.max(elapsedTimeRequired - elapsed, 1) : 1;
           timeout = Math.max(elapsedTimeRequired, timeout);
           setTimeout(() => {
-            const templateToDelete = fromUuidSync(tUuid) as MeasuredTemplateDocument || null;
-            templateToDelete?.delete()
+            (fromUuidSync(tUuid) as MeasuredTemplateDocument | null)?.delete()
           }, timeout);
         } else {
           setTimeout(() => {
-            const templateToDelete = fromUuidSync(tUuid) as MeasuredTemplateDocument || null;
-            templateToDelete?.delete()
+            (fromUuidSync(tUuid) as MeasuredTemplateDocument | null)?.delete()
           }, elapsedTimeRequired);
           log("Not auto removing instantaneous template because boss loot assets active")
         }
@@ -5581,7 +5591,8 @@ return {
   protected async calculateCoverSaveBonus(
     target: Token,
     template: foundry.canvas.placeables.MeasuredTemplate.Implementation | undefined | null,
-    rollAbility: string | undefined | null
+    rollAbility: string | undefined | null,
+    templateCoverOrigin?: { x: number, y: number, elevation?: number }
   ): Promise<number> {
     if (!this.item || !this.activityHasSave || rollAbility !== "dex") {
       return 0;
@@ -5596,13 +5607,17 @@ return {
     // Get the raw module-computed cover bonus
     let moduleCoverBonus = 0;
 
-    // Determine the cover origin point: explicit coverOrigin > template center > caster token
+    // Determine the cover origin point: explicit coverOrigin > templateCoverOrigin > template placeable > caster token
     let position: { x: number, y: number } | undefined;
     let originElevation: number = this.token?.document?.elevation ?? 0;
 
     if (this.workflowOptions.coverOrigin) {
       position = { x: this.workflowOptions.coverOrigin.x, y: this.workflowOptions.coverOrigin.y };
       originElevation = this.workflowOptions.coverOrigin.elevation ?? originElevation;
+    } else if (templateCoverOrigin) {
+      // v14: pre-computed cover origin from template/region shape data
+      position = { x: templateCoverOrigin.x, y: templateCoverOrigin.y };
+      originElevation = templateCoverOrigin.elevation ?? originElevation;
     } else if (template) {
       position = foundry.utils.duplicate(template.center);
       const dimensions = canvas.dimensions;
@@ -6300,13 +6315,13 @@ return {
     result: Roll[],
     context: ProcessTargetSaveContext
   ): Promise<void> {
-    const { rollDC, rollAbility, rollType, template, D20Roll } = context;
+    const { rollDC, rollAbility, rollType, template, templateCoverOrigin, D20Roll } = context;
 
     let saveRollTotal = result.reduce((acc, r) => acc + r.total!, 0);
     let saveRolls = result;
     this.updateAdvantageTrackingFromRoll(target, result);
     let { isFumble, isCritical } = this.determineCriticalOrFumble(saveRolls[0], saveRollTotal);
-    const coverSaveBonus = await this.calculateCoverSaveBonus(target, template, rollAbility);
+    const coverSaveBonus = await this.calculateCoverSaveBonus(target, template, rollAbility, templateCoverOrigin);
     if (coverSaveBonus > 0 && coverSaveBonus < TOTAL_COVER && saveRolls[0]) {
       // Inject cover bonus into the roll so it's visible in the roll tooltip
       const OperatorTerm = foundry.dice.terms.OperatorTerm;
@@ -6754,14 +6769,41 @@ return {
     this.saveResults = results.filter(r => !!r).flat();
 
     // Get template for area target saves (also when templateUuid is set explicitly via midiOptions)
+    // v14: templates are backed by Regions — resolve either type for cover origin
     let template: foundry.canvas.placeables.MeasuredTemplate.Implementation | undefined | null;
+    let templateCoverOrigin: { x: number, y: number, elevation?: number } | undefined;
     if (this.templateUuid) {
-      const templateDocument = await fromUuid(this.templateUuid) as MeasuredTemplateDocument | null;
-      template = templateDocument?.object;
+      const doc = await fromUuid(this.templateUuid);
+      if (doc?.documentName === "Region") {
+        // v14 Region-backed template: extract cover origin from shape data
+        const regionDoc = doc as RegionDocument.Implementation;
+        const shape = regionDoc.shapes?.at?.(0) as any;
+        if (shape) {
+          templateCoverOrigin = { x: shape.x ?? 0, y: shape.y ?? 0 };
+          if (shape.type === "rectangle") {
+            templateCoverOrigin.x += (shape.width ?? 0) / 2;
+            templateCoverOrigin.y += (shape.height ?? 0) / 2;
+          }
+          templateCoverOrigin.elevation = regionDoc.elevation?.bottom ?? 0;
+        }
+      } else {
+        const templateDoc = doc as MeasuredTemplateDocument | null;
+        template = templateDoc?.object ?? undefined;
+        // If we have a placeable, compute cover origin from it
+        if (template) {
+          templateCoverOrigin = foundry.utils.duplicate(template.center);
+          const dimensions = canvas.dimensions;
+          if (template.document.t === "rect") {
+            templateCoverOrigin.x += (template.document.width ?? 1) / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
+            templateCoverOrigin.y += (template.document.width ?? 1) / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
+          }
+          templateCoverOrigin.elevation = template.document.elevation;
+        }
+      }
     }
 
     // Process each target's save result
-    const processContext = { rollDC, rollAbility: rollAbilities[0], rollType, template, D20Roll };
+    const processContext = { rollDC, rollAbility: rollAbilities[0], rollType, template, templateCoverOrigin, D20Roll };
     let i = 0;
     for (let target of allHitTargets) {
       if (!target.actor) continue; // these were skipped when doing the rolls so they can be skipped now
@@ -8600,15 +8642,19 @@ export class TrapWorkflow extends Workflow {
     if (templates) {
       for (const tDoc of templates) {
         if (!tDoc?.uuid) continue;
-        this.templateUuid = tDoc.uuid;
-        await this.setupTemplateCleanup(tDoc as MeasuredTemplateDocument);
+        // v14: resolve proxy MeasuredTemplate to actual RegionDocument
+        const regionDoc = tDoc._id ? canvas.scene?.regions.get(tDoc._id) : undefined;
+        const docToStore = regionDoc ?? tDoc;
+        this.templateUuid = docToStore.uuid;
+        await this.setupTemplateCleanup(docToStore);
       }
       this.placedTemplateCount = templates.length;
       this.selectAllTemplateTargets();
       if (this.templateLocation?.removeDelay) {
         let ids: string[] = templates.map(td => td._id as string)
         //TODO test this again
-        setTimeout(() => canvas.scene?.deleteEmbeddedDocuments("MeasuredTemplate", ids), this.templateLocation.removeDelay * 1000);
+        // v14: templates are backed by Regions — delete as Region documents
+        setTimeout(() => canvas.scene?.deleteEmbeddedDocuments("Region", ids), this.templateLocation.removeDelay * 1000);
       }
     }
     return this.WorkflowState_TemplatePlaced

@@ -57,13 +57,13 @@ export function initPatching() {
   // and MidiDependentDocumentMixin (for our registry-based tracking of Actor/Item parents)
   // This allows dnd5e.dependentOn flag to work for all parent types
 
-  // MeasuredTemplate, Token, AmbientLight need dnd5e's mixin added (not in their base class)
-  class MidiMeasuredTemplateDocument extends MidiDependentDocumentMixin(
-    globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.MeasuredTemplate.documentClass)
-  ) { };
-  //@ts-expect-error
-  CONFIG.MeasuredTemplate.documentClass = MidiMeasuredTemplateDocument;
+  // v14: MeasuredTemplate is a compat-layer proxy for Region — both share the same ID and flags.
+  // Do NOT apply DependentDocumentMixin to MeasuredTemplate; the Region already handles tracking.
+  // Applying it to both causes duplicate entries in dnd5e.registry.dependents (different UUIDs
+  // for same document: Scene.x.MeasuredTemplate.y vs Scene.x.Region.y), leading to double-delete
+  // when ActiveEffect5e._onDelete cascades via getDependents().forEach(e => e.delete()).
 
+  // Token, AmbientLight need dnd5e's mixin added (not in their base class)
   class MidiTokenDocument extends MidiDependentDocumentMixin(
     globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.Token.documentClass)
   ) { };
@@ -2395,19 +2395,29 @@ export async function challengeConcentration(this: Actor.Implementation, wrapped
   return;
 }
 
-export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocument, options: any, user: string) {
+export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocument | RegionDocument.Implementation, options: any, user: string) {
   if (user !== game.user?.id) return;
   if (options.undo) return;
 
+  // Cast for flag operations — both document types support getFlag with identical runtime behavior
+  const flagDoc = templateDocument as MeasuredTemplateDocument;
+
   // Cascade delete dependents of this template via MidiDependentsRegistry (only active GM should do this)
+  // v14: Region and MeasuredTemplate share the same ID but have different UUIDs.
+  // Dependents may be tracked under either UUID (e.g., addDependent(template, ...) uses the
+  // MeasuredTemplate UUID), so cascade under both the Region UUID and the MeasuredTemplate UUID.
   if (preferredActiveGM()?.isSelf) {
     await MidiDependentsRegistry.deleteDependents(templateDocument.uuid);
+    const altUuid = templateDocument.uuid.replace(".Region.", ".MeasuredTemplate.");
+    if (altUuid !== templateDocument.uuid) {
+      await MidiDependentsRegistry.deleteDependents(altUuid);
+    }
   }
 
   // Check if this template was dependent on a concentration effect - if so, clean up the effect if no more dependents
   if (options.noConcentrationCheck || configSettings.removeConcentrationEffects === "none") return;
 
-  const dependentOn = templateDocument.getFlag("dnd5e", "dependentOn");
+  const dependentOn = flagDoc.getFlag("dnd5e", "dependentOn");
   if (!dependentOn) return;
 
   const parentEffect = fromUuidSync(dependentOn);

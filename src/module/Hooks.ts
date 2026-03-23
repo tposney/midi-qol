@@ -79,7 +79,12 @@ export let readyHooks = async () => {
     }
   });
 
-  Hooks.on("deleteMeasuredTemplate", checkDeleteTemplate);
+  // v14: deleteMeasuredTemplate hook does NOT fire — only deleteRegion fires.
+  // Filter for template-backed regions (flags.core.MeasuredTemplate) and delegate to checkDeleteTemplate.
+  Hooks.on("deleteRegion", async (regionDoc, options, userId) => {
+    if (!foundry.utils.getProperty(regionDoc, "flags.core.MeasuredTemplate")) return;
+    await checkDeleteTemplate(regionDoc, options, userId);
+  });
 
   // Auto-target tokens when a template is refreshed (moved/reshaped during preview or after placement)
   // Only the user who placed the template should update targeting, otherwise all clients
@@ -374,10 +379,13 @@ export let readyHooks = async () => {
     MidiDependentsRegistry.deleteDependents(deletedToken.uuid);
   });
 
-  // Handle deletion of Regions - cascade delete dependents via MidiDependentsRegistry
+  // Handle deletion of non-template Regions — cascade delete dependents via MidiDependentsRegistry.
+  // Template-backed regions are handled by checkDeleteTemplate above (which also cascades under
+  // the MeasuredTemplate UUID for v14 compat — see checkDeleteTemplate).
   Hooks.on("deleteRegion", (deletedRegion: any, options: any, user) => {
     if (!preferredActiveGM()?.isSelf) return;
     if (options.undo) return;
+    if (foundry.utils.getProperty(deletedRegion, "flags.core.MeasuredTemplate")) return;
     MidiDependentsRegistry.deleteDependents(deletedRegion.uuid);
   });
 
@@ -2047,6 +2055,40 @@ Hooks.on("preCreateMeasuredTemplate", (templateDoc: MeasuredTemplateDocument.Imp
   if (distance <= maxRange + tolerance) return true;
 
   // Out of range - notify and cancel
+  ui.notifications?.warn(i18n("midi-qol.TemplateOutOfRange"));
+  return false;
+});
+
+// v14: preCreateMeasuredTemplate does NOT fire after the compat layer creates a Region.
+// preCreateRegion fires instead. Filter for template-backed regions and run the same range validation.
+Hooks.on("preCreateRegion", (regionDoc, regionData, options, userId) => {
+  if (!foundry.utils.getProperty(regionData, "flags.core.MeasuredTemplate")) return true;
+  if (userId !== game.user?.id) return true;
+
+  const midiFlags = regionDoc.flags?.[MODULE_ID] as { maxRange?: number, sourceTokenUuid?: string } | undefined;
+  const maxRange = midiFlags?.maxRange;
+  if (!maxRange) return true;
+
+  const sourceTokenUuid = midiFlags?.sourceTokenUuid;
+  if (!sourceTokenUuid) return true;
+
+  const tokenDoc = fromUuidSync(sourceTokenUuid) as TokenDocument.Implementation | null;
+  const token = tokenDoc?.object;
+  if (!token) return true;
+
+  // Reconstruct template position from the first region shape
+  const shape = regionDoc.shapes?.at?.(0) as any;
+  if (!shape) return true;
+  const templateX = shape.x as number | undefined;
+  const templateY = shape.y as number | undefined;
+  if (templateX === undefined || templateY === undefined) return true;
+
+  const poly = getTokenPerimeterPolygon(token);
+  const closest = closestPointOnPerimeter(poly, templateX, templateY);
+  const distance = measurePointDistance(closest, { x: templateX, y: templateY });
+  const tolerance = (canvas?.dimensions?.distance ?? 5) / 2;
+  if (distance <= maxRange + tolerance) return true;
+
   ui.notifications?.warn(i18n("midi-qol.TemplateOutOfRange"));
   return false;
 });

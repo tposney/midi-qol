@@ -659,12 +659,10 @@
 /* Damage type icon next to total */
 .midi-damage-type-icon {
   display: inline-block;
-  width: 16px;
-  height: 16px;
-  vertical-align: -0.15em;
+  --icon-fill: #777;
+  --icon-size: 16px;
+  vertical-align: text-bottom;
   margin-left: 0.25em;
-  border: none;
-  opacity: 0.7;
 }
 
 /* Section separators between filled sections */

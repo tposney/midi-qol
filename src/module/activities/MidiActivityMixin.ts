@@ -1783,18 +1783,24 @@ export let MidiActivityMixin = Base => {
 
         if (templateDocuments && templateDocuments.length > 0) {
           let td = templateDocuments[0];
+          // v14: resolve proxy MeasuredTemplate to actual RegionDocument
+          const regionDoc = canvas.scene?.regions.get(td._id);
+          const docToStore = regionDoc ?? td;
           td.object?.refresh();
           await busyWait(10);
           if (workflow) {
-            workflow.templateUuid = td.uuid;
+            workflow.templateUuid = docToStore.uuid;
             if (installedModules.get("walledtemplates") && this.flags?.walledtemplates?.attachToken === "caster") {
-              // @ts-expect-error walledtemplates types
-              await tokenToUse.attachTemplate(td.object, { "flags.dae.stackable": "noneName" }, true);
+              // v14: td.object may be undefined (Region-backed), walledtemplates needs its own v14 update
+              if (td.object) {
+                // @ts-expect-error walledtemplates types
+                await tokenToUse.attachTemplate(td.object, { "flags.dae.stackable": "noneName" }, true);
+              }
               if (workflow && !foundry.utils.getProperty(this, "item.flags.walledtemplates.noAutotarget"))
-                selectTargetsFromTemplates([td]);
+                selectTargetsFromTemplates([docToStore.uuid]);
             }
-            else if (getActivityAutoTargetAction(this) !== "none") selectTargetsFromTemplates([td]);
-          } else selectTargetsFromTemplates([td]);
+            else if (getActivityAutoTargetAction(this) !== "none") selectTargetsFromTemplates([docToStore.uuid]);
+          } else selectTargetsFromTemplates([docToStore.uuid]);
           return templateDocuments;
         }
       }

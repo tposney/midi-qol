@@ -676,7 +676,6 @@
     "midi-qol.DistanceMeasurementOptions.center": "網格正方形中心",
     "midi-qol.DistanceMeasurementOptions.perimeter": "Token 周長",
     "midi-qol.NoSocketLib": "Midi-qol 需要安裝並啟用 socketlib",
-    "midi-qol.chatlogPruneDeprecated": "Midi-qol 內置的聊天記錄清理功能已過時，請改用 'chatlog-prune' 模組。",
     "midi-qol.confirm": "確認對話框",
     "midi-qol.ExportConfig": "匯出 midi-qol 設定為 json 檔案",
     "midi-qol.ImportConfig": "從 json 檔案匯入 midi-qol 設定",

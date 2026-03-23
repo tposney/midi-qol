@@ -78,7 +78,6 @@ export let midiSoundSettings: any = {};
 export let midiSoundSettingsBackup: any = undefined;
 export let nsaFlag: boolean;
 export let playerControlsInvisibleTokens: boolean = false;
-export let pruneChatLog: boolean = true;
 export let replaceDefaultActivities: boolean = true;
 export let isDnd5e53: boolean = false;
 export function setDnd5e53(value: boolean) { isDnd5e53 = value; }
@@ -87,26 +86,6 @@ export let saveTimeouts = {};
 export let saveToChatCard: boolean = false;
 export let targetConfirmation: typeof defaultTargetConfirmationSettings;
 export let useWeakReferences: boolean = false;
-
-/**
- * Syncs the chatlog-prune module's "enabled" setting with midi-qol's pruneChatLog setting.
- * Only runs if chatlog-prune module is active.
- */
-export function syncChatlogPruneSetting(enabled: boolean): void {
-  const chatlogPruneModule = game.modules.get("chatlog-prune");
-  if (!chatlogPruneModule?.active) return;
-
-  try {
-    // @ts-expect-error chatlog-prune is an external module
-    const currentSetting = game.settings.get("chatlog-prune", "enabled");
-    if (currentSetting !== enabled) {
-      // @ts-expect-error chatlog-prune is an external module
-      game.settings.set("chatlog-prune", "enabled", enabled);
-    }
-  } catch (err) {
-    console.warn("midi-qol | Failed to sync chatlog-prune enabled setting:", err);
-  }
-}
 
 export const defaultTargetConfirmationSettings = {
   enabled: false,
@@ -350,7 +329,6 @@ export async function resetConfigSettingsToDefaults(): Promise<void> {
   await game.settings.set("midi-qol", "AutoRemoveTargets", "dead");
   await game.settings.set("midi-qol", "TargetConfirmation", defaultTargetConfirmationSettings);
   await game.settings.set("midi-qol", "playerControlsInvisibleTokens", false);
-  await game.settings.set("midi-qol", "pruneChatLog", true);
   await game.settings.set("midi-qol", "DebounceInterval", 0);
   await game.settings.set("midi-qol", "Debug", "None");
   await game.settings.set("midi-qol", "SaveToChatCard", false);
@@ -424,7 +402,6 @@ export function collectSettingData() {
     nsaFlag,
     saveToChatCard,
     playerControlsInvisibleTokens,
-    pruneChatLog,
     replaceDefaultActivities,
     targetConfirmation,
     useWeakReferences,
@@ -608,11 +585,6 @@ export async function importSettingsFromJSON(json) {
     if (game.settings.get("midi-qol", "playerControlsInvisibleTokens") !== json.playerControlsInvisibleTokens) requiresReload = true;
     await game.settings.set("midi-qol", "playerControlsInvisibleTokens", json.playerControlsInvisibleTokens);
   }
-  if (json.pruneChatLog !== undefined) {
-    if (game.settings.get("midi-qol", "pruneChatLog") !== json.pruneChatLog) requiresReload = true;
-    await game.settings.set("midi-qol", "pruneChatLog", json.pruneChatLog);
-  }
-
   const settingsAppId = game.settings.sheet?.id;
   if (settingsAppId) foundry.applications.instances.get(settingsAppId)?.render(true);
   const exportSource = json.flags?.exportSource;
@@ -980,7 +952,6 @@ export let fetchParams = () => {
   useWeakReferences = game.settings.get("midi-qol", "UseWeakReferences") ?? false;
   if (useWeakReferences !== oldWeakReferences) Workflow.clearWorkflows();
   saveToChatCard = game.settings.get("midi-qol", "SaveToChatCard");
-  pruneChatLog = game.settings.get("midi-qol", "pruneChatLog");
   targetConfirmation = game.settings.get("midi-qol", "TargetConfirmation");
   if (configSettings.griddedGridless === undefined) configSettings.griddedGridless = false;
   if (configSettings.gridlessFudge === undefined) configSettings.gridlessFudge = 0;
@@ -1867,20 +1838,6 @@ export const registerSettings = function () {
     config: true,
     type: Boolean,
     requiresReload: true
-  });
-
-  game.settings.register("midi-qol", "pruneChatLog", {
-    name: "Prune Chat Log",
-    hint: "Automatically prune chat messages to limit those in memory.",
-    scope: "world",
-    default: true,
-    type: Boolean,
-    config: true,
-    requiresReload: true,
-    onChange: (value: boolean) => {
-      pruneChatLog = value;
-      syncChatlogPruneSetting(value);
-    }
   });
 
   game.settings.register("midi-qol", "DebounceInterval", {

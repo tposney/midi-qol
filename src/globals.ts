@@ -29,7 +29,6 @@ import { MidiSounds } from "./module/midi-sounds";
 import { computeTargetsFromTemplates, resolveTargetConfirmation, selectTargetsFromTemplates } from "./module/activities/activityHelpers";
 import { showUndoWorkflowApp } from "./module/apps/UndoWorkflow";
 import { TroubleShooter } from "./module/apps/TroubleShooter";
-import { ChatLogMidi } from "./module/ChatClasses/ChatLogMidi";
 import { ChatMessageMidi } from "./module/ChatClasses/ChatMessageMidi";
 import { DamageApplicationElementMidi } from "./module/ChatClasses/DamageApplicationElementMidi";
 import { MidiDependentsRegistry, RegistryChangeEvent } from "./module/lib/MidiDependentsRegistry";
@@ -117,7 +116,6 @@ declare module "fvtt-types/configuration" {
     "dnd5e.challengeVisibility": string;
     "midi-qol.MidiSoundSettings": Record<string, any>;
     "midi-qol.playerControlsInvisibleTokens": boolean;
-    "midi-qol.pruneChatLog"
     "midi-qol.RollStats": Record<string, Stats>;
     "midi-qol.ConfigSettings": typeof configSettings;
     "midi-qol.CriticalDamage": string;
@@ -802,7 +800,6 @@ declare global {
       DDBGameLogWorkflow: typeof DDBGameLogWorkflow;
     };
     ChatClasses: {
-      ChatLogMidi: typeof ChatLogMidi,
       ChatMessageMidi: typeof ChatMessageMidi,
       DamageApplicationElementMidi: typeof DamageApplicationElementMidi
     }
@@ -1604,7 +1601,9 @@ export type ProcessTargetSaveContext = {
   rollDC: number | undefined;
   rollAbility: string | undefined;
   rollType: string | undefined;
+  // v14: template placeable may not exist (Region-backed); use templateCoverOrigin for cover
   template: foundry.canvas.placeables.MeasuredTemplate.Implementation | undefined | null;
+  templateCoverOrigin?: { x: number, y: number, elevation?: number };
   D20Roll: typeof Roll;
 };
 

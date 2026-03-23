@@ -7508,7 +7508,16 @@ export function getIncapacitatedStatusEffect() {
   return incapEffect;
 }
 
-export async function markFlanking(token?: Token.Implementation | null, target?: Token.Implementation | null): Promise<boolean> {
+let _markFlankingPromise: Promise<boolean> = Promise.resolve(false);
+export function markFlanking(token?: Token.Implementation | null, target?: Token.Implementation | null): Promise<boolean> {
+  _markFlankingPromise = _markFlankingPromise.then(
+    () => _markFlankingImpl(token, target),
+    () => _markFlankingImpl(token, target)
+  );
+  return _markFlankingPromise;
+}
+
+async function _markFlankingImpl(token?: Token.Implementation | null, target?: Token.Implementation | null): Promise<boolean> {
   if (!canvas) return false;
   if (!target || !target?.actor) return false;
   const flankingMode = checkRule("checkFlanking") as string;
@@ -7812,7 +7821,8 @@ export function getChanges(actorOrItem: Actor.Implementation | Item.Implementati
   return actorOrItem.effects.contents
     .flat()
     .map(e => {
-      let c: Array<any> = foundry.utils.duplicate(e.changes);
+      // @ts-expect-error v14 system.changes not typed in fvtt-types
+      let c: Array<any> = foundry.utils.duplicate(e.system.changes);
       c = c.map(change => { change.effect = e; return change; })
       return c
     })
@@ -9382,7 +9392,8 @@ export async function cleanCPRFlanked() {
   let cprEffect = getCPREffect(flankedId);
   if (!cprEffect) return;
   let updateNeeded = false;
-  const changes = foundry.utils.deepClone(cprEffect.changes);
+  // @ts-expect-error v14 system.changes not typed in fvtt-types
+  const changes = foundry.utils.deepClone(cprEffect.system.changes);
   changes.forEach(c => {
     if (c.key === "flags.midi-qol.grants.attack.advantage.mwak") {
       c.key = "flags.midi-qol.grants.advantage.attack.mwak";
@@ -9394,7 +9405,8 @@ export async function cleanCPRFlanked() {
     }
   });
   if (updateNeeded) {
-    await cprEffect.update({ "changes": changes });
+    // @ts-expect-error v14 system.changes not typed in fvtt-types
+    await cprEffect.update({ "system.changes": changes });
     console.warn("midi-qol | cleanCPRFlanked | corrected flanked effect", cprEffect);
   }
   cprEffect = getCPREffect(flankedId);

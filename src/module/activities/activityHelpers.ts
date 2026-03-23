@@ -511,7 +511,9 @@ export function selectTargetsFromTemplates(
 
 /**
  * Returns tokens inside a template without modifying game.user.targets.
- * Accepts a MeasuredTemplate placeable, a MeasuredTemplateDocument, or a UUID string.
+ * Accepts a MeasuredTemplate placeable, a MeasuredTemplateDocument, a RegionDocument, or a UUID string.
+ * In v14, MeasuredTemplates are backed by Regions — when no placeable is available,
+ * falls back to Region-based targeting via testPoint().
  * Handles WalledTemplates, VolumetricTemplates, and standard template targeting.
  * Note: When VolumetricTemplates is active, game.user.targets may be modified as a
  * side effect of compute3Dtemplate — the returned array is still the authoritative result.
@@ -526,15 +528,35 @@ export function computeTargetsFromTemplate(
   if (!autoTarget) autoTarget = configSettings.autoTarget;
   if (autoTarget === "none") return [];
 
-  // Resolve to a MeasuredTemplate placeable
+  // Resolve to a MeasuredTemplate placeable, falling back to RegionDocument for v14
   let mTemplate: foundry.canvas.placeables.MeasuredTemplate.Implementation | undefined;
+  let regionDoc: RegionDocument.Implementation | undefined;
+
   if (typeof template === "string") {
-    const tDoc = fromUuidSync(template) as MeasuredTemplateDocument | null;
-    mTemplate = tDoc?.object ?? undefined;
+    const doc = fromUuidSync(template);
+    if (doc?.documentName === "Region") {
+      // Region UUID (v14 native) — use Region targeting directly
+      regionDoc = doc as RegionDocument.Implementation;
+    } else if (doc) {
+      const mtDoc = doc as MeasuredTemplateDocument;
+      mTemplate = mtDoc.object ?? undefined;
+      if (!mTemplate && mtDoc._id) {
+        // v14 compat: proxy MeasuredTemplateDocument with no placeable — look up backing Region
+        regionDoc = canvas.scene?.regions.get(mtDoc._id) ?? undefined;
+      }
+    }
   } else if (template instanceof MeasuredTemplateDocument) {
     mTemplate = template.object ?? undefined;
+    if (!mTemplate && template._id) {
+      regionDoc = canvas.scene?.regions.get(template._id) ?? undefined;
+    }
   } else {
     mTemplate = template;
+  }
+
+  // v14: Region-based targeting when no placeable is available
+  if (!mTemplate && regionDoc) {
+    return computeTargetsFromRegion(regionDoc, selfTokenRef, ignoreSelf, AoETargetType, autoTarget);
   }
   if (!mTemplate) return [];
 
@@ -574,6 +596,117 @@ export function computeTargetsFromTemplate(
     }
   }
   return targetTokens;
+}
+
+/**
+ * v14 Region-based targeting: returns tokens inside a Region using testPoint().
+ * Used when a MeasuredTemplate has been converted to a Region (v14 compat layer)
+ * and no MeasuredTemplate placeable is available.
+ * Does not support VolumetricTemplates or WalledTemplates (those modules need their own v14 updates).
+ */
+function computeTargetsFromRegion(
+  regionDoc: RegionDocument.Implementation,
+  selfTokenRef: TokenOrDocument | string | null | undefined,
+  ignoreSelf: boolean,
+  AoETargetType: string,
+  autoTarget: string
+): Token.Implementation[] {
+  const selfToken = getToken(selfTokenRef);
+  const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget);
+  const targetTokens: Token.Implementation[] = [];
+
+  for (const token of (canvas.tokens?.placeables ?? [])) {
+    if (!isAoETargetable(token, { selfToken, ignoreSelf, AoETargetType, autoTarget })) continue;
+    if (token.actor && isTokenInsideRegion(regionDoc, token, wallsBlockTargeting)) {
+      if (token.id) targetTokens.push(token);
+    }
+  }
+  return targetTokens;
+}
+
+/**
+ * v14 Region-based containment check: mirrors isTokenInside() but uses regionDoc.testPoint().
+ * Checks each grid square the token occupies, with optional wall-blocking.
+ */
+function isTokenInsideRegion(
+  regionDoc: RegionDocument.Implementation,
+  token: Token.Implementation,
+  wallsBlockTargeting: boolean
+): boolean {
+  const grid = canvas.scene?.grid;
+  if (!grid) return false;
+
+  if (configSettings.optionalRules.wallsBlockRange !== "none" && hasWallBlockingCondition(token))
+    return false;
+  if (!isValidTarget(token)) return false;
+
+  // Extract template-equivalent data from the Region's first shape for wall collision checks
+  const shape = regionDoc.shapes?.at?.(0) as any;
+  const shapeOrigin = shape ? { x: shape.x ?? 0, y: shape.y ?? 0 } : undefined;
+
+  // Wall collision origin: for rectangles use center, for others use shape origin
+  let wallOriginX = shapeOrigin?.x ?? 0;
+  let wallOriginY = shapeOrigin?.y ?? 0;
+  if (shape?.type === "rectangle") {
+    wallOriginX += (shape.width ?? 0) / 2;
+    wallOriginY += (shape.height ?? 0) / 2;
+  }
+
+  // Compute template distance in grid units (for levels 3D distance check)
+  const distancePixels = (grid.size ?? 100) / (grid.distance ?? 5);
+  let templateDistance = 0;
+  if (shape) {
+    switch (shape.type) {
+      case "circle": case "cone":
+        templateDistance = (shape.radius ?? 0) / distancePixels;
+        break;
+      case "line":
+        templateDistance = (shape.length ?? 0) / distancePixels;
+        break;
+    }
+  }
+
+  const startX = token.document.width >= 1 ? 0.5 : (token.document.width / 2);
+  const startY = token.document.height >= 1 ? 0.5 : (token.document.height / 2);
+  for (let x = startX; x < token.document.width; x++) {
+    for (let y = startY; y < token.document.height; y++) {
+      const testX = token.x + x * grid.size!;
+      const testY = token.y + y * grid.size!;
+
+      // Use polygonTree.testPoint with tolerance=1 to include boundary tokens.
+      // regionDoc.testPoint uses Clipper strict containment (boundary = outside),
+      // but MeasuredTemplate.shape.contains was boundary-inclusive. Tolerance of 1px matches that behavior.
+      const tokenElevation = token.document.elevation;
+      const { bottom, top } = regionDoc.elevation;
+      let contains = (((bottom ?? -Infinity) <= tokenElevation) && (tokenElevation <= (top ?? Infinity)))
+        // @ts-expect-error polygonTree.testPoint accepts optional distance param not in type defs
+        && regionDoc.polygonTree.testPoint({ x: testX, y: testY }, 1);
+
+      if (contains && wallsBlockTargeting) {
+        if (
+          configSettings.optionalRules.wallsBlockRange === "centerLevels"
+          && installedModules.get("levels")
+          && !installedModules.get("levelsvolumetrictemplates")) {
+          let p1 = { x: testX, y: testY, z: token.document.elevation };
+          //@ts-expect-error no levels types
+          const { elevation } = CONFIG.Levels.handlers.TemplateHandler.getTemplateData(false);
+          let p2 = { x: wallOriginX, y: wallOriginY, z: elevation as number };
+          contains = getUnitDist(p2.x, p2.y, p2.z, token) <= templateDistance;
+          //@ts-expect-error no levels types
+          contains = contains && !CONFIG.Levels?.API?.testCollision(p1, p2, "collision");
+        } else if (!installedModules.get("levelsvolumetrictemplates")) {
+          contains = !CONFIG.Canvas.polygonBackends.sight.testCollision(
+            { x: wallOriginX, y: wallOriginY },
+            { x: testX, y: testY },
+            { mode: "any", type: "move" }
+          );
+        }
+      }
+
+      if (contains) return true;
+    }
+  }
+  return false;
 }
 
 export function computeTargetsFromTemplates(
