@@ -145,7 +145,7 @@ export let MidiActivityMixin = Base => {
     static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.SHARED"];
 
     static defineSchema() {
-      const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, SetField } = foundry.data.fields;
+      const { StringField, ArrayField, BooleanField, NumberField, SchemaField, ObjectField, SetField } = foundry.data.fields;
       const { FormulaField } = globalThis.dnd5e.dataModels.fields;
       const schema = {
         ...super.defineSchema(),
@@ -207,7 +207,7 @@ export let MidiActivityMixin = Base => {
           preRemoveConditionText: new MidiConditionField({ name: "removeCondition", initial: "" }),
           //@ts-expect-error find out why there is a type error here
           postRemoveConditionText: new MidiConditionField({ name: "postRemoveCondition", initial: "" }),
-        })
+        }),
       };
       return schema;
     }

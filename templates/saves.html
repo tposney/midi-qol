@@ -27,7 +27,7 @@
       {{#if save.hasAttribution}}
       <span class="midi-save-attribution-info {{save.saveTotalClass}}" data-tooltip-html="{{{save.attributionTooltip}}}" data-tooltip-direction="DOWN"><i class="fas fa-info-circle"></i></span>
       {{/if}}
-      {{#if save.coverLabel}}<img class="midi-qol-ac-icon" src="{{save.coverLabel}}" />{{/if}}
+      {{#if save.coverLabel}}<dnd5e-icon class="midi-qol-ac-icon" src="{{save.coverLabel}}"></dnd5e-icon>{{/if}}
       <span class="{{save.saveTotalClass}} midi-qol-tooltip midi-qol-save-total" style="font-weight: bold;" {{#if save.saveTooltip}}data-tooltip="{{save.saveTooltip}}"{{/if}}>
         {{save.rollTotal}}
         <span class="midi-qol-tooltiptext midi-qol-save-tooltip {{save.saveToolTipClass}}" style="text-align: left;">

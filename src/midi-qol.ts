@@ -373,6 +373,7 @@ Hooks.once('init', async function () {
   log('Initializing midi-qol');
   window.customElements.define("midi-damage-application", DamageApplicationElementMidi as unknown as CustomElementConstructor);
   setupActivities();
+
   // Only install ChatLogMidi if chatlog-prune module is not active
   if (game.settings.get("midi-qol", "pruneChatLog") && !game.modules.get("chatlog-prune")?.active) {
     foundry.utils.logCompatibilityWarning(

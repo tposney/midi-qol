@@ -288,7 +288,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       return uniqueTypes.map(type => {
         const config = GameSystemConfig.damageTypes[type] ?? GameSystemConfig.healingTypes?.[type];
         if (!config?.icon) return "";
-        return `<img class="midi-damage-type-icon" src="${config.icon}" alt="${config.label ?? ""}" data-tooltip="${config.label ?? ""}" />`;
+        return `<dnd5e-icon class="midi-damage-type-icon" src="${config.icon}" aria-label="${config.label ?? ""}" data-tooltip="${config.label ?? ""}"></dnd5e-icon>`;
       }).join("");
     }
 

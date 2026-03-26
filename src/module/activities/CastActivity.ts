@@ -51,7 +51,9 @@ let defineMidiCastActivityClass =  <T extends Activity>(ActivityClass: T) => {
       if (this.activation?.override) return this.activation.type;
       const spell = this.cachedSpell;
       if (spell) {
-        const spellActivity = spell.system?.activities?.filter((a: any) => a.canUse)?.[0];
+        const activities = spell.system?.activities;
+        const activityList = (activities instanceof Collection) ? activities.contents : Object.values(activities ?? {});
+        const spellActivity = activityList.find((a: any) => a.canUse) ?? activityList[0];
         if (spellActivity?.activation?.type) return spellActivity.activation.type;
       }
       // @ts-expect-error item.system.activation not typed
@@ -114,8 +116,9 @@ let defineMidiCastActivityClass =  <T extends Activity>(ActivityClass: T) => {
       // range calculations, activation type).
       const spell = this.cachedSpell ?? fromUuidSync(this.spell?.uuid);
       if (!spell) return;
-      const spellActivity = spell.system?.activities?.filter((a: any) => a.canUse)?.[0]
-        ?? spell.system?.activities?.contents?.[0];
+      const activities = spell.system?.activities;
+      const activityList = (activities instanceof Collection) ? activities.contents : Object.values(activities ?? {});
+      const spellActivity = activityList.find((a: any) => a.canUse) ?? activityList[0];
       if (!spellActivity) return;
 
       // Target: inherit affects and template data from spell activity

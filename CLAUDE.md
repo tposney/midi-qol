@@ -122,6 +122,9 @@ Note: This approach doesn't handle embedded document hierarchy (effects stored a
 - **Do not automatically commit or push changes** to midi-qol-13x or midi-qol-tests — user reviews diffs first
 - **NEVER run `git checkout` without explicit user approval** — can destroy uncommitted work
 
+### Tool Usage
+- **`sed` and `find` commands**: Allowed via Bash without asking for permission when you have read/write access to the target directory. No need to use the dedicated Read/Edit/Glob tools exclusively — use whichever is most efficient for the task.
+
 ### Coding Conventions
 - **Comments**: Use sparingly. Only comment complex or non-obvious code.
 - **Transient debug**: Always use `console.error()`, never `log()`/`warn()`/midi logging. Never wrap in `if (debugEnabled)`.
@@ -211,6 +214,12 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
     - `flags.times-up.durationSeconds` flag path kept for backward compat with existing effects.
     - DAE API (`game.modules.get("dae").api`) exports: `expireEffect`, `isEffectExpired`, `isTransferEffect`, `hasDuration`, `hasExpiry`.
     - One-time migration from times-up settings runs at `ready` via `migrateTimesUpSettings()`.
+
+15. **v14 ActiveEffect change values must remain strings** — v14's `AnyField` stores values as-is (no auto-coercion). The v13 backward-compat shim's `#migrateChangeValue` ran `JSON.parse` on string values (`"-10"` → `-10`), but native v14 schema does not. Always use string values in effect changes — this preserves support for Roll expressions (`"1d6"`, `"@abilities.str.mod"`). Code consuming change values should handle strings (e.g., `new Roll(value)`, `Number.isNumeric()`).
+
+16. **v14 `type: "override"` breaks Set fields** — For dnd5e Set-based trait fields (`system.traits.dr.value`, `system.traits.di.value`), `type: "override"` replaces the Set with a plain value/Array, breaking `.has()` calls downstream. Use `type: "add"` instead — v14's `SetField._applyChangeAdd` properly adds elements to the existing Set.
+
+17. **v14 `markFlanking` must be serialized** — The function can be called concurrently from the `targetToken` hook, the workflow, and `TargetConfirmation`. The CPR effect branch's check-then-create (`effects.get()` → `createEmbeddedDocuments(..., { keepId: true })`) isn't atomic. Fixed by serializing via a promise chain so only one `_markFlankingImpl` runs at a time.
 
 ## Testing
 

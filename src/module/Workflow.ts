@@ -475,7 +475,7 @@ export class Workflow {
     return new Set();
   }
   set targets(targets: Set<TokenOrDocument>) {
-    this.#targets = targets?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
+    this.#targets = new Set(Array.from(targets ?? []).map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t));
     const targetDocuments = Array.from(targets ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
     this.persistFields({ targets: targetDocuments.map(t => ({ uuid: t.uuid, name: t.name })) });
   }
@@ -981,7 +981,7 @@ export class Workflow {
     attackTotal?: number;
     attackType?: string;
     baseAc?: number;
-    acIcons?: Array<{ img?: string; icon?: string; tooltip?: string; cssClass: string }>;
+    acIcons?: Array<{ img?: string; icon?: string; tooltip?: string; cssClass: string; useDnd5eIcon?: boolean }>;
     gmName: string;
     hitClass: string;
     hitResultNumeric?: string;
@@ -2426,6 +2426,9 @@ export class Workflow {
     if (!this.activity.attack) {
       this.hitTargets = new Set(this.targets);
       this.hitTargetsEC = new Set();
+      if (this.targets.size > 0 && this.activity.target?.affects?.type !== "self") {
+        await this.displayHitTargets(false);
+      }
       if (this.activity.roll?.formula) return this.WorkflowState_WaitForUtilityRoll;
       return this.postAttackRollState;
     }
@@ -5018,7 +5021,7 @@ return {
         gmName: getTokenName(target),
         playerName: getTokenPlayerName(target) ?? "",
         uuid: tokenUuid,
-        showAC: true,
+        showAC: !!this.activity.attack,
         isHit: this.hitTargets.has(target)
       };
     }
@@ -7657,26 +7660,26 @@ return {
       const acDisplay = !isFinite(targetAC) ? "∞" : `${effectiveAC}`;
 
       // Build array of AC modifier icons and AC tooltip — icon order matches tooltip order
-      const acIcons: Array<{ img?: string; icon?: string; tooltip?: string; cssClass: string }> = [];
+      const acIcons: Array<{ img?: string; icon?: string; tooltip?: string; cssClass: string; useDnd5eIcon?: boolean }> = [];
       let acTooltipParts = `${acResult?.baseAC ?? effectiveAC}`;
       if (targetACMod) acTooltipParts += ` ${targetACMod > 0 ? "+" : ""}${targetACMod}`;
 
       const displayCover = acResult?.effectiveCoverBonus ?? 0;
       if (!acResult?.coverIgnored && displayCover >= TOTAL_COVER) {
-        acIcons.push({ img: "systems/dnd5e/icons/svg/statuses/cover-total.svg", tooltip: `+${displayCover}: ${i18n("EFFECT.DND5E.StatusTotalCover")}`, cssClass: "midi-qol-ac-icon" });
+        acIcons.push({ img: "systems/dnd5e/icons/svg/statuses/cover-total.svg", tooltip: `+${displayCover}: ${i18n("EFFECT.DND5E.StatusTotalCover")}`, cssClass: "midi-qol-ac-icon", useDnd5eIcon: true });
       } else if (!acResult?.coverIgnored && displayCover >= THREE_QUARTERS_COVER) {
-        acIcons.push({ img: "systems/dnd5e/icons/svg/statuses/cover-three-quarters.svg", tooltip: `+${displayCover}: ${i18n("EFFECT.DND5E.StatusThreeQuartersCover")}`, cssClass: "midi-qol-ac-icon" });
+        acIcons.push({ img: "systems/dnd5e/icons/svg/statuses/cover-three-quarters.svg", tooltip: `+${displayCover}: ${i18n("EFFECT.DND5E.StatusThreeQuartersCover")}`, cssClass: "midi-qol-ac-icon", useDnd5eIcon: true });
       } else if (!acResult?.coverIgnored && displayCover >= HALF_COVER) {
-        acIcons.push({ img: "systems/dnd5e/icons/svg/statuses/cover-half.svg", tooltip: `+${displayCover}: ${i18n("EFFECT.DND5E.StatusHalfCover")}`, cssClass: "midi-qol-ac-icon" });
+        acIcons.push({ img: "systems/dnd5e/icons/svg/statuses/cover-half.svg", tooltip: `+${displayCover}: ${i18n("EFFECT.DND5E.StatusHalfCover")}`, cssClass: "midi-qol-ac-icon", useDnd5eIcon: true });
       }
       if (!acResult?.coverIgnored && acResult && acResult.effectiveCoverBonus > 0)
         acTooltipParts += ` +${acResult.effectiveCoverBonus}`;
 
       if (acResult?.coverIgnored) {
         if (this.activity?.actionType === "rwak") {
-          acIcons.push({ img: "icons/skills/targeting/target-strike-gray.webp", tooltip: i18n("midi-qol.SharpShooter"), cssClass: "midi-qol-ac-icon-no-filter" });
+          acIcons.push({ img: "icons/skills/targeting/target-strike-gray.webp", tooltip: i18n("midi-qol.SharpShooter"), cssClass: "midi-qol-ac-icon-img" });
         } else if (this.activity?.actionType === "rsak") {
-          acIcons.push({ img: "icons/skills/targeting/crosshair-triple-strike-orange.webp", tooltip: i18n("midi-qol.SpellSniper"), cssClass: "midi-qol-ac-icon-no-filter" });
+          acIcons.push({ img: "icons/skills/targeting/crosshair-triple-strike-orange.webp", tooltip: i18n("midi-qol.SpellSniper"), cssClass: "midi-qol-ac-icon-img" });
         }
       }
 
@@ -7687,13 +7690,13 @@ return {
         acIcons.push({
           img: isFlankedMode ? "modules/midi-qol/icons/encirclement.svg" : "icons/svg/sword.svg",
           tooltip: `-${flankingACMod}: ${isFlankedMode ? i18n("midi-qol.Flanked") : i18n("midi-qol.Flanking")}`,
-          cssClass: "midi-qol-ac-icon"
+          cssClass: "midi-qol-ac-icon", useDnd5eIcon: true
         });
         acTooltipParts += ` -${flankingACMod}`;
       }
 
       if (reactionACDelta) {
-        acIcons.push({ img: "modules/midi-qol/icons/reaction.svg", tooltip: `${reactionACDelta > 0 ? "+" : ""}${reactionACDelta}: ${i18n("DND5E.Reaction")}: ${reactionItemName}`, cssClass: "midi-qol-ac-icon" });
+        acIcons.push({ img: "modules/midi-qol/icons/reaction.svg", tooltip: `${reactionACDelta > 0 ? "+" : ""}${reactionACDelta}: ${i18n("DND5E.Reaction")}: ${reactionItemName}`, cssClass: "midi-qol-ac-icon", useDnd5eIcon: true });
         acTooltipParts += ` ${reactionACDelta > 0 ? "+" : ""}${reactionACDelta}`;
       }
 

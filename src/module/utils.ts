@@ -5759,12 +5759,25 @@ export async function reactionDialog(
         const activity = reactionActivities.find(i => i.uuid === button.key);
         if (activity) {
           dialog.close();
-          // options = foundry.utils.mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid, checkGMStatus: false}, {overwrite: true});
+          // For Cast activities that don't override targeting, resolve the effective target type from the spell
+          let effectiveTargetType = activity.target?.affects?.type;
+          // @ts-expect-error no dnd5e-types for _source.target.override
+          if (activity.type === "cast" && !activity._source?.target?.override) {
+            // @ts-expect-error no dnd5e-types for CastActivity.cachedSpell / spell
+            const spell: Item.Implementation | undefined = activity.cachedSpell ?? fromUuidSync(activity.spell?.uuid);
+            if (spell) {
+              // @ts-expect-error no dnd5e-types for item.system.activities
+              const activities = spell.system?.activities;
+              const activityList = (activities instanceof Collection) ? activities.contents : Object.values(activities ?? {});
+              const spellActivity = activityList.find((a: any) => a.canUse) ?? activityList[0];
+              if (spellActivity?.target?.affects?.type) effectiveTargetType = spellActivity.target.affects.type;
+            }
+          }
           const itemRollOptions = foundry.utils.mergeObject({
             createWorkflow: true,
             configureDialog: true,
             checkGMStatus: false,
-            targetUuids: activity.target?.affects?.type !== "self" ? [triggerTokenUuid] : [getOrCreateTokenForActor(actor)?.document?.uuid],
+            targetUuids: effectiveTargetType !== "self" ? [triggerTokenUuid] : [getOrCreateTokenForActor(actor)?.document?.uuid],
             isReaction: true,
             workflowOptions: { targetConfirmation: "none" },
             ignoreUserTargets: true

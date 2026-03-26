@@ -657,12 +657,10 @@
 /* Damage type icon next to total */
 .midi-damage-type-icon {
   display: inline-block;
-  width: 16px;
-  height: 16px;
-  vertical-align: -0.15em;
+  --icon-fill: #777;
+  --icon-size: 16px;
+  vertical-align: text-bottom;
   margin-left: 0.25em;
-  border: none;
-  opacity: 0.7;
 }
 
 /* Section separators between filled sections */
@@ -1747,23 +1745,30 @@ section.midi-qol.tab {
 }
 
 /* AC modifier icons in hit/save display (cover, flanking, reaction, grants) */
-.midi-qol-ac-icon,
-.midi-qol-ac-icon-no-filter {
+.midi-qol-ac-icon {
+  --icon-fill: #777;
+  --icon-size: 14px;
+  display: inline-block;
+  vertical-align: text-bottom;
+  margin-right: 1px;
+}
+
+/* Non-SVG images (Sharpshooter/Spell Sniper .webp) — use img, tint grey */
+.midi-qol-ac-icon-img {
   display: inline !important;
   width: 14px !important;
   height: 14px !important;
   vertical-align: -0.125em;
   margin-right: 1px;
+  filter: grayscale(1) opacity(0.6);
 }
 
-.midi-qol-ac-icon {
-  filter: brightness(0);
-}
-
+/* Font Awesome icons (grants AC bonus) */
 .midi-qol-ac-icon-fa {
   font-size: 8px;
   vertical-align: -0.125em;
   margin-right: 1px;
+  color: #777;
 }
 
 /* Make unchecked checkboxes more visible in dark theme */

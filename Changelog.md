@@ -1,3 +1,8 @@
+### 13.0.56
+* Fix for reactions for cast activities that do not override the spell targeting to respect self targeting on the underlying spell.
+* Fix for Heal and Damage activities not displaying targets.
+* Fix for the spell.system?.activities?.filter is not a function error for cast activities
+
 ### 13.0.55
 **Bug Fixes**
 * Added spell school-based advantage/disadvantage flags for attack rolls: `flags.midi-qol.advantage.attack.school.{school}`, `disadvantage.attack.school.{school}`, `noAdvantage.attack.school.{school}`, `noDisadvantage.attack.school.{school}`, and the corresponding `grants.*` variants. These complement the existing save school flags added in 13.0.52.
