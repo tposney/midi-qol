@@ -110,66 +110,9 @@ let defineMidiCastActivityClass =  <T extends Activity>(ActivityClass: T) => {
 
     prepareFinalData(rollData: any) {
       super.prepareFinalData(rollData);
-      // When the cast activity doesn't override a field (override is false/absent),
-      // inherit the spell's values so callers see the correct data without needing
-      // CastActivity-specific checks (e.g. completeActivityUse self-target detection,
-      // range calculations, activation type).
-      const spell = this.cachedSpell ?? fromUuidSync(this.spell?.uuid);
-      if (!spell) return;
-      const activities = spell.system?.activities;
-      const activityList = (activities instanceof Collection) ? activities.contents : Object.values(activities ?? {});
-      const spellActivity = activityList.find((a: any) => a.canUse) ?? activityList[0];
-      if (!spellActivity) return;
-
-      // Target: inherit affects and template data from spell activity
-      if (!this._source.target?.override) {
-        if (spellActivity.target?.affects?.type) {
-          this.target.affects.type = spellActivity.target.affects.type;
-        }
-        if (spellActivity.target?.affects?.count) {
-          this.target.affects.count = spellActivity.target.affects.count;
-        }
-        if (spellActivity.target?.template?.type) {
-          foundry.utils.mergeObject(this.target.template, spellActivity.target.template);
-        }
-      }
-
-      // Range: inherit range data from spell activity
-      if (!this._source.range?.override && this.range) {
-        if (spellActivity.range?.value !== undefined && spellActivity.range?.value !== null) {
-          this.range.value = spellActivity.range.value;
-        }
-        if (spellActivity.range?.units) {
-          this.range.units = spellActivity.range.units;
-        }
-        if ((spellActivity.range as any)?.special) {
-          (this.range as any).special = (spellActivity.range as any).special;
-        }
-      }
-
-      // Activation: inherit activation data from spell activity
-      if (!this._source.activation?.override) {
-        if (spellActivity.activation?.type) {
-          this.activation.type = spellActivity.activation.type;
-        }
-        if (spellActivity.activation?.value !== undefined && spellActivity.activation?.value !== null) {
-          this.activation.value = spellActivity.activation.value;
-        }
-        if (spellActivity.activation?.condition) {
-          this.activation.condition = spellActivity.activation.condition;
-        }
-      }
-
-      // Duration: inherit duration data from spell activity (falls through to spell item system data)
-      if (!this._source.duration?.override) {
-        const spellDuration = spell.system?.duration;
-        if (spellDuration?.value) {
-          this.duration.value = spellDuration.value;
-        }
-        if (spellDuration?.units) {
-          this.duration.units = spellDuration.units;
-        }
-      }
+      // dnd5e handles CastActivity overrides via an enchantment effect on the cached spell
+      // (see getSpellChanges/getCachedSpellData) — no need to copy spell values onto the
+      // CastActivity here. The spell's own workflow uses the spell's activity data directly.
     }
 
     get possibleOtherActivity() {
