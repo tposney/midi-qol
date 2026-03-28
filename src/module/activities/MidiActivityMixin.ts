@@ -5,6 +5,7 @@ import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFir
 import { OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { ConditionEditor } from "../apps/ConditionEditor.js";
+import { RegionBehaviorEditor } from "../apps/RegionBehaviorEditor.js";
 import { averageDice, skipConcentrationActorUuids } from "../patching.js"
 import {
   aoeTargetTypeOptions,
@@ -145,7 +146,7 @@ export let MidiActivityMixin = Base => {
     static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.SHARED"];
 
     static defineSchema() {
-      const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, SetField } = foundry.data.fields;
+      const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, SetField, NumberField, ColorField } = foundry.data.fields;
       const { FormulaField } = globalThis.dnd5e.dataModels.fields;
       const schema = {
         ...super.defineSchema(),
@@ -207,7 +208,32 @@ export let MidiActivityMixin = Base => {
           preRemoveConditionText: new MidiConditionField({ name: "removeCondition", initial: "" }),
           //@ts-expect-error find out why there is a type error here
           postRemoveConditionText: new MidiConditionField({ name: "postRemoveCondition", initial: "" }),
-        })
+        }),
+        regionBehavior: new SchemaField({
+          enabled: new BooleanField({ initial: false }),
+          dispositionFilter: new NumberField({ initial: -1, choices: { [-1]: "Enemies", [0]: "All", [1]: "Allies" } }),
+          excludeSource: new BooleanField({ initial: true }),
+          oncePerTurn: new BooleanField({ initial: true }),
+          // @ts-expect-error fvtt-types missing EDGE_RESTRICTION_TYPES (v14 regions use EDGE not WALL)
+          wallRestriction: new StringField({ initial: "none", choices: ["none", ...CONST.EDGE_RESTRICTION_TYPES] }),
+          regionVisibility: new NumberField({ initial: CONST.REGION_VISIBILITY.ALWAYS, choices: Object.values(CONST.REGION_VISIBILITY) }),
+          rules: new ArrayField(new SchemaField({
+            trigger: new StringField({ required: true, blank: false, initial: "entry" }),
+            action: new StringField({ required: true, blank: false, initial: "useActivity" }),
+            targetId: new StringField({ required: true, blank: false, initial: "" }),
+          }), { initial: [] }),
+        }),
+        regionLight: new SchemaField({
+          enabled: new BooleanField({ initial: false }),
+          dim: new NumberField({ initial: 0, min: 0 }),
+          bright: new NumberField({ initial: 0, min: 0 }),
+          color: new ColorField({ initial: null, nullable: true }),
+          alpha: new NumberField({ initial: 0.5, min: 0, max: 1 }),
+          luminosity: new NumberField({ initial: 0.5, min: 0, max: 1 }),
+          animationType: new StringField({ initial: "", nullable: true }),
+          animationSpeed: new NumberField({ initial: 5, min: 0, max: 10 }),
+          animationIntensity: new NumberField({ initial: 5, min: 1, max: 10 }),
+        }),
       };
       return schema;
     }
@@ -1748,7 +1774,7 @@ export let MidiActivityMixin = Base => {
       return super.shouldHideChatButton?.(button, message) ?? false;
     }
 
-    async _placeEmanationTemplate(workflow: Workflow) {
+    async _placeEmanationTemplate(workflow: Workflow, castLevel?: number) {
       const autoCreateTemplate = activityHasAutoPlaceTemplate(this);
       const actor = this.item.parent;
       const tokenToUse = workflow.token ?? getToken(actor);
@@ -1788,21 +1814,143 @@ export let MidiActivityMixin = Base => {
           const docToStore = regionDoc ?? td;
           td.object?.refresh();
           await busyWait(10);
+
+          if (regionDoc) {
+            const regionUpdate: Record<string, any> = {
+              attachment: { token: tokenToUse.document.id },
+            };
+            // Apply configured region visibility (default ALWAYS from compat shim)
+            const rbConfig = this.regionBehavior;
+            if (rbConfig?.enabled && rbConfig.regionVisibility !== undefined) {
+              regionUpdate.visibility = rbConfig.regionVisibility;
+            }
+            await regionDoc.update(regionUpdate);
+          }
+
           if (workflow) {
             workflow.templateUuid = docToStore.uuid;
-            if (installedModules.get("walledtemplates") && this.flags?.walledtemplates?.attachToken === "caster") {
-              // v14: td.object may be undefined (Region-backed), walledtemplates needs its own v14 update
-              if (td.object) {
-                // @ts-expect-error walledtemplates types
-                await tokenToUse.attachTemplate(td.object, { "flags.dae.stackable": "noneName" }, true);
-              }
-              if (workflow && !foundry.utils.getProperty(this, "item.flags.walledtemplates.noAutotarget"))
-                selectTargetsFromTemplates([docToStore.uuid]);
-            }
-            else if (getActivityAutoTargetAction(this) !== "none") selectTargetsFromTemplates([docToStore.uuid]);
+            if (getActivityAutoTargetAction(this) !== "none") selectTargetsFromTemplates([docToStore.uuid]);
           } else selectTargetsFromTemplates([docToStore.uuid]);
           return templateDocuments;
         }
+      }
+    }
+
+    /**
+     * Attach a MidiRegionActivityBehaviorType to a RegionDocument.
+     * If `regionBehavior.enabled` is set on this activity, uses the stored config.
+     * Otherwise falls back to auto-deriving from the overtime sibling activity.
+     * @param regionDoc The Region to attach the behavior to
+     * @param workflow The current workflow
+     * @param overTimeActivity The activity with isOverTimeFlag (may differ from `this` if `this` is the Cast activity)
+     * @param castLevel The spell level from the usage message (set by dnd5e's _prepareUsageScaling before _usageChatContext)
+     */
+    async _attachRegionActivityBehavior(regionDoc: RegionDocument.Implementation, workflow: Workflow, overTimeActivity: any, castLevel?: number) {
+      const rbConfig = this.regionBehavior;
+      console.error(`MidiActivity._attachRegionActivityBehavior | rbConfig=`, rbConfig, `overTimeActivity=`, overTimeActivity?.name);
+
+      // If explicitly configured on this activity, use stored config
+      // Convert portable IDs/identifiers from the activity schema to full UUIDs for the behavior type
+      if (rbConfig?.enabled) {
+        const resolvedRules: Array<{trigger: string, action: string, targetUuid: string}> = [];
+        for (const rule of rbConfig.rules ?? []) {
+          if (rule.action === "useActivity") {
+            // @ts-expect-error no dnd5e types for activities
+            const act = this.item?.system.activities?.find(
+              (a: any) => (a.identifier || a.midiProperties?.identifier) === rule.targetId
+            );
+            if (act) resolvedRules.push({ trigger: rule.trigger, action: rule.action, targetUuid: act.uuid });
+          } else {
+            // applyEffect / removeEffect — resolve effect ID to UUID
+            const effect = this.item?.effects.get(rule.targetId);
+            if (effect) resolvedRules.push({ trigger: rule.trigger, action: rule.action, targetUuid: effect.uuid });
+          }
+        }
+
+        console.error(`MidiActivity._attachRegionActivityBehavior | resolved ${resolvedRules.length} rules from ${rbConfig.rules?.length ?? 0} config rules:`, resolvedRules);
+
+        const behaviorData = {
+          type: `${MODULE_ID}.regionActivity` as const,
+          name: `${this.item?.name ?? "Activity"} Region Activity`,
+          system: {
+            sourceItemUuid: this.item?.uuid ?? "",
+            sourceActorUuid: this.actor?.uuid ?? "",
+            rules: resolvedRules,
+            dispositionFilter: rbConfig.dispositionFilter ?? -1,
+            castLevel: castLevel ?? workflow?.spellLevel ?? 0,
+            excludeSource: rbConfig.excludeSource ?? true,
+            oncePerTurn: rbConfig.oncePerTurn ?? true,
+            wallRestriction: rbConfig.wallRestriction ?? "none",
+          },
+        };
+        console.error(`MidiActivity._attachRegionActivityBehavior | creating behavior with data:`, JSON.parse(JSON.stringify(behaviorData)));
+        await regionDoc.createEmbeddedDocuments("RegionBehavior", [behaviorData] as any);
+
+        // Set region restriction if a wall restriction type is selected
+        if (rbConfig.wallRestriction && rbConfig.wallRestriction !== "none") {
+          // @ts-expect-error fvtt-types missing v14 RegionDocument.restriction field
+          await regionDoc.update({ restriction: { enabled: true, type: rbConfig.wallRestriction, priority: 0 } });
+        }
+      } else if (overTimeActivity) {
+        // Fallback: auto-derive from overtime activity (existing logic, kept for backward compat)
+        const overTimeProps = overTimeActivity.overTimeProperties;
+        const triggerTurnStart = overTimeProps?.turnChoice === "start";
+        const triggerTurnEnd = overTimeProps?.turnChoice === "end";
+
+        // Collect dontApply effect UUIDs from the item — these are entry/exit effects
+        const effectUuids: string[] = [];
+        for (const effect of this.item?.effects ?? []) {
+          if (!effect?.id) continue;
+          if (effect.transfer) continue;
+          if (!effect.flags?.dae?.dontApply) continue;
+          effectUuids.push(effect.uuid);
+        }
+
+        const activityUuid = overTimeActivity.uuid ?? "";
+        const rules: Array<{trigger: string, action: string, targetUuid: string}> = [];
+        if (activityUuid) rules.push({ trigger: "entry", action: "useActivity", targetUuid: activityUuid });
+        if (triggerTurnStart && activityUuid) rules.push({ trigger: "turnStart", action: "useActivity", targetUuid: activityUuid });
+        if (triggerTurnEnd && activityUuid) rules.push({ trigger: "turnEnd", action: "useActivity", targetUuid: activityUuid });
+        for (const effectUuid of effectUuids) {
+          rules.push({ trigger: "entry", action: "applyEffect", targetUuid: effectUuid });
+          rules.push({ trigger: "exit", action: "removeEffect", targetUuid: effectUuid });
+        }
+
+        const behaviorData = {
+          type: `${MODULE_ID}.regionActivity` as const,
+          name: `${this.item?.name ?? "Activity"} Region Activity`,
+          system: {
+            sourceItemUuid: this.item?.uuid ?? "",
+            sourceActorUuid: this.actor?.uuid ?? "",
+            rules,
+            dispositionFilter: -1,
+            castLevel: castLevel ?? workflow?.spellLevel ?? 0,
+            excludeSource: true,
+            oncePerTurn: true,
+          },
+        };
+
+        await regionDoc.createEmbeddedDocuments("RegionBehavior", [behaviorData] as any);
+      }
+
+      // Attach light behavior if configured on this activity
+      const lightConfig = this.regionLight;
+      if (lightConfig?.enabled && (lightConfig.dim > 0 || lightConfig.bright > 0)) {
+        const lightBehaviorData = {
+          type: `${MODULE_ID}.regionLight` as const,
+          name: `${this.item?.name ?? "Activity"} Region Light`,
+          system: {
+            dim: lightConfig.dim ?? 0,
+            bright: lightConfig.bright ?? 0,
+            color: lightConfig.color || null,
+            alpha: lightConfig.alpha ?? 0.5,
+            luminosity: lightConfig.luminosity ?? 0.5,
+            animationType: lightConfig.animationType || null,
+            animationSpeed: lightConfig.animationSpeed ?? 5,
+            animationIntensity: lightConfig.animationIntensity ?? 5,
+          },
+        };
+        await regionDoc.createEmbeddedDocuments("RegionBehavior", [lightBehaviorData] as any);
       }
     }
 
@@ -1819,7 +1967,8 @@ export let MidiActivityMixin = Base => {
       const emanationNoTemplate = activityHasEmanationNoTemplate(this);
       // If emanationTemplate or emanationNoTemplate setup game.user?.targets.
       if (tokenToUse && autoCreateTemplate) {
-        this.templates = await this._placeEmanationTemplate(workflow);
+        const castLevel = foundry.utils.getProperty(message, "data.system.spellLevel") as number | undefined;
+        this.templates = await this._placeEmanationTemplate(workflow, castLevel);
       }
       if (tokenToUse && emanationNoTemplate) {
         setRangedTargets(tokenToUse, this.target);
@@ -1993,6 +2142,7 @@ export let MidiActivityMixinSheet = Base => {
         ...super.DEFAULT_OPTIONS.actions,
         addMacro: MidiActivitySheet.#addMacro,
         openConditionEditor: MidiActivitySheet.#openConditionEditor,
+        openRegionBehaviorEditor: MidiActivitySheet.#openRegionBehaviorEditor,
       }
     }
     static #addMacro() {
@@ -2018,6 +2168,10 @@ export let MidiActivityMixinSheet = Base => {
         },
         onCancel: () => { }
       }).render({ force: true });
+    }
+
+    static #openRegionBehaviorEditor() {
+      new RegionBehaviorEditor(this.activity).render({ force: true });
     }
 
     static PARTS = {
@@ -2126,6 +2280,50 @@ export let MidiActivityMixinSheet = Base => {
         return this._prepareMidiQolContext(context);
       }
       return context;
+    }
+
+    async _onRender(context, options) {
+      await super._onRender(context, options);
+
+      // Inject Region Behaviour button into the targeting section when activity has an area target
+      // activityHasAreaTarget checks GameSystemConfig.areaTargetTypes — includes emanation but excludes emanationNoTemplate
+      if (!activityHasAreaTarget(this.activity)) return;
+      const targetingTab = this.element.querySelector('section[data-tab="activation-targeting"]');
+      if (!targetingTab) return;
+      // Find the last fieldset in the targeting tab (the "Target Type Area" fieldset)
+      const fieldsets = targetingTab.querySelectorAll("fieldset");
+      const areaFieldset = fieldsets[fieldsets.length - 1];
+      if (!areaFieldset) return;
+      // Don't inject twice
+      if (areaFieldset.querySelector('[data-action="openRegionBehaviorEditor"]')) return;
+
+      const enabled = this.activity.regionBehavior?.enabled ?? false;
+      const group = document.createElement("div");
+      group.classList.add("form-group");
+      group.innerHTML = `
+        <label>${i18n("midi-qol.REGION_BEHAVIOR.header")}</label>
+        <div class="form-fields">
+          <input type="checkbox" name="regionBehavior.enabled" ${enabled ? "checked" : ""} />
+          <button type="button" class="unbutton control-button" data-action="openRegionBehaviorEditor"
+            data-tooltip="midi-qol.REGION_BEHAVIOR.editor.hint"
+            aria-label="${i18n("midi-qol.REGION_BEHAVIOR.editor.title")}">
+            <i class="fas fa-cog" inert></i>
+          </button>
+        </div>
+        <p class="hint">${i18n("midi-qol.SHARED.FIELDS.regionBehavior.enabled.hint")}</p>
+      `;
+      areaFieldset.appendChild(group);
+
+      // Auto-set target.override when region behaviour is enabled
+      if (enabled && !this.activity.target?.override) {
+        this.activity.update({ "target.override": true });
+      }
+      const enabledCheckbox = group.querySelector('input[name="regionBehavior.enabled"]') as HTMLInputElement;
+      enabledCheckbox?.addEventListener("change", async () => {
+        if (enabledCheckbox.checked && !this.activity.target?.override) {
+          await this.activity.update({ "target.override": true });
+        }
+      });
     }
   }
 }

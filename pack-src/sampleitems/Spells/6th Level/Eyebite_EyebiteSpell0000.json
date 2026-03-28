@@ -36,8 +36,7 @@
           "enableCondition": "",
           "disableCondition": "",
           "disableIncapacitated": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "_stats": {
@@ -51,7 +50,8 @@
         "lastModifiedBy": null,
         "exportSource": null
       },
-      "_key": "!items.effects!EyebiteSpell0000.eyeAsleepEff0000"
+      "_key": "!items.effects!EyebiteSpell0000.eyeAsleepEff0000",
+      "showIcon": 2
     },
     {
       "name": "Panicked",
@@ -84,8 +84,7 @@
           "enableCondition": "",
           "disableCondition": "",
           "disableIncapacitated": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "_stats": {
@@ -99,7 +98,8 @@
         "lastModifiedBy": null,
         "exportSource": null
       },
-      "_key": "!items.effects!EyebiteSpell0000.eyePanickedEff00"
+      "_key": "!items.effects!EyebiteSpell0000.eyePanickedEff00",
+      "showIcon": 2
     },
     {
       "name": "Sickened",
@@ -132,8 +132,7 @@
           "enableCondition": "",
           "disableCondition": "",
           "disableIncapacitated": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "_stats": {
@@ -147,7 +146,8 @@
         "lastModifiedBy": null,
         "exportSource": null
       },
-      "_key": "!items.effects!EyebiteSpell0000.eyeSickenedEff00"
+      "_key": "!items.effects!EyebiteSpell0000.eyeSickenedEff00",
+      "showIcon": 2
     }
   ],
   "flags": {
@@ -190,7 +190,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

@@ -15,8 +15,7 @@
           "selfTargetAlways": false,
           "durationExpression": "",
           "disableCondition": "",
-          "disableIncapacitated": false,
-          "showIcon": true
+          "disableIncapacitated": false
         },
         "dnd5e-helpers": {
           "rest-effect": "Ignore"
@@ -68,7 +67,8 @@
         ]
       },
       "sort": 0,
-      "_key": "!items.effects!lgK9jaZ1UnAA6aTX.9OFOAQENA1VYGc7T"
+      "_key": "!items.effects!lgK9jaZ1UnAA6aTX.9OFOAQENA1VYGc7T",
+      "showIcon": 2
     }
   ],
   "flags": {
@@ -167,7 +167,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.54"
+        "version": "13.0.55"
       }
     }
   },

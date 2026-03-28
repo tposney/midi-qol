@@ -167,6 +167,89 @@ Two important behavioral differences when using native v14 schema vs the backwar
 3. **Region targeting**: `regionDoc.testPoint({x, y, elevation})` handles 2D polygon containment + elevation range. VolumetricTemplates/WalledTemplates not supported for Region path (those modules need their own v14 updates).
 4. **Cover origin**: Pre-computed from Region shape data (or template placeable) and passed through `ProcessTargetSaveContext.templateCoverOrigin`, avoiding dependency on template placeable in `calculateCoverSaveBonus`.
 
+### 2026-03-23: MidiRegionActivityBehaviorType — UUID Schema + Token Attachment
+
+**Files:** `MidiRegionActivityBehaviorType.ts`, `MidiActivityMixin.ts`, `lang/en.json`, `css/styles.css`
+
+**1. Behavior type schema: IDs/identifiers → full UUIDs**
+
+The behavior type stored on the Region at cast time now stores full UUIDs instead of item-relative effect IDs and activity identifiers. The activity schema on the Item (edited via `RegionBehaviorEditor`) still stores portable IDs/identifiers (survive compendium import). `_attachRegionActivityBehavior` converts at cast time.
+
+| Old Field | New Field | Type |
+|-----------|-----------|------|
+| `entryEffectIds` | `entryEffectUuids` | `SetField(DocumentUUIDField({type:"ActiveEffect"}))` |
+| `exitEffectIds` | `exitEffectUuids` | `SetField(DocumentUUIDField({type:"ActiveEffect"}))` |
+| `onEntryActivities` | `onEntryActivityUuids` | `SetField(StringField)` (Activity is a PseudoDocument, not in `ALL_DOCUMENT_TYPES`) |
+| `onExitActivities` | `onExitActivityUuids` | `SetField(StringField)` |
+| `onTurnStartActivities` | `onTurnStartActivityUuids` | `SetField(StringField)` |
+| `onTurnEndActivities` | `onTurnEndActivityUuids` | `SetField(StringField)` |
+
+Removed `baseLevel` field (unnecessary — retrievable from the activity resolved via UUID).
+
+**Runtime resolution changes:**
+- `_applyEffectsToToken`: `fromUuidSync(effectUuid)` instead of `sourceItem.effects.get(effectId)`
+- `_removeEffectsFromToken`: matches by `flags.midi-qol.regionSourceEffectUuid` (renamed from `regionSourceEffectId`)
+- `_triggerActivity`: takes UUID directly, passes straight to `_executeTriggerActivity` — no identifier→activity lookup
+- `_hasTriggeredThisTurn`/`_markTriggeredThisTurn`: derive flag key from UUID last segment via `_activityKeyFromUuid()`
+
+**Activity UUID display:** Overrides `toInput` on each activity UUID `SetField` in `defineSchema()` to resolve UUIDs to activity names via `fromUuidSync()` for the Region behavior config form. Effect fields render natively via `DocumentUUIDField` → `HTMLDocumentTagsElement`.
+
+**2. Cast level fix**
+
+`_usageChatContext` is called during `super.use()` — before `workflow.castData` is set. The old code fell back to the base spell level; the UUID refactor made it fall back to 0.
+
+Fix: Extract spell level from `message.data.system.spellLevel` (set by dnd5e's `_prepareUsageScaling` before `_usageChatContext` is called) and thread it through `_placeEmanationTemplate(workflow, castLevel)` → `_attachRegionActivityBehavior(regionDoc, workflow, overTimeActivity, castLevel)`.
+
+**3. Emanation region attachment to caster token (v14 native)**
+
+After region creation, sets `regionDoc.update({ attachment: { token: tokenId } })` using Foundry v14's native `RegionDocument.attachment.token` field. The region now automatically moves, rotates, and adjusts elevation with the caster token — handled by `Token#computeAttachedRegionUpdates()` in Foundry core. The token also won't trigger its own attached region's enter/exit events during movement.
+
+Removed the walledtemplates-specific `attachTemplate` code path from `_placeEmanationTemplate` since the native mechanism replaces it.
+
+**CSS:** Added `.region-behavior-config` styles to constrain tag element width and fix justification.
+
+### 2026-03-24: Wall Restriction Dropdown — `CONST.EDGE_RESTRICTION_TYPES`
+
+**Files changed:**
+- `src/module/activities/MidiActivityMixin.ts` — schema + `_attachRegionActivityBehavior`
+- `src/module/regionBehaviors/MidiRegionActivityBehaviorType.ts` — schema
+- `src/module/apps/RegionBehaviorEditor.ts` — dropdown context
+- `templates/apps/RegionBehaviorEditor/regionBehaviorEditor.hbs` — checkbox → `<select>`
+- `lang/en.json` — renamed `wallsBlock` keys to `wallRestriction`, added `none` option
+
+**Problem:** Region activity wall blocking was a boolean (`wallsBlock: true/false`). Foundry v14 Regions support fine-grained restriction types (`CONST.EDGE_RESTRICTION_TYPES`: `["light", "darkness", "sight", "sound", "move"]`) for controlling which wall types block region effects.
+
+**Fix:** Replaced boolean `wallsBlock` with `wallRestriction` StringField. Choices: `"none"` (no wall blocking) plus all `CONST.EDGE_RESTRICTION_TYPES` values. Default: `"move"`. Dropdown labels use Foundry's `REGION.RESTRICTION_TYPES.{type}.label` localization keys. `CONST.EDGE_RESTRICTION_TYPES` required `@ts-expect-error` (fvtt-types only has `WALL_RESTRICTION_TYPES`).
+
+### 2026-03-24: Custom MidiRegionBehaviorConfig Sheet
+
+**Files created:**
+- `src/module/apps/MidiRegionBehaviorConfig.ts` — custom sheet extending `RegionBehaviorConfig`
+- `templates/apps/MidiRegionBehaviorConfig/midiRegionBehaviorConfig.hbs` — template with rules section
+
+**Files modified:**
+- `src/midi-qol.ts` — registered sheet via `DocumentSheetConfig.registerSheet`
+- `css/styles.css` — grid layout for rule rows
+
+**Problem:** The `rules` ArrayField on the `midi-qol.regionActivity` behavior type had no `hasFormSupport` in Foundry v14's `ArrayField`, so the rules section was invisible when editing a region behavior in the region editor. Only the simple fields (sourceItemUuid, dispositionFilter, etc.) rendered via the default `RegionBehaviorConfig`.
+
+**Fix:** Registered a custom `RegionBehaviorConfig` subclass for the `midi-qol.regionActivity` type. The sheet renders standard fields via the parent's form support, plus a custom rules section with dynamic add/remove rows. Each rule row has trigger `<select>`, action `<select>`, and `<document-tags single>` for the target UUID (Foundry's built-in element with native drag-and-drop).
+
+### 2026-03-24: Sample Items — `flags.dae.showIcon` → Native `showIcon`
+
+**Script:** `/tmp/migrate-showicon.mjs`
+
+**Scope:** 79 effects across 62 JSON files in `pack-src/sampleitems/`.
+
+**Problem:** Sample item effects used the deprecated `flags.dae.showIcon` (boolean) instead of v14's native top-level `showIcon` field (numeric, from `CONST.ACTIVE_EFFECT_SHOW_ICON`).
+
+**Transformations:**
+- `flags.dae.showIcon: true` → top-level `showIcon: 2` (ALWAYS)
+- `flags.dae.showIcon: false` → top-level `showIcon: 0` (NEVER)
+- Removed `showIcon` key from `flags.dae` object in each effect
+
+**Result:** 41 effects migrated from `true` → `2`, 38 effects from `false` → `0`. No `flags.dae.showIcon` references remain in pack-src.
+
 ---
 
 ## Phase 3 — Enhancement Options (Future Work)

@@ -38,8 +38,7 @@
           "enableCondition": "",
           "disableCondition": "",
           "disableIncapacitated": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "_stats": {
@@ -53,7 +52,8 @@
         "lastModifiedBy": null,
         "exportSource": null
       },
-      "_key": "!items.effects!J9FnAzEpUf9l0t6f.pwsStunnedEff000"
+      "_key": "!items.effects!J9FnAzEpUf9l0t6f.pwsStunnedEff000",
+      "showIcon": 2
     },
     {
       "name": "No Movement",
@@ -117,8 +117,7 @@
           "enableCondition": "",
           "disableCondition": "",
           "disableIncapacitated": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "_stats": {
@@ -132,7 +131,8 @@
         "lastModifiedBy": null,
         "exportSource": null
       },
-      "_key": "!items.effects!J9FnAzEpUf9l0t6f.pwsNoMoveEff0000"
+      "_key": "!items.effects!J9FnAzEpUf9l0t6f.pwsNoMoveEff0000",
+      "showIcon": 2
     }
   ],
   "flags": {
@@ -175,7 +175,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

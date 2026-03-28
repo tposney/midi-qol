@@ -28,7 +28,7 @@
             </div>
             {{#if hit.acIcons.length}}
             <span class="midi-qol-ac-icons">
-              {{#each hit.acIcons}}{{#if this.icon}}<i class="{{this.icon}} {{this.cssClass}}" {{#if this.tooltip}}data-tooltip="{{this.tooltip}}"{{/if}}></i>{{else}}<img class="{{this.cssClass}}" src="{{this.img}}" {{#if this.tooltip}}data-tooltip="{{this.tooltip}}"{{/if}} />{{/if}}{{/each}}
+              {{#each hit.acIcons}}{{#if this.icon}}<i class="{{this.icon}} {{this.cssClass}}" {{#if this.tooltip}}data-tooltip="{{this.tooltip}}"{{/if}}></i>{{else if this.useDnd5eIcon}}<dnd5e-icon class="{{this.cssClass}}" src="{{this.img}}" {{#if this.tooltip}}data-tooltip="{{this.tooltip}}"{{/if}}></dnd5e-icon>{{else}}<img class="{{this.cssClass}}" src="{{this.img}}" {{#if this.tooltip}}data-tooltip="{{this.tooltip}}"{{/if}} />{{/if}}{{/each}}
             </span>
             {{/if}}
             {{#if showAC}}

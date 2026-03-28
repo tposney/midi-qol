@@ -17,8 +17,7 @@
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "name": "Divine Word (Deafened)",
@@ -43,7 +42,8 @@
         "changes": []
       },
       "sort": 0,
-      "_key": "!items.effects!DivineWord000000.dvnWrdDeafened00"
+      "_key": "!items.effects!DivineWord000000.dvnWrdDeafened00",
+      "showIcon": 2
     },
     {
       "_id": "dvnWrdBlndDeaf00",
@@ -59,8 +59,7 @@
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "name": "Divine Word (Blinded & Deafened)",
@@ -86,7 +85,8 @@
         "changes": []
       },
       "sort": 0,
-      "_key": "!items.effects!DivineWord000000.dvnWrdBlndDeaf00"
+      "_key": "!items.effects!DivineWord000000.dvnWrdBlndDeaf00",
+      "showIcon": 2
     },
     {
       "_id": "dvnWrdAllThree00",
@@ -102,8 +102,7 @@
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "name": "Divine Word (Blinded, Deafened & Stunned)",
@@ -130,7 +129,8 @@
         "changes": []
       },
       "sort": 0,
-      "_key": "!items.effects!DivineWord000000.dvnWrdAllThree00"
+      "_key": "!items.effects!DivineWord000000.dvnWrdAllThree00",
+      "showIcon": 2
     }
   ],
   "flags": {
@@ -196,7 +196,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

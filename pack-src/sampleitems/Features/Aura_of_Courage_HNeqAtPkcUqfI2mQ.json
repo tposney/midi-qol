@@ -19,8 +19,7 @@
           "selfTargetAlways": false,
           "durationExpression": "",
           "disableCondition": "",
-          "disableIncapacitated": false,
-          "showIcon": true
+          "disableIncapacitated": false
         },
         "core": {
           "overlay": false
@@ -71,7 +70,8 @@
         "round": 179,
         "turn": 0,
         "combat": null
-      }
+      },
+      "showIcon": 2
     }
   ],
   "flags": {
@@ -164,7 +164,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.54"
+        "version": "13.0.55"
       }
     }
   },

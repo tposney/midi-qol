@@ -29,8 +29,7 @@
           "enableCondition": "",
           "disableCondition": "",
           "disableIncapacitated": false,
-          "dontApply": false,
-          "showIcon": false
+          "dontApply": false
         }
       },
       "_stats": {
@@ -69,7 +68,8 @@
         "round": null,
         "turn": 1,
         "combat": null
-      }
+      },
+      "showIcon": 0
     },
     {
       "_id": "8r9eWcqP6QyIbPWU",
@@ -96,8 +96,7 @@
           "enableCondition": "",
           "disableCondition": "",
           "disableIncapacitated": false,
-          "dontApply": false,
-          "showIcon": false
+          "dontApply": false
         }
       },
       "_stats": {
@@ -124,7 +123,8 @@
         ]
       },
       "sort": 0,
-      "_key": "!items.effects!hbc8mhTMkQRZhqHS.8r9eWcqP6QyIbPWU"
+      "_key": "!items.effects!hbc8mhTMkQRZhqHS.8r9eWcqP6QyIbPWU",
+      "showIcon": 0
     }
   ],
   "flags": {
@@ -194,7 +194,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

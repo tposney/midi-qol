@@ -63,6 +63,12 @@
       }
     ]
   },
+  "documentTypes": {
+    "RegionBehavior": {
+      "regionActivity": {},
+      "regionLight": {}
+    }
+  },
   "packs": [
     {
       "name": "midiqol-sample-items",

@@ -172,7 +172,8 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
    - The name `onSave` means "also apply on save", NOT "only apply if saved"
 
 2. **CRITICAL: Foundry document IDs must be exactly 16 characters**
-   - ALL IDs: item `_id`, effect `_id`, activity `_id`. 15-char IDs cause silent failures, undefined `uuid`, tidy5e crashes.
+   - ALL IDs: item `_id`, effect `_id`, activity `_id`. 15-char IDs cause silent failures: Foundry silently regenerates them on import, breaking any stored references to that ID.
+   - **MANDATORY VERIFICATION**: After creating ANY ID, count the characters explicitly (e.g., `sgGuardianSpd000` = s-g-G-u-a-r-d-i-a-n-S-p-d-0-0-0 = 16 ✓). Do NOT rely on visual pattern matching — IDs that "look the right length" are the most common source of bugs.
    - IDs in `_key` fields must be consistent. Filename `Name_Id.json` must match `_id`.
    - When in doubt, pad with trailing zeros: `Befuddlement0000` not `Befuddlement000`
 

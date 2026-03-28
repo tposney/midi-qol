@@ -1,0 +1,101 @@
+<form autocomplete="off">
+  <fieldset>
+    <legend>{{ localize "midi-qol.REGION_BEHAVIOR.editor.general" }}</legend>
+
+    <div class="form-group">
+      <label>{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.enabled.label" }}</label>
+      <div class="form-fields">
+        <input type="checkbox" name="enabled" {{checked enabled}} />
+      </div>
+      <p class="hint">{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.enabled.hint" }}</p>
+    </div>
+
+    <div class="form-group">
+      <label>{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.dispositionFilter.label" }}</label>
+      <div class="form-fields">
+        <select name="dispositionFilter">
+          {{#each dispositionOptions}}
+            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.excludeSource.label" }}</label>
+      <div class="form-fields">
+        <input type="checkbox" name="excludeSource" {{checked excludeSource}} />
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.oncePerTurn.label" }}</label>
+      <div class="form-fields">
+        <input type="checkbox" name="oncePerTurn" {{checked oncePerTurn}} />
+      </div>
+      <p class="hint">{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.oncePerTurn.hint" }}</p>
+    </div>
+
+    <div class="form-group">
+      <label>{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.wallRestriction.label" }}</label>
+      <div class="form-fields">
+        <select name="wallRestriction">
+          {{#each wallRestrictionOptions}}
+            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <p class="hint">{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.wallRestriction.hint" }}</p>
+    </div>
+
+    <div class="form-group">
+      <label>{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.regionVisibility.label" }}</label>
+      <div class="form-fields">
+        <select name="regionVisibility">
+          {{#each regionVisibilityOptions}}
+            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <p class="hint">{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.regionVisibility.hint" }}</p>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>{{ localize "midi-qol.REGION_BEHAVIOR.editor.rules" }}</legend>
+    <div class="rules-header">
+      <span>{{ localize "midi-qol.REGION_BEHAVIOR.editor.trigger" }}</span>
+      <span>{{ localize "midi-qol.REGION_BEHAVIOR.editor.action" }}</span>
+      <span>{{ localize "midi-qol.REGION_BEHAVIOR.editor.target" }}</span>
+      <a data-action="addRule" title="Add Rule"><i class="fa-regular fa-plus-square"></i></a>
+    </div>
+    <ol class="rules-list scrollable">
+      {{#each rules}}
+      <li data-index="{{this.index}}" class="rule-row">
+        <select name="rules.{{this.index}}.trigger">
+          {{#each ../triggerChoices}}
+            <option value="{{this.value}}" {{#if (eq this.value ../trigger)}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+        <select name="rules.{{this.index}}.action">
+          {{#each ../actionChoices}}
+            <option value="{{this.value}}" {{#if (eq this.value ../action)}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+        <select name="rules.{{this.index}}.targetId">
+          <option value="">—</option>
+          {{#each this.targetOptions}}
+            <option value="{{this.value}}" {{#if (eq this.value ../targetId)}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+        <a data-action="deleteRule" title="Delete Rule"><i class="fa-solid fa-trash"></i></a>
+      </li>
+      {{/each}}
+    </ol>
+  </fieldset>
+
+  <footer class="sheet-footer flexrow">
+    <button type="button" data-action="save"><i class="fas fa-save"></i> {{ localize "Save" }}</button>
+    <button type="button" data-action="cancel"><i class="fas fa-times"></i> {{ localize "Cancel" }}</button>
+  </footer>
+</form>

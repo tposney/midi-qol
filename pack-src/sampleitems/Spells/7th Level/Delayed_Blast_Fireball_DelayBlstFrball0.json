@@ -18,7 +18,6 @@
           "specialDuration": [],
           "transfer": false,
           "dontApply": false,
-          "showIcon": true,
           "selfTarget": true
         }
       },
@@ -49,7 +48,8 @@
         ]
       },
       "sort": 0,
-      "_key": "!items.effects!DelayBlstFrball0.dbfChargingEff00"
+      "_key": "!items.effects!DelayBlstFrball0.dbfChargingEff00",
+      "showIcon": 2
     }
   ],
   "flags": {
@@ -118,7 +118,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

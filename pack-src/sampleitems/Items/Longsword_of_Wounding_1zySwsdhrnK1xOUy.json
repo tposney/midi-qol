@@ -24,7 +24,6 @@
           "selfTarget": false,
           "selfTargetAlways": false,
           "dontApply": false,
-          "showIcon": false,
           "durationExpression": ""
         },
         "ActiveAuras": {
@@ -123,7 +122,8 @@
         ]
       },
       "sort": 0,
-      "_key": "!items.effects!1zySwsdhrnK1xOUy.BqzfX8p9NqtZ1Qxx"
+      "_key": "!items.effects!1zySwsdhrnK1xOUy.BqzfX8p9NqtZ1Qxx",
+      "showIcon": 0
     }
   ],
   "flags": {
@@ -280,7 +280,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

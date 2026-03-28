@@ -1,0 +1,48 @@
+<section class="standard-form scrollable">
+    {{#if hint}}
+    <p class="hint">{{localize hint}}</p>
+    {{/if}}
+
+    {{! Standard fields from parent _getFields() }}
+    {{#each fields as |outer|}}
+    {{#if outer.fieldset}}
+    <fieldset>
+        <legend>{{localize outer.legend}}</legend>
+        {{#each outer.fields as |f|}}
+        {{formField f.field value=f.value localize=true model=../../model}}
+        {{/each}}
+    </fieldset>
+    {{else}}
+    {{formField outer.field value=outer.value localize=true model=../model}}
+    {{/if}}
+    {{/each}}
+
+    {{! Rules section }}
+    <fieldset>
+        <legend>{{localize "midi-qol.REGION_BEHAVIOR.editor.rules"}}</legend>
+        <div class="rules-header">
+            <span>{{localize "midi-qol.REGION_BEHAVIOR.editor.trigger"}}</span>
+            <span>{{localize "midi-qol.REGION_BEHAVIOR.editor.action"}}</span>
+            <span>{{localize "midi-qol.REGION_BEHAVIOR.editor.target"}}</span>
+            <a data-action="addRule" title="{{localize 'midi-qol.REGION_BEHAVIOR.config.addRule'}}"><i class="fa-regular fa-plus-square"></i></a>
+        </div>
+        <ol class="rules-list">
+            {{#each rules}}
+            <li data-index="{{this.index}}" class="rule-row">
+                <select data-field="trigger" name="system.rules.{{this.index}}.trigger">
+                    {{#each ../triggerChoices}}
+                    <option value="{{this.value}}" {{#if (eq this.value ../trigger)}}selected{{/if}}>{{this.label}}</option>
+                    {{/each}}
+                </select>
+                <select data-field="action" name="system.rules.{{this.index}}.action">
+                    {{#each ../actionChoices}}
+                    <option value="{{this.value}}" {{#if (eq this.value ../action)}}selected{{/if}}>{{this.label}}</option>
+                    {{/each}}
+                </select>
+                <document-tags name="system.rules.{{this.index}}.targetUuid" single {{#if this.targetUuid}}value="{{this.targetUuid}}"{{/if}}></document-tags>
+                <a data-action="deleteRule" title="{{localize 'midi-qol.REGION_BEHAVIOR.config.deleteRule'}}"><i class="fa-solid fa-trash"></i></a>
+            </li>
+            {{/each}}
+        </ol>
+    </fieldset>
+</section>

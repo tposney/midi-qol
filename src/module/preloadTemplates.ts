@@ -53,6 +53,7 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/apps/SoundConfigPanel/sounds.hbs",
     "modules/midi-qol/templates/apps/TargetConfirmation/targetConfirmation.hbs",
     "modules/midi-qol/templates/apps/TargetConfirmationConfig/targetConfirmationConfig.hbs",
+    "modules/midi-qol/templates/apps/MidiRegionBehaviorConfig/midiRegionBehaviorConfig.hbs",
     "modules/midi-qol/templates/apps/ModuleReviewDialog/moduleReview.hbs",
     "modules/midi-qol/templates/apps/TroubleShooter/common.hbs",
     "modules/midi-qol/templates/apps/TroubleShooter/errors.hbs",

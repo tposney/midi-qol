@@ -1095,14 +1095,16 @@ export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffe
        } else foundry.utils.setProperty(actor, change.key, change.value);
      } */
   } else if (deferredEvaluation.some(k => change.key.startsWith(k))) {
-    // v14 migrateChangeValue converts "0"→0, "1"→1, "true"→true, "false"→false via JSON.parse
-    if (typeof change.value === "boolean") foundry.utils.setProperty(actor, change.key, change.value);
-    else if (change.value === 0) foundry.utils.setProperty(actor, change.key, false);
-    else if (change.value === 1) foundry.utils.setProperty(actor, change.key, true);
-    else if (typeof change.value !== "string") foundry.utils.setProperty(actor, change.key, change.value);
-    else if (["true", "1"].includes(change.value.trim())) foundry.utils.setProperty(actor, change.key, true);
-    else if (["false", "0"].includes(change.value.trim())) foundry.utils.setProperty(actor, change.key, false);
-    else foundry.utils.setProperty(actor, change.key, change.value);
+    // v14 AnyField stores values as-is (no auto-coercion), but v13 backward-compat shim's
+    // migrateChangeValue ran JSON.parse converting "0"→0, "1"→1, etc. Handle both.
+    const changeValue = change.value as string | number | boolean;
+    if (typeof changeValue === "boolean") foundry.utils.setProperty(actor, change.key, changeValue);
+    else if (changeValue === 0) foundry.utils.setProperty(actor, change.key, false);
+    else if (changeValue === 1) foundry.utils.setProperty(actor, change.key, true);
+    else if (typeof changeValue !== "string") foundry.utils.setProperty(actor, change.key, changeValue);
+    else if (["true", "1"].includes(changeValue.trim())) foundry.utils.setProperty(actor, change.key, true);
+    else if (["false", "0"].includes(changeValue.trim())) foundry.utils.setProperty(actor, change.key, false);
+    else foundry.utils.setProperty(actor, change.key, changeValue);
   } else if (change.key.match(/system.traits.*custom/)) {
     // do the trait application here - think about how to update both trait and bypass
   } else if (typeof change.value === "string" && change.key.startsWith("flags.midi-qol")) {
@@ -2892,6 +2894,26 @@ export interface WallCollisionOptions {
 }
 
 /**
+ * v14: Check if a region surface blocks the path between two elevated points.
+ * Returns false immediately for same-elevation rays (no surface can block).
+ */
+function checkSurfaceCollision(
+  origin: { x: number, y: number },
+  dest: { x: number, y: number },
+  options: WallCollisionOptions
+): boolean {
+  const originElev = options.originElevation;
+  const destElev = options.destElevation;
+  if (originElev === undefined || destElev === undefined || originElev === destElev) return false;
+  // @ts-expect-error testSurfaceCollision not in fvtt-types
+  return !!canvas.scene?.testSurfaceCollision?.(
+    { x: origin.x, y: origin.y, elevation: originElev },
+    { x: dest.x, y: dest.y, elevation: destElev },
+    { type: "sight", mode: "any" }
+  );
+}
+
+/**
  * Check if a wall blocks the path between two points.
  * Respects the wallsBlockRange setting and handles different collision modes.
  *
@@ -2915,6 +2937,8 @@ export function checkWallCollision(
         mode: "any",
         type: "sight"
       });
+      // v14: also check region surface collisions for cross-elevation rays
+      if (!blocked) blocked = checkSurfaceCollision(origin, dest, options);
       return blocked;
     }
 
@@ -2944,6 +2968,7 @@ export function checkWallCollision(
         mode: "any",
         type: "sight"
       });
+      if (!blocked) blocked = checkSurfaceCollision(origin, dest, options);
       return blocked;
 
     case "alternative":
@@ -2954,6 +2979,7 @@ export function checkWallCollision(
           mode: "any",
           type: "sight"
         });
+        if (!blocked) blocked = checkSurfaceCollision(origin, dest, options);
         return blocked;
       }
       return false;
@@ -5770,12 +5796,25 @@ export async function reactionDialog(
         const activity = reactionActivities.find(i => i.uuid === button.key);
         if (activity) {
           dialog.close();
-          // options = foundry.utils.mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid, checkGMStatus: false}, {overwrite: true});
+          // For Cast activities that don't override targeting, resolve the effective target type from the spell
+          let effectiveTargetType = activity.target?.affects?.type;
+          // @ts-expect-error no dnd5e-types for _source.target.override
+          if (activity.type === "cast" && !activity._source?.target?.override) {
+            // @ts-expect-error no dnd5e-types for CastActivity.cachedSpell / spell
+            const spell: Item.Implementation | undefined = activity.cachedSpell ?? fromUuidSync(activity.spell?.uuid);
+            if (spell) {
+              // @ts-expect-error no dnd5e-types for item.system.activities
+              const activities = spell.system?.activities;
+              const activityList = (activities instanceof Collection) ? activities.contents : Object.values(activities ?? {});
+              const spellActivity = activityList.find((a: any) => a.canUse) ?? activityList[0];
+              if (spellActivity?.target?.affects?.type) effectiveTargetType = spellActivity.target.affects.type;
+            }
+          }
           const itemRollOptions = foundry.utils.mergeObject({
             createWorkflow: true,
             configureDialog: true,
             checkGMStatus: false,
-            targetUuids: activity.target?.affects?.type !== "self" ? [triggerTokenUuid] : [getOrCreateTokenForActor(actor)?.document?.uuid],
+            targetUuids: effectiveTargetType !== "self" ? [triggerTokenUuid] : [getOrCreateTokenForActor(actor)?.document?.uuid],
             isReaction: true,
             workflowOptions: { targetConfirmation: "none" },
             ignoreUserTargets: true
@@ -7854,12 +7893,26 @@ export function initializeVision(tk: Token.Implementation, force = false) {
   const sourceId = tk.sourceId;
   tk.vision = new CONFIG.Canvas.visionSourceClass({ sourceId, object: tk });
 
-  tk.vision.initialize({
+  // v14: blinded is an object with per-cause states, not a single boolean
+  // @ts-expect-error protected _getVisionBlindedStates
+  const blindedStates = tk._getVisionBlindedStates?.() ?? {
+    blind: tk.document.hasStatusEffect(CONFIG.specialStatusEffects.BLIND),
+    burrow: tk.document.hasStatusEffect(CONFIG.specialStatusEffects.BURROW)
+  };
+  for (const state in blindedStates) tk.vision.blinded[state] = blindedStates[state];
+
+  // v14: use the token's own data builder which includes level for multi-level scenes
+  // @ts-expect-error protected _getVisionSourceData
+  const visionData = tk._getVisionSourceData?.() ?? {
     x: tk.center.x,
     y: tk.center.y,
     elevation: tk.document.elevation,
-    radius: Math.clamp(tk.sightRange, 0, canvas.dimensions?.maxR ?? 0),
-    externalRadius: tk.externalRadius, // Math.max(tk.mesh.width, tk.mesh.height) / 2,
+    // @ts-expect-error no dnd5e-types for token.document.level
+    level: tk.document.level,
+    radius: tk.sightRange,
+    // @ts-expect-error lightPerceptionRange may not be typed
+    lightRadius: tk.lightPerceptionRange,
+    externalRadius: tk.externalRadius,
     angle: tk.document.sight.angle,
     contrast: tk.document.sight.contrast,
     saturation: tk.document.sight.saturation,
@@ -7867,10 +7920,11 @@ export function initializeVision(tk: Token.Implementation, force = false) {
     attenuation: tk.document.sight.attenuation,
     rotation: tk.document.rotation,
     visionMode: tk.document.sight.visionMode as foundry.canvas.perception.VisionMode.ConfiguredModes,
-    preview: !!tk._original,
     color: tk.document.sight.color?.toNearest(),
-    blinded: tk.document.hasStatusEffect(CONFIG.specialStatusEffects.BLIND)
-  });
+    preview: !!tk._original,
+  };
+  tk.vision.initialize(visionData);
+
   if (!tk.vision.los) {
     // @ts-expect-error protected
     tk.vision.shape = tk.vision._createRestrictedPolygon();
@@ -7899,12 +7953,16 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
     [0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t],
     [-t2, -t2], [-t2, t2], [t2, t2], [t2, -t2], [-t2, 0], [t2, 0], [0, -t2], [0, t2]
   ] : [[0, 0]];
+  // v14: test points use ElevatedPoint (not PIXI.Point) and each test carries a Level reference
+  const targetElevation = target.document.elevation ?? 0;
+  // @ts-expect-error no dnd5e-types for document.level / scene.levels
+  const targetLevel = canvas.scene.levels?.get(target.document.level) ?? canvas.level;
   const tests = offsets.map(o => ({
-    point: new PIXI.Point(targetPoint.x + o[0], targetPoint.y + o[1]),
-    elevation: target?.document.elevation ?? 0,
+    point: { x: targetPoint.x + o[0], y: targetPoint.y + o[1], elevation: targetElevation },
+    level: targetLevel,
     los: new Map()
   }));
-  const config = { tests, object: target };
+  const config = { tests, object: target, level: targetLevel };
   const tokenDetectionModes = token.detectionModes;
   const modes = CONFIG.Canvas.detectionModes;
   let validModes = new Set(validModesParam);
@@ -7914,7 +7972,13 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   // approximation (ClockwiseSweepPolygon) that can miss narrow visible corridors
   // through wall gaps. Foundry uses this same testCollision approach for restricted
   // vision angles; we extend it to 360° vision for accuracy.
-  if (token.vision) {
+  //
+  // For cross-level tokens, skip pre-population and let Foundry's DetectionMode._testLOS
+  // handle level-split ray logic natively (it splits the ray at the level boundary and
+  // tests walls/surfaces in each level independently).
+  // @ts-expect-error no dnd5e-types for document.level
+  const sameLevel = token.document.level === target.document.level;
+  if (token.vision && sameLevel) {
     const origin = { x: token.vision.x, y: token.vision.y };
     for (const test of tests) {
       const collision = CONFIG.Canvas.polygonBackends.sight.testCollision(
@@ -7934,7 +7998,7 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
     if (result === true) matchedModes.add(detectionModes.lightPerception?.id ?? DetectionModeCONST.BASIC_MODE_ID);
   }
 
-  const lightPerception = tokenDetectionModes.lightPerception;
+  const lightPerception = (tokenDetectionModes as Record<string, any>).lightPerception;
   if (lightPerception && ["lightPerception", "all"].some(mode => validModes.has(mode))) {
     // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
     const result = (lightPerception && token.vision) ? modes.lightPerception.testVisibility(token.vision, lightPerception, config) : false;

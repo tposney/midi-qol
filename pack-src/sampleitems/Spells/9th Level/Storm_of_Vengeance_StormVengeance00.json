@@ -17,8 +17,7 @@
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "name": "Storm of Vengeance (Deafened)",
@@ -43,7 +42,8 @@
         "changes": []
       },
       "sort": 0,
-      "_key": "!items.effects!StormVengeance00.stormDeafenedEf0"
+      "_key": "!items.effects!StormVengeance00.stormDeafenedEf0",
+      "showIcon": 2
     },
     {
       "_id": "stormTrackerEff0",
@@ -60,7 +60,6 @@
           "specialDuration": [],
           "transfer": false,
           "dontApply": false,
-          "showIcon": false,
           "selfTarget": true,
           "selfTargetAlways": true
         }
@@ -92,7 +91,8 @@
         ]
       },
       "sort": 100,
-      "_key": "!items.effects!StormVengeance00.stormTrackerEff0"
+      "_key": "!items.effects!StormVengeance00.stormTrackerEff0",
+      "showIcon": 0
     }
   ],
   "flags": {
@@ -134,7 +134,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     },
     "itemacro": {

@@ -25,8 +25,7 @@
           "enableCondition": "",
           "disableCondition": "",
           "disableIncapacitated": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "img": "icons/creatures/unholy/demon-fire-horned-clawed.webp",
@@ -57,7 +56,8 @@
         "lastModifiedBy": null,
         "exportSource": null
       },
-      "_key": "!items.effects!Y594kb8pSv6Q2d8R.banishedEffect00"
+      "_key": "!items.effects!Y594kb8pSv6Q2d8R.banishedEffect00",
+      "showIcon": 2
     }
   ],
   "flags": {
@@ -127,7 +127,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.54"
+        "version": "13.0.55"
       }
     }
   },

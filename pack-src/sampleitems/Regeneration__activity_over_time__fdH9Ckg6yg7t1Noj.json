@@ -193,7 +193,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },
@@ -230,7 +230,6 @@
           "selfTargetAlways": false,
           "dontApply": false,
           "stackable": "multi",
-          "showIcon": false,
           "durationExpression": "",
           "macroRepeat": "none",
           "specialDuration": []
@@ -272,7 +271,8 @@
         "lastModifiedBy": null,
         "exportSource": null
       },
-      "_key": "!items.effects!fdH9Ckg6yg7t1Noj.K6NAHny5znkioCPj"
+      "_key": "!items.effects!fdH9Ckg6yg7t1Noj.K6NAHny5znkioCPj",
+      "showIcon": 0
     }
   ],
   "folder": null,

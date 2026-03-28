@@ -89,8 +89,7 @@
           "enableCondition": "",
           "disableCondition": "",
           "disableIncapacitated": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "_stats": {
@@ -104,7 +103,8 @@
         "lastModifiedBy": null,
         "exportSource": null
       },
-      "_key": "!items.effects!IrresistDance000.irdDanceEff00000"
+      "_key": "!items.effects!IrresistDance000.irdDanceEff00000",
+      "showIcon": 2
     },
     {
       "name": "Short Dance",
@@ -166,8 +166,7 @@
           "enableCondition": "",
           "disableCondition": "",
           "disableIncapacitated": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "_stats": {
@@ -181,7 +180,8 @@
         "lastModifiedBy": null,
         "exportSource": null
       },
-      "_key": "!items.effects!IrresistDance000.irdShortDance000"
+      "_key": "!items.effects!IrresistDance000.irdShortDance000",
+      "showIcon": 2
     }
   ],
   "flags": {
@@ -224,7 +224,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

@@ -19,8 +19,7 @@
           "selfTargetAlways": false,
           "durationExpression": "",
           "disableIncapacitated": false,
-          "dontApply": false,
-          "showIcon": false
+          "dontApply": false
         },
         "ActiveAuras": {
           "isAura": false,
@@ -73,7 +72,8 @@
         ]
       },
       "sort": 0,
-      "_key": "!items.effects!gORhS685EvD5Q6Lr.FniO7deC5cNc9vuy"
+      "_key": "!items.effects!gORhS685EvD5Q6Lr.FniO7deC5cNc9vuy",
+      "showIcon": 0
     }
   ],
   "flags": {
@@ -222,7 +222,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

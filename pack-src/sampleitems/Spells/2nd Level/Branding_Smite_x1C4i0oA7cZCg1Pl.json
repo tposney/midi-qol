@@ -25,8 +25,7 @@
           "enableCondition": "",
           "disableCondition": "",
           "disableIncapacitated": false,
-          "dontApply": false,
-          "showIcon": false
+          "dontApply": false
         }
       },
       "_stats": {
@@ -59,7 +58,8 @@
         ]
       },
       "sort": 0,
-      "_key": "!items.effects!x1C4i0oA7cZCg1Pl.6hAZJkE4UfjO7Adp"
+      "_key": "!items.effects!x1C4i0oA7cZCg1Pl.6hAZJkE4UfjO7Adp",
+      "showIcon": 0
     }
   ],
   "flags": {
@@ -129,7 +129,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

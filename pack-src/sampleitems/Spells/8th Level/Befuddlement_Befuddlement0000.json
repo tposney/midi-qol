@@ -14,8 +14,7 @@
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "name": "Befuddled",
@@ -45,7 +44,8 @@
         ]
       },
       "sort": 0,
-      "_key": "!items.effects!Befuddlement0000.befuddledEffect0"
+      "_key": "!items.effects!Befuddlement0000.befuddledEffect0",
+      "showIcon": 2
     }
   ],
   "flags": {
@@ -114,7 +114,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

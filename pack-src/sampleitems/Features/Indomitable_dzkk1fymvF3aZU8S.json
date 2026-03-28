@@ -17,8 +17,7 @@
           "stackable": "none",
           "durationExpression": "",
           "disableCondition": "",
-          "disableIncapacitated": false,
-          "showIcon": false
+          "disableIncapacitated": false
         },
         "times-up": {
           "isPassive": false
@@ -93,7 +92,8 @@
         "round": 214,
         "turn": 0,
         "combat": null
-      }
+      },
+      "showIcon": 0
     }
   ],
   "flags": {
@@ -147,7 +147,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

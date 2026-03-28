@@ -24,7 +24,6 @@
           "durationExpression": "",
           "disableIncapacitated": false,
           "dontApply": false,
-          "showIcon": true,
           "enableCondition": "",
           "disableCondition": ""
         }
@@ -56,7 +55,8 @@
         ]
       },
       "sort": 0,
-      "_key": "!items.effects!Jx7qODRKPAwo6oFK.shieldACBonus000"
+      "_key": "!items.effects!Jx7qODRKPAwo6oFK.shieldACBonus000",
+      "showIcon": 2
     }
   ],
   "flags": {
@@ -98,7 +98,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

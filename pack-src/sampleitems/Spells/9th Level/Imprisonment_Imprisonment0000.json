@@ -14,8 +14,7 @@
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "name": "Imprisonment",
@@ -41,7 +40,8 @@
         "changes": []
       },
       "sort": 0,
-      "_key": "!items.effects!Imprisonment0000.imprisonedEffct0"
+      "_key": "!items.effects!Imprisonment0000.imprisonedEffct0",
+      "showIcon": 2
     },
     {
       "_id": "imprisonImmune00",
@@ -54,8 +54,7 @@
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "name": "Imprisonment (Immune)",
@@ -85,7 +84,8 @@
         ]
       },
       "sort": 100,
-      "_key": "!items.effects!Imprisonment0000.imprisonImmune00"
+      "_key": "!items.effects!Imprisonment0000.imprisonImmune00",
+      "showIcon": 2
     }
   ],
   "flags": {
@@ -127,7 +127,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

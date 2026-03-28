@@ -92,7 +92,6 @@
           "selfTargetAlways": false,
           "dontApply": false,
           "stackable": "countDeleteDecrement",
-          "showIcon": true,
           "durationExpression": "",
           "macroRepeat": "none",
           "specialDuration": [],
@@ -136,7 +135,8 @@
         "changes": []
       },
       "sort": 0,
-      "_key": "!items.effects!BtuJVytzMV8jUJFs.tTAx1lkzPXjzwxas"
+      "_key": "!items.effects!BtuJVytzMV8jUJFs.tTAx1lkzPXjzwxas",
+      "showIcon": 2
     }
   ],
   "flags": {
@@ -338,7 +338,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

@@ -14,8 +14,7 @@
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "name": "Prismatic Spray (Indigo - Restrained)",
@@ -47,7 +46,8 @@
         ]
       },
       "sort": 0,
-      "_key": "!items.effects!PrismaticSpray00.prsmtcRestrained"
+      "_key": "!items.effects!PrismaticSpray00.prsmtcRestrained",
+      "showIcon": 2
     },
     {
       "_id": "prsmtcBlinded000",
@@ -63,8 +63,7 @@
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "name": "Prismatic Spray (Violet - Blinded)",
@@ -96,7 +95,8 @@
         ]
       },
       "sort": 100,
-      "_key": "!items.effects!PrismaticSpray00.prsmtcBlinded000"
+      "_key": "!items.effects!PrismaticSpray00.prsmtcBlinded000",
+      "showIcon": 2
     }
   ],
   "flags": {
@@ -162,7 +162,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

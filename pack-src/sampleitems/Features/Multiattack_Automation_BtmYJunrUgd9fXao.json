@@ -160,7 +160,6 @@
           "selfTargetAlways": false,
           "dontApply": false,
           "stackable": "noneName",
-          "showIcon": false,
           "durationExpression": "",
           "macroRepeat": "none",
           "specialDuration": []
@@ -213,7 +212,8 @@
         "round": null,
         "turn": null,
         "combat": null
-      }
+      },
+      "showIcon": 0
     }
   ],
   "folder": "fZIl4G4qj3C894LI",
@@ -333,7 +333,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

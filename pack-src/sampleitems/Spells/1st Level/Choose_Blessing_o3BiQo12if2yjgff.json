@@ -22,7 +22,6 @@
           "selfTargetAlways": false,
           "dontApply": false,
           "stackable": "none",
-          "showIcon": true,
           "durationExpression": "",
           "macroRepeat": "none",
           "specialDuration": [],
@@ -54,7 +53,8 @@
         ]
       },
       "sort": 0,
-      "_key": "!items.effects!o3BiQo12if2yjgff.Q0havLsLloUiTB8e"
+      "_key": "!items.effects!o3BiQo12if2yjgff.Q0havLsLloUiTB8e",
+      "showIcon": 2
     },
     {
       "name": "Ethereal",
@@ -75,7 +75,6 @@
           "selfTargetAlways": false,
           "dontApply": true,
           "stackable": "none",
-          "showIcon": false,
           "durationExpression": "",
           "macroRepeat": "none",
           "specialDuration": [],
@@ -107,7 +106,8 @@
         ]
       },
       "sort": 0,
-      "_key": "!items.effects!o3BiQo12if2yjgff.l0zLtfBsYQBtiBPN"
+      "_key": "!items.effects!o3BiQo12if2yjgff.l0zLtfBsYQBtiBPN",
+      "showIcon": 0
     },
     {
       "name": "Invisible",
@@ -128,7 +128,6 @@
           "selfTargetAlways": false,
           "dontApply": true,
           "stackable": "none",
-          "showIcon": false,
           "durationExpression": "",
           "macroRepeat": "none",
           "specialDuration": [],
@@ -160,7 +159,8 @@
         ]
       },
       "sort": 0,
-      "_key": "!items.effects!o3BiQo12if2yjgff.BKllJaSYjW5sZOjV"
+      "_key": "!items.effects!o3BiQo12if2yjgff.BKllJaSYjW5sZOjV",
+      "showIcon": 0
     }
   ],
   "flags": {
@@ -199,7 +199,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

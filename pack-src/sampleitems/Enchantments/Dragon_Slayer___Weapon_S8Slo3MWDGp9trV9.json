@@ -355,7 +355,6 @@
           "enableCondition": "",
           "disableCondition": "",
           "stackable": "multi",
-          "showIcon": false,
           "durationExpression": "",
           "macroRepeat": "none",
           "specialDuration": []
@@ -397,7 +396,8 @@
         "lastModifiedBy": "Zl1BOUaPLwDEujaL",
         "exportSource": null
       },
-      "_key": "!items.effects!S8Slo3MWDGp9trV9.ZveR6kPKafjcwQdY"
+      "_key": "!items.effects!S8Slo3MWDGp9trV9.ZveR6kPKafjcwQdY",
+      "showIcon": 0
     }
   ],
   "folder": "Rcyn9RLxkqLeYlIN",
@@ -439,7 +439,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

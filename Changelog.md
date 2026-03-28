@@ -1,3 +1,9 @@
+### 14.0.2
+**New Features**
+* New `MidiRegionLightBehaviorType` — a custom region behavior that creates an AmbientLight at the region center, repositions it when the region moves, and deletes it when the region is removed. Configurable per-activity via the Region Behaviour editor (dim/bright radius, color, alpha, luminosity, animation).
+* New Region Behaviour editor on the activity sheet Targeting tab — configure which activities fire on entry/exit/turn-start/turn-end, which effects to apply/remove, disposition filtering, and light settings. Replaces the previous auto-derive-from-overtime fallback for spells with explicit region config.
+* Updated Moonbeam sample item to use the new region behavior and light config.
+
 ### 13.0.55
 **Bug Fixes**
 * Added spell school-based advantage/disadvantage flags for attack rolls: `flags.midi-qol.advantage.attack.school.{school}`, `disadvantage.attack.school.{school}`, `noAdvantage.attack.school.{school}`, `noDisadvantage.attack.school.{school}`, and the corresponding `grants.*` variants. These complement the existing save school flags added in 13.0.52.

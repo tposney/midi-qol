@@ -72,6 +72,9 @@ export let setupSocket = () => {
   socketlibSocket.register("removeActionBonusReaction", removeActionBonusReaction);
   socketlibSocket.register("rollActionSave", rollActionSave);
   socketlibSocket.register("toggleStatusEffect", _toggleStatusEffect);
+  socketlibSocket.register("midiRegionTriggerActivity", _midiRegionTriggerActivity);
+  socketlibSocket.register("midiRegionApplyEffects", _midiRegionApplyEffects);
+  socketlibSocket.register("midiRegionRemoveEffects", _midiRegionRemoveEffects);
 
   // socketlibSocket.register("canSense", _canSense);
 }
@@ -116,6 +119,9 @@ export class SaferSocket {
       case "recordStats":
       case "toggleStatusEffect":
       case "toggleTokenHidden":
+      case "midiRegionTriggerActivity":
+      case "midiRegionApplyEffects":
+      case "midiRegionRemoveEffects":
         return true;
 
       case "addConvenientEffect":
@@ -2524,4 +2530,39 @@ function recoverDamageListFromJSON(damageList: SerializedDamageListEntry[]): Dam
 
 function recoverDamageDetailFromJSON(damageDetail?: DamageDescriptionObject[]): DamageDescription[] {
   return (damageDetail ?? []).map(d => ({ ...d, properties: new Set(d.properties) }));
+}
+
+/* ---------------------------------------- */
+/*  Region Behavior Socket Handlers         */
+/* ---------------------------------------- */
+
+async function _midiRegionTriggerActivity(data: {
+  activityUuid: string;
+  targetUuids: string[];
+  castLevel: number;
+  sourceActorUuid: string;
+}) {
+  const { MidiRegionActivityBehaviorType } = await import("./regionBehaviors/MidiRegionActivityBehaviorType.js");
+  return MidiRegionActivityBehaviorType._executeTriggerActivity(data);
+}
+
+async function _midiRegionApplyEffects(data: {
+  actorUuid: string;
+  effects: ActiveEffect.CreateData[];
+}) {
+  const actor = fromActorUuid(data.actorUuid);
+  if (!actor) return;
+  for (const effect of data.effects) {
+    if (effect.transfer === undefined) effect.transfer = false;
+  }
+  return actor.createEmbeddedDocuments("ActiveEffect", data.effects);
+}
+
+async function _midiRegionRemoveEffects(data: {
+  actorUuid: string;
+  effectIds: string[];
+}) {
+  const actor = fromActorUuid(data.actorUuid);
+  if (!actor) return;
+  return actor.deleteEmbeddedDocuments("ActiveEffect", data.effectIds);
 }

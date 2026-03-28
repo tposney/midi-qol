@@ -32,6 +32,9 @@ import { ModuleReviewDialog } from './module/apps/ModuleReviewDialog.js';
 import { RollStatsDisplay } from './module/apps/RollStatsDisplay.js';
 import { SoundConfigPanel } from './module/apps/SoundConfigPanel.js';
 import { registerHandlebarsHelpers } from './module/lib/HandlebarsHelpers.js';
+import { MidiRegionActivityBehaviorType } from './module/regionBehaviors/MidiRegionActivityBehaviorType.js';
+import { MidiRegionLightBehaviorType } from './module/regionBehaviors/MidiRegionLightBehaviorType.js';
+import { MidiRegionBehaviorConfig } from './module/apps/MidiRegionBehaviorConfig.js';
 
 // Register macro-autocomplete hook handler at module load time so it's
 // ready before macro-autocomplete fires "macro-autocomplete.ready" in its ready hook.
@@ -254,6 +257,8 @@ Object.assign(globalThis.MidiQOL, {
   midiRenderBonusDamageRoll,
   midiRenderOtherDamageRoll,
   MidiSounds,
+  MidiRegionActivityBehaviorType,
+  MidiRegionLightBehaviorType,
   modifyDamageBy,
   moveToken,
   moveTokenAwayFromPoint,
@@ -370,6 +375,23 @@ Hooks.once('init', async function () {
   log('Initializing midi-qol');
   window.customElements.define("midi-damage-application", DamageApplicationElementMidi as unknown as CustomElementConstructor);
   setupActivities();
+
+  // Register custom RegionBehaviorType for region activities (emanation auras)
+  CONFIG.RegionBehavior.dataModels[`${MODULE_ID}.regionActivity`] = MidiRegionActivityBehaviorType as any;
+  CONFIG.RegionBehavior.typeLabels![`${MODULE_ID}.regionActivity`] = `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.label`;
+  CONFIG.RegionBehavior.typeIcons[`${MODULE_ID}.regionActivity`] = "fa-solid fa-hat-wizard";
+
+  // Register custom sheet for regionActivity behavior config (renders the rules ArrayField)
+  DocumentSheetConfig.registerSheet(RegionBehavior, MODULE_ID, MidiRegionBehaviorConfig as any, {
+    types: [`${MODULE_ID}.regionActivity`],
+    makeDefault: true,
+    label: "Midi QOL Region Activity"
+  });
+
+  // Register custom RegionBehaviorType for region lights
+  CONFIG.RegionBehavior.dataModels[`${MODULE_ID}.regionLight`] = MidiRegionLightBehaviorType as any;
+  CONFIG.RegionBehavior.typeLabels![`${MODULE_ID}.regionLight`] = `BEHAVIOR.TYPES.${MODULE_ID}.regionLight.label`;
+  CONFIG.RegionBehavior.typeIcons[`${MODULE_ID}.regionLight`] = "fa-solid fa-lightbulb";
 
   // @ts-expect-error no dnd5e-types
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;

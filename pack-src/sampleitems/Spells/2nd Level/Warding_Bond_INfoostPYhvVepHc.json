@@ -17,8 +17,7 @@
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
-          "dontApply": false,
-          "showIcon": true
+          "dontApply": false
         }
       },
       "name": "Bonded",
@@ -150,7 +149,8 @@
         ]
       },
       "sort": 0,
-      "_key": "!items.effects!INfoostPYhvVepHc.wbBondedEffect00"
+      "_key": "!items.effects!INfoostPYhvVepHc.wbBondedEffect00",
+      "showIcon": 2
     }
   ],
   "flags": {
@@ -220,7 +220,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },

@@ -20,8 +20,7 @@
           "disableIncapacitated": false,
           "selfTarget": false,
           "selfTargetAlways": false,
-          "dontApply": false,
-          "showIcon": false
+          "dontApply": false
         },
         "ActiveAuras": {
           "isAura": false,
@@ -76,7 +75,8 @@
         "round": 199,
         "turn": 0,
         "combat": null
-      }
+      },
+      "showIcon": 0
     }
   ],
   "flags": {
@@ -232,7 +232,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.55"
       }
     }
   },
