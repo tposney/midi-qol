@@ -1643,7 +1643,7 @@ export class Workflow {
   otherDamageTotal: number | undefined;
   bonusDamageTotal: number | undefined;
   keepActivityCard: boolean | undefined;
-  hitTargetsDisplayed: boolean | undefined;
+  needsHitTargetsDisplayed: boolean = true;
   // TODO: Type this
   conditionData: any | undefined;
   flankingAdvantage: boolean | undefined;
@@ -2426,7 +2426,9 @@ export class Workflow {
     if (!this.activity.attack) {
       this.hitTargets = new Set(this.targets);
       this.hitTargetsEC = new Set();
-      if (this.targets.size > 0 && this.activity.target?.affects?.type !== "self") {
+      if (this.hasSave) {
+        this.needsHitTargetsDisplayed = false;
+      } else if (this.targets.size > 0 && this.activity.target?.affects?.type !== "self") {
         await this.displayHitTargets(false);
       }
       if (this.activity.roll?.formula) return this.WorkflowState_WaitForUtilityRoll;
@@ -3454,7 +3456,7 @@ export class Workflow {
     await this.expireTargetEffects(specialExpiries)
     let chatMessage = this.chatCard;
     let selfTarget = this.token ?? getOrCreateTokenForActor(this.actor);
-    if (!this.hitTargetsDisplayed && this.targets?.size > 0 && chatMessage && (this.activity.effects?.length || this.otherActivity?.effects?.length)) {
+    if (this.needsHitTargetsDisplayed && this.targets?.size > 0 && chatMessage && (this.activity.effects?.length || this.otherActivity?.effects?.length)) {
       this.hitDisplayData = {};
       // Always show all targets in the display, not just effectTargets (failed saves)
       const theTargets = this.targets;
@@ -4998,7 +5000,7 @@ return {
 
   async displayHitTargets(whisper = false) {
     this.hitDisplayData = {};
-    this.hitTargetsDisplayed = true;
+    this.needsHitTargetsDisplayed = false;
     // @ts-expect-error no dnd5e-types
     if (this.item.type === "feat" && ["ench", "class", undefined].includes(this.activity.actionType)) return;
     for (let target of this.targets) {
@@ -5029,7 +5031,7 @@ return {
   }
 
   async displayHits(whisper = false, showHits = true) {
-    this.hitTargetsDisplayed = true;
+    this.needsHitTargetsDisplayed = false;
     // if (["", undefined].includes(this.activity.target?.affects?.type)) return; This does not work for lots of srd items
     const templateData = {
       attackType: this.item.name ?? "",
@@ -5067,7 +5069,7 @@ return {
     let fullDamageText = "";
     let noDamageText = "";
     let halfDamageText = "";
-    //this.hitTargetsDisplayed = true;
+    //this.needsHitTargetsDisplayed = false;
     if (this.activity && (this.activity.save || this.activity.check) && (this.activity.damage?.parts.length ?? 0) > 0) {
       switch (getSaveMultiplierForActivity(this.activity)) {
         case 0:

@@ -2,6 +2,7 @@
 * Fix for reactions for cast activities that do not override the spell targeting to respect self targeting on the underlying spell.
 * Fix for Heal and Damage activities not displaying targets.
 * Fix for the spell.system?.activities?.filter is not a function error for cast activities
+* Fix for save-only activities showing duplicate target lists (targets displayed once as hit targets and again as save targets).
 
 ### 13.0.55
 **Bug Fixes**
