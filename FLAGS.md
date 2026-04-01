@@ -410,8 +410,10 @@ Grant advantage on various roll types. All advantage flags are **Evaluated** (co
 | `flags.midi-qol.advantage.attack.all` | Evaluated | Advantage on all attack types |
 | `flags.midi-qol.advantage.attack.{attackType}` | Evaluated | Advantage on specific attack type |
 | `flags.midi-qol.advantage.attack.{ability}` | Evaluated | Advantage on attacks using specific ability |
+| `flags.midi-qol.advantage.attack.school.{school}` | Evaluated | Advantage on spell attacks of a specific school |
 
 *Attack types: mwak, rwak, msak, rsak. Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Saving Throws
 
@@ -483,8 +485,10 @@ Grant disadvantage on various roll types. All disadvantage flags are **Evaluated
 | `flags.midi-qol.disadvantage.attack.all` | Evaluated | Disadvantage on all attacks |
 | `flags.midi-qol.disadvantage.attack.{attackType}` | Evaluated | Disadvantage on specific attack type |
 | `flags.midi-qol.disadvantage.attack.{ability}` | Evaluated | Disadvantage on attacks using specific ability |
+| `flags.midi-qol.disadvantage.attack.school.{school}` | Evaluated | Disadvantage on spell attacks of a specific school |
 
 *Attack types: mwak, rwak, msak, rsak. Abilities: str, dex, con, int, wis, cha.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Saving Throws
 
@@ -554,8 +558,10 @@ Prevent advantage on various roll types. These flags suppress advantage even whe
 |------|--------|-------------|
 | `flags.midi-qol.noAdvantage.attack.all` | Evaluated | Prevent advantage on all attacks |
 | `flags.midi-qol.noAdvantage.attack.{attackType}` | Evaluated | Prevent advantage on specific attack type |
+| `flags.midi-qol.noAdvantage.attack.school.{school}` | Evaluated | Prevent advantage on spell attacks of a specific school |
 
 *Attack types: mwak, rwak, msak, rsak.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Saving Throws
 
@@ -624,8 +630,10 @@ Prevent disadvantage on various roll types. These flags suppress disadvantage ev
 |------|--------|-------------|
 | `flags.midi-qol.noDisadvantage.attack.all` | Evaluated | Prevent disadvantage on all attacks |
 | `flags.midi-qol.noDisadvantage.attack.{attackType}` | Evaluated | Prevent disadvantage on specific attack type |
+| `flags.midi-qol.noDisadvantage.attack.school.{school}` | Evaluated | Prevent disadvantage on spell attacks of a specific school |
 
 *Attack types: mwak, rwak, msak, rsak.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Saving Throws
 
@@ -855,8 +863,10 @@ Flags applied to a target that affect incoming attacks/rolls against them. All g
 |------|--------|-------------|
 | `flags.midi-qol.grants.advantage.attack.all` | Evaluated | Attackers have advantage on all attacks |
 | `flags.midi-qol.grants.advantage.attack.{attackType}` | Evaluated | Attackers have advantage on specific attack type |
+| `flags.midi-qol.grants.advantage.attack.school.{school}` | Evaluated | Attackers have advantage on spell attacks of a specific school |
 
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Grant Disadvantage to Attackers
 
@@ -864,8 +874,10 @@ Flags applied to a target that affect incoming attacks/rolls against them. All g
 |------|--------|-------------|
 | `flags.midi-qol.grants.disadvantage.attack.all` | Evaluated | Attackers have disadvantage on all attacks |
 | `flags.midi-qol.grants.disadvantage.attack.{attackType}` | Evaluated | Disadvantage on specific attack type |
+| `flags.midi-qol.grants.disadvantage.attack.school.{school}` | Evaluated | Disadvantage on spell attacks of a specific school |
 
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Grant Critical Hits
 
@@ -939,10 +951,13 @@ Prevent attacks against target from being fumbles. For multi-target attacks, ALL
 |------|--------|-------------|
 | `flags.midi-qol.grants.noAdvantage.attack.all` | Evaluated | Prevent attacker's advantage |
 | `flags.midi-qol.grants.noAdvantage.attack.{attackType}` | Evaluated | Prevent advantage on specific attack type |
+| `flags.midi-qol.grants.noAdvantage.attack.school.{school}` | Evaluated | Prevent advantage on spell attacks of a specific school |
 | `flags.midi-qol.grants.noDisadvantage.attack.all` | Evaluated | Prevent attacker's disadvantage |
 | `flags.midi-qol.grants.noDisadvantage.attack.{attackType}` | Evaluated | Prevent disadvantage on specific attack type |
+| `flags.midi-qol.grants.noDisadvantage.attack.school.{school}` | Evaluated | Prevent disadvantage on spell attacks of a specific school |
 
 *Attack types: mwak, rwak, msak, rsak.*
+*Spell schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Grant Max/Min Damage
 

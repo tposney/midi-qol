@@ -1,3 +1,12 @@
+### 13.0.57
+* Fix for flanking/flanked icons not displaying on the hits display line. Icons now render correctly in both light and dark themes (e.g. Carolingian).
+* Fix for damage application tray change-source icons (save, resistance, etc.) being unreadable in dark themes.
+* Fix for `getItemFromEffectOrigin` not resolving Activity origin UUIDs to their parent Item.
+* 2024 rules: frightened condition now grants disadvantage on attacks against the source of the fear effect.
+* Fix for `damage.critical.allow = false` on an activity not preventing critical damage when `grants.critical.all` forces critical on the workflow.
+* Improved attribution for attack advantage/disadvantage to show the effect that granted the flag (e.g. "Faerie Fire - Grants Advantage on All Attacks").
+* Added `deathSave` as a rollType for the `rollAbility` socket action, allowing death saves to be triggered via GM action.
+
 ### 13.0.56
 * Fix for reactions for cast activities that do not override the spell targeting to respect self targeting on the underlying spell.
 * Fix for Heal and Damage activities not displaying targets.

@@ -3850,6 +3850,26 @@ export class Workflow {
         }
       }
     }
+    // Frightened condition (2024 rules): disadvantage on attacks against the source of fear
+    if (firstTarget && safeGetGameSetting("dnd5e", "rulesVersion") === "modern" && hasCondition(this.actor, "frightened")) {
+      for (const ef of this.actor.allApplicableEffects()) {
+        if (ef.disabled || !ef.statuses.has("frightened")) continue;
+        const origin = ef.origin ? fromUuidSync(ef.origin) : undefined;
+        let sourceActor: Actor | undefined;
+        if (origin instanceof Actor) {
+          sourceActor = origin;
+        } else if (origin) {
+          let doc: any = origin;
+          while (doc && !(doc instanceof Actor)) doc = doc.parent;
+          if (doc instanceof Actor) sourceActor = doc;
+        }
+        if (sourceActor && firstTarget.actor?.uuid === sourceActor.uuid) {
+          this.attackRollModifierTracker.disadvantage.add('frightened', 'Frightened');
+          break;
+        }
+      }
+    }
+
     await this.checkTargetAdvantage();
   }
 
@@ -7692,7 +7712,7 @@ return {
         acIcons.push({
           img: isFlankedMode ? "modules/midi-qol/icons/encirclement.svg" : "icons/svg/sword.svg",
           tooltip: `-${flankingACMod}: ${isFlankedMode ? i18n("midi-qol.Flanked") : i18n("midi-qol.Flanking")}`,
-          cssClass: "midi-qol-ac-icon", useDnd5eIcon: true
+          cssClass: "midi-qol-ac-icon-img"
         });
         acTooltipParts += ` -${flankingACMod}`;
       }

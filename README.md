@@ -133,7 +133,7 @@ If you prefer to configure settings manually, here's a recommended full automati
 | v11.4.48 | v12 | up to v3.2.x | - |
 | v11.6.x | v12 | v3.3.x | [manifest](https://gitlab.com/tposney/midi-qol/raw/v11.6/package/module.json) |
 | v12.4.27+ | v12 | v4.2+ | [manifest](https://gitlab.com/tposney/midi-qol/raw/v12dnd4/package/module.json) |
-| v13.0.52+ | v13 | v5.2.4+ / v5.3 | [manifest](https://gitlab.com/tposney/midi-qol/raw/v13/package/module.json) |
+| v13.0.57+ | v13 | v5.2.4+ / v5.3 | [manifest](https://gitlab.com/tposney/midi-qol/raw/v13/package/module.json) |
 
 ## Required Modules
 
@@ -842,6 +842,7 @@ Set via active effects using **CUSTOM** or **OVERRIDE** mode.
 | Optional | `flags.midi-qol.optional.NAME.attack.all` | Prompted bonus effects |
 | Damage Mod | `system.traits.dm.midi.all` | Reduce/increase damage (use negative values to reduce) |
 | Save by School | `flags.midi-qol.advantage.save.school.nec` | Advantage/disadvantage on saves vs specific spell schools (13.0.52+) |
+| Attack by School | `flags.midi-qol.advantage.attack.school.evo` | Advantage/disadvantage on spell attacks of specific schools (13.0.55+) |
 | Tool Checks | `flags.midi-qol.advantage.tool.thief` | Per-tool advantage/disadvantage/fail/success/min/max (13.0.38+) |
 
 **Special Flags:**
@@ -855,7 +856,6 @@ Set via active effects using **CUSTOM** or **OVERRIDE** mode.
 | `flags.midi-qol.potentCantrip` | Cantrips do half on save |
 | `flags.midi-qol.concentrationSaveBonus` | Add to concentration saves |
 | `flags.midi-qol.deathSaveBonus` | Add to death saves |
-| `flags.midi-qol.bloodSense` | No disadvantage vs hidden/invisible creatures not at full HP within range (13.0.52+) |
 
 > [!tip] Navigation 
 > See [FLAGS.md](FLAGS.md) for complete documentation of all flags.

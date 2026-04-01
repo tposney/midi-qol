@@ -103,16 +103,31 @@ let defineMidiCastActivityClass =  <T extends Activity>(ActivityClass: T) => {
         delete usage.workflow;
         throw err;
       }
+      // Process the Cast activity's own consumption (e.g., activityUses on Paladin's Smite).
+      // dnd5e's CastActivity.use() bypasses Activity.use() entirely so consume() never runs.
+      // The spell's config.cause mechanism also fails when the cached spell's activity has
+      // consumption.spellSlot: false (ignoreLinkedConsumption becomes true).
+      // Skip spell slot consumption here — the spell handles that when it runs.
+      //
+      // IMPORTANT: Consumption is deferred until AFTER the cast completes.
+      // If consumed before, autoDestroy scrolls get deleted before the cached spell
+      // and concentration effect are set up, leaving orphaned effects that crash clients.
+      const hasOwnConsumption = this.consumption?.targets?.length > 0;
+
       // Delegate to dnd5e CastActivity.use() which fetches/creates the cached spell and calls spell.use()
       // @ts-expect-error
-      return ActivityClass.prototype.use.bind(this)(usage, dialog, message);
-    }
+      const result = await ActivityClass.prototype.use.bind(this)(usage, dialog, message);
 
-    prepareFinalData(rollData: any) {
-      super.prepareFinalData(rollData);
-      // dnd5e handles CastActivity overrides via an enchantment effect on the cached spell
-      // (see getSpellChanges/getCachedSpellData) — no need to copy spell values onto the
-      // CastActivity here. The spell's own workflow uses the spell's activity data directly.
+      // Consume the Cast activity's own resources after casting succeeds
+      // result is false on explicit abort; undefined is a valid success (MidiActivityMixin bare return)
+      if (result !== false && hasOwnConsumption) {
+        const consumeConfig = this._prepareUsageConfig({
+          consume: { resources: true, spellSlot: false, action: false }
+        });
+        await this.consume(consumeConfig, { data: {} });
+      }
+
+      return result;
     }
 
     get possibleOtherActivity() {
