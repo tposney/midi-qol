@@ -940,9 +940,11 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
   let useDefaultCritical = getCriticalDamage() === "default";
   useDefaultCritical ||= (getCriticalDamage() === "explodeCharacter" && this.data.actorType !== "character");
   useDefaultCritical ||= (getCriticalDamage() === "explodeNPC" && this.data.actorType !== "npc");
-  if (this.options.critical?.allow === false || options.critical?.allow === false || !this.isCritical || useDefaultCritical) {
-    options.critical.allow = this.isCritical;
-    this.options.isCritical = this.isCritical;
+  const criticalNotAllowed = this.options.critical?.allow === false || options.critical?.allow === false;
+  if (criticalNotAllowed || !this.isCritical || useDefaultCritical) {
+    const effectiveIsCritical = criticalNotAllowed ? false : this.isCritical;
+    options.critical.allow = effectiveIsCritical;
+    this.options.isCritical = effectiveIsCritical;
     //@ts-expect-error "dnd5e"
     options.critical.multiplyNumeric ??= game.settings.get("dnd5e", "criticalDamageModifiers");
     //@ts-expect-error "dnd5e"

@@ -107,6 +107,22 @@ export function getFlagDisplayName(flag: string): string {
   return flag;
 }
 
+/**
+ * Build attribution display name, prefixing with active effect name(s) if available.
+ * Format: "Effect Name - flag display" when an effect set the flag, otherwise just "flag display".
+ */
+function getAttributionDisplayName(actor: Actor.Implementation, flag: string, flagDisplayName: string): string {
+  const evalKey = `flags.midi-qol.${flag}`.replace("flags.midi-qol.", "flags.midi.evaluated.");
+  const effectNames: string[] = foundry.utils.getProperty(actor, `${evalKey}.effects`) ?? [];
+  // Filter out the generic "flag" entry which means it was set directly, not by an effect
+  const realEffects = effectNames.filter(name => name !== "flag");
+  if (realEffects.length > 0) {
+    const uniqueNames = [...new Set(realEffects)];
+    return `${uniqueNames.join(", ")} - ${flagDisplayName}`;
+  }
+  return flagDisplayName;
+}
+
 // ─────────────────────────────────────────────────────────────────
 // AdvantageDisadvantageTracker Class
 // ─────────────────────────────────────────────────────────────────
@@ -742,7 +758,7 @@ export async function computeAdvantageFlags(
   for (const flag of flags.advantageFlags) {
     if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
       const source = flag.replace(/^advantage\./, '');
-      tracker.advantage.add(source, getFlagDisplayName(flag));
+      tracker.advantage.add(source, getAttributionDisplayName(actor, flag, getFlagDisplayName(flag)));
       break;
     }
   }
@@ -751,7 +767,7 @@ export async function computeAdvantageFlags(
   for (const flag of flags.disadvantageFlags) {
     if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
       const source = flag.replace(/^disadvantage\./, '');
-      tracker.disadvantage.add(source, getFlagDisplayName(flag));
+      tracker.disadvantage.add(source, getAttributionDisplayName(actor, flag, getFlagDisplayName(flag)));
       break;
     }
   }
@@ -762,7 +778,7 @@ export async function computeAdvantageFlags(
   if (flags.noAdvantageFlags?.length) {
     for (const flag of flags.noAdvantageFlags) {
       if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-        tracker.advantage.suppress(flag, getFlagDisplayName(flag));
+        tracker.advantage.suppress(flag, getAttributionDisplayName(actor, flag, getFlagDisplayName(flag)));
         break;
       }
     }
@@ -772,7 +788,7 @@ export async function computeAdvantageFlags(
   if (flags.noDisadvantageFlags?.length) {
     for (const flag of flags.noDisadvantageFlags) {
       if (await evalAllConditionsAsync(actor, midiFlag(flag), conditionData, false)) {
-        tracker.disadvantage.suppress(flag, getFlagDisplayName(flag));
+        tracker.disadvantage.suppress(flag, getAttributionDisplayName(actor, flag, getFlagDisplayName(flag)));
         break;
       }
     }
@@ -792,7 +808,8 @@ export async function computeAdvantageFlags(
     if (flags.sourceAdvantageFlags?.length) {
       for (const flag of flags.sourceAdvantageFlags) {
         if (await evalAllConditionsAsync(grantsActor, midiFlag(flag), grantsConditionData, false)) {
-          tracker.advantage.add(`${flag} ${grantsName}`, `${getFlagDisplayName(flag)} (${grantsName})`);
+          const effectDisplay = getAttributionDisplayName(grantsActor, flag, getFlagDisplayName(flag));
+          tracker.advantage.add(`${flag} ${grantsName}`, `${effectDisplay} (${grantsName})`);
           break;
         }
       }
@@ -801,7 +818,8 @@ export async function computeAdvantageFlags(
     if (flags.sourceDisadvantageFlags?.length) {
       for (const flag of flags.sourceDisadvantageFlags) {
         if (await evalAllConditionsAsync(grantsActor, midiFlag(flag), grantsConditionData, false)) {
-          tracker.disadvantage.add(`${flag} ${grantsName}`, `${getFlagDisplayName(flag)} (${grantsName})`);
+          const effectDisplay = getAttributionDisplayName(grantsActor, flag, getFlagDisplayName(flag));
+          tracker.disadvantage.add(`${flag} ${grantsName}`, `${effectDisplay} (${grantsName})`);
           break;
         }
       }
@@ -810,7 +828,8 @@ export async function computeAdvantageFlags(
     if (flags.sourceNoAdvantageFlags?.length) {
       for (const flag of flags.sourceNoAdvantageFlags) {
         if (await evalAllConditionsAsync(grantsActor, midiFlag(flag), grantsConditionData, false)) {
-          tracker.advantage.suppress(`${flag} ${grantsName}`, `${getFlagDisplayName(flag)} (${grantsName})`);
+          const effectDisplay = getAttributionDisplayName(grantsActor, flag, getFlagDisplayName(flag));
+          tracker.advantage.suppress(`${flag} ${grantsName}`, `${effectDisplay} (${grantsName})`);
           break;
         }
       }
@@ -819,7 +838,8 @@ export async function computeAdvantageFlags(
     if (flags.sourceNoDisadvantageFlags?.length) {
       for (const flag of flags.sourceNoDisadvantageFlags) {
         if (await evalAllConditionsAsync(grantsActor, midiFlag(flag), grantsConditionData, false)) {
-          tracker.disadvantage.suppress(`${flag} ${grantsName}`, `${getFlagDisplayName(flag)} (${grantsName})`);
+          const effectDisplay = getAttributionDisplayName(grantsActor, flag, getFlagDisplayName(flag));
+          tracker.disadvantage.suppress(`${flag} ${grantsName}`, `${effectDisplay} (${grantsName})`);
           break;
         }
       }

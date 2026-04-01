@@ -1737,7 +1737,7 @@
   "midi-qol.flagTemplate.superSaver.name": "Super Saver ({label})",
   "midi-qol.flagTemplate.superSaver.description": "No damage on save, half damage on fail.",
   "midi-qol.flagTemplate.semiSuperSaver.name": "Semi Super Saver ({label})",
-  "midi-qol.flagTemplate.semiSuperSaver.description": "No damage on save, half damage on fail.",
+  "midi-qol.flagTemplate.semiSuperSaver.description": "No damage on save, full damage on fail.",
   "midi-qol.flagTemplate.max.ability.save.name": "Max Save ({label})",
   "midi-qol.flagTemplate.max.ability.save.description": "Maximum rollable number on the main d20 for {label} saves.",
   "midi-qol.flagTemplate.min.ability.save.name": "Min Save ({label})",

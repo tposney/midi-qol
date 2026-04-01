@@ -1,4 +1,12 @@
-### 14.0.2
+### 14.0.1
+* This release is v14 compatible. Tested wtih dnd5e 5.3 prerelease.
+* Supports tempmax daamge.
+* I've migrated midi to use regions rather than templates throughout.
+  - Use dnd5e to place templates so there is still a template like interaction.
+  - Regions now support dependents.
+  - New Region behaviour created that allows you to apply effects, run activities (i.e. do damage) on enter/exit of the region, starting/ending turn in the region and so on. Allows managing only one application per turn.
+    * This should make many currently complex behaviours easy. Spirit Guardians, one of my favourites, is now trivial to implement and is included in the sample items compendium.
+    * You can attach the region behaviour to **any** region created by a spell, it does not need to be attached to the caster, so all sorts of other things can now be easily modelled.
 **New Features**
 * New `MidiRegionLightBehaviorType` — a custom region behavior that creates an AmbientLight at the region center, repositions it when the region moves, and deletes it when the region is removed. Configurable per-activity via the Region Behaviour editor (dim/bright radius, color, alpha, luminosity, animation).
 * New Region Behaviour editor on the activity sheet Targeting tab — configure which activities fire on entry/exit/turn-start/turn-end, which effects to apply/remove, disposition filtering, and light settings. Replaces the previous auto-derive-from-overtime fallback for spells with explicit region config.

@@ -7546,7 +7546,7 @@ export class Workflow {
         acIcons.push({
           img: isFlankedMode ? "modules/midi-qol/icons/encirclement.svg" : "icons/svg/sword.svg",
           tooltip: `-${flankingACMod}: ${isFlankedMode ? i18n("midi-qol.Flanked") : i18n("midi-qol.Flanking")}`,
-          cssClass: "midi-qol-ac-icon", useDnd5eIcon: true
+          cssClass: "midi-qol-ac-icon-img"
         });
         acTooltipParts += ` -${flankingACMod}`;
       }

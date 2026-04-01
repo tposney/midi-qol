@@ -58,7 +58,7 @@
         "id": "dae",
         "type": "module",
         "compatibility": {
-          "minimum": "13.0.23"
+          "minimum": "14.0.0"
         }
       }
     ]

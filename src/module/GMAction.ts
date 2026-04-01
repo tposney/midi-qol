@@ -964,6 +964,8 @@ async function rollAbility(data: {
       else if (normalizedRequest === "skill") result = await actor.rollSkill(config, dialog, message);
       // @ts-expect-error no dnd5e-types
       else if (normalizedRequest === "tool") result = await actor.rollToolCheck(config, dialog, message);
+      // @ts-expect-error no dnd5e-types
+      else if (normalizedRequest === "deathSave") result = await actor.rollDeathSave(config, dialog, message);
       resolve(result ?? {});
     }, configSettings.playerSaveTimeout * 1000);
     // @ts-expect-error no dnd5e-types
@@ -974,6 +976,8 @@ async function rollAbility(data: {
     else if (normalizedRequest === "skill") result = await actor.rollSkill(config, dialog, message);
     // @ts-expect-error no dnd5e-types
     else if (normalizedRequest === "tool") result = await actor.rollToolCheck(config, dialog, message);
+    // @ts-expect-error no dnd5e-types
+    else if (normalizedRequest === "deathSave") result = await actor.rollDeathSave(config, dialog, message);
     if (timeoutId) clearTimeout(timeoutId);
     resolve(result ?? {})
   });

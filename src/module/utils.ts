@@ -9478,18 +9478,20 @@ export async function cleanCPRFlanked() {
 export function getItemFromEffectOrigin(origin: string, alreadyVisited: string[] = []): Item.Implementation | undefined {
   let originItem: Item.Implementation | undefined;
   if (alreadyVisited.includes(origin)) return;
-  const originEffectOrItem = fromUuidSync(origin) as ActiveEffect.Implementation | Item.Implementation | undefined;
-  if (originEffectOrItem instanceof Item) return originEffectOrItem;
-  if (originEffectOrItem?.parent instanceof Item) {
-    originItem = originEffectOrItem.parent;
-  } else if (originEffectOrItem?.origin) {
-    originItem = getItemFromEffectOrigin(originEffectOrItem.origin, [...alreadyVisited, origin]);
+  const originDoc = fromUuidSync(origin) as ActiveEffect.Implementation | Item.Implementation | Activity | undefined;
+  if (originDoc instanceof Item) return originDoc;
+  //@ts-expect-error no dnd5e types - Activity has .item getter
+  if (originDoc?.item instanceof Item) return originDoc.item;
+  if (originDoc?.parent instanceof Item) {
+    originItem = originDoc.parent;
+  } else if (originDoc?.origin) {
+    originItem = getItemFromEffectOrigin(originDoc.origin, [...alreadyVisited, origin]);
     // recursive so @michael can feel fancy
   }
   // Fallback: if we couldn't resolve to an Item (e.g. grandchild embedded docs on synthetic actors),
-  // try stripping the ActiveEffect segment to resolve the parent Item directly
-  if (!originItem && origin.includes(".ActiveEffect.")) {
-    const itemUuid = origin.replace(/\.ActiveEffect\.[^.]+$/, "");
+  // try stripping the ActiveEffect or Activity segment to resolve the parent Item directly
+  if (!originItem && (origin.includes(".ActiveEffect.") || origin.includes(".Activity."))) {
+    const itemUuid = origin.replace(/\.(?:ActiveEffect|Activity)\.[^.]+$/, "");
     let item = fromUuidSync(itemUuid);
     // If the UUID contains .Actor. segment (synthetic token), try without it
     if (!(item instanceof Item) && itemUuid.includes(".Actor.")) {
