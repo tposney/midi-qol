@@ -695,7 +695,7 @@
     "midi-qol.ActiveDefenceString": "主動防禦",
     "midi-qol.ActiveDefence.Name": "主動防禦",
     "midi-qol.ActiveDefenceModifier.Name": "主動防禦修正值",
-    "midi-qol.ActiveDefenceModifier.Hint": "DC 會變為攻擊加成 + (22 - 此修正值)，主動防禦擲骰為 AC - 修正值 + 1d20。建議值為 12、10 或 0。",
+    "midi-qol.ActiveDefenceModifier.Hint": "DC 會變為攻擊加成 + 此修正值，主動防禦擲骰為 AC - (22 - 修正值) + 1d20。建議值為 12、10 或 0。",
     "midi-qol.ActiveDefence.Hint": "改由玩家進行防禦擲骰，而非 GM 擲骰攻擊。",
     "midi-qol.ActiveDefenceDC.Name": "顯示主動防禦 DC",
     "midi-qol.ActiveDefenceDC.Hint": "若設定，主動防禦 DC 將顯示在聊天卡片中。",

@@ -697,7 +697,7 @@
   "midi-qol.ActiveDefenceString": "Active Defence",
   "midi-qol.ActiveDefence.Name": "Defesa Ativa",
   "midi-qol.ActiveDefenceModifier.Name": "Modificador de Defesa Ativa",
-  "midi-qol.ActiveDefenceModifier.Hint": "A CD da Defesa Ativa será o bônus de ataque + (22 - este modificador) e a rolagem de Defesa Ativa será CA - modificador + 1d20. <br>O valor não importa, apenas escolha o que faz as rolagens parecerem boas para você. <br> Os valores sugeridos são <strong>12</strong>, 10 ou 0.",
+  "midi-qol.ActiveDefenceModifier.Hint": "A CD da Defesa Ativa será o bônus de ataque + este modificador e a rolagem de Defesa Ativa será CA - (22 - modificador) + 1d20. <br>O valor não importa, apenas escolha o que faz as rolagens parecerem boas para você. <br> Os valores sugeridos são <strong>12</strong>, 10 ou 0.",
   "midi-qol.ActiveDefence.Hint": "Ao invés do Mestre rolar 'Para Atingir', jogadores fazem uma rolagem de defesa.",
   "midi-qol.ActiveDefenceDC.Name": "Exibir CD da Defesa Ativa",
   "midi-qol.ActiveDefenceDC.Hint": "Se habilitado, a CD da Defesa Ativa será mostrada no cartão de chat.",
