@@ -550,7 +550,7 @@
 "midi-qol.ActiveDefenceString": "Difesa Attiva",
 "midi-qol.ActiveDefence.Name": "Difesa Attiva",
 "midi-qol.ActiveDefenceModifier.Name": "Modificatore Difesa Attiva",
-"midi-qol.ActiveDefenceModifier.Hint": "La CD di difesa attiva sarà bonus di attacco + (22 - questo modificatore) e il tiro di difesa attiva sarà CA - modificatore + 1d20. <br>Il valore non è importante, scegli solo ciò che ti fa sembrare buono il tiro. <br> I valori suggeriti sono <strong>12</strong>, 10 o 0",
+"midi-qol.ActiveDefenceModifier.Hint": "La CD di difesa attiva sarà bonus di attacco + questo modificatore e il tiro di difesa attiva sarà CA - (22 - modificatore) + 1d20. <br>Il valore non è importante, scegli solo ciò che ti fa sembrare buono il tiro. <br> I valori suggeriti sono <strong>12</strong>, 10 o 0",
 "midi-qol.ActiveDefence.Hint": "Invece di far effettuare il tiro 'Per Colpire' al DM, i giocatori effettuano un tiro di difesa.",
 "midi-qol.ActiveDefenceDC.Name": "Mostra CD Difesa Attiva",
 "midi-qol.ActiveDefenceDC.Hint": "Se impostato, la CD di difesa attiva verrà mostrata nella scheda chat",

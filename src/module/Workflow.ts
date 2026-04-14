@@ -7910,30 +7910,39 @@ export class ActiveDefenceWorkflow extends Workflow {
           let hitSymbol = "fa-blank"
           // if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor")) && !this.isCritical) hitScale = Math.floor(this.challengeModeScale[targetActor.uuid]);
           let isHitResult = "miss";
+          // Inverse hit/miss icons from normal attacks so the result looks the same as with saving throws
           if (game.user?.isGM && ["hitDamage", "all"].includes(configSettings.hideRollDetails) && (this.isCritical || isHit || isHitEC)) {
-            isHitResult = "hit";
-            hitSymbol = "fa-tick";
+            // Failed defence roll
+            isHitResult = "miss";
+            hitSymbol = "fa-xmark";
           } else if (this.isCritical) {
-            isHitResult = "critical";
-            hitSymbol = "fa-check-double"
-          } else if (game.user?.isGM && this.isFumble && ["hitDamage", "all"].includes(configSettings.hideRollDetails)) {
-            isHitResult = "miss";
-            hitSymbol = "fa-xmark";
-          } else if (this.isFumble) {
+            // Fumbled defence roll
             isHitResult = "fumble";
-            hitSymbol = "fa-xmarks-lines"
-          } else if (isHit) {
+            hitSymbol = "fa-xmarks-lines";
+          } else if (game.user?.isGM && this.isFumble && ["hitDamage", "all"].includes(configSettings.hideRollDetails)) {
+            // Successful defence roll
             isHitResult = "hit";
             hitSymbol = "fa-check";
-          } else if (isHitEC && ["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor") as string)) {
-            isHitResult = "hitEC";
-            hitSymbol = "fa-check";
-          } else if (isHitEC) {
-            isHitResult = "hitEC";
-            hitSymbol = "fa-check";
-          } else {
+          } else if (this.isFumble) {
+            // Nat 20 defence roll
+            isHitResult = "critical";
+            hitSymbol = "fa-check-double";
+          } else if (isHit) {
+            // Failed defence roll
             isHitResult = "miss";
             hitSymbol = "fa-xmark";
+          } else if (isHitEC && ["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor") as string)) {
+            // Failed defence roll
+            isHitResult = "miss";
+            hitSymbol = "fa-xmark";
+          } else if (isHitEC) {
+            // Failed defence roll
+            isHitResult = "miss";
+            hitSymbol = "fa-xmark";
+          } else {
+            // Successful defence roll
+            isHitResult = "hit";
+            hitSymbol = "fa-check";
           }
           let hitStyle = "";
 
