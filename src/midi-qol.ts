@@ -1845,7 +1845,7 @@ export function setupMidiStatusEffects() {
         system: {
           changes: [
             { key: "flags.midi-qol.actions.bonus", type: "custom", value: "true" },
-            { key: "Flags.midi-qol.actions.bonusActionsUsed", type: "add", value: "1", priority: 20 }
+            { key: "flags.midi-qol.actions.bonusActionsUsed", type: "add", value: "1", priority: 20 }
           ]
         },
         img: "modules/midi-qol/icons/bonus-action.svg",
@@ -1868,7 +1868,7 @@ export function setupMidiStatusEffects() {
         system: {
           changes: [
             { key: "flags.midi-qol.actions.reaction", type: "custom", value: "true" },
-            { key: "Flags.midi-qol.actions.reactionsUsed", type: "add", value: "1", priority: 20 }
+            { key: "flags.midi-qol.actions.reactionsUsed", type: "add", value: "1", priority: 20 }
           ]
         },
         img: "modules/midi-qol/icons/reaction.svg",
