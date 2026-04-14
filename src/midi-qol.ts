@@ -1836,7 +1836,7 @@ export function setupMidiStatusEffects() {
         name: i18n("midi-qol.bonusActionUsed"),
         changes: [
           { key: "flags.midi-qol.actions.bonus", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
-          { key: "Flags.midi-qol.actions.bonusActionsUsed", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "1", priority: 20 }
+          { key: "flags.midi-qol.actions.bonusActionsUsed", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "1", priority: 20 }
         ],
         img: "modules/midi-qol/icons/bonus-action.svg",
 
@@ -1857,7 +1857,7 @@ export function setupMidiStatusEffects() {
         name: i18n("midi-qol.reactionUsed"),
         changes: [
           { key: "flags.midi-qol.actions.reaction", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
-          { key: "Flags.midi-qol.actions.reactionsUsed", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "1", priority: 20 }
+          { key: "flags.midi-qol.actions.reactionsUsed", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: "1", priority: 20 }
         ],
         img: "modules/midi-qol/icons/reaction.svg",
         // effectData: { transfer: false },
