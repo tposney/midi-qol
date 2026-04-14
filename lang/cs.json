@@ -704,7 +704,7 @@
   "midi-qol.ActiveDefenceString": "Aktivní obrana",
   "midi-qol.ActiveDefence.Name": "Používat aktivní obranu?",
   "midi-qol.ActiveDefenceModifier.Name": "Oprava aktivní obrany",
-  "midi-qol.ActiveDefenceModifier.Hint": "SO aktivní obrany bude určováno: Bonus k útoku + (22 - tato oprava), Hod na aktivní obranu bude tvořen: OČ - oprava + 1k20. <br>Na hodnotě nezáleží, jen si vyber, co ti přijde zajímavé. <br> Doporučené hodnoty jsou <strong>12</strong>, 10 či 0.",
+  "midi-qol.ActiveDefenceModifier.Hint": "SO aktivní obrany bude určováno: Bonus k útoku + tato oprava, Hod na aktivní obranu bude tvořen: OČ - (22 - oprava) + 1k20. <br>Na hodnotě nezáleží, jen si vyber, co ti přijde zajímavé. <br> Doporučené hodnoty jsou <strong>12</strong>, 10 či 0.",
   "midi-qol.ActiveDefence.Hint": "Po zaškrtnutí budou hráči tzv. házet na obranu namísto toho, aby PJ házel na útok.",
   "midi-qol.ActiveDefenceDC.Name": "Zobrazovat SO aktivní obrany?",
   "midi-qol.ActiveDefenceDC.Hint": "Po zaškrtnutí bude SO aktivní obrany zobrazováno v kartě chatu.",

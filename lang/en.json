@@ -704,7 +704,7 @@
   "midi-qol.ActiveDefenceString": "Active Defence",
   "midi-qol.ActiveDefence.Name": "Active Defence",
   "midi-qol.ActiveDefenceModifier.Name": "Active Defence Modifier",
-  "midi-qol.ActiveDefenceModifier.Hint": "The active defence DC will be attack bonus + (22 - this modifier) and the active defence roll will be AC - modifier + 1d20. <br>The value does not matter just choose what makes the rolls look good to you. <br> Suggested values are <strong>12</strong>, 10 or 0",
+  "midi-qol.ActiveDefenceModifier.Hint": "The active defence DC will be `attack bonus + this modifier` and the active defence roll will be `1d20 + AC - (22 - this modifier)`. <br>The value does not matter, just choose what makes the rolls look good to you. <br>Suggested values are <strong>12</strong>, 10, or 0.",
   "midi-qol.ActiveDefence.Hint": "Instead of GM rolling 'To Hit', players make a defence roll.",
   "midi-qol.ActiveDefenceDC.Name": "Show Active Defence DC",
   "midi-qol.ActiveDefenceDC.Hint": "If set the active defence DC will be shown in the chat card",
