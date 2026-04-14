@@ -553,7 +553,7 @@
   "midi-qol.ActiveDefenceString": "能動防御",
   "midi-qol.ActiveDefence.Name": "能動防御",
   "midi-qol.ActiveDefenceModifier.Name": "能動防御修正値",
-  "midi-qol.ActiveDefenceModifier.Hint": "能動防御の難易度は攻撃ボーナス + (22 - この修正値)となり、能動防御ロールはAC - 修正値 + 1d20となります。<br>値自体は重要ではなく、ロールが見やすくなる値を選んでください。<br>推奨値は<strong>12</strong>、10、または0です",
+  "midi-qol.ActiveDefenceModifier.Hint": "能動防御の難易度は攻撃ボーナス + この修正値 となり、能動防御ロールはAC - (22 - 修正値) + 1d20となります。<br>値自体は重要ではなく、ロールが見やすくなる値を選んでください。<br>推奨値は<strong>12</strong>、10、または0です",
   "midi-qol.ActiveDefence.Hint": "GMの命中判定の代わりに、プレイヤーが防御判定を行う選択ルールを使用します。",
   "midi-qol.ActiveDefenceDC.Name": "能動防御難易度を表示",
   "midi-qol.ActiveDefenceDC.Hint": "有効にすると、チャットカードに能動防御の難易度が表示されます",
