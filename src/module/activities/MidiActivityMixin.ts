@@ -302,8 +302,8 @@ export let MidiActivityMixin = Base => {
       const baseFlags = super.messageFlags;
       // Lock target membership to workflow.targets, but use dnd5e's fresh AC values.
       // dnd5e's getTargetDescriptors() reads live ac.value (which includes cover bonuses)
-      // and returns null for coverTotal. Don't use workflow.targetDescriptors here because
-      // getWorkflowByActivityUuid may return a stale workflow from a previous use.
+      // and returns null for coverTotal. getWorkflowByActivityUuid uses a direct map
+      // lookup so it only finds the current workflow (not stale re-keyed ones).
       const targets = new Map();
       if (this.workflow?.targets) {
         const dnd5eDescriptors = baseFlags.targets as Array<{uuid: string, ac: number | null}> | undefined;
@@ -541,6 +541,13 @@ export let MidiActivityMixin = Base => {
       return this.name.slugify();
     }
 
+    _preCreate(data) {
+      super._preCreate(data);
+      if (!("otherActivityId" in data)) {
+        this.updateSource({ otherActivityId: "none" });
+      }
+    }
+
     prepareData() {
       //@ts-expect-error
       if (!this.midiProperties.identifier && !this.name) this.midiProperties.identifier = i18n(this.constructor.metadata.dnd5eTitle).slugify();
@@ -605,7 +612,7 @@ export let MidiActivityMixin = Base => {
           workflowClass = ActiveDefenceWorkflow;
         }
         if (!(workflowClass.prototype instanceof Workflow)) workflowClass = Workflow;
-        const workflowOptions = { ...usage.midiOptions, ...(usage.midiOptions?.workflowOptions ?? {}), event: usage.event as AugmentedEvent | undefined, storeWorkflow: false };
+        const workflowOptions = { ...usage.midiOptions, ...(usage.midiOptions?.workflowOptions ?? {}), event: usage.event as AugmentedEvent | undefined, storeWorkflow: true };
         delete workflowOptions.workflowOptions;
         if (usage.workflow)
           usage.midiOptions.workflowOptions.autoRollAttack = true;
@@ -1920,6 +1927,12 @@ export let MidiActivityMixin = Base => {
         if (!this._otherActivity) this._otherActivity = this.item.system.activities.find(a => a.identifier === this.otherActivityId) as MidiActivityMixin | undefined;
         this._otherActivity?.prepareData();
         return this._otherActivity as MidiActivityMixin | undefined;
+      }
+
+      // Auto-detect only applies to attack activities
+      if (!this.attack) {
+        this._otherActivity = null;
+        return this._otherActivity as null;
       }
 
       if (!this._otherActivity) {

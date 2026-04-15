@@ -715,9 +715,9 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       const preDamageDetails = damagePerActor[actor.uuid];
       const damageDetails = setupDamageDetails(preDamageDetails, selector, actor);
       if (damageDetails) {
-        await workflow?.callDamageHooksAndMacros(damageDetails, token);
         damageDetails.damageDetails[selector] = damageDetails.damageDetail;
         workflow.damageList.push(damageDetails);
+        await workflow?.callDamageHooksAndMacros(damageDetails, token);
       }
     }
     await timedAwaitExecuteAsGM("createReverseDamageCard", {
@@ -910,7 +910,7 @@ export function requestPCSave(ability: string, rollType: string | undefined, pla
     let content = ` ${actorName} ${shouldDisplaySaveDC() ? "DC " + options.saveDetails.rollDC : ""} ${abilityString} ${rollLabel}`;
     if (options.saveDetails.advantage && !options.saveDetails.disadvantage) content = content + ` (${i18n("DND5E.Advantage")}) - ${options.flavor})`;
     else if (!options.saveDetails.advantage && options.saveDetails.disadvantage) content = content + ` (${i18n("DND5E.Disadvantage")}) - ${options.flavor})`;
-    else content + ` - ${options.flavor})`;
+    else content = content + ` - ${options.flavor})`;
     const chatData = {
       content,
       whisper: [player]
@@ -3100,20 +3100,32 @@ export function computePerimeterDistance(
         const srcCenter = (token1 as Token).center;
         const tgtCenter = (token2 as Token).center;
         const t = Math.min((token2 as Token).w, (token2 as Token).h) / 4;
-        const t2 = Math.min((token2 as Token).w, (token2 as Token).h) / 2 - 2;
+        const t2half = Math.min((token2 as Token).w, (token2 as Token).h) / 2 - 2;
         const offsets = t > 0 ? [
           [0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t],
-          [-t2, -t2], [-t2, t2], [t2, t2], [t2, -t2], [-t2, 0], [t2, 0], [0, -t2], [0, t2]
+          [-t2half, -t2half], [-t2half, t2half], [t2half, t2half], [t2half, -t2half], [-t2half, 0], [t2half, 0], [0, -t2half], [0, t2half]
         ] : [[0, 0]];
         const testPoints = offsets.map(o => new PIXI.Point(tgtCenter.x + o[0], tgtCenter.y + o[1]));
         const srcOrigin = new PIXI.Point(srcCenter.x, srcCenter.y);
 
+        const t1Elevation = (token1 as Token).document.elevation ?? 0;
+        const t2Elevation = (token2 as Token).document.elevation ?? 0;
+        const t1DocSize = Math.max((token1 as Token).document.height ?? 1, (token1 as Token).document.width ?? 1);
+        const t2DocSize = Math.min((token2 as Token).document.height ?? 1, (token2 as Token).document.width ?? 1);
+        const t1TopElevation = t1Elevation + t1DocSize * (canvas.dimensions?.distance ?? 5);
+        const t2TopElevation = t2Elevation + t2DocSize * (canvas.dimensions?.distance ?? 5);
+
         let allBlocked = true;
         for (const tgtPt of testPoints) {
-          const collision = CONFIG.Canvas.polygonBackends.sight.testCollision(
-            srcOrigin, tgtPt,
-            { type: "sight", mode: "any" }
-          );
+          const collision = checkWallCollision(srcOrigin, tgtPt, {
+            source: (token1 as Token).document,
+            wallsBlockRange,
+            coverVisible: preCheck.coverVisible,
+            originElevation: t1Elevation,
+            destElevation: t2Elevation,
+            originTopElevation: t1TopElevation,
+            destTopElevation: t2TopElevation
+          });
           if (!collision) { allBlocked = false; break; }
         }
         if (allBlocked) {
@@ -7406,12 +7418,12 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
   if (token.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)) {
     range = 2;
   }
-  if (getFlankingDistance(token, target) > range * (canvas.dimensions?.distance ?? 5)) return false;
+  const flankDist = getFlankingDistance(token, target);
+  if (flankDist > range * (canvas.dimensions?.distance ?? 5)) return false;
   // an enemy's enemies are my friends.
   const allies = findPotentialFlankers(target)
-
-  if (!token.document.disposition) return false; // Neutral tokens can't get flanking
-  if (allies.length <= 1) return false; // length 1 means no other allies nearby
+  if (!token.document.disposition) return false;
+  if (allies.length <= 1) return false;
   const gridW = canvas.grid?.sizeX ?? 100;
   const gridH = canvas.grid?.sizeY ?? 100;
   const tl = { x: target.x, y: target.y };
@@ -9399,7 +9411,7 @@ export function getItemFromEffectOrigin(origin: string, alreadyVisited: string[]
   if (originDoc?.item instanceof Item) return originDoc.item;
   if (originDoc?.parent instanceof Item) {
     originItem = originDoc.parent;
-  } else if (originDoc?.origin) {
+  } else if (typeof originDoc?.origin === "string") {
     originItem = getItemFromEffectOrigin(originDoc.origin, [...alreadyVisited, origin]);
     // recursive so @michael can feel fancy
   }

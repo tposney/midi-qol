@@ -791,7 +791,7 @@
   },
   "midi-qol.Wounded": "Wounded",
   "midi-qol.AddWounded.Name": "Add effect when hp falls below %",
-  "midi-qol.AddWounded.Hint": "Add Selected status when HP are less than specified percentage of max. 0 disables",
+  "midi-qol.AddWounded.Hint": "Add Selected status when HP are less than or equal to specified percentage of max. 0 disables",
   "midi-qol.debugCallTiming.Name": "Log execution timing",
   "midi-qol.debugCallTiming.Hint": "Provide some log information about how long things take",
   "midi-qol.autoFailFriendly": "Auto Fail Friendly",

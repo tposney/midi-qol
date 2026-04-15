@@ -258,7 +258,7 @@ export async function processWoundedStatus(actor: Actor.Implementation) {
 
     // Handle wounded status
     if (configSettings.addWounded > 0 && configSettings.addWoundedStyle !== "none") {
-      const needsWounded = attributes.hp.pct < configSettings.addWounded && !needsBeaten;
+      const needsWounded = attributes.hp.pct <= configSettings.addWounded && !needsBeaten;
       const woundedStatus = getWoundedStatus();
       if (!woundedStatus) {
         const message = "wounded status condition not set - please update your midi-qol wounded condition on the mechanics tab";

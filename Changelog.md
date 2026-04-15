@@ -1,3 +1,19 @@
+### 13.0.58
+* Fix Active Defence display icons/colours to match saving throw presentation — defence success now shows as a positive result (MR !413, thanks @morepurplemorebetter).
+* Fix Active Defence Modifier hint text to match the actual code formulas (MR !413, thanks @Bacon).
+* Fix capitalization typo in `bonusActionUsed` and `reactionUsed` status effect changes — `Flags.midi-qol` → `flags.midi-qol` (MR !415, thanks @baconnugget).
+* Updated pt-BR translation (MR !410, !411, thanks @Kharmans).
+* Fix `workflow.damageList` being empty during `preDamageApplication` OnUse macros — damage entries are now added to the list before the macro is called.
+* Fix `dnd5e.preUseActivity` hook receiving stale targets from a previous item use in `messageConfig.data.flags.dnd5e.targets`. Targets now correctly reflect the current use.
+* Fix re-rolling attack from a card button (after switching targets) still using the old target for damage application.
+* Fix targets not being displayed on the attack card when "Auto Check Hit" is set to "Don't check".
+* Fix for always highlighting roll success/failure for dnd5e 5.3+. Moved the midi settings for highlighting roll success/failure to the midi-qol hits section.
+* Fix wall collision testing for token perimeter distance measurement. The perimeter distance path was using a 2D sight check instead of routing through the elevation-aware wall collision system, causing "Center + Levels" and other 3D wall-blocking modes (e.g. Wall Height) to be ignored.
+* Change to how other activity defaults. 
+  - For any activity created through the activity editor other activity will be force set to None, you can override it as required.
+  - For programatically created activities only AttackActivity will default to auto, all others will default to none unless overridden.
+
+
 ### 13.0.57
 * Fix for flanking/flanked icons not displaying on the hits display line. Icons now render correctly in both light and dark themes (e.g. Carolingian).
 * Fix for damage application tray change-source icons (save, resistance, etc.) being unreadable in dark themes.

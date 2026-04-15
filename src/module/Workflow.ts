@@ -269,20 +269,17 @@ export class Workflow {
 
   static getWorkflowByActivityUuid(activityUuid?: string): Workflow | undefined {
     if (!activityUuid) return;
-    // Hacky way to get the most recent workflow for an activityUuid - which is probably what we want.
-    // depends on map iterating in order of insertion 
-    const entries = Array.from(Workflow.workflows.entries()).reverse();
-    let returnValue: any = undefined;
-    for (const [key, workflow] of entries) {
-      if (workflow instanceof WeakRef) {
-        if (workflow?.deref()?.activity?.uuid === activityUuid) {
-          returnValue = Workflow.getWorkflow(key);
-          break;
-        }
-      } else if (workflow.activity.uuid === activityUuid) {
-        returnValue = Workflow.getWorkflow(key);
-        break;
-      }
+    // Direct map lookup — the workflow is keyed by activity.uuid until the chat card is
+    // created, at which point the activity.uuid entry is deleted and replaced by the
+    // chatMessage.uuid entry. A direct get() avoids finding stale re-keyed workflows.
+    // Use workflows.get() directly (not getWorkflow()) to avoid infinite recursion,
+    // since getWorkflow() falls back to getWorkflowByActivityUuid().
+    const entry = Workflow.workflows.get(activityUuid);
+    let returnValue: Workflow | undefined;
+    if (entry instanceof WeakRef) {
+      returnValue = entry.deref();
+    } else {
+      returnValue = entry;
     }
     if (debugEnabled > 0) warn(`Fetching workflow by activity uuid ${activityUuid} workflowId: ${returnValue?.id}`);
     return returnValue;
@@ -569,7 +566,7 @@ export class Workflow {
 
   get templateId() {
     if (!this.templateUuid || typeof this.templateUuid !== "string") return;
-    return this.templateUuid.split(".")[-1];
+    return this.templateUuid.split(".").at(-1);
   }
 
   get inCombat() {
@@ -2517,6 +2514,9 @@ export class Workflow {
     if (configSettings.autoCheckHit === "none") {
       this.hitTargets = new Set();
       this.hitTargetsEC = new Set();
+      if (this.targets.size > 0 && this.activity.target?.affects?.type !== "self") {
+        await this.displayHitTargets(false);
+      }
       return this.postAttackRollState;
     }
     if (getAutoRollDamage(this) === "always") return this.postAttackRollState;
@@ -4894,14 +4894,8 @@ return {
         const d: any = this.attackRoll.dice[0]; // should be a dice term but DiceTerm.options not defined
         const isD20 = (d.faces === 20);
         if (isD20) {
-          if (this.isCritical) {
-            content = content.replace('dice-total', 'dice-total critical');
-          } else if (this.isFumble) {
-            content = content.replace('dice-total', 'dice-total fumble');
-          } else if (d.options.target) {
-            if ((this.attackRoll?.total || 0) >= d.options.target) content = content.replace('dice-total', 'dice-total success');
-            else content = content.replace('dice-total', 'dice-total failure');
-          }
+          // Success/failure/critical/fumble classes are applied at render time
+          // by ChatMessageMidi._applyAttackRollHighlight, not baked into content.
           this.d20AttackRoll = d.total;
         }
       }
@@ -5034,6 +5028,8 @@ return {
         img = (await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 })) ?? "";
       }
       const tokenUuid = target.document.uuid;
+      // @ts-expect-error no dnd5e-types
+      const baseAc = target.actor?.system?.attributes?.ac?.value ?? 10;
       this.hitDisplayData[tokenUuid] = {
         targetClass: (target.actor as Actor)?.hasPlayerOwner ? "midi-qol-player-target" : "midi-qol-npc-target",
         target: target,
@@ -5044,6 +5040,8 @@ return {
         playerName: getTokenPlayerName(target) ?? "",
         uuid: tokenUuid,
         showAC: !!this.activity.attack,
+        acDisplay: `${baseAc}`,
+        acIcons: [],
         isHit: this.hitTargets.has(target)
       };
     }

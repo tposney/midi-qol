@@ -95,6 +95,18 @@
       <div class="notes midi-qol-faint">{{{localize "SETTINGS.DND5E.VISIBILITY.Attack.Hint"}}}</div>
     </div>
     <div class="form-group">
+      <label>{{localize "midi-qol.HighlightSuccess.Name"}}</label>
+      <input type="checkbox" name="highlightSuccess" data-dtype="Boolean" {{checked
+      configSettings.highlightSuccess}} />
+      <div class="notes midi-qol-faint">{{{localize "midi-qol.HighlightSuccess.Hint"}}}</div>
+    </div>
+    <div class="form-group">
+      <label>{{localize "midi-qol.HighLightCriticalAttackOnly.Name"}}</label>
+      <input type="checkbox" name="highLightCriticalAttackOnly" data-dtype="Boolean" {{checked
+      configSettings.highLightCriticalAttackOnly}} />
+      <div class="notes midi-qol-faint">{{{localize "midi-qol.HighLightCriticalAttackOnly.Hint"}}}</div>
+    </div>
+    <div class="form-group">
       <label>{{localize "midi-qol.AutoCheckHit.Name"}}</label>
       <select name="autoCheckHit" data-dtype="String">
         {{midiSelectOptions autoCheckHitOptions selected=configSettings.autoCheckHit localize=true}}

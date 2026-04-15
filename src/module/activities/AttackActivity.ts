@@ -4,7 +4,7 @@ import { Workflow } from "../Workflow.js";
 import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags } from "../lib/RollModifierTracker.js";
 import { MidiOptions } from "../utils.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
-import { addAttribution, areMidiKeysPressed, callActivityHooks, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets } from "../utils.js";
+import { addAttribution, areMidiKeysPressed, callActivityHooks, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets, validTargetTokens } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
@@ -172,6 +172,10 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         attackConfig.midiOptions.advantage = undefined;
         attackConfig.midiOptions.disadvantage = undefined;
         workflow.activity = this;
+        // Update targets if user has selected new ones; preserve existing targets otherwise
+        // (e.g. template-derived targets, programmatic targetsToUse, or no selection)
+        const currentTargets = validTargetTokens(new Set(game.user?.targets));
+        if (currentTargets.size > 0) workflow.setTargets(currentTargets);
         // @ts-expect-error
         return this.rollAttack({ workflow }, {}, {});
       }
@@ -201,6 +205,9 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         attackConfig.midiOptions.workflowOptions.advantage = true;
         attackConfig.midiOptions.workflowOptions.disadvantage = false;
         workflow.activity = this;
+        // Update targets if user has selected new ones; preserve existing targets otherwise
+        const currentTargets = validTargetTokens(new Set(game.user?.targets));
+        if (currentTargets.size > 0) workflow.setTargets(currentTargets);
         //@ts-expect-error
         return this.rollAttack(attackConfig, {}, {});
       }
@@ -230,6 +237,9 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         attackConfig.midiOptions.workflowOptions.advantage = false;
         attackConfig.midiOptions.workflowOptions.disadvantage = true;
         workflow.activity = this;
+        // Update targets if user has selected new ones; preserve existing targets otherwise
+        const currentTargets = validTargetTokens(new Set(game.user?.targets));
+        if (currentTargets.size > 0) workflow.setTargets(currentTargets);
         //@ts-expect-error
         return this.rollAttack(attackConfig, {}, {});
       }

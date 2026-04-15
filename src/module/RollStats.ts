@@ -78,6 +78,12 @@ export class RollStats {
       this.currentStats[id] = foundry.utils.mergeObject(this.currentStats[id], blankStats,
         { overwrite: false, inplace: true, insertKeys: true, insertValues: true });
     }
+    // Sanitize any NaN/undefined numeric fields from corrupted or old stats
+    for (const scope of [this.currentStats[id].session, this.currentStats[id].lifetime]) {
+      for (const key of Object.keys(blankStat) as Array<keyof typeof blankStat>) {
+        if (!Number.isFinite(scope[key])) scope[key] = 0;
+      }
+    }
     return this.currentStats[id];
   }
 
@@ -126,6 +132,12 @@ export class RollStats {
     if (!currentStats.itemStats[itemName].lifetime) {
       currentStats.itemStats[itemName].lifetime = foundry.utils.duplicate(blankStat);
     }
+    // Sanitize any NaN/undefined numeric fields from corrupted or old stats
+    for (const scope of [currentStats.itemStats[itemName].session, currentStats.itemStats[itemName].lifetime]) {
+      for (const key of Object.keys(blankStat) as Array<keyof typeof blankStat>) {
+        if (!Number.isFinite(scope[key])) scope[key] = 0;
+      }
+    }
     return currentStats.itemStats[itemName];
   }
 
@@ -167,6 +179,7 @@ export class RollStats {
   }
 
   toPrecision(number: number, digits: number) {
+    if (!Number.isFinite(number)) return 0;
     return Math.round(number * (10 ** digits)) / (10 ** digits);
   }
 
