@@ -70,7 +70,7 @@ export class RegionBehaviorEditor extends HandlebarsApplicationMixin(Application
       { value: "none", label: i18n("midi-qol.REGION_BEHAVIOR.wallRestriction.none"), selected: context.wallRestriction === "none" },
       ...edgeTypes.map((type: string) => ({
         value: type,
-        label: game.i18n.localize(`REGION.RESTRICTION_TYPES.${type}.label`),
+        label: game.i18n?.localize(`REGION.RESTRICTION_TYPES.${type}.label`) ?? type,
         selected: context.wallRestriction === type,
       })),
     ];
@@ -78,7 +78,7 @@ export class RegionBehaviorEditor extends HandlebarsApplicationMixin(Application
     // Region visibility dropdown — uses core REGION_VISIBILITY options
     context.regionVisibilityOptions = Object.entries(CONST.REGION_VISIBILITY).map(([key, value]) => ({
       value: String(value),
-      label: game.i18n.localize(`REGION.VISIBILITY.${key}.label`),
+      label: game.i18n?.localize(`REGION.VISIBILITY.${key}.label`) ?? key,
       selected: context.regionVisibility === value,
     }));
 

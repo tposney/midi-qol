@@ -69,7 +69,10 @@ Flags marked as **BooleanFormula** in the sections below accept:
 
 All **Evaluated** flags in the advantage, disadvantage, noAdvantage, noDisadvantage, fail, success, critical, noCritical, fumble, noFumble, grants, magicResistance, and magicVulnerability categories are BooleanFormula fields.
 
-Additionally, the following special flags are BooleanFormula: `neverTarget`, `ignoreNearbyFoes`, `potentCantrip`, `sculptSpells`, `carefulSpells`, `sharpShooter`, `uncanny-dodge`, `inMotion`, `initiativeAdv`, `initiativeDisadv`, `initiativeNoAdv`, `initiativeNoDisadv`, `advantage.concentration`, `disadvantage.concentration`, `noAdvantage.concentration`, `noDisadvantage.concentration`, `fail.disadvantage.heavy`, and `canFlank`.
+Additionally, the following special flags are BooleanFormula: `neverTarget`, `ignoreNearbyFoes`, `potentCantrip`, `sculptSpells`, `carefulSpells`, `sharpShooter`, `uncanny-dodge`, `inMotion`, `advantage.concentration`, `disadvantage.concentration`, `noAdvantage.concentration`, `noDisadvantage.concentration`, `fail.disadvantage.heavy`, and `canFlank`.
+
+> [!note]
+> Initiative advantage/disadvantage flags use the `flags.dnd5e.*` namespace, not `flags.midi-qol.*`. Use `flags.dnd5e.initiativeAdv`, `flags.dnd5e.initiativeDisadv`, etc. They are registered in the DAE field browser under midi-qol for convenience, but the actual initiative code checks the dnd5e flag paths.
 
 **Deferred evaluation flags** include:
 - `flags.midi-qol.optional.*` - Optional bonus effects
@@ -413,6 +416,22 @@ Grant advantage on various roll types. All advantage flags are **Evaluated** (co
 
 *Attack types: mwak, rwak, msak, rsak. Abilities: str, dex, con, int, wis, cha.*
 
+#### Attack by Spell School
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.advantage.attack.school.{school}` | Evaluated | Advantage on attacks from spells of specific school |
+
+*Schools: abj, con, div, enc, evo, ill, nec, trs.*
+
+### Damage Rolls
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.advantage.damage.{attackType}` | Evaluated | Advantage (roll twice, take higher) on damage rolls for specific attack type |
+
+*Attack types: mwak, rwak, msak, rsak.*
+
 ### Saving Throws
 
 | Flag | Access | Description |
@@ -445,7 +464,7 @@ Grant advantage on various roll types. All advantage flags are **Evaluated** (co
 *Abilities: str, dex, con, int, wis, cha.*
 
 > [!note]
-> Ability check advantage/disadvantage flags also apply to skills that use that ability. For example, `advantage.ability.check.dex` grants advantage on Acrobatics, Sleight of Hand, and Stealth checks (all DEX-based skills).
+> Ability check advantage/disadvantage flags also apply to skills that use that ability. For example, `advantage.check.dex` grants advantage on Acrobatics, Sleight of Hand, and Stealth checks (all DEX-based skills).
 
 ### Tool Checks
 
@@ -485,6 +504,14 @@ Grant disadvantage on various roll types. All disadvantage flags are **Evaluated
 | `flags.midi-qol.disadvantage.attack.{ability}` | Evaluated | Disadvantage on attacks using specific ability |
 
 *Attack types: mwak, rwak, msak, rsak. Abilities: str, dex, con, int, wis, cha.*
+
+#### Attack by Spell School
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.disadvantage.attack.school.{school}` | Evaluated | Disadvantage on attacks from spells of specific school |
+
+*Schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Saving Throws
 
@@ -554,8 +581,9 @@ Prevent advantage on various roll types. These flags suppress advantage even whe
 |------|--------|-------------|
 | `flags.midi-qol.noAdvantage.attack.all` | Evaluated | Prevent advantage on all attacks |
 | `flags.midi-qol.noAdvantage.attack.{attackType}` | Evaluated | Prevent advantage on specific attack type |
+| `flags.midi-qol.noAdvantage.attack.school.{school}` | Evaluated | Prevent advantage on attacks from spells of specific school |
 
-*Attack types: mwak, rwak, msak, rsak.*
+*Attack types: mwak, rwak, msak, rsak. Schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Saving Throws
 
@@ -624,8 +652,9 @@ Prevent disadvantage on various roll types. These flags suppress disadvantage ev
 |------|--------|-------------|
 | `flags.midi-qol.noDisadvantage.attack.all` | Evaluated | Prevent disadvantage on all attacks |
 | `flags.midi-qol.noDisadvantage.attack.{attackType}` | Evaluated | Prevent disadvantage on specific attack type |
+| `flags.midi-qol.noDisadvantage.attack.school.{school}` | Evaluated | Prevent disadvantage on attacks from spells of specific school |
 
-*Attack types: mwak, rwak, msak, rsak.*
+*Attack types: mwak, rwak, msak, rsak. Schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Saving Throws
 
@@ -796,6 +825,12 @@ Force automatic failure on rolls. All fail flags are **Evaluated** (conditional 
 
 Force automatic success on rolls. All success flags are **Evaluated** (conditional expression) and registered as **BooleanFormula** fields with DAE.
 
+### All Rolls
+
+| Flag | Access | Description |
+|------|--------|-------------|
+| `flags.midi-qol.success.all` | Evaluated | Automatically succeed on all rolls |
+
 ### Attack Rolls
 
 | Flag | Access | Description |
@@ -855,8 +890,10 @@ Flags applied to a target that affect incoming attacks/rolls against them. All g
 |------|--------|-------------|
 | `flags.midi-qol.grants.advantage.attack.all` | Evaluated | Attackers have advantage on all attacks |
 | `flags.midi-qol.grants.advantage.attack.{attackType}` | Evaluated | Attackers have advantage on specific attack type |
+| `flags.midi-qol.grants.advantage.attack.school.{school}` | Evaluated | Attackers have advantage on attacks from spells of specific school |
+| `flags.midi-qol.grants.advantage.all` | Evaluated | Attackers have advantage on all rolls against this target |
 
-*Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
+*Attack types: mwak, rwak, msak, rsak, heal, other, save, util. Schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Grant Disadvantage to Attackers
 
@@ -864,6 +901,8 @@ Flags applied to a target that affect incoming attacks/rolls against them. All g
 |------|--------|-------------|
 | `flags.midi-qol.grants.disadvantage.attack.all` | Evaluated | Attackers have disadvantage on all attacks |
 | `flags.midi-qol.grants.disadvantage.attack.{attackType}` | Evaluated | Disadvantage on specific attack type |
+| `flags.midi-qol.grants.disadvantage.attack.school.{school}` | Evaluated | Disadvantage on attacks from spells of specific school |
+| `flags.midi-qol.grants.disadvantage.all` | Evaluated | Attackers have disadvantage on all rolls against this target |
 
 *Attack types: mwak, rwak, msak, rsak, heal, other, save, util.*
 
@@ -939,10 +978,12 @@ Prevent attacks against target from being fumbles. For multi-target attacks, ALL
 |------|--------|-------------|
 | `flags.midi-qol.grants.noAdvantage.attack.all` | Evaluated | Prevent attacker's advantage |
 | `flags.midi-qol.grants.noAdvantage.attack.{attackType}` | Evaluated | Prevent advantage on specific attack type |
+| `flags.midi-qol.grants.noAdvantage.attack.school.{school}` | Evaluated | Prevent advantage on attacks from spells of specific school |
 | `flags.midi-qol.grants.noDisadvantage.attack.all` | Evaluated | Prevent attacker's disadvantage |
 | `flags.midi-qol.grants.noDisadvantage.attack.{attackType}` | Evaluated | Prevent disadvantage on specific attack type |
+| `flags.midi-qol.grants.noDisadvantage.attack.school.{school}` | Evaluated | Prevent disadvantage on attacks from spells of specific school |
 
-*Attack types: mwak, rwak, msak, rsak.*
+*Attack types: mwak, rwak, msak, rsak. Schools: abj, con, div, enc, evo, ill, nec, trs.*
 
 ### Grant Max/Min Damage
 
@@ -1043,7 +1084,7 @@ Advantage or disadvantage on saves against magical effects. All magic resistance
 | Flag | Access | Description |
 |------|--------|-------------|
 | `flags.midi-qol.magicVulnerability.all` | Evaluated | Disadvantage on all saves vs magic |
-| `flags.midi-qol.magicVulnerability.all.{ability}` | Evaluated | Disadvantage on specific ability saves vs magic |
+| `flags.midi-qol.magicVulnerability.{ability}` | Evaluated | Disadvantage on specific ability saves vs magic |
 
 *Abilities: str, dex, con, int, wis, cha.*
 
@@ -1082,6 +1123,7 @@ Set minimum or maximum values for the d20 roll (not total). All min/max flags ar
 | `flags.midi-qol.min.ability.save.concentration` | Direct | Minimum for concentration saves. **Mapped to:** `system.attributes.concentration.roll.min` |
 | `flags.midi-qol.min.ability.check.all` | Direct | Minimum d20 roll for all checks |
 | `flags.midi-qol.min.ability.check.{ability}` | Direct | Minimum for specific ability checks |
+| `flags.midi-qol.min.skill.all` | Direct | Minimum d20 roll for all skill checks |
 | `flags.midi-qol.min.skill.{skill}` | Direct | Minimum for specific skill. **Mapped to:** `system.skills.{skill}.roll.min` |
 | `flags.midi-qol.min.tool.all` | Direct | Minimum d20 roll for all tool checks |
 | `flags.midi-qol.min.tool.{tool}` | Direct | Minimum for specific tool check |

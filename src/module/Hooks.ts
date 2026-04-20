@@ -535,7 +535,6 @@ export function initHooks() {
   //           "ActivityMacro", "ActivityMacro.uuid"
   async function executeMacroSpec(macroSpec: string, actor: Actor.Implementation, effect?: ActiveEffect.Implementation): Promise<any> {
     let macro: Macro.Implementation | undefined;
-    let macroData: Macro.CreateData | undefined;
     let macroItem: Item.Implementation | undefined;
     let macroActivity: Activity | undefined;
 
@@ -549,7 +548,6 @@ export function initHooks() {
         // @ts-expect-error no dnd5e-types
         originActivity = origin.system.activities?.contents[0];
       } else if ((origin as any)?.item) {
-        // It's an activity
         originActivity = origin as unknown as Activity;
         originItem = (origin as any).item;
       }
@@ -557,23 +555,15 @@ export function initHooks() {
 
     try {
       if (macroSpec.startsWith("function.")) {
-        // Create a script macro that calls the named function
         const funcName = macroSpec.replace("function.", "").trim();
-        macroData = {
-          name: "replacement effect function call",
-          type: "script",
-          command: `return await ${funcName}({ speaker, actor, token, character, item, args, scope })`
-        };
+        macro = DAE.createSyntheticMacro(
+          `return await ${funcName}({ speaker, actor, token, character, item, args, scope })`,
+          "replacement effect function call"
+        );
         macroItem = originItem;
       } else if (macroSpec.startsWith("Macro.")) {
-        // Get macro by name from game.macros
         const macroName = macroSpec.replace("Macro.", "").trim();
-        macro = game.macros?.getName(macroName);
-        if (!macro) {
-          // Try as UUID
-          const macroEntity = await fromUuid(macroName);
-          if (macroEntity instanceof Macro) macro = macroEntity;
-        }
+        macro = await DAE.resolveWorldMacro(macroName);
         if (!macro) {
           warn(`applyReplacementEffect | Could not find macro ${macroName}`);
           return;
@@ -584,25 +574,23 @@ export function initHooks() {
         }
         macroItem = originItem;
       } else if (macroSpec.startsWith("ItemMacro")) {
-        // Use helper function to resolve ItemMacro
         const resolved = await resolveItemMacro(macroSpec, { actor, originItem });
         if (resolved) {
           macroItem = resolved.item;
-          macroData = resolved.macroData;
+          macro = DAE.createSyntheticMacro(resolved.macroData.command as string, String(resolved.macroData.name));
         } else if (effect?.origin) {
-          // DAE itemData fallback - look for item data stored in effect flags
           const itemData = resolveDAEItemData(actor, effect.origin);
           if (itemData) {
             macroItem = itemData as unknown as Item.Implementation;
-            macroData = itemData.flags?.dae?.macro ?? itemData.flags?.itemacro?.macro;
+            const command = DAE.getItemMacroCommand(itemData);
+            if (command) macro = DAE.createSyntheticMacro(command);
           }
         }
-        if (!macroData) {
+        if (!macro) {
           warn(`applyReplacementEffect | Could not resolve ItemMacro: ${macroSpec}`);
           return;
         }
       } else if (macroSpec.startsWith("ActivityMacro")) {
-        // Use helper function to resolve ActivityMacro
         const resolved = await resolveActivityMacro(macroSpec, { originItem, originActivity });
         if (!resolved) {
           warn(`applyReplacementEffect | Could not resolve ActivityMacro: ${macroSpec}`);
@@ -613,28 +601,11 @@ export function initHooks() {
         macro = resolved.macro;
       }
 
-      // Create macro if we have macroData but no macro
-      if (macroData && !macro) {
-        const OWNER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER;
-        macroData.ownership = { default: OWNER };
-        macroData.author = game.user?.id;
-        macro = new CONFIG.Macro.documentClass(macroData);
-      }
-
       if (!macro?.command) return;
 
-      // Build execution context
       const token = tokenForActor(actor);
-      const speaker = ChatMessage.getSpeaker({ actor, token: token?.document });
       const args = [{ actor, token, effect, item: macroItem, activity: macroActivity, reason: "replacementEffect" }];
-
-      const scope: Macro.UnknownScope = {};
-      scope.actor = actor;
-      scope.token = token;
-      scope.effect = effect;
-      scope.item = macroItem;
-      scope.activity = macroActivity;
-      scope.args = args;
+      const scope: Macro.UnknownScope = { actor, token, effect, item: macroItem, activity: macroActivity, args };
 
       return macro.execute(scope);
     } catch (err) {
@@ -799,7 +770,11 @@ export function initHooks() {
           // await unTimedExecuteAsGM("completeActivityUse", { activityUuid: activity.uuid, actorUuid: actor.uuid, usage: {}, dialog: {}, message: {} });
         }
       }
-      processActivations();
+      processActivations().catch(err => {
+        const errMessage = "Activation Automation | processActivations error";
+        error(errMessage, err);
+        TroubleShooter.recordError(err, errMessage);
+      });
     } catch (err) {
       const errMessage = "Activation Automation | preCreateChatMessage error";
       error(errMessage, err);

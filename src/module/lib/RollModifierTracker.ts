@@ -113,7 +113,8 @@ export function getFlagDisplayName(flag: string): string {
  */
 function getAttributionDisplayName(actor: Actor.Implementation, flag: string, flagDisplayName: string): string {
   const evalKey = `flags.midi-qol.${flag}`.replace("flags.midi-qol.", "flags.midi.evaluated.");
-  const effectNames: string[] = foundry.utils.getProperty(actor, `${evalKey}.effects`) ?? [];
+  const result = foundry.utils.getProperty(actor, `${evalKey}.effects`);
+  const effectNames: string[] = Array.isArray(result) ? result : [];
   // Filter out the generic "flag" entry which means it was set directly, not by an effect
   const realEffects = effectNames.filter(name => name !== "flag");
   if (realEffects.length > 0) {

@@ -1,3 +1,18 @@
+### 14.0.2
+* Fix active defence rolls displaying hit/miss icons inverted — defence rolls now display results like saving throws (success = check, failure = X) (MR !412).
+* Fix bonus action and reaction used status effects not tracking usage — `Flags.midi-qol` (capital F) typo in change keys prevented the flags from being set (MR !414).
+* Updated pt-BR translation (MR !410, !411, thanks @Kharmans).
+* Auto-placed emanation templates now respect the `stationary` targeting option — stationary emanations remain where they are cast instead of following the caster.
+* Fix `workflow.damageList` being empty during `preDamageApplication` OnUse macros — damage entries are now added to the list before the macro is called.
+* Fix `dnd5e.preUseActivity` hook receiving stale targets from a previous item use in `messageConfig.data.flags.dnd5e.targets`. Targets now correctly reflect the current use.
+* Fix re-rolling attack from a card button (after switching targets) still using the old target for damage application.
+* Fix targets not being displayed on the attack card when "Auto Check Hit" is set to "Don't check".
+* Fix `Workflow.templateId` always returning undefined (broken negative array index).
+* Fix save prompt missing flavor text when neither advantage nor disadvantage applies.
+* `DamageOnlyWorkflow` now exposes a `ready` promise that resolves when the workflow completes. Callers can `await workflow.ready` instead of guessing with `setTimeout`. The internal `performState` call is now properly awaited.
+* Fix for detecting if a target can be hit when there is a surface between them. Prior to the fix any surface between the attacker and target would trigger "blocked by a wall" even if there was clear line of sight "through" the level.
+
+
 ### 14.0.1
 * This release is v14 compatible. Tested wtih dnd5e 5.3 prerelease.
 * Supports tempmax daamge.

@@ -66,7 +66,31 @@ export function initPatching() {
   // Token, AmbientLight need dnd5e's mixin added (not in their base class)
   class MidiTokenDocument extends MidiDependentDocumentMixin(
     globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.Token.documentClass)
-  ) { };
+  ) {
+    // Override visibility test points to support testing at top/center+top of token
+    // based on the visionTestHeight setting. This affects Foundry's rendering pipeline
+    // (what tokens appear visible on screen) and midi's canSee/canSense checks.
+    getVisibilityTestPoints(data = {}) {
+      // @ts-expect-error calling super on mixed-in class
+      const points: Array<{ x: number, y: number, elevation: number }> = super.getVisibilityTestPoints(data);
+      const setting = configSettings.optionalRules.visionTestHeight;
+      if (setting === "center" || !points.length) return points;
+
+      const gridDistance = this.parent?.grid?.distance ?? 5;
+      const depth = data.depth ?? this.depth ?? 1;
+      const baseElev = data.elevation ?? this.elevation ?? 0;
+      const centerElev = baseElev + (depth * gridDistance / 2);
+      const topElev = baseElev + (depth * gridDistance);
+
+      if (setting === "top") {
+        for (const p of points) p.elevation = topElev;
+      } else if (setting === "centerAndTop") {
+        const topPoints = points.map(p => ({ x: p.x, y: p.y, elevation: topElev }));
+        points.push(...topPoints);
+      }
+      return points;
+    }
+  };
   //@ts-expect-error
   CONFIG.Token.documentClass = MidiTokenDocument;
 
@@ -258,7 +282,7 @@ export async function processWoundedStatus(actor: Actor.Implementation) {
 
     // Handle wounded status
     if (configSettings.addWounded > 0 && configSettings.addWoundedStyle !== "none") {
-      const needsWounded = attributes.hp.pct < configSettings.addWounded && !needsBeaten;
+      const needsWounded = attributes.hp.pct <= configSettings.addWounded && !needsBeaten;
       const woundedStatus = getWoundedStatus();
       if (!woundedStatus) {
         const message = "wounded status condition not set - please update your midi-qol wounded condition on the mechanics tab";

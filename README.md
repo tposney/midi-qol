@@ -1,11 +1,6 @@
 # Midi-QOL
 
-![](https://img.shields.io/badge/Foundry-v10-informational)
-![](https://img.shields.io/badge/Foundry-v11-informational)
-![](https://img.shields.io/badge/Foundry-v12-informational)
-![](https://img.shields.io/badge/Foundry-v13-informational)
-![](https://img.shields.io/badge/Dnd5e-v3.3.1-informational)
-![](https://img.shields.io/badge/Dnd5e-v4.4.2-informational)
+![](https://img.shields.io/badge/Foundry-v14-informational)
 ![](https://img.shields.io/badge/Dnd5e-v5.2.4+-informational)
 ![](https://img.shields.io/badge/Dnd5e-v5.3+-informational)
 ![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2Fmidi-qol&colorB=4aa94a)
@@ -134,6 +129,7 @@ If you prefer to configure settings manually, here's a recommended full automati
 | v11.6.x | v12 | v3.3.x | [manifest](https://gitlab.com/tposney/midi-qol/raw/v11.6/package/module.json) |
 | v12.4.27+ | v12 | v4.2+ | [manifest](https://gitlab.com/tposney/midi-qol/raw/v12dnd4/package/module.json) |
 | v13.0.52+ | v13 | v5.2.4+ / v5.3 | [manifest](https://gitlab.com/tposney/midi-qol/raw/v13/package/module.json) |
+| v14.0.x | v14 | v5.2.4+ / v5.3 | [manifest](https://gitlab.com/tposney/midi-qol/raw/v14/package/module.json) |
 
 ## Required Modules
 
@@ -149,15 +145,16 @@ If you prefer to configure settings manually, here's a recommended full automati
 
 | Module | Description |
 |--------|-------------|
-| [**Times-up**](https://foundryvtt.com/packages/times-up) | Automatically expires Active Effects as game time passes. Essential for spell durations and temporary buffs. Works with DAE and integrates with time-tracking modules. |
-| **Calendar Module** | Any module that advances game time (Simple Calendar, SmallTime, etc.) - required for Times-up to function properly with real-time expiry. |
+| **Calendar Module** | Any module that advances game time (Simple Calendar, SmallTime, etc.) - recommended if you want effects to expire based on world time. |
+
+> **Note (v14):** Duration management (effect expiry, seconds/rounds conversion, combat start/end handling) has moved from Times-up into DAE. Times-up is no longer required for v14. DAE handles all duration management automatically.
 
 ### Auras & Proximity Effects
 
 | Module | Description |
 |--------|-------------|
-| [**Active Auras**](https://foundryvtt.com/packages/ActiveAuras) | Propagates Active Effects labeled as auras onto nearby tokens. Perfect for Paladin's Aura of Protection, Twilight Cleric's aura, Spirit Guardians, etc. Configurable distance and targeting. DAE @ fields are correctly parsed before application. |
-| [**Aura Effects**](https://foundryvtt.com/packages/auraeffects) | **Preferred.** Converts Active Effects into auras with automatic range-based application. Features disposition filtering (friendly/hostile), stacking control ("best aura wins" logic), visual aura boundaries, and formula evaluation at the source for stat-based bonuses. |
+| [**Aura Effects**](https://foundryvtt.com/packages/auraeffects) | **Recommended.** Converts Active Effects into auras with automatic range-based application. Features disposition filtering (friendly/hostile), stacking control ("best aura wins" logic), visual aura boundaries, and formula evaluation at the source for stat-based bonuses. |
+| [**Active Auras**](https://foundryvtt.com/packages/ActiveAuras) | *Legacy.* Propagates Active Effects labeled as auras onto nearby tokens. Use Aura Effects for new items instead. |
 
 ### Visual Effects & Animations
 
@@ -455,9 +452,9 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 | Setting | Description |
 |---------|-------------|
 | Optional Rules Enabled | Master toggle for optional rules |
-| Check Flanking | Check if you and allies flank opponent (Advantage/Flanking effect/Flanked effect). Supports hex grids (13.0.51+) |
-| Flanking Bonus | Numeric bonus to apply instead of advantage when flanking (0 = use advantage). Per-target bonus reduces target AC rather than granting blanket advantage, giving finer-grained control. (Added in 13.0.51) |
-| Flanking Visualization | Highlight squares/hexes that would provide flanking when targeting an adjacent creature. Useful for adjudicating disputes. Moderately expensive, not recommended for routine play. (Added in 13.0.51) |
+| Check Flanking | Check if you and allies flank opponent. Options: none, Advantage Only, Midi Flanking effect, Midi Flanked effect, Midi Flanked + no conga line, or CE variants (if installed). Supports hex grids |
+| Flanking Bonus Type | What benefit flanking gives: Advantage (default) or +1 to +5 to hit (reduces target's effective AC) |
+| Show Flanking Positions | Highlight grid cells where an ally would create flanking against your current target |
 | Invisible Advantage | Invisible attackers have advantage, disadvantage if target invisible (RAW 2014/RAW 2024/Vision). The 2024 mode checks visibility rather than the invisible condition. (2024 mode added in 13.0.43) |
 | Hidden Advantage | Hidden attackers have advantage/disadvantage (None/Check Hidden/Perceptive) |
 | Invisible Vision | Behave as if all tokens have vision enabled when checking |
@@ -487,7 +484,7 @@ Midi-QOL provides a flexible system for playing sounds during workflow events. E
 
 1. Enable "Use Custom Sounds" in Midi-QOL Misc settings
 2. Open the Sound Configuration panel (button in Misc settings)
-3. Go to the "Quick" tab and click "Create Sample Playlist" to create the "Midi Item Tracks" playlist
+3. Go to the "Quick Settings" tab and click "Create Sample Playlist" to create the "Midi Item Tracks" playlist
 4. Choose a preset configuration: Basic, Detailed, or Full
 5. Switch to the "Sounds" tab to customize individual sound mappings
 
@@ -1288,7 +1285,7 @@ turn=end, saveDC=15, saveAbility=wis, failCount=2+, removeCondition=@attributes.
 # Changelog & Credits
 
 ## Changelog
-https://gitlab.com/tposney/midi-qol/-/blob/v13/Changelog.md
+https://gitlab.com/tposney/midi-qol/-/blob/v14/Changelog.md
 
 ## Credits
 

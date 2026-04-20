@@ -421,9 +421,7 @@ export class ConditionEditor extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!codeMirrorEl) return;
 
     // Set value programmatically — avoids HTML attribute escaping issues with quotes/special chars.
-    // Default to a logical AND expression so the Blockly visual editor has a useful starting block
-    // (standalone expression blocks need a statement wrapper to generate code).
-    const editorValue = this.originalValue || "true && true";
+    const editorValue = this.originalValue || "true";
     (codeMirrorEl as any).value = editorValue;
 
     // Inject contextual completions into the code-mirror element via macro-autocomplete API

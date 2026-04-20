@@ -715,9 +715,9 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       const preDamageDetails = damagePerActor[actor.uuid];
       const damageDetails = setupDamageDetails(preDamageDetails, selector, actor);
       if (damageDetails) {
-        await workflow?.callDamageHooksAndMacros(damageDetails, token);
         damageDetails.damageDetails[selector] = damageDetails.damageDetail;
         workflow.damageList.push(damageDetails);
+        await workflow?.callDamageHooksAndMacros(damageDetails, token);
       }
     }
     await timedAwaitExecuteAsGM("createReverseDamageCard", {
@@ -910,7 +910,7 @@ export function requestPCSave(ability: string, rollType: string | undefined, pla
     let content = ` ${actorName} ${shouldDisplaySaveDC() ? "DC " + options.saveDetails.rollDC : ""} ${abilityString} ${rollLabel}`;
     if (options.saveDetails.advantage && !options.saveDetails.disadvantage) content = content + ` (${i18n("DND5E.Advantage")}) - ${options.flavor})`;
     else if (!options.saveDetails.advantage && options.saveDetails.disadvantage) content = content + ` (${i18n("DND5E.Disadvantage")}) - ${options.flavor})`;
-    else content + ` - ${options.flavor})`;
+    else content = content + ` - ${options.flavor})`;
     const chatData = {
       content,
       whisper: [player]
@@ -1360,16 +1360,16 @@ export async function resolveItemMacro(
 
     // Fall back to finding by name on actor
     if (!item && actor) {
-      item = actor.items.find(i => i.name === itemSpec && !!(i.flags?.dae?.macro ?? i.flags?.itemacro?.macro));
+      item = actor.items.find(i => i.name === itemSpec && !!DAE.getItemMacroCommand(i));
     }
   }
 
   if (!item) return undefined;
 
-  const macroData = item.flags?.dae?.macro ?? item.flags?.itemacro?.macro;
-  if (!macroData) return undefined;
+  const command = DAE.getItemMacroCommand(item);
+  if (!command) return undefined;
 
-  return { item, macroData };
+  return { item, macroData: { name: item.name, type: "script" as const, command } };
 }
 
 /**
@@ -2905,12 +2905,29 @@ function checkSurfaceCollision(
   const originElev = options.originElevation;
   const destElev = options.destElevation;
   if (originElev === undefined || destElev === undefined || originElev === destElev) return false;
-  // @ts-expect-error testSurfaceCollision not in fvtt-types
-  return !!canvas.scene?.testSurfaceCollision?.(
-    { x: origin.x, y: origin.y, elevation: originElev },
-    { x: dest.x, y: dest.y, elevation: destElev },
-    { type: "sight", mode: "any" }
-  );
+  // Test rays at bottom, center, and top of token vertical extents.
+  // A surface has openings (e.g. balcony edge) that only some rays pass through.
+  // If ANY ray is clear, the attack has a path and is not blocked.
+  const originTop = options.originTopElevation ?? originElev;
+  const destTop = options.destTopElevation ?? destElev;
+  const originMid = (originElev + originTop) / 2;
+  const destMid = (destElev + destTop) / 2;
+  const elevPairs = [
+    [originElev, destElev],
+    [originMid, destMid],
+    [originTop, destTop],
+  ];
+  for (const [oElev, dElev] of elevPairs) {
+    if (oElev === dElev) return false;
+    // @ts-expect-error testSurfaceCollision not in fvtt-types
+    const blocked = !!canvas.scene?.testSurfaceCollision?.(
+      { x: origin.x, y: origin.y, elevation: oElev },
+      { x: dest.x, y: dest.y, elevation: dElev },
+      { type: "sight", mode: "any" }
+    );
+    if (!blocked) return false;
+  }
+  return true;
 }
 
 /**
@@ -3127,20 +3144,33 @@ export function computePerimeterDistance(
         const srcCenter = (token1 as Token).center;
         const tgtCenter = (token2 as Token).center;
         const t = Math.min((token2 as Token).w, (token2 as Token).h) / 4;
-        const t2 = Math.min((token2 as Token).w, (token2 as Token).h) / 2 - 2;
+        const t2half = Math.min((token2 as Token).w, (token2 as Token).h) / 2 - 2;
         const offsets = t > 0 ? [
           [0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t],
-          [-t2, -t2], [-t2, t2], [t2, t2], [t2, -t2], [-t2, 0], [t2, 0], [0, -t2], [0, t2]
+          [-t2half, -t2half], [-t2half, t2half], [t2half, t2half], [t2half, -t2half], [-t2half, 0], [t2half, 0], [0, -t2half], [0, t2half]
         ] : [[0, 0]];
         const testPoints = offsets.map(o => new PIXI.Point(tgtCenter.x + o[0], tgtCenter.y + o[1]));
         const srcOrigin = new PIXI.Point(srcCenter.x, srcCenter.y);
 
+        const t1Elevation = (token1 as Token).document.elevation ?? 0;
+        const t2Elevation = (token2 as Token).document.elevation ?? 0;
+        const gridDist = canvas.dimensions?.distance ?? 5;
+        const t1DocSize = Math.max((token1 as Token).document.height ?? 1, (token1 as Token).document.width ?? 1);
+        const t2DocSize = Math.min((token2 as Token).document.height ?? 1, (token2 as Token).document.width ?? 1);
+        const t1TopElevation = t1Elevation + t1DocSize * gridDist;
+        const t2TopElevation = t2Elevation + t2DocSize * gridDist;
+
         let allBlocked = true;
         for (const tgtPt of testPoints) {
-          const collision = CONFIG.Canvas.polygonBackends.sight.testCollision(
-            srcOrigin, tgtPt,
-            { type: "sight", mode: "any" }
-          );
+          const collision = checkWallCollision(srcOrigin, tgtPt, {
+            source: (token1 as Token).document,
+            wallsBlockRange,
+            coverVisible: preCheck.coverVisible,
+            originElevation: t1Elevation,
+            destElevation: t2Elevation,
+            originTopElevation: t1TopElevation,
+            destTopElevation: t2TopElevation
+          });
           if (!collision) { allBlocked = false; break; }
         }
         if (allBlocked) {
@@ -7906,11 +7936,10 @@ export function initializeVision(tk: Token.Implementation, force = false) {
   const visionData = tk._getVisionSourceData?.() ?? {
     x: tk.center.x,
     y: tk.center.y,
-    elevation: tk.document.elevation,
+    elevation: tk.document.getMovementOrigin?.()?.elevation ?? tk.document.elevation,
     // @ts-expect-error no dnd5e-types for token.document.level
     level: tk.document.level,
     radius: tk.sightRange,
-    // @ts-expect-error lightPerceptionRange may not be typed
     lightRadius: tk.lightPerceptionRange,
     externalRadius: tk.externalRadius,
     angle: tk.document.sight.angle,
@@ -7942,27 +7971,20 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   if (!token.hasSight && !configSettings.optionalRules.invisVision) return ["senseAll"];
   if ((!token.vision || !token.vision.los) && !initializeVision(token)) return ["noSight"];
   const matchedModes: Set<string> = new Set();
-  // Determine the array of offset points to test.
-  // Inner ring at t (min dimension / 4) matches Foundry's standard tolerance.
-  // Outer ring at t2 (min dimension / 2 - 2) tests near the token boundary,
-  // catching narrow visible slivers that the inner ring misses.
-  const t = Math.min(target.w, target.h) / 4;
-  const t2 = Math.min(target.w, target.h) / 2 - 2;
-  const targetPoint = target.center;
-  const offsets = t > 0 ? [
-    [0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t],
-    [-t2, -t2], [-t2, t2], [t2, t2], [t2, -t2], [-t2, 0], [t2, 0], [0, -t2], [0, t2]
-  ] : [[0, 0]];
-  // v14: test points use ElevatedPoint (not PIXI.Point) and each test carries a Level reference
-  const targetElevation = target.document.elevation ?? 0;
+  // Use Foundry's getVisibilityTestPoints() which returns constrained test points
+  // (removes points behind walls/surfaces from the target's own movement origin).
+  // This matches what Foundry's rendering pipeline uses for visibility determination.
+  // @ts-expect-error getVisibilityTestPoints not in fvtt-types
+  const visTestPoints: Array<{x: number, y: number, elevation?: number}> = target.document.getVisibilityTestPoints?.() ?? [target.center];
   // @ts-expect-error no dnd5e-types for document.level / scene.levels
   const targetLevel = canvas.scene.levels?.get(target.document.level) ?? canvas.level;
-  const tests = offsets.map(o => ({
-    point: { x: targetPoint.x + o[0], y: targetPoint.y + o[1], elevation: targetElevation },
+  const tests = visTestPoints.map(p => ({
+    point: { x: p.x, y: p.y, elevation: p.elevation ?? (target.document.getMovementOrigin?.()?.elevation ?? target.document.elevation ?? 0) },
     level: targetLevel,
-    los: new Map()
+    los: new Map() as Map<foundry.canvas.sources.PointVisionSource, boolean>
   }));
-  const config = { tests, object: target, level: targetLevel };
+  // @ts-expect-error CanvasVisibilityTestConfiguration not in fvtt-types
+  const config: CanvasVisibilityTestConfiguration = { tests, object: target, level: targetLevel };
   const tokenDetectionModes = token.detectionModes;
   const modes = CONFIG.Canvas.detectionModes;
   let validModes = new Set(validModesParam);
@@ -7973,20 +7995,38 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   // through wall gaps. Foundry uses this same testCollision approach for restricted
   // vision angles; we extend it to 360° vision for accuracy.
   //
-  // For cross-level tokens, skip pre-population and let Foundry's DetectionMode._testLOS
-  // handle level-split ray logic natively (it splits the ray at the level boundary and
-  // tests walls/surfaces in each level independently).
+  // For cross-level tokens, Foundry's DetectionMode._testCollision uses canvas.level
+  // to split the ray at level boundaries. If canvas.level doesn't match the source token's
+  // level, the ray splitting is incorrect (e.g., entire ray tested in target level only).
+  // We pre-populate the LOS cache for both same-level and cross-level cases.
   // @ts-expect-error no dnd5e-types for document.level
   const sameLevel = token.document.level === target.document.level;
-  if (token.vision && sameLevel) {
+  if (token.vision) {
     const origin = { x: token.vision.x, y: token.vision.y };
     for (const test of tests) {
-      const collision = CONFIG.Canvas.polygonBackends.sight.testCollision(
+      // 2D wall collision test
+      const wallCollision = CONFIG.Canvas.polygonBackends.sight.testCollision(
         origin,
         test.point,
         { type: "sight", mode: "any", source: token.vision, useThreshold: true, priority: token.vision.priority }
       );
-      test.los.set(token.vision, !collision);
+      let hasLOS = !wallCollision;
+      // For cross-level tokens, also check surface collision (floors/ceilings between levels)
+      if (hasLOS && !sameLevel) {
+        const originElev = token.vision.elevation;
+        const destElev = test.point.elevation;
+        if (originElev !== destElev) {
+          // @ts-expect-error testSurfaceCollision not in fvtt-types
+          const surfaceBlocked = !!canvas.scene?.testSurfaceCollision?.(
+            { x: origin.x, y: origin.y, elevation: originElev },
+            { x: test.point.x, y: test.point.y, elevation: destElev },
+            { type: "sight", mode: "any" }
+          );
+          if (surfaceBlocked) hasLOS = false;
+        }
+      }
+      // @ts-expect-error fvtt-types token.vision doesn't match PointVisionSource Map key
+      test.los.set(token.vision, hasLOS);
     }
   }
 
@@ -9484,7 +9524,7 @@ export function getItemFromEffectOrigin(origin: string, alreadyVisited: string[]
   if (originDoc?.item instanceof Item) return originDoc.item;
   if (originDoc?.parent instanceof Item) {
     originItem = originDoc.parent;
-  } else if (originDoc?.origin) {
+  } else if (typeof originDoc?.origin === "string") {
     originItem = getItemFromEffectOrigin(originDoc.origin, [...alreadyVisited, origin]);
     // recursive so @michael can feel fancy
   }

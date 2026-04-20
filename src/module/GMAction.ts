@@ -65,6 +65,7 @@ export let setupSocket = () => {
   socketlibSocket.register("undoTillWorkflow", undoTillWorkflow);
   socketlibSocket.register("updateActor", updateActor);
   socketlibSocket.register("updateEffects", updateEffects);
+  socketlibSocket.register("updateItems", updateItems);
   socketlibSocket.register("recordStats", GMrecordStats)
   socketlibSocket.register("saveAllStats", GMsaveAllStats)
   socketlibSocket.register("updateUndoChatCardUuids", updateUndoChatCardUuids);
@@ -134,6 +135,7 @@ export class SaferSocket {
       case "removeEffectUuids":
       case "updateActor":
       case "updateEffects":
+      case "updateItems":
       case "_gmSetFlag":
       case "_gmUnsetFlag":
         if (game.user?.isTrusted) return true;
@@ -362,8 +364,15 @@ async function createEffects(data: { actorUuid: string, effects: ActiveEffect.Cr
 }
 
 async function updateEffects(data: { actorUuid: string, updates: ActiveEffect.UpdateData[] }) {
+  // actorUuid can be an Actor, Token, or Item UUID — transfer effects live on Items
+  let parent: any = fromUuidSync(data.actorUuid);
+  if (parent instanceof TokenDocument) parent = parent.actor;
+  return parent?.updateEmbeddedDocuments("ActiveEffect", data.updates);
+}
+
+async function updateItems(data: { actorUuid: string, updates: Item.UpdateData[] }) {
   const actor = fromActorUuid(data.actorUuid);
-  return actor?.updateEmbeddedDocuments("ActiveEffect", data.updates);
+  return actor?.updateEmbeddedDocuments("Item", data.updates);
 }
 
 async function _toggleStatusEffect(data: { actorUuid: string, statusId: string, options: Actor.ToggleStatusEffectOptions }) {

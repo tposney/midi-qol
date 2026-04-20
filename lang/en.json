@@ -562,6 +562,18 @@
       "simplecover5e": "Use the Simple Cover 5e module to calculate cover. Total cover blocks the attack. Requires the Simple Cover 5e module."
     }
   },
+  "midi-qol.VisionTestHeight.Name": "Vision test point height",
+  "midi-qol.VisionTestHeight.Hint": "Which elevation to test for token visibility. Affects both Foundry's rendering and midi's vision checks.",
+  "midi-qol.VisionTestHeightOptions": {
+    "center": "Center",
+    "top": "Top",
+    "centerAndTop": "Center and Top",
+    "expandedHints": {
+      "center": "Test visibility at the token's center height (Foundry default: elevation + depth/2).",
+      "top": "Test visibility at the top of the token (elevation + depth). Useful for multi-level scenes where tokens near floor edges should be more visible.",
+      "centerAndTop": "Test visibility at both center and top of the token. If either is visible, the token is detected."
+    }
+  },
   "midi-qol.NearbyAllyRanged.Name": "(House Rule) Ranged Attacks at foes near allies have disadvantage",
   "midi-qol.WallsBlockRangeOptions": {
     "none": "No",
@@ -787,7 +799,7 @@
   },
   "midi-qol.Wounded": "Wounded",
   "midi-qol.AddWounded.Name": "Add effect when hp falls below %",
-  "midi-qol.AddWounded.Hint": "Add Selected status when HP are less than specified percentage of max. 0 disables",
+  "midi-qol.AddWounded.Hint": "Add Selected status when HP are less than or equal to specified percentage of max. 0 disables",
   "midi-qol.debugCallTiming.Name": "Log execution timing",
   "midi-qol.debugCallTiming.Hint": "Provide some log information about how long things take",
   "midi-qol.autoFailFriendly": "Auto Fail Friendly",

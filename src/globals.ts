@@ -619,6 +619,18 @@ declare global {
   }
 
   // Note: Intentional `var` use here to add to the `globalThis`
+  var DAE: {
+    actionQueue: foundry.utils.Semaphore;
+    createSyntheticMacro: (command: string, name?: string) => Macro.Implementation;
+    createFunctionMacro: (functionPath: string) => Macro.Implementation;
+    resolveWorldMacro: (nameOrUuid: string) => Promise<Macro.Implementation | undefined>;
+    getItemMacroCommand: (source: unknown) => string | undefined;
+    doEffects: (...args: any[]) => Promise<any>;
+    doActivityEffects: (...args: any[]) => Promise<any>;
+    DIMEditor: any;
+    localizationMap: Record<string, string>;
+    [key: string]: any;
+  };
   var MidiDAEEval: {
     testfunc: (...args: any[]) => void;
     canSee: typeof utils.canSee;
@@ -1239,6 +1251,7 @@ export interface Activity extends AnyMutableObject {
       width: string;
       height: string;
       units: string;
+      stationary?: boolean;
     };
     affects: {
       count: string;

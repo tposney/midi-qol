@@ -286,6 +286,7 @@ class ConfigSettings {
     vitalityItem: "", // Item name for vitality pool feature
     vitalityDeadCondition: "dead", // Condition to apply when vitality reaches 0
     vitalityDeathRequires: "vitalityOnly", // "vitalityOnly" = dead when vitality=0, "vitalityAndHP" = dead when vitality=0 AND HP=0
+    visionTestHeight: "center",
     wallsBlockRange: "center",
   };
 }
@@ -1373,6 +1374,12 @@ export const autoCEEffectsOptions = keysToExtendedOptionsObj("AutoCEEffectsOptio
   "both"
 ]);
 
+
+export const visionTestHeightOptions = keysToExtendedOptionsObj("VisionTestHeightOptions", [
+  "center",
+  "top",
+  "centerAndTop"
+]);
 
 export const wallsBlockRangeOptionsNew = keysToExtendedOptionsObj("WallsBlockRangeOptionsNew", [
   "none",

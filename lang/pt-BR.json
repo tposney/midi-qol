@@ -1718,7 +1718,7 @@
   "midi-qol.flagTemplate.superSaver.name": "Super Salv. ({label})",
   "midi-qol.flagTemplate.superSaver.description": "Sem dano em caso de sucesso, metade do dano em caso de falha.",
   "midi-qol.flagTemplate.semiSuperSaver.name": "Semi Super Salv. ({label})",
-  "midi-qol.flagTemplate.semiSuperSaver.description": "Sem dano em caso de sucesso, metade do dano em caso de falha.",
+  "midi-qol.flagTemplate.semiSuperSaver.description": "Sem dano em caso de sucesso, dano total em caso de falha.",
   "midi-qol.flagTemplate.max.ability.save.name": "Salv. Máx ({label})",
   "midi-qol.flagTemplate.max.ability.save.description": "Número máximo que pode ser rolado no d20 principal para salvaguardas de {label}.",
   "midi-qol.flagTemplate.min.ability.save.name": "Salv. Mín ({label})",

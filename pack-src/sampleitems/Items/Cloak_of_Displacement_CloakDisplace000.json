@@ -1,0 +1,195 @@
+{
+  "name": "Cloak of Displacement",
+  "type": "equipment",
+  "img": "icons/equipment/back/cloak-brown-accent-brown-layered-collared-fur.webp",
+  "effects": [
+    {
+      "_id": "CloakDispEffect0",
+      "name": "Cloak of Displacement",
+      "img": "icons/equipment/back/cloak-brown-accent-brown-layered-collared-fur.webp",
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "macro.itemMacro",
+            "value": "",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
+      "disabled": false,
+      "duration": {},
+      "transfer": true,
+      "origin": null,
+      "description": "<p>Creatures have Disadvantage on attack rolls against you. If you take damage, this property ceases to function until the start of your next turn. Suppressed while your Speed is 0.</p>",
+      "statuses": [],
+      "flags": {
+        "dae": {
+          "stackable": "noneName",
+          "selfTarget": false,
+          "selfTargetAlways": true,
+          "macroRepeat": "startEveryTurn",
+          "specialDuration": [],
+          "durationExpression": "",
+          "transfer": true
+        }
+      },
+      "sort": 0,
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "14.357",
+        "systemId": "dnd5e",
+        "systemVersion": "5.2.4",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "start": {
+        "time": null,
+        "round": null,
+        "turn": null,
+        "combat": null
+      },
+      "showIcon": 2,
+      "_key": "!items.effects!CloakDisplace000.CloakDispEffect0"
+    }
+  ],
+  "flags": {
+    "dae": {
+      "activeEquipped": true,
+      "alwaysActive": false,
+      "macro": {
+        "name": "Cloak of Displacement",
+        "type": "script",
+        "scope": "global",
+        "command": "// Cloak of Displacement — item macro (2024 rules)\n// Transfer effect with macroRepeat: startEveryTurn\n// Creates a non-transfer \"Displaced\" effect with grants.disadvantage.attack.all\n// and isDamaged special duration. When damaged, midi-qol removes that effect.\n// At the start of each turn, this macro re-creates it if missing and speed > 0.\n\nconst DISPLACED_NAME = \"Displaced\";\nconst lastArg = args[args.length - 1];\n\nfunction hasDisplacedEffect() {\n  return actor.appliedEffects.find(e => e.name === DISPLACED_NAME && e.origin === macroItem.uuid);\n}\n\nfunction hasSpeed() {\n  const speed = actor.system.attributes?.movement;\n  if (!speed) return false;\n  return (speed.walk || 0) > 0 || (speed.fly || 0) > 0 || (speed.swim || 0) > 0 || (speed.climb || 0) > 0 || (speed.burrow || 0) > 0;\n}\n\nasync function createDisplacedEffect() {\n  const effectData = {\n    name: DISPLACED_NAME,\n    img: \"icons/magic/control/silhouette-hold-beam-blue.webp\",\n    origin: macroItem.uuid,\n    system: {\n      changes: [\n        { key: \"flags.midi-qol.grants.disadvantage.attack.all\", value: \"1\", priority: 20, type: \"custom\" }\n      ]\n    },\n    flags: {\n      dae: {\n        specialDuration: [\"isDamaged\"],\n        stackable: \"noneName\"\n      }\n    },\n    description: \"<p>Creatures have Disadvantage on attack rolls against you (Cloak of Displacement). Removed when you take damage.</p>\"\n  };\n  await actor.createEmbeddedDocuments(\"ActiveEffect\", [effectData]);\n}\n\nasync function removeDisplacedEffect() {\n  const existing = hasDisplacedEffect();\n  if (existing) await existing.delete();\n}\n\nif (args[0] === \"on\") {\n  if (hasSpeed() && !hasDisplacedEffect()) await createDisplacedEffect();\n  return;\n}\n\nif (args[0] === \"off\") {\n  await removeDisplacedEffect();\n  return;\n}\n\nif (args[0] === \"each\" && lastArg.turn === \"startTurn\") {\n  if (!hasSpeed()) {\n    await removeDisplacedEffect();\n    return;\n  }\n  if (!hasDisplacedEffect()) {\n    await createDisplacedEffect();\n    ChatMessage.create({\n      content: `<p><strong>${actor.name}'s</strong> Cloak of Displacement shimmers back to life.</p>`,\n      speaker: ChatMessage.getSpeaker({ actor })\n    });\n  }\n}",
+        "_id": null,
+        "folder": null,
+        "sort": 0,
+        "flags": {},
+        "_stats": {
+          "systemId": "dnd5e",
+          "systemVersion": "5.2.4",
+          "coreVersion": "14.357",
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null
+        }
+      }
+    },
+    "midi-qol": {
+      "onUseMacroName": "",
+      "onUseMacroParts": {
+        "items": []
+      }
+    },
+    "midiProperties": {
+      "confirmTargets": "default",
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "noConcentrationCheck": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "14.0.1"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Wondrous Item, Rare (Requires Attunement)</em></p><p>While you wear this cloak, it magically projects an illusion that makes you appear to be standing in a place near your actual location, causing any creature to have Disadvantage on attack rolls against you. If you take damage, the property ceases to function until the start of your next turn. This property is suppressed while your Speed is 0.</p><section class=\"secret\" id=\"secret-cloakDisplacementNote\"><p><strong>Foundry Note</strong></p><p>The cloak creates a \"Displaced\" effect that grants disadvantage on all attacks against the wearer. When the wearer takes damage, the Displaced effect is removed (via isDamaged special duration). At the start of each turn, the macro re-creates it if missing. If all movement speeds are 0, the effect is not created (and removed if present).</p></section>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "revision": 1,
+      "rules": "2024",
+      "license": ""
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 2,
+      "units": "lb"
+    },
+    "price": {
+      "value": 4000,
+      "denomination": "gp"
+    },
+    "attunement": "required",
+    "attuned": false,
+    "equipped": false,
+    "rarity": "rare",
+    "identified": true,
+    "cover": null,
+    "crewed": false,
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "armor": {
+      "value": null,
+      "dex": null,
+      "magicalBonus": null
+    },
+    "hp": {
+      "value": null,
+      "max": null,
+      "dt": null,
+      "conditions": ""
+    },
+    "type": {
+      "value": "wondrous",
+      "baseItem": ""
+    },
+    "activities": {},
+    "identifier": "cloak-of-displacement",
+    "container": null,
+    "properties": [
+      "mgc"
+    ],
+    "unidentified": {
+      "description": ""
+    },
+    "strength": null,
+    "proficient": null
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "14.357",
+    "systemId": "dnd5e",
+    "systemVersion": "5.2.4",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "folder": "5Ok9Jbl5nOokCkqf",
+  "_id": "CloakDisplace000",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!CloakDisplace000"
+}

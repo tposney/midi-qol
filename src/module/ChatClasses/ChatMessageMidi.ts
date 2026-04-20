@@ -349,22 +349,56 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     _highlightCriticalSuccessFailure(html: HTMLElement) {
-      // @ts-expect-error no dnd5e-types
-      super._highlightCriticalSuccessFailure(html);
+      if (!this.flags?.[MODULE_ID]?.messageType) {
+        // Non-midi messages (saves, death saves, ability checks): let dnd5e handle normally
+        // @ts-expect-error no dnd5e-types
+        super._highlightCriticalSuccessFailure(html);
+        return;
+      }
+      // Midi messages: apply our own logic (also runs from _enrichChatCard for "usage" type messages)
+      this._applyAttackRollHighlight(html);
+    }
+
+    /**
+     * Apply or strip success/failure/critical/fumble classes on dice-total elements.
+     * Classes are determined at render time from roll data, respecting visibility settings.
+     * Called from both _highlightCriticalSuccessFailure (non-usage messages) and
+     * _enrichChatCard (all messages including usage-type where _highlightCritical is skipped).
+     */
+    private _applyAttackRollHighlight(html: HTMLElement) {
       const totals = html.querySelectorAll(".dice-total");
+      const hideResult = !game.user?.isGM && (["whisper", "gmOnly"].includes(configSettings.autoCheckHit) || safeGetGameSetting("dnd5e", "attackRollVisibility") === "none");
       for (let [index, d20Roll] of this.rolls.entries()) {
         const total = totals[index];
         if (!total) continue;
-        if (!game.user?.isGM && (["whisper", "gmOnly"].includes(configSettings.autoCheckHit) || safeGetGameSetting("dnd5e", "attackRollVisibility") === "none")) {
-          total.classList.remove("success", "failure", "critical", "fumble");
-        } else if (configSettings.highLightCriticalAttackOnly) {
-          //@ts-expect-error
-          if (d20Roll?.isCritical) total.classList.add("critical");
-          //@ts-expect-error
-          if (d20Roll?.isFumble) total.classList.add("fumble");
-          total.classList.remove("success", "failure");
-        } else if (!configSettings.highlightSuccess) {
-          total.classList.remove("success", "failure", "critical", "fumble");
+        // Always start clean — remove any classes that may have been added by super or prior render
+        total.classList.remove("success", "failure", "critical", "fumble");
+        total.querySelector(".icons")?.remove();
+
+        if (hideResult) continue;
+
+        // Determine what classes to add from the roll data
+        //@ts-expect-error .dice not typed
+        const d0 = d20Roll?.dice?.[0];
+        if (!d0 || d0.faces !== 20 || d0.values?.length !== 1) continue;
+
+        // @ts-expect-error D20Roll not typed
+        const d20 = dnd5e.dice.D20Roll.fromRoll(d20Roll);
+        const isAttack = this.getFlag("dnd5e", "roll.type") === "attack";
+        const canCrit = isAttack || this.getFlag("dnd5e", "roll.type") === "death";
+
+        if (!configSettings.highlightSuccess) continue;
+
+        if (configSettings.highLightCriticalAttackOnly) {
+          if (canCrit && d20.isCritical) total.classList.add("critical");
+          if (canCrit && d20.isFumble) total.classList.add("fumble");
+        } else {
+          if (canCrit && d20.isCritical) total.classList.add("critical");
+          if (canCrit && d20.isFumble) total.classList.add("fumble");
+          if (d20.dice[0]?.options?.target) {
+            if (d20.isSuccess) total.classList.add("success");
+            else total.classList.add("failure");
+          }
         }
       }
     }
@@ -555,6 +589,10 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       // @ts-expect-error no dnd5e-types
       super._enrichChatCard(html);
       this.applyChatVisibility(html);
+      // Apply attack roll highlighting based on visibility settings.
+      // Needed here because "usage" type messages (dnd5e activities) take the system.getHTML()
+      // path in renderHTML, which calls _enrichChatCard but skips _highlightCriticalSuccessFailure.
+      this._applyAttackRollHighlight(html);
       this._addMarkerClasses(html);
       if (debugEnabled > 1) log("Finished enriching chat card", Date.now(), this.id);
     }
