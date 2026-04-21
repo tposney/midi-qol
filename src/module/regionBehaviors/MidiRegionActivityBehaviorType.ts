@@ -158,19 +158,14 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     const actor = token.actor;
     if (!actor) return;
 
-    console.error(`MidiRegionActivity._executeRulesForTrigger | trigger=${trigger} rules=`, rules, `token=${token.name}`);
-
     for (const rule of rules) {
       if (rule.trigger !== trigger) continue;
-      console.error(`MidiRegionActivity._executeRulesForTrigger | matched rule:`, rule);
       try {
         switch (rule.action) {
           case "useActivity":
             if (oncePerTurn && this._hasTriggeredThisTurn(actor, rule.targetUuid)) {
-              console.error(`MidiRegionActivity._executeRulesForTrigger | skipped (already triggered this turn)`);
               continue;
             }
-            console.error(`MidiRegionActivity._executeRulesForTrigger | calling _triggerActivity uuid=${rule.targetUuid}`);
             await this._triggerActivity(token, rule.targetUuid);
             if (oncePerTurn) await this._markTriggeredThisTurn(actor, rule.targetUuid);
             break;
@@ -325,10 +320,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     const castLevel = self.castLevel as number;
     const sourceActorUuid = self.sourceActorUuid as string;
 
-    if (!activityUuid) {
-      console.error(`MidiRegionActivity._triggerActivity | no activityUuid, returning`);
-      return;
-    }
+    if (!activityUuid) return;
 
     const triggerData = {
       activityUuid,
@@ -336,7 +328,6 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
       castLevel,
       sourceActorUuid,
     };
-    console.error(`MidiRegionActivity._triggerActivity | isGM=${game.user?.isGM} triggerData=`, triggerData);
 
     if (game.user?.isGM) {
       await MidiRegionActivityBehaviorType._executeTriggerActivity(triggerData);
@@ -351,14 +342,11 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     castLevel: number;
     sourceActorUuid: string;
   }): Promise<void> {
-    console.error(`MidiRegionActivity._executeTriggerActivity | activityUuid=${data.activityUuid}`);
     const activity = fromUuidSync(data.activityUuid);
     if (!activity) {
-      console.error(`MidiRegionActivity._executeTriggerActivity | activity NOT FOUND for uuid=${data.activityUuid}`);
       error(`MidiRegionActivity: activity ${data.activityUuid} not found`);
       return;
     }
-    console.error(`MidiRegionActivity._executeTriggerActivity | found activity:`, (activity as any).name);
 
     const targetTokens: Set<Token.Implementation> = new Set();
     for (const uuid of data.targetUuids) {
@@ -366,11 +354,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
       const token = tokenDoc?.object ?? (tokenDoc ? getToken(tokenDoc) : null);
       if (token) targetTokens.add(token);
     }
-    if (!targetTokens.size) {
-      console.error(`MidiRegionActivity._executeTriggerActivity | no valid target tokens resolved`);
-      return;
-    }
-    console.error(`MidiRegionActivity._executeTriggerActivity | calling completeActivityUse with ${targetTokens.size} targets`);
+    if (!targetTokens.size) return;
 
     await completeActivityUse(activity as any, {
       midiOptions: {

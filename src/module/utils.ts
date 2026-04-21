@@ -6656,7 +6656,7 @@ export function computeTemplateShapeDistance(templateDocument: MeasuredTemplateD
   distance *= canvas.dimensions?.distancePixels ?? 1;
   direction = Math.toRadians(direction);
   if (!templateDocument.object) {
-    throw new Error("Template document has no object");
+    return { shape: undefined, distance: 0 };
   }
   //@ts-expect-error doesn't like `object.ray`
   templateDocument.object.ray = foundry.canvas.geometry.Ray.fromAngle(x, y, direction, distance);

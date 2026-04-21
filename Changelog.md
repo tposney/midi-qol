@@ -1,3 +1,6 @@
+### 14.0.3
+* Clean up debug left in.
+
 ### 14.0.2
 * Fix active defence rolls displaying hit/miss icons inverted — defence rolls now display results like saving throws (success = check, failure = X) (MR !412).
 * Fix bonus action and reaction used status effects not tracking usage — `Flags.midi-qol` (capital F) typo in change keys prevented the flags from being set (MR !414).

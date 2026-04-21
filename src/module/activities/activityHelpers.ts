@@ -676,6 +676,8 @@ function isTokenInsideRegion(
       // Use polygonTree.testPoint with tolerance=1 to include boundary tokens.
       // regionDoc.testPoint uses Clipper strict containment (boundary = outside),
       // but MeasuredTemplate.shape.contains was boundary-inclusive. Tolerance of 1px matches that behavior.
+      // Note: Foundry v14's token.testInsideRegion() uses tolerance 0.75 — we intentionally use 1 here
+      // to maintain parity with the legacy isTokenInside() boundary-inclusive behavior.
       const tokenElevation = token.document.elevation;
       const { bottom, top } = regionDoc.elevation;
       let contains = (((bottom ?? -Infinity) <= tokenElevation) && (tokenElevation <= (top ?? Infinity)))

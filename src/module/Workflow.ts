@@ -1936,7 +1936,6 @@ export class Workflow {
       this.templateUuid = docToStore.uuid;  // setter pushes to array + persists
       await this.setupTemplateCleanup(docToStore);
 
-      console.error(`processPlacedTemplates | regionDoc=${regionDoc?.id} activity=${activity?.name} hasAttachMethod=${typeof (activity as any)?._attachRegionActivityBehavior}`);
       if (regionDoc && activity) {
         const overTimeActivity = activity.isOverTimeFlag
           ? activity
@@ -1979,7 +1978,8 @@ export class Workflow {
 
   async setupTemplateCleanup(templateDocument: MeasuredTemplateDocument | RegionDocument.Implementation): Promise<boolean> {
     if (!templateDocument) return false;
-    const flagDoc = templateDocument as MeasuredTemplateDocument;
+    // Both MeasuredTemplateDocument and RegionDocument inherit setFlag/getFlag from Document base
+    const flagDoc = templateDocument as MeasuredTemplateDocument | RegionDocument.Implementation;
 
     if (configSettings.autoRemoveInstantaneousTemplate &&
       this.activity?.duration?.units === "inst") {

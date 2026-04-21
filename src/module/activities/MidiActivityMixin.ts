@@ -1855,7 +1855,6 @@ export let MidiActivityMixin = Base => {
      */
     async _attachRegionActivityBehavior(regionDoc: RegionDocument.Implementation, workflow: Workflow, overTimeActivity: any, castLevel?: number) {
       const rbConfig = this.regionBehavior;
-      console.error(`MidiActivity._attachRegionActivityBehavior | rbConfig=`, rbConfig, `overTimeActivity=`, overTimeActivity?.name);
 
       // If explicitly configured on this activity, use stored config
       // Convert portable IDs/identifiers from the activity schema to full UUIDs for the behavior type
@@ -1875,8 +1874,6 @@ export let MidiActivityMixin = Base => {
           }
         }
 
-        console.error(`MidiActivity._attachRegionActivityBehavior | resolved ${resolvedRules.length} rules from ${rbConfig.rules?.length ?? 0} config rules:`, resolvedRules);
-
         const behaviorData = {
           type: `${MODULE_ID}.regionActivity` as const,
           name: `${this.item?.name ?? "Activity"} Region Activity`,
@@ -1891,7 +1888,6 @@ export let MidiActivityMixin = Base => {
             wallRestriction: rbConfig.wallRestriction ?? "none",
           },
         };
-        console.error(`MidiActivity._attachRegionActivityBehavior | creating behavior with data:`, JSON.parse(JSON.stringify(behaviorData)));
         await regionDoc.createEmbeddedDocuments("RegionBehavior", [behaviorData] as any);
 
         // Set region restriction if a wall restriction type is selected
