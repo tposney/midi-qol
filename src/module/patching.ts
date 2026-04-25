@@ -67,32 +67,101 @@ export function initPatching() {
   class MidiTokenDocument extends MidiDependentDocumentMixin(
     globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.Token.documentClass)
   ) {
-    // Override visibility test points to support testing at top/center+top of token
-    // based on the visionTestHeight setting. This affects Foundry's rendering pipeline
-    // (what tokens appear visible on screen) and midi's canSee/canSense checks.
-    getVisibilityTestPoints(data = {}) {
-      // @ts-expect-error calling super on mixed-in class
+    _midiVisionSourceFraction: number | undefined;
+    _midiVisionTargetFraction: number | undefined;
+
+    _getHeightFraction(flagName: string): number {
+      // Token flags (set directly or via active effects targeting the token document)
+      const flagValue = this.getFlag("midi-qol", flagName) as number | undefined;
+      if (flagValue != null) return Math.clamp(flagValue, 0, 100) / 100;
+      return configSettings.optionalRules.visionTestHeight === "top" ? 1.0 : 0.5;
+    }
+
+    // Override vision origin elevation based on token flags.midi-qol.visionSourceHeight (0-100%)
+    // or the midi setting. Affects Foundry's rendering and midi's canSee/canSense.
+    getVisionOrigin(data: Record<string, any> = {}) {
+      const origin = super.getVisionOrigin(data);
+      const fraction = this._getHeightFraction("visionSourceHeight");
+      if (fraction !== 0.5) {
+        const gridDistance = this.parent?.grid?.distance ?? 5;
+        const depth = data.depth ?? this.depth ?? 1;
+        const baseElev = data.elevation ?? this.elevation ?? 0;
+        origin.elevation = baseElev + (depth * gridDistance * fraction);
+      }
+      return origin;
+    }
+
+    // Override visibility test points elevation based on token flags.midi-qol.visionTargetHeight (0-100%)
+    // or the midi setting. Controls where on this token other tokens test visibility against.
+    getVisibilityTestPoints(data: Record<string, any> = {}) {
       const points: Array<{ x: number, y: number, elevation: number }> = super.getVisibilityTestPoints(data);
-      const setting = configSettings.optionalRules.visionTestHeight;
-      if (setting === "center" || !points.length) return points;
-
-      const gridDistance = this.parent?.grid?.distance ?? 5;
-      const depth = data.depth ?? this.depth ?? 1;
-      const baseElev = data.elevation ?? this.elevation ?? 0;
-      const centerElev = baseElev + (depth * gridDistance / 2);
-      const topElev = baseElev + (depth * gridDistance);
-
-      if (setting === "top") {
-        for (const p of points) p.elevation = topElev;
-      } else if (setting === "centerAndTop") {
-        const topPoints = points.map(p => ({ x: p.x, y: p.y, elevation: topElev }));
-        points.push(...topPoints);
+      const fraction = this._getHeightFraction("visionTargetHeight");
+      if (fraction !== 0.5 && points.length) {
+        const gridDistance = this.parent?.grid?.distance ?? 5;
+        const depth = data.depth ?? this.depth ?? 1;
+        const baseElev = data.elevation ?? this.elevation ?? 0;
+        const targetElev = baseElev + (depth * gridDistance * fraction);
+        for (const p of points) p.elevation = targetElev;
       }
       return points;
+    }
+
+    // Detect vision height flag changes and refresh vision.
+    // Covers: direct token.setFlag(), active effects targeting token.flags via
+    // applyActiveEffects → _renderActiveEffectChanges → _onUpdate, and
+    // actor-related updates via _onUpdateBaseActor → _onRelatedUpdate.
+    _onRelatedUpdate(update: Record<string, any> = {}, operation: Record<string, any> = {}) {
+      super._onRelatedUpdate(update, operation);
+      this._refreshVisionIfNeeded();
+    }
+
+    _onUpdate(changed: Record<string, any>, options: Record<string, any>, userId: string) {
+      super._onUpdate(changed, options, userId);
+      if ("flags" in changed) this._refreshVisionIfNeeded();
+    }
+
+    _refreshVisionIfNeeded() {
+      const sourceFraction = this._getHeightFraction("visionSourceHeight");
+      const targetFraction = this._getHeightFraction("visionTargetHeight");
+      if (sourceFraction !== this._midiVisionSourceFraction || targetFraction !== this._midiVisionTargetFraction) {
+        this._midiVisionSourceFraction = sourceFraction;
+        this._midiVisionTargetFraction = targetFraction;
+        this.object?.initializeVisionSource();
+        canvas.perception?.update({ refreshVision: true });
+      }
     }
   };
   //@ts-expect-error
   CONFIG.Token.documentClass = MidiTokenDocument;
+
+  // TODO: Wall Height integration — commented out pending further testing
+  // When midi's visionSourceHeight flag is set, override losHeight so Wall Height
+  // uses midi's vision elevation for wall checks.
+  // if (game.modules.get("wall-height")?.active) {
+  //   libWrapper.register(MODULE_ID, "CONFIG.Token.objectClass.prototype.losHeight",
+  //     function wallHeightLosHeightWrapper(this: Token.Implementation, wrapped: Function) {
+  //       const flagValue = this.document?.getFlag("midi-qol", "visionSourceHeight") as number | undefined;
+  //       if (flagValue != null) {
+  //         const fraction = Math.clamp(flagValue, 0, 100) / 100;
+  //         const gridDistance = this.scene?.grid?.distance ?? 5;
+  //         const depth = this.document.depth ?? 1;
+  //         return (this.document.elevation ?? 0) + (depth * gridDistance * fraction);
+  //       }
+  //       return wrapped();
+  //     }, "MIXED");
+  // }
+
+  // Fix: when a token with vision is below a surface, the surface should be occluded
+  // (tiles transparent, exposure skipped) even if the token's test points don't fall
+  // within the surface polygon. Without this, tokens on the First Floor have their
+  // vision clipped by the Second Floor Surface if they're not directly underneath it.
+  libWrapper.register(MODULE_ID, "CanvasOcclusionMask.prototype._updateOccludedSurfaces",
+    _updateOccludedSurfacesWrapper, "WRAPPER");
+
+  // Surface vision fog: draw a fog overlay for areas blocked by floor surfaces.
+  // Uses Foundry's surfaceExposure rendering to dim areas the token can't see through floors.
+  // Hook fires during refreshVisibility, after standard shapes are drawn.
+  Hooks.on("visibilityRefresh", _onVisibilityRefreshSurfaceFog);
 
   class MidiAmbientLightDocument extends MidiDependentDocumentMixin(
     globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.AmbientLight.documentClass)
@@ -122,6 +191,167 @@ export function initPatching() {
   class MidiActor extends MidiDependentDocumentMixin(CONFIG.Actor.documentClass) { };
   //@ts-expect-error
   CONFIG.Actor.documentClass = MidiActor;
+}
+
+// Fix surface occlusion for tokens below upper-floor surfaces. Foundry's default only
+// occlude a surface if a token's test points fall inside the surface polygon. This misses
+// tokens on a lower floor that aren't directly underneath the surface. We force-occlude
+// surfaces at or above the current level's top elevation when any vision source is below,
+// while preserving Foundry's geometric test for same-level features (balconies, overhangs).
+function _updateOccludedSurfacesWrapper(this: any, wrapped: Function, flags: any) {
+  wrapped(flags);
+  if (configSettings.optionalRules.surfaceOcclusion === false) return;
+  // @ts-expect-error v14 canvas.level not in fvtt-types
+  if (!canvas?.scene || !canvas.level) return;
+  // @ts-expect-error v14 scene.levels not in fvtt-types
+  if ((canvas.scene.levels?.size ?? 0) <= 1) return;
+
+  // @ts-expect-error v14 canvas.level not in fvtt-types
+  const levelTop = canvas.level.elevation.top;
+  if (!Number.isFinite(levelTop)) return;
+
+  const hasTokenBelow = canvas.effects!.visionSources.some(
+    (s: any) => s.active && s.origin?.elevation != null && s.origin.elevation < levelTop
+  );
+  if (!hasTokenBelow) return;
+
+  // @ts-expect-error v14 getSurfaces not in fvtt-types
+  for (const surface of canvas.scene.getSurfaces({ level: canvas.level.id, occlusion: true })) {
+    if (surface.elevation >= levelTop && !this.occludedSurfaces.has(surface)) {
+      this.occludedSurfaces.add(surface);
+    }
+  }
+}
+
+// Surface fog overlay: darkens areas on lower floors blocked by surface regions.
+// Fog = (vision polygon) ∩ (holes in surface) ∩ (projected shadow of surface edges)
+// - "holes" = areas within vision where there's no floor (vision − surface footprint)
+// - "projected shadow" = areas where the diagonal LOS from viewer to lower floor is blocked
+// - Only the intersection of holes and shadow gets fogged — areas you can see through
+//   a gap but where the surface edge blocks the angled view to the floor below.
+// To disable: remove the Hooks.on("visibilityRefresh", ...) call in initPatching.
+let _surfaceFogOverlay: any = null;
+
+function _onVisibilityRefreshSurfaceFog() {
+  if (!(canvas as any)?.interface) return;
+  if (configSettings.optionalRules.surfaceVisionFog === false) {
+    if (_surfaceFogOverlay && !_surfaceFogOverlay.destroyed) _surfaceFogOverlay.clear();
+    return;
+  }
+  if (!_surfaceFogOverlay || _surfaceFogOverlay.destroyed) {
+    _surfaceFogOverlay = new PIXI.LegacyGraphics();
+    _surfaceFogOverlay.zIndex = 1150;
+    (canvas as any).interface.addChild(_surfaceFogOverlay);
+  }
+  _surfaceFogOverlay.clear();
+
+  // @ts-expect-error v14 canvas.level not in fvtt-types
+  if (!canvas?.scene || !canvas.level) return;
+  // @ts-expect-error v14 scene.levels not in fvtt-types
+  if ((canvas.scene.levels?.size ?? 0) <= 1) return;
+
+  const controlled = canvas.tokens?.controlled?.[0];
+  if (!controlled?.vision) return;
+
+  const visionSource = controlled.vision;
+  const origin = visionSource.origin;
+  if (origin?.elevation == null) return;
+
+  const vx = origin.x;
+  const vy = origin.y;
+  const viewerElev = origin.elevation;
+  const visionPoly = visionSource.los ?? visionSource.shape;
+  if (!visionPoly?.points?.length) return;
+
+  // @ts-expect-error getSurfaces not in fvtt-types
+  const surfaces: Array<{ region: any, elevation: number }> = canvas.scene.getSurfaces({ type: "sight" });
+  if (!surfaces.length) return;
+
+  // Only process surfaces between the viewer and the level below
+  // @ts-expect-error v14 canvas.level not in fvtt-types
+  const currentLevel = canvas.level;
+  // @ts-expect-error v14 scene.levels not in fvtt-types
+  const levels: any[] = Array.from(canvas.scene.levels ?? []);
+  const sortedLevels = levels.sort((a: any, b: any) => b.elevation.bottom - a.elevation.bottom);
+  const currentIdx = sortedLevels.findIndex((l: any) => l.id === currentLevel?.id);
+  const levelBelow = sortedLevels[currentIdx + 1];
+  if (!levelBelow) return;
+  const targetElev = levelBelow.elevation.bottom;
+
+  const blockingSurfaces = surfaces.filter((s: any) =>
+    s.elevation < viewerElev && s.elevation > targetElev
+  );
+  if (!blockingSurfaces.length) return;
+
+  const SCALE = CONST.CLIPPER_SCALING_FACTOR;
+
+  // Step 1: Combine all blocking surface footprints into one Clipper path set
+  const surfaceClipper = new ClipperLib.Clipper();
+  const surfaceUnion: any[] = [];
+  let hasSurface = false;
+  for (const surface of blockingSurfaces) {
+    const region = surface.region;
+    const polygonTree = region.object?.animationState?.polygonTree ?? region.polygonTree;
+    if (!polygonTree?.clipperPaths?.length) continue;
+    surfaceClipper.AddPaths(polygonTree.clipperPaths, ClipperLib.PolyType.ptSubject, true);
+    hasSurface = true;
+  }
+  if (!hasSurface) return;
+  surfaceClipper.Execute(ClipperLib.ClipType.ctUnion, surfaceUnion,
+    ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+  if (!surfaceUnion.length) return;
+
+  // Step 2: Compute holes = vision polygon − surface footprint
+  // Both visionPath and surfaceUnion are already at CLIPPER_SCALING_FACTOR (×100)
+  const visionPath = visionPoly.toClipperPoints({ scalingFactor: SCALE });
+  const holeClipper = new ClipperLib.Clipper();
+  holeClipper.AddPath(visionPath, ClipperLib.PolyType.ptSubject, true);
+  holeClipper.AddPaths(surfaceUnion, ClipperLib.PolyType.ptClip, true);
+  const holes: any[] = [];
+  holeClipper.Execute(ClipperLib.ClipType.ctDifference, holes,
+    ClipperLib.PolyFillType.pftEvenOdd, ClipperLib.PolyFillType.pftEvenOdd);
+  if (!holes.length) return;
+
+  // Step 3: For each hole, compute the "clear cone" — the area visible through the hole
+  // from the viewer's angle. Scale each hole by 1/t from the viewer, where
+  // t = (viewerElev - surfaceElev) / (viewerElev - targetElev).
+  // Subtract the clear cone from the hole to get the fogged area.
+  // Use targetElev = standard token visibility test height (50% of 1-square depth = 2.5ft above floor).
+  const gridDist = canvas.scene?.grid?.distance ?? 5;
+  const targetMid = levelBelow.elevation.bottom + gridDist * 0.5;
+  const blockElev = blockingSurfaces[0].elevation;
+  const tFactor = (viewerElev - blockElev) / (viewerElev - targetMid);
+  if (tFactor <= 0 || tFactor >= 1) return;
+  const invT = 1 / tFactor;
+
+  const vxScaled = vx * SCALE;
+  const vyScaled = vy * SCALE;
+
+  _surfaceFogOverlay.beginFill(0x000000, 0.9);
+  for (const hole of holes) {
+    // Compute clear cone: scale hole vertices by invT from the viewer
+    const clearPoly = hole.map((pt: any) => ({
+      X: Math.round(vxScaled + (pt.X - vxScaled) * invT),
+      Y: Math.round(vyScaled + (pt.Y - vyScaled) * invT)
+    }));
+
+    // fog = hole − clear cone
+    const fogClipper = new ClipperLib.Clipper();
+    fogClipper.AddPath(hole, ClipperLib.PolyType.ptSubject, true);
+    fogClipper.AddPath(clearPoly, ClipperLib.PolyType.ptClip, true);
+    const fogResult: any[] = [];
+    fogClipper.Execute(ClipperLib.ClipType.ctDifference, fogResult,
+      ClipperLib.PolyFillType.pftEvenOdd, ClipperLib.PolyFillType.pftEvenOdd);
+
+    for (const path of fogResult) {
+      const points: number[] = [];
+      for (const pt of path) {
+        points.push(pt.X / SCALE, pt.Y / SCALE);
+      }
+      _surfaceFogOverlay.drawPolygon(points);
+    }
+  }
+  _surfaceFogOverlay.endFill();
 }
 
 /**

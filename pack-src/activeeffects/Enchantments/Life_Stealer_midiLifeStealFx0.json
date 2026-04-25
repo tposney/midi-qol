@@ -1,0 +1,82 @@
+{
+  "name": "Life Stealer",
+  "type": "enchantment",
+  "img": "icons/weapons/swords/sword-guard-engraved.webp",
+  "system": {
+    "changes": [
+      {
+        "key": "name",
+        "value": "{} of Life Stealing",
+        "priority": 50,
+        "type": "override"
+      },
+      {
+        "key": "system.properties",
+        "value": "mgc",
+        "priority": 20,
+        "type": "add"
+      },
+      {
+        "key": "system.magicalBonus",
+        "value": "1",
+        "priority": 40,
+        "type": "upgrade"
+      },
+      {
+        "key": "flags.midi-qol.onUseMacroName",
+        "value": "ActivityMacro.life-stealer, postActiveEffects",
+        "priority": 50,
+        "type": "custom"
+      },
+      {
+        "key": "system.attunement",
+        "value": "required",
+        "priority": 20,
+        "type": "override"
+      }
+    ]
+  },
+  "disabled": true,
+  "start": {
+    "time": null,
+    "combat": null,
+    "combatant": null,
+    "initiative": null,
+    "round": null,
+    "turn": null
+  },
+  "duration": {
+    "value": null,
+    "units": "seconds",
+    "expiry": null,
+    "expired": false
+  },
+  "description": "Enchants a weapon as Life Stealer. Adds magical property, +1 bonus, requires attunement, and adds the life-stealer on-use macro.",
+  "origin": null,
+  "tint": "#ffffff",
+  "transfer": false,
+  "statuses": [],
+  "showIcon": 0,
+  "folder": "midiEnchantFldr0",
+  "sort": 0,
+  "flags": {
+    "dae": {
+      "specialDuration": [],
+      "enableCondition": "",
+      "disableCondition": "",
+      "stackable": "multi",
+      "macroRepeat": "none"
+    },
+    "core": {
+      "overlay": false
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-active-effects",
+        "version": "14.0.5"
+      }
+    }
+  },
+  "_id": "midiLifeStealFx0",
+  "_key": "!effects!midiLifeStealFx0"
+}

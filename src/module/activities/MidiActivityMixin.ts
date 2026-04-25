@@ -1436,7 +1436,18 @@ export let MidiActivityMixin = Base => {
         if (this.item.type === "tool" && !this.target?.affects.type)
           selfTarget = true;
         if (!selfTarget) {
-          workflow.setTargets(validTargetTokens(new Set(game.user?.targets)));
+          // Use the target snapshot captured at the start of use() (before any await points)
+          // to avoid a race condition where concurrent workflows clear game.user.targets
+          // via updateUserTargets([]) during async gaps.
+          const snapshotUuids = config.midiOptions?.workflowOptions?.preSelectedTargetUuids;
+          const userTargets: Set<Token.Implementation> = snapshotUuids?.length
+            ? new Set(
+                snapshotUuids
+                  .map(uuid => (fromUuidSync(uuid) as TokenDocument | null)?.object)
+                  .filter((t): t is Token.Implementation => !!t)
+              )
+            : new Set(game.user?.targets);
+          workflow.setTargets(validTargetTokens(userTargets));
         } else {
           foundry.utils.setProperty(config, "midiOptions.workflowOptions.targetConfirmation", "none");
           let potentialTarget = getOrCreateTokenForActor(this.actor);

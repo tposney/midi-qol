@@ -215,17 +215,17 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
 
 ## Testing
 
-Tests use the Quench framework in a separate module:
-- **Location**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-tests/`
-- **Build**: `cd midi-qol-tests && npm run build`
-- Accesses midi-qol via `globalThis.MidiQOL`
+Tests use the Quench framework in separate test modules (not embedded in the main module source). Each major version branch has its own test module:
+- **midi-qol tests (v13)**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-tests/` — for midi-qol-13x, accesses midi-qol via `globalThis.MidiQOL`
+- **midi-qol tests (v14)**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-tests-v14x/` — for midi-qol-14x
+- **DAE tests (v14)**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/dae-tests-14x/` — for dae-14x, accesses DAE via `game.modules.get("dae").api` and `globalThis.DAE`
 
 **CRITICAL: Never remove tests without explicit user consent.**
 
 ### Test Conventions
-- Batch ID: `quench.midi-qol.{camelCaseName}`, displayName: `"{number}. {Title} Tests"`
-- No "Midi" or "midi-qol" in displayName (exception: `flags.midi-qol` references)
-- Export: `register{Number}{PascalCaseName}Tests`
+- **midi-qol**: Batch ID `quench.midi-qol.{camelCaseName}`, displayName `"{number}. {Title} Tests"`, export `register{Number}{PascalCaseName}Tests`
+- **DAE**: Batch ID `quench.dae.{camelCaseName}`, displayName `"{number}. {Title} Tests"`, export `register{Number}{PascalCaseName}Tests`
+- No module name in displayName (exception: `flags.midi-qol` / `flags.dae` references)
 - Every test starts with `await testMessage("6.1", "description")` before `this.timeout()`
 
 ### Test World
@@ -245,9 +245,17 @@ npm run compilePacks # JSON (pack-src/) → LevelDB (packs/) for sample items
 npm run extractPacks # LevelDB → JSON with ID generation
 ```
 
-Tests are in a separate module:
+Related modules:
 ```bash
-cd /home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-tests && npm run build
+cd /home/timp/foundry-data/foundryalpha/Data/modulesrc/dae-14x && npm run build   # DAE v14: typeCheck + gulp → dist/dae.js
+cd /home/timp/foundry-data/foundryalpha/Data/modulesrc/dae-10x && npm run build   # DAE v13
+```
+
+Test modules:
+```bash
+cd /home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-tests && npm run build      # midi-qol v13 tests
+cd /home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-tests-v14x && npm run build # midi-qol v14 tests
+cd /home/timp/foundry-data/foundryalpha/Data/modulesrc/dae-tests-14x && npm run build       # DAE v14 tests
 ```
 
 ## Planned Refactors

@@ -1,0 +1,72 @@
+{
+  "name": "Prone",
+  "type": "base",
+  "img": "icons/svg/falling.svg",
+  "system": {
+    "changes": [
+      {
+        "key": "token.flags.midi-qol.visionSourceHeight",
+        "type": "override",
+        "value": 15,
+        "priority": null,
+        "phase": "final"
+      },
+      {
+        "key": "token.flags.midi-qol.visionTargetHeight",
+        "type": "override",
+        "value": 15,
+        "priority": null,
+        "phase": "final"
+      }
+    ]
+  },
+  "disabled": false,
+  "start": {
+    "time": null,
+    "combat": null,
+    "combatant": null,
+    "initiative": null,
+    "round": null,
+    "turn": null
+  },
+  "duration": {
+    "value": null,
+    "units": "seconds",
+    "expiry": null,
+    "expired": false
+  },
+  "description": "Prone reduces the token's vision origin and visibility test height to 15% of its full height.",
+  "origin": null,
+  "tint": "#ffffff",
+  "transfer": false,
+  "statuses": [],
+  "showIcon": 1,
+  "folder": "midiTokenFxFldr0",
+  "sort": 0,
+  "flags": {
+    "dae": {
+      "specialDuration": [],
+      "enableCondition": "",
+      "disableCondition": "",
+      "expiryMode": "default",
+      "macroRepeat": "none",
+      "disableIncapacitated": false
+    },
+    "dnd5e": {
+      "riders": {
+        "statuses": []
+      }
+    },
+    "core": {
+      "overlay": false
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-active-effects",
+        "version": "14.0.5"
+      }
+    }
+  },
+  "_id": "midiProneFx00000",
+  "_key": "!effects!midiProneFx00000"
+}

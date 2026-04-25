@@ -1,0 +1,88 @@
+{
+  "name": "Wounding Weapon",
+  "type": "enchantment",
+  "img": "icons/weapons/swords/sword-guard-red.webp",
+  "system": {
+    "changes": [
+      {
+        "key": "name",
+        "value": "{} of Wounding",
+        "priority": 50,
+        "type": "override"
+      },
+      {
+        "key": "system.rarity",
+        "value": "rare",
+        "priority": 50,
+        "type": "override"
+      },
+      {
+        "key": "system.properties",
+        "value": "mgc",
+        "priority": 20,
+        "type": "add"
+      },
+      {
+        "key": "system.magicalBonus",
+        "value": "1",
+        "priority": 40,
+        "type": "upgrade"
+      },
+      {
+        "key": "system.attunement",
+        "value": "required",
+        "priority": 20,
+        "type": "override"
+      },
+      {
+        "key": "flags.midi-qol.onUseMacroName",
+        "value": "ActivityMacro.Wounding, postActiveEffects",
+        "priority": 20,
+        "type": "custom"
+      }
+    ]
+  },
+  "disabled": false,
+  "start": {
+    "time": null,
+    "combat": null,
+    "combatant": null,
+    "initiative": null,
+    "round": null,
+    "turn": null
+  },
+  "duration": {
+    "value": null,
+    "units": "seconds",
+    "expiry": null,
+    "expired": false
+  },
+  "description": "Enchants a weapon as a Weapon of Wounding. Sets rarity to rare, adds magical property, +1 bonus, requires attunement, and adds the Wounding on-use macro.",
+  "origin": null,
+  "tint": "#ffffff",
+  "transfer": false,
+  "statuses": [],
+  "showIcon": 0,
+  "folder": "midiEnchantFldr0",
+  "sort": 0,
+  "flags": {
+    "dae": {
+      "specialDuration": [],
+      "enableCondition": "",
+      "disableCondition": "",
+      "stackable": "multi",
+      "macroRepeat": "none"
+    },
+    "core": {
+      "overlay": false
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-active-effects",
+        "version": "14.0.5"
+      }
+    }
+  },
+  "_id": "midiWoundingWpn0",
+  "_key": "!effects!midiWoundingWpn0"
+}

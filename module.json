@@ -78,6 +78,24 @@
       "type": "Item",
       "system": "dnd5e",
       "lang": []
+    },
+    {
+      "name": "midiqol-active-effects",
+      "label": "Midi Active Effects",
+      "path": "./packs/activeeffects",
+      "module": "world",
+      "type": "ActiveEffect",
+      "system": "dnd5e",
+      "lang": []
+    }
+  ],
+  "packFolders": [
+    {
+      "name": "Midi Samples",
+      "packs": [
+        "midiqol-sample-items",
+        "midiqol-active-effects"
+      ]
     }
   ],
   "languages": [

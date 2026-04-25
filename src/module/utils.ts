@@ -1282,7 +1282,7 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
     if (token) targetsToUse = new Set([token]);
 
     const overTimeWorkflow: Workflow = await completeActivityUse(overTimeActivity,
-      { midiOptions: { targetsToUse, checkGMstatus, workflowOptions: { noProvokeReaction: true, autoConsumeResource: "both" } } },
+      { midiOptions: { targetsToUse, checkGMstatus, workflowOptions: { noProvokeReaction: true, autoConsumeResource: "both", overTimeEffectUuid: effect.uuid } } },
       { configure: overTimeActivity.consumption?.spellSlot === true },
       { create: true }) as Workflow;
 
@@ -2208,7 +2208,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
           targetsToUse: new Set([theTargetToken]),
           // targetUuids: [theTargetUuid],
           ignoreUserTargets: true,
-          workflowOptions: { targetConfirmation: "none", isOverTime: true, allowIncapacitated },
+          workflowOptions: { targetConfirmation: "none", isOverTime: true, allowIncapacitated, overTimeEffectUuid: effect.uuid },
           flags: {
             dnd5e: { "itemData": ownedItem.toObject() },
           }
@@ -2894,6 +2894,26 @@ export interface WallCollisionOptions {
 }
 
 /**
+ * Get the vision height fraction for a token, respecting per-token flags and the global setting.
+ * Returns the fraction (0-1) of the token's height to use for vision/targeting elevation.
+ */
+function getTokenHeightFraction(token: Token.Implementation, flagName: "visionSourceHeight" | "visionTargetHeight"): number {
+  const flagValue = token.document?.getFlag("midi-qol", flagName) as number | undefined;
+  if (flagValue != null) return Math.clamp(flagValue, 0, 100) / 100;
+  return configSettings.optionalRules.visionTestHeight === "top" ? 1.0 : 0.5;
+}
+
+/**
+ * Compute the effective elevation for a token based on its vision height flags/setting.
+ */
+export function getTokenVisionElevation(token: Token.Implementation, flagName: "visionSourceHeight" | "visionTargetHeight"): number {
+  const baseElev = token.document.elevation ?? 0;
+  const gridDistance = canvas.dimensions?.distance ?? 5;
+  const depth = token.document.depth ?? 1;
+  return baseElev + (depth * gridDistance * getTokenHeightFraction(token, flagName));
+}
+
+/**
  * v14: Check if a region surface blocks the path between two elevated points.
  * Returns false immediately for same-elevation rays (no surface can block).
  */
@@ -3152,13 +3172,15 @@ export function computePerimeterDistance(
         const testPoints = offsets.map(o => new PIXI.Point(tgtCenter.x + o[0], tgtCenter.y + o[1]));
         const srcOrigin = new PIXI.Point(srcCenter.x, srcCenter.y);
 
-        const t1Elevation = (token1 as Token).document.elevation ?? 0;
-        const t2Elevation = (token2 as Token).document.elevation ?? 0;
+        const t1Elevation = (token1 as Token.Implementation).document.elevation ?? 0;
+        const t2Elevation = (token2 as Token.Implementation).document.elevation ?? 0;
         const gridDist = canvas.dimensions?.distance ?? 5;
         const t1DocSize = Math.max((token1 as Token).document.height ?? 1, (token1 as Token).document.width ?? 1);
         const t2DocSize = Math.min((token2 as Token).document.height ?? 1, (token2 as Token).document.width ?? 1);
         const t1TopElevation = t1Elevation + t1DocSize * gridDist;
         const t2TopElevation = t2Elevation + t2DocSize * gridDist;
+        const t1VisionElev = getTokenVisionElevation(token1 as Token.Implementation, "visionSourceHeight");
+        const t2VisionElev = getTokenVisionElevation(token2 as Token.Implementation, "visionTargetHeight");
 
         let allBlocked = true;
         for (const tgtPt of testPoints) {
@@ -3166,8 +3188,8 @@ export function computePerimeterDistance(
             source: (token1 as Token).document,
             wallsBlockRange,
             coverVisible: preCheck.coverVisible,
-            originElevation: t1Elevation,
-            destElevation: t2Elevation,
+            originElevation: t1VisionElev,
+            destElevation: t2VisionElev,
             originTopElevation: t1TopElevation,
             destTopElevation: t2TopElevation
           });
@@ -3315,8 +3337,8 @@ export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): nu
           source: token1.document,
           wallsBlockRange: configSettings.optionalRules.wallsBlockRange,
           coverVisible: undefined,
-          originElevation: (token1.document as TokenDocument).elevation ?? 0,
-          destElevation: (token2.document as TokenDocument).elevation ?? 0,
+          originElevation: getTokenVisionElevation(token1 as Token.Implementation, "visionSourceHeight"),
+          destElevation: getTokenVisionElevation(token2 as Token.Implementation, "visionTargetHeight"),
         });
         if (collision) return -1;
       }
@@ -3439,6 +3461,8 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: {
   const t2Elevation = t2.document.elevation ?? 0;
   const t1TopElevation = t1Elevation + Math.max(t1DocHeight, t1DocWidth) * (canvas.dimensions?.distance ?? 5);
   const t2TopElevation = t2Elevation + Math.min(t2DocHeight, t2DocWidth) * (canvas.dimensions?.distance ?? 5); // assume t2 is trying to make itself small
+  const t1VisionElev = getTokenVisionElevation(t1 as Token.Implementation, "visionSourceHeight");
+  const t2VisionElev = getTokenVisionElevation(t2 as Token.Implementation, "visionTargetHeight");
   const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
   // Module pre-check: full cover means no attack, otherwise skip per-ray los checks
   const preCheck = wallsBlock ? computeWallBlockPreCheck(t1, t2, wallsBlock, includeCover) : { blocked: false, coverVisible: undefined };
@@ -3475,8 +3499,8 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: {
                 source: t1.document,
                 wallsBlockRange: configSettings.optionalRules.wallsBlockRange,
                 coverVisible,
-                originElevation: t1Elevation,
-                destElevation: t2Elevation,
+                originElevation: t1VisionElev,
+                destElevation: t2VisionElev,
                 originTopElevation: t1TopElevation,
                 destTopElevation: t2TopElevation
               });
@@ -8004,14 +8028,14 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   if (token.vision) {
     const origin = { x: token.vision.x, y: token.vision.y };
     for (const test of tests) {
-      // 2D wall collision test
       const wallCollision = CONFIG.Canvas.polygonBackends.sight.testCollision(
         origin,
         test.point,
         { type: "sight", mode: "any", source: token.vision, useThreshold: true, priority: token.vision.priority }
       );
       let hasLOS = !wallCollision;
-      // For cross-level tokens, also check surface collision (floors/ceilings between levels)
+      // For cross-level tokens, also check surface collision (floors/ceilings between levels).
+      // token.vision.elevation already reflects the visionTestHeight setting via getVisionOrigin override.
       if (hasLOS && !sameLevel) {
         const originElev = token.vision.elevation;
         const destElev = test.point.elevation;

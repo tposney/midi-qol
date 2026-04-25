@@ -1,0 +1,75 @@
+{
+  "name": "Dragon Slayer - Weapon",
+  "type": "enchantment",
+  "img": "icons/weapons/swords/greatsword-crossguard-embossed-gold.webp",
+  "system": {
+    "changes": [
+      {
+        "key": "name",
+        "value": "{} of Dragon Slaying",
+        "priority": 50,
+        "type": "override"
+      },
+      {
+        "key": "system.properties",
+        "value": "mgc",
+        "priority": 20,
+        "type": "add"
+      },
+      {
+        "key": "system.magicalBonus",
+        "value": "1",
+        "priority": 40,
+        "type": "upgrade"
+      }
+    ]
+  },
+  "disabled": true,
+  "start": {
+    "time": null,
+    "combat": null,
+    "combatant": null,
+    "initiative": null,
+    "round": null,
+    "turn": null
+  },
+  "duration": {
+    "value": null,
+    "units": "seconds",
+    "expiry": null,
+    "expired": false
+  },
+  "description": "Enchants a weapon as Dragon Slayer. Adds the magical property and +1 magical bonus.",
+  "origin": null,
+  "tint": "#ffffff",
+  "transfer": false,
+  "statuses": [],
+  "showIcon": 0,
+  "folder": "midiEnchantFldr0",
+  "sort": 0,
+  "flags": {
+    "dae": {
+      "specialDuration": [],
+      "enableCondition": "",
+      "disableCondition": "",
+      "stackable": "multi",
+      "macroRepeat": "none"
+    },
+    "dnd5e": {
+      "riders": {
+        "statuses": []
+      }
+    },
+    "core": {
+      "overlay": false
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-active-effects",
+        "version": "14.0.5"
+      }
+    }
+  },
+  "_id": "midiDrgnSlayWpn0",
+  "_key": "!effects!midiDrgnSlayWpn0"
+}

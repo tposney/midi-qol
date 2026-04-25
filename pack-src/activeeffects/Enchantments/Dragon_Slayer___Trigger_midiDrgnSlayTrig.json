@@ -1,0 +1,87 @@
+{
+  "name": "Dragon Slayer - Weapon (Trigger Activity)",
+  "type": "enchantment",
+  "img": "icons/weapons/swords/greatsword-guard-split-eyes.webp",
+  "system": {
+    "changes": [
+      {
+        "key": "name",
+        "value": "{} of Dragon Slaying",
+        "priority": 50,
+        "type": "override"
+      },
+      {
+        "key": "system.properties",
+        "value": "mgc",
+        "priority": 20,
+        "type": "add"
+      },
+      {
+        "key": "system.magicalBonus",
+        "value": "1",
+        "priority": 40,
+        "type": "upgrade"
+      },
+      {
+        "key": "activities[attack].midiProperties.triggeredActivityId",
+        "value": "slayer-damage",
+        "priority": 20,
+        "type": "override"
+      },
+      {
+        "key": "activities[attack].midiProperties.triggeredActivityConditionText",
+        "value": "raceOrType.includes(\"dragon\")",
+        "priority": 20,
+        "type": "override"
+      }
+    ]
+  },
+  "disabled": true,
+  "start": {
+    "time": null,
+    "combat": null,
+    "combatant": null,
+    "initiative": null,
+    "round": null,
+    "turn": null
+  },
+  "duration": {
+    "value": null,
+    "units": "seconds",
+    "expiry": null,
+    "expired": false
+  },
+  "description": "Enchants a weapon as Dragon Slayer using the trigger activity pattern. Adds magical property, +1 bonus, and configures the attack activity to trigger bonus damage against dragons.",
+  "origin": null,
+  "tint": "#ffffff",
+  "transfer": false,
+  "statuses": [],
+  "showIcon": 0,
+  "folder": "midiEnchantFldr0",
+  "sort": 0,
+  "flags": {
+    "dae": {
+      "specialDuration": [],
+      "enableCondition": "",
+      "disableCondition": "",
+      "stackable": "multi",
+      "macroRepeat": "none"
+    },
+    "dnd5e": {
+      "riders": {
+        "statuses": []
+      }
+    },
+    "core": {
+      "overlay": false
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-active-effects",
+        "version": "14.0.5"
+      }
+    }
+  },
+  "_id": "midiDrgnSlayTrig",
+  "_key": "!effects!midiDrgnSlayTrig"
+}

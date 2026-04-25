@@ -564,14 +564,16 @@
   },
   "midi-qol.VisionTestHeight.Name": "Vision test point height",
   "midi-qol.VisionTestHeight.Hint": "Which elevation to test for token visibility. Affects both Foundry's rendering and midi's vision checks.",
+  "midi-qol.SurfaceOcclusion.Name": "Occlude upper floor surfaces",
+  "midi-qol.SurfaceOcclusion.Hint": "In multi-level scenes, make upper floor surfaces transparent when viewing from a lower floor, even if the token is not directly underneath.",
+  "midi-qol.SurfaceVisionFog.Name": "Dim lower floors through surface holes",
+  "midi-qol.SurfaceVisionFog.Hint": "In multi-level scenes, dim areas visible through gaps in floor surfaces where the viewing angle blocks line of sight to the floor below.",
   "midi-qol.VisionTestHeightOptions": {
     "center": "Center",
     "top": "Top",
-    "centerAndTop": "Center and Top",
     "expandedHints": {
       "center": "Test visibility at the token's center height (Foundry default: elevation + depth/2).",
-      "top": "Test visibility at the top of the token (elevation + depth). Useful for multi-level scenes where tokens near floor edges should be more visible.",
-      "centerAndTop": "Test visibility at both center and top of the token. If either is visible, the token is detected."
+      "top": "Test visibility at the top of the token (elevation + depth). Affects both the source token's vision origin and target test points. Useful for multi-level scenes where tokens near floor edges should be more visible."
     }
   },
   "midi-qol.NearbyAllyRanged.Name": "(House Rule) Ranged Attacks at foes near allies have disadvantage",
@@ -2134,6 +2136,14 @@
     "flags.midi-qol.uncanny-dodge": {
       "name": "Uncanny Dodge",
       "description": ""
+    },
+    "token.flags.midi-qol.visionSourceHeight": {
+      "name": "Vision Source Height %",
+      "description": "Override where this token sees from (0=feet, 50=center, 100=top). Unset uses the midi Vision Test Height setting."
+    },
+    "token.flags.midi-qol.visionTargetHeight": {
+      "name": "Vision Target Height %",
+      "description": "Override where this token is tested for visibility (0=feet, 50=center, 100=top). Unset uses the midi Vision Test Height setting."
     }
   },
   "midi-qol.OverTimeEditor.Title": "OverTime Editor",

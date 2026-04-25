@@ -1,5 +1,18 @@
-### 14.0.3
-* Clean up debug left in.
+### 14.0.5
+* The "Vision test point height" setting overrides the source token's vision origin (where the token sees from - foundry default 1/2 of the tokens height), not just the target test points. Setting to "Top" means both the viewing token's eye point and the target's visibility test points use the top of the token height. This improves visibility through holes in surfaces for tokens standing near edges.
+* New token flags `token.flags.midi-qol.visionSourceHeight` and `token.flags.midi-qol.visionTargetHeight` allow per-token override of the vision height as a percentage (0–100) of the token's height. When not set, falls back to the midi setting. These can be set via DAE active effects (e.g. a "Crouch" or "Prone" effect setting both to 25). Vision automatically refreshes when these flags change.
+* midi-qol uses these settings in determining tokens can see/sense other tokens and for walls block tests.
+* New "Dim lower floors through surface holes" setting (Workflow tab). In multi-level scenes, areas visible through gaps in floor surfaces are dimmed where the token's viewing angle means the floor edge blocks line of sight to the level below.
+  - This helps distinguish areas the token can actually see from areas that appear lit but are blocked by the floor surface. Default foundry behaviour is to show all of the floor below even if the token can't see it.
+  - If you use the restored tower free map pack and position a token on the gallery above the chapel (which has a hole down to the first floor) and enable/disable the midi setting you will see what the behaviour is.
+  - Give a token on the top level the tippy toes activity and make sure it is enabled to see the effect of changing the vision height on a token.
+* New "Occlude upper floor surfaces" setting (Workflow tab). In multi-level scenes, makes upper floor surfaces transparent when viewing from a lower floor, even if the token is not directly underneath the surface. Without this, tokens near the edge of a floor hole may have their vision clipped by the floor above.
+* New "Midi Active Effects" compendium with sample vision height effects (Crouching, Prone, Tippy Toes).
+* Not done: these settings do not interact with wall height - they are simply for shadowing the floor below if you can't see it.
+
+### 14.0.4
+* Removed some spurious debug console.errors
+
 
 ### 14.0.2
 * Fix active defence rolls displaying hit/miss icons inverted — defence rolls now display results like saving throws (success = check, failure = X) (MR !412).
@@ -14,6 +27,7 @@
 * Fix save prompt missing flavor text when neither advantage nor disadvantage applies.
 * `DamageOnlyWorkflow` now exposes a `ready` promise that resolves when the workflow completes. Callers can `await workflow.ready` instead of guessing with `setTimeout`. The internal `performState` call is now properly awaited.
 * Fix for detecting if a target can be hit when there is a surface between them. Prior to the fix any surface between the attacker and target would trigger "blocked by a wall" even if there was clear line of sight "through" the level.
+  - Added a setting to change what elevation is used to compute los from one token to another. Founrdy by default uses the mid point of the tokens z range. For humans and others with eyes at the top of their head this significantly reduces what they can see when look over a level with a hole in it (measures from the middle of the token's square and 1/2 way up the token) which I think feels overly restrictive. The setting allows you to use the top of the token signficantly increasing what the token can see.
 
 
 ### 14.0.1

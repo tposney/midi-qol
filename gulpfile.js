@@ -285,12 +285,17 @@ function cleanPackFolderNames(packSrcDir) {
  * Extract packs: packs/ -> pack-src/ (LevelDB to JSON)
  */
 exports.extractPacks = gulp.series(
-  pdel(["pack-src/sampleitems"]),
+  pdel(["pack-src/sampleitems", "pack-src/activeeffects"]),
   async () => {
     if (!foundryvttCli) foundryvttCli = await import("@foundryvtt/foundryvtt-cli");
     await foundryvttCli.extractPack("packs/sampleitems", "pack-src/sampleitems", { folders: true });
     cleanPackFolderNames("pack-src/sampleitems");
     plog("Extracted packs/sampleitems to pack-src/sampleitems");
+    if (fs.existsSync("packs/activeeffects")) {
+      await foundryvttCli.extractPack("packs/activeeffects", "pack-src/activeeffects", { folders: true });
+      cleanPackFolderNames("pack-src/activeeffects");
+      plog("Extracted packs/activeeffects to pack-src/activeeffects");
+    }
   }
 );
 
@@ -311,10 +316,10 @@ function generateFoundryId() {
  * Also handles embedded documents (effects, activities)
  * Recursively scans subdirectories for nested folder structures.
  */
-async function ensurePackIds(packSrcDir) {
+async function ensurePackIds(packSrcDir, { documentType = "Item", compendiumSource = "midi-qol.midiqol-sample-items" } = {}) {
   let modified = 0;
   const midiVersion = PACKAGE.version;
-  const compendiumSource = "midi-qol.midiqol-sample-items";
+  const keyPrefix = documentType === "Item" ? "items" : "effects";
 
   // Get the last compile time from marker file
   const lastCompileMarker = path.join(packSrcDir, ".last-compile");
@@ -349,7 +354,7 @@ async function ensurePackIds(packSrcDir) {
         }
 
         // Generate or fix _key if missing/wrong
-        const expectedKey = `!items!${item._id}`;
+        const expectedKey = `!${keyPrefix}!${item._id}`;
         if (!item._key || item._key !== expectedKey) {
           item._key = expectedKey;
           changed = true;
@@ -371,7 +376,7 @@ async function ensurePackIds(packSrcDir) {
               effect._id = generateFoundryId();
               changed = true;
             }
-            const effectKey = `!items.effects!${item._id}.${effect._id}`;
+            const effectKey = `!${keyPrefix}.effects!${item._id}.${effect._id}`;
             if (!effect._key || effect._key !== effectKey) {
               effect._key = effectKey;
               changed = true;
@@ -433,7 +438,7 @@ async function ensurePackIds(packSrcDir) {
         name: path.basename(dir),
         sorting: "a",
         folder: parentFolderId || null,
-        type: "Item",
+        type: documentType,
         _id: folderId,
         _key: `!folders!${folderId}`
       };
@@ -492,15 +497,21 @@ async function ensurePackIds(packSrcDir) {
  * Compile packs: pack-src/ -> packs/ (JSON to LevelDB)
  */
 exports.compilePacks = gulp.series(
-  pdel(["packs/sampleitems"]),
+  pdel(["packs/sampleitems", "packs/activeeffects"]),
   async () => {
-    await ensurePackIds("pack-src/sampleitems");
     if (!foundryvttCli) foundryvttCli = await import("@foundryvtt/foundryvtt-cli");
+
+    await ensurePackIds("pack-src/sampleitems");
     await foundryvttCli.compilePack("pack-src/sampleitems", "packs/sampleitems", { recursive: true });
-    // Touch the last-compile marker so we can detect modified files on next compile
-    const marker = path.join("pack-src/sampleitems", ".last-compile");
-    fs.writeFileSync(marker, new Date().toISOString());
+    const itemsMarker = path.join("pack-src/sampleitems", ".last-compile");
+    fs.writeFileSync(itemsMarker, new Date().toISOString());
     plog("Compiled pack-src/sampleitems to packs/sampleitems");
+
+    await ensurePackIds("pack-src/activeeffects", { documentType: "ActiveEffect", compendiumSource: "midi-qol.midiqol-active-effects" });
+    await foundryvttCli.compilePack("pack-src/activeeffects", "packs/activeeffects", { recursive: true });
+    const effectsMarker = path.join("pack-src/activeeffects", ".last-compile");
+    fs.writeFileSync(effectsMarker, new Date().toISOString());
+    plog("Compiled pack-src/activeeffects to packs/activeeffects");
   },
   pdel([DEV_DIST() + PACK + GLOB], { force: true }),
   outputPackFiles(DEV_DIST()),

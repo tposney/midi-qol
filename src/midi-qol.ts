@@ -95,7 +95,7 @@ export let levelsAPI: any;
 // export let allDamageTypes;
 export const MODULE_ID = "midi-qol";
 
-const { StringField } = foundry.data.fields;
+const { StringField, NumberField } = foundry.data.fields;
 
 export let i18n = (key: SelectOptionValue) => {
   const k = typeof key === "object" ? key.label : key;
@@ -527,6 +527,12 @@ Hooks.on("dae.modifySpecials", (specKey, specials, _characterSpec) => {
   daeFieldBrowserFields.push(`system.traits.ida.value`);
   specials[`system.traits.idm.value`] = [new StringField(), -1];
   daeFieldBrowserFields.push(`system.traits.idm.value`);
+
+  // Token-targeted vision height overrides (0-100% of token height)
+  specials[`token.flags.${MODULE_ID}.visionSourceHeight`] = [new NumberField(), "override"];
+  daeFieldBrowserFields.push(`token.flags.${MODULE_ID}.visionSourceHeight`);
+  specials[`token.flags.${MODULE_ID}.visionTargetHeight`] = [new NumberField(), "override"];
+  daeFieldBrowserFields.push(`token.flags.${MODULE_ID}.visionTargetHeight`);
 });
 
 //@ts-expect-error
@@ -1682,14 +1688,12 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.disadvantage.heavy`);
   booleanFormula(`flags.${MODULE_ID}.canFlank`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.canFlank`);
-  /*
-  bs(`flags.${MODULE_ID}.grants.advantage.attack.all`);
-  bs(`flags.${MODULE_ID}.grants.disadvantage.attack.all`);
-  bs(``);
 
-  bs(``);
-  bs(``);
-  */
+  // Token-targeted vision height overrides (0-100% of token height)
+  untyped(`token.flags.${MODULE_ID}.visionSourceHeight`);
+  daeFieldBrowserFields.push(`token.flags.${MODULE_ID}.visionSourceHeight`);
+  untyped(`token.flags.${MODULE_ID}.visionTargetHeight`);
+  daeFieldBrowserFields.push(`token.flags.${MODULE_ID}.visionTargetHeight`);
 }
 
 function setupMidiFlagEditors(DAEapi: any) {
