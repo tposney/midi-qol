@@ -1,3 +1,6 @@
+### 13.0.59
+* Fix for double consumption when using a spell from an item with item uses.
+
 ### 13.0.58
 * Fix Active Defence display icons/colours to match saving throw presentation — defence success now shows as a positive result (MR !413, thanks @morepurplemorebetter).
 * Fix Active Defence Modifier hint text to match the actual code formulas (MR !413, thanks @Bacon).

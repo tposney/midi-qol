@@ -84,7 +84,7 @@
       "info": {
         "source": "midi-qol.midiqol-sample-items",
         "rules": "modern",
-        "version": "13.0.57"
+        "version": "13.0.58"
       },
       "-=macros": null
     },

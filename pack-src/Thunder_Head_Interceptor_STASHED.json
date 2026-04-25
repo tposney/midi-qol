@@ -1,0 +1,787 @@
+{
+  "name": "Thunder-Head Interceptor",
+  "type": "equipment",
+  "img": "icons/commodities/tech/tube-canister-blue.webp",
+  "effects": [
+    {
+      "name": "Aero-Stabiliser",
+      "origin": null,
+      "duration": {
+        "rounds": null,
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "disabled": false,
+      "flags": {
+        "dae": {
+          "transfer": true,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "stackable": "noneName",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "dontApply": false,
+          "showIcon": true
+        }
+      },
+      "img": "icons/commodities/tech/tube-canister-blue.webp",
+      "_id": "aeroStabiliser00",
+      "type": "base",
+      "system": {},
+      "changes": [
+        {
+          "key": "system.attributes.movement.fly",
+          "mode": 4,
+          "value": "80",
+          "priority": null
+        },
+        {
+          "key": "flags.midi-qol.superSaver.dex",
+          "mode": 5,
+          "value": "1",
+          "priority": 20
+        },
+        {
+          "key": "flags.midi-qol.grants.attack.bonus.rwak",
+          "mode": 2,
+          "value": "-2",
+          "priority": 20
+        },
+        {
+          "key": "flags.midi-qol.grants.attack.bonus.rsak",
+          "mode": 2,
+          "value": "-2",
+          "priority": 20
+        },
+        {
+          "key": "flags.dnd5e.DamageBonusMacro",
+          "mode": 0,
+          "value": "ItemMacro",
+          "priority": 20
+        },
+        {
+          "key": "macro.itemMacro",
+          "mode": 0,
+          "value": "preAttackRoll",
+          "priority": 20
+        },
+        {
+          "key": "macro.itemMacro",
+          "mode": 0,
+          "value": "postAttackRoll",
+          "priority": 20
+        },
+        {
+          "key": "macro.itemMacro",
+          "mode": 0,
+          "value": "isDamaged",
+          "priority": 20
+        }
+      ],
+      "description": "<p>While mounted on the broom: Fly speed 80 ft, +2 AC vs ranged attacks (applied as -2 to incoming ranged attack rolls), Evasion (Dex saves), advantage on firearm attacks when 60+ ft above target (elevation), Kinetic Battery bonus damage on firearm hits, and Hype-Man sound effects.</p>",
+      "tint": "#ffffff",
+      "transfer": true,
+      "statuses": [],
+      "sort": 0,
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.351",
+        "systemId": "dnd5e",
+        "systemVersion": "5.3.0",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_key": "!items.effects!ThunderHeadInt00.aeroStabiliser00"
+    },
+    {
+      "name": "Full-Auto Overdrive",
+      "origin": null,
+      "duration": {
+        "rounds": null,
+        "startTime": null,
+        "seconds": 60,
+        "combat": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "disabled": false,
+      "flags": {
+        "dae": {
+          "transfer": false,
+          "selfTarget": true,
+          "selfTargetAlways": true,
+          "stackable": "noneName",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "dontApply": false,
+          "showIcon": true
+        }
+      },
+      "img": "icons/magic/time/clock-spinning-gold-pink.webp",
+      "_id": "hastedOverdrive0",
+      "type": "base",
+      "system": {},
+      "changes": [
+        {
+          "key": "system.attributes.movement.walk",
+          "mode": 1,
+          "value": "2",
+          "priority": null
+        },
+        {
+          "key": "system.attributes.movement.fly",
+          "mode": 1,
+          "value": "2",
+          "priority": null
+        },
+        {
+          "key": "system.attributes.movement.burrow",
+          "mode": 1,
+          "value": "2",
+          "priority": null
+        },
+        {
+          "key": "system.attributes.movement.climb",
+          "mode": 1,
+          "value": "2",
+          "priority": null
+        },
+        {
+          "key": "system.attributes.movement.swim",
+          "mode": 1,
+          "value": "2",
+          "priority": null
+        },
+        {
+          "key": "system.attributes.ac.bonus",
+          "mode": 2,
+          "value": "2",
+          "priority": null
+        },
+        {
+          "key": "system.abilities.dex.save.roll.mode",
+          "mode": 2,
+          "value": "1",
+          "priority": null
+        },
+        {
+          "key": "macro.itemMacro",
+          "mode": 0,
+          "value": "",
+          "priority": 20
+        }
+      ],
+      "description": "<p>Speed doubled, +2 AC, Advantage on Dex saves. Extra action each turn (Attack [one only], Dash, Disengage, Hide, or Utilize). When this ends, the broom stalls.</p>",
+      "tint": "#ffffff",
+      "transfer": false,
+      "statuses": [],
+      "sort": 100,
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.351",
+        "systemId": "dnd5e",
+        "systemVersion": "5.3.0",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_key": "!items.effects!ThunderHeadInt00.hastedOverdrive0"
+    },
+    {
+      "name": "Stalled",
+      "origin": null,
+      "duration": {
+        "rounds": null,
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "disabled": true,
+      "flags": {
+        "dae": {
+          "transfer": false,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "stackable": "noneName",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "dontApply": true,
+          "showIcon": true
+        }
+      },
+      "img": "icons/tools/nautical/anchor-blue.webp",
+      "_id": "stalledEffect000",
+      "type": "base",
+      "system": {},
+      "changes": [
+        {
+          "key": "system.attributes.movement.walk",
+          "mode": 5,
+          "value": "0",
+          "priority": 99
+        },
+        {
+          "key": "system.attributes.movement.fly",
+          "mode": 5,
+          "value": "0",
+          "priority": 99
+        },
+        {
+          "key": "system.attributes.movement.burrow",
+          "mode": 5,
+          "value": "0",
+          "priority": 99
+        },
+        {
+          "key": "system.attributes.movement.climb",
+          "mode": 5,
+          "value": "0",
+          "priority": 99
+        },
+        {
+          "key": "system.attributes.movement.swim",
+          "mode": 5,
+          "value": "0",
+          "priority": 99
+        }
+      ],
+      "description": "<p>The broom has stalled! All speeds are 0. Use the <strong>Kickstart</strong> action (Bonus Action) to restart it.</p>",
+      "tint": "#ffffff",
+      "transfer": false,
+      "statuses": [],
+      "sort": 200,
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.351",
+        "systemId": "dnd5e",
+        "systemVersion": "5.3.0",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_key": "!items.effects!ThunderHeadInt00.stalledEffect000"
+    }
+  ],
+  "folder": "5Ok9Jbl5nOokCkqf",
+  "flags": {
+    "midi-qol": {
+      "effectActivation": false,
+      "fumbleThreshold": null,
+      "rollAttackPerTarget": "default",
+      "removeAttackDamageButtons": "default",
+      "itemCondition": "",
+      "otherCondition": "",
+      "effectCondition": "",
+      "reactionCondition": ""
+    },
+    "midiProperties": {
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "rollOther": false,
+      "critOther": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "offHandWeapon": false,
+      "noConcentrationCheck": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "dae": {
+      "macro": {
+        "name": "Thunder-Head Interceptor",
+        "img": "icons/commodities/tech/tube-canister-blue.webp",
+        "type": "script",
+        "scope": "global",
+        "command": "const version = \"13.0.58\";\nconst FIREARMS = [\"revolver\", \"musket\", \"pistol\"];\nconst SOUNDS = {\n  critHorn: \"sounds/combat/epic-start-horn.ogg\",\n  initDrums: \"sounds/drums.wav\",\n  damageOoh: \"modules/midi-qol/sounds/fail1.wav\"\n};\nconst playSound = (src, volume = 0.8) => foundry.audio.AudioHelper.play({ src, volume, autoplay: true, loop: false });\ntry {\n  // === Kinetic Battery: Bonus damage on firearm hit ===\n  if (args[0].tag === \"DamageBonus\") {\n    if (args[0].hitTargets.length === 0) return {};\n    const baseItem = rolledItem?.system?.type?.baseItem;\n    if (!FIREARMS.includes(baseItem)) return {};\n    const charges = actor.getFlag(\"midi-qol\", \"thunderHeadCharges\") || 0;\n    if (charges <= 0) return {};\n    await actor.setFlag(\"midi-qol\", \"thunderHeadCharges\", 0);\n    ChatMessage.create({\n      content: `<p><strong>Kinetic Battery Discharge!</strong> ${charges} charge${charges !== 1 ? \"s\" : \"\"} expended for ${charges}d12 Force damage.</p>`,\n      speaker: ChatMessage.getSpeaker({ actor })\n    });\n    return { damageRoll: `${charges}d12[force]`, flavor: \"Kinetic Battery\" };\n  }\n\n  // === Aero-Stabiliser: Advantage on firearm attacks from 60ft above ===\n  if (args[0].tag === \"OnUse\" && args[0].macroPass === \"preAttackRoll\") {\n    const baseItem = rolledItem?.system?.type?.baseItem;\n    if (!FIREARMS.includes(baseItem)) return;\n    const attackerToken = canvas.tokens.get(args[0].tokenId);\n    const targetToken = args[0].targets?.[0]?.object;\n    if (!attackerToken || !targetToken) return;\n    const elevDiff = (attackerToken.document.elevation ?? 0) - (targetToken.document.elevation ?? 0);\n    if (elevDiff >= 60) {\n      workflow.advantage = true;\n      workflow.attackAdvAttribution.add(\"Aero-Stabiliser (60ft above)\");\n    }\n  }\n\n  // === Hype-Man: Air-horn on critical hits ===\n  if (args[0].tag === \"OnUse\" && args[0].macroPass === \"postAttackRoll\") {\n    if (workflow.isCritical) {\n      playSound(SOUNDS.critHorn, 1.0);\n      ChatMessage.create({\n        content: `<p><em>The broom blasts a stadium air-horn! <strong>BWAAAAAAH!</strong></em></p>`,\n        speaker: ChatMessage.getSpeaker({ actor })\n      });\n    }\n  }\n\n  // === Hype-Man: Sympathetic OOH! on taking damage ===\n  if (args[0].tag === \"OnUse\" && args[0].macroPass === \"isDamaged\") {\n    playSound(SOUNDS.damageOoh, 0.6);\n  }\n\n  // === Hype-Man: War drums on combat start / Transfer effect setup ===\n  if (args[0] === \"on\") {\n    const lastArg = args[args.length - 1];\n    const effectName = lastArg?.efData?.name ?? \"\";\n    if (effectName === \"Aero-Stabiliser\") {\n      const hookId = Hooks.on(\"combatStart\", (combat) => {\n        const combatant = combat.combatants.find(c => c.actorId === actor.id);\n        if (combatant) {\n          playSound(SOUNDS.initDrums, 0.8);\n          ChatMessage.create({\n            content: `<p><em>The Thunder-Head's bristles thrum with a rhythmic, war-drum beat!</em></p>`,\n            speaker: ChatMessage.getSpeaker({ actor })\n          });\n        }\n      });\n      actor._thunderHeadCombatHook = hookId;\n    }\n  }\n\n  // === Full-Auto Overdrive expired: Apply Stalled / Cleanup hooks ===\n  if (args[0] === \"off\") {\n    const lastArg = args[args.length - 1];\n    const effectName = lastArg?.efData?.name ?? \"\";\n    if (effectName === \"Full-Auto Overdrive\") {\n      const stalledTemplate = macroItem.effects.find(e => e.name === \"Stalled\");\n      if (stalledTemplate) {\n        const effectData = stalledTemplate.toObject();\n        effectData.origin = macroItem.uuid;\n        effectData.disabled = false;\n        effectData.flags.dae.dontApply = false;\n        effectData.duration = {};\n        await actor.createEmbeddedDocuments(\"ActiveEffect\", [effectData]);\n        ui.notifications.warn(\"The Thunder-Head stalls! Speed 0 until you Kickstart it.\");\n      }\n    }\n    if (effectName === \"Aero-Stabiliser\" && actor._thunderHeadCombatHook) {\n      Hooks.off(\"combatStart\", actor._thunderHeadCombatHook);\n      delete actor._thunderHeadCombatHook;\n    }\n  }\n} catch (err) {\n  console.error(`Thunder-Head Interceptor ${version}`, err);\n}",
+        "author": "Zl1BOUaPLwDEujaL",
+        "ownership": {
+          "default": 3
+        },
+        "_id": null,
+        "folder": null,
+        "sort": 0,
+        "flags": {},
+        "_stats": {
+          "systemId": "dnd5e",
+          "systemVersion": "5.3.0",
+          "coreVersion": "13.351",
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null,
+          "compendiumSource": null,
+          "duplicateSource": null
+        }
+      }
+    },
+    "dnd5e": {
+      "persistSourceMigration": true,
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.58"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<h2>The Thunder-Head Interceptor</h2><p><em>Wondrous Item, Very Rare (Requires Attunement)</em></p><p>This broom looks less like a cleaning tool and more like a rocket-propelled chassis. The handle is crafted from cold-forged dragon-bone, reinforced with brass valves, while the bristles consist of shimmering metallic wires that crackle with blue electricity and emit a faint smell of ozone.</p><ul><li><strong>Flying Speed:</strong> 80 ft. (Reduced to 60 ft. if carrying over 200 lbs).</li><li><strong>Hype-Man (Quirk):</strong> The broom possesses a boisterous sentience (INT 10, WIS 12, CHA 16). While it cannot speak, it communicates via sound: stadium air-horn blasts on critical hits, rhythmic thumping like a war drum during initiative, and a sympathetic &ldquo;OOH!&rdquo; whenever you take damage.</li></ul><hr /><h3>Passive Features</h3><ul><li><strong>Aero-Stabiliser:</strong> The broom locks into a perfect hover. You have <strong>Advantage</strong> on firearm attack rolls if you are at least 60 feet above your target (by elevation). Additionally, you gain a <strong>+2 bonus to AC</strong> against ranged attacks and the <strong>Evasion</strong> trait while mounted.</li><li><strong>Kinetic Battery:</strong> The broom absorbs the shock of its own instability. Every time you take damage from <em>Backfire</em>, the broom stores 1 charge (maximum 3). When you hit a creature with a firearm attack, all stored charges are automatically expended to deal an extra <strong>1d12 Force damage per charge</strong>.</li></ul><h3>Active Features</h3><ul><li><strong>Full-Auto Overdrive (1/Day):</strong> As a bonus action, you push the broom to its limit. For 1 minute, you gain the benefits of <em>Haste</em>. When this effect ends, the broom &ldquo;stalls&rdquo;&mdash;its speed becomes 0 and its magic goes dormant until you spend a Bonus Action to <em>Kickstart</em> it.</li><li><strong>The &ldquo;Big Bang&rdquo; Recoil (Reaction):</strong> When you hit a creature with a firearm attack, you can trigger a directional explosion. You instantly fly up to <strong>30 feet</strong> in any direction without provoking opportunity attacks. The target and every creature within 10 feet of it must succeed on a <strong>DC 17 Constitution save</strong> or take <strong>3d8 Thunder damage</strong> and be knocked <strong>Prone</strong>.</li></ul><h3>Defects</h3><ul><li><strong>Kickstart Needed:</strong> To activate the broom&rsquo;s flight each day (or after a stall), you must spend a <strong>Bonus Action</strong> revving the bristles. This creates a deafening mechanical roar audible up to 300 feet.</li><li><strong>Backfire:</strong> Whenever you use <em>Big Bang Recoil</em>, you must succeed on a <strong>DC 10 Strength saving throw</strong> or take <strong>1d6 Force damage</strong> from intense whiplash. Taking this damage stores a Kinetic Battery charge.</li><li><strong>Fuel Guzzler:</strong> The broom requires 10 gp worth of &ldquo;High-Octane Arcane Oil&rdquo; every 24 hours. If not fueled, speed drops to 30 ft and it loses all Active Features and Aero-Stabiliser benefits.</li></ul><hr /><h3>Automation Notes</h3><ul><li><strong>Aero-Stabiliser:</strong> +2 AC vs ranged is applied as -2 to incoming ranged attack rolls. Elevation advantage checks attacker vs target elevation difference &ge; 60 ft. Evasion applies to Dex saves (Evasion/superSaver).</li><li><strong>Kinetic Battery:</strong> Charges stored in <code>flags.midi-qol.thunderHeadCharges</code>. Auto-expended on firearm hits via DamageBonusMacro.</li><li><strong>Firearms:</strong> Detected by base weapon type: revolver, musket, pistol.</li><li><strong>Fuel Guzzler &amp; 200 lb weight limit:</strong> Not automated &mdash; track manually.</li></ul>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "Homebrew",
+      "revision": 1,
+      "rules": "2024"
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 3,
+      "units": "lb"
+    },
+    "price": {
+      "value": 50000,
+      "denomination": "gp"
+    },
+    "attunement": "required",
+    "rarity": "veryRare",
+    "identified": true,
+    "cover": null,
+    "crewed": false,
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "armor": {
+      "value": null
+    },
+    "hp": {
+      "value": 0,
+      "max": 0,
+      "dt": null,
+      "conditions": ""
+    },
+    "speed": {
+      "value": null
+    },
+    "strength": null,
+    "proficient": null,
+    "type": {
+      "value": "wondrous",
+      "baseItem": ""
+    },
+    "unidentified": {
+      "description": ""
+    },
+    "container": null,
+    "properties": [
+      "mgc"
+    ],
+    "activities": {
+      "fullAutoOvrdrv00": {
+        "_id": "fullAutoOvrdrv00",
+        "type": "utility",
+        "name": "Full-Auto Overdrive",
+        "activation": {
+          "type": "bonus",
+          "value": 1,
+          "condition": "",
+          "override": true
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "target": "",
+              "value": "1",
+              "scaling": {
+                "mode": "",
+                "formula": ""
+              }
+            }
+          ],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "The broom screams to life — Haste for 1 minute!"
+        },
+        "duration": {
+          "concentration": false,
+          "value": "1",
+          "units": "minute",
+          "special": "",
+          "override": true
+        },
+        "effects": [
+          {
+            "_id": "hastedOverdrive0"
+          }
+        ],
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": true
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "self",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "1",
+          "recovery": [
+            {
+              "period": "lr",
+              "type": "recoverAll"
+            }
+          ]
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "sort": 0,
+        "img": "icons/magic/time/clock-spinning-gold-pink.webp",
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "midiProperties": {
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "forceDialog": false,
+          "confirmTargets": "never",
+          "automationOnly": false,
+          "otherActivityCompatible": false,
+          "identifier": "fullAutoOverdrive",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "useConditionReason": ""
+      },
+      "bigBangRecoil000": {
+        "_id": "bigBangRecoil000",
+        "type": "save",
+        "name": "Big Bang Recoil",
+        "activation": {
+          "type": "reaction",
+          "value": 1,
+          "condition": "When you hit a creature with a firearm attack",
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "A directional explosion propels you 30 ft without provoking!"
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": true
+        },
+        "effects": [],
+        "range": {
+          "value": "",
+          "units": "ft",
+          "special": "",
+          "override": true
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "radius",
+            "size": "10",
+            "width": "",
+            "height": "",
+            "units": "ft"
+          },
+          "affects": {
+            "count": "",
+            "type": "creature",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "save": {
+          "ability": "con",
+          "dc": {
+            "calculation": "",
+            "formula": "17"
+          }
+        },
+        "damage": {
+          "critical": {
+            "bonus": ""
+          },
+          "includeBase": false,
+          "parts": [
+            {
+              "number": 3,
+              "denomination": 8,
+              "bonus": "",
+              "types": [
+                "thunder"
+              ],
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "scaling": {
+                "mode": "",
+                "number": null,
+                "formula": ""
+              }
+            }
+          ]
+        },
+        "sort": 100,
+        "img": "icons/magic/sonic/explosion-shock-wave-teal.webp",
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "Big Bang Recoil",
+          "command": "const version = \"13.0.58\";\ntry {\n  if (args[0].tag === \"OnUse\" && args[0].macroPass === \"postActiveEffects\") {\n    const token = canvas.tokens.get(args[0].tokenId);\n    if (!token) return;\n    // Apply Prone to targets that failed the save\n    for (const target of args[0].failedSaves) {\n      const targetActor = target.actor;\n      if (targetActor) await targetActor.toggleStatusEffect(\"prone\", { active: true });\n    }\n    // Backfire: DC 10 Str save\n    ChatMessage.create({\n      content: `<p><em>The broom bucks violently from the recoil...</em></p>`,\n      speaker: ChatMessage.getSpeaker({ actor })\n    });\n    const saveRolls = await actor.rollSavingThrow({ability: \"str\", target: 10}, {}, { fastForward: true });\n    const saveRoll = saveRolls?.[0];\n    if (!saveRoll || saveRoll.total < 10) {\n      const damageRoll = await new Roll(\"1d6[force]\").evaluate();\n      await MidiQOL.applyTokenDamage(\n        [{ value: damageRoll.total, type: \"force\", properties: new Set() }],\n        damageRoll.total,\n        new Set([token]),\n        macroItem,\n        new Set()\n      );\n      // Gain Kinetic Battery charge (max 3)\n      const charges = actor.getFlag(\"midi-qol\", \"thunderHeadCharges\") || 0;\n      const newCharges = Math.min(charges + 1, 3);\n      await actor.setFlag(\"midi-qol\", \"thunderHeadCharges\", newCharges);\n      ChatMessage.create({\n        content: `<p><strong>Backfire!</strong> ${damageRoll.total} Force damage from whiplash. Kinetic Battery: ${newCharges}/3 charges.</p>`,\n        speaker: ChatMessage.getSpeaker({ actor })\n      });\n    } else {\n      ChatMessage.create({\n        content: `<p><strong>Backfire resisted!</strong> You brace against the whiplash. No charge stored.</p>`,\n        speaker: ChatMessage.getSpeaker({ actor })\n      });\n    }\n  }\n} catch (err) {\n  console.error(`Big Bang Recoil Backfire ${version}`, err);\n}"
+        },
+        "midiProperties": {
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "otherActivityCompatible": false,
+          "identifier": "bigBangRecoil",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "useConditionReason": "",
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        }
+      },
+      "kickstartAct0000": {
+        "_id": "kickstartAct0000",
+        "type": "utility",
+        "name": "Kickstart",
+        "activation": {
+          "type": "bonus",
+          "value": 1,
+          "condition": "",
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "VROOOOM! The broom roars back to life! (Audible up to 300 ft)"
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": true
+        },
+        "effects": [],
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": true
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "self",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "sort": 200,
+        "img": "icons/skills/melee/strike-hammer-destructive-orange.webp",
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "Kickstart",
+          "command": "const version = \"13.0.58\";\ntry {\n  if (args[0].tag === \"OnUse\" && args[0].macroPass === \"postActiveEffects\") {\n    const stalledEffect = actor.effects.find(e => e.name === \"Stalled\");\n    if (stalledEffect) {\n      await stalledEffect.delete();\n      ChatMessage.create({\n        content: `<p><strong>VROOOOM!</strong> The Thunder-Head Interceptor roars back to life with a deafening mechanical scream audible up to 300 feet!</p>`,\n        speaker: ChatMessage.getSpeaker({ actor })\n      });\n    } else {\n      ui.notifications.info(\"The broom isn't stalled.\");\n    }\n  }\n} catch (err) {\n  console.error(`Kickstart ${version}`, err);\n}"
+        },
+        "midiProperties": {
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "forceDialog": false,
+          "confirmTargets": "never",
+          "automationOnly": false,
+          "otherActivityCompatible": false,
+          "identifier": "kickstart",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "useConditionReason": ""
+      }
+    },
+    "identifier": "thunder-head-interceptor",
+    "equipped": false,
+    "attuned": false
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.351",
+    "systemId": "dnd5e",
+    "systemVersion": "5.3.0",
+    "createdTime": 1744800000000,
+    "modifiedTime": 1744800000000,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
+  },
+  "_id": "ThunderHeadInt00",
+  "sort": 0,
+  "ownership": {
+    "default": 0,
+    "Zl1BOUaPLwDEujaL": 3
+  },
+  "_key": "!items!ThunderHeadInt00"
+}

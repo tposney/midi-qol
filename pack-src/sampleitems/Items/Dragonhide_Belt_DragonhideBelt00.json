@@ -1,0 +1,253 @@
+{
+  "name": "Dragonhide Belt",
+  "type": "equipment",
+  "img": "icons/equipment/waist/belt-buckle-glowing-orange.webp",
+  "effects": [
+    {
+      "_id": "drgnhideBeltEf00",
+      "name": "Dragonhide Belt",
+      "img": "icons/equipment/waist/belt-buckle-glowing-orange.webp",
+      "type": "base",
+      "changes": [
+        {
+          "key": "system.bonuses.spell.dc",
+          "mode": 2,
+          "value": "2",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {},
+      "transfer": true,
+      "origin": null,
+      "description": "<p>+2 bonus to the saving throw DCs of your ki features.</p>",
+      "statuses": [],
+      "flags": {
+        "dae": {
+          "stackable": "noneName",
+          "transfer": true
+        }
+      },
+      "system": {},
+      "sort": 0,
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.351",
+        "systemId": "dnd5e",
+        "systemVersion": "5.3.0",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_key": "!items.effects!DragonhideBelt00.drgnhideBeltEf00"
+    }
+  ],
+  "folder": "5Ok9Jbl5nOokCkqf",
+  "flags": {
+    "midi-qol": {
+      "rollAttackPerTarget": "default",
+      "removeAttackDamageButtons": "default",
+      "itemCondition": "",
+      "otherCondition": "",
+      "effectCondition": "",
+      "reactionCondition": ""
+    },
+    "midiProperties": {
+      "confirmTargets": "default",
+      "magicdam": false,
+      "magiceffect": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.58"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Wondrous Item, Rare (Requires Attunement by a Monk)</em></p><p>This finely detailed belt is made of dragonhide. While wearing it, you gain a +2 bonus to the saving throw DCs of your ki features.</p><p>In addition, you can use an action to regain ki points equal to a roll of your Martial Arts die. You can't use this action again until the next dawn.</p><section class=\"secret\" id=\"secret-dragonhideBeltNote\"><p><strong>Foundry Note</strong></p><p>The +2 DC bonus is applied via <code>system.bonuses.spell.dc</code>, which increases all ability-based save DCs (including ki). The Regain Focus activity rolls the Martial Arts die (<code>@scale.monk.die</code>) and restores that many Focus Points on the Monk's Focus feature. Requires the 2024 Monk class with the <strong>Monk's Focus</strong> feature (identifier: <code>monks-focus</code>).</p></section>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "revision": 1,
+      "rules": "2024"
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 1,
+      "units": "lb"
+    },
+    "price": {
+      "value": 4000,
+      "denomination": "gp"
+    },
+    "attunement": "required",
+    "attuned": false,
+    "equipped": false,
+    "rarity": "rare",
+    "identified": true,
+    "cover": null,
+    "crewed": false,
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "armor": {
+      "value": null
+    },
+    "hp": {
+      "value": null,
+      "max": null,
+      "dt": null,
+      "conditions": ""
+    },
+    "type": {
+      "value": "wondrous",
+      "baseItem": ""
+    },
+    "activities": {
+      "regainFocusAct00": {
+        "_id": "regainFocusAct00",
+        "type": "utility",
+        "name": "Regain Focus",
+        "activation": {
+          "type": "action",
+          "value": 1,
+          "condition": "",
+          "override": true
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "target": "",
+              "value": "1",
+              "scaling": {
+                "mode": "",
+                "formula": ""
+              }
+            }
+          ],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "Roll your Martial Arts die and regain that many ki points."
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": true
+        },
+        "effects": [],
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": true
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "self",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "1",
+          "recovery": [
+            {
+              "period": "dawn",
+              "type": "recoverAll"
+            }
+          ]
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "sort": 0,
+        "img": "icons/magic/symbols/runes-star-magenta.webp",
+        "macroData": {
+          "name": "Regain Focus",
+          "command": "const version = \"13.0.58\";\ntry {\n  if (args[0].tag === \"OnUse\" && args[0].macroPass === \"postActiveEffects\") {\n    const monksFocus = actor.items.find(i => i.system.identifier === \"monks-focus\");\n    if (!monksFocus) {\n      ui.notifications.warn(\"No Monk's Focus feature found on this actor.\");\n      return;\n    }\n    const dieFormula = actor.system.scale?.monk?.die;\n    if (!dieFormula) {\n      ui.notifications.warn(\"No Martial Arts die found — is this character a Monk?\");\n      return;\n    }\n    const roll = await new Roll(dieFormula.formula ?? dieFormula.toString()).evaluate();\n    await roll.toMessage({\n      speaker: ChatMessage.getSpeaker({ actor }),\n      flavor: `${macroItem.name} — Martial Arts die (Focus Points regained)`\n    });\n    const maxUses = monksFocus.system.uses.max;\n    const resolvedMax = typeof maxUses === \"string\" ? Roll.safeEval(Roll.replaceFormulaData(maxUses, actor.getRollData())) : maxUses;\n    const currentSpent = monksFocus.system.uses.spent;\n    const regained = Math.min(roll.total, currentSpent);\n    if (regained > 0) {\n      await monksFocus.update({ \"system.uses.spent\": currentSpent - regained });\n      ChatMessage.create({\n        content: `<p><strong>${actor.name}</strong> regains <strong>${regained}</strong> Focus Point${regained !== 1 ? \"s\" : \"\"} (${monksFocus.system.uses.spent - regained}/${resolvedMax} spent).</p>`,\n        speaker: ChatMessage.getSpeaker({ actor })\n      });\n    } else {\n      ChatMessage.create({\n        content: `<p><strong>${actor.name}</strong> has no spent Focus Points to regain.</p>`,\n        speaker: ChatMessage.getSpeaker({ actor })\n      });\n    }\n  }\n} catch (err) {\n  console.error(`Dragonhide Belt ${version}`, err);\n}"
+        },
+        "midiProperties": {
+          "confirmTargets": "never",
+          "automationOnly": false,
+          "otherActivityCompatible": false,
+          "identifier": "regainFocus",
+          "displayActivityName": true,
+          "rollMode": "default"
+        },
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "useConditionReason": ""
+      }
+    },
+    "identifier": "dragonhide-belt",
+    "container": null,
+    "properties": [
+      "mgc"
+    ],
+    "unidentified": {
+      "description": ""
+    },
+    "strength": null,
+    "proficient": null
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.351",
+    "systemId": "dnd5e",
+    "systemVersion": "5.3.0",
+    "createdTime": 1745020800000,
+    "modifiedTime": 1745020800000,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
+  },
+  "_id": "DragonhideBelt00",
+  "sort": 0,
+  "ownership": {
+    "default": 0,
+    "Zl1BOUaPLwDEujaL": 3
+  },
+  "_key": "!items!DragonhideBelt00"
+}
