@@ -838,12 +838,9 @@ export let fetchParams = () => {
   if (configSettings.averageDamage === undefined) configSettings.averageDamage = "none";
   enableWorkflow = game.settings.get("midi-qol", "EnableWorkflow");
   conditionUpdateCard = game.settings.get("midi-qol", "ConditionUpdateCard") ?? "none";
-  const legacyConditionUpdateCard = (configSettings as any).conditionUpdateCard;
-  if (legacyConditionUpdateCard !== undefined) {
-    conditionUpdateCard = legacyConditionUpdateCard;
+  if ((configSettings as any).conditionUpdateCard !== undefined) {
     delete (configSettings as any).conditionUpdateCard;
     game.settings.set("midi-qol", "ConfigSettings", configSettings);
-    game.settings.set("midi-qol", "ConditionUpdateCard", conditionUpdateCard);
   }
   //@ts-expect-error legacy boolean value
   if (configSettings.optionalRules.challengeModeArmor === true) { // old settings

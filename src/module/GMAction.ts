@@ -1662,8 +1662,12 @@ function conditionDisplayText(value: unknown, fallback: string = ""): string {
   return text;
 }
 
+function getConditionUpdateCardMode(): string {
+  return safeGetGameSetting("midi-qol", "ConditionUpdateCard") ?? conditionUpdateCard ?? "none";
+}
+
 function shouldCreateConditionUpdateEntry(effect: ActiveEffect.Implementation, options: any = {}) {
-  if (conditionUpdateCard === "none") return false;
+  if (getConditionUpdateCardMode() === "none") return false;
   if (!(effect?.parent instanceof CONFIG.Actor.documentClass)) return false;
   const midiConditionUpdate = options?.midiConditionUpdate ?? {};
   if (midiConditionUpdate.force) return true;
@@ -2004,9 +2008,10 @@ function findRelatedConditionCardMessage(data: ConditionUpdateGroup & { chainTex
 }
 
 async function createPlayerConditionCard(data: ConditionUpdateGroup & { chainText?: string; headerText?: string; sourceLabel?: string; reasonText?: string; reasonLabel?: string }): Promise<string | undefined> {
-  if (!["playerresults", "npcplayerresults"].includes(conditionUpdateCard)) return;
+  const cardMode = getConditionUpdateCardMode();
+  if (!["playerresults", "npcplayerresults"].includes(cardMode)) return;
 
-  const showNPC = conditionUpdateCard === "npcplayerresults";
+  const showNPC = cardMode === "npcplayerresults";
   const updates = data.updates.filter(update => showNPC || update.hasPlayerOwner);
   if (updates.length === 0) return;
 
@@ -2071,7 +2076,7 @@ async function createPlayerConditionCard(data: ConditionUpdateGroup & { chainTex
 }
 
 async function createGMConditionCard(data: ConditionUpdateGroup & { chainText?: string; headerText?: string; sourceLabel?: string; reasonText?: string; reasonLabel?: string }): Promise<string | undefined> {
-  if (conditionUpdateCard === "none") return;
+  if (getConditionUpdateCardMode() === "none") return;
   if (!data.updates.length) return;
 
   let cardData = {

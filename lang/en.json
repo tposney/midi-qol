@@ -33,7 +33,7 @@
   "midi-qol.PlayerDamageCard.Name": "Show a player's damage card",
   "midi-qol.PlayerDamageCard.Hint": "A simpler version of the damage card. Only displayed if the GM card is displayed. Card is not shown to the GM",
   "midi-qol.ConditionUpdateCard.Name": "Show condition update chat cards",
-  "midi-qol.ConditionUpdateCard.Hint": "Display chat notifications when status conditions or OverTime effects are added or removed.",
+  "midi-qol.ConditionUpdateCard.Hint": "Display condition-change chat cards when status conditions or OverTime effects are added or removed.",
   "midi-qol.PlayerCardDamageDifferent.Name": "Display the player damage card if the rolled damage does not match the applied damage for some target",
   "midi-qol.ItemRollButtons.Name": "Add attack/damage buttons to item inventory list",
   "midi-qol.ItemRollButtons.Hint": "Add Roll Buttons to item description - these buttons support ctrl/alt/shift to skip the dialog",
@@ -304,9 +304,9 @@
   },
   "midi-qol.conditionUpdateCardOptions": {
     "none": "Don't show",
-    "gm": "Show GM results",
-    "playerresults": "Show GM and player results",
-    "npcplayerresults": "Show GM, player, and NPC results"
+    "gm": "GM only",
+    "playerresults": "GM + public cards for player-owned actors",
+    "npcplayerresults": "GM + public cards for all actors"
   },
   "midi-qol.ConditionUpdate": {
     "updated": "Condition Updated",
