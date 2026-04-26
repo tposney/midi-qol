@@ -1378,6 +1378,14 @@
           "label": "Save Removes",
           "hint": "Save removes effect"
         },
+        "ignoreTriggeringActivitySaveHit": {
+          "label": "Ignore Triggering Save/Hit",
+          "hint": "Apply this overtime effect even if the triggering activity did not hit or the target did not fail its save/check"
+        },
+        "removeTriggeringActivityEffects": {
+          "label": "Remove Triggering Effects",
+          "hint": "When Save Removes succeeds, also remove effects created by the triggering activity"
+        },
         "preRemoveConditionText": {
           "label": "Pre activity remove condition",
           "hint": "Tested prior to rolling activity, effect removed if true"

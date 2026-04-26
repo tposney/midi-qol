@@ -103,6 +103,7 @@ import {
   clearTargetSave,
   getToolLabel,
   getConsumptionData,
+  applyTriggeredActivityAsOverTime,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, computeAbilityAdvantage, buildPreComputedAdvantageMap } from "./patching.js";
@@ -3367,6 +3368,18 @@ export class Workflow {
           const toUuids = (targets: Set<TokenOrDocument>): string[] => {
             return Array.from(targets ?? new Set()).map(t => (t instanceof TokenDocument ? t : t.document).uuid)
           }
+          const getTriggerPassTargets = (): Set<TokenOrDocument> => {
+            if ((this.saveActivity?.save || this.saveActivity?.check) && this.activity.attack) {
+              return new Set([...this.hitTargets, ...this.hitTargetsEC].filter(t => this.failedSaves.has(t)));
+            }
+            if (this.activity.save || this.activity.check) return new Set(this.failedSaves);
+            if (this.activity.attack) return new Set([...this.hitTargets, ...this.hitTargetsEC]);
+            return new Set(this.targets);
+          }
+          const sourceHasSaveOrHit = !!(((this.saveActivity?.save || this.saveActivity?.check) && this.activity.attack)
+            || this.activity.save || this.activity.check || this.activity.attack);
+          const enforceTriggerSaveHit = triggeredActivity.isOverTimeFlag && !triggeredActivity.overTimeProperties?.ignoreTriggeringActivitySaveHit;
+          const triggerPassTargetUuids = enforceTriggerSaveHit && sourceHasSaveOrHit ? new Set(toUuids(getTriggerPassTargets())) : undefined;
 
           if (this.activity.midiProperties?.triggeredActivityRollAs) {
             switch (this.activity.midiProperties.triggeredActivityRollAs) {
@@ -3384,7 +3397,7 @@ export class Workflow {
           if (!usage.midiOptions.rollAs?.isOwner) usage.midiOptions.checkGMstatus = true;
           if (this.activity.midiProperties?.triggeredActivityTargets)
             switch (this.activity.midiProperties.triggeredActivityTargets) {
-              case "self": targetUuids = [this.tokenUuid ?? ""]; break;
+              case "self": targetUuids = [this.tokenUuid ?? this.actor?.uuid ?? ""]; break;
               case "hitTargets": targetUuids = toUuids(this.hitTargets); break;
               case "missedTargets": targetUuids = toUuids(this.targets.difference(this.hitTargets)); break;
               case "failedSaves": targetUuids = toUuids(this.failedSaves); break;
@@ -3397,7 +3410,15 @@ export class Workflow {
             }
           usage.midiOptions.targetUuids = targetUuids;
           usage.midiOptions.triggeredActivity = true;
+          if (triggerPassTargetUuids) {
+            targetUuids = targetUuids.filter(uuid => triggerPassTargetUuids.has(uuid));
+            usage.midiOptions.targetUuids = targetUuids;
+          }
           if (this.activity.midiProperties.triggeredActivityTargets !== "retarget" && targetUuids?.length === 0)
+            shouldTrigger = false;
+          if (enforceTriggerSaveHit && sourceHasSaveOrHit && targetUuids?.length === 0)
+            shouldTrigger = false;
+          if (triggeredActivity.isOverTimeFlag && targetUuids?.length === 0)
             shouldTrigger = false;
           if (this.activity.midiProperties?.triggeredActivityConditionText && shouldTrigger) {
             const target = await fromUuid(targetUuids[0]) as TokenDocument.Implementation | undefined;;
@@ -3411,8 +3432,12 @@ export class Workflow {
             foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringActivityUuid", this.activity.uuid);
             const triggerConsume = this.activity.midiProperties?.triggeredActivityConsume ?? true;
             const triggerConfigure = this.activity.midiProperties?.triggeredActivityConfigure ?? true;
-            if (!triggerConsume) foundry.utils.setProperty(usage, "consume", { resources: false, spellSlot: false, action: false });
-            await completeActivityUse(triggeredActivity, usage, { configure: triggerConfigure }, {});
+            if (triggeredActivity.isOverTimeFlag) {
+              await applyTriggeredActivityAsOverTime(this, triggeredActivity, targetUuids);
+            } else {
+              if (!triggerConsume) foundry.utils.setProperty(usage, "consume", { resources: false, spellSlot: false, action: false });
+              await completeActivityUse(triggeredActivity, usage, { configure: triggerConfigure }, {});
+            }
           }
         }
       }

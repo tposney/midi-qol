@@ -193,6 +193,16 @@ declare module "fvtt-types/configuration" {
           baseLevel?: number;
         };
         dependentOn?: string; // UUID of parent document (Actor/Item) for midi-qol dependent tracking
+        autoOverTime?: {
+          activityUuid?: string;
+          activityName?: string;
+          activityIdentifier?: string;
+          sourceActorUuid?: string;
+          triggeringActivityUuid?: string;
+          triggeringActivityName?: string;
+          triggeringItemCardUuid?: string;
+          triggeringEffectUuids?: string[];
+        };
         overtime?: {
           permanent?: boolean;      // Effect marked permanent by saveCount/failCount
           savesRemaining?: number;  // Remaining saves needed for saveCount
@@ -1189,6 +1199,8 @@ export interface Activity extends AnyMutableObject {
   overTimeProperties?: {
     turnChoice?: string;
     saveRemoves?: boolean;
+    ignoreTriggeringActivitySaveHit?: boolean;
+    removeTriggeringActivityEffects?: boolean;
     rollAs?: string;
     preRemoveConditionText?: string;
     postRemoveConditionText?: string;
@@ -1262,6 +1274,7 @@ export interface Activity extends AnyMutableObject {
   hasHealing: boolean;
   actionType: string;
   uuid: string;
+  isOverTimeFlag?: boolean;
   otherActivity?: Activity | null;
   type: string;
   useCondition: string;
