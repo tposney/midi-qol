@@ -1,4 +1,4 @@
-import { checkRule, configSettings, safeGetGameSetting, isDnd5e53 } from "./settings.js";
+import { checkRule, conditionUpdateCard, configSettings, safeGetGameSetting, isDnd5e53 } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID, systemConcentrationId } from "../midi-qol.js";
 import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions, tokenForActor, getTokenName, getTokenPlayerName, getStatusName } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
@@ -1663,7 +1663,7 @@ function conditionDisplayText(value: unknown, fallback: string = ""): string {
 }
 
 function shouldCreateConditionUpdateEntry(effect: ActiveEffect.Implementation, options: any = {}) {
-  if (configSettings.conditionUpdateCard === "none") return false;
+  if (conditionUpdateCard === "none") return false;
   if (!(effect?.parent instanceof CONFIG.Actor.documentClass)) return false;
   const midiConditionUpdate = options?.midiConditionUpdate ?? {};
   if (midiConditionUpdate.force) return true;
@@ -2004,9 +2004,9 @@ function findRelatedConditionCardMessage(data: ConditionUpdateGroup & { chainTex
 }
 
 async function createPlayerConditionCard(data: ConditionUpdateGroup & { chainText?: string; headerText?: string; sourceLabel?: string; reasonText?: string; reasonLabel?: string }): Promise<string | undefined> {
-  if (!["playerresults", "npcplayerresults"].includes(configSettings.conditionUpdateCard)) return;
+  if (!["playerresults", "npcplayerresults"].includes(conditionUpdateCard)) return;
 
-  const showNPC = configSettings.conditionUpdateCard === "npcplayerresults";
+  const showNPC = conditionUpdateCard === "npcplayerresults";
   const updates = data.updates.filter(update => showNPC || update.hasPlayerOwner);
   if (updates.length === 0) return;
 
@@ -2071,7 +2071,7 @@ async function createPlayerConditionCard(data: ConditionUpdateGroup & { chainTex
 }
 
 async function createGMConditionCard(data: ConditionUpdateGroup & { chainText?: string; headerText?: string; sourceLabel?: string; reasonText?: string; reasonLabel?: string }): Promise<string | undefined> {
-  if (configSettings.conditionUpdateCard === "none") return;
+  if (conditionUpdateCard === "none") return;
   if (!data.updates.length) return;
 
   let cardData = {
