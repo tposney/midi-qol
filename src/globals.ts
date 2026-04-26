@@ -539,6 +539,11 @@ declare module "fvtt-types/configuration" {
         isHit?: boolean;
         otherActivityConsumed?: object;
         playerDamageCard?: boolean;
+        playerConditionCard?: boolean;
+        conditionUpdateCard?: boolean;
+        conditionUpdateGroupId?: string;
+        conditionUpdateData?: any;
+        actorUuids?: string[];
       };
     };
     Item: {

@@ -245,6 +245,14 @@
     </div>
 
     <div class="form-group">
+      <label>{{localize "midi-qol.ConditionUpdateCard.Name"}}</label>
+      <select name="conditionUpdateCard" data-dtype="String">
+        {{selectOptions conditionUpdateCardOptions selected=configSettings.conditionUpdateCard localize=true}}
+      </select>
+      <div class="notes midi-qol-faint">{{{localize "midi-qol.ConditionUpdateCard.Hint"}}}</div>
+    </div>
+
+    <div class="form-group">
       <label>{{localize "midi-qol.PlayerCardDamageDifferent.Name"}}</label>
       <input type="checkbox" name="playerCardDamageDifferent" data-dtype="Boolean" {{checked
         configSettings.playerCardDamageDifferent}} />

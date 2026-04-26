@@ -1061,6 +1061,80 @@ section.midi-qol.tab {
 }
 
 /* ----------------------------------------- */
+/* ----------------------------------------- */
+/* Condition Update Cards                    */
+/* ----------------------------------------- */
+
+.midi-qol-condition-card {
+  padding: 2px 0;
+}
+
+.chat-message.message.flexcol:has(.midi-qol-condition-card) .message-header {
+  display: none;
+}
+
+.midi-qol-cond-header {
+  font-size: 0.9em;
+  padding: 2px 4px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+  margin-bottom: 2px;
+}
+
+.midi-qol-cond-meta {
+  font-size: 0.8em;
+  padding: 0 4px 3px 4px;
+  opacity: 0.8;
+}
+
+.midi-qol-cond-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  flex-wrap: wrap;
+}
+
+.midi-qol-cond-actor-row {
+  padding-bottom: 0;
+}
+
+.midi-qol-cond-effect-row {
+  padding-top: 0;
+  padding-left: 30px;
+}
+
+.midi-qol-cond-effect-row .midi-qol-cond-op {
+  min-width: 56px;
+}
+
+.midi-qol-condition-card .midi-qol-target-name {
+  border: 0;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.midi-qol-cond-name-stack {
+  width: 170px;
+}
+
+.midi-qol-cond-name-stack .midi-qol-playerTokenName {
+  text-align: right;
+}
+
+.midi-qol-cond-actor,
+.midi-qol-cond-effect {
+  font-weight: 600;
+}
+
+.midi-qol-cond-op {
+  opacity: 0.85;
+}
+
+.midi-qol-cond-status {
+  font-size: 0.85em;
+  opacity: 0.75;
+}
+
 /* Advantage/Disadvantage Indicator
 /* ----------------------------------------- */
 /* Attribution info icon - shows tooltip with advantage/disadvantage sources */

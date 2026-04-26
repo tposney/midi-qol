@@ -150,6 +150,7 @@ class ConfigSettings {
   autoApplyDamage: string = "none";
   damageCardStyle: string = "flexbox";
   playerDamageCard: string = "none";
+  conditionUpdateCard: string = "none";
   playerCardDamageDifferent: boolean = false;
   hidePlayerDamageCard: boolean = true;
   autoCEEffects: string = "none";
@@ -699,6 +700,7 @@ export let fetchParams = () => {
   //@ts-expect-error legacy boolean value
   if (configSettings.autoItemEffects === false) configSettings.autoItemEffects = "off";
   if (configSettings.playerDamageCard === undefined) configSettings.playerDamageCard = "none";
+  if (configSettings.conditionUpdateCard === undefined) configSettings.conditionUpdateCard = "none";
   if (configSettings.playerCardDamageDifferent === undefined) configSettings.playerCardDamageDifferent = true;
   if (configSettings.rollAlternate === undefined) configSettings.rollAlternate = "off";
   //@ts-expect-error legacy boolean value
@@ -1179,6 +1181,13 @@ export const playerDamageCardOptions = keysToExtendedOptionsObj("playerDamageCar
   "playerbuttons",
   "npcplayerresults",
   "npcplayerbuttons"
+]);
+
+export const conditionUpdateCardOptions = keysToExtendedOptionsObj("conditionUpdateCardOptions", [
+  "none",
+  "gm",
+  "playerresults",
+  "npcplayerresults"
 ]);
 
 export const removeButtonsOptions = keysToOptionsObj("removeButtonsOptions", [

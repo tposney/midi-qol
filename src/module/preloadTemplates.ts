@@ -7,6 +7,8 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/damage-results-classic.html",
     "modules/midi-qol/templates/damage-results-player.html",
     "modules/midi-qol/templates/damage-results-player-classic.html",
+    "modules/midi-qol/templates/condition-results.html",
+    "modules/midi-qol/templates/condition-results-player.html",
     "modules/midi-qol/templates/damage-roll-dialog.hbs",
     "modules/midi-qol/templates/damage-roll.html",
     "modules/midi-qol/templates/dialog.hbs",
