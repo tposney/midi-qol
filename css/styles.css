@@ -855,6 +855,16 @@ section.midi-qol.tab {
   }
 }
 
+section.midi-qol.tab > .sheet-tabs {
+  flex-wrap: wrap;
+  font-size: var(--font-size-12);
+  text-transform: none;
+}
+
+section.midi-qol.tab > .sheet-tabs [data-tab] label {
+  white-space: nowrap;
+}
+
 .theme-dark .midi-qol.tab textarea:not(:read-only) {
   background: var(--dnd5e-background-card);
 }
