@@ -203,6 +203,8 @@ export let MidiActivityMixin = Base => {
         overTimeProperties: new SchemaField({
           turnChoice: new StringField({ blank: false, choices: ["start", "end"], default: "start" }),
           saveRemoves: new BooleanField({ initial: true }),
+          ignoreTriggeringActivitySaveHit: new BooleanField({ initial: false }),
+          removeTriggeringActivityEffects: new BooleanField({ initial: false }),
           rollAs: new StringField({ blank: false, choices: ["target", "source"], initial: "target" }),
           //@ts-expect-error find out why there is a type error here
           preRemoveConditionText: new MidiConditionField({ name: "removeCondition", initial: "" }),

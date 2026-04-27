@@ -1,4 +1,4 @@
-import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface } from "../midi-qol.js";
+import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface, createEffects, updateEffects } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
@@ -1217,11 +1217,10 @@ async function getOvertimeActivity(actor: Actor.Implementation, effect: ActiveEf
     }
   }
   if (!activity) {
-    console.error(`getOvertimeActivity | activity not found for changeValue: "${changeValue}"`);
+    if (debugEnabled > 0) debug(`getOvertimeActivity | activity not found for changeValue: "${changeValue}"`);
     return undefined;
   }
   const turnChoice = activity.overTimeProperties?.turnChoice ?? "start";
-  console.error(`getOvertimeActivity | found activity: ${activity.name}, turnChoice: ${turnChoice}, startTurn: ${startTurn}`);
   // Check start/end turn
   if (turnChoice === "start" && !startTurn) return undefined;
   if (turnChoice === "end" && startTurn) return undefined;
@@ -1238,15 +1237,18 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
   for (let change of changes) {
     const activity = await getOvertimeActivity(actor, effect, change, startTurn);
     if (!activity) {
-      console.warn(`midi-qol | localActivityOverTime | for actor ${actor} activity ${change.value} not found or not overTime`);
       continue;
     }
     // Determine which actor should roll the overtime activity
+    const autoOverTime = effect.flags?.[MODULE_ID]?.autoOverTime;
     const rollAsChoice = activity.overTimeProperties?.rollAs ?? "target";
     let rollActor = actor; // default: target actor (the actor bearing the effect)
-    if (rollAsChoice === "source") {
+    const autoOverTimeSourceActor = autoOverTime?.sourceActorUuid
+      ? fromUuidSync(autoOverTime.sourceActorUuid) as Actor.Implementation | undefined
+      : undefined;
+    if (autoOverTime?.sourceActorUuid || rollAsChoice === "source") {
       const originItem = getItemFromEffectOrigin(effect.origin ?? "");
-      if (originItem?.actor) rollActor = originItem.actor;
+      rollActor = autoOverTimeSourceActor ?? originItem?.actor ?? actor;
     }
 
     // Create an item owned by the rolling actor which has all of the details
@@ -1276,7 +1278,7 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
       }
     }
     let targetsToUse: Set<Token> | undefined = undefined;
-    const checkGMstatus = rollAsChoice === "source" && rollActor !== actor && !rollActor.isOwner;
+    const checkGMstatus = rollActor !== actor && !rollActor.isOwner;
     // Overtime effects always target the actor bearing the effect
     const token = tokenForActor(actor);
     if (token) targetsToUse = new Set([token]);
@@ -1288,7 +1290,30 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
 
     // Check save condition
     if (activity.overTimeProperties?.saveRemoves && overTimeWorkflow?.saves.has(getOrCreateTokenForActor(actor)!)) {
-      await effect.delete();
+      let removedTriggeringEffects = false;
+      if (activity.overTimeProperties.removeTriggeringActivityEffects) {
+        const autoOverTime = (effect.flags?.[MODULE_ID]?.autoOverTime ?? {}) as Record<string, any>;
+        const triggeringEffectUuids = autoOverTime.triggeringEffectUuids ?? [];
+        const triggeringActivityUuid = autoOverTime.triggeringActivityUuid;
+        const triggeringEffectOrigins = autoOverTime.triggeringEffectOrigins ?? [];
+        const triggeringEffects = actor.appliedEffects.filter(activeEffect => {
+          if (activeEffect.uuid === effect.uuid) return false;
+          if (triggeringEffectUuids.includes(activeEffect.uuid)) return true;
+          if (triggeringEffectOrigins.includes(activeEffect.origin ?? "")) return true;
+          if (triggeringEffectOrigins.includes(String(foundry.utils.getProperty(activeEffect, "flags.dnd5e.dependentOn") ?? ""))) return true;
+          if (triggeringActivityUuid && activeEffect.flags?.dae?.activity === triggeringActivityUuid) return true;
+          if (triggeringEffectUuids.length > 0) return false;
+          return triggeringActivityUuid ? activeEffect.origin === triggeringActivityUuid : false;
+        });
+        if (triggeringEffects.length > 0) {
+          const removeOptions = { "expiry-reason": "midi-qol:activityOverTime:saveRemovesTrigger" };
+          for (const triggeringEffect of triggeringEffects) {
+            await triggeringEffect.delete(removeOptions as any);
+          }
+          removedTriggeringEffects = true;
+        }
+      }
+      if (!removedTriggeringEffects && fromUuidSync(effect.uuid)) await effect.delete();
       return;
     }
     // Check remove condition
@@ -1300,6 +1325,152 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
       }
     }
   }
+}
+
+export async function applyTriggeredActivityAsOverTime(triggeringWorkflow: Workflow, activity: Activity, targetUuids: string[] = []) {
+  if (!activity?.isOverTimeFlag) return false;
+
+  const targetActors: Actor.Implementation[] = [];
+  const targetActorUuids = new Set<string>();
+  for (const targetUuid of targetUuids ?? []) {
+    const targetActor = getActor(targetUuid);
+    if (!targetActor || targetActorUuids.has(targetActor.uuid)) continue;
+    targetActorUuids.add(targetActor.uuid);
+    targetActors.push(targetActor);
+  }
+  if (targetActors.length === 0) return false;
+
+  const activityRef = `${activity.identifier || activity.uuid}`;
+  const origin = activity.item?.uuid ?? activity.uuid;
+  const concentrationUuid = triggeringWorkflow.actor?.effects.get(triggeringWorkflow.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid
+    ?? getConcentrationEffect(triggeringWorkflow.actor, triggeringWorkflow.item)?.uuid;
+  const triggeringEffectOrigins = new Set<string>();
+  if (triggeringWorkflow.activity?.uuid) triggeringEffectOrigins.add(triggeringWorkflow.activity.uuid);
+  if (concentrationUuid) triggeringEffectOrigins.add(concentrationUuid);
+  const triggeringItemUuid = triggeringWorkflow.activity?.item?.uuid ?? triggeringWorkflow.item?.uuid;
+  if (triggeringItemUuid) {
+    for (const effectData of triggeringWorkflow.activity?.effects ?? []) {
+      if (effectData?._id) triggeringEffectOrigins.add(`${triggeringItemUuid}.ActiveEffect.${effectData._id}`);
+    }
+  }
+  const triggeringActivityName = `${triggeringWorkflow.activity?.name ?? triggeringWorkflow.item?.name ?? ""}`;
+  const triggeringItemCardUuid = triggeringWorkflow.itemCardUuid ?? triggeringWorkflow.chatCard?.uuid;
+  let effectApplied = false;
+
+  for (const targetActor of targetActors) {
+    const triggeringEffects = targetActor.appliedEffects.filter(activeEffect => {
+      if (triggeringEffectOrigins.has(activeEffect.origin ?? "")) return true;
+      if (triggeringEffectOrigins.has(String(foundry.utils.getProperty(activeEffect, "flags.dnd5e.dependentOn") ?? ""))) return true;
+      if (triggeringWorkflow.activity?.uuid && activeEffect.flags?.dae?.activity === triggeringWorkflow.activity.uuid) return true;
+      return false;
+    });
+    const triggeringEffectUuids = triggeringEffects.map(activeEffect => activeEffect.uuid);
+    const sourceEffect = triggeringEffects[0];
+
+    const autoOverTimeData = {
+      activityUuid: activity.uuid,
+      activityName: activity.name,
+      activityIdentifier: activity.identifier,
+      sourceActorUuid: triggeringWorkflow.actor?.uuid,
+      triggeringActivityUuid: triggeringWorkflow.activity?.uuid,
+      triggeringActivityName,
+      triggeringItemCardUuid,
+      triggeringEffectUuids,
+      triggeringEffectOrigins: Array.from(triggeringEffectOrigins),
+    };
+
+    let duration: any = sourceEffect ? foundry.utils.duplicate(sourceEffect.toObject().duration ?? {}) : {};
+    if (duration.expired !== undefined) duration.expired = false;
+    const shouldUseActivityDuration = activity.duration?.units && !["inst"].includes(activity.duration.units);
+    if (!sourceEffect && shouldUseActivityDuration) {
+      const convertedDuration = convertDuration(activity.duration, isInCombat(targetActor));
+      duration = {
+        startRound: game.combat?.round,
+        startTurn: game.combat?.turn,
+        startTime: game.time?.worldTime,
+      };
+      if (convertedDuration.type === "seconds") {
+        duration = {
+          seconds: Math.max(convertedDuration.seconds ?? 1, 1),
+          startTime: game.time?.worldTime,
+        };
+      } else if (convertedDuration.type === "turns") {
+        duration = {
+          rounds: convertedDuration.rounds,
+          turns: (convertedDuration.rounds ?? 0) > 0 ? convertedDuration.turns : Math.max(convertedDuration.turns ?? 1, 1),
+          startRound: game.combat?.round,
+          startTurn: game.combat?.turn,
+        };
+      }
+    }
+
+    const effectChanges = [
+      {
+        key: `flags.${MODULE_ID}.ActivityOverTime`,
+        type: "override",
+        value: activityRef,
+        priority: 20,
+      },
+    ];
+
+    const effectData: any = {
+      origin,
+      disabled: false,
+      transfer: false,
+      img: `${activity.img ?? activity.item?.img ?? ""}`,
+      name: activity.name,
+      duration,
+      "system.changes": effectChanges,
+      flags: {
+        dae: {
+          stackable: "noneName",
+        },
+        [MODULE_ID]: {
+          castData: triggeringWorkflow.castData,
+          autoOverTime: autoOverTimeData,
+        },
+      },
+    };
+
+    const dependentOnUuid = sourceEffect?.uuid ?? concentrationUuid;
+    if (dependentOnUuid) {
+      foundry.utils.setProperty(effectData, "flags.dnd5e.dependentOn", dependentOnUuid);
+    }
+
+    const existingEffect = targetActor.appliedEffects.find((existing) => {
+      const autoOverTime = existing.flags?.[MODULE_ID]?.autoOverTime;
+      if (!autoOverTime) return false;
+      if (autoOverTime.activityUuid !== activity.uuid) return false;
+      if ((autoOverTime.sourceActorUuid ?? "") !== (triggeringWorkflow.actor?.uuid ?? "")) return false;
+      return true;
+    });
+
+    if (existingEffect) {
+      await updateEffects({
+        actorUuid: targetActor.uuid,
+        updates: [{
+          _id: existingEffect.id,
+          origin: effectData.origin,
+          disabled: effectData.disabled,
+          transfer: effectData.transfer,
+          img: effectData.img,
+          name: effectData.name,
+          duration: effectData.duration,
+          "system.changes": effectChanges,
+          flags: effectData.flags,
+        }],
+      } as any);
+    } else {
+      await createEffects({
+        actorUuid: targetActor.uuid,
+        effects: [effectData],
+        options: { keepId: true },
+      } as any);
+    }
+    effectApplied = true;
+  }
+
+  return effectApplied;
 }
 
 /** Structured representation of count action (saveCount/failCount) */
