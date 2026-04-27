@@ -67,6 +67,7 @@ let fastForwardMigrationDone = false;
 /** @deprecated Removed in favor of granular configSettings.autoFastForward[] and configSettings.gmAutoFastForward[] arrays */
 export let autoRemoveTargets: string;
 export let coloredBorders: string;
+export let conditionUpdateCard: string = "none";
 export let criticalDamage: string;
 export let criticalDamageGM: string;
 export let debounceInterval: number;
@@ -327,6 +328,7 @@ export async function resetConfigSettingsToDefaults(): Promise<void> {
   await game.settings.set("midi-qol", "showGM", false);
   await game.settings.set("midi-qol", "ForceHideRoll", true);
   await game.settings.set("midi-qol", "DragDropTarget", false);
+  await game.settings.set("midi-qol", "ConditionUpdateCard", "none");
   // RollStats is intentionally not reset - statistics data
   // CriticalDamage/CriticalDamageGM/ColoredBorders are now in configSettings (reset above via defaultSettings)
   await game.settings.set("midi-qol", "AutoRemoveTargets", "dead");
@@ -396,6 +398,7 @@ export function collectSettingData() {
     itemRollButtons,
     autoRemoveTargets,
     coloredBorders,
+    conditionUpdateCard,
     criticalDamage,
     criticalDamageGM,
     debounceInterval,
@@ -529,11 +532,16 @@ export async function importSettingsFromJSON(json) {
 
   // Handle migration of deprecated displaySaveDC field
   const importedConfigSettings = removeOldValues(json.configSettings);
+  const importedConditionUpdateCard = removeOldValues(json.conditionUpdateCard ?? importedConfigSettings.conditionUpdateCard);
+  delete importedConfigSettings.conditionUpdateCard;
   if (importedConfigSettings.displaySaveDC !== undefined) {
     await migrateDisplaySaveDC(importedConfigSettings, "import");
   }
 
   await game.settings.set("midi-qol", "ConfigSettings", importedConfigSettings);
+  if (importedConditionUpdateCard !== undefined) {
+    await game.settings.set("midi-qol", "ConditionUpdateCard", importedConditionUpdateCard);
+  }
   await game.settings.set("midi-qol", "MidiSoundSettings", removeOldValues(json.midiSoundSettings) ?? {});
   await game.settings.set("midi-qol", "TargetConfirmation", removeOldValues(json.targetConfirmation));
 
@@ -804,6 +812,11 @@ export let fetchParams = () => {
   }
   if (configSettings.averageDamage === undefined) configSettings.averageDamage = "none";
   enableWorkflow = game.settings.get("midi-qol", "EnableWorkflow");
+  conditionUpdateCard = game.settings.get("midi-qol", "ConditionUpdateCard") ?? "none";
+  if ((configSettings as any).conditionUpdateCard !== undefined) {
+    delete (configSettings as any).conditionUpdateCard;
+    game.settings.set("midi-qol", "ConfigSettings", configSettings);
+  }
   //@ts-expect-error legacy boolean value
   if (configSettings.optionalRules.challengeModeArmor === true) { // old settings
     //@ts-expect-error legacy value
@@ -1153,6 +1166,13 @@ export const playerDamageCardOptions = keysToExtendedOptionsObj("playerDamageCar
   "playerbuttons",
   "npcplayerresults",
   "npcplayerbuttons"
+]);
+
+export const conditionUpdateCardOptions = keysToOptionsObj("conditionUpdateCardOptions", [
+  "none",
+  "gm",
+  "playerresults",
+  "npcplayerresults"
 ]);
 
 export const removeButtonsOptions = keysToOptionsObj("removeButtonsOptions", [
@@ -1781,6 +1801,18 @@ export const registerSettings = function () {
     choices: autoRemoveTargetsOptions,
     onChange: fetchParams
   });
+
+  game.settings.register("midi-qol", "ConditionUpdateCard", {
+    name: i18n("midi-qol.ConditionUpdateCard.Name"),
+    hint: i18n("midi-qol.ConditionUpdateCard.Hint"),
+    scope: "world",
+    default: "none",
+    type: String,
+    config: true,
+    choices: conditionUpdateCardOptions,
+    onChange: fetchParams
+  });
+
   game.settings.registerMenu("midi-qol", "midi-qol", {
     name: i18n("midi-qol.config"),
     label: "midi-qol.WorkflowSettings",

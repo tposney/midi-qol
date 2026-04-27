@@ -120,6 +120,7 @@ declare module "fvtt-types/configuration" {
     "midi-qol.ConfigSettings": typeof configSettings;
     "midi-qol.CriticalDamage": string;
     "midi-qol.CriticalDamageGM": string;
+    "midi-qol.ConditionUpdateCard": string;
     "midi-qol.showGM": boolean;
     "midi-qol.ColoredBorders": string;
     "midi-qol.AutoFastForwardAbilityRolls": boolean;
@@ -538,6 +539,11 @@ declare module "fvtt-types/configuration" {
         isHit?: boolean;
         otherActivityConsumed?: object;
         playerDamageCard?: boolean;
+        playerConditionCard?: boolean;
+        conditionUpdateCard?: boolean;
+        conditionUpdateGroupId?: string;
+        conditionUpdateData?: any;
+        actorUuids?: string[];
       };
     };
     Item: {

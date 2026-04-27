@@ -1,0 +1,38 @@
+<div class="midi-qol-condition-card collapsible dnd5e2-collapsible">
+  <div class="midi-qol-cond-header">
+    <i class="fa-solid fa-caret-down"></i>
+    <span class="midi-qol-cond-header-text">{{headerText}}</span>
+  </div>
+  <div class="collapsible-content card-content">
+    <div class="wrapper">
+      {{#if chainText}}
+      <div class="midi-qol-cond-meta">
+        <strong>{{sourceLabel}}:</strong> {{chainText}}
+      </div>
+      {{/if}}
+      {{#if reasonText}}
+      <div class="midi-qol-cond-meta">
+        <strong>{{reasonLabel}}:</strong> {{reasonText}}
+      </div>
+      {{/if}}
+      {{#each groupedUpdates as |actorGroup gid|}}
+      <div class="midi-qol-cond-row midi-qol-cond-actor-row">
+        <img src="{{actorGroup.tokenImg}}" class="midi-qol-target-name" height="22">
+        <div class="name-stacked midi-qol-cond-name-stack">
+          <span class="midi-qol-gmTokenName title">{{{actorGroup.actorName}}}</span>
+          <span class="midi-qol-playerTokenName title">{{actorGroup.playerName}}</span>
+        </div>
+      </div>
+      {{#each actorGroup.effects as |effect eid|}}
+      <div class="midi-qol-cond-row midi-qol-cond-effect-row">
+        <span class="midi-qol-cond-op">{{effect.operation}}</span>
+        <span class="midi-qol-cond-effect">{{effect.effectName}}</span>
+        {{#if effect.statusesText}}
+        <span class="midi-qol-cond-status">({{effect.statusesText}})</span>
+        {{/if}}
+      </div>
+      {{/each}}
+      {{/each}}
+    </div>
+  </div>
+</div>

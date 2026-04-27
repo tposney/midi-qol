@@ -32,6 +32,8 @@
   "midi-qol.DamageCardStyle.Name": "Damage card style",
   "midi-qol.PlayerDamageCard.Name": "Show a player's damage card",
   "midi-qol.PlayerDamageCard.Hint": "A simpler version of the damage card. Only displayed if the GM card is displayed. Card is not shown to the GM",
+  "midi-qol.ConditionUpdateCard.Name": "Show condition update chat cards",
+  "midi-qol.ConditionUpdateCard.Hint": "Display condition-change chat cards when status conditions or OverTime effects are added or removed.",
   "midi-qol.PlayerCardDamageDifferent.Name": "Display the player damage card if the rolled damage does not match the applied damage for some target",
   "midi-qol.ItemRollButtons.Name": "Add attack/damage buttons to item inventory list",
   "midi-qol.ItemRollButtons.Hint": "Add Roll Buttons to item description - these buttons support ctrl/alt/shift to skip the dialog",
@@ -299,6 +301,39 @@
     "playerbuttons": "Show player results + buttons",
     "npcplayerresults": "Show player and npc results",
     "npcplayerbuttons": "Show player and npc + buttons"
+  },
+  "midi-qol.conditionUpdateCardOptions": {
+    "none": "Don't show",
+    "gm": "GM only",
+    "playerresults": "GM + public cards for player-owned actors",
+    "npcplayerresults": "GM + public cards for all actors"
+  },
+  "midi-qol.ConditionUpdate": {
+    "updated": "Condition Updated",
+    "updatedPlural": "Conditions Updated",
+    "source": "Source",
+    "reason": "Reason",
+    "added": "Added",
+    "removed": "Removed",
+    "unknownEffect": "Effect",
+    "reasons": {
+      "unknown": "Effect expired or removed",
+      "activityOverTimeSaveRemoves": "OverTime save succeeded",
+      "activityOverTimeSaveRemovesTrigger": "OverTime save succeeded",
+      "activityOverTimePreRemoveCondition": "OverTime pre-remove condition",
+      "activityOverTimePostRemoveCondition": "OverTime post-remove condition",
+      "overTime": "OverTime effect removed",
+      "overTimeActionSave": "OverTime action save succeeded",
+      "overTimeSaveCount": "OverTime save threshold reached",
+      "overTimeFailCount": "OverTime fail threshold reached",
+      "zeroHP": "Removed on zero HP",
+      "removeTokenCondition": "Token condition removed:",
+      "longRest": "Removed on long rest",
+      "shortRest": "Removed on short rest",
+      "newDay": "Removed on new day",
+      "isMoved": "Removed on movement",
+      "optionalConsumed": "Optional effect consumed"
+    }
   },
   "midi-qol.removeButtonsOptions": {
     "off": "Off",

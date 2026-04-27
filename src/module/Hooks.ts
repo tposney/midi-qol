@@ -1,6 +1,6 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
-import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
+import { preferredActiveGM, processUndoDamageCard, queueConditionUpdateFromCreate, queueConditionUpdateFromDelete } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget } from "./utils.js";
 import { checkMechanic, checkRule, configSettings, dragDropTargeting, isDnd5e53, setDnd5e53 } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook, getTemplateSourceToken } from "./patching.js";
@@ -274,6 +274,7 @@ export let readyHooks = async () => {
     if (debugEnabled > 0) warn("deleteActiveEffectHook", deletedEffect, deletedEffect.parent.name, options);
     async function changeFunc() {
       try {
+        await queueConditionUpdateFromDelete(deletedEffect, options);
         let origin = fromUuidSync(deletedEffect.origin as any);
         if (origin instanceof ActiveEffect && !options.noConcentrationCheck && configSettings.removeConcentrationEffects !== "none") {
           // @ts-expect-error no dnd5e-types
@@ -345,6 +346,25 @@ export let readyHooks = async () => {
         return true;
       } catch (err) {
         console.warn("Error in deleteActiveEffect", err, deletedEffect, options);
+        return true;
+      }
+    }
+    return changeFunc();
+  })
+
+  Hooks.on("createActiveEffect", (createdEffect, options: any, user) => {
+    if (options.undo) return;
+    if (debugEnabled > 0) console.warn("createActiveEffect", createdEffect, options, user);
+    if (!preferredActiveGM()?.isSelf) return;
+    if (!(createdEffect.parent instanceof CONFIG.Actor.documentClass)) return;
+    if (createdEffect.disabled) return;
+    if (debugEnabled > 0) warn("createActiveEffectHook", createdEffect, createdEffect.parent.name, options);
+    async function changeFunc() {
+      try {
+        await queueConditionUpdateFromCreate(createdEffect, options);
+        return true;
+      } catch (err) {
+        console.warn("Error in createActiveEffect", err, createdEffect, options);
         return true;
       }
     }

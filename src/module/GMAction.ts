@@ -1,6 +1,6 @@
-import { checkRule, configSettings, safeGetGameSetting, isDnd5e53 } from "./settings.js";
-import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions } from "./utils.js";
+import { checkRule, conditionUpdateCard, configSettings, safeGetGameSetting, isDnd5e53 } from "./settings.js";
+import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID, systemConcentrationId } from "../midi-qol.js";
+import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions, tokenForActor, getTokenName, getTokenPlayerName, getStatusName } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DamageDescriptionObject, Workflow, WorkflowOptions } from "./Workflow.js";
 import { bonusCheck, checkWounded } from "./patching.js";
@@ -13,6 +13,43 @@ import { DamageApplicationOptions, DamageDescription, DamageListEntry, MonksToke
 
 export let socketlibSocket: any = undefined;
 let traitList = { di: "", dr: "", dv: "", dm: "", da: "" };
+const conditionUpdateQueue = new Map<string, ConditionUpdateGroup>();
+const conditionUpdateOriginGroupMap = new Map<string, { groupId: string, expires: number }>();
+let conditionUpdateQueueTimer: ReturnType<typeof setTimeout> | undefined;
+const CONDITION_UPDATE_DEBOUNCE_MS = 350;
+const CONDITION_UPDATE_LINK_MS = 5000;
+
+type ConditionUpdateEntry = {
+  groupId: string;
+  reason: string;
+  actorUuid: string;
+  actorName: string;
+  playerName: string;
+  tokenImg: string;
+  effectUuid: string;
+  effectName: string;
+  statusesText: string;
+  operation: string;
+  hasPlayerOwner: boolean;
+  isCharacter: boolean;
+  parentActivityUuid?: string;
+  parentActivityName: string;
+  childActivityUuid?: string;
+  childActivityName: string;
+  sourceActorUuid?: string;
+  sourceChatCardUuid?: string;
+};
+
+type ConditionUpdateGroup = {
+  groupId: string;
+  reason: string;
+  parentActivityName: string;
+  childActivityName: string;
+  sourceActorUuid?: string;
+  sourceChatCardUuid?: string;
+  updates: ConditionUpdateEntry[];
+  seen: Set<string>;
+};
 
 export let setupSocket = () => {
   socketlibSocket = globalThis.socketlib.registerModule(MODULE_ID);
@@ -1620,6 +1657,494 @@ async function prepareDamageListItems(
     await allPromises;
     debug("GMAction.prepareDamageListItems: awaited all promises", Date.now() - promisesStart);
   }
+}
+
+function conditionDisplayText(value: unknown, fallback: string = ""): string {
+  const text = `${value ?? ""}`.trim();
+  if (!text) return fallback;
+
+  const localized = i18n(text);
+  if (localized && localized !== text) return localized;
+  return text;
+}
+
+function getConditionUpdateCardMode(): string {
+  return safeGetGameSetting("midi-qol", "ConditionUpdateCard") ?? conditionUpdateCard ?? "none";
+}
+
+function shouldCreateConditionUpdateEntry(effect: ActiveEffect.Implementation, options: any = {}) {
+  if (getConditionUpdateCardMode() === "none") return false;
+  if (!(effect?.parent instanceof CONFIG.Actor.documentClass)) return false;
+  const midiConditionUpdate = options?.midiConditionUpdate ?? {};
+  if (midiConditionUpdate.force) return true;
+  const statuses = Array.from(effect.statuses ?? []).filter((statusId) => statusId !== systemConcentrationId);
+  const hasStatuses = statuses.length > 0;
+  // @ts-expect-error fvtt-types v14 ActiveEffect
+  const hasOverTimeChange = effect.system?.changes?.some(change => {
+    return change.key?.startsWith(`flags.${MODULE_ID}.ActivityOverTime`)
+      || change.key?.startsWith(`flags.${MODULE_ID}.OverTime`);
+  });
+  const reason = `${options?.["expiry-reason"] ?? midiConditionUpdate.reason ?? ""}`;
+  const hasOverTimeReason = reason.includes("overTime") || reason.includes("activityOverTime");
+  return hasStatuses || hasOverTimeChange || hasOverTimeReason;
+}
+
+function getConditionActivityName(activityUuid: string | undefined): string {
+  if (!activityUuid) return "";
+  try {
+    const activity = fromUuidSync(activityUuid) as { name?: string } | undefined;
+    return conditionDisplayText(activity?.name ?? "", "");
+  } catch (_err) {
+    return "";
+  }
+}
+
+function getConditionUpdateReasonLabel(reason: string | undefined): string {
+  if (!reason) return "";
+  const reasonText = `${reason}`.trim();
+  if (!reasonText) return "";
+  if (reasonText.startsWith("midi-qol:removeTokenCondition:")) {
+    const condition = reasonText.replace("midi-qol:removeTokenCondition:", "");
+    return `${i18n("midi-qol.ConditionUpdate.reasons.removeTokenCondition")} ${condition}`;
+  }
+
+  const reasonLabels: Record<string, string> = {
+    "midi-qol:activityOverTime:saveRemoves": "midi-qol.ConditionUpdate.reasons.activityOverTimeSaveRemoves",
+    "midi-qol:activityOverTime:saveRemovesTrigger": "midi-qol.ConditionUpdate.reasons.activityOverTimeSaveRemovesTrigger",
+    "midi-qol:activityOverTime:preRemoveCondition": "midi-qol.ConditionUpdate.reasons.activityOverTimePreRemoveCondition",
+    "midi-qol:activityOverTime:postRemoveCondition": "midi-qol.ConditionUpdate.reasons.activityOverTimePostRemoveCondition",
+    "midi-qol:overTime": "midi-qol.ConditionUpdate.reasons.overTime",
+    "midi-qol:overTime:actionSave": "midi-qol.ConditionUpdate.reasons.overTimeActionSave",
+    "midi-qol:overTime:saveCount": "midi-qol.ConditionUpdate.reasons.overTimeSaveCount",
+    "midi-qol:overTime:failCount": "midi-qol.ConditionUpdate.reasons.overTimeFailCount",
+    "midi-qol:zeroHP": "midi-qol.ConditionUpdate.reasons.zeroHP",
+    "midi-qol:longRest": "midi-qol.ConditionUpdate.reasons.longRest",
+    "midi-qol:shortRest": "midi-qol.ConditionUpdate.reasons.shortRest",
+    "midi-qol:newDay": "midi-qol.ConditionUpdate.reasons.newDay",
+    "midi-qol:isMoved": "midi-qol.ConditionUpdate.reasons.isMoved",
+    "midi-qol:optionalConsumed": "midi-qol.ConditionUpdate.reasons.optionalConsumed"
+  };
+
+  const labelKey = reasonLabels[reasonText];
+  if (labelKey) return i18n(labelKey);
+  if (reasonText.includes("activityOverTime:saveRemovesTrigger")) return i18n("midi-qol.ConditionUpdate.reasons.activityOverTimeSaveRemovesTrigger");
+  if (reasonText.includes("activityOverTime:saveRemoves")) return i18n("midi-qol.ConditionUpdate.reasons.activityOverTimeSaveRemoves");
+  if (reasonText.includes("activityOverTime:preRemoveCondition")) return i18n("midi-qol.ConditionUpdate.reasons.activityOverTimePreRemoveCondition");
+  if (reasonText.includes("activityOverTime:postRemoveCondition")) return i18n("midi-qol.ConditionUpdate.reasons.activityOverTimePostRemoveCondition");
+  if (reasonText.startsWith("midi-qol:")) return reasonText.replace("midi-qol:", "");
+  return reasonText;
+}
+
+function getConditionCardTokenImage(actor: Actor.Implementation): string {
+  const token = tokenForActor(actor);
+  let img = token?.document.texture.src ?? actor.img ?? "";
+  if (configSettings.usePlayerPortrait && `${actor.type ?? ""}` === "character") {
+    img = actor.img ?? img;
+  }
+  return img;
+}
+
+function createConditionUpdateEntry(effect: ActiveEffect.Implementation, options: any = {}): ConditionUpdateEntry | undefined {
+  if (!shouldCreateConditionUpdateEntry(effect, options)) return undefined;
+  const actor = effect.parent;
+  if (!(actor instanceof CONFIG.Actor.documentClass)) return undefined;
+
+  const midiConditionUpdate = options?.midiConditionUpdate ?? {};
+  const autoOverTime = (foundry.utils.getProperty(effect, `flags.${MODULE_ID}.autoOverTime`) ?? {}) as Record<string, any>;
+  const reason = `${options?.["expiry-reason"] ?? midiConditionUpdate.reason ?? ""}`;
+  const nowBucket = Math.floor(Date.now() / CONDITION_UPDATE_DEBOUNCE_MS);
+  const linkedGroupData = !midiConditionUpdate.groupId && effect.origin ? conditionUpdateOriginGroupMap.get(effect.origin) : undefined;
+  const linkedGroupId = linkedGroupData && linkedGroupData.expires > Date.now() ? linkedGroupData.groupId : undefined;
+  if (linkedGroupData && linkedGroupData.expires <= Date.now() && effect.origin) {
+    conditionUpdateOriginGroupMap.delete(effect.origin);
+  }
+
+  const groupId = `${midiConditionUpdate.groupId ?? linkedGroupId ?? `${actor.uuid}:${nowBucket}`}`;
+  const parentActivityUuid = midiConditionUpdate.parentActivityUuid ?? autoOverTime.triggeringActivityUuid;
+  const childActivityUuid = midiConditionUpdate.childActivityUuid ?? autoOverTime.activityUuid;
+  const parentActivityName = conditionDisplayText(midiConditionUpdate.parentActivityName ?? autoOverTime.triggeringActivityName ?? getConditionActivityName(parentActivityUuid), "");
+  const childActivityName = conditionDisplayText(midiConditionUpdate.childActivityName ?? autoOverTime.activityName ?? getConditionActivityName(childActivityUuid), "");
+
+  const statuses = Array.from(effect.statuses ?? []).filter(statusId => statusId !== systemConcentrationId);
+  const statusesText = statuses.map(statusId => getStatusName(statusId)).join(", ");
+  const token = tokenForActor(actor);
+  const actorName = token ? getTokenName(token) : actor.name;
+  const playerName = token ? getTokenPlayerName(token) ?? "" : "";
+  const effectName = conditionDisplayText(effect.name || statusesText || i18n("midi-qol.ConditionUpdate.unknownEffect"), i18n("midi-qol.ConditionUpdate.unknownEffect"));
+  const displayStatusesText = effectName.toLowerCase() === statusesText.toLowerCase() ? "" : statusesText;
+  const operationType = midiConditionUpdate.operation ?? "removed";
+  const operationLabel = operationType === "added"
+    ? i18n("midi-qol.ConditionUpdate.added")
+    : i18n("midi-qol.ConditionUpdate.removed");
+
+  return {
+    groupId,
+    reason,
+    actorUuid: actor.uuid,
+    actorName,
+    playerName,
+    tokenImg: getConditionCardTokenImage(actor),
+    effectUuid: effect.uuid,
+    effectName,
+    statusesText: displayStatusesText,
+    operation: operationLabel,
+    hasPlayerOwner: !!actor.hasPlayerOwner,
+    isCharacter: `${actor.type ?? ""}` === "character",
+    parentActivityUuid,
+    parentActivityName,
+    childActivityUuid,
+    childActivityName,
+    sourceActorUuid: midiConditionUpdate.sourceActorUuid ?? autoOverTime.sourceActorUuid,
+    sourceChatCardUuid: midiConditionUpdate.sourceChatCardUuid ?? autoOverTime.triggeringItemCardUuid
+  };
+}
+
+export async function queueConditionUpdateFromDelete(deletedEffect: ActiveEffect.Implementation, options: any = {}) {
+  const entry = createConditionUpdateEntry(deletedEffect, options);
+  if (!entry) return;
+
+  let group = conditionUpdateQueue.get(entry.groupId);
+  if (!group) {
+    group = {
+      groupId: entry.groupId,
+      reason: entry.reason,
+      parentActivityName: entry.parentActivityName,
+      childActivityName: entry.childActivityName,
+      sourceActorUuid: entry.sourceActorUuid,
+      sourceChatCardUuid: entry.sourceChatCardUuid,
+      updates: [],
+      seen: new Set<string>()
+    };
+  }
+
+  if (!group.parentActivityName && entry.parentActivityName) group.parentActivityName = entry.parentActivityName;
+  if (!group.childActivityName && entry.childActivityName) group.childActivityName = entry.childActivityName;
+  group.reason = resolveConditionReason(group.reason, entry.reason);
+
+  const dedupeKey = `${entry.actorUuid}:${entry.effectUuid}:${entry.operation}`;
+  if (!group.seen.has(dedupeKey)) {
+    group.seen.add(dedupeKey);
+    group.updates.push(entry);
+  }
+
+  const linkData = { groupId: entry.groupId, expires: Date.now() + CONDITION_UPDATE_LINK_MS };
+  if (entry.effectUuid) conditionUpdateOriginGroupMap.set(entry.effectUuid, linkData);
+  if (deletedEffect.origin) conditionUpdateOriginGroupMap.set(deletedEffect.origin, linkData);
+
+  conditionUpdateQueue.set(entry.groupId, group);
+  if (!conditionUpdateQueueTimer) {
+    conditionUpdateQueueTimer = setTimeout(() => {
+      flushConditionUpdateQueue();
+    }, CONDITION_UPDATE_DEBOUNCE_MS);
+  }
+}
+
+export async function queueConditionUpdateFromCreate(createdEffect: ActiveEffect.Implementation, options: any = {}) {
+  const midiConditionUpdate = {
+    ...(options?.midiConditionUpdate ?? {}),
+    operation: options?.midiConditionUpdate?.operation ?? "added"
+  };
+  return queueConditionUpdateFromDelete(createdEffect, {
+    ...options,
+    midiConditionUpdate
+  });
+}
+
+async function flushConditionUpdateQueue() {
+  if (conditionUpdateQueueTimer) clearTimeout(conditionUpdateQueueTimer);
+  conditionUpdateQueueTimer = undefined;
+
+  const groups = mergeConditionUpdateGroups(Array.from(conditionUpdateQueue.values()));
+  conditionUpdateQueue.clear();
+  for (const [origin, linkData] of Array.from(conditionUpdateOriginGroupMap.entries())) {
+    if (!linkData || linkData.expires <= Date.now()) {
+      conditionUpdateOriginGroupMap.delete(origin);
+    }
+  }
+
+  for (const group of groups) {
+    if (!group.updates.length) continue;
+    const headerText = group.updates.length === 1
+      ? i18n("midi-qol.ConditionUpdate.updated")
+      : i18n("midi-qol.ConditionUpdate.updatedPlural");
+    const chainText = group.parentActivityName && group.childActivityName
+      ? `${group.parentActivityName} -> ${group.childActivityName}`
+      : group.childActivityName || group.parentActivityName || "";
+    const cardData = {
+      ...group,
+      headerText,
+      chainText,
+      reasonText: getConditionUpdateReasonLabel(group.reason),
+      sourceLabel: i18n("midi-qol.ConditionUpdate.source"),
+      reasonLabel: i18n("midi-qol.ConditionUpdate.reason")
+    };
+    await createPlayerConditionCard(cardData);
+    await createGMConditionCard(cardData);
+  }
+}
+
+function mergeConditionUpdateGroups(groups: ConditionUpdateGroup[] = []) {
+  const merged: ConditionUpdateGroup[] = [];
+  for (const group of groups) {
+    const incomingHasChain = !!(group.parentActivityName || group.childActivityName);
+    const incomingOverTime = `${group.reason ?? ""}`.includes("activityOverTime");
+    const targetGroup = merged.find((existingGroup) => {
+      const existingActorUuids = new Set((existingGroup.updates ?? []).map(update => update.actorUuid));
+      const hasActorOverlap = (group.updates ?? []).some(update => existingActorUuids.has(update.actorUuid));
+      if (!hasActorOverlap) return false;
+      const existingHasChain = !!(existingGroup.parentActivityName || existingGroup.childActivityName);
+      const existingOverTime = `${existingGroup.reason ?? ""}`.includes("activityOverTime");
+      return incomingHasChain || existingHasChain || incomingOverTime || existingOverTime;
+    });
+
+    if (!targetGroup) {
+      merged.push({
+        groupId: group.groupId,
+        reason: group.reason,
+        parentActivityName: group.parentActivityName,
+        childActivityName: group.childActivityName,
+        sourceActorUuid: group.sourceActorUuid,
+        sourceChatCardUuid: group.sourceChatCardUuid,
+        updates: [...group.updates],
+        seen: new Set(group.seen)
+      });
+      continue;
+    }
+
+    targetGroup.updates = mergeConditionUpdateRows(targetGroup.updates, group.updates);
+    targetGroup.reason = resolveConditionReason(targetGroup.reason, group.reason);
+    if (!targetGroup.parentActivityName && group.parentActivityName) targetGroup.parentActivityName = group.parentActivityName;
+    if (!targetGroup.childActivityName && group.childActivityName) targetGroup.childActivityName = group.childActivityName;
+    if (!targetGroup.sourceActorUuid && group.sourceActorUuid) targetGroup.sourceActorUuid = group.sourceActorUuid;
+    if (!targetGroup.sourceChatCardUuid && group.sourceChatCardUuid) targetGroup.sourceChatCardUuid = group.sourceChatCardUuid;
+  }
+  return merged;
+}
+
+function mergeConditionUpdateRows(existingRows: ConditionUpdateEntry[] = [], incomingRows: ConditionUpdateEntry[] = []) {
+  const mergedRows: ConditionUpdateEntry[] = [];
+  const seen = new Set<string>();
+  for (const row of [...existingRows, ...incomingRows]) {
+    const dedupeKey = `${row.actorUuid}:${row.effectUuid ?? row.effectName}:${row.operation}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    mergedRows.push(row);
+  }
+  return mergedRows;
+}
+
+function groupConditionUpdatesByActor(updates: ConditionUpdateEntry[] = []) {
+  const grouped: Array<{
+    actorUuid: string;
+    actorName: string;
+    playerName: string;
+    tokenImg: string;
+    effects: Array<Pick<ConditionUpdateEntry, "effectUuid" | "effectName" | "statusesText" | "operation">>;
+  }> = [];
+  const actorGroups = new Map<string, (typeof grouped)[number]>();
+  for (const update of updates) {
+    const actorKey = update.actorUuid || update.actorName;
+    let actorGroup = actorGroups.get(actorKey);
+    if (!actorGroup) {
+      actorGroup = {
+        actorUuid: update.actorUuid,
+        actorName: update.actorName,
+        playerName: update.playerName,
+        tokenImg: update.tokenImg,
+        effects: []
+      };
+      actorGroups.set(actorKey, actorGroup);
+      grouped.push(actorGroup);
+    }
+    actorGroup.effects.push({
+      effectUuid: update.effectUuid,
+      effectName: update.effectName,
+      statusesText: update.statusesText,
+      operation: update.operation
+    });
+  }
+  return grouped;
+}
+
+function resolveConditionReason(currentReason: string | undefined, newReason: string | undefined) {
+  const priority = (reason: string | undefined) => {
+    if (!reason) return 0;
+    if (reason.includes("activityOverTime:saveRemovesTrigger")) return 4;
+    if (reason.includes("activityOverTime:saveRemoves")) return 4;
+    if (reason.includes("activityOverTime")) return 3;
+    if (reason.startsWith("midi-qol:")) return 2;
+    return 1;
+  };
+  return priority(newReason) >= priority(currentReason) ? (newReason ?? "") : (currentReason ?? "");
+}
+
+function findConditionCardMessage(groupId: string, playerCard = false): ChatMessage.Implementation | undefined {
+  const messages = game.messages?.contents ?? [];
+  return [...messages].reverse().find((message) => {
+    const flags = message.flags?.[MODULE_ID];
+    if (!flags?.conditionUpdateCard) return false;
+    if ((flags.playerConditionCard ?? false) !== playerCard) return false;
+    return flags.conditionUpdateGroupId === groupId;
+  });
+}
+
+function findRelatedConditionCardMessage(data: ConditionUpdateGroup & { chainText?: string }, playerCard = false): ChatMessage.Implementation | undefined {
+  const messages = game.messages?.contents ?? [];
+  const actorUuids = new Set((data.updates ?? []).map(update => update.actorUuid));
+  if (actorUuids.size === 0) return undefined;
+  const now = Date.now();
+  return [...messages].reverse().find((message) => {
+    const flags = message.flags?.[MODULE_ID];
+    if (!flags?.conditionUpdateCard) return false;
+    if ((flags.playerConditionCard ?? false) !== playerCard) return false;
+    if (flags.conditionUpdateGroupId === data.groupId) return false;
+    if (now - (message.timestamp ?? 0) > CONDITION_UPDATE_LINK_MS) return false;
+    const existingData = flags.conditionUpdateData ?? {};
+    const existingActorUuids = flags.actorUuids ?? existingData.updates?.map(update => update.actorUuid) ?? [];
+    const actorOverlap = existingActorUuids.some(actorUuid => actorUuids.has(actorUuid));
+    if (!actorOverlap) return false;
+    const existingChain = `${existingData.chainText ?? ""}`.trim();
+    const incomingChain = `${data.chainText ?? ""}`.trim();
+    if (data.sourceChatCardUuid && existingData.sourceChatCardUuid && data.sourceChatCardUuid === existingData.sourceChatCardUuid) return true;
+    if (incomingChain && existingChain && incomingChain === existingChain) return true;
+    if (incomingChain || existingChain) return true;
+    const existingReason = `${existingData.reason ?? ""}`;
+    const incomingReason = `${data.reason ?? ""}`;
+    return existingReason.includes("activityOverTime") || incomingReason.includes("activityOverTime");
+  });
+}
+
+async function createPlayerConditionCard(data: ConditionUpdateGroup & { chainText?: string; headerText?: string; sourceLabel?: string; reasonText?: string; reasonLabel?: string }): Promise<string | undefined> {
+  const cardMode = getConditionUpdateCardMode();
+  if (!["playerresults", "npcplayerresults"].includes(cardMode)) return;
+
+  const showNPC = cardMode === "npcplayerresults";
+  const updates = data.updates.filter(update => showNPC || update.hasPlayerOwner);
+  if (updates.length === 0) return;
+
+  let cardData = {
+    ...data,
+    updates
+  };
+
+  const existingMessage = findConditionCardMessage(data.groupId, true) ?? findRelatedConditionCardMessage(cardData, true);
+  if (existingMessage) {
+    const existingData = foundry.utils.duplicate(existingMessage.flags?.[MODULE_ID]?.conditionUpdateData ?? {});
+    cardData = {
+      ...cardData,
+      updates: mergeConditionUpdateRows(existingData.updates ?? [], updates),
+      chainText: existingData.chainText || cardData.chainText,
+      reason: resolveConditionReason(existingData.reason, cardData.reason)
+    };
+    cardData.reasonText = getConditionUpdateReasonLabel(cardData.reason);
+    cardData.headerText = cardData.updates.length === 1
+      ? i18n("midi-qol.ConditionUpdate.updated")
+      : i18n("midi-qol.ConditionUpdate.updatedPlural");
+  }
+
+  const renderData = {
+    ...cardData,
+    groupedUpdates: groupConditionUpdatesByActor(cardData.updates)
+  };
+  const content = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/condition-results-player.html", renderData);
+  const actorUuids = [...new Set(cardData.updates.map(update => `${update.actorUuid ?? ""}`))].filter(uuid => !!uuid);
+
+  if (existingMessage) {
+    const existingFlags = foundry.utils.duplicate(existingMessage.flags?.[MODULE_ID] ?? {});
+    await existingMessage.update({
+      content,
+      flags: {
+        [MODULE_ID]: {
+          ...existingFlags,
+          conditionUpdateData: renderData,
+          actorUuids
+        }
+      }
+    } as any);
+    return existingMessage.uuid;
+  }
+
+  const chatData = {
+    user: game.user?.id,
+    speaker: { scene: getCanvas()?.scene?.id, alias: game.user?.name },
+    content,
+    flags: {
+      [MODULE_ID]: {
+        conditionUpdateCard: true,
+        playerConditionCard: true,
+        conditionUpdateGroupId: data.groupId,
+        conditionUpdateData: renderData,
+        actorUuids
+      }
+    },
+    style: CONST.CHAT_MESSAGE_STYLES.OTHER
+  };
+  return (await ChatMessage.create(chatData as ChatMessage.CreateData))?.uuid;
+}
+
+async function createGMConditionCard(data: ConditionUpdateGroup & { chainText?: string; headerText?: string; sourceLabel?: string; reasonText?: string; reasonLabel?: string }): Promise<string | undefined> {
+  if (getConditionUpdateCardMode() === "none") return;
+  if (!data.updates.length) return;
+
+  let cardData = {
+    ...data,
+    updates: data.updates
+  };
+
+  const existingMessage = findConditionCardMessage(data.groupId, false) ?? findRelatedConditionCardMessage(cardData, false);
+  if (existingMessage) {
+    const existingData = foundry.utils.duplicate(existingMessage.flags?.[MODULE_ID]?.conditionUpdateData ?? {});
+    cardData = {
+      ...cardData,
+      updates: mergeConditionUpdateRows(existingData.updates ?? [], data.updates),
+      chainText: existingData.chainText || cardData.chainText,
+      reason: resolveConditionReason(existingData.reason, cardData.reason)
+    };
+    cardData.reasonText = getConditionUpdateReasonLabel(cardData.reason);
+    cardData.headerText = cardData.updates.length === 1
+      ? i18n("midi-qol.ConditionUpdate.updated")
+      : i18n("midi-qol.ConditionUpdate.updatedPlural");
+  }
+
+  const renderData = {
+    ...cardData,
+    groupedUpdates: groupConditionUpdatesByActor(cardData.updates)
+  };
+  const content = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/condition-results.html", renderData);
+  const actorUuids = [...new Set(cardData.updates.map(update => `${update.actorUuid ?? ""}`))].filter(uuid => !!uuid);
+
+  if (existingMessage) {
+    const existingFlags = foundry.utils.duplicate(existingMessage.flags?.[MODULE_ID] ?? {});
+    await existingMessage.update({
+      content,
+      flags: {
+        [MODULE_ID]: {
+          ...existingFlags,
+          conditionUpdateData: renderData,
+          actorUuids
+        }
+      }
+    } as any);
+    return existingMessage.uuid;
+  }
+
+  const gmWhisper = ChatMessage.getWhisperRecipients("GM").filter((u) => u.active).map((u) => u.id);
+  if (!gmWhisper.length) return;
+  const chatData: ChatMessage.CreateData = {
+    speaker: { scene: getCanvas()?.scene?.id, alias: game.user?.name },
+    content,
+    whisper: gmWhisper,
+    flags: {
+      [MODULE_ID]: {
+        conditionUpdateCard: true,
+        conditionUpdateGroupId: data.groupId,
+        conditionUpdateData: renderData,
+        actorUuids
+      }
+    },
+    style: CONST.CHAT_MESSAGE_STYLES.OTHER
+  };
+  return (await ChatMessage.create(chatData))?.uuid;
 }
 
 // Fetch the token, then use the tokenData.actor.id

@@ -1,0 +1,25 @@
+<div class="midi-qol-condition-card midi-qol-player-condition-card">
+  <div class="midi-qol-cond-header">
+    <span class="midi-qol-cond-header-text">{{headerText}}</span>
+  </div>
+  {{#if chainText}}
+  <div class="midi-qol-cond-meta">
+    <strong>{{sourceLabel}}:</strong> {{chainText}}
+  </div>
+  {{/if}}
+  {{#each groupedUpdates as |actorGroup gid|}}
+  <div class="midi-qol-cond-row midi-qol-cond-actor-row">
+    <img src="{{actorGroup.tokenImg}}" class="midi-qol-target-name" height="22">
+    <span class="midi-qol-cond-actor">{{{actorGroup.actorName}}}</span>
+  </div>
+  {{#each actorGroup.effects as |effect eid|}}
+  <div class="midi-qol-cond-row midi-qol-cond-effect-row">
+    <span class="midi-qol-cond-op">{{effect.operation}}</span>
+    <span class="midi-qol-cond-effect">{{effect.effectName}}</span>
+    {{#if effect.statusesText}}
+    <span class="midi-qol-cond-status">({{effect.statusesText}})</span>
+    {{/if}}
+  </div>
+  {{/each}}
+  {{/each}}
+</div>
