@@ -10,25 +10,34 @@
                 {{localize "midi-qol.OptionalRules.Hint"}}
             {{/unless}}
             {{#if configSettings.optionalRulesEnabled}}
-                <div class="form-group">
-                    <label>{{localize "midi-qol.CheckFlanking.Name"}}</label>
-                    <select name="optionalRules.checkFlanking" data-dtype="String">
-                        {{midiSelectOptions checkFlankingOptions selected=configSettings.optionalRules.checkFlanking localize=true}}
-                    </select>
-                    <div class="notes midi-qol-faint">{{{localize "midi-qol.CheckFlanking.Hint"}}}</div>
-                </div>
-                <div class="form-group">
-                    <label>{{localize "midi-qol.FlankingBonus.Name"}}</label>
-                    <select name="optionalRules.flankingBonus" data-dtype="String">
-                        {{selectOptions flankingBonusOptions selected=configSettings.optionalRules.flankingBonus localize=true}}
-                    </select>
-                    <div class="notes midi-qol-faint">{{{localize "midi-qol.FlankingBonus.Hint"}}}</div>
-                </div>
-                <div class="form-group">
-                    <label>{{localize "midi-qol.ShowFlankingHighlight.Name"}}</label>
-                    <input type="checkbox" name="optionalRules.showFlankingHighlight" data-dtype="Boolean"
-                        {{checked configSettings.optionalRules.showFlankingHighlight}} />
-                    <div class="notes midi-qol-faint">{{{localize "midi-qol.ShowFlankingHighlight.Hint"}}}</div>
+                <div class="midi-qol-box">
+                    <div class="midi-qol-settings heading">{{localize "midi-qol.Flanking"}}</div>
+                    <div class="form-group">
+                        <label>{{localize "midi-qol.CheckFlanking.Name"}}</label>
+                        <select name="optionalRules.checkFlanking" data-dtype="String">
+                            {{midiSelectOptions checkFlankingOptions selected=configSettings.optionalRules.checkFlanking localize=true}}
+                        </select>
+                        <div class="notes midi-qol-faint">{{{localize "midi-qol.CheckFlanking.Hint"}}}</div>
+                    </div>
+                    <div class="form-group">
+                        <label>{{localize "midi-qol.FlankingBonus.Name"}}</label>
+                        <select name="optionalRules.flankingBonus" data-dtype="String">
+                            {{selectOptions flankingBonusOptions selected=configSettings.optionalRules.flankingBonus localize=true}}
+                        </select>
+                        <div class="notes midi-qol-faint">{{{localize "midi-qol.FlankingBonus.Hint"}}}</div>
+                    </div>
+                    <div class="form-group">
+                        <label>{{localize "midi-qol.FlankingRequiresVisibility.Name"}}</label>
+                        <input type="checkbox" name="optionalRules.flankingRequiresVisibility" data-dtype="Boolean"
+                            {{checked configSettings.optionalRules.flankingRequiresVisibility}} />
+                        <div class="notes midi-qol-faint">{{{localize "midi-qol.FlankingRequiresVisibility.Hint"}}}</div>
+                    </div>
+                    <div class="form-group">
+                        <label>{{localize "midi-qol.ShowFlankingHighlight.Name"}}</label>
+                        <input type="checkbox" name="optionalRules.showFlankingHighlight" data-dtype="Boolean"
+                            {{checked configSettings.optionalRules.showFlankingHighlight}} />
+                        <div class="notes midi-qol-faint">{{{localize "midi-qol.ShowFlankingHighlight.Hint"}}}</div>
+                    </div>
                 </div>
                 <div class="midi-qol-box">
                     <div class="form-group">

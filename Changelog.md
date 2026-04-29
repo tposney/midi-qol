@@ -1,3 +1,16 @@
+### 13.0.61
+* GM Roll Hiding refactored: the single "Hide Roll Details" dropdown has been replaced with four independent settings — Attack Roll Display, Damage Roll Display, Attack DSN, and Damage DSN. Each can be configured separately. Existing settings are automatically migrated.
+* Fix attack roll critical/fumble highlighting not showing icons when "Only highlight critical/fumble hits" is enabled.
+* Fix for concentration auto roll being done twice when "Chat Message + Auto Roll" is selected.
+* Fix for double consumption when using a spell from an item with item uses (e.g. Staff of Power).
+* New "Flanking requires target can sense flanker" setting. When enabled, invisible or hidden allies won't contribute to flanking unless the target can sense them.
+* Flanking settings are now grouped in their own box within Optional Rules.
+* Overtime workflows now include `overTimeEffectUuid` in `workflowOptions`.
+* New sample items: Elemental Attunement (Monk Warrior of the Elements), Dragonhide Belt +2.
+
+### 13.0.60
+* Same as 13.0.60 but marked as 5.2 compatible
+
 ### 13.0.59
 * Fix for double consumption when using a spell from an item with item uses.
 

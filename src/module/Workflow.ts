@@ -4894,8 +4894,6 @@ return {
         const d: any = this.attackRoll.dice[0]; // should be a dice term but DiceTerm.options not defined
         const isD20 = (d.faces === 20);
         if (isD20) {
-          // Success/failure/critical/fumble classes are applied at render time
-          // by ChatMessageMidi._applyAttackRollHighlight, not baked into content.
           this.d20AttackRoll = d.total;
         }
       }
@@ -7637,13 +7635,13 @@ return {
       let hitSymbol = "fa-blank"
       // if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor")) && !this.isCritical) hitScale = Math.floor(this.challengeModeScale[targetActor.uuid]);
       let isHitResult = "miss";
-      if (game.user?.isGM && ["hitDamage", "all"].includes(configSettings.hideRollDetails) && (this.isCritical || isHit || isHitEC)) {
+      if (game.user?.isGM && ["hitMiss", "hidden"].includes(configSettings.gmAttackDisplay ?? "full") && (this.isCritical || isHit || isHitEC)) {
         isHitResult = "hit";
         hitSymbol = "fa-tick";
       } else if (this.isCritical) {
         isHitResult = "critical";
         hitSymbol = "fa-check-double"
-      } else if (game.user?.isGM && this.isFumble && ["hitDamage", "all"].includes(configSettings.hideRollDetails)) {
+      } else if (game.user?.isGM && this.isFumble && ["hitMiss", "hidden"].includes(configSettings.gmAttackDisplay ?? "full")) {
         isHitResult = "miss";
         hitSymbol = "fa-xmark";
       } else if (this.isFumble) {
@@ -8074,7 +8072,7 @@ export class ActiveDefenceWorkflow extends Workflow {
           // if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor")) && !this.isCritical) hitScale = Math.floor(this.challengeModeScale[targetActor.uuid]);
           let isHitResult = "miss";
           // Inverse hit/miss icons from normal attacks so the result looks the same as with saving throws
-          if (game.user?.isGM && ["hitDamage", "all"].includes(configSettings.hideRollDetails) && (this.isCritical || isHit || isHitEC)) {
+          if (game.user?.isGM && ["hitMiss", "hidden"].includes(configSettings.gmAttackDisplay ?? "full") && (this.isCritical || isHit || isHitEC)) {
             // Failed defence roll
             isHitResult = "miss";
             hitSymbol = "fa-xmark";
@@ -8082,7 +8080,7 @@ export class ActiveDefenceWorkflow extends Workflow {
             // Fumbled defence roll
             isHitResult = "fumble";
             hitSymbol = "fa-xmarks-lines";
-          } else if (game.user?.isGM && this.isFumble && ["hitDamage", "all"].includes(configSettings.hideRollDetails)) {
+          } else if (game.user?.isGM && this.isFumble && ["hitMiss", "hidden"].includes(configSettings.gmAttackDisplay ?? "full")) {
             // Successful defence roll
             isHitResult = "hit";
             hitSymbol = "fa-check";

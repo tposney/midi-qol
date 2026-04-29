@@ -1,0 +1,219 @@
+{
+  "name": "Elemental Attunement",
+  "type": "feat",
+  "img": "icons/magic/fire/flame-burning-fist-strike.webp",
+  "system": {
+    "description": {
+      "value": "<p>At the start of your turn, you can expend 1 Focus Point to imbue yourself with elemental energy. The energy lasts for 10 minutes or until you have the Incapacitated condition. You gain the following benefits while this feature is active.</p><p><strong>Reach.</strong> When you make an Unarmed Strike, your reach is 10 feet greater than normal, as elemental energy extends from you.</p><p><strong>Elemental Strikes.</strong> Whenever you hit with your Unarmed Strike, you can cause it to deal your choice of Acid, Cold, Fire, Lightning, or Thunder damage rather than its normal damage type. When you deal one of these types with it, you can also force the target to make a Strength saving throw. On a failed save, you can move the target up to 10 feet toward or away from you, as elemental energy swirls around it.</p><section class=\"secret\" id=\"secret-elemAttuneNote\"><p><strong>Foundry Note</strong></p><p>The <em>Imbue Elements</em> activity spends 1 Focus Point and applies an enchantment to your Unarmed Strike that adds +10 ft reach and elemental damage type choices (Acid, Cold, Fire, Lightning, Thunder). When rolling damage, you will be prompted to choose the damage type.</p><p>The <em>Elemental Push</em> activity is a STR save (ki DC). On a failed save, the target is automatically pushed 10 ft away from you.</p></section>",
+      "chat": ""
+    },
+    "source": {
+      "book": "PHB'24",
+      "page": "",
+      "license": ""
+    },
+    "type": {
+      "value": "class",
+      "subtype": ""
+    },
+    "requirements": "Monk 3 (Warrior of the Elements)",
+    "properties": [],
+    "activities": {
+      "imbueElementsA00": {
+        "_id": "imbueElementsA00",
+        "type": "utility",
+        "name": "Imbue Elements",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "condition": "At the start of your turn",
+          "override": true
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "target": "monks-focus",
+              "value": "1",
+              "scaling": {}
+            }
+          ],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "Imbues yourself with elemental energy for 10 minutes."
+        },
+        "duration": {
+          "concentration": false,
+          "value": "10",
+          "units": "minute",
+          "special": "",
+          "override": true
+        },
+        "effects": [],
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": true
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "self",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "sort": 0,
+        "img": "icons/magic/fire/flame-burning-fist-strike.webp",
+        "midiProperties": {
+          "confirmTargets": "none",
+          "autoConsume": false,
+          "forceConsumeDialog": "never"
+        },
+        "macroData": {
+          "name": "Imbue Elements",
+          "command": "const version = \"13.0.61\";\ntry {\n  if (args[0].tag !== \"OnUse\" || args[0].macroPass !== \"postActiveEffects\") return;\n  const actor = rolledItem.parent;\n  const unarmed = actor.items.find(i => i.system.identifier === \"unarmed-strike\" || i.name === \"Unarmed Strike\");\n  if (!unarmed) {\n    ui.notifications.warn(\"No Unarmed Strike found on this actor.\");\n    return;\n  }\n  const existing = unarmed.effects.find(e => e.name === \"Elemental Attunement\" && e.type === \"enchantment\");\n  if (existing) await existing.delete();\n  const effectData = {\n    name: \"Elemental Attunement\",\n    img: macroItem.img,\n    type: \"enchantment\",\n    origin: macroActivity.uuid,\n    disabled: false,\n    duration: { value: 10, units: \"minutes\" },\n    start: { time: game.time.worldTime },\n    description: \"Your Unarmed Strike reach is 10 ft greater and can deal Acid, Cold, Fire, Lightning, or Thunder damage.\",\n    changes: [\n      { key: \"system.range.reach\", value: \"+10\", mode: CONST.ACTIVE_EFFECT_MODES.ADD },\n      { key: \"system.damage.base.types\", value: \"acid\", mode: CONST.ACTIVE_EFFECT_MODES.ADD },\n      { key: \"system.damage.base.types\", value: \"cold\", mode: CONST.ACTIVE_EFFECT_MODES.ADD },\n      { key: \"system.damage.base.types\", value: \"fire\", mode: CONST.ACTIVE_EFFECT_MODES.ADD },\n      { key: \"system.damage.base.types\", value: \"lightning\", mode: CONST.ACTIVE_EFFECT_MODES.ADD },\n      { key: \"system.damage.base.types\", value: \"thunder\", mode: CONST.ACTIVE_EFFECT_MODES.ADD }\n    ],\n    flags: {\n      dae: {\n        disableIncapacitated: true\n      }\n    }\n  };\n  const [created] = await unarmed.createEmbeddedDocuments(\"ActiveEffect\", [effectData]);\n  if (created) {\n    ChatMessage.create({\n      content: `<p><strong>${actor.name}</strong> imbues their Unarmed Strike with elemental energy for 10 minutes.</p>`,\n      speaker: ChatMessage.getSpeaker({ actor })\n    });\n  }\n} catch (err) {\n  console.error(`Elemental Attunement Imbue ${version}`, err);\n}",
+          "type": "script"
+        }
+      },
+      "elementalPushA00": {
+        "_id": "elementalPushA00",
+        "type": "save",
+        "name": "Elemental Push",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "condition": "After hitting with an Unarmed Strike dealing elemental damage",
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "STR save or be moved up to 10 ft toward or away from you."
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": true
+        },
+        "effects": [],
+        "range": {
+          "units": "",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "1",
+            "type": "creature",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "save": {
+          "ability": [
+            "str"
+          ],
+          "dc": {
+            "calculation": "ki",
+            "formula": ""
+          }
+        },
+        "damage": {
+          "parts": []
+        },
+        "sort": 100,
+        "img": "icons/magic/air/wind-swirl-blue-green.webp",
+        "midiProperties": {
+          "confirmTargets": "default",
+          "otherActivityId": "none",
+          "otherActivityCompatible": false
+        },
+        "macroData": {
+          "name": "Elemental Push",
+          "command": "const version = \"14.0.6\";\ntry {\n  if (args[0].tag !== \"OnUse\" || args[0].macroPass !== \"postActiveEffects\") return;\n  const workflow = args[0].workflow;\n  if (!workflow) return;\n  const casterToken = canvas.tokens.get(workflow.tokenId);\n  if (!casterToken || !workflow.failedSaves.size) return;\n  const direction = await foundry.applications.api.DialogV2.wait({\n    window: { title: \"Elemental Push/Pull\" },\n    content: \"<p>Move the target toward or away from you?</p>\",\n    buttons: [\n      { action: \"push\", label: \"Push (Away)\", icon: \"fas fa-arrow-right\" },\n      { action: \"pull\", label: \"Pull (Toward)\", icon: \"fas fa-arrow-left\" },\n      { action: \"none\", label: \"No Movement\" }\n    ],\n    close: () => \"none\"\n  });\n  if (direction === \"none\") return;\n  const distance = direction === \"push\" ? 10 : -10;\n  for (const target of workflow.failedSaves) {\n    await MidiQOL.moveTokenAwayFromPoint(target, distance, casterToken.center);\n  }\n} catch (err) {\n  console.error(`Elemental Push ${version}`, err);\n}",
+          "type": "script"
+        }
+      }
+    },
+    "identifier": "elemental-attunement",
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    }
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "removeAttackDamageButtons": "default",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "onUseMacroName": "[postActiveEffects]ActivityMacro"
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.62"
+      }
+    }
+  },
+  "folder": "fZIl4G4qj3C894LI",
+  "sort": 0,
+  "_id": "elemAttuneItem00",
+  "_key": "!items!elemAttuneItem00"
+}

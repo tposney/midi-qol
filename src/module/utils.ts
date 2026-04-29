@@ -7227,6 +7227,7 @@ function getFlankingDistance(t1: Token.Implementation, t2: Token.Implementation)
 export function findPotentialFlankers(target: Token.Implementation) {
   const gridDist = canvas?.dimensions?.distance ?? 5;
   const isGridless = canvas?.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS;
+  const requiresVisibility = configSettings.optionalRules.flankingRequiresVisibility;
 
   let allies: Token.Implementation[];
   let reachAllies: Token.Implementation[];
@@ -7241,6 +7242,7 @@ export function findPotentialFlankers(target: Token.Implementation) {
       if (checkIncapacitated(t.actor, debugEnabled > 0, false)) return false;
       // Check disposition: must be hostile to target
       if (t.document.disposition === target.document.disposition) return false;
+      if (requiresVisibility && !canSense(target, t)) return false;
       const dist = getFlankingDistance(t, target);
       return dist >= 0 && dist <= gridDist;
     });
@@ -7250,6 +7252,7 @@ export function findPotentialFlankers(target: Token.Implementation) {
       if (t.id === target.id) return false;
       if (checkIncapacitated(t.actor, debugEnabled > 0, false)) return false;
       if (t.document.disposition === target.document.disposition) return false;
+      if (requiresVisibility && !canSense(target, t)) return false;
       if (allNearby.some(a => a === t)) return false;
       //@ts-expect-error no dnd5e-types
       if (!t.actor.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)) return false;
@@ -7258,8 +7261,8 @@ export function findPotentialFlankers(target: Token.Implementation) {
     });
     allies = allNearby.concat(reachNearby);
   } else {
-    allies = findNearby(-1, target, gridDist);
-    reachAllies = findNearby(-1, target, 2 * gridDist).filter(
+    allies = findNearby(-1, target, gridDist, requiresVisibility ? { isSeen: true } : {});
+    reachAllies = findNearby(-1, target, 2 * gridDist, requiresVisibility ? { isSeen: true } : {}).filter(
       ally => !(allies.some(tk => tk === ally)) &&
         //@ts-expect-error no dnd5e-types
         ally.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)
@@ -8121,41 +8124,36 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
     if (dice3dEnabled()) {
       //@ts-expect-error game.dice3d
       const dice3d = game.dice3d;
-      const hideRollOption = configSettings.hideRollDetails;
       let ghostRoll = false;
       let whisperUsers: User.Implementation[] | null = null;
       const rollMode = defaultRollMode || game.settings.get("core", "rollMode");
-      let hideRoll = (["all"].includes(hideRollOption) && game.user?.isGM) ? true : false;
-      if (!game.user?.isGM) hideRoll = false;
-      else if (hideRollOption !== "none") {
-        if (configSettings.gmHide3dDice && game.user?.isGM) hideRoll = true;
-        if (game.user?.isGM && !hideRoll) {
-          switch (rollType) {
-            case "attackRollD20":
-              if (["d20Only", "d20AttackOnly", "detailsDSN"].includes(hideRollOption)) {
-                for (let i = 1; i < roll.dice.length; i++) { // hide everything except the d20
-                  roll.dice[i].results.forEach(r => foundry.utils.setProperty(r, "hidden", true));
-                }
-                hideRoll = false;
-              } else if ((["hitDamage", "all", "hitCriticalDamage", "details"].includes(hideRollOption) && game.user?.isGM))
-                hideRoll = true;
-              break;
-            case "attackRoll":
-              hideRoll = hideRollOption !== "detailsDSN";
-              break;
-            case "damageRoll":
-              hideRoll = hideRollOption !== "detailsDSN";
-              break;
-            default:
-              hideRoll = false;
-              break;
+      let hideRoll = false;
+      if (game.user?.isGM) {
+        let dsnSetting: string = "show";
+        switch (rollType) {
+          case "attackRollD20":
+          case "attackRoll":
+            dsnSetting = configSettings.gmAttackDsn ?? "show";
+            break;
+          case "damageRoll":
+            dsnSetting = configSettings.gmDamageDsn ?? "show";
+            break;
+          default:
+            dsnSetting = "show";
+            break;
+        }
+        if (dsnSetting === "none") {
+          hideRoll = true;
+        } else if (dsnSetting === "ghost") {
+          ghostRoll = true;
+        } else if (rollType === "attackRollD20") {
+          // For d20-only display, hide non-d20 dice from the animation
+          for (let i = 1; i < roll.dice.length; i++) {
+            roll.dice[i].results.forEach(r => foundry.utils.setProperty(r, "hidden", true));
           }
         }
       }
-      if (hideRoll && configSettings.ghostRolls && game.user?.isGM && !configSettings.gmHide3dDice) {
-        ghostRoll = true;
-        hideRoll = false;
-      } else {
+      if (!ghostRoll) {
         ghostRoll = rollMode === "blindroll";
       }
 
@@ -8930,7 +8928,7 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
   return { deleted: actorEffectsToDelete, disabled: effectsToDisable, itemEffects: effectsToDelete };
 }
 
-export function processConcentrationRequestMessage(message: ChatMessage.Implementation, html: HTMLElement, data) {
+export async function processConcentrationRequestMessage(message: ChatMessage.Implementation, html: HTMLElement, data) {
   if (configSettings.doConcentrationCheck !== "chat") return;
   let elt = html.querySelectorAll<HTMLElement>("[data-action=concentration]");
   const hasRolled = foundry.utils.getProperty(message, `flags.${MODULE_ID}.concentrationRolled`);
@@ -8945,13 +8943,12 @@ export function processConcentrationRequestMessage(message: ChatMessage.Implemen
       if (token) actor = token.actor;
       if (!actor && actorId) actor = game.actors?.get(actorId);
       if (actor) {
+        await message.setFlag(MODULE_ID, "concentrationRolled", true);
         const user = playerForActor(actor);
         if (user?.active) {
-          // const whisper = game.users?.filter(user => actor.testUserPermission(user, "OWNER")).map(u => (u as User).id);
           socketlibSocket.executeAsUser("rollConcentration", user.id, { actorUuid: actor.uuid, target: dc, create: true, rollMode: "gmroll" });
           // @ts-expect-error no dnd5e-types
         } else actor.rollConcentration({ legacy: false, target: dc }, {}, { create: true, rollMode: "gmroll" });
-        message.setFlag(MODULE_ID, "concentrationRolled", true);
       }
     }
   }
