@@ -1,8 +1,8 @@
 > [!tip] Navigation
 > [Go to Readme](/README.md#table-of-contents) <br>
 > [Go to Macro Guide](/MACROS.md#table-of-contents) <br>
-> [Go to Flowchart (Default - Damage Before Saves)](docs/flowchart.md) <br>
-> [Go to Workflow Fields](docs/workflowfields.md)
+> [Go to Flowchart (Default - Damage Before Saves)](/docs/flowchart.md) <br>
+> [Go to Workflow Fields](/docs/workflowfields.md)
 
 # Macro Passes for MidiQOL
 
