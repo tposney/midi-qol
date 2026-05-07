@@ -2898,7 +2898,7 @@ export interface WallCollisionOptions {
  * Returns the fraction (0-1) of the token's height to use for vision/targeting elevation.
  */
 function getTokenHeightFraction(token: Token.Implementation, flagName: "visionSourceHeight" | "visionTargetHeight"): number {
-  const flagValue = token.document?.getFlag("midi-qol", flagName) as number | undefined;
+  const flagValue = foundry.utils.getProperty(token.document, `flags.midi-qol.${flagName}`) as number | undefined;
   if (flagValue != null) return Math.clamp(flagValue, 0, 100) / 100;
   return configSettings.optionalRules.visionTestHeight === "top" ? 1.0 : 0.5;
 }
@@ -4597,7 +4597,8 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     buttons: any,
     rollMode: string | undefined,
     timeout: number,
-    item: Item | undefined
+    item: Item | undefined,
+    flagOwners?: Record<string, any>
   }
 
   constructor(data) {
@@ -4657,13 +4658,17 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
+    const flagOwners = this.data.flagOwners ?? {};
+    const ownerOf = (flagName: string): any => flagOwners[flagName] ?? this.data.actor;
     this.data.flags = this.data.flags.filter(flagName => {
-      if ((getOptionalCountRemaining(this.data.actor, `${flagName}.count`)) < 1) return false;
-      return foundry.utils.getProperty(this.data.actor, flagName) !== undefined
+      const owner = ownerOf(flagName);
+      if ((getOptionalCountRemaining(this.data.actor, `${flagName}.count`, owner)) < 1) return false;
+      return foundry.utils.getProperty(owner, flagName) !== undefined
     });
     if (this.data.flags.length === 0) this.close();
     this.data.buttons = this.data.flags.reduce((obj, flag) => {
-      let flagData: any = foundry.utils.getProperty(this.data.actor ?? {}, flag) as any; // TODO This should be tightened up
+      const owner = ownerOf(flag);
+      let flagData: any = foundry.utils.getProperty(owner ?? {}, flag) as any; // TODO This should be tightened up
       let value: string | undefined = foundry.utils.getProperty(flagData ?? {}, this.data.flagSelector) as string;
       // Skip object values — can happen if a flag key like "damage.save" gets an extra ".all"
       // appended by DAE deprecation logic, creating a nested object instead of a string
@@ -4891,6 +4896,10 @@ export async function bonusDialog(
   let originalRoll = roll;
   let rollHTML = await midiRenderRoll(roll);
   const player = playerForActor(this.actor);
+  // Map full flag path -> owning document (item enchantment) for flags whose data
+  // does not live on the actor. Defaults to actor when not present in the map.
+  const flagOwners: Record<string, any> = options.flagOwners ?? {};
+  const ownerOf = (flagName: string): any => flagOwners[flagName] ?? this.actor;
 
   const callback = async (dialog, button) => {
     if (this.secondTimeoutId) {
@@ -4912,23 +4921,24 @@ export async function bonusDialog(
     }
     await unTimedExecuteAsGM("queueUndoDataDirect", undoData)
 
-    // const rollMode = foundry.utils.getProperty(this.actor ?? {}, button.key)?.rollMode ?? safeGetGameSetting("core", "rollMode");
+    const buttonOwner = ownerOf(button.key);
+    // const rollMode = foundry.utils.getProperty(buttonOwner ?? {}, button.key)?.rollMode ?? safeGetGameSetting("core", "rollMode");
     // @ts-expect-error no dnd5e-types
     let rollMode = roll.options.rollMode;
-    rollMode = (foundry.utils.getProperty(this.actor ?? {}, button.key) as any)?.rollMode ?? rollMode ?? safeGetGameSetting("core", "rollMode");
-    if (!hasEffectGranting(this.actor, button.key, flagSelector)) return;
+    rollMode = (foundry.utils.getProperty(buttonOwner ?? {}, button.key) as any)?.rollMode ?? rollMode ?? safeGetGameSetting("core", "rollMode");
+    if (!hasEffectGranting(this.actor, button.key, flagSelector, buttonOwner)) return;
     let resultApplied = false; // This is just for macro calls
     let macroToCall: string = "";
     const allFlagSelector = flagSelector.split(".").slice(0, -1).join(".") + ".all";
     let specificMacro = false;
-    const possibleMacro = foundry.utils.getProperty(this.actor ?? {}, `${button.key}.${flagSelector}`) ||
-      foundry.utils.getProperty(this.actor ?? {}, `${button.key}.${allFlagSelector}`);
+    const possibleMacro = foundry.utils.getProperty(buttonOwner ?? {}, `${button.key}.${flagSelector}`) ||
+      foundry.utils.getProperty(buttonOwner ?? {}, `${button.key}.${allFlagSelector}`);
     if (possibleMacro && typeof button.value === "string" && (button.value.trim().startsWith("ItemMacro") || button.value.trim().startsWith("Macro") || button.value.trim().startsWith("function"))) {
       macroToCall = button.value;
       if (macroToCall.startsWith("Macro.")) macroToCall = macroToCall.replace("Macro.", "");
       specificMacro = true;
-    } else if ((foundry.utils.getProperty(this.actor ?? {}, `${button.key}.macroToCall`) as string)?.trim()) {
-      macroToCall = (foundry.utils.getProperty(this.actor ?? {}, `${button.key}.macroToCall`) as string)?.trim();
+    } else if ((foundry.utils.getProperty(buttonOwner ?? {}, `${button.key}.macroToCall`) as string)?.trim()) {
+      macroToCall = (foundry.utils.getProperty(buttonOwner ?? {}, `${button.key}.macroToCall`) as string)?.trim();
     }
     if (macroToCall) {
       let result: any;
@@ -5041,7 +5051,7 @@ export async function bonusDialog(
           //@ts-expect-error .DamageRoll
           const DamageRoll = CONFIG.Dice.DamageRoll
           let rollOptions = foundry.utils.duplicate(roll!.options);
-          if (foundry.utils.getProperty(this.actor ?? this, `${button.key}.criticalDamage`))
+          if (foundry.utils.getProperty(buttonOwner ?? this.actor ?? this, `${button.key}.criticalDamage`))
             //@ts-expect-error
             rollOptions.configured = false;
           // rollOptions = { critical: (this.isCritical || this.rollOptions.critical), configured: false };
@@ -5140,33 +5150,34 @@ export async function bonusDialog(
   let lastForceFlag = ""
   const oldRoll = foundry.utils.deepClone(roll);
   for (let flagName of bonusFlags) {
-    if ((getOptionalCountRemaining(this.actor, `${flagName}.count`)) < 1) continue;
-    let activationCondition: string | undefined = foundry.utils.getProperty(this.actor ?? {}, `${flagName}.activation`) as string;
+    const owner = ownerOf(flagName);
+    if ((getOptionalCountRemaining(this.actor, `${flagName}.count`, owner)) < 1) continue;
+    let activationCondition: string | undefined = foundry.utils.getProperty(owner ?? {}, `${flagName}.activation`) as string;
     if (activationCondition !== undefined) {
       activationCondition = await evalCondition(activationCondition, conditionData, { errorReturn: true, async: true });
       if (!activationCondition) continue;
     }
-    let forcedCondition: string | undefined = foundry.utils.getProperty(this.actor ?? {}, `${flagName}.force`) as string;
+    let forcedCondition: string | undefined = foundry.utils.getProperty(owner ?? {}, `${flagName}.force`) as string;
     if (forcedCondition !== undefined) {
       forcedCondition = await evalCondition(forcedCondition, conditionData, { errorReturn: true, async: true });
       if (forcedCondition) {
         const altFlag = flagSelector.split(".").slice(0, -1).join(".") + ".all";
         await callback(undefined, {
           key: flagName,
-          value: foundry.utils.getProperty(this.actor ?? {}, `${flagName}.${flagSelector}`) ?? foundry.utils.getProperty(this.actor ?? {}, `${flagName}.${altFlag}`) ?? "",
+          value: foundry.utils.getProperty(owner ?? {}, `${flagName}.${flagSelector}`) ?? foundry.utils.getProperty(owner ?? {}, `${flagName}.${altFlag}`) ?? "",
           label: "none"
         });
         lastForceFlag = flagName;
       }
       continue;
     }
-    if (foundry.utils.getProperty(this.actor, flagName) !== undefined) validFlags.push(flagName);
+    if (foundry.utils.getProperty(owner, flagName) !== undefined) validFlags.push(flagName);
   }
   if (showRoll && lastForceFlag !== "") {
     DSNMarkDiceDisplayed(roll);
     // const rollMode = foundry.utils.getProperty(this.actor ?? {}, lastForceFlag)?.rollMode ?? options.rollMode ?? safeGetGameSetting("core", "rollMode");
     //@ts-expect-error
-    const rollMode = foundry.utils.getProperty(this.actor ?? {}, lastForceFlag)?.rollMode ?? oldRoll.options.rollMode ?? safeGetGameSetting("core", "rollMode");
+    const rollMode = foundry.utils.getProperty(ownerOf(lastForceFlag) ?? {}, lastForceFlag)?.rollMode ?? oldRoll.options.rollMode ?? safeGetGameSetting("core", "rollMode");
     const card = await displayBeforeAfterRolls({ originalRoll: oldRoll, newRoll: roll, rollMode, title, player, options, actor: this.actor });
     if (card?.uuid && this instanceof Workflow) { // this does not work currently since the undoId has not yet been set
       await unTimedExecuteAsGM("updateUndoChatCardUuidsById", { id: this.undoId, chatCardUuids: [card.uuid] });
@@ -5220,14 +5231,15 @@ export async function bonusDialog(
         close: onClose.bind(this),
         timeout,
         item: this.item,
-        workflow: this instanceof Workflow ? this : undefined
+        workflow: this instanceof Workflow ? this : undefined,
+        flagOwners
       }).render({ force: true });
   });
 }
 
-export function getOptionalCountRemainingShortFlag(actor: Actor.Implementation, flag: string) {
+export function getOptionalCountRemainingShortFlag(actor: Actor.Implementation, flag: string, owner?: any) {
   const flagPrefix = `flags.${MODULE_ID}.optional.${flag}`;
-  const countRemaining = getOptionalCountRemaining(actor, `${flagPrefix}.count`) && getOptionalCountRemaining(actor, `${flagPrefix}.countAlt`);
+  const countRemaining = getOptionalCountRemaining(actor, `${flagPrefix}.count`, owner) && getOptionalCountRemaining(actor, `${flagPrefix}.countAlt`, owner);
   return countRemaining;
 }
 
@@ -5322,8 +5334,10 @@ function getOptionalActivityUsesActivityMatch(actor: Actor.Implementation, count
     return activity?.uses.value;
   }
 }
-export function getOptionalCountRemaining(actor: Actor.Implementation, flag: string) {
-  const countValue = foundry.utils.getProperty(actor, flag) as string;
+// `owner` is the document that holds the flag value (defaults to actor). Game-state checks
+// (combat turns, reactions, item/activity uses) always use the actor.
+export function getOptionalCountRemaining(actor: Actor.Implementation, flag: string, owner?: any) {
+  const countValue = foundry.utils.getProperty(owner ?? actor, flag) as string;
   if (!countValue) return 1;
   if (Number.isNumeric(countValue)) return countValue;
   if (["each-round", "each-turn"].includes(countValue) && game.combat) {
@@ -5435,16 +5449,17 @@ export async function removeEffectGranting(actor: Actor.Implementation, changeKe
   }
 }
 
-export function hasEffectGranting(actor: Actor.Implementation, key: string, selector: string) {
+export function hasEffectGranting(actor: Actor.Implementation, key: string, selector: string, owner?: any) {
   // Actually check for the flag being set...
-  if (getOptionalCountRemainingShortFlag(actor, key) <= 0) return false;
+  if (getOptionalCountRemainingShortFlag(actor, key, owner) <= 0) return false;
+  const source = owner ?? actor;
   let changeKey = `${key}.${selector}`;
-  let hasKey = foundry.utils.getProperty(actor ?? {}, changeKey);
+  let hasKey = foundry.utils.getProperty(source ?? {}, changeKey);
   if (hasKey !== undefined) return true;
   let allKey = selector.split(".");
   allKey[allKey.length - 1] = "all";
   changeKey = `${key}.${allKey.join(".")}`;
-  hasKey = foundry.utils.getProperty(actor ?? {}, changeKey);
+  hasKey = foundry.utils.getProperty(source ?? {}, changeKey);
   if (hasKey !== undefined) return hasKey;
   return false;
 }
@@ -7307,6 +7322,7 @@ function getFlankingDistance(t1: Token.Implementation, t2: Token.Implementation)
 export function findPotentialFlankers(target: Token.Implementation) {
   const gridDist = canvas?.dimensions?.distance ?? 5;
   const isGridless = canvas?.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS;
+  const requiresVisibility = configSettings.optionalRules.flankingRequiresVisibility;
 
   let allies: Token.Implementation[];
   let reachAllies: Token.Implementation[];
@@ -7319,8 +7335,8 @@ export function findPotentialFlankers(target: Token.Implementation) {
       if (!t.actor) return false;
       if (t.id === target.id) return false;
       if (checkIncapacitated(t.actor, debugEnabled > 0, false)) return false;
-      // Check disposition: must be hostile to target
       if (t.document.disposition === target.document.disposition) return false;
+      if (requiresVisibility && !canSense(target, t)) return false;
       const dist = getFlankingDistance(t, target);
       return dist >= 0 && dist <= gridDist;
     });
@@ -7330,6 +7346,7 @@ export function findPotentialFlankers(target: Token.Implementation) {
       if (t.id === target.id) return false;
       if (checkIncapacitated(t.actor, debugEnabled > 0, false)) return false;
       if (t.document.disposition === target.document.disposition) return false;
+      if (requiresVisibility && !canSense(target, t)) return false;
       if (allNearby.some(a => a === t)) return false;
       //@ts-expect-error no dnd5e-types
       if (!t.actor.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)) return false;
@@ -7338,8 +7355,9 @@ export function findPotentialFlankers(target: Token.Implementation) {
     });
     allies = allNearby.concat(reachNearby);
   } else {
-    allies = findNearby(-1, target, gridDist);
-    reachAllies = findNearby(-1, target, 2 * gridDist).filter(
+    const nearbyOptions = requiresVisibility ? { isSeen: true } : {};
+    allies = findNearby(-1, target, gridDist, nearbyOptions);
+    reachAllies = findNearby(-1, target, 2 * gridDist, nearbyOptions).filter(
       ally => !(allies.some(tk => tk === ally)) &&
         //@ts-expect-error no dnd5e-types
         ally.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)
@@ -8246,41 +8264,36 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
     if (dice3dEnabled()) {
       //@ts-expect-error game.dice3d
       const dice3d = game.dice3d;
-      const hideRollOption = configSettings.hideRollDetails;
       let ghostRoll = false;
       let whisperUsers: User.Implementation[] | null = null;
       const rollMode = defaultRollMode || game.settings.get("core", "rollMode");
-      let hideRoll = (["all"].includes(hideRollOption) && game.user?.isGM) ? true : false;
-      if (!game.user?.isGM) hideRoll = false;
-      else if (hideRollOption !== "none") {
-        if (configSettings.gmHide3dDice && game.user?.isGM) hideRoll = true;
-        if (game.user?.isGM && !hideRoll) {
-          switch (rollType) {
-            case "attackRollD20":
-              if (["d20Only", "d20AttackOnly", "detailsDSN"].includes(hideRollOption)) {
-                for (let i = 1; i < roll.dice.length; i++) { // hide everything except the d20
-                  roll.dice[i].results.forEach(r => foundry.utils.setProperty(r, "hidden", true));
-                }
-                hideRoll = false;
-              } else if ((["hitDamage", "all", "hitCriticalDamage", "details"].includes(hideRollOption) && game.user?.isGM))
-                hideRoll = true;
-              break;
-            case "attackRoll":
-              hideRoll = hideRollOption !== "detailsDSN";
-              break;
-            case "damageRoll":
-              hideRoll = hideRollOption !== "detailsDSN";
-              break;
-            default:
-              hideRoll = false;
-              break;
+      let hideRoll = false;
+      if (game.user?.isGM) {
+        let dsnSetting: string = "show";
+        switch (rollType) {
+          case "attackRollD20":
+          case "attackRoll":
+            dsnSetting = configSettings.gmAttackDsn ?? "show";
+            break;
+          case "damageRoll":
+            dsnSetting = configSettings.gmDamageDsn ?? "show";
+            break;
+          default:
+            dsnSetting = "show";
+            break;
+        }
+        if (dsnSetting === "none") {
+          hideRoll = true;
+        } else if (dsnSetting === "ghost") {
+          ghostRoll = true;
+        } else if (rollType === "attackRollD20") {
+          // For d20-only display, hide non-d20 dice from the animation
+          for (let i = 1; i < roll.dice.length; i++) {
+            roll.dice[i].results.forEach(r => foundry.utils.setProperty(r, "hidden", true));
           }
         }
       }
-      if (hideRoll && configSettings.ghostRolls && game.user?.isGM && !configSettings.gmHide3dDice) {
-        ghostRoll = true;
-        hideRoll = false;
-      } else {
+      if (!ghostRoll) {
         ghostRoll = rollMode === "blindroll";
       }
 
@@ -9065,7 +9078,7 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
   return { expired: actorEffectsToExpire, disabled: effectsToDisable, itemEffects: effectsToDelete };
 }
 
-export function processConcentrationRequestMessage(message: ChatMessage.Implementation, html: HTMLElement, data) {
+export async function processConcentrationRequestMessage(message: ChatMessage.Implementation, html: HTMLElement, data) {
   if (configSettings.doConcentrationCheck !== "chat") return;
   let elt = html.querySelectorAll<HTMLElement>("[data-action=concentration]");
   const hasRolled = foundry.utils.getProperty(message, `flags.${MODULE_ID}.concentrationRolled`);
@@ -9080,13 +9093,12 @@ export function processConcentrationRequestMessage(message: ChatMessage.Implemen
       if (token) actor = token.actor;
       if (!actor && actorId) actor = game.actors?.get(actorId);
       if (actor) {
+        await message.setFlag(MODULE_ID, "concentrationRolled", true);
         const user = playerForActor(actor);
         if (user?.active) {
-          // const whisper = game.users?.filter(user => actor.testUserPermission(user, "OWNER")).map(u => (u as User).id);
           socketlibSocket.executeAsUser("rollConcentration", user.id, { actorUuid: actor.uuid, target: dc, create: true, rollMode: "gmroll" });
           // @ts-expect-error no dnd5e-types
         } else actor.rollConcentration({ legacy: false, target: dc }, {}, { create: true, rollMode: "gmroll" });
-        message.setFlag(MODULE_ID, "concentrationRolled", true);
       }
     }
   }

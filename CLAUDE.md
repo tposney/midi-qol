@@ -238,8 +238,8 @@ Tests use the Quench framework in separate test modules (not embedded in the mai
 ## Build Commands
 
 ```bash
-npm run build        # Production: typeCheck + esbuild → single midi-qol.js
-npm run devbuild     # Development: outputs to devDir in package.json
+npm run build        # Standard build: typeCheck + esbuild → single midi-qol.js. Always use this.
+npm run devbuild     # AVOID: outputs to devDir without typecheck. Use `npm run build` instead.
 npx gulp devWatch    # Watch mode
 npm run compilePacks # JSON (pack-src/) → LevelDB (packs/) for sample items
 npm run extractPacks # LevelDB → JSON with ID generation

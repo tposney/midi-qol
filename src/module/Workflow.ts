@@ -1988,7 +1988,7 @@ export class Workflow {
 
     const concentrationEffect = getConcentrationEffect(this.actor, this.item);
     if (concentrationEffect) {
-      await flagDoc.setFlag("dnd5e", "dependentOn", concentrationEffect.uuid);
+      await (flagDoc as MeasuredTemplateDocument).setFlag("dnd5e", "dependentOn", concentrationEffect.uuid);
       return true;
     }
 
@@ -2003,7 +2003,7 @@ export class Workflow {
     );
 
     if (existingEffect) {
-      await flagDoc.setFlag("dnd5e", "dependentOn", existingEffect.uuid);
+      await (flagDoc as MeasuredTemplateDocument).setFlag("dnd5e", "dependentOn", existingEffect.uuid);
       return true;
     }
 
@@ -2051,7 +2051,7 @@ export class Workflow {
 
     const effects = await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
     if (effects.length > 0) {
-      await flagDoc.setFlag("dnd5e", "dependentOn", effects[0].uuid);
+      await (flagDoc as MeasuredTemplateDocument).setFlag("dnd5e", "dependentOn", effects[0].uuid);
       return true;
     }
 
@@ -2484,10 +2484,7 @@ export class Workflow {
       this.hitTargetsEC = new Set();
       if (debugEnabled > 0) warn("damageRollStarted | for non auto target area effects spells", this)
     }
-    const damageBonusMacros = this.getDamageBonusMacros();
-    if (damageBonusMacros) {
-      await this.rollBonusDamage(damageBonusMacros);
-    }
+    await this.rollAllBonusDamage();
     return this.WorkflowState_DamageRollComplete;
   }
 
@@ -4120,10 +4117,10 @@ export class Workflow {
     return `${actorMacros},${itemMacros}`;
   }
 
-  async rollBonusDamage(damageBonusMacro: string) {
-    const extraDamages = (await this.callMacros(this.item, damageBonusMacro, "DamageBonus", "DamageBonus"))?.deepFlatten();
-    if (!extraDamages) return;
-    let rolls: Roll[] = [];
+  async rollBonusDamage(damageBonusMacro: string, item: Item.Implementation | undefined = this.item): Promise<Roll[]> {
+    const extraDamages = (await this.callMacros(item, damageBonusMacro, "DamageBonus", "DamageBonus"))?.deepFlatten();
+    if (!extraDamages) return [];
+    const rolls: Roll[] = [];
     try {
       for (let damageEntry of extraDamages) {
         if (!damageEntry || typeof damageEntry !== "object") continue;
@@ -4142,21 +4139,37 @@ export class Workflow {
             flavor: flavor ?? damageType
           }
           // @ts-expect-error no dnd5e-types
-          rolls.push(await new CONFIG.Dice.DamageRoll(damageRoll, this.item.getRollData() ?? this.actor.getRollData(), rollOptions).evaluate());
+          rolls.push(await new CONFIG.Dice.DamageRoll(damageRoll, item?.getRollData() ?? this.actor.getRollData(), rollOptions).evaluate());
         }
       }
-      await this.setBonusDamageRolls(rolls);
     } catch (err) {
       const message = `midi-qol | rollBonusDamage | error in evaluating${extraDamages} in bonus damage`
       TroubleShooter.recordError(err, message);
       console.warn(message, err);
-      this.bonusDamageRolls = undefined;
-      this.rawBonusDamageDetail = [];
+      return [];
     }
-    if (this.bonusDamageRolls && this.workflowOptions?.damageRollDSN !== false) {
-      await displayDSNForRoll(this.bonusDamageRolls, "damageRoll");
+    return rolls;
+  }
+
+  // Run item-level + ammunition-level DamageBonus macros and store the combined rolls.
+  // Ammunition macros run with the ammo item as their context so `rolledItem`/`macroItem`
+  // resolve to the arrow rather than the bow.
+  async rollAllBonusDamage(): Promise<void> {
+    const rolls: (Roll | undefined)[] = [];
+    const itemMacros = this.getDamageBonusMacros();
+    if (itemMacros) rolls.push(...await this.rollBonusDamage(itemMacros));
+    if (this.ammunition) {
+      const ammoMacros = this.ammunitionOnUseMacros?.getMacros("damageBonus");
+      if (ammoMacros?.length) rolls.push(...await this.rollBonusDamage(ammoMacros, this.ammunition));
     }
-    return;
+    // Filter undefined — a macro that throws bubbles up as `undefined` from callMacros' catch
+    // wrapper and a future macro author may return undefined rolls directly.
+    const validRolls = rolls.filter((r): r is Roll => r instanceof Roll);
+    if (!validRolls.length) return;
+    await this.setBonusDamageRolls(validRolls);
+    if (this.workflowOptions?.damageRollDSN !== false) {
+      await displayDSNForRoll(this.bonusDamageRolls!, "damageRoll");
+    }
   }
 
   // TODO: Kill?
@@ -7087,26 +7100,46 @@ export class Workflow {
     }
   }
 
+  // Builds a [optionalKeys, flagOwners] tuple for the rolling actor + item enchantments.
+  // flagOwners maps full flag paths (e.g. "flags.midi-qol.optional.dragonSlayer") to the item
+  // when an enchantment on the rolling item is the source of that key. Actor keys take precedence.
+  private collectOptionalFlagSources(): { keys: string[], owners: Record<string, any> } {
+    const actorOptional = this.actor.flags?.[MODULE_ID]?.optional ?? {};
+    const itemOptional = (this.item?.flags?.[MODULE_ID]?.optional ?? {}) as Record<string, any>;
+    const keys: string[] = Object.keys(actorOptional);
+    const owners: Record<string, any> = {};
+    for (const key of Object.keys(itemOptional)) {
+      if (!(key in actorOptional)) {
+        keys.push(key);
+        owners[`flags.${MODULE_ID}.optional.${key}`] = this.item;
+      }
+    }
+    return { keys, owners };
+  }
+
   async processAttackRollBonusFlags() {
     let attackBonus = "attack.all";
     if (this.activity && this.activity.hasAttack) attackBonus = `attack.${this.activity.actionType}`;
-    const optionalFlags = this.actor.flags?.[MODULE_ID]?.optional ?? {};
+    const { keys: allOptionalKeys, owners: flagOwners } = this.collectOptionalFlagSources();
+    const ownerOfShort = (flag: string): any => flagOwners[`flags.${MODULE_ID}.optional.${flag}`] ?? this.actor;
     // If the attack roll is a fumble only select flags that allow the roll to be rerolled.
-    let bonusFlags = Object.keys(optionalFlags)
+    let bonusFlags = allOptionalKeys
       .filter(flag => {
-        const hasAttackFlag = foundry.utils.getProperty(this.actor ?? {}, midiFlag(`optional.${flag}.attack.all`)) as string ||
-          foundry.utils.getProperty(this.actor ?? {}, midiFlag(`optional.${flag}.${attackBonus}`)) as string;
+        const owner = ownerOfShort(flag);
+        const hasAttackFlag = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.attack.all`)) as string ||
+          foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.${attackBonus}`)) as string;
         if (hasAttackFlag === undefined) return false;
         if (this.isFumble && !hasAttackFlag?.includes("roll")) return false;
-        if (!this.actor.flags[MODULE_ID]!.optional![flag].count) return true;
-        return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
+        const flagData = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}`)) as any;
+        if (!flagData?.count) return true;
+        return getOptionalCountRemainingShortFlag(this.actor, flag, owner) > 0;
       })
       .map(flag => midiFlag(`optional.${flag}`));
 
     if (bonusFlags.length > 0) {
-      const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
+      const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
         ?? checkMechanic("displayBonusRolls") as boolean;
-      const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll!, "attackRoll")
+      const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll!, "attackRoll", { flagOwners })
       if (newRoll) this.setAttackRoll(newRoll);
     }
     if (this.targets.size === 1) {
@@ -7117,20 +7150,22 @@ export class Workflow {
       if (isMiss) {
         attackBonus = "attack.fail.all"
         if (this.activity && this.activity.hasAttack) attackBonus = `attack.fail.${this.activity.actionType}`;
-        let bonusFlags = Object.keys(optionalFlags)
+        let bonusFlags = allOptionalKeys
           .filter(flag => {
-            const hasAttackFlag = foundry.utils.getProperty(this.actor ?? {}, midiFlag(`optional.${flag}.attack.fail.all`)) as string
-              || foundry.utils.getProperty(this.actor ?? {}, midiFlag(`optional.${flag}.${attackBonus}`)) as string;
+            const owner = ownerOfShort(flag);
+            const hasAttackFlag = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.attack.fail.all`)) as string
+              || foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.${attackBonus}`)) as string;
             if (hasAttackFlag === undefined) return false;
             if (this.isFumble && !hasAttackFlag?.includes("roll")) return false;
-            if (!this.actor.flags[MODULE_ID]!.optional![flag].count) return true;
-            return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
+            const flagData = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}`)) as any;
+            if (!flagData?.count) return true;
+            return getOptionalCountRemainingShortFlag(this.actor, flag, owner) > 0;
           })
           .map(flag => midiFlag(`optional.${flag}`));
         if (bonusFlags.length > 0) {
-          const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
+          const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
             ?? checkMechanic("displayBonusRolls") as boolean;
-          const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll");
+          const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll", { flagOwners });
           if (newRoll) this.setAttackRoll(newRoll);
         }
       }
@@ -7143,22 +7178,24 @@ export class Workflow {
     const rollMode = safeGetGameSetting("core", "rollMode");
     const hideDSN = game.user?.isGM && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
     if (this.activity) damageBonus = `damage.${this.activity.actionType}`;
-    const optionalFlags = this.actor.flags?.[MODULE_ID]?.optional ?? {};
-    const bonusFlags = Object.keys(optionalFlags)
+    const { keys: allOptionalKeys, owners: flagOwners } = this.collectOptionalFlagSources();
+    const ownerOfShort = (flag: string): any => flagOwners[`flags.${MODULE_ID}.optional.${flag}`] ?? this.actor;
+    const bonusFlags = allOptionalKeys
       .filter(flag => {
-        const hasDamageFlag = foundry.utils.getProperty(this.actor ?? {}, midiFlag(`optional.${flag}.damage.all`)) !== undefined ||
-          foundry.utils.getProperty(this.actor ?? {}, midiFlag(`optional.${flag}.${damageBonus}`)) !== undefined;
+        const owner = ownerOfShort(flag);
+        const hasDamageFlag = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.damage.all`)) !== undefined ||
+          foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.${damageBonus}`)) !== undefined;
         if (!hasDamageFlag) return false;
-        return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
+        return getOptionalCountRemainingShortFlag(this.actor, flag, owner) > 0;
       })
       .map(flag => midiFlag(`optional.${flag}`));
     if (bonusFlags.length > 0) {
       // this.damageRollHTML = await midiRenderDamageRoll(this.damageRoll);
       // this.damamgeRollHTML = $(this.damageRolHTML).find(".dice-roll").remove();
       // TODO dnd3 work out what this means for multiple rolls
-      const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
+      const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
         ?? checkMechanic("displayBonusRolls") as boolean;
-      let newRoll = await bonusDialog.bind(this)(bonusFlags, damageBonus, displayBonusRolls === true, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, damageRolls[0], "damageRoll", { hideDSN, damageRolls })
+      let newRoll = await bonusDialog.bind(this)(bonusFlags, damageBonus, displayBonusRolls === true, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, damageRolls[0], "damageRoll", { hideDSN, damageRolls, flagOwners })
       if (newRoll) damageRolls[0] = newRoll;
     }
     return damageRolls;
@@ -7453,13 +7490,13 @@ export class Workflow {
       let hitSymbol = "fa-blank"
       // if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor")) && !this.isCritical) hitScale = Math.floor(this.challengeModeScale[targetActor.uuid]);
       let isHitResult = "miss";
-      if (game.user?.isGM && ["hitDamage", "all"].includes(configSettings.hideRollDetails) && (this.isCritical || isHit || isHitEC)) {
+      if (game.user?.isGM && ["hitMiss", "hidden"].includes(configSettings.gmAttackDisplay ?? "full") && (this.isCritical || isHit || isHitEC)) {
         isHitResult = "hit";
         hitSymbol = "fa-tick";
       } else if (this.isCritical) {
         isHitResult = "critical";
         hitSymbol = "fa-check-double"
-      } else if (game.user?.isGM && this.isFumble && ["hitDamage", "all"].includes(configSettings.hideRollDetails)) {
+      } else if (game.user?.isGM && this.isFumble && ["hitMiss", "hidden"].includes(configSettings.gmAttackDisplay ?? "full")) {
         isHitResult = "miss";
         hitSymbol = "fa-xmark";
       } else if (this.isFumble) {
@@ -7891,7 +7928,7 @@ export class ActiveDefenceWorkflow extends Workflow {
           // if (["scale", "scaleNoAR"].includes(checkRule("challengeModeArmor")) && !this.isCritical) hitScale = Math.floor(this.challengeModeScale[targetActor.uuid]);
           let isHitResult = "miss";
           // Inverse hit/miss icons from normal attacks so the result looks the same as with saving throws
-          if (game.user?.isGM && ["hitDamage", "all"].includes(configSettings.hideRollDetails) && (this.isCritical || isHit || isHitEC)) {
+          if (game.user?.isGM && ["hitMiss", "hidden"].includes(configSettings.gmAttackDisplay ?? "full") && (this.isCritical || isHit || isHitEC)) {
             // Failed defence roll
             isHitResult = "miss";
             hitSymbol = "fa-xmark";
@@ -7899,7 +7936,7 @@ export class ActiveDefenceWorkflow extends Workflow {
             // Fumbled defence roll
             isHitResult = "fumble";
             hitSymbol = "fa-xmarks-lines";
-          } else if (game.user?.isGM && this.isFumble && ["hitDamage", "all"].includes(configSettings.hideRollDetails)) {
+          } else if (game.user?.isGM && this.isFumble && ["hitMiss", "hidden"].includes(configSettings.gmAttackDisplay ?? "full")) {
             // Successful defence roll
             isHitResult = "hit";
             hitSymbol = "fa-check";
@@ -8664,10 +8701,7 @@ export class DDBGameLogWorkflow extends Workflow {
 
     this.rawDamageDetail = createDamageDetail({ roll: this.damageRolls, activity: this.activity, defaultType: this.defaultDamageType });
 
-    const damageBonusMacros = this.getDamageBonusMacros();
-    if (damageBonusMacros) {
-      await this.rollBonusDamage(damageBonusMacros);
-    }
+    await this.rollAllBonusDamage();
     this.rawOtherDamageDetail = [];
     if (this.bonusDamageRolls) {
       const messageData = {
@@ -8855,6 +8889,8 @@ export type WorkflowOptions = InexactPartial<{
   coverOrigin: { x: number, y: number, elevation?: number };
   templateUuid: string;
   preSelectedTargetUuids: string[];
+  // UUID of the over-time effect that triggered this workflow, used by overtime processing.
+  overTimeEffectUuid: string;
 }>
 
 // Workflow's `rollOptions`

@@ -1,3 +1,14 @@
+### 14.0.6
+* Fix for concentration auto roll being done twice when "Chat Message + Auto Roll" is selected.
+* Fix for double consumption when using a spell from an item with item uses (e.g. Staff of Power casting Cone of Cold consumed 10 charges instead of 5).
+* Fix attack roll critical/fumble highlighting not showing icons or colours when "Only highlight critical/fumble hits" is enabled. Regression from 13.0.58.
+* Fix numeric `forcedMode` values from modules causing crash in DAE effect config (`forcedMode.toLowerCase is not a function`). Changed all midi-qol spec registrations from numeric `-1` to string `""`.
+* New "Flanking requires target can sense flanker" setting (Rules tab, Flanking box). When enabled, invisible or hidden allies won't contribute to flanking unless the target can sense them.
+* Flanking settings are now grouped in their own box within Optional Rules.
+* New "Midi Active Effects" compendium with sample enchantment effects (Dragon Slayer variants, Life Stealer, Wounding Weapon) extracted from sample items.
+* Overtime workflows now include `overTimeEffectUuid` in `workflowOptions`, accessible from hooks, macros, and save roll options.
+* Fix target snapshot race condition — targets are now captured at the start of `use()` to prevent concurrent workflows from clearing each other's targets.
+
 ### 14.0.5
 * The "Vision test point height" setting overrides the source token's vision origin (where the token sees from - foundry default 1/2 of the tokens height), not just the target test points. Setting to "Top" means both the viewing token's eye point and the target's visibility test points use the top of the token height. This improves visibility through holes in surfaces for tokens standing near edges.
 * New token flags `token.flags.midi-qol.visionSourceHeight` and `token.flags.midi-qol.visionTargetHeight` allow per-token override of the vision height as a percentage (0–100) of the token's height. When not set, falls back to the midi setting. These can be set via DAE active effects (e.g. a "Crouch" or "Prone" effect setting both to 25). Vision automatically refreshes when these flags change.

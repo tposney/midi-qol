@@ -178,7 +178,18 @@ export function initPatching() {
   // ActiveEffect, Item, Actor already have dnd5e's DependentDocumentMixin in their class hierarchy
   // Just add MidiDependentDocumentMixin for our registry tracking
   //@ts-expect-error - Mixin pattern type inference
-  class MidiActiveEffect extends MidiDependentDocumentMixin(CONFIG.ActiveEffect.documentClass) { };
+  class MidiActiveEffect extends MidiDependentDocumentMixin(CONFIG.ActiveEffect.documentClass) {
+    // dnd5e's isAppliedEnchantment getter dereferences this.parent.uuid, which throws when
+    // an enchantment effect is loaded standalone (e.g. fromUuid on a compendium-stored
+    // top-level ActiveEffect). Treat the no-parent case as "not applied" and otherwise
+    // fall through to the system's logic.
+    get isAppliedEnchantment() {
+      // @ts-expect-error parent not on MixinDocumentInstance
+      if (!this.parent) return false;
+      // @ts-expect-error no dnd5e types
+      return super.isAppliedEnchantment;
+    }
+  };
   //@ts-expect-error
   CONFIG.ActiveEffect.documentClass = MidiActiveEffect;
 
