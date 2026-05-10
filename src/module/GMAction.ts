@@ -76,6 +76,7 @@ export let setupSocket = () => {
   socketlibSocket.register("midiRegionTriggerActivity", _midiRegionTriggerActivity);
   socketlibSocket.register("midiRegionApplyEffects", _midiRegionApplyEffects);
   socketlibSocket.register("midiRegionRemoveEffects", _midiRegionRemoveEffects);
+  socketlibSocket.register("setupRegion", _setupRegion);
 
   // socketlibSocket.register("canSense", _canSense);
 }
@@ -123,6 +124,7 @@ export class SaferSocket {
       case "midiRegionTriggerActivity":
       case "midiRegionApplyEffects":
       case "midiRegionRemoveEffects":
+      case "setupRegion":
         return true;
 
       case "addConvenientEffect":
@@ -2578,4 +2580,32 @@ async function _midiRegionRemoveEffects(data: {
   const actor = fromActorUuid(data.actorUuid);
   if (!actor) return;
   return actor.deleteEmbeddedDocuments("ActiveEffect", data.effectIds);
+}
+
+// RegionDocument.update and embedded RegionBehavior creation both require GM-level scene
+// write permission, which players don't have. Batched here so a player-cast region spell
+// (e.g. Spirit Guardians) configures its proxied region in a single socket round-trip.
+// Use the writeRegion() helper in MidiActivityMixin — it skips the socket entirely when
+// the caller already has permission (e.g. GM cast).
+//
+// Race: the region was just created on the caller's client; the create broadcast to this
+// client may arrive after the socketlib message. Foundry socket events are in-order per
+// connection, so the create will arrive — poll briefly until it does.
+async function _setupRegion(data: { regionUuid: string; update?: any; behaviors?: any[] }) {
+  let regionDoc = fromUuidSync(data.regionUuid) as RegionDocument.Implementation | null;
+  const deadline = Date.now() + 2000;
+  while (!regionDoc && Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 25));
+    regionDoc = fromUuidSync(data.regionUuid) as RegionDocument.Implementation | null;
+  }
+  if (!regionDoc) {
+    error(`midi-qol | setupRegion: region ${data.regionUuid} not found within 2s`);
+    return;
+  }
+  if (data.update && Object.keys(data.update).length > 0) {
+    await regionDoc.update(data.update);
+  }
+  if (data.behaviors?.length) {
+    return regionDoc.createEmbeddedDocuments("RegionBehavior", data.behaviors as any);
+  }
 }

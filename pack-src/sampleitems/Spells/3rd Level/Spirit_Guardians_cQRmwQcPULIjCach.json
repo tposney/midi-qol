@@ -20,7 +20,7 @@
         }
       },
       "name": "Spirit Guardians",
-      "description": "<p>Concentration marker. Enemies within 15 feet have their speed halved and must save against Radiant or Necrotic damage at the start of each turn and when entering the emanation.</p>",
+      "description": "<p>Concentration marker. Enemies within 15 feet have their speed halved and must save against Radiant or Necrotic damage at the end of each turn and when entering the emanation.</p>",
       "statuses": [],
       "_stats": {
         "compendiumSource": null,
@@ -127,13 +127,13 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "14.0.1"
+        "version": "14.0.6"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>Protective spirits flit around you in a 15-foot Emanation for the duration. If you are good or neutral, their spectral form appears angelic or fey (your choice). If you are evil, they appear fiendish.</p><p>When you cast this spell, you can designate creatures to be unaffected by it. Any other creature's Speed is halved in the Emanation, and whenever the Emanation enters a creature's space and whenever a creature enters the Emanation or ends its turn there, the creature must make a Wisdom saving throw. On a failed save, the creature takes 3d8 Radiant damage (if you are good or neutral) or 3d8 Necrotic damage (if you are evil). On a successful save, the creature takes half as much damage. A creature makes this save only once per turn.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d8 for each spell slot level above 3.</p><p><strong>midi-qol</strong>: The Cast activity applies a self-target concentration effect and places a 15-foot emanation Region. The <code>MidiRegionActivityBehavior</code> is auto-attached to the Region, which applies speed reduction on entry (removed on exit) and triggers the Emanation Save on entry + at the start of each enemy's turn. No macros or external modules needed. Spell scaling supported (+1d8 per slot above 3). Concentration removal deletes the Region, which cascades to remove all applied effects.</p>",
+      "value": "<p>Protective spirits flit around you in a 15-foot Emanation for the duration. If you are good or neutral, their spectral form appears angelic or fey (your choice). If you are evil, they appear fiendish.</p><p>When you cast this spell, you can designate creatures to be unaffected by it. Any other creature's Speed is halved in the Emanation, and whenever the Emanation enters a creature's space and whenever a creature enters the Emanation or ends its turn there, the creature must make a Wisdom saving throw. On a failed save, the creature takes 3d8 Radiant damage (if you are good or neutral) or 3d8 Necrotic damage (if you are evil). On a successful save, the creature takes half as much damage. A creature makes this save only once per turn.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d8 for each spell slot level above 3.</p><p><strong>midi-qol</strong>: The Cast activity applies a self-target concentration effect and places a 15-foot emanation Region. The <code>MidiRegionActivityBehavior</code> is auto-attached to the Region, which applies speed reduction on entry (removed on exit) and triggers the Emanation Save on entry + at the end of each enemy's turn. No macros or external modules needed. Spell scaling supported (+1d8 per slot above 3). Concentration removal deletes the Region, which cascades to remove all applied effects.</p>",
       "chat": "<p>Protective spirits flit around you in a 15-foot Emanation for the duration. If you are good or neutral, their spectral form appears angelic or fey (your choice). If you are evil, they appear fiendish.</p><p>When you cast this spell, you can designate creatures to be unaffected by it. Any other creature's Speed is halved in the Emanation, and whenever the Emanation enters a creature's space and whenever a creature enters the Emanation or ends its turn there, the creature must make a Wisdom saving throw. On a failed save, the creature takes 3d8 Radiant damage (if you are good or neutral) or 3d8 Necrotic damage (if you are evil). On a successful save, the creature takes half as much damage. A creature makes this save only once per turn.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d8 for each spell slot level above 3.</p>"
     },
     "source": {
@@ -293,7 +293,7 @@
               "targetId": "guardiansDamage"
             },
             {
-              "trigger": "turnStart",
+              "trigger": "turnEnd",
               "action": "useActivity",
               "targetId": "guardiansDamage"
             },
@@ -436,7 +436,7 @@
         "otherActivityId": "none",
         "isOverTimeFlag": true,
         "overTimeProperties": {
-          "turnChoice": "start",
+          "turnChoice": "end",
           "saveRemoves": false,
           "preRemoveConditionText": "",
           "postRemoveConditionText": ""

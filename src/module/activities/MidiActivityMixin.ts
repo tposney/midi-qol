@@ -1,6 +1,6 @@
 import { Activity, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn, busyWait } from "../../midi-qol.js";
-import { socketlibSocket } from "../GMAction.js";
+import { socketlibSocket, timedAwaitExecuteAsGM } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFirstWorkflow } from "../Workflow.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
@@ -118,6 +118,34 @@ export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.Formu
     wrapper.appendChild(button);
     return wrapper;
   }
+}
+
+/**
+ * Apply optional region update + region behavior creation. GMs run locally; non-GMs send
+ * a single batched socket call. We gate on isGM because RegionDocument#canUserModify can
+ * report "update" permission for the player who just placed the template (Foundry grants
+ * owner perms to the creator), but creating embedded RegionBehaviors requires scene-level
+ * write which only GMs have — checking update perms gives a false positive there.
+ */
+async function writeRegion(
+  regionDoc: any,
+  ops: { update?: Record<string, any>; behaviors?: any[] }
+): Promise<any> {
+  const hasUpdate = !!(ops.update && Object.keys(ops.update).length > 0);
+  const hasBehaviors = !!(ops.behaviors && ops.behaviors.length > 0);
+  if (!hasUpdate && !hasBehaviors) return undefined;
+
+  if (game.user?.isGM) {
+    if (hasUpdate) await regionDoc.update(ops.update);
+    if (hasBehaviors) return regionDoc.createEmbeddedDocuments("RegionBehavior", ops.behaviors);
+    return undefined;
+  }
+
+  return timedAwaitExecuteAsGM("setupRegion", {
+    regionUuid: regionDoc.uuid,
+    update: hasUpdate ? ops.update : undefined,
+    behaviors: hasBehaviors ? ops.behaviors : undefined,
+  });
 }
 
 export let MidiActivityMixin = Base => {
@@ -1843,7 +1871,12 @@ export let MidiActivityMixin = Base => {
             if (rbConfig?.enabled && rbConfig.regionVisibility !== undefined) {
               regionUpdate.visibility = rbConfig.regionVisibility;
             }
-            await regionDoc.update(regionUpdate);
+            // Defer the GM round-trip: _attachRegionActivityBehavior runs later in the
+            // same use flow and will batch this update with behavior creation into one
+            // socket call.
+            if (Object.keys(regionUpdate).length) {
+              this._pendingRegionUpdate = regionUpdate;
+            }
           }
 
           if (workflow) {
@@ -1866,6 +1899,10 @@ export let MidiActivityMixin = Base => {
      */
     async _attachRegionActivityBehavior(regionDoc: RegionDocument.Implementation, workflow: Workflow, overTimeActivity: any, castLevel?: number) {
       const rbConfig = this.regionBehavior;
+      // Collect behaviors to attach and any region update; writeRegion() batches them
+      // into a single GM round-trip (or runs locally if the user has permission).
+      const behaviors: any[] = [];
+      let regionUpdate: any | undefined;
 
       // If explicitly configured on this activity, use stored config
       // Convert portable IDs/identifiers from the activity schema to full UUIDs for the behavior type
@@ -1885,7 +1922,7 @@ export let MidiActivityMixin = Base => {
           }
         }
 
-        const behaviorData = {
+        behaviors.push({
           type: `${MODULE_ID}.regionActivity` as const,
           name: `${this.item?.name ?? "Activity"} Region Activity`,
           system: {
@@ -1898,13 +1935,11 @@ export let MidiActivityMixin = Base => {
             oncePerTurn: rbConfig.oncePerTurn ?? true,
             wallRestriction: rbConfig.wallRestriction ?? "none",
           },
-        };
-        await regionDoc.createEmbeddedDocuments("RegionBehavior", [behaviorData] as any);
+        });
 
         // Set region restriction if a wall restriction type is selected
         if (rbConfig.wallRestriction && rbConfig.wallRestriction !== "none") {
-          // @ts-expect-error fvtt-types missing v14 RegionDocument.restriction field
-          await regionDoc.update({ restriction: { enabled: true, type: rbConfig.wallRestriction, priority: 0 } });
+          regionUpdate = { restriction: { enabled: true, type: rbConfig.wallRestriction, priority: 0 } };
         }
       } else if (overTimeActivity) {
         // Fallback: auto-derive from overtime activity (existing logic, kept for backward compat)
@@ -1931,7 +1966,7 @@ export let MidiActivityMixin = Base => {
           rules.push({ trigger: "exit", action: "removeEffect", targetUuid: effectUuid });
         }
 
-        const behaviorData = {
+        behaviors.push({
           type: `${MODULE_ID}.regionActivity` as const,
           name: `${this.item?.name ?? "Activity"} Region Activity`,
           system: {
@@ -1943,15 +1978,13 @@ export let MidiActivityMixin = Base => {
             excludeSource: true,
             oncePerTurn: true,
           },
-        };
-
-        await regionDoc.createEmbeddedDocuments("RegionBehavior", [behaviorData] as any);
+        });
       }
 
       // Attach light behavior if configured on this activity
       const lightConfig = this.regionLight;
       if (lightConfig?.enabled && (lightConfig.dim > 0 || lightConfig.bright > 0)) {
-        const lightBehaviorData = {
+        behaviors.push({
           type: `${MODULE_ID}.regionLight` as const,
           name: `${this.item?.name ?? "Activity"} Region Light`,
           system: {
@@ -1964,9 +1997,17 @@ export let MidiActivityMixin = Base => {
             animationSpeed: lightConfig.animationSpeed ?? 5,
             animationIntensity: lightConfig.animationIntensity ?? 5,
           },
-        };
-        await regionDoc.createEmbeddedDocuments("RegionBehavior", [lightBehaviorData] as any);
+        });
       }
+
+      // Merge in any update deferred from _placeEmanationTemplate (attachment / visibility)
+      const pendingUpdate = this._pendingRegionUpdate;
+      if (pendingUpdate) {
+        regionUpdate = { ...pendingUpdate, ...(regionUpdate ?? {}) };
+        delete this._pendingRegionUpdate;
+      }
+
+      await writeRegion(regionDoc, { update: regionUpdate, behaviors });
     }
 
     async _usageChatContext(message) {

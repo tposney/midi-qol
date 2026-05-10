@@ -1,3 +1,7 @@
+### 14.0.7
+* Fix for midi-qol region behaviours throwing an error when cast by a non-gm.
+* Correct Spirit Guardians to be end of turn rather than start of turn.
+
 ### 14.0.6
 * Fix for concentration auto roll being done twice when "Chat Message + Auto Roll" is selected.
 * Fix for double consumption when using a spell from an item with item uses (e.g. Staff of Power casting Cone of Cold consumed 10 charges instead of 5).
