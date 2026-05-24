@@ -379,6 +379,7 @@
     "detailsDSN": "Rolar Fórmula Mas Mostrar Rolagem DSN",
     "details": "Rolar Fórmula",
     "d20Only": "Exibir Ataque d20 + Dano Total",
+    "d20DamageDSN": "Exibir Ataque d20 + Dano Total + Dano DSN",
     "hitDamage": "Exibir Acerto/Erro + Dano Total",
     "hitCriticalDamage": "Exibir Acerto/Erro/Acerto Crítico/Falha Crítica + Dano Total",
     "attackTotalOnly": "Exibir Apenas Total da Rolagem",
@@ -389,11 +390,58 @@
       "detailsDSN": "Esconde a fórmula de rolagem mas ainda mostra a rolagem de dados do DSN para que os jogadores vejam a animação.",
       "details": "Esconde a fórmula de rolagem e não mostra os dados do DSN.",
       "d20Only": "Exibe somente a rolagem de ataque d20 e o dano total.",
+      "d20DamageDSN": "Exibe a rolagem de ataque d20 e o dano total, e exibe a animação do DSN para os dados de dano.",
       "hitDamage": "Exibe Acerto/Erro mais o dano total.",
       "hitCriticalDamage": "Exibe Acertos/Erros/Críticos/Erros Críticos e o dano total.",
       "attackTotalOnly": "Exibe somente o total da rolagem de ataque.",
       "d20AttackOnly": "Exibe somente dados de ataques d20.",
       "all": "Esconde dos jogadores todos os detalhes da rolagem."
+    }
+  },
+  "midi-qol.GMAttackDisplay.Name": "Exibição de Rolagem de Ataque do Mestre",
+  "midi-qol.GMAttackDisplay.Hint": "O que os jogadores veem nas rolagens de ataque do Mestre.",
+  "midi-qol.gmAttackDisplayOptions": {
+    "full": "Rolagem Completa",
+    "hideFormula": "Esconder Fórmula",
+    "d20Only": "Apenas d20",
+    "attackTotal": "Apenas Total do Ataque",
+    "hitMiss": "Apenas Acerto/Erro",
+    "hitMissCrit": "Acerto/Erro/Crítico/Falha Crítica",
+    "hidden": "Oculto",
+    "expandedHints": {
+      "full": "Os jogadores veem a rolagem de ataque completa, incluindo a fórmula e os detalhes dos dados.",
+      "hideFormula": "Os jogadores veem o resultado da rolagem dos dados, mas não a fórmula.",
+      "d20Only": "Os jogadores veem apenas o resultado do d20.",
+      "attackTotal": "Os jogadores veem apenas o total do ataque.",
+      "hitMiss": "Os jogadores veem apenas se o ataque acertou ou errou.",
+      "hitMissCrit": "Os jogadores veem acerto/erro com distinção entre crítico e falha crítica.",
+      "hidden": "Os jogadores não veem nenhuma informação sobre a rolagem de ataque."
+    }
+  },
+  "midi-qol.GMDamageDisplay.Name": "Exibição de Rolagem de Dano do Mestre",
+  "midi-qol.GMDamageDisplay.Hint": "O que os jogadores veem nas rolagens de dano do Mestre.",
+  "midi-qol.gmDamageDisplayOptions": {
+    "full": "Rolagem Completa",
+    "totalOnly": "Apenas Total do Dano",
+    "hidden": "Oculto",
+    "expandedHints": {
+      "full": "Os jogadores veem a rolagem de dano completa, incluindo a fórmula e os detalhes dos dados.",
+      "totalOnly": "Os jogadores veem apenas o total do dano.",
+      "hidden": "Os jogadores não veem nenhuma informação sobre a rolagem de dano."
+    }
+  },
+  "midi-qol.GMAttackDsn.Name": "Rolagem de Ataque DSN",
+  "midi-qol.GMAttackDsn.Hint": "Animação do Dice So Nice para rolagens de ataque do Mestre, como vista pelos jogadores.",
+  "midi-qol.GMDamageDsn.Name": "Rolagem de Dano DSN",
+  "midi-qol.GMDamageDsn.Hint": "Animação do Dice So Nice para rolagens de dano do Mestre, como vista pelos jogadores.",
+  "midi-qol.gmDsnDisplayOptions": {
+    "show": "Mostrar Dados",
+    "ghost": "Dados Fantasmas",
+    "none": "Sem Dados",
+    "expandedHints": {
+      "show": "Os jogadores veem a animação completa dos dados DSN.",
+      "ghost": "Os jogadores veem dados fantasmas translúcidos.",
+      "none": "Nenhuma animação de dados DSN é exibida aos jogadores."
     }
   },
   "midi-qol.RollOtherDamageOptions": {
@@ -403,6 +451,7 @@
     "ifSave": "Outra Condição Verdadeira e Salvaguarda Presente"
   },
   "midi-qol.potion": "Poção",
+  "midi-qol.GMRollHiding": "Ocultando Rolagem do Mestre",
   "midi-qol.HideRollDetails.Name": "Ocultar Detalhes de Rolagens de Mestre",
   "midi-qol.HideRollDetails.Hint": "Escolha quais rolagens de Mestre serão escondidas/exibidas aos jogadores.",
   "midi-qol.DiceRolled": "<div>Rolado</div>",
@@ -704,7 +753,7 @@
   "midi-qol.ActiveDefenceString": "Active Defence",
   "midi-qol.ActiveDefence.Name": "Defesa Ativa",
   "midi-qol.ActiveDefenceModifier.Name": "Modificador de Defesa Ativa",
-  "midi-qol.ActiveDefenceModifier.Hint": "A CD da Defesa Ativa será o bônus de ataque + este modificador e a rolagem de Defesa Ativa será CA - (22 - modificador) + 1d20. <br>O valor não importa, apenas escolha o que faz as rolagens parecerem boas para você. <br> Os valores sugeridos são <strong>12</strong>, 10 ou 0.",
+  "midi-qol.ActiveDefenceModifier.Hint": "A CD da Defesa Ativa será 'bônus de ataque + este modificador' e a rolagem de Defesa Ativa será '1d20 + CA - (22 - modificador)'. <br>O valor não importa, apenas escolha o que faz as rolagens parecerem boas para você. <br> Os valores sugeridos são <strong>12</strong>, 10 ou 0.",
   "midi-qol.ActiveDefence.Hint": "Ao invés do Mestre rolar 'Para Atingir', jogadores fazem uma rolagem de defesa.",
   "midi-qol.ActiveDefenceDC.Name": "Exibir CD da Defesa Ativa",
   "midi-qol.ActiveDefenceDC.Hint": "Se habilitado, a CD da Defesa Ativa será mostrada no cartão de chat.",
@@ -791,7 +840,7 @@
   },
   "midi-qol.Wounded": "Ferido",
   "midi-qol.AddWounded.Name": "Adicionar Efeito se PV Abaixo de %",
-  "midi-qol.AddWounded.Hint": "Adiciona a condição selecionada quando o PV for menor do que a porcentagem configurada. Desabilitado em 0.",
+  "midi-qol.AddWounded.Hint": "Adiciona a condição selecionada quando o PV for menor ou igual à porcentagem especificada do máximo. 0 desativa.",
   "midi-qol.debugCallTiming.Name": "Log do Tempo de Execução",
   "midi-qol.debugCallTiming.Hint": "Forneçe algumas informações de log sobre quanto tempo as coisas demoram.",
   "midi-qol.autoFailFriendly": "Falha Automática Aliado",
@@ -894,6 +943,8 @@
   "midi-qol.FlankingBonus.Hint": "Quando um flanqueamento for detectado, conceda vantagem (padrão) ou reduza a CA efetiva do alvo em um valor fixo.",
   "midi-qol.SharpShooter": "Sharpshooter",
   "midi-qol.SpellSniper": "Spell Sniper",
+  "midi-qol.FlankingRequiresVisibility.Name": "Flanquear exige que o alvo consiga perceber o flanqueador",
+  "midi-qol.FlankingRequiresVisibility.Hint": "Quando ativada, um aliado só é considerado um flanqueador se o alvo puder detectá-lo. Aliados invisíveis ou ocultos não contribuem para o flanqueamento.",
   "midi-qol.ShowFlankingHighlight.Name": "Mostrar Posições de Flanqueamento",
   "midi-qol.ShowFlankingHighlight.Hint": "Destaque as células da grade onde um aliado criaria flanqueamento contra seu alvo atual.",
   "midi-qol.FlankingBonusOptions.advantage": "Vantagem",
@@ -1104,6 +1155,7 @@
   "midi-qol.emanationTemplate.counted.one": "Emanação Sem Modelo",
   "midi-qol.emanationTemplate.counted.other": "Emanação Sem Modelo",
   "midi-qol.AddFakeDice.Name": "Adicionar Dados Falsos do Dice So Nice às Rolagens do Mestre",
+  "midi-qol.AddFakeDice.Hint": "Adiciona dados extras aleatórios à animação do DSN para que os jogadores não possam contar dados para deduzir modificadores.",
   "midi-qol.MidiFieldsTab.Name": "Exibir os campos do Midi QOL em uma aba separada",
   "midi-qol.UndoChatColor.Name": "Desfazer a Cor dos Cartões de Chat",
   "midi-qol.UndoChatColor.Hint": "'Deletar' significa remover o cartão de chat ou desfazer. Do contrário, os cartões desfeitos são coloridos novamente.",
