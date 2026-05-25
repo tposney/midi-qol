@@ -2319,7 +2319,7 @@
   "midi-qol.REGION_BEHAVIOR.disposition.allies": "Aliados",
   "midi-qol.REGION_BEHAVIOR.config.addRule": "Adicionar Regra",
   "midi-qol.REGION_BEHAVIOR.config.deleteRule": "Excluir Regra",
-  "midi-qol.SHARED.FIELDS.regionBehavior.enabled.label": "Habilitar Comportamento de Região",
+  "midi-qol.SHARED.FIELDS.regionBehavior.enabled.label": "Ativar Comportamento de Região",
   "midi-qol.SHARED.FIELDS.regionBehavior.enabled.hint": "Anexa uma atividade de comportamento do Midi-QoL à região criada pelo modelo desta atividade.",
   "midi-qol.SHARED.FIELDS.regionBehavior.dispositionFilter.label": "Filtro de Disposição",
   "midi-qol.SHARED.FIELDS.regionBehavior.excludeSource.label": "Excluir Token de Origem",
