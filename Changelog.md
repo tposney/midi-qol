@@ -1,4 +1,4 @@
-### 13.0.62
+### 13.0.63
 * Fix template placement for spells whose range uses a unit different from the scene grid (e.g. Meteor Swarm with range 1 mile in a foot-grid scene). Templates were being clamped to the caster's perimeter; range is now converted to scene grid units before the placement range check.
 * Fix `midi-qol.preTargetSave` hook contract: `saveDetails.advantage`/`disadvantage` set by external hook handlers is now applied to the resulting save roll. Previously the values were stored on the roll config but were not seeded into the advantage tracker, so the hook had no effect on midi-driven saves.
 * Switched the player damage card's healing label from the removed `DND5E.Healing` localisation key to `DND5E.HEAL.HealingButton` (introduced in dnd5e 5.3). Feature-detected via `i18n.has` so dnd5e 5.2.x continues to work.
@@ -7,6 +7,8 @@
 * The dnd5e damage application tray on midi chat cards now opens or collapses based on whether midi auto-applied damage. When midi auto-applies, the tray is collapsed; when midi did not auto-apply, the tray is expanded so the apply controls are visible without an extra click. This overrides the dnd5e "Auto Collapse Chat Trays" setting for midi cards only.
 * Optional bonus dialog for missed attacks (`flags.midi-qol.optional.*.attack.fail.*`) now uses the same effective AC as the hit check (the AC captured at roll time via `targetDescriptor.ac`), instead of the live `actor.system.attributes.ac.value`. Previously the two could disagree when AC changed between roll time and the bonus-flag evaluation (e.g. when a preAttackRoll macro toggled effects on the target), so the dialog could fire for an attack that would still hit.
 * Counter Mage sample item: fixed the Abjuration-Breaker cleanup effect not being deleted at the end of the attack workflow. Stale cleanup effects from prior attacks were being removed by DAE stacking when a new cleanup effect was created, which fired their `off` macro pass and prematurely restored the freshly-suppressed magic effects on the target. The cleanup effect is now removed explicitly in `postActiveEffects`.
+
+### 13.0.62 skipped
 
 ### 13.0.61
 * GM Roll Hiding refactored: the single "Hide Roll Details" dropdown has been replaced with four independent settings — Attack Roll Display, Damage Roll Display, Attack DSN, and Damage DSN. Each can be configured separately. Existing settings are automatically migrated.
