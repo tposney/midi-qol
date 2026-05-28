@@ -559,6 +559,9 @@ declare module "fvtt-types/configuration" {
         onUseMacroName?: string;
         noProvokeReaction?: boolean;
         isConcentrationCheck?: boolean;
+        // Optional bonus flags applied to the item (e.g. via enchantment effects), checked
+        // alongside the actor's optional flags when the item is used.
+        optional?: Record<string, any>;
         trapWorkflow?: {
           ignoreSelf?: boolean;
         }

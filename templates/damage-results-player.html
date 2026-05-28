@@ -57,7 +57,7 @@
     <img src="{{damage.tokenImg}}" id="{{damage.tokenId}}" class="midi-qol-target-name" height="22">
     {{#if ../showImmun}}{{#if damage.tooltip}}<div class="midi-qol-tooltiptext"><div>{{{damage.tooltip}}}</div></div>{{/if}}{{/if}}
     {{#if damage.isHealing}}
-    <span class="midi-qol-dmg-text midi-qol-dmg-healing">{{damage.absRawTotalDamage}} {{localize "DND5E.Healing"}} &rarr; {{damage.absPlayerViewTotalDamage}} {{localize "midi-qol.Healed"}}</span>
+    <span class="midi-qol-dmg-text midi-qol-dmg-healing">{{damage.absRawTotalDamage}} {{@root.healingLabel}} &rarr; {{damage.absPlayerViewTotalDamage}} {{localize "midi-qol.Healed"}}</span>
     {{else}}
     <span class="midi-qol-dmg-text">{{damage.damageItem.rawTotalDamage}} {{localize "DND5E.Damage"}} &rarr; {{damage.playerViewTotalDamage}} {{localize "midi-qol.DamageDealt"}}</span>
     {{/if}}

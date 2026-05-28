@@ -292,10 +292,15 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }).join("");
     }
 
-    _enrichUsageEffects(html: HTMLLIElement) {
-      if (["off", "applyLeave"].includes(configSettings.autoItemEffects))
-        //@ts-expect-error
-        return super._enrichUsageEffects(html);
+    // Removes the dnd5e effects tray from the rendered chat card when midi's
+    // autoItemEffects suppresses the apply button. dnd5e v5.x emits an
+    // <effect-application> custom element from usage-card.hbs which renders
+    // itself in connectedCallback — there's no longer a _enrichUsageEffects
+    // method to skip, so we strip the element from the DOM after super runs.
+    _maybeStripEffectsTray(html: HTMLElement) {
+      if (["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects)) {
+        html.querySelectorAll("effect-application").forEach(el => el.remove());
+      }
     }
 
     _enrichDamageTooltip(rolls: Roll[], html: HTMLElement) {
@@ -330,6 +335,12 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         || ((configSettings.addChatDamageButtons === "pc") && !game.user?.isGM);
       if (game.user?.isGM && configSettings.autoApplyDamage === "none") shouldAddButtons = true;
       if (shouldAddButtons) {
+        // Expand the tray when midi did not auto-apply (player needs to click);
+        // collapse it when midi already applied damage. Wins over dnd5e's
+        // autoCollapseChatTrays setting via _trayStates.
+        const midiApplied = !!configSettings.autoApplyDamage?.toLowerCase().includes("yes");
+        (this as any)._trayStates ??= new Map();
+        (this as any)._trayStates.set("MIDI-DAMAGE-APPLICATION", !midiApplied);
         for (let dType of MQDamageRollTypes) {
           rolls = this.rolls.filter(r => foundry.utils.getProperty(r, "options.midi-qol.rollType") === dType);
           if (!rolls.length) continue;
@@ -349,11 +360,44 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     _highlightCriticalSuccessFailure(html: HTMLElement) {
-      // Let dnd5e highlight non-midi messages (saves, checks, death saves).
-      // Midi messages are usage-type so Foundry never calls this directly for them —
-      // they go through _enrichChatCard → _highlightMidiRolls instead.
       // @ts-expect-error no dnd5e-types
       super._highlightCriticalSuccessFailure(html);
+      // dnd5e only adds critical/fumble for attack and death saves.
+      // Add critical/fumble highlighting for other d20 rolls (saves, ability checks).
+      const totals = html.querySelectorAll(".dice-total");
+      for (let [index, d20Roll] of this.rolls.entries()) {
+        const total = totals[index];
+        if (!total || total.classList.contains("critical") || total.classList.contains("fumble")) continue;
+        const d0 = d20Roll?.dice?.[0];
+        if (!d0 || d0.faces !== 20 || d0.values?.length !== 1) continue;
+        // @ts-expect-error D20Roll not typed
+        const d20 = dnd5e.dice.D20Roll.fromRoll(d20Roll);
+        if (d20.isCritical) {
+          total.classList.add("critical");
+          if (!total.querySelector(".icons")) {
+            const icons = document.createElement("div");
+            icons.classList.add("icons");
+            const icon = document.createElement("i");
+            icon.classList.add("fas", "fa-check-double");
+            icon.setAttribute("inert", "");
+            icons.append(icon);
+            total.append(icons);
+          }
+        } else if (d20.isFumble) {
+          total.classList.add("fumble");
+          if (!total.querySelector(".icons")) {
+            const icons = document.createElement("div");
+            icons.classList.add("icons");
+            for (let i = 0; i < 2; i++) {
+              const icon = document.createElement("i");
+              icon.classList.add("fas", "fa-xmark");
+              icon.setAttribute("inert", "");
+              icons.append(icon);
+            }
+            total.append(icons);
+          }
+        }
+      }
       this._applyMidiHighlightSettings(html);
     }
 
@@ -364,7 +408,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       const isMidiMessage = !!this.flags?.[MODULE_ID]?.messageType;
       const hideResult = isMidiMessage && !game.user?.isGM && (["whisper", "gmOnly"].includes(configSettings.autoCheckHit) || safeGetGameSetting("dnd5e", "attackRollVisibility") === "none");
       const totals = html.querySelectorAll(".dice-total");
-      for (const total of totals) {
+      for (const total of Array.from(totals)) {
         if (hideResult || !configSettings.highlightSuccess) {
           total.classList.remove("success", "failure", "critical", "fumble");
           total.querySelector(".icons")?.remove();
@@ -398,7 +442,6 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         total.classList.remove("success", "failure", "critical", "fumble");
         total.querySelector(".icons")?.remove();
 
-        //@ts-expect-error .dice not typed
         const d0 = d20Roll?.dice?.[0];
         if (!d0 || d0.faces !== 20 || d0.values?.length !== 1) continue;
 
@@ -625,6 +668,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         this.applyChatVisibility(html);
         // @ts-expect-error no dnd5e-types
         super._enrichChatCard(html);
+        this._maybeStripEffectsTray(html);
         this._addMarkerClasses(html);
         return;
       }
@@ -633,6 +677,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
       // @ts-expect-error no dnd5e-types
       super._enrichChatCard(html);
+      this._maybeStripEffectsTray(html);
       this.applyChatVisibility(html);
       // For usage-type messages, Foundry skips _highlightCriticalSuccessFailure.
       // Add classes + icons directly for midi messages, then apply midi settings.

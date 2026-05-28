@@ -150,7 +150,7 @@ Note: This approach doesn't handle embedded document hierarchy (effects stored a
 ### Related Modules
 - **chatlog-prune** (`/home/timp/foundry-data/foundryalpha/Data/modulesrc/chatlog-prune/`): Keep `ChatLogPrune.ts` and `ChatLogMidi.ts` in sync. midi-qol's built-in chat log pruning deprecated since 13.0.37.
 - **midi-qol-setup-wizard** (`/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-setup-wizard/`): Key files: `scripts/wizard.js`, `wizard-steps.js`, `setting-definitions.js`, `module-definitions.js`. Launched via `Hooks.call("midi-qol-setup-wizard.launch")`.
-- **item-delete-check** (`/home/timp/foundry-data/foundryv13/Data/modules/item-delete-check/`): Single `main.js`, no build step, `master` branch.
+- **item-delete-check** (`/home/timp/foundry-data/foundryalpha/Data/modules/item-delete-check/`): Single `main.js`, no build step, `master` branch.
 
 ### Foundry ApplicationV2 Scrollable Pattern
 Never use raw `overflow-y: auto`. Use Foundry's built-in pattern:
@@ -246,9 +246,8 @@ Tests use the Quench framework in a separate module:
 ## Build Commands
 
 ```bash
-npm run build        # Production: typeCheck + esbuild → single midi-qol.js
-npm run devbuild     # Development: outputs to devDir in package.json
-npx gulp devWatch    # Watch mode
+npm run build        # Production: typeCheck + esbuild → single midi-qol.js. USE THIS — never devbuild.
+npx gulp devWatch    # Watch mode (only when explicitly working on a dev-server flow)
 npm run compilePacks # JSON (pack-src/) → LevelDB (packs/) for sample items
 npm run extractPacks # LevelDB → JSON with ID generation
 ```

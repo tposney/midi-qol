@@ -1,5 +1,5 @@
 import { Activity, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig } from "../../globals.js";
-import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn, busyWait } from "../../midi-qol.js";
+import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn, busyWait, getHealingLabel } from "../../midi-qol.js";
 import { socketlibSocket } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFirstWorkflow } from "../Workflow.js";
 import { OnUseMacros } from "../apps/Item.js";
@@ -1231,7 +1231,7 @@ export let MidiActivityMixin = Base => {
         }
 
         let actionFlavor: string;
-        actionFlavor = i18n(this.actionType === "heal" ? "DND5E.Healing" : "DND5E.DamageRoll");
+        actionFlavor = this.actionType === "heal" ? getHealingLabel() : i18n("DND5E.DamageRoll");
 
         const title = this.name;
         const speaker = getSpeaker(this.actor!);
@@ -1846,7 +1846,7 @@ export let MidiActivityMixin = Base => {
       // if target type is not blank or there are targets only set hasEffects if we are not going to remove the button later
       if (this.target?.affects.type !== "" || workflow?.targets.size !== 0)
         hasEffects &&= !["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects);
-      let dmgBtnText = (this.actionType === "heal") ? i18n("DND5E.Healing") : i18n("DND5E.Damage");
+      let dmgBtnText = (this.actionType === "heal") ? getHealingLabel() : i18n("DND5E.Damage");
       if (workflow?.workflowOptions?.fastForwardDamage && configSettings.showFastForward) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
 
       let midiContextData = {

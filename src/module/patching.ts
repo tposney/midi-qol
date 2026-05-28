@@ -533,8 +533,6 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
         const chosenSkill = configData.skill ?? skillId;
         const chosenAdvantage = preComputedSkillAdvantageMap[chosenSkill!];
         if (chosenAdvantage) {
-          // Only override advantage/disadvantage if not pre-computed from external module
-          // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
           if (!hasPreComputedAdvantage) {
             configData.advantage = chosenAdvantage.hasAdvantage;
             configData.disadvantage = chosenAdvantage.hasDisadvantage;
@@ -1218,8 +1216,6 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
         const chosenAbility = configData.ability ?? abilityId;
         const chosenAdvantage = preComputedAdvantageMap[chosenAbility!];
         if (chosenAdvantage) {
-          // Only override advantage/disadvantage if not pre-computed from external module
-          // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
           if (!hasPreComputedAdvantage) {
             configData.advantage = chosenAdvantage.hasAdvantage;
             configData.disadvantage = chosenAdvantage.hasDisadvantage;
@@ -2495,8 +2491,6 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
         const chosenTool = configData.tool ?? toolId;
         const chosenAdvantage = preComputedToolAdvantageMap[chosenTool!];
         if (chosenAdvantage) {
-          // Only override advantage/disadvantage if not pre-computed from external module
-          // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
           if (!hasPreComputedAdvantage) {
             configData.advantage = chosenAdvantage.hasAdvantage;
             configData.disadvantage = chosenAdvantage.hasDisadvantage;

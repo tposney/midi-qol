@@ -1,5 +1,5 @@
 import { checkRule, configSettings, safeGetGameSetting, isDnd5e53 } from "./settings.js";
-import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
+import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID, getHealingLabel } from "../midi-qol.js";
 import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DamageDescriptionObject, Workflow, WorkflowOptions } from "./Workflow.js";
@@ -889,6 +889,9 @@ async function rollAbility(data: {
   }
 
   // Build midiOptions for patching.ts
+  // advantage/disadvantage seed computeAdvantageFlags via options.advantage so the
+  // midi-qol.preTargetSave hook's saveDetails.advantage actually applies. The flag is
+  // also kept on the top-level config below for the applyPreComputedAdvantage path.
   const midiOptions: MidiOptions = {
     workflowId,
     rollAbilities,
@@ -902,6 +905,8 @@ async function rollAbility(data: {
     isConcentrationCheck,
     workflowOptions,
     itemCardUuid,
+    advantage,
+    disadvantage,
   };
 
   let config: RollProcessConfig = {
@@ -1654,7 +1659,8 @@ async function createPlayerDamageCard(data: {
     damageList: [] as DamageListContextEntry[],
     needsButtonAll: false,
     showNPC,
-    playerButtons
+    playerButtons,
+    healingLabel: getHealingLabel()
   };
 
   prepareDamageListItems(data, templateData, tokenDataList, false, showNPC, true)

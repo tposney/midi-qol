@@ -1,4 +1,4 @@
-import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats } from "../midi-qol.js";
+import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats, getHealingLabel } from "../midi-qol.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions, shouldDisplaySaveDC, isDnd5e53 } from "./settings.js";
@@ -2592,7 +2592,7 @@ export class Workflow {
         // provide a hint as to the type of roll expected.
         // Match rollDamage button with optional span: <button data-action="rollDamage">text</button> or <button data-action="rollDamage"><span>text</span></button>
         const searchRe = /(<button[^>]*data-action="rollDamage"[^>]*>)(?:<span>)?[^<]*(?:<\/span>)?(<\/button>)/;
-        const damageTypeString = (this.activity.actionType === "heal") ? i18n("DND5E.Healing") : i18n("DND5E.Damage");
+        const damageTypeString = (this.activity.actionType === "heal") ? getHealingLabel() : i18n("DND5E.Damage");
         let damageString = (this.rollOptions.isCritical || this.isCritical) ? i18n("DND5E.Critical") : damageTypeString;
         if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) damageString += ` ${i18n("midi-qol.fastForward")}`;
         // Preserve button tag, replace content with span for consistency
@@ -7269,50 +7269,76 @@ return {
     }
   }
 
+  // Builds a [optionalKeys, flagOwners] tuple for the rolling actor + item enchantments.
+  // flagOwners maps full flag paths (e.g. "flags.midi-qol.optional.dragonSlayer") to the item
+  // when an enchantment on the rolling item is the source of that key. Actor keys take precedence.
+  private collectOptionalFlagSources(): { keys: string[], owners: Record<string, any> } {
+    const actorOptional = this.actor.flags?.[MODULE_ID]?.optional ?? {};
+    const itemOptional = (this.item?.flags?.[MODULE_ID]?.optional ?? {}) as Record<string, any>;
+    const keys: string[] = Object.keys(actorOptional);
+    const owners: Record<string, any> = {};
+    for (const key of Object.keys(itemOptional)) {
+      if (!(key in actorOptional)) {
+        keys.push(key);
+        owners[`flags.${MODULE_ID}.optional.${key}`] = this.item;
+      }
+    }
+    return { keys, owners };
+  }
+
   async processAttackRollBonusFlags() {
     let attackBonus = "attack.all";
     if (this.activity && this.activity.hasAttack) attackBonus = `attack.${this.activity.actionType}`;
-    const optionalFlags = this.actor.flags?.[MODULE_ID]?.optional ?? {};
+    const { keys: allOptionalKeys, owners: flagOwners } = this.collectOptionalFlagSources();
+    const ownerOfShort = (flag: string): any => flagOwners[`flags.${MODULE_ID}.optional.${flag}`] ?? this.actor;
     // If the attack roll is a fumble only select flags that allow the roll to be rerolled.
-    let bonusFlags = Object.keys(optionalFlags)
+    let bonusFlags = allOptionalKeys
       .filter(flag => {
-        const hasAttackFlag = foundry.utils.getProperty(this.actor ?? {}, midiFlag(`optional.${flag}.attack.all`)) as string ||
-          foundry.utils.getProperty(this.actor ?? {}, midiFlag(`optional.${flag}.${attackBonus}`)) as string;
+        const owner = ownerOfShort(flag);
+        const hasAttackFlag = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.attack.all`)) as string ||
+          foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.${attackBonus}`)) as string;
         if (hasAttackFlag === undefined) return false;
         if (this.isFumble && !hasAttackFlag?.includes("roll")) return false;
-        if (!this.actor.flags[MODULE_ID]!.optional![flag].count) return true;
-        return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
+        const flagData = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}`)) as any;
+        if (!flagData?.count) return true;
+        return getOptionalCountRemainingShortFlag(this.actor, flag, owner) > 0;
       })
       .map(flag => midiFlag(`optional.${flag}`));
 
     if (bonusFlags.length > 0) {
-      const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
+      const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
         ?? checkMechanic("displayBonusRolls") as boolean;
-      const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll!, "attackRoll")
+      const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll!, "attackRoll", { flagOwners })
       if (newRoll) this.setAttackRoll(newRoll);
     }
     if (this.targets.size === 1) {
+      const target = this.targets.first()!;
+      // Use the AC captured at roll time (matches what checkHits will compare against
+      // via computeTargetAC). Falls back to live ac.value when no descriptor exists.
+      const descriptor = getTargetDescriptor(target.actor?.uuid ?? "", this.targetDescriptors);
       // @ts-expect-error no dnd5e-types
-      const targetAC = this.targets.first()!.actor?.system.attributes.ac.value;
+      const targetAC = descriptor?.ac ?? target.actor?.system.attributes.ac.value;
       await this.processAttackRoll();
       const isMiss = this.isFumble || (this.attackRoll!.total ?? 0) < targetAC;
       if (isMiss) {
         attackBonus = "attack.fail.all"
         if (this.activity && this.activity.hasAttack) attackBonus = `attack.fail.${this.activity.actionType}`;
-        let bonusFlags = Object.keys(optionalFlags)
+        let bonusFlags = allOptionalKeys
           .filter(flag => {
-            const hasAttackFlag = foundry.utils.getProperty(this.actor ?? {}, midiFlag(`optional.${flag}.attack.fail.all`)) as string
-              || foundry.utils.getProperty(this.actor ?? {}, midiFlag(`optional.${flag}.${attackBonus}`)) as string;
+            const owner = ownerOfShort(flag);
+            const hasAttackFlag = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.attack.fail.all`)) as string
+              || foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.${attackBonus}`)) as string;
             if (hasAttackFlag === undefined) return false;
             if (this.isFumble && !hasAttackFlag?.includes("roll")) return false;
-            if (!this.actor.flags[MODULE_ID]!.optional![flag].count) return true;
-            return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
+            const flagData = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}`)) as any;
+            if (!flagData?.count) return true;
+            return getOptionalCountRemainingShortFlag(this.actor, flag, owner) > 0;
           })
           .map(flag => midiFlag(`optional.${flag}`));
         if (bonusFlags.length > 0) {
-          const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
+          const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
             ?? checkMechanic("displayBonusRolls") as boolean;
-          const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll");
+          const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll", { flagOwners });
           if (newRoll) this.setAttackRoll(newRoll);
         }
       }
@@ -7325,22 +7351,24 @@ return {
     const rollMode = safeGetGameSetting("core", "rollMode");
     const hideDSN = game.user?.isGM && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
     if (this.activity) damageBonus = `damage.${this.activity.actionType}`;
-    const optionalFlags = this.actor.flags?.[MODULE_ID]?.optional ?? {};
-    const bonusFlags = Object.keys(optionalFlags)
+    const { keys: allOptionalKeys, owners: flagOwners } = this.collectOptionalFlagSources();
+    const ownerOfShort = (flag: string): any => flagOwners[`flags.${MODULE_ID}.optional.${flag}`] ?? this.actor;
+    const bonusFlags = allOptionalKeys
       .filter(flag => {
-        const hasDamageFlag = foundry.utils.getProperty(this.actor ?? {}, midiFlag(`optional.${flag}.damage.all`)) !== undefined ||
-          foundry.utils.getProperty(this.actor ?? {}, midiFlag(`optional.${flag}.${damageBonus}`)) !== undefined;
+        const owner = ownerOfShort(flag);
+        const hasDamageFlag = foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.damage.all`)) !== undefined ||
+          foundry.utils.getProperty(owner ?? {}, midiFlag(`optional.${flag}.${damageBonus}`)) !== undefined;
         if (!hasDamageFlag) return false;
-        return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
+        return getOptionalCountRemainingShortFlag(this.actor, flag, owner) > 0;
       })
       .map(flag => midiFlag(`optional.${flag}`));
     if (bonusFlags.length > 0) {
       // this.damageRollHTML = await midiRenderDamageRoll(this.damageRoll);
       // this.damamgeRollHTML = $(this.damageRolHTML).find(".dice-roll").remove();
       // TODO dnd3 work out what this means for multiple rolls
-      const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
+      const displayBonusRolls: boolean | undefined = bonusFlags.reduce((acc: boolean | undefined, flag: string) => (acc || (foundry.utils.getProperty(flagOwners[flag] ?? this.actor ?? {}, `${flag}.displayBonusRolls`) as boolean)), undefined)
         ?? checkMechanic("displayBonusRolls") as boolean;
-      let newRoll = await bonusDialog.bind(this)(bonusFlags, damageBonus, displayBonusRolls === true, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, damageRolls[0], "damageRoll", { hideDSN, damageRolls })
+      let newRoll = await bonusDialog.bind(this)(bonusFlags, damageBonus, displayBonusRolls === true, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, damageRolls[0], "damageRoll", { hideDSN, damageRolls, flagOwners })
       if (newRoll) damageRolls[0] = newRoll;
     }
     return damageRolls;
