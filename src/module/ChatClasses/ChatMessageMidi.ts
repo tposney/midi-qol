@@ -3,6 +3,9 @@ import { configSettings, safeGetGameSetting, saveToChatCard } from "../settings.
 import { getToken } from "../utils.js";
 import { setDamageRollMinTerms } from "../activities/activityHelpers.js";
 
+// Damage is auto-applied by midi when autoApplyDamage is one of the "yes*" modes.
+const midiAutoAppliesDamage = () => !!configSettings.autoApplyDamage?.toLowerCase().includes("yes");
+
 const removeAll = (html: HTMLElement, sel: string) => html.querySelectorAll(sel).forEach(el => el.remove());
 const hideAll = (html: HTMLElement, sel: string) => html.querySelectorAll<HTMLElement>(sel).forEach(el => el.style.display = "none");
 const stripHighlight = (html: HTMLElement, sel: string) => html.querySelectorAll<HTMLElement>(sel).forEach(
@@ -292,10 +295,15 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }).join("");
     }
 
-    _enrichUsageEffects(html: HTMLLIElement) {
-      if (["off", "applyLeave"].includes(configSettings.autoItemEffects))
-        //@ts-expect-error
-        return super._enrichUsageEffects(html);
+    // Removes the dnd5e effects tray from the rendered chat card when midi's
+    // autoItemEffects suppresses the apply button. dnd5e v5.x emits an
+    // <effect-application> custom element from usage-card.hbs which renders
+    // itself in connectedCallback — there's no longer a _enrichUsageEffects
+    // method to skip, so we strip the element from the DOM after super runs.
+    _maybeStripEffectsTray(html: HTMLElement) {
+      if (["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects)) {
+        html.querySelectorAll("effect-application").forEach(el => el.remove());
+      }
     }
 
     _enrichDamageTooltip(rolls: Roll[], html: HTMLElement) {
@@ -342,10 +350,24 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
             type: roll.options.type,
             properties: new Set(roll.options.properties ?? [])
           }));
-
+          // Set the initial open state directly so connectedCallback renders correctly.
+          // _collapseTrays (overridden below) keeps it in sync on re-render, bypassing the
+          // dnd5e _trayStates className/tagName collision.
+          damageApplication.toggleAttribute("open", !midiAutoAppliesDamage());
           html.querySelector(".message-content")?.appendChild(damageApplication);
         }
       }
+    }
+
+    _collapseTrays(html: HTMLElement) {
+      // @ts-expect-error no dnd5e-types
+      super._collapseTrays(html);
+      if (!this.flags?.[MODULE_ID]?.messageType) return;
+      const open = !midiAutoAppliesDamage();
+      html.querySelectorAll("midi-damage-application").forEach(el => {
+        el.toggleAttribute("open", open);
+        el.querySelector(".collapsible")?.classList.toggle("collapsed", !open);
+      });
     }
 
     _highlightCriticalSuccessFailure(html: HTMLElement) {
@@ -656,6 +678,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         this.applyChatVisibility(html);
         // @ts-expect-error no dnd5e-types
         super._enrichChatCard(html);
+        this._maybeStripEffectsTray(html);
         this._addMarkerClasses(html);
         return;
       }
@@ -664,6 +687,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
       // @ts-expect-error no dnd5e-types
       super._enrichChatCard(html);
+      this._maybeStripEffectsTray(html);
       this.applyChatVisibility(html);
       // For usage-type messages, Foundry skips _highlightCriticalSuccessFailure.
       // Add classes + icons directly for midi messages, then apply midi settings.

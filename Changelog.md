@@ -1,3 +1,13 @@
+### 14.0.8
+* Fix template placement for spells whose range uses a unit different from the scene grid (e.g. Meteor Swarm with range 1 mile in a foot-grid scene). Templates were being clamped to the caster's perimeter; range is now converted to scene grid units before the placement range check.
+* Fix `midi-qol.preTargetSave` hook contract: `saveDetails.advantage`/`disadvantage` set by external hook handlers is now applied to the resulting save roll. Previously the values were stored on the roll config but were not seeded into the advantage tracker, so the hook had no effect on midi-driven saves.
+* Switched all `DND5E.Healing` references to `DND5E.HEAL.HealingButton` (the older key was removed in dnd5e 5.3). Affects the player damage card healing label, the damage-roll button on midi chat cards, and the action flavor text for healing activities.
+* Region behaviour-triggered activities (e.g. Spirit Guardians' damage save, Moonbeam's emanation save) are now attributed to the source actor's player owner rather than the GM. Chat messages, rolls, and speaker attribution show the player as the roller; falls back to the GM when no player owner is online. The trigger is dispatched directly to the source player's client when possible to avoid an extra GM hop.
+* The dnd5e damage application tray on midi chat cards now opens or collapses based on whether midi auto-applied damage. When midi auto-applies, the tray is collapsed; when midi did not auto-apply, the tray is expanded so the apply controls are visible without an extra click. This overrides the dnd5e "Auto Collapse Chat Trays" setting for midi cards only.
+* Optional bonus dialog for missed attacks (`flags.midi-qol.optional.*.attack.fail.*`) now uses the same effective AC as the hit check (the AC captured at roll time via `targetDescriptor.ac`), instead of the live `actor.system.attributes.ac.value`. Previously the two could disagree when AC changed between roll time and the bonus-flag evaluation (e.g. when a preAttackRoll macro toggled effects on the target), so the dialog could fire for an attack that would still hit.
+* Fix: with "Auto Apply Item Effects" set to "Do not display button" or "Remove button", the dnd5e effects-application tray is now removed from midi chat cards. 
+* Removed the deprecated `activity.targets` getter/setter — use `workflow.targets` instead.
+
 ### 14.0.7
 * Fix for midi-qol region behaviours throwing an error when cast by a non-gm.
 * Correct Spirit Guardians to be end of turn rather than start of turn.

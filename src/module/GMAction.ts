@@ -897,6 +897,9 @@ async function rollAbility(data: {
   }
 
   // Build midiOptions for patching.ts
+  // advantage/disadvantage seed computeAdvantageFlags via options.advantage so the
+  // midi-qol.preTargetSave hook's saveDetails.advantage actually applies. The flag is
+  // also kept on the top-level config below for the applyPreComputedAdvantage path.
   const midiOptions: MidiOptions = {
     workflowId,
     rollAbilities,
@@ -910,6 +913,8 @@ async function rollAbility(data: {
     isConcentrationCheck,
     workflowOptions,
     itemCardUuid,
+    advantage,
+    disadvantage,
   };
 
   let config: RollProcessConfig = {

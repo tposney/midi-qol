@@ -3270,6 +3270,18 @@ function measureTokenToPointPerimeter(token: Token, destPoint: { x: number, y: n
   return measurePointDistance(closest, destPoint);
 }
 
+const SCENE_UNIT_TO_DND5E: Record<string, string> = {
+  ft: "ft", feet: "ft", foot: "ft",
+  m: "m", meter: "m", meters: "m", metre: "m", metres: "m",
+};
+
+export function rangeToSceneUnits(value: number | undefined | null, units: string | undefined | null): number {
+  if (!value || !units) return value ?? 0;
+  const sceneUnit = canvas?.scene?.grid?.units?.toLowerCase() ?? "";
+  const sceneUnitDnd = SCENE_UNIT_TO_DND5E[sceneUnit] ?? sceneUnit;
+  return (globalThis as any).dnd5e?.utils?.convertLength?.(value, units, sceneUnitDnd, { strict: false }) ?? value;
+}
+
 /**
  * Get the perimeter-based distance from a token to a point, with gridification.
  * This applies the same gridification formula as getDistance in perimeter mode:

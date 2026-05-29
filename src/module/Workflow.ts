@@ -2451,7 +2451,7 @@ export class Workflow {
       const chatMessage = this.chatCard;
       if (chatMessage?.content) {
         const searchRe = /(<button[^>]*data-action="rollDamage"[^>]*>)(?:<span>)?[^<]*(?:<\/span>)?(<\/button>)/;
-        const damageTypeString = (this.activity.actionType === "heal") ? i18n("DND5E.Healing") : i18n("DND5E.Damage");
+        const damageTypeString = (this.activity.actionType === "heal") ? i18n("DND5E.HEAL.HealingButton") : i18n("DND5E.Damage");
         let damageString = (this.rollOptions.isCritical || this.isCritical) ? i18n("DND5E.Critical") : damageTypeString;
         if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) damageString += ` ${i18n("midi-qol.fastForward")}`;
         // Preserve button tag, replace content with span for consistency
@@ -7143,8 +7143,12 @@ export class Workflow {
       if (newRoll) this.setAttackRoll(newRoll);
     }
     if (this.targets.size === 1) {
+      const target = this.targets.first()!;
+      // Use the AC captured at roll time (matches what checkHits will compare against
+      // via computeTargetAC). Falls back to live ac.value when no descriptor exists.
+      const descriptor = getTargetDescriptor(target.actor?.uuid ?? "", this.targetDescriptors);
       // @ts-expect-error no dnd5e-types
-      const targetAC = this.targets.first()!.actor?.system.attributes.ac.value;
+      const targetAC = descriptor?.ac ?? target.actor?.system.attributes.ac.value;
       await this.processAttackRoll();
       const isMiss = this.isFumble || (this.attackRoll!.total ?? 0) < targetAC;
       if (isMiss) {

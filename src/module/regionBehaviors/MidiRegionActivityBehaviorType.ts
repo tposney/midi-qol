@@ -1,5 +1,5 @@
 import { MODULE_ID, debugEnabled, error, warn } from "../../midi-qol.js";
-import { completeActivityUse, fromActorUuid, getToken, isValidTarget } from "../utils.js";
+import { completeActivityUse, fromActorUuid, getToken, isValidTarget, playerForActor } from "../utils.js";
 import { preferredActiveGM, socketlibSocket } from "../GMAction.js";
 
 const { ArrayField, BooleanField, NumberField, SchemaField, StringField } = foundry.data.fields;
@@ -329,7 +329,19 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
       sourceActorUuid,
     };
 
-    if (game.user?.isGM) {
+    // Resolve the source actor's player owner so the triggered activity is attributed
+    // to them (chat author, speaker, rolls). Dispatch directly to that user when
+    // possible to avoid a redundant GM hop. playerForActor returns an active player
+    // owner if one exists, else falls back to preferredActiveGM.
+    const sourceActor = sourceActorUuid ? fromActorUuid(sourceActorUuid) : null;
+    const asUser = sourceActor ? playerForActor(sourceActor) : undefined;
+
+    if (asUser?.active && asUser.id === game.user?.id) {
+      await MidiRegionActivityBehaviorType._executeTriggerActivity(triggerData);
+    } else if (asUser?.active) {
+      // midiRegionTriggerActivity is in the canCall whitelist for any user.
+      await socketlibSocket.executeAsUser("midiRegionTriggerActivity", asUser.id, triggerData);
+    } else if (game.user?.isGM) {
       await MidiRegionActivityBehaviorType._executeTriggerActivity(triggerData);
     } else {
       await socketlibSocket.executeAsGM("midiRegionTriggerActivity", triggerData);
@@ -356,6 +368,9 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     }
     if (!targetTokens.size) return;
 
+    // _triggerActivity has already dispatched us to the correct client (source
+    // actor's owner if online, else GM). Run completeActivityUse locally — chat
+    // messages, rolls, and speaker attribution come from whichever user is here.
     await completeActivityUse(activity as any, {
       midiOptions: {
         targetsToUse: targetTokens,
