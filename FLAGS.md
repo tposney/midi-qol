@@ -1279,7 +1279,7 @@ No damage on save (normal damage on fail). Registered as **BooleanFormula** fiel
 
 ## Optional Bonus Effects
 
-Optional bonuses can modify *[attack](#attack-bonuses), [damage](#damage-bonuses), [save](#save-bonuses-1), [check](#check-bonuses), and [skill](#skill-bonuses)* rolls, or *provide an [AC bonus](#ac-bonus)*. Key features include:
+Optional bonuses can modify *attack*, *damage*, *save*, *check*, and *skill* rolls, or provide an *AC bonus* against one attack at a time. Key features include:
 
 - **Conditional Triggers:** use [conditional evaluations](#conditional-expression-evaluation) to limit when the bonus is applied. 
 - **Activation Options:** provide a prompt or use the bonus automatically. 
@@ -1287,7 +1287,7 @@ Optional bonuses can modify *[attack](#attack-bonuses), [damage](#damage-bonuses
 - **Failed Rolls:** offer the bonus only when the triggering roll fails a DC.
 - **Call Macros:** write complex logic in a macro that returns an evaluated roll or a [valid bonus](#bonus-value-options).
 
-Each optional bonus key has the following structure. `NAME` must be replaced with your own unique identifier for each bonus.
+Each optional bonus key has the following structure. `NAME` must be replaced with your own unique identifier for each bonus. Also see [config](#configuration) and [type](#bonus-types).
 ```
 flags.midi-qol.optional.NAME.{config or type}
 ```
@@ -1299,12 +1299,7 @@ flags.midi-qol.optional.NAME.{config or type}
   - [Count](#count-format-options)
   - [Bonus](#bonus-value-options)
   - [Macros](#itemmacro-in-optional-bonus-flags)
-- [Attack Bonus](#attack-bonuses)
-- [Damage Bonus](#damage-bonuses)
-- [Save Bonus](#save-bonuses-1)
-- [Check Bonus](#check-bonuses)
-- [Skill Bonus](#skill-bonuses)
-- [AC Bonus](#ac-bonus)
+- [Types](#bonus-types)
 
 ### Example - Lucky Reroll
 
@@ -1335,7 +1330,7 @@ When the actor makes an attack roll, they'll be prompted to use "Lucky - Reroll 
 | `flags.midi-qol.optional.NAME.displayBonusRolls` | Direct | Override display setting for this bonus (`true`/`false`) |
 | `flags.midi-qol.optional.NAME.rollMode` | Direct | Roll mode for this bonus (`publicroll`, `gmroll`, `blindroll`, `selfroll`) |
 
-None of these are required. If an optional bonus only has one key `flags.midi-qol.optional.NAME.{type} CUSTOM {bonus}`, then it will apply once the first time it is triggered. `count` must be included for more than one use, and `activation` or `force` must be included to limit the trigger.
+None of these are required. If an optional bonus only has one key `flags.midi-qol.optional.NAME.{type} CUSTOM {bonus}`, then it will apply once the first time it is triggered. Include `count` for more than one use, and use `activation` or `force` to limit the trigger.
 
 > [!important] Documentation
 > Guides on the data available for activation and force conditions are available in the [Conditional Expression Evaluation](#conditional-expression-evaluation) section, or in the [MidiQOL Discord](https://discord.com/channels/915186263609454632/1218903432392347658).
@@ -1391,7 +1386,7 @@ The value set for optional bonus flags determines what happens when the bonus is
 
 #### ItemMacro in Optional Bonus Flags
 
-When using `ItemMacro` as the value for optional bonus flags (e.g., `flags.midi-qol.optional.NAME.attack.all`), it is automatically rewritten:
+When using `ItemMacro` as the value for optional bonus flags (e.g., `flags.midi-qol.optional.NAME.attack.all CUSTOM ItemMacro`), it is automatically rewritten:
 
 | Input Value | Rewritten To |
 |-------------|--------------|
@@ -1401,65 +1396,34 @@ When using `ItemMacro` as the value for optional bonus flags (e.g., `flags.midi-
 
 This allows effects to reference their source item's macro without hardcoding UUIDs.
 
-### Attack Bonuses
+### Bonus Types
 
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.attack.all` | Evaluated | Optional attack bonus (all) |
-| `flags.midi-qol.optional.NAME.attack.{attackType}` | Evaluated | Optional attack bonus (specific type) |
-| `flags.midi-qol.optional.NAME.attack.fail.all` | Evaluated | Optional bonus on miss (all) |
-| `flags.midi-qol.optional.NAME.attack.fail.{attackType}` | Evaluated | Optional bonus on miss (specific type) |
+Optional bonuses have a `type` and `subtype`. A subtype of `all` will trigger for every subtype. Each type additionally has a variant `{type}.fail`, which applies only when the triggering roll failed. All of these keys are [evaluated](#conditional-expression-evaluation).
+```
+flags.midi-qol.optional.NAME.{type}.{subtype}
+```
+|  | Type | Subtype  Options |
+| :--- | :--- | :--- |
+| **Attack** | `attack` | `all`\| `{attack}` |
+| **Attack Fail** | `attack.fail` | `all`\| `{attack}` |
+| **Saving Throw** | `save` | `all` \| `{ability}` |
+| **Save Fail** | `save.fail` | `all` \| `{ability}` |
+| **Ability Check** | `check` | `all` \| `{ability}` |
+| **Check Fail** | `check.fail` | `all` \| `{ability}` |
+| **Skill Check** | `skill` | `all` \| `{skill}` |
+| **Skill Fail** | `skill.fail` | `all` \| `{skill}` |
+| **Damage Roll** | `damage` | `all` \| `{damage}` |
+| **AC** | `ac` | *(none)* |
 
-*Attack types:* `mwak`, `rwak`, `msak`, `rsak`
+- *Attacks:* `mwak`, `rwak`, `msak`, `rsak`
+- *Abilities:* `str`, `dex`, `con`, `int`, `wis`, `cha`
+- *Skills:* `acr`, `ani`, `arc`, `ath`, `dec`, `his`, `ins`, `inv`, `itm`, `med`, `nat`, `prc`, `per`, `prf`, `rel`, `slt`, `ste`, `sur`
+- *Damage*: `mwak`, `rwak`, `msak`, `rsak`, `heal`, `other`, `save`, `util`
 
-### Save Bonuses
-
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.save.all` | Evaluated | Optional save bonus (all) |
-| `flags.midi-qol.optional.NAME.save.{ability}` | Evaluated | Optional save bonus (specific ability) |
-| `flags.midi-qol.optional.NAME.save.fail.all` | Evaluated | Optional bonus on failed save (all) |
-| `flags.midi-qol.optional.NAME.save.fail.{ability}` | Evaluated | Optional bonus on failed save (specific) |
-
-*Abilities:* `str`, `dex`, `con`, `int`, `wis`, `cha`
-
-### Check Bonuses
-
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.check.all` | Evaluated | Optional check bonus (all) |
-| `flags.midi-qol.optional.NAME.check.{ability}` | Evaluated | Optional check bonus (specific ability) |
-| `flags.midi-qol.optional.NAME.check.fail.all` | Evaluated | Optional bonus on failed check (all) |
-| `flags.midi-qol.optional.NAME.check.fail.{ability}` | Evaluated | Optional bonus on failed check (specific) |
-
-*Abilities: str, dex, con, int, wis, cha.*
-
-### Skill Bonuses
-
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.skill.all` | Evaluated | Optional skill bonus (all) |
-| `flags.midi-qol.optional.NAME.skill.{skill}` | Evaluated | Optional skill bonus (specific) |
-| `flags.midi-qol.optional.NAME.skill.fail.all` | Evaluated | Optional bonus on failed skill (all) |
-| `flags.midi-qol.optional.NAME.skill.fail.{skill}` | Evaluated | Optional bonus on failed skill (specific) |
-
-*Skills:* `acr`, `ani`, `arc`, `ath`, `dec`, `his`, `ins`, `inv`, `itm`, `med`, `nat`, `prc`, `per`, `prf`, `rel`, `slt`, `ste`, `sur`
-
-### Damage Bonuses
-
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.damage.all` | Evaluated | Optional damage bonus (all) |
-| `flags.midi-qol.optional.NAME.damage.{attackType}` | Evaluated | Optional damage bonus (specific type) |
-| `flags.midi-qol.optional.NAME.criticalDamage` | Evaluated | Rules for critical damage dice are applied to this bonus |
-
-*Attack types:* `mwak`, `rwak`, `msak`, `rsak`, `heal`, `other`, `save`, `util`
-
-### AC Bonus
-
-| Flag | Access | Description |
-|------|--------|-------------|
-| `flags.midi-qol.optional.NAME.ac` | Evaluated | Optional AC bonus (reaction) |
+Optional bonuses for damage can use an additional [configuration option](#configuration). This includes the bonus when evaluating damage dice for critical hits.
+```
+flags.midi-qol.optional.NAME.criticalDamage
+```
 
 > [!tip] [Jump to Top](#table-of-contents)
 
