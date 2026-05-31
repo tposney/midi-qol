@@ -1398,27 +1398,27 @@ This allows effects to reference their source item's macro without hardcoding UU
 
 ### Bonus Types
 
-Optional bonuses have a `type` and `subtype`. A subtype of `all` will trigger for every subtype. Each type additionally has a variant `{type}.fail`, which applies only when the triggering roll failed. All of these keys are [evaluated](#conditional-expression-evaluation).
-```
-flags.midi-qol.optional.NAME.{type}.{subtype}
-```
-|  | Type | Subtype  Options |
-| :--- | :--- | :--- |
-| **Attack** | `attack` | `all`\| `{attack}` |
-| **Attack Fail** | `attack.fail` | `all`\| `{attack}` |
-| **Saving Throw** | `save` | `all` \| `{ability}` |
-| **Save Fail** | `save.fail` | `all` \| `{ability}` |
-| **Ability Check** | `check` | `all` \| `{ability}` |
-| **Check Fail** | `check.fail` | `all` \| `{ability}` |
-| **Skill Check** | `skill` | `all` \| `{skill}` |
-| **Skill Fail** | `skill.fail` | `all` \| `{skill}` |
-| **Damage Roll** | `damage` | `all` \| `{damage}` |
-| **AC** | `ac` | *(none)* |
+Optional bonuses with `fail` keys are evaluated only when the triggering roll fails.
 
-- *Attacks:* `mwak`, `rwak`, `msak`, `rsak`
-- *Abilities:* `str`, `dex`, `con`, `int`, `wis`, `cha`
-- *Skills:* `acr`, `ani`, `arc`, `ath`, `dec`, `his`, `ins`, `inv`, `itm`, `med`, `nat`, `prc`, `per`, `prf`, `rel`, `slt`, `ste`, `sur`
-- *Damage*: `mwak`, `rwak`, `msak`, `rsak`, `heal`, `other`, `save`, `util`
+| Flag | Access |
+| --- | --- |
+| `flags.midi-qol.optional.NAME.attack.{attackType}` | Evaluated |
+| `flags.midi-qol.optional.NAME.attack.fail.{attackType}` | Evaluated |
+| `flags.midi-qol.optional.NAME.save.{ability}` | Evaluated |
+| `flags.midi-qol.optional.NAME.save.fail.{ability}` | Evaluated |
+| `flags.midi-qol.optional.NAME.check.{ability}` | Evaluated |
+| `flags.midi-qol.optional.NAME.check.fail.{ability}` | Evaluated |
+| `flags.midi-qol.optional.NAME.skill.{skill}` | Evaluated |
+| `flags.midi-qol.optional.NAME.skill.fail.{skill}` | Evaluated |
+| `flags.midi-qol.optional.NAME.damage.{damageType}` | Evaluated |
+| `flags.midi-qol.optional.NAME.ac` | Evaluated |
+
+| Subtype | Values |
+| --- | --- |
+| **Attack Types** | `all` \| `mwak`, `rwak`, `msak`, `rsak` |
+| **Abilities** | `all` \| `str`, `dex`, `con`, `int`, `wis`, `cha` |
+| **Skills** | `all` \| `acr`, `ani`, `arc`, `ath`, `dec`, `his`, `ins`, `inv`, `itm`, `med`, `nat`, `prc`, `per`, `prf`, `rel`, `slt`, `ste`, `sur` |
+| **Damage Types** | `all` \| `mwak`, `rwak`, `msak`, `rsak`, `heal`, `other`, `save`, `util` |
 
 Optional bonuses for damage can use an additional [configuration option](#configuration). This includes the bonus when evaluating damage dice for critical hits.
 ```
