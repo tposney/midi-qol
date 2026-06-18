@@ -139,7 +139,6 @@ declare module "fvtt-types/configuration" {
     "midi-qol.splashWarnings": boolean;
     "midi-qol.last-run-version": string;
     "midi-qol.instanceId": string;
-    "chris-premades.effectInterface": boolean;
   }
   interface FlagConfig {
     ActiveEffect: {

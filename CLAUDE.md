@@ -213,6 +213,8 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
     - DAE API (`game.modules.get("dae").api`) exports: `expireEffect`, `isEffectExpired`, `isTransferEffect`, `hasDuration`, `hasExpiry`.
     - One-time migration from times-up settings runs at `ready` via `migrateTimesUpSettings()`.
 
+15. **Persisted workflow fields go through `PersistedFieldStore`** — Workflow.ts fields backed by chat-card flags (scalars, token Sets, Roll/Roll[], DamageDescription[]) use `this.#persisted.scalar/tokenSet/roll(s)/damageDetail` accessors, not hand-rolled `#field` + getter/setter pairs. The store owns caching, flag fallback, and serialization (including `Roll.fromData` rehydration). New persisted fields should use it; only genuinely special accessors (`currentAction`, `isCritical`/`isFumble`, `activity`, `item`, `token`, `otherDamageMatches`) remain hand-written.
+
 ## Testing
 
 Tests use the Quench framework in separate test modules (not embedded in the main module source). Each major version branch has its own test module:

@@ -73,7 +73,7 @@ import {
   clearTargetSave,
   getConsumptionData,
 } from "../utils.js";
-import { activityHasScaledTargetCount, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
+import { activityHasScaledTargetCount, attachTokenOptions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
   _validateType(value: unknown) {
@@ -238,6 +238,9 @@ export let MidiActivityMixin = Base => {
           // @ts-expect-error fvtt-types missing EDGE_RESTRICTION_TYPES (v14 regions use EDGE not WALL)
           wallRestriction: new StringField({ initial: "none", choices: ["none", ...CONST.EDGE_RESTRICTION_TYPES] }),
           regionVisibility: new NumberField({ initial: CONST.REGION_VISIBILITY.ALWAYS, choices: Object.values(CONST.REGION_VISIBILITY) }),
+          // "default" leaves the region stationary. "caster" attaches it to the caster's token;
+          // "target" attaches it to a chosen target (prompts if multiple targets are selected).
+          attachToken: new StringField({ initial: "default", choices: ["default", "caster", "target"] }),
           rules: new ArrayField(new SchemaField({
             trigger: new StringField({ required: true, blank: false, initial: "entry" }),
             action: new StringField({ required: true, blank: false, initial: "useActivity" }),
@@ -292,7 +295,7 @@ export let MidiActivityMixin = Base => {
      * Default is false and must be overridden in the subclass
      * Examples of self triggerOnly are the Cast and Forward activities
      */
-    get selfOnlyTriggerActivity() {
+    get isSelfTriggerableOnly() {
       return false;
     }
 
@@ -416,18 +419,14 @@ export let MidiActivityMixin = Base => {
           ui.notifications?.warn(i18n("midi-qol.noTargets"));
           return;
         }
-        const result = (await socketlibSocket.executeAsUser("applyEffects", authorId, {
+        await socketlibSocket.executeAsUser("applyEffects", authorId, {
           workflowId: message.uuid,
           targets: Array.from(game.user?.targets).map(t => t.document.uuid)
-        }));
+        });
       } else {
-        if (workflow) {
-          workflow.forceApplyEffects = true; // don't overwrite the application targets
-          workflow.effectTargets = new Set(game.user?.targets);
-          if (workflow.effectTargets.size > 0) await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects)
-        } else {
-          ui.notifications?.warn(i18nFormat("midi-qol.NoWorkflow", { itemName: this.item?.name }));
-        }
+        workflow.forceApplyEffects = true; // don't overwrite the application targets
+        workflow.effectTargets = new Set(game.user?.targets);
+        if (workflow.effectTargets.size > 0) await workflow.performState(workflow.WorkflowState_ApplyDynamicEffects)
       }
     }
     static async #confirmDamageRollCancel(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
@@ -619,7 +618,7 @@ export let MidiActivityMixin = Base => {
       // itemData._id = this.item._id;
       actor = getActor(usage.midiOptions?.rollAs);
       if (usage.midiOptions?.rollAs) delete usage.midiOptions.rollAs;
-      if (!actor || actor === this.actor || this.selfOnlyTriggerActivity) return this.use(usage, dialog, message);
+      if (!actor || actor === this.actor || this.isSelfTriggerableOnly) return this.use(usage, dialog, message);
       const itemData = this.item.toObject();
       // @ts-expect-error
       delete itemData._id;
@@ -638,6 +637,7 @@ export let MidiActivityMixin = Base => {
       if (!this.item.isEmbedded) return;
       if (!this.item.isOwner) {
         ui.notifications?.error("DND5E.DocumentUseWarn", { localize: true });
+        return;
       }
       if (!this.canUse) {
         ui.notifications?.error("DND5E.ACTIVITY.Warning.UsageNotAllowed", { localize: true });
@@ -872,7 +872,7 @@ export let MidiActivityMixin = Base => {
       const consumption = this._prepareUsageConfig(usage);
       const autoConsume = await this._prepareUsageUpdates(consumption, { returnErrors: true });
       // If consumption would fail _prepareUsageUpdates will return an array of errors and on success an object of updates
-      if (autoConsume.length ?? 0 > 0) {
+      if ((autoConsume.length ?? 0) > 0) {
         dialog.configure = true;
         return true;
       }
@@ -1808,9 +1808,55 @@ export let MidiActivityMixin = Base => {
         case "refundOtherActivity": return !consumed || foundry.utils.isEmpty(consumed);
         // dnd5e hides placeTemplate when !game.canvas.scene, which is true during page reload
         // before canvas is ready — only check permission here
-        case "placeTemplate": return !game.user?.can("TEMPLATE_CREATE");
+        // REGION_CREATE replaced the deprecated TEMPLATE_CREATE in v14 (templates are regions); cast until fvtt-types catches up
+        case "placeTemplate": return !game.user?.can("REGION_CREATE" as User.ActionPermission);
       }
       return super.shouldHideChatButton?.(button, message) ?? false;
+    }
+
+    // Region update deferred from _placeEmanationTemplate, consumed by
+    // _attachRegionActivityBehavior later in the same use flow (same activity clone)
+    declare _pendingRegionUpdate: Record<string, any> | undefined;
+
+    async _resolveAttachTokenId(workflow: Workflow | undefined, mode: "caster" | "target"): Promise<string | undefined> {
+      if (mode === "caster") return (workflow?.token ?? getToken(this.actor))?.document.id ?? undefined;
+      const fromWorkflow = workflow?.targets && workflow.targets.size > 0
+        ? Array.from(workflow.targets) as Token.Implementation[]
+        : [];
+      const targets = fromWorkflow.length > 0
+        ? fromWorkflow
+        : Array.from(game.user?.targets ?? []) as Token.Implementation[];
+      if (targets.length === 0) {
+        ui.notifications?.warn(i18n("midi-qol.REGION_BEHAVIOR.attachToken.noTarget"));
+        return undefined;
+      }
+      if (targets.length === 1) return targets[0].document.id ?? undefined;
+      return this._promptAttachTargetPicker(targets);
+    }
+
+    async _promptAttachTargetPicker(targets: Token.Implementation[]): Promise<string | undefined> {
+      const optionsHtml = targets
+        .map(t => `<option value="${t.document.id}">${foundry.utils.escapeHTML(t.document.name ?? t.name ?? t.id ?? "")}</option>`)
+        .join("");
+      const content = `
+        <p>${i18n("midi-qol.REGION_BEHAVIOR.attachToken.pickerHint")}</p>
+        <select name="attachTargetId" autofocus>${optionsHtml}</select>
+      `;
+      let selectedId: string | undefined;
+      await foundry.applications.api.DialogV2.prompt<foundry.applications.api.DialogV2.PromptConfig>({
+        window: { title: i18n("midi-qol.REGION_BEHAVIOR.attachToken.pickerTitle") },
+        content,
+        ok: {
+          callback: (_evt, button) => {
+            const form = button.form as HTMLFormElement | null;
+            const select = form?.querySelector('select[name="attachTargetId"]') as HTMLSelectElement | null;
+            const value = select?.value;
+            if (value) selectedId = value;
+          },
+        },
+        rejectClose: false,
+      });
+      return selectedId;
     }
 
     async _placeEmanationTemplate(workflow: Workflow, castLevel?: number) {
@@ -1856,9 +1902,8 @@ export let MidiActivityMixin = Base => {
 
           if (regionDoc) {
             const regionUpdate: Record<string, any> = {};
-            if (!this.target?.template?.stationary) {
-              regionUpdate.attachment = { token: tokenToUse.document.id };
-            }
+            // Token attachment is resolved in _attachRegionActivityBehavior, which runs
+            // after template targeting so attachToken "target" sees the template targets.
             // Apply configured region visibility (default ALWAYS from compat shim)
             const rbConfig = this.regionBehavior;
             if (rbConfig?.enabled && rbConfig.regionVisibility !== undefined) {
@@ -1998,6 +2043,23 @@ export let MidiActivityMixin = Base => {
       if (pendingUpdate) {
         regionUpdate = { ...pendingUpdate, ...(regionUpdate ?? {}) };
         delete this._pendingRegionUpdate;
+      }
+
+      // Resolve token attachment for all template types. "default" preserves the
+      // pre-attachToken behavior: auto-placed emanations follow the caster, all other
+      // templates are stationary. Attachment configures the region itself, so it
+      // applies regardless of regionBehavior.enabled (which only gates the behavior rules).
+      const attachMode = this.regionBehavior?.attachToken ?? "default";
+      const effectiveAttachMode = attachMode === "default"
+        ? (activityHasAutoPlaceTemplate(this) ? "caster" : undefined)
+        : attachMode;
+      if ((effectiveAttachMode === "caster" || effectiveAttachMode === "target")
+          && !this.target?.template?.stationary
+          && !(regionUpdate?.attachment)) {
+        const attachId = await this._resolveAttachTokenId(workflow, effectiveAttachMode);
+        if (attachId) {
+          regionUpdate = { ...(regionUpdate ?? {}), attachment: { token: attachId } };
+        }
       }
 
       await writeRegion(regionDoc, { update: regionUpdate, behaviors });
@@ -2231,6 +2293,13 @@ export let MidiActivityMixinSheet = Base => {
 
     static PARTS = {
       ...super.PARTS,
+      activation: {
+        template: "modules/midi-qol/templates/activity/activation.hbs",
+        templates: [
+          ...super.PARTS.activation.templates,
+          "modules/midi-qol/templates/activity/parts/region-behavior-targeting.hbs",
+        ]
+      },
       "midi-qol": {
         template: "modules/midi-qol/templates/activity/parts/midi-activity-tab.hbs",
       }
@@ -2317,7 +2386,6 @@ export let MidiActivityMixinSheet = Base => {
       context.AutoCEEffectsOptions = [{ value: "default", label: i18n("midi-qol.MidiSettings") }, ...AutoCEEffectsOptions];
       const defaultAction = { "default": i18n("midi-qol.MidiSettings") };
       context.AutoTargetActionOptions = Object.entries(foundry.utils.mergeObject(defaultAction, autoTargetOptions)).map(([value, opt]) => ({ value, label: typeof opt === "string" ? opt : opt.label }));
-      context.hasAreaTarget = this.activity.target?.template?.type;
       context.possibleOtherActivity = this.activity.possibleOtherActivity;
       context.turnChoiceOptions = [{ value: "start", label: i18n("midi-qol.OVERTIME.FIELDS.turnChoice.start") }, { value: "end", label: i18n("midi-qol.OVERTIME.FIELDS.turnChoice.end") }];
       context.overTimeRollAsOptions = [{ value: "target", label: i18n("midi-qol.OVERTIME.FIELDS.rollAs.target") }, { value: "source", label: i18n("midi-qol.OVERTIME.FIELDS.rollAs.source") }];
@@ -2330,9 +2398,16 @@ export let MidiActivityMixinSheet = Base => {
       context.hasDamage = this.activity.damage;
       context.isSummons = this.activity.type === "summon";
       context.consumesHP = this.activity.consumption?.targets?.some(t => t.target === "attributes.hp.value");
+      context.hasAreaTarget = !!this.activity.target?.template?.type;
       if (partId === "midi-qol") {
         context.tab = context.tabs["midi-qol"];
         return this._prepareMidiQolContext(context);
+      }
+      if (partId === "activation") {
+        // Region-behavior panel only renders for real AoE/emanation templates — matches
+        // GameSystemConfig.areaTargetTypes, so emanationNoTemplate (no template at all) is excluded.
+        context.showRegionBehaviorPanel = activityHasAreaTarget(this.activity);
+        context.attachTokenOptions = attachTokenOptions(this.activity.regionBehavior?.attachToken ?? "default");
       }
       return context;
     }
@@ -2340,41 +2415,17 @@ export let MidiActivityMixinSheet = Base => {
     async _onRender(context, options) {
       await super._onRender(context, options);
 
-      // Inject Region Behaviour button into the targeting section when activity has an area target
-      // activityHasAreaTarget checks GameSystemConfig.areaTargetTypes — includes emanation but excludes emanationNoTemplate
+      // Auto-set target.override when region behaviour is enabled. The form-rendered
+      // checkbox lives in the activation tab via region-behavior-targeting.hbs.
       if (!activityHasAreaTarget(this.activity)) return;
-      const targetingTab = this.element.querySelector('section[data-tab="activation-targeting"]');
-      if (!targetingTab) return;
-      // Find the last fieldset in the targeting tab (the "Target Type Area" fieldset)
-      const fieldsets = targetingTab.querySelectorAll("fieldset");
-      const areaFieldset = fieldsets[fieldsets.length - 1];
-      if (!areaFieldset) return;
-      // Don't inject twice
-      if (areaFieldset.querySelector('[data-action="openRegionBehaviorEditor"]')) return;
-
-      const enabled = this.activity.regionBehavior?.enabled ?? false;
-      const group = document.createElement("div");
-      group.classList.add("form-group");
-      group.innerHTML = `
-        <label>${i18n("midi-qol.REGION_BEHAVIOR.header")}</label>
-        <div class="form-fields">
-          <input type="checkbox" name="regionBehavior.enabled" ${enabled ? "checked" : ""} />
-          <button type="button" class="unbutton control-button" data-action="openRegionBehaviorEditor"
-            data-tooltip="midi-qol.REGION_BEHAVIOR.editor.hint"
-            aria-label="${i18n("midi-qol.REGION_BEHAVIOR.editor.title")}">
-            <i class="fas fa-cog" inert></i>
-          </button>
-        </div>
-        <p class="hint">${i18n("midi-qol.SHARED.FIELDS.regionBehavior.enabled.hint")}</p>
-      `;
-      areaFieldset.appendChild(group);
-
-      // Auto-set target.override when region behaviour is enabled
-      if (enabled && !this.activity.target?.override) {
+      const enabledCheckbox = this.element.querySelector(
+        'input[name="regionBehavior.enabled"]'
+      ) as HTMLInputElement | null;
+      if (!enabledCheckbox) return;
+      if (this.activity.regionBehavior?.enabled && !this.activity.target?.override) {
         this.activity.update({ "target.override": true });
       }
-      const enabledCheckbox = group.querySelector('input[name="regionBehavior.enabled"]') as HTMLInputElement;
-      enabledCheckbox?.addEventListener("change", async () => {
+      enabledCheckbox.addEventListener("change", async () => {
         if (enabledCheckbox.checked && !this.activity.target?.override) {
           await this.activity.update({ "target.override": true });
         }

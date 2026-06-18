@@ -583,24 +583,26 @@ function isVisible(this: Token.Implementation, wrapped) {
  * @param messageRollMode - Roll mode from message config (takes priority if already BLIND)
  * @returns The roll mode to use
  */
+// rollMode here is a v14 message mode (CONFIG.ChatMessage.modes key: public/gm/blind/self), matching
+// what the roll dialog and the activity seed now use — not the legacy CONST.DICE_ROLL_MODES values.
 function applyBlindRollMode(
   blindRollSettings: string[],
   choiceId: string | undefined,
-  messageRollMode: keyof CONFIG.Dice.RollModes | undefined
+  messageRollMode: string | undefined
 ): keyof CONFIG.Dice.RollModes {
-  let rollMode: keyof CONFIG.Dice.RollModes = messageRollMode ?? safeGetGameSetting("core", "rollMode");
+  let rollMode: string = messageRollMode ?? safeGetGameSetting("core", "messageMode");
 
   // If already blind, keep it
-  if (rollMode === CONST.DICE_ROLL_MODES.BLIND) return rollMode;
+  if (rollMode === "blind") return rollMode as keyof CONFIG.Dice.RollModes;
 
   // Check if this roll should be forced to blind
   const shouldBeBlind = blindRollSettings.includes("all") || blindRollSettings.includes(choiceId ?? "");
-  if (shouldBeBlind && [CONST.DICE_ROLL_MODES.PUBLIC, "roll", CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode)) {
-    rollMode = CONST.DICE_ROLL_MODES.BLIND;
+  if (shouldBeBlind && ["public", "roll", "gm"].includes(rollMode)) {
+    rollMode = "blind";
     game.settings.set("core", "rollMode", CONST.DICE_ROLL_MODES.BLIND);
   }
 
-  return rollMode;
+  return rollMode as keyof CONFIG.Dice.RollModes;
 }
 
 export interface Options {
@@ -902,9 +904,8 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     if (preRollSkillHookId) Hooks.off("dnd5e.preRollSkill", preRollSkillHookId);
     if (rollSkillHookId) Hooks.off("dnd5e.postSkillRollConfiguration", rollSkillHookId);
     if (saveRollMode) game.settings.set("core", "rollMode", saveRollMode);
-    if (oldFormat) return result?.[0];
-    return result;
   }
+  return oldFormat ? result?.[0] : result;
 }
 
 /**
@@ -1572,21 +1573,24 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     }
     if (saveRollMode) game.settings.set("core", "rollMode", saveRollMode);
     if (abilityId) await expireRollEffect.bind(this)(rollType, abilityId, success);
-    if (config.midiOptions.isConcentrationCheck) {
+    // Concentration saves arrive as rollType "save" with "concentration" in hookNames (see effectiveRollType).
+    // Pass the bare "ConcentrationSave" so expireRollEffect matches is/isConcentrationSaveSuccess/Failure.
+    if (config.hookNames?.includes("concentration")) {
       // @ts-expect-error no dnd5e-types
       if (success === undefined && result?.[0]?.isSuccess !== undefined) success = result[0].isSuccess;
-      expireRollEffect.bind(this)("isConcentrationSave", "", success);
+      await expireRollEffect.bind(this)("ConcentrationSave", "", success);
     }
   } catch (err) {
     const message = `doRollAbility error ${this.name} ${abilityId} ${rollType} ${this.uuid}`;
     TroubleShooter.recordError(err, message);
     error(message, err);
+    throw err;
   } finally {
     if (preRollAbilityHookId) Hooks.off(`dnd5e.preRoll${type}`, preRollAbilityHookId);
     if (rollAbilityHookId) Hooks.off(`dnd5e.post${type}RollConfiguration`, rollAbilityHookId);
     if (saveRollMode) game.settings.set("core", "rollMode", saveRollMode);
-    return oldFormat ? result?.[0] : result
   }
+  return oldFormat ? result?.[0] : result
 }
 
 export async function rollSavingThrow(this: Actor.Implementation, wrapped, config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {

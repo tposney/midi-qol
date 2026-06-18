@@ -679,19 +679,19 @@ export let fetchParams = () => {
   if (configSettings.reactionTimeout === undefined) configSettings.reactionTimeout = 0;
   if (configSettings.convenientEffectsReaction === undefined) configSettings.convenientEffectsReaction = "Reaction"; //TODO come back when it is configurable in midi and set it to ""
   if (typeof configSettings.rangeTarget !== "string") configSettings.rangeTarget = "none";
-  if (!configSettings.showReactionAttackRoll === undefined) configSettings.showReactionAttackRoll = "all";
+  if (configSettings.showReactionAttackRoll === undefined) configSettings.showReactionAttackRoll = "all";
+  //@ts-expect-error type mismatch - this is for legacy true setting
+  if (configSettings.rollChecksBlind === true) configSettings.rollChecksBlind = ["all"];
   if (!configSettings.rollChecksBlind) configSettings.rollChecksBlind = [];
   configSettings.rollChecksBlind = configSettings.rollChecksBlind.filter((item) => item !== "none");
   //@ts-expect-error type mismatch - this is for legacy true setting
-  if (configSettings.rollChecksBlind === true) configSettings.rollChecksBlind = ["all"];
+  if (configSettings.rollSavesBlind === true) configSettings.rollSavesBlind = ["all"];
   if (!configSettings.rollSavesBlind) configSettings.rollSavesBlind = [];
   configSettings.rollSavesBlind = configSettings.rollSavesBlind.filter((item) => item !== "none");
   //@ts-expect-error type mismatch - this is for legacy true setting
-  if (configSettings.rollSavesBlind === true) configSettings.rollSavessBlind = ["all"];
+  if (configSettings.rollSkillsBlind === true) configSettings.rollSkillsBlind = ["all"];
   if (!configSettings.rollSkillsBlind) configSettings.rollSkillsBlind = [];
   configSettings.rollSkillsBlind = configSettings.rollSkillsBlind.filter((item) => item !== "none");
-  //@ts-expect-error type mismatch - this is for legacy true setting
-  if (configSettings.rollSkillsBlind === true) configSettings.rollSkillsBlind = ["all"];
   migrateGmRollHiding(configSettings);
   if (configSettings.addFakeDice === undefined) configSettings.addFakeDice = false;
   if (typeof configSettings.gmConsumeResource !== "string") configSettings.gmConsumeResource = "none";

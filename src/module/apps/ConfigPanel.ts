@@ -428,7 +428,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
     let newSettings = foundry.utils.mergeObject(configSettings, realData, { overwrite: true, inplace: false });
     if (game.user?.can("SETTINGS_MODIFY")) {
-      game.settings.set("midi-qol", "ConfigSettings", newSettings);
+      await game.settings.set("midi-qol", "ConfigSettings", newSettings);
       //@ts-expect-error v13 stubby
       if (needReload) foundry.applications.settings.SettingsConfig.reloadConfirm({world: true});
     }
@@ -781,13 +781,13 @@ export async function applySettings(key: string) {
       const jsonText = await fetchConfigFile(PATH + config.fileName);
       const configData = JSON.parse(jsonText);
       if (await showDiffs(configSettings, configData.configSettings, "", config.shortDescription)) {
-        importSettingsFromJSON(jsonText);
+        await importSettingsFromJSON(jsonText);
+        log(`Loaded ${config.fileName}`);
       }
       return true;
     } catch (err) {
       error("could not load config file", config.fileName, err);
     }
-    log(`Loaded ${config.fileName} version ${config.version}`);
   }
   return false;
 }

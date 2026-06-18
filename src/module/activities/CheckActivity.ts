@@ -2,7 +2,7 @@ import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { replaceDefaultActivities, autoCheckSavesOptions, configSettings } from "../settings.js";
+import { replaceDefaultActivities, autoCheckSavesOptions, configSettings, safeGetGameSetting } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { MidiSaveActivity } from "./SaveActivity.js";
 import { getSceneTargets } from "./activityHelpers.js";
@@ -103,14 +103,15 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
         const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: token instanceof Token ? token.document : null });
         const messageData: AnyMutableObject = { data: { speaker } };
         if (!actor) continue;
-        if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) messageData.rollMode = game.settings.get("core", "rollMode");
-        else messageData.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+        // v14 message-mode strings (CONFIG.ChatMessage.modes keys) so the value matches the roll dialog's options
+        if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) messageData.rollMode = safeGetGameSetting("core", "messageMode");
+        else messageData.rollMode = "gm";
         if (!game.user?.isGM) {
-          if (configSettings.playerRollSaves === "noneDialogPublic") messageData.rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
-          else if (configSettings.playerRollSaves === "noneDialogPrivate") messageData.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
-          else if (configSettings.playerRollSaves === "noneDialogSelf") messageData.rollMode = CONST.DICE_ROLL_MODES.SELF;
-          else if (configSettings.playerRollSaves === "noneDialogBlind") messageData.rollMode = CONST.DICE_ROLL_MODES.BLIND;
-          else messageData.rollMode = game.settings.get("core", "rollMode");
+          if (configSettings.playerRollSaves === "noneDialogPublic") messageData.rollMode = "public";
+          else if (configSettings.playerRollSaves === "noneDialogPrivate") messageData.rollMode = "gm";
+          else if (configSettings.playerRollSaves === "noneDialogSelf") messageData.rollMode = "self";
+          else if (configSettings.playerRollSaves === "noneDialogBlind") messageData.rollMode = "blind";
+          else messageData.rollMode = safeGetGameSetting("core", "messageMode");
         }
         //@ts-expect-error no dnd5e types
         if (skill) await actor.rollSkill({ ...rollData, skill }, {}, messageData);

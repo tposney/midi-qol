@@ -182,7 +182,9 @@ Hooks.on("createChatMessage", (message, data, user) => {
   // if (currentUndo.userId !== user) return;
   if (speaker.token) {
     const tokenUuid = `Scene.${speaker.scene}.Token.${speaker.token}`;
-    if (currentUndo.allTargets?.has(tokenUuid)) currentUndo.chatCardUuids.push(message.uuid);
+    // allTargets is keyed by actor uuid - resolve the speaker token's actor
+    const actorUuid = (fromUuidSync(tokenUuid) as TokenDocument.Implementation | null)?.actor?.uuid;
+    if (actorUuid && currentUndo.allTargets?.has(actorUuid)) currentUndo.chatCardUuids.push(message.uuid);
   } else if (speaker.actor) {
     const actorUuid = `Actor.${speaker.actor}`;
     if (currentUndo.allTargets?.has(actorUuid)) currentUndo.chatCardUuids.push(message.uuid);
@@ -417,7 +419,7 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
 
   if (debugEnabled > 0) warn("undoSingleTokenActor | Effects to add ", actor.name, effectsToAdd);
   if (effectsToAdd?.length > 0) {
-    if (globalThis.DAE?.actionQueue) globalThis.DAE.actionQueue.add(async () => {
+    if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(async () => {
       effectsToAdd = effectsToAdd?.filter(eff => !actor.effects.some(effect => effect.id === eff._id!));
       if (debugEnabled > 0) warn("undoSingleTokenActor | Effects to add are ", effectsToAdd, actor.name);
       // @ts-expect-error extra option silliness

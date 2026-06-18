@@ -32,8 +32,7 @@ export let readyHooks = async () => {
 
   //@ts-expect-error
   Hooks.on("template3dUpdatePreview", (at, t) => {
-    //@ts-expect-error VolumetricTemplates
-    VolumetricTemplates.compute3Dtemplate(t);
+    globalThis.VolumetricTemplates?.compute3Dtemplate(t);
   });
 
   Hooks.on("targetToken", foundry.utils.debounce(checkFlanking, 150));
@@ -404,7 +403,7 @@ export let readyHooks = async () => {
       combat.rollInitiative(combatantIds, { updateTurn: true }).then(() => {
         // Check if combat was deleted during async operation
         if (game.combats?.get(combatId)) combat.update({ turn: 0 });
-      });
+      }).catch(err => TroubleShooter.recordError(err, "autoRerollInitiative"));
     }
   });
 }
