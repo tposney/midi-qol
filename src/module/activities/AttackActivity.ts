@@ -494,13 +494,13 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
 
         message ??= {};
         message.create ??= config.midiOptions.chatMessage;
-        const rollMode = safeGetGameSetting("core", "rollMode");
-        const showChatAttackCard = game.user?.isGM && configSettings.gmAttackDamageCards && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
+        const rollMode = safeGetGameSetting("core", "messageMode") as string;
+        const showChatAttackCard = game.user?.isGM && configSettings.gmAttackDamageCards && ["self", "blind", "gm"].includes(rollMode);
         if (showChatAttackCard) {
           // Show a chat card for attack rolls if the players are not going to see the midi card.
           message.create = true;
           foundry.utils.setProperty(message, "data.flags.midi-qol.gmHide", true); // since the gm will see the midi card hide the attack card for the author
-          message.rollMode = rollMode;
+          message.rollMode = rollMode as keyof CONFIG.Dice.RollModes;
         }
         config.attackMode ??= this.attackMode ?? "oneHanded";
         // @ts-expect-error isVersatile is a dnd5e getter

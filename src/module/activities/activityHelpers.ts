@@ -399,11 +399,11 @@ export async function showItemInfo(this: Item.Implementation): Promise<ChatMessa
   };
   chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
 
-  // Toggle default roll mode
-  let rollMode = safeGetGameSetting("core", "rollMode") ?? "public";
-  if (["gmroll", "blindroll"].includes(rollMode)) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM").filter(u => u.active);
-  if (rollMode === "blindroll") chatData["blind"] = true;
-  if (rollMode === "selfroll") chatData["whisper"] = [game.user?.id];
+  // Toggle default roll mode (v14 message modes)
+  let rollMode = (safeGetGameSetting("core", "messageMode") as string) ?? "public";
+  if (["gm", "blind"].includes(rollMode)) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM").filter(u => u.active);
+  if (rollMode === "blind") chatData["blind"] = true;
+  if (rollMode === "self") chatData["whisper"] = [game.user?.id];
 
   // Create the chat message
   return ChatMessage.create(chatData);

@@ -622,32 +622,38 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         removeAll(html, ".midi-save-attribution-info");
       }
 
+      // Per-target result visibility keys on the TARGET (the saver) — the row classes
+      // (.midi-qol-npc-save-* vs .midi-qol-save-*) are assigned from each target's hasPlayerOwner:
+      //   NPC-target results → shown only when the challenge is fully public ("all")
+      //   PC-target results  → shown unless the challenge is hidden entirely ("none")
+      // The single save DC is one value for the activity, so its visibility follows the CASTER.
       const dcHidden = shouldDisplayChallenge === "player" && !(messageActor as any)?.hasPlayerOwner;
-      const displayNPCSaves = shouldDisplayChallenge === "all" || (shouldDisplayChallenge === "player" && !dcHidden);
+      const displayNPCSaves = shouldDisplayChallenge === "all";
       const displayPlayerSaves = shouldDisplayChallenge !== "none";
 
       if (!displayPlayerSaves || autoCheckSaves === "whisper" || this.blind) {
         removeAll(html, ".midi-qol-save-total");
         removeAll(html, ".midi-qol-save-tooltip");
         removeAll(html, ".midi-qol-save-symbol");
-        removeAll(html, ".midi-qol-saveDC");
       }
       if (!displayNPCSaves || autoCheckSaves === "whisper" || this.blind) {
-        if (!dcHidden) removeAll(html, ".midi-qol-npc-save-symbol");
+        removeAll(html, ".midi-qol-npc-save-symbol");
         removeAll(html, ".midi-qol-npc-save-tooltip");
         removeAll(html, ".midi-qol-npc-save-total");
-        if (!displayNPCSaves && !messageActor?.hasPlayerOwner) {
-          removeAll(html, ".midi-qol-saveDC");
-        }
       } else if (autoCheckSaves !== "allShow") {
         removeAll(html, ".midi-qol-npc-save-tooltip");
         if (autoCheckSaves === "allNoRoll") removeAll(html, ".midi-qol-npc-save-total");
       }
 
+      // Save DC (single, activity-level) follows the caster.
+      if (dcHidden || shouldDisplayChallenge === "none" || autoCheckSaves === "whisper" || this.blind) {
+        removeAll(html, ".midi-qol-saveDC");
+      }
+
       if (!configSettings.highlightSuccess || !["all", "player"].includes(shouldDisplayChallenge) || ["whisper", "none"].includes(autoCheckSaves)) {
         stripHighlight(html, ".midi-qol-saves-display .midi-qol-save-class");
       }
-      if ((!displayNPCSaves && !dcHidden) || !configSettings.highlightSuccess) {
+      if (!displayNPCSaves || !configSettings.highlightSuccess) {
         stripHighlight(html, ".midi-qol-save-class.midi-qol-npc-target");
       }
     }

@@ -103,6 +103,8 @@ import {
   clearTargetSave,
   getToolLabel,
   getConsumptionData,
+  toMessageMode,
+  toLegacyRollMode,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, computeAbilityAdvantage, buildPreComputedAdvantageMap } from "./patching.js";
@@ -2018,8 +2020,8 @@ export class Workflow {
     }
     if ((!getAutoRollAttack(this) && this.activity.attack) || this.activity instanceof MidiTransformActivity) {
       // Not auto rolling so display targets
-      const rollMode = safeGetGameSetting("core", "rollMode");
-      this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === CONST.DICE_ROLL_MODES.BLIND || rollMode === CONST.DICE_ROLL_MODES.PRIVATE;
+      const rollMode = safeGetGameSetting("core", "messageMode") as string;
+      this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === "blind" || rollMode === "gm";
       if (this.activity.target?.affects?.type !== "self") {
         await this.displayHitTargets(this.whisperAttackCard);
       }
@@ -2097,8 +2099,8 @@ export class Workflow {
       await this.recordFlankingBonuses();
       await this.checkHits();
       await this.displayAttackRoll();
-      const rollMode = safeGetGameSetting("core", "rollMode");
-      this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === CONST.DICE_ROLL_MODES.BLIND || rollMode === CONST.DICE_ROLL_MODES.PRIVATE;
+      const rollMode = safeGetGameSetting("core", "messageMode") as string;
+      this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === "blind" || rollMode === "gm";
       await this.callMidiHooks("midi-qol.hitsChecked");
       if (this.aborted) return this.WorkflowState_Abort;
       await this.displayHits(this.whisperAttackCard);
@@ -5473,20 +5475,21 @@ export class Workflow {
     };
 
     if (!whisper) {
+      // monks-tokenbar uses the legacy roll-mode vocabulary ("roll" = public) — translate at the boundary.
       const rollMode = ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
-        ? this.activity.midiProperties!.rollMode
-        : CONST.DICE_ROLL_MODES.PUBLIC;
+        ? toLegacyRollMode(this.activity.midiProperties!.rollMode)
+        : "roll";
       timedExecuteAsGM("monksTokenBarSaves", buildRequestData(monkRequests, rollMode));
     } else {
       // Whisper mode - send GM and player requests separately with different roll modes
       const playerRollMode = ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
-        ? this.activity.midiProperties!.rollMode
+        ? toLegacyRollMode(this.activity.midiProperties!.rollMode)
         : "roll";
       if (monkRequestsPlayer.length > 0) {
         timedExecuteAsGM("monksTokenBarSaves", buildRequestData(monkRequestsPlayer, playerRollMode));
       }
       if (monkRequestsGM.length > 0) {
-        timedExecuteAsGM("monksTokenBarSaves", buildRequestData(monkRequestsGM, CONST.DICE_ROLL_MODES.PRIVATE));
+        timedExecuteAsGM("monksTokenBarSaves", buildRequestData(monkRequestsGM, "gmroll"));
       }
     }
   }
@@ -5533,8 +5536,9 @@ export class Workflow {
       disadvantage: flashRequests.some(r => r.disadvantage) || undefined,
       skipRollDialog: true,
       sendAsRequest: true,
+      // flash-rolls-5e uses the legacy roll-mode vocabulary ("roll" = public) — translate at the boundary.
       rollMode: ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
-        ? this.activity.midiProperties!.rollMode
+        ? toLegacyRollMode(this.activity.midiProperties!.rollMode)
         : "roll",
       workflowId: this.id,
     };
@@ -5648,9 +5652,7 @@ export class Workflow {
             const showTargetDC = configSettings.autoCheckSaves !== "whisper" && shouldDisplaySaveDC(this.actor);
             if (!game.user?.isGM && saveDisplay === "allShow") {
               // Non-GM users don't have permission to create chat cards impersonating the GM
-              const rollMode = ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
-                ? this.activity.midiProperties?.rollMode
-                : CONST.DICE_ROLL_MODES.PUBLIC;
+              const rollMode = toMessageMode(this.activity.midiProperties?.rollMode);
               result = await timedAwaitExecuteAsGM("rollAbility", {
                 saveDetails,
                 displayOptions: {
@@ -5754,21 +5756,31 @@ export class Workflow {
     if (!owner) owner = game.user;
 
     let rollMode = ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
-      ? this.activity.midiProperties!.rollMode
-      : whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC;
+      ? toMessageMode(this.activity.midiProperties!.rollMode)
+      : whisper ? "gm" : "public";
 
     if (!owner?.isGM) {
       if ((this.activity.midiProperties?.rollMode ?? "default") === "default") {
         if (["noneDialogPublic", "nonePublic"].includes(configSettings.playerRollSaves)) {
-          rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
+          rollMode = "public";
         } else if (["noneDialogPrivate", "none"].includes(configSettings.playerRollSaves)) {
-          rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+          rollMode = "gm";
         } else if (configSettings.playerRollSaves === "noneDialogSelf") {
-          rollMode = CONST.DICE_ROLL_MODES.SELF;
+          rollMode = "self";
         } else if (configSettings.playerRollSaves === "noneDialogBlind") {
-          rollMode = CONST.DICE_ROLL_MODES.BLIND;
+          rollMode = "blind";
         }
       }
+    }
+
+    // dnd5e challengeVisibility: when an NPC target's challenge should be hidden from players
+    // (visibility "player"/"none"), keep its save-roll chat card private to the GM — otherwise under
+    // autoCheckSaves "allShow" the dnd5e card is created public. Respect an explicit activity rollMode.
+    if ((this.activity.midiProperties?.rollMode ?? "default") === "default"
+      && !target.actor?.hasPlayerOwner
+      && !shouldDisplaySaveDC(target.actor as Actor)
+      && ["public", "ic"].includes(rollMode)) {
+      rollMode = "gm";
     }
 
     // Only pass target DC if player should see success/failure (based on autoCheckSaves and visibility)
@@ -6923,8 +6935,8 @@ export class Workflow {
 
   async processDamageRollBonusFlags(damageRolls: Roll[]): Promise<Roll[]> {
     let damageBonus = "damage.all";
-    const rollMode = safeGetGameSetting("core", "rollMode");
-    const hideDSN = game.user?.isGM && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
+    const rollMode = safeGetGameSetting("core", "messageMode") as string;
+    const hideDSN = game.user?.isGM && ["self", "blind", "gm"].includes(rollMode);
     if (this.activity) damageBonus = `damage.${this.activity.actionType}`;
     const { keys: allOptionalKeys, owners: flagOwners } = this.collectOptionalFlagSources();
     const ownerOfShort = (flag: string): any => flagOwners[`flags.${MODULE_ID}.optional.${flag}`] ?? this.actor;
@@ -7882,7 +7894,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         promises.push(
           new Promise(async (resolve) => {
             const result = await (new D20Roll(formula, {}, options)).evaluate();
-            result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")} ${options.criticalSuccess}/${options.criticalFailure}` }, { rollMode: configSettings.optionalRules.activeDefenceShow });
+            result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")} ${options.criticalSuccess}/${options.criticalFailure}` }, { rollMode: toMessageMode(configSettings.optionalRules.activeDefenceShow) });
             // displayDSNForRoll(result, "attackRoll")
             resolve(result);
           })
@@ -8133,7 +8145,7 @@ export class DamageOnlyWorkflow extends Workflow {
       this.itemCard = await this.activity._createUsageMessage(messageConfig);
       this.itemCardUuid = this.itemCard?.uuid;
     }
-    const whisperCard = configSettings.autoCheckHit === "whisper" || safeGetGameSetting("core", "rollMode") === CONST.DICE_ROLL_MODES.BLIND;
+    const whisperCard = configSettings.autoCheckHit === "whisper" || safeGetGameSetting("core", "messageMode") === "blind";
     if (this.actor) { // Hacky process bonus flags
       // TODO come back and fix this for dnd3
       const newRolls = await this.processDamageRollBonusFlags(this.damageRolls);
@@ -8278,7 +8290,7 @@ export class TrapWorkflow extends Workflow {
     await this.displayAttackRoll();
     this.recordTargetACModifiers();
     await this.checkHits(this.workflowOptions);
-    const whisperCard = configSettings.autoCheckHit === "whisper" || safeGetGameSetting("core", "rollMode") === CONST.DICE_ROLL_MODES.BLIND;
+    const whisperCard = configSettings.autoCheckHit === "whisper" || safeGetGameSetting("core", "messageMode") === "blind";
     await this.displayHits(whisperCard);
     return this.WorkflowState_WaitForSaves;
   }

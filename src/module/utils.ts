@@ -929,7 +929,7 @@ export function requestPCActiveDefence(player: User, actor: Actor, saveItemName:
   const useUuid = true;
   const actorId = useUuid ? actor.uuid : actor.id;
 
-  let rollMode = checkRule("activeDefenceShow") ?? CONST.DICE_ROLL_MODES.SELF;
+  let rollMode = toMessageMode((checkRule("activeDefenceShow") as string) || "self");
   // TODO: Right check?
   let flavor = `${saveItemName} ${configSettings.optionalRules.activeDefence ? "DC " + options.rollOptions.target : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
   const midiType = "defenceRoll";
@@ -1182,7 +1182,6 @@ export async function doActivityOverTimeEffect(actor: Actor.Implementation, effe
   if (effect.disabled || effect.isSuppressed) return;
   const auraFlags = effect.flags?.ActiveAuras ?? {};
   if (auraFlags.isAura && auraFlags.ignoreSelf) return;
-  const ROLL_MODES = CONST.DICE_ROLL_MODES;
   const owner = playerForActor(actor);
   // @ts-expect-error fvtt-types v14 ActiveEffect
   const changes = effect.system.changes;
@@ -1190,7 +1189,7 @@ export async function doActivityOverTimeEffect(actor: Actor.Implementation, effe
   for (let change of changes) {
     const activity = await getOvertimeActivity(actor, effect, change, startTurn);
     if (!activity) continue;
-    if (([ROLL_MODES.PRIVATE, ROLL_MODES.SELF] as string[]).includes(activity.midiProperties?.rollMode ?? "")) {
+    if (["gm", "self"].includes(toMessageMode(activity.midiProperties?.rollMode ?? ""))) {
       requiresUserExecution = owner !== undefined;
       break;
     }
@@ -1931,7 +1930,8 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
     macro: raw.macro,
     itemName: raw.itemName,
     chatFlavor: raw.chatFlavor ?? "",
-    rollMode: raw.rollMode,
+    // Normalize a legacy stored over-time rollMode to its v14 equivalent (keeps "default"/undefined).
+    rollMode: raw.rollMode ? rollModeToMessageMode(raw.rollMode) : raw.rollMode,
     fastForwardDamage: parseBool(raw.fastForwardDamage, true),
     fastForwardAttack: parseBool(raw.fastForwardAttack, true),
     autoRollAttack: parseBool(raw.autoRollAttack, true),
@@ -4621,7 +4621,7 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     this.data = data;
     this.timeRemaining = this.data.timeout;
     this.rollExpanded = false;
-    if (!data.rollMode) data.rollMode = safeGetGameSetting("core", "rollMode");
+    if (!data.rollMode) data.rollMode = safeGetGameSetting("core", "messageMode");
     this.timeoutId = setTimeout(() => {
       if (this.secondTimeoutId) clearTimeout(this.secondTimeoutId);
       this.timeoutId = undefined;
@@ -4870,7 +4870,7 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
 // deprecated ChatMessage.applyRollMode + legacy roll-mode strings. midi still receives legacy
 // rollMode values from dnd5e/core, so map them across using literals (not the deprecated
 // CONST.DICE_ROLL_MODES). undefined and "roll" fall through so applyMode uses the core messageMode default.
-function rollModeToMessageMode(rollMode?: string): string | undefined {
+export function rollModeToMessageMode(rollMode?: string): string | undefined {
   switch (rollMode) {
     case "publicroll": return "public";
     case "gmroll": return "gm";
@@ -4878,6 +4878,25 @@ function rollModeToMessageMode(rollMode?: string): string | undefined {
     case "selfroll": return "self";
     case "roll": return undefined;
     default: return rollMode;
+  }
+}
+
+// Normalize any stored/legacy rollMode to a v14 message mode for INTERNAL use. Legacy strings map
+// across; "roll"/undefined → the core messageMode default; v14 values pass through unchanged.
+export function toMessageMode(mode?: string): string {
+  if (mode === "roll" || mode === undefined || mode === "default") return (safeGetGameSetting("core", "messageMode") as string) ?? "public";
+  return rollModeToMessageMode(mode) ?? "public";
+}
+
+// Translate a v14 message mode to the legacy roll-mode vocabulary, ONLY for modules that haven't
+// migrated (e.g. monks-tokenbar, whose public is "roll"). Accepts legacy input too (idempotent).
+export function toLegacyRollMode(mode?: string): string {
+  switch (mode) {
+    case "public": case "ic": case "publicroll": case "roll": return "roll";
+    case "gm": case "gmroll": return "gmroll";
+    case "blind": case "blindroll": return "blindroll";
+    case "self": case "selfroll": return "selfroll";
+    default: return "roll";
   }
 }
 // fvtt-types has not yet added v14's ChatMessage.applyMode static.
@@ -4956,10 +4975,10 @@ export async function bonusDialog(
     await unTimedExecuteAsGM("queueUndoDataDirect", undoData)
 
     const buttonOwner = ownerOf(button.key);
-    // const rollMode = foundry.utils.getProperty(buttonOwner ?? {}, button.key)?.rollMode ?? safeGetGameSetting("core", "rollMode");
+    // const rollMode = foundry.utils.getProperty(buttonOwner ?? {}, button.key)?.rollMode ?? safeGetGameSetting("core", "messageMode");
     // @ts-expect-error no dnd5e-types
     let rollMode = roll.options.rollMode;
-    rollMode = (foundry.utils.getProperty(buttonOwner ?? {}, button.key) as any)?.rollMode ?? rollMode ?? safeGetGameSetting("core", "rollMode");
+    rollMode = (foundry.utils.getProperty(buttonOwner ?? {}, button.key) as any)?.rollMode ?? rollMode ?? safeGetGameSetting("core", "messageMode");
     if (!hasEffectGranting(this.actor, button.key, flagSelector, buttonOwner)) return;
     let resultApplied = false; // This is just for macro calls
     let macroToCall: string = "";
@@ -5146,7 +5165,7 @@ export async function bonusDialog(
       if (game.user?.isGM) {
         dialog.data.content = newRollHTML;
       } else {
-        if (["publicroll", "gmroll", "selfroll"].includes(rollMode)) dialog.data.content = newRollHTML;
+        if (["public", "gm", "self"].includes(toMessageMode(rollMode))) dialog.data.content = newRollHTML;
         else dialog.data.content = "Hidden Roll";
       }
       dialog.render(true);
@@ -5209,9 +5228,9 @@ export async function bonusDialog(
   }
   if (showRoll && lastForceFlag !== "") {
     DSNMarkDiceDisplayed(roll);
-    // const rollMode = foundry.utils.getProperty(this.actor ?? {}, lastForceFlag)?.rollMode ?? options.rollMode ?? safeGetGameSetting("core", "rollMode");
+    // const rollMode = foundry.utils.getProperty(this.actor ?? {}, lastForceFlag)?.rollMode ?? options.rollMode ?? safeGetGameSetting("core", "messageMode");
     //@ts-expect-error
-    const rollMode = foundry.utils.getProperty(ownerOf(lastForceFlag) ?? {}, lastForceFlag)?.rollMode ?? oldRoll.options.rollMode ?? safeGetGameSetting("core", "rollMode");
+    const rollMode = foundry.utils.getProperty(ownerOf(lastForceFlag) ?? {}, lastForceFlag)?.rollMode ?? oldRoll.options.rollMode ?? safeGetGameSetting("core", "messageMode");
     const card = await displayBeforeAfterRolls({ originalRoll: oldRoll, newRoll: roll, rollMode, title, player, options, actor: this.actor });
     if (card?.uuid && this instanceof Workflow) { // this does not work currently since the undoId has not yet been set
       await unTimedExecuteAsGM("updateUndoChatCardUuidsById", { id: this.undoId, chatCardUuids: [card.uuid] });
@@ -5243,11 +5262,11 @@ export async function bonusDialog(
     }
 
     let content: string;
-    let rollMode: any = options?.rollMode ?? safeGetGameSetting("core", "rollMode");
+    let rollMode: any = options?.rollMode ?? safeGetGameSetting("core", "messageMode");
     if (game.user?.isGM) {
       content = rollHTML;
     } else {
-      if (["publicroll", "gmroll", "selfroll"].includes(rollMode)) content = rollHTML;
+      if (["public", "gm", "self"].includes(toMessageMode(rollMode))) content = rollHTML;
       else content = "Hidden Roll";
     }
     const dialog = new RollModifyDialog(
@@ -8257,7 +8276,7 @@ export function hasDAE(workflow: Workflow) {
 }
 
 
-export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string, defaultRollMode?: string) {
+export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string, defaultRollMode?: string, saveDisplay?: string) {
   if (!rolls) return;
   if (!(rolls instanceof Array)) rolls = [rolls];
   /*
@@ -8279,7 +8298,8 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
       const dice3d = game.dice3d;
       let ghostRoll = false;
       let whisperUsers: User.Implementation[] | null = null;
-      const rollMode = defaultRollMode || game.settings.get("core", "rollMode");
+      // v14 message mode ("public"|"gm"|"blind"|"self"|"ic"); dnd5e + midi always emit v14 modes here.
+      const rollMode = defaultRollMode || (safeGetGameSetting("core", "messageMode") as string);
       let hideRoll = false;
       if (game.user?.isGM) {
         let dsnSetting: string = "show";
@@ -8291,6 +8311,19 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
           case "damageRoll":
             dsnSetting = configSettings.gmDamageDsn ?? "show";
             break;
+          case "save":
+          case "check": {
+            // Drive save/ability-check DSN visibility from autoCheckSaves (the activity's saveDisplay
+            // override, else the global), independent of the roll's message mode:
+            //   allShow          → full public dice
+            //   all / allNoRoll  → ghost (GM sees the real dice; players see ghost dice, not the values)
+            //   whisper / gmOnly → GM only (players see nothing)
+            const sd = saveDisplay ?? configSettings.autoCheckSaves;
+            if (["all", "allNoRoll"].includes(sd)) ghostRoll = true;
+            else if (["whisper", "gmOnly"].includes(sd)) whisperUsers = ChatMessage.getWhisperRecipients("GM") as unknown as User[];
+            dsnSetting = "show";
+            break;
+          }
           default:
             dsnSetting = "show";
             break;
@@ -8307,12 +8340,12 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
         }
       }
       if (!ghostRoll) {
-        ghostRoll = rollMode === "blindroll";
+        ghostRoll = rollMode === "blind";
       }
 
-      if (rollMode === "selfroll" || rollMode === "gmroll" || rollMode === "blindroll") {
+      if (rollMode === "self" || rollMode === "gm" || rollMode === "blind") {
         whisperUsers = ChatMessage.getWhisperRecipients("GM") as unknown as User[];
-        if (rollMode !== "blindroll" && game.user) whisperUsers.concat(game.user as unknown as User);
+        if (rollMode !== "blind" && game.user) whisperUsers.push(game.user as unknown as User);
       }
       if (!hideRoll) {
         let displayRoll = Roll.fromData(JSON.parse(JSON.stringify(roll))); // make a copy of the roll
@@ -8342,7 +8375,7 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
             promises.push(dice3d?.showForRoll(displayRoll, game.user, true, game.users?.players.map(u => (u as User).id), game.user?.isGM));
           }
         } else
-          promises.push(dice3d?.showForRoll(displayRoll, game.user, true, whisperUsers, rollMode === "blindroll" && !game.user?.isGM));
+          promises.push(dice3d?.showForRoll(displayRoll, game.user, true, whisperUsers, rollMode === "blind" && !game.user?.isGM));
       }
     }
 
@@ -9109,9 +9142,9 @@ export async function processConcentrationRequestMessage(message: ChatMessage.Im
         await message.setFlag(MODULE_ID, "concentrationRolled", true);
         const user = playerForActor(actor);
         if (user?.active) {
-          socketlibSocket.executeAsUser("rollConcentration", user.id, { actorUuid: actor.uuid, target: dc, create: true, rollMode: "gmroll" });
+          socketlibSocket.executeAsUser("rollConcentration", user.id, { actorUuid: actor.uuid, target: dc, create: true, rollMode: "gm" });
           // @ts-expect-error no dnd5e-types
-        } else actor.rollConcentration({ legacy: false, target: dc }, {}, { create: true, rollMode: "gmroll" });
+        } else actor.rollConcentration({ legacy: false, target: dc }, {}, { create: true, rollMode: "gm" });
       }
     }
   }
@@ -9379,14 +9412,14 @@ export function convertDuration(
 
 export function getSaveRollModeFor(abilityId: string) {
   if (configSettings.rollChecksBlind.includes("all") || configSettings.rollChecksBlind.includes(abilityId))
-    return "blindroll";
-  return configSettings.autoCheckSaves !== "allShow" ? "gmroll" : "public";
+    return "blind";
+  return configSettings.autoCheckSaves !== "allShow" ? "gm" : "public";
 }
 
 export function getCheckRollModeFor(abilityId: string) {
   if (configSettings.rollSavesBlind.includes("all") || configSettings.rollSavesBlind.includes(abilityId))
-    return "blindroll";
-  return configSettings.autoCheckSaves !== "allShow" ? "gmroll" : "public";
+    return "blind";
+  return configSettings.autoCheckSaves !== "allShow" ? "gm" : "public";
 }
 
 export function areMidiKeysPressed(event: AugmentedEvent | undefined, action: string) {

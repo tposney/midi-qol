@@ -72,6 +72,8 @@ import {
   popTargetSave,
   clearTargetSave,
   getConsumptionData,
+  toMessageMode,
+  rollModeToMessageMode,
 } from "../utils.js";
 import { activityHasScaledTargetCount, attachTokenOptions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
@@ -672,7 +674,7 @@ export let MidiActivityMixin = Base => {
         usage.workflow!.sequenceId = usage.sequenceId;
         message.workflow = usage.workflow; // TODO: remove hack to allow card config processing
         usage.workflow!.systemCard = message.systemCard;
-        if ((activity.midiProperties?.rollMode ?? "default") !== "default") message.rollMode = activity.midiProperties!.rollMode;
+        if ((activity.midiProperties?.rollMode ?? "default") !== "default") message.rollMode = toMessageMode(activity.midiProperties!.rollMode) as keyof CONFIG.Dice.RollModes;
         if (activity.midiProperties?.skipConcentrationCheck && this.actor &&
             activity.consumption.targets.some(t => t.target === "attributes.hp.value"))
           skipConcentrationActorUuids.add(this.actor.uuid);
@@ -982,9 +984,9 @@ export let MidiActivityMixin = Base => {
               //@ts-expect-error no dnd5e-types
               config.workflow.isCritical = rolls[0].options.isCritical;
           });
-          const rollMode = safeGetGameSetting("core", "rollMode");
+          const rollMode = safeGetGameSetting("core", "messageMode") as string;
           message.create ??= false;
-          const showChatDamageCard = game.user?.isGM && configSettings.gmAttackDamageCards && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
+          const showChatDamageCard = game.user?.isGM && configSettings.gmAttackDamageCards && ["self", "blind", "gm"].includes(rollMode);
           if (showChatDamageCard) {
             // Show a chat card for damage rolls if the players are not going to see the midi card.
             message.create = true;
@@ -1225,7 +1227,7 @@ export let MidiActivityMixin = Base => {
     async postProcessDamageRoll(config: RollProcessConfig, result: Array<Roll>): Promise<Array<Roll>> {
       //@ts-expect-error
       const DamageRoll = CONFIG.Dice.DamageRoll;
-      const rollMode = safeGetGameSetting("core", "rollMode");
+      const rollMode = safeGetGameSetting("core", "messageMode") as string;
 
       try {
         if (!config.workflow) return result;
@@ -1316,8 +1318,7 @@ export let MidiActivityMixin = Base => {
             let promises = result2.map(r => displayDSNForRoll(r, "damageRoll"));
             await Promise.all(promises);
           }
-          await DamageRoll.toMessage(result2, messageData, { rollMode: game.settings.get("core", "rollMode") });
-          // await result2.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") });
+          await DamageRoll.toMessage(result2, messageData, { rollMode: safeGetGameSetting("core", "messageMode") });
         } else if (this.actor?.flags?.[MODULE_ID]?.damage?.advantage) {
           // To do this properly requires rerolling each term in the damage roll
         }
@@ -2320,14 +2321,19 @@ export let MidiActivityMixinSheet = Base => {
       // context = await super._prepareEffectContext(context);
       context.ConfirmTargetOptions = Object.entries(confirmTargetOptions).map(([value, label]) => ({ value, label }));
       if (this.activity.forcedTargetConfirmation) context.ConfirmTargetOptions = context.ConfirmTargetOptions.filter(o => o.value === this.activity.forcedTargetConfirmation);
-      const ROLL_MODES = CONST.DICE_ROLL_MODES;
+      // v14 message-mode values (was legacy CONST.DICE_ROLL_MODES). Stored legacy values are migrated
+      // to v14 below so the picker matches and re-saves the new value.
       context.RollModeOptions = [
         { value: "default", label: i18n("Default") },
-        { value: ROLL_MODES.PUBLIC, label: i18n("CHAT.RollPublic") },
-        { value: ROLL_MODES.PRIVATE, label: i18n("CHAT.RollPrivate") },
-        { value: ROLL_MODES.BLIND, label: i18n("CHAT.RollBlind") },
-        { value: ROLL_MODES.SELF, label: i18n("CHAT.RollSelf") }
+        { value: "public", label: i18n("CHAT.RollPublic") },
+        { value: "gm", label: i18n("CHAT.RollPrivate") },
+        { value: "blind", label: i18n("CHAT.RollBlind") },
+        { value: "self", label: i18n("CHAT.RollSelf") }
       ];
+      // Migrate-on-edit: normalize a legacy stored rollMode to its v14 equivalent for display + save.
+      const srcMidi = (context as any).source?.midiProperties;
+      if (srcMidi && srcMidi.rollMode && srcMidi.rollMode !== "default")
+        srcMidi.rollMode = rollModeToMessageMode(srcMidi.rollMode) ?? srcMidi.rollMode;
       context.RemoveChatButtonsOptions = Object.entries(foundry.utils.mergeObject({ "default": i18n("midi-qol.MidiSettings") }, removeButtonsOptions))
         .map(([value, label]) => ({ value, label }));
       context.placeholderIdentifier = context.activity.identifier;

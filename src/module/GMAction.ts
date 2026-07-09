@@ -267,7 +267,7 @@ async function confirmDamageRollCompleteHit(data: { workflowId: string, activity
   }
   workflow.hitTargets = new Set(workflow.targets);
   workflow.hitTargetsEC = new Set();
-  const rollMode = safeGetGameSetting("core", "rollMode");
+  const rollMode = safeGetGameSetting("core", "messageMode") as string;
   workflow.isFumble = false;
   for (let hitDataKey in workflow.hitDisplayData) {
     workflow.hitDisplayData[hitDataKey].hitString = i18n("midi-qol.hits");
@@ -292,7 +292,7 @@ async function confirmDamageRollCompleteMiss(data: { workflowId: string, activit
   if (workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0) {
     workflow.hitTargets = new Set();
     workflow.hitTargetsEC = new Set();
-    const rollMode = safeGetGameSetting("core", "rollMode");
+    const rollMode = safeGetGameSetting("core", "messageMode") as string;
     for (let hitDataKey in workflow.hitDisplayData) {
       workflow.hitDisplayData[hitDataKey].hitString = i18n("midi-qol.misses");
       if (configSettings.highlightSuccess) {

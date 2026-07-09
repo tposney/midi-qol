@@ -263,7 +263,7 @@ class ConfigSettings {
     actionSpecialDurationImmediate: false,
     activeDefence: false,
     activeDefenceModifier: 12,
-    activeDefenceShow: "selfroll",
+    activeDefenceShow: "self",
     ActiveDefenceDC: true,
     autoRerollInitiative: false,
     challengeModeArmor: "none",
@@ -744,7 +744,7 @@ export let fetchParams = () => {
     actionSpecialDurationImmediate: false,
     activeDefence: false,
     activeDefenceModifier: 12, // default value for active defence modifier
-    activeDefenceShow: "selfroll",
+    activeDefenceShow: "self",
     ActiveDefenceDC: true,
     challengeModeArmor: "none",
     challengeModeArmorScale: false,
@@ -795,7 +795,7 @@ export let fetchParams = () => {
   //@ts-expect-error legacy nonexistent value
   if (configSettings.optionalRules.activeDefenceShowGM === true) {
     // old setting replaced with new
-    configSettings.optionalRules.activeDefenceShow = "gmroll";
+    configSettings.optionalRules.activeDefenceShow = "gm";
     //@ts-expect-error legacy nonexistent value
     delete configSettings.optionalRules.activeDefenceShowGM;
   }
@@ -1990,6 +1990,16 @@ export function safeGetGameSetting(moduleName: string, settingName: string): any
   if (game.settings.settings.get(`${moduleName}.${settingName}`))
     //@ts-expect-error
     return game.settings.get(moduleName, settingName);
+  else return undefined;
+}
+
+// Setter companion to safeGetGameSetting — sets only registered settings, and accepts loose key names
+// (fvtt-types' KeyFor<"core"> lags v14, e.g. "messageMode"). Returns the set promise or undefined.
+export function safeSetGameSetting(moduleName: string, settingName: string, value: unknown): Promise<unknown> | undefined {
+  // @ts-expect-error
+  if (game.settings.settings.get(`${moduleName}.${settingName}`))
+    //@ts-expect-error
+    return game.settings.set(moduleName, settingName, value);
   else return undefined;
 }
 

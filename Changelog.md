@@ -1,4 +1,15 @@
 
+### 14.0.10
+* Migrated from the deprecated `core.rollMode` to v14's `core.messageMode` throughout (chat-card visibility, roll-mode save/restore, "Hidden Roll" gating); stored legacy values are normalized on read.
+* Activity Roll Mode picker uses v14 values and migrates a legacy stored value on open/save.
+* Fix: hidden NPC saving throws were leaked to players; a save with no explicit roll mode against a hidden-challenge NPC is now forced to GM-only.
+* Fix: save DC on save-result cards now follows the caster, not per-target ownership; NPC save results now show only when the challenge is fully public.
+* Fix: save/ability-check 3D dice (DSN) visibility now follows `autoCheckSaves` (or a per-activity `saveDisplay`) rather than the message mode.
+* Fix: self/GM/blind whispered DSN rolls were not shown to the rolling user.
+* Fix: v14 roll modes are translated back to legacy values for Monk's TokenBar / Flash Rolls 5e.
+* Fix: Active Defence default/migration, over-time roll modes, and concentration re-rolls updated to v14 modes.
+* Internal: exported `toMessageMode`/`toLegacyRollMode`/`rollModeToMessageMode`, added `safeSetGameSetting`, extended `displayDSNForRoll` with `saveDisplay`.
+
 ### 14.0.9
 * Allow regions to be attached for non emanation templates. If more than 1 target (AoE templates) is possible a confirmation dialog to identify which target to attach the template/region to.
     - Emanation templates continue to auto-attach to the caster by default (the "default" Attach Region To setting preserves the previous behaviour); choose caster/target explicitly to override.
