@@ -76,6 +76,7 @@ export let setupSocket = () => {
   socketlibSocket.register("midiRegionTriggerActivity", _midiRegionTriggerActivity);
   socketlibSocket.register("midiRegionApplyEffects", _midiRegionApplyEffects);
   socketlibSocket.register("midiRegionRemoveEffects", _midiRegionRemoveEffects);
+  socketlibSocket.register("setupRegion", _setupRegion);
 
   // socketlibSocket.register("canSense", _canSense);
 }
@@ -123,6 +124,7 @@ export class SaferSocket {
       case "midiRegionTriggerActivity":
       case "midiRegionApplyEffects":
       case "midiRegionRemoveEffects":
+      case "setupRegion":
         return true;
 
       case "addConvenientEffect":
@@ -233,8 +235,8 @@ async function confirmDamageRollComplete(data: { workflowId: string, activityUui
     return undefined;
   }
   const hasHits = workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0;
-  if ((workflow.currentAction === workflow.WorkflowState_AttackRollComplete) || hasHits &&
-    activity?.hasDamage && (!workflow.damageRoll || workflow.currentAction !== workflow.WorkflowState_ConfirmRoll)) {
+  if ((workflow.currentAction === workflow.WorkflowState_AttackRollComplete) || (hasHits &&
+    activity?.hasDamage && (!workflow.damageRoll || workflow.currentAction !== workflow.WorkflowState_ConfirmRoll))) {
     return "midi-qol | You must roll damage before completing the roll - you can only confirm miss until then";
   }
   if (workflow.hitTargets.size === 0 && workflow.hitTargetsEC.size === 0) {
@@ -265,7 +267,7 @@ async function confirmDamageRollCompleteHit(data: { workflowId: string, activity
   }
   workflow.hitTargets = new Set(workflow.targets);
   workflow.hitTargetsEC = new Set();
-  const rollMode = safeGetGameSetting("core", "rollMode");
+  const rollMode = safeGetGameSetting("core", "messageMode") as string;
   workflow.isFumble = false;
   for (let hitDataKey in workflow.hitDisplayData) {
     workflow.hitDisplayData[hitDataKey].hitString = i18n("midi-qol.hits");
@@ -290,7 +292,7 @@ async function confirmDamageRollCompleteMiss(data: { workflowId: string, activit
   if (workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0) {
     workflow.hitTargets = new Set();
     workflow.hitTargetsEC = new Set();
-    const rollMode = safeGetGameSetting("core", "rollMode");
+    const rollMode = safeGetGameSetting("core", "messageMode") as string;
     for (let hitDataKey in workflow.hitDisplayData) {
       workflow.hitDisplayData[hitDataKey].hitString = i18n("midi-qol.misses");
       if (configSettings.highlightSuccess) {
@@ -537,7 +539,8 @@ async function _completeActivityUse(data: {
   if (!game.user) return null;
   let { activityUuid, actorUuid, usage, dialog, message } = data;
   let actor: any = await fromUuid(actorUuid);
-  if (actor.actor) actor = actor.actor;
+  if (actor?.actor) actor = actor.actor;
+  if (!actor) return null;
   if (usage.midiOptions?.targetsToUse) {
     const targets = usage.midiOptions.targetsToUse.map(t => (fromUuidSync(t) as TokenDocument.Implementation)?.object).filter(t => isValidTarget(t)) as foundry.canvas.placeables.Token.Implementation[];
     usage.midiOptions.targetsToUse = new Set(targets);
@@ -553,7 +556,8 @@ async function _completeItemUse(data: {
   if (!game.user) return null;
   let { itemData, actorUuid, config, dialog, message } = data;
   let actor: any = await fromUuid(actorUuid);
-  if (actor.actor) actor = actor.actor;
+  if (actor?.actor) actor = actor.actor;
+  if (!actor) return null;
   let ownedItem = new CONFIG.Item.documentClass(itemData, { parent: actor });
   // prepare item data for socketed events
   ownedItem.prepareData();
@@ -562,7 +566,7 @@ async function _completeItemUse(data: {
   // @ts-expect-error no dnd5e-types
   ownedItem.applyActiveEffects();
   const workflow = await completeItemUse(ownedItem, config, dialog, message);
-  if (data.config?.midiOptions?.workflowData) return workflow.getMacroData();
+  if (workflow && data.config?.midiOptions?.workflowData) return workflow.getMacroData();
   else return true;
 }
 
@@ -895,6 +899,9 @@ async function rollAbility(data: {
   }
 
   // Build midiOptions for patching.ts
+  // advantage/disadvantage seed computeAdvantageFlags via options.advantage so the
+  // midi-qol.preTargetSave hook's saveDetails.advantage actually applies. The flag is
+  // also kept on the top-level config below for the applyPreComputedAdvantage path.
   const midiOptions: MidiOptions = {
     workflowId,
     rollAbilities,
@@ -908,6 +915,8 @@ async function rollAbility(data: {
     isConcentrationCheck,
     workflowOptions,
     itemCardUuid,
+    advantage,
+    disadvantage,
   };
 
   let config: RollProcessConfig = {
@@ -1663,7 +1672,7 @@ async function createPlayerDamageCard(data: {
     playerButtons
   };
 
-  prepareDamageListItems(data, templateData, tokenDataList, false, showNPC, true)
+  await prepareDamageListItems(data, templateData, tokenDataList, false, showNPC, true)
   if (templateData.damageList.length === 0) {
     log("No damage data to show to player");
     return;
@@ -2578,4 +2587,32 @@ async function _midiRegionRemoveEffects(data: {
   const actor = fromActorUuid(data.actorUuid);
   if (!actor) return;
   return actor.deleteEmbeddedDocuments("ActiveEffect", data.effectIds);
+}
+
+// RegionDocument.update and embedded RegionBehavior creation both require GM-level scene
+// write permission, which players don't have. Batched here so a player-cast region spell
+// (e.g. Spirit Guardians) configures its proxied region in a single socket round-trip.
+// Use the writeRegion() helper in MidiActivityMixin — it skips the socket entirely when
+// the caller already has permission (e.g. GM cast).
+//
+// Race: the region was just created on the caller's client; the create broadcast to this
+// client may arrive after the socketlib message. Foundry socket events are in-order per
+// connection, so the create will arrive — poll briefly until it does.
+async function _setupRegion(data: { regionUuid: string; update?: any; behaviors?: any[] }) {
+  let regionDoc = fromUuidSync(data.regionUuid) as RegionDocument.Implementation | null;
+  const deadline = Date.now() + 2000;
+  while (!regionDoc && Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 25));
+    regionDoc = fromUuidSync(data.regionUuid) as RegionDocument.Implementation | null;
+  }
+  if (!regionDoc) {
+    error(`midi-qol | setupRegion: region ${data.regionUuid} not found within 2s`);
+    return;
+  }
+  if (data.update && Object.keys(data.update).length > 0) {
+    await regionDoc.update(data.update);
+  }
+  if (data.behaviors?.length) {
+    return regionDoc.createEmbeddedDocuments("RegionBehavior", data.behaviors as any);
+  }
 }

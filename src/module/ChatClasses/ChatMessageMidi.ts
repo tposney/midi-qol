@@ -3,6 +3,9 @@ import { configSettings, safeGetGameSetting, saveToChatCard } from "../settings.
 import { getToken } from "../utils.js";
 import { setDamageRollMinTerms } from "../activities/activityHelpers.js";
 
+// Damage is auto-applied by midi when autoApplyDamage is one of the "yes*" modes.
+const midiAutoAppliesDamage = () => !!configSettings.autoApplyDamage?.toLowerCase().includes("yes");
+
 const removeAll = (html: HTMLElement, sel: string) => html.querySelectorAll(sel).forEach(el => el.remove());
 const hideAll = (html: HTMLElement, sel: string) => html.querySelectorAll<HTMLElement>(sel).forEach(el => el.style.display = "none");
 const stripHighlight = (html: HTMLElement, sel: string) => html.querySelectorAll<HTMLElement>(sel).forEach(
@@ -215,7 +218,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       const returns: any[] = [];
       setDamageRollMinTerms(rollsToAccumulate);
       const formulaInToolTip = ["formula", "formulaadv"].includes(configSettings.rollAlternate);
-      const hideDetails = this.author?.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none";
+      const hideDetails = this.author?.isGM && !game.user?.isGM && ((configSettings.gmDamageDisplay ?? "full") !== "full");
       const hideFormula = hideDetails || (options.blind && !game.user?.isGM);
       const rollSets: Roll[][] = multiRolls ? rollsToAccumulate.map(r => [r]) : [rollsToAccumulate];
       for (const rolls of rollSets) {
@@ -234,7 +237,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           foundry.utils.setProperty(rolls[0], "flags.midi-qol.breakdown", breakdown);
           foundry.utils.setProperty(rolls[0], "flags.midi-qol.total", total);
         }
-        if (hideDetails && ["attackTotalOnly", "d20AttackOnly", "all"].includes(configSettings.hideRollDetails ?? "none")) {
+        if (hideDetails && (configSettings.gmDamageDisplay ?? "full") === "hidden") {
           total = "--";
         }
         if (options.blind && !game.user?.isGM) total = "--";
@@ -292,10 +295,15 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }).join("");
     }
 
-    _enrichUsageEffects(html: HTMLLIElement) {
-      if (["off", "applyLeave"].includes(configSettings.autoItemEffects))
-        //@ts-expect-error
-        return super._enrichUsageEffects(html);
+    // Removes the dnd5e effects tray from the rendered chat card when midi's
+    // autoItemEffects suppresses the apply button. dnd5e v5.x emits an
+    // <effect-application> custom element from usage-card.hbs which renders
+    // itself in connectedCallback — there's no longer a _enrichUsageEffects
+    // method to skip, so we strip the element from the DOM after super runs.
+    _maybeStripEffectsTray(html: HTMLElement) {
+      if (["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects)) {
+        html.querySelectorAll("effect-application").forEach(el => el.remove());
+      }
     }
 
     _enrichDamageTooltip(rolls: Roll[], html: HTMLElement) {
@@ -342,62 +350,125 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
             type: roll.options.type,
             properties: new Set(roll.options.properties ?? [])
           }));
-
+          // Set the initial open state directly so connectedCallback renders correctly.
+          // _collapseTrays (overridden below) keeps it in sync on re-render, bypassing the
+          // dnd5e _trayStates className/tagName collision.
+          damageApplication.toggleAttribute("open", !midiAutoAppliesDamage());
           html.querySelector(".message-content")?.appendChild(damageApplication);
         }
       }
     }
 
+    _collapseTrays(html: HTMLElement) {
+      // @ts-expect-error no dnd5e-types
+      super._collapseTrays(html);
+      if (!this.flags?.[MODULE_ID]?.messageType) return;
+      const open = !midiAutoAppliesDamage();
+      html.querySelectorAll("midi-damage-application").forEach(el => {
+        el.toggleAttribute("open", open);
+        el.querySelector(".collapsible")?.classList.toggle("collapsed", !open);
+      });
+    }
+
     _highlightCriticalSuccessFailure(html: HTMLElement) {
-      if (!this.flags?.[MODULE_ID]?.messageType) {
-        // Non-midi messages (saves, death saves, ability checks): let dnd5e handle normally
-        // @ts-expect-error no dnd5e-types
-        super._highlightCriticalSuccessFailure(html);
-        return;
+      // @ts-expect-error no dnd5e-types
+      super._highlightCriticalSuccessFailure(html);
+      // dnd5e only adds critical/fumble for attack and death saves.
+      // Add critical/fumble highlighting for other d20 rolls (saves, ability checks).
+      const totals = html.querySelectorAll(".dice-total");
+      for (let [index, d20Roll] of this.rolls.entries()) {
+        const total = totals[index];
+        if (!total || total.classList.contains("critical") || total.classList.contains("fumble")) continue;
+        const d0 = d20Roll?.dice?.[0];
+        if (!d0 || d0.faces !== 20 || d0.values?.length !== 1) continue;
+        // @ts-expect-error D20Roll not typed
+        const d20 = dnd5e.dice.D20Roll.fromRoll(d20Roll);
+        if (d20.isCritical) {
+          total.classList.add("critical");
+          if (!total.querySelector(".icons")) {
+            const icons = document.createElement("div");
+            icons.classList.add("icons");
+            const icon = document.createElement("i");
+            icon.classList.add("fas", "fa-check-double");
+            icon.setAttribute("inert", "");
+            icons.append(icon);
+            total.append(icons);
+          }
+        } else if (d20.isFumble) {
+          total.classList.add("fumble");
+          if (!total.querySelector(".icons")) {
+            const icons = document.createElement("div");
+            icons.classList.add("icons");
+            for (let i = 0; i < 2; i++) {
+              const icon = document.createElement("i");
+              icon.classList.add("fas", "fa-xmark");
+              icon.setAttribute("inert", "");
+              icons.append(icon);
+            }
+            total.append(icons);
+          }
+        }
       }
-      // Midi messages: apply our own logic (also runs from _enrichChatCard for "usage" type messages)
-      this._applyAttackRollHighlight(html);
+      this._applyMidiHighlightSettings(html);
     }
 
     /**
-     * Apply or strip success/failure/critical/fumble classes on dice-total elements.
-     * Classes are determined at render time from roll data, respecting visibility settings.
-     * Called from both _highlightCriticalSuccessFailure (non-usage messages) and
-     * _enrichChatCard (all messages including usage-type where _highlightCritical is skipped).
+     * Add critical/fumble/success/failure classes and icons for midi messages.
+     * Used by _enrichChatCard for usage-type messages where _highlightCriticalSuccessFailure
+     * is not called by Foundry. Does not mutate document flags (safe during async super._enrichChatCard).
      */
-    private _applyAttackRollHighlight(html: HTMLElement) {
+    private _highlightMidiRolls(html: HTMLElement) {
+      function makeIcon(cls: string) {
+        const icon = document.createElement("i");
+        icon.classList.add("fas", cls);
+        icon.setAttribute("inert", "");
+        return icon;
+      }
       const totals = html.querySelectorAll(".dice-total");
-      const hideResult = !game.user?.isGM && (["whisper", "gmOnly"].includes(configSettings.autoCheckHit) || safeGetGameSetting("dnd5e", "attackRollVisibility") === "none");
       for (let [index, d20Roll] of this.rolls.entries()) {
         const total = totals[index];
         if (!total) continue;
-        // Always start clean — remove any classes that may have been added by super or prior render
         total.classList.remove("success", "failure", "critical", "fumble");
         total.querySelector(".icons")?.remove();
 
-        if (hideResult) continue;
-
-        // Determine what classes to add from the roll data
-        //@ts-expect-error .dice not typed
         const d0 = d20Roll?.dice?.[0];
         if (!d0 || d0.faces !== 20 || d0.values?.length !== 1) continue;
 
         // @ts-expect-error D20Roll not typed
         const d20 = dnd5e.dice.D20Roll.fromRoll(d20Roll);
-        const isAttack = this.getFlag("dnd5e", "roll.type") === "attack";
-        const canCrit = isAttack || this.getFlag("dnd5e", "roll.type") === "death";
+        if (d20.isCritical) total.classList.add("critical");
+        if (d20.isFumble) total.classList.add("fumble");
+        if (d20.dice[0]?.options?.target) {
+          if (d20.isSuccess) total.classList.add("success");
+          else total.classList.add("failure");
+        }
 
-        if (!configSettings.highlightSuccess) continue;
+        const icons = document.createElement("div");
+        icons.classList.add("icons");
+        if (total.classList.contains("critical")) icons.append(makeIcon("fa-check-double"));
+        else if (total.classList.contains("fumble")) icons.append(makeIcon("fa-xmark"), makeIcon("fa-xmark"));
+        else if (total.classList.contains("success")) icons.append(makeIcon("fa-check"));
+        else if (total.classList.contains("failure")) icons.append(makeIcon("fa-xmark"));
+        if (icons.children.length) total.append(icons);
+      }
+    }
 
-        if (configSettings.highLightCriticalAttackOnly) {
-          if (canCrit && d20.isCritical) total.classList.add("critical");
-          if (canCrit && d20.isFumble) total.classList.add("fumble");
-        } else {
-          if (canCrit && d20.isCritical) total.classList.add("critical");
-          if (canCrit && d20.isFumble) total.classList.add("fumble");
-          if (d20.dice[0]?.options?.target) {
-            if (d20.isSuccess) total.classList.add("success");
-            else total.classList.add("failure");
+    /**
+     * Strip or adjust classes and icons based on midi highlight/visibility settings.
+     */
+    private _applyMidiHighlightSettings(html: HTMLElement) {
+      const isMidiMessage = !!this.flags?.[MODULE_ID]?.messageType;
+      const hideResult = isMidiMessage && !game.user?.isGM && (["whisper", "gmOnly"].includes(configSettings.autoCheckHit) || safeGetGameSetting("dnd5e", "attackRollVisibility") === "none");
+      const totals = html.querySelectorAll(".dice-total");
+      for (const total of Array.from(totals)) {
+        if (hideResult || !configSettings.highlightSuccess) {
+          total.classList.remove("success", "failure", "critical", "fumble");
+          total.querySelector(".icons")?.remove();
+        } else if (configSettings.highLightCriticalAttackOnly) {
+          const hadSuccessOrFailure = total.classList.contains("success") || total.classList.contains("failure");
+          total.classList.remove("success", "failure");
+          if (hadSuccessOrFailure && !total.classList.contains("critical") && !total.classList.contains("fumble")) {
+            total.querySelector(".icons")?.remove();
           }
         }
       }
@@ -407,28 +478,35 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (!this.author?.isGM || game.user?.isGM) return;
       const hitFlag = this.flags?.[MODULE_ID]?.isHit;
       const hitString = hitFlag === undefined ? "" : hitFlag ? i18n("midi-qol.hits") : i18n("midi-qol.misses");
-      let attackRollText;
+      const isCritical = this.flags?.[MODULE_ID]?.isCritical;
+      const isFumble = this.flags?.[MODULE_ID]?.isFumble;
+      const attackDisplay = configSettings.gmAttackDisplay ?? "full";
+      const damageDisplay = configSettings.gmDamageDisplay ?? "full";
+
+      // Attack roll masking
+      let attackRollText: string | undefined;
       let hideCritFumble = false;
-      switch (configSettings.hideRollDetails) {
-        case "none": 
-        case "detailsDSN": 
-        case "details":
+      switch (attackDisplay) {
+        case "full":
           break;
-        case "d20Only": 
-        case "d20AttackOnly":
+        case "hideFormula":
+          break;
+        case "d20Only":
           attackRollText = `(d20) ${this.rolls[0]?.terms[0].total ?? "--"}`;
           break;
-        case "hitDamage":
+        case "attackTotal":
+          attackRollText = `${this.rolls[0]?.total ?? "--"}`;
+          break;
+        case "hitMiss":
           hideCritFumble = true;
           attackRollText = hitString;
           break;
-        case "hitCriticalDamage":
+        case "hitMissCrit":
           attackRollText = hitString;
+          if (isCritical) attackRollText = i18n("midi-qol.criticalHit");
+          else if (isFumble) attackRollText = i18n("midi-qol.fumble");
           break;
-        case "attackTotalOnly":
-          attackRollText = this.rolls[0]?.total ?? "--";
-          break;
-        case "all":
+        case "hidden":
           hideCritFumble = true;
           attackRollText = "--";
           break;
@@ -437,11 +515,25 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         html.querySelectorAll(".midi-qol-attack-roll .dice-total")?.forEach(el => el.classList.remove("critical", "fumble"));
       }
       if (attackRollText) html.querySelectorAll(".midi-attack-roll .dice-total")?.forEach(el => el.innerHTML = attackRollText);
-      if ((configSettings.hideRollDetails ?? "none") !== "none") {
-        removeAll(html, ".midi-attack-roll .dice-formula");
+      if (attackDisplay !== "full") {
+        if (attackDisplay !== "hideFormula") {
+          removeAll(html, ".midi-attack-roll .dice-formula");
+        }
         removeAll(html, ".midi-attack-roll .dice-tooltip");
         html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
         removeAll(html, ".midi-attribution-info");
+      }
+
+      // Damage roll masking
+      if (damageDisplay === "totalOnly") {
+        removeAll(html, ".midi-damage-roll .dice-formula");
+        removeAll(html, ".midi-damage-roll .dice-tooltip");
+        html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
+      } else if (damageDisplay === "hidden") {
+        removeAll(html, ".midi-damage-roll .dice-formula");
+        removeAll(html, ".midi-damage-roll .dice-tooltip");
+        html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
+        html.querySelectorAll(".midi-damage-roll .dice-total")?.forEach(el => el.innerHTML = "--");
       }
     }
 
@@ -499,12 +591,18 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         }
 
         // Dice tooltip/click blocking for GM rolls hidden from players
-        if (this.author?.isGM && (configSettings.hideRollDetails ?? "none") !== "none") {
+        const attackHidden = (configSettings.gmAttackDisplay ?? "full") !== "full";
+        const damageHidden = (configSettings.gmDamageDisplay ?? "full") !== "full";
+        if (this.author?.isGM && (attackHidden || damageHidden)) {
           const noDice = this.noDiceClicks.bind(this);
-          html.querySelectorAll(".midi-attack-roll .dice-roll, .midi-damage-roll .dice-roll")
-            .forEach(el => el.addEventListener("click", noDice));
-          html.querySelectorAll<HTMLDivElement>(".midi-attack-roll .dice-tooltip, .midi-damage-roll .dice-tooltip")
-            .forEach(el => el.style.height = "0");
+          if (attackHidden) {
+            html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => el.addEventListener("click", noDice));
+            html.querySelectorAll<HTMLDivElement>(".midi-attack-roll .dice-tooltip").forEach(el => el.style.height = "0");
+          }
+          if (damageHidden) {
+            html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", noDice));
+            html.querySelectorAll<HTMLDivElement>(".midi-damage-roll .dice-tooltip").forEach(el => el.style.height = "0");
+          }
         }
       }
     }
@@ -524,32 +622,38 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         removeAll(html, ".midi-save-attribution-info");
       }
 
+      // Per-target result visibility keys on the TARGET (the saver) — the row classes
+      // (.midi-qol-npc-save-* vs .midi-qol-save-*) are assigned from each target's hasPlayerOwner:
+      //   NPC-target results → shown only when the challenge is fully public ("all")
+      //   PC-target results  → shown unless the challenge is hidden entirely ("none")
+      // The single save DC is one value for the activity, so its visibility follows the CASTER.
       const dcHidden = shouldDisplayChallenge === "player" && !(messageActor as any)?.hasPlayerOwner;
-      const displayNPCSaves = shouldDisplayChallenge === "all" || (shouldDisplayChallenge === "player" && !dcHidden);
+      const displayNPCSaves = shouldDisplayChallenge === "all";
       const displayPlayerSaves = shouldDisplayChallenge !== "none";
 
       if (!displayPlayerSaves || autoCheckSaves === "whisper" || this.blind) {
         removeAll(html, ".midi-qol-save-total");
         removeAll(html, ".midi-qol-save-tooltip");
         removeAll(html, ".midi-qol-save-symbol");
-        removeAll(html, ".midi-qol-saveDC");
       }
       if (!displayNPCSaves || autoCheckSaves === "whisper" || this.blind) {
-        if (!dcHidden) removeAll(html, ".midi-qol-npc-save-symbol");
+        removeAll(html, ".midi-qol-npc-save-symbol");
         removeAll(html, ".midi-qol-npc-save-tooltip");
         removeAll(html, ".midi-qol-npc-save-total");
-        if (!displayNPCSaves && !messageActor?.hasPlayerOwner) {
-          removeAll(html, ".midi-qol-saveDC");
-        }
       } else if (autoCheckSaves !== "allShow") {
         removeAll(html, ".midi-qol-npc-save-tooltip");
         if (autoCheckSaves === "allNoRoll") removeAll(html, ".midi-qol-npc-save-total");
       }
 
+      // Save DC (single, activity-level) follows the caster.
+      if (dcHidden || shouldDisplayChallenge === "none" || autoCheckSaves === "whisper" || this.blind) {
+        removeAll(html, ".midi-qol-saveDC");
+      }
+
       if (!configSettings.highlightSuccess || !["all", "player"].includes(shouldDisplayChallenge) || ["whisper", "none"].includes(autoCheckSaves)) {
         stripHighlight(html, ".midi-qol-saves-display .midi-qol-save-class");
       }
-      if ((!displayNPCSaves && !dcHidden) || !configSettings.highlightSuccess) {
+      if (!displayNPCSaves || !configSettings.highlightSuccess) {
         stripHighlight(html, ".midi-qol-save-class.midi-qol-npc-target");
       }
     }
@@ -580,6 +684,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         this.applyChatVisibility(html);
         // @ts-expect-error no dnd5e-types
         super._enrichChatCard(html);
+        this._maybeStripEffectsTray(html);
         this._addMarkerClasses(html);
         return;
       }
@@ -588,11 +693,14 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
       // @ts-expect-error no dnd5e-types
       super._enrichChatCard(html);
+      this._maybeStripEffectsTray(html);
       this.applyChatVisibility(html);
-      // Apply attack roll highlighting based on visibility settings.
-      // Needed here because "usage" type messages (dnd5e activities) take the system.getHTML()
-      // path in renderHTML, which calls _enrichChatCard but skips _highlightCriticalSuccessFailure.
-      this._applyAttackRollHighlight(html);
+      // For usage-type messages, Foundry skips _highlightCriticalSuccessFailure.
+      // Add classes + icons directly for midi messages, then apply midi settings.
+      if (this.flags?.[MODULE_ID]?.messageType) {
+        this._highlightMidiRolls(html);
+      }
+      this._applyMidiHighlightSettings(html);
       this._addMarkerClasses(html);
       if (debugEnabled > 1) log("Finished enriching chat card", Date.now(), this.id);
     }

@@ -1,5 +1,5 @@
 import { i18n, MODULE_ID, GameSystemConfig } from "../../midi-qol.js";
-import { serializeOvertimeDetails, parseBool } from "../utils.js";
+import { serializeOvertimeDetails, parseBool, rollModeToMessageMode } from "../utils.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -138,7 +138,7 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       macro: raw.macro ?? "",
       itemName: raw.itemName ?? "",
       chatFlavor: raw.chatFlavor ?? "",
-      rollMode: raw.rollMode ?? "default",
+      rollMode: (raw.rollMode ? rollModeToMessageMode(raw.rollMode) : undefined) ?? "default",
       fastForwardDamage: parseBool(raw.fastForwardDamage, true),
       fastForwardAttack: parseBool(raw.fastForwardAttack, true),
       autoRollAttack: parseBool(raw.autoRollAttack, true),
@@ -302,12 +302,14 @@ export class OverTimeEditor extends HandlebarsApplicationMixin(ApplicationV2) {
       roll: "midi-qol.OverTimeEditor.ActionSaveRoll"
     };
 
+    // v14 message-mode values (was legacy publicroll/gmroll/blindroll/selfroll). Legacy stored values
+    // are normalized to v14 on access (see doOverTimeEffect) so old over-time effects keep working.
     context.rollModeOptions = {
       default: "midi-qol.OverTimeEditor.RollModeDefault",
-      publicroll: "midi-qol.OverTimeEditor.RollModePublic",
-      gmroll: "midi-qol.OverTimeEditor.RollModeGM",
-      blindroll: "midi-qol.OverTimeEditor.RollModeBlind",
-      selfroll: "midi-qol.OverTimeEditor.RollModeSelf"
+      public: "midi-qol.OverTimeEditor.RollModePublic",
+      gm: "midi-qol.OverTimeEditor.RollModeGM",
+      blind: "midi-qol.OverTimeEditor.RollModeBlind",
+      self: "midi-qol.OverTimeEditor.RollModeSelf"
     };
 
     return context;

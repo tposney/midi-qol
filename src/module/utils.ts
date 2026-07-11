@@ -929,7 +929,7 @@ export function requestPCActiveDefence(player: User, actor: Actor, saveItemName:
   const useUuid = true;
   const actorId = useUuid ? actor.uuid : actor.id;
 
-  let rollMode = checkRule("activeDefenceShow") ?? CONST.DICE_ROLL_MODES.SELF;
+  let rollMode = toMessageMode((checkRule("activeDefenceShow") as string) || "self");
   // TODO: Right check?
   let flavor = `${saveItemName} ${configSettings.optionalRules.activeDefence ? "DC " + options.rollOptions.target : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
   const midiType = "defenceRoll";
@@ -1182,7 +1182,6 @@ export async function doActivityOverTimeEffect(actor: Actor.Implementation, effe
   if (effect.disabled || effect.isSuppressed) return;
   const auraFlags = effect.flags?.ActiveAuras ?? {};
   if (auraFlags.isAura && auraFlags.ignoreSelf) return;
-  const ROLL_MODES = CONST.DICE_ROLL_MODES;
   const owner = playerForActor(actor);
   // @ts-expect-error fvtt-types v14 ActiveEffect
   const changes = effect.system.changes;
@@ -1190,7 +1189,7 @@ export async function doActivityOverTimeEffect(actor: Actor.Implementation, effe
   for (let change of changes) {
     const activity = await getOvertimeActivity(actor, effect, change, startTurn);
     if (!activity) continue;
-    if (([ROLL_MODES.PRIVATE, ROLL_MODES.SELF] as string[]).includes(activity.midiProperties?.rollMode ?? "")) {
+    if (["gm", "self"].includes(toMessageMode(activity.midiProperties?.rollMode ?? ""))) {
       requiresUserExecution = owner !== undefined;
       break;
     }
@@ -2102,7 +2101,8 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
     macro: raw.macro,
     itemName: raw.itemName,
     chatFlavor: raw.chatFlavor ?? "",
-    rollMode: raw.rollMode,
+    // Normalize a legacy stored over-time rollMode to its v14 equivalent (keeps "default"/undefined).
+    rollMode: raw.rollMode ? rollModeToMessageMode(raw.rollMode) : raw.rollMode,
     fastForwardDamage: parseBool(raw.fastForwardDamage, true),
     fastForwardAttack: parseBool(raw.fastForwardAttack, true),
     autoRollAttack: parseBool(raw.autoRollAttack, true),
@@ -2584,6 +2584,9 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         if (!result) {
           cleanupAndResolve(result);
         }
+      }).catch(err => {
+        TroubleShooter.recordError(err, "completeActivityUse | activity.use failed");
+        cleanupAndResolve(undefined, "error");
       });
     });
   } else {
@@ -3069,7 +3072,7 @@ export interface WallCollisionOptions {
  * Returns the fraction (0-1) of the token's height to use for vision/targeting elevation.
  */
 function getTokenHeightFraction(token: Token.Implementation, flagName: "visionSourceHeight" | "visionTargetHeight"): number {
-  const flagValue = token.document?.getFlag("midi-qol", flagName) as number | undefined;
+  const flagValue = foundry.utils.getProperty(token.document, `flags.midi-qol.${flagName}`) as number | undefined;
   if (flagValue != null) return Math.clamp(flagValue, 0, 100) / 100;
   return configSettings.optionalRules.visionTestHeight === "top" ? 1.0 : 0.5;
 }
@@ -3439,6 +3442,18 @@ function measureTokenToPointPerimeter(token: Token, destPoint: { x: number, y: n
   // Find closest point on the token perimeter to the destination
   const closest = closestPointOnPerimeter(poly, destPoint.x, destPoint.y);
   return measurePointDistance(closest, destPoint);
+}
+
+const SCENE_UNIT_TO_DND5E: Record<string, string> = {
+  ft: "ft", feet: "ft", foot: "ft",
+  m: "m", meter: "m", meters: "m", metre: "m", metres: "m",
+};
+
+export function rangeToSceneUnits(value: number | undefined | null, units: string | undefined | null): number {
+  if (!value || !units) return value ?? 0;
+  const sceneUnit = canvas?.scene?.grid?.units?.toLowerCase() ?? "";
+  const sceneUnitDnd = SCENE_UNIT_TO_DND5E[sceneUnit] ?? sceneUnit;
+  return (globalThis as any).dnd5e?.utils?.convertLength?.(value, units, sceneUnitDnd, { strict: false }) ?? value;
 }
 
 /**
@@ -4768,7 +4783,8 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     buttons: any,
     rollMode: string | undefined,
     timeout: number,
-    item: Item | undefined
+    item: Item | undefined,
+    flagOwners?: Record<string, any>
   }
 
   constructor(data) {
@@ -4776,7 +4792,7 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     this.data = data;
     this.timeRemaining = this.data.timeout;
     this.rollExpanded = false;
-    if (!data.rollMode) data.rollMode = safeGetGameSetting("core", "rollMode");
+    if (!data.rollMode) data.rollMode = safeGetGameSetting("core", "messageMode");
     this.timeoutId = setTimeout(() => {
       if (this.secondTimeoutId) clearTimeout(this.secondTimeoutId);
       this.timeoutId = undefined;
@@ -4828,13 +4844,17 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
+    const flagOwners = this.data.flagOwners ?? {};
+    const ownerOf = (flagName: string): any => flagOwners[flagName] ?? this.data.actor;
     this.data.flags = this.data.flags.filter(flagName => {
-      if ((getOptionalCountRemaining(this.data.actor, `${flagName}.count`)) < 1) return false;
-      return foundry.utils.getProperty(this.data.actor, flagName) !== undefined
+      const owner = ownerOf(flagName);
+      if ((getOptionalCountRemaining(this.data.actor, `${flagName}.count`, owner)) < 1) return false;
+      return foundry.utils.getProperty(owner, flagName) !== undefined
     });
     if (this.data.flags.length === 0) this.close();
     this.data.buttons = this.data.flags.reduce((obj, flag) => {
-      let flagData: any = foundry.utils.getProperty(this.data.actor ?? {}, flag) as any; // TODO This should be tightened up
+      const owner = ownerOf(flag);
+      let flagData: any = foundry.utils.getProperty(owner ?? {}, flag) as any; // TODO This should be tightened up
       let value: string | undefined = foundry.utils.getProperty(flagData ?? {}, this.data.flagSelector) as string;
       // Skip object values — can happen if a flag key like "damage.save" gets an extra ".all"
       // appended by DAE deprecation logic, creating a nested object instead of a string
@@ -5017,6 +5037,44 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
   }
 }
 
+// v14's ChatMessage.applyMode takes message-mode strings (public/gm/blind/self/ic), replacing the
+// deprecated ChatMessage.applyRollMode + legacy roll-mode strings. midi still receives legacy
+// rollMode values from dnd5e/core, so map them across using literals (not the deprecated
+// CONST.DICE_ROLL_MODES). undefined and "roll" fall through so applyMode uses the core messageMode default.
+export function rollModeToMessageMode(rollMode?: string): string | undefined {
+  switch (rollMode) {
+    case "publicroll": return "public";
+    case "gmroll": return "gm";
+    case "blindroll": return "blind";
+    case "selfroll": return "self";
+    case "roll": return undefined;
+    default: return rollMode;
+  }
+}
+
+// Normalize any stored/legacy rollMode to a v14 message mode for INTERNAL use. Legacy strings map
+// across; "roll"/undefined → the core messageMode default; v14 values pass through unchanged.
+export function toMessageMode(mode?: string): string {
+  if (mode === "roll" || mode === undefined || mode === "default") return (safeGetGameSetting("core", "messageMode") as string) ?? "public";
+  return rollModeToMessageMode(mode) ?? "public";
+}
+
+// Translate a v14 message mode to the legacy roll-mode vocabulary, ONLY for modules that haven't
+// migrated (e.g. monks-tokenbar, whose public is "roll"). Accepts legacy input too (idempotent).
+export function toLegacyRollMode(mode?: string): string {
+  switch (mode) {
+    case "public": case "ic": case "publicroll": case "roll": return "roll";
+    case "gm": case "gmroll": return "gmroll";
+    case "blind": case "blindroll": return "blindroll";
+    case "self": case "selfroll": return "selfroll";
+    default: return "roll";
+  }
+}
+// fvtt-types has not yet added v14's ChatMessage.applyMode static.
+type ChatMessageWithApplyMode = typeof ChatMessage & {
+  applyMode(chatData: ChatMessage.CreateData, mode?: string): ChatMessage.CreateData;
+};
+
 async function displayBeforeAfterRolls(data: {
   originalRoll: Roll,
   newRoll: Roll,
@@ -5039,9 +5097,9 @@ async function displayBeforeAfterRolls(data: {
     rolls: [originalRoll, newRoll],
     sound: CONFIG.sounds.dice,
   }, { inplace: false });
-  // @ts-expect-error
-  if (originalRoll.options.rollMode) ChatMessage.applyRollMode(chatData, originalRoll.options.rollMode);
-  else ChatMessage.applyRollMode(chatData, rollMode as ChatMessage.PassableRollMode);
+  // @ts-expect-error originalRoll.options.rollMode is not typed
+  const rawRollMode: string | undefined = originalRoll.options.rollMode || rollMode;
+  (ChatMessage as ChatMessageWithApplyMode).applyMode(chatData, rollModeToMessageMode(rawRollMode));
   foundry.utils.setProperty(newRoll, `flags.${MODULE_ID}.chatMessageShown`, true);
   return await ChatMessage.create(chatData);
 }
@@ -5062,6 +5120,10 @@ export async function bonusDialog(
   let originalRoll = roll;
   let rollHTML = await midiRenderRoll(roll);
   const player = playerForActor(this.actor);
+  // Map full flag path -> owning document (item enchantment) for flags whose data
+  // does not live on the actor. Defaults to actor when not present in the map.
+  const flagOwners: Record<string, any> = options.flagOwners ?? {};
+  const ownerOf = (flagName: string): any => flagOwners[flagName] ?? this.actor;
 
   const callback = async (dialog, button) => {
     if (this.secondTimeoutId) {
@@ -5083,23 +5145,24 @@ export async function bonusDialog(
     }
     await unTimedExecuteAsGM("queueUndoDataDirect", undoData)
 
-    // const rollMode = foundry.utils.getProperty(this.actor ?? {}, button.key)?.rollMode ?? safeGetGameSetting("core", "rollMode");
+    const buttonOwner = ownerOf(button.key);
+    // const rollMode = foundry.utils.getProperty(buttonOwner ?? {}, button.key)?.rollMode ?? safeGetGameSetting("core", "messageMode");
     // @ts-expect-error no dnd5e-types
     let rollMode = roll.options.rollMode;
-    rollMode = (foundry.utils.getProperty(this.actor ?? {}, button.key) as any)?.rollMode ?? rollMode ?? safeGetGameSetting("core", "rollMode");
-    if (!hasEffectGranting(this.actor, button.key, flagSelector)) return;
+    rollMode = (foundry.utils.getProperty(buttonOwner ?? {}, button.key) as any)?.rollMode ?? rollMode ?? safeGetGameSetting("core", "messageMode");
+    if (!hasEffectGranting(this.actor, button.key, flagSelector, buttonOwner)) return;
     let resultApplied = false; // This is just for macro calls
     let macroToCall: string = "";
     const allFlagSelector = flagSelector.split(".").slice(0, -1).join(".") + ".all";
     let specificMacro = false;
-    const possibleMacro = foundry.utils.getProperty(this.actor ?? {}, `${button.key}.${flagSelector}`) ||
-      foundry.utils.getProperty(this.actor ?? {}, `${button.key}.${allFlagSelector}`);
+    const possibleMacro = foundry.utils.getProperty(buttonOwner ?? {}, `${button.key}.${flagSelector}`) ||
+      foundry.utils.getProperty(buttonOwner ?? {}, `${button.key}.${allFlagSelector}`);
     if (possibleMacro && typeof button.value === "string" && (button.value.trim().startsWith("ItemMacro") || button.value.trim().startsWith("Macro") || button.value.trim().startsWith("function"))) {
       macroToCall = button.value;
       if (macroToCall.startsWith("Macro.")) macroToCall = macroToCall.replace("Macro.", "");
       specificMacro = true;
-    } else if ((foundry.utils.getProperty(this.actor ?? {}, `${button.key}.macroToCall`) as string)?.trim()) {
-      macroToCall = (foundry.utils.getProperty(this.actor ?? {}, `${button.key}.macroToCall`) as string)?.trim();
+    } else if ((foundry.utils.getProperty(buttonOwner ?? {}, `${button.key}.macroToCall`) as string)?.trim()) {
+      macroToCall = (foundry.utils.getProperty(buttonOwner ?? {}, `${button.key}.macroToCall`) as string)?.trim();
     }
     if (macroToCall) {
       let result: any;
@@ -5212,7 +5275,7 @@ export async function bonusDialog(
           //@ts-expect-error .DamageRoll
           const DamageRoll = CONFIG.Dice.DamageRoll
           let rollOptions = foundry.utils.duplicate(roll!.options);
-          if (foundry.utils.getProperty(this.actor ?? this, `${button.key}.criticalDamage`))
+          if (foundry.utils.getProperty(buttonOwner ?? this.actor ?? this, `${button.key}.criticalDamage`))
             //@ts-expect-error
             rollOptions.configured = false;
           // rollOptions = { critical: (this.isCritical || this.rollOptions.critical), configured: false };
@@ -5251,7 +5314,7 @@ export async function bonusDialog(
         content: `${newRollHTML}`,
         whisper: [player?.id ?? ""]
       };
-      ChatMessage.applyRollMode(chatData, rollMode);
+      (ChatMessage as ChatMessageWithApplyMode).applyMode(chatData, rollModeToMessageMode(rollMode));
       chatMessage = await ChatMessage.create(chatData);
     }
 
@@ -5273,7 +5336,7 @@ export async function bonusDialog(
       if (game.user?.isGM) {
         dialog.data.content = newRollHTML;
       } else {
-        if (["publicroll", "gmroll", "selfroll"].includes(rollMode)) dialog.data.content = newRollHTML;
+        if (["public", "gm", "self"].includes(toMessageMode(rollMode))) dialog.data.content = newRollHTML;
         else dialog.data.content = "Hidden Roll";
       }
       dialog.render(true);
@@ -5311,33 +5374,34 @@ export async function bonusDialog(
   let lastForceFlag = ""
   const oldRoll = foundry.utils.deepClone(roll);
   for (let flagName of bonusFlags) {
-    if ((getOptionalCountRemaining(this.actor, `${flagName}.count`)) < 1) continue;
-    let activationCondition: string | undefined = foundry.utils.getProperty(this.actor ?? {}, `${flagName}.activation`) as string;
+    const owner = ownerOf(flagName);
+    if ((getOptionalCountRemaining(this.actor, `${flagName}.count`, owner)) < 1) continue;
+    let activationCondition: string | undefined = foundry.utils.getProperty(owner ?? {}, `${flagName}.activation`) as string;
     if (activationCondition !== undefined) {
       activationCondition = await evalCondition(activationCondition, conditionData, { errorReturn: true, async: true });
       if (!activationCondition) continue;
     }
-    let forcedCondition: string | undefined = foundry.utils.getProperty(this.actor ?? {}, `${flagName}.force`) as string;
+    let forcedCondition: string | undefined = foundry.utils.getProperty(owner ?? {}, `${flagName}.force`) as string;
     if (forcedCondition !== undefined) {
       forcedCondition = await evalCondition(forcedCondition, conditionData, { errorReturn: true, async: true });
       if (forcedCondition) {
         const altFlag = flagSelector.split(".").slice(0, -1).join(".") + ".all";
         await callback(undefined, {
           key: flagName,
-          value: foundry.utils.getProperty(this.actor ?? {}, `${flagName}.${flagSelector}`) ?? foundry.utils.getProperty(this.actor ?? {}, `${flagName}.${altFlag}`) ?? "",
+          value: foundry.utils.getProperty(owner ?? {}, `${flagName}.${flagSelector}`) ?? foundry.utils.getProperty(owner ?? {}, `${flagName}.${altFlag}`) ?? "",
           label: "none"
         });
         lastForceFlag = flagName;
       }
       continue;
     }
-    if (foundry.utils.getProperty(this.actor, flagName) !== undefined) validFlags.push(flagName);
+    if (foundry.utils.getProperty(owner, flagName) !== undefined) validFlags.push(flagName);
   }
   if (showRoll && lastForceFlag !== "") {
     DSNMarkDiceDisplayed(roll);
-    // const rollMode = foundry.utils.getProperty(this.actor ?? {}, lastForceFlag)?.rollMode ?? options.rollMode ?? safeGetGameSetting("core", "rollMode");
+    // const rollMode = foundry.utils.getProperty(this.actor ?? {}, lastForceFlag)?.rollMode ?? options.rollMode ?? safeGetGameSetting("core", "messageMode");
     //@ts-expect-error
-    const rollMode = foundry.utils.getProperty(this.actor ?? {}, lastForceFlag)?.rollMode ?? oldRoll.options.rollMode ?? safeGetGameSetting("core", "rollMode");
+    const rollMode = foundry.utils.getProperty(ownerOf(lastForceFlag) ?? {}, lastForceFlag)?.rollMode ?? oldRoll.options.rollMode ?? safeGetGameSetting("core", "messageMode");
     const card = await displayBeforeAfterRolls({ originalRoll: oldRoll, newRoll: roll, rollMode, title, player, options, actor: this.actor });
     if (card?.uuid && this instanceof Workflow) { // this does not work currently since the undoId has not yet been set
       await unTimedExecuteAsGM("updateUndoChatCardUuidsById", { id: this.undoId, chatCardUuids: [card.uuid] });
@@ -5369,11 +5433,11 @@ export async function bonusDialog(
     }
 
     let content: string;
-    let rollMode: any = options?.rollMode ?? safeGetGameSetting("core", "rollMode");
+    let rollMode: any = options?.rollMode ?? safeGetGameSetting("core", "messageMode");
     if (game.user?.isGM) {
       content = rollHTML;
     } else {
-      if (["publicroll", "gmroll", "selfroll"].includes(rollMode)) content = rollHTML;
+      if (["public", "gm", "self"].includes(toMessageMode(rollMode))) content = rollHTML;
       else content = "Hidden Roll";
     }
     const dialog = new RollModifyDialog(
@@ -5391,14 +5455,15 @@ export async function bonusDialog(
         close: onClose.bind(this),
         timeout,
         item: this.item,
-        workflow: this instanceof Workflow ? this : undefined
+        workflow: this instanceof Workflow ? this : undefined,
+        flagOwners
       }).render({ force: true });
   });
 }
 
-export function getOptionalCountRemainingShortFlag(actor: Actor.Implementation, flag: string) {
+export function getOptionalCountRemainingShortFlag(actor: Actor.Implementation, flag: string, owner?: any) {
   const flagPrefix = `flags.${MODULE_ID}.optional.${flag}`;
-  const countRemaining = getOptionalCountRemaining(actor, `${flagPrefix}.count`) && getOptionalCountRemaining(actor, `${flagPrefix}.countAlt`);
+  const countRemaining = getOptionalCountRemaining(actor, `${flagPrefix}.count`, owner) && getOptionalCountRemaining(actor, `${flagPrefix}.countAlt`, owner);
   return countRemaining;
 }
 
@@ -5493,8 +5558,10 @@ function getOptionalActivityUsesActivityMatch(actor: Actor.Implementation, count
     return activity?.uses.value;
   }
 }
-export function getOptionalCountRemaining(actor: Actor.Implementation, flag: string) {
-  const countValue = foundry.utils.getProperty(actor, flag) as string;
+// `owner` is the document that holds the flag value (defaults to actor). Game-state checks
+// (combat turns, reactions, item/activity uses) always use the actor.
+export function getOptionalCountRemaining(actor: Actor.Implementation, flag: string, owner?: any) {
+  const countValue = foundry.utils.getProperty(owner ?? actor, flag) as string;
   if (!countValue) return 1;
   if (Number.isNumeric(countValue)) return countValue;
   if (["each-round", "each-turn"].includes(countValue) && game.combat) {
@@ -5606,16 +5673,17 @@ export async function removeEffectGranting(actor: Actor.Implementation, changeKe
   }
 }
 
-export function hasEffectGranting(actor: Actor.Implementation, key: string, selector: string) {
+export function hasEffectGranting(actor: Actor.Implementation, key: string, selector: string, owner?: any) {
   // Actually check for the flag being set...
-  if (getOptionalCountRemainingShortFlag(actor, key) <= 0) return false;
+  if (getOptionalCountRemainingShortFlag(actor, key, owner) <= 0) return false;
+  const source = owner ?? actor;
   let changeKey = `${key}.${selector}`;
-  let hasKey = foundry.utils.getProperty(actor ?? {}, changeKey);
+  let hasKey = foundry.utils.getProperty(source ?? {}, changeKey);
   if (hasKey !== undefined) return true;
   let allKey = selector.split(".");
   allKey[allKey.length - 1] = "all";
   changeKey = `${key}.${allKey.join(".")}`;
-  hasKey = foundry.utils.getProperty(actor ?? {}, changeKey);
+  hasKey = foundry.utils.getProperty(source ?? {}, changeKey);
   if (hasKey !== undefined) return hasKey;
   return false;
 }
@@ -6274,106 +6342,85 @@ async function confirm(title: string = "Are you sure", { content, defaultYes } =
     defaultYes
   });
 }
-async function asyncMySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn?: any): Promise<any> {
-  let result;
-  try {
-    expression = expression.replace(/confirm\((.*)\)/g, "await confirm($1)");
-    const src = 'with (sandbox) { return ' + expression + '}';
-    let AsyncFunction = foundry.utils.AsyncFunction;
-    // @ts-expect-error
-    const evl = AsyncFunction("sandbox", src) as ((arg: any) => Promise<any>);
-    sandbox = foundry.utils.mergeObject(sandbox, {
-      Roll,
-      findNearby,
-      findNearbyCount,
-      checkNearby,
-      hasCondition,
-      checkDefeated,
-      checkIncapacitated,
-      canSee,
-      canSense,
-      computeDistance,
-      checkActivityRange,
-      checkDistance,
-      contestedRoll,
-      fromUuidSync,
-      confirm,
-      nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid,
-      combat: game.combat,
-      evalRaceOrType: raceOrType,
-      evalTypeOrRace: typeOrRace,
-      sizeNumeric,
-      error: console.error,
-      warn: console.warn,
-      log: console.log
-    });
-    const sandboxProxy = new Proxy(sandbox, {
-      has: () => true, // Include everything
-      get: (t, k) => k === Symbol.unscopables ? undefined : (t[k as string] ?? Math[k]),
-      set: () => { error("midi-qol | asyncMySafeEval | You may not set properties of the sandbox environment"); return false } // No-op
-    });
-    if (MidiQOL.logEvaluationData) console.log('MidiQOL asyncMySafeEval', { expression, sandboxProxy });
-    result = await evl.call(null, sandboxProxy);
-    if (MidiQOL.logEvaluationData) console.log('MidiQOL asyncMySafeEval', { result });
-  } catch (err) {
+function buildEvalSandbox(sandbox: AnyMutableObject, asyncEval: boolean): AnyMutableObject {
+  const extras: AnyMutableObject = {
+    Roll,
+    findNearby,
+    findNearbyCount,
+    checkNearby,
+    hasCondition,
+    checkDefeated,
+    checkIncapacitated,
+    canSee,
+    canSense,
+    computeDistance,
+    checkActivityRange,
+    checkDistance,
+    fromUuidSync,
+    nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid,
+    combat: game.combat,
+    evalRaceOrType: raceOrType,
+    evalTypeOrRace: typeOrRace,
+    evalTypeOrRaceEval: typeOrRace, // legacy alias - sync eval historically only exposed this name
+    sizeNumeric,
+    error: console.error,
+    warn: console.warn,
+    log: console.log
+  };
+  if (asyncEval) {
+    // promise-returning helpers only work where the expression can await them
+    extras.contestedRoll = contestedRoll;
+    extras.confirm = confirm;
+  }
+  return foundry.utils.mergeObject(sandbox, extras);
+}
+
+function mySafeEvalImpl(expression: string, sandbox: AnyMutableObject, onErrorReturn: any, asyncEval: boolean): any {
+  const label = asyncEval ? "asyncMySafeEval" : "mySafeEval";
+  const coerceNumeric = (result: any) => Number.isNumeric(result) ? Number(result) : result;
+  const handleError = (err: any) => {
     // @ts-expect-error sandbox confuses
-    const message = `midi-qol | asyncMySafeEval | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
+    const message = `midi-qol | ${label} | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
     console.warn(message, err);
     TroubleShooter.recordError(err, message);
-    result = onErrorReturn;
-  }
-  if (Number.isNumeric(result)) return Number(result)
-  return result;
-};
-
-function mySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn?: any): any {
-  let result;
+    return coerceNumeric(onErrorReturn);
+  };
   try {
-    const src = 'with (sandbox) { return ' + expression + '}';
-    if (expression.includes("Roll(")) {
+    if (asyncEval) {
+      expression = expression.replace(/confirm\((.*)\)/g, "await confirm($1)");
+    } else if (expression.includes("Roll(")) {
       error("safeEval | Roll expressions are not supported", expression)
       expression = expression.replaceAll(/evaluate\s*\({\s*async:\s* false\s*}\)/g, "evaluateSync({strict: false})")
       error("Expression replaced with ", expression);
     }
-    const evl = new Function('sandbox', src);
-    sandbox = foundry.utils.mergeObject(sandbox, {
-      Roll,
-      findNearby,
-      findNearbyCount,
-      checkNearby,
-      hasCondition,
-      checkDefeated,
-      checkIncapacitated,
-      canSee,
-      canSense,
-      computeDistance,
-      checkActivityRange,
-      checkDistance,
-      fromUuidSync,
-      nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid,
-      combat: game.combat,
-      evalRaceOrType: raceOrType,
-      evalTypeOrRaceEval: typeOrRace,
-      sizeNumeric
-    });
-
+    const src = 'with (sandbox) { return ' + expression + '}';
+    // @ts-expect-error
+    const evl: (sandboxArg: any) => any = asyncEval ? foundry.utils.AsyncFunction("sandbox", src) : new Function("sandbox", src);
+    sandbox = buildEvalSandbox(sandbox, asyncEval);
     const sandboxProxy = new Proxy(sandbox, {
       has: () => true, // Include everything
       get: (t, k) => k === Symbol.unscopables ? undefined : (t[k as string] ?? Math[k]),
-      set: () => { error("mySafeEval | You may not set properties of the sandbox environment"); return false } // No-op
+      set: () => { error(`midi-qol | ${label} | You may not set properties of the sandbox environment`); return false } // No-op
     });
-    if (MidiQOL.logEvaluationData) console.log('MidiQOL mySafeEval', { expression, sandboxProxy });
-    result = evl(sandboxProxy);
-    if (MidiQOL.logEvaluationData) console.log('MidiQOL mySafeEval', { result });
+    if (MidiQOL.logEvaluationData) console.log(`MidiQOL ${label}`, { expression, sandboxProxy });
+    const result = evl.call(null, sandboxProxy);
+    if (asyncEval) return Promise.resolve(result).then((r: any) => {
+      if (MidiQOL.logEvaluationData) console.log(`MidiQOL ${label}`, { result: r });
+      return coerceNumeric(r);
+    }, handleError);
+    if (MidiQOL.logEvaluationData) console.log(`MidiQOL ${label}`, { result });
+    return coerceNumeric(result);
   } catch (err) {
-    // @ts-expect-error sandbox confuses
-    const message = `midi-qol | mySafeEval | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
-    console.warn(message, err)
-    TroubleShooter.recordError(err, message);
-    result = onErrorReturn;
+    return handleError(err);
   }
-  if (Number.isNumeric(result)) return Number(result)
-  return result;
+}
+
+async function asyncMySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn?: any): Promise<any> {
+  return mySafeEvalImpl(expression, sandbox, onErrorReturn, true);
+};
+
+function mySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn?: any): any {
+  return mySafeEvalImpl(expression, sandbox, onErrorReturn, false);
 };
 
 export async function evalReactionActivationCondition(workflow: Workflow, condition: string | undefined | boolean, target: TokenOrDocument, options: any = {}): Promise<boolean> {
@@ -7478,6 +7525,7 @@ function getFlankingDistance(t1: Token.Implementation, t2: Token.Implementation)
 export function findPotentialFlankers(target: Token.Implementation) {
   const gridDist = canvas?.dimensions?.distance ?? 5;
   const isGridless = canvas?.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS;
+  const requiresVisibility = configSettings.optionalRules.flankingRequiresVisibility;
 
   let allies: Token.Implementation[];
   let reachAllies: Token.Implementation[];
@@ -7490,8 +7538,8 @@ export function findPotentialFlankers(target: Token.Implementation) {
       if (!t.actor) return false;
       if (t.id === target.id) return false;
       if (checkIncapacitated(t.actor, debugEnabled > 0, false)) return false;
-      // Check disposition: must be hostile to target
       if (t.document.disposition === target.document.disposition) return false;
+      if (requiresVisibility && !canSense(target, t)) return false;
       const dist = getFlankingDistance(t, target);
       return dist >= 0 && dist <= gridDist;
     });
@@ -7501,6 +7549,7 @@ export function findPotentialFlankers(target: Token.Implementation) {
       if (t.id === target.id) return false;
       if (checkIncapacitated(t.actor, debugEnabled > 0, false)) return false;
       if (t.document.disposition === target.document.disposition) return false;
+      if (requiresVisibility && !canSense(target, t)) return false;
       if (allNearby.some(a => a === t)) return false;
       //@ts-expect-error no dnd5e-types
       if (!t.actor.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)) return false;
@@ -7509,8 +7558,9 @@ export function findPotentialFlankers(target: Token.Implementation) {
     });
     allies = allNearby.concat(reachNearby);
   } else {
-    allies = findNearby(-1, target, gridDist);
-    reachAllies = findNearby(-1, target, 2 * gridDist).filter(
+    const nearbyOptions = requiresVisibility ? { isSeen: true } : {};
+    allies = findNearby(-1, target, gridDist, nearbyOptions);
+    reachAllies = findNearby(-1, target, 2 * gridDist, nearbyOptions).filter(
       ally => !(allies.some(tk => tk === ally)) &&
         //@ts-expect-error no dnd5e-types
         ally.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)
@@ -8397,7 +8447,7 @@ export function hasDAE(workflow: Workflow) {
 }
 
 
-export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string, defaultRollMode?: string) {
+export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string, defaultRollMode?: string, saveDisplay?: string) {
   if (!rolls) return;
   if (!(rolls instanceof Array)) rolls = [rolls];
   /*
@@ -8417,47 +8467,56 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
     if (dice3dEnabled()) {
       //@ts-expect-error game.dice3d
       const dice3d = game.dice3d;
-      const hideRollOption = configSettings.hideRollDetails;
       let ghostRoll = false;
       let whisperUsers: User.Implementation[] | null = null;
-      const rollMode = defaultRollMode || game.settings.get("core", "rollMode");
-      let hideRoll = (["all"].includes(hideRollOption) && game.user?.isGM) ? true : false;
-      if (!game.user?.isGM) hideRoll = false;
-      else if (hideRollOption !== "none") {
-        if (configSettings.gmHide3dDice && game.user?.isGM) hideRoll = true;
-        if (game.user?.isGM && !hideRoll) {
-          switch (rollType) {
-            case "attackRollD20":
-              if (["d20Only", "d20AttackOnly", "detailsDSN"].includes(hideRollOption)) {
-                for (let i = 1; i < roll.dice.length; i++) { // hide everything except the d20
-                  roll.dice[i].results.forEach(r => foundry.utils.setProperty(r, "hidden", true));
-                }
-                hideRoll = false;
-              } else if ((["hitDamage", "all", "hitCriticalDamage", "details"].includes(hideRollOption) && game.user?.isGM))
-                hideRoll = true;
-              break;
-            case "attackRoll":
-              hideRoll = hideRollOption !== "detailsDSN";
-              break;
-            case "damageRoll":
-              hideRoll = hideRollOption !== "detailsDSN";
-              break;
-            default:
-              hideRoll = false;
-              break;
+      // v14 message mode ("public"|"gm"|"blind"|"self"|"ic"); dnd5e + midi always emit v14 modes here.
+      const rollMode = defaultRollMode || (safeGetGameSetting("core", "messageMode") as string);
+      let hideRoll = false;
+      if (game.user?.isGM) {
+        let dsnSetting: string = "show";
+        switch (rollType) {
+          case "attackRollD20":
+          case "attackRoll":
+            dsnSetting = configSettings.gmAttackDsn ?? "show";
+            break;
+          case "damageRoll":
+            dsnSetting = configSettings.gmDamageDsn ?? "show";
+            break;
+          case "save":
+          case "check": {
+            // Drive save/ability-check DSN visibility from autoCheckSaves (the activity's saveDisplay
+            // override, else the global), independent of the roll's message mode:
+            //   allShow          → full public dice
+            //   all / allNoRoll  → ghost (GM sees the real dice; players see ghost dice, not the values)
+            //   whisper / gmOnly → GM only (players see nothing)
+            const sd = saveDisplay ?? configSettings.autoCheckSaves;
+            if (["all", "allNoRoll"].includes(sd)) ghostRoll = true;
+            else if (["whisper", "gmOnly"].includes(sd)) whisperUsers = ChatMessage.getWhisperRecipients("GM") as unknown as User[];
+            dsnSetting = "show";
+            break;
+          }
+          default:
+            dsnSetting = "show";
+            break;
+        }
+        if (dsnSetting === "none") {
+          hideRoll = true;
+        } else if (dsnSetting === "ghost") {
+          ghostRoll = true;
+        } else if (rollType === "attackRollD20") {
+          // For d20-only display, hide non-d20 dice from the animation
+          for (let i = 1; i < roll.dice.length; i++) {
+            roll.dice[i].results.forEach(r => foundry.utils.setProperty(r, "hidden", true));
           }
         }
       }
-      if (hideRoll && configSettings.ghostRolls && game.user?.isGM && !configSettings.gmHide3dDice) {
-        ghostRoll = true;
-        hideRoll = false;
-      } else {
-        ghostRoll = rollMode === "blindroll";
+      if (!ghostRoll) {
+        ghostRoll = rollMode === "blind";
       }
 
-      if (rollMode === "selfroll" || rollMode === "gmroll" || rollMode === "blindroll") {
+      if (rollMode === "self" || rollMode === "gm" || rollMode === "blind") {
         whisperUsers = ChatMessage.getWhisperRecipients("GM") as unknown as User[];
-        if (rollMode !== "blindroll" && game.user) whisperUsers.concat(game.user as unknown as User);
+        if (rollMode !== "blind" && game.user) whisperUsers.push(game.user as unknown as User);
       }
       if (!hideRoll) {
         let displayRoll = Roll.fromData(JSON.parse(JSON.stringify(roll))); // make a copy of the roll
@@ -8487,7 +8546,7 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
             promises.push(dice3d?.showForRoll(displayRoll, game.user, true, game.users?.players.map(u => (u as User).id), game.user?.isGM));
           }
         } else
-          promises.push(dice3d?.showForRoll(displayRoll, game.user, true, whisperUsers, rollMode === "blindroll" && !game.user?.isGM));
+          promises.push(dice3d?.showForRoll(displayRoll, game.user, true, whisperUsers, rollMode === "blind" && !game.user?.isGM));
       }
     }
 
@@ -9236,7 +9295,7 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
   return { expired: actorEffectsToExpire, disabled: effectsToDisable, itemEffects: effectsToDelete };
 }
 
-export function processConcentrationRequestMessage(message: ChatMessage.Implementation, html: HTMLElement, data) {
+export async function processConcentrationRequestMessage(message: ChatMessage.Implementation, html: HTMLElement, data) {
   if (configSettings.doConcentrationCheck !== "chat") return;
   let elt = html.querySelectorAll<HTMLElement>("[data-action=concentration]");
   const hasRolled = foundry.utils.getProperty(message, `flags.${MODULE_ID}.concentrationRolled`);
@@ -9251,13 +9310,12 @@ export function processConcentrationRequestMessage(message: ChatMessage.Implemen
       if (token) actor = token.actor;
       if (!actor && actorId) actor = game.actors?.get(actorId);
       if (actor) {
+        await message.setFlag(MODULE_ID, "concentrationRolled", true);
         const user = playerForActor(actor);
         if (user?.active) {
-          // const whisper = game.users?.filter(user => actor.testUserPermission(user, "OWNER")).map(u => (u as User).id);
-          socketlibSocket.executeAsUser("rollConcentration", user.id, { actorUuid: actor.uuid, target: dc, create: true, rollMode: "gmroll" });
+          socketlibSocket.executeAsUser("rollConcentration", user.id, { actorUuid: actor.uuid, target: dc, create: true, rollMode: "gm" });
           // @ts-expect-error no dnd5e-types
-        } else actor.rollConcentration({ legacy: false, target: dc }, {}, { create: true, rollMode: "gmroll" });
-        message.setFlag(MODULE_ID, "concentrationRolled", true);
+        } else actor.rollConcentration({ legacy: false, target: dc }, {}, { create: true, rollMode: "gm" });
       }
     }
   }
@@ -9525,14 +9583,14 @@ export function convertDuration(
 
 export function getSaveRollModeFor(abilityId: string) {
   if (configSettings.rollChecksBlind.includes("all") || configSettings.rollChecksBlind.includes(abilityId))
-    return "blindroll";
-  return configSettings.autoCheckSaves !== "allShow" ? "gmroll" : "public";
+    return "blind";
+  return configSettings.autoCheckSaves !== "allShow" ? "gm" : "public";
 }
 
 export function getCheckRollModeFor(abilityId: string) {
   if (configSettings.rollSavesBlind.includes("all") || configSettings.rollSavesBlind.includes(abilityId))
-    return "blindroll";
-  return configSettings.autoCheckSaves !== "allShow" ? "gmroll" : "public";
+    return "blind";
+  return configSettings.autoCheckSaves !== "allShow" ? "gm" : "public";
 }
 
 export function areMidiKeysPressed(event: AugmentedEvent | undefined, action: string) {
@@ -9619,10 +9677,10 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
   return true;
 }
 
+// CPR's effect-interface item was removed. Return undefined (callers fall back to midi's built-ins)
+// until a future CPR version provides a new effect source — wire it up here. TODO(CPR).
 function getCPREffect(id: string): ActiveEffect.Implementation | undefined {
-  if (!game.modules.get("chris-premades")?.active || !game.settings.get("chris-premades", "effectInterface")) return undefined;
-  let cprItem = game.items?.find(i => ((i.flags["chris-premades"]))?.effectInterface);
-  return cprItem?.effects.get(id) as ActiveEffect;
+  return undefined;
 }
 
 // --- Target save/restore ---

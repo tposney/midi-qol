@@ -59,6 +59,18 @@
       </div>
       <p class="hint">{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.regionVisibility.hint" }}</p>
     </div>
+
+    <div class="form-group">
+      <label>{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.attachToken.label" }}</label>
+      <div class="form-fields">
+        <select name="attachToken">
+          {{#each attachTokenOptions}}
+            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <p class="hint">{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.attachToken.hint" }}</p>
+    </div>
   </fieldset>
 
   <fieldset>

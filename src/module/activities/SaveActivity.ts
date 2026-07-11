@@ -2,7 +2,7 @@ import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { replaceDefaultActivities, configSettings } from "../settings.js";
+import { replaceDefaultActivities, configSettings, safeGetGameSetting } from "../settings.js";
 import { isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { getSceneTargets } from "./activityHelpers.js";
@@ -105,14 +105,15 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
         // if (!actor?.hasPlayerOwner && workflow) message.create = false - this breaks save checking from chat card
         if (token instanceof foundry.canvas.placeables.Token) foundry.utils.setProperty(message, "flags.midi-qol.requestId", token.document.uuid);
         else foundry.utils.setProperty(message, "flags.midi-qol.requestId", token?.uuid);
-        if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) message.rollMode = game.settings.get("core", "rollMode");
-        else message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+        // v14 message-mode strings (CONFIG.ChatMessage.modes keys) so the value matches the roll dialog's options
+        if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) message.rollMode = safeGetGameSetting("core", "messageMode");
+        else message.rollMode = "gm";
         if (!game.user?.isGM) {
-          if (configSettings.playerRollSaves === "noneDialogPublic") message.rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
-          else if (configSettings.playerRollSaves === "noneDialogPrivate") message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
-          else if (configSettings.playerRollSaves === "noneDialogSelf") message.rollMode = CONST.DICE_ROLL_MODES.SELF;
-          else if (configSettings.playerRollSaves === "noneDialogBlind") message.rollMode = CONST.DICE_ROLL_MODES.BLIND;
-          else message.rollMode = game.settings.get("core", "rollMode");
+          if (configSettings.playerRollSaves === "noneDialogPublic") message.rollMode = "public";
+          else if (configSettings.playerRollSaves === "noneDialogPrivate") message.rollMode = "gm";
+          else if (configSettings.playerRollSaves === "noneDialogSelf") message.rollMode = "self";
+          else if (configSettings.playerRollSaves === "noneDialogBlind") message.rollMode = "blind";
+          else message.rollMode = safeGetGameSetting("core", "messageMode");
         }
 
 
@@ -134,11 +135,7 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
 
     get possibleOtherActivity() {
       return true;
-    }
-    get selfTriggerableOnly() {
-      return false;
-    }
-    get canUseOtherActivity() {
+    }    get canUseOtherActivity() {
       return true;
     }
 

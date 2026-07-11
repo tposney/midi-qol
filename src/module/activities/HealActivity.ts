@@ -41,15 +41,12 @@ let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
 
     static #rollHealing(this: Activity, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.getWorkflow(message?.uuid);
+      if (workflow) workflow.activity = this;
       return this.rollDamage({event, workflow}, {}, {});
     }
     get possibleOtherActivity() { 
       return true;
     }
-    get selfTriggerableOnly() {
-      return false;
-    }
-
     get canUseOtherActivity() {
       return true;
     }
