@@ -182,7 +182,9 @@ Hooks.on("createChatMessage", (message, data, user) => {
   // if (currentUndo.userId !== user) return;
   if (speaker.token) {
     const tokenUuid = `Scene.${speaker.scene}.Token.${speaker.token}`;
-    if (currentUndo.allTargets?.has(tokenUuid)) currentUndo.chatCardUuids.push(message.uuid);
+    // allTargets is keyed by actor uuid - resolve the speaker token's actor
+    const actorUuid = (fromUuidSync(tokenUuid) as TokenDocument.Implementation | null)?.actor?.uuid;
+    if (actorUuid && currentUndo.allTargets?.has(actorUuid)) currentUndo.chatCardUuids.push(message.uuid);
   } else if (speaker.actor) {
     const actorUuid = `Actor.${speaker.actor}`;
     if (currentUndo.allTargets?.has(actorUuid)) currentUndo.chatCardUuids.push(message.uuid);
@@ -405,6 +407,7 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
   const itemsToAdd = actorData?.items?.filter(itemData => /*!itemData.flags?.dae?.DAECreated && */ !actor.items.some(item => itemData._id === item.id));
   if (debugEnabled > 0) warn("undoSingleTokenActor | Items to add ", actor.name, itemsToAdd)
   if ((itemsToAdd?.length ?? 0) > 0) {
+    // @ts-expect-error extra option silliness
     if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.createEmbeddedDocuments.bind(actor), "Item", itemsToAdd, { keepId: true, isUndo: true });
     // @ts-expect-error extra option silliness
     else await actor?.createEmbeddedDocuments("Item", itemsToAdd, { keepId: true, isUndo: true });
@@ -416,7 +419,7 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
 
   if (debugEnabled > 0) warn("undoSingleTokenActor | Effects to add ", actor.name, effectsToAdd);
   if (effectsToAdd?.length > 0) {
-    if (globalThis.DAE?.actionQueue) globalThis.DAE.actionQueue.add(async () => {
+    if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(async () => {
       effectsToAdd = effectsToAdd?.filter(eff => !actor.effects.some(effect => effect.id === eff._id!));
       if (debugEnabled > 0) warn("undoSingleTokenActor | Effects to add are ", effectsToAdd, actor.name);
       // @ts-expect-error extra option silliness
@@ -426,10 +429,12 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
     else await actor.createEmbeddedDocuments("ActiveEffect", effectsToAdd, { keepId: true, isUndo: true });
   }
 
+  // @ts-expect-error extra option silliness
   if (actorData && globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.updateEmbeddedDocuments.bind(actor), "Item", actorData.items, { keepId: true, isUndo: true });
   // @ts-expect-error extra option silliness
   else if (actorData) await actor.updateEmbeddedDocuments("Item", actorData.items, { keepId: true, isUndo: true });
   if ((actorData?.effects?.length ?? 0) > 0) {
+    // @ts-expect-error extra option silliness
     if (globalThis.DAE?.actionQueue) await globalThis.DAE.actionQueue.add(actor.updateEmbeddedDocuments.bind(actor), "ActiveEffect", actorData!.effects, { keepId: true, isUndo: true });
     // @ts-expect-error extra option silliness
     else await actor.updateEmbeddedDocuments("ActiveEffect", actorData!.effects, { keepId: true, isUndo: true });

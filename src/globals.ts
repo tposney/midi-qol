@@ -140,7 +140,6 @@ declare module "fvtt-types/configuration" {
     "midi-qol.splashWarnings": boolean;
     "midi-qol.last-run-version": string;
     "midi-qol.instanceId": string;
-    "chris-premades.effectInterface": boolean;
   }
   interface FlagConfig {
     ActiveEffect: {
@@ -564,6 +563,9 @@ declare module "fvtt-types/configuration" {
         onUseMacroName?: string;
         noProvokeReaction?: boolean;
         isConcentrationCheck?: boolean;
+        // Optional bonus flags applied to the item (e.g. via enchantment effects), checked
+        // alongside the actor's optional flags when the item is used.
+        optional?: Record<string, any>;
         trapWorkflow?: {
           ignoreSelf?: boolean;
         }
@@ -606,6 +608,10 @@ declare module "fvtt-types/configuration" {
       };
       "midi-qol"?: {
         dependentOn?: string; // UUID of parent document (Actor/Item) for midi-qol dependent tracking
+        // Per-token override (0-100) for vision source elevation as a fraction of token height.
+        visionSourceHeight?: number;
+        // Per-token override (0-100) for vision target elevation as a fraction of token height.
+        visionTargetHeight?: number;
       };
     }
     AmbientLightDocument: {
@@ -624,6 +630,14 @@ declare global {
     }
   }
 
+  // Foundry v14 TokenDocument additions not yet in fvtt-types.
+  interface TokenDocument {
+    /** Token vertical depth in grid units; affects collision and elevation math. */
+    depth: number;
+    /** Movement-origin computation point (token center adjusted by half its depth). */
+    getMovementOrigin(data?: { x?: number; y?: number; elevation?: number; width?: number; height?: number; depth?: number }): { x: number; y: number; elevation: number };
+  }
+
   // Note: Intentional `var` use here to add to the `globalThis`
   var DAE: {
     actionQueue: foundry.utils.Semaphore;
@@ -634,7 +648,7 @@ declare global {
     doEffects: (...args: any[]) => Promise<any>;
     doActivityEffects: (...args: any[]) => Promise<any>;
     DIMEditor: any;
-    localizationMap: Record<string, string>;
+    localizationMap: Record<string, { name?: string; description?: string }>;
     [key: string]: any;
   };
   var MidiDAEEval: {

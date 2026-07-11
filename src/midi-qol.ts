@@ -459,73 +459,73 @@ Hooks.on("dae.modifySpecials", (specKey, specials, _characterSpec) => {
   specials[`flags.${MODULE_ID}.optional.NAME.macroToCall`] = [new StringField(), "custom"];
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.macroToCall`);
   for (let type of ["dm", "da", "di", "dv", "dr"]) {
-    // specials[`system.traits.${type}.midi.all`] = [new StringField(), -1];
+    // specials[`system.traits.${type}.midi.all`] = [new StringField(), ""];
     // daeFieldBrowserFields.push(`system.traits.${type}.midi.all`);
-    specials[`system.traits.${type}.midi.magical`] = [new StringField(), -1];
+    specials[`system.traits.${type}.midi.magical`] = [new StringField(), ""];
     daeFieldBrowserFields.push(`system.traits.${type}.midi.magical`);
-    specials[`system.traits.${type}.midi.non-magical`] = [new StringField(), -1];
+    specials[`system.traits.${type}.midi.non-magical`] = [new StringField(), ""];
     daeFieldBrowserFields.push(`system.traits.${type}.midi.non-magical`);
-    specials[`system.traits.${type}.midi.non-magical-physical`] = [new StringField(), -1];
+    specials[`system.traits.${type}.midi.non-magical-physical`] = [new StringField(), ""];
     daeFieldBrowserFields.push(`system.traits.${type}.midi.non-magical-physical`);
-    specials[`system.traits.${type}.midi.non-silver-physical`] = [new StringField(), -1];
+    specials[`system.traits.${type}.midi.non-silver-physical`] = [new StringField(), ""];
     daeFieldBrowserFields.push(`system.traits.${type}.midi.non-silver-physical`);
-    specials[`system.traits.${type}.midi.non-adamant-physical`] = [new StringField(), -1];
+    specials[`system.traits.${type}.midi.non-adamant-physical`] = [new StringField(), ""];
     daeFieldBrowserFields.push(`system.traits.${type}.midi.non-adamant-physical`);
-    specials[`system.traits.${type}.midi.non-physical`] = [new StringField(), -1];
+    specials[`system.traits.${type}.midi.non-physical`] = [new StringField(), ""];
     daeFieldBrowserFields.push(`system.traits.${type}.midi.non-physical`);
-    specials[`system.traits.${type}.midi.physical`] = [new StringField(), -1];
+    specials[`system.traits.${type}.midi.physical`] = [new StringField(), ""];
     daeFieldBrowserFields.push(`system.traits.${type}.midi.physical`);
-    specials[`system.traits.${type}.midi.spell`] = [new StringField(), -1];
+    specials[`system.traits.${type}.midi.spell`] = [new StringField(), ""];
     daeFieldBrowserFields.push(`system.traits.${type}.midi.spell`);
-    specials[`system.traits.${type}.midi.non-spell`] = [new StringField(), -1];
+    specials[`system.traits.${type}.midi.non-spell`] = [new StringField(), ""];
     daeFieldBrowserFields.push(`system.traits.${type}.midi.non-spell`);
     if (!["dm", "da"].includes(type)) allAttackTypes.forEach(attackType => {
-      specials[`system.traits.${type}.midi.${attackType}`] = [new StringField(), -1];
+      specials[`system.traits.${type}.midi.${attackType}`] = [new StringField(), ""];
       daeFieldBrowserFields.push(`system.traits.${type}.midi.${attackType}`);
     });
   }
 
   if (GameSystemConfig.damageTypes) {
-    specials[`system.traits.dm.midi.all`] = [new StringField(), -1];
+    specials[`system.traits.dm.midi.all`] = [new StringField(), ""];
     daeFieldBrowserFields.push(`system.traits.dm.midi.all`);
     Object.keys(GameSystemConfig.damageTypes).forEach(dType => {
-      specials[`system.traits.dm.amount.${dType}`] = [new StringField(), -1]
+      specials[`system.traits.dm.amount.${dType}`] = [new StringField(), ""]
       daeFieldBrowserFields.push(`system.traits.dm.${dType}`);
     });
     Object.keys(GameSystemConfig.itemActionTypes).forEach(aType => {
-      specials[`system.traits.dm.midi.${aType}`] = [new StringField(), -1];
+      specials[`system.traits.dm.midi.${aType}`] = [new StringField(), ""];
       daeFieldBrowserFields.push(`system.traits.dm.midi.${aType}`);
     });
     Object.keys(GameSystemConfig.healingTypes).forEach(dType => {
-      specials[`system.traits.dm.amount.${dType}`] = [new StringField(), -1];
+      specials[`system.traits.dm.amount.${dType}`] = [new StringField(), ""];
       daeFieldBrowserFields.push(`system.traits.dm.midi.${dType}`);
     });
-    specials[`system.traits.da.midi.all`] = [new StringField(), -1];
+    specials[`system.traits.da.midi.all`] = [new StringField(), ""];
     daeFieldBrowserFields.push(`system.traits.da.midi.all`);
     Object.keys(GameSystemConfig.damageTypes).forEach(dType => {
-      specials[`system.traits.da.${dType}`] = [new StringField(), -1];
+      specials[`system.traits.da.${dType}`] = [new StringField(), ""];
       daeFieldBrowserFields.push(`system.traits.da.${dType}`);
     });
     Object.keys(GameSystemConfig.itemActionTypes).forEach(aType => {
-      specials[`system.traits.da.midi.${aType}`] = [new StringField(), -1];
+      specials[`system.traits.da.midi.${aType}`] = [new StringField(), ""];
       daeFieldBrowserFields.push(`system.traits.da.midi.${aType}`);
     });
     Object.keys(GameSystemConfig.healingTypes).forEach(dType => {
-      specials[`system.traits.da.${dType}`] = [new StringField(), -1];
-      daeFieldBrowserFields[`system.traits.da.${dType}`] = [new StringField(), -1];
+      specials[`system.traits.da.${dType}`] = [new StringField(), ""];
+      daeFieldBrowserFields[`system.traits.da.${dType}`] = [new StringField(), ""];
     });
   }
 
-  // specials[`system.traits.dm.midi.final`] = [new StringField(), -1];
-  specials[`system.traits.idi.value`] = [new StringField(), -1];
+  // specials[`system.traits.dm.midi.final`] = [new StringField(), ""];
+  specials[`system.traits.idi.value`] = [new StringField(), ""];
   daeFieldBrowserFields.push(`system.traits.idi.value`);
-  specials[`system.traits.idr.value`] = [new StringField(), -1];
+  specials[`system.traits.idr.value`] = [new StringField(), ""];
   daeFieldBrowserFields.push(`system.traits.idr.value`);
-  specials[`system.traits.idv.value`] = [new StringField(), -1];
+  specials[`system.traits.idv.value`] = [new StringField(), ""];
   daeFieldBrowserFields.push(`system.traits.idv.value`);
-  specials[`system.traits.ida.value`] = [new StringField(), -1];
+  specials[`system.traits.ida.value`] = [new StringField(), ""];
   daeFieldBrowserFields.push(`system.traits.ida.value`);
-  specials[`system.traits.idm.value`] = [new StringField(), -1];
+  specials[`system.traits.idm.value`] = [new StringField(), ""];
   daeFieldBrowserFields.push(`system.traits.idm.value`);
 
   // Token-targeted vision height overrides (0-100% of token height)
@@ -619,7 +619,7 @@ Hooks.on("dae.addSpecialDurations", daeSpecialDurations => {
   daeSpecialDurations["isSaveSuccess"] = `${i18n("dae.isRollBase")} ${i18n("dae.isSaveDetail")}: ${i18n("dae.success")}`;
   daeSpecialDurations["isSaveFailure"] = `${i18n("dae.isRollBase")} ${i18n("dae.isSaveDetail")}: ${i18n("dae.failure")}`;
   daeSpecialDurations["isConcentrationSave"] = i18n("dae.isConcentrationSave");
-  daeSpecialDurations["isConcentrationSaveFail"] = `${i18n("dae.isConcentrationSave")}: ${i18n("dae.failure")}`;
+  daeSpecialDurations["isConcentrationSaveFailure"] = `${i18n("dae.isConcentrationSave")}: ${i18n("dae.failure")}`;
   daeSpecialDurations["isConcentrationSaveSuccess"] = `${i18n("dae.isConcentrationSave")}: ${i18n("dae.success")}`;
   daeSpecialDurations["isCheck"] = `${i18n("dae.isRollBase")} ${i18n("dae.isCheckDetail")}`;
   daeSpecialDurations["isSkill"] = `${i18n("dae.isRollBase")} ${i18n("dae.isSkillDetail")}`;

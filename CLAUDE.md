@@ -213,6 +213,8 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
     - DAE API (`game.modules.get("dae").api`) exports: `expireEffect`, `isEffectExpired`, `isTransferEffect`, `hasDuration`, `hasExpiry`.
     - One-time migration from times-up settings runs at `ready` via `migrateTimesUpSettings()`.
 
+15. **Persisted workflow fields go through `PersistedFieldStore`** — Workflow.ts fields backed by chat-card flags (scalars, token Sets, Roll/Roll[], DamageDescription[]) use `this.#persisted.scalar/tokenSet/roll(s)/damageDetail` accessors, not hand-rolled `#field` + getter/setter pairs. The store owns caching, flag fallback, and serialization (including `Roll.fromData` rehydration). New persisted fields should use it; only genuinely special accessors (`currentAction`, `isCritical`/`isFumble`, `activity`, `item`, `token`, `otherDamageMatches`) remain hand-written.
+
 ## Testing
 
 Tests use the Quench framework in separate test modules (not embedded in the main module source). Each major version branch has its own test module:
@@ -238,8 +240,8 @@ Tests use the Quench framework in separate test modules (not embedded in the mai
 ## Build Commands
 
 ```bash
-npm run build        # Production: typeCheck + esbuild → single midi-qol.js
-npm run devbuild     # Development: outputs to devDir in package.json
+npm run build        # Standard build: typeCheck + esbuild → single midi-qol.js. Always use this.
+npm run devbuild     # AVOID: outputs to devDir without typecheck. Use `npm run build` instead.
 npx gulp devWatch    # Watch mode
 npm run compilePacks # JSON (pack-src/) → LevelDB (packs/) for sample items
 npm run extractPacks # LevelDB → JSON with ID generation

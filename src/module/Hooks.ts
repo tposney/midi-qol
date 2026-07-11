@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard, queueConditionUpdateFromCreate, queueConditionUpdateFromDelete } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget, rangeToSceneUnits } from "./utils.js";
 import { checkMechanic, checkRule, configSettings, dragDropTargeting, isDnd5e53, setDnd5e53 } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook, getTemplateSourceToken } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -32,8 +32,7 @@ export let readyHooks = async () => {
 
   //@ts-expect-error
   Hooks.on("template3dUpdatePreview", (at, t) => {
-    //@ts-expect-error VolumetricTemplates
-    VolumetricTemplates.compute3Dtemplate(t);
+    globalThis.VolumetricTemplates?.compute3Dtemplate(t);
   });
 
   Hooks.on("targetToken", foundry.utils.debounce(checkFlanking, 150));
@@ -424,7 +423,7 @@ export let readyHooks = async () => {
       combat.rollInitiative(combatantIds, { updateTurn: true }).then(() => {
         // Check if combat was deleted during async operation
         if (game.combats?.get(combatId)) combat.update({ turn: 0 });
-      });
+      }).catch(err => TroubleShooter.recordError(err, "autoRerollInitiative"));
     }
   });
 }
@@ -1996,10 +1995,8 @@ Hooks.on("dnd5e.preCreateActivityTemplate", (activity, templateData) => {
   if (rangeUnits && rangeUnits !== "self" && rangeUnits !== "none" && rangeUnits !== "any") {
     let maxRange = range.long || range.value;
     if (maxRange && maxRange > 0) {
-      // Convert touch range to a small distance
-      if (rangeUnits === "touch") {
-        maxRange = canvas?.dimensions?.distance ?? 5;
-      }
+      if (rangeUnits === "touch") maxRange = canvas?.dimensions?.distance ?? 5;
+      else maxRange = rangeToSceneUnits(maxRange, rangeUnits);
       foundry.utils.setProperty(templateData, "flags.midi-qol.maxRange", maxRange);
     }
   }

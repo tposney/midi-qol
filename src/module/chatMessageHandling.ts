@@ -147,8 +147,8 @@ export function ddbglPendingFired(data: { sceneId: string, tokenId: string, acto
   }
   // const tokenUuid = `Scene.${sceneId??0}.Token.${tokenId??0}`;
   const token = fromUuidSync(`Scene.${sceneId ?? 0}.Token.${tokenId ?? 0}`)?.object as Token.Implementation | undefined;
-  const actor = (token instanceof TokenDocument) ? token?.actor ?? game.actors?.get(actorId ?? "") : undefined;
-  if (!actor || !(token instanceof CONFIG.Token.documentClass)) {
+  const actor = token?.actor ?? game.actors?.get(actorId ?? "");
+  if (!actor) {
     warn(" ddb-game-log hook could not find actor");
     return;
   }

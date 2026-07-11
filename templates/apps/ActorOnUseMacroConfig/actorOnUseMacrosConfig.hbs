@@ -16,11 +16,7 @@
           </div>
           <div class="value">
           <select name="onUseMacroParts.items.{{@index}}.option" data-dtype="String">
-            {{#select this.option}}
-            {{#each ../MacroPassOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
+            {{selectOptions ../MacroPassOptions selected=this.option}}
           </select>
         </div>
         <div class="effect-controls">

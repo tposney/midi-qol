@@ -35,8 +35,14 @@
         "type": "override"
       },
       {
+        "key": "flags.dae.macro.command",
+        "value": "const version = \"14.0.6\";\ntry {\n  if (args[0]?.macroPass !== \"postActiveEffects\") return;\n  const target = workflow?.hitTargets?.first();\n  if (!target) return;\n  const tactor = target.actor;\n  if (!tactor) return;\n  // stackable: \"count\" — DAE auto-increments flags.dae.stacks when the same effect\n  // (matched by origin + base name) is re-applied, so this stays a single effect.\n  // midi-qol's OverTime processor multiplies damageRoll by flags.dae.stacks at tick time,\n  // and a successful save removes the whole effect (all stacks).\n  await MidiQOL.socket().executeAsGM(\"createEffects\", {\n    actorUuid: tactor.uuid,\n    effects: [{\n      name: \"Wounded\",\n      img: macroItem?.img ?? \"icons/skills/wounds/injury-pain-blood-red.webp\",\n      origin: macroItem?.uuid,\n      flags: { dae: { stackable: \"count\", stacks: 1 } },\n      changes: [{\n        key: \"flags.midi-qol.OverTime\",\n        value: \"turn=start,damageRoll=1d4,damageType=necrotic,saveDC=15,saveAbility=con,saveRemove=true,label=Wounded\",\n        mode: 0,\n        priority: 20\n      }]\n    }]\n  });\n} catch (err) {\n  console.error(`Wounding ${version}`, err);\n}",
+        "priority": 50,
+        "type": "override"
+      },
+      {
         "key": "flags.midi-qol.onUseMacroName",
-        "value": "ActivityMacro.Wounding, postActiveEffects",
+        "value": "ItemMacro, postActiveEffects",
         "priority": 20,
         "type": "custom"
       }
@@ -58,7 +64,7 @@
     "expired": false
   },
   "description": "Enchants a weapon as a Weapon of Wounding. Sets rarity to rare, adds magical property, +1 bonus, requires attunement, and adds the Wounding on-use macro.",
-  "origin": null,
+  "origin": "Compendium.midi-qol.midiqol-active-effects.ActiveEffect.midiWoundingWpn0",
   "tint": "#ffffff",
   "transfer": false,
   "statuses": [],
@@ -79,7 +85,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-active-effects",
-        "version": "14.0.5"
+        "version": "14.0.6"
       }
     }
   },

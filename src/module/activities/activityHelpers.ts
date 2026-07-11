@@ -1,5 +1,5 @@
 import { Activity, ActivityUseConfiguration, RollMessageConfig, TokenOrDocument } from "../../globals.js";
-import { MODULE_ID, debugEnabled, warn, error } from "../../midi-qol.js";
+import { MODULE_ID, debugEnabled, warn, error, i18n } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog, TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 import { configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
@@ -18,6 +18,14 @@ const creatureTargetTypes = ["creature", "enemy", "ally", "willing"];
  * @param activity The activity to check
  * @returns true if single target should be enforced
  */
+export function attachTokenOptions(selected: string) {
+  return ["default", "caster", "target"].map(value => ({
+    value,
+    label: i18n(`midi-qol.REGION_BEHAVIOR.attachToken.${value}`),
+    selected: selected === value
+  }));
+}
+
 export function shouldEnforceSingleTarget(activity: Activity): boolean {
   if (!configSettings.enforceSingleWeaponTarget) return false;
   if (!allAttackTypes.includes(activity.actionType)) return false;
@@ -109,15 +117,15 @@ export async function doActivityReactions(activity: Activity, workflow: Workflow
   }>[] = [];
   if (!foundry.utils.getProperty(activity, `flags.${MODULE_ID}.noProvokeReaction`) && !workflow?.workflowOptions.noProvokeReaction) {
     for (let targetToken of workflow.targets) {
-      promises.push(new Promise(async resolve => {
-        const result = await doReactions(targetToken, workflow.tokenUuid, null, "reactionpreattack", { item: this, workflow, workflowOptions: foundry.utils.mergeObject(workflow.workflowOptions, { sourceActorUuid: activity.actor?.uuid, sourceItemUuid: this?.uuid }, { inplace: false, overwrite: true }) });
+      promises.push((async () => {
+        const result = await doReactions(targetToken, workflow.tokenUuid, null, "reactionpreattack", { item: activity.item, workflow, workflowOptions: foundry.utils.mergeObject(workflow.workflowOptions, { sourceActorUuid: activity.actor?.uuid, sourceItemUuid: activity.item?.uuid }, { inplace: false, overwrite: true }) });
         if (result.name) {
           targetToken.actor?.reset();
           workflow.actor.reset();
           // targetToken.actor?.prepareData(); // allow for any items applied to the actor - like shield spell
         }
-        resolve(result);
-      }));
+        return result;
+      })());
     }
   }
   return await Promise.all(promises);
@@ -391,11 +399,11 @@ export async function showItemInfo(this: Item.Implementation): Promise<ChatMessa
   };
   chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
 
-  // Toggle default roll mode
-  let rollMode = safeGetGameSetting("core", "rollMode") ?? "public";
-  if (["gmroll", "blindroll"].includes(rollMode)) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM").filter(u => u.active);
-  if (rollMode === "blindroll") chatData["blind"] = true;
-  if (rollMode === "selfroll") chatData["whisper"] = [game.user?.id];
+  // Toggle default roll mode (v14 message modes)
+  let rollMode = (safeGetGameSetting("core", "messageMode") as string) ?? "public";
+  if (["gm", "blind"].includes(rollMode)) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM").filter(u => u.active);
+  if (rollMode === "blind") chatData["blind"] = true;
+  if (rollMode === "self") chatData["whisper"] = [game.user?.id];
 
   // Create the chat message
   return ChatMessage.create(chatData);

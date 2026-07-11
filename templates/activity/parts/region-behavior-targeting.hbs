@@ -1,0 +1,26 @@
+{{#if showRegionBehaviorPanel}}
+<section class="tab activity-{{ tab.id }} {{ tab.cssClass }} midi-region-behavior"
+         data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
+    <fieldset>
+        <legend>{{localize "midi-qol.REGION_BEHAVIOR.header"}}</legend>
+        {{ formField fields.regionBehavior.fields.enabled
+            value=source.regionBehavior.enabled
+            input=@root.inputs.createCheckboxInput }}
+        {{ formField fields.regionBehavior.fields.attachToken
+            value=source.regionBehavior.attachToken
+            options=attachTokenOptions localize=true }}
+        <div class="form-group">
+            <label></label>
+            <div class="form-fields">
+                <button type="button" class="unbutton control-button"
+                        data-action="openRegionBehaviorEditor"
+                        data-tooltip="midi-qol.REGION_BEHAVIOR.editor.hint"
+                        aria-label="{{localize "midi-qol.REGION_BEHAVIOR.editor.title"}}">
+                    <i class="fas fa-cog"></i>
+                    {{localize "midi-qol.REGION_BEHAVIOR.editor.title"}}
+                </button>
+            </div>
+        </div>
+    </fieldset>
+</section>
+{{/if}}

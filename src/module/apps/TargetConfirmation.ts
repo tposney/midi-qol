@@ -346,7 +346,11 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     return super.close(options);
   }
 
+  #callbackFired = false;
   doCallback(value = false) {
+    // close() always calls doCallback(false) - only the first call (e.g. roll) may win
+    if (this.#callbackFired) return;
+    this.#callbackFired = true;
     try {
       if (this.callback) this.callback(value);
     } catch (err) {
