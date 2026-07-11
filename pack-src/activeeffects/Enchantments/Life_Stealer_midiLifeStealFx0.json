@@ -23,8 +23,20 @@
         "type": "upgrade"
       },
       {
+        "key": "flags.dae.macro.command",
+        "value": "const version = \"14.0.6\";\ntry {\n  if (args[0]?.macroPass === \"DamageBonus\") {\n    if (!workflow?.hitTargets?.size) return {};\n    return { damageRoll: \"1d6[necrotic]\", flavor: \"Life Stealer\" };\n  }\n  if (args[0]?.macroPass === \"postActiveEffects\") {\n    if (!workflow?.hitTargets?.size) return;\n    const necroticTotal = (workflow?.bonusDamageRolls ?? [])\n      .reduce((sum, r) => sum + ((r.options?.type ?? r.options?.flavor) === \"necrotic\" ? r.total : 0), 0);\n    if (!necroticTotal) return;\n    const currentTemp = actor?.system?.attributes?.hp?.temp ?? 0;\n    if (necroticTotal > currentTemp) {\n      ChatMessage.create({ content: `${macroItem?.name ?? \"Life Stealer\"} steals ${necroticTotal} HP` });\n      await actor.update({ \"system.attributes.hp.temp\": necroticTotal });\n    }\n  }\n} catch (err) {\n  console.error(`Life Stealer ${version}`, err);\n}",
+        "priority": 50,
+        "type": "override"
+      },
+      {
         "key": "flags.midi-qol.onUseMacroName",
-        "value": "ActivityMacro.life-stealer, postActiveEffects",
+        "value": "ItemMacro, DamageBonus",
+        "priority": 50,
+        "type": "custom"
+      },
+      {
+        "key": "flags.midi-qol.onUseMacroName",
+        "value": "ItemMacro, postActiveEffects",
         "priority": 50,
         "type": "custom"
       },
@@ -52,7 +64,7 @@
     "expired": false
   },
   "description": "Enchants a weapon as Life Stealer. Adds magical property, +1 bonus, requires attunement, and adds the life-stealer on-use macro.",
-  "origin": null,
+  "origin": "Compendium.midi-qol.midiqol-active-effects.ActiveEffect.midiLifeStealFx0",
   "tint": "#ffffff",
   "transfer": false,
   "statuses": [],
@@ -73,7 +85,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-active-effects",
-        "version": "14.0.5"
+        "version": "14.0.6"
       }
     }
   },

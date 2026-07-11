@@ -4,7 +4,7 @@
   "img": "icons/magic/water/projectile-ice-shard.webp",
   "system": {
     "description": {
-      "value": "<p>You create a shard of ice and fling it at one creature within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 Piercing damage. Hit or miss, the shard then explodes. The target and each creature within 5 feet of it must succeed on a Dexterity saving throw or take 2d6 Cold damage.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The Cold damage increases by 1d6 for each spell slot level above 1.</p><p><strong>midi-qol</strong>: Two activities — a ranged spell attack for 1d10 Piercing (no scaling), then a Shard Explosion DEX save for 2d6 Cold (no damage on save, scales +1d6/level). The attack activity uses <code>triggeredActivityId</code> to automatically fire the explosion (hit or miss) as a 5ft radius template centered on the target. The explosion activity is <code>automationOnly</code> so it cannot be used manually.</p>",
+      "value": "<p>You create a shard of ice and fling it at one creature within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 Piercing damage. Hit or miss, the shard then explodes. The target and each creature within 5 feet of it must succeed on a Dexterity saving throw or take 2d6 Cold damage.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The Cold damage increases by 1d6 for each spell slot level above 1.</p><p><strong>midi-qol</strong>: Two activities \u2014 a ranged spell attack for 1d10 Piercing (no scaling), then a Shard Explosion DEX save for 2d6 Cold (no damage on save, scales +1d6/level). The attack activity uses <code>triggeredActivityId</code> to automatically fire the explosion (hit or miss) as a 5ft radius template centered on the target. The explosion activity is <code>automationOnly</code> so it cannot be used manually.</p>",
       "chat": "<p>You create a shard of ice and fling it at one creature within range. Make a ranged spell attack against the target. On a hit, the target takes 1d10 Piercing damage. Hit or miss, the shard then explodes. The target and each creature within 5 feet of it must succeed on a Dexterity saving throw or take 2d6 Cold damage.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The Cold damage increases by 1d6 for each spell slot level above 1.</p>"
     },
     "source": {
@@ -356,7 +356,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.55"
+        "version": "14.0.8"
       }
     }
   },

@@ -180,6 +180,10 @@ class ConfigSettings {
   fixStickyKeys: boolean = true;
   fumbleSound: string = "";
   ghostRolls: boolean = false;
+  gmAttackDisplay: string = "full";
+  gmDamageDisplay: string = "full";
+  gmAttackDsn: string = "show";
+  gmDamageDsn: string = "show";
   gmAttackDamageCards: boolean = false;
   gmAutoAttack: boolean = false;
   gmAutoDamage: string = "none";
@@ -259,12 +263,13 @@ class ConfigSettings {
     actionSpecialDurationImmediate: false,
     activeDefence: false,
     activeDefenceModifier: 12,
-    activeDefenceShow: "selfroll",
+    activeDefenceShow: "self",
     ActiveDefenceDC: true,
     autoRerollInitiative: false,
     challengeModeArmor: "none",
     checkFlanking: "off",
     flankingBonus: "advantage" as string,
+    flankingRequiresVisibility: false,
     showFlankingHighlight: false,
     checkRange: "longFail",
     coverCalculation: "none",
@@ -458,6 +463,36 @@ function removeOldValues(theObject: any) {
 }
 
 /**
+ * Migrate hideRollDetails + ghostRolls + gmHide3dDice → granular GM display settings.
+ * Modifies the configSettings object in place. Only runs if gmAttackDisplay is undefined.
+ */
+function migrateGmRollHiding(cs: any) {
+  if (cs.gmAttackDisplay !== undefined) return;
+  const old = cs.hideRollDetails ?? "none";
+  const ghost = cs.ghostRolls ?? false;
+  const migrationMap: Record<string, { attack: string; damage: string; attackDsn: string; damageDsn: string }> = {
+    "none":             { attack: "full",       damage: "full",      attackDsn: "show", damageDsn: "show" },
+    "detailsDSN":       { attack: "hideFormula", damage: "full",     attackDsn: "show", damageDsn: "show" },
+    "details":          { attack: "hideFormula", damage: "full",     attackDsn: "none", damageDsn: "none" },
+    "d20Only":          { attack: "d20Only",    damage: "totalOnly", attackDsn: "show", damageDsn: "none" },
+    "d20DamageDSN":     { attack: "d20Only",    damage: "totalOnly", attackDsn: "show", damageDsn: "show" },
+    "hitDamage":        { attack: "hitMiss",    damage: "totalOnly", attackDsn: "none", damageDsn: "none" },
+    "hitCriticalDamage": { attack: "hitMissCrit", damage: "totalOnly", attackDsn: "none", damageDsn: "none" },
+    "attackTotalOnly":  { attack: "attackTotal", damage: "totalOnly", attackDsn: "none", damageDsn: "none" },
+    "d20AttackOnly":    { attack: "d20Only",    damage: "hidden",    attackDsn: "show", damageDsn: "none" },
+    "all":              { attack: "hidden",     damage: "hidden",    attackDsn: "none", damageDsn: "none" },
+  };
+  const mapped = migrationMap[old] ?? migrationMap["none"];
+  cs.gmAttackDisplay = mapped.attack;
+  cs.gmDamageDisplay = mapped.damage;
+  cs.gmAttackDsn = ghost ? "ghost" : mapped.attackDsn;
+  cs.gmDamageDsn = ghost ? "ghost" : mapped.damageDsn;
+  delete cs.hideRollDetails;
+  delete cs.ghostRolls;
+  delete cs.gmHide3dDice;
+}
+
+/**
  * Migrates the deprecated displaySaveDC setting to dnd5e challengeVisibility.
  * Modifies the configSettings object in place, removing the deprecated field.
  * @param configSettingsToMigrate - The configSettings object to migrate (will be modified)
@@ -532,6 +567,8 @@ export async function importSettingsFromJSON(json) {
   if (importedConfigSettings.displaySaveDC !== undefined) {
     await migrateDisplaySaveDC(importedConfigSettings, "import");
   }
+  // Migrate old hideRollDetails → granular GM display settings on import
+  migrateGmRollHiding(importedConfigSettings);
 
   await game.settings.set("midi-qol", "ConfigSettings", importedConfigSettings);
   await game.settings.set("midi-qol", "MidiSoundSettings", removeOldValues(json.midiSoundSettings) ?? {});
@@ -642,21 +679,20 @@ export let fetchParams = () => {
   if (configSettings.reactionTimeout === undefined) configSettings.reactionTimeout = 0;
   if (configSettings.convenientEffectsReaction === undefined) configSettings.convenientEffectsReaction = "Reaction"; //TODO come back when it is configurable in midi and set it to ""
   if (typeof configSettings.rangeTarget !== "string") configSettings.rangeTarget = "none";
-  if (!configSettings.showReactionAttackRoll === undefined) configSettings.showReactionAttackRoll = "all";
+  if (configSettings.showReactionAttackRoll === undefined) configSettings.showReactionAttackRoll = "all";
+  //@ts-expect-error type mismatch - this is for legacy true setting
+  if (configSettings.rollChecksBlind === true) configSettings.rollChecksBlind = ["all"];
   if (!configSettings.rollChecksBlind) configSettings.rollChecksBlind = [];
   configSettings.rollChecksBlind = configSettings.rollChecksBlind.filter((item) => item !== "none");
   //@ts-expect-error type mismatch - this is for legacy true setting
-  if (configSettings.rollChecksBlind === true) configSettings.rollChecksBlind = ["all"];
+  if (configSettings.rollSavesBlind === true) configSettings.rollSavesBlind = ["all"];
   if (!configSettings.rollSavesBlind) configSettings.rollSavesBlind = [];
   configSettings.rollSavesBlind = configSettings.rollSavesBlind.filter((item) => item !== "none");
   //@ts-expect-error type mismatch - this is for legacy true setting
-  if (configSettings.rollSavesBlind === true) configSettings.rollSavessBlind = ["all"];
+  if (configSettings.rollSkillsBlind === true) configSettings.rollSkillsBlind = ["all"];
   if (!configSettings.rollSkillsBlind) configSettings.rollSkillsBlind = [];
   configSettings.rollSkillsBlind = configSettings.rollSkillsBlind.filter((item) => item !== "none");
-  //@ts-expect-error type mismatch - this is for legacy true setting
-  if (configSettings.rollSkillsBlind === true) configSettings.rollSkillsBlind = ["all"];
-  if (configSettings.gmHide3dDice === undefined) configSettings.gmHide3dDice = false;
-  if (configSettings.ghostRolls === undefined) configSettings.ghostRolls = false;
+  migrateGmRollHiding(configSettings);
   if (configSettings.addFakeDice === undefined) configSettings.addFakeDice = false;
   if (typeof configSettings.gmConsumeResource !== "string") configSettings.gmConsumeResource = "none";
   if (typeof configSettings.consumeResource !== "string") configSettings.consumeResource = "none";
@@ -708,12 +744,13 @@ export let fetchParams = () => {
     actionSpecialDurationImmediate: false,
     activeDefence: false,
     activeDefenceModifier: 12, // default value for active defence modifier
-    activeDefenceShow: "selfroll",
+    activeDefenceShow: "self",
     ActiveDefenceDC: true,
     challengeModeArmor: "none",
     challengeModeArmorScale: false,
     checkFlanking: "off",
     flankingBonus: "advantage",
+    flankingRequiresVisibility: false,
     checkRange: "longfail",
     coverCalculation: "none",
     displayBonusRolls: true,
@@ -758,7 +795,7 @@ export let fetchParams = () => {
   //@ts-expect-error legacy nonexistent value
   if (configSettings.optionalRules.activeDefenceShowGM === true) {
     // old setting replaced with new
-    configSettings.optionalRules.activeDefenceShow = "gmroll";
+    configSettings.optionalRules.activeDefenceShow = "gm";
     //@ts-expect-error legacy nonexistent value
     delete configSettings.optionalRules.activeDefenceShowGM;
   }
@@ -1213,6 +1250,28 @@ export const hideRollDetailsOptions = keysToExtendedOptionsObj("hideRollDetailsO
   "attackTotalOnly",
   "d20AttackOnly",
   "all"
+]);
+
+export const gmAttackDisplayOptions = keysToExtendedOptionsObj("gmAttackDisplayOptions", [
+  "full",
+  "hideFormula",
+  "d20Only",
+  "attackTotal",
+  "hitMiss",
+  "hitMissCrit",
+  "hidden"
+]);
+
+export const gmDamageDisplayOptions = keysToExtendedOptionsObj("gmDamageDisplayOptions", [
+  "full",
+  "totalOnly",
+  "hidden"
+]);
+
+export const gmDsnDisplayOptions = keysToExtendedOptionsObj("gmDsnDisplayOptions", [
+  "show",
+  "ghost",
+  "none"
 ]);
 
 export const rollOtherDamageOptions = keysToExtendedOptionsObj("RollOtherDamageOptions", [
@@ -1931,6 +1990,16 @@ export function safeGetGameSetting(moduleName: string, settingName: string): any
   if (game.settings.settings.get(`${moduleName}.${settingName}`))
     //@ts-expect-error
     return game.settings.get(moduleName, settingName);
+  else return undefined;
+}
+
+// Setter companion to safeGetGameSetting — sets only registered settings, and accepts loose key names
+// (fvtt-types' KeyFor<"core"> lags v14, e.g. "messageMode"). Returns the set promise or undefined.
+export function safeSetGameSetting(moduleName: string, settingName: string, value: unknown): Promise<unknown> | undefined {
+  // @ts-expect-error
+  if (game.settings.settings.get(`${moduleName}.${settingName}`))
+    //@ts-expect-error
+    return game.settings.set(moduleName, settingName, value);
   else return undefined;
 }
 

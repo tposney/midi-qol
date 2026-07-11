@@ -1,5 +1,5 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
-import { configSettings, checkRule, checkMechanic, safeGetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
+import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
 import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
@@ -178,7 +178,18 @@ export function initPatching() {
   // ActiveEffect, Item, Actor already have dnd5e's DependentDocumentMixin in their class hierarchy
   // Just add MidiDependentDocumentMixin for our registry tracking
   //@ts-expect-error - Mixin pattern type inference
-  class MidiActiveEffect extends MidiDependentDocumentMixin(CONFIG.ActiveEffect.documentClass) { };
+  class MidiActiveEffect extends MidiDependentDocumentMixin(CONFIG.ActiveEffect.documentClass) {
+    // dnd5e's isAppliedEnchantment getter dereferences this.parent.uuid, which throws when
+    // an enchantment effect is loaded standalone (e.g. fromUuid on a compendium-stored
+    // top-level ActiveEffect). Treat the no-parent case as "not applied" and otherwise
+    // fall through to the system's logic.
+    get isAppliedEnchantment() {
+      // @ts-expect-error parent not on MixinDocumentInstance
+      if (!this.parent) return false;
+      // @ts-expect-error no dnd5e types
+      return super.isAppliedEnchantment;
+    }
+  };
   //@ts-expect-error
   CONFIG.ActiveEffect.documentClass = MidiActiveEffect;
 
@@ -572,24 +583,26 @@ function isVisible(this: Token.Implementation, wrapped) {
  * @param messageRollMode - Roll mode from message config (takes priority if already BLIND)
  * @returns The roll mode to use
  */
+// rollMode here is a v14 message mode (CONFIG.ChatMessage.modes key: public/gm/blind/self), matching
+// what the roll dialog and the activity seed now use — not the legacy CONST.DICE_ROLL_MODES values.
 function applyBlindRollMode(
   blindRollSettings: string[],
   choiceId: string | undefined,
-  messageRollMode: keyof CONFIG.Dice.RollModes | undefined
+  messageRollMode: string | undefined
 ): keyof CONFIG.Dice.RollModes {
-  let rollMode: keyof CONFIG.Dice.RollModes = messageRollMode ?? safeGetGameSetting("core", "rollMode");
+  let rollMode: string = messageRollMode ?? safeGetGameSetting("core", "messageMode");
 
   // If already blind, keep it
-  if (rollMode === CONST.DICE_ROLL_MODES.BLIND) return rollMode;
+  if (rollMode === "blind") return rollMode as keyof CONFIG.Dice.RollModes;
 
   // Check if this roll should be forced to blind
   const shouldBeBlind = blindRollSettings.includes("all") || blindRollSettings.includes(choiceId ?? "");
-  if (shouldBeBlind && [CONST.DICE_ROLL_MODES.PUBLIC, "roll", CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode)) {
-    rollMode = CONST.DICE_ROLL_MODES.BLIND;
-    game.settings.set("core", "rollMode", CONST.DICE_ROLL_MODES.BLIND);
+  if (shouldBeBlind && ["public", "roll", "gm"].includes(rollMode)) {
+    rollMode = "blind";
+    safeSetGameSetting("core", "messageMode", "blind");
   }
 
-  return rollMode;
+  return rollMode as keyof CONFIG.Dice.RollModes;
 }
 
 export interface Options {
@@ -709,7 +722,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
   let rollSkillHookId: number | undefined;
   //@ts-expect-error
   let result: CONFIG.Dice.D20Roll[] = [];
-  const saveRollMode: keyof CONFIG.Dice.RollModes = safeGetGameSetting("core", "rollMode");
+  const saveRollMode: keyof CONFIG.Dice.RollModes = safeGetGameSetting("core", "messageMode");
   try {
     message.data ??= {};
     let skillId = config.skill;
@@ -745,7 +758,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     }
 
     let success: boolean | undefined = undefined;
-    let rollMode: keyof CONFIG.Dice.RollModes = message.rollMode ?? safeGetGameSetting("core", "rollMode");
+    let rollMode: keyof CONFIG.Dice.RollModes = message.rollMode ?? safeGetGameSetting("core", "messageMode");
     if (dialog.configure === undefined && config.midiOptions.fastForward) dialog.configure = false;
 
     let skillModifiers: RollModifierResult;
@@ -890,10 +903,9 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
   finally {
     if (preRollSkillHookId) Hooks.off("dnd5e.preRollSkill", preRollSkillHookId);
     if (rollSkillHookId) Hooks.off("dnd5e.postSkillRollConfiguration", rollSkillHookId);
-    if (saveRollMode) game.settings.set("core", "rollMode", saveRollMode);
-    if (oldFormat) return result?.[0];
-    return result;
+    if (saveRollMode) safeSetGameSetting("core", "messageMode", saveRollMode);
   }
+  return oldFormat ? result?.[0] : result;
 }
 
 /**
@@ -1381,7 +1393,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
   let overtimeActorUuid: string | undefined;
   let preRollAbilityHookId: number | undefined;
   let rollAbilityHookId: number | undefined;
-  const saveRollMode: keyof CONFIG.Dice.RollModes = safeGetGameSetting("core", "rollMode");
+  const saveRollMode: keyof CONFIG.Dice.RollModes = safeGetGameSetting("core", "messageMode");
   let result: Roll[] | undefined;
   let type: "SavingThrow" | "AbilityCheck" = "SavingThrow";
   try {
@@ -1514,10 +1526,13 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
       console.warn("midi-qol | doRollAbility: result is a Roll, not an array of Rolls");
       result = [result];
     }
-    let rollMode: keyof CONFIG.Dice.RollModes = message.rollMode ?? safeGetGameSetting("core", "rollMode");
+    let rollMode: keyof CONFIG.Dice.RollModes = message.rollMode ?? safeGetGameSetting("core", "messageMode");
     // @ts-expect-error
     result.forEach(r => r.options.rollMode = rollMode);
-    await displayDSNForRoll(result, rollType, rollMode);
+    // Effective save display drives DSN ghosting for saves (per-activity saveDisplay overrides the global).
+    const activitySaveDisplay = config.midiOptions?.workflow?.activity?.saveDisplay as string | undefined;
+    const saveDisplay: string = (activitySaveDisplay && activitySaveDisplay !== "default") ? activitySaveDisplay : configSettings.autoCheckSaves;
+    await displayDSNForRoll(result, rollType, rollMode, saveDisplay);
     DSNMarkDiceDisplayed(result);
     foundry.utils.mergeObject(message.data, { "flags": config.flags ?? {} });
     // Set overtimeActorUuid AFTER message object is replaced by hook and merged
@@ -1559,23 +1574,26 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
         if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
       }
     }
-    if (saveRollMode) game.settings.set("core", "rollMode", saveRollMode);
+    if (saveRollMode) safeSetGameSetting("core", "messageMode", saveRollMode);
     if (abilityId) await expireRollEffect.bind(this)(rollType, abilityId, success);
-    if (config.midiOptions.isConcentrationCheck) {
+    // Concentration saves arrive as rollType "save" with "concentration" in hookNames (see effectiveRollType).
+    // Pass the bare "ConcentrationSave" so expireRollEffect matches is/isConcentrationSaveSuccess/Failure.
+    if (config.hookNames?.includes("concentration")) {
       // @ts-expect-error no dnd5e-types
       if (success === undefined && result?.[0]?.isSuccess !== undefined) success = result[0].isSuccess;
-      expireRollEffect.bind(this)("isConcentrationSave", "", success);
+      await expireRollEffect.bind(this)("ConcentrationSave", "", success);
     }
   } catch (err) {
     const message = `doRollAbility error ${this.name} ${abilityId} ${rollType} ${this.uuid}`;
     TroubleShooter.recordError(err, message);
     error(message, err);
+    throw err;
   } finally {
     if (preRollAbilityHookId) Hooks.off(`dnd5e.preRoll${type}`, preRollAbilityHookId);
     if (rollAbilityHookId) Hooks.off(`dnd5e.post${type}RollConfiguration`, rollAbilityHookId);
-    if (saveRollMode) game.settings.set("core", "rollMode", saveRollMode);
-    return oldFormat ? result?.[0] : result
+    if (saveRollMode) safeSetGameSetting("core", "messageMode", saveRollMode);
   }
+  return oldFormat ? result?.[0] : result
 }
 
 export async function rollSavingThrow(this: Actor.Implementation, wrapped, config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
@@ -1673,10 +1691,10 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
       roll.options.advantage = advantage;
       roll.options.disadvantage = disadvantage;
       if (!autoFail && !autoSuccess && configData.midiOptions?.parts?.length) roll.parts = [...(roll.parts ?? []), ...configData.midiOptions.parts];
-      if (blindSaveRoll) roll.options.rollMode = CONST.DICE_ROLL_MODES.BLIND;
+      if (blindSaveRoll) roll.options.rollMode = "blind" as keyof CONFIG.Dice.RollModes;
     }
     setRollDialogOptions(configData, dialogData, "save");
-    if (blindSaveRoll) messageData.rollMode = CONST.DICE_ROLL_MODES.BLIND;
+    if (blindSaveRoll) messageData.rollMode = "blind" as keyof CONFIG.Dice.RollModes;
   });
 
   try {
@@ -2798,7 +2816,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
 
     if (this.token) foundry.utils.setProperty(dialog, "options.window.subtitle", this.token.name);
     result = await wrapped(config, dialog, message);
-    let rollMode = message.rollMode ?? safeGetGameSetting("core", "rollMode");
+    let rollMode = message.rollMode ?? safeGetGameSetting("core", "messageMode");
     if (result) {
       await displayDSNForRoll(result, "toolCheck", rollMode);
       DSNMarkDiceDisplayed(result);

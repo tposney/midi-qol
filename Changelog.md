@@ -1,3 +1,65 @@
+
+### 14.0.10
+* Migrated from the deprecated `core.rollMode` to v14's `core.messageMode` throughout (chat-card visibility, roll-mode save/restore, "Hidden Roll" gating); stored legacy values are normalized on read.
+* Activity Roll Mode picker uses v14 values and migrates a legacy stored value on open/save.
+* Fix: hidden NPC saving throws were leaked to players; a save with no explicit roll mode against a hidden-challenge NPC is now forced to GM-only.
+* Fix: save DC on save-result cards now follows the caster, not per-target ownership; NPC save results now show only when the challenge is fully public.
+* Fix: save/ability-check 3D dice (DSN) visibility now follows `autoCheckSaves` (or a per-activity `saveDisplay`) rather than the message mode.
+* Fix: self/GM/blind whispered DSN rolls were not shown to the rolling user.
+* Fix: v14 roll modes are translated back to legacy values for Monk's TokenBar / Flash Rolls 5e.
+* Fix: Active Defence default/migration, over-time roll modes, and concentration re-rolls updated to v14 modes.
+* Internal: exported `toMessageMode`/`toLegacyRollMode`/`rollModeToMessageMode`, added `safeSetGameSetting`, extended `displayDSNForRoll` with `saveDisplay`.
+
+### 14.0.9
+* Allow regions to be attached for non emanation templates. If more than 1 target (AoE templates) is possible a confirmation dialog to identify which target to attach the template/region to.
+    - Emanation templates continue to auto-attach to the caster by default (the "default" Attach Region To setting preserves the previous behaviour); choose caster/target explicitly to override.
+* Fix: clicking "+" in the actor On-Use Macros config threw `Missing helper: "select"` (the Foundry v12 `select` helper was removed); migrated to `selectOptions`.
+* Fix: the "Show reaction attack roll" setting default was never applied.
+* Fix: the legacy "Roll Saves Blind = all" migration silently did nothing (property typo).
+* Fix: DDB Game Log pending attack/damage/heal rolls could not resolve their actor, breaking the integration.
+* Fix: an activity could still be used after the "you do not own this item" warning; the use is now aborted.
+* Fix: skill/ability/saving-throw rolls that errored were silently swallowed and returned empty; errors now surface, and rolls redirected to another actor (concentration/overtime requests) return their result.
+* Fix: a chain of triggered activities that loops indirectly (A→B→C→B) now aborts with a notification instead of hanging.
+* Fix: the player damage card could render empty when a target used a video (webm) token texture.
+* Fix: the target confirmation dialog ran its callback twice.
+* Fix: pre-attack reactions were passed the wrong item reference.
+* Fix: sync activation conditions now expose `evalTypeOrRace` (previously only available in async conditions).
+* Fix: rolls on workflows rebuilt from a chat card (e.g. region-behaviour triggers) are now reconstructed correctly instead of left as raw data.
+* Fix: undo could miss re-created effects and chat cards spoken by a token; both are now captured.
+* Fix: the roll mode chosen in the save/check roll dialog (e.g. self) was ignored — the seeded mode now uses v14 message-mode values so it matches the dialog and is honoured.
+* Fix: the Concentration Save special durations (isConcentrationSave / success / failure) did not expire effects. NOTE: the failure key was renamed `isConcentrationSaveFail` → `isConcentrationSaveFailure`, so existing effects using the "Concentration Save: failure" special duration must re-select it on the effect.
+
+Internal changes (no functional/user impact):
+* Workflow persisted-field accessors consolidated behind a single helper.
+* Unified the sync/async safe-eval implementations and the activity self-trigger getters; removed the resulting dead code.
+* Added missing guards/error handling (region preview without Levels, initiative reroll, activity-use failure, GM socket actor lookups) and removed leftover debug logging.
+* Sample item metadata version stamps refreshed.
+
+### 14.0.8
+* Fix template placement for spells whose range uses a unit different from the scene grid (e.g. Meteor Swarm with range 1 mile in a foot-grid scene). Templates were being clamped to the caster's perimeter; range is now converted to scene grid units before the placement range check.
+* Fix `midi-qol.preTargetSave` hook contract: `saveDetails.advantage`/`disadvantage` set by external hook handlers is now applied to the resulting save roll. Previously the values were stored on the roll config but were not seeded into the advantage tracker, so the hook had no effect on midi-driven saves.
+* Switched all `DND5E.Healing` references to `DND5E.HEAL.HealingButton` (the older key was removed in dnd5e 5.3). Affects the player damage card healing label, the damage-roll button on midi chat cards, and the action flavor text for healing activities.
+* Region behaviour-triggered activities (e.g. Spirit Guardians' damage save, Moonbeam's emanation save) are now attributed to the source actor's player owner rather than the GM. Chat messages, rolls, and speaker attribution show the player as the roller; falls back to the GM when no player owner is online. The trigger is dispatched directly to the source player's client when possible to avoid an extra GM hop.
+* The dnd5e damage application tray on midi chat cards now opens or collapses based on whether midi auto-applied damage. When midi auto-applies, the tray is collapsed; when midi did not auto-apply, the tray is expanded so the apply controls are visible without an extra click. This overrides the dnd5e "Auto Collapse Chat Trays" setting for midi cards only.
+* Optional bonus dialog for missed attacks (`flags.midi-qol.optional.*.attack.fail.*`) now uses the same effective AC as the hit check (the AC captured at roll time via `targetDescriptor.ac`), instead of the live `actor.system.attributes.ac.value`. Previously the two could disagree when AC changed between roll time and the bonus-flag evaluation (e.g. when a preAttackRoll macro toggled effects on the target), so the dialog could fire for an attack that would still hit.
+* Fix: with "Auto Apply Item Effects" set to "Do not display button" or "Remove button", the dnd5e effects-application tray is now removed from midi chat cards. 
+* Removed the deprecated `activity.targets` getter/setter — use `workflow.targets` instead.
+
+### 14.0.7
+* Fix for midi-qol region behaviours throwing an error when cast by a non-gm.
+* Correct Spirit Guardians to be end of turn rather than start of turn.
+
+### 14.0.6
+* Fix for concentration auto roll being done twice when "Chat Message + Auto Roll" is selected.
+* Fix for double consumption when using a spell from an item with item uses (e.g. Staff of Power casting Cone of Cold consumed 10 charges instead of 5).
+* Fix attack roll critical/fumble highlighting not showing icons or colours when "Only highlight critical/fumble hits" is enabled. Regression from 13.0.58.
+* Fix numeric `forcedMode` values from modules causing crash in DAE effect config (`forcedMode.toLowerCase is not a function`). Changed all midi-qol spec registrations from numeric `-1` to string `""`.
+* New "Flanking requires target can sense flanker" setting (Rules tab, Flanking box). When enabled, invisible or hidden allies won't contribute to flanking unless the target can sense them.
+* Flanking settings are now grouped in their own box within Optional Rules.
+* New "Midi Active Effects" compendium with sample enchantment effects (Dragon Slayer variants, Life Stealer, Wounding Weapon) extracted from sample items.
+* Overtime workflows now include `overTimeEffectUuid` in `workflowOptions`, accessible from hooks, macros, and save roll options.
+* Fix target snapshot race condition — targets are now captured at the start of `use()` to prevent concurrent workflows from clearing each other's targets.
+
 ### 14.0.5
 * The "Vision test point height" setting overrides the source token's vision origin (where the token sees from - foundry default 1/2 of the tokens height), not just the target test points. Setting to "Top" means both the viewing token's eye point and the target's visibility test points use the top of the token height. This improves visibility through holes in surfaces for tokens standing near edges.
 * New token flags `token.flags.midi-qol.visionSourceHeight` and `token.flags.midi-qol.visionTargetHeight` allow per-token override of the vision height as a percentage (0–100) of the token's height. When not set, falls back to the midi setting. These can be set via DAE active effects (e.g. a "Crouch" or "Prone" effect setting both to 25). Vision automatically refreshes when these flags change.
@@ -27,12 +89,12 @@
 * Fix save prompt missing flavor text when neither advantage nor disadvantage applies.
 * `DamageOnlyWorkflow` now exposes a `ready` promise that resolves when the workflow completes. Callers can `await workflow.ready` instead of guessing with `setTimeout`. The internal `performState` call is now properly awaited.
 * Fix for detecting if a target can be hit when there is a surface between them. Prior to the fix any surface between the attacker and target would trigger "blocked by a wall" even if there was clear line of sight "through" the level.
-  - Added a setting to change what elevation is used to compute los from one token to another. Founrdy by default uses the mid point of the tokens z range. For humans and others with eyes at the top of their head this significantly reduces what they can see when look over a level with a hole in it (measures from the middle of the token's square and 1/2 way up the token) which I think feels overly restrictive. The setting allows you to use the top of the token signficantly increasing what the token can see.
+  - Added a setting to change what elevation is used to compute los from one token to another. Foundry by default uses the mid point of the tokens z range. For humans and others with eyes at the top of their head this significantly reduces what they can see when look over a level with a hole in it (measures from the middle of the token's square and 1/2 way up the token) which I think feels overly restrictive. The setting allows you to use the top of the token significantly increasing what the token can see.
 
 
 ### 14.0.1
-* This release is v14 compatible. Tested wtih dnd5e 5.3 prerelease.
-* Supports tempmax daamge.
+* This release is v14 compatible. Tested with dnd5e 5.3 prerelease.
+* Supports tempmax damage.
 * I've migrated midi to use regions rather than templates throughout.
   - Use dnd5e to place templates so there is still a template like interaction.
   - Regions now support dependents.
@@ -53,7 +115,7 @@
 **New Features**
 * Updated Guidance sample item to allow rolling when the caster does not have a token on the map, i.e. always applies to self as a optional bonus action.
 * Some minor styling changes on the chat card.
-* Added a few additonal fields in roll statistics tracking
+* Added a few additional fields in roll statistics tracking
 
 **Movement API overhaul** — `moveToken`, `moveTokenAwayFromPoint`, and new `teleportToken` now use Foundry's `TokenDocument.move()` API, which means they properly trigger movement hooks and region events (e.g., `isMoved` specialDuration now fires correctly).
 
@@ -134,7 +196,7 @@
 **For developers**
 * Midi's sample items is now build from pack-src by default, I have also structured the items into a folder structure to make it easier for developers to submit changes/browse for items as needed
 * All midi-qol hooks, now call the preMades version as well. Also call the midi-qol hooks with the workflowId, which is almost always the chart card uuid.
-* Added four new hooks, midi-qol.preSetReactionUsed, midi-qol.preSetBonusActionUsed, midi-qol.setBonusReactionUsed, midi-qol.setReactionUsed, all pass the same args actor, reactionEffect. The reaction effect is "live" so modifications via updateSource will be applied to the effect when it is created on the actor and the hooks are called via aysncHooksCall so they can await actions, like doing a Roll.
+* Added four new hooks, midi-qol.preSetReactionUsed, midi-qol.preSetBonusActionUsed, midi-qol.setBonusReactionUsed, midi-qol.setReactionUsed, all pass the same args actor, reactionEffect. The reaction effect is "live" so modifications via updateSource will be applied to the effect when it is created on the actor and the hooks are called via asyncHooksCall so they can await actions, like doing a Roll.
 * `WorkflowOptions` now accepts `templateUuid` and `coverOrigin: { x, y, elevation? }`, both passable via `completeActivityUse` as `{ midiOptions: { workflowOptions: { templateUuid, coverOrigin } } }`.
   - `templateUuid` sets the workflow's template UUID (e.g., for activities that reference a previously-placed template).
   - `coverOrigin` sets the origin point for DEX save cover calculations, overriding both template center and caster position. Useful when the template may be deleted by the time saves are rolled.
@@ -145,7 +207,7 @@
 * Fix for AoE templates setting targets for all players, not just the client that rolled the item.
 * Fix for some template placements incorrectly including some tokens in the cover save bonus.* Various other fixes for template targeting not correctly recording targets.
 * When rolling a self target feature (for example action surge) the user's targets switch to self, which breaks the usage pattern of attack, action surge, attack, since the second attack will target the attacker (targets get swapped to the action surger).
-  - Midi now reverts targets back to what they were before the slef target activity ran.
+  - Midi now reverts targets back to what they were before the self target activity ran.
   - Midi should now remember the target you had selected before doing action surge, allowing attack, action surge, attack without needing to retarget.
 * More changes to cover calculation.
   - Midi will now always check the configured cover module and use the "best" cover of the token status and what the module returns.
@@ -814,7 +876,7 @@ Since this change affects what players see please check your settings and the di
 * Fix for players seeing "missed" color highlight when settings are to disable everything.
 * Fix for TroubleShooter not loading older troubleshooter files.
 * Target confirmation knows about whether the chat log is expanded or hidden and positions accordingly.
-* Fix for case where damage bonus not being correctly applied - thanks @thatlonelybugber.
+* Fix for case where damage bonus not being correctly applied - thanks @thatlonelybugbear.
 * Introduced a change in emanation/radius targeting. Instead of using "self" use "-self" to indicate that the caster should not be included. Use of "self" will generate a deprecation warning and will be removed eventually.
 * Updated pt.br.json and it.json - thanks @kharmans and GregoryWarn
 * New setting to control if using an item waits for damage application to complete before finishing. In mechanics tab. 
@@ -3400,7 +3462,7 @@ await  MidiQOL.contestedRoll({
 });
 ```
 * Which says, roll an acrobatics check for token and an athletics or acrobatics check for the target token.   
-The flavor is the item name (in this case Shove), on success call the function success, display the results to a chat message (and since this is an item onUse macro wtih merge cards enabled I pass in the itecCardId) of the item chat card and the results will be displayed in that card.  
+The flavor is the item name (in this case Shove), on success call the function success, display the results to a chat message (and since this is an item onUse macro with merge cards enabled I pass in the itecCardId) of the item chat card and the results will be displayed in that card.  
 The rolls are not fastForwarded so the appropriate players get presented with a roll configuration dialog and the results of each roll are displayed as ability/skill chat cards.
 
 ## 11.0.6
@@ -3515,7 +3577,7 @@ The rolls are not fastForwarded so the appropriate players get presented with a 
 * **Breaking** Actions/reactions and bonus actions are recorded in actor.flags["midi-qol"].actions.bonus/reaction/action true or false, the flag denoting the combat round the bonus action or reaction was use is stored in actor.flags["midi-qol"].actions.reactionCombatRound/bonusActionCombatRound.
 
 ### 10.0.45
-* Fix for fey ancestry item macro typo - thanks @thatlonelybugber
+* Fix for fey ancestry item macro typo - thanks @thatlonelybugbear
 * Fix for shield macro typo - thanks @thatlonelybugear
 * Fix for broach of shielding and 10.0.45 argument calling.
 * Fix for erroneous preTargetdamageApplication macro call - thanks @Elwin
@@ -4051,7 +4113,7 @@ Bug Fixes
 
 * Roll flavors that are not dnd5e damage types now are treated as the default damage type for the item.
 * Confirming damage flavours can be upper or lower case.
-* **BREAKING** When rolling damage the diceflavor will be set to the damage for each dice roll which means DSN daamge rolls will be correctly colored and the damage type of each damage roll will be displayed in the chat card.
+* **BREAKING** When rolling damage the diceflavor will be set to the damage for each dice roll which means DSN damage rolls will be correctly colored and the damage type of each damage roll will be displayed in the chat card.
 
 * Added support for spell sniper, flags.dnd5e.spellSniper.
 

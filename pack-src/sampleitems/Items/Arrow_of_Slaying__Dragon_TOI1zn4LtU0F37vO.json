@@ -121,7 +121,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.55"
+        "version": "14.0.6"
       }
     }
   },
@@ -155,12 +155,10 @@
     },
     "damage": {
       "base": {
-        "number": 1,
-        "denomination": 6,
-        "bonus": "@mod",
-        "types": [
-          "piercing"
-        ],
+        "number": null,
+        "denomination": 0,
+        "bonus": "",
+        "types": [],
         "custom": {
           "enabled": false
         },
@@ -168,18 +166,17 @@
           "number": 1
         }
       },
-      "replace": true
+      "replace": false
     },
     "properties": [
-      "mgc",
-      "sil"
+      "mgc"
     ],
     "unidentified": {
       "description": ""
     },
     "type": {
       "value": "ammo",
-      "subtype": ""
+      "subtype": "arrow"
     },
     "container": null,
     "activities": {
@@ -249,7 +246,7 @@
                 "formula": ""
               },
               "number": 6,
-              "denomination": 6,
+              "denomination": 10,
               "bonus": "",
               "types": [
                 "piercing"

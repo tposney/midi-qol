@@ -1,4 +1,5 @@
 import { i18n, MODULE_ID } from "../../midi-qol.js";
+import { attachTokenOptions } from "../activities/activityHelpers.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -62,6 +63,8 @@ export class RegionBehaviorEditor extends HandlebarsApplicationMixin(Application
     context.oncePerTurn = rb.oncePerTurn ?? true;
     context.wallRestriction = rb.wallRestriction ?? "none";
     context.regionVisibility = rb.regionVisibility ?? CONST.REGION_VISIBILITY.ALWAYS;
+    context.attachToken = rb.attachToken ?? "default";
+    context.attachTokenOptions = attachTokenOptions(context.attachToken);
 
     // Wall restriction dropdown — uses Foundry's EDGE_RESTRICTION_TYPES plus "none"
     // @ts-expect-error fvtt-types missing EDGE_RESTRICTION_TYPES
@@ -191,6 +194,7 @@ export class RegionBehaviorEditor extends HandlebarsApplicationMixin(Application
       "regionBehavior.oncePerTurn": data.oncePerTurn ?? true,
       "regionBehavior.wallRestriction": data.wallRestriction ?? "none",
       "regionBehavior.regionVisibility": Number(data.regionVisibility ?? CONST.REGION_VISIBILITY.ALWAYS),
+      "regionBehavior.attachToken": data.attachToken ?? "default",
       "regionBehavior.rules": this._workingRules,
     };
 
