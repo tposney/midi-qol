@@ -2207,7 +2207,7 @@ function renderActivitySheetHook(app, [elem]) {
   let closeButton = elem.closest('.window-header').querySelector('button[data-action="close"]');
   let daeButton = document.createElement('button');
   const DIMtitle = i18n('dae.DIMEditor.Name');
-  daeButton.setAttribute('class', 'header-control fa-solid fa-file-pen dae-dimeditor');
+  daeButton.setAttribute('class', 'header-control fa-solid fa-file-pen dae-dimeditor icon');
   daeButton.onclick = function (ev) { new Editor({ document: this.activity }).render({ force: true }); }.bind(app);
   if (activity.macro?.command) daeButton.style.color = '#36ba36';
 
