@@ -1755,7 +1755,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       // TODO: Remove the latter after sufficient time has passed
       const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
       const undoDamageData = recoverDamageListFromJSON(undoFlag);
-      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempHP, newVitality, calcDamageOptions, updateOptions } of undoDamageData) {
+      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempMax, calcDamageOptions, updateOptions } of undoDamageData) {
         if (!actorUuid) continue;
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
         applyButton?.children[0].classList.add("midi-qol-enable-damage-button");
@@ -1772,7 +1772,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           "system.attributes.hp.temp": oldTempHP ?? 0,
           "system.attributes.hp.value": oldHP ?? 0
         };
-        if (oldTempMax !== undefined) updates["system.attributes.hp.tempmax"] = oldTempMax;
+        if (newTempMax! - oldTempMax!) updates["system.attributes.hp.tempmax"] = oldTempMax;
         // Handle vitality undo - only if actor still has a vitality item
         const undoItem = undoDamageData.find(d => d.actorUuid === actorUuid);
         const vitalityItem = getVitalityItem(actor);
@@ -1808,7 +1808,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       // TODO: Remove the latter after sufficient time has passed
       const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
       const undoDamageData = recoverDamageListFromJSON(undoFlag);
-      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, newTempMax, oldHP, oldTempHP, oldVitality, calcDamageOptions, updateOptions } of undoDamageData) {
+      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, newTempMax, oldHP, oldTempMax, calcDamageOptions, updateOptions } of undoDamageData) {
         if (!actorUuid) continue;
         let actor = fromActorUuid(actorUuid);
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
@@ -1819,7 +1819,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         reverseButton?.children[0].classList.add("midi-qol-enable-damage-button");
         log(`Setting HP to ${newTempHP} and ${newHP} ${actor?.name} ${actorUuid}`);
         const update = { "system.attributes.hp.temp": newTempHP ?? 0, "system.attributes.hp.value": newHP ?? 0 } as Actor.UpdateData;
-        if (newTempMax !== undefined) update["system.attributes.hp.tempmax"] = newTempMax;
+        if (newTempMax! - oldTempMax!) update["system.attributes.hp.tempmax"] = newTempMax;
         const amount = (newHP ?? 0) - (oldHP ?? 0);
         // Handle vitality apply - only if actor still has a vitality item
         const applyItem = undoDamageData.find(d => d.actorUuid === actorUuid);
@@ -1852,7 +1852,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
   const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
   const undoDamageData = recoverDamageListFromJSON(undoFlag);
   undoDamageData?.forEach((undoEntry) => {
-    const { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempHP, newTempMax, oldVitality, newVitality, damageDetail, calcDamageOptions, updateOptions, oldVitalitySpent, newVitalitySpent } = undoEntry;
+    const { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempHP, newTempMax, damageDetail, calcDamageOptions, updateOptions, oldVitalitySpent, newVitalitySpent } = undoEntry;
     if (!actorUuid) return;
     let button = html.querySelector<HTMLButtonElement>(`#reverse-${actorUuid.replaceAll(".", "")}`);
     button?.addEventListener("click", (ev) => {
@@ -1874,7 +1874,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           "system.attributes.hp.temp": oldTempHP ?? 0,
           "system.attributes.hp.value": oldHP ?? 0
         };
-        if (oldTempMax !== undefined) updates["system.attributes.hp.tempmax"] = oldTempMax;
+        if (newTempMax! - oldTempMax!) updates["system.attributes.hp.tempmax"] = oldTempMax;
         // Handle vitality undo - only if actor still has a vitality item
         const vitalityItem = getVitalityItem(actor);
         let vitalityUpdated = false;
@@ -1923,7 +1923,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
             "system.attributes.hp.temp": newTempHP ?? 0,
             "system.attributes.hp.value": newHP ?? 0
           };
-          if (newTempMax !== undefined) updates["system.attributes.hp.tempmax"] = newTempMax;
+          if (newTempMax! - oldTempMax!) updates["system.attributes.hp.tempmax"] = newTempMax;
           // Handle vitalityItem apply - only if actor still has a vitality item
           const vitalityItem = getVitalityItem(actor);
           let vitalityUpdated = false;
