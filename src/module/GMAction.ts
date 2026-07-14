@@ -566,7 +566,7 @@ async function _completeItemUse(data: {
   // @ts-expect-error no dnd5e-types
   ownedItem.applyActiveEffects();
   const workflow = await completeItemUse(ownedItem, config, dialog, message);
-  if (workflow && data.config?.midiOptions?.workflowData) return workflow.getMacroData();
+  if (workflow && data.config?.midiOptions?.workflowData) return workflow.getSafeMacroData();
   else return true;
 }
 

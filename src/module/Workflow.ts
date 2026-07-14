@@ -4055,6 +4055,8 @@ export class Workflow {
       templateUuid: this.templateUuid, // first template UUID (backward compat)
       templateUuids: this.templateUuids, // all template UUIDs
       tokenUuid: this.tokenUuid,
+      utilityRoll: this.utilityRoll,
+      utilityRolls: this.utilityRolls,
       uuid: this.itemUuid, // deprecated
       workflowOptions: this.workflowOptions,
       castData: this.castData,
@@ -8763,6 +8765,8 @@ type MidiMacroData = {
   templateUuid?: string;
   templateUuids?: string[];
   tokenUuid?: string;
+  utilityRoll?: Roll;
+  utilityRolls?: Roll[];
   uuid?: string;
   workflow: Workflow;
   workflowId: string;
