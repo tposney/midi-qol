@@ -245,7 +245,7 @@ export let MidiActivityMixin = Base => {
      * Default is false and must be overridden in the subclass
      * Examples of self triggerOnly are the Cast and Forward activities
      */
-    get selfOnlyTriggerActivity() {
+    get isSelfTriggerableOnly() {
       return false;
     }
 
@@ -369,18 +369,14 @@ export let MidiActivityMixin = Base => {
           ui.notifications?.warn(i18n("midi-qol.noTargets"));
           return;
         }
-        const result = (await socketlibSocket.executeAsUser("applyEffects", authorId, {
+        await socketlibSocket.executeAsUser("applyEffects", authorId, {
           workflowId: message.uuid,
           targets: Array.from(game.user?.targets).map(t => t.document.uuid)
-        }));
+        });
       } else {
-        if (workflow) {
-          workflow.forceApplyEffects = true; // don't overwrite the application targets
-          workflow.effectTargets = new Set(game.user?.targets);
-          if (workflow.effectTargets.size > 0) workflow.performState(workflow.WorkflowState_ApplyDynamicEffects)
-        } else {
-          ui.notifications?.warn(i18nFormat("midi-qol.NoWorkflow", { itemName: this.item?.name }));
-        }
+        workflow.forceApplyEffects = true; // don't overwrite the application targets
+        workflow.effectTargets = new Set(game.user?.targets);
+        if (workflow.effectTargets.size > 0) workflow.performState(workflow.WorkflowState_ApplyDynamicEffects)
       }
     }
     static async #confirmDamageRollCancel(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
@@ -572,7 +568,7 @@ export let MidiActivityMixin = Base => {
       // itemData._id = this.item._id;
       actor = getActor(usage.midiOptions?.rollAs);
       if (usage.midiOptions?.rollAs) delete usage.midiOptions.rollAs;
-      if (!actor || actor === this.actor || this.selfOnlyTriggerActivity) return this.use(usage, dialog, message);
+      if (!actor || actor === this.actor || this.isSelfTriggerableOnly) return this.use(usage, dialog, message);
       const itemData = this.item.toObject();
       // @ts-expect-error
       delete itemData._id;
@@ -591,6 +587,7 @@ export let MidiActivityMixin = Base => {
       if (!this.item.isEmbedded) return;
       if (!this.item.isOwner) {
         ui.notifications?.error("DND5E.DocumentUseWarn", { localize: true });
+        return;
       }
       if (!this.canUse) {
         ui.notifications?.error("DND5E.ACTIVITY.Warning.UsageNotAllowed", { localize: true });
@@ -825,7 +822,7 @@ export let MidiActivityMixin = Base => {
       const consumption = this._prepareUsageConfig(usage);
       const autoConsume = await this._prepareUsageUpdates(consumption, { returnErrors: true });
       // If consumption would fail _prepareUsageUpdates will return an array of errors and on success an object of updates
-      if (autoConsume.length ?? 0 > 0) {
+      if ((autoConsume.length ?? 0) > 0) {
         dialog.configure = true;
         return true;
       }

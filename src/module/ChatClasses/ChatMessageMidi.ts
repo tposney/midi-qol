@@ -3,6 +3,7 @@ import { configSettings, safeGetGameSetting, saveToChatCard } from "../settings.
 import { getToken } from "../utils.js";
 import { setDamageRollMinTerms } from "../activities/activityHelpers.js";
 
+const midiAutoAppliesDamage = () => !!configSettings.autoApplyDamage?.toLowerCase().includes("yes");
 const removeAll = (html: HTMLElement, sel: string) => html.querySelectorAll(sel).forEach(el => el.remove());
 const hideAll = (html: HTMLElement, sel: string) => html.querySelectorAll<HTMLElement>(sel).forEach(el => el.style.display = "none");
 const stripHighlight = (html: HTMLElement, sel: string) => html.querySelectorAll<HTMLElement>(sel).forEach(
@@ -335,12 +336,6 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         || ((configSettings.addChatDamageButtons === "pc") && !game.user?.isGM);
       if (game.user?.isGM && configSettings.autoApplyDamage === "none") shouldAddButtons = true;
       if (shouldAddButtons) {
-        // Expand the tray when midi did not auto-apply (player needs to click);
-        // collapse it when midi already applied damage. Wins over dnd5e's
-        // autoCollapseChatTrays setting via _trayStates.
-        const midiApplied = !!configSettings.autoApplyDamage?.toLowerCase().includes("yes");
-        (this as any)._trayStates ??= new Map();
-        (this as any)._trayStates.set("MIDI-DAMAGE-APPLICATION", !midiApplied);
         for (let dType of MQDamageRollTypes) {
           rolls = this.rolls.filter(r => foundry.utils.getProperty(r, "options.midi-qol.rollType") === dType);
           if (!rolls.length) continue;
@@ -353,10 +348,24 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
             type: roll.options.type,
             properties: new Set(roll.options.properties ?? [])
           }));
-
+          // Set the initial open state directly so connectedCallback renders correctly.
+          // _collapseTrays (overridden below) keeps it in sync on re-render, bypassing the
+          // dnd5e _trayStates className/tagName collision.
+          damageApplication.toggleAttribute("open", !midiAutoAppliesDamage());
           html.querySelector(".message-content")?.appendChild(damageApplication);
         }
       }
+    }
+
+    _collapseTrays(html: HTMLElement) {
+      // @ts-expect-error no dnd5e-types
+      super._collapseTrays(html);
+      if (!this.flags?.[MODULE_ID]?.messageType) return;
+      const open = !midiAutoAppliesDamage();
+      html.querySelectorAll("midi-damage-application").forEach(el => {
+        el.toggleAttribute("open", open);
+        el.querySelector(".collapsible")?.classList.toggle("collapsed", !open);
+      });
     }
 
     _highlightCriticalSuccessFailure(html: HTMLElement) {

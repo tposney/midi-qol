@@ -217,6 +217,124 @@ type DamageBonusMacroResult = DamageBonusMacroSingleResult[] | DamageBonusMacroS
 
 export type WorkflowState = undefined | ((context: WorkflowContext) => Promise<WorkflowState>);
 
+/**
+ * Write-through cache in front of the workflow's chat-card flags.
+ * Getters fall back to the persisted flag value (then the default) until the
+ * field is first written; writing undefined clears the cache so the getter
+ * falls back to the persisted value again (matches the old #field semantics).
+ */
+class PersistedFieldStore {
+  #cache = new Map<string, unknown>();
+  #getFlags: () => Record<string, any> | undefined;
+  #persist: (updates: Record<string, unknown>) => void;
+  #forcePersist: (updates: Record<string, unknown>) => void;
+
+  constructor(getFlags: () => Record<string, any> | undefined, persist: (updates: Record<string, unknown>) => void, forcePersist: (updates: Record<string, unknown>) => void) {
+    this.#getFlags = getFlags;
+    this.#persist = persist;
+    this.#forcePersist = forcePersist;
+  }
+
+  scalar<T>(key: string, dflt: T, legacyKey?: string): T {
+    if (this.#cache.has(key)) return this.#cache.get(key) as T;
+    const flags = this.#getFlags();
+    return (flags?.[key] ?? (legacyKey ? flags?.[legacyKey] : undefined) ?? dflt) as T;
+  }
+
+  setScalar<T>(key: string, value: T): void {
+    if (value === undefined) this.#cache.delete(key);
+    else this.#cache.set(key, value);
+    this.#persist({ [key]: value });
+  }
+
+  // Token sets persist as uuid arrays (or {uuid, name} pairs for "targets") and
+  // restore to Sets of canvas placeables. An empty restore returns an uncached
+  // fresh Set so a later flag write is still picked up.
+  tokenSet(key: string, namePairs = false): Set<Token.Implementation> {
+    if (this.#cache.has(key)) return this.#cache.get(key) as Set<Token.Implementation>;
+    const data = this.#getFlags()?.[key];
+    if (data?.length) {
+      const tokens: Set<Token.Implementation> = new Set(data
+        .map((entry: any) => (fromUuidSync(namePairs ? entry.uuid : entry) as TokenDocument.Implementation | undefined)?.object)
+        .filter((t: Token.Implementation | undefined): t is Token.Implementation => !!t));
+      this.#cache.set(key, tokens);
+      return tokens;
+    }
+    return new Set();
+  }
+
+  setTokenSet(key: string, tokens: Set<TokenOrDocument> | undefined, namePairs = false): void {
+    if (tokens === undefined) this.#cache.delete(key);
+    else this.#cache.set(key, new Set(Array.from(tokens).map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t)));
+    const targetDocuments = Array.from(tokens ?? []).map(t => getTokenDocument(t)).filter((t): t is TokenDocument.Implementation => !!t);
+    this.#persist({ [key]: targetDocuments.map(t => namePairs ? { uuid: t.uuid, name: t.name } : t.uuid) });
+  }
+
+  // Rolls persist as toJSON() data and must be rehydrated with Roll.fromData
+  // (which redirects to the persisted subclass via data.class). Falls back to
+  // the raw data if the class is no longer registered.
+  #rollFromData(data: any): Roll {
+    if (data instanceof Roll) return data;
+    try {
+      return Roll.fromData(data) as Roll;
+    } catch (err) {
+      TroubleShooter.recordError(err, `PersistedFieldStore | could not rehydrate roll ${data?.class}`);
+      return data;
+    }
+  }
+
+  roll(key: string): Roll | undefined {
+    if (this.#cache.has(key)) return this.#cache.get(key) as Roll;
+    const data = this.#getFlags()?.[key];
+    if (data) {
+      const roll = this.#rollFromData(data);
+      this.#cache.set(key, roll);
+      return roll;
+    }
+    return undefined;
+  }
+
+  setRoll(key: string, roll: Roll | undefined): void {
+    if (roll === undefined) this.#cache.delete(key);
+    else this.#cache.set(key, roll);
+    this.#forcePersist({ [key]: roll?.toJSON() ?? null });
+  }
+
+  rolls(key: string): Roll[] | undefined {
+    if (this.#cache.has(key)) return this.#cache.get(key) as Roll[];
+    const data = this.#getFlags()?.[key];
+    if (data?.length) {
+      const rolls = data.map((r: any) => this.#rollFromData(r));
+      this.#cache.set(key, rolls);
+      return rolls;
+    }
+    return undefined;
+  }
+
+  setRolls(key: string, rolls: Roll[] | undefined): void {
+    if (rolls === undefined) this.#cache.delete(key);
+    else this.#cache.set(key, rolls);
+    this.#forcePersist({ [key]: rolls?.map(r => r.toJSON()) ?? [] });
+  }
+
+  damageDetail(key: string): DamageDescription[] {
+    if (this.#cache.has(key)) return this.#cache.get(key) as DamageDescription[];
+    const data = this.#getFlags()?.[key];
+    if (data?.length) {
+      const detail = damageDetailsFromObject(data as unknown as DamageDescriptionObject[]);
+      this.#cache.set(key, detail);
+      return detail;
+    }
+    return [];
+  }
+
+  setDamageDetail(key: string, detail: DamageDescription[]): void {
+    if (detail === undefined) this.#cache.delete(key);
+    else this.#cache.set(key, detail);
+    this.#persist({ [key]: damageDetailToObject(detail) });
+  }
+}
+
 export class Workflow {
   public static WorkflowDataFlags = WorkflowDataFlags;
 
@@ -240,8 +358,8 @@ export class Workflow {
     else Workflow.workflows.set(workflow.id, workflow);
   }
   static getWorkflow(id?: string): Workflow | undefined {
-    if (debugEnabled > 0) warn("Get workflow ", id, Workflow.workflows, Workflow.workflows[id ?? ""])
-    if (debugEnabled > 1) debug("Get workflow ", id, Workflow.workflows, Workflow.workflows[id ?? ""])
+    if (debugEnabled > 0) warn("Get workflow ", id, Workflow.workflows, Workflow.workflows.get(id ?? ""))
+    if (debugEnabled > 1) debug("Get workflow ", id, Workflow.workflows, Workflow.workflows.get(id ?? ""))
     if (!id) return;
     let workflow = Workflow.workflows.get(id);
     if (workflow instanceof WeakRef) {
@@ -325,30 +443,18 @@ export class Workflow {
     }
   }
 
+  #persisted = new PersistedFieldStore(() => this.midiFlags, updates => this.persistFields(updates), updates => this.forcePersistFields(updates));
+
   get useActiveDefence() { return false; }
   get actor(): Actor.Implementation {
     return this.activity?.actor!;
   }
 
-  #abort: boolean | undefined;
-  get abort() {
-    if (this.#abort !== undefined) return this.#abort;
-    return (this.midiFlags?.abort ?? this.midiFlags?.aborted) ?? false;
-  }
-  set abort(abort: boolean | undefined) {
-    this.#abort = !!abort;
-    this.persistFields({ abort: !!abort });
-  }
+  get abort() { return this.#persisted.scalar("abort", false, "aborted"); }
+  set abort(abort: boolean | undefined) { this.#persisted.setScalar("abort", !!abort); }
 
-  #itemUseComplete: boolean | undefined;
-  get itemUseComplete() {
-    if (this.#itemUseComplete !== undefined) return this.#itemUseComplete;
-    return this.midiFlags?.itemUseComplete ?? false;
-  }
-  set itemUseComplete(itemUseComplete: boolean | undefined) {
-    this.#itemUseComplete = !!itemUseComplete;
-    this.persistFields({ itemUseComplete: !!itemUseComplete });
-  }
+  get itemUseComplete() { return this.#persisted.scalar("itemUseComplete", false); }
+  set itemUseComplete(itemUseComplete: boolean | undefined) { this.#persisted.setScalar("itemUseComplete", !!itemUseComplete); }
 
   #token: Token.Implementation | undefined;
   get token(): Token.Implementation | undefined {
@@ -364,14 +470,11 @@ export class Workflow {
     this.persistFields({ attackingTokenUuid: token?.document?.uuid ?? "" });
   }
 
-  #workflowOptions: WorkflowOptions | undefined;
   get workflowOptions(): WorkflowOptions {
-    if (this.#workflowOptions !== undefined) return this.#workflowOptions;
-    return (this.midiFlags?.workflowOptions ?? {}) as WorkflowOptions;
+    return this.#persisted.scalar<WorkflowOptions>("workflowOptions", {});
   }
   set workflowOptions(workflowOptions: WorkflowOptions) {
-    this.#workflowOptions = workflowOptions;
-    this.persistFields({ workflowOptions });
+    this.#persisted.setScalar("workflowOptions", workflowOptions);
   }
 
   get needItemCard(): boolean { return !!this.itemCardUuid };
@@ -461,84 +564,19 @@ export class Workflow {
     return this.token?.document.uuid;
   }
 
-  #targets: Set<Token.Implementation> | undefined;
-  get targets(): Set<Token.Implementation> {
-    if (this.#targets) return this.#targets;
-    const cardTargets = this.midiFlags?.targets;
-    if (cardTargets?.length) {
-      this.#targets = new Set(cardTargets.map(data => (fromUuidSync(data.uuid) as TokenDocument.Implementation | undefined)?.object).filter(t => !!t));
-      return this.#targets
-    }
-    return new Set();
-  }
-  set targets(targets: Set<TokenOrDocument>) {
-    this.#targets = new Set(Array.from(targets ?? []).map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t));
-    const targetDocuments = Array.from(targets ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
-    this.persistFields({ targets: targetDocuments.map(t => ({ uuid: t.uuid, name: t.name })) });
-  }
+  get targets(): Set<Token.Implementation> { return this.#persisted.tokenSet("targets", true); }
+  set targets(targets: Set<TokenOrDocument>) { this.#persisted.setTokenSet("targets", targets ?? new Set(), true); }
 
-  #targetsCanSee: Set<Token.Implementation> | undefined;
-  get targetsCanSee(): Set<Token.Implementation> {
-    if (this.#targetsCanSee) return this.#targetsCanSee;
-    const uuids = this.midiFlags?.targetsCanSeeUuids;
-    if (uuids?.length) {
-      this.#targetsCanSee = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument.Implementation | undefined)?.object).filter(t => !!t));
-      return this.#targetsCanSee
-    }
-    return new Set();
-  }
-  set targetsCanSee(targetsCanSee: Set<TokenOrDocument> | undefined) {
-    this.#targetsCanSee = targetsCanSee?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    const targetDocuments = Array.from(targetsCanSee ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
-    this.persistFields({ targetsCanSeeUuids: targetDocuments.map(t => t.uuid) });
-  }
-  #targetsCanSense: Set<Token.Implementation> | undefined;
-  get targetsCanSense(): Set<Token.Implementation> {
-    if (this.#targetsCanSense) return this.#targetsCanSense;
-    const uuids = this.midiFlags?.targetsCanSenseUuids;
-    if (uuids?.length) {
-      this.#targetsCanSense = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
-      return this.#targetsCanSense
-    }
-    return new Set();
-  }
-  set targetsCanSense(targetsCanSense: Set<TokenOrDocument> | undefined) {
-    this.#targetsCanSense = targetsCanSense?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    const targetDocuments = Array.from(targetsCanSense ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
-    this.persistFields({ targetsCanSenseUuids: targetDocuments.map(t => t.uuid) });
-  }
+  get targetsCanSee(): Set<Token.Implementation> { return this.#persisted.tokenSet("targetsCanSeeUuids"); }
+  set targetsCanSee(targetsCanSee: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("targetsCanSeeUuids", targetsCanSee); }
+  get targetsCanSense(): Set<Token.Implementation> { return this.#persisted.tokenSet("targetsCanSenseUuids"); }
+  set targetsCanSense(targetsCanSense: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("targetsCanSenseUuids", targetsCanSense); }
 
-  #tokenCanSee: Set<Token.Implementation> | undefined;
-  get tokenCanSee(): Set<Token.Implementation> {
-    if (this.#tokenCanSee) return this.#tokenCanSee;
-    const uuids = this.midiFlags?.tokenCanSeeUuids;
-    if (uuids?.length) {
-      this.#tokenCanSee = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
-      return this.#tokenCanSee
-    }
-    return new Set();
-  }
-  set tokenCanSee(tokenCanSee: Set<TokenOrDocument> | undefined) {
-    this.#tokenCanSee = tokenCanSee?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    const targetDocuments = Array.from(tokenCanSee ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
-    this.persistFields({ tokenCanSeeUuids: targetDocuments.map(t => t.uuid) });
-  }
+  get tokenCanSee(): Set<Token.Implementation> { return this.#persisted.tokenSet("tokenCanSeeUuids"); }
+  set tokenCanSee(tokenCanSee: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("tokenCanSeeUuids", tokenCanSee); }
 
-  #tokenCanSense: Set<Token.Implementation> | undefined;
-  get tokenCanSense(): Set<Token.Implementation> {
-    if (this.#tokenCanSense) return this.#tokenCanSense;
-    const uuids = this.midiFlags?.tokenCanSenseUuids;
-    if (uuids?.length) {
-      this.#tokenCanSense = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
-      return this.#tokenCanSense
-    }
-    return new Set();
-  }
-  set tokenCanSense(tokenCanSense: Set<TokenOrDocument> | undefined) {
-    this.#tokenCanSense = tokenCanSense?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    const targetDocuments = Array.from(tokenCanSense ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
-    this.persistFields({ tokenCanSenseUuids: targetDocuments.map(t => t.uuid) });
-  }
+  get tokenCanSense(): Set<Token.Implementation> { return this.#persisted.tokenSet("tokenCanSenseUuids"); }
+  set tokenCanSense(tokenCanSense: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("tokenCanSenseUuids", tokenCanSense); }
 
   templateUuids: string[] = [];
   expectedTemplateCount: number = 0;
@@ -573,15 +611,8 @@ export class Workflow {
     return this.actor.inCombat
   }
   isTurn: boolean | undefined; // Is it the item wielder's turn.
-  #AoO: boolean | undefined;
-  get AoO() {
-    if (this.#AoO !== undefined) return this.#AoO;
-    return this.midiFlags?.AoO ?? false;
-  }
-  set AoO(AoO: boolean) {
-    this.#AoO = AoO;
-    this.persistFields({ AoO });
-  }
+  get AoO() { return this.#persisted.scalar("AoO", false); }
+  set AoO(AoO: boolean) { this.#persisted.setScalar("AoO", AoO); }
 
   #damageList: DamageListEntry[] | undefined;
   get damageList() {
@@ -612,15 +643,8 @@ export class Workflow {
     return this.activity.uuid;
   }
 
-  #suspended: boolean | undefined;
-  get suspended() {
-    if (this.#suspended !== undefined) return this.#suspended;
-    return this.midiFlags?.suspended ?? false;
-  }
-  set suspended(suspended: boolean) {
-    this.#suspended = suspended;
-    this.persistFields({ suspended });
-  }
+  get suspended() { return this.#persisted.scalar("suspended", false); }
+  set suspended(suspended: boolean) { this.#persisted.setScalar("suspended", suspended); }
 
   #currentAction: WorkflowState;
   get currentAction() {
@@ -721,47 +745,14 @@ export class Workflow {
     return this.attackRollModifierTracker.critical.isSuppressed;
   }
 
-  #d20AttackRoll: number | undefined;
-  get d20AttackRoll() {
-    if (this.#d20AttackRoll !== undefined) return this.#d20AttackRoll;
-    return this.midiFlags?.d20AttackRoll ?? -1;
-  }
-  set d20AttackRoll(d20AttackRoll: number) {
-    this.#d20AttackRoll = d20AttackRoll;
-    this.persistFields({ d20AttackRoll });
-  }
+  get d20AttackRoll() { return this.#persisted.scalar("d20AttackRoll", -1); }
+  set d20AttackRoll(d20AttackRoll: number) { this.#persisted.setScalar("d20AttackRoll", d20AttackRoll); }
 
-  #hitTargets: Set<Token.Implementation> | undefined;
-  get hitTargets(): Set<Token.Implementation> {
-    if (this.#hitTargets) return this.#hitTargets;
-    const uuids = this.midiFlags?.hitTargetUuids;
-    if (uuids?.length) {
-      this.#hitTargets = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
-      return this.#hitTargets
-    }
-    return new Set();
-  }
-  set hitTargets(hitTargets: Set<TokenOrDocument> | undefined) {
-    this.#hitTargets = hitTargets?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    const targetDocuments = Array.from(hitTargets ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
-    this.persistFields({ hitTargetUuids: targetDocuments.map(t => t.uuid) });
-  }
+  get hitTargets(): Set<Token.Implementation> { return this.#persisted.tokenSet("hitTargetUuids"); }
+  set hitTargets(hitTargets: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("hitTargetUuids", hitTargets); }
 
-  #hitTargetsEC: Set<Token.Implementation> | undefined;
-  get hitTargetsEC(): Set<Token.Implementation> {
-    if (this.#hitTargetsEC) return this.#hitTargetsEC;
-    const uuids = this.midiFlags?.hitECTargetUuids;
-    if (uuids?.length) {
-      this.#hitTargetsEC = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
-      return this.#hitTargetsEC
-    }
-    return new Set();
-  }
-  set hitTargetsEC(hitTargetsEC: Set<TokenOrDocument> | undefined) {
-    this.#hitTargetsEC = hitTargetsEC?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    const targetDocuments = Array.from(hitTargetsEC ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
-    this.persistFields({ hitECTargetUuids: targetDocuments.map(t => t.uuid) });
-  }
+  get hitTargetsEC(): Set<Token.Implementation> { return this.#persisted.tokenSet("hitECTargetUuids"); }
+  set hitTargetsEC(hitTargetsEC: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("hitECTargetUuids", hitTargetsEC); }
 
   #otherDamageMatches: Set<Token.Implementation> | undefined;
   get otherDamageMatches(): Set<Token.Implementation> | undefined {
@@ -781,50 +772,22 @@ export class Workflow {
     this.persistFields({ otherDamageMatchUuids: uuids });
   }
 
-  #attackRoll: Roll | undefined;
-  get attackRoll(): Roll | undefined {
-    if (this.#attackRoll) return this.#attackRoll;
-    const chatRoll = this.midiFlags?.attackRoll;
-    if (chatRoll) this.#attackRoll = chatRoll;
-    return this.#attackRoll;
-  }
+  get attackRoll(): Roll | undefined { return this.#persisted.roll("attackRoll"); }
   set attackRoll(attackRoll: Roll | undefined) {
     if (attackRoll) attackRoll.data = {};
-    this.#attackRoll = attackRoll;
-    this.forcePersistFields({ attackRoll: attackRoll?.toJSON() ?? null });
+    this.#persisted.setRoll("attackRoll", attackRoll);
   }
 
-  #diceRoll: number | undefined;
-  get diceRoll() {
-    if (this.#diceRoll !== undefined) return this.#diceRoll;
-    return this.midiFlags?.diceRoll ?? 0;
-  }
-  set diceRoll(diceRoll: number) {
-    this.#diceRoll = diceRoll;
-    this.persistFields({ diceRoll });
-  }
+  get diceRoll() { return this.#persisted.scalar("diceRoll", 0); }
+  set diceRoll(diceRoll: number) { this.#persisted.setScalar("diceRoll", diceRoll); }
 
-  #attackTotal: number | undefined;
-  get attackTotal() {
-    if (this.#attackTotal !== undefined) return this.#attackTotal;
-    return this.midiFlags?.attackTotal ?? 0;
-  }
-  set attackTotal(attackTotal: number) {
-    this.#attackTotal = attackTotal;
-    this.persistFields({ attackTotal });
-  }
+  get attackTotal() { return this.#persisted.scalar("attackTotal", 0); }
+  set attackTotal(attackTotal: number) { this.#persisted.setScalar("attackTotal", attackTotal); }
 
   attackRollHTML: HTMLElement | string | undefined;
 
-  #attackRollCount: number | undefined;
-  get attackRollCount() {
-    if (this.#attackRollCount !== undefined) return this.#attackRollCount;
-    return this.midiFlags?.attackRollCount ?? 0;
-  }
-  set attackRollCount(attackRollCount: number) {
-    this.#attackRollCount = attackRollCount;
-    this.persistFields({ attackRollCount });
-  }
+  get attackRollCount() { return this.#persisted.scalar("attackRollCount", 0); }
+  set attackRollCount(attackRollCount: number) { this.#persisted.setScalar("attackRollCount", attackRollCount); }
 
   // ─────────────────────────────────────────────────────────────────
   // Attack Advantage Mode - tracks advantage/disadvantage with counts and suppression
@@ -1097,290 +1060,71 @@ export class Workflow {
     return this.#rolls ?? [];
   }
 
-  #damageRolls: Roll[] | undefined;
-  get damageRolls(): Roll[] {
-    if (this.#damageRolls) return this.#damageRolls;
-    const chatRolls = this.midiFlags?.damageRolls;
-    if (chatRolls?.length) this.#damageRolls = chatRolls;
-    return this.#damageRolls ?? [];
-  }
-  set damageRolls(damageRolls: Roll[]) {
-    this.#damageRolls = damageRolls;
-    this.forcePersistFields({ damageRolls: damageRolls.map(r => r.toJSON()) });
-  }
+  get damageRolls(): Roll[] { return this.#persisted.rolls("damageRolls") ?? []; }
+  set damageRolls(damageRolls: Roll[]) { this.#persisted.setRolls("damageRolls", damageRolls); }
 
-  #bonusDamageRolls: Roll[] | undefined;
-  get bonusDamageRolls(): Roll[] | undefined {
-    if (this.#bonusDamageRolls) return this.#bonusDamageRolls;
-    const chatRolls = this.midiFlags?.bonusDamageRolls;
-    if (chatRolls?.length) this.#bonusDamageRolls = chatRolls;
-    return this.#bonusDamageRolls;
-  }
-  set bonusDamageRolls(bonusDamageRolls: Roll[] | undefined) {
-    this.#bonusDamageRolls = bonusDamageRolls;
-    this.forcePersistFields({ bonusDamageRolls: bonusDamageRolls?.map(r => r.toJSON()) ?? [] });
-  }
+  get bonusDamageRolls(): Roll[] | undefined { return this.#persisted.rolls("bonusDamageRolls"); }
+  set bonusDamageRolls(bonusDamageRolls: Roll[] | undefined) { this.#persisted.setRolls("bonusDamageRolls", bonusDamageRolls); }
 
-  #otherDamageRolls: Roll[] | undefined;
-  get otherDamageRolls(): Roll[] | undefined {
-    if (this.#otherDamageRolls) return this.#otherDamageRolls;
-    const chatRolls = this.midiFlags?.otherDamageRolls;
-    if (chatRolls?.length) this.#otherDamageRolls = chatRolls;
-    return this.#otherDamageRolls;
-  }
-  set otherDamageRolls(otherDamageRolls: Roll[] | undefined) {
-    this.#otherDamageRolls = otherDamageRolls;
-    this.forcePersistFields({ otherDamageRolls: otherDamageRolls?.map(r => r.toJSON()) ?? [] });
-  }
+  get otherDamageRolls(): Roll[] | undefined { return this.#persisted.rolls("otherDamageRolls"); }
+  set otherDamageRolls(otherDamageRolls: Roll[] | undefined) { this.#persisted.setRolls("otherDamageRolls", otherDamageRolls); }
 
-  #utilityRolls: Roll[] | undefined;
-  get utilityRolls(): Roll[] | undefined {
-    if (this.#utilityRolls) return this.#utilityRolls;
-    const chatRolls = this.midiFlags?.utilityRolls;
-    if (chatRolls?.length) this.#utilityRolls = chatRolls;
-    return this.#utilityRolls ?? [];
-  }
+  get utilityRolls(): Roll[] | undefined { return this.#persisted.rolls("utilityRolls") ?? []; }
   set utilityRolls(utilityRolls: Roll[] | undefined) {
-    this.#utilityRolls = utilityRolls;
-    this.forcePersistFields({ utilityRolls: utilityRolls?.map(d => { d.data = {}; return d.toJSON() }) ?? [] });
+    utilityRolls?.forEach(d => d.data = {});
+    this.#persisted.setRolls("utilityRolls", utilityRolls);
   }
 
-  #damageTotal: number | undefined;
-  get damageTotal() {
-    if (this.#damageTotal !== undefined) return this.#damageTotal;
-    return this.midiFlags?.damageTotal ?? 0;
-  }
-  set damageTotal(damageTotal: number) {
-    this.#damageTotal = damageTotal;
-    this.persistFields({ damageTotal });
-  }
+  get damageTotal() { return this.#persisted.scalar("damageTotal", 0); }
+  set damageTotal(damageTotal: number) { this.#persisted.setScalar("damageTotal", damageTotal); }
 
-  #rawDamageDetail: DamageDescription[] | undefined;
-  get rawDamageDetail(): DamageDescription[] {
-    if (this.#rawDamageDetail) return this.#rawDamageDetail;
-    const data = this.midiFlags?.rawDamageDetail;
-    if (data?.length) {
-      this.#rawDamageDetail = damageDetailsFromObject(data as unknown as DamageDescriptionObject[]);
-    }
-    return this.#rawDamageDetail ?? [];
-  }
-  set rawDamageDetail(rawDamageDetail: DamageDescription[]) {
-    this.#rawDamageDetail = rawDamageDetail;
-    this.persistFields({ rawDamageDetail: damageDetailToObject(rawDamageDetail) });
-  }
+  get rawDamageDetail(): DamageDescription[] { return this.#persisted.damageDetail("rawDamageDetail"); }
+  set rawDamageDetail(rawDamageDetail: DamageDescription[]) { this.#persisted.setDamageDetail("rawDamageDetail", rawDamageDetail); }
 
-  #rawOtherDamageDetail: DamageDescription[] | undefined = undefined;
-  get rawOtherDamageDetail(): DamageDescription[] {
-    if (this.#rawOtherDamageDetail) return this.#rawOtherDamageDetail;
-    const data = this.midiFlags?.rawOtherDamageDetail;
-    if (data?.length) {
-      this.#rawOtherDamageDetail = damageDetailsFromObject(data as unknown as DamageDescriptionObject[]);
-    }
-    return this.#rawOtherDamageDetail ?? [];
-  }
-  set rawOtherDamageDetail(rawOtherDamageDetail: DamageDescription[]) {
-    this.#rawOtherDamageDetail = rawOtherDamageDetail;
-    this.persistFields({ rawOtherDamageDetail: damageDetailToObject(rawOtherDamageDetail) });
-  }
+  get rawOtherDamageDetail(): DamageDescription[] { return this.#persisted.damageDetail("rawOtherDamageDetail"); }
+  set rawOtherDamageDetail(rawOtherDamageDetail: DamageDescription[]) { this.#persisted.setDamageDetail("rawOtherDamageDetail", rawOtherDamageDetail); }
 
-  #rawBonusDamageDetail: DamageDescription[] | undefined = undefined;
-  get rawBonusDamageDetail(): DamageDescription[] {
-    if (this.#rawBonusDamageDetail) return this.#rawBonusDamageDetail;
-    const data = this.midiFlags?.rawBonusDamageDetail;
-    if (data?.length) {
-      this.#rawBonusDamageDetail = damageDetailsFromObject(data as unknown as DamageDescriptionObject[]);
-    }
-    return this.#rawBonusDamageDetail ?? [];
-  }
-  set rawBonusDamageDetail(rawBonusDamageDetail: DamageDescription[]) {
-    this.#rawBonusDamageDetail = rawBonusDamageDetail;
-    this.persistFields({ rawBonusDamageDetail: damageDetailToObject(rawBonusDamageDetail) });
-  }
+  get rawBonusDamageDetail(): DamageDescription[] { return this.#persisted.damageDetail("rawBonusDamageDetail"); }
+  set rawBonusDamageDetail(rawBonusDamageDetail: DamageDescription[]) { this.#persisted.setDamageDetail("rawBonusDamageDetail", rawBonusDamageDetail); }
 
-  #damageDetail: DamageDescription[] | undefined = undefined;
-  get damageDetail(): DamageDescription[] {
-    if (this.#damageDetail) return this.#damageDetail;
-    const data = this.midiFlags?.damageDetail;
-    if (data?.length) {
-      this.#damageDetail = damageDetailsFromObject(data as unknown as DamageDescriptionObject[]);
-    }
-    return this.#damageDetail ?? [];
-  }
-  set damageDetail(damageDetail: DamageDescription[]) {
-    this.#damageDetail = damageDetail;
-    this.persistFields({ damageDetail: damageDetailToObject(damageDetail) });
-  }
-  #otherDamageDetail: DamageDescription[] | undefined = undefined;
-  get otherDamageDetail(): DamageDescription[] {
-    if (this.#otherDamageDetail) return this.#otherDamageDetail;
-    const data = this.midiFlags?.otherDamageDetail;
-    if (data?.length) {
-      this.#otherDamageDetail = damageDetailsFromObject(data as unknown as DamageDescriptionObject[]);
-    }
-    return this.#otherDamageDetail ?? [];
-  }
-  set otherDamageDetail(otherDamageDetail: DamageDescription[]) {
-    this.#otherDamageDetail = otherDamageDetail;
-    this.persistFields({ otherDamageDetail: damageDetailToObject(otherDamageDetail) });
-  }
+  get damageDetail(): DamageDescription[] { return this.#persisted.damageDetail("damageDetail"); }
+  set damageDetail(damageDetail: DamageDescription[]) { this.#persisted.setDamageDetail("damageDetail", damageDetail); }
+  get otherDamageDetail(): DamageDescription[] { return this.#persisted.damageDetail("otherDamageDetail"); }
+  set otherDamageDetail(otherDamageDetail: DamageDescription[]) { this.#persisted.setDamageDetail("otherDamageDetail", otherDamageDetail); }
 
-  #bonusDamageDetail: DamageDescription[] | undefined = undefined;
-  get bonusDamageDetail(): DamageDescription[] {
-    if (this.#bonusDamageDetail) return this.#bonusDamageDetail;
-    const data = this.midiFlags?.bonusDamageDetail;
-    if (data?.length) {
-      this.#bonusDamageDetail = damageDetailsFromObject(data as unknown as DamageDescriptionObject[]);
-    }
-    return this.#bonusDamageDetail ?? [];
-  }
-  set bonusDamageDetail(bonusDamageDetail: DamageDescription[]) {
-    this.#bonusDamageDetail = bonusDamageDetail;
-    this.persistFields({ bonusDamageDetail: damageDetailToObject(bonusDamageDetail) });
-  }
+  get bonusDamageDetail(): DamageDescription[] { return this.#persisted.damageDetail("bonusDamageDetail"); }
+  set bonusDamageDetail(bonusDamageDetail: DamageDescription[]) { this.#persisted.setDamageDetail("bonusDamageDetail", bonusDamageDetail); }
 
   damageRollHTML: HTMLElement | string | undefined;
 
-  #damageRollCount: number | undefined;
-  get damageRollCount(): number {
-    if (this.#damageRollCount !== undefined) return this.#damageRollCount;
-    return this.midiFlags?.damageRollCount ?? 0;
-  }
-  set damageRollCount(damageRollCount: number) {
-    this.#damageRollCount = damageRollCount;
-    this.persistFields({ damageRollCount });
-  }
+  get damageRollCount(): number { return this.#persisted.scalar("damageRollCount", 0); }
+  set damageRollCount(damageRollCount: number) { this.#persisted.setScalar("damageRollCount", damageRollCount); }
 
-  #defaultDamageType: string | undefined;
-  get defaultDamageType(): string {
-    if (this.#defaultDamageType !== undefined) return this.#defaultDamageType;
-    return this.midiFlags?.defaultDamageType ?? "";
-  }
-  set defaultDamageType(defaultDamageType: string) {
-    this.#defaultDamageType = defaultDamageType;
-    this.persistFields({ defaultDamageType });
-  }
+  get defaultDamageType(): string { return this.#persisted.scalar("defaultDamageType", ""); }
+  set defaultDamageType(defaultDamageType: string) { this.#persisted.setScalar("defaultDamageType", defaultDamageType); }
 
-  #effectsAlreadyExpired: string[] | undefined;
-  get effectsAlreadyExpired(): string[] {
-    if (this.#effectsAlreadyExpired !== undefined) return this.#effectsAlreadyExpired;
-    return this.midiFlags?.effectsAlreadyExpired ?? [];
-  }
-  set effectsAlreadyExpired(effectsAlreadyExpired: string[]) {
-    this.#effectsAlreadyExpired = effectsAlreadyExpired;
-    this.persistFields({ effectsAlreadyExpired });
-  }
+  get effectsAlreadyExpired(): string[] { return this.#persisted.scalar<string[]>("effectsAlreadyExpired", []); }
+  set effectsAlreadyExpired(effectsAlreadyExpired: string[]) { this.#persisted.setScalar("effectsAlreadyExpired", effectsAlreadyExpired); }
 
   noAutoDamage: boolean | undefined; // override damage roll for damage rolls
 
-  #saves: Set<Token.Implementation> | undefined;
-  get saves(): Set<Token.Implementation> {
-    if (this.#saves) return this.#saves;
-    const uuids = this.midiFlags?.saveUuids;
-    if (uuids?.length) {
-      this.#saves = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
-      return this.#saves
-    }
-    return new Set();
-  }
-  set saves(saves: Set<TokenOrDocument> | undefined) {
-    this.#saves = saves?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    const targetDocuments = Array.from(saves ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
-    this.persistFields({ saveUuids: targetDocuments.map(t => t.uuid) });
-  }
+  get saves(): Set<Token.Implementation> { return this.#persisted.tokenSet("saveUuids"); }
+  set saves(saves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("saveUuids", saves); }
 
-  #superSavers: Set<Token.Implementation> | undefined;
-  get superSavers(): Set<Token.Implementation> {
-    if (this.#superSavers) return this.#superSavers;
-    const uuids = this.midiFlags?.superSaverUuids;
-    if (uuids?.length) {
-      this.#superSavers = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
-      return this.#superSavers
-    }
-    return new Set();
-  }
-  set superSavers(superSavers: Set<TokenOrDocument> | undefined) {
-    this.#superSavers = superSavers?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    const targetDocuments = Array.from(superSavers ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
-    this.persistFields({ superSaverUuids: targetDocuments.map(t => t.uuid) });
-  }
-  #semiSuperSavers: Set<Token.Implementation> | undefined
-  get semiSuperSavers(): Set<Token.Implementation> {
-    if (this.#semiSuperSavers) return this.#semiSuperSavers;
-    const uuids = this.midiFlags?.semiSuperSaverUuids;
-    if (uuids?.length) {
-      this.#semiSuperSavers = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
-      return this.#semiSuperSavers
-    }
-    return new Set();
-  }
-  set semiSuperSavers(semiSuperSavers: Set<TokenOrDocument> | undefined) {
-    this.#semiSuperSavers = semiSuperSavers?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    const targetDocuments = Array.from(semiSuperSavers ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
-    this.persistFields({ semiSuperSaverUuids: targetDocuments.map(t => t.uuid) });
-  }
+  get superSavers(): Set<Token.Implementation> { return this.#persisted.tokenSet("superSaverUuids"); }
+  set superSavers(superSavers: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("superSaverUuids", superSavers); }
+  get semiSuperSavers(): Set<Token.Implementation> { return this.#persisted.tokenSet("semiSuperSaverUuids"); }
+  set semiSuperSavers(semiSuperSavers: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("semiSuperSaverUuids", semiSuperSavers); }
 
-  #failedSaves: Set<Token.Implementation> | undefined;
-  get failedSaves(): Set<Token.Implementation> {
-    if (this.#failedSaves) return this.#failedSaves;
-    const uuids = this.midiFlags?.failedSaveUuids;
-    if (uuids?.length) {
-      this.#failedSaves = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
-      return this.#failedSaves
-    }
-    return new Set();
-  }
-  set failedSaves(failedSaves: Set<TokenOrDocument> | undefined) {
-    this.#failedSaves = failedSaves?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    const targetDocuments = Array.from(failedSaves ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
-    this.persistFields({ failedSaveUuids: targetDocuments.map(t => t.uuid) });
-  }
+  get failedSaves(): Set<Token.Implementation> { return this.#persisted.tokenSet("failedSaveUuids"); }
+  set failedSaves(failedSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("failedSaveUuids", failedSaves); }
 
-  #fumbleSaves: Set<Token.Implementation> | undefined;
-  get fumbleSaves(): Set<Token.Implementation> {
-    if (this.#fumbleSaves) return this.#fumbleSaves;
-    const uuids = this.midiFlags?.fumbleSaveUuids;
-    if (uuids?.length) {
-      this.#fumbleSaves = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
-      return this.#fumbleSaves
-    }
-    return new Set();
-  }
-  set fumbleSaves(fumbleSaves: Set<TokenOrDocument> | undefined) {
-    this.#fumbleSaves = fumbleSaves?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    const targetDocuments = Array.from(fumbleSaves ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
-    this.persistFields({ fumbleSaveUuids: targetDocuments.map(t => t.uuid) });
-  }
-  #criticalSaves: Set<Token.Implementation> | undefined;
-  get criticalSaves(): Set<Token.Implementation> {
-    if (this.#criticalSaves) return this.#criticalSaves;
-    const uuids = this.midiFlags?.criticalSaveUuids;
-    if (uuids?.length) {
-      this.#criticalSaves = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object).filter(t => !!t));
-      return this.#criticalSaves
-    }
-    return new Set();
-  }
-  set criticalSaves(criticalSaves: Set<TokenOrDocument> | undefined) {
-    this.#criticalSaves = criticalSaves?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    const targetDocuments = Array.from(criticalSaves ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
-    this.persistFields({ criticalSaveUuids: targetDocuments.map(t => t.uuid) });
-  }
-  #advantageSaves: Set<Token.Implementation> | undefined;
-  get advantageSaves(): Set<Token.Implementation> {
-    if (this.#advantageSaves) return this.#advantageSaves;
-    const uuids = this.midiFlags?.advantageSaveUuids;
-    if (uuids?.length) {
-      this.#advantageSaves = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument)?.object).filter(t => !!t));
-      return this.#advantageSaves
-    }
-    return new Set();
-  }
-
-  set advantageSaves(advantageSaves: Set<TokenOrDocument> | undefined) {
-    this.#advantageSaves = advantageSaves?.map(t => t instanceof TokenDocument ? t.object : t).filter(t => !!t);
-    const targetDocuments = Array.from(advantageSaves ?? []).map(t => getTokenDocument(t)).filter(t => !!t);
-    this.persistFields({ advantageSaveUuids: targetDocuments.map(t => t.uuid) });
-  }
+  get fumbleSaves(): Set<Token.Implementation> { return this.#persisted.tokenSet("fumbleSaveUuids"); }
+  set fumbleSaves(fumbleSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("fumbleSaveUuids", fumbleSaves); }
+  get criticalSaves(): Set<Token.Implementation> { return this.#persisted.tokenSet("criticalSaveUuids"); }
+  set criticalSaves(criticalSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("criticalSaveUuids", criticalSaves); }
+  get advantageSaves(): Set<Token.Implementation> { return this.#persisted.tokenSet("advantageSaveUuids"); }
+  set advantageSaves(advantageSaves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("advantageSaveUuids", advantageSaves); }
   saveRequests: Record<string, (value: any) => void>;
   saveTimeouts: Record<string, NodeJS.Timeout>;
   defenceRequests: Record<string, (value: any) => void>;
@@ -1479,15 +1223,8 @@ export class Workflow {
     this.#attackRollModifierTracker.reset();
   }
 
-  #noOptionalRules: boolean | undefined;
-  get noOptionalRules() {
-    if (this.#noOptionalRules !== undefined) return this.#noOptionalRules;
-    return this.midiFlags?.noOptionalRules ?? false;
-  }
-  set noOptionalRules(noOptionalRules: boolean) {
-    this.#noOptionalRules = noOptionalRules;
-    this.persistFields({ noOptionalRules });
-  }
+  get noOptionalRules() { return this.#persisted.scalar("noOptionalRules", false); }
+  set noOptionalRules(noOptionalRules: boolean) { this.#persisted.setScalar("noOptionalRules", noOptionalRules); }
   undoData: UndoData | undefined; // Way too big to store. Undos are blanked on reload
 
   get bonusDamageFlavor() {
@@ -1805,7 +1542,9 @@ export class Workflow {
     }
     this.templateUuids = [];
     if (this.activity instanceof MidiSummonActivity && configSettings.autoRemoveSummonedCreature) {
-      this.postSummonHookId = Hooks.once("dnd5e.postSummon", (activity, profile, createdTokens, options) => {
+      // Hooks.on + uuid filter rather than Hooks.once: concurrent summon workflows must not consume each other's hook
+      this.postSummonHookId = Hooks.on("dnd5e.postSummon", (activity, profile, createdTokens, options) => {
+        if (activity?.uuid !== this.activity?.uuid) return;
         this.summonedCreatures = createdTokens;
       })
     }
@@ -1906,13 +1645,12 @@ export class Workflow {
       return;
     }
     const workflow = Workflow.getWorkflow(id);
-    console.warn(`removeWorkflow deleting ${id}`, Workflow.workflows[id]); // TODO remove
     if (!workflow) {
       if (debugEnabled > 0) warn("removeWorkflow | No such workflow ", id);
       return;
     }
     if (workflow.postSummonHookId) Hooks.off("dnd5e.postSummon", workflow.postSummonHookId);
-    if (debugEnabled > 0) warn(`removeWorkflow deleting ${id}`, Workflow.workflows[id]);
+    if (debugEnabled > 0) warn(`removeWorkflow deleting ${id}`, Workflow.workflows.get(id));
     Workflow.workflows.delete(id);
     // Remove buttons
     if (workflow.itemCardUuid) {
@@ -3346,12 +3084,14 @@ export class Workflow {
       let activity = this.activity
       shouldTrigger = true;
       let possibleTriggerActivity = await this.activity.getTriggeredActivity();
+      const visitedActivities = new Set([activity.uuid]);
       while (possibleTriggerActivity) {
-        if (possibleTriggerActivity.id === activity.id) {
+        if (visitedActivities.has(possibleTriggerActivity.uuid)) {
           ui.notifications?.error((`midi-qol | loop detected in triggered activities for ${this.actor.name} ${this.item.name} ${this.activity.name} - execution aborted`))
           shouldTrigger = false;
           break;
         }
+        visitedActivities.add(possibleTriggerActivity.uuid);
         possibleTriggerActivity = await possibleTriggerActivity.getTriggeredActivity();
       }
 
@@ -3517,7 +3257,6 @@ export class Workflow {
     if (contentChanged) {
       const update: ChatMessage.UpdateData = {
         "content": content,
-        timestamp: Date.now(),
         flags: { "midi-qol": { type: MESSAGE_TYPES.ITEM } },
       };
       await this.performThrottledUpdate(chatMessage, update);
@@ -3680,7 +3419,7 @@ export class Workflow {
     this.saves = new Set();
     this.criticalSaves = new Set();
     this.fumbleSaves = new Set();
-    this.failedSaves = this.activity.hasAttack ? new Set(this.#hitTargets ?? []) : new Set(this.#targets ?? []);
+    this.failedSaves = this.activity.hasAttack ? new Set(this.hitTargets) : new Set(this.targets);
     this.advantageSaves = new Set();
     this.disadvantageSaves = new Set();
     this.saveDisplayData = [];
@@ -4841,7 +4580,7 @@ return {
           type: MESSAGE_TYPES.OTHER,
           // roll: utilityRoll?.roll,
         }
-      }, { overwrite: true, inplace: false }
+      }
     }
     // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
     const rolls = [...(this.attackRoll ? [this.attackRoll] : []),
@@ -5071,7 +4810,6 @@ return {
 
       const update = {
         content,
-        timestamp: Date.now(),
         flags: { "midi-qol": { type: MESSAGE_TYPES.HITS } },
         // TODO: May not be required
         style: CONST.CHAT_MESSAGE_STYLES.OTHER
@@ -6944,7 +6682,7 @@ return {
         if (!specialDuration) return false;
         return specialDuration.includes(healedDamaged);
       }).map(ef => ef.uuid)
-      if (expiredEffects?.length ?? 0 > 0) {
+      if ((expiredEffects?.length ?? 0) > 0) {
         await timedAwaitExecuteAsGM("removeEffectUuids", {
           actorUuid: token.actor?.uuid,
           effects: expiredEffects,
@@ -7836,8 +7574,12 @@ return {
       else if (this.activity.hasHealing) damageType = this.activity.healing!.types.first() ?? "healing";
       const message = `convertRollToDamageRoll: roll is not a damage roll, setting type to ${damageType}`;
       TroubleShooter.recordError(new Error(message));
-      error("convertRollToDamageRoll: roll is not a damage roll", DamageRoll.fromRoll(roll, {}, { type: damageType }));
-      return new DamageRoll.fromRoll(roll.formula, {}, { type: damageType })[0];
+      // DamageRoll has no static fromRoll (only D20Roll does) - mirror it, then stamp the damage type
+      const damageRoll = new DamageRoll(roll.formula, roll.data, roll.options);
+      Object.assign(damageRoll, roll);
+      damageRoll.options.type = damageType;
+      error("convertRollToDamageRoll: roll is not a damage roll", damageRoll);
+      return damageRoll;
     }
     return roll;
   }
@@ -8493,7 +8235,7 @@ export class DamageOnlyWorkflow extends Workflow {
       //@ts-expect-error no dnd5e types
       theItem = new CONFIG.Item.documentClass(extraItemData, { parent: actor });
     }
-    if (!theItem) return;
+    if (!theItem) throw new Error("DamageOnlyWorkflow | could not create synthetic item"); // cannot return before super()
 
     // theItem.setFlag = async (scope: string, key: string, value: any) => { return theItem };
     theItem.prepareData();
@@ -8794,8 +8536,8 @@ export class DDBGameLogWorkflow extends Workflow {
   needsDamage: boolean;
   needsOtherDamage: boolean | undefined;
   static get forceCreate() { return false }
-  static get(id: string): DDBGameLogWorkflow {
-    return Workflow.workflows[id];
+  static get(id: string): DDBGameLogWorkflow | undefined {
+    return Workflow.getWorkflow(id) as DDBGameLogWorkflow | undefined;
   }
 
   constructor(actor: Actor.Implementation, activity: Activity, speaker: ChatMessage.SpeakerData, targets: Token.Implementation[], options: any) {
@@ -8901,7 +8643,7 @@ export class DDBGameLogWorkflow extends Workflow {
 
   async WorkflowState_RollFinished(context: WorkflowContext = {}): Promise<WorkflowState> {
     if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookId);
-    super.WorkflowState_RollFinished();
+    await super.WorkflowState_RollFinished();
     return this.WorkflowState_Suspend;
   }
 }
@@ -8967,7 +8709,7 @@ export class DummyWorkflow extends Workflow {
     } catch (err) {
       TroubleShooter.recordError(err, "simulate attack");
     } finally {
-      Hooks.off("preUpdateItem", hookId)
+      Hooks.off("dnd5e.rollAttack", hookId)
     }
     const maxroll = (await this.attackRoll?.reroll({ maximize: true }))?.total;
     const minroll = (await this.attackRoll?.reroll({ minimize: true }))?.total;

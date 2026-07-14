@@ -227,8 +227,8 @@ async function confirmDamageRollComplete(data: { workflowId: string, activityUui
     return undefined;
   }
   const hasHits = workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0;
-  if ((workflow.currentAction === workflow.WorkflowState_AttackRollComplete) || hasHits &&
-    activity?.hasDamage && (!workflow.damageRoll || workflow.currentAction !== workflow.WorkflowState_ConfirmRoll)) {
+  if ((workflow.currentAction === workflow.WorkflowState_AttackRollComplete) || (hasHits &&
+    activity?.hasDamage && (!workflow.damageRoll || workflow.currentAction !== workflow.WorkflowState_ConfirmRoll))) {
     return "midi-qol | You must roll damage before completing the roll - you can only confirm miss until then";
   }
   if (workflow.hitTargets.size === 0 && workflow.hitTargetsEC.size === 0) {
@@ -531,7 +531,8 @@ async function _completeActivityUse(data: {
   if (!game.user) return null;
   let { activityUuid, actorUuid, usage, dialog, message } = data;
   let actor: any = await fromUuid(actorUuid);
-  if (actor.actor) actor = actor.actor;
+  if (actor?.actor) actor = actor.actor;
+  if (!actor) return null;
   if (usage.midiOptions?.targetsToUse) {
     const targets = usage.midiOptions.targetsToUse.map(t => (fromUuidSync(t) as TokenDocument.Implementation)?.object).filter(t => isValidTarget(t)) as foundry.canvas.placeables.Token.Implementation[];
     usage.midiOptions.targetsToUse = new Set(targets);
@@ -547,7 +548,8 @@ async function _completeItemUse(data: {
   if (!game.user) return null;
   let { itemData, actorUuid, config, dialog, message } = data;
   let actor: any = await fromUuid(actorUuid);
-  if (actor.actor) actor = actor.actor;
+  if (actor?.actor) actor = actor.actor;
+  if (!actor) return null;
   let ownedItem = new CONFIG.Item.documentClass(itemData, { parent: actor });
   // prepare item data for socketed events
   ownedItem.prepareData();
@@ -556,7 +558,7 @@ async function _completeItemUse(data: {
   // @ts-expect-error no dnd5e-types
   ownedItem.applyActiveEffects();
   const workflow = await completeItemUse(ownedItem, config, dialog, message);
-  if (data.config?.midiOptions?.workflowData) return workflow.getSafeMacroData();
+  if (workflow && data.config?.midiOptions?.workflowData) return workflow.getMacroData();
   else return true;
 }
 
@@ -1663,7 +1665,7 @@ async function createPlayerDamageCard(data: {
     healingLabel: getHealingLabel()
   };
 
-  prepareDamageListItems(data, templateData, tokenDataList, false, showNPC, true)
+  await prepareDamageListItems(data, templateData, tokenDataList, false, showNPC, true)
   if (templateData.damageList.length === 0) {
     log("No damage data to show to player");
     return;

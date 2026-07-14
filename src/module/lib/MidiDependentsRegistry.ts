@@ -203,8 +203,8 @@ export function MidiDependentDocumentMixin<T extends new (...args: any[]) => Mix
       try {
         // Check if dependentOn flag is being changed/deleted
         const dnd5eFlags = (changed as Record<string, any>).flags?.dnd5e;
-        if (!dnd5eFlags) return true;
-        if (!("dependentOn" in dnd5eFlags || "-=dependentOn" in dnd5eFlags)) return true;
+        if (!dnd5eFlags) return allowed;
+        if (!("dependentOn" in dnd5eFlags || "-=dependentOn" in dnd5eFlags)) return allowed;
 
         const oldParent = this.flags?.dnd5e?.dependentOn;
         if (oldParent && this.uuid) {

@@ -130,10 +130,6 @@ let defineMidiTransformActivityClass = <T extends Activity>(ActivityClass: T) =>
       return true;
     }
 
-    get selfTriggerableOnly() {
-      return false;
-    }
-
     async _triggerSubsequentActions(config, results) {
     }
   }

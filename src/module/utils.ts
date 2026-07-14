@@ -2402,6 +2402,9 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         if (!result) {
           cleanupAndResolve(result);
         }
+      }).catch(err => {
+        TroubleShooter.recordError(err, "completeActivityUse | activity.use failed");
+        cleanupAndResolve(undefined, "error");
       });
     });
   } else {
@@ -2534,15 +2537,10 @@ export async function completeItemUse(itemRef: Item.Implementation | string, con
     // error(`completeItemUse | item ${item.name} ${item.uuid} does not have a suitable activity`);
     // return undefined;
   }
-  if (activities.length === 1) { // if there is a single non-automation activity use it
-    return completeActivityUse(activities[0], activityConfig, dialog, message);
-  }
-
-  if (activities?.length > 1 || chooseActivity) {
-    const activity = await MidiActivityChoiceDialog.create(item);
-    if (activity) return completeActivityUse(activity, activityConfig, dialog, message);
-
-  }
+  // Apply the module prune hook (midi-qol.itemUseActivitySelect) before deciding: create() skips the
+  // dialog for a single survivor and returns null (skip the roll) if modules removed them all.
+  const activity = await MidiActivityChoiceDialog.create(item, { chooseActivity });
+  if (activity) return completeActivityUse(activity, activityConfig, dialog, message);
   return undefined;
 }
 
@@ -6060,106 +6058,85 @@ async function confirm(title: string = "Are you sure", { content, defaultYes } =
     defaultYes
   });
 }
-async function asyncMySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn?: any): Promise<any> {
-  let result;
-  try {
-    expression = expression.replace(/confirm\((.*)\)/g, "await confirm($1)");
-    const src = 'with (sandbox) { return ' + expression + '}';
-    let AsyncFunction = foundry.utils.AsyncFunction;
-    // @ts-expect-error
-    const evl = AsyncFunction("sandbox", src) as ((arg: any) => Promise<any>);
-    sandbox = foundry.utils.mergeObject(sandbox, {
-      Roll,
-      findNearby,
-      findNearbyCount,
-      checkNearby,
-      hasCondition,
-      checkDefeated,
-      checkIncapacitated,
-      canSee,
-      canSense,
-      computeDistance,
-      checkActivityRange,
-      checkDistance,
-      contestedRoll,
-      fromUuidSync,
-      confirm,
-      nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid,
-      combat: game.combat,
-      evalRaceOrType: raceOrType,
-      evalTypeOrRace: typeOrRace,
-      sizeNumeric,
-      error: console.error,
-      warn: console.warn,
-      log: console.log
-    });
-    const sandboxProxy = new Proxy(sandbox, {
-      has: () => true, // Include everything
-      get: (t, k) => k === Symbol.unscopables ? undefined : (t[k as string] ?? Math[k]),
-      set: () => { error("midi-qol | asyncMySafeEval | You may not set properties of the sandbox environment"); return false } // No-op
-    });
-    if (MidiQOL.logEvaluationData) console.log('MidiQOL asyncMySafeEval', { expression, sandboxProxy });
-    result = await evl.call(null, sandboxProxy);
-    if (MidiQOL.logEvaluationData) console.log('MidiQOL asyncMySafeEval', { result });
-  } catch (err) {
+function buildEvalSandbox(sandbox: AnyMutableObject, asyncEval: boolean): AnyMutableObject {
+  const extras: AnyMutableObject = {
+    Roll,
+    findNearby,
+    findNearbyCount,
+    checkNearby,
+    hasCondition,
+    checkDefeated,
+    checkIncapacitated,
+    canSee,
+    canSense,
+    computeDistance,
+    checkActivityRange,
+    checkDistance,
+    fromUuidSync,
+    nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid,
+    combat: game.combat,
+    evalRaceOrType: raceOrType,
+    evalTypeOrRace: typeOrRace,
+    evalTypeOrRaceEval: typeOrRace, // legacy alias - sync eval historically only exposed this name
+    sizeNumeric,
+    error: console.error,
+    warn: console.warn,
+    log: console.log
+  };
+  if (asyncEval) {
+    // promise-returning helpers only work where the expression can await them
+    extras.contestedRoll = contestedRoll;
+    extras.confirm = confirm;
+  }
+  return foundry.utils.mergeObject(sandbox, extras);
+}
+
+function mySafeEvalImpl(expression: string, sandbox: AnyMutableObject, onErrorReturn: any, asyncEval: boolean): any {
+  const label = asyncEval ? "asyncMySafeEval" : "mySafeEval";
+  const coerceNumeric = (result: any) => Number.isNumeric(result) ? Number(result) : result;
+  const handleError = (err: any) => {
     // @ts-expect-error sandbox confuses
-    const message = `midi-qol | asyncMySafeEval | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
+    const message = `midi-qol | ${label} | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
     console.warn(message, err);
     TroubleShooter.recordError(err, message);
-    result = onErrorReturn;
-  }
-  if (Number.isNumeric(result)) return Number(result)
-  return result;
-};
-
-function mySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn?: any): any {
-  let result;
+    return coerceNumeric(onErrorReturn);
+  };
   try {
-    const src = 'with (sandbox) { return ' + expression + '}';
-    if (expression.includes("Roll(")) {
+    if (asyncEval) {
+      expression = expression.replace(/confirm\((.*)\)/g, "await confirm($1)");
+    } else if (expression.includes("Roll(")) {
       error("safeEval | Roll expressions are not supported", expression)
       expression = expression.replaceAll(/evaluate\s*\({\s*async:\s* false\s*}\)/g, "evaluateSync({strict: false})")
       error("Expression replaced with ", expression);
     }
-    const evl = new Function('sandbox', src);
-    sandbox = foundry.utils.mergeObject(sandbox, {
-      Roll,
-      findNearby,
-      findNearbyCount,
-      checkNearby,
-      hasCondition,
-      checkDefeated,
-      checkIncapacitated,
-      canSee,
-      canSense,
-      computeDistance,
-      checkActivityRange,
-      checkDistance,
-      fromUuidSync,
-      nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid,
-      combat: game.combat,
-      evalRaceOrType: raceOrType,
-      evalTypeOrRaceEval: typeOrRace,
-      sizeNumeric
-    });
-
+    const src = 'with (sandbox) { return ' + expression + '}';
+    // @ts-expect-error
+    const evl: (sandboxArg: any) => any = asyncEval ? foundry.utils.AsyncFunction("sandbox", src) : new Function("sandbox", src);
+    sandbox = buildEvalSandbox(sandbox, asyncEval);
     const sandboxProxy = new Proxy(sandbox, {
       has: () => true, // Include everything
       get: (t, k) => k === Symbol.unscopables ? undefined : (t[k as string] ?? Math[k]),
-      set: () => { error("mySafeEval | You may not set properties of the sandbox environment"); return false } // No-op
+      set: () => { error(`midi-qol | ${label} | You may not set properties of the sandbox environment`); return false } // No-op
     });
-    if (MidiQOL.logEvaluationData) console.log('MidiQOL mySafeEval', { expression, sandboxProxy });
-    result = evl(sandboxProxy);
-    if (MidiQOL.logEvaluationData) console.log('MidiQOL mySafeEval', { result });
+    if (MidiQOL.logEvaluationData) console.log(`MidiQOL ${label}`, { expression, sandboxProxy });
+    const result = evl.call(null, sandboxProxy);
+    if (asyncEval) return Promise.resolve(result).then((r: any) => {
+      if (MidiQOL.logEvaluationData) console.log(`MidiQOL ${label}`, { result: r });
+      return coerceNumeric(r);
+    }, handleError);
+    if (MidiQOL.logEvaluationData) console.log(`MidiQOL ${label}`, { result });
+    return coerceNumeric(result);
   } catch (err) {
-    // @ts-expect-error sandbox confuses
-    const message = `midi-qol | mySafeEval | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
-    console.warn(message, err)
-    TroubleShooter.recordError(err, message);
-    result = onErrorReturn;
+    return handleError(err);
   }
-  if (Number.isNumeric(result)) return Number(result)
-  return result;
+}
+
+async function asyncMySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn?: any): Promise<any> {
+  return mySafeEvalImpl(expression, sandbox, onErrorReturn, true);
+};
+
+function mySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn?: any): any {
+  return mySafeEvalImpl(expression, sandbox, onErrorReturn, false);
 };
 
 export async function evalReactionActivationCondition(workflow: Workflow, condition: string | undefined | boolean, target: TokenOrDocument, options: any = {}): Promise<boolean> {
