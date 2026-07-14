@@ -2540,15 +2540,10 @@ export async function completeItemUse(itemRef: Item.Implementation | string, con
     // error(`completeItemUse | item ${item.name} ${item.uuid} does not have a suitable activity`);
     // return undefined;
   }
-  if (activities.length === 1) { // if there is a single non-automation activity use it
-    return completeActivityUse(activities[0], activityConfig, dialog, message);
-  }
-
-  if (activities?.length > 1 || chooseActivity) {
-    const activity = await MidiActivityChoiceDialog.create(item);
-    if (activity) return completeActivityUse(activity, activityConfig, dialog, message);
-
-  }
+  // Apply the module prune hook (midi-qol.itemUseActivitySelect) before deciding: create() skips the
+  // dialog for a single survivor and returns null (skip the roll) if modules removed them all.
+  const activity = await MidiActivityChoiceDialog.create(item, { chooseActivity });
+  if (activity) return completeActivityUse(activity, activityConfig, dialog, message);
   return undefined;
 }
 

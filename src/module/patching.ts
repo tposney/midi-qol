@@ -2928,12 +2928,11 @@ export async function doItemUse(this: Item.Implementation, wrapped, config: Acti
     if (attackActivity) return await attackActivity.use(config, dialog, message);
     else return await activities?.[0]?.use(config, dialog, message);
   }
-  if (activities?.length > 1 || chooseActivity) {
-    const activity = await MidiActivityChoiceDialog.create(this);
+  if (activities?.length) {
+    // Apply the module prune hook (midi-qol.itemUseActivitySelect) before deciding: create() skips
+    // the dialog for a single survivor and returns null (skip the roll) if modules removed them all.
+    const activity = await MidiActivityChoiceDialog.create(this, { chooseActivity });
     return await activity?.use(config, dialog, message);
-  }
-  if (activities?.length === 1) {
-    return await activities[0].use(config, dialog, message);
   }
   // @ts-expect-error no dnd5e-types
   if (this.actor) return this.displayCard(message);

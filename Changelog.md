@@ -1,4 +1,13 @@
 
+### 14.0.11
+* Organise the Midi activity settings into subtabs (MR !423, thanks @garrysmod367).
+* Fix socketed (GM-executed) workflows (MR !428, thanks @baconnugget).
+* Fix temp-max HP handling on the undo card (MR !418, thanks @baconnugget).
+* Updated pt-BR translation (MR !425, thanks @cardosomafrasantana).
+* Offer spell reactions castable with a higher-level slot when no slot of the spell's own level is available (e.g. Shield with only level 3 slots) (MR !431, thanks @thatlonelybugbear).
+* Fix chat cards from a sequence of rolls displaying out of order / with stale timestamps — content updates no longer overwrite the message's creation timestamp.
+* Activity choice dialog applies the `midi-qol.itemUseActivitySelect` prune hook before prompting — a single surviving activity is used with no dialog, an empty list skips the use; hook fires once.
+
 ### 14.0.10
 * Migrated from the deprecated `core.rollMode` to v14's `core.messageMode` throughout (chat-card visibility, roll-mode save/restore, "Hidden Roll" gating); stored legacy values are normalized on read.
 * Activity Roll Mode picker uses v14 values and migrates a legacy stored value on open/save.

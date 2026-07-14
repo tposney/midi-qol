@@ -3079,7 +3079,6 @@ export class Workflow {
     if (contentChanged) {
       const update: ChatMessage.UpdateData = {
         "content": content,
-        timestamp: Date.now(),
         flags: { "midi-qol": { type: MESSAGE_TYPES.ITEM } },
       };
       await this.performThrottledUpdate(chatMessage, update);
@@ -4616,7 +4615,6 @@ export class Workflow {
 
       const update = {
         content,
-        timestamp: Date.now(),
         flags: { "midi-qol": { type: MESSAGE_TYPES.HITS } },
         // TODO: May not be required
         style: CONST.CHAT_MESSAGE_STYLES.OTHER
