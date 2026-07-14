@@ -5511,6 +5511,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
 
           // Use dnd5e's consumption checks for all items/spells
           const config = activity._prepareUsageConfig({ create: false });
+          if (item.type === "spell") foundry.utils.setProperty(config, "consume.spellSlot", false);
           const canUse = await activity._prepareUsageUpdates(config, { returnErrors: true });
           if (canUse instanceof Array) continue; // insufficient uses available
           // If no condition is specified, default to requiring isHit
