@@ -142,6 +142,13 @@
   "midi-qol.ConfigButtons": "Roll Dialog",
   "midi-qol.ConfigTitle": "Midi-QOL Configuration",
   "midi-qol.WorkflowSettings": "Workflow Settings",
+  "midi-qol.ActivitySheetTabs": {
+    "modConditions": "Conditions",
+    "workflowSettings": "Workflow",
+    "activityManagement": "Activities",
+    "overtime": "OverTime",
+    "activityMacro": "Macro"
+  },
   "midi-qol.CheckSaveText.Name": "Search item description",
   "midi-qol.CheckSaveText.Hint": "Search item description for save type - 'half as much damage' and if present spell does 1/2 damage on save. If unchecked assume a save does default save modifier damage",
   "midi-qol.Save": "Save Settings",

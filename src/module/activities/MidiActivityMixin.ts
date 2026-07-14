@@ -2034,11 +2034,51 @@ export let MidiActivityMixinSheet = Base => {
     }
 
     _getTabs() {
+      const midiSubTabs = ["modConditions", "workflowSettings", "activityManagement", "overtime", "activityMacro"];
+      if (!midiSubTabs.includes(this.tabGroups["midi-qol"])) {
+        this.tabGroups["midi-qol"] = "modConditions";
+      }
+
       let tabs = super._getTabs();
       tabs = {
         ...tabs,
         "midi-qol": {
-          id: "midi-qol", group: "sheet", icon: "fa-solid fa-sun", label: "midi-qol"
+          id: "midi-qol",
+          group: "sheet",
+          icon: "fa-solid fa-sun",
+          label: "midi-qol",
+          tabs: {
+            modConditions: {
+              id: "modConditions",
+              group: "midi-qol",
+              icon: "fa-solid fa-filter",
+              label: i18n("midi-qol.ActivitySheetTabs.modConditions")
+            },
+            workflowSettings: {
+              id: "workflowSettings",
+              group: "midi-qol",
+              icon: "fa-solid fa-gears",
+              label: i18n("midi-qol.ActivitySheetTabs.workflowSettings")
+            },
+            activityManagement: {
+              id: "activityManagement",
+              group: "midi-qol",
+              icon: "fa-solid fa-sitemap",
+              label: i18n("midi-qol.ActivitySheetTabs.activityManagement")
+            },
+            overtime: {
+              id: "overtime",
+              group: "midi-qol",
+              icon: "fa-solid fa-clock",
+              label: i18n("midi-qol.ActivitySheetTabs.overtime")
+            },
+            activityMacro: {
+              id: "activityMacro",
+              group: "midi-qol",
+              icon: "fa-solid fa-file-pen",
+              label: i18n("midi-qol.ActivitySheetTabs.activityMacro")
+            }
+          }
         }
       }
       return super._markTabs(tabs);
