@@ -9,6 +9,9 @@ import ApplicationV2 = foundry.applications.api.ApplicationV2
 import { WorkflowOptions } from "../Workflow.js";
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
+const OVERLAY_ALPHA = 0.6; // Texture opacity (0.0 to 1.0)
+const OVERLAY_NAME = "MidiTargetConfirmationMouseOverOverlay";
+
 export class TargetConfirmationDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   callback: ((data) => {}) | undefined;
   data: {
@@ -19,7 +22,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     options: any;
     maxTargets: number | null | undefined;
   };
+  notAllowedTexture: PIXI.Texture | null = null;
   hookId: number;
+  hoverHookId: number;
 
   constructor(actor: Actor.Implementation, activity: Activity, user: User.Implementation, options: TargetConfirmationOptions = {}) {
     super(options);
@@ -70,6 +75,10 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         this.data.targets = newTargets;
         this.render();
       }
+    });
+
+    this.hoverHookId = Hooks.on("hoverToken", (token, hovered) => {
+        this.hoverToken(token, hovered);
     });
     return this;
   }
@@ -132,29 +141,86 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
 
   validateAndUpdateTargets() {
     const targets = Array.from(game.user?.targets ?? []);
-    const actor = this.data.activity.actor;
-    const attackerToken = tokenForActor(actor);
     let validTargets: Array<string> = [];
     for (let target of targets) {
       // Skip invalid targets
       if (!isValidTarget(target)) continue;
 
-      // Skip targets that are excluded by workflow options (if present)
-      if (this.data.options?.workflowOptions?.excludeTargets && this.data.options.workflowOptions.excludeTargets?.includes(target.document.uuid)) continue;
+      // Skip non selectable targets
+      if (!this.isTargetSelectable(target)) continue;
 
-      // Skip targets that do not match the activity's target type
-      switch (this.data.activity.target?.affects?.type ?? "any") {
-        case "enemy":
-          if ((attackerToken?.document?.disposition ?? 1) * target.document.disposition >= 0) continue;
-          break;
-        case "ally":
-          if ((attackerToken?.document?.disposition ?? 1) * target.document.disposition < 0) continue;
-          break;
-        default: break;
-      }
       validTargets.push(target.id);
     }
     updateUserTargets(validTargets);
+  }
+
+  hoverToken(token: Token.Implementation, hovered: boolean) {
+    if (!hovered) {
+      const existingOverlay = token.mesh?.getChildByName(OVERLAY_NAME);
+      if (existingOverlay) {
+          token.mesh?.removeChild(existingOverlay);
+          existingOverlay.destroy(); // Free up memory
+      }
+      return;
+    }
+    // Only apply the overlay the current control and tool is set for targeting tokens
+    if (ui.controls?.control?.name !== "tokens" || ui.controls?.tool?.name !== "target") return;
+
+    // Skip invalid targets, we don't want to give any indication about these tokens
+    if (!isValidTarget(token)) return;
+
+
+    // Do nothing if the token selectable
+    if (this.isTargetSelectable(token)) return;
+
+    // Prevent adding multiple copies of the texture
+    if (token.mesh?.getChildByName(OVERLAY_NAME)) return;
+
+    if (!this.notAllowedTexture || !token.mesh) {
+      return;
+    }
+    const sprite = new PIXI.Sprite(this.notAllowedTexture);
+    
+    // Configure sprite size, opacity, and name anchor
+    sprite.name = OVERLAY_NAME;
+    sprite.alpha = OVERLAY_ALPHA;
+    sprite.tint = 0xFF0000; // Red tint for "not allowed" indication
+    
+    // Align sprite center with token center
+    sprite.anchor.set(0.5);
+    sprite.x = 0;
+    sprite.y = 0;
+
+    // Make texture encompass token size
+    sprite.width = token.w / token.mesh.scale.x;
+    sprite.height = token.h / token.mesh.scale.y;
+
+    // Prevent texture from rotating with token
+    sprite.rotation = -Math.toRadians(token.mesh.angle);
+  
+    // Add the texture layer directly to the token container
+    token.mesh.addChild(sprite);
+  }
+
+  isTargetSelectable(token: Token.Implementation): boolean {
+      // Skip targets that are not included by workflow options (if present)
+      if (this.data.options?.workflowOptions?.includeTargets && !this.data.options.workflowOptions.includeTargets?.includes(token.document.uuid)) return false;
+      // Skip targets that are excluded by workflow options (if present)
+      if (this.data.options?.workflowOptions?.excludeTargets && this.data.options.workflowOptions.excludeTargets?.includes(token.document.uuid)) return false;
+
+      const actor = this.data.activity.actor;
+      const attackerToken = tokenForActor(actor);
+      // Skip targets that do not match the activity's target type
+      switch (this.data.activity.target?.affects?.type ?? "any") {
+        case "enemy":
+          if ((attackerToken?.document?.disposition ?? 1) * token.document.disposition >= 0) return false;
+          break;
+        case "ally":
+          if ((attackerToken?.document?.disposition ?? 1) * token.document.disposition < 0) return false;
+          break;
+        default: break;
+      }
+      return true;
   }
 
   async _prepareContext(options: ApplicationV2.RenderOptions) {
@@ -296,6 +362,15 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
 
   async _onRender(context, options) {
     await super._onRender(context, options);
+
+    const NOT_ALLOWED_TEXTURE_PATH = "icons/svg/cancel.svg";
+    let texture = await foundry.canvas.loadTexture(NOT_ALLOWED_TEXTURE_PATH);
+    if (texture instanceof PIXI.Texture) {
+      this.notAllowedTexture = texture;
+    } else {
+      error(`TargetConfirmation | Failed to load texture from ${NOT_ALLOWED_TEXTURE_PATH}`);
+    }
+
     if (canvas) {
       // TODO: This doing anything? 
       let targetNames = this.element.getElementsByClassName("content-link midi-qol");
@@ -342,6 +417,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
 
   close(options = {}) {
     Hooks.off("targetToken", this.hookId);
+    Hooks.off("hoverToken", this.hoverHookId);
     this.doCallback(false);
     return super.close(options);
   }
