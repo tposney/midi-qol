@@ -1330,6 +1330,7 @@ export const onUseMacroOptions = keysToExtendedOptionsObj("onUseMacroOptions", [
   "preSave",
   "postSave",
   "preDamageRollConfig",
+  "preDamageCalculation",
   "preDamageApplication",
   "preActiveEffects",
   "postActiveEffects",

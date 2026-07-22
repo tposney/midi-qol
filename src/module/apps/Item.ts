@@ -15,8 +15,13 @@ export class OnUseMacros {
     return macros;
   }
 
-  public getMacros(currentOption: string | undefined): string {
-    return this.items.filter(x => x.macroName?.length > 0 && (x.option.toLocaleLowerCase() === (currentOption ?? "").toLocaleLowerCase() || x.option === "all")).map(x => x.macroName).toString();
+  public getMacros(currentOption: string | undefined, { includeAll = true } = {}): string {
+    return this.items
+      .filter(x => x.macroName?.length > 0
+        && (x.option.toLocaleLowerCase() === (currentOption ?? "").toLocaleLowerCase()
+          || (includeAll && x.option === "all")))
+      .map(x => x.macroName)
+      .toString();
   }
 
   public toString() {
