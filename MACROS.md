@@ -483,8 +483,33 @@ flags.midi-qol.onUseMacroName CUSTOM macro,macroPass
 | `damageBonus` | When computing damage bonus (item only) |
 | `preDamageApplication` | Before damage applied |
 | `preActiveEffects` | Before effects applied |
+| `preApplyActiveEffectData` | Before cloned effect data is applied to each target |
 | `postActiveEffects` | After effects applied |
 | `all` | Called at each pass above |
+
+`preApplyActiveEffectData` runs once for each target and DAE activity-effect
+context. It can modify the cloned effect sources in `args[0].options.effects` without changing
+the effects stored on the item. The options also contain `activity`, `target`,
+`targetUuid`, and `effectContext`. Remove entries from `effects` to skip
+individual effects, or return `{ haltEffectsApplication: true }` to skip the
+entire application for that target and context. Because this pass can run many
+times in one workflow, macros configured for `all` do not receive it; select
+`preApplyActiveEffectData` explicitly.
+
+```js
+if (args[0].macroPass === "preApplyActiveEffectData") {
+  const { effects, target } = args[0].options;
+  for (const effect of effects) {
+    effect.name = `${effect.name} - ${target.name}`;
+    effect.changes.push({
+      key: "system.attributes.ac.bonus",
+      mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+      value: "1",
+      priority: 20,
+    });
+  }
+}
+```
 
 **Workflow State Passes (dynamically generated):**
 

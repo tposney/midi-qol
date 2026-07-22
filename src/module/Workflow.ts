@@ -2914,10 +2914,9 @@ export class Workflow {
               )
             );
           }
-          const effectsToApplyUuids = selectedEffects.map(ef => ef.uuid);
-          if (effectsToApplyUuids?.length > 0) {
-            doEffectsData.origin = origin ?? effectsToApplyUuids[0];
-            await globalThis.DAE.doActivityEffects(this.activity, true, [token], effectsToApplyUuids, doEffectsData);
+          if (selectedEffects.length > 0) {
+            doEffectsData.origin = origin ?? selectedEffects[0].uuid;
+            await this.applyActivityEffectData(this.activity, token, selectedEffects, "activity", doEffectsData);
           }
         }
         if (ceTargetEffect && this.activity.item && token.actor) {
@@ -2949,12 +2948,11 @@ export class Workflow {
       }
 
       if (this.effectTargetsOnSave.size > 0 && onSaveActivityEffects.length > 0) {
-        let selectedEffects = onSaveActivityEffects;
-        const effectsToApplyUuids = onSaveActivityEffects.map(ef => ef.uuid);
-        if (effectsToApplyUuids?.length > 0) {
+        const selectedEffects = onSaveActivityEffects;
+        if (selectedEffects.length > 0) {
           // TODO: Is this right?
-          doEffectsData.origin = effectsToApplyUuids[0];
-          await globalThis.DAE.doActivityEffects(this.activity, true, [token], effectsToApplyUuids, doEffectsData)
+          doEffectsData.origin = selectedEffects[0].uuid;
+          await this.applyActivityEffectData(this.activity, token, selectedEffects, "activityOnSave", doEffectsData);
         }
       }
       if (this.forceApplyEffects || this.otherEffectTargets.has(token)) {
@@ -2969,19 +2967,17 @@ export class Workflow {
               )
             );
           }
-          const effectsToApplyUuids = selectedEffects.map(ef => ef.uuid);
-          if (effectsToApplyUuids?.length > 0) {
-            doEffectsData.origin = effectsToApplyUuids[0];
-            await globalThis.DAE.doActivityEffects(this.otherActivity, true, [token], effectsToApplyUuids, doEffectsData)
+          if (selectedEffects.length > 0) {
+            doEffectsData.origin = selectedEffects[0].uuid;
+            await this.applyActivityEffectData(this.otherActivity, token, selectedEffects, "otherActivity", doEffectsData);
           }
         }
       }
       if (this.otherEffectTargetsOnSave.size > 0 && onSaveOtherActivityEffects.length > 0) {
-        let selectedEffects = onSaveOtherActivityEffects;
-        const effectsToApplyUuids = onSaveOtherActivityEffects.map(ef => ef.uuid);
-        if (effectsToApplyUuids?.length > 0) {
-          doEffectsData.origin = effectsToApplyUuids[0];
-          await globalThis.DAE.doActivityEffects(this.otherActivity, true, [token], effectsToApplyUuids, doEffectsData)
+        const selectedEffects = onSaveOtherActivityEffects;
+        if (selectedEffects.length > 0) {
+          doEffectsData.origin = selectedEffects[0].uuid;
+          await this.applyActivityEffectData(this.otherActivity, token, selectedEffects, "otherActivityOnSave", doEffectsData);
         }
       }
     }
@@ -2995,7 +2991,7 @@ export class Workflow {
     const selfToken = getOrCreateTokenForActor(this.actor);
     if (selfEffects.length > 0 && selfToken) {
       doEffectsData.origin = origin ?? this.activity.uuid ?? this.item.uuid;
-      await globalThis.DAE.doActivityEffects(this.activity, true, [selfToken], selfEffects.map(ef => ef.uuid), doEffectsData)
+      await this.applyActivityEffectData(this.activity, selfToken, selfEffects, "self", doEffectsData);
     }
 
     let otherSelfEffects: ActiveEffect.Implementation[] = [];
@@ -3003,7 +2999,7 @@ export class Workflow {
     else otherSelfEffects = otherActivitySelfEffects;
     if (otherSelfEffects.length > 0 && selfToken) {
       doEffectsData.origin = this.otherActivity!.item.uuid;
-      await globalThis.DAE.doActivityEffects(this.otherActivity, true, [selfToken], otherSelfEffects.map(ef => ef.uuid), doEffectsData)
+      await this.applyActivityEffectData(this.otherActivity, selfToken, otherSelfEffects, "otherSelf", doEffectsData);
     }
 
     if (this.actor && ceSelfEffect && (this.effectTargets?.size > 0 || ceEffect!.flags?.dae?.selfTargetAlways)) {
@@ -3028,6 +3024,56 @@ export class Workflow {
     }
     return this.WorkflowState_RollFinished;
   }
+
+  /**
+   * Clone the selected activity effects for a single target and allow On Use
+   * macros to modify only the data for this application before handing it to DAE.
+   */
+  async applyActivityEffectData(
+    activity: any,
+    target: Token.Implementation,
+    effects: ActiveEffect.Implementation[],
+    effectContext: "activity" | "activityOnSave" | "otherActivity" | "otherActivityOnSave" | "self" | "otherSelf",
+    doEffectsData: AnyObject
+  ): Promise<void> {
+    const dae = globalThis.DAE as any;
+    if (!dae.supportsActivityEffectData) {
+      await dae.doActivityEffects(activity, true, [target], effects.map(effect => effect.uuid), doEffectsData);
+      return;
+    }
+
+    const application = {
+      activity,
+      effectContext,
+      effects: effects.map(effect => effect.toObject()),
+      target,
+      targetUuid: getTokenDocument(target)?.uuid,
+    };
+
+    let results: any[] = [];
+    if (configSettings.allowUseMacro && this.workflowOptions.noOnUseMacro !== true) {
+      results = await this.callMacros(
+        this.item,
+        this.onUseMacros?.getMacros("preApplyActiveEffectData", { includeAll: false }),
+        "OnUse",
+        "preApplyActiveEffectData",
+        application,
+      );
+      if (this.ammunition) {
+        results.push(...await this.callMacros(
+          this.ammunition,
+          this.ammunitionOnUseMacros?.getMacros("preApplyActiveEffectData", { includeAll: false }),
+          "OnUse",
+          "preApplyActiveEffectData",
+          application,
+        ));
+      }
+    }
+
+    if (results.some(result => result?.haltEffectsApplication) || application.effects.length === 0) return;
+    await dae.doActivityEffects(activity, true, [target], application.effects, doEffectsData);
+  }
+
   async WorkflowState_Cleanup(context: WorkflowContext = {}): Promise<WorkflowState> {
     const blfxActive = game.modules.get("boss-loot-assets-premium")?.active ||
       game.modules.get("boss-loot-assets-free")?.active;

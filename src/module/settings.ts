@@ -1332,6 +1332,7 @@ export const onUseMacroOptions = keysToExtendedOptionsObj("onUseMacroOptions", [
   "preDamageRollConfig",
   "preDamageApplication",
   "preActiveEffects",
+  "preApplyActiveEffectData",
   "postActiveEffects",
   "isTargeted",
   "isPreAttacked",

@@ -490,6 +490,7 @@
     "preDamageRollConfig": "Before Damage Configuration",
     "preDamageApplication": "Before Damage Application",
     "preActiveEffects": "Before Active Effects",
+    "preApplyActiveEffectData": "Before applying Active Effect data to each target",
     "postActiveEffects": "After Active Effects ",
     "isTargeted": "Target is targeted but before item is rolled",
     "isPreAttacked": "Target is about to be attacked, before reactions",
