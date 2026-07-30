@@ -4813,6 +4813,11 @@ async function displayBeforeAfterRolls(data: {
     whisper: [player?.id ?? ""],
     rolls: [originalRoll, newRoll],
     sound: CONFIG.sounds.dice,
+    flags: {
+      [MODULE_ID]: {
+        optionalBonusBeforeAfter: true
+      }
+    }
   }, { inplace: false });
   // @ts-expect-error
   if (originalRoll.options.rollMode) ChatMessage.applyRollMode(chatData, originalRoll.options.rollMode);
