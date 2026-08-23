@@ -5712,7 +5712,13 @@ return {
       flashRequestType = "savingthrow"; // default
     }
 
-    const flashRollKey = rollAbilities?.[0] ?? rollSkills?.[0] ?? rollTools?.[0];
+    // The roll key must match the request type. Skill and tool checks also populate rollAbilities
+    // (the ability the check is made with), so selecting the first non-empty list would send an
+    // ability id as a skill/tool key, which dnd5e cannot resolve.
+    let flashRollKey: string | undefined;
+    if (rollType === "skill") flashRollKey = rollSkills?.[0];
+    else if (rollType === "tool") flashRollKey = rollTools?.[0];
+    else flashRollKey = rollAbilities?.[0];
     if (!flashRollKey) {
       flashRequestType = "custom";
     }
