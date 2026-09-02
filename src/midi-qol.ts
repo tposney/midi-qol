@@ -187,6 +187,7 @@ Hooks.once("levelsReady", function () {
 Hooks.once("init", () => {
   registerHandlebarsHelpers();
   setupChatMessageMidi();
+  setupDamageCardMessage();
   //@ts-expect-error
   CONFIG.ChatMessage.documentClass = ChatMessageMidi;
   // @ts-expect-error
@@ -871,6 +872,7 @@ Hooks.once('ready', function () {
 });
 
 import { setupChatMessageMidi, ChatMessageMidi } from './module/ChatClasses/ChatMessageMidi.js';
+import { setupDamageCardMessage } from './module/ChatClasses/DamageCardMessage.js';
 import { MidiSaveActivity, setupSaveActivity } from './module/activities/SaveActivity.js';
 import { MidiUtilityActivity, setupUtilityActivity } from './module/activities/UtilityActivity.js';
 import { MidiSummonActivity, setupSummonActivity } from './module/activities/SummonActivity.js';

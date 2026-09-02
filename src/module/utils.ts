@@ -595,15 +595,14 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     let combinedDamageDetails: DamageDescription[] = [];
 
 
-    const damageArr: [DamageDescription[] | undefined, string][] = [[workflow.damageDetail ?? [], "defaultDamage"], [(workflow.otherDamageMatches?.has(token) ?? true) ? (workflow.otherDamageDetail ?? []) : [], "otherDamage"], [workflow.bonusDamageDetail ?? [], "bonusDamage"]];
-    for (let [damages, type] of damageArr) {
-      if (!damages) {
-        const message = `processDamageRoll | ${type} damages is not defined`;
-        TroubleShooter.recordError(new Error("no valid damage"), message);
-        error(message);
-        continue;
-      }
-      let calcDamageOptions: CalcDamageOptions = {
+    const damageBuckets: [DamageDescription[], "defaultDamage" | "otherDamage" | "bonusDamage"][] = [
+      [workflow.damageDetail ?? [], "defaultDamage"],
+      [(workflow.otherDamageMatches?.has(token) ?? true) ? (workflow.otherDamageDetail ?? []) : [], "otherDamage"],
+      [workflow.bonusDamageDetail ?? [], "bonusDamage"]
+    ];
+
+    const buildCalcDamageOptions = (): CalcDamageOptions => {
+      const calcDamageOptions: CalcDamageOptions = {
         invertHealing: true,
         multiplier: challengeModeScale,
         // Always initialize ignore to ensure dnd5e calculateDamage processes traits correctly
@@ -634,65 +633,106 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           uncannyDodge: actor.flags?.[MODULE_ID]?.["uncanny-dodge"] && workflow.item?.hasAttack
         }
       };
-
-      // calcDamageOptions = foundry.utils.duplicate(damagePerActor[actor.uuid].damageDetails.calcDamageOptions[type]) as CalcDamageOptions;
-      if (type === "otherDamage" && (workflow.otherActivity?.save || workflow.otherActivity?.check)) {
-        const defaultSaveMultiplier = getSaveMultiplierForActivity(workflow.otherActivity);
-        const saveMultiplier = hasSaved
-          ? superSaver || semiSuperSaver
-            ? 0
-            : defaultSaveMultiplier
-          : superSaver
-            ? defaultSaveMultiplier
-            : 1;
-        calcDamageOptions.midi.saveMultiplier = saveMultiplier;
-      }
-
       const categories: Record<string, string> = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption", "idm": "modification" };
-      if (workflow?.activity) {
-        const ignoreTraits = workflow.activity.midiProperties?.ignoreTraits;
-        if (ignoreTraits) {
-          for (let key of Object.keys(categories)) {
-            const category = categories[key];
-            // Check for base key (e.g., "idi") - applies to all damage types
-            if (ignoreTraits.has(key)) {
-              if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
-              for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
-                calcDamageOptions.ignore![category].add(dt);
-              }
+      const ignoreTraits = workflow?.activity?.midiProperties?.ignoreTraits;
+      if (ignoreTraits) {
+        for (let key of Object.keys(categories)) {
+          const category = categories[key];
+          // Check for base key (e.g., "idi") - applies to all damage types
+          if (ignoreTraits.has(key)) {
+            if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
+            for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
+              calcDamageOptions.ignore![category].add(dt);
             }
           }
-          // Check for damage-type specific keys (e.g., "idi.fire")
-          for (const trait of ignoreTraits) {
-            if (trait.includes('.')) {
-              const [categoryKey, damageType] = trait.split('.');
-              const category = categories[categoryKey];
-              if (category && GameSystemConfig.damageTypes[damageType]) {
-                if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
-                calcDamageOptions.ignore![category].add(damageType);
-              }
+        }
+        // Check for damage-type specific keys (e.g., "idi.fire")
+        for (const trait of ignoreTraits) {
+          if (trait.includes('.')) {
+            const [categoryKey, damageType] = trait.split('.');
+            const category = categories[categoryKey];
+            if (category && GameSystemConfig.damageTypes[damageType]) {
+              if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
+              calcDamageOptions.ignore![category].add(damageType);
             }
           }
         }
       }
+      return calcDamageOptions;
+    };
+
+    const otherSaveMultiplier = (workflow.otherActivity?.save || workflow.otherActivity?.check)
+      ? (() => {
+        const defaultOtherMultiplier = getSaveMultiplierForActivity(workflow.otherActivity);
+        return hasSaved
+          ? superSaver || semiSuperSaver
+            ? 0
+            : defaultOtherMultiplier
+          : superSaver
+            ? defaultOtherMultiplier
+            : 1;
+      })()
+      : undefined;
+
+    if (configSettings.singleDamageCalculation) {
+      // One calculateDamage call for all of a target's damage. dnd5e treats a damage modification
+      // (system.traits.dm.amount) as a budget consumed across the entries of a single call, and midi's
+      // own DR (traits.dm.midi) is likewise summed per call - so calling once per category applied both
+      // once per category. The only per-category input is the other-damage save multiplier, carried on
+      // the entries instead of in the options.
+      const calcDamageOptions = buildCalcDamageOptions();
+      if (otherSaveMultiplier !== undefined) for (const d of damageBuckets[1][0]) d.midiSaveMultiplier = otherSaveMultiplier;
+
+      const allDamage: DamageDescription[] = [];
+      for (const [damages, type] of damageBuckets) {
+        for (const d of damages) d.midiCategory = type;
+        allDamage.push(...damages);
+        damageDetails[`raw${type}`] = damages;
+        damageDetails.calcDamageOptions[type] = calcDamageOptions;
+      }
 
       //@ts-expect-error no dnd5e-types
-      let returnDamages = token.actor.calculateDamage(damages, calcDamageOptions);
-      damageDetails[type] = returnDamages;
-      damageDetails[`raw${type}`] = damages;
-      damageDetails.calcDamageOptions[type] = calcDamageOptions;
-      if (configSettings.singleConcentrationRoll) {
-        combinedDamageDetails = combinedDamageDetails.concat(returnDamages);
-        combinedRawDamageDetails = combinedRawDamageDetails.concat(damages);
+      const calculated: DamageDescription[] = token.actor.calculateDamage(allDamage, calcDamageOptions) ?? [];
+
+      // Partition by tag, never by index: midi's DR pass pushes an aggregate entry and splices out
+      // midi-none entries, so the returned array is neither the same length nor order as the input.
+      for (const [, type] of damageBuckets) damageDetails[type] = calculated.filter(d => d.midiCategory === type);
+      // Injected entries are cross-category, so they ride with the combined total rather than with
+      // any single category's display.
+      damageDetails.injectedDamage = calculated.filter(d => !d.midiCategory);
+      combinedRawDamageDetails = allDamage;
+      combinedDamageDetails = (damageDetails.defaultDamage ?? [])
+        .concat(damageDetails.otherDamage ?? [], damageDetails.bonusDamage ?? [], damageDetails.injectedDamage);
+    } else {
+      for (let [damages, type] of damageBuckets) {
+        if (!damages) {
+          const message = `processDamageRoll | ${type} damages is not defined`;
+          TroubleShooter.recordError(new Error("no valid damage"), message);
+          error(message);
+          continue;
+        }
+        const calcDamageOptions = buildCalcDamageOptions();
+        if (type === "otherDamage" && otherSaveMultiplier !== undefined) calcDamageOptions.midi.saveMultiplier = otherSaveMultiplier;
+
+        //@ts-expect-error no dnd5e-types
+        let returnDamages = token.actor.calculateDamage(damages, calcDamageOptions);
+        damageDetails[type] = returnDamages;
+        damageDetails[`raw${type}`] = damages;
+        damageDetails.calcDamageOptions[type] = calcDamageOptions;
+        if (configSettings.singleConcentrationRoll) {
+          combinedDamageDetails = combinedDamageDetails.concat(returnDamages);
+          combinedRawDamageDetails = combinedRawDamageDetails.concat(damages);
+        }
       }
     }
     damageDetails.calcDamageOptions.combinedDamage = damageDetails.calcDamageOptions.defaultDamage;
+    const injected = damageDetails.injectedDamage ?? [];
     if (configSettings.singleConcentrationRoll) {
       damageDetails["rawcombinedDamage"] = mergeDamageDetail(combinedRawDamageDetails);
       damageDetails["combinedDamage"] = combinedDamageDetails;
     } else {
       damageDetails.rawcombinedDamage = mergeDamageDetail((damageDetails.rawdefaultDamage ?? []).concat(damageDetails.rawbonusDamage ?? []));
-      damageDetails.combinedDamage = (damageDetails?.defaultDamage ?? []).concat(damageDetails.bonusDamage ?? []);
+      damageDetails.combinedDamage = (damageDetails?.defaultDamage ?? []).concat(damageDetails.bonusDamage ?? [], injected);
     }
   }
 
@@ -1009,6 +1049,8 @@ export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffe
   if (change.key === "flags.dnd5e.DamageBonusMacro") {
     // DAEdnd5e - daeCustom processes these
   } else if (change.key === `flags.${MODULE_ID}.onUseMacroName`) {
+    // Change values are not guaranteed to be strings; this flag is only meaningful as one.
+    if (typeof change.value !== "string") return true;
     const args = change.value.split(",")?.map(arg => arg.trim());
     const currentFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.onUseMacroName`) as string ?? "";
     if (args[0] === "ActivityMacro" || args[0] === MQActivityMacroLabel) {
@@ -1074,7 +1116,8 @@ export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffe
     const macroString = (currentFlag?.length > 0) ? [currentFlag, extraFlag].join(",") : extraFlag;
     foundry.utils.setProperty(actor, `flags.${MODULE_ID}.onUseMacroName`, macroString)
     return true;
-  } else if (change.key.startsWith(`flags.${MODULE_ID}.optional.`) && (change.value.trim() === "ItemMacro" || change.value.trim() === MQItemMacroLabel)) {
+  } else if (change.key.startsWith(`flags.${MODULE_ID}.optional.`)
+    && (change.value?.trim?.() === "ItemMacro" || change.value?.trim?.() === MQItemMacroLabel)) {
     let macroString = change.value;
     if (originUuid?.includes("Item.")) {
       const itemUuid = originUuid?.includes("ActiveEffect.") ? originUuid.split(".").slice(0, -2).join(".") : originUuid;
@@ -2537,8 +2580,6 @@ export async function completeItemUse(itemRef: Item.Implementation | string, con
     // error(`completeItemUse | item ${item.name} ${item.uuid} does not have a suitable activity`);
     // return undefined;
   }
-  // Apply the module prune hook (midi-qol.itemUseActivitySelect) before deciding: create() skips the
-  // dialog for a single survivor and returns null (skip the roll) if modules removed them all.
   const activity = await MidiActivityChoiceDialog.create(item, { chooseActivity });
   if (activity) return completeActivityUse(activity, activityConfig, dialog, message);
   return undefined;
@@ -5493,7 +5534,8 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
             }
           }
           // @ts-expect-error no dnd5e-types
-          if (item.type === "spell") {
+          const isSpell = item.type === "spell";
+          if (isSpell) {
             if (configSettings.ignoreSpellReactionRestriction) {
               // Skip all validation for spells when this setting is enabled
               reactions.push(activity);
@@ -5509,7 +5551,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
 
           // Use dnd5e's consumption checks for all items/spells
           const config = activity._prepareUsageConfig({ create: false });
-          if (item.type === "spell") foundry.utils.setProperty(config, "consume.spellSlot", false);
+          if (isSpell) foundry.utils.setProperty(config, "consume.spellSlot", false);
           const canUse = await activity._prepareUsageUpdates(config, { returnErrors: true });
           if (canUse instanceof Array) continue; // insufficient uses available
           // If no condition is specified, default to requiring isHit
@@ -7022,10 +7064,11 @@ export async function renderAttributionTooltip(attributions: AttributionMap, tit
   }));
 
   // Always render the tooltip, even if empty (will show title or "Normal" state)
-  return foundry.applications.handlebars.renderTemplate(
+  // Compacted: this is HTML-escaped into a data-tooltip-html attribute.
+  return compactHTML(await foundry.applications.handlebars.renderTemplate(
     "modules/midi-qol/templates/attribution-tooltip.html",
     { attributions: localizedEntries, title }
-  );
+  ));
 }
 
 /**
@@ -7130,10 +7173,10 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
     }));
     const title = advantageModeStr === "advantage" ? i18n("DND5E.Advantage") :
                   advantageModeStr === "disadvantage" ? i18n("DND5E.Disadvantage") : "";
-    attributionTooltip = await foundry.applications.handlebars.renderTemplate(
+    attributionTooltip = compactHTML(await foundry.applications.handlebars.renderTemplate(
       "modules/midi-qol/templates/attribution-tooltip.html",
       { attributions, title }
-    );
+    ));
   }
 
   // Extract damage type icon for display next to total
@@ -8394,7 +8437,7 @@ function displayContestedResults(chatCardUuid: string | undefined, resultContent
     const searchRE = /<div class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
     const replaceString = `<div class="midi-qol-saves-display">${resultContent}<div class="end-midi-qol-saves-display">`;
     content = content.replace(searchRE, replaceString);
-    itemCard.update({ content });
+    itemCard.update({ content: compactCardContent(content) });
   } else {
     // const title = `${flavor ?? i18n("miidi-qol:ContestedRoll")} results`;
     ChatMessage.create({ content: `<p>${resultContent}</p>`, speaker });
@@ -8848,10 +8891,25 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
   if (debugEnabled) warn("_updateAction | post update updatesCache", Date.now(), updates);
 }
 
+const CARD_DESCRIPTION_RE = /<section class="card-header[\s\S]*?<\/section>\s*<\/section>/;
+
+/** Drop template indentation. One space, not none, so inline elements aren't run together. */
+export const compactHTML = (html: string) => html.replace(/[ \t]*\n[ \t]*/g, " ");
+
+/** Compact midi's card markup. Idempotent. The item description is authored prose, so left alone. */
+export function compactCardContent(content: string): string {
+  if (!content) return content;
+  const description = content.match(CARD_DESCRIPTION_RE)?.[0];
+  if (!description) return compactHTML(content);
+  const at = content.indexOf(description);
+  return compactHTML(content.slice(0, at)) + description + compactHTML(content.slice(at + description.length));
+}
+
 // NOTE: Typed as a ChatMessage since that's all we use it for
 export async function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData, throttlingFunc: undefined | ((document: ChatMessage.Implementation, updates: ChatMessage.UpdateData) => Promise<void>) = undefined, immediate = false) {
   if (!document) return; // ChatCard was removed already?;
   updates = foundry.utils.expandObject(updates) as typeof updates;
+  if (typeof updates.content === "string") updates.content = compactCardContent(updates.content);
   updates = foundry.utils.mergeObject((updatesCache[document.uuid] ?? {}), updates, { inplace: false, overwrite: true })
   updatesCache[document.uuid] = updates;
   if (!debounceInterval || immediate || !throttlingFunc) {

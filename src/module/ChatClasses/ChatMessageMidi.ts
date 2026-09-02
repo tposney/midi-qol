@@ -10,6 +10,14 @@ const stripHighlight = (html: HTMLElement, sel: string) => html.querySelectorAll
   el => el.classList.remove("success", "failure", "critical", "fumble")
 );
 
+/** rollType tag -> the flag it is rebuilt into. utilityRolls is absent: chatRolls merges them. */
+const MIDI_ROLL_FLAGS: Record<string, string> = {
+  attack: "attackRoll",
+  defaultDamage: "damageRolls",
+  bonusDamage: "bonusDamageRolls",
+  otherDamage: "otherDamageRolls"
+};
+
 import Token = foundry.canvas.placeables.Token;
 let _highlighted: Token.Implementation | null = null;
 
@@ -83,6 +91,28 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         if (data?.length) {
           midiFlags[field] = data.map((r: any) => r instanceof Roll ? r : Roll.fromData(r));
         }
+      }
+      this.deriveRollFlags(midiFlags);
+    }
+
+    /**
+     * Put the rolls back on the flags from `this.rolls`.
+     *
+     * They are no longer stored there - a roll on the flags was a second copy of one already in
+     * `message.rolls`, tagged with its `options["midi-qol"].rollType`. `flags` is a deep clone of
+     * the source (ObjectField#initialize), so nothing written here reaches the database.
+     * Only fills what is absent, leaving messages written before the change on their stored copies.
+     */
+    deriveRollFlags(midiFlags: Record<string, any>) {
+      if (!midiFlags.messageType) return;
+      const derived: Record<string, Roll[]> = {};
+      for (const roll of this.rolls) {
+        const field = MIDI_ROLL_FLAGS[foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`) as string];
+        if (field) (derived[field] ??= []).push(roll);
+      }
+      for (const [field, rolls] of Object.entries(derived)) {
+        if (field === "attackRoll") midiFlags.attackRoll ??= rolls[0];
+        else if (!midiFlags[field]?.length) midiFlags[field] = rolls;
       }
     }
 
@@ -348,9 +378,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
             type: roll.options.type,
             properties: new Set(roll.options.properties ?? [])
           }));
-          // Set the initial open state directly so connectedCallback renders correctly.
-          // _collapseTrays (overridden below) keeps it in sync on re-render, bypassing the
-          // dnd5e _trayStates className/tagName collision.
+          // Set open directly for connectedCallback; _trayStates collides on className/tagName.
           damageApplication.toggleAttribute("open", !midiAutoAppliesDamage());
           html.querySelector(".message-content")?.appendChild(damageApplication);
         }

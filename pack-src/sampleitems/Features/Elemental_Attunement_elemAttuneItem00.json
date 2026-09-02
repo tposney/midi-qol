@@ -10,7 +10,9 @@
     "source": {
       "book": "PHB'24",
       "page": "",
-      "license": ""
+      "license": "",
+      "rules": "2024",
+      "custom": ""
     },
     "type": {
       "value": "class",

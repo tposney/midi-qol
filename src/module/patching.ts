@@ -321,7 +321,8 @@ function isVisible(this: Token.Implementation, wrapped) {
 function applyBlindRollMode(
   blindRollSettings: string[],
   choiceId: string | undefined,
-  messageRollMode: keyof CONFIG.Dice.RollModes | undefined
+  messageRollMode: keyof CONFIG.Dice.RollModes | undefined,
+  messageDetails?: any
 ): keyof CONFIG.Dice.RollModes {
   let rollMode: keyof CONFIG.Dice.RollModes = messageRollMode ?? safeGetGameSetting("core", "rollMode");
 
@@ -331,8 +332,14 @@ function applyBlindRollMode(
   // Check if this roll should be forced to blind
   const shouldBeBlind = blindRollSettings.includes("all") || blindRollSettings.includes(choiceId ?? "");
   if (shouldBeBlind && [CONST.DICE_ROLL_MODES.PUBLIC, "roll", CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode)) {
-    rollMode = CONST.DICE_ROLL_MODES.BLIND;
-    game.settings.set("core", "rollMode", CONST.DICE_ROLL_MODES.BLIND);
+    if ((configSettings.blindRollDisplay ?? "hidden") === "obscured") {
+      // Keep the card public, but flag it so the result renders as "??" to non-GM players
+      // (obscureRollRender) and the DSN animation is kept private (see the displayDSNForRoll calls).
+      if (messageDetails) foundry.utils.setProperty(messageDetails, "data.flags.midi-qol.obscureRoll", true);
+    } else {
+      rollMode = CONST.DICE_ROLL_MODES.BLIND;
+      game.settings.set("core", "rollMode", CONST.DICE_ROLL_MODES.BLIND);
+    }
   }
 
   return rollMode;
@@ -560,7 +567,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
       else if (chosenSkillTracker?.modifiers.willSucceed) success = true;
 
       // Apply blind roll mode based on chosen skill
-      messageDetails.rollMode = applyBlindRollMode(configSettings.rollSkillsBlind, skillId, messageDetails.rollMode);
+      messageDetails.rollMode = applyBlindRollMode(configSettings.rollSkillsBlind, skillId, messageDetails.rollMode, messageDetails);
 
       return true;
     });
@@ -584,7 +591,9 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     if (rollMode !== CONST.DICE_ROLL_MODES.BLIND) rollMode = result.options.rollMode;
     else result.options.rollMode = CONST.DICE_ROLL_MODES.BLIND;
     */
-    await displayDSNForRoll(result, "skill", rollMode);
+    // When obscuring, keep the 3D dice animation private so it can't reveal the hidden result to players
+    const skillDsnRollMode = foundry.utils.getProperty(message, "data.flags.midi-qol.obscureRoll") ? CONST.DICE_ROLL_MODES.BLIND : rollMode;
+    await displayDSNForRoll(result, "skill", skillDsnRollMode);
     DSNMarkDiceDisplayed(result);
     if (!config.simulate) {
       result[0] = await bonusCheck(this, result[0], "skill", skillId, message.data);
@@ -618,6 +627,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     if (message.create !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
+        messageData.speaker = ChatMessage.getSpeaker({ actor: this, token: this.token ?? undefined });
         messageData.rolls = result;
         const chatMsg = await ChatMessage.create(messageData, { rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
@@ -1243,7 +1253,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
 
       // Apply blind roll mode based on chosen ability
       const blindRollSettings = rollType === "check" ? configSettings.rollChecksBlind : configSettings.rollSavesBlind;
-      messageDetails.rollMode = applyBlindRollMode(blindRollSettings, abilityId, messageDetails.rollMode);
+      messageDetails.rollMode = applyBlindRollMode(blindRollSettings, abilityId, messageDetails.rollMode, messageDetails);
     });
     if (this.token) foundry.utils.setProperty(dialog, "options.window.subtitle", this.token.name);
 
@@ -1258,7 +1268,9 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     let rollMode: keyof CONFIG.Dice.RollModes = message.rollMode ?? safeGetGameSetting("core", "rollMode");
     // @ts-expect-error
     result.forEach(r => r.options.rollMode = rollMode);
-    await displayDSNForRoll(result, rollType, rollMode);
+    // When obscuring, keep the 3D dice animation private so it can't reveal the hidden result to players
+    const abilityDsnRollMode = foundry.utils.getProperty(message, "data.flags.midi-qol.obscureRoll") ? CONST.DICE_ROLL_MODES.BLIND : rollMode;
+    await displayDSNForRoll(result, rollType, abilityDsnRollMode);
     DSNMarkDiceDisplayed(result);
     foundry.utils.mergeObject(message.data, { "flags": config.flags ?? {} });
     // Set overtimeActorUuid AFTER message object is replaced by hook and merged
@@ -1294,6 +1306,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     if (message.create !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
+        messageData.speaker = ChatMessage.getSpeaker({ actor: this, token: this.token ?? undefined });
         messageData.rolls = result;
         const chatMsg = await ChatMessage.create(messageData, { rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
@@ -2129,7 +2142,10 @@ function _prepareItem(wrapped, item, ctx) {
   // Filter from ctx.activities to preserve dnd5e's visibility filtering (including level limits)
   // Fixes issue #1548: Activity Visibility "Level Limit" ignored when midi-qol is enabled
   if (ctx.activities) {
-    ctx.activities = ctx.activities.filter((a: Activity) => !a.midiProperties?.automationOnly);
+    // ctx.activities holds the sheet's prepared context objects, not Activity documents, so the
+    // flag has to be read back off the item - filtering on a.midiProperties never matched anything.
+    ctx.activities = ctx.activities.filter((a: { _id: string }) =>
+      !item.system.activities?.get(a._id)?.midiProperties?.automationOnly);
   }
 }
 
@@ -2518,7 +2534,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
       else if (chosenToolTracker?.modifiers.willSucceed) success = true;
 
       // Apply blind roll mode based on chosen tool (uses check settings since tools are ability checks)
-      messageDetails.rollMode = applyBlindRollMode(configSettings.rollChecksBlind, toolId, messageDetails.rollMode);
+      messageDetails.rollMode = applyBlindRollMode(configSettings.rollChecksBlind, toolId, messageDetails.rollMode, messageDetails);
 
       return true;
     });
@@ -2527,7 +2543,9 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     result = await wrapped(config, dialog, message);
     let rollMode = message.rollMode ?? safeGetGameSetting("core", "rollMode");
     if (result) {
-      await displayDSNForRoll(result, "toolCheck", rollMode);
+      // When obscuring, keep the 3D dice animation private so it can't reveal the hidden result to players
+      const toolDsnRollMode = foundry.utils.getProperty(message, "data.flags.midi-qol.obscureRoll") ? CONST.DICE_ROLL_MODES.BLIND : rollMode;
+      await displayDSNForRoll(result, "toolCheck", toolDsnRollMode);
       DSNMarkDiceDisplayed(result);
       result![0] = await bonusCheck(this, result![0], "check", config.ability ?? "", message.data);
       DSNMarkDiceDisplayed(result);
@@ -2548,6 +2566,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     if (chatMessage !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
+        messageData.speaker = ChatMessage.getSpeaker({ actor: this, token: this.token ?? undefined });
         messageData.rolls = result;
         const chatMsg = await ChatMessage.create(messageData, { rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
@@ -2638,8 +2657,6 @@ export async function doItemUse(this: Item.Implementation, wrapped, config: Acti
     else return await activities?.[0]?.use(config, dialog, message);
   }
   if (activities?.length) {
-    // Apply the module prune hook (midi-qol.itemUseActivitySelect) before deciding: create() skips
-    // the dialog for a single survivor and returns null (skip the roll) if modules removed them all.
     const activity = await MidiActivityChoiceDialog.create(this, { chooseActivity });
     return await activity?.use(config, dialog, message);
   }

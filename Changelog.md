@@ -1,3 +1,25 @@
+### 13.0.65
+* Fixed the damage card no longer showing which modifications applied (DR, resistance, immunity); the markers are stored with the card rather than recomputed from the raw damage detail.
+* Fixed the damage card total freezing after a multiplier was used: the preview replaced the total span's contents, so later refreshes had nothing to write to.
+* Damage cards now store only the fields undo/apply reads in `flags.midi-qol.undoDamage` (~53% smaller); the socket payload is unchanged.
+* Damage cards no longer embed a generated base64 thumbnail for animated tokens; the card carries the token's path and the thumbnail is produced locally when it renders.
+* Stop storing the recomputed `midi.updates`/`midi.amount` damage options on the card — they are rewritten whenever undo/apply re-runs.
+* Damage cards are now a chat-message sub-type (`midi-qol.damage`) rendered from `message.system` on display instead of storing their markup.
+* Removed the classic (table) damage card style and its setting; the flexbox card is the only layout.
+* Damage cards no longer store other modules' `calcDamageOptions` scopes, or the target/source uuids already on the message; both uuids are restored when the card is read.
+* Attack/damage/bonus/other damage rolls are no longer stored a second time in `flags.midi-qol` — they are rebuilt from `message.rolls` when the message is prepared. `utilityRolls` is unchanged.
+* Chat card updates now always write the full roll list rather than replacing it with the roll just made.
+* Strip template indentation from midi's chat card markup before it is stored; the item description is left as authored.
+* Target rows store one name span instead of a gm/player pair when the two names match.
+* Moved the repeated inline styles on save rows into the stylesheet.
+* Target confirmation: add `includeTargets` support and a "not allowed" overlay when hovering a non-selectable token (backport of MR !433, thanks @pgervais70).
+* Add a "Blind roll display" setting: forced-blind saves/checks/skills can show a public card with the result obscured as `??` (result, dice breakdown and success/crit/fumble highlight hidden from players) instead of being fully hidden.
+* Fixed damage modification (`system.traits.dm`) and midi damage reduction being applied once per damage category (base/other/bonus) instead of once per activity. New "Single Damage Calculation" setting (default on) computes all of a target's damage in one pass; disable it to restore the old behaviour.
+* Fixed multi-target save/check/skill chat cards using the first target's token as the speaker for every roll.
+* Add an "Undead Fortitude" sample item.
+* Add a "Gloves of Soul Catching" sample item.
+* Add a "Gloves of Soul Catching (Elemental)" sample item: adds the 2d10 to the attack's damage roll so Elemental Attunement re-types it.
+
 ### 13.0.64
 * Organise the Midi activity settings into subtabs (MR !420, thanks @garrysmod367).
 * Fix socketed (GM-executed) workflows (MR !427, thanks @baconnugget).

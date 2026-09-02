@@ -351,13 +351,13 @@ export let MidiActivityMixin = Base => {
 
     static async #applyEffects(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.getWorkflow(message.uuid);
-      if (workflow) workflow.activity = this;
       if (!workflow) {
         const errMessage = "MidiQOL | MidiActivity | applyEffects | No workflow found";
         error(errMessage);
         TroubleShooter.recordError(new Error("No workflow found"), errMessage);
         return;
       }
+      workflow.activity = this;
       const authorId = message.author?.id;
       if (game.user?.id !== authorId) {
         // applying effects on behalf of another user;

@@ -1,0 +1,131 @@
+{
+ "name": "Undead Fortitude",
+ "type": "feat",
+ "img": "icons/magic/death/skull-flames-white-blue.webp",
+ "system": {
+  "type": {
+   "value": "monster",
+   "subtype": ""
+  },
+  "activities": {},
+  "uses": {
+   "spent": 0,
+   "recovery": [],
+   "max": ""
+  },
+  "description": {
+   "value": "<p>If damage reduces this creature to 0 hit points, it makes a Constitution saving throw (DC 5 plus the damage taken) unless the damage is radiant or from a critical hit. On a successful save, the creature drops to 1 hit point instead.</p><p><strong>midi-qol</strong>: a transfer effect registers an <code>isDamaged</code> target macro. When incoming damage would drop the creature to 0 HP (and is neither radiant nor a critical hit) it rolls the Constitution save at DC 5 + damage taken; on success the damage is reduced so exactly 1 HP remains.</p>",
+   "chat": ""
+  },
+  "identifier": "undead-fortitude",
+  "source": {
+   "revision": 1,
+   "rules": "2024"
+  },
+  "enchant": {},
+  "prerequisites": {
+   "level": null
+  },
+  "properties": [
+   "trait"
+  ],
+  "requirements": ""
+ },
+ "effects": [
+  {
+   "_id": "undeadFortEffct0",
+   "name": "Undead Fortitude",
+   "img": "icons/magic/death/skull-flames-white-blue.webp",
+   "type": "base",
+   "system": {},
+   "changes": [
+    {
+     "key": "flags.midi-qol.onUseMacroName",
+     "mode": 0,
+     "value": "ItemMacro, isDamaged",
+     "priority": 20
+    }
+   ],
+   "disabled": false,
+   "transfer": true,
+   "origin": null,
+   "duration": {
+    "startTime": null,
+    "seconds": null,
+    "combat": null,
+    "rounds": null,
+    "turns": null,
+    "startRound": null,
+    "startTurn": null
+   },
+   "tint": "#ffffff",
+   "statuses": [],
+   "flags": {
+    "dae": {
+     "selfTarget": false,
+     "selfTargetAlways": false,
+     "stackable": "noneName",
+     "durationExpression": "",
+     "macroRepeat": "none",
+     "specialDuration": [],
+     "disableCondition": "",
+     "disableIncapacitated": false,
+     "showIcon": false
+    }
+   },
+   "sort": 0,
+   "_key": "!items.effects!undeadFortitude0.undeadFortEffct0"
+  }
+ ],
+ "flags": {
+  "dae": {
+   "macro": {
+    "name": "Undead Fortitude",
+    "type": "script",
+    "img": "icons/svg/dice-target.svg",
+    "scope": "global",
+    "command": "// Undead Fortitude - triggered on the isDamaged target pass\nif (args[0].tag !== \"TargetOnUse\" || args[0].macroPass !== \"isDamaged\") return;\nconst di = workflow?.damageItem;\nif (!di || di.oldHP < 1 || di.hpDamage <= 0) return;\n// Only when this damage reduces the creature to 0 HP\nif (di.newHP > 0) return;\n// ...unless the damage is radiant or from a critical hit\nif (workflow.isCritical || di.critical) return;\nconst isRadiant = (di.damageDetail ?? []).some(d => (d.type ?? \"\").toLowerCase() === \"radiant\");\nif (isRadiant) return;\n\nconst name = macroItem?.name ?? \"Undead Fortitude\";\nconst dc = 5 + Math.max(0, di.totalDamage);\nconst flavor = `${name} - DC ${dc} Constitution saving throw`;\nconst save = (await actor.rollSavingThrow({ ability: \"con\", target: dc }, {}, { flavor, fastForward: true }))?.[0]?.total ?? 0;\nif (save < dc) return; // failed the save - drops as normal\n\n// Success: reduce the damage so exactly 1 HP remains, handling both damage-detail modes.\nconst useDetail = MidiQOL.configSettings().useDamageDetail;\nconst base = useDetail ? di.totalDamage : di.hpDamage;\nMidiQOL.modifyDamageBy({ damageItem: di, value: (di.oldHP - 1) - base, type: \"none\", reason: name });\ndi.newHP = 1;\nChatMessage.create({\n  speaker: ChatMessage.getSpeaker({ actor }),\n  content: `<strong>${name}</strong>: ${actor.name} succeeds on a DC ${dc} Constitution save and drops to 1 hit point instead of 0.`\n});\n",
+    "author": null,
+    "ownership": {
+     "default": 3
+    },
+    "flags": {},
+    "_stats": {}
+   }
+  },
+  "midi-qol": {
+   "onUseMacroParts": {
+    "items": []
+   }
+  },
+  "midiProperties": {
+   "confirmTargets": "default",
+   "autoFailFriendly": false,
+   "autoSaveFriendly": false,
+   "critOther": false,
+   "offHandWeapon": false,
+   "magicdam": false,
+   "magiceffect": false,
+   "noConcentrationCheck": false,
+   "toggleEffect": false,
+   "ignoreTotalCover": false,
+   "idr": false,
+   "idi": false,
+   "idv": false,
+   "ida": false
+  },
+  "chris-premades": {
+   "info": {
+    "source": "midi-qol.midiqol-sample-items",
+    "version": "13.0.64"
+   }
+  }
+ },
+ "folder": "fZIl4G4qj3C894LI",
+ "sort": 0,
+ "ownership": {
+  "default": 0
+ },
+ "_id": "undeadFortitude0",
+ "_key": "!items!undeadFortitude0"
+}

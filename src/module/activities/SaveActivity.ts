@@ -134,7 +134,9 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
 
     get possibleOtherActivity() {
       return true;
-    }    get canUseOtherActivity() {
+    }
+
+    get canUseOtherActivity() {
       return true;
     }
 

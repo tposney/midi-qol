@@ -29,7 +29,6 @@
     },
     "midi-qol.AutoApplyDamage.Name": "自動對目標套用傷害",
     "midi-qol.AutoApplyDamage.Hint": "自動對命中的目標（若啟用了自動命中檢查）或使用者選定的目標套用傷害。",
-    "midi-qol.DamageCardStyle.Name": "傷害卡片風格",
     "midi-qol.PlayerDamageCard.Name": "顯示玩家的傷害卡片",
     "midi-qol.PlayerDamageCard.Hint": "較精簡版的傷害卡片。僅在顯示 GM 卡片時才顯示。此卡片不會對 GM 顯示。",
     "midi-qol.PlayerCardDamageDifferent.Name": "若擲出的傷害與套用於目標的傷害不符，則顯示玩家傷害卡片",
@@ -286,10 +285,6 @@
         "yesCard": "是 + 傷害卡片",
         "yesCardMisses": "是 + 傷害卡片 + 未命中",
         "yesCardNPC": "是(NPC) 否(PC) + 傷害卡片"
-    },
-    "midi-qol.damageCardStyleOptions": {
-        "flexbox": "Flexbox 佈局",
-        "classic": "經典 (表格)"
     },
     "midi-qol.playerDamageCardOptions": {
         "none": "不顯示",

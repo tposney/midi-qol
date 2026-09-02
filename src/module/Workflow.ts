@@ -217,22 +217,24 @@ type DamageBonusMacroResult = DamageBonusMacroSingleResult[] | DamageBonusMacroS
 
 export type WorkflowState = undefined | ((context: WorkflowContext) => Promise<WorkflowState>);
 
-/**
- * Write-through cache in front of the workflow's chat-card flags.
- * Getters fall back to the persisted flag value (then the default) until the
- * field is first written; writing undefined clears the cache so the getter
- * falls back to the persisted value again (matches the old #field semantics).
- */
+/** Write-through cache over the chat-card flags; unwritten fields read the flag, then the default. */
 class PersistedFieldStore {
   #cache = new Map<string, unknown>();
   #getFlags: () => Record<string, any> | undefined;
   #persist: (updates: Record<string, unknown>) => void;
   #forcePersist: (updates: Record<string, unknown>) => void;
+  #persistRolls: () => void;
 
-  constructor(getFlags: () => Record<string, any> | undefined, persist: (updates: Record<string, unknown>) => void, forcePersist: (updates: Record<string, unknown>) => void) {
+  constructor({ getFlags, persist, forcePersist, persistRolls }: {
+    getFlags: () => Record<string, any> | undefined,
+    persist: (updates: Record<string, unknown>) => void,
+    forcePersist: (updates: Record<string, unknown>) => void,
+    persistRolls: () => void
+  }) {
     this.#getFlags = getFlags;
     this.#persist = persist;
     this.#forcePersist = forcePersist;
+    this.#persistRolls = persistRolls;
   }
 
   scalar<T>(key: string, dflt: T, legacyKey?: string): T {
@@ -247,20 +249,16 @@ class PersistedFieldStore {
     this.#persist({ [key]: value });
   }
 
-  // Token sets persist as uuid arrays (or {uuid, name} pairs for "targets") and
-  // restore to Sets of canvas placeables. An empty restore returns an uncached
-  // fresh Set so a later flag write is still picked up.
+  // Persisted as uuids (or {uuid, name} pairs). Only an absent flag stays uncached, so a first write is seen.
   tokenSet(key: string, namePairs = false): Set<Token.Implementation> {
     if (this.#cache.has(key)) return this.#cache.get(key) as Set<Token.Implementation>;
     const data = this.#getFlags()?.[key];
-    if (data?.length) {
-      const tokens: Set<Token.Implementation> = new Set(data
-        .map((entry: any) => (fromUuidSync(namePairs ? entry.uuid : entry) as TokenDocument.Implementation | undefined)?.object)
-        .filter((t: Token.Implementation | undefined): t is Token.Implementation => !!t));
-      this.#cache.set(key, tokens);
-      return tokens;
-    }
-    return new Set();
+    if (data === undefined) return new Set();
+    const tokens: Set<Token.Implementation> = new Set((data ?? [])
+      .map((entry: any) => (fromUuidSync(namePairs ? entry.uuid : entry) as TokenDocument.Implementation | undefined)?.object)
+      .filter((t: Token.Implementation | undefined): t is Token.Implementation => !!t));
+    this.#cache.set(key, tokens);
+    return tokens;
   }
 
   setTokenSet(key: string, tokens: Set<TokenOrDocument> | undefined, namePairs = false): void {
@@ -270,16 +268,14 @@ class PersistedFieldStore {
     this.#persist({ [key]: targetDocuments.map(t => namePairs ? { uuid: t.uuid, name: t.name } : t.uuid) });
   }
 
-  // Rolls persist as toJSON() data and must be rehydrated with Roll.fromData
-  // (which redirects to the persisted subclass via data.class). Falls back to
-  // the raw data if the class is no longer registered.
+  // Roll.fromData redirects to the subclass named in data.class; unregistered classes fall back to raw data.
   #rollFromData(data: any): Roll {
     if (data instanceof Roll) return data;
     try {
       return Roll.fromData(data) as Roll;
     } catch (err) {
       TroubleShooter.recordError(err, `PersistedFieldStore | could not rehydrate roll ${data?.class}`);
-      return data;
+      return data as Roll; // deliberate: hand back the raw data rather than losing the field
     }
   }
 
@@ -294,10 +290,12 @@ class PersistedFieldStore {
     return undefined;
   }
 
-  setRoll(key: string, roll: Roll | undefined): void {
+  /** `derived` rolls skip the flags - they are in message.rolls and prepareDerivedData rebuilds the flag. */
+  setRoll(key: string, roll: Roll | undefined, derived = false): void {
     if (roll === undefined) this.#cache.delete(key);
     else this.#cache.set(key, roll);
-    this.#forcePersist({ [key]: roll?.toJSON() ?? null });
+    if (derived) this.#persistRolls();
+    else this.#forcePersist({ [key]: roll?.toJSON() ?? null });
   }
 
   rolls(key: string): Roll[] | undefined {
@@ -311,10 +309,11 @@ class PersistedFieldStore {
     return undefined;
   }
 
-  setRolls(key: string, rolls: Roll[] | undefined): void {
+  setRolls(key: string, rolls: Roll[] | undefined, derived = false): void {
     if (rolls === undefined) this.#cache.delete(key);
     else this.#cache.set(key, rolls);
-    this.#forcePersist({ [key]: rolls?.map(r => r.toJSON()) ?? [] });
+    if (derived) this.#persistRolls();
+    else this.#forcePersist({ [key]: rolls?.map(r => r.toJSON()) ?? [] });
   }
 
   damageDetail(key: string): DamageDescription[] {
@@ -443,7 +442,21 @@ export class Workflow {
     }
   }
 
-  #persisted = new PersistedFieldStore(() => this.midiFlags, updates => this.persistFields(updates), updates => this.forcePersistFields(updates));
+  /**
+   * Rolls persist to `message.rolls`, never to the flags — ChatMessageMidi.prepareDerivedData puts
+   * them back on the flags when the message is prepared. Written unconditionally, like the flags
+   * they replace, so `workflow.attackRoll` survives a reload with saveToChatCard off.
+   */
+  private persistRolls(): void {
+    if (this.itemCardUuid) addUpdatesCache(this.id, { rolls: this.chatRolls });
+  }
+
+  #persisted = new PersistedFieldStore({
+    getFlags: () => this.midiFlags,
+    persist: updates => this.persistFields(updates),
+    forcePersist: updates => this.forcePersistFields(updates),
+    persistRolls: () => this.persistRolls()
+  });
 
   get useActiveDefence() { return false; }
   get actor(): Actor.Implementation {
@@ -775,7 +788,7 @@ export class Workflow {
   get attackRoll(): Roll | undefined { return this.#persisted.roll("attackRoll"); }
   set attackRoll(attackRoll: Roll | undefined) {
     if (attackRoll) attackRoll.data = {};
-    this.#persisted.setRoll("attackRoll", attackRoll);
+    this.#persisted.setRoll("attackRoll", attackRoll, true);
   }
 
   get diceRoll() { return this.#persisted.scalar("diceRoll", 0); }
@@ -1061,15 +1074,16 @@ export class Workflow {
   }
 
   get damageRolls(): Roll[] { return this.#persisted.rolls("damageRolls") ?? []; }
-  set damageRolls(damageRolls: Roll[]) { this.#persisted.setRolls("damageRolls", damageRolls); }
+  set damageRolls(damageRolls: Roll[]) { this.#persisted.setRolls("damageRolls", damageRolls, true); }
 
   get bonusDamageRolls(): Roll[] | undefined { return this.#persisted.rolls("bonusDamageRolls"); }
-  set bonusDamageRolls(bonusDamageRolls: Roll[] | undefined) { this.#persisted.setRolls("bonusDamageRolls", bonusDamageRolls); }
+  set bonusDamageRolls(bonusDamageRolls: Roll[] | undefined) { this.#persisted.setRolls("bonusDamageRolls", bonusDamageRolls, true); }
 
   get otherDamageRolls(): Roll[] | undefined { return this.#persisted.rolls("otherDamageRolls"); }
-  set otherDamageRolls(otherDamageRolls: Roll[] | undefined) { this.#persisted.setRolls("otherDamageRolls", otherDamageRolls); }
+  set otherDamageRolls(otherDamageRolls: Roll[] | undefined) { this.#persisted.setRolls("otherDamageRolls", otherDamageRolls, true); }
 
   get utilityRolls(): Roll[] | undefined { return this.#persisted.rolls("utilityRolls") ?? []; }
+  // Not derived: chatRolls carries the merged utilityRoll, so individual rolls can't be recovered.
   set utilityRolls(utilityRolls: Roll[] | undefined) {
     utilityRolls?.forEach(d => d.data = {});
     this.#persisted.setRolls("utilityRolls", utilityRolls);
@@ -4582,10 +4596,9 @@ return {
         }
       }
     }
-    // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
-    const rolls = [...(this.attackRoll ? [this.attackRoll] : []),
-    ...(this.utilityRoll ? [this.utilityRoll] : [])];
-    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls });
+    // chatRolls, not just this roll: message.rolls is where the rolls are stored now, so a partial
+    // array here would drop the ones already made.
+    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls: this.chatRolls });
   }
 
   async displayAttackRoll(displayOptions: { GMOnlyAttackRoll?: boolean } = {}) {
@@ -4657,9 +4670,7 @@ return {
 
       }
     }
-    // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
-    const rolls = [...(this.attackRoll ? [this.attackRoll] : [])];
-    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls });
+    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls: this.chatRolls });
   }
 
   async displayDamageRolls() {
@@ -8143,8 +8154,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         hitECTargetUuids: Array.from(this.hitTargetsEC).map(t => getTokenDocument(t)?.uuid),
       }
     };
-    const rolls = [...(this.attackRoll ? [this.attackRoll] : [])];
-    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls });
+    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls: this.chatRolls });
   }
 }
 export class UserWorkflow extends Workflow {
@@ -8765,6 +8775,8 @@ export type WorkflowOptions = InexactPartial<{
   damageRollDSN: boolean;
   disadvantage: boolean;
   event: AugmentedEvent;
+  excludeTargets: string[];
+  includeTargets: string[];
   fastForward: boolean;
   fastForwardAbility: boolean;
   fastForwardAttack: boolean;

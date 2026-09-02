@@ -148,7 +148,6 @@ class ConfigSettings {
   allowActorUseMacro: boolean = true;
   attackPerTarget: boolean = false;
   autoApplyDamage: string = "none";
-  damageCardStyle: string = "flexbox";
   playerDamageCard: string = "none";
   playerCardDamageDifferent: boolean = false;
   hidePlayerDamageCard: boolean = true;
@@ -254,6 +253,7 @@ class ConfigSettings {
   rollChecksBlind: string[] = [];
   rollSavesBlind: string[] = [];
   rollSkillsBlind: string[] = [];
+  blindRollDisplay: string = "hidden";
   savesBeforeDamage: boolean = false;
   saveStatsEvery: number = 20;
   showDSN: boolean = true;
@@ -262,6 +262,7 @@ class ConfigSettings {
   showReactionAttackRoll: string = "all";
   showReactionChatMessage: boolean = false;
   singleConcentrationRoll: boolean = true;
+  singleDamageCalculation: boolean = true;
   skillAbilityCheckAdvantage: boolean = true;
   spellHitSound: string = "";
   spellUseSound: string = "";
@@ -693,6 +694,7 @@ export let fetchParams = () => {
 
   configSettings = game.settings.get("midi-qol", "ConfigSettings");
   if (configSettings.saveDROrder === undefined) configSettings.saveDROrder = "DRSaveDr";
+  if (configSettings.singleDamageCalculation === undefined) configSettings.singleDamageCalculation = true;
   if (!["DRSaveDr", "SaveDRDr", "SaveDrDR"].includes(configSettings.saveDROrder)) {
     ui.notifications?.warn("invalidSaveDROrder reset to 'dm.midi/dnd5e.dm -> Saves/(dr/dv/di) - dnd5e RAW'");
     configSettings.saveDROrder = "DRSaveDr";
@@ -1206,11 +1208,6 @@ export const autoApplyDamageOptions = keysToExtendedOptionsObj("autoApplyDamageO
 ]);
 
 
-export const damageCardStyleOptions = keysToExtendedOptionsObj("damageCardStyleOptions", [
-  "flexbox",
-  "classic"
-]);
-
 export const playerDamageCardOptions = keysToExtendedOptionsObj("playerDamageCardOptions", [
   "none",
   "playerresults",
@@ -1300,6 +1297,11 @@ export const gmDsnDisplayOptions = keysToExtendedOptionsObj("gmDsnDisplayOptions
   "show",
   "ghost",
   "none"
+]);
+
+export const blindRollDisplayOptions = keysToExtendedOptionsObj("blindRollDisplayOptions", [
+  "hidden",
+  "obscured"
 ]);
 
 export const rollOtherDamageOptions = keysToExtendedOptionsObj("RollOtherDamageOptions", [

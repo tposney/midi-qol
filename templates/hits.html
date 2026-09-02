@@ -19,12 +19,17 @@
             <i class="midi-qol-hit-symbol fas {{hit.hitSymbol}}"></i>
             <img class="midi-qol-target-img" src="{{hit.img}}" />
             <div class="name-stacked">
+              {{!-- The gm/player copy is stripped at display time; one span serves both when equal. --}}
+              {{#if (eq hit.gmName hit.playerName)}}
+              <span class="midi-qol-target-name title" id="{{hit.target.id}}">{{{hit.gmName}}}</span>
+              {{else}}
               <span class="midi-qol-target-name title midi-qol-gmTokenName" id="{{hit.target.id}}">
                 {{{hit.gmName}}}
               </span>
               <span class="midi-qol-target-name title midi-qol-playerTokenName" id="{{hit.target.id}}">
                 {{hit.playerName}}
               </span>
+              {{/if}}
             </div>
             {{#if hit.acIcons.length}}
             <span class="midi-qol-ac-icons">

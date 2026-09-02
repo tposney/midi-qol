@@ -91,6 +91,27 @@ export let hideRollRender = (msg: ChatMessage.Implementation, html: HTMLElement,
   return true;
 };
 
+// For rolls forced blind with blindRollDisplay === "obscured": the card is public, but non-GM
+// players see the result replaced with "??" and the dice breakdown stripped. GMs see everything.
+export let obscureRollRender = (msg: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
+  if (game.user?.isGM) return true;
+  if (!foundry.utils.getProperty(msg, `flags.${MODULE_ID}.obscureRoll`)) return true;
+  // Replace the result with "??", strip the dice breakdown, and remove the success/failure/crit/fumble
+  // colouring classes (otherwise a nat 1/20 or pass/fail would still be given away by the highlight).
+  const HIGHLIGHT = ["critical", "fumble", "success", "failure", "min", "max"];
+  const apply = () => {
+    html.querySelectorAll<HTMLElement>(".dice-total").forEach((el) => { el.textContent = "??"; el.classList.remove(...HIGHLIGHT); });
+    html.querySelectorAll(".dice-tooltip").forEach((el) => el.remove());
+    html.querySelectorAll<HTMLElement>(".critical, .fumble, .success, .failure, .min, .max").forEach((el) => el.classList.remove(...HIGHLIGHT));
+    HIGHLIGHT.forEach((c) => html.classList.remove(c));
+  };
+  apply();
+  // dnd5e paints the crit/fumble/success/failure colouring AFTER the render hooks (next frame),
+  // so re-apply once more on the following frame to strip the classes it adds.
+  requestAnimationFrame(apply);
+  return true;
+};
+
 
 export let hideRollUpdate = (message: ChatMessage.Implementation, data: ChatMessage.UpdateData, options: ChatMessage.Database.UpdateOptions, id: string) => {
   return true;

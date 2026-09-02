@@ -1,0 +1,141 @@
+{
+  "name": "Gloves of Soul Catching",
+  "type": "equipment",
+  "img": "icons/equipment/hand/glove-armored-leather-steel-brown.webp",
+  "system": {
+    "description": {
+      "value": "<p>Your Constitution score is 20 while you wear these gloves. This property of the gloves has no effect on you if your Constitution is already 20 or higher.</p><p>After making a successful unarmed strike while wearing these gloves, you can use the gloves to deal an extra 2d10 force damage to the target, and you regain a number of hit points equal to the force damage dealt. Alternatively, instead of regaining hit points in this way, you can choose to gain advantage on one attack roll, ability check, or saving throw you make before the end of your next turn.</p>",
+      "chat": ""
+    },
+    "identifier": "gloves-of-soul-catching",
+    "source": {
+      "revision": 1,
+      "rules": "2014",
+      "book": "",
+      "page": "",
+      "custom": ""
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 0,
+      "units": "lb"
+    },
+    "price": {
+      "value": 0,
+      "denomination": "gp"
+    },
+    "rarity": "artifact",
+    "attunement": "required",
+    "attuned": false,
+    "equipped": false,
+    "identified": true,
+    "type": {
+      "value": "wondrous",
+      "baseItem": ""
+    },
+    "armor": {
+      "value": null,
+      "dex": null,
+      "magicalBonus": null
+    },
+    "properties": [
+      "mgc"
+    ],
+    "activities": {},
+    "uses": {
+      "spent": 0,
+      "max": "",
+      "recovery": [],
+      "autoDestroy": false
+    }
+  },
+  "effects": [
+    {
+      "_id": "glovesSoulCatEf0",
+      "name": "Gloves of Soul Catching",
+      "img": "icons/equipment/hand/glove-armored-leather-steel-brown.webp",
+      "type": "base",
+      "changes": [
+        {
+          "key": "system.abilities.con.value",
+          "mode": 4,
+          "value": "20",
+          "priority": 20
+        },
+        {
+          "key": "flags.dnd5e.DamageBonusMacro",
+          "mode": 0,
+          "value": "ItemMacro",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {},
+      "transfer": true,
+      "origin": null,
+      "description": "<p>Constitution 20 (if lower), and an optional 2d10 force rider on unarmed strikes.</p>",
+      "statuses": [],
+      "flags": {
+        "dae": {
+          "stackable": "noneName",
+          "transfer": true
+        }
+      },
+      "system": {},
+      "sort": 0,
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.351",
+        "systemId": "dnd5e",
+        "systemVersion": "5.3.0",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_key": "!items.effects!GlovesSoulCatch0.glovesSoulCatEf0"
+    }
+  ],
+  "folder": "5Ok9Jbl5nOokCkqf",
+  "sort": 0,
+  "flags": {
+    "midi-qol": {
+      "onUseMacroName": "",
+      "effectActivation": false
+    },
+    "dae": {
+      "macro": {
+        "name": "Gloves of Soul Catching",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "const version = \"13.0.65\";\nconst ADV_NAME = \"Gloves of Soul Catching: Advantage\";\ntry {\n  if (workflow.hitTargets.size === 0) return {};\n  const isUnarmed = rolledItem?.system?.identifier === \"unarmed-strike\"\n    || rolledItem?.system?.type?.value === \"unarmed\"\n    || rolledItem?.name === \"Unarmed Strike\";\n  if (!isUnarmed) return {};\n\n  const hp = actor.system.attributes.hp;\n  const choice = await foundry.applications.api.DialogV2.wait({\n    window: { title: macroItem.name },\n    position: { width: 420 },\n    content: `<p>Spend the gloves' power for an extra 2d10 force damage?</p>`\n      + (hp.value >= hp.max ? `<p><em>You are already at full hit points.</em></p>` : \"\"),\n    buttons: [\n      { action: \"heal\", label: \"Regain hit points\", default: true },\n      { action: \"advantage\", label: \"Advantage on one roll instead\" },\n      { action: \"no\", label: \"Don't use\" }\n    ],\n    close: () => \"no\"\n  });\n  if (choice === \"no\") return {};\n\n  const roll = await new CONFIG.Dice.DamageRoll(\"2d10\", {}, {\n    type: \"force\", isCritical: workflow.isCritical, flavor: macroItem.name\n  }).evaluate();\n\n  if (choice === \"heal\") {\n    // Rolled force damage, not the amount left after the target's resistances. Applied via\n    // applyDamage so dnd5e's damage/healing hooks fire and dependent automation can react.\n    await actor.applyDamage([{ value: roll.total, type: \"healing\" }]);\n  } else {\n    for (const ef of actor.effects.filter(e => e.name === ADV_NAME)) await ef.delete();\n    await actor.createEmbeddedDocuments(\"ActiveEffect\", [{\n      name: ADV_NAME,\n      img: macroItem.img,\n      origin: macroItem.uuid,\n      duration: { rounds: 1 },\n      changes: [{ key: \"flags.midi-qol.advantage.all\", mode: 5, value: \"1\", priority: 20 }],\n      // Consumed by the first attack, check, save or skill roll; the duration is the backstop.\n      flags: { dae: { specialDuration: [\"1Attack\", \"isCheck\", \"isSave\", \"isSkill\"], stackable: \"noneName\" } }\n    }]);\n  }\n  return roll;\n} catch (err) {\n  console.error(`Gloves of Soul Catching ${version}`, err);\n  return {};\n}",
+        "author": null,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {}
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.64"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.351",
+    "systemId": "dnd5e",
+    "systemVersion": "5.3.0",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "_id": "GlovesSoulCatch0",
+  "_key": "!items!GlovesSoulCatch0"
+}
