@@ -5,7 +5,6 @@ export declare const USEFUL_MODULE_VERSIONS: {
     anonymous: string;
     auraeffects: string;
     autoanimations: string;
-    "chatlog-prune": string;
     "chris-premades": string;
     "condition-lab-triggler": string;
     dae: string;

@@ -110,7 +110,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
 
       const schema = {
         ...super.defineSchema(),
-        otherActivityId: new StringField({ name: "otherActivity", initial: "" }),
         otherActivityAsParentType: new BooleanField({
           name: "otherActivityAsParentType",
           initial: true,
@@ -407,9 +406,16 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           dialog.configure = true;
         }
 
+        // A caller can name the attack mode up front - automation and macros have no user to ask.
+        // dnd5e validates it against the item's own attackModes and falls back to the first one, so
+        // an unrecognised mode degrades to a normal attack rather than reinstating the prompt.
+        const suppliedAttackMode = config.midiOptions?.workflowOptions?.attackMode;
+        if (suppliedAttackMode) config.attackMode = suppliedAttackMode;
+
         // Thrown weapons normally require dialog to choose attack mode, but respect forceRollDialog="never"
         //@ts-expect-error no dnd5e-types
-        if (this.item?.system.properties.has("thr") && effectiveForceRollDialog !== "never") {
+        if (this.item?.system.properties.has("thr") && effectiveForceRollDialog !== "never"
+          && !suppliedAttackMode) {
           dialog.configure = true;
         }
 
@@ -716,9 +722,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       return false;
     }
 
-    get canUseOtherActivity() {
-      return true;
-    }
 
     prepareData() {
       super.prepareData();

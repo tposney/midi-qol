@@ -29,7 +29,6 @@
   },
   "midi-qol.AutoApplyDamage.Name": "Aplicar Dano Automaticamente",
   "midi-qol.AutoApplyDamage.Hint": "Aplica o dano automaticamente a um alvo atingido (se 'Verificação de Acerto' estiver ativado) ou a alvos que o usuário selecionou.",
-  "midi-qol.DamageCardStyle.Name": "Estilo do Cartão de Dano",
   "midi-qol.PlayerDamageCard.Name": "Exibir Cartão de Dano de Jogador",
   "midi-qol.PlayerDamageCard.Hint": "Uma versão mais simples do cartão de dano. Exibido somente se o cartão do Mestre é exibido. O cartão não é exibido ao Mestre.",
   "midi-qol.PlayerCardDamageDifferent.Name": "Exibir cartão de dano do jogador se o dano rolado não corresponder ao dano aplicado a algum alvo",
@@ -288,10 +287,6 @@
     "yesCard": "Sim + Cartão de Dano",
     "yesCardMisses": "Sim + Cartão de Dano + Erros",
     "yesCardNPC": "Sim(PNJ) Não(PJ) + Cartão de Dano"
-  },
-  "midi-qol.damageCardStyleOptions": {
-    "flexbox": "Layout Flexbox",
-    "classic": "Clássico (tabela)"
   },
   "midi-qol.playerDamageCardOptions": {
     "none": "Não Exibir",
@@ -594,7 +589,6 @@
   "midi-qol.WallsBlockRangeOptionsNew": {
     "none": "Não",
     "center": "Verificação de Centro",
-    "centerLevels": "Centro + Levels",
     "levelsautocover": "Levels Auto Cover",
     "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "tokencover": "Alternative Token Cover",
@@ -602,7 +596,6 @@
     "expandedHints": {
       "none": "Paredes não bloqueiam verificação de alcance.",
       "center": "Verifica a linha de visão do centro do token até o centro do alvo. Se uma parede bloquear a linha, o ataque será bloqueado.",
-      "centerLevels": "Verificação de centro a centro usando o módulo Levels para determinar a linha de visão (LOS) que bloqueia a parede. Também utiliza Levels Volumetric Templates para direcionamento do modelo. Requer o módulo Levels.",
       "levelsautocover": "Use o módulo Levels Auto Cover para calcular a cobertura. A Cobertura Total bloqueia o ataque. Requer o módulo Levels Auto Cover.",
       "simbuls-cover-calculator": "Use o módulo Simbul's Cover Calculator para calcular a cobertura. A Cobertura Total bloqueia o ataque. Requer o módulo Simbul's Cover Calculator.",
       "tokencover": "Use o módulo Alternative Token Cover para calcular a cobertura. A Cobertura Total bloqueia o ataque. Requer o módulo Alternative Token Cover.",
@@ -626,8 +619,7 @@
   "midi-qol.NearbyAllyRanged.Name": "(Regra da Casa) Ataques à distância contra inimigos próximos de aliados têm desvantagem",
   "midi-qol.WallsBlockRangeOptions": {
     "none": "Não",
-    "center": "Verificação de Centro",
-    "centerLevels": "Centro + Levels"
+    "center": "Verificação de Centro"
   },
   "midi-qol.CoverCalculation.Name": "Calcular Cobertura",
   "midi-qol.CoverCalculation.Hint": "Calcula o bônus de CA para alvos em cobertura. Configurações retiradas do módulo selecionado.",

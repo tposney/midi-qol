@@ -416,6 +416,8 @@ function isTokenInside(template: foundry.canvas.placeables.MeasuredTemplate.Impl
   if (configSettings.optionalRules.wallsBlockRange !== "none" && hasWallBlockingCondition(token))
     return false;
   if (!isValidTarget(token)) return false;
+  // No backing Region during preview, so derive the band from the template.
+  if (!withinBand(templateElevationBand(template.document), token)) return false;
 
   // TODO: This can be vastly simplified, _IF_ we can assume gridded scenes
   // Check for center of each square the token uses.
@@ -439,25 +441,7 @@ function isTokenInside(template: foundry.canvas.placeables.MeasuredTemplate.Impl
         const r = new foundry.canvas.geometry.Ray({ x: tx, y: ty }, { x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y });
 
         // If volumetric templates installed always leave targeting to it.
-        if (
-          configSettings.optionalRules.wallsBlockRange === "centerLevels"
-          && installedModules.get("levels")
-          && !installedModules.get("levelsvolumetrictemplates")) {
-          let p1 = {
-            x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y,
-            z: token.document.elevation
-          }
-          // installedModules.get("levels").lastTokenForTemplate.elevation no longer defined
-          //@ts-expect-error no levels types
-          const { elevation } = CONFIG.Levels.handlers.TemplateHandler.getTemplateData(false)
-          let p2 = {
-            x: tx, y: ty,
-            z: elevation as number
-          }
-          contains = getUnitDist(p2.x, p2.y, p2.z, token) <= template.document.distance;
-          //@ts-expect-error no levels types
-          contains = contains && !CONFIG.Levels?.API?.testCollision(p1, p2, "collision");
-        } else if (!installedModules.get("levelsvolumetrictemplates")) {
+        if (!installedModules.get("levelsvolumetrictemplates")) {
           contains = !CONFIG.Canvas.polygonBackends.sight.testCollision({ x: tx, y: ty }, { x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y }, { mode: "any", type: "move" })
         }
       }
@@ -524,7 +508,7 @@ export function selectTargetsFromTemplates(
  * falls back to Region-based targeting via testPoint().
  * Handles WalledTemplates, VolumetricTemplates, and standard template targeting.
  * Note: When VolumetricTemplates is active, game.user.targets may be modified as a
- * side effect of compute3Dtemplate — the returned array is still the authoritative result.
+ * side effect of computeRegion3d — the returned array is still the authoritative result.
  */
 export function computeTargetsFromTemplate(
   template: foundry.canvas.placeables.MeasuredTemplate.Implementation | MeasuredTemplateDocument | string,
@@ -568,7 +552,10 @@ export function computeTargetsFromTemplate(
   }
   if (!mTemplate) return [];
 
-  const useWalledTemplates = autoTarget === "walledtemplates" && game.modules.get("walledtemplates")?.active;
+  // v14 never draws MeasuredTemplates, so the walled shape is never computed and
+  // targetsWithinShape() returns nothing - fall through rather than targeting nobody.
+  const useWalledTemplates = autoTarget === "walledtemplates"
+    && !!game.modules.get("walledtemplates")?.active && !!mTemplate.shape;
   if (!useWalledTemplates) {
     // For cones/rays during preview, the shape may be stale (computed with old direction)
     const templateType = mTemplate.document.t;
@@ -581,13 +568,21 @@ export function computeTargetsFromTemplate(
   const selfToken = getToken(selfTokenRef);
   let targetTokens: Token.Implementation[] = [];
 
-  if (installedModules.get("levelsvolumetrictemplates")) {
-    const tokensToCheck = canvas.tokens?.placeables?.filter(tk =>
-      isAoETargetable(tk, { selfToken, ignoreSelf, AoETargetType, autoTarget })
-    );
-    //@ts-expect-error VolumetricTemplates
-    VolumetricTemplates.compute3Dtemplate(mTemplate, tokensToCheck);
-    targetTokens = Array.from(game.user?.targets ?? []);
+  const lvtCandidates = installedModules.get("levelsvolumetrictemplates") && !useWalledTemplates
+    ? (canvas.tokens?.placeables ?? []).filter(tk => isAoETargetable(tk, { selfToken, ignoreSelf, AoETargetType, autoTarget }))
+    : undefined;
+  const lvtInside = lvtCandidates
+    ? lvtContainedIds(getBackingRegion(mTemplate.document), lvtCandidates)
+    : undefined;
+
+  if (lvtInside) {
+    const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget);
+    const regionDoc = getBackingRegion(mTemplate.document);
+    // lvt only sees the declared band, whose top is null - apply the derived top.
+    const band = regionDoc ? regionElevationBand(regionDoc) : templateElevationBand(mTemplate.document);
+    targetTokens = lvtCandidates!.filter(tk => tk.id && lvtInside.includes(tk.id)
+      && withinBand(band, tk)
+      && !(wallsBlockTargeting && regionDoc && regionWallBlocked(regionDoc, tk)));
   } else if (useWalledTemplates) {
     //@ts-expect-error walledtemplates
     targetTokens = (mTemplate.targetsWithinShape) ? mTemplate.targetsWithinShape() : [];
@@ -606,6 +601,94 @@ export function computeTargetsFromTemplate(
   return targetTokens;
 }
 
+/** Vertical extent of an AoE in scene units - core leaves the backing Region's elevation.top null. */
+function aoeHeight(shapeType: string, dims: { radius?: number, width?: number, angle?: number, curvature?: string }): number | undefined {
+  switch (shapeType) {
+    case "circle": case "sphere": case "radius":
+      return dims.radius === undefined ? undefined : dims.radius * 2;
+    case "ellipse":
+      return dims.radius === undefined ? undefined : dims.radius * 2;
+    case "rectangle": case "rect": case "line": case "ray": case "ring":
+      return dims.width;
+    case "cone": {
+      if (dims.radius === undefined) return undefined;
+      const angleRad = (dims.angle ?? 0) * (Math.PI / 180);
+      if (dims.curvature === "flat") return dims.radius * Math.tan(angleRad / 2) * 2;
+      if (dims.curvature === "semicircle") return dims.radius - (dims.radius / (1 + Math.tan(angleRad / 2))) * 2;
+      return dims.radius * Math.sin(angleRad / 2) * 2;
+    }
+  }
+  return undefined;
+}
+
+/** Region elevation band, deriving top from the shape when core leaves it null. */
+function regionElevationBand(regionDoc: RegionDocument.Implementation): { bottom: number, top: number } {
+  const bottom = regionDoc.elevation?.bottom ?? -Infinity;
+  const declaredTop = regionDoc.elevation?.top;
+  if (Number.isFinite(declaredTop)) return { bottom, top: declaredTop as number };
+  const shape = regionDoc.shapes?.at?.(0) as any;
+  const dp = canvas.scene?.dimensions?.distancePixels ?? 1;
+  const height = shape ? aoeHeight(shape.type, {
+    radius: (shape.radius ?? shape.radiusX ?? shape.outerWidth) / dp,
+    width: (shape.width ?? shape.outerWidth) / dp,
+    angle: shape.angle,
+    curvature: shape.curvature
+  }) : undefined;
+  return { bottom, top: height === undefined ? Infinity : bottom + height };
+}
+
+/** Template elevation band - used during preview, before a Region exists. */
+function templateElevationBand(templateDoc: any): { bottom: number, top: number } {
+  const bottom = templateDoc.elevation ?? 0;
+  const height = aoeHeight(templateDoc.t, {
+    radius: templateDoc.distance,
+    width: templateDoc.width ?? templateDoc.distance,
+    angle: templateDoc.angle,
+    curvature: "round"
+  });
+  return { bottom, top: height === undefined ? Infinity : bottom + height };
+}
+
+function withinBand(band: { bottom: number, top: number }, token: Token.Implementation): boolean {
+  const elev = token.document.elevation ?? 0;
+  return band.bottom <= elev && elev <= band.top;
+}
+
+/** The Region backing a template - same id on v14. */
+function getBackingRegion(doc: any): RegionDocument.Implementation | undefined {
+  if (!doc) return undefined;
+  if (doc.documentName === "Region") return doc as RegionDocument.Implementation;
+  return (doc._id ? canvas.scene?.regions.get(doc._id) : undefined) ?? undefined;
+}
+
+/**
+ * Volumetric containment via levelsvolumetrictemplates. Undefined if it can't answer, so callers
+ * fall back to midi's own test. Sets game.user.targets as a side effect; midi writes the final set.
+ */
+function lvtContainedIds(regionDoc: RegionDocument.Implementation | undefined, candidates: Token.Implementation[]): string[] | undefined {
+  if (!regionDoc) return undefined;
+  const api = (game.modules.get("levelsvolumetrictemplates") as any)?.API;
+  if (typeof api?.computeRegion3d !== "function") return undefined;
+  return api.computeRegion3d(regionDoc, candidates.map(tk => tk.document), false) ?? [];
+}
+
+/** LOS from the region's shape origin to a token - lvt does no wall checking on v14. */
+function regionWallBlocked(regionDoc: RegionDocument.Implementation, token: Token.Implementation): boolean {
+  const shape = regionDoc.shapes?.at?.(0) as any;
+  if (!shape) return false;
+  let originX = shape.x ?? 0;
+  let originY = shape.y ?? 0;
+  if (shape.type === "rectangle") {
+    originX += (shape.width ?? 0) / 2;
+    originY += (shape.height ?? 0) / 2;
+  }
+  return !!CONFIG.Canvas.polygonBackends.sight.testCollision(
+    { x: originX, y: originY },
+    { x: token.center.x, y: token.center.y },
+    { mode: "any", type: "move" }
+  );
+}
+
 /**
  * v14 Region-based targeting: returns tokens inside a Region using testPoint().
  * Used when a MeasuredTemplate has been converted to a Region (v14 compat layer)
@@ -621,15 +704,20 @@ function computeTargetsFromRegion(
 ): Token.Implementation[] {
   const selfToken = getToken(selfTokenRef);
   const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget);
-  const targetTokens: Token.Implementation[] = [];
+  const candidates = (canvas.tokens?.placeables ?? []).filter(token =>
+    token.actor && isAoETargetable(token, { selfToken, ignoreSelf, AoETargetType, autoTarget }));
 
-  for (const token of (canvas.tokens?.placeables ?? [])) {
-    if (!isAoETargetable(token, { selfToken, ignoreSelf, AoETargetType, autoTarget })) continue;
-    if (token.actor && isTokenInsideRegion(regionDoc, token, wallsBlockTargeting)) {
-      if (token.id) targetTokens.push(token);
+  if (installedModules.get("levelsvolumetrictemplates")) {
+    const inside = lvtContainedIds(regionDoc, candidates);
+    if (inside) {
+      const band = regionElevationBand(regionDoc);
+      return candidates.filter(tk => tk.id && inside.includes(tk.id)
+        && withinBand(band, tk)
+        && !(wallsBlockTargeting && regionWallBlocked(regionDoc, tk)));
     }
   }
-  return targetTokens;
+
+  return candidates.filter(token => isTokenInsideRegion(regionDoc, token, wallsBlockTargeting) && token.id);
 }
 
 /**
@@ -686,31 +774,17 @@ function isTokenInsideRegion(
       // but MeasuredTemplate.shape.contains was boundary-inclusive. Tolerance of 1px matches that behavior.
       // Note: Foundry v14's token.testInsideRegion() uses tolerance 0.75 — we intentionally use 1 here
       // to maintain parity with the legacy isTokenInside() boundary-inclusive behavior.
-      const tokenElevation = token.document.elevation;
-      const { bottom, top } = regionDoc.elevation;
-      let contains = (((bottom ?? -Infinity) <= tokenElevation) && (tokenElevation <= (top ?? Infinity)))
+      let contains = withinBand(regionElevationBand(regionDoc), token)
         // @ts-expect-error polygonTree.testPoint accepts optional distance param not in type defs
         && regionDoc.polygonTree.testPoint({ x: testX, y: testY }, 1);
 
       if (contains && wallsBlockTargeting) {
-        if (
-          configSettings.optionalRules.wallsBlockRange === "centerLevels"
-          && installedModules.get("levels")
-          && !installedModules.get("levelsvolumetrictemplates")) {
-          let p1 = { x: testX, y: testY, z: token.document.elevation };
-          //@ts-expect-error no levels types
-          const { elevation } = CONFIG.Levels.handlers.TemplateHandler.getTemplateData(false);
-          let p2 = { x: wallOriginX, y: wallOriginY, z: elevation as number };
-          contains = getUnitDist(p2.x, p2.y, p2.z, token) <= templateDistance;
-          //@ts-expect-error no levels types
-          contains = contains && !CONFIG.Levels?.API?.testCollision(p1, p2, "collision");
-        } else if (!installedModules.get("levelsvolumetrictemplates")) {
-          contains = !CONFIG.Canvas.polygonBackends.sight.testCollision(
-            { x: wallOriginX, y: wallOriginY },
-            { x: testX, y: testY },
-            { mode: "any", type: "move" }
-          );
-        }
+        // Always check - lvt does no wall checking on v14.
+        contains = !CONFIG.Canvas.polygonBackends.sight.testCollision(
+          { x: wallOriginX, y: wallOriginY },
+          { x: testX, y: testY },
+          { mode: "any", type: "move" }
+        );
       }
 
       if (contains) return true;

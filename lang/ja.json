@@ -457,7 +457,6 @@
   "midi-qol.WallsBlockRangeOptionsNew": {
     "none": "無効",
     "center": "中心点",
-    "centerLevels": "中心点＋Levels",
     "levelsautocover": "Levels Auto Cover",
     "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "tokencover": "Alternative Token Cover",
@@ -466,8 +465,7 @@
   "midi-qol.NearbyAllyRanged.Name": "（ハウスルール） 味方と隣接する敵への遠隔攻撃は不利を受ける",
   "midi-qol.WallsBlockRangeOptions": {
     "none": "無効",
-    "center": "中心点",
-    "centerLevels": "中心点＋Levels"
+    "center": "中心点"
   },
   "midi-qol.CoverCalculation.Name": "遮蔽の計算",
   "midi-qol.CoverCalculation.Hint": "選択したモジュールを用いて対象との遮蔽を判断し、ACボーナスを自動で適用します。",

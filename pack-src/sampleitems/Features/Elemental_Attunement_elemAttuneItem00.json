@@ -1,0 +1,321 @@
+{
+  "name": "Elemental Attunement",
+  "type": "feat",
+  "img": "icons/magic/fire/flame-burning-fist-strike.webp",
+  "system": {
+    "description": {
+      "value": "<p>At the start of your turn, you can expend 1 Focus Point to imbue yourself with elemental energy. The energy lasts for 10 minutes or until you have the Incapacitated condition. You gain the following benefits while this feature is active.</p><p><strong>Reach.</strong> When you make an Unarmed Strike, your reach is 10 feet greater than normal, as elemental energy extends from you.</p><p><strong>Elemental Strikes.</strong> Whenever you hit with your Unarmed Strike, you can cause it to deal your choice of Acid, Cold, Fire, Lightning, or Thunder damage rather than its normal damage type. When you deal one of these types with it, you can also force the target to make a Strength saving throw (DC = your Wisdom save DC). On a failed save, you can move the target up to 10 feet toward or away from you.</p><section class=\"secret\" id=\"secret-elemAttuneNote\"><p><strong>Foundry Note</strong></p><p>The <em>Imbue Elements</em> activity spends 1 Focus Point and applies an enchantment to your Unarmed Strike that adds +10 ft reach plus a 10-minute trigger effect.</p><p>When you hit with an Unarmed Strike while attuned, you are prompted to choose a damage type (Acid / Cold / Fire / Lightning / Thunder / No Change). If you choose an elemental type, you are then prompted to push or pull the target 5 or 10 feet (the Pull option is filtered by current distance so you can't pull a target through your space). The push triggers the automation-only <em>Elemental Push</em> activity: a STR save vs DC = <code>@abilities.wis.dc</code> (your Wisdom save DC = 8 + proficiency + Wisdom modifier). On a failed save the target is moved via <code>MidiQOL.moveTokenAwayFromPoint</code> which preserves any active grappled / grappling effects.</p><p><strong>Note:</strong> chris-premades' <code>tokenUtils.pushToken</code> unconditionally removes grappled / grappling effects on the moved token without checking the grappler's reach. This sample item deliberately avoids that path.</p></section>",
+      "chat": ""
+    },
+    "source": {
+      "book": "PHB'24",
+      "page": "",
+      "license": ""
+    },
+    "type": {
+      "value": "class",
+      "subtype": ""
+    },
+    "requirements": "Monk 3 (Warrior of the Elements)",
+    "properties": [],
+    "activities": {
+      "imbueElementsA00": {
+        "_id": "imbueElementsA00",
+        "type": "utility",
+        "name": "Imbue Elements",
+        "sort": 0,
+        "img": "icons/magic/fire/flame-burning-fist-strike.webp",
+        "activation": {
+          "type": "bonus",
+          "value": 1,
+          "condition": "",
+          "override": true
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "target": "monks-focus",
+              "value": "1",
+              "scaling": {}
+            }
+          ],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "Imbues yourself with elemental energy for 10 minutes."
+        },
+        "duration": {
+          "concentration": false,
+          "value": "10",
+          "units": "minute",
+          "special": "",
+          "override": true
+        },
+        "effects": [
+          {
+            "_id": "elemAttuneEffect"
+          }
+        ],
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": true
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "self",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "midiProperties": {
+          "confirmTargets": "none",
+          "autoConsume": false,
+          "forceConsumeDialog": "never",
+          "automationOnly": false,
+          "otherActivityId": "none",
+          "otherActivityCompatible": false,
+          "identifier": "imbue-elements"
+        },
+        "macroData": {
+          "name": "",
+          "command": ""
+        }
+      },
+      "elementalPushA00": {
+        "_id": "elementalPushA00",
+        "type": "save",
+        "name": "Elemental Push",
+        "sort": 100,
+        "img": "icons/magic/air/wind-swirl-blue-green.webp",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "condition": "Triggered after a successful Unarmed Strike with chosen elemental damage",
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": "STR save vs your Monk DC or be moved up to 10 ft."
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": true
+        },
+        "effects": [],
+        "range": {
+          "units": "",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "1",
+            "type": "creature",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "save": {
+          "ability": [
+            "str"
+          ],
+          "dc": {
+            "calculation": "",
+            "formula": "@abilities.wis.dc"
+          }
+        },
+        "damage": {
+          "parts": [],
+          "onSave": "half",
+          "critical": {
+            "allow": false
+          }
+        },
+        "midiProperties": {
+          "confirmTargets": "default",
+          "automationOnly": true,
+          "otherActivityId": "none",
+          "otherActivityCompatible": false,
+          "identifier": "elemental-push",
+          "forceConsumeDialog": "never"
+        },
+        "macroData": {
+          "name": "",
+          "command": ""
+        }
+      }
+    },
+    "identifier": "elemental-attunement",
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    }
+  },
+  "effects": [
+    {
+      "_id": "elemAttuneEffect",
+      "name": "Elemental Attunement",
+      "img": "icons/magic/fire/flame-burning-fist-strike.webp",
+      "type": "base",
+      "disabled": false,
+      "transfer": false,
+      "origin": null,
+      "tint": "#ffffff",
+      "statuses": [],
+      "sort": 0,
+      "description": "Your Unarmed Strike reach is increased by 10 ft and you can imbue strikes with elemental damage that can push or pull targets.",
+      "system": {},
+      "duration": {
+        "startTime": null,
+        "seconds": 600,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "changes": [
+        {
+          "key": "macro.itemMacro",
+          "value": "",
+          "mode": 0,
+          "priority": 20
+        },
+        {
+          "key": "flags.midi-qol.onUseMacroName",
+          "value": "ItemMacro,postDamageRoll",
+          "mode": 0,
+          "priority": 20
+        }
+      ],
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "selfTargetAlways": true,
+          "stackable": "noneName",
+          "disableIncapacitated": true,
+          "macroRepeat": "none",
+          "showIcon": true
+        },
+        "midi-qol": {
+          "effectActivation": false
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.348",
+        "systemId": "dnd5e",
+        "systemVersion": "5.1.9",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_key": "!items.effects!elemAttuneItem00.elemAttuneEffect"
+    }
+  ],
+  "flags": {
+    "midi-qol": {
+      "removeAttackDamageButtons": "default",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": ""
+    },
+    "dae": {
+      "macro": {
+        "name": "Elemental Attunement",
+        "img": "icons/magic/fire/flame-burning-fist-strike.webp",
+        "type": "script",
+        "scope": "global",
+        "command": "const version = \"13.0.64\";\ntry {\n  // === DAE on/off — maintain enchantment on Unarmed Strike ===\n  if (args[0] === \"on\" || args[0] === \"off\") {\n    const lastArg = args[args.length - 1];\n    const sourceActor = lastArg?.actorUuid ? await fromUuid(lastArg.actorUuid) : null;\n    if (!sourceActor) return;\n    const unarmed = sourceActor.items.find(i =>\n      i.system?.identifier === \"unarmed-strike\" || i.name === \"Unarmed Strike\"\n    );\n    if (!unarmed) {\n      if (args[0] === \"on\") ui.notifications?.warn(\"Elemental Attunement: no Unarmed Strike on actor.\");\n      return;\n    }\n    const existing = unarmed.effects.filter(e =>\n      e.name === \"Elemental Attunement\" && e.type === \"enchantment\"\n    );\n    if (existing.length) await unarmed.deleteEmbeddedDocuments(\"ActiveEffect\", existing.map(e => e.id));\n    if (args[0] === \"off\") return;\n    const enchantData = {\n      name: \"Elemental Attunement\",\n      img: lastArg.efData?.img ?? macroItem?.img ?? \"icons/magic/fire/flame-burning-fist-strike.webp\",\n      type: \"enchantment\",\n      origin: lastArg.origin ?? macroItem?.uuid,\n      changes: [\n        { key: \"system.range.reach\", value: \"+10\", mode: CONST.ACTIVE_EFFECT_MODES.ADD, priority: 20 }\n      ]\n    };\n    await unarmed.createEmbeddedDocuments(\"ActiveEffect\", [enchantData]);\n    return;\n  }\n\n  // === midi-qol OnUse passes (fire only for Unarmed Strike workflows) ===\n  if (args[0]?.tag !== \"OnUse\") return;\n  if (!workflow || !workflow.item) return;\n  if (workflow.item.system?.identifier !== \"unarmed-strike\" && workflow.item.name !== \"Unarmed Strike\") return;\n  if (!workflow.hitTargets?.size) return;\n\n  // ---- postDamageRoll: prompt for damage type, then push/pull (single pass) ----\n  if (args[0].macroPass !== \"postDamageRoll\") return;\n  if (workflow.elementalAttunementHandled) return;\n  workflow.elementalAttunementHandled = true;\n\n  // 1. Damage-type prompt\n  const dmgChoice = await foundry.applications.api.DialogV2.wait({\n    window: { title: \"Elemental Attunement: Damage Type\" },\n    content: \"<p>Choose damage type for this Unarmed Strike:</p>\",\n    buttons: [\n      { action: \"acid\", label: \"Acid\", icon: \"fa-solid fa-droplet\" },\n      { action: \"cold\", label: \"Cold\", icon: \"fa-solid fa-snowflake\" },\n      { action: \"fire\", label: \"Fire\", icon: \"fa-solid fa-fire\" },\n      { action: \"lightning\", label: \"Lightning\", icon: \"fa-solid fa-bolt\" },\n      { action: \"thunder\", label: \"Thunder\", icon: \"fa-solid fa-cloud-bolt\" },\n      { action: \"none\", label: \"No Change\", icon: \"fa-solid fa-xmark\" }\n    ],\n    close: () => \"none\"\n  });\n  if (dmgChoice && dmgChoice !== \"none\") {\n    for (let i = 0; i < (workflow.damageRolls?.length ?? 0); i++) {\n      const roll = workflow.damageRolls[i];\n      if (roll?.options) roll.options.type = dmgChoice;\n    }\n    if (workflow.setDamageRolls) await workflow.setDamageRolls(workflow.damageRolls);\n  } else {\n    return;\n  }\n\n  // 2. Push/pull prompt + save + move\n  const casterToken = workflow.token;\n  if (!casterToken) return;\n  const target = workflow.hitTargets.first();\n  if (!target?.actor) return;\n  const dist = MidiQOL.getDistance(casterToken, target, { wallsBlock: false });\n  if (typeof dist !== \"number\" || dist < 0) return;\n\n  const buttons = [\n    { action: \"10\", label: \"Push 10 ft Away\", icon: \"fa-solid fa-arrow-right\" },\n    { action: \"5\", label: \"Push 5 ft Away\", icon: \"fa-solid fa-arrow-right\" },\n    { action: \"0\", label: \"No Movement\", icon: \"fa-solid fa-xmark\" }\n  ];\n  if (dist > 5) buttons.push({ action: \"-5\", label: \"Pull 5 ft Toward\", icon: \"fa-solid fa-arrow-left\" });\n  if (dist > 10) buttons.push({ action: \"-10\", label: \"Pull 10 ft Toward\", icon: \"fa-solid fa-arrow-left\" });\n\n  const moveChoice = await foundry.applications.api.DialogV2.wait({\n    window: { title: \"Elemental Attunement: Push/Pull\" },\n    content: `<p>Current distance: <strong>${dist} ft</strong>. Move the target?</p>`,\n    buttons,\n    close: () => \"0\"\n  });\n  const dx = Number(moveChoice);\n  if (!dx) return;\n\n  // Find the Elemental Push activity on the source feat.\n  const pushActivity = macroItem.system.activities.find(a =>\n    a.id === \"elementalPushA00\" || a.identifier === \"elemental-push\" || a.name === \"Elemental Push\"\n  );\n  if (!pushActivity) {\n    console.error(\"Elemental Attunement: Elemental Push activity not found on source item.\");\n    return;\n  }\n\n  const saveWorkflow = await MidiQOL.completeActivityUse(\n    pushActivity,\n    { consumeUsage: false, consume: { resources: false, spellSlot: false } },\n    {\n      configureDialog: false,\n      targetUuids: [target.document.uuid],\n      workflowOptions: { autoRollDamage: \"none\", autoFastDamage: true, autoRollAttack: true }\n    }\n  );\n  if (!saveWorkflow?.failedSaves?.size) return;\n\n  // dx > 0 pushes away from caster; dx < 0 pulls toward caster.\n  await MidiQOL.moveTokenAwayFromPoint(target, dx, casterToken.center);\n} catch (err) {\n  console.error(`Elemental Attunement ${version}`, err);\n}\n",
+        "author": null,
+        "ownership": {
+          "default": 3
+        },
+        "_id": null,
+        "folder": null,
+        "sort": 0,
+        "flags": {},
+        "_stats": {
+          "systemId": "dnd5e",
+          "systemVersion": "5.1.9",
+          "coreVersion": "13.348",
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null,
+          "compendiumSource": null,
+          "duplicateSource": null
+        }
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "14.0.12"
+      }
+    }
+  },
+  "folder": "fZIl4G4qj3C894LI",
+  "sort": 0,
+  "_id": "elemAttuneItem00",
+  "_key": "!items!elemAttuneItem00"
+}

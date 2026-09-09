@@ -1,4 +1,4 @@
-import { GameSystemConfig, MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, i18n, log } from "../../midi-qol.js";
+import { GameSystemConfig, MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n, log } from "../../midi-qol.js";
 import { configSettings, safeGetGameSetting, saveToChatCard } from "../settings.js";
 import { getToken } from "../utils.js";
 import { setDamageRollMinTerms } from "../activities/activityHelpers.js";
@@ -11,6 +11,14 @@ const hideAll = (html: HTMLElement, sel: string) => html.querySelectorAll<HTMLEl
 const stripHighlight = (html: HTMLElement, sel: string) => html.querySelectorAll<HTMLElement>(sel).forEach(
   el => el.classList.remove("success", "failure", "critical", "fumble")
 );
+
+/** rollType tag -> the flag it is rebuilt into. utilityRolls is absent: chatRolls merges them. */
+const MIDI_ROLL_FLAGS: Record<string, string> = {
+  attack: "attackRoll",
+  defaultDamage: "damageRolls",
+  bonusDamage: "bonusDamageRolls",
+  otherDamage: "otherDamageRolls"
+};
 
 import Token = foundry.canvas.placeables.Token;
 let _highlighted: Token.Implementation | null = null;
@@ -86,6 +94,28 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           midiFlags[field] = data.map((r: any) => r instanceof Roll ? r : Roll.fromData(r));
         }
       }
+      this.deriveRollFlags(midiFlags);
+    }
+
+    /**
+     * Put the rolls back on the flags from `this.rolls`.
+     *
+     * They are no longer stored there - a roll on the flags was a second copy of one already in
+     * `message.rolls`, tagged with its `options["midi-qol"].rollType`. `flags` is a deep clone of
+     * the source (ObjectField#initialize), so nothing written here reaches the database.
+     * Only fills what is absent, leaving messages written before the change on their stored copies.
+     */
+    deriveRollFlags(midiFlags: Record<string, any>) {
+      if (!midiFlags.messageType) return;
+      const derived: Record<string, Roll[]> = {};
+      for (const roll of this.rolls) {
+        const field = MIDI_ROLL_FLAGS[foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`) as string];
+        if (field) (derived[field] ??= []).push(roll);
+      }
+      for (const [field, rolls] of Object.entries(derived)) {
+        if (field === "attackRoll") midiFlags.attackRoll ??= rolls[0];
+        else if (!midiFlags[field]?.length) midiFlags[field] = rolls;
+      }
     }
 
     static get TRAY_TYPES() {
@@ -137,18 +167,6 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if ((this.flags?.[MODULE_ID]?.damageDetail?.length ?? 0) > 0 && this.isContentVisible && !!canvas.tokens?.controlled.length) return true;
       // @ts-expect-error no dnd5e-types
       return super.canApplyDamage;
-    }
-
-    // Patch for getAssociatedItem not preparing data on items recovered from item.data
-    getAssociatedItem() {
-      if (this.flags?.[MODULE_ID]?.syntheticItem) {
-        const storedData = this.flags.dnd5e?.item?.data;
-        //@ts-expect-error no dnd5e-types
-        const actor = super.getAssociatedActor();
-        if (storedData) return new Item.implementation(storedData, { parent: actor })
-      }
-      // @ts-expect-error no dnd5e-types
-      return super.getAssociatedItem();
     }
 
     /**

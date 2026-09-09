@@ -1,3 +1,59 @@
+### 14.0.12
+
+**Damage cards**
+* Damage cards show which modifications applied (DR, resistance, immunity) again.
+* Damage card totals update after a multiplier is used.
+* Damage cards are a chat-message sub-type (`midi-qol.damage`) rendered on display.
+* Removed the classic (table) damage card style and its setting.
+* Damage cards store ~53% less in `flags.midi-qol.undoDamage`; the socket payload is unchanged.
+* Damage cards no longer embed a base64 thumbnail for animated tokens.
+* Damage cards no longer store `midi.updates`/`midi.amount`.
+* Damage cards no longer store other modules' `calcDamageOptions` scopes or the target/source uuids already on the message.
+* The HP status header updates on damage cards written with the old classic layout.
+* Attack/damage/bonus/other damage rolls are no longer stored twice; `utilityRolls` is unchanged.
+* Chat card updates write the full roll list.
+* Chat card markup is stored without template indentation.
+* Target rows store one name span when the gm and player names match.
+* Save row styles moved to the stylesheet.
+
+**Range and targeting**
+* Drag and drop targeting works again.
+* Long range disadvantage applies to weapons again.
+* Thrown weapons are range checked.
+* Range is measured from a token's committed position rather than its animated one.
+* Default `constrainTemplatePlacement` to false (MR !408, thanks @thatlonelybugbear).
+* Target confirmation: added `includeTargets` support and a "not allowed" overlay when hovering a non-selectable token (MR !433, thanks @pgervais70).
+* Fixed template targeting with Volumetric Templates on v14; the Troubleshooter warns when its "Target on Placement" setting would override midi.
+* Walled Templates is not v14 compatible; selecting it for auto target now falls through to the other targeting paths instead of targeting nothing.
+* Templates start at the caster's elevation, for the placement preview and the placed template.
+* AoE elevation is bounded above by the shape's height.
+
+**Activities**
+* The Forward activity sheet renders its activation tab.
+* Instantaneous summons no longer expire at the next time advance.
+* Turn durations keep their turn count instead of being converted to one round.
+* Added "Other Activity Default" setting (auto/none) for activities that have never had an other activity chosen, e.g. from the SRD compendia.
+* Added `workflowOptions.attackMode`; a thrown weapon no longer forces the attack dialog when one is supplied.
+* Activities marked automation only are no longer listed on the item sheet.
+* The character sheet reaction filter finds reactions declared on an activity, and skips cached cast-spell copies.
+
+**Rolls, saves and conditions**
+* Added "Blind roll display" setting: forced-blind saves/checks/skills can show a public card with the result obscured as `??`.
+* Fixed an error applying an effect when a `flags.midi-qol.optional.*` or `onUseMacroName` change value is not a string.
+* Damage modification (`system.traits.dm`) and midi damage reduction apply once per activity rather than once per damage category. Added "Single Damage Calculation" setting, default on.
+* Multi-target save/check/skill chat cards use each target's own token as the speaker.
+* `stackCount` is available in condition and roll data.
+
+**Compatibility and settings**
+* Added `MidiQOL.convertDuration`, `MidiQOL.isRangeCheckable` and `MidiQOL.activityRanges`.
+* Default `surfaceVisionFog` to false.
+* Added the `icon` CSS class to the dnd5e header-control button (MR !429, thanks @olegbol2005).
+* Work around Coven's Automation Toolkit passing an effect UUID where a document is expected.
+* Removed built-in chat log pruning; use the `chatlog-prune` module instead.
+* Removed the "Center + Levels" walls-block-range option; existing worlds migrate to "Center Check".
+
+**Sample items**
+* Added an "Undead Fortitude" sample item.
 
 ### 14.0.11
 * Organise the Midi activity settings into subtabs (MR !423, thanks @garrysmod367).

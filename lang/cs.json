@@ -452,7 +452,6 @@
   "midi-qol.WallsBlockRangeOptionsNew": {
     "none": "Neblokovat",
     "center": "Střed",
-    "centerLevels": "Střed + Levels",
     "levelsautocover": "Levels Auto Cover",
     "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "tokencover": "Alternative Token Cover",
@@ -461,8 +460,7 @@
   "midi-qol.NearbyAllyRanged.Name": "(Domácí pravidlo) Útoky střelbou na nepřátele se spojenci poblíž mají Nevýhodu",
   "midi-qol.WallsBlockRangeOptions": {
     "none": "Ne",
-    "center": "Kontrola středu",
-    "centerLevels": "Střed + Levels"
+    "center": "Kontrola středu"
   },
   "midi-qol.CoverCalculation.Name": "Automatizace krytu",
   "midi-qol.CoverCalculation.Hint": "Zda se má výpočítávat bonus k OČ pro cíle v krytu a z jakého modulu převzít nastavení.",

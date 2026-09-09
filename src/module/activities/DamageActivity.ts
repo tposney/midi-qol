@@ -49,9 +49,6 @@ let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {
       return true;
     }
     
-    get canUseOtherActivity() {
-      return true;
-    }
     async rollDamage(config: AnyMutableObject, dialog: AnyMutableObject, message: AnyMutableObject) {
       config.midiOptions ??= {};
       // @ts-expect-error config is AnyMutableObject

@@ -154,23 +154,31 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     updateUserTargets(validTargets);
   }
 
+  /** Remove a token's overlay sprite; the shared texture is kept. */
+  removeNotAllowedOverlay(token: Token.Implementation | undefined) {
+    const overlay = token?.mesh?.getChildByName(OVERLAY_NAME);
+    if (overlay) {
+      token!.mesh?.removeChild(overlay);
+      overlay.destroy(); // Free up memory (shared texture is preserved)
+    }
+  }
+
+  /** Clear all overlays on close, so the hovered token isn't left with an orphan. */
+  removeAllNotAllowedOverlays() {
+    for (const token of canvas?.tokens?.placeables ?? []) this.removeNotAllowedOverlay(token);
+  }
+
   hoverToken(token: Token.Implementation, hovered: boolean) {
     if (!hovered) {
-      const existingOverlay = token.mesh?.getChildByName(OVERLAY_NAME);
-      if (existingOverlay) {
-          token.mesh?.removeChild(existingOverlay);
-          existingOverlay.destroy(); // Free up memory
-      }
+      this.removeNotAllowedOverlay(token);
       return;
     }
-    // Only apply the overlay the current control and tool is set for targeting tokens
+    // Only when the control/tool are set for targeting
     if (ui.controls?.control?.name !== "tokens" || ui.controls?.tool?.name !== "target") return;
 
     // Skip invalid targets, we don't want to give any indication about these tokens
     if (!isValidTarget(token)) return;
 
-
-    // Do nothing if the token selectable
     if (this.isTargetSelectable(token)) return;
 
     // Prevent adding multiple copies of the texture
@@ -363,12 +371,12 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
   async _onRender(context, options) {
     await super._onRender(context, options);
 
-    const NOT_ALLOWED_TEXTURE_PATH = "icons/svg/cancel.svg";
-    let texture = await foundry.canvas.loadTexture(NOT_ALLOWED_TEXTURE_PATH);
-    if (texture instanceof PIXI.Texture) {
-      this.notAllowedTexture = texture;
-    } else {
-      error(`TargetConfirmation | Failed to load texture from ${NOT_ALLOWED_TEXTURE_PATH}`);
+    // Load once - _onRender runs on every re-render.
+    if (!this.notAllowedTexture) {
+      const NOT_ALLOWED_TEXTURE_PATH = "icons/svg/cancel.svg";
+      const texture = await foundry.canvas.loadTexture(NOT_ALLOWED_TEXTURE_PATH);
+      if (texture instanceof PIXI.Texture) this.notAllowedTexture = texture;
+      else error(`TargetConfirmation | Failed to load texture from ${NOT_ALLOWED_TEXTURE_PATH}`);
     }
 
     if (canvas) {
@@ -418,6 +426,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
   close(options = {}) {
     Hooks.off("targetToken", this.hookId);
     Hooks.off("hoverToken", this.hoverHookId);
+    this.removeAllNotAllowedOverlays();
     this.doCallback(false);
     return super.close(options);
   }

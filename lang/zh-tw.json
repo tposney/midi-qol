@@ -29,7 +29,6 @@
     },
     "midi-qol.AutoApplyDamage.Name": "自動對目標套用傷害",
     "midi-qol.AutoApplyDamage.Hint": "自動對命中的目標（若啟用了自動命中檢查）或使用者選定的目標套用傷害。",
-    "midi-qol.DamageCardStyle.Name": "傷害卡片風格",
     "midi-qol.PlayerDamageCard.Name": "顯示玩家的傷害卡片",
     "midi-qol.PlayerDamageCard.Hint": "較精簡版的傷害卡片。僅在顯示 GM 卡片時才顯示。此卡片不會對 GM 顯示。",
     "midi-qol.PlayerCardDamageDifferent.Name": "若擲出的傷害與套用於目標的傷害不符，則顯示玩家傷害卡片",
@@ -287,10 +286,6 @@
         "yesCardMisses": "是 + 傷害卡片 + 未命中",
         "yesCardNPC": "是(NPC) 否(PC) + 傷害卡片"
     },
-    "midi-qol.damageCardStyleOptions": {
-        "flexbox": "Flexbox 佈局",
-        "classic": "經典 (表格)"
-    },
     "midi-qol.playerDamageCardOptions": {
         "none": "不顯示",
         "playerresults": "顯示玩家結果",
@@ -545,7 +540,6 @@
     "midi-qol.WallsBlockRangeOptionsNew": {
         "none": "否",
         "center": "中心檢查",
-        "centerLevels": "中心 + 高度",
         "levelsautocover": "Levels Auto Cover",
         "simbuls-cover-calculator": "Simbul's Cover Calculator",
         "tokencover": "Alternative Token Cover",
@@ -553,7 +547,6 @@
         "expandedHints": {
             "none": "牆壁不會阻擋遠程攻擊檢查。",
             "center": "檢查 Token 中心到目標中心。若有牆壁阻擋，則攻擊失敗。",
-            "centerLevels": "中心對中心檢查，並使用 Levels 模組判定牆壁。亦使用 Levels 高度模板進行目標選取。需要 Levels 模組。",
             "levelsautocover": "使用 Levels Auto Cover 模組計算掩體。全面掩護會阻擋攻擊。",
             "simbuls-cover-calculator": "使用 Simbul's Cover Calculator 模組計算掩體。",
             "tokencover": "使用 Alternative Token Cover 模組計算掩體。",
@@ -563,8 +556,7 @@
     "midi-qol.NearbyAllyRanged.Name": "（房規）對靠近盟友的敵方進行遠程攻擊具有劣勢",
     "midi-qol.WallsBlockRangeOptions": {
         "none": "否",
-        "center": "中心檢查",
-        "centerLevels": "中心 + 高度"
+        "center": "中心檢查"
     },
     "midi-qol.CoverCalculation.Name": "計算掩體",
     "midi-qol.CoverCalculation.Hint": "計算掩體內的目標 AC 加成 — 設定取自選定的模組",

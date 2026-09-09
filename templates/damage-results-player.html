@@ -7,7 +7,7 @@
   {{#each damageList as |damage iid|}}
   {{#if isCharacter}}
   <div class="midi-qol-tooltip midi-qol-dmg-row" data-hp-applied="{{#if ../damageWasApplied}}true{{else}}false{{/if}}" data-actor-uuid="{{damage.displayUuid}}">
-    <img src="{{damage.tokenImg}}" id="{{damage.tokenId}}" class="midi-qol-target-name" height="22">
+    <img src="{{damage.tokenImg}}" {{#if damage.tokenVideoSrc}}data-midi-video-src="{{damage.tokenVideoSrc}}" {{/if}}id="{{damage.tokenId}}" class="midi-qol-target-name" height="22">
     {{#if damage.tooltip}}<div class="midi-qol-tooltiptext"><div>{{{damage.tooltip}}}</div></div>{{/if}}
     {{!-- Total damage/healing applied at start of line --}}
     <span id="dmg-total-{{damage.displayUuid}}" class="midi-qol-dmg-total{{#if damage.noChange}} midi-qol-dmg-hidden{{/if}}{{#if damage.isHealing}} midi-qol-dmg-healing{{/if}}" data-hp-total="{{damage.totalDamage}}"><span class="dmg-total-sign">{{#if damage.isHealing}}+{{else}}-{{/if}}</span><span class="dmg-total-value">{{#if damage.totalDamage}}{{damage.totalDamage}}{{else}}0{{/if}}</span></span>
@@ -54,7 +54,7 @@
   </div>
   {{else}}
   <div class="midi-qol-tooltip midi-qol-dmg-row">
-    <img src="{{damage.tokenImg}}" id="{{damage.tokenId}}" class="midi-qol-target-name" height="22">
+    <img src="{{damage.tokenImg}}" {{#if damage.tokenVideoSrc}}data-midi-video-src="{{damage.tokenVideoSrc}}" {{/if}}id="{{damage.tokenId}}" class="midi-qol-target-name" height="22">
     {{#if ../showImmun}}{{#if damage.tooltip}}<div class="midi-qol-tooltiptext"><div>{{{damage.tooltip}}}</div></div>{{/if}}{{/if}}
     {{#if damage.isHealing}}
     <span class="midi-qol-dmg-text midi-qol-dmg-healing">{{damage.absRawTotalDamage}} {{localize "DND5E.HEAL.HealingButton"}} &rarr; {{damage.absPlayerViewTotalDamage}} {{localize "midi-qol.Healed"}}</span>
