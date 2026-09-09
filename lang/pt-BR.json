@@ -141,6 +141,13 @@
   "midi-qol.ConfigButtons": "Diálogo de Rolagem",
   "midi-qol.ConfigTitle": "Configurações do Midi QOL",
   "midi-qol.WorkflowSettings": "Configurações de Workflow",
+  "midi-qol.ActivitySheetTabs": {
+    "modConditions": "Condições",
+    "workflowSettings": "Workflow",
+    "activityManagement": "Atividades",
+    "overtime": "OverTime",
+    "activityMacro": "Macro"
+  },
   "midi-qol.CheckSaveText.Name": "Procurar Descrição",
   "midi-qol.CheckSaveText.Hint": "Procura descrições no item para salvaguardas do tipo 'metade do dano' e se estiver presente, a magia causa metade do dano em salvaguardas. Se desativado, Midi QOL assumirá que salvaguardas causam o modificador de dano padrão.",
   "midi-qol.Save": "Salvar Configurações",
