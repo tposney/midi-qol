@@ -109,15 +109,15 @@ export async function doActivityReactions(activity: Activity, workflow: Workflow
   }>[] = [];
   if (!foundry.utils.getProperty(activity, `flags.${MODULE_ID}.noProvokeReaction`) && !workflow?.workflowOptions.noProvokeReaction) {
     for (let targetToken of workflow.targets) {
-      promises.push(new Promise(async resolve => {
-        const result = await doReactions(targetToken, workflow.tokenUuid, null, "reactionpreattack", { item: this, workflow, workflowOptions: foundry.utils.mergeObject(workflow.workflowOptions, { sourceActorUuid: activity.actor?.uuid, sourceItemUuid: this?.uuid }, { inplace: false, overwrite: true }) });
+      promises.push((async () => {
+        const result = await doReactions(targetToken, workflow.tokenUuid, null, "reactionpreattack", { item: activity.item, workflow, workflowOptions: foundry.utils.mergeObject(workflow.workflowOptions, { sourceActorUuid: activity.actor?.uuid, sourceItemUuid: activity.item?.uuid }, { inplace: false, overwrite: true }) });
         if (result.name) {
           targetToken.actor?.reset();
           workflow.actor.reset();
           // targetToken.actor?.prepareData(); // allow for any items applied to the actor - like shield spell
         }
-        resolve(result);
-      }));
+        return result;
+      })());
     }
   }
   return await Promise.all(promises);

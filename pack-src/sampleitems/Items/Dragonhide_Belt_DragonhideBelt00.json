@@ -1,12 +1,12 @@
 {
-  "name": "Dragonhide Belt",
+  "name": "Dragonhide Belt, +2",
   "type": "equipment",
-  "img": "icons/equipment/waist/belt-buckle-glowing-orange.webp",
+  "img": "icons/equipment/waist/belt-buckle-gem-red.webp",
   "effects": [
     {
       "_id": "drgnhideBeltEf00",
       "name": "Dragonhide Belt",
-      "img": "icons/equipment/waist/belt-buckle-glowing-orange.webp",
+      "img": "icons/equipment/waist/belt-buckle-gem-red.webp",
       "type": "base",
       "changes": [
         {
@@ -52,7 +52,8 @@
       "itemCondition": "",
       "otherCondition": "",
       "effectCondition": "",
-      "reactionCondition": ""
+      "reactionCondition": "",
+      "onUseMacroName": "[postActiveEffects]ActivityMacro"
     },
     "midiProperties": {
       "confirmTargets": "default",
@@ -72,7 +73,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.58"
+        "version": "13.0.62"
       }
     }
   },
@@ -103,9 +104,14 @@
     "cover": null,
     "crewed": false,
     "uses": {
-      "max": "",
+      "max": "1",
       "spent": 0,
-      "recovery": []
+      "recovery": [
+        {
+          "period": "dawn",
+          "type": "recoverAll"
+        }
+      ]
     },
     "armor": {
       "value": null
@@ -137,10 +143,7 @@
               "type": "itemUses",
               "target": "",
               "value": "1",
-              "scaling": {
-                "mode": "",
-                "formula": ""
-              }
+              "scaling": {}
             }
           ],
           "scaling": {
@@ -186,31 +189,27 @@
         },
         "uses": {
           "spent": 0,
-          "max": "1",
-          "recovery": [
-            {
-              "period": "dawn",
-              "type": "recoverAll"
-            }
-          ]
+          "max": "",
+          "recovery": []
         },
         "roll": {
-          "formula": "",
-          "name": "",
+          "formula": "@scale.monk.die",
+          "name": "Ki Points Regained",
           "prompt": false,
-          "visible": false
+          "visible": true
         },
         "sort": 0,
         "img": "icons/magic/symbols/runes-star-magenta.webp",
         "macroData": {
           "name": "Regain Focus",
-          "command": "const version = \"13.0.58\";\ntry {\n  if (args[0].tag === \"OnUse\" && args[0].macroPass === \"postActiveEffects\") {\n    const monksFocus = actor.items.find(i => i.system.identifier === \"monks-focus\");\n    if (!monksFocus) {\n      ui.notifications.warn(\"No Monk's Focus feature found on this actor.\");\n      return;\n    }\n    const dieFormula = actor.system.scale?.monk?.die;\n    if (!dieFormula) {\n      ui.notifications.warn(\"No Martial Arts die found — is this character a Monk?\");\n      return;\n    }\n    const roll = await new Roll(dieFormula.formula ?? dieFormula.toString()).evaluate();\n    await roll.toMessage({\n      speaker: ChatMessage.getSpeaker({ actor }),\n      flavor: `${macroItem.name} — Martial Arts die (Focus Points regained)`\n    });\n    const maxUses = monksFocus.system.uses.max;\n    const resolvedMax = typeof maxUses === \"string\" ? Roll.safeEval(Roll.replaceFormulaData(maxUses, actor.getRollData())) : maxUses;\n    const currentSpent = monksFocus.system.uses.spent;\n    const regained = Math.min(roll.total, currentSpent);\n    if (regained > 0) {\n      await monksFocus.update({ \"system.uses.spent\": currentSpent - regained });\n      ChatMessage.create({\n        content: `<p><strong>${actor.name}</strong> regains <strong>${regained}</strong> Focus Point${regained !== 1 ? \"s\" : \"\"} (${monksFocus.system.uses.spent - regained}/${resolvedMax} spent).</p>`,\n        speaker: ChatMessage.getSpeaker({ actor })\n      });\n    } else {\n      ChatMessage.create({\n        content: `<p><strong>${actor.name}</strong> has no spent Focus Points to regain.</p>`,\n        speaker: ChatMessage.getSpeaker({ actor })\n      });\n    }\n  }\n} catch (err) {\n  console.error(`Dragonhide Belt ${version}`, err);\n}"
+          "command": "const version = \"13.0.61\";\ntry {\n  if (args[0].tag !== \"OnUse\" || args[0].macroPass !== \"postActiveEffects\") return;\n  const actor = rolledItem.parent;\n  const monksFocus = actor.items.find(i => i.system.identifier === \"monks-focus\");\n  if (!monksFocus) {\n    ui.notifications.warn(\"No Monk's Focus feature found on this actor.\");\n    return;\n  }\n  const rolled = workflow.utilityRoll?.total;\n  if (!rolled || rolled <= 0) {\n    ui.notifications.warn(\"No utility roll result \u2014 was the Martial Arts die rolled?\");\n    return;\n  }\n  const maxUses = monksFocus.system.uses.max;\n  const resolvedMax = typeof maxUses === \"string\"\n    ? Roll.safeEval(Roll.replaceFormulaData(maxUses, actor.getRollData()))\n    : maxUses;\n  const currentSpent = monksFocus.system.uses.spent;\n  const regained = Math.min(rolled, currentSpent);\n  if (regained > 0) {\n    await monksFocus.update({ \"system.uses.spent\": currentSpent - regained });\n    ChatMessage.create({\n      content: `<p><strong>${actor.name}</strong> regains <strong>${regained}</strong> Focus Point${regained !== 1 ? \"s\" : \"\"} (${currentSpent - regained}/${resolvedMax} spent).</p>`,\n      speaker: ChatMessage.getSpeaker({ actor })\n    });\n  } else {\n    ChatMessage.create({\n      content: `<p><strong>${actor.name}</strong> has no spent Focus Points to regain.</p>`,\n      speaker: ChatMessage.getSpeaker({ actor })\n    });\n  }\n} catch (err) {\n  console.error(`Dragonhide Belt ${version}`, err);\n}",
+          "type": "script"
         },
         "midiProperties": {
           "confirmTargets": "never",
           "automationOnly": false,
           "otherActivityCompatible": false,
-          "identifier": "regainFocus",
+          "identifier": "regain-focus",
           "displayActivityName": true,
           "rollMode": "default"
         },

@@ -1,5 +1,5 @@
 import { Activity, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig } from "../../globals.js";
-import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn, busyWait } from "../../midi-qol.js";
+import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn, busyWait, getHealingLabel } from "../../midi-qol.js";
 import { socketlibSocket } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFirstWorkflow } from "../Workflow.js";
 import { OnUseMacros } from "../apps/Item.js";
@@ -247,7 +247,7 @@ export let MidiActivityMixin = Base => {
      * Default is false and must be overridden in the subclass
      * Examples of self triggerOnly are the Cast and Forward activities
      */
-    get selfOnlyTriggerActivity() {
+    get isSelfTriggerableOnly() {
       return false;
     }
 
@@ -353,13 +353,13 @@ export let MidiActivityMixin = Base => {
 
     static async #applyEffects(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.getWorkflow(message.uuid);
-      if (workflow) workflow.activity = this;
       if (!workflow) {
         const errMessage = "MidiQOL | MidiActivity | applyEffects | No workflow found";
         error(errMessage);
         TroubleShooter.recordError(new Error("No workflow found"), errMessage);
         return;
       }
+      workflow.activity = this;
       const authorId = message.author?.id;
       if (game.user?.id !== authorId) {
         // applying effects on behalf of another user;
@@ -371,18 +371,14 @@ export let MidiActivityMixin = Base => {
           ui.notifications?.warn(i18n("midi-qol.noTargets"));
           return;
         }
-        const result = (await socketlibSocket.executeAsUser("applyEffects", authorId, {
+        await socketlibSocket.executeAsUser("applyEffects", authorId, {
           workflowId: message.uuid,
           targets: Array.from(game.user?.targets).map(t => t.document.uuid)
-        }));
+        });
       } else {
-        if (workflow) {
-          workflow.forceApplyEffects = true; // don't overwrite the application targets
-          workflow.effectTargets = new Set(game.user?.targets);
-          if (workflow.effectTargets.size > 0) workflow.performState(workflow.WorkflowState_ApplyDynamicEffects)
-        } else {
-          ui.notifications?.warn(i18nFormat("midi-qol.NoWorkflow", { itemName: this.item?.name }));
-        }
+        workflow.forceApplyEffects = true; // don't overwrite the application targets
+        workflow.effectTargets = new Set(game.user?.targets);
+        if (workflow.effectTargets.size > 0) workflow.performState(workflow.WorkflowState_ApplyDynamicEffects)
       }
     }
     static async #confirmDamageRollCancel(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
@@ -574,7 +570,7 @@ export let MidiActivityMixin = Base => {
       // itemData._id = this.item._id;
       actor = getActor(usage.midiOptions?.rollAs);
       if (usage.midiOptions?.rollAs) delete usage.midiOptions.rollAs;
-      if (!actor || actor === this.actor || this.selfOnlyTriggerActivity) return this.use(usage, dialog, message);
+      if (!actor || actor === this.actor || this.isSelfTriggerableOnly) return this.use(usage, dialog, message);
       const itemData = this.item.toObject();
       // @ts-expect-error
       delete itemData._id;
@@ -593,6 +589,7 @@ export let MidiActivityMixin = Base => {
       if (!this.item.isEmbedded) return;
       if (!this.item.isOwner) {
         ui.notifications?.error("DND5E.DocumentUseWarn", { localize: true });
+        return;
       }
       if (!this.canUse) {
         ui.notifications?.error("DND5E.ACTIVITY.Warning.UsageNotAllowed", { localize: true });
@@ -827,7 +824,7 @@ export let MidiActivityMixin = Base => {
       const consumption = this._prepareUsageConfig(usage);
       const autoConsume = await this._prepareUsageUpdates(consumption, { returnErrors: true });
       // If consumption would fail _prepareUsageUpdates will return an array of errors and on success an object of updates
-      if (autoConsume.length ?? 0 > 0) {
+      if ((autoConsume.length ?? 0) > 0) {
         dialog.configure = true;
         return true;
       }
@@ -1233,7 +1230,7 @@ export let MidiActivityMixin = Base => {
         }
 
         let actionFlavor: string;
-        actionFlavor = i18n(this.actionType === "heal" ? "DND5E.Healing" : "DND5E.DamageRoll");
+        actionFlavor = this.actionType === "heal" ? getHealingLabel() : i18n("DND5E.DamageRoll");
 
         const title = this.name;
         const speaker = getSpeaker(this.actor!);
@@ -1848,7 +1845,7 @@ export let MidiActivityMixin = Base => {
       // if target type is not blank or there are targets only set hasEffects if we are not going to remove the button later
       if (this.target?.affects.type !== "" || workflow?.targets.size !== 0)
         hasEffects &&= !["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects);
-      let dmgBtnText = (this.actionType === "heal") ? i18n("DND5E.Healing") : i18n("DND5E.Damage");
+      let dmgBtnText = (this.actionType === "heal") ? getHealingLabel() : i18n("DND5E.Damage");
       if (workflow?.workflowOptions?.fastForwardDamage && configSettings.showFastForward) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
 
       let midiContextData = {
@@ -2036,11 +2033,51 @@ export let MidiActivityMixinSheet = Base => {
     }
 
     _getTabs() {
+      const midiSubTabs = ["modConditions", "workflowSettings", "activityManagement", "overtime", "activityMacro"];
+      if (!midiSubTabs.includes(this.tabGroups["midi-qol"])) {
+        this.tabGroups["midi-qol"] = "modConditions";
+      }
+
       let tabs = super._getTabs();
       tabs = {
         ...tabs,
         "midi-qol": {
-          id: "midi-qol", group: "sheet", icon: "fa-solid fa-sun", label: "midi-qol"
+          id: "midi-qol",
+          group: "sheet",
+          icon: "fa-solid fa-sun",
+          label: "midi-qol",
+          tabs: {
+            modConditions: {
+              id: "modConditions",
+              group: "midi-qol",
+              icon: "fa-solid fa-filter",
+              label: i18n("midi-qol.ActivitySheetTabs.modConditions")
+            },
+            workflowSettings: {
+              id: "workflowSettings",
+              group: "midi-qol",
+              icon: "fa-solid fa-gears",
+              label: i18n("midi-qol.ActivitySheetTabs.workflowSettings")
+            },
+            activityManagement: {
+              id: "activityManagement",
+              group: "midi-qol",
+              icon: "fa-solid fa-sitemap",
+              label: i18n("midi-qol.ActivitySheetTabs.activityManagement")
+            },
+            overtime: {
+              id: "overtime",
+              group: "midi-qol",
+              icon: "fa-solid fa-clock",
+              label: i18n("midi-qol.ActivitySheetTabs.overtime")
+            },
+            activityMacro: {
+              id: "activityMacro",
+              group: "midi-qol",
+              icon: "fa-solid fa-file-pen",
+              label: i18n("midi-qol.ActivitySheetTabs.activityMacro")
+            }
+          }
         }
       }
       return super._markTabs(tabs);
@@ -2169,7 +2206,7 @@ function renderActivitySheetHook(app, [elem]) {
   let closeButton = elem.closest('.window-header').querySelector('button[data-action="close"]');
   let daeButton = document.createElement('button');
   const DIMtitle = i18n('dae.DIMEditor.Name');
-  daeButton.setAttribute('class', 'header-control fa-solid fa-file-pen dae-dimeditor');
+  daeButton.setAttribute('class', 'header-control fa-solid fa-file-pen dae-dimeditor icon');
   daeButton.onclick = function (ev) { new Editor({ document: this.activity }).render({ force: true }); }.bind(app);
   if (activity.macro?.command) daeButton.style.color = '#36ba36';
 

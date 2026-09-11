@@ -1,4 +1,4 @@
-import { criticalDamage, criticalDamageChoices, nsaFlag, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, damageCardStyleOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, checkFlankingOptions, flankingBonusOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions, safeGetGameSetting, resetConfigSettingsToDefaults, distanceMeasurementOptions } from "../settings.js"
+import { criticalDamage, criticalDamageChoices, nsaFlag, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, gmAttackDisplayOptions, gmDamageDisplayOptions, gmDsnDisplayOptions, blindRollDisplayOptions, checkFlankingOptions, flankingBonusOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions, safeGetGameSetting, resetConfigSettingsToDefaults, distanceMeasurementOptions } from "../settings.js"
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, debugEnabled, log, GameSystemConfig, ceInterface } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
@@ -197,7 +197,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       criticalDamage,
       criticalDamageChoices,
       autoApplyDamageOptions,
-      damageCardStyleOptions,
       playerDamageCardOptions,
       damageImmunitiesOptions,
       showItemDetailsOptions,
@@ -216,6 +215,10 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       itemTypeLabels: Object.keys(CONFIG.Item.typeLabels).filter(key => !["backpack", "base"].includes(key)).reduce((acc, key) => { acc[key] = CONFIG.Item.typeLabels[key]; return acc }, {}),
       hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),
       hideRollDetailsOptions,
+      gmAttackDisplayOptions,
+      gmDamageDisplayOptions,
+      gmDsnDisplayOptions,
+      blindRollDisplayOptions,
       checkFlankingOptions: checkFlankingOptionsLocalized,
       flankingBonusOptions,
       nsaFlag,
@@ -424,7 +427,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
     let newSettings = foundry.utils.mergeObject(configSettings, realData, { overwrite: true, inplace: false });
     if (game.user?.can("SETTINGS_MODIFY")) {
-      game.settings.set("midi-qol", "ConfigSettings", newSettings);
+      await game.settings.set("midi-qol", "ConfigSettings", newSettings);
       //@ts-expect-error v13 stubby
       if (needReload) foundry.applications.settings.SettingsConfig.reloadConfirm({world: true});
     }
@@ -722,12 +725,13 @@ let quickSettingsDetails: any = {
     description: "Secret Squirrel: Hide most GM roll info from players",
     shortDescription: "Secret Squirrel",
     configSettings: {
-      hideRollDetails: "all",
+      gmAttackDisplay: "hidden",
+      gmDamageDisplay: "hidden",
+      gmAttackDsn: "none",
+      gmDamageDsn: "none",
       displaySaveAdvantage: false,
       hideNPCNames: "Unknown Creature",
       showReactionAttackRoll: "none",
-      gmHide3dDice: true,
-      ghostRolls: true,
       displayHitResultNumeric: false
     },
     codeChecks: (current, settings) => {
@@ -741,12 +745,13 @@ let quickSettingsDetails: any = {
     description: "Full Disclosure: Players see the details of all GM rolls and the results",
     shortDescription: "Full Disclosure",
     configSettings: {
-      hideRollDetails: "none",
+      gmAttackDisplay: "full",
+      gmDamageDisplay: "full",
+      gmAttackDsn: "show",
+      gmDamageDsn: "show",
       displaySaveAdvantage: true,
       showReactionAttackRoll: "all",
       hideNPCNames: "",
-      gmHide3dDice: false,
-      ghostRolls: false,
       displayHitResultNumeric: true
     },
     codeChecks: (current, settings) => {
@@ -775,13 +780,13 @@ export async function applySettings(key: string) {
       const jsonText = await fetchConfigFile(PATH + config.fileName);
       const configData = JSON.parse(jsonText);
       if (await showDiffs(configSettings, configData.configSettings, "", config.shortDescription)) {
-        importSettingsFromJSON(jsonText);
+        await importSettingsFromJSON(jsonText);
+        log(`Loaded ${config.fileName}`);
       }
       return true;
     } catch (err) {
       error("could not load config file", config.fileName, err);
     }
-    log(`Loaded ${config.fileName} version ${config.version}`);
   }
   return false;
 }

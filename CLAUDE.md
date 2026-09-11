@@ -150,7 +150,7 @@ Note: This approach doesn't handle embedded document hierarchy (effects stored a
 ### Related Modules
 - **chatlog-prune** (`/home/timp/foundry-data/foundryalpha/Data/modulesrc/chatlog-prune/`): Keep `ChatLogPrune.ts` and `ChatLogMidi.ts` in sync. midi-qol's built-in chat log pruning deprecated since 13.0.37.
 - **midi-qol-setup-wizard** (`/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-setup-wizard/`): Key files: `scripts/wizard.js`, `wizard-steps.js`, `setting-definitions.js`, `module-definitions.js`. Launched via `Hooks.call("midi-qol-setup-wizard.launch")`.
-- **item-delete-check** (`/home/timp/foundry-data/foundryv13/Data/modules/item-delete-check/`): Single `main.js`, no build step, `master` branch.
+- **item-delete-check** (`/home/timp/foundry-data/foundryalpha/Data/modules/item-delete-check/`): Single `main.js`, no build step, `master` branch.
 
 ### Foundry ApplicationV2 Scrollable Pattern
 Never use raw `overflow-y: auto`. Use Foundry's built-in pattern:
@@ -217,9 +217,14 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
 
 15. **v14 ActiveEffect change values must remain strings** — v14's `AnyField` stores values as-is (no auto-coercion). The v13 backward-compat shim's `#migrateChangeValue` ran `JSON.parse` on string values (`"-10"` → `-10`), but native v14 schema does not. Always use string values in effect changes — this preserves support for Roll expressions (`"1d6"`, `"@abilities.str.mod"`). Code consuming change values should handle strings (e.g., `new Roll(value)`, `Number.isNumeric()`).
 
-16. **v14 `type: "override"` breaks Set fields** — For dnd5e Set-based trait fields (`system.traits.dr.value`, `system.traits.di.value`), `type: "override"` replaces the Set with a plain value/Array, breaking `.has()` calls downstream. Use `type: "add"` instead — v14's `SetField._applyChangeAdd` properly adds elements to the existing Set.
+16. **v14 Set-based trait fields: `add` adds *and* removes** — dnd5e Set trait fields (`system.traits.dr.value`, `di.value`, `dv.value`, `bypasses`, proficiencies, languages, `ci.value`) are `SetField`s. `override` yields a valid Set (so `.has()` works — the earlier "breaks `.has()`" note was a stale apply path) but **replaces the whole Set, wiping existing entries** — avoid it for incremental changes.
+    - **`add` both adds and removes.** dnd5e's `ActiveEffect5e.applyChange`/`applyChangeField` (NOT the base Foundry `SetField`, whose `_applyChangeAdd` is a plain `union`) special-cases Set traits in `add` mode: each value is stripped of a leading `-`, and if it had one it is `current.delete()`d, else `current.add()`ed. So `add: acid` adds and `add: -acid` **removes** acid — in stock dnd5e, no modules. `subtract` (= `difference`, bare value, no `-`) also removes.
+    - **DAE preserves this.** DAE delegates all non-`custom` changes to dnd5e's `applyChange` (dae-14x `daeApplyChange` → `wrapped`; dae-10x → `c.effect.apply`), so `add -value` removal flows through to dnd5e identically with DAE active. DAE's own `-value` handling (`doCustomArrayValue`) is an *additional* path that only runs in `custom` mode. (Earlier "`-value` is custom-mode only" was wrong.)
+    - **DAE editor (dae-14x):** Set-backed pickers default to `add` (type unrestricted; `override` would wipe the Set) and show `-value` removal options in **both `custom` and `add`** modes (filtered out only for `subtract`/`override`, which take bare values).
 
 17. **v14 `markFlanking` must be serialized** — The function can be called concurrently from the `targetToken` hook, the workflow, and `TargetConfirmation`. The CPR effect branch's check-then-create (`effects.get()` → `createEmbeddedDocuments(..., { keepId: true })`) isn't atomic. Fixed by serializing via a promise chain so only one `_markFlankingImpl` runs at a time.
+
+18. **Persisted workflow fields go through `PersistedFieldStore`** — Workflow.ts fields backed by chat-card flags (scalars, token Sets, Roll/Roll[], DamageDescription[]) use `this.#persisted.scalar/tokenSet/roll(s)/damageDetail` accessors, not hand-rolled `#field` + getter/setter pairs. The store owns caching, flag fallback, and serialization (including `Roll.fromData` rehydration). New persisted fields should use it; only genuinely special accessors (`currentAction`, `isCritical`/`isFumble`, `activity`, `item`, `token`, `otherDamageMatches`) remain hand-written.
 
 ## Testing
 
@@ -246,9 +251,8 @@ Tests use the Quench framework in a separate module:
 ## Build Commands
 
 ```bash
-npm run build        # Production: typeCheck + esbuild → single midi-qol.js
-npm run devbuild     # Development: outputs to devDir in package.json
-npx gulp devWatch    # Watch mode
+npm run build        # Production: typeCheck + esbuild → single midi-qol.js. USE THIS — never devbuild.
+npx gulp devWatch    # Watch mode (only when explicitly working on a dev-server flow)
 npm run compilePacks # JSON (pack-src/) → LevelDB (packs/) for sample items
 npm run extractPacks # LevelDB → JSON with ID generation
 ```

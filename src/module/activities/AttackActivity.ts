@@ -720,10 +720,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       return true;
     }
 
-    get selfTriggerableOnly() {
-      return false;
-    }
-
     prepareData() {
       super.prepareData();
       if (this.otherActivityUuid && this.otherActivityUuid !== "") {

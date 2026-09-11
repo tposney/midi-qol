@@ -18,7 +18,7 @@ import * as utils from "./module/utils";
 import * as settings from "./module/settings";
 import { RollStats, Stats } from "./module/RollStats";
 import { checkRule, configSettings, targetConfirmation } from "./module/settings";
-import { SaferSocket, SerializedDamageListEntry } from "./module/GMAction";
+import { PersistedUndoEntry, SaferSocket, SerializedDamageListEntry } from "./module/GMAction";
 import { MidiActivityMixin } from "./module/activities/MidiActivityMixin";
 import * as undo from "./module/undo";
 import * as patching from "./module/patching";
@@ -536,7 +536,8 @@ declare module "fvtt-types/configuration" {
         templateUuid?: string;
         templateUuids?: string[];
         workflowOptions?: WorkflowOptions;
-        undoDamage?: SerializedDamageListEntry[];
+        // written as PersistedUndoEntry; messages predating the prune carry the full socket shape
+        undoDamage?: (PersistedUndoEntry | SerializedDamageListEntry)[];
         utilityRolls?: Roll.Data[] | Roll[];
         "use.consumed"?: any;
         "use.otherScaling"?: number | false;
@@ -569,6 +570,9 @@ declare module "fvtt-types/configuration" {
         onUseMacroName?: string;
         noProvokeReaction?: boolean;
         isConcentrationCheck?: boolean;
+        // Optional bonus flags applied to the item (e.g. via enchantment effects), checked
+        // alongside the actor's optional flags when the item is used.
+        optional?: Record<string, any>;
         trapWorkflow?: {
           ignoreSelf?: boolean;
         }
@@ -622,6 +626,13 @@ declare module "fvtt-types/configuration" {
 };
 
 declare global {
+  /** fvtt-types brands module sub-types, so "midi-qol.damage" needs declaring to be assignable. */
+  interface DataModelConfig {
+    ChatMessage: {
+      "midi-qol.damage": typeof import("./module/ChatClasses/DamageCardMessage.js").MidiDamageMessageData;
+    };
+  }
+
   namespace Roll {
     interface _Options {
       /** dnd5e D20Roll advantage mode: -1 (disadvantage), 0 (normal), 1 (advantage) */
@@ -1040,6 +1051,9 @@ export type PreSetupDamageListEntry = {
     },
     bonusDamage?: DamageDescription[];
     combinedDamage: DamageDescription[];
+    // Entries midi injects during calculation (the aggregate DR entry). Cross-category by nature,
+    // so they belong to the application total rather than to any one category's display.
+    injectedDamage?: DamageDescription[];
     defaultDamage?: DamageDescription[];
     otherDamage?: DamageDescription[];
     rawbonusDamage?: DamageDescription[];
@@ -1066,7 +1080,12 @@ export type PreSetupDamageListEntry = {
   uncannyDodge?: boolean;
 }
 
+/** Per-entry display data for the damage card tooltip, kept because the stored damageDetail is the
+ *  raw (pre-calculation) list and so carries no `active` markers to derive modifications from. */
+export type DamageModDisplay = { type: string; value: number; mods: string[] };
+
 export type DamageListEntry = PreSetupDamageListEntry & {
+  damageMods?: DamageModDisplay[];
   damageSelector: string;
   calcDamageOptions: CalcDamageOptions;
   updateOptions: any;
@@ -1352,6 +1371,8 @@ export type DamageDescription = {
   formula?: string;
   allActives?: string[];
   displayValue?: number; // original DR amount for tooltip display (when inlined)
+  midiCategory?: "defaultDamage" | "otherDamage" | "bonusDamage";
+  midiSaveMultiplier?: number;
 };
 
 type BasicRollConfig = {

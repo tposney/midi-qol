@@ -133,10 +133,9 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
       const message = `midi-qol | _DAgetTargetOptions failed to get target options`;
       console.warn(message, err);
       TroubleShooter.recordError(err, message);
-    } finally {
-      foundry.utils.setProperty(options, "midi.sourceActorUuid", sourceActorUuid);
-      return options;
     }
+    foundry.utils.setProperty(options, "midi.sourceActorUuid", sourceActorUuid);
+    return options;
   }
   // Flag categories for active damage modifiers
   static SET_FLAGS = ["modification", "resistance", "vulnerability", "immunity",
