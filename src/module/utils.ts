@@ -595,15 +595,14 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     let combinedDamageDetails: DamageDescription[] = [];
 
 
-    const damageArr: [DamageDescription[] | undefined, string][] = [[workflow.damageDetail ?? [], "defaultDamage"], [(workflow.otherDamageMatches?.has(token) ?? true) ? (workflow.otherDamageDetail ?? []) : [], "otherDamage"], [workflow.bonusDamageDetail ?? [], "bonusDamage"]];
-    for (let [damages, type] of damageArr) {
-      if (!damages) {
-        const message = `processDamageRoll | ${type} damages is not defined`;
-        TroubleShooter.recordError(new Error("no valid damage"), message);
-        error(message);
-        continue;
-      }
-      let calcDamageOptions: CalcDamageOptions = {
+    const damageBuckets: [DamageDescription[], "defaultDamage" | "otherDamage" | "bonusDamage"][] = [
+      [workflow.damageDetail ?? [], "defaultDamage"],
+      [(workflow.otherDamageMatches?.has(token) ?? true) ? (workflow.otherDamageDetail ?? []) : [], "otherDamage"],
+      [workflow.bonusDamageDetail ?? [], "bonusDamage"]
+    ];
+
+    const buildCalcDamageOptions = (): CalcDamageOptions => {
+      const calcDamageOptions: CalcDamageOptions = {
         invertHealing: true,
         multiplier: challengeModeScale,
         // Always initialize ignore to ensure dnd5e calculateDamage processes traits correctly
@@ -634,65 +633,106 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           uncannyDodge: actor.flags?.[MODULE_ID]?.["uncanny-dodge"] && workflow.item?.hasAttack
         }
       };
-
-      // calcDamageOptions = foundry.utils.duplicate(damagePerActor[actor.uuid].damageDetails.calcDamageOptions[type]) as CalcDamageOptions;
-      if (type === "otherDamage" && (workflow.otherActivity?.save || workflow.otherActivity?.check)) {
-        const defaultSaveMultiplier = getSaveMultiplierForActivity(workflow.otherActivity);
-        const saveMultiplier = hasSaved
-          ? superSaver || semiSuperSaver
-            ? 0
-            : defaultSaveMultiplier
-          : superSaver
-            ? defaultSaveMultiplier
-            : 1;
-        calcDamageOptions.midi.saveMultiplier = saveMultiplier;
-      }
-
       const categories: Record<string, string> = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption", "idm": "modification" };
-      if (workflow?.activity) {
-        const ignoreTraits = workflow.activity.midiProperties?.ignoreTraits;
-        if (ignoreTraits) {
-          for (let key of Object.keys(categories)) {
-            const category = categories[key];
-            // Check for base key (e.g., "idi") - applies to all damage types
-            if (ignoreTraits.has(key)) {
-              if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
-              for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
-                calcDamageOptions.ignore![category].add(dt);
-              }
+      const ignoreTraits = workflow?.activity?.midiProperties?.ignoreTraits;
+      if (ignoreTraits) {
+        for (let key of Object.keys(categories)) {
+          const category = categories[key];
+          // Check for base key (e.g., "idi") - applies to all damage types
+          if (ignoreTraits.has(key)) {
+            if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
+            for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
+              calcDamageOptions.ignore![category].add(dt);
             }
           }
-          // Check for damage-type specific keys (e.g., "idi.fire")
-          for (const trait of ignoreTraits) {
-            if (trait.includes('.')) {
-              const [categoryKey, damageType] = trait.split('.');
-              const category = categories[categoryKey];
-              if (category && GameSystemConfig.damageTypes[damageType]) {
-                if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
-                calcDamageOptions.ignore![category].add(damageType);
-              }
+        }
+        // Check for damage-type specific keys (e.g., "idi.fire")
+        for (const trait of ignoreTraits) {
+          if (trait.includes('.')) {
+            const [categoryKey, damageType] = trait.split('.');
+            const category = categories[categoryKey];
+            if (category && GameSystemConfig.damageTypes[damageType]) {
+              if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
+              calcDamageOptions.ignore![category].add(damageType);
             }
           }
         }
       }
+      return calcDamageOptions;
+    };
+
+    const otherSaveMultiplier = (workflow.otherActivity?.save || workflow.otherActivity?.check)
+      ? (() => {
+        const defaultOtherMultiplier = getSaveMultiplierForActivity(workflow.otherActivity);
+        return hasSaved
+          ? superSaver || semiSuperSaver
+            ? 0
+            : defaultOtherMultiplier
+          : superSaver
+            ? defaultOtherMultiplier
+            : 1;
+      })()
+      : undefined;
+
+    if (configSettings.singleDamageCalculation) {
+      // One calculateDamage call for all of a target's damage. dnd5e treats a damage modification
+      // (system.traits.dm.amount) as a budget consumed across the entries of a single call, and midi's
+      // own DR (traits.dm.midi) is likewise summed per call - so calling once per category applied both
+      // once per category. The only per-category input is the other-damage save multiplier, carried on
+      // the entries instead of in the options.
+      const calcDamageOptions = buildCalcDamageOptions();
+      if (otherSaveMultiplier !== undefined) for (const d of damageBuckets[1][0]) d.midiSaveMultiplier = otherSaveMultiplier;
+
+      const allDamage: DamageDescription[] = [];
+      for (const [damages, type] of damageBuckets) {
+        for (const d of damages) d.midiCategory = type;
+        allDamage.push(...damages);
+        damageDetails[`raw${type}`] = damages;
+        damageDetails.calcDamageOptions[type] = calcDamageOptions;
+      }
 
       //@ts-expect-error no dnd5e-types
-      let returnDamages = token.actor.calculateDamage(damages, calcDamageOptions);
-      damageDetails[type] = returnDamages;
-      damageDetails[`raw${type}`] = damages;
-      damageDetails.calcDamageOptions[type] = calcDamageOptions;
-      if (configSettings.singleConcentrationRoll) {
-        combinedDamageDetails = combinedDamageDetails.concat(returnDamages);
-        combinedRawDamageDetails = combinedRawDamageDetails.concat(damages);
+      const calculated: DamageDescription[] = token.actor.calculateDamage(allDamage, calcDamageOptions) ?? [];
+
+      // Partition by tag, never by index: midi's DR pass pushes an aggregate entry and splices out
+      // midi-none entries, so the returned array is neither the same length nor order as the input.
+      for (const [, type] of damageBuckets) damageDetails[type] = calculated.filter(d => d.midiCategory === type);
+      // Injected entries are cross-category, so they ride with the combined total rather than with
+      // any single category's display.
+      damageDetails.injectedDamage = calculated.filter(d => !d.midiCategory);
+      combinedRawDamageDetails = allDamage;
+      combinedDamageDetails = (damageDetails.defaultDamage ?? [])
+        .concat(damageDetails.otherDamage ?? [], damageDetails.bonusDamage ?? [], damageDetails.injectedDamage);
+    } else {
+      for (let [damages, type] of damageBuckets) {
+        if (!damages) {
+          const message = `processDamageRoll | ${type} damages is not defined`;
+          TroubleShooter.recordError(new Error("no valid damage"), message);
+          error(message);
+          continue;
+        }
+        const calcDamageOptions = buildCalcDamageOptions();
+        if (type === "otherDamage" && otherSaveMultiplier !== undefined) calcDamageOptions.midi.saveMultiplier = otherSaveMultiplier;
+
+        //@ts-expect-error no dnd5e-types
+        let returnDamages = token.actor.calculateDamage(damages, calcDamageOptions);
+        damageDetails[type] = returnDamages;
+        damageDetails[`raw${type}`] = damages;
+        damageDetails.calcDamageOptions[type] = calcDamageOptions;
+        if (configSettings.singleConcentrationRoll) {
+          combinedDamageDetails = combinedDamageDetails.concat(returnDamages);
+          combinedRawDamageDetails = combinedRawDamageDetails.concat(damages);
+        }
       }
     }
     damageDetails.calcDamageOptions.combinedDamage = damageDetails.calcDamageOptions.defaultDamage;
+    const injected = damageDetails.injectedDamage ?? [];
     if (configSettings.singleConcentrationRoll) {
       damageDetails["rawcombinedDamage"] = mergeDamageDetail(combinedRawDamageDetails);
       damageDetails["combinedDamage"] = combinedDamageDetails;
     } else {
       damageDetails.rawcombinedDamage = mergeDamageDetail((damageDetails.rawdefaultDamage ?? []).concat(damageDetails.rawbonusDamage ?? []));
-      damageDetails.combinedDamage = (damageDetails?.defaultDamage ?? []).concat(damageDetails.bonusDamage ?? []);
+      damageDetails.combinedDamage = (damageDetails?.defaultDamage ?? []).concat(damageDetails.bonusDamage ?? [], injected);
     }
   }
 
@@ -1009,6 +1049,8 @@ export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffe
   if (change.key === "flags.dnd5e.DamageBonusMacro") {
     // DAEdnd5e - daeCustom processes these
   } else if (change.key === `flags.${MODULE_ID}.onUseMacroName`) {
+    // Change values are not guaranteed to be strings; this flag is only meaningful as one.
+    if (typeof change.value !== "string") return true;
     const args = change.value.split(",")?.map(arg => arg.trim());
     const currentFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.onUseMacroName`) as string ?? "";
     if (args[0] === "ActivityMacro" || args[0] === MQActivityMacroLabel) {
@@ -1074,7 +1116,8 @@ export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffe
     const macroString = (currentFlag?.length > 0) ? [currentFlag, extraFlag].join(",") : extraFlag;
     foundry.utils.setProperty(actor, `flags.${MODULE_ID}.onUseMacroName`, macroString)
     return true;
-  } else if (change.key.startsWith(`flags.${MODULE_ID}.optional.`) && (change.value.trim() === "ItemMacro" || change.value.trim() === MQItemMacroLabel)) {
+  } else if (change.key.startsWith(`flags.${MODULE_ID}.optional.`)
+    && (change.value?.trim?.() === "ItemMacro" || change.value?.trim?.() === MQItemMacroLabel)) {
     let macroString = change.value;
     if (originUuid?.includes("Item.")) {
       const itemUuid = originUuid?.includes("ActiveEffect.") ? originUuid.split(".").slice(0, -2).join(".") : originUuid;
@@ -2402,6 +2445,9 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         if (!result) {
           cleanupAndResolve(result);
         }
+      }).catch(err => {
+        TroubleShooter.recordError(err, "completeActivityUse | activity.use failed");
+        cleanupAndResolve(undefined, "error");
       });
     });
   } else {
@@ -2534,15 +2580,8 @@ export async function completeItemUse(itemRef: Item.Implementation | string, con
     // error(`completeItemUse | item ${item.name} ${item.uuid} does not have a suitable activity`);
     // return undefined;
   }
-  if (activities.length === 1) { // if there is a single non-automation activity use it
-    return completeActivityUse(activities[0], activityConfig, dialog, message);
-  }
-
-  if (activities?.length > 1 || chooseActivity) {
-    const activity = await MidiActivityChoiceDialog.create(item);
-    if (activity) return completeActivityUse(activity, activityConfig, dialog, message);
-
-  }
+  const activity = await MidiActivityChoiceDialog.create(item, { chooseActivity });
+  if (activity) return completeActivityUse(activity, activityConfig, dialog, message);
   return undefined;
 }
 
@@ -3201,6 +3240,18 @@ function measureTokenToPointPerimeter(token: Token, destPoint: { x: number, y: n
   // Find closest point on the token perimeter to the destination
   const closest = closestPointOnPerimeter(poly, destPoint.x, destPoint.y);
   return measurePointDistance(closest, destPoint);
+}
+
+const SCENE_UNIT_TO_DND5E: Record<string, string> = {
+  ft: "ft", feet: "ft", foot: "ft",
+  m: "m", meter: "m", meters: "m", metre: "m", metres: "m",
+};
+
+export function rangeToSceneUnits(value: number | undefined | null, units: string | undefined | null): number {
+  if (!value || !units) return value ?? 0;
+  const sceneUnit = canvas?.scene?.grid?.units?.toLowerCase() ?? "";
+  const sceneUnitDnd = SCENE_UNIT_TO_DND5E[sceneUnit] ?? sceneUnit;
+  return (globalThis as any).dnd5e?.utils?.convertLength?.(value, units, sceneUnitDnd, { strict: false }) ?? value;
 }
 
 /**
@@ -4528,7 +4579,8 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
     buttons: any,
     rollMode: string | undefined,
     timeout: number,
-    item: Item | undefined
+    item: Item | undefined,
+    flagOwners?: Record<string, any>
   }
 
   constructor(data) {
@@ -4588,13 +4640,17 @@ export class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) 
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
+    const flagOwners = this.data.flagOwners ?? {};
+    const ownerOf = (flagName: string): any => flagOwners[flagName] ?? this.data.actor;
     this.data.flags = this.data.flags.filter(flagName => {
-      if ((getOptionalCountRemaining(this.data.actor, `${flagName}.count`)) < 1) return false;
-      return foundry.utils.getProperty(this.data.actor, flagName) !== undefined
+      const owner = ownerOf(flagName);
+      if ((getOptionalCountRemaining(this.data.actor, `${flagName}.count`, owner)) < 1) return false;
+      return foundry.utils.getProperty(owner, flagName) !== undefined
     });
     if (this.data.flags.length === 0) this.close();
     this.data.buttons = this.data.flags.reduce((obj, flag) => {
-      let flagData: any = foundry.utils.getProperty(this.data.actor ?? {}, flag) as any; // TODO This should be tightened up
+      const owner = ownerOf(flag);
+      let flagData: any = foundry.utils.getProperty(owner ?? {}, flag) as any; // TODO This should be tightened up
       let value: string | undefined = foundry.utils.getProperty(flagData ?? {}, this.data.flagSelector) as string;
       // Skip object values — can happen if a flag key like "damage.save" gets an extra ".all"
       // appended by DAE deprecation logic, creating a nested object instead of a string
@@ -4822,6 +4878,10 @@ export async function bonusDialog(
   let originalRoll = roll;
   let rollHTML = await midiRenderRoll(roll);
   const player = playerForActor(this.actor);
+  // Map full flag path -> owning document (item enchantment) for flags whose data
+  // does not live on the actor. Defaults to actor when not present in the map.
+  const flagOwners: Record<string, any> = options.flagOwners ?? {};
+  const ownerOf = (flagName: string): any => flagOwners[flagName] ?? this.actor;
 
   const callback = async (dialog, button) => {
     if (this.secondTimeoutId) {
@@ -4843,23 +4903,24 @@ export async function bonusDialog(
     }
     await unTimedExecuteAsGM("queueUndoDataDirect", undoData)
 
-    // const rollMode = foundry.utils.getProperty(this.actor ?? {}, button.key)?.rollMode ?? safeGetGameSetting("core", "rollMode");
+    const buttonOwner = ownerOf(button.key);
+    // const rollMode = foundry.utils.getProperty(buttonOwner ?? {}, button.key)?.rollMode ?? safeGetGameSetting("core", "rollMode");
     // @ts-expect-error no dnd5e-types
     let rollMode = roll.options.rollMode;
-    rollMode = (foundry.utils.getProperty(this.actor ?? {}, button.key) as any)?.rollMode ?? rollMode ?? safeGetGameSetting("core", "rollMode");
-    if (!hasEffectGranting(this.actor, button.key, flagSelector)) return;
+    rollMode = (foundry.utils.getProperty(buttonOwner ?? {}, button.key) as any)?.rollMode ?? rollMode ?? safeGetGameSetting("core", "rollMode");
+    if (!hasEffectGranting(this.actor, button.key, flagSelector, buttonOwner)) return;
     let resultApplied = false; // This is just for macro calls
     let macroToCall: string = "";
     const allFlagSelector = flagSelector.split(".").slice(0, -1).join(".") + ".all";
     let specificMacro = false;
-    const possibleMacro = foundry.utils.getProperty(this.actor ?? {}, `${button.key}.${flagSelector}`) ||
-      foundry.utils.getProperty(this.actor ?? {}, `${button.key}.${allFlagSelector}`);
+    const possibleMacro = foundry.utils.getProperty(buttonOwner ?? {}, `${button.key}.${flagSelector}`) ||
+      foundry.utils.getProperty(buttonOwner ?? {}, `${button.key}.${allFlagSelector}`);
     if (possibleMacro && typeof button.value === "string" && (button.value.trim().startsWith("ItemMacro") || button.value.trim().startsWith("Macro") || button.value.trim().startsWith("function"))) {
       macroToCall = button.value;
       if (macroToCall.startsWith("Macro.")) macroToCall = macroToCall.replace("Macro.", "");
       specificMacro = true;
-    } else if ((foundry.utils.getProperty(this.actor ?? {}, `${button.key}.macroToCall`) as string)?.trim()) {
-      macroToCall = (foundry.utils.getProperty(this.actor ?? {}, `${button.key}.macroToCall`) as string)?.trim();
+    } else if ((foundry.utils.getProperty(buttonOwner ?? {}, `${button.key}.macroToCall`) as string)?.trim()) {
+      macroToCall = (foundry.utils.getProperty(buttonOwner ?? {}, `${button.key}.macroToCall`) as string)?.trim();
     }
     if (macroToCall) {
       let result: any;
@@ -4972,7 +5033,7 @@ export async function bonusDialog(
           //@ts-expect-error .DamageRoll
           const DamageRoll = CONFIG.Dice.DamageRoll
           let rollOptions = foundry.utils.duplicate(roll!.options);
-          if (foundry.utils.getProperty(this.actor ?? this, `${button.key}.criticalDamage`))
+          if (foundry.utils.getProperty(buttonOwner ?? this.actor ?? this, `${button.key}.criticalDamage`))
             //@ts-expect-error
             rollOptions.configured = false;
           // rollOptions = { critical: (this.isCritical || this.rollOptions.critical), configured: false };
@@ -5071,33 +5132,34 @@ export async function bonusDialog(
   let lastForceFlag = ""
   const oldRoll = foundry.utils.deepClone(roll);
   for (let flagName of bonusFlags) {
-    if ((getOptionalCountRemaining(this.actor, `${flagName}.count`)) < 1) continue;
-    let activationCondition: string | undefined = foundry.utils.getProperty(this.actor ?? {}, `${flagName}.activation`) as string;
+    const owner = ownerOf(flagName);
+    if ((getOptionalCountRemaining(this.actor, `${flagName}.count`, owner)) < 1) continue;
+    let activationCondition: string | undefined = foundry.utils.getProperty(owner ?? {}, `${flagName}.activation`) as string;
     if (activationCondition !== undefined) {
       activationCondition = await evalCondition(activationCondition, conditionData, { errorReturn: true, async: true });
       if (!activationCondition) continue;
     }
-    let forcedCondition: string | undefined = foundry.utils.getProperty(this.actor ?? {}, `${flagName}.force`) as string;
+    let forcedCondition: string | undefined = foundry.utils.getProperty(owner ?? {}, `${flagName}.force`) as string;
     if (forcedCondition !== undefined) {
       forcedCondition = await evalCondition(forcedCondition, conditionData, { errorReturn: true, async: true });
       if (forcedCondition) {
         const altFlag = flagSelector.split(".").slice(0, -1).join(".") + ".all";
         await callback(undefined, {
           key: flagName,
-          value: foundry.utils.getProperty(this.actor ?? {}, `${flagName}.${flagSelector}`) ?? foundry.utils.getProperty(this.actor ?? {}, `${flagName}.${altFlag}`) ?? "",
+          value: foundry.utils.getProperty(owner ?? {}, `${flagName}.${flagSelector}`) ?? foundry.utils.getProperty(owner ?? {}, `${flagName}.${altFlag}`) ?? "",
           label: "none"
         });
         lastForceFlag = flagName;
       }
       continue;
     }
-    if (foundry.utils.getProperty(this.actor, flagName) !== undefined) validFlags.push(flagName);
+    if (foundry.utils.getProperty(owner, flagName) !== undefined) validFlags.push(flagName);
   }
   if (showRoll && lastForceFlag !== "") {
     DSNMarkDiceDisplayed(roll);
     // const rollMode = foundry.utils.getProperty(this.actor ?? {}, lastForceFlag)?.rollMode ?? options.rollMode ?? safeGetGameSetting("core", "rollMode");
     //@ts-expect-error
-    const rollMode = foundry.utils.getProperty(this.actor ?? {}, lastForceFlag)?.rollMode ?? oldRoll.options.rollMode ?? safeGetGameSetting("core", "rollMode");
+    const rollMode = foundry.utils.getProperty(ownerOf(lastForceFlag) ?? {}, lastForceFlag)?.rollMode ?? oldRoll.options.rollMode ?? safeGetGameSetting("core", "rollMode");
     const card = await displayBeforeAfterRolls({ originalRoll: oldRoll, newRoll: roll, rollMode, title, player, options, actor: this.actor });
     if (card?.uuid && this instanceof Workflow) { // this does not work currently since the undoId has not yet been set
       await unTimedExecuteAsGM("updateUndoChatCardUuidsById", { id: this.undoId, chatCardUuids: [card.uuid] });
@@ -5151,14 +5213,15 @@ export async function bonusDialog(
         close: onClose.bind(this),
         timeout,
         item: this.item,
-        workflow: this instanceof Workflow ? this : undefined
+        workflow: this instanceof Workflow ? this : undefined,
+        flagOwners
       }).render({ force: true });
   });
 }
 
-export function getOptionalCountRemainingShortFlag(actor: Actor.Implementation, flag: string) {
+export function getOptionalCountRemainingShortFlag(actor: Actor.Implementation, flag: string, owner?: any) {
   const flagPrefix = `flags.${MODULE_ID}.optional.${flag}`;
-  const countRemaining = getOptionalCountRemaining(actor, `${flagPrefix}.count`) && getOptionalCountRemaining(actor, `${flagPrefix}.countAlt`);
+  const countRemaining = getOptionalCountRemaining(actor, `${flagPrefix}.count`, owner) && getOptionalCountRemaining(actor, `${flagPrefix}.countAlt`, owner);
   return countRemaining;
 }
 
@@ -5253,8 +5316,10 @@ function getOptionalActivityUsesActivityMatch(actor: Actor.Implementation, count
     return activity?.uses.value;
   }
 }
-export function getOptionalCountRemaining(actor: Actor.Implementation, flag: string) {
-  const countValue = foundry.utils.getProperty(actor, flag) as string;
+// `owner` is the document that holds the flag value (defaults to actor). Game-state checks
+// (combat turns, reactions, item/activity uses) always use the actor.
+export function getOptionalCountRemaining(actor: Actor.Implementation, flag: string, owner?: any) {
+  const countValue = foundry.utils.getProperty(owner ?? actor, flag) as string;
   if (!countValue) return 1;
   if (Number.isNumeric(countValue)) return countValue;
   if (["each-round", "each-turn"].includes(countValue) && game.combat) {
@@ -5364,16 +5429,17 @@ export async function removeEffectGranting(actor: Actor.Implementation, changeKe
   }
 }
 
-export function hasEffectGranting(actor: Actor.Implementation, key: string, selector: string) {
+export function hasEffectGranting(actor: Actor.Implementation, key: string, selector: string, owner?: any) {
   // Actually check for the flag being set...
-  if (getOptionalCountRemainingShortFlag(actor, key) <= 0) return false;
+  if (getOptionalCountRemainingShortFlag(actor, key, owner) <= 0) return false;
+  const source = owner ?? actor;
   let changeKey = `${key}.${selector}`;
-  let hasKey = foundry.utils.getProperty(actor ?? {}, changeKey);
+  let hasKey = foundry.utils.getProperty(source ?? {}, changeKey);
   if (hasKey !== undefined) return true;
   let allKey = selector.split(".");
   allKey[allKey.length - 1] = "all";
   changeKey = `${key}.${allKey.join(".")}`;
-  hasKey = foundry.utils.getProperty(actor ?? {}, changeKey);
+  hasKey = foundry.utils.getProperty(source ?? {}, changeKey);
   if (hasKey !== undefined) return hasKey;
   return false;
 }
@@ -5468,7 +5534,8 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
             }
           }
           // @ts-expect-error no dnd5e-types
-          if (item.type === "spell") {
+          const isSpell = item.type === "spell";
+          if (isSpell) {
             if (configSettings.ignoreSpellReactionRestriction) {
               // Skip all validation for spells when this setting is enabled
               reactions.push(activity);
@@ -5484,6 +5551,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
 
           // Use dnd5e's consumption checks for all items/spells
           const config = activity._prepareUsageConfig({ create: false });
+          if (isSpell) foundry.utils.setProperty(config, "consume.spellSlot", false);
           const canUse = await activity._prepareUsageUpdates(config, { returnErrors: true });
           if (canUse instanceof Array) continue; // insufficient uses available
           // If no condition is specified, default to requiring isHit
@@ -6032,106 +6100,85 @@ async function confirm(title: string = "Are you sure", { content, defaultYes } =
     defaultYes
   });
 }
-async function asyncMySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn?: any): Promise<any> {
-  let result;
-  try {
-    expression = expression.replace(/confirm\((.*)\)/g, "await confirm($1)");
-    const src = 'with (sandbox) { return ' + expression + '}';
-    let AsyncFunction = foundry.utils.AsyncFunction;
-    // @ts-expect-error
-    const evl = AsyncFunction("sandbox", src) as ((arg: any) => Promise<any>);
-    sandbox = foundry.utils.mergeObject(sandbox, {
-      Roll,
-      findNearby,
-      findNearbyCount,
-      checkNearby,
-      hasCondition,
-      checkDefeated,
-      checkIncapacitated,
-      canSee,
-      canSense,
-      computeDistance,
-      checkActivityRange,
-      checkDistance,
-      contestedRoll,
-      fromUuidSync,
-      confirm,
-      nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid,
-      combat: game.combat,
-      evalRaceOrType: raceOrType,
-      evalTypeOrRace: typeOrRace,
-      sizeNumeric,
-      error: console.error,
-      warn: console.warn,
-      log: console.log
-    });
-    const sandboxProxy = new Proxy(sandbox, {
-      has: () => true, // Include everything
-      get: (t, k) => k === Symbol.unscopables ? undefined : (t[k as string] ?? Math[k]),
-      set: () => { error("midi-qol | asyncMySafeEval | You may not set properties of the sandbox environment"); return false } // No-op
-    });
-    if (MidiQOL.logEvaluationData) console.log('MidiQOL asyncMySafeEval', { expression, sandboxProxy });
-    result = await evl.call(null, sandboxProxy);
-    if (MidiQOL.logEvaluationData) console.log('MidiQOL asyncMySafeEval', { result });
-  } catch (err) {
+function buildEvalSandbox(sandbox: AnyMutableObject, asyncEval: boolean): AnyMutableObject {
+  const extras: AnyMutableObject = {
+    Roll,
+    findNearby,
+    findNearbyCount,
+    checkNearby,
+    hasCondition,
+    checkDefeated,
+    checkIncapacitated,
+    canSee,
+    canSense,
+    computeDistance,
+    checkActivityRange,
+    checkDistance,
+    fromUuidSync,
+    nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid,
+    combat: game.combat,
+    evalRaceOrType: raceOrType,
+    evalTypeOrRace: typeOrRace,
+    evalTypeOrRaceEval: typeOrRace, // legacy alias - sync eval historically only exposed this name
+    sizeNumeric,
+    error: console.error,
+    warn: console.warn,
+    log: console.log
+  };
+  if (asyncEval) {
+    // promise-returning helpers only work where the expression can await them
+    extras.contestedRoll = contestedRoll;
+    extras.confirm = confirm;
+  }
+  return foundry.utils.mergeObject(sandbox, extras);
+}
+
+function mySafeEvalImpl(expression: string, sandbox: AnyMutableObject, onErrorReturn: any, asyncEval: boolean): any {
+  const label = asyncEval ? "asyncMySafeEval" : "mySafeEval";
+  const coerceNumeric = (result: any) => Number.isNumeric(result) ? Number(result) : result;
+  const handleError = (err: any) => {
     // @ts-expect-error sandbox confuses
-    const message = `midi-qol | asyncMySafeEval | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
+    const message = `midi-qol | ${label} | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
     console.warn(message, err);
     TroubleShooter.recordError(err, message);
-    result = onErrorReturn;
-  }
-  if (Number.isNumeric(result)) return Number(result)
-  return result;
-};
-
-function mySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn?: any): any {
-  let result;
+    return coerceNumeric(onErrorReturn);
+  };
   try {
-    const src = 'with (sandbox) { return ' + expression + '}';
-    if (expression.includes("Roll(")) {
+    if (asyncEval) {
+      expression = expression.replace(/confirm\((.*)\)/g, "await confirm($1)");
+    } else if (expression.includes("Roll(")) {
       error("safeEval | Roll expressions are not supported", expression)
       expression = expression.replaceAll(/evaluate\s*\({\s*async:\s* false\s*}\)/g, "evaluateSync({strict: false})")
       error("Expression replaced with ", expression);
     }
-    const evl = new Function('sandbox', src);
-    sandbox = foundry.utils.mergeObject(sandbox, {
-      Roll,
-      findNearby,
-      findNearbyCount,
-      checkNearby,
-      hasCondition,
-      checkDefeated,
-      checkIncapacitated,
-      canSee,
-      canSense,
-      computeDistance,
-      checkActivityRange,
-      checkDistance,
-      fromUuidSync,
-      nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid,
-      combat: game.combat,
-      evalRaceOrType: raceOrType,
-      evalTypeOrRaceEval: typeOrRace,
-      sizeNumeric
-    });
-
+    const src = 'with (sandbox) { return ' + expression + '}';
+    // @ts-expect-error
+    const evl: (sandboxArg: any) => any = asyncEval ? foundry.utils.AsyncFunction("sandbox", src) : new Function("sandbox", src);
+    sandbox = buildEvalSandbox(sandbox, asyncEval);
     const sandboxProxy = new Proxy(sandbox, {
       has: () => true, // Include everything
       get: (t, k) => k === Symbol.unscopables ? undefined : (t[k as string] ?? Math[k]),
-      set: () => { error("mySafeEval | You may not set properties of the sandbox environment"); return false } // No-op
+      set: () => { error(`midi-qol | ${label} | You may not set properties of the sandbox environment`); return false } // No-op
     });
-    if (MidiQOL.logEvaluationData) console.log('MidiQOL mySafeEval', { expression, sandboxProxy });
-    result = evl(sandboxProxy);
-    if (MidiQOL.logEvaluationData) console.log('MidiQOL mySafeEval', { result });
+    if (MidiQOL.logEvaluationData) console.log(`MidiQOL ${label}`, { expression, sandboxProxy });
+    const result = evl.call(null, sandboxProxy);
+    if (asyncEval) return Promise.resolve(result).then((r: any) => {
+      if (MidiQOL.logEvaluationData) console.log(`MidiQOL ${label}`, { result: r });
+      return coerceNumeric(r);
+    }, handleError);
+    if (MidiQOL.logEvaluationData) console.log(`MidiQOL ${label}`, { result });
+    return coerceNumeric(result);
   } catch (err) {
-    // @ts-expect-error sandbox confuses
-    const message = `midi-qol | mySafeEval | activation condition (${expression}) error, actorUuid: ${sandbox.actorUuid} itemUuid: ${sandbox.item?.uuid} targetUuid: ${sandbox.targetUuid}`;
-    console.warn(message, err)
-    TroubleShooter.recordError(err, message);
-    result = onErrorReturn;
+    return handleError(err);
   }
-  if (Number.isNumeric(result)) return Number(result)
-  return result;
+}
+
+async function asyncMySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn?: any): Promise<any> {
+  return mySafeEvalImpl(expression, sandbox, onErrorReturn, true);
+};
+
+function mySafeEval(expression: string, sandbox: AnyMutableObject, onErrorReturn?: any): any {
+  return mySafeEvalImpl(expression, sandbox, onErrorReturn, false);
 };
 
 export async function evalReactionActivationCondition(workflow: Workflow, condition: string | undefined | boolean, target: TokenOrDocument, options: any = {}): Promise<boolean> {
@@ -7017,10 +7064,11 @@ export async function renderAttributionTooltip(attributions: AttributionMap, tit
   }));
 
   // Always render the tooltip, even if empty (will show title or "Normal" state)
-  return foundry.applications.handlebars.renderTemplate(
+  // Compacted: this is HTML-escaped into a data-tooltip-html attribute.
+  return compactHTML(await foundry.applications.handlebars.renderTemplate(
     "modules/midi-qol/templates/attribution-tooltip.html",
     { attributions: localizedEntries, title }
-  );
+  ));
 }
 
 /**
@@ -7125,10 +7173,10 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
     }));
     const title = advantageModeStr === "advantage" ? i18n("DND5E.Advantage") :
                   advantageModeStr === "disadvantage" ? i18n("DND5E.Disadvantage") : "";
-    attributionTooltip = await foundry.applications.handlebars.renderTemplate(
+    attributionTooltip = compactHTML(await foundry.applications.handlebars.renderTemplate(
       "modules/midi-qol/templates/attribution-tooltip.html",
       { attributions, title }
-    );
+    ));
   }
 
   // Extract damage type icon for display next to total
@@ -7227,6 +7275,7 @@ function getFlankingDistance(t1: Token.Implementation, t2: Token.Implementation)
 export function findPotentialFlankers(target: Token.Implementation) {
   const gridDist = canvas?.dimensions?.distance ?? 5;
   const isGridless = canvas?.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS;
+  const requiresVisibility = configSettings.optionalRules.flankingRequiresVisibility;
 
   let allies: Token.Implementation[];
   let reachAllies: Token.Implementation[];
@@ -7241,6 +7290,7 @@ export function findPotentialFlankers(target: Token.Implementation) {
       if (checkIncapacitated(t.actor, debugEnabled > 0, false)) return false;
       // Check disposition: must be hostile to target
       if (t.document.disposition === target.document.disposition) return false;
+      if (requiresVisibility && !canSense(target, t)) return false;
       const dist = getFlankingDistance(t, target);
       return dist >= 0 && dist <= gridDist;
     });
@@ -7250,6 +7300,7 @@ export function findPotentialFlankers(target: Token.Implementation) {
       if (t.id === target.id) return false;
       if (checkIncapacitated(t.actor, debugEnabled > 0, false)) return false;
       if (t.document.disposition === target.document.disposition) return false;
+      if (requiresVisibility && !canSense(target, t)) return false;
       if (allNearby.some(a => a === t)) return false;
       //@ts-expect-error no dnd5e-types
       if (!t.actor.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)) return false;
@@ -7258,8 +7309,8 @@ export function findPotentialFlankers(target: Token.Implementation) {
     });
     allies = allNearby.concat(reachNearby);
   } else {
-    allies = findNearby(-1, target, gridDist);
-    reachAllies = findNearby(-1, target, 2 * gridDist).filter(
+    allies = findNearby(-1, target, gridDist, requiresVisibility ? { isSeen: true } : {});
+    reachAllies = findNearby(-1, target, 2 * gridDist, requiresVisibility ? { isSeen: true } : {}).filter(
       ally => !(allies.some(tk => tk === ally)) &&
         //@ts-expect-error no dnd5e-types
         ally.actor?.items.contents.some(item => item.system?.properties?.has("rch") && item.system.equipped)
@@ -8121,41 +8172,36 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
     if (dice3dEnabled()) {
       //@ts-expect-error game.dice3d
       const dice3d = game.dice3d;
-      const hideRollOption = configSettings.hideRollDetails;
       let ghostRoll = false;
       let whisperUsers: User.Implementation[] | null = null;
       const rollMode = defaultRollMode || game.settings.get("core", "rollMode");
-      let hideRoll = (["all"].includes(hideRollOption) && game.user?.isGM) ? true : false;
-      if (!game.user?.isGM) hideRoll = false;
-      else if (hideRollOption !== "none") {
-        if (configSettings.gmHide3dDice && game.user?.isGM) hideRoll = true;
-        if (game.user?.isGM && !hideRoll) {
-          switch (rollType) {
-            case "attackRollD20":
-              if (["d20Only", "d20AttackOnly", "detailsDSN"].includes(hideRollOption)) {
-                for (let i = 1; i < roll.dice.length; i++) { // hide everything except the d20
-                  roll.dice[i].results.forEach(r => foundry.utils.setProperty(r, "hidden", true));
-                }
-                hideRoll = false;
-              } else if ((["hitDamage", "all", "hitCriticalDamage", "details"].includes(hideRollOption) && game.user?.isGM))
-                hideRoll = true;
-              break;
-            case "attackRoll":
-              hideRoll = hideRollOption !== "detailsDSN";
-              break;
-            case "damageRoll":
-              hideRoll = hideRollOption !== "detailsDSN";
-              break;
-            default:
-              hideRoll = false;
-              break;
+      let hideRoll = false;
+      if (game.user?.isGM) {
+        let dsnSetting: string = "show";
+        switch (rollType) {
+          case "attackRollD20":
+          case "attackRoll":
+            dsnSetting = configSettings.gmAttackDsn ?? "show";
+            break;
+          case "damageRoll":
+            dsnSetting = configSettings.gmDamageDsn ?? "show";
+            break;
+          default:
+            dsnSetting = "show";
+            break;
+        }
+        if (dsnSetting === "none") {
+          hideRoll = true;
+        } else if (dsnSetting === "ghost") {
+          ghostRoll = true;
+        } else if (rollType === "attackRollD20") {
+          // For d20-only display, hide non-d20 dice from the animation
+          for (let i = 1; i < roll.dice.length; i++) {
+            roll.dice[i].results.forEach(r => foundry.utils.setProperty(r, "hidden", true));
           }
         }
       }
-      if (hideRoll && configSettings.ghostRolls && game.user?.isGM && !configSettings.gmHide3dDice) {
-        ghostRoll = true;
-        hideRoll = false;
-      } else {
+      if (!ghostRoll) {
         ghostRoll = rollMode === "blindroll";
       }
 
@@ -8391,7 +8437,7 @@ function displayContestedResults(chatCardUuid: string | undefined, resultContent
     const searchRE = /<div class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
     const replaceString = `<div class="midi-qol-saves-display">${resultContent}<div class="end-midi-qol-saves-display">`;
     content = content.replace(searchRE, replaceString);
-    itemCard.update({ content });
+    itemCard.update({ content: compactCardContent(content) });
   } else {
     // const title = `${flavor ?? i18n("miidi-qol:ContestedRoll")} results`;
     ChatMessage.create({ content: `<p>${resultContent}</p>`, speaker });
@@ -8845,10 +8891,25 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
   if (debugEnabled) warn("_updateAction | post update updatesCache", Date.now(), updates);
 }
 
+const CARD_DESCRIPTION_RE = /<section class="card-header[\s\S]*?<\/section>\s*<\/section>/;
+
+/** Drop template indentation. One space, not none, so inline elements aren't run together. */
+export const compactHTML = (html: string) => html.replace(/[ \t]*\n[ \t]*/g, " ");
+
+/** Compact midi's card markup. Idempotent. The item description is authored prose, so left alone. */
+export function compactCardContent(content: string): string {
+  if (!content) return content;
+  const description = content.match(CARD_DESCRIPTION_RE)?.[0];
+  if (!description) return compactHTML(content);
+  const at = content.indexOf(description);
+  return compactHTML(content.slice(0, at)) + description + compactHTML(content.slice(at + description.length));
+}
+
 // NOTE: Typed as a ChatMessage since that's all we use it for
 export async function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData, throttlingFunc: undefined | ((document: ChatMessage.Implementation, updates: ChatMessage.UpdateData) => Promise<void>) = undefined, immediate = false) {
   if (!document) return; // ChatCard was removed already?;
   updates = foundry.utils.expandObject(updates) as typeof updates;
+  if (typeof updates.content === "string") updates.content = compactCardContent(updates.content);
   updates = foundry.utils.mergeObject((updatesCache[document.uuid] ?? {}), updates, { inplace: false, overwrite: true })
   updatesCache[document.uuid] = updates;
   if (!debounceInterval || immediate || !throttlingFunc) {
@@ -8930,7 +8991,7 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
   return { deleted: actorEffectsToDelete, disabled: effectsToDisable, itemEffects: effectsToDelete };
 }
 
-export function processConcentrationRequestMessage(message: ChatMessage.Implementation, html: HTMLElement, data) {
+export async function processConcentrationRequestMessage(message: ChatMessage.Implementation, html: HTMLElement, data) {
   if (configSettings.doConcentrationCheck !== "chat") return;
   let elt = html.querySelectorAll<HTMLElement>("[data-action=concentration]");
   const hasRolled = foundry.utils.getProperty(message, `flags.${MODULE_ID}.concentrationRolled`);
@@ -8945,13 +9006,12 @@ export function processConcentrationRequestMessage(message: ChatMessage.Implemen
       if (token) actor = token.actor;
       if (!actor && actorId) actor = game.actors?.get(actorId);
       if (actor) {
+        await message.setFlag(MODULE_ID, "concentrationRolled", true);
         const user = playerForActor(actor);
         if (user?.active) {
-          // const whisper = game.users?.filter(user => actor.testUserPermission(user, "OWNER")).map(u => (u as User).id);
           socketlibSocket.executeAsUser("rollConcentration", user.id, { actorUuid: actor.uuid, target: dc, create: true, rollMode: "gmroll" });
           // @ts-expect-error no dnd5e-types
         } else actor.rollConcentration({ legacy: false, target: dc }, {}, { create: true, rollMode: "gmroll" });
-        message.setFlag(MODULE_ID, "concentrationRolled", true);
       }
     }
   }

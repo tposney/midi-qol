@@ -1,0 +1,396 @@
+{
+  "name": "Vow of Enmity",
+  "type": "feat",
+  "img": "icons/magic/fire/explosion-embers-evade-silhouette.webp",
+  "system": {
+    "description": {
+      "value": "<p>When you take the Attack action, you can expend one use of Channel Divinity to utter a vow of enmity against a creature you can see within 30 feet of yourself. You have advantage on attack rolls against that creature for 1 minute, or until you use this feature again.</p><p>If the creature drops to 0 hit points before the vow ends, use <em>Transfer Vow</em> to move it to another creature within 30 feet (no action required). The original duration keeps running.</p><p><em>Sample item note:</em> uses are tracked on this item. On a 2024 paladin, repoint the Utter Vow consumption at the actor's own Channel Divinity feature.</p>",
+      "chat": ""
+    },
+    "source": {
+      "revision": 1,
+      "rules": "2024",
+      "book": "",
+      "page": "",
+      "custom": ""
+    },
+    "activities": {
+      "vowMakeVowAct000": {
+        "type": "utility",
+        "_id": "vowMakeVowAct000",
+        "name": "Utter Vow",
+        "sort": 0,
+        "activation": {
+          "type": "special",
+          "value": null,
+          "override": true,
+          "condition": "When you take the Attack action"
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false,
+          "targets": [
+            {
+              "type": "itemUses",
+              "target": "",
+              "value": "1",
+              "scaling": {
+                "mode": "",
+                "formula": ""
+              }
+            }
+          ]
+        },
+        "duration": {
+          "units": "minute",
+          "value": "1",
+          "concentration": false,
+          "override": true
+        },
+        "effects": [
+          {
+            "_id": "vowSelfAdvant000"
+          },
+          {
+            "_id": "vowTargetMark000"
+          }
+        ],
+        "range": {
+          "units": "ft",
+          "value": "30",
+          "override": true,
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "1",
+            "type": "creature",
+            "special": ""
+          },
+          "override": true,
+          "prompt": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "toggleEffect": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        }
+      },
+      "vowSwapVowAct000": {
+        "type": "utility",
+        "_id": "vowSwapVowAct000",
+        "name": "Transfer Vow",
+        "sort": 1,
+        "activation": {
+          "type": "special",
+          "value": null,
+          "override": true,
+          "condition": "When the vowed creature drops to 0 hit points (no action required)"
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false,
+          "targets": []
+        },
+        "duration": {
+          "units": "minute",
+          "value": "1",
+          "concentration": false,
+          "override": true
+        },
+        "effects": [
+          {
+            "_id": "vowTargetMark000"
+          }
+        ],
+        "range": {
+          "units": "ft",
+          "value": "30",
+          "override": true,
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "1",
+            "type": "creature",
+            "special": ""
+          },
+          "override": true,
+          "prompt": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "toggleEffect": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        }
+      }
+    },
+    "uses": {
+      "max": "1",
+      "spent": 0,
+      "recovery": [
+        {
+          "period": "sr",
+          "type": "recoverAll",
+          "formula": ""
+        }
+      ]
+    },
+    "type": {
+      "value": "class",
+      "subtype": "channelDivinity"
+    },
+    "requirements": "Oath of Vengeance Paladin 3",
+    "recharge": {
+      "value": null,
+      "charged": false
+    },
+    "properties": [],
+    "identifier": "vow-of-enmity",
+    "prerequisites": {
+      "level": null,
+      "repeatable": false
+    }
+  },
+  "effects": [
+    {
+      "_id": "vowSelfAdvant000",
+      "name": "Vow of Enmity",
+      "img": "icons/magic/fire/explosion-embers-evade-silhouette.webp",
+      "type": "base",
+      "changes": [
+        {
+          "key": "flags.midi-qol.advantage.attack.all",
+          "mode": 0,
+          "value": "targetUuid === \"\"",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "transfer": false,
+      "origin": null,
+      "tint": "#ffffff",
+      "duration": {
+        "startTime": null,
+        "seconds": 60,
+        "combat": null,
+        "rounds": 10,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "description": "",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "disableIncapacitated": false,
+          "selfTarget": true,
+          "selfTargetAlways": false,
+          "dontApply": false,
+          "stackable": "noneName",
+          "showIcon": false,
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": ""
+        }
+      },
+      "_key": "!items.effects!vowOfEnmity00000.vowSelfAdvant000"
+    },
+    {
+      "_id": "vowTargetMark000",
+      "name": "Marked by Vow of Enmity",
+      "img": "icons/magic/fire/explosion-embers-evade-silhouette.webp",
+      "type": "base",
+      "changes": [],
+      "disabled": false,
+      "transfer": false,
+      "origin": null,
+      "tint": "#ffffff",
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "description": "",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "disableIncapacitated": false,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "dontApply": false,
+          "stackable": "noneName",
+          "showIcon": false,
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": ""
+        }
+      },
+      "_key": "!items.effects!vowOfEnmity00000.vowTargetMark000"
+    }
+  ],
+  "folder": "fZIl4G4qj3C894LI",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {
+    "core": {},
+    "dae": {
+      "macro": {
+        "name": "Vow of Enmity",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "const version = \"13.0.64\";\ntry {\n  if (args[0].macroPass !== \"postActiveEffects\") return;\n  const target = workflow.targets.first();\n  if (!target) return;\n  const ADV = \"flags.midi-qol.advantage.attack.all\";\n  const markName = \"Marked by Vow of Enmity\";\n  const mine = ef => MidiQOL.getItemFromEffectOrigin(ef.origin ?? \"\")?.uuid === macroItem.uuid;\n  const isTransfer = rolledActivity?.id === \"vowSwapVowAct000\";\n\n  const selfEffect = actor.effects.find(ef => ef.name === macroItem.name && mine(ef));\n  if (!selfEffect) {\n    if (isTransfer) {\n      ui.notifications?.warn(`${macroItem.name}: no active vow to transfer.`);\n      workflow.aborted = true;\n    }\n    return;\n  }\n\n  // RAW the vow only transfers once the vowed creature is at 0 HP.\n  if (isTransfer) {\n    const prevUuid = selfEffect.changes.find(c => c.key === ADV)?.value?.match(/\"([^\"]+)\"/)?.[1];\n    const prev = prevUuid ? await fromUuid(prevUuid) : null;\n    if (prev && (prev.actor?.system?.attributes?.hp?.value ?? 0) > 0) {\n      const ok = await foundry.applications.api.DialogV2.confirm({\n        window: { title: macroItem.name },\n        content: `<p>${prev.name} still has hit points - the vow transfers only when the vowed creature drops to 0. Transfer anyway?</p>`,\n        rejectClose: false\n      });\n      if (!ok) { workflow.aborted = true; return; }\n    }\n  }\n\n  // The advantage lives on the paladin; only the stored uuid changes.\n  const changes = selfEffect.changes.map(c => c.key === ADV\n    ? { ...c, value: `targetUuid === \"${target.document.uuid}\"` }\n    : c);\n  await selfEffect.update({ changes });\n\n  for (const t of canvas.tokens?.placeables ?? []) {\n    if (t.document.uuid === target.document.uuid) continue;\n    for (const ef of (t.actor?.effects ?? []).filter(ef => ef.name === markName && mine(ef))) await ef.delete();\n  }\n  const marker = target.actor?.effects?.find(ef => ef.name === markName && mine(ef));\n  if (marker) await MidiQOL.addDependent(selfEffect, marker);\n} catch (err) {\n  console.error(`${macroItem?.name} ${version}`, err);\n}\n",
+        "sort": 0,
+        "ownership": {
+          "default": 0
+        },
+        "flags": {},
+        "_stats": {}
+      }
+    },
+    "midiProperties": {
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "rollOther": false,
+      "critOther": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "autoFailFriendly": false,
+      "offHandWeapon": false,
+      "ignoreTotalCover": false,
+      "autoSaveFriendly": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "effectActivation": false,
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "reactionCondition": "",
+      "effectCondition": "",
+      "otherCondition": "",
+      "AoETargetType": "any",
+      "AoETargetTypeIncludeSelf": true,
+      "autoTarget": "default",
+      "removeAttackDamageButtons": "default",
+      "onUseMacroName": "[postActiveEffects]ItemMacro"
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.64"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "5.3.3",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "_id": "vowOfEnmity00000",
+  "_key": "!items!vowOfEnmity00000"
+}

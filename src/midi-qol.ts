@@ -105,6 +105,14 @@ export let i18nFormat = (key: string, data = {}) => {
   return game.i18n?.format(key, data) ?? key;
 }
 
+// dnd5e 5.3 nested DND5E.Healing under DND5E.HEAL.HealingButton; older 5.2.x
+// has the flat key. Feature-detect via i18n.has so we work on both.
+export function getHealingLabel(): string {
+  return game.i18n?.has("DND5E.HEAL.HealingButton")
+    ? i18n("DND5E.HEAL.HealingButton")
+    : i18n("DND5E.Healing");
+}
+
 export function getStaticID(id: string): string {
   id = `dnd5e${id}`;
   if (id.length >= 16) return id.substring(0, 16);
@@ -179,6 +187,7 @@ Hooks.once("levelsReady", function () {
 Hooks.once("init", () => {
   registerHandlebarsHelpers();
   setupChatMessageMidi();
+  setupDamageCardMessage();
   //@ts-expect-error
   CONFIG.ChatMessage.documentClass = ChatMessageMidi;
   // @ts-expect-error
@@ -863,6 +872,7 @@ Hooks.once('ready', function () {
 });
 
 import { setupChatMessageMidi, ChatMessageMidi } from './module/ChatClasses/ChatMessageMidi.js';
+import { setupDamageCardMessage } from './module/ChatClasses/DamageCardMessage.js';
 import { MidiSaveActivity, setupSaveActivity } from './module/activities/SaveActivity.js';
 import { MidiUtilityActivity, setupUtilityActivity } from './module/activities/UtilityActivity.js';
 import { MidiSummonActivity, setupSummonActivity } from './module/activities/SummonActivity.js';

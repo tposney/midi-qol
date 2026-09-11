@@ -1,5 +1,6 @@
-import { checkRule, conditionUpdateCard, configSettings, safeGetGameSetting, isDnd5e53 } from "./settings.js";
-import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID, systemConcentrationId } from "../midi-qol.js";
+import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
+import { checkRule, configSettings, safeGetGameSetting, isDnd5e53, conditionUpdateCard } from "./settings.js";
+import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID, getHealingLabel, systemConcentrationId } from "../midi-qol.js";
 import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions, tokenForActor, getTokenName, getTokenPlayerName, getStatusName } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DamageDescriptionObject, Workflow, WorkflowOptions } from "./Workflow.js";
@@ -9,7 +10,7 @@ import { queueUndoData, startUndoWorkflow, updateUndoChatCardUuids, _removeMostR
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { installedModules } from "./setupModules.js";
 import { StatUpdateMessage } from "./RollStats.js";
-import { DamageApplicationOptions, DamageDescription, DamageListEntry, MonksTokenBarRequest, MoveTokenOptions, RollDialogConfig, RollMessageConfig, RollProcessConfig, SaveDetails, TeleportTokenDestination } from "../globals.js";
+import { DamageApplicationOptions, DamageDescription, DamageListEntry, DamageModDisplay, MonksTokenBarRequest, MoveTokenOptions, RollDialogConfig, RollMessageConfig, RollProcessConfig, SaveDetails, TeleportTokenDestination } from "../globals.js";
 
 export let socketlibSocket: any = undefined;
 let traitList = { di: "", dr: "", dv: "", dm: "", da: "" };
@@ -264,8 +265,8 @@ async function confirmDamageRollComplete(data: { workflowId: string, activityUui
     return undefined;
   }
   const hasHits = workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0;
-  if ((workflow.currentAction === workflow.WorkflowState_AttackRollComplete) || hasHits &&
-    activity?.hasDamage && (!workflow.damageRoll || workflow.currentAction !== workflow.WorkflowState_ConfirmRoll)) {
+  if ((workflow.currentAction === workflow.WorkflowState_AttackRollComplete) || (hasHits &&
+    activity?.hasDamage && (!workflow.damageRoll || workflow.currentAction !== workflow.WorkflowState_ConfirmRoll))) {
     return "midi-qol | You must roll damage before completing the roll - you can only confirm miss until then";
   }
   if (workflow.hitTargets.size === 0 && workflow.hitTargetsEC.size === 0) {
@@ -568,7 +569,8 @@ async function _completeActivityUse(data: {
   if (!game.user) return null;
   let { activityUuid, actorUuid, usage, dialog, message } = data;
   let actor: any = await fromUuid(actorUuid);
-  if (actor.actor) actor = actor.actor;
+  if (actor?.actor) actor = actor.actor;
+  if (!actor) return null;
   if (usage.midiOptions?.targetsToUse) {
     const targets = usage.midiOptions.targetsToUse.map(t => (fromUuidSync(t) as TokenDocument.Implementation)?.object).filter(t => isValidTarget(t)) as foundry.canvas.placeables.Token.Implementation[];
     usage.midiOptions.targetsToUse = new Set(targets);
@@ -584,7 +586,8 @@ async function _completeItemUse(data: {
   if (!game.user) return null;
   let { itemData, actorUuid, config, dialog, message } = data;
   let actor: any = await fromUuid(actorUuid);
-  if (actor.actor) actor = actor.actor;
+  if (actor?.actor) actor = actor.actor;
+  if (!actor) return null;
   let ownedItem = new CONFIG.Item.documentClass(itemData, { parent: actor });
   // prepare item data for socketed events
   ownedItem.prepareData();
@@ -593,7 +596,7 @@ async function _completeItemUse(data: {
   // @ts-expect-error no dnd5e-types
   ownedItem.applyActiveEffects();
   const workflow = await completeItemUse(ownedItem, config, dialog, message);
-  if (data.config?.midiOptions?.workflowData) return workflow.getMacroData();
+  if (workflow && data.config?.midiOptions?.workflowData) return workflow.getMacroData();
   else return true;
 }
 
@@ -926,6 +929,9 @@ async function rollAbility(data: {
   }
 
   // Build midiOptions for patching.ts
+  // advantage/disadvantage seed computeAdvantageFlags via options.advantage so the
+  // midi-qol.preTargetSave hook's saveDetails.advantage actually applies. The flag is
+  // also kept on the top-level config below for the applyPreComputedAdvantage path.
   const midiOptions: MidiOptions = {
     workflowId,
     rollAbilities,
@@ -939,6 +945,8 @@ async function rollAbility(data: {
     isConcentrationCheck,
     workflowOptions,
     itemCardUuid,
+    advantage,
+    disadvantage,
   };
 
   let config: RollProcessConfig = {
@@ -1110,7 +1118,7 @@ async function createReverseDamageCard(data: {
   return cardIds;
 }
 
-interface DamageListContextEntry {
+export interface DamageListContextEntry {
   isCharacter: boolean;
   isNpc: boolean;
   actorUuid: string;
@@ -1118,6 +1126,7 @@ interface DamageListContextEntry {
   displayUuid: string;
   tokenId?: string;
   tokenImg: string;
+  tokenVideoSrc?: string;
   hpDamage: number;
   abshpDamage: number;
   tempDamage: number;
@@ -1175,7 +1184,7 @@ function calculateDamageAmounts(damageDetail: DamageDescription[]): { amount: nu
 function updateDamageCardDisplay(
   html: HTMLElement,
   actorUuid: string,
-  undoEntry: DamageListEntry,
+  undoEntry: RecoveredUndoEntry,
   showUndoMode: boolean
 ): void {
   const displayUuid = actorUuid.replaceAll(".", "");
@@ -1370,30 +1379,44 @@ function updateHPStatusHeader(html: HTMLElement, actorUuid?: string, applied?: b
   }
 }
 
+/** The modification labels for one calculated damage entry. */
+export function damageDetailMods(di: DamageDescription): string[] {
+  let allMods: string[];
+  if (isDnd5e53) {
+    // 5.3+: all boolean flags nested under all/type
+    allMods = [];
+    for (const cat of ["modification", "resistance", "vulnerability", "immunity",
+      "absorption", "DR", "saved", "uncannyDodge", "spell", "magic", "nonmagic"]) {
+      if (di.active?.all?.[cat] || di.active?.type?.[cat]) allMods.push(cat);
+    }
+    if (di.active?.threshold) allMods.push("threshold");
+  } else {
+    // 5.2.x: all keys flat
+    allMods = Object.keys(di.active ?? {}).reduce((acc: string[], k) => {
+      if (k === "semiSuperSaver" || k === "superSaver" || k === "inlined") return acc;
+      if (di.active?.[k] && k !== "multiplier") acc.push(k);
+      return acc;
+    }, []);
+  }
+  if ((di.allActives?.length ?? 0) > 0) allMods = allMods.concat(di.allActives!);
+  return allMods;
+}
+
+/** The card tooltip's per-entry display data, taken from the CALCULATED damage detail. */
+export function buildDamageMods(damageDetail?: DamageDescription[]): DamageModDisplay[] {
+  return (damageDetail ?? []).map(di => ({
+    type: di.type, value: di.displayValue ?? di.value, mods: damageDetailMods(di)
+  }));
+}
+
 /** Helper to generate tooltip HTML for a damage item */
 function generateDamageTooltip(damageItem: DamageListEntry, tokenName?: string): string {
-  const tooltipList = damageItem.damageDetail?.map(di => {
-    let allMods: string[];
-    if (isDnd5e53) {
-      // 5.3+: all boolean flags nested under all/type
-      allMods = [];
-      for (const cat of ["modification", "resistance", "vulnerability", "immunity",
-        "absorption", "DR", "saved", "uncannyDodge", "spell", "magic", "nonmagic"]) {
-        if (di.active?.all?.[cat] || di.active?.type?.[cat]) allMods.push(cat);
-      }
-      if (di.active?.threshold) allMods.push("threshold");
-    } else {
-      // 5.2.x: all keys flat
-      allMods = Object.keys(di.active ?? {}).reduce((acc: string[], k) => {
-        if (k === "semiSuperSaver" || k === "superSaver" || k === "inlined") return acc;
-        if (di.active?.[k] && k !== "multiplier") acc.push(k);
-        return acc;
-      }, []);
-    }
-    if ((di.allActives?.length ?? 0) > 0) allMods = allMods.concat(di.allActives!);
-    let mods = (allMods.length > 0) ? `| ${allMods.join(",")}` : "";
-    const displayVal = di.displayValue ?? di.value;
-    return `${displayVal > 0 ? Math.floor(displayVal) : Math.ceil(displayVal)} ${{ ...GameSystemConfig.damageTypes, ...GameSystemConfig.healingTypes }[di.type === "" ? "none" : di.type]?.label ?? "none"} ${mods}`
+  // damageMods is stored on the card because the stored damageDetail is the raw list and has no
+  // `active` markers; live application still derives it from the calculated detail.
+  const entries = damageItem.damageMods ?? buildDamageMods(damageItem.damageDetail);
+  const tooltipList = entries.map(e => {
+    const mods = (e.mods.length > 0) ? `| ${e.mods.join(",")}` : "";
+    return `${e.value > 0 ? Math.floor(e.value) : Math.ceil(e.value)} ${{ ...GameSystemConfig.damageTypes, ...GameSystemConfig.healingTypes }[e.type === "" ? "none" : e.type]?.label ?? "none"} ${mods}`
   }).map(s => s.replaceAll(",,", ",").replaceAll(",,", ","));
 
   const toolTipHeader: string[] = [];
@@ -1433,7 +1456,12 @@ async function prepareDamageListItems(
   tokenDataList: DamageListEntry[],
   createPromises: boolean = false,
   showNPC: boolean = true,
-  doHits: boolean = true
+  doHits: boolean = true,
+  /**
+   * Rebuilding a stored card rather than applying damage. The recompute below reads the actor's
+   * CURRENT state, so re-rendering would subtract the damage again; the stored figures stand.
+   */
+  fromStoredData: boolean = false
 ): Promise<void> {
   const damageList = data.damageList;
   let promises: Promise<any>[] = [];
@@ -1453,7 +1481,7 @@ async function prepareDamageListItems(
 
     // let newTempHP = Math.max(0, oldTempHP - tempDamage);
     // @ts-expect-error no dnd5e-types
-    if (actor.isOwner && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
+    if (!fromStoredData && actor.isOwner && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
       // @ts-expect-error no dnd5e-types
       const hp = actor.system.attributes.hp;
       let { amount, temp, healing, vitality: vitalityDamage, tempMax } = calculateDamageAmounts(damageItem.damageDetail);
@@ -1580,7 +1608,9 @@ async function prepareDamageListItems(
       actorUuid,
       actorId,
       totalDamage: Math.abs(Math.trunc(damageItem.totalDamage)),
+      // raw detail, so a multiplier re-applied from the card recalculates from unmodified damage
       damageDetail: damageItem.rawDamageDetail,
+      damageMods: damageItem.damageMods ?? buildDamageMods(damageItem.damageDetail),
       updateOptions: data.updateOptions ?? {}
     });
 
@@ -1588,11 +1618,23 @@ async function prepareDamageListItems(
     // @ts-expect-error no dnd5e-types
     if (configSettings.usePlayerPortrait && actor.type === "character")
       img = actor.img as string;
+    // An animated token has no still frame to put in an <img>, and createThumbnail returns a base64
+    // data URI — roughly 27KB, which used to be written into the card and so persisted on the
+    // message for the life of the world. The source is carried in a data attribute instead and the
+    // thumbnail is generated locally when the card renders (see resolveTokenThumbnails).
+    let tokenVideoSrc: string | undefined;
     if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
-      img = await game.video!.createThumbnail(img, { width: 100, height: 100 });
+      tokenVideoSrc = img;
+      const portrait = actor.img as string | undefined;
+      img = portrait && !foundry.helpers.media.VideoHelper.hasVideoExtension(portrait)
+        ? portrait
+        : "icons/svg/mystery-man.svg";
     }
 
-    const playerViewTotalDamage = damageItem.hpDamage + damageItem.tempDamage;
+    // tempDamage is not persisted on the card - derive it from the temp HP figures that are, or a
+    // re-rendered card would show NaN.
+    const tempDamageApplied = damageItem.tempDamage ?? ((damageItem.oldTempHP ?? 0) - (damageItem.newTempHP ?? 0));
+    const playerViewTotalDamage = damageItem.hpDamage + tempDamageApplied;
     const isHealing = (damageItem.rawTotalDamage ?? 0) < 0 || playerViewTotalDamage < 0;
     // Extract direct vitality damage/healing from damage detail (not overflow) - only if vitality system is enabled
     const vitalityEnabled = !!checkRule("vitalityItem");
@@ -1605,6 +1647,7 @@ async function prepareDamageListItems(
       displayUuid: actorUuid.replaceAll(".", ""),
       tokenId: tokenDocument?.id ?? undefined,
       tokenImg: img,
+      tokenVideoSrc,
       hpDamage,
       abshpDamage: Math.abs(damageItem.hpDamage),
       tempDamage: (damageItem.newTempHP ?? 0) - (damageItem.oldTempHP ?? 0),
@@ -2178,10 +2221,11 @@ async function createPlayerDamageCard(data: {
     damageList: [] as DamageListContextEntry[],
     needsButtonAll: false,
     showNPC,
-    playerButtons
+    playerButtons,
+    healingLabel: getHealingLabel()
   };
 
-  prepareDamageListItems(data, templateData, tokenDataList, false, showNPC, true)
+  await prepareDamageListItems(data, templateData, tokenDataList, false, showNPC, true)
   if (templateData.damageList.length === 0) {
     log("No damage data to show to player");
     return;
@@ -2190,18 +2234,20 @@ async function createPlayerDamageCard(data: {
   templateData.needsButtonAll = damageList.length > 1;
   templateData.playerButtons = templateData.playerButtons && templateData.damageList.some(listItem => listItem.isCharacter);
   if (["yesCard", "noCard", "yesCardNPC", "yesCardMisses", "noCardMisses"].includes(data.autoApplyDamage)) {
-    const playerTemplate = configSettings.damageCardStyle === "classic"
-      ? "modules/midi-qol/templates/damage-results-player-classic.html"
-      : "modules/midi-qol/templates/damage-results-player.html";
-    const content = await foundry.applications.handlebars.renderTemplate(playerTemplate, templateData);
     const speaker: any = ChatMessage.getSpeaker();
     speaker.alias = data.sender;
     let chatData: any = {
       user: game.user?.id,
       speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: game.user?.id, actor: data.actorId },
-      content: content,
+      content: "",
       // whisper: ChatMessage.getWhisperRecipients("players").filter(u => u.active).map(u => u.id),
-      flags: { "midi-qol": { "undoDamage": prepareDamageListToJSON(tokenDataList), playerDamageCard: true, actorUuid: data.actorUuid } }
+      type: DAMAGE_MESSAGE_TYPE,
+      // rendered from this on display rather than stored as markup
+      system: {
+        player: true, doHits: true, autoApplyDamage: data.autoApplyDamage,
+        forceApply: data.forceApply, showNPC, playerButtons: templateData.playerButtons
+      } satisfies DamageCardOptions,
+      flags: { "midi-qol": { "undoDamage": prepareDamageListForFlag(tokenDataList), playerDamageCard: true, actorUuid: data.actorUuid } }
     };
 
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
@@ -2236,17 +2282,18 @@ async function createGMReverseDamageCard(
   await prepareDamageListItems(data, templateData, tokenDataList, true, true, doHits)
   templateData.needsButtonAll = damageList.length > 1;
   if (["yesCard", "noCard", "yesCardNPC", "yesCardMisses", "noCardMisses"].includes(data.autoApplyDamage)) {
-    const gmTemplate = configSettings.damageCardStyle === "classic"
-      ? "modules/midi-qol/templates/damage-results-classic.html"
-      : "modules/midi-qol/templates/damage-results.html";
-    const content = await foundry.applications.handlebars.renderTemplate(gmTemplate, templateData);
     const speaker = ChatMessage.getSpeaker();
     speaker.alias = game.user?.name;
     let chatData: ChatMessage.CreateData = {
       speaker: { scene: getCanvas()?.scene?.id, alias: game.user?.name },
-      content: content,
+      content: "",
       whisper: ChatMessage.getWhisperRecipients("GM").filter(u => (u as User).active).map(u => u.id),
-      flags: { [MODULE_ID]: { "undoDamage": prepareDamageListToJSON(tokenDataList), actorUuid: data.actorUuid } }
+      type: DAMAGE_MESSAGE_TYPE,
+      system: {
+        player: false, doHits, autoApplyDamage: data.autoApplyDamage,
+        forceApply: data.forceApply, showNPC: true
+      } satisfies DamageCardOptions,
+      flags: { [MODULE_ID]: { "undoDamage": prepareDamageListForFlag(tokenDataList), actorUuid: data.actorUuid } }
     };
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
     if (data.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? {}, data.flagTags);
@@ -2263,8 +2310,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
     (async () => {
       // TODO: Remove the latter after sufficient time has passed
       const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
-      const undoDamageData = recoverDamageListFromJSON(undoFlag);
-      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempHP, newVitality, calcDamageOptions, updateOptions } of undoDamageData) {
+      const undoDamageData = recoverUndoListFromFlag(message, undoFlag);
+      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempMax, calcDamageOptions, updateOptions } of undoDamageData) {
         if (!actorUuid) continue;
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
         applyButton?.children[0].classList.add("midi-qol-enable-damage-button");
@@ -2281,7 +2328,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           "system.attributes.hp.temp": oldTempHP ?? 0,
           "system.attributes.hp.value": oldHP ?? 0
         };
-        if (oldTempMax !== undefined) updates["system.attributes.hp.tempmax"] = oldTempMax;
+        if (newTempMax! - oldTempMax!) updates["system.attributes.hp.tempmax"] = oldTempMax;
         // Handle vitality undo - only if actor still has a vitality item
         const undoItem = undoDamageData.find(d => d.actorUuid === actorUuid);
         const vitalityItem = getVitalityItem(actor);
@@ -2316,8 +2363,8 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
     (async () => {
       // TODO: Remove the latter after sufficient time has passed
       const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
-      const undoDamageData = recoverDamageListFromJSON(undoFlag);
-      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, newTempMax, oldHP, oldTempHP, oldVitality, calcDamageOptions, updateOptions } of undoDamageData) {
+      const undoDamageData = recoverUndoListFromFlag(message, undoFlag);
+      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, newTempMax, oldHP, oldTempMax, calcDamageOptions, updateOptions } of undoDamageData) {
         if (!actorUuid) continue;
         let actor = fromActorUuid(actorUuid);
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
@@ -2328,7 +2375,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         reverseButton?.children[0].classList.add("midi-qol-enable-damage-button");
         log(`Setting HP to ${newTempHP} and ${newHP} ${actor?.name} ${actorUuid}`);
         const update = { "system.attributes.hp.temp": newTempHP ?? 0, "system.attributes.hp.value": newHP ?? 0 } as Actor.UpdateData;
-        if (newTempMax !== undefined) update["system.attributes.hp.tempmax"] = newTempMax;
+        if (newTempMax! - oldTempMax!) update["system.attributes.hp.tempmax"] = newTempMax;
         const amount = (newHP ?? 0) - (oldHP ?? 0);
         // Handle vitality apply - only if actor still has a vitality item
         const applyItem = undoDamageData.find(d => d.actorUuid === actorUuid);
@@ -2359,9 +2406,9 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
 
   // TODO: Remove the latter after sufficient time has passed
   const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
-  const undoDamageData = recoverDamageListFromJSON(undoFlag);
+  const undoDamageData = recoverUndoListFromFlag(message, undoFlag);
   undoDamageData?.forEach((undoEntry) => {
-    const { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempHP, newTempMax, oldVitality, newVitality, damageDetail, calcDamageOptions, updateOptions, oldVitalitySpent, newVitalitySpent } = undoEntry;
+    const { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempHP, newTempMax, damageDetail, calcDamageOptions, updateOptions, oldVitalitySpent, newVitalitySpent } = undoEntry;
     if (!actorUuid) return;
     let button = html.querySelector<HTMLButtonElement>(`#reverse-${actorUuid.replaceAll(".", "")}`);
     button?.addEventListener("click", (ev) => {
@@ -2383,7 +2430,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           "system.attributes.hp.temp": oldTempHP ?? 0,
           "system.attributes.hp.value": oldHP ?? 0
         };
-        if (oldTempMax !== undefined) updates["system.attributes.hp.tempmax"] = oldTempMax;
+        if (newTempMax! - oldTempMax!) updates["system.attributes.hp.tempmax"] = oldTempMax;
         // Handle vitality undo - only if actor still has a vitality item
         const vitalityItem = getVitalityItem(actor);
         let vitalityUpdated = false;
@@ -2432,7 +2479,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
             "system.attributes.hp.temp": newTempHP ?? 0,
             "system.attributes.hp.value": newHP ?? 0
           };
-          if (newTempMax !== undefined) updates["system.attributes.hp.tempmax"] = newTempMax;
+          if (newTempMax! - oldTempMax!) updates["system.attributes.hp.tempmax"] = newTempMax;
           // Handle vitalityItem apply - only if actor still has a vitality item
           const vitalityItem = getVitalityItem(actor);
           let vitalityUpdated = false;
@@ -2691,7 +2738,13 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       if (totalSpan) {
         totalSpan.classList.toggle("midi-qol-dmg-hidden", !hasDamageToApply);
         totalSpan.classList.toggle("midi-qol-dmg-healing", isHealing);
-        totalSpan.textContent = `${isHealing ? "+" : "-"}${absTotalDamage}`;
+        // Write the children, never the parent: setting textContent here would discard
+        // .dmg-total-sign/.dmg-total-value, and updateDamageCardDisplay only writes them if present,
+        // so every later refresh would silently skip the total and leave this preview frozen.
+        const signSpan = totalSpan.querySelector<HTMLSpanElement>(".dmg-total-sign");
+        if (signSpan) signSpan.textContent = isHealing ? "+" : "-";
+        const valueSpan = totalSpan.querySelector<HTMLSpanElement>(".dmg-total-value");
+        if (valueSpan) valueSpan.textContent = String(absTotalDamage);
       }
 
       // Update temp HP display
@@ -2964,6 +3017,7 @@ export interface SerializedDamageListEntry extends Omit<DamageListEntry, "calcDa
   damageDetails: {
     bonusDamage?: DamageDescriptionObject[];
     combinedDamage: DamageDescriptionObject[];
+    injectedDamage?: DamageDescriptionObject[];
     defaultDamage?: DamageDescriptionObject[];
     otherDamage?: DamageDescriptionObject[];
     rawbonusDamage?: DamageDescriptionObject[];
@@ -2986,6 +3040,168 @@ export interface SerializedDamageListEntry extends Omit<DamageListEntry, "calcDa
     };
   };
 }
+/**
+ * The members of a damage-list entry that survive onto `flags.midi-qol.undoDamage`.
+ *
+ * This one list is the single source of truth for both halves of the storage path: the runtime
+ * projection below reads it, and `PersistedUndoFields` is derived from it, so a field cannot be
+ * dropped from the data while remaining in the type (or the reverse). Because `RecoveredUndoEntry`
+ * is derived the same way, an undo/apply handler that reaches for a member NOT in this list is a
+ * compile error rather than an `undefined` at runtime — which is what keeps the two serialisers
+ * from drifting apart as fields come and go.
+ *
+ * The list is narrower than the socket payload on purpose. The socket entry feeds
+ * createReverseDamageCard, which renders the whole card and needs the lot; the flag only has to
+ * support undo/apply afterwards. Storing the socket shape persisted the entire working state of the
+ * damage calculation on every card, for every target — on a real world's chat log that was 55% of
+ * undoDamage (`damageDetails` alone 5.8MB of 19MB), and undoDamage was 89% of everything midi
+ * stored on chat messages.
+ *
+ * To store another field: add it here. Nothing else needs to change.
+ */
+const PERSISTED_UNDO_FIELDS = ["actorUuid", "targetUuid", "damageSelector", "wasHit", "damageMods",
+  "oldHP", "newHP", "oldTempHP", "newTempHP", "oldTempMax", "newTempMax",
+  "oldVitality", "newVitality", "oldVitalitySpent", "newVitalitySpent",
+  "hpDamage", "totalDamage", "rawTotalDamage"] as const;
+
+/** Members carried verbatim; those below need their encoding changed and are handled explicitly. */
+type PersistedUndoFields = Pick<DamageListEntry, typeof PERSISTED_UNDO_FIELDS[number]>;
+
+/** What is written to `flags.midi-qol.undoDamage`. */
+export interface PersistedUndoEntry extends PersistedUndoFields {
+  damageDetail: DamageDescriptionObject[];
+  calcDamageOptions: SerializedDamageListEntry["calcDamageOptions"];
+  updateOptions: any;
+}
+
+/** A stored entry with its Sets and DamageDescriptions rehydrated. */
+export type RecoveredUndoEntry = Omit<PersistedUndoEntry, "damageDetail" | "calcDamageOptions"> & {
+  damageDetail: DamageDescription[];
+  calcDamageOptions: DamageListEntry["calcDamageOptions"];
+};
+
+/**
+ * Members of `calcDamageOptions.midi` that are outputs rather than inputs.
+ *
+ * midi's own dnd5e.preApplyDamage handler writes these at the moment damage is applied (Hooks.ts),
+ * and writes them again every time undo or apply re-runs it — so the stored copy is never read and
+ * is stale by construction. `updates` in particular is the whole actor update payload, which the
+ * replay paths rebuild from oldHP/newHP.
+ */
+const RECOMPUTED_MIDI_OPTIONS = ["updates", "amount"];
+
+/**
+ * Members of `calcDamageOptions.midi` that repeat something already on the message. Dropped on the
+ * way out and put back by recoverUndoListFromFlag, so the replay hooks see them unchanged.
+ */
+const DUPLICATED_MIDI_OPTIONS = ["targetUuid", "sourceActorUuid"];
+
+/**
+ * `calcDamageOptions` scopes midi persists. Other modules add their own (RPG Damage Numbers writes
+ * `RPGDN`); those are display state for a card that has already been rendered, so they are not
+ * stored. midi's own keys plus dnd5e's DamageApplicationOptions.
+ */
+const PERSISTED_DAMAGE_OPTIONS = ["midi", "ignore", "downgrade", "invertHealing", "multiplier",
+  "midiIgnoreComputed", "ignoreTarget"];
+
+/**
+ * Serialise for storage on the chat message. Runs the socket serialiser then drops what the flag
+ * does not need, so this decides only WHICH members survive, never how any of them is encoded.
+ */
+export function prepareDamageListForFlag(damageList: DamageListEntry[]): PersistedUndoEntry[] {
+  return prepareDamageListToJSON(damageList).map(entry => {
+    const kept = Object.fromEntries(PERSISTED_UNDO_FIELDS
+      .filter(field => entry[field] !== undefined)
+      .map(field => [field, entry[field]])) as PersistedUndoFields;
+    const { midi, ...otherOptions } = entry.calcDamageOptions ?? {};
+    const keptOptions = Object.fromEntries(Object.entries(otherOptions)
+      .filter(([key]) => PERSISTED_DAMAGE_OPTIONS.includes(key)));
+    return {
+      ...kept,
+      damageDetail: entry.damageDetail,
+      calcDamageOptions: midi
+        ? {
+          ...keptOptions,
+          midi: Object.fromEntries(Object.entries(midi).filter(([key]) =>
+            !RECOMPUTED_MIDI_OPTIONS.includes(key) && !DUPLICATED_MIDI_OPTIONS.includes(key)))
+        } as PersistedUndoEntry["calcDamageOptions"]
+        : keptOptions as PersistedUndoEntry["calcDamageOptions"],
+      updateOptions: entry.updateOptions
+    };
+  });
+}
+
+/**
+ * What the card needs beyond the damage entries themselves, so it can be rendered from data.
+ *
+ * The decisions taken when the damage was applied; everything else is derived or looked up live.
+ * Storing them stops a later settings change silently restyling an old card.
+ */
+export interface DamageCardOptions {
+  player: boolean;
+  doHits: boolean;
+  autoApplyDamage: string;
+  forceApply: boolean;
+  showNPC: boolean;
+  playerButtons?: boolean;
+}
+
+/** Build a damage card's context from the message. Shared by card creation and the sub-type render. */
+export async function buildDamageCardContext(
+  message: ChatMessage.Implementation,
+  card: DamageCardOptions
+): Promise<{
+  damageApplied: string;
+  damageWasApplied: boolean;
+  damageList: DamageListContextEntry[];
+  needsButtonAll: boolean;
+  showNPC: boolean;
+  playerButtons?: boolean;
+  healingLabel: string;
+}> {
+  const flags: any = message.flags?.[MODULE_ID];
+  const damageList = recoverUndoListFromFlag(message, flags?.undoDamage ?? []) as unknown as DamageListEntry[];
+  // Must match what card creation computes: it decides which of apply/undo is the live button.
+  const damageWasApplied = card.doHits
+    && (["yes", "yesCard", "yesCardMisses"].includes(card.autoApplyDamage) || card.forceApply);
+  const templateData = {
+    damageWasApplied,
+    damageApplied: damageWasApplied ? i18n("midi-qol.HPUpdated")
+      : card.autoApplyDamage === "yesCardNPC" ? i18n("midi-qol.HPNPCUpdated") : i18n("midi-qol.HPNotUpdated"),
+    damageList: [] as DamageListContextEntry[],
+    needsButtonAll: damageList.length > 1,
+    showNPC: card.showNPC,
+    playerButtons: card.playerButtons,
+    // v13 only: the player template localises healing through this, v14 inlines it.
+    healingLabel: getHealingLabel()
+  };
+  // createPromises false: this builds the display only, it must never re-apply damage
+  await prepareDamageListItems(
+    { damageList, autoApplyDamage: card.autoApplyDamage, flagTags: null, forceApply: card.forceApply, updateOptions: {} },
+    templateData, [], false, card.showNPC, card.doHits, true);
+  return templateData;
+}
+
+/**
+ * Recover a stored entry, sharing every decoding rule with the socket path. Accepts the full socket
+ * shape too, so messages written before the payload was pruned keep working.
+ *
+ * Puts back the DUPLICATED_MIDI_OPTIONS the flag does not carry - midi's own dnd5e.preApplyDamage
+ * handler reads `midi.sourceActorUuid`. Only fills what is absent, so older entries keep theirs.
+ */
+function recoverUndoListFromFlag(message: ChatMessage.Implementation,
+  damageList: (PersistedUndoEntry | SerializedDamageListEntry)[]): RecoveredUndoEntry[] {
+  const sourceActorUuid = message?.flags?.[MODULE_ID]?.actorUuid;
+  const recovered = recoverDamageListFromJSON(damageList as SerializedDamageListEntry[]);
+  for (const entry of recovered) {
+    const midi = entry.calcDamageOptions?.midi;
+    if (!midi) continue;
+    midi.targetUuid ??= entry.targetUuid;
+    if (sourceActorUuid) midi.sourceActorUuid ??= sourceActorUuid;
+  }
+  return recovered;
+}
+
 export function prepareDamageListToJSON(damageList: DamageListEntry[]) {
   const newDL = foundry.utils.deepClone(damageList).map(damageItem => {
     const { downgrade, ignore } = damageItem.calcDamageOptions;
@@ -3041,8 +3257,14 @@ function recoverDamageListFromJSON(damageList: SerializedDamageListEntry[]): Dam
       }
     }
     const newDamageDetail = recoverDamageDetailFromJSON(damageItem.damageDetail);
-    const newRawDamageDetail = recoverDamageDetailFromJSON(damageItem.rawDamageDetail);
-    const newDamageDetails = Object.fromEntries(Object.entries(damageItem.damageDetails).map(([key, value]) => [key, recoverDamageDetailFromJSON(value)]));
+    // A stored entry carries neither (see prepareDamageListForFlag); a socket payload and a
+    // message written before the prune carry both. rawDamageDetail falls back to the detail
+    // itself, which is what it holds except where a multiplier has been applied.
+    const newRawDamageDetail = damageItem.rawDamageDetail
+      ? recoverDamageDetailFromJSON(damageItem.rawDamageDetail)
+      : newDamageDetail;
+    const newDamageDetails = Object.fromEntries(Object.entries(damageItem.damageDetails ?? {})
+      .map(([key, value]) => [key, recoverDamageDetailFromJSON(value)]));
     const unSerializedEntry: DamageListEntry = {
       ...damageItem,
       calcDamageOptions: {

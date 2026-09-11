@@ -53,12 +53,32 @@
       </select>
     </div>
 
-    <div class="form-group">
-      <label>{{localize "midi-qol.HideRollDetails.Name"}}</label>
-      <select name="hideRollDetails" data-dtype="String">
-        {{midiSelectOptions hideRollDetailsOptions selected=configSettings.hideRollDetails localize=true}}
-      </select>
-      <div class="notes midi-qol-faint">{{{localize "midi-qol.HideRollDetails.Hint"}}}</div>
+    <div class="midi-qol-box">
+      <div class="midi-qol-settings heading">{{localize "midi-qol.GMRollHiding"}}</div>
+      <div class="form-group">
+        <label>{{localize "midi-qol.GMAttackDisplay.Name"}}</label>
+        <div class="form-fields">
+          <select name="gmAttackDisplay" data-dtype="String">
+            {{midiSelectOptions gmAttackDisplayOptions selected=configSettings.gmAttackDisplay localize=true}}
+          </select>
+          <select name="gmAttackDsn" data-dtype="String">
+            {{midiSelectOptions gmDsnDisplayOptions selected=configSettings.gmAttackDsn localize=true}}
+          </select>
+        </div>
+        <div class="notes midi-qol-faint">{{{localize "midi-qol.GMAttackDisplay.Hint"}}}</div>
+      </div>
+      <div class="form-group">
+        <label>{{localize "midi-qol.GMDamageDisplay.Name"}}</label>
+        <div class="form-fields">
+          <select name="gmDamageDisplay" data-dtype="String">
+            {{midiSelectOptions gmDamageDisplayOptions selected=configSettings.gmDamageDisplay localize=true}}
+          </select>
+          <select name="gmDamageDsn" data-dtype="String">
+            {{midiSelectOptions gmDsnDisplayOptions selected=configSettings.gmDamageDsn localize=true}}
+          </select>
+        </div>
+        <div class="notes midi-qol-faint">{{{localize "midi-qol.GMDamageDisplay.Hint"}}}</div>
+      </div>
     </div>
 
     <div class="form-group">
@@ -67,16 +87,9 @@
       <div class="notes midi-qol-faint">{{localize "midi-qol.dummyCards.Hint"}}</div>
     </div>
     <div class="form-group">
-      <label>{{localize "midi-qol.GMHide3dDice.Name"}}</label>
-      <input type="checkbox" name="gmHide3dDice" data-dtype="Boolean" {{checked configSettings.gmHide3dDice}} />
-    </div>
-    <div class="form-group">
-      <label>{{localize "midi-qol.GhostRolls.Name"}}</label>
-      <input type="checkbox" name="ghostRolls" data-dtype="Boolean" {{checked configSettings.ghostRolls}} />
-    </div>
-    <div class="form-group">
       <label>{{localize "midi-qol.AddFakeDice.Name"}}</label>
       <input type="checkbox" name="addFakeDice" data-dtype="Boolean" {{checked configSettings.addFakeDice}} />
+      <div class="notes midi-qol-faint">{{localize "midi-qol.AddFakeDice.Hint"}}</div>
     </div>
 
     <div class="form-group">

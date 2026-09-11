@@ -29,7 +29,6 @@
   },
   "midi-qol.AutoApplyDamage.Name": "Automatizace aplikace zásahu na cíl",
   "midi-qol.AutoApplyDamage.Hint": "Automaticky aplikuje zranění na zasažené cíle (pokud je povoleno ověření zásahů), nebo na cíle vybrané uživatelem.",
-  "midi-qol.DamageCardStyle.Name": "Styl karty zásahu",
   "midi-qol.PlayerDamageCard.Name": "Zobrazování karty zásahu hráče",
   "midi-qol.PlayerDamageCard.Hint": "Zjednodušená verze karty zásahu. Zobrazí se pouze, pokud byla zobrazena karta PJ. Zjednodušená karta se PJ nezobrazuje.",
   "midi-qol.PlayerCardDamageDifferent.Name": "Zobrazovat kartu zásahu hráče, pokud se hozené zranění neshoduje s aplikovaným zraněním pro některý z cílů?",
@@ -288,10 +287,6 @@
     "yesCard": "Ano + karta zásahu",
     "yesCardMisses": "Ano + karta zásahu + selhání",
     "yesCardNPC": "Ano(NP), Ne(hráči) + karta zásahu"
-  },
-  "midi-qol.damageCardStyleOptions": {
-    "flexbox": "Rozložení Flexbox",
-    "classic": "Klasické (tabulka)"
   },
   "midi-qol.playerDamageCardOptions": {
     "none": "Nezobrazovat",

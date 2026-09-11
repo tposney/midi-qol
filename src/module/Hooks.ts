@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
+import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, obscureRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard, queueConditionUpdateFromCreate, queueConditionUpdateFromDelete } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget, rangeToSceneUnits } from "./utils.js";
 import { checkMechanic, checkRule, configSettings, dragDropTargeting, isDnd5e53, setDnd5e53 } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook, getTemplateSourceToken } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -32,8 +32,7 @@ export let readyHooks = async () => {
 
   //@ts-expect-error
   Hooks.on("template3dUpdatePreview", (at, t) => {
-    //@ts-expect-error VolumetricTemplates
-    VolumetricTemplates.compute3Dtemplate(t);
+    globalThis.VolumetricTemplates?.compute3Dtemplate(t);
   });
 
   Hooks.on("targetToken", foundry.utils.debounce(checkFlanking, 150));
@@ -416,7 +415,7 @@ export let readyHooks = async () => {
       combat.rollInitiative(combatantIds, { updateTurn: true }).then(() => {
         // Check if combat was deleted during async operation
         if (game.combats?.get(combatId)) combat.update({ turn: 0 });
-      });
+      }).catch(err => TroubleShooter.recordError(err, "autoRerollInitiative"));
     }
   });
 }
@@ -486,11 +485,35 @@ export function initHooks() {
     if (debugEnabled > 1) debug("render message hook ", message.id, message, html, data);
     // chatDamageButtons(message, html, data); This no longer works since the html is rewritten
     processUndoDamageCard(message, html, data);
+    resolveTokenThumbnails(html);
     colorChatMessageHandler(message, html, data);
     hideRollRender(message, html, data);
+    obscureRollRender(message, html, data);
     hideStuffHandler(message, html, data);
     processConcentrationRequestMessage(message, html, data);
   });
+
+  /**
+   * Put a still frame in the <img> for an animated token.
+   *
+   * The card stores the video's path rather than a rendered thumbnail: createThumbnail returns a
+   * base64 data URI, and writing that into the message content persisted ~27KB per animated target
+   * for the life of the world. Generating it here costs nothing after the first card — Foundry
+   * caches thumbnails per source in game.video.thumbs.
+   */
+  async function resolveTokenThumbnails(html: HTMLElement) {
+    for (const img of Array.from(html.querySelectorAll<HTMLImageElement>("img[data-midi-video-src]"))) {
+      const src = img.dataset.midiVideoSrc;
+      if (!src) continue;
+      try {
+        const thumb = game.video?.thumbs?.get(src) ?? await game.video?.createThumbnail(src, { width: 100, height: 100 });
+        if (thumb) img.src = thumb;
+      } catch (err) {
+        // the placeholder portrait already in the src is a fine outcome
+        if (debugEnabled > 0) warn("Could not create a token thumbnail for", src, err);
+      }
+    }
+  }
 
   Hooks.on("deleteChatMessage", (message, options, user) => {
     Workflow.deleteWorkflow(message.uuid);
@@ -1220,6 +1243,8 @@ function applySaves({ damages, options }: DamageCalcParams): void {
 
   for (const damage of damages) {
     if (isDRType(damage.type)) continue;
+    // Other damage carries its own multiplier - all categories share one calculateDamage call.
+    const entrySaveMultiplier = damage.midiSaveMultiplier ?? mo.saveMultiplier;
 
     const ignoringSuperSaver = mo.superSaver && shouldIgnore(options, "superSaver", damage.type);
     const ignoringSemiSuperSaver = mo.semiSuperSaver && shouldIgnore(options, "semiSuperSaver", damage.type);
@@ -1228,17 +1253,17 @@ function applySaves({ damages, options }: DamageCalcParams): void {
     if (mo.superSaver && !ignoringSuperSaver) {
       setDamageActiveFlag(damage, "superSaver");
     }
-    if (mo.semiSuperSaver && !ignoringSemiSuperSaver && (mo.saveMultiplier ?? 1) !== 1) {
+    if (mo.semiSuperSaver && !ignoringSemiSuperSaver && (entrySaveMultiplier ?? 1) !== 1) {
       setDamageActiveFlag(damage, "semiSuperSaver");
     }
-    if (mo.saved && !ignoringSaved && (mo.saveMultiplier ?? 1) !== 1) {
+    if (mo.saved && !ignoringSaved && (entrySaveMultiplier ?? 1) !== 1) {
       setDamageActiveFlag(damage, "saved");
     }
 
     if (mo.saved && !ignoringSaved) {
       const multiplier = ignoringSuperSaver
         ? configSettings.defaultSaveMultiplier
-        : (mo.superSaver ? 0 : (mo.saveMultiplier ?? 1));
+        : (mo.superSaver ? 0 : (entrySaveMultiplier ?? 1));
       damage.value = damage.value * multiplier;
       foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * multiplier);
     } else if (mo.superSaver && !ignoringSuperSaver) {
@@ -2013,10 +2038,8 @@ Hooks.on("dnd5e.preCreateActivityTemplate", (activity, templateData) => {
   if (rangeUnits && rangeUnits !== "self" && rangeUnits !== "none" && rangeUnits !== "any") {
     let maxRange = range.long || range.value;
     if (maxRange && maxRange > 0) {
-      // Convert touch range to a small distance
-      if (rangeUnits === "touch") {
-        maxRange = canvas?.dimensions?.distance ?? 5;
-      }
+      if (rangeUnits === "touch") maxRange = canvas?.dimensions?.distance ?? 5;
+      else maxRange = rangeToSceneUnits(maxRange, rangeUnits);
       foundry.utils.setProperty(templateData, "flags.midi-qol.maxRange", maxRange);
     }
   }
