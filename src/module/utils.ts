@@ -1210,11 +1210,10 @@ async function getOvertimeActivity(actor: Actor.Implementation, effect: ActiveEf
     }
   }
   if (!activity) {
-    console.error(`getOvertimeActivity | activity not found for changeValue: "${changeValue}"`);
+    if (debugEnabled > 0) debug(`getOvertimeActivity | activity not found for changeValue: "${changeValue}"`);
     return undefined;
   }
   const turnChoice = activity.overTimeProperties?.turnChoice ?? "start";
-  console.error(`getOvertimeActivity | found activity: ${activity.name}, turnChoice: ${turnChoice}, startTurn: ${startTurn}`);
   // Check start/end turn
   if (turnChoice === "start" && !startTurn) return undefined;
   if (turnChoice === "end" && startTurn) return undefined;
@@ -1230,7 +1229,6 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
   for (let change of changes) {
     const activity = await getOvertimeActivity(actor, effect, change, startTurn);
     if (!activity) {
-      console.warn(`midi-qol | localActivityOverTime | for actor ${actor} activity ${change.value} not found or not overTime`);
       continue;
     }
     // Determine which actor should roll the overtime activity
@@ -1284,20 +1282,30 @@ export async function localActivityOverTimeEffect(actor: Actor.Implementation, e
 
     // Check save condition
     if (activity.overTimeProperties?.saveRemoves && overTimeWorkflow?.saves.has(getOrCreateTokenForActor(actor)!)) {
+      let removedTriggeringEffects = false;
       if (activity.overTimeProperties.removeTriggeringActivityEffects) {
-        const triggeringEffectUuids = effect.flags?.[MODULE_ID]?.autoOverTime?.triggeringEffectUuids ?? [];
-        const triggeringActivityUuid = effect.flags?.[MODULE_ID]?.autoOverTime?.triggeringActivityUuid;
+        const autoOverTime = (effect.flags?.[MODULE_ID]?.autoOverTime ?? {}) as Record<string, any>;
+        const triggeringEffectUuids = autoOverTime.triggeringEffectUuids ?? [];
+        const triggeringActivityUuid = autoOverTime.triggeringActivityUuid;
+        const triggeringEffectOrigins = autoOverTime.triggeringEffectOrigins ?? [];
         const triggeringEffects = actor.appliedEffects.filter(activeEffect => {
           if (activeEffect.uuid === effect.uuid) return false;
           if (triggeringEffectUuids.includes(activeEffect.uuid)) return true;
+          if (triggeringEffectOrigins.includes(activeEffect.origin ?? "")) return true;
+          if (triggeringEffectOrigins.includes(String(foundry.utils.getProperty(activeEffect, "flags.dnd5e.dependentOn") ?? ""))) return true;
+          if (triggeringActivityUuid && activeEffect.flags?.dae?.activity === triggeringActivityUuid) return true;
           if (triggeringEffectUuids.length > 0) return false;
           return triggeringActivityUuid ? activeEffect.origin === triggeringActivityUuid : false;
         });
         if (triggeringEffects.length > 0) {
-          await expireEffects(actor, triggeringEffects, { "expiry-reason": "midi-qol:activityOverTime:saveRemovesTrigger" });
+          const removeOptions = { "expiry-reason": "midi-qol:activityOverTime:saveRemovesTrigger" };
+          for (const triggeringEffect of triggeringEffects) {
+            await triggeringEffect.delete(removeOptions as any);
+          }
+          removedTriggeringEffects = true;
         }
       }
-      await effect.delete();
+      if (!removedTriggeringEffects && fromUuidSync(effect.uuid)) await effect.delete();
       return;
     }
     // Check remove condition
@@ -1342,9 +1350,14 @@ export async function applyTriggeredActivityAsOverTime(triggeringWorkflow: Workf
   let effectApplied = false;
 
   for (const targetActor of targetActors) {
-    const triggeringEffectUuids = targetActor.appliedEffects
-      .filter(activeEffect => triggeringEffectOrigins.has(activeEffect.origin ?? ""))
-      .map(activeEffect => activeEffect.uuid);
+    const triggeringEffects = targetActor.appliedEffects.filter(activeEffect => {
+      if (triggeringEffectOrigins.has(activeEffect.origin ?? "")) return true;
+      if (triggeringEffectOrigins.has(String(foundry.utils.getProperty(activeEffect, "flags.dnd5e.dependentOn") ?? ""))) return true;
+      if (triggeringWorkflow.activity?.uuid && activeEffect.flags?.dae?.activity === triggeringWorkflow.activity.uuid) return true;
+      return false;
+    });
+    const triggeringEffectUuids = triggeringEffects.map(activeEffect => activeEffect.uuid);
+    const sourceEffect = triggeringEffects[0];
 
     const autoOverTimeData = {
       activityUuid: activity.uuid,
@@ -1355,26 +1368,32 @@ export async function applyTriggeredActivityAsOverTime(triggeringWorkflow: Workf
       triggeringActivityName,
       triggeringItemCardUuid,
       triggeringEffectUuids,
+      triggeringEffectOrigins: Array.from(triggeringEffectOrigins),
     };
 
-    const convertedDuration = convertDuration(activity.duration, isInCombat(targetActor));
-    let duration: any = {
-      startRound: game.combat?.round,
-      startTurn: game.combat?.turn,
-      startTime: game.time?.worldTime,
-    };
-    if (convertedDuration.type === "seconds") {
+    let duration: any = sourceEffect ? foundry.utils.duplicate(sourceEffect.toObject().duration ?? {}) : {};
+    if (duration.expired !== undefined) duration.expired = false;
+    const shouldUseActivityDuration = activity.duration?.units && !["inst"].includes(activity.duration.units);
+    if (!sourceEffect && shouldUseActivityDuration) {
+      const convertedDuration = convertDuration(activity.duration, isInCombat(targetActor));
       duration = {
-        seconds: Math.max(convertedDuration.seconds ?? 1, 1),
-        startTime: game.time?.worldTime,
-      };
-    } else if (convertedDuration.type === "turns") {
-      duration = {
-        rounds: convertedDuration.rounds,
-        turns: (convertedDuration.rounds ?? 0) > 0 ? convertedDuration.turns : Math.max(convertedDuration.turns ?? 1, 1),
         startRound: game.combat?.round,
         startTurn: game.combat?.turn,
+        startTime: game.time?.worldTime,
       };
+      if (convertedDuration.type === "seconds") {
+        duration = {
+          seconds: Math.max(convertedDuration.seconds ?? 1, 1),
+          startTime: game.time?.worldTime,
+        };
+      } else if (convertedDuration.type === "turns") {
+        duration = {
+          rounds: convertedDuration.rounds,
+          turns: (convertedDuration.rounds ?? 0) > 0 ? convertedDuration.turns : Math.max(convertedDuration.turns ?? 1, 1),
+          startRound: game.combat?.round,
+          startTurn: game.combat?.turn,
+        };
+      }
     }
 
     const effectData: any = {
@@ -1403,8 +1422,9 @@ export async function applyTriggeredActivityAsOverTime(triggeringWorkflow: Workf
       },
     };
 
-    if (concentrationUuid) {
-      foundry.utils.setProperty(effectData, "flags.dnd5e.dependentOn", concentrationUuid);
+    const dependentOnUuid = sourceEffect?.uuid ?? concentrationUuid;
+    if (dependentOnUuid) {
+      foundry.utils.setProperty(effectData, "flags.dnd5e.dependentOn", dependentOnUuid);
     }
 
     const existingEffect = targetActor.appliedEffects.find((existing) => {
