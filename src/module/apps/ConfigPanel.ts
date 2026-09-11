@@ -1,4 +1,4 @@
-import { criticalDamage, criticalDamageChoices, nsaFlag, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, visionTestHeightOptions, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, damageCardStyleOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, gmAttackDisplayOptions, gmDamageDisplayOptions, gmDsnDisplayOptions, checkFlankingOptions, flankingBonusOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions, safeGetGameSetting, resetConfigSettingsToDefaults, distanceMeasurementOptions } from "../settings.js"
+import { criticalDamage, criticalDamageChoices, nsaFlag, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, visionTestHeightOptions, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, gmAttackDisplayOptions, gmDamageDisplayOptions, gmDsnDisplayOptions, blindRollDisplayOptions, checkFlankingOptions, flankingBonusOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, defaultOtherActivityOptions, doConcentrationCheckOptions, addChatDamageButtonsOptions, activationAutomationOptions, safeGetGameSetting, resetConfigSettingsToDefaults, distanceMeasurementOptions } from "../settings.js"
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, debugEnabled, log, GameSystemConfig, ceInterface } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
@@ -94,9 +94,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         CoverCalculationOptions[module.id] = withOptionLabel(CoverCalculationOptions[module.id], `${i18n(CoverCalculationOptions[module.id])} - ${notInstalled}`);
       }
     });
-    if (!installedModules.get("levels")) {
-      wallsBlockRangeOptions["centerLevels"] = withOptionLabel(wallsBlockRangeOptions["centerLevels"], `${i18n(wallsBlockRangeOptions["centerLevels"])} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Levels" })}`);
-    }
     // Mark walledtemplates option as "not installed" when the module is not active
     const autoTargetOptionsLocalized: SelectOptions = foundry.utils.duplicate(autoTargetOptions);
     if (!installedModules.get("walledtemplates")) {
@@ -189,6 +186,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       quickSettingsOptions,
       autoCheckHitOptions,
       autoTargetOptions: autoTargetOptionsLocalized,
+      defaultOtherActivityOptions,
       rangeTargetOptions,
       requiresTargetsOptions,
       autoCheckSavesOptions,
@@ -197,7 +195,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       criticalDamage,
       criticalDamageChoices,
       autoApplyDamageOptions,
-      damageCardStyleOptions,
+     
       playerDamageCardOptions,
       damageImmunitiesOptions,
       showItemDetailsOptions,
@@ -220,6 +218,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       gmAttackDisplayOptions,
       gmDamageDisplayOptions,
       gmDsnDisplayOptions,
+      blindRollDisplayOptions,
       checkFlankingOptions: checkFlankingOptionsLocalized,
       flankingBonusOptions,
       nsaFlag,

@@ -7,7 +7,7 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, tokenAtPosition, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, convertDuration, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
@@ -91,7 +91,6 @@ export let log = (...args: any[]) => console.log("midi-qol | ", ...args);
 export let warn = (...args: any[]) => { if (debugEnabled > 0) console.warn("midi-qol | ", ...args) };
 export let error = (...args: any[]) => console.error("midi-qol | ", ...args);
 export let timelog = (...args: any[]) => warn("midi-qol | ", Date.now(), ...args);
-export let levelsAPI: any;
 // export let allDamageTypes;
 export const MODULE_ID = "midi-qol";
 
@@ -172,14 +171,10 @@ export let MQDamageRollTypes = ["defaultDamage", "otherDamage", "bonusDamage"];
 /* ------------------------------------ */
 /* Initialize module					*/
 /* ------------------------------------ */
-//@ts-expect-error
-Hooks.once("levelsReady", function () {
-  // @ts-expect-error
-  levelsAPI = CONFIG.Levels.API;
-});
 Hooks.once("init", () => {
   registerHandlebarsHelpers();
   setupChatMessageMidi();
+  setupDamageCardMessage();
   //@ts-expect-error
   CONFIG.ChatMessage.documentClass = ChatMessageMidi;
   // @ts-expect-error
@@ -202,6 +197,8 @@ Object.assign(globalThis.MidiQOL, {
   canSense,
   canSenseModes,
   checkActivityRange,
+  isRangeCheckable,
+  activityRanges,
   checkDistance,
   checkIncapacitated,
   checkNearby,
@@ -210,7 +207,9 @@ Object.assign(globalThis.MidiQOL, {
   completeActivityUse,
   computeAbilityAdvantage,
   computeCoverBonus,
+  tokenAtPosition,
   computeDistance,
+  convertDuration,
   computeSkillAdvantage,
   computeToolAdvantage,
   contestedRoll,
@@ -877,6 +876,7 @@ Hooks.once('ready', function () {
 });
 
 import { setupChatMessageMidi, ChatMessageMidi } from './module/ChatClasses/ChatMessageMidi.js';
+import { setupDamageCardMessage } from './module/ChatClasses/DamageCardMessage.js';
 import { MidiSaveActivity, setupSaveActivity } from './module/activities/SaveActivity.js';
 import { MidiUtilityActivity, setupUtilityActivity } from './module/activities/UtilityActivity.js';
 import { MidiSummonActivity, setupSummonActivity } from './module/activities/SummonActivity.js';
@@ -972,6 +972,7 @@ function setupMidiQOLApi() {
     checkActivityRange,
     checkRule,
     computeCoverBonus,
+    tokenAtPosition,
     computeDistance,
     getDistance,
     contestedRoll,

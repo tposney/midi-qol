@@ -1,92 +1,111 @@
-<section class="tab mid-qol-{{ tab.id }} {{ tab.cssClass }}" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
-  <fieldset>
-    <legend>{{localize "midi-qol.SHARED.use-condition.header"}}</legend>
-    {{ formField fields.useConditionText value=source.useConditionText }}
-    {{ formField fields.useConditionReason value=source.useConditionReason }}
-    {{ formField fields.effectConditionText value=source.effectConditionText }}
-    {{ formField fields.midiProperties.fields.chooseEffects value=source.midiProperties.chooseEffects input=@root.inputs.createCheckboxInput }}
-    {{ formField fields.midiProperties.fields.toggleEffect value=source.midiProperties.toggleEffect input=@root.inputs.createCheckboxInput }}
-    {{ formField fields.midiProperties.fields.noConcentrationCheck value=source.midiProperties.noConcentrationCheck input=@root.inputs.createCheckboxInput }}
-    {{#if consumesHP}}
-      {{ formField fields.midiProperties.fields.skipConcentrationCheck value=source.midiProperties.skipConcentrationCheck input=@root.inputs.createCheckboxInput }}
-    {{/if}}
-  </fieldset>
-  <fieldset>
-    {{#with fields.midiProperties.fields as |fields|}}
-      {{ formField fields.rollMode value=../source.midiProperties.rollMode options=../RollModeOptions localize=true}}
-      {{ formField fields.removeChatButtons value=../source.midiProperties.removeChatButtons options=../RemoveChatButtonsOptions localize=true}}
-      {{ formField fields.displayActivityName value=../source.midiProperties.displayActivityName input=@root.inputs.createCheckboxInput }}
-      {{ formField fields.identifier value=../source.midiProperties.identifier placeholder=../placeholderIdentifier }}
-      {{ formField fields.autoConsume value=../source.midiProperties.autoConsume input=@root.inputs.createCheckboxInput}}
-      {{ formField fields.forceConsumeDialog value=../source.midiProperties.forceConsumeDialog options=../ConsumeDialogOptions localize=true}}
-      {{ formField fields.forceRollDialog value=../source.midiProperties.forceRollDialog options=../RollDialogOptions localize=true}}
-      {{ formField fields.forceDamageDialog value=../source.midiProperties.forceDamageDialog options=../DamageDialogOptions localize=true}}
-      {{ formField fields.confirmTargets value=../source.midiProperties.confirmTargets options=../ConfirmTargetOptions localize=true}}
+<section class="tab midi-qol mid-qol-{{ tab.id }} {{ tab.cssClass }}" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
+  {{> "templates/generic/tab-navigation.hbs" tabs=tab.tabs }}
 
-      {{#if ../hasAreaTarget}}
-        {{ formField fields.autoTargetType value=../source.midiProperties.autoTargetType options=../AutoTargetTypeOptions localize=true}}
-        {{ formField fields.autoTargetAction value=../source.midiProperties.autoTargetAction localize=true
-          options=../AutoTargetActionOptions}}
-      {{/if}}
-      {{#if CEActive}}
-        {{ formField fields.autoCEEffects value=../source.midiProperties.autoCEEffects options=../AutoCEEffectsOptions localize=true}}
-      {{/if}}
-      {{ formField fields.automationOnly value=../source.midiProperties.automationOnly input=@root.inputs.createCheckboxInput }}
-      {{#if ../possibleOtherActivity}}
-        {{ formField fields.otherActivityCompatible value=../source.midiProperties.otherActivityCompatible input=@root.inputs.createCheckboxInput }}
-      {{/if}}
-      {{#if ../hasDamage }}
-        {{ formField fields.ignoreFullCover value=../source.midiProperties.ignoreFullCover input=@root.inputs.createCheckboxInput }}
-        {{ formField fields.ignoreTraits value=../source.midiProperties.ignoreTraits options=../ignoreTraitsOptions
-          label="midi-qol.SHARED.ignore.header" localize=true classes="multi-select"}}
-        {{ formField fields.magicDamage value=../source.midiProperties.magicDamage input=@root.inputs.createCheckboxInput }}
-      {{/if}}
-    {{/with}}
-    {{#if isSummons}}
-      {{ formField fields.friendlySummon value=source.friendlySummon input=@root.inputs.createCheckboxInput }}
-    {{/if}}
-  </fieldset>
-  {{#if (ne fields.otherActivityId undefined)}}
+  <section class="tab activity-{{ tab.tabs.modConditions.id }} {{ tab.tabs.modConditions.cssClass }}"
+    data-tab="{{ tab.tabs.modConditions.id }}" data-group="{{ tab.tabs.modConditions.group }}">
     <fieldset>
-      {{ formField fields.otherActivityId value=source.otherActivityId options=otherActivityOptions}}
-      {{ formField fields.otherActivityAsParentType value=source.otherActivityAsParentType input=@root.inputs.createCheckboxInput}}        
-    </fieldset>
-  {{/if}}
-  <fieldset>
-    {{#with fields.midiProperties.fields as |fields|}}
-      {{ formField fields.triggeredActivityId value=../source.midiProperties.triggeredActivityId localize=true
-        options=../triggeredActivityOptions}}
-      {{#if (ne ../source.midiProperties.triggeredActivityId "none")}}
-        {{ formField fields.triggeredActivityConditionText value=../source.midiProperties.triggeredActivityConditionText }}
-        {{ formField fields.triggeredActivityTargets value=../source.midiProperties.triggeredActivityTargets localize=true
-          options=../triggeredActivityTargetOptions}}
-        {{ formField fields.triggeredActivityRollAs value=../source.midiProperties.triggeredActivityRollAs localize=true
-          options=../triggeredActivityRollAsOptions}}
-        {{ formField fields.triggeredActivityConsume value=../source.midiProperties.triggeredActivityConsume }}
-        {{ formField fields.triggeredActivityConfigure value=../source.midiProperties.triggeredActivityConfigure }}
+      {{ formField fields.useConditionText value=source.useConditionText }}
+      {{ formField fields.useConditionReason value=source.useConditionReason }}
+      {{ formField fields.effectConditionText value=source.effectConditionText }}
+      {{ formField fields.midiProperties.fields.chooseEffects value=source.midiProperties.chooseEffects input=@root.inputs.createCheckboxInput }}
+      {{ formField fields.midiProperties.fields.toggleEffect value=source.midiProperties.toggleEffect input=@root.inputs.createCheckboxInput }}
+      {{ formField fields.midiProperties.fields.noConcentrationCheck value=source.midiProperties.noConcentrationCheck input=@root.inputs.createCheckboxInput }}
+      {{#if consumesHP}}
+        {{ formField fields.midiProperties.fields.skipConcentrationCheck value=source.midiProperties.skipConcentrationCheck input=@root.inputs.createCheckboxInput }}
       {{/if}}
-    {{/with}}
-  </fieldset>
-  <fieldset>
-    <legend> {{ localize "midi-qol.OVERTIME.extras.header" }} </legend>
-    {{ formField fields.isOverTimeFlag value=source.isOverTimeFlag input=@root.inputs.createCheckboxInput }}
-    {{#if source.isOverTimeFlag}}
-      {{#with fields.overTimeProperties.fields as |fields|}}
-        {{ formField fields.turnChoice value=../source.overTimeProperties.turnChoice options=../turnChoiceOptions localize=true}}
-        {{ formField fields.rollAs value=../source.overTimeProperties.rollAs options=../overTimeRollAsOptions localize=true}}
-        {{ formField fields.saveRemoves value=../source.overTimeProperties.saveRemoves input=@root.inputs.createCheckboxInput }}
-        {{ formField fields.preRemoveConditionText value=../source.overTimeProperties.preRemoveConditionText}}
-        {{ formField fields.postRemoveConditionText value=../source.overTimeProperties.postRemoveConditionText}}
-        {{/with}}
+    </fieldset>
+  </section>
+
+  <section class="tab activity-{{ tab.tabs.workflowSettings.id }} {{ tab.tabs.workflowSettings.cssClass }}"
+    data-tab="{{ tab.tabs.workflowSettings.id }}" data-group="{{ tab.tabs.workflowSettings.group }}">
+    <fieldset>
+      {{#with fields.midiProperties.fields as |fields|}}
+        {{ formField fields.rollMode value=../source.midiProperties.rollMode options=../RollModeOptions localize=true}}
+        {{ formField fields.removeChatButtons value=../source.midiProperties.removeChatButtons options=../RemoveChatButtonsOptions localize=true}}
+        {{ formField fields.displayActivityName value=../source.midiProperties.displayActivityName input=@root.inputs.createCheckboxInput }}
+        {{ formField fields.identifier value=../source.midiProperties.identifier placeholder=../placeholderIdentifier }}
+        {{ formField fields.autoConsume value=../source.midiProperties.autoConsume input=@root.inputs.createCheckboxInput}}
+        {{ formField fields.forceConsumeDialog value=../source.midiProperties.forceConsumeDialog options=../ConsumeDialogOptions localize=true}}
+        {{ formField fields.forceRollDialog value=../source.midiProperties.forceRollDialog options=../RollDialogOptions localize=true}}
+        {{ formField fields.forceDamageDialog value=../source.midiProperties.forceDamageDialog options=../DamageDialogOptions localize=true}}
+        {{ formField fields.confirmTargets value=../source.midiProperties.confirmTargets options=../ConfirmTargetOptions localize=true}}
+
+        {{#if ../hasAreaTarget}}
+          {{ formField fields.autoTargetType value=../source.midiProperties.autoTargetType options=../AutoTargetTypeOptions localize=true}}
+          {{ formField fields.autoTargetAction value=../source.midiProperties.autoTargetAction localize=true
+            options=../AutoTargetActionOptions}}
+        {{/if}}
+        {{#if CEActive}}
+          {{ formField fields.autoCEEffects value=../source.midiProperties.autoCEEffects options=../AutoCEEffectsOptions localize=true}}
+        {{/if}}
+        {{ formField fields.automationOnly value=../source.midiProperties.automationOnly input=@root.inputs.createCheckboxInput }}
+        {{#if ../possibleOtherActivity}}
+          {{ formField fields.otherActivityCompatible value=../source.midiProperties.otherActivityCompatible input=@root.inputs.createCheckboxInput }}
+        {{/if}}
+        {{#if ../hasDamage }}
+          {{ formField fields.ignoreFullCover value=../source.midiProperties.ignoreFullCover input=@root.inputs.createCheckboxInput }}
+          {{ formField fields.ignoreTraits value=../source.midiProperties.ignoreTraits options=../ignoreTraitsOptions
+            label="midi-qol.SHARED.ignore.header" localize=true classes="multi-select"}}
+          {{ formField fields.magicDamage value=../source.midiProperties.magicDamage input=@root.inputs.createCheckboxInput }}
+        {{/if}}
+      {{/with}}
+      {{#if isSummons}}
+        {{ formField fields.friendlySummon value=source.friendlySummon input=@root.inputs.createCheckboxInput }}
+      {{/if}}
+    </fieldset>
+  </section>
+
+  <section class="tab activity-{{ tab.tabs.activityManagement.id }} {{ tab.tabs.activityManagement.cssClass }}"
+    data-tab="{{ tab.tabs.activityManagement.id }}" data-group="{{ tab.tabs.activityManagement.group }}">
+    {{#if (ne fields.otherActivityId undefined)}}
+      <fieldset>
+        {{ formField fields.otherActivityId value=source.otherActivityId options=otherActivityOptions}}
+        {{ formField fields.otherActivityAsParentType value=source.otherActivityAsParentType input=@root.inputs.createCheckboxInput}}
+      </fieldset>
     {{/if}}
-  </fieldset>
-  <fieldset>
-    <label> {{ localize 'midi-qol.SHARED.FIELDS.ActivityMacro.label' }}
-      <button type="button" class="unbutton control-button" data-action="addMacro"
-        data-tooltip="midi-qol.SHARED.FIELDS.ActivityMacro.hint"
-        aria-label="{{ localize 'midi-qol.SHARED.FIELDS.ActivityMacro.label' }}">
-        <i class="fas fa-file-pen" inert></i>
-      </button>
-    </label>
-  </fieldset>
+    <fieldset>
+      {{#with fields.midiProperties.fields as |fields|}}
+        {{ formField fields.triggeredActivityId value=../source.midiProperties.triggeredActivityId localize=true
+          options=../triggeredActivityOptions}}
+        {{#if (ne ../source.midiProperties.triggeredActivityId "none")}}
+          {{ formField fields.triggeredActivityConditionText value=../source.midiProperties.triggeredActivityConditionText }}
+          {{ formField fields.triggeredActivityTargets value=../source.midiProperties.triggeredActivityTargets localize=true
+            options=../triggeredActivityTargetOptions}}
+          {{ formField fields.triggeredActivityRollAs value=../source.midiProperties.triggeredActivityRollAs localize=true
+            options=../triggeredActivityRollAsOptions}}
+          {{ formField fields.triggeredActivityConsume value=../source.midiProperties.triggeredActivityConsume }}
+          {{ formField fields.triggeredActivityConfigure value=../source.midiProperties.triggeredActivityConfigure }}
+        {{/if}}
+      {{/with}}
+    </fieldset>
+  </section>
+
+  <section class="tab activity-{{ tab.tabs.overtime.id }} {{ tab.tabs.overtime.cssClass }}"
+    data-tab="{{ tab.tabs.overtime.id }}" data-group="{{ tab.tabs.overtime.group }}">
+    <fieldset>
+      {{ formField fields.isOverTimeFlag value=source.isOverTimeFlag input=@root.inputs.createCheckboxInput }}
+      {{#if source.isOverTimeFlag}}
+        {{#with fields.overTimeProperties.fields as |fields|}}
+          {{ formField fields.turnChoice value=../source.overTimeProperties.turnChoice options=../turnChoiceOptions localize=true}}
+          {{ formField fields.rollAs value=../source.overTimeProperties.rollAs options=../overTimeRollAsOptions localize=true}}
+          {{ formField fields.saveRemoves value=../source.overTimeProperties.saveRemoves input=@root.inputs.createCheckboxInput }}
+          {{ formField fields.preRemoveConditionText value=../source.overTimeProperties.preRemoveConditionText}}
+          {{ formField fields.postRemoveConditionText value=../source.overTimeProperties.postRemoveConditionText}}
+        {{/with}}
+      {{/if}}
+    </fieldset>
+  </section>
+
+  <section class="tab activity-{{ tab.tabs.activityMacro.id }} {{ tab.tabs.activityMacro.cssClass }}"
+    data-tab="{{ tab.tabs.activityMacro.id }}" data-group="{{ tab.tabs.activityMacro.group }}">
+    <fieldset>
+      <label> {{ localize 'midi-qol.SHARED.FIELDS.ActivityMacro.label' }}
+        <button type="button" class="unbutton control-button" data-action="addMacro"
+          data-tooltip="midi-qol.SHARED.FIELDS.ActivityMacro.hint"
+          aria-label="{{ localize 'midi-qol.SHARED.FIELDS.ActivityMacro.label' }}">
+          <i class="fas fa-file-pen" inert></i>
+        </button>
+      </label>
+    </fieldset>
+  </section>
 </section>

@@ -128,7 +128,6 @@ class ConfigSettings {
   allowActorUseMacro: boolean = true;
   attackPerTarget: boolean = false;
   autoApplyDamage: string = "none";
-  damageCardStyle: string = "flexbox";
   playerDamageCard: string = "none";
   playerCardDamageDifferent: boolean = false;
   hidePlayerDamageCard: boolean = true;
@@ -141,13 +140,14 @@ class ConfigSettings {
   autoUndoTransformations: boolean = false;
   autoRemoveTemplate: boolean = true;
   autoRemoveInstantaneousTemplate: boolean = false;
-  constrainTemplatePlacement: boolean = true;
+  constrainTemplatePlacement: boolean = false;
   templateSnapping: string = "full";
   autoRollAttack: boolean = false;
   autoRollDamage: string = "none";
   autoCompleteWorkflow = true;
   saveDROrder = "DRSaveDr";
   autoTarget: string = "none";
+  defaultOtherActivity: string = "auto";
   averageDamage: string = "none";
   checkSaveText: boolean = false;
   checkTwoHanded: boolean = false;
@@ -234,6 +234,7 @@ class ConfigSettings {
   rollChecksBlind: string[] = [];
   rollSavesBlind: string[] = [];
   rollSkillsBlind: string[] = [];
+  blindRollDisplay: string = "hidden";
   savesBeforeDamage: boolean = false;
   saveStatsEvery: number = 20;
   showDSN: boolean = true;
@@ -242,6 +243,7 @@ class ConfigSettings {
   showReactionAttackRoll: string = "all";
   showReactionChatMessage: boolean = false;
   singleConcentrationRoll: boolean = true;
+  singleDamageCalculation: boolean = true;
   skillAbilityCheckAdvantage: boolean = true;
   spellHitSound: string = "";
   spellUseSound: string = "";
@@ -294,7 +296,7 @@ class ConfigSettings {
     vitalityDeathRequires: "vitalityOnly", // "vitalityOnly" = dead when vitality=0, "vitalityAndHP" = dead when vitality=0 AND HP=0
     visionTestHeight: "center",
     surfaceOcclusion: true,
-    surfaceVisionFog: true,
+    surfaceVisionFog: false,
     wallsBlockRange: "center",
   };
 }
@@ -675,6 +677,7 @@ export let fetchParams = () => {
 
   configSettings = game.settings.get("midi-qol", "ConfigSettings");
   if (configSettings.saveDROrder === undefined) configSettings.saveDROrder = "DRSaveDr";
+  if (configSettings.singleDamageCalculation === undefined) configSettings.singleDamageCalculation = true;
   if (!["DRSaveDr", "SaveDRDr", "SaveDrDR"].includes(configSettings.saveDROrder)) {
     ui.notifications?.warn("invalidSaveDROrder reset to 'dm.midi/dnd5e.dm -> Saves/(dr/dv/di) - dnd5e RAW'");
     configSettings.saveDROrder = "DRSaveDr";
@@ -782,6 +785,8 @@ export let fetchParams = () => {
   }, configSettings.optionalRules ?? {}, { overwrite: true, insertKeys: true, insertValues: true });
   if (!configSettings.optionalRules.incapacitated) configSettings.optionalRules.incapacitated = "nothing";
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
+  // v14 Levels has no CONFIG.Levels.API/TemplateHandler; its sight wrapper is one "center" already uses.
+  if (configSettings.optionalRules.wallsBlockRange === "centerLevels") configSettings.optionalRules.wallsBlockRange = "center";
   //@ts-expect-error legacy boolean value
   if (configSettings.optionalRules.checkFlanking === true) configSettings.optionalRules.checkFlanking = "ceadv";
   if (!configSettings.optionalRules.coverCalculation) configSettings.optionalRules.coverCalculation = "none";
@@ -1192,11 +1197,6 @@ export const autoApplyDamageOptions = keysToExtendedOptionsObj("autoApplyDamageO
 ]);
 
 
-export const damageCardStyleOptions = keysToExtendedOptionsObj("damageCardStyleOptions", [
-  "flexbox",
-  "classic"
-]);
-
 export const playerDamageCardOptions = keysToExtendedOptionsObj("playerDamageCardOptions", [
   "none",
   "playerresults",
@@ -1292,6 +1292,11 @@ export const gmDsnDisplayOptions = keysToExtendedOptionsObj("gmDsnDisplayOptions
   "show",
   "ghost",
   "none"
+]);
+
+export const blindRollDisplayOptions = keysToExtendedOptionsObj("blindRollDisplayOptions", [
+  "hidden",
+  "obscured"
 ]);
 
 export const rollOtherDamageOptions = keysToExtendedOptionsObj("RollOtherDamageOptions", [
@@ -1464,7 +1469,6 @@ export const visionTestHeightOptions = keysToExtendedOptionsObj("VisionTestHeigh
 export const wallsBlockRangeOptionsNew = keysToExtendedOptionsObj("WallsBlockRangeOptionsNew", [
   "none",
   "center",
-  "centerLevels",
   "levelsautocover",
   "simbuls-cover-calculator",
   "tokencover",
@@ -1621,6 +1625,11 @@ export const challengeModeArmorOptions = keysToExtendedOptionsObj("ChallengeMode
   "challenge",
   "scale",
   "scaleNoAR"
+]);
+
+export const defaultOtherActivityOptions = keysToExtendedOptionsObj("DefaultOtherActivityOptions", [
+  "auto",
+  "none"
 ]);
 
 export const saveDROrderOptions = keysToExtendedOptionsObj("SaveDROrderOptions", [

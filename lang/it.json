@@ -454,7 +454,6 @@
 "midi-qol.WallsBlockRangeOptionsNew": {
   "none": "No",
   "center": "Controllo dal Centro",
-  "centerLevels": "Centro + Livelli",
   "levelsautocover": "Copertura Automatica Livelli",
   "simbuls-cover-calculator": "Calcolatore di Copertura Simbuls",
   "tokencover": "Copertura Alternativa dei Token",
@@ -463,8 +462,7 @@
 "midi-qol.NearbyAllyRanged.Name": "(Regola della Casa) Gli attacchi a distanza contro nemici vicini agli alleati hanno svantaggio.",
 "midi-qol.WallsBlockRangeOptions": {
   "none": "No",
-  "center": "Controllo dal Centro",
-  "centerLevels": "Centro + Livelli"
+  "center": "Controllo dal Centro"
 },
 "midi-qol.CoverCalculation.Name": "Calcola la Copertura",
 "midi-qol.CoverCalculation.Hint": "Calcola il bonus CA per i bersagli sotto copertura - le impostazioni sono prese dal modulo selezionato",

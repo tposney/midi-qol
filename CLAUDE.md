@@ -81,6 +81,16 @@ For full API details (header controls, custom content/tabs, config APIs), read t
 - **Chris-Premades GitHub**: `https://github.com/chrisk123999/chris-premades` (branch: master)
 - "CPR" and "Cauldron of Plentiful Resources" both refer to the chris-premades module
 
+#### CAT (Covens Automation Toolkit) wiki — authoritative for v14 macro authoring
+- **Wiki root**: `https://github.com/chrisk123999/covens-automation-toolkit/wiki`
+- **Guidelines for Macro Writers** (v13→v14 changes, helper rename table): `.../wiki/Guidelines-for-Macro-Writers`
+- Other pages: `.../wiki/Macro-Scope`, `.../wiki/Events` (trigger prefixes + the `roll` pass list)
+- **Fetch the RAW markdown**, not the rendered page — the rendered fetch returns only a summary and drops the rename table:
+  `https://raw.githubusercontent.com/wiki/chrisk123999/covens-automation-toolkit/<Page-Name>.md`
+- **Reference implementation** upstream cites: `chris-premades` branch `main`, `scripts/macros/modern/spells/chromaticOrb.mjs` (raw: `https://raw.githubusercontent.com/chrisk123999/chris-premades/main/scripts/macros/modern/spells/chromaticOrb.mjs`)
+- ⚠ The wiki is written against a **newer CAT than any release** — verify every entry against the local `cat-14x` checkout before adopting it (some documented helpers exist in neither the tag nor `origin/main`).
+- **Follow upstream's stated intent** wherever the wiki defines a usage pattern, rather than inventing a local convention.
+
 ### SRD Reference Data
 - Location: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-13x/SRD/`
 - Folders with `24` suffix (e.g., `spells24/`) = **modern 2024 / SRD 5.2** rules — check these first
@@ -214,6 +224,14 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
     - One-time migration from times-up settings runs at `ready` via `migrateTimesUpSettings()`.
 
 15. **Persisted workflow fields go through `PersistedFieldStore`** — Workflow.ts fields backed by chat-card flags (scalars, token Sets, Roll/Roll[], DamageDescription[]) use `this.#persisted.scalar/tokenSet/roll(s)/damageDetail` accessors, not hand-rolled `#field` + getter/setter pairs. The store owns caching, flag fallback, and serialization (including `Roll.fromData` rehydration). New persisted fields should use it; only genuinely special accessors (`currentAction`, `isCritical`/`isFumble`, `activity`, `item`, `token`, `otherDamageMatches`) remain hand-written.
+
+16. **Never call `getRollData()` from `ActiveEffect#getReplacementData` or `#shouldApplyChange`** — both run inside `applyActiveEffects`, i.e. inside data preparation. Re-preparing a document from there recurses until the renderer crashes (no CPU spike, debugger won't pause, CDP evaluate times out). Item-target roll data belongs in DAE's `daeApplyChange` wrapper, where the target document is not the one being prepared.
+
+17. **DAE registers its libWrapper patches in `DAEdnd5e.initActions()`, not `DAESystem.initActions()`** — the dnd5e subclass overrides the base wholesale. Registering in the base silently no-ops: no error, methods just stay unwrapped.
+
+18. **Evaluating effect change values must be gated on a numeric target** — `flags.midi-qol.optional.*` bonuses are roll fragments, so evaluating `"+2"` to `"2"` breaks the formula. DAE gates on the current value being a number or ValidSpec `fieldType === "number"`. Core evaluates formulas only in `NumberField._castChangeDelta`; non-schema keys get `Number(raw) || 0`, which is why arithmetic on flags needed handling at all.
+
+19. **Test keys must be verified to exercise the behaviour under test** — `system.attributes.ac.bonus` has ValidSpec phase `initial` (not final, despite comments claiming otherwise), and dnd5e coerces `system.attributes.movement.walk` to a number in derived data. Both silently made acceptance tests pass against unfixed code. Use `system.attributes.ac.flat` for phase correction and `system.bonuses.*` for FormulaField behaviour.
 
 ## Testing
 

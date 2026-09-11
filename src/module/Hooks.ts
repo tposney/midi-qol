@@ -1,5 +1,5 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
+import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, obscureRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard, queueConditionUpdateFromCreate, queueConditionUpdateFromDelete } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget, rangeToSceneUnits } from "./utils.js";
 import { checkMechanic, checkRule, configSettings, dragDropTargeting, isDnd5e53, setDnd5e53 } from "./settings.js";
@@ -8,7 +8,7 @@ import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { Workflow } from "./Workflow.js";
 import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
 import { installedModules } from "./setupModules.js";
-import { preActivityConsumptionHook, activityConsumptionHook, selectTargetsFromTemplates, isAoETargetable } from "./activities/activityHelpers.js";
+import { preActivityConsumptionHook, activityConsumptionHook, selectTargetsFromTemplates } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
 import { MidiDependentsRegistry } from "./lib/MidiDependentsRegistry.js";
@@ -28,11 +28,6 @@ export let readyHooks = async () => {
     }) ?? [];
     if (expiredEffects.length > 0) expireEffects(actor!, expiredEffects, { "expiry-reason": "midi-qol:isMoved" });
 
-  });
-
-  //@ts-expect-error
-  Hooks.on("template3dUpdatePreview", (at, t) => {
-    globalThis.VolumetricTemplates?.compute3Dtemplate(t);
   });
 
   Hooks.on("targetToken", foundry.utils.debounce(checkFlanking, 150));
@@ -104,55 +99,20 @@ export let readyHooks = async () => {
     const autoTarget = getActivityAutoTargetAction(template.activity);
     if (autoTarget === "none") return;
 
-    if (installedModules.get("levelsvolumetrictemplates") && autoTarget !== "walledtemplates") {
-      //@ts-expect-error CONFIG.Levels
-      const levelsTemplateData = CONFIG.Levels.handlers.TemplateHandler.getTemplateData(false);
-      if (template.document.elevation !== levelsTemplateData.elevation) {
-        template.document.elevation = levelsTemplateData.elevation;
-      }
-      // Resolve the activity and source token for disposition filtering
-      // @ts-expect-error no dnd5e-types
-      const activity = template.activity
-        ?? (template.document.flags?.dnd5e?.origin ? fromUuidSync(template.document.flags.dnd5e.origin) : undefined);
-      const sourceToken = getTemplateSourceToken(template.document);
-      const selfToken = sourceToken ?? undefined;
-      const AoETargetType = activity ? getAoETargetType(activity) : "any";
-      const ignoreSelf = activity
-        ? (activity?.target.affects.special ?? "").split(";").some((spec: string) => ["-self"].includes(spec))
-        : false;
+    // template.activity is set by dnd5e on AbilityTemplate during preview, but not on
+    // the standard MeasuredTemplate created after placement. Fall back to looking up
+    // the activity from the template's dnd5e.origin flag (the activity UUID).
+    // @ts-expect-error no dnd5e-types
+    const activity = template.activity
+      ?? (template.document.flags?.dnd5e?.origin ? fromUuidSync(template.document.flags.dnd5e.origin) : undefined);
+    const sourceToken = getTemplateSourceToken(template.document);
 
-      // Filter which tokens to pass - not too far; wall blocking is left to levels.
-      let distance = template.document.distance;
-      const dimensions = canvas.dimensions || { size: 1, distance: 1 };
-      distance *= dimensions.size / dimensions.distance;
-      const tokensToCheck = canvas.tokens.placeables?.filter(tk => {
-        const r = new foundry.canvas.geometry.Ray(
-          { x: template.document?.x ?? template.x, y: template.document?.y ?? template.y },
-          { x: tk.x + tk.document.width * dimensions.size, y: tk.y + tk.document.height * dimensions.size }
-        );
-        const maxExtension = (1 + Math.max(tk.document.width, tk.document.height)) * dimensions.size;
-        if (r.distance > distance + maxExtension) return false;
-        if (!isAoETargetable(tk, { selfToken, ignoreSelf, AoETargetType, autoTarget })) return false;
-        return true;
-      });
-      if (tokensToCheck && tokensToCheck.length > 0) {
-        //@ts-expect-error VolumetricTemplates
-        VolumetricTemplates.compute3Dtemplate(template, tokensToCheck);
-      }
+    // Targeting (incl. the lvt path) lives in computeTargetsFromTemplate - one shared code path.
+    if (activity && sourceToken) {
+      const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some((spec: string) => ["-self"].includes(spec));
+      selectTargetsFromTemplates([template], sourceToken, ignoreSelf, getAoETargetType(activity), autoTarget);
     } else {
-      // template.activity is set by dnd5e on AbilityTemplate during preview, but not on
-      // the standard MeasuredTemplate created after placement. Fall back to looking up
-      // the activity from the template's dnd5e.origin flag (the activity UUID).
-      // @ts-expect-error no dnd5e-types
-      const activity = template.activity
-        ?? (template.document.flags?.dnd5e?.origin ? fromUuidSync(template.document.flags.dnd5e.origin) : undefined);
-      const sourceToken = getTemplateSourceToken(template.document);
-      if (activity && sourceToken) {
-        const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some((spec: string) => ["-self"].includes(spec));
-        selectTargetsFromTemplates([template], sourceToken, ignoreSelf, getAoETargetType(activity), autoTarget);
-      } else {
-        selectTargetsFromTemplates([template]);
-      }
+      selectTargetsFromTemplates([template]);
     }
   });
 
@@ -493,11 +453,31 @@ export function initHooks() {
     if (debugEnabled > 1) debug("render message hook ", message.id, message, html, data);
     // chatDamageButtons(message, html, data); This no longer works since the html is rewritten
     processUndoDamageCard(message, html, data);
+    resolveTokenThumbnails(html);
     colorChatMessageHandler(message, html, data);
     hideRollRender(message, html, data);
+    obscureRollRender(message, html, data);
     hideStuffHandler(message, html, data);
     processConcentrationRequestMessage(message, html, data);
   });
+
+  /**
+   * Put a still frame in the <img> for an animated token. The card carries the video's path rather
+   * than a base64 thumbnail; Foundry caches what this generates in game.video.thumbs.
+   */
+  async function resolveTokenThumbnails(html: HTMLElement) {
+    for (const img of Array.from(html.querySelectorAll<HTMLImageElement>("img[data-midi-video-src]"))) {
+      const src = img.dataset.midiVideoSrc;
+      if (!src) continue;
+      try {
+        const thumb = game.video?.thumbs?.get(src) ?? await game.video?.createThumbnail(src, { width: 100, height: 100 });
+        if (thumb) img.src = thumb;
+      } catch (err) {
+        // the placeholder portrait already in the src is a fine outcome
+        if (debugEnabled > 0) warn("Could not create a token thumbnail for", src, err);
+      }
+    }
+  }
 
   Hooks.on("deleteChatMessage", (message, options, user) => {
     Workflow.deleteWorkflow(message.uuid);
@@ -929,7 +909,7 @@ export function initHooks() {
   Hooks.on('dropCanvasData', function (canvas, dropData: any) {
     if (!dragDropTargeting) return true;
     if (dropData.type !== "Item") return true;
-    if (!canvas.grid?.grid) return;
+    if (!canvas.grid) return true;
     let grid_size = canvas.scene?.grid.size ?? 100;
     // This will work for all grids except gridless
     // TODO: swap to `getTopLeftPoint` - should simplify some
@@ -1202,6 +1182,8 @@ function applySaves({ damages, options }: DamageCalcParams): void {
 
   for (const damage of damages) {
     if (isDRType(damage.type)) continue;
+    // Other damage carries its own multiplier - all categories share one calculateDamage call.
+    const entrySaveMultiplier = damage.midiSaveMultiplier ?? mo.saveMultiplier;
 
     const ignoringSuperSaver = mo.superSaver && shouldIgnore(options, "superSaver", damage.type);
     const ignoringSemiSuperSaver = mo.semiSuperSaver && shouldIgnore(options, "semiSuperSaver", damage.type);
@@ -1210,17 +1192,17 @@ function applySaves({ damages, options }: DamageCalcParams): void {
     if (mo.superSaver && !ignoringSuperSaver) {
       setDamageActiveFlag(damage, "superSaver");
     }
-    if (mo.semiSuperSaver && !ignoringSemiSuperSaver && (mo.saveMultiplier ?? 1) !== 1) {
+    if (mo.semiSuperSaver && !ignoringSemiSuperSaver && (entrySaveMultiplier ?? 1) !== 1) {
       setDamageActiveFlag(damage, "semiSuperSaver");
     }
-    if (mo.saved && !ignoringSaved && (mo.saveMultiplier ?? 1) !== 1) {
+    if (mo.saved && !ignoringSaved && (entrySaveMultiplier ?? 1) !== 1) {
       setDamageActiveFlag(damage, "saved");
     }
 
     if (mo.saved && !ignoringSaved) {
       const multiplier = ignoringSuperSaver
         ? configSettings.defaultSaveMultiplier
-        : (mo.superSaver ? 0 : (mo.saveMultiplier ?? 1));
+        : (mo.superSaver ? 0 : (entrySaveMultiplier ?? 1));
       damage.value = damage.value * multiplier;
       foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * multiplier);
     } else if (mo.superSaver && !ignoringSuperSaver) {
@@ -1978,11 +1960,18 @@ Hooks.on("dnd5e.rollConcentration", (rolls, { subject }) => {
 Hooks.on("dnd5e.preCreateActivityTemplate", (activity, templateData) => {
   templateData.distance! += 0.000001; // Make the template fractionally larger to avoid rounding errors
 
+  const casterToken = activity.actor ? tokenForActor(activity.actor) : undefined;
+
+  // dnd5e leaves elevation at 0, so anchor to the caster. Covers preview and placement in one
+  // place; an explicit elevation from the caller wins.
+  if (casterToken && templateData.elevation === undefined) {
+    templateData.elevation = casterToken.document.elevation;
+  }
+
   if (!configSettings.constrainTemplatePlacement) return true;
 
-  // Get the caster's token and store its UUID for later use
-  const actor = activity.actor;
-  const token = actor ? tokenForActor(actor) : undefined;
+  // Store the caster's token UUID for later use
+  const token = casterToken;
   if (token) {
     foundry.utils.setProperty(templateData, "flags.midi-qol.sourceTokenUuid", token.document.uuid);
   }

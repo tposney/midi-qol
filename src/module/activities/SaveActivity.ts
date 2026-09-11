@@ -55,7 +55,6 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
 
       return {
         ...super.defineSchema(),
-        otherActivityId: new StringField({ name: "otherActivity", initial: "none" }),
         otherActivityAsParentType: new BooleanField({
           name: "otherActivityAsParentType",
           initial: true,
@@ -135,10 +134,7 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
 
     get possibleOtherActivity() {
       return true;
-    }    get canUseOtherActivity() {
-      return true;
     }
-
     async _triggerSubsequentActions(config, results) {
     }
     

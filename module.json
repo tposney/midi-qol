@@ -2,7 +2,6 @@
   "id": "{{name}}",
   "title": "{{title}}",
   "description": "{{description}}",
-
   "version": "{{version}}",
   "authors": [
     {
@@ -33,7 +32,9 @@
   "socket": true,
   "scripts": [],
   "esmodules": "{{sources}}",
-  "styles": ["css/styles.css"],
+  "styles": [
+    "css/styles.css"
+  ],
   "relationships": {
     "systems": [
       {
@@ -67,6 +68,9 @@
     "RegionBehavior": {
       "regionActivity": {},
       "regionLight": {}
+    },
+    "ChatMessage": {
+      "damage": {}
     }
   },
   "packs": [

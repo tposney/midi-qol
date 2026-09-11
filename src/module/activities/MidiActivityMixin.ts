@@ -177,6 +177,8 @@ export let MidiActivityMixin = Base => {
         useConditionText: new MidiConditionField({ name: "useCondition", initial: "" }),
         useConditionReason: new StringField({ name: "useConditionReason", initial: "" }),
         effectConditionText: new MidiConditionField({ name: "effectCondition", initial: "" }),
+        // null means never set, so imported items follow configSettings.defaultOtherActivity
+        otherActivityId: new StringField({ name: "otherActivity", initial: null, nullable: true }),
         // disabled pending a way to make it work 
         // useSystemActivity: new BooleanField({ name: "useSystemActivity", initial: false }),
         macroData: new SchemaField({
@@ -315,9 +317,6 @@ export let MidiActivityMixin = Base => {
       return false;
     }
 
-    get canUseOtherActivity() {
-      return false;
-    }
 
     get canUse() {
       // if (this.midiProperties?.automationOnly) return false;
@@ -2161,7 +2160,7 @@ export let MidiActivityMixin = Base => {
 
     get otherActivity() {
       if (this._otherActivity !== undefined) return this._otherActivity as MidiActivityMixin;
-      if (this.otherActivityId === "none" || this.otherActivityId === undefined) return undefined;
+      if (this.otherActivityId === "none") return undefined;
       if (this.ammunitionItem) {
         //TODO consider making this a choice of activity
         // @ts-expect-error no dnd5e-types
@@ -2181,7 +2180,7 @@ export let MidiActivityMixin = Base => {
         }
       }
 
-      if (this.otherActivityId !== "") {
+      if (this.otherActivityId) {
         // @ts-expect-error no dnd5e-types
         this._otherActivity = this.item.system.activities.get(this.otherActivityId) as MidiActivityMixin | undefined;
         // @ts-expect-error no dnd5e-types
@@ -2196,23 +2195,19 @@ export let MidiActivityMixin = Base => {
         return this._otherActivity as null;
       }
 
-      if (!this._otherActivity) {
-        // Is there exactly 1 automation only and otherActivityCompatible activity on the item
-        // @ts-expect-error no dnd5e-types
-        const otherActivityOptions = this.item.system.activities.filter(a => a.midiProperties?.automationOnly && a.isOtherActivityCompatible && a.uuid !== this.uuid);
-        if (otherActivityOptions.length === 1) {
-          this._otherActivity = otherActivityOptions[0];
-        }
+      // unset ("" or null) follows the configured default; new activities are stamped "none"
+      if (configSettings.defaultOtherActivity === "none") {
+        this._otherActivity = null;
+        return this._otherActivity as null;
       }
-      if (!this._otherActivity) {
-        // Is there exactly 1 other activity compatible activity on the item
+
+      // Prefer a sole automationOnly candidate, else a sole compatible one; ambiguity means no pairing
+      const soleCandidate = (filter: (a: any) => boolean) => {
         // @ts-expect-error no dnd5e-types
-        const otherActivityOptions = this.item.system.activities.filter(a => a.isOtherActivityCompatible && a.uuid !== this.uuid);
-        if (otherActivityOptions.length === 1) {
-          this._otherActivity = otherActivityOptions[0];
-        }
-      }
-      // If none of the above match we can't tell which one to use.
+        const options = this.item.system.activities.filter(a => filter(a) && a.isOtherActivityCompatible && a.uuid !== this.uuid);
+        return options.length === 1 ? options[0] : undefined;
+      };
+      this._otherActivity = soleCandidate(a => a.midiProperties?.automationOnly) ?? soleCandidate(() => true);
       this._otherActivity?.prepareData();
       if (!this._otherActivity) this._otherActivity = null;
       return this._otherActivity as MidiActivityMixin | undefined | null;
@@ -2307,11 +2302,51 @@ export let MidiActivityMixinSheet = Base => {
     }
 
     _getTabs() {
+      const midiSubTabs = ["modConditions", "workflowSettings", "activityManagement", "overtime", "activityMacro"];
+      if (!midiSubTabs.includes(this.tabGroups["midi-qol"])) {
+        this.tabGroups["midi-qol"] = "modConditions";
+      }
+
       let tabs = super._getTabs();
       tabs = {
         ...tabs,
         "midi-qol": {
-          id: "midi-qol", group: "sheet", icon: "fa-solid fa-sun", label: "midi-qol"
+          id: "midi-qol",
+          group: "sheet",
+          icon: "fa-solid fa-sun",
+          label: "midi-qol",
+          tabs: {
+            modConditions: {
+              id: "modConditions",
+              group: "midi-qol",
+              icon: "fa-solid fa-filter",
+              label: i18n("midi-qol.ActivitySheetTabs.modConditions")
+            },
+            workflowSettings: {
+              id: "workflowSettings",
+              group: "midi-qol",
+              icon: "fa-solid fa-gears",
+              label: i18n("midi-qol.ActivitySheetTabs.workflowSettings")
+            },
+            activityManagement: {
+              id: "activityManagement",
+              group: "midi-qol",
+              icon: "fa-solid fa-sitemap",
+              label: i18n("midi-qol.ActivitySheetTabs.activityManagement")
+            },
+            overtime: {
+              id: "overtime",
+              group: "midi-qol",
+              icon: "fa-solid fa-clock",
+              label: i18n("midi-qol.ActivitySheetTabs.overtime")
+            },
+            activityMacro: {
+              id: "activityMacro",
+              group: "midi-qol",
+              icon: "fa-solid fa-file-pen",
+              label: i18n("midi-qol.ActivitySheetTabs.activityMacro")
+            }
+          }
         }
       }
       return super._markTabs(tabs);
@@ -2354,8 +2389,9 @@ export let MidiActivityMixinSheet = Base => {
           const identifierString = a.identifier === a.name.slugify() ? "" : ` (${a.identifier})`;
           ret.push({ label: `${a.name}${identifierString}`, value: a.identifier, id: a.id });
           return ret
-        }, [{ label: "Auto", value: "" }, { label: "None", value: "none" }]);
-      context.otherActivityOptions?.forEach(option => { option.selected = option.value === this.activity.otherActivityId || option.id === this.activity.otherActivityId });
+        }, [{ label: "Default", value: "" }, { label: "None", value: "none" }]);
+      const selectedOtherActivity = this.activity.otherActivityId ?? "";
+      context.otherActivityOptions?.forEach(option => { option.selected = option.value === selectedOtherActivity || option.id === selectedOtherActivity });
       context.triggeredActivityOptions = this.item.system.activities
         .filter(a => a.id !== this.activity.id && a.isTriggerableActivity)
         .reduce((ret, a) => {
@@ -2471,7 +2507,7 @@ function renderActivitySheetHook(app, [elem]) {
   let closeButton = elem.closest('.window-header').querySelector('button[data-action="close"]');
   let daeButton = document.createElement('button');
   const DIMtitle = i18n('dae.DIMEditor.Name');
-  daeButton.setAttribute('class', 'header-control fa-solid fa-file-pen dae-dimeditor');
+  daeButton.setAttribute('class', 'header-control fa-solid fa-file-pen dae-dimeditor icon');
   daeButton.onclick = function (ev) { new Editor({ document: this.activity }).render({ force: true }); }.bind(app);
   if (activity.macro?.command) daeButton.style.color = '#36ba36';
 

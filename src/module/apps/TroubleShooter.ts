@@ -795,17 +795,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
         break;
       case "center":
         break;
-      case "centerLevels":
-        if (!(game.modules.get("levels")?.active)) {
-          data.problems.push({
-            moduleId: "levels",
-            severity: "Error",
-            problemSummary: "You must enable the 'levels' module to use the 'Center Levels' option for 'Walls Block Range'",
-            problemDetail: undefined,
-            fixer: "Enable the 'levels' module"
-          });
-        }
-        break;
       case "levelsautocover":
         if (!(game.modules.get("levelsautocover")?.active)) {
           data.problems.push({
@@ -1021,12 +1010,30 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
+  public static checkVolumetricTemplates(data: TroubleShooterData) {
+    if (!game.modules.get("levelsvolumetrictemplates")?.active) return;
+    if (configSettings.autoTarget === "none") return;
+    // lvt's "Target on Placement" pass runs unfiltered 100ms after region creation, overwriting
+    // midi's filtered targets.
+    if (safeGetGameSetting("levelsvolumetrictemplates", "targetOnPlacement")) {
+      data.problems.push({
+        moduleId: "levelsvolumetrictemplates",
+        severity: "Error",
+        problemSummary: "Volumetric Templates 'Target on Placement' overrides midi's targeting with an unfiltered target list",
+        problemDetail: undefined,
+        fixer: "Disable 'Target on Placement' in the Volumetric Templates settings - midi applies its own targeting rules",
+        fixerId: -1
+      });
+    }
+  }
+
   public static checkCommonProblems(data: TroubleShooterData) {
     this.checkMidiSettings(data);
     this.checkMidiCoverSettings(data)
     this.checkMidiSaveSettings(data);
     this.checkNoActorTokens(data);
     this.checkConcentrationStatusEffects(data);
+    this.checkVolumetricTemplates(data);
   }
 
   public static checkAutoAnimations(data: TroubleShooterData) {

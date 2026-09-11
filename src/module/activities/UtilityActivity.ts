@@ -53,7 +53,6 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
   
         const schema = {
           ...super.defineSchema(),
-          otherActivityId: new StringField({ name: "otherActivity", initial: "none" }),
           otherActivityAsParentType: new BooleanField({
             name: "otherActivityAsParentType",
             initial: true,

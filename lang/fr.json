@@ -425,7 +425,6 @@
   "midi-qol.WallsBlockRangeOptionsNew": {
     "none": "Non",
     "center": "Vérification du centre",
-    "centerLevels": "Centre + Levels",
     "dnd5eHelpers": "dnd5e helpers",
     "dnd5eHelpersAC": "dnd5e helpers + AC",
     "levelsautocover": "Niveaux de couverture automatique",
@@ -435,8 +434,7 @@
   "midi-qol.NearbyAllyRanged.Name": "(Règle maison) Les attaques à distance contre des ennemis proches d'alliés ont un désavantage.",
   "midi-qol.WallsBlockRangeOptions": {
     "none": "Non",
-    "center": "Vérification du centre",
-    "centerLevels": "Centre + Levels"
+    "center": "Vérification du centre"
   },
   "midi-qol.NearbyAllyRanged.Hint": "Les attaques à distance avec des alliés à proximité (5 pieds) de la cible ont un désavantage pour les cibles plus petites que X (p*h). 0 désactive",
   "midi-qol.Incapacitated.Name": "Les acteurs incapables d'agir ne peuvent pas lancer d'attaques",

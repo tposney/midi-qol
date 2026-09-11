@@ -22,6 +22,11 @@ export function setupForwardActivity() {
 }
 let defineMidiForwardSheetClass = (baseClass: any) => {
   return class MidiForwardSheet extends MidiActivityMixinSheet(baseClass) {
+    // Forward has no time/targeting - keep dnd5e's narrower activation part, which registers only the partials it uses.
+    static PARTS = {
+      ...super.PARTS,
+      activation: baseClass.PARTS.activation,
+    };
   }
 }
 
