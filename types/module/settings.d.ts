@@ -51,7 +51,6 @@ declare class ConfigSettings {
     allowActorUseMacro: boolean;
     attackPerTarget: boolean;
     autoApplyDamage: string;
-    damageCardStyle: string;
     playerDamageCard: string;
     playerCardDamageDifferent: boolean;
     hidePlayerDamageCard: boolean;
@@ -241,7 +240,6 @@ export declare function collectSettingData(): {
         allowActorUseMacro: boolean;
         attackPerTarget: boolean;
         autoApplyDamage: string;
-        damageCardStyle: string;
         playerDamageCard: string;
         playerCardDamageDifferent: boolean;
         hidePlayerDamageCard: boolean;
@@ -477,9 +475,6 @@ export declare const rangeTargetOptions: {
     [k: string]: string;
 };
 export declare const autoApplyDamageOptions: {
-    [k: string]: string;
-};
-export declare const damageCardStyleOptions: {
     [k: string]: string;
 };
 export declare const playerDamageCardOptions: {

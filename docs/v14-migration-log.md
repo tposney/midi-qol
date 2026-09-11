@@ -235,6 +235,28 @@ Removed the walledtemplates-specific `attachTemplate` code path from `_placeEman
 
 **Fix:** Registered a custom `RegionBehaviorConfig` subclass for the `midi-qol.regionActivity` type. The sheet renders standard fields via the parent's form support, plus a custom rules section with dynamic add/remove rows. Each rule row has trigger `<select>`, action `<select>`, and `<document-tags single>` for the target UUID (Foundry's built-in element with native drag-and-drop).
 
+### 2026-08-18: Sample Items — ported Counter Mage and Elemental Attunement from v13
+
+Both existed only in `midi-qol-13x/pack-src` and had never been carried across (v13 Features: 34, v14: 32).
+
+**Applied from the 2026-03-21 checklist above:**
+- `icon:` in effect creation -> `img:` — Counter Mage (x2). DialogV2 button `icon:` values left alone.
+- numeric `mode: N` in programmatic effect data -> `type: "..."` — Counter Mage (x3): `mode: 0` -> `"custom"`,
+  `mode: 5` -> `"override"`.
+- version stamp `flags.chris-premades.info.version` -> 14.0.12.
+
+Clean on the rest of the checklist: no bare `getProperty`, no `label:` in effect creation, no `effect.changes`,
+no Dialog v1 (Elemental Attunement already uses DialogV2).
+
+**APIs verified against v14 before porting:** `MidiQOL.addDependent/createEffects/getItemFromEffectOrigin/
+socket/completeActivityUse/getDistance/moveTokenAwayFromPoint`, socket handlers `removeEffect/updateEffects/
+updateItems`, and the `midi-qol.ReactionFilter` hook — all present.
+
+**Caveat:** Counter Mage hooks `midi-qol.premades.postAttackRollComplete`, which is fired by **chris-premades**,
+not midi. That dependency is identical on v13, but the Antimagic Shot path needs a v14-compatible CPR.
+
+Neither item has been exercised in a running v14 world — static port only.
+
 ### 2026-03-24: Sample Items — `flags.dae.showIcon` → Native `showIcon`
 
 **Script:** `/tmp/migrate-showicon.mjs`

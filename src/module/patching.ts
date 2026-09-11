@@ -401,12 +401,35 @@ export function readyPatching() {
   libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickRight2", userInitiatedTargetWrapper, "WRAPPER");
   libWrapper.register(MODULE_ID, "foundry.canvas.layers.TokenLayer.prototype.selectObjects", userInitiatedTargetWrapper, "WRAPPER");
 
+  patchCatGetOriginActivity();
+
   const gameVersion = game.system?.version;
   if ((game.system?.id === "dnd5e" && foundry.utils.isNewerVersion("3.3", gameVersion ?? ""))) {
     if (ui.notifications)
       ui.notifications.error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
     else
       error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
+  }
+}
+
+/**
+ * CAT passes midi's overTimeEffectUuid straight to getOriginActivity, which expects a document and
+ * dereferences effect.flags - the throw aborts every over time save. Resolve the string first.
+ * Remove once CAT fixes conditionResistanceAndVulnerability.mjs.
+ */
+function patchCatGetOriginActivity() {
+  if (!game.modules.get("cat")?.active) return;
+  if (typeof (globalThis as any).cat?.utils?.effectUtils?.getOriginActivity !== "function") return;
+  try {
+    libWrapper.register(MODULE_ID, "cat.utils.effectUtils.getOriginActivity",
+      async function (wrapped: Function, effect: unknown, ...args: unknown[]) {
+        if (typeof effect === "string") effect = await fromUuid(effect);
+        return wrapped(effect, ...args);
+      }, "WRAPPER");
+  } catch (err) {
+    const message = "midi-qol | could not patch cat.utils.effectUtils.getOriginActivity";
+    TroubleShooter.recordError(err, message);
+    console.warn(message, err);
   }
 }
 
@@ -588,7 +611,8 @@ function isVisible(this: Token.Implementation, wrapped) {
 function applyBlindRollMode(
   blindRollSettings: string[],
   choiceId: string | undefined,
-  messageRollMode: string | undefined
+  messageRollMode: string | undefined,
+  messageDetails?: any
 ): keyof CONFIG.Dice.RollModes {
   let rollMode: string = messageRollMode ?? safeGetGameSetting("core", "messageMode");
 
@@ -598,8 +622,14 @@ function applyBlindRollMode(
   // Check if this roll should be forced to blind
   const shouldBeBlind = blindRollSettings.includes("all") || blindRollSettings.includes(choiceId ?? "");
   if (shouldBeBlind && ["public", "roll", "gm"].includes(rollMode)) {
-    rollMode = "blind";
-    safeSetGameSetting("core", "messageMode", "blind");
+    if ((configSettings.blindRollDisplay ?? "hidden") === "obscured") {
+      // Keep the card public, but flag it so the result renders as "??" to non-GM players
+      // (obscureRollRender) and the DSN animation is kept private (see the displayDSNForRoll calls).
+      if (messageDetails) foundry.utils.setProperty(messageDetails, "data.flags.midi-qol.obscureRoll", true);
+    } else {
+      rollMode = "blind";
+      safeSetGameSetting("core", "messageMode", "blind");
+    }
   }
 
   return rollMode as keyof CONFIG.Dice.RollModes;
@@ -814,7 +844,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
         }
       }
       setRollDialogOptions(configData, dialogData, "skill");
-    });
+        });
     rollSkillHookId = Hooks.once("dnd5e.postSkillRollConfiguration", (rolls, configData, dialog, messageDetails) => {
       // record message configuration details for later display
       message = messageDetails;
@@ -829,10 +859,10 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
       else if (chosenSkillTracker?.modifiers.willSucceed) success = true;
 
       // Apply blind roll mode based on chosen skill
-      messageDetails.rollMode = applyBlindRollMode(configSettings.rollSkillsBlind, skillId, messageDetails.rollMode);
+      messageDetails.rollMode = applyBlindRollMode(configSettings.rollSkillsBlind, skillId, messageDetails.rollMode, messageDetails);
 
       return true;
-    });
+        });
 
     const saveCreate = message.create;
     message.create = false;
@@ -853,7 +883,9 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     if (rollMode !== CONST.DICE_ROLL_MODES.BLIND) rollMode = result.options.rollMode;
     else result.options.rollMode = CONST.DICE_ROLL_MODES.BLIND;
     */
-    await displayDSNForRoll(result, "skill", rollMode);
+    // When obscuring, keep the 3D dice animation private so it can't reveal the hidden result to players
+    const skillDsnRollMode = foundry.utils.getProperty(message, "data.flags.midi-qol.obscureRoll") ? "blind" : rollMode;
+    await displayDSNForRoll(result, "skill", skillDsnRollMode);
     DSNMarkDiceDisplayed(result);
     if (!config.simulate) {
       result[0] = await bonusCheck(this, result[0], "skill", skillId, message.data);
@@ -887,6 +919,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     if (message.create !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
+        messageData.speaker = ChatMessage.getSpeaker({ actor: this, token: this.token ?? undefined });
         messageData.rolls = [...result];
         const chatMsg = await ChatMessage.create(messageData, { rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
@@ -1497,7 +1530,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
         }
       }
       setRollDialogOptions(configData, dialogData, rollType as FastForwardRollType);
-    });
+        });
 
     rollAbilityHookId = Hooks.once(`dnd5e.post${type}RollConfiguration`, (rolls, configData, dialogData, messageDetails) => {
       // record the configured message data for later display
@@ -1514,8 +1547,8 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
 
       // Apply blind roll mode based on chosen ability
       const blindRollSettings = rollType === "check" ? configSettings.rollChecksBlind : configSettings.rollSavesBlind;
-      messageDetails.rollMode = applyBlindRollMode(blindRollSettings, abilityId, messageDetails.rollMode);
-    });
+      messageDetails.rollMode = applyBlindRollMode(blindRollSettings, abilityId, messageDetails.rollMode, messageDetails);
+        });
     if (this.token) foundry.utils.setProperty(dialog, "options.window.subtitle", this.token.name);
 
     result = await wrapped(config, dialog, message);
@@ -1532,7 +1565,9 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     // Effective save display drives DSN ghosting for saves (per-activity saveDisplay overrides the global).
     const activitySaveDisplay = config.midiOptions?.workflow?.activity?.saveDisplay as string | undefined;
     const saveDisplay: string = (activitySaveDisplay && activitySaveDisplay !== "default") ? activitySaveDisplay : configSettings.autoCheckSaves;
-    await displayDSNForRoll(result, rollType, rollMode, saveDisplay);
+    // When obscuring, keep the 3D dice animation private so it can't reveal the hidden result to players
+    const abilityDsnRollMode = foundry.utils.getProperty(message, "data.flags.midi-qol.obscureRoll") ? "blind" : rollMode;
+    await displayDSNForRoll(result, rollType, abilityDsnRollMode, saveDisplay);
     DSNMarkDiceDisplayed(result);
     foundry.utils.mergeObject(message.data, { "flags": config.flags ?? {} });
     // Set overtimeActorUuid AFTER message object is replaced by hook and merged
@@ -1568,6 +1603,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     if (message.create !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
+        messageData.speaker = ChatMessage.getSpeaker({ actor: this, token: this.token ?? undefined });
         messageData.rolls = [...result];
         const chatMsg = await ChatMessage.create(messageData, { rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
@@ -2405,7 +2441,10 @@ function _prepareItem(wrapped, item, ctx) {
   // Filter from ctx.activities to preserve dnd5e's visibility filtering (including level limits)
   // Fixes issue #1548: Activity Visibility "Level Limit" ignored when midi-qol is enabled
   if (ctx.activities) {
-    ctx.activities = ctx.activities.filter((a: Activity) => !a.midiProperties?.automationOnly);
+    // ctx.activities holds the sheet's prepared context objects, not Activity documents, so the
+    // flag has to be read back off the item - filtering on a.midiProperties never matched anything.
+    ctx.activities = ctx.activities.filter((a: { _id: string }) =>
+      !item.system.activities?.get(a._id)?.midiProperties?.automationOnly);
   }
 }
 
@@ -2793,7 +2832,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
       }
       setRollDialogOptions(configData, dialogData, "tool");
       message = messageData;
-    });
+        });
 
     postRollHookId = Hooks.once("dnd5e.postToolRollConfiguration", (rolls, configData, dialogData, messageDetails) => {
       // record message configuration details for later display
@@ -2809,16 +2848,18 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
       else if (chosenToolTracker?.modifiers.willSucceed) success = true;
 
       // Apply blind roll mode based on chosen tool (uses check settings since tools are ability checks)
-      messageDetails.rollMode = applyBlindRollMode(configSettings.rollChecksBlind, toolId, messageDetails.rollMode);
+      messageDetails.rollMode = applyBlindRollMode(configSettings.rollChecksBlind, toolId, messageDetails.rollMode, messageDetails);
 
       return true;
-    });
+        });
 
     if (this.token) foundry.utils.setProperty(dialog, "options.window.subtitle", this.token.name);
     result = await wrapped(config, dialog, message);
     let rollMode = message.rollMode ?? safeGetGameSetting("core", "messageMode");
     if (result) {
-      await displayDSNForRoll(result, "toolCheck", rollMode);
+      // When obscuring, keep the 3D dice animation private so it can't reveal the hidden result to players
+      const toolDsnRollMode = foundry.utils.getProperty(message, "data.flags.midi-qol.obscureRoll") ? "blind" : rollMode;
+      await displayDSNForRoll(result, "toolCheck", toolDsnRollMode);
       DSNMarkDiceDisplayed(result);
       result![0] = await bonusCheck(this, result![0], "check", config.ability ?? "", message.data);
       DSNMarkDiceDisplayed(result);
@@ -2839,6 +2880,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     if (chatMessage !== false && result) {
       if (foundry.utils.getProperty(result, "flags.midi-qol.chatMessageShown") !== true) {
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
+        messageData.speaker = ChatMessage.getSpeaker({ actor: this, token: this.token ?? undefined });
         messageData.rolls = [...result];
         const chatMsg = await ChatMessage.create(messageData, { rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
@@ -2928,12 +2970,11 @@ export async function doItemUse(this: Item.Implementation, wrapped, config: Acti
     if (attackActivity) return await attackActivity.use(config, dialog, message);
     else return await activities?.[0]?.use(config, dialog, message);
   }
-  if (activities?.length > 1 || chooseActivity) {
-    const activity = await MidiActivityChoiceDialog.create(this);
+  if (activities?.length) {
+    // Apply the module prune hook (midi-qol.itemUseActivitySelect) before deciding: create() skips
+    // the dialog for a single survivor and returns null (skip the roll) if modules removed them all.
+    const activity = await MidiActivityChoiceDialog.create(this, { chooseActivity });
     return await activity?.use(config, dialog, message);
-  }
-  if (activities?.length === 1) {
-    return await activities[0].use(config, dialog, message);
   }
   // @ts-expect-error no dnd5e-types
   if (this.actor) return this.displayCard(message);
@@ -3033,10 +3074,9 @@ function _filterItems(wrapped, items, filters) {
   if (!filters.has("reaction")) return wrapped(items, filters);
   const revisedFilters = new Set(filters);
   revisedFilters.delete("reaction");
-  let filteredItems = wrapped(items, revisedFilters);
-  filteredItems = filteredItems.filter(item => {
-    if (item.system.activation?.type?.includes("reaction")) return true;
-    return false
+  return wrapped(items, revisedFilters).filter(item => {
+    if (item.getFlag("dnd5e", "cachedFor")) return false; // proxy for a cast activity
+    return item.system.activities?.some(activity =>
+      (activity.effectiveActivationType ?? activity.activation?.type)?.includes("reaction"));
   });
-  return filteredItems
 };

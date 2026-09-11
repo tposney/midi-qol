@@ -385,15 +385,13 @@
     "midi-qol.WallsBlockRangeOptionsNew": {
         "none": "하지 않음",
         "center": "중앙 검사",
-        "centerLevels": "중앙 + 높이(Level)",
         "dnd5eHelpers": "dnd5e helpers",
         "dnd5eHelpersAC": "dnd5e helpers + AC"
     },
     "midi-qol.NearbyAllyRanged.Name": "(House Rule) Ranged Attacks at foes near allies have disadvantage.",
     "midi-qol.WallsBlockRangeOptions": {
         "none": "없음",
-        "center": "중앙 검사",
-        "centerLevels": "중앙 + 높이(Level)"
+        "center": "중앙 검사"
     },
     "midi-qol.NearbyAllyRanged.Hint": "Ranged Attacks with allies nearby (5 feet) to the target have disadvantage for targets smaller than this (w*h). 0 disables",
     "midi-qol.Incapacitated.Name": "무력화된 액터들의 공격 불가",

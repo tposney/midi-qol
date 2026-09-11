@@ -73,6 +73,7 @@ import {
   activityHasAreaTarget,
   getSaveMultiplierForActivity,
   checkActivityRange,
+  isRangeCheckable,
   getDistance,
   getActivityAutoTargetAction,
   activityHasEmanationNoTemplate,
@@ -216,11 +217,13 @@ class PersistedFieldStore {
   #getFlags: () => Record<string, any> | undefined;
   #persist: (updates: Record<string, unknown>) => void;
   #forcePersist: (updates: Record<string, unknown>) => void;
+  #persistRolls: () => void;
 
-  constructor(getFlags: () => Record<string, any> | undefined, persist: (updates: Record<string, unknown>) => void, forcePersist: (updates: Record<string, unknown>) => void) {
+  constructor(getFlags: () => Record<string, any> | undefined, persist: (updates: Record<string, unknown>) => void, forcePersist: (updates: Record<string, unknown>) => void, persistRolls: () => void) {
     this.#getFlags = getFlags;
     this.#persist = persist;
     this.#forcePersist = forcePersist;
+    this.#persistRolls = persistRolls;
   }
 
   scalar<T>(key: string, dflt: T, legacyKey?: string): T {
@@ -282,10 +285,16 @@ class PersistedFieldStore {
     return undefined;
   }
 
-  setRoll(key: string, roll: Roll | undefined): void {
+  /**
+   * `derived` fields are not written to the flags: the roll is already in `message.rolls`, tagged
+   * with its `options["midi-qol"].rollType`, and ChatMessageMidi.prepareDerivedData rebuilds the
+   * flag from there. Storing both was storing the same roll twice.
+   */
+  setRoll(key: string, roll: Roll | undefined, derived = false): void {
     if (roll === undefined) this.#cache.delete(key);
     else this.#cache.set(key, roll);
-    this.#forcePersist({ [key]: roll?.toJSON() ?? null });
+    if (derived) this.#persistRolls();
+    else this.#forcePersist({ [key]: roll?.toJSON() ?? null });
   }
 
   rolls(key: string): Roll[] | undefined {
@@ -299,10 +308,11 @@ class PersistedFieldStore {
     return undefined;
   }
 
-  setRolls(key: string, rolls: Roll[] | undefined): void {
+  setRolls(key: string, rolls: Roll[] | undefined, derived = false): void {
     if (rolls === undefined) this.#cache.delete(key);
     else this.#cache.set(key, rolls);
-    this.#forcePersist({ [key]: rolls?.map(r => r.toJSON()) ?? [] });
+    if (derived) this.#persistRolls();
+    else this.#forcePersist({ [key]: rolls?.map(r => r.toJSON()) ?? [] });
   }
 
   damageDetail(key: string): DamageDescription[] {
@@ -420,7 +430,17 @@ export class Workflow {
     }
   }
 
-  #persisted = new PersistedFieldStore(() => this.midiFlags, updates => this.persistFields(updates), updates => this.forcePersistFields(updates));
+  /**
+   * Rolls persist to `message.rolls`, never to the flags — ChatMessageMidi.prepareDerivedData puts
+   * them back on the flags when the message is prepared. Written unconditionally, like the flags
+   * they replace, so `workflow.attackRoll` survives a reload with saveToChatCard off.
+   */
+  private persistRolls(): void {
+    if (this.itemCardUuid) addUpdatesCache(this.id, { rolls: this.chatRolls });
+  }
+
+  #persisted = new PersistedFieldStore(() => this.midiFlags, updates => this.persistFields(updates),
+    updates => this.forcePersistFields(updates), () => this.persistRolls());
 
   get useActiveDefence() { return false; }
   get actor(): Actor.Implementation {
@@ -741,7 +761,7 @@ export class Workflow {
   get attackRoll(): Roll | undefined { return this.#persisted.roll("attackRoll"); }
   set attackRoll(attackRoll: Roll | undefined) {
     if (attackRoll) attackRoll.data = {};
-    this.#persisted.setRoll("attackRoll", attackRoll);
+    this.#persisted.setRoll("attackRoll", attackRoll, true);
   }
 
   get diceRoll() { return this.#persisted.scalar("diceRoll", 0); }
@@ -991,15 +1011,16 @@ export class Workflow {
   }
 
   get damageRolls(): Roll[] { return this.#persisted.rolls("damageRolls") ?? []; }
-  set damageRolls(damageRolls: Roll[]) { this.#persisted.setRolls("damageRolls", damageRolls); }
+  set damageRolls(damageRolls: Roll[]) { this.#persisted.setRolls("damageRolls", damageRolls, true); }
 
   get bonusDamageRolls(): Roll[] | undefined { return this.#persisted.rolls("bonusDamageRolls"); }
-  set bonusDamageRolls(bonusDamageRolls: Roll[] | undefined) { this.#persisted.setRolls("bonusDamageRolls", bonusDamageRolls); }
+  set bonusDamageRolls(bonusDamageRolls: Roll[] | undefined) { this.#persisted.setRolls("bonusDamageRolls", bonusDamageRolls, true); }
 
   get otherDamageRolls(): Roll[] | undefined { return this.#persisted.rolls("otherDamageRolls"); }
-  set otherDamageRolls(otherDamageRolls: Roll[] | undefined) { this.#persisted.setRolls("otherDamageRolls", otherDamageRolls); }
+  set otherDamageRolls(otherDamageRolls: Roll[] | undefined) { this.#persisted.setRolls("otherDamageRolls", otherDamageRolls, true); }
 
   get utilityRolls(): Roll[] | undefined { return this.#persisted.rolls("utilityRolls") ?? []; }
+  // Not derived: chatRolls carries the merged utilityRoll, so individual rolls can't be recovered.
   set utilityRolls(utilityRolls: Roll[] | undefined) {
     utilityRolls?.forEach(d => d.data = {});
     this.#persisted.setRolls("utilityRolls", utilityRolls);
@@ -1993,7 +2014,18 @@ export class Workflow {
     }
 
     // do pre roll checks
-    if (checkMechanic("checkRange") !== "none" && (!this.AoO && ["rwak", "rsak"].includes(this.activity.actionType ?? "")) && this.tokenUuid) {
+    /*
+     * Thrown weapons are ranged attacks and the range rules apply to them — "hurl a handaxe" is the
+     * rules' own example of making one. A thrown weapon is a melee weapon carrying the property, so
+     * its activity is mwak and this gate was skipping it: no long-range disadvantage, and no
+     * out-of-range failure either. `checkActivityRange` was always written to cope with them (it
+     * clamps the long range away only for melee weapons *without* the property) and
+     * TargetConfirmation already calls it for mwak, so this caller was the odd one out.
+     *
+     * No guard is needed for one used in melee: with its normal range read correctly, a javelin
+     * thirty feet out is inside it and reports normal.
+     */
+    if (checkMechanic("checkRange") !== "none" && !this.AoO && isRangeCheckable(this.activity) && this.tokenUuid) {
       const { result, attackingToken, range, longRange } = checkActivityRange(this.activity, getToken(this.token) ?? "invalid", this.targets);
       switch (result) {
         case "fail": return this.WorkflowState_RollFinished;
@@ -3104,7 +3136,6 @@ export class Workflow {
     if (contentChanged) {
       const update: ChatMessage.UpdateData = {
         "content": content,
-        timestamp: Date.now(),
         flags: { "midi-qol": { type: MESSAGE_TYPES.ITEM } },
       };
       await this.performThrottledUpdate(chatMessage, update);
@@ -3144,8 +3175,8 @@ export class Workflow {
           }
           const inCombat = !!(game.combat?.turns.some(combatant => combatant.token?.id === selfTarget?.id));
           const converted = convertDuration(activityDuration, inCombat);
-          if (converted.type === "none") {
-            // Permanent/special duration - no expiry
+          if (converted.type === "none" || activityDuration?.units === "inst") {
+            // Permanent/special duration - no expiry. dnd5e summons are often instantaneous (e.g. find familiar)
             // @ts-expect-error fvtt-types v14 duration
             effectData.start = { time: game.time?.worldTime ?? 0, round: game.combat?.round ?? 0, turn: game.combat?.turn ?? 0 };
           } else if (converted.type === "seconds") {
@@ -4082,6 +4113,8 @@ export class Workflow {
       templateUuid: this.templateUuid, // first template UUID (backward compat)
       templateUuids: this.templateUuids, // all template UUIDs
       tokenUuid: this.tokenUuid,
+      utilityRoll: this.utilityRoll,
+      utilityRolls: this.utilityRolls,
       uuid: this.itemUuid, // deprecated
       workflowOptions: this.workflowOptions,
       castData: this.castData,
@@ -4409,10 +4442,9 @@ export class Workflow {
         }
       }
     }
-    // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
-    const rolls = [...(this.attackRoll ? [this.attackRoll] : []),
-    ...(this.utilityRoll ? [this.utilityRoll] : [])];
-    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls });
+    // chatRolls, not just this roll: message.rolls is where the rolls are stored now, so a partial
+    // array here would drop the ones already made.
+    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls: this.chatRolls });
   }
 
   async displayAttackRoll(displayOptions: { GMOnlyAttackRoll?: boolean } = {}) {
@@ -4486,9 +4518,7 @@ export class Workflow {
 
       }
     }
-    // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
-    const rolls = [...(this.attackRoll ? [this.attackRoll] : [])];
-    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls });
+    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls: this.chatRolls });
   }
 
   async displayDamageRolls() {
@@ -4639,7 +4669,6 @@ export class Workflow {
 
       const update = {
         content,
-        timestamp: Date.now(),
         flags: { "midi-qol": { type: MESSAGE_TYPES.HITS } },
         // TODO: May not be required
         style: CONST.CHAT_MESSAGE_STYLES.OTHER
@@ -8016,8 +8045,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         hitECTargetUuids: Array.from(this.hitTargetsEC).map(t => getTokenDocument(t)?.uuid),
       }
     };
-    const rolls = [...(this.attackRoll ? [this.attackRoll] : [])];
-    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls });
+    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls: this.chatRolls });
   }
 }
 export class UserWorkflow extends Workflow {
@@ -8631,6 +8659,7 @@ export type WorkflowOptions = InexactPartial<{
   advantage: boolean;
   allowIncapacitated: boolean;
   attackPerTarget: boolean;
+  attackMode: string;
   attackRollDSN: boolean;
   autoConsumeResource: string;
   autoFastAttack: boolean;
@@ -8640,6 +8669,8 @@ export type WorkflowOptions = InexactPartial<{
   damageRollDSN: boolean;
   disadvantage: boolean;
   event: AugmentedEvent;
+  excludeTargets: string[];
+  includeTargets: string[];
   fastForward: boolean;
   fastForwardAbility: boolean;
   fastForwardAttack: boolean;
@@ -8800,6 +8831,8 @@ type MidiMacroData = {
   templateUuid?: string;
   templateUuids?: string[];
   tokenUuid?: string;
+  utilityRoll?: Roll;
+  utilityRolls?: Roll[];
   uuid?: string;
   workflow: Workflow;
   workflowId: string;

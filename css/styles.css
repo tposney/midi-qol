@@ -545,6 +545,22 @@
   width: max-content;
   min-width: 200px;
   right: 0;
+  text-align: left;
+}
+
+/* Was inline on every save row. */
+.midi-qol-save-heading {
+  text-align: center;
+}
+
+.midi-qol-save-img {
+  background-color: var(--dnd5e-background-10);
+  width: 30px;
+  height: 30px;
+}
+
+.midi-qol-save-name .midi-qol-playerTokenName {
+  text-align: right;
 }
 
 .midi-qol-saves-display {
@@ -575,6 +591,7 @@
 
 .midi-qol-save-total {
   white-space: nowrap;
+  font-weight: bold;
 }
 
 
@@ -853,6 +870,16 @@ section.midi-qol.tab {
   .midi-activation-conditions h3 {
     border-bottom-color: var(--color-border-light-primary)
   }
+}
+
+section.midi-qol.tab > .sheet-tabs {
+  flex-wrap: wrap;
+  font-size: var(--font-size-12);
+  text-transform: none;
+}
+
+section.midi-qol.tab > .sheet-tabs [data-tab] label {
+  white-space: nowrap;
 }
 
 .theme-dark .midi-qol.tab textarea:not(:read-only) {

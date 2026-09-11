@@ -9,7 +9,7 @@ import { concentrationCheckItemDisplayName } from "./Hooks.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
-import { Activity, ActivityUseConfiguration, CalcDamageOptions, DamageDescription, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails } from "../globals.js";
+import { Activity, ActivityUseConfiguration, CalcDamageOptions, MidiChangeData, DamageDescription, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails } from "../globals.js";
 
 import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject, AnyObject } from "fvtt-types/utils";
@@ -594,16 +594,14 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     let combinedRawDamageDetails: DamageDescription[] = [];
     let combinedDamageDetails: DamageDescription[] = [];
 
+    const damageBuckets: [DamageDescription[], "defaultDamage" | "otherDamage" | "bonusDamage"][] = [
+      [workflow.damageDetail ?? [], "defaultDamage"],
+      [(workflow.otherDamageMatches?.has(token) ?? true) ? (workflow.otherDamageDetail ?? []) : [], "otherDamage"],
+      [workflow.bonusDamageDetail ?? [], "bonusDamage"]
+    ];
 
-    const damageArr: [DamageDescription[] | undefined, string][] = [[workflow.damageDetail ?? [], "defaultDamage"], [(workflow.otherDamageMatches?.has(token) ?? true) ? (workflow.otherDamageDetail ?? []) : [], "otherDamage"], [workflow.bonusDamageDetail ?? [], "bonusDamage"]];
-    for (let [damages, type] of damageArr) {
-      if (!damages) {
-        const message = `processDamageRoll | ${type} damages is not defined`;
-        TroubleShooter.recordError(new Error("no valid damage"), message);
-        error(message);
-        continue;
-      }
-      let calcDamageOptions: CalcDamageOptions = {
+    const buildCalcDamageOptions = (): CalcDamageOptions => {
+      const calcDamageOptions: CalcDamageOptions = {
         invertHealing: true,
         multiplier: challengeModeScale,
         // Always initialize ignore to ensure dnd5e calculateDamage processes traits correctly
@@ -634,65 +632,103 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           uncannyDodge: actor.flags?.[MODULE_ID]?.["uncanny-dodge"] && workflow.item?.hasAttack
         }
       };
-
-      // calcDamageOptions = foundry.utils.duplicate(damagePerActor[actor.uuid].damageDetails.calcDamageOptions[type]) as CalcDamageOptions;
-      if (type === "otherDamage" && (workflow.otherActivity?.save || workflow.otherActivity?.check)) {
-        const defaultSaveMultiplier = getSaveMultiplierForActivity(workflow.otherActivity);
-        const saveMultiplier = hasSaved
-          ? superSaver || semiSuperSaver
-            ? 0
-            : defaultSaveMultiplier
-          : superSaver
-            ? defaultSaveMultiplier
-            : 1;
-        calcDamageOptions.midi.saveMultiplier = saveMultiplier;
-      }
-
       const categories: Record<string, string> = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption", "idm": "modification" };
-      if (workflow?.activity) {
-        const ignoreTraits = workflow.activity.midiProperties?.ignoreTraits;
-        if (ignoreTraits) {
-          for (let key of Object.keys(categories)) {
-            const category = categories[key];
-            // Check for base key (e.g., "idi") - applies to all damage types
-            if (ignoreTraits.has(key)) {
-              if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
-              for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
-                calcDamageOptions.ignore![category].add(dt);
-              }
+      const ignoreTraits = workflow?.activity?.midiProperties?.ignoreTraits;
+      if (ignoreTraits) {
+        for (let key of Object.keys(categories)) {
+          const category = categories[key];
+          // Check for base key (e.g., "idi") - applies to all damage types
+          if (ignoreTraits.has(key)) {
+            if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
+            for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
+              calcDamageOptions.ignore![category].add(dt);
             }
           }
-          // Check for damage-type specific keys (e.g., "idi.fire")
-          for (const trait of ignoreTraits) {
-            if (trait.includes('.')) {
-              const [categoryKey, damageType] = trait.split('.');
-              const category = categories[categoryKey];
-              if (category && GameSystemConfig.damageTypes[damageType]) {
-                if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
-                calcDamageOptions.ignore![category].add(damageType);
-              }
+        }
+        // Check for damage-type specific keys (e.g., "idi.fire")
+        for (const trait of ignoreTraits) {
+          if (trait.includes('.')) {
+            const [categoryKey, damageType] = trait.split('.');
+            const category = categories[categoryKey];
+            if (category && GameSystemConfig.damageTypes[damageType]) {
+              if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
+              calcDamageOptions.ignore![category].add(damageType);
             }
           }
         }
       }
+      return calcDamageOptions;
+    };
+
+    const otherSaveMultiplier = (workflow.otherActivity?.save || workflow.otherActivity?.check)
+      ? (() => {
+        const defaultOtherMultiplier = getSaveMultiplierForActivity(workflow.otherActivity);
+        return hasSaved
+          ? superSaver || semiSuperSaver
+            ? 0
+            : defaultOtherMultiplier
+          : superSaver
+            ? defaultOtherMultiplier
+            : 1;
+      })()
+      : undefined;
+
+    if (configSettings.singleDamageCalculation) {
+      // One calculateDamage call for all of a target's damage: dnd5e's damage modification and midi's
+      // own DR are both budgets consumed per call, so calling per category applied them per category.
+      // The only per-category input is the other-damage save multiplier, carried on the entries.
+      const calcDamageOptions = buildCalcDamageOptions();
+      if (otherSaveMultiplier !== undefined) for (const d of damageBuckets[1][0]) d.midiSaveMultiplier = otherSaveMultiplier;
+
+      const allDamage: DamageDescription[] = [];
+      for (const [damages, type] of damageBuckets) {
+        for (const d of damages) d.midiCategory = type;
+        allDamage.push(...damages);
+        damageDetails[`raw${type}`] = damages;
+        damageDetails.calcDamageOptions[type] = calcDamageOptions;
+      }
 
       //@ts-expect-error no dnd5e-types
-      let returnDamages = token.actor.calculateDamage(damages, calcDamageOptions);
-      damageDetails[type] = returnDamages;
-      damageDetails[`raw${type}`] = damages;
-      damageDetails.calcDamageOptions[type] = calcDamageOptions;
-      if (configSettings.singleConcentrationRoll) {
-        combinedDamageDetails = combinedDamageDetails.concat(returnDamages);
-        combinedRawDamageDetails = combinedRawDamageDetails.concat(damages);
+      const calculated: DamageDescription[] = token.actor.calculateDamage(allDamage, calcDamageOptions) ?? [];
+
+      // Partition by tag, never by index: midi's DR pass pushes an aggregate entry and splices out
+      // midi-none entries, so the returned array is neither the same length nor order as the input.
+      for (const [, type] of damageBuckets) damageDetails[type] = calculated.filter(d => d.midiCategory === type);
+      // Injected entries are cross-category, so they ride with the combined total.
+      damageDetails.injectedDamage = calculated.filter(d => !d.midiCategory);
+      combinedRawDamageDetails = allDamage;
+      combinedDamageDetails = (damageDetails.defaultDamage ?? [])
+        .concat(damageDetails.otherDamage ?? [], damageDetails.bonusDamage ?? [], damageDetails.injectedDamage);
+    } else {
+      for (let [damages, type] of damageBuckets) {
+        if (!damages) {
+          const message = `processDamageRoll | ${type} damages is not defined`;
+          TroubleShooter.recordError(new Error("no valid damage"), message);
+          error(message);
+          continue;
+        }
+        const calcDamageOptions = buildCalcDamageOptions();
+        if (type === "otherDamage" && otherSaveMultiplier !== undefined) calcDamageOptions.midi.saveMultiplier = otherSaveMultiplier;
+
+        //@ts-expect-error no dnd5e-types
+        let returnDamages = token.actor.calculateDamage(damages, calcDamageOptions);
+        damageDetails[type] = returnDamages;
+        damageDetails[`raw${type}`] = damages;
+        damageDetails.calcDamageOptions[type] = calcDamageOptions;
+        if (configSettings.singleConcentrationRoll) {
+          combinedDamageDetails = combinedDamageDetails.concat(returnDamages);
+          combinedRawDamageDetails = combinedRawDamageDetails.concat(damages);
+        }
       }
     }
     damageDetails.calcDamageOptions.combinedDamage = damageDetails.calcDamageOptions.defaultDamage;
+    const injected = damageDetails.injectedDamage ?? [];
     if (configSettings.singleConcentrationRoll) {
       damageDetails["rawcombinedDamage"] = mergeDamageDetail(combinedRawDamageDetails);
       damageDetails["combinedDamage"] = combinedDamageDetails;
     } else {
       damageDetails.rawcombinedDamage = mergeDamageDetail((damageDetails.rawdefaultDamage ?? []).concat(damageDetails.rawbonusDamage ?? []));
-      damageDetails.combinedDamage = (damageDetails?.defaultDamage ?? []).concat(damageDetails.bonusDamage ?? []);
+      damageDetails.combinedDamage = (damageDetails?.defaultDamage ?? []).concat(damageDetails.bonusDamage ?? [], injected);
     }
   }
 
@@ -982,7 +1018,7 @@ export function setupMidiFlagTypes() {
   }
 }
 
-export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffect.ChangeData & { effect?: ActiveEffect.Implementation }, current: unknown, delta: unknown, changes: unknown) {
+export function midiCustomEffect(actor: Actor.Implementation, change: MidiChangeData & { effect?: ActiveEffect.Implementation }, current: unknown, delta: unknown, changes: unknown) {
   if (!change.key) return true;
   if (typeof change?.key !== "string") return true;
   // For passive effects originUuid should point to the parent item, rather than the original item.
@@ -1009,6 +1045,8 @@ export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffe
   if (change.key === "flags.dnd5e.DamageBonusMacro") {
     // DAEdnd5e - daeCustom processes these
   } else if (change.key === `flags.${MODULE_ID}.onUseMacroName`) {
+    // v14 AnyField preserves non-string change values; this flag is only meaningful as a string.
+    if (typeof change.value !== "string") return true;
     const args = change.value.split(",")?.map(arg => arg.trim());
     const currentFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.onUseMacroName`) as string ?? "";
     if (args[0] === "ActivityMacro" || args[0] === MQActivityMacroLabel) {
@@ -1074,7 +1112,8 @@ export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffe
     const macroString = (currentFlag?.length > 0) ? [currentFlag, extraFlag].join(",") : extraFlag;
     foundry.utils.setProperty(actor, `flags.${MODULE_ID}.onUseMacroName`, macroString)
     return true;
-  } else if (change.key.startsWith(`flags.${MODULE_ID}.optional.`) && (change.value.trim() === "ItemMacro" || change.value.trim() === MQItemMacroLabel)) {
+  } else if (change.key.startsWith(`flags.${MODULE_ID}.optional.`) && typeof change.value === "string"
+    && (change.value.trim() === "ItemMacro" || change.value.trim() === MQItemMacroLabel)) {
     let macroString = change.value;
     if (originUuid?.includes("Item.")) {
       const itemUuid = originUuid?.includes("ActiveEffect.") ? originUuid.split(".").slice(0, -2).join(".") : originUuid;
@@ -1985,6 +2024,17 @@ async function buildOvertimeItemData(ctx: OvertimeItemBuildContext): Promise<{ i
   return { itemData, activityData };
 }
 
+/** Effect stack count - flags.dae.stacks, or EffectCounter's per-token counter when present. */
+export function getEffectStackCount(effect: ActiveEffect.Implementation | undefined, token?: TokenOrDocument): number {
+  if (!effect) return 1;
+  let stacks = (effect.flags?.dae as any)?.stacks ?? 1;
+  if (globalThis.EffectCounter && token) {
+    const counter = globalThis.EffectCounter.findCounter(getTokenDocument(token), effect.img ?? (effect as any).icon);
+    if (counter) stacks = counter.getValue();
+  }
+  return Number(stacks) || 1;
+}
+
 /**
  * Parse raw overtime spec string into typed OvertimeDetails
  */
@@ -2209,6 +2259,11 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
   const changes = effect.system.changes.filter(change => change.key.startsWith(`flags.${MODULE_ID}.OverTime`));
   if (changes.length > 0) for (let change of changes) {
     // flags.midi-qol.OverTime turn=start/end, damageRoll=rollspec, damageType=string, saveDC=number, saveAbility=str/dex/etc, damageBeforeSave=true/[false], label="String"
+    // Read the raw value - parseOvertimeDetails substitutes @fields before details.damageRoll exists.
+    // Only damageRoll counts; @stackCount in a condition says nothing about damage scaling.
+    const rawDamageRoll = typeof change.value === "string"
+      ? (/(?:^|,)\s*damageRoll\s*=\s*([^,]*)/i.exec(change.value)?.[1] ?? "") : "";
+    const authorHandlesStacks = rawDamageRoll.includes("@stackCount");
     const details = parseOvertimeDetails(change.value, rollData, effect.name);
     if (!details) continue;
 
@@ -2299,17 +2354,14 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
       // Target is passed via targetsToUse in the options below — no need to modify game.user.targets
       // which would clobber the GM's real targets before completeActivityUse can save them.
 
-      // Handle stacking damage rolls
+      // Repeat per stack by default; if the spec uses @stackCount the author scales it themselves.
       if (damageRoll && activityData.damage?.parts?.[0]) {
         let damageRollString = damageRoll;
-        let stackCount = effect.flags.dae?.stacks ?? 1;
-        if (globalThis.EffectCounter && theTargetToken) {
-          // This only runs for combatants and
-          const counter = globalThis.EffectCounter.findCounter(getTokenDocument(theTargetToken), effect.img ?? effect.icon) //v12 icon -> img
-          if (counter) stackCount = counter.getValue();
+        if (!authorHandlesStacks) {
+          const stackCount = getEffectStackCount(effect, theTargetToken);
+          for (let i = 1; i < stackCount; i++)
+            damageRollString = `${damageRollString} + ${damageRoll}`;
         }
-        for (let i = 1; i < stackCount; i++)
-          damageRollString = `${damageRollString} + ${damageRoll}`;
         activityData.damage.parts[0].custom.formula = damageRollString;
       }
 
@@ -2711,15 +2763,10 @@ export async function completeItemUse(itemRef: Item.Implementation | string, con
     // error(`completeItemUse | item ${item.name} ${item.uuid} does not have a suitable activity`);
     // return undefined;
   }
-  if (activities.length === 1) { // if there is a single non-automation activity use it
-    return completeActivityUse(activities[0], activityConfig, dialog, message);
-  }
-
-  if (activities?.length > 1 || chooseActivity) {
-    const activity = await MidiActivityChoiceDialog.create(item);
-    if (activity) return completeActivityUse(activity, activityConfig, dialog, message);
-
-  }
+  // Apply the module prune hook (midi-qol.itemUseActivitySelect) before deciding: create() skips the
+  // dialog for a single survivor and returns null (skip the roll) if modules removed them all.
+  const activity = await MidiActivityChoiceDialog.create(item, { chooseActivity });
+  if (activity) return completeActivityUse(activity, activityConfig, dialog, message);
   return undefined;
 }
 
@@ -3153,27 +3200,11 @@ export function checkWallCollision(
       return blocked;
     }
 
-    case "centerLevels":
     case "levelsautocover":
-      if (installedModules.get("levels")) {
-        if (coverVisible === false) {
-          return true;
-        }
-        if (coverVisible === undefined) {
-          const p1 = { x: origin.x, y: origin.y, z: options.originElevation ?? 0 };
-          const p2 = { x: dest.x, y: dest.y, z: options.destElevation ?? 0 };
-          //@ts-expect-error Levels API not typed
-          const baseToBase = CONFIG.Levels.API.testCollision(p1, p2, "collision");
-          const p1Top = { x: origin.x, y: origin.y, z: options.originTopElevation ?? p1.z };
-          const p2Top = { x: dest.x, y: dest.y, z: options.destTopElevation ?? p2.z };
-          //@ts-expect-error Levels API not typed
-          const topToBase = CONFIG.Levels.API.testCollision(p1Top, p2Top, "collision");
-          blocked = baseToBase && topToBase;
-          return blocked;
-        }
-        return false;
-      }
-      // Fallback to basic check if Levels not installed
+      // Unresolved by the levelsautocover pre-check falls back to the "center" check - Levels has
+      // no collision API on v14, only a Scene#testSurfaceCollision wrapper.
+      if (coverVisible === false) return true;
+      if (coverVisible !== undefined) return false;
       blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
         source,
         mode: "any",
@@ -3496,6 +3527,42 @@ export interface DistanceOptions {
  * @param options - Options for distance calculation
  * @returns The distance between the tokens, or -1 if invalid/blocked
  */
+/**
+ * The committed position of a token, ignoring any movement animation in flight.
+ *
+ * Both `token.center` and `token.document.x` interpolate while a move animates: measured during a
+ * three-square move, document.x reported 3210, 3300 and 3410 before finally reaching 3500, and
+ * `move()` itself resolves at 3410 — before arrival. `movement.state` reads "completed" throughout,
+ * so it cannot be used as a gate either. Measuring range mid-animation therefore uses a square the
+ * token merely passed through, and an attack made straight after moving is rejected as out of range
+ * from the *old* position.
+ *
+ * `_source` holds the destination from the moment the database write lands and never interpolates,
+ * which is why core reads it too - see Token#checkCollision, which derives its origin as
+ * `getMovementOrigin(this.document._source)`.
+ *
+ * Note this is committed state, not intended state: in the few milliseconds between calling move()
+ * and the write landing, `_source` is still the origin, and during an uncommitted drag preview it
+ * remains the pre-drag position. Both are the correct answer to "where is this token now".
+ */
+export function tokenSourcePosition(tokenRef: any): { x: number, y: number } {
+  const doc = tokenRef?.document ?? tokenRef;
+  const source = doc?._source;
+  if (Number.isFinite(source?.x) && Number.isFinite(source?.y)) return { x: source.x, y: source.y };
+  return { x: doc?.x ?? 0, y: doc?.y ?? 0 };
+}
+
+/** Centre of a token at its committed position. */
+export function tokenSourceCenter(tokenRef: any): { x: number, y: number } {
+  const doc = tokenRef?.document ?? tokenRef;
+  const pos = tokenSourcePosition(doc);
+  if (typeof doc?.getCenterPoint === "function") {
+    try { return doc.getCenterPoint({ ...pos }); } catch { /* fall through */ }
+  }
+  const size = canvas?.dimensions?.size ?? 100;
+  return { x: pos.x + ((doc?.width ?? 1) * size) / 2, y: pos.y + ((doc?.height ?? 1) * size) / 2 };
+}
+
 export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): number {
   const { wallsBlock = false, includeCover = true, includeElevation = configSettings.optionalRules.distanceIncludesHeight } = options;
   const measurementMode = configSettings.optionalRules.distanceMeasurement ?? "center";
@@ -3529,7 +3596,9 @@ export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): nu
         if (collision) return -1;
       }
     }
-    const result = canvas.grid.measurePath([token1.center, token2.center], {});
+    // Committed centres, not the animated ones - see tokenSourceCenter.
+    const result = canvas.grid.measurePath(
+      [tokenSourceCenter(token1), tokenSourceCenter(token2)], {});
     distance = result?.distance ?? 0;
   } else if (measurementMode === "center") {
     distance = computeDistance(t1, t2, { wallsBlock, includeCover, includeElevation });
@@ -3658,6 +3727,16 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: {
   let segments: { ray: Ray }[] = [];
   let rayDistance, distance;
   let heightDifference = 0;
+  /*
+   * Both source positions are read once rather than inside the loops.
+   *
+   * `tokenSourcePosition` reads `_source.x/y` and neither token moves while the rays are built, so
+   * these were loop-invariant — the outer one recomputed per square of t1, the inner one per *pair*
+   * of squares. For two Gargantuan tokens that is well over a hundred redundant calls for a single
+   * distance, on a path taken for every attack, target check and range test.
+   */
+  const t1Source = tokenSourcePosition(t1);
+  const t2Source = tokenSourcePosition(t2);
   if (!(t2.document instanceof WallDocument)) {
     for (let x = t1StartX; x < t1DocWidth; x++) {
       for (let y = t1StartY; y < t1DocHeight; y++) {
@@ -3667,7 +3746,7 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: {
             y = t1DocHeight - t1StartY;
           }
         }
-        const point1 = canvas.grid.getCenterPoint({ x: Math.round(t1.document.x + (canvas.dimensions.size * x)), y: Math.round(t1.document.y + (canvas.dimensions.size * y)) });
+        const point1 = canvas.grid.getCenterPoint({ x: Math.round(t1Source.x + (canvas.dimensions.size * x)), y: Math.round(t1Source.y + (canvas.dimensions.size * y)) });
         const origin = new PIXI.Point(point1.x, point1.y);
         for (let x1 = t2StartX; x1 < t2DocWidth; x1++) {
           for (let y1 = t2StartY; y1 < t2DocHeight; y1++) {
@@ -3677,7 +3756,7 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: {
                 y1 = t2DocHeight - t2StartY;
               }
             }
-            const point2 = canvas.grid.getCenterPoint({ x: Math.round(t2.document.x + (canvas.dimensions.size * x1)), y: Math.round(t2.document.y + (canvas.dimensions.size * y1)) });
+            const point2 = canvas.grid.getCenterPoint({ x: Math.round(t2Source.x + (canvas.dimensions.size * x1)), y: Math.round(t2Source.y + (canvas.dimensions.size * y1)) });
             const dest = new PIXI.Point(point2.x, point2.y);
             const r = new foundry.canvas.geometry.Ray(origin, dest);
             if (wallsBlock) {
@@ -3730,6 +3809,44 @@ let pointWarn = foundry.utils.debounce(() => {
   ui.notifications?.warn("4 Point LOS check selected but dnd5e-helpers not installed")
 }, 100)
 
+/**
+ * Whether an attack is one the range rules bite on: a ranged attack, or a melee weapon being thrown.
+ *
+ * Shared so the caller deciding whether to check and the branch deciding what a failure means agree
+ * about what counts. They did not, and a javelin fell through the gap in both.
+ */
+export function isRangeCheckable(activity: Activity): boolean {
+  const actionType = activity?.actionType ?? "";
+  if (["rwak", "rsak"].includes(actionType)) return true;
+  if (!["mwak", "msak"].includes(actionType)) return false;
+  // @ts-expect-error no dnd5e-types
+  return !!activity?.item?.labels?.properties?.some((p: any) => p.abbr === "thr");
+}
+
+/**
+ * The normal and long range of an activity, in the activity's own units.
+ *
+ * An activity that does not set its own range reports `range.value` as the furthest usable
+ * distance — for a weapon, its long range — so reading that as the normal range makes the two equal
+ * and leaves the long-range disadvantage unreachable: everything beyond normal range is also beyond
+ * `range`, and the out-of-range test above it has already returned. Measured, no weapon in the game
+ * was ever getting disadvantage past its short range, an archer included. The true pair survives on
+ * the item.
+ *
+ * Spells are unaffected either way: a spell's own range is its real one and it has no long range,
+ * so the derived value already agrees.
+ */
+export function activityRanges(activity: Activity): { normal: number, long: number } {
+  const own: any = activity?.range ?? {};
+  // An activity that overrides its range means it; the item's is no longer relevant.
+  if (own.override) return { normal: (own.value || own.reach) || 0, long: Number(own.long) || 0 };
+  // @ts-expect-error no dnd5e-types
+  const item: any = activity?.item?.system?.range;
+  const normal = Number(item?.value) || (own.value || own.reach) || 0;
+  const long = Number(item?.long ?? own.long) || 0;
+  return { normal, long };
+}
+
 export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocument | string | undefined, targetsRef: Set<TokenOrDocument | string> | undefined, showWarning: boolean = true): { result: string, attackingToken?: Token.Implementation, range?: number | undefined, longRange?: number | undefined } {
   if (!canvas || !canvas.scene) return { result: "normal" };
   const checkRangeFunction = (activity: Activity, token: Token.Implementation, targets: Set<Token.Implementation>): { result: string, reason?: string, range?: number | undefined, longRange?: number | undefined } => {
@@ -3768,8 +3885,7 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
     };
 
     const attackType = activity.actionType;
-    let range = ((activity.range?.value || activity.range?.reach) ?? 0);
-    let longRange = (activity.range?.long ?? 0);
+    let { normal: range, long: longRange } = activityRanges(activity);
     if (activity.actor?.system) { // TODO revisit when/if flags move to activities
       let conditionData;
       let rangeBonus = activity.actor?.flags?.[MODULE_ID]?.range?.[attackType] ?? "0"
@@ -3883,7 +3999,7 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
 
       if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
         log(`${target.name} is too far ${distance} from your character you cannot hit`)
-        if (checkMechanic("checkRange") === "longdisadv" && ["rwak", "rsak"].includes(activity.actionType)) {
+        if (checkMechanic("checkRange") === "longdisadv" && isRangeCheckable(activity)) {
           return {
             result: "dis",
             reason: `${actor?.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`,
@@ -3998,6 +4114,9 @@ export function hasCoverStatus(actor: Actor | null | undefined): boolean {
   return !!(statuses?.has("coverHalf") || statuses?.has("coverThreeQuarters") || statuses?.has("coverTotal"));
 }
 
+/** A position to evaluate cover from, in scene pixels, as `TokenDocument#x`/`y` are. */
+export type CoverPosition = { x: number, y: number, elevation?: number };
+
 /** Check if an actor has the coverTotal status (impossible to hit). */
 export function hasCoverTotal(actor: Actor | null | undefined): boolean {
   return !!actor?.statuses?.has("coverTotal");
@@ -4017,13 +4136,71 @@ export function getCoverBonus(attacker: TokenOrDocument, target: TokenOrDocument
 }
 
 /**
+ * A view of a token as though it stood somewhere else.
+ *
+ * Every cover backend answers for a token at its current position, which is no help to anything
+ * asking "what cover would the target have if I attacked from over there?" — a planner choosing
+ * between squares, a ruler preview, a macro weighing a move. Moving the token to ask is not an
+ * option: it is a document update, it is visible, and it is wrong if anything throws in between.
+ *
+ * So the token is presented at the position instead. Geometry is overridden and everything else —
+ * actor, scene, flags, methods — forwards to the real token, because a backend may read any of it.
+ */
+export function tokenAtPosition(token: Token.Implementation, position: CoverPosition): Token.Implementation {
+  const gridX = canvas?.grid?.sizeX ?? 100;
+  const gridY = canvas?.grid?.sizeY ?? 100;
+  const width = (token.document?.width ?? 1) * gridX;
+  const height = (token.document?.height ?? 1) * gridY;
+  const elevation = position.elevation ?? token.document?.elevation ?? 0;
+  const center = { x: position.x + width / 2, y: position.y + height / 2 };
+
+  let view: Token.Implementation;
+  const documentView = new Proxy(token.document, {
+    get(doc, key) {
+      if (key === "x") return position.x;
+      if (key === "y") return position.y;
+      if (key === "elevation") return elevation;
+      if (key === "object") return view;
+      const value = Reflect.get(doc, key, doc);
+      return typeof value === "function" ? value.bind(doc) : value;
+    }
+  });
+
+  view = new Proxy(token, {
+    get(tok, key) {
+      switch (key) {
+        case "x": return position.x;
+        case "y": return position.y;
+        case "w": return width;
+        case "h": return height;
+        case "center": return center;
+        case "elevation": return elevation;
+        case "document": return documentView;
+        case "bounds": return new PIXI.Rectangle(position.x, position.y, width, height);
+        case "getCenterPoint": return () => center;
+      }
+      const value = Reflect.get(tok, key, tok);
+      return typeof value === "function" ? value.bind(tok) : value;
+    }
+  });
+  return view;
+}
+
+/**
  * Returns the raw cover bonus from the configured cover module.
  * Does NOT check cover statuses, apply attack-specific reductions (sharpshooter, etc.),
  * or reconcile with status-based cover.
+ *
+ * `options.position` asks the question from a square the attacker is not standing on, in scene
+ * pixels and measured from the token's top-left corner as `TokenDocument#x`/`y` are. The configured
+ * cover backend still supplies the answer, so a caller planning a move gets the same number the
+ * attack will later be resolved with rather than a second opinion of its own.
  */
-export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOrDocument, activity?: Activity): number {
-  const attacker = attackerIn instanceof TokenDocument ? attackerIn.object : attackerIn;
+export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOrDocument, activity?: Activity,
+  options: { position?: CoverPosition } = {}): number {
+  let attacker = attackerIn instanceof TokenDocument ? attackerIn.object : attackerIn;
   const target = targetIn instanceof TokenDocument ? targetIn.object : targetIn;
+  if (attacker && options.position) attacker = tokenAtPosition(attacker, options.position);
   if (activity instanceof Item) {
     const item = activity;
     activity = undefined;
@@ -5778,7 +5955,8 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
             }
           }
           // @ts-expect-error no dnd5e-types
-          if (item.type === "spell") {
+          const isSpell = item.type === "spell";
+          if (isSpell) {
             if (configSettings.ignoreSpellReactionRestriction) {
               // Skip all validation for spells when this setting is enabled
               reactions.push(activity);
@@ -5794,6 +5972,7 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
 
           // Use dnd5e's consumption checks for all items/spells
           const config = activity._prepareUsageConfig({ create: false });
+          if (isSpell) foundry.utils.setProperty(config, "consume.spellSlot", false);
           const canUse = await activity._prepareUsageUpdates(config, { returnErrors: true });
           if (canUse instanceof Array) continue; // insufficient uses available
           // If no condition is specified, default to requiring isHit
@@ -6691,6 +6870,8 @@ export function createConditionData(data: {
     }
     if (data.effect) {
       rollData.effect = data.effect;
+      // DAE rewrites @stackCount on a deep clone that never reaches effect.system.changes, so supply it here.
+      rollData.stackCount = getEffectStackCount(data.effect, getOrCreateTokenForActor(actor ?? undefined));
     }
     if (game.combat) {
       const combat = game.combat;
@@ -7315,10 +7496,11 @@ export async function renderAttributionTooltip(attributions: AttributionMap, tit
   }));
 
   // Always render the tooltip, even if empty (will show title or "Normal" state)
-  return foundry.applications.handlebars.renderTemplate(
+  // Compacted: this is HTML-escaped into a data-tooltip-html attribute.
+  return compactHTML(await foundry.applications.handlebars.renderTemplate(
     "modules/midi-qol/templates/attribution-tooltip.html",
     { attributions: localizedEntries, title }
-  );
+  ));
 }
 
 /**
@@ -7423,10 +7605,10 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
     }));
     const title = advantageModeStr === "advantage" ? i18n("DND5E.Advantage") :
                   advantageModeStr === "disadvantage" ? i18n("DND5E.Disadvantage") : "";
-    attributionTooltip = await foundry.applications.handlebars.renderTemplate(
+    attributionTooltip = compactHTML(await foundry.applications.handlebars.renderTemplate(
       "modules/midi-qol/templates/attribution-tooltip.html",
       { attributions, title }
-    );
+    ));
   }
 
   // Extract damage type icon for display next to total
@@ -8746,7 +8928,7 @@ function displayContestedResults(chatCardUuid: string | undefined, resultContent
     const searchRE = /<div class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
     const replaceString = `<div class="midi-qol-saves-display">${resultContent}<div class="end-midi-qol-saves-display">`;
     content = content.replace(searchRE, replaceString);
-    itemCard.update({ content });
+    itemCard.update({ content: compactCardContent(content) });
   } else {
     // const title = `${flavor ?? i18n("miidi-qol:ContestedRoll")} results`;
     ChatMessage.create({ content: `<p>${resultContent}</p>`, speaker });
@@ -9200,10 +9382,25 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
   if (debugEnabled) warn("_updateAction | post update updatesCache", Date.now(), updates);
 }
 
+const CARD_DESCRIPTION_RE = /<section class="card-header[\s\S]*?<\/section>\s*<\/section>/;
+
+/** Drop template indentation. One space, not none, so inline elements aren't run together. */
+export const compactHTML = (html: string) => html.replace(/[ \t]*\n[ \t]*/g, " ");
+
+/** Compact midi's card markup. Idempotent. The item description is authored prose, so left alone. */
+export function compactCardContent(content: string): string {
+  if (!content) return content;
+  const description = content.match(CARD_DESCRIPTION_RE)?.[0];
+  if (!description) return compactHTML(content);
+  const at = content.indexOf(description);
+  return compactHTML(content.slice(0, at)) + description + compactHTML(content.slice(at + description.length));
+}
+
 // NOTE: Typed as a ChatMessage since that's all we use it for
 export async function throttledUpdate(document: ChatMessage.Implementation, updates: ChatMessage.UpdateData, throttlingFunc: undefined | ((document: ChatMessage.Implementation, updates: ChatMessage.UpdateData) => Promise<void>) = undefined, immediate = false) {
   if (!document) return; // ChatCard was removed already?;
   updates = foundry.utils.expandObject(updates) as typeof updates;
+  if (typeof updates.content === "string") updates.content = compactCardContent(updates.content);
   updates = foundry.utils.mergeObject((updatesCache[document.uuid] ?? {}), updates, { inplace: false, overwrite: true })
   updatesCache[document.uuid] = updates;
   if (!debounceInterval || immediate || !throttlingFunc) {
@@ -9471,23 +9668,17 @@ export interface ConvertedDuration {
  *
  * @param durationData - Duration with units and value
  * @param inCombat - Whether the actor is currently in combat
- * @param maxRoundsForTurns - Maximum rounds before switching to seconds (default 10)
  * @returns Converted duration with type, seconds, rounds, and turns
  */
 export function convertDuration(
   durationData: { units: string; value: number } | undefined,
-  inCombat: boolean,
-  maxRoundsForTurns: number = 10
+  inCombat: boolean
 ): ConvertedDuration {
-  const timesUpActive = installedModules.get("times-up");
-  const useTurns = inCombat && timesUpActive;
   const roundTime = CONFIG.time.roundTime ?? 6;
 
   // No duration or invalid - return minimal duration
   if (!durationData?.units) {
-    return useTurns
-      ? { type: "turns", seconds: 0, rounds: 0, turns: 1 }
-      : { type: "seconds", seconds: 1, rounds: 0, turns: 0 };
+    return { type: "seconds", seconds: 1, rounds: 0, turns: 0 };
   }
 
   const { units, value } = durationData;
@@ -9499,24 +9690,17 @@ export function convertDuration(
 
   // Handle instantaneous - minimal duration
   if (units === "inst") {
-    return useTurns
-      ? { type: "turns", seconds: 0, rounds: 0, turns: 1 }
-      : { type: "seconds", seconds: 1, rounds: 0, turns: 0 };
+    return { type: "seconds", seconds: 1, rounds: 0, turns: 0 };
   }
 
-  // Handle turn-based durations
+  // Turns stay turns - core tracks them once a combat exists, and a turn has no seconds equivalent.
   if (["turn", "turns"].includes(units)) {
-    return {
-      type: useTurns ? "turns" : "seconds",
-      seconds: roundTime,
-      rounds: 0,
-      turns: value
-    };
+    return { type: "turns", seconds: undefined, rounds: 0, turns: value };
   }
 
   if (["round", "rounds"].includes(units)) {
     return {
-      type: useTurns ? "turns" : "seconds",
+      type: inCombat ? "turns" : "seconds",
       seconds: value * roundTime,
       rounds: value,
       turns: 0
@@ -9571,14 +9755,8 @@ export function convertDuration(
       return { type: "none", seconds: undefined, rounds: undefined, turns: undefined };
   }
 
-  const rounds = Math.floor(seconds / roundTime);
-
-  // Use turns for short durations in combat, seconds for longer durations
-  if (useTurns && rounds <= maxRoundsForTurns) {
-    return { type: "turns", seconds, rounds, turns: 0 };
-  }
-
-  return { type: "seconds", seconds, rounds, turns: 0 };
+  // Time-based units stay seconds - core tracks them in and out of combat.
+  return { type: "seconds", seconds, rounds: Math.floor(seconds / roundTime), turns: 0 };
 }
 
 export function getSaveRollModeFor(abilityId: string) {
