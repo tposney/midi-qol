@@ -1118,7 +1118,7 @@
   },
   "midi-qol.GriddedGridless.Name": "Gridless Grid",
   "midi-qol.GridlessFudge.Name": "Fudge factor",
-  "midi-qol.GridlessFudge.Hint": "Subtract the fudge factor from the measured distance when checking range. Specified in grid scale units, i.e. ft/m",
+  "midi-qol.GridlessFudge.Hint": "Reduce measured distance by this amount, never dropping below one grid unit. Adjacent tokens will still measure one square. Specified in grid scale units, i.e. ft/m",
   "midi-qol.GriddedGridless.Hint": "If set midi will use the square grid for all distance calculations in gridless scenes",
   "midi-qol.targetConfirmationPosition": "Target Confirmation Position",
   "midi-qol.TargetConfirmationEnabled": "Enable Target Confirmation",

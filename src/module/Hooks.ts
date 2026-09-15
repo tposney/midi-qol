@@ -1,5 +1,5 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, obscureRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
+import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget, rangeToSceneUnits } from "./utils.js";
 import { checkMechanic, checkRule, configSettings, dragDropTargeting, isDnd5e53, setDnd5e53 } from "./settings.js";
@@ -8,7 +8,7 @@ import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { Workflow } from "./Workflow.js";
 import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
 import { installedModules } from "./setupModules.js";
-import { preActivityConsumptionHook, activityConsumptionHook, selectTargetsFromTemplates } from "./activities/activityHelpers.js";
+import { preActivityConsumptionHook, activityConsumptionHook, midiTemplateFlags, selectTargetsFromTemplates } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
 import { MidiDependentsRegistry } from "./lib/MidiDependentsRegistry.js";
@@ -80,40 +80,29 @@ export let readyHooks = async () => {
     await checkDeleteTemplate(regionDoc, options, userId);
   });
 
-  // Auto-target tokens when a template is refreshed (moved/reshaped during preview or after placement)
-  // Only the user who placed the template should update targeting, otherwise all clients
-  // would set their own game.user.targets causing every player to target the AoE tokens.
-  // @ts-expect-error fvtt-types missing flags parameter on refreshMeasuredTemplate hook
-  Hooks.on("refreshMeasuredTemplate", (template: foundry.canvas.placeables.MeasuredTemplate.Implementation, flags: Record<string, boolean>) => {
-    if (!flags.refreshPosition && !flags.refreshShape) return;
-    if (!canvas?.tokens) return;
-    if (template.document.author?.id !== game.user?.id) return;
 
-    // Only auto-target for templates created by dnd5e activities (midi or native).
-    // template.activity is set during preview; flags.dnd5e.origin is set after placement.
-    // Skip manually placed or non-activity templates entirely.
-    // @ts-expect-error no dnd5e-types
-    if (!template.activity && !template.document.flags?.dnd5e?.origin) return;
-
-    // @ts-expect-error no dnd5e-types
-    const autoTarget = getActivityAutoTargetAction(template.activity);
-    if (autoTarget === "none") return;
-
-    // template.activity is set by dnd5e on AbilityTemplate during preview, but not on
-    // the standard MeasuredTemplate created after placement. Fall back to looking up
-    // the activity from the template's dnd5e.origin flag (the activity UUID).
-    // @ts-expect-error no dnd5e-types
-    const activity = template.activity
-      ?? (template.document.flags?.dnd5e?.origin ? fromUuidSync(template.document.flags.dnd5e.origin) : undefined);
-    const sourceToken = getTemplateSourceToken(template.document);
-
-    // Targeting (incl. the lvt path) lives in computeTargetsFromTemplate - one shared code path.
-    if (activity && sourceToken) {
-      const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some((spec: string) => ["-self"].includes(spec));
-      selectTargetsFromTemplates([template], sourceToken, ignoreSelf, getAoETargetType(activity), autoTarget);
-    } else {
-      selectTargetsFromTemplates([template]);
-    }
+  /*
+   * Live targeting while a template is being dragged — the region-era counterpart of the
+   * `refreshMeasuredTemplate` handler above.
+   *
+   * dnd5e 6.0 places templates with `canvas.regions.placeRegions`, so the thing being dragged is a
+   * Region preview whose document is not in the scene; every move sets `refreshShapes` on it.
+   * Targeting reads that unsaved document directly, which is fine because `polygonTree.testPoint`
+   * is pure geometry and answers before the region is ever saved.
+   *
+   * Placed regions are deliberately excluded: they are targeted once, by `processPlacedTemplates`.
+   */
+  // `flags` is optional because fvtt-types declares the hook with only the placeable; Foundry
+  // passes the render flags as a second argument (placeable-object.mjs: `Hooks.callAll(...)`).
+  Hooks.on("refreshRegion", (region: foundry.canvas.placeables.Region.Implementation,
+    flags?: Record<string, boolean>) => {
+    if (!flags?.refreshShapes && !flags?.refreshGeometry) return;
+    if (!canvas?.tokens || !canvas.scene) return;
+    const doc = region?.document;
+    if (!doc || !foundry.utils.getProperty(doc, "flags.core.MeasuredTemplate")) return;
+    if (doc.id && canvas.scene.regions.has(doc.id)) return;
+    if (configSettings.autoTarget === "none") return;
+    selectTargetsFromTemplates([doc]);
   });
 
   // Handle updates to the characters HP
@@ -436,7 +425,6 @@ export function initHooks() {
     resolveTokenThumbnails(html);
     colorChatMessageHandler(message, html, data);
     hideRollRender(message, html, data);
-    obscureRollRender(message, html, data);
     hideStuffHandler(message, html, data);
     processConcentrationRequestMessage(message, html, data);
   });
@@ -1932,96 +1920,49 @@ Hooks.on("dnd5e.rollConcentration", (rolls, { subject }) => {
   }
 });
 
-// Set midi-qol flags on activity templates for use during preview and placement.
-// When constrainTemplatePlacement is enabled:
-// - Sets sourceTokenUuid for all templates
-// - Sets maxRange for templates with limited range (clamps placement during preview)
-// - Sets anchorToToken for cone/ray templates with range Self/None
-Hooks.on("dnd5e.preCreateActivityTemplate", (activity, templateData) => {
-  templateData.distance! += 0.000001; // Make the template fractionally larger to avoid rounding errors
 
-  const casterToken = activity.actor ? tokenForActor(activity.actor) : undefined;
 
-  // dnd5e leaves elevation at 0, so anchor to the caster. Covers preview and placement in one
-  // place; an explicit elevation from the caller wins.
-  if (casterToken && templateData.elevation === undefined) {
-    templateData.elevation = casterToken.document.elevation;
-  }
+// v14: preCreateMeasuredTemplate does NOT fire after the compat layer creates a Region.
+// preCreateRegion fires instead. Filter for template-backed regions and run the same range validation.
+/*
+ * Stamp midi's flags onto activity template regions before they are created.
+ *
+ * This is where `dnd5e.preCreateActivityTemplate` used to do it. That hook fires only from the
+ * deprecated `AbilityTemplate`; `dnd5e.createMeasuredTemplate` is the 6.0 equivalent and receives
+ * the region data `TemplatePlacement.fromActivity` is about to create. `preCreateRegion` below
+ * reads both of these back to enforce the range limit.
+ */
+/*
+ * Hand midi's placement constraints to `TemplatePlacement` before the placement UI runs.
+ *
+ * `_place` is wrapped (patching.ts) to apply them while the template is dragged; this is where the
+ * values come from. Putting them on the config keeps the wrapper free of activity lookups.
+ */
+Hooks.on("dnd5e.preCreateMeasuredTemplate", (activity, placementConfig: Record<string, unknown>) => {
+  placementConfig.activity = activity;
+  const flags = midiTemplateFlags(activity);
+  if (flags.maxRange !== undefined) placementConfig.midiMaxRange = flags.maxRange;
 
-  if (!configSettings.constrainTemplatePlacement) return true;
-
-  // Store the caster's token UUID for later use
-  const token = casterToken;
-  if (token) {
-    foundry.utils.setProperty(templateData, "flags.midi-qol.sourceTokenUuid", token.document.uuid);
-  }
-
-  const range = activity.range;
-  const rangeUnits = range?.units;
-
-  // Calculate and store max range for templates that should be range-limited
-  // Only set maxRange for range types that should be limited (not self/none/any)
-  if (rangeUnits && rangeUnits !== "self" && rangeUnits !== "none" && rangeUnits !== "any") {
-    let maxRange = range.long || range.value;
-    if (maxRange && maxRange > 0) {
-      if (rangeUnits === "touch") maxRange = canvas?.dimensions?.distance ?? 5;
-      else maxRange = rangeToSceneUnits(maxRange, rangeUnits);
-      foundry.utils.setProperty(templateData, "flags.midi-qol.maxRange", maxRange);
-    }
-  }
-
-  // Check if this template should be anchored to the caster's token
-  // Cones and rays with range self/none/0 should be anchored
-  const templateType = templateData.t;
-  if (templateType === "cone" || templateType === "ray") {
-    const isSelfRange = rangeUnits === "self"
-      || rangeUnits === "none"
-      || (!range?.value && !range?.long && rangeUnits !== "touch");
-
-    if (isSelfRange) {
-      foundry.utils.setProperty(templateData, "flags.midi-qol.anchorToToken", true);
-    }
+  // Cones and rays with no meaningful range originate from the caster's own border.
+  const shapeType = GameSystemConfig.areaTargetTypes?.[activity.target?.template?.type]?.template;
+  if (shapeType === "cone" || shapeType === "ray") {
+    const range = activity.range;
+    const units = range?.units;
+    const isSelfRange = units === "self" || units === "none"
+      || (!range?.value && !range?.long && units !== "touch");
+    if (isSelfRange) placementConfig.midiAnchorToToken = true;
   }
   return true;
 });
 
-// Check template placement range - prevent placing templates beyond the activity's range
-// This is a safety check - the preview movement should already clamp position within range
-Hooks.on("preCreateMeasuredTemplate", (templateDoc: MeasuredTemplateDocument.Implementation, templateData: MeasuredTemplateDocument.CreateData, options: object, userId: string) => {
-  if (userId !== game.user?.id) return true;
-
-  // Use pre-set midi-qol flags from preCreateActivityTemplate hook
-  const midiFlags = templateDoc.flags?.[MODULE_ID] as { maxRange?: number, sourceTokenUuid?: string } | undefined;
-  const maxRange = midiFlags?.maxRange;
-  if (!maxRange) return true;
-
-  const sourceTokenUuid = midiFlags?.sourceTokenUuid;
-  if (!sourceTokenUuid) return true;
-
-  // Get the source token
-  const tokenDoc = fromUuidSync(sourceTokenUuid) as TokenDocument.Implementation | null;
-  const token = tokenDoc?.object;
-  if (!token) return true;
-
-  // Calculate raw grid distance from token perimeter to template position
-  const templateX = templateDoc.x;
-  const templateY = templateDoc.y;
-  if (templateX === undefined || templateY === undefined) return true;
-
-  const poly = getTokenPerimeterPolygon(token);
-  const closest = closestPointOnPerimeter(poly, templateX, templateY);
-  const distance = measurePointDistance(closest, { x: templateX, y: templateY });
-  // Allow half a grid square tolerance for grid snapping moving the position slightly beyond range
-  const tolerance = (canvas?.dimensions?.distance ?? 5) / 2;
-  if (distance <= maxRange + tolerance) return true;
-
-  // Out of range - notify and cancel
-  ui.notifications?.warn(i18n("midi-qol.TemplateOutOfRange"));
-  return false;
+Hooks.on("dnd5e.createMeasuredTemplate", (activity, regionData: Record<string, any>[]) => {
+  const flags = midiTemplateFlags(activity);
+  for (const data of regionData) {
+    for (const [key, value] of Object.entries(flags)) foundry.utils.setProperty(data, `flags.${MODULE_ID}.${key}`, value);
+  }
+  return true;
 });
 
-// v14: preCreateMeasuredTemplate does NOT fire after the compat layer creates a Region.
-// preCreateRegion fires instead. Filter for template-backed regions and run the same range validation.
 Hooks.on("preCreateRegion", (regionDoc, regionData, options, userId) => {
   if (!foundry.utils.getProperty(regionData, "flags.core.MeasuredTemplate")) return true;
   if (userId !== game.user?.id) return true;

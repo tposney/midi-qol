@@ -1,7 +1,7 @@
 import { debug, warn, i18n, error, debugEnabled, i18nFormat, MODULE_ID } from "../midi-qol.js";
 import { DDBGameLogWorkflow, Workflow } from "./Workflow.js";
 import { nsaFlag, coloredBorders, configSettings, forceHideRoll } from "./settings.js";
-import { playerFor, playerForActor, doOverTimeEffect, isInCombat, isAutoFastForward } from "./utils.js";
+import { playerFor, playerForActor, doOverTimeEffect, isInCombat, isAutoFastForward, dnd5eRollType, dnd5eRollItemId } from "./utils.js";
 import { preferredActiveGM, socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 export const MAESTRO_MODULE_NAME = "maestro";
@@ -31,7 +31,10 @@ export let colorChatMessageHandler = (message: ChatMessage.Implementation, html:
 // TODO think about monks tb on preUpdateChatMessage?
 // Also should ideally be async.
 export function checkOverTimeSaves(message: ChatMessage.Implementation, data: ChatMessage.CreateData, options: ChatMessage.Database.CreateOptions, user: string) {
-  if (!message.rolls?.length || !["skill", "save", "ability"].includes(data.flags?.dnd5e?.roll?.type ?? "")) return true;
+  // "death" is deliberately excluded: 6.0 files death saves under the "save" sub-type, where the old
+  // flag gave them their own string, so testing the sub-type alone would newly trigger over-time
+  // effects on death saves.
+  if (!message.rolls?.length || !["skill", "save", "ability", "tool"].includes(dnd5eRollType(message) ?? "")) return true;
   let actor = message.speakerActor;
   if (message.speaker.token) {
     actor = game.scenes?.get(message.speaker?.scene ?? "")?.tokens?.get(message.speaker.token)?.actor ?? actor;
@@ -54,13 +57,21 @@ export function checkOverTimeSaves(message: ChatMessage.Implementation, data: Ch
   }
 
   try {
-    let func = async (actor: Actor, rollFlags: any, roll: Roll) => {
+    // The shape doOverTimeEffect expects, rebuilt from wherever the data now lives.
+    const legacy = (key: string) => foundry.utils.getProperty(data, `flags.dnd5e.roll.${key}`);
+    const rollFlags: Record<string, unknown> = {
+      type: dnd5eRollType(message),
+      ability: foundry.utils.getProperty(message, "system.ability") ?? legacy("ability"),
+      skillId: foundry.utils.getProperty(message, "system.skill") ?? legacy("skillId"),
+      toolId: foundry.utils.getProperty(message, "system.tool") ?? legacy("toolId")
+    };
+    let func = async (actor: Actor, _rollFlags: any, roll: Roll) => {
       // @ts-expect-error fvtt-types v14 ActiveEffect
       for (let effect of actor.effects.filter(ef => ef.system.changes.some(change => change.key.startsWith("flags.midi-qol.OverTime")))) {
-        await doOverTimeEffect(actor, effect, true, { saveToUse: roll, rollFlags: data.flags?.dnd5e?.roll, isActionSave: true })
+        await doOverTimeEffect(actor, effect, true, { saveToUse: roll, rollFlags, isActionSave: true })
       }
     };
-    func(actor, data.flags?.dnd5e?.roll, message.rolls[message.rolls.length - 1]);
+    func(actor, rollFlags, message.rolls[message.rolls.length - 1]);
   } catch (err) {
     const message = `checkOverTimeSaves error for ${actor?.name} ${actor.uuid}`;
     console.warn(message, err);
@@ -92,26 +103,6 @@ export let hideRollRender = (msg: ChatMessage.Implementation, html: HTMLElement,
   return true;
 };
 
-// For rolls forced blind with blindRollDisplay === "obscured": the card is public, but non-GM
-// players see the result replaced with "??" and the dice breakdown stripped. GMs see everything.
-export let obscureRollRender = (msg: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
-  if (game.user?.isGM) return true;
-  if (!foundry.utils.getProperty(msg, `flags.${MODULE_ID}.obscureRoll`)) return true;
-  // Replace the result with "??", strip the dice breakdown, and remove the success/failure/crit/fumble
-  // colouring classes (otherwise a nat 1/20 or pass/fail would still be given away by the highlight).
-  const HIGHLIGHT = ["critical", "fumble", "success", "failure", "min", "max"];
-  const apply = () => {
-    html.querySelectorAll<HTMLElement>(".dice-total").forEach((el) => { el.textContent = "??"; el.classList.remove(...HIGHLIGHT); });
-    html.querySelectorAll(".dice-tooltip").forEach((el) => el.remove());
-    html.querySelectorAll<HTMLElement>(".critical, .fumble, .success, .failure, .min, .max").forEach((el) => el.classList.remove(...HIGHLIGHT));
-    HIGHLIGHT.forEach((c) => html.classList.remove(c));
-  };
-  apply();
-  // dnd5e paints the crit/fumble/success/failure colouring AFTER the render hooks (next frame),
-  // so re-apply once more on the following frame to strip the classes it adds.
-  requestAnimationFrame(apply);
-  return true;
-};
 
 
 export let hideRollUpdate = (message: ChatMessage.Implementation, data: ChatMessage.UpdateData, options: ChatMessage.Database.UpdateOptions, id: string) => {
@@ -148,16 +139,10 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
     html.style.display = "none";
     return;
   }
-  // Blind roll dice replacement — affects non-midi messages too (monks-tokenbar etc.)
-  if (!game.user?.isGM && message.blind) {
-    html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => {
-      el.outerHTML = `<span>${i18n("midi-qol.DiceRolled")}</span>`;
-    });
-    if (!(message.flags && message.flags["monks-tokenbar"]))
-      html.querySelectorAll(".dice-roll").forEach(el => {
-        el.outerHTML = `<span>${i18n("midi-qol.DiceRolled")}</span>`;
-      });
-  }
+  // Blind-roll dice replacement and obscured-result masking now run in
+  // ChatMessageMidi.maskHiddenRolls. This hook fires before the card body exists, so anything
+  // reaching into .message-content from here matches nothing. What stays is whole-message hiding,
+  // which acts on the message element itself and is unaffected.
   return true;
 }
 
@@ -230,8 +215,9 @@ export function processCreateDDBGLMessages(message: ChatMessage.Implementation, 
   const ddbGLFlags: any = flags["ddb-game-log"];
   if (!ddbGLFlags || ddbGLFlags.pending) return;
   // let sceneId, tokenId, actorId, itemId;
-  if (!(["attack", "damage", "heal"].includes(flags.dnd5e?.roll?.type ?? ""))) return;
-  const itemId = flags.dnd5e?.roll?.itemId;
+  const rollType = dnd5eRollType(message);
+  if (!(["attack", "damage", "heal", "healing"].includes(rollType ?? ""))) return;
+  const itemId = dnd5eRollItemId(message);
   if (!itemId) { error("Could not find item for fulfilled roll"); return }
   const token = fromUuidSync(`Scene.${message.speaker.scene}.Token.${message.speaker.token}`)?.object as Token.Implementation | null;
   const actor = token?.actor ?? game.actors?.get(message.speaker.actor ?? "");
@@ -251,13 +237,13 @@ export function processCreateDDBGLMessages(message: ChatMessage.Implementation, 
 
   const item = actor.items.get(itemId);
   if (!item) {
-    error(`ddb-game-log roll could not find item ${flags?.dnd5e?.roll?.itemId} on actor ${actor.name}`);
+    error(`ddb-game-log roll could not find item ${itemId} on actor ${actor.name}`);
     return;
   }
 
   let workflow: DDBGameLogWorkflow | undefined = DDBGameLogWorkflow.get(item.uuid);
   //@ts-expect-error no dnd5e-types
-  if (!workflow && flags.dnd5e.roll.type === "damage" && item.hasAttack && ["rwak", "mwak"].includes(item.actionType)) {
+  if (!workflow && rollType === "damage" && item.hasAttack && ["rwak", "mwak"].includes(item.actionType)) {
     warn(`ddb-game-log roll damage roll without workflow being started ${actor.name} using ${item.name}`);
     return;
   }
@@ -270,7 +256,7 @@ export function processCreateDDBGLMessages(message: ChatMessage.Implementation, 
     workflow.undoData.chatCardUuids = workflow.undoData.chatCardUuids.concat([message.uuid]);
     unTimedExecuteAsGM("updateUndoChatCardUuids", workflow.undoData);
   }
-  if (flags?.dnd5e?.roll?.type === "attack") {
+  if (rollType === "attack") {
     let rolls = message.rolls;
     if (!(rolls instanceof Array)) rolls = [rolls];
     // workflow.needItemCard = false; TODO revisit this
@@ -286,7 +272,7 @@ export function processCreateDDBGLMessages(message: ChatMessage.Implementation, 
     }
   }
 
-  if (["damage", "heal"].includes(flags.dnd5e?.roll?.type ?? "")) {
+  if (["damage", "heal", "healing"].includes(rollType ?? "")) {
     let rolls = message.rolls;
     if (!rolls) return;
     // workflow.needItemCard = false; TODO revisit this

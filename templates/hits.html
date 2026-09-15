@@ -14,7 +14,7 @@
     {{/if}}
         <ul class="dnd5e2 unlist evaluation wrapper">
           {{#each hits as |hit iid|}}
-          <li data-uuid="{{actorUuid}}" data-id="{{hit.target.id}}"
+          <li data-uuid="{{hit.actorUuid}}" data-id="{{hit.target.id}}"
             class="target {{hit.hitClass}} midi-qol midi-qol-hit-class midi-qol-target-select">
             <i class="midi-qol-hit-symbol fas {{hit.hitSymbol}}"></i>
             <img class="midi-qol-target-img" src="{{hit.img}}" />

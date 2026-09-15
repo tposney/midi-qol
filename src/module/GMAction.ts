@@ -969,36 +969,47 @@ async function rollAbility(data: {
     }
   }
   if (rollMode) message.rollMode = rollMode as RollMessageConfig["rollMode"];
-  return new Promise(async (resolve) => {
+  const performRoll = async (): Promise<Roll[] | Roll | undefined> => {
+    // @ts-expect-error no dnd5e-types
+    if (normalizedRequest === "save") return actor.rollSavingThrow(config, dialog, message);
+    // @ts-expect-error no dnd5e-types
+    if (normalizedRequest === "check") return actor.rollAbilityCheck(config, dialog, message);
+    // @ts-expect-error no dnd5e-types
+    if (normalizedRequest === "skill") return actor.rollSkill(config, dialog, message);
+    // @ts-expect-error no dnd5e-types
+    if (normalizedRequest === "tool") return actor.rollToolCheck(config, dialog, message);
+    // @ts-expect-error no dnd5e-types
+    if (normalizedRequest === "deathSave") return actor.rollDeathSave(config, dialog, message);
+    return undefined;
+  };
+
+  return new Promise((resolve) => {
     let timeoutId: NodeJS.Timeout | undefined;
-    let result: Roll[] | Roll | undefined;
-    if (configSettings.playerSaveTimeout > 0) timeoutId = setTimeout(async () => {
+    let settled = false;
+    const settle = (result?: Roll[] | Roll) => {
+      if (settled) return;
+      settled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      resolve(result ?? {});
+    };
+    /*
+     * A failed roll must still settle. This promise is the result of a socketlib request that a
+     * workflow awaits, and a rejection thrown from an async executor is swallowed rather than
+     * rejecting the promise — so an error here used to leave the workflow waiting forever, with
+     * only playerSaveTimeout (off by default) to rescue it. Settling empty matches the no-actor path.
+     */
+    const fail = (err: unknown) => {
+      const msg = `rollAbility | ${normalizedRequest} roll failed for ${actor.name}`;
+      TroubleShooter.recordError(err, msg);
+      error(msg, err);
+      settle();
+    };
+    if (configSettings.playerSaveTimeout > 0) timeoutId = setTimeout(() => {
       warn(`Roll request for ${actor.name} timed out. Doing roll`);
       dialog.configure = false; // assume player is asleep force roll without dialog
-      // @ts-expect-error no dnd5e-types
-      if (normalizedRequest === "save") result = await actor.rollSavingThrow(config, dialog, message);
-      // @ts-expect-error no dnd5e-types
-      else if (normalizedRequest === "check") result = await actor.rollAbilityCheck(config, dialog, message);
-      // @ts-expect-error no dnd5e-types
-      else if (normalizedRequest === "skill") result = await actor.rollSkill(config, dialog, message);
-      // @ts-expect-error no dnd5e-types
-      else if (normalizedRequest === "tool") result = await actor.rollToolCheck(config, dialog, message);
-      // @ts-expect-error no dnd5e-types
-      else if (normalizedRequest === "deathSave") result = await actor.rollDeathSave(config, dialog, message);
-      resolve(result ?? {});
+      performRoll().then(settle).catch(fail);
     }, configSettings.playerSaveTimeout * 1000);
-    // @ts-expect-error no dnd5e-types
-    if (normalizedRequest === "save") result = await actor.rollSavingThrow(config, dialog, message);
-    // @ts-expect-error no dnd5e-types
-    else if (normalizedRequest === "check") result = await actor.rollAbilityCheck(config, dialog, message);
-    // @ts-expect-error no dnd5e-types
-    else if (normalizedRequest === "skill") result = await actor.rollSkill(config, dialog, message);
-    // @ts-expect-error no dnd5e-types
-    else if (normalizedRequest === "tool") result = await actor.rollToolCheck(config, dialog, message);
-    // @ts-expect-error no dnd5e-types
-    else if (normalizedRequest === "deathSave") result = await actor.rollDeathSave(config, dialog, message);
-    if (timeoutId) clearTimeout(timeoutId);
-    resolve(result ?? {})
+    performRoll().then(settle).catch(fail);
   });
 }
 

@@ -1,6 +1,6 @@
 import { GameSystemConfig, MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n, log } from "../../midi-qol.js";
 import { configSettings, safeGetGameSetting, saveToChatCard } from "../settings.js";
-import { getToken } from "../utils.js";
+import { getToken, isDnd5eRollMessage } from "../utils.js";
 import { setDamageRollMinTerms } from "../activities/activityHelpers.js";
 
 // Damage is auto-applied by midi when autoApplyDamage is one of the "yes*" modes.
@@ -13,6 +13,12 @@ const stripHighlight = (html: HTMLElement, sel: string) => html.querySelectorAll
 );
 
 /** rollType tag -> the flag it is rebuilt into. utilityRolls is absent: chatRolls merges them. */
+/** The attack roll on a card, located by its tag rather than by position. */
+function attackRollOf(message: { rolls?: readonly Roll[] }): Roll | undefined {
+  return (message.rolls ?? []).find(r =>
+    foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === "attack");
+}
+
 const MIDI_ROLL_FLAGS: Record<string, string> = {
   attack: "attackRoll",
   defaultDamage: "damageRolls",
@@ -69,7 +75,8 @@ export let ChatMessageMidi: ReturnType<typeof defineChatMessageMidiClass>;
 export function setupChatMessageMidi() {
   ChatMessageMidi = defineChatMessageMidiClass(globalThis.dnd5e.documents.ChatMessage5e);
   CONFIG.ChatMessage.batchSize = 25;
-  globalThis.dnd5e.documents.ChatMessage5e.TRAY_TYPES.push("midi-damage-application");
+  // Not pushed onto dnd5e's array as well — the `TRAY_TYPES` getter below already appends it, and
+  // doing both listed `midi-damage-application` twice (harmless, but it mutates the system's array).
 }
 
 export function defineChatMessageMidiClass(baseClass: ChatMessage.ImplementationClass) {
@@ -133,7 +140,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     // midi has it's own target handling so don't display the attack targets here (however, DO display the mastery)
     _enrichAttackTargets(html) {
       // This code borrowed from the start of the system's ChatMessage5e#_enrichAttackTargets method
-      const attackRoll = this.rolls[0];
+      const attackRoll = attackRollOf(this) ?? this.rolls[0];
       // @ts-expect-error no dnd5e-types
       if (!(attackRoll instanceof dnd5e.dice.D20Roll)) return;
 
@@ -203,7 +210,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
    * @returns {Promise}
    */
     applyChatCardDamage(li: HTMLElement, multiplier: number) {
-      const type = this.flags.dnd5e?.roll?.type;
+      const type = isDnd5eRollMessage(this) ? "roll" : undefined;
       // @ts-expect-error no dnd5e-types
       if (type !== undefined || !this.flags?.[MODULE_ID]) return super.applyChatCardDamage(li, multiplier);
       const rollsToCheck = this.rolls.filter(r => MQDamageRollTypes.includes(foundry.utils.getProperty(r, "options.midi-qol.rollType") as string));
@@ -325,7 +332,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     _enrichDamageTooltip(rolls: Roll[], html: HTMLElement) {
-      if (this.flags?.dnd5e?.roll?.type !== undefined || !this.flags?.[MODULE_ID])
+      if (isDnd5eRollMessage(this) || !this.flags?.[MODULE_ID])
         // @ts-expect-error no dnd5e-types
         return super._enrichDamageTooltip(rolls, html);
       for (let rollType of MQDamageRollTypes) {
@@ -492,6 +499,45 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }
     }
 
+    /**
+     * Mask the dice of a blind roll, and blank an obscured roll's result, for non-GMs.
+     *
+     * Lives here rather than on `renderChatMessageHTML` because core fires that hook inside
+     * `super.renderHTML()`, before dnd5e's subclass fills `.message-content` from the data model.
+     * Measured at hook time on a 6.0 card: `dice-roll=0`, `dice-total=0`; populated by the next
+     * frame. So the masking ran against an empty card and hid nothing — a blind roll's dice were
+     * visible to every player. `_enrichChatCard` runs on both render paths (the model's `getHTML`
+     * and dnd5e's own branch for messages without one) and after midi's highlighting, so this is
+     * the last word on the markup.
+     */
+    private maskHiddenRolls(html: HTMLElement) {
+      if (game.user?.isGM) return;
+      const placeholder = () => {
+        const span = document.createElement("span");
+        span.textContent = i18n("midi-qol.DiceRolled");
+        return span;
+      };
+      if (this.blind) {
+        html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => el.replaceWith(placeholder()));
+        // monks-tokenbar renders its own rolls and does its own hiding.
+        if (!this.flags?.["monks-tokenbar"]) {
+          html.querySelectorAll(".dice-roll").forEach(el => el.replaceWith(placeholder()));
+        }
+      }
+      if (!foundry.utils.getProperty(this, `flags.${MODULE_ID}.obscureRoll`)) return;
+      // Public card, hidden result: replace the total and strip the breakdown. The colouring classes
+      // go too — a nat 1 or 20 would otherwise still be given away by the highlight.
+      const HIGHLIGHT = ["critical", "fumble", "success", "failure", "min", "max"];
+      html.querySelectorAll<HTMLElement>(".dice-total").forEach(el => {
+        el.textContent = "??";
+        el.classList.remove(...HIGHLIGHT);
+      });
+      html.querySelectorAll(".dice-tooltip").forEach(el => el.remove());
+      html.querySelectorAll<HTMLElement>(".critical, .fumble, .success, .failure, .min, .max")
+        .forEach(el => el.classList.remove(...HIGHLIGHT));
+      HIGHLIGHT.forEach(c => html.classList.remove(c));
+    }
+
     maskAttackRolls(html: HTMLElement) {
       if (!this.author?.isGM || game.user?.isGM) return;
       const hitFlag = this.flags?.[MODULE_ID]?.isHit;
@@ -504,16 +550,19 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       // Attack roll masking
       let attackRollText: string | undefined;
       let hideCritFumble = false;
+      // Located by tag, not position: the card now also carries the save rolls, and a save-only card
+      // has no attack roll at index 0 at all.
+      const attackRoll = attackRollOf(this) ?? this.rolls[0];
       switch (attackDisplay) {
         case "full":
           break;
         case "hideFormula":
           break;
         case "d20Only":
-          attackRollText = `(d20) ${this.rolls[0]?.terms[0].total ?? "--"}`;
+          attackRollText = `(d20) ${attackRoll?.terms[0].total ?? "--"}`;
           break;
         case "attackTotal":
-          attackRollText = `${this.rolls[0]?.total ?? "--"}`;
+          attackRollText = `${attackRoll?.total ?? "--"}`;
           break;
         case "hitMiss":
           hideCritFumble = true;
@@ -697,20 +746,35 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }
     }
 
-    _enrichChatCard(html: HTMLElement) {
+    /*
+     * `options` is not decoration — it carries the data model's rendering decisions, and dropping it
+     * changes what the system draws.
+     *
+     * dnd5e 6.0 calls this from `ChatMessageDataModel#getHTML` as
+     * `_enrichChatCard(element, this._getEnrichmentOptions())`, and every card model that wants no
+     * speaker portrait says so there: `ItemMessageData` and `RollMessageData` both return
+     * `{ avatar: false }`. Taking one parameter and calling `super` with one meant the flag never
+     * arrived, `_enrichHeader` saw `options.avatar !== false`, and drew an avatar the card had asked
+     * it not to. Compact cards have no rule sizing that image, so it rendered at its natural size —
+     * about two hundred and twenty pixels, on dnd5e's own cards as much as midi's, and only when
+     * midi was enabled.
+     */
+    _enrichChatCard(html: HTMLElement, options: object = {}) {
       if (!this.flags?.[MODULE_ID]?.messageType) {
         this.applyChatVisibility(html);
         // @ts-expect-error no dnd5e-types
-        super._enrichChatCard(html);
+        super._enrichChatCard(html, options);
         this._maybeStripEffectsTray(html);
         this._addMarkerClasses(html);
+        this._addLegacyCardDataset(html);
+        this.maskHiddenRolls(html);
         return;
       }
       if (debugEnabled > 1) log("Enriching chat card", Date.now(), this.id);
       this.maskAttackRolls(html); // This has to run first to stop errors when ChatMessage5e._enrichDamageTooltip runs
 
       // @ts-expect-error no dnd5e-types
-      super._enrichChatCard(html);
+      super._enrichChatCard(html, options);
       this._maybeStripEffectsTray(html);
       this.applyChatVisibility(html);
       // For usage-type messages, Foundry skips _highlightCriticalSuccessFailure.
@@ -720,7 +784,41 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }
       this._applyMidiHighlightSettings(html);
       this._addMarkerClasses(html);
+      this._addLegacyCardDataset(html);
+      this.maskHiddenRolls(html);
       if (debugEnabled > 1) log("Finished enriching chat card", Date.now(), this.id);
+    }
+
+    /**
+     * Restore the `data-*` attributes midi's own card carried on its root element.
+     *
+     * They were on `activity-card.hbs`, which is gone — the card root is now `dnd5e.card-face`, a
+     * system partial midi cannot add attributes to. The information is all on `message.system` in
+     * 6.0, but macros and other modules select on these attributes, so they are stamped back on
+     * after render rather than left to break silently.
+     */
+    _addLegacyCardDataset(html: HTMLElement) {
+      const card = html.querySelector<HTMLElement>(".chat-card");
+      if (!card) return;
+      const system = this.system as unknown as Record<string, any> | undefined;
+      const item = system?.item?.uuid ? fromUuidSync(system.item.uuid) as Item.Implementation | null : null;
+      const actor = this.speakerActor ?? item?.actor;
+      const tokenUuid = system?.origin?.uuid
+        ?? (this.speaker?.scene && this.speaker?.token
+          ? `Scene.${this.speaker.scene}.Token.${this.speaker.token}` : undefined);
+      const set = (name: string, value: unknown) => {
+        if (value !== undefined && value !== null && value !== "") card.setAttribute(name, String(value));
+      };
+      set("data-actor-id", actor?.id);
+      set("data-actor-uuid", actor?.uuid);
+      set("data-item-id", item?.id ?? system?.item?.id);
+      set("data-item-uuid", system?.item?.uuid);
+      set("data-token-id", this.speaker?.token);
+      set("data-token-uuid", tokenUuid);
+      // @ts-expect-error no dnd5e types for item.system.level
+      const level = item?.system?.level;
+      // "power" is a sub-type some systems/modules add; compare as a string so fvtt-types' narrower union does not reject it.
+      if (level !== undefined) set(String(item?.type) === "power" ? "data-power-level" : "data-spell-level", level);
     }
 
     /** Add CSS marker classes to avoid expensive :has() selectors during layout */

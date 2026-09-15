@@ -49,14 +49,7 @@
     ]
   },
   "disabled": true,
-  "start": {
-    "time": null,
-    "combat": null,
-    "combatant": null,
-    "initiative": null,
-    "round": null,
-    "turn": null
-  },
+  "start": null,
   "duration": {
     "value": null,
     "units": "seconds",
@@ -85,7 +78,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-active-effects",
-        "version": "14.0.6"
+        "version": "14.6.0"
       }
     }
   },

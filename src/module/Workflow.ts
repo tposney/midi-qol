@@ -25,6 +25,7 @@ import {
   asyncHooksCallAll,
   asyncHooksCall,
   midiRenderRoll,
+  renderSaveRollHTML,
   markFlanking,
   computeFlankingStatus,
   computeFlankedStatus,
@@ -112,8 +113,9 @@ import { bonusCheck, collectBonusFlags, defaultRollOptions, computeAbilityAdvant
 import { PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
+import { SAVE_TEMPLATE_FIELDS, type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
-import { activityHasScaledTargetCount, computeTargetsFromTemplates, postTemplateConfirmTargets } from "./activities/activityHelpers.js";
+import { activityHasScaledTargetCount, computeTargetsFromTemplates, createActivityTemplateRegions, postTemplateConfirmTargets } from "./activities/activityHelpers.js";
 import { Activity, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
@@ -409,6 +411,27 @@ export class Workflow {
 
   async performThrottledUpdate(chatCard: ChatMessage.Implementation, updates: ChatMessage.UpdateData, immediate = false) {
     return await throttledUpdate(chatCard, updates, this.throttleChatMessageUpdates, immediate);
+  }
+
+
+  /**
+   * Write one rendered roll section to the card.
+   *
+   * Replaces the regex splice each `display*` method used to do against `message.content`. The HTML
+   * is the same HTML; only its destination changed, from a match inside one long string to a named
+   * slot the template renders.
+   */
+  async setCardSection(
+    name: SectionName,
+    section: MidiCardSection,
+    extraUpdates: Record<string, unknown> = {}
+  ): Promise<void> {
+    const chatCard = this.chatCard;
+    if (!chatCard) return;
+    await this.performThrottledUpdate(chatCard, {
+      [`system.midi.sections.${name}`]: section,
+      ...extraUpdates
+    } as ChatMessage.UpdateData);
   }
 
   itemCardUuid: string | undefined;
@@ -1331,6 +1354,8 @@ export class Workflow {
   useOther: boolean | undefined;
   otherDamageRollHTML: string | undefined;
   saveTargetsDisplayed: boolean | undefined;
+  /** What midi's damage calculation actually applied, per target uuid. Set by `processDamageRoll`. */
+  midiTargetDetail: Record<string, Record<string, unknown>> | undefined;
   targetSaveDetails: Record<string, SaveDetails> | undefined;  // Per-target SaveDetails for attribution tracking
 
   /** Get save rolls keyed by target UUID - derived from targetSaveDetails */
@@ -1505,72 +1530,39 @@ export class Workflow {
   static async removeItemCardConfirmRollButton(itemCardUuid: string) {
     const chatMessage = getCachedDocument(itemCardUuid) as ChatMessage.Implementation;
     const workflow = Workflow.getWorkflow(itemCardUuid);
-    if (!chatMessage?.content) return;
-    let content = chatMessage.content;
-    const confirmMissRe = /<button class="midi-qol-confirm-damage-roll-complete-miss" data-action="confirmDamageRollCompleteMiss">[^<]*?<\/button>/;
-    content = content?.replace(confirmMissRe, "");
-    const confirmRe = /<button class="midi-qol-confirm-damage-roll-complete" data-action="confirmDamageRollComplete">[^<]*?<\/button>/;
-    content = content?.replace(confirmRe, "");
-    const confirmHitRe = /<button class="midi-qol-confirm-damage-roll-complete-hit" data-action="confirmDamageRollCompleteHit">[^<]*?<\/button>/;
-    content = content?.replace(confirmHitRe, "");
-    const cancelRe = /<button class="midi-qol-confirm-damage-roll-cancel" data-action="confirmDamageRollCancel">[^<]*?<\/button>/;
-    content = content?.replace(cancelRe, "");
-    // TODO come back and make this cached.
-    return await throttledUpdate(chatMessage, { content }, workflow?.throttleChatMessageUpdates, false);
+    if (!chatMessage) return;
+    return await throttledUpdate(chatMessage,
+      { "system.midi.progress": { confirmed: true } } as ChatMessage.UpdateData,
+      workflow?.throttleChatMessageUpdates, false);
   }
 
   static async removeItemCardButtons(itemCardUuid: string | undefined, { removeAllButtons = false, removeAttackButtons = true, removeDamageButtons = false, removeDnD5eButtons = false, removeConfirmButtons = false, removeAllDnd5eButtons = false, removeDnd5eSaveButtons = false, removeDnd5eTemplateButtons = false } = {}) {
     try {
       const workflow = Workflow.getWorkflow(itemCardUuid);
       const chatMessage = workflow?.chatCard;
-      if (!chatMessage?.content) return;
-      let content = chatMessage?.content;
+      if (!chatMessage) return;
       let allowRemoveAll = !(workflow && workflow.activity?.target.affects.type === "" && workflow.targets.size === 0)
-      if (removeAllButtons && allowRemoveAll) {
-        const buttonRe = /<button[\s\S]*?<\/button>/gi;
-        content = content.replace(buttonRe, "");
-        return await throttledUpdate(chatMessage, { content }, workflow?.throttleChatMessageUpdates, false);
-      } else {
-        if (removeAttackButtons) {
-          const attackRe = /<div class="midi-qol-attack-buttons[^"]*">[\s\S]*?<\/div>/;
-          content = content?.replace(attackRe, "")
-        }
-        if (removeDamageButtons) {
-          const damageRe = /<div class="midi-qol-damage-buttons[^"]*">[\s\S]*?<\/div>/
-          const otherDamageRe = /<button class="midi-qol-otherDamage-button" data-action="rollDamage">[^<]*<\/button>/
-          const formulaRe = /<button data-action="rollFormula">[^<]*<\/button>/
-          content = content?.replace(damageRe, "")
-          content = content?.replace(otherDamageRe, "")
-          content = content?.replace(formulaRe, "")
-        }
-        if (removeAllDnd5eButtons) { // This is not correct
-          const dnd5eRe = /<div class="midi-dnd5e-buttons">[\s\S]*?<div class="end-midi-dnd5e-buttons">/
-          content = content?.replace(dnd5eRe, "<div class='midi-dnd5e-buttons'><\/div><div class='end-midi-dnd5e-buttons'>")
-        } else {
-          if (removeDnd5eSaveButtons) {
-            const saveRe = /<button[\s\S].*?data-action="rollSave"[\s\S]*?<\/button>/
-            for (let count = 0; count < 100; count++) {
-              if (!content.match(saveRe)) break;
-              content = content?.replace(saveRe, "")
-            }
-          }
-          if (removeDnd5eTemplateButtons) {
-            const templateRe = /<button[\s\S].*?data-action="placeTemplate"[\s\S]*?<\/button>/
-            content = content?.replace(templateRe, "")
-          }
-        }
-        if (removeConfirmButtons) {
-          const confirmMissRe = /<button class="midi-qol-confirm-damage-roll-complete-miss" data-action="confirmDamageRollCompleteMiss">[^<]*?<\/button>/;
-          content = content?.replace(confirmMissRe, "");
-          const confirmRe = /<button class="midi-qol-confirm-damage-roll-complete" data-action="confirmDamageRollComplete">[^<]*?<\/button>/;
-          content = content?.replace(confirmRe, "");
-          const confirmHitRe = /<button class="midi-qol-confirm-damage-roll-complete-hit" data-action="confirmDamageRollCompleteHit">[^<]*?<\/button>/;
-          content = content?.replace(confirmHitRe, "");
-          const cancelRe = /<button class="midi-qol-confirm-damage-roll-cancel" data-action="confirmDamageRollCancel">[^<]*?<\/button>/;
-          content = content?.replace(cancelRe, "");
-        }
-        return await throttledUpdate(chatMessage, { content }, workflow?.throttleChatMessageUpdates);
-      }
+
+      /*
+       * A card rendered from the data model has no markup to cut buttons out of, and cutting them
+       * would not survive anyway — every message update re-renders the whole card from
+       * `_prepareContext`. Record what happened instead; `midiButtonVisibility` decides what to draw,
+       * per viewer, on each render.
+       *
+       * Only the events are recorded. `removeAttackButtons`/`removeDamageButtons` are the caller's
+       * evaluation of a removal policy the render re-evaluates for itself, so passing them on would
+       * freeze one user's answer onto everyone's card — the thing this replaces.
+       */
+        const progress: Record<string, boolean> = {};
+        if (removeAllButtons && allowRemoveAll) progress.allRemoved = true;
+        if (removeConfirmButtons) progress.confirmed = true;
+        if (removeDnd5eSaveButtons || removeAllDnd5eButtons) progress.savesResolved = true;
+        if (removeDnd5eTemplateButtons) progress.templatesPlaced = true;
+        if (foundry.utils.isEmpty(progress)) return;
+        return await throttledUpdate(chatMessage,
+          { "system.midi.progress": progress } as ChatMessage.UpdateData,
+          workflow?.throttleChatMessageUpdates, false);
+
     } catch (err) {
       const message = `removeItemCardButtons`;
       TroubleShooter.recordError(err, message);
@@ -1974,17 +1966,18 @@ export class Workflow {
     if (!this.itemCardUuid) return this.WorkflowState_AoETargetConfirmation;
 
     const chatMessage = this.chatCard;
-    if (!chatMessage?.content) return this.WorkflowState_AoETargetConfirmation;
-    // remove the place template button from the chat card only if all templates have been placed
+    if (!chatMessage) return this.WorkflowState_AoETargetConfirmation;
     this.targets = validTargetTokens(this.targets);
     this.hitTargets = new Set()
     this.hitTargetsEC = new Set();
-    let content = chatMessage.content;
-    if (this.placedTemplateCount >= (Number(this.activity?.target?.template?.count) || 1)) {
-      const buttonRe = /<button.*?data-action="placeTemplate"[^>]*?>[\s\S]*?<\/button>/
-      content = chatMessage.content?.replace(buttonRe, "");
-    }
-    await this.performThrottledUpdate(chatMessage, { content, flags: { "midi-qol": { type: MESSAGE_TYPES.ITEM } }, style: CONST.CHAT_MESSAGE_STYLES.OTHER });
+    // The place-template button goes once every template has been placed; `shouldHideChatButton`
+    // reads this back.
+    const templatesPlaced = this.placedTemplateCount >= (Number(this.activity?.target?.template?.count) || 1);
+    await this.performThrottledUpdate(chatMessage, {
+      "system.midi.progress": { templatesPlaced },
+      flags: { "midi-qol": { type: MESSAGE_TYPES.ITEM } },
+      style: CONST.CHAT_MESSAGE_STYLES.OTHER
+    } as ChatMessage.UpdateData);
     return this.WorkflowState_AoETargetConfirmation;
   }
 
@@ -2086,17 +2079,7 @@ export class Workflow {
     const autoRollAttack = getAutoRollAttack(this);
     if (!autoRollAttack) {
       const chatMessage = this.chatCard;
-      let content = chatMessage?.content;
-      if (content && !isFastRoll) {
-        const searchRe = /(<button[^>]*data-action="rollAttack"[^>]*>)<span>[^<]*<\/span>(<\/button>)/;
-
-        const hasAdvantage = this.advantage && !this.disadvantage;
-        const hasDisadvantage = this.disadvantage && !this.advantage;
-        let attackString = hasAdvantage ? i18n("DND5E.Advantage") : hasDisadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
-        let replaceString = `$1<span>${attackString}</span>$2`;
-        content = content.replace(searchRe, replaceString);
-        await this.performThrottledUpdate(chatMessage, { content });
-      } else if (!chatMessage) {
+      if (!chatMessage) {
         const message = `WaitForAttackRoll | no chat message`;
         error(message);
         TroubleShooter.recordError(new Error(message), message);
@@ -2224,17 +2207,6 @@ export class Workflow {
       this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, { create: false });
       return this.WorkflowState_Suspend;
     } else {
-      const chatMessage = this.chatCard;
-      if (chatMessage?.content) {
-        const searchRe = /(<button[^>]*data-action="rollDamage"[^>]*>)(?:<span>)?[^<]*(?:<\/span>)?(<\/button>)/;
-        const damageTypeString = (this.activity.actionType === "heal") ? i18n("DND5E.HEAL.HealingButton") : i18n("DND5E.Damage");
-        let damageString = (this.rollOptions.isCritical || this.isCritical) ? i18n("DND5E.Critical") : damageTypeString;
-        if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) damageString += ` ${i18n("midi-qol.fastForward")}`;
-        // Preserve button tag, replace content with span for consistency
-        let replaceString = `$1<span>${damageString}</span>$2`;
-        let content = chatMessage.content.replace(searchRe, replaceString);
-        await this.performThrottledUpdate(chatMessage, { content });
-      }
     }
     return this.WorkflowState_Suspend; // wait for a damage roll to advance the state.
   }
@@ -2414,6 +2386,10 @@ export class Workflow {
     }
 
     if (this.rawDamageDetail && (this.rawDamageDetail?.length || this.rawOtherDamageDetail?.length)) await processDamageRoll(this, this.rawDamageDetail[0]?.type ?? this.defaultDamageType)
+    // Now that the damage calculation has run, the card can report what it applied.
+    if (this.chatCard && this.midiTargetDetail) {
+      await this.performThrottledUpdate(this.chatCard, this.#targetsUpdate() as ChatMessage.UpdateData);
+    }
     this.recordDamageStats();
     // If a damage card is going to be created don't call the isDamaged macro - wait for the damage card calculations to do a better job
     if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true && !configSettings.autoApplyDamage.includes("Card"))
@@ -3082,38 +3058,20 @@ export class Workflow {
       await this.displayHits(chatMessage.whisper.length > 0, true);
       chatMessage = this.chatCard
     }
-    let content = chatMessage?.content;
-    let contentChanged = false;
-    // TODO move this to call the omnibus remove buttons function
-    if (content && getRemoveAttackButtons(this.activity) && chatMessage && configSettings.confirmAttackDamage === "none") {
-      // Match rollAttack button from activity-card.hbs
-      let searchRe = /<button[^>]*?data-action="rollAttack"[\s\S]*?<\/button>/;
-      content = content.replace(searchRe, "");
-      contentChanged = true;
-    }
-    // Once the roll is finished and all templates placed, remove the template button
-    if (content) {
-      let isEmanationTargeting = activityHasAutoPlaceTemplate(this.activity) || activityHasEmanationNoTemplate(this.activity);
-      let isAoETargeting = !isEmanationTargeting && activityHasAreaTarget(this.activity);
-      if (isAoETargeting && !isEmanationTargeting && this.placedTemplateCount >= (Number(this.activity?.target?.template?.count) || 1)) {
-        const searchRe = /<button[^>]*?data-action="placeTemplate"[\s\S]*?<\/button>/;
-        content = content.replace(searchRe, "");
-        contentChanged = true;
+
+    {
+      // The attack-button strip that used to live here is now `midiButtonVisibility`, which reaches
+      // the same answer from `message.rolls` and re-reads the policy per viewer.
+      const progress: Record<string, boolean> = {};
+      if (configSettings.autoItemEffects === "applyRemove"
+        && (this.activity.target?.affects.type !== "" || this.targets.size !== 0)) progress.effectsApplied = true;
+      const isEmanation = activityHasAutoPlaceTemplate(this.activity) || activityHasEmanationNoTemplate(this.activity);
+      if (!isEmanation && activityHasAreaTarget(this.activity)
+        && this.placedTemplateCount >= (Number(this.activity?.target?.template?.count) || 1)) progress.templatesPlaced = true;
+      if (!foundry.utils.isEmpty(progress)) {
+        await this.performThrottledUpdate(this.chatCard!,
+          { "system.midi.progress": progress } as ChatMessage.UpdateData);
       }
-    }
-    if (this.activity.target?.affects.type !== "" || this.targets.size !== 0) {
-      if (configSettings.autoItemEffects === "applyRemove" && content) {
-        const buttonRe = /<button[^>]*?data-action="midiApplyEffects"[\s\S]*?<\/button>/;
-        content = content?.replace(buttonRe, "");
-        contentChanged = true;
-      }
-    }
-    if (contentChanged) {
-      const update: ChatMessage.UpdateData = {
-        "content": content,
-        flags: { "midi-qol": { type: MESSAGE_TYPES.ITEM } },
-      };
-      await this.performThrottledUpdate(chatMessage, update);
     }
     // Template cleanup is now handled by setupTemplateCleanup in unSuspend
 
@@ -4390,24 +4348,18 @@ export class Workflow {
   async removeEffectsButton() {
     if (!this.itemCardUuid) return;
     const chatMessage = this.chatCard;
-    if (chatMessage?.content) {
-      const buttonRe = /<button[^>]*?data-action="midiApplyEffects"[\s\S]*?<\/button>/;
-      let content = chatMessage.content.replace(buttonRe, "");
-      await this.performThrottledUpdate(chatMessage, { content });
-    }
+      return await this.performThrottledUpdate(chatMessage!,
+        { "system.midi.progress": { effectsApplied: true } } as ChatMessage.UpdateData);
   }
   async displayUtilityRolls() {
     const chatMessage = this.chatCard;
     let newFlags = {};
-    let content;
-    if (chatMessage?.content) { // display the attack roll
+    let section: MidiCardSection | undefined;
+    if (chatMessage) { // display the utility roll
       const utilityRoll = this.utilityRoll; // will concat as needed
-      //let searchRe = /<div class="midi-qol-attack-roll">.*?<\/div>/;
-      let searchRe = /<div[^>]*?class="midi-qol-utility-roll[^"]*"[\s\S]*?<div class="end-midi-qol-utility-roll">/
       // Display roll name if available, otherwise default to utility activity type title
       const rollString = this.activity?.roll?.name || i18n("DND5E.UTILITY.Title");
-      let replaceString = `<div class="midi-qol-utility-roll"><div class="midi-roll-label">${rollString}</div>${this.utilityRollHTML}<div class="end-midi-qol-utility-roll">`
-      content = chatMessage.content.replace(searchRe, replaceString);
+      section = { label: rollString, rollType: "utility" };
       if (debugEnabled > 0) warn("displayUtilityRoll |", this.utilityRoll)
       newFlags = {
         "midi-qol":
@@ -4419,7 +4371,8 @@ export class Workflow {
     }
     // chatRolls, not just this roll: message.rolls is where the rolls are stored now, so a partial
     // array here would drop the ones already made.
-    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls: this.chatRolls });
+    await this.performThrottledUpdate(chatMessage,
+      this.#sectionUpdate("utility", section, { flags: newFlags, rolls: this.chatRolls }));
   }
 
   async displayAttackRoll(displayOptions: { GMOnlyAttackRoll?: boolean } = {}) {
@@ -4427,10 +4380,8 @@ export class Workflow {
     const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
     const chatMessage = this.chatCard;
     let newFlags = {};
-    let content;
-    if (chatMessage?.content) { // display the attack roll
-      content = chatMessage.content;
-      let searchRe = /<div[^>]*?class="midi-qol-attack-roll[^"]*"[\s\S]*?<div class="end-midi-qol-attack-roll">/
+    let section: MidiCardSection | undefined;
+    if (chatMessage) { // display the attack roll
       // Determine attack label based on attackRollModifierTracker.advantageMode
       let attackString: string;
       const mode = this.attackRoll?.options?.advantageMode ?? this.attackRollModifierTracker.advantageMode ?? ADV_MODE.NORMAL;
@@ -4444,26 +4395,9 @@ export class Workflow {
       if (configSettings.addFakeDice) // addFakeDice => roll 2d20 always - don't show advantage/disadvantage or players will know the 2nd d20 is fake
         attackString = i18n("DND5E.Attack");
 
-      // Add attribution info icon if there's any attribution data
-      let attributionIcon = "";
-      if (Object.keys(this.attackAttribution).length > 0) {
-        const tooltipContent = await this.renderAttributionTooltip();
-        if (tooltipContent) {
-          attributionIcon = ` <span class="midi-attribution-info" data-tooltip-html="${foundry.utils.escapeHTML(tooltipContent)}" data-tooltip-direction="DOWN"><i class="fas fa-info-circle"></i></span>`;
-        }
-      }
-
-      let replaceString = `<div class="midi-qol-attack-roll midi-qol-section-filled"><div class="midi-roll-label">${attackString}${attributionIcon}</div>${this.attackRollHTML}<div class="end-midi-qol-attack-roll">`
-
-      content = content.replace(searchRe, replaceString);
-      if (this.attackRollCount > 1) {
-        // Match rollAttack button - handles both multi mode (no span) and single mode (with span)
-        // Also handles optional style attribute with flexible spacing
-        const attackButtonRe = /(<button[^>]*data-action="rollAttack"[^>]*>)(?:<span>)?(\[\d*\] )*([^<]+)(?:<\/span>)?(<\/button>)/;
-        content = content.replace(attackButtonRe, `$1<span>[${this.attackRollCount}] $3</span>$4`);
-        const confirmButtonRe = /<button class="midi-qol-confirm-damage-roll-complete" data-action="confirm-damage-roll-complete">(\[[\d ]*\])*([^<]+)<\/button>/;
-        content = content.replace(confirmButtonRe, `<button class="midi-qol-confirm-damage-roll-complete" data-action="confirm-damage-roll-complete">[${this.attackRollCount} ${this.damageRollCount + 1}] $2</button>`);
-      }
+      // Named, not stored: the attack roll is already in `message.rolls`, and so are its attributions,
+      // so the card renders both from there rather than carrying a second copy.
+      section = { label: attackString, rollType: "attack" };
 
       if (this.attackRoll?.dice.length) {
         const d: any = this.attackRoll.dice[0]; // should be a dice term but DiceTerm.options not defined
@@ -4493,57 +4427,90 @@ export class Workflow {
 
       }
     }
-    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls: this.chatRolls });
+    await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("attack", section,
+      { flags: newFlags, rolls: this.chatRolls, "system.midi.attackRollCount": this.attackRollCount }));
+  }
+
+  /**
+   * Build the message update for a display method, routing the rendered section either to its named
+   * slot or, for a card still rendering from stored markup, to the spliced `content`.
+   */
+  #sectionUpdate(
+    name: SectionName,
+    section: MidiCardSection | undefined,
+    extras: Record<string, unknown> = {}
+  ): ChatMessage.UpdateData {
+    return this.#sectionsUpdate(section ? { [name]: section } : {}, extras);
+  }
+
+  /**
+   * The saves section's render data, with the live Tokens projected away.
+   *
+   * `saves.html` needs only `target.id` and `target.document.uuid` from each entry, so keeping the
+   * placeable would serialise a canvas object into the card. Only the fields the template actually
+   * reads are kept — a live entry also carries `modifierTracker` (409 B on a measured card),
+   * `rollDetail`, `id` and `adv`, none of which the markup touches. The item id moves into the data
+   * because the wrapper it used to sit on is now part of the template.
+   */
+  #saveSectionData(templateData: Record<string, any>): Record<string, unknown> {
+    const saves = (templateData.saves ?? []).map((save: any) => {
+      const projected: Record<string, unknown> = {
+        target: { id: save?.target?.id ?? "", document: { uuid: save?.target?.document?.uuid ?? "" } }
+      };
+      for (const field of SAVE_TEMPLATE_FIELDS) projected[field] = save?.[field];
+      return projected;
+    });
+    return { ...templateData, saves, itemId: this.item.id };
+  }
+
+  /**
+   * The roll HTML fields are typed as `string | HTMLElement`; sections store markup.
+   */
+  #sectionHTML(value: string | HTMLElement | undefined | null): string {
+    if (!value) return "";
+    return typeof value === "string" ? value : value.outerHTML;
+  }
+
+  /** As `#sectionUpdate`, for a display method that fills more than one slot in a single update. */
+  #sectionsUpdate(
+    sections: Partial<Record<SectionName, MidiCardSection>>,
+    extras: Record<string, unknown> = {}
+  ): ChatMessage.UpdateData {
+    const updates: Record<string, unknown> = { ...extras };
+    for (const [name, section] of Object.entries(sections)) updates[`system.midi.sections.${name}`] = section;
+    return updates as ChatMessage.UpdateData;
   }
 
   async displayDamageRolls() {
     const chatMessage = this.chatCard;
-    if (!chatMessage?.content) {
+    if (!chatMessage) {
       const message = `midi-qol | displayDamageRolls | no chat message to display damage rolls`;
       console.warn(message);
       TroubleShooter.recordError(new Error(message), message);
       return;
     }
-    let content = chatMessage.content;
-    if ((getRemoveDamageButtons(this.activity) && configSettings.confirmAttackDamage === "none") || this.workflowType === "TrapWorkflow") {
-      // Match rollDamage button from activity-card.hbs
-      const damageRe = /<button[^>]*?data-action="rollDamage"[\s\S]*?<\/button>/
-      const formulaRe = /<button[^>]*?data-action="rollFormula"[\s\S]*?<\/button>/
-      content = content?.replace(damageRe, "<div></div>")
-      content = content?.replace(formulaRe, "")
-    }
     let newFlags = {};
+    // Which slot each roll lands in depends on `useOther`.
+    const sections: Partial<Record<SectionName, MidiCardSection>> = {};
     if (chatMessage) {
       if (this.damageRollHTML) {
         if (!this.useOther) {
-          const searchRe = /<div[^>]*?class="midi-qol-damage-roll[^"]*"[\s\S]*?<div class="end-midi-qol-damage-roll">/;
-          const replaceString = `<div class="midi-qol-damage-roll midi-qol-section-filled"><div class="midi-roll-label">${this.damageFlavor}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-damage-roll">`
-          content = content.replace(searchRe, replaceString);
+          sections.damage = { label: this.damageFlavor ?? "", rollType: "defaultDamage" };
         } else {
-          const otherSearchRe = /<div[^>]*?class="midi-qol-other-damage-roll[^"]*"[\s\S]*?<div class="end-midi-qol-other-damage-roll">/;
-          const otherReplaceString = `<div class="midi-qol-other-damage-roll midi-qol-section-filled"><div class="midi-roll-label">${this.damageFlavor}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-other-damage-roll">`
-          content = content.replace(otherSearchRe, otherReplaceString);
+          sections.otherDamage = { label: this.damageFlavor ?? "", rollType: "defaultDamage" };
         }
         if (this.otherDamageRollHTML) {
-          const otherSearchRe = /<div[^>]*?class="midi-qol-other-damage-roll[^"]*"[\s\S]*?<div class="end-midi-qol-other-damage-roll">/;
-          const otherReplaceString = `<div class="midi-qol-other-damage-roll midi-qol-section-filled"><div class="midi-roll-label">${this.otherDamageFlavor}${this.otherDamageRollHTML || ""}</div><div class="end-midi-qol-other-damage-roll">`
-          content = content.replace(otherSearchRe, otherReplaceString);
+          sections.otherDamage = { label: this.otherDamageFlavor ?? "", rollType: "otherDamage" };
         }
         if (this.bonusDamageRolls) {
-          const bonusSearchRe = /<div[^>]*?class="midi-qol-bonus-damage-roll[^"]*"[\s\S]*?<div class="end-midi-qol-bonus-damage-roll">/;
-          const bonusReplaceString = `<div class="midi-qol-bonus-damage-roll midi-qol-section-filled"><div class="midi-roll-label">${this.bonusDamageFlavor}${this.bonusDamageHTML || ""}</div><div class="end-midi-qol-bonus-damage-roll">`
-          content = content.replace(bonusSearchRe, bonusReplaceString);
+          sections.bonusDamage = { label: this.bonusDamageFlavor ?? "", rollType: "bonusDamage" };
         }
       } else {
         if (this.otherDamageRollHTML) {
-          const otherSearchRe = /<div[^>]*?class="midi-qol-damage-roll[^"]*"[\s\S]*?<div class="end-midi-qol-damage-roll">/;
-          const otherReplaceString = `<div class="midi-qol-damage-roll midi-qol-section-filled"><div class="midi-roll-label">${this.otherDamageFlavor}</div>${this.otherDamageRollHTML || ""}<div class="end-midi-qol-damage-roll">`
-          content = content.replace(otherSearchRe, otherReplaceString);
+          sections.damage = { label: this.otherDamageFlavor ?? "", rollType: "otherDamage" };
         }
         if (this.bonusDamageRolls) {
-          const bonusSearchRe = /<div[^>]*?class="midi-qol-bonus-damage-roll[^"]*"[\s\S]*?<div class="end-midi-qol-bonus-damage-roll">/;
-          const bonusReplaceString = `<div class="midi-qol-bonus-damage-roll midi-qol-section-filled"><div class="midi-roll-label">${this.bonusDamageFlavor}</div>${this.bonusDamageHTML || ""}<div class="end-midi-qol-bonus-damage-roll">`
-          content = content.replace(bonusSearchRe, bonusReplaceString);
+          sections.bonusDamage = { label: this.bonusDamageFlavor ?? "", rollType: "bonusDamage" };
         }
       }
 
@@ -4571,18 +4538,17 @@ export class Workflow {
       }, { overwrite: true, inplace: false });
     }
 
-    if (this.damageRollCount > 1) {
-      // Match rollDamage button - handles both multi mode (no span) and single mode (with span)
-      const damageButtonRe = /(<button[^>]*data-action="rollDamage"[^>]*>)(?:<span>)?(\[\d*\] )*([^<]+)(?:<\/span>)?(<\/button>)/;
-      content = content.replace(damageButtonRe, `$1<span>[${this.damageRollCount}] $3</span>$4`);
-      const confirmButtonRe = /<button class="midi-qol-confirm-damage-roll-complete" data-action="confirm-damage-roll-complete">(\[[\d ]*\])*([^<]+)<\/button>/;
-      content = content.replace(confirmButtonRe, `<button class="midi-qol-confirm-damage-roll-complete" data-action="confirm-damage-roll-complete">[${this.attackRollCount} ${Math.max(this.damageRollCount, 1)}] $2</button>`);
-    } else {
-      // Match rollDamage button - handles both multi mode (no span) and single mode (with span)
-      const damageButtonRe = /(<button[^>]*data-action="rollDamage"[^>]*>)(?:<span>)?(\[\d*\] )*([^<]+)(?:<\/span>)?(<\/button>)/;
-      content = content.replace(damageButtonRe, `$1<span>$3</span>$4`);
-    }
-    return await this.performThrottledUpdate(chatMessage, { "content": content, flags: newFlags, rolls: this.chatRolls }, false);
+    return await this.performThrottledUpdate(chatMessage,
+      this.#sectionsUpdate(sections, {
+        flags: newFlags, rolls: this.chatRolls, "system.midi.damageRollCount": this.damageRollCount,
+        /*
+         * Refreshed here as well as at `displayHits`, because reactions resolve in between. Uncanny
+         * dodge is the case that shows it: the target uses it as a reaction after being hit, so the
+         * descriptor written with the hits still says `uncannyDodge: false`. midi's own card
+         * calculates at damage time and sees the flag, which is why the two disagreed.
+         */
+        ...this.#targetsUpdate()
+      }), false);
   }
 
   async displayHitTargets(whisper = false) {
@@ -4634,21 +4600,35 @@ export class Workflow {
       isGM: game.user?.isGM,
     };
     if (debugEnabled > 0) warn("displayHits |", templateData, whisper);
-    const hitContent = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/hits.html", templateData) || "No Targets";
     const chatMessage = this.chatCard;
 
-    if (chatMessage?.content) {
-      let searchString = /<div[^>]*?class="midi-qol-hits-display[^"]*"[\s\S]*?<div class="end-midi-qol-hits-display">/;
-      let replaceString = `<div class="midi-qol-hits-display midi-qol-section-filled">${hitContent}<div class="end-midi-qol-hits-display">`
-      let content = chatMessage.content.replace(searchString, replaceString);
-
-      const update = {
-        content,
+    if (chatMessage) {
+      /*
+       * The data, not the markup. `hits.html` needs only `target.id` from each entry, so the live
+       * Token is projected away — storing it would serialise a canvas placeable into the card.
+       *
+       * `oneCard`, `collapsibleTargets` and `isGM` are deliberately not stored: they are properties
+       * of the viewer and the current settings, and baking them in gave every client the roller's
+       * answer.
+       */
+      /*
+       * A list, not the uuid-keyed map the workflow holds. `throttledUpdate` runs the update through
+       * `foundry.utils.expandObject`, and an actor uuid contains dots — so the map was exploded into
+       * `{ Scene: { <id>: { Token: { <id>: … } } } }` and the template rendered nothing.
+       */
+      const hits = Object.entries(this.hitDisplayData ?? {}).map(([actorUuid, hit]: [string, any]) =>
+        ({ ...hit, actorUuid, target: { id: hit?.target?.id ?? hit?.target?.document?.id ?? "" } }));
+      const section = {
+        label: "",
+        template: "modules/midi-qol/templates/hits.html",
+        data: { attackType: templateData.attackType, attackTotal: templateData.attackTotal, showHits, hits }
+      };
+      await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("hits", section, {
+        ...this.#targetsUpdate(),
         flags: { "midi-qol": { type: MESSAGE_TYPES.HITS } },
         // TODO: May not be required
         style: CONST.CHAT_MESSAGE_STYLES.OTHER
-      }
-      await this.performThrottledUpdate(chatMessage, update);
+      }));
     }
   }
 
@@ -4767,11 +4747,10 @@ export class Workflow {
     }
     const chatMessage = this.chatCard;
 
-    const saveContent = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/saves.html", templateData);
-    let searchRe = /<div[^>]*?class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
-    let replaceString = `<div class="midi-qol-saves-display"><div data-item-id="${this.item.id}">${saveContent}</div><div class="end-midi-qol-saves-display">`
-    let content = chatMessage.content.replace(searchRe, replaceString);
-    await this.performThrottledUpdate(chatMessage, { content, flags: { "midi-qol": { type: MESSAGE_TYPES.SAVES } } });
+    const section = { label: "", template: "modules/midi-qol/templates/saves.html",
+      data: this.#saveSectionData(templateData) };
+    await this.performThrottledUpdate(chatMessage,
+      this.#sectionUpdate("saves", section, { flags: { "midi-qol": { type: MESSAGE_TYPES.SAVES } } }));
   }
   async displaySaves(_whisper: boolean = false) {
     let { fullDamageText, halfDamageText, noDamageText } = this.computeSaveFlavors();
@@ -4785,11 +4764,8 @@ export class Workflow {
       // TODO force roll damage
     }
     let chatMessage = this.chatCard; // XXX await asyncGetCachedDocument(this.itemCardUuid);
-    if (chatMessage?.content) {
+    if (chatMessage) {
       templateData.saveDisplayFlavor = this.saveDisplayFlavor;
-      const saveContent = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/saves.html", templateData);
-      let searchRe: RegExp;
-      let replaceString: string;
       let midiTargets = Array.from(this.targets.map(t => t.document));
       let midiTargetDescriptors: CombinedTargetDescriptor[] | undefined;
 
@@ -4797,37 +4773,12 @@ export class Workflow {
         const saves = this.saves?.map(t => t.document.uuid);
         const semiSuperSavers = this.semiSuperSavers?.map(t => t.document.uuid);
         const superSavers = this.superSavers?.map(t => t.document.uuid);
-        const targetDescriptors = this.targetDescriptors;
-        midiTargetDescriptors = midiTargets.map(t => {
-          let uncannyDodge = !!(t.actor?.flags?.[MODULE_ID]?.["uncanny-dodge"] && this.activity.attack);
-          let saveMults = {
-            otherDamage: this.otherActivity ? getSaveMultiplierForActivity(this.otherActivity) : 1,
-            defaultDamage: getSaveMultiplierForActivity(this.activity),
-            bonusDamage: getSaveMultiplierForActivity(this.activity)
-          };
-
-          const targetDescriptor = getTargetDescriptor(t.actor?.uuid ?? "", targetDescriptors) ?? {}
-          return foundry.utils.mergeObject({
-            name: t.name,
-            img: t.actor?.img as string,
-            uuid: t.actor?.uuid ?? "",
-            //@ts-expect-error no dnd5e-types
-            ac: hasCoverTotal(t.actor) ? null : t?.actor?.system.attributes.ac.value as number,
-            saved: saves?.has(t.uuid),
-            semiSuperSaver: semiSuperSavers?.has(t.uuid),
-            superSaver: superSavers?.has(t.uuid),
-            saveMults,
-            itemType: this.item.type,
-            uncannyDodge,
-          }, targetDescriptor);
-        })
+        midiTargetDescriptors = this.buildMidiTargetDescriptors(midiTargets);
       }
       if (this.workflowType !== "DamageOnlyWorkflow") {
-        searchRe = /<div[^>]*?class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
-        replaceString = `<div class="midi-qol-saves-display"><div data-item-id="${this.item.id}">${saveContent}</div><div class="end-midi-qol-saves-display">`
-        let content = chatMessage.content.replace(searchRe, replaceString);
+        const section = { label: "", template: "modules/midi-qol/templates/saves.html",
+          data: this.#saveSectionData(templateData) };
         const update = {
-          content,
           /* rolls: this.chatRolls */
           flags: {
             "midi-qol": {
@@ -4841,13 +4792,89 @@ export class Workflow {
               advantageSaveUuids: Array.from(this.advantageSaves).map(t => t.document.uuid),
               sourceActorUuid: this.actor.uuid,
             },
-            dnd5e: { targets: midiTargetDescriptors }
           },
+          ...this.#targetsUpdate(),
           style: CONST.CHAT_MESSAGE_STYLES.OTHER
         };
-        await this.performThrottledUpdate(chatMessage, update);
+        await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("saves", section, update));
       }
     }
+  }
+
+  /**
+   * Record the workflow's targets on the card, in the field dnd5e reads.
+   *
+   * dnd5e captures `system.targets` from `game.user.targets` when the usage message is created.
+   * midi frequently settles its targets *after* that — a template is placed, target confirmation
+   * runs, an AoE recomputes — so the card kept whatever happened to be targeted at creation. That
+   * is what the damage tray and `<recorded-targets>` read, which is why a Fireball that hit four
+   * creatures listed one.
+   *
+   * `TargetsField.getDescriptors` is dnd5e's own serialiser, so the entries are exactly what it
+   * expects to resolve.
+   */
+  #targetsUpdate(): Record<string, unknown> {
+    const TargetsField = globalThis.dnd5e?.dataModels?.chatMessage?.fields?.TargetsField;
+    if (!TargetsField?.getDescriptors) return {};
+    const tokens = Array.from(this.targets ?? []);
+    if (!tokens.length) return {};
+    // dnd5e's descriptors, with midi's per-target detail merged onto the matching entry. The extra
+    // keys are part of the schema because MidiUsageMessageData extends the targets field.
+    const descriptors = TargetsField.getDescriptors(tokens) as Record<string, unknown>[];
+    const midiByToken = new Map(this.buildMidiTargetDescriptors(
+      tokens.map(t => getTokenDocument(t)).filter(Boolean) as TokenDocument.Implementation[])
+      .map(d => [(d as { tokenUuid?: string }).tokenUuid ?? d.uuid, d]));
+    for (const descriptor of descriptors) {
+      const detail = midiByToken.get(descriptor.token as string) ?? midiByToken.get(descriptor.actor as string);
+      if (!detail) continue;
+      const { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon } =
+        detail as Record<string, unknown>;
+      Object.assign(descriptor, { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon });
+    }
+    return { "system.targets": descriptors };
+  }
+
+  /**
+   * midi's per-target detail for the damage tray: save results, save multipliers, uncanny dodge.
+   *
+   * dnd5e's own `system.targets` cannot hold these — its `TargetsField` is name/img/ac/actor/token —
+   * so they go in midi's own flag and `DamageApplicationElementMidi.getTargetOptions` reads them
+   * back into `options.midi`, which is what makes the tray's numbers and icons match midi's card.
+   */
+  buildMidiTargetDescriptors(targets: TokenDocument.Implementation[]): CombinedTargetDescriptor[] {
+    const saves = this.saves?.map(t => t.document.uuid);
+    const semiSuperSavers = this.semiSuperSavers?.map(t => t.document.uuid);
+    const superSavers = this.superSavers?.map(t => t.document.uuid);
+    const existing = this.targetDescriptors;
+    return targets.map(t => {
+      // What the damage calculation used, if it has run; the live flag is transient for reactions.
+      const applied = this.midiTargetDetail?.[t.uuid];
+      const uncannyDodge = applied
+        ? !!applied.uncannyDodge
+        : !!(t.actor?.flags?.[MODULE_ID]?.["uncanny-dodge"] && this.activity?.attack);
+      const uncannyDodgeIcon = applied?.uncannyDodgeIcon as string | undefined;
+      const saveMults = {
+        otherDamage: this.otherActivity ? getSaveMultiplierForActivity(this.otherActivity) : 1,
+        defaultDamage: getSaveMultiplierForActivity(this.activity),
+        bonusDamage: getSaveMultiplierForActivity(this.activity)
+      };
+      const targetDescriptor = getTargetDescriptor(t.actor?.uuid ?? "", existing) ?? {};
+      return foundry.utils.mergeObject({
+        name: t.name,
+        img: t.actor?.img as string,
+        uuid: t.actor?.uuid ?? "",
+        tokenUuid: t.uuid,
+        //@ts-expect-error no dnd5e-types
+        ac: hasCoverTotal(t.actor) ? null : t?.actor?.system.attributes.ac.value as number,
+        saved: saves?.has(t.uuid),
+        semiSuperSaver: semiSuperSavers?.has(t.uuid),
+        superSaver: superSavers?.has(t.uuid),
+        saveMults,
+        itemType: this.item?.type,
+        uncannyDodge,
+        uncannyDodgeIcon
+      }, targetDescriptor) as CombinedTargetDescriptor;
+    });
   }
 
   get chatRolls(): Roll[] {
@@ -4857,6 +4884,13 @@ export class Workflow {
     if (this.damageRolls) messageRolls.push(...this.damageRolls);
     if (this.bonusDamageRolls) messageRolls.push(...this.bonusDamageRolls);
     if (this.otherDamageRolls) messageRolls.push(...this.otherDamageRolls);
+    /*
+     * Saves go last so `rolls[0]` keeps meaning what it did to anything still indexing it, and are
+     * carried at all because a save roll is worth having on the card in its own right — macros,
+     * Dice So Nice and dnd5e's `getAssociatedRolls` all read `message.rolls`, and until now the
+     * saves existed only as rendered markup inside midi's own section.
+     */
+    for (const roll of Object.values(this.tokenSaves ?? {})) messageRolls.push(roll);
     return messageRolls;
   }
 
@@ -5001,24 +5035,15 @@ export class Workflow {
     const img = await this.getTargetPortraitImage(target);
     const isPlayerOwned = target.actor?.hasPlayerOwner ?? false;
 
-    let rollHTML = await midiRenderRoll(saveRoll);
+    let rollHTML = await renderSaveRollHTML(saveRoll);
     //@ts-expect-error midiChosenId is a custom roll option
     const midiChosenId: string | undefined = saveRoll.options?.midiChosenId;
-    if (midiChosenId) {
-      let choiceTitle = "";
-      if (GameSystemConfig.abilities[midiChosenId]) {
-        const abilityLabel = GameSystemConfig.abilities[midiChosenId].label ?? "";
-        choiceTitle = i18nFormat("DND5E.SavePromptTitle", { ability: abilityLabel });
-      } else if (GameSystemConfig.skills[midiChosenId]) {
-        const skillLabel = GameSystemConfig.skills[midiChosenId].label ?? "";
-        choiceTitle = i18nFormat("DND5E.SkillPromptTitle", { skill: skillLabel, ability: "" });
-      } else {
-        const toolLabel = getToolLabel(midiChosenId);
-        if (toolLabel && toolLabel !== midiChosenId) choiceTitle = i18nFormat("DND5E.ToolPromptTitle", { tool: toolLabel });
-      }
-      if (choiceTitle) rollHTML = `<div style="font-weight:bold; text-align:center;">${choiceTitle}</div>${rollHTML}`;
-    }
     const targetDocUuid = getTokenDocument(target)?.uuid ?? "none";
+
+    // Tagged so the roll can be found on the card: `rollType` the way every other midi roll is
+    // tagged, and the target uuid because saves are per-target and the card has no other way back.
+    foundry.utils.setProperty(saveRoll, `options.${MODULE_ID}.rollType`, "save");
+    foundry.utils.setProperty(saveRoll, `options.${MODULE_ID}.targetUuid`, targetDocUuid);
 
     // Retrieve the per-target saveDetails for attribution tracking
     const saveDetails = this.targetSaveDetails?.[targetDocUuid];
@@ -6508,28 +6533,19 @@ export class Workflow {
   }
 
   async displayChatCardWithoutDamageDetail() {
-    let chatMessage = getCachedDocument(this.itemCardUuid) as ChatMessage.Implementation | undefined;
-    let data: ChatMessage.CreateData | undefined;
-    if (chatMessage?.content) {
-      let content = chatMessage.content;
-      data = chatMessage!.toObject();
-      content = data.content || "";
-      let searchRe = /<div[^>]*?class="midi-qol-damage-roll[^"]*"[\s\S]*?<div class="end-midi-qol-damage-roll">/;
-      let replaceString = `<div class="midi-qol-damage-roll"><div class="end-midi-qol-damage-roll">`
-      content = content.replace(searchRe, replaceString);
-      searchRe = /<div[^>]*?class="midi-qol-other-roll"[\s\S]*?<div class="end-midi-qol-other-roll">/;
-      replaceString = `<div class="midi-qol-other-roll"><div class="end-midi-qol-other-roll">`
-      content = content.replace(searchRe, replaceString);
-      searchRe = /<div[^>]*?class="midi-qol-bonus-roll">[\s\S]*?<div class="end-midi-qol-bonus-roll">/;
-      replaceString = `<div class="midi-qol-bonus-roll"><div class="end-midi-qol-bonus-roll">`
-      content = content.replace(searchRe, replaceString);
+    const chatMessage = getCachedDocument(this.itemCardUuid) as ChatMessage.Implementation | undefined;
+    if (!chatMessage) return;
+    // Re-post the card with the damage figures dropped, leaving the rest of it intact.
+    // Destructured rather than deleted: the new card must not carry the old one's id.
+    const { _id, ...data } = chatMessage.toObject();
+    for (const name of ["damage", "otherDamage", "bonusDamage"]) {
+      foundry.utils.setProperty(data, `system.midi.sections.${name}`, null);
     }
     if (installedModules.get("ready-set-roll-5e")) return;
-    if (data && this.currentAction === this.WorkflowState_Completed) {
+    if (this.currentAction === this.WorkflowState_Completed) {
       if (this.itemCardUuid) {
         await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: true });
       }
-      delete data._id;
       const itemCard = await CONFIG.ChatMessage.documentClass.create(data);
       this.itemCardUuid = itemCard?.uuid;
     }
@@ -8002,12 +8018,9 @@ export class ActiveDefenceWorkflow extends Workflow {
   async displayAttackRoll() {
     const chatMessage = this.chatCard;
     let newFlags = {};
-    const searchRe = /<div[^>]*?class="midi-qol-attack-roll[^"]*"[\s\S]*?<div class="end-midi-qol-attack-roll">/;
-    let DCString = "DC";
-    DCString = i18n("DND5E.AbbreviationDC") ?? "DC";
+    const DCString = i18n("DND5E.AbbreviationDC") ?? "DC";
     const attackString = `<label class="midi-qol-active-defence-dc">${DCString} ${this.activeDefenceDC}</label> ${i18n("midi-qol.ActiveDefenceString")}`;
-    const replaceString = `<div class="midi-qol-attack-roll midi-qol-section-filled"><div class="midi-roll-label">${attackString}</div><div class="end-midi-qol-attack-roll">`;
-    let content = chatMessage?.content.replace(searchRe, replaceString) ?? "";
+    const section = { label: attackString, html: "" };
     newFlags = {
       "midi-qol":
       {
@@ -8020,7 +8033,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         hitECTargetUuids: Array.from(this.hitTargetsEC).map(t => getTokenDocument(t)?.uuid),
       }
     };
-    await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls: this.chatRolls });
+    await this.setCardSection("attack", section, { flags: newFlags, rolls: this.chatRolls });
   }
 }
 export class UserWorkflow extends Workflow {
@@ -8258,33 +8271,23 @@ export class TrapWorkflow extends Workflow {
     if (!activityHasAreaTarget(this.activity) || !this.templateLocation) {
       return this.WorkflowState_TemplatePlaced;
     }
-    //@ts-expect-error no dnd5e-types
-    const TemplateClass = game.system.canvas.AbilityTemplate;
-    const abilityTemplates = TemplateClass.fromActivity(this.activity);
-    const templateData: any = abilityTemplates[0].document.toObject(false);
-    // template.draw();
-    // get the x and y position from the trapped token
-    templateData.x = this.templateLocation?.x || 0;
-    templateData.y = this.templateLocation?.y || 0;
-    templateData.direction = this.templateLocation?.direction || 0;
-
-    // Create the template
-    let templates = await (canvas.scene as unknown as Scene)?.createEmbeddedDocuments("MeasuredTemplate", [templateData]);
-    if (templates) {
-      for (const tDoc of templates) {
-        if (!tDoc?.uuid) continue;
-        // v14: resolve proxy MeasuredTemplate to actual RegionDocument
-        const regionDoc = tDoc._id ? canvas.scene?.regions.get(tDoc._id) : undefined;
-        const docToStore = regionDoc ?? tDoc;
+    // Regions directly — the deprecated AbilityTemplate skipped dnd5e's unit conversion, which is
+    // why trap templates came out the wrong size.
+    const templates = await createActivityTemplateRegions(this.activity, [{
+      x: this.templateLocation?.x || 0,
+      y: this.templateLocation?.y || 0,
+      direction: this.templateLocation?.direction || 0
+    }]);
+    if (templates?.length) {
+      for (const docToStore of templates) {
+        if (!docToStore?.uuid) continue;
         this.templateUuid = docToStore.uuid;
         await this.setupTemplateCleanup(docToStore);
       }
       this.placedTemplateCount = templates.length;
       this.selectAllTemplateTargets();
       if (this.templateLocation?.removeDelay) {
-        let ids: string[] = templates.map(td => td._id as string)
-        //TODO test this again
-        // v14: templates are backed by Regions — delete as Region documents
+        const ids: string[] = templates.map(td => td.id as string);
         setTimeout(() => canvas.scene?.deleteEmbeddedDocuments("Region", ids), this.templateLocation.removeDelay * 1000);
       }
     }
@@ -8472,10 +8475,8 @@ export class DDBGameLogWorkflow extends Workflow {
 
   async WorkflowState_AwaitTemplate(context: WorkflowContext = {}): Promise<WorkflowState> {
     if (!activityHasAreaTarget(this.activity)) return super.WorkflowState_AwaitTemplate;
-    let system: any = game.system;
-    // Create the template
-    const template = system.canvas.AbilityTemplate.fromActivity(this.activity);
-    if (template) template.drawPreview();
+    // `TemplatePlacement.fromActivity` runs the placement UI and creates the Regions itself.
+    await globalThis.dnd5e.canvas.TemplatePlacement.fromActivity(this.activity);
     return super.WorkflowState_AwaitTemplate;
   }
   async WorkflowState_WaitForDamageRoll(context: WorkflowContext = {}): Promise<WorkflowState> {

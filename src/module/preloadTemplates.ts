@@ -1,6 +1,6 @@
 export async function preloadTemplates() {
   const templatePaths = [
-    "modules/midi-qol/templates/activity-card.hbs",
+    "modules/midi-qol/templates/chat/usage-card.hbs",
     "modules/midi-qol/templates/attack-roll.html",
     "modules/midi-qol/templates/bonus-damage-roll.html",
     "modules/midi-qol/templates/damage-results.html",
@@ -60,5 +60,10 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/apps/TroubleShooter/summary.hbs",
     "modules/midi-qol/templates/apps/UndoWorkflow/undo-workflow.hbs"
   ];
-	return foundry.applications.handlebars.loadTemplates(templatePaths);
+  // `midi.section` is referenced by name from usage-card.hbs, so it needs a registered alias the way
+  // dnd5e registers its own card partials as `dnd5e.card-face` and friends.
+  return foundry.applications.handlebars.loadTemplates({
+    ...Object.fromEntries(templatePaths.map(p => [p, p])),
+    "midi.section": "modules/midi-qol/templates/chat/section.hbs"
+  });
 }

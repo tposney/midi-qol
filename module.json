@@ -42,7 +42,7 @@
         "type": "system",
         "compatibility": {
           "minimum": "5.2.4",
-          "maximum": "5.3.99"
+          "maximum": "6.999"
         }
       }
     ],
@@ -59,7 +59,7 @@
         "id": "dae",
         "type": "module",
         "compatibility": {
-          "minimum": "14.0.0"
+          "minimum": "14.0.14"
         }
       }
     ]
@@ -110,12 +110,12 @@
     },
     {
       "lang": "cs",
-      "name": "Češky",
+      "name": "\u010ce\u0161ky",
       "path": "lang/cs.json"
     },
     {
       "lang": "ja",
-      "name": " 日本語",
+      "name": " \u65e5\u672c\u8a9e",
       "path": "lang/ja.json"
     },
     {
@@ -125,12 +125,12 @@
     },
     {
       "lang": "fr",
-      "name": "Français",
+      "name": "Fran\u00e7ais",
       "path": "lang/fr.json"
     },
     {
       "lang": "pt-BR",
-      "name": "Português (Brasil)",
+      "name": "Portugu\u00eas (Brasil)",
       "path": "lang/pt-BR.json"
     },
     {
@@ -150,7 +150,7 @@
     },
     {
       "lang": "zh-tw",
-      "name": "正體中文",
+      "name": "\u6b63\u9ad4\u4e2d\u6587",
       "path": "lang/zh-tw.json"
     }
   ],

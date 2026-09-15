@@ -1,3 +1,56 @@
+### 14.6.0 (dnd6 branch)
+* Version reads Foundry-major dot dnd5e-major: 14.0.x is the dnd5e 5.x line, 14.6.x the 6.x line.
+* Supports dnd5e 6.x.
+* Requires dae 14.0.14 or later.
+
+**Breaking: transfer effects with a duration**
+* A duration on a transfer effect no longer runs. dnd5e 6.0 does not start one, and transfer effects are passive by design; the old behaviour (toggle the effect on, it expires and disables itself) was times-up/DAE managing the v13 duration schema.
+* Legacy items that relied on it — the effect toggled on and expiring on its own — now stay on until toggled off again.
+* To restore it, add the effect to the activity's Effects list. dnd5e then applies it to the actor as a copy on use, which carries the duration and expires normally, leaving the item's effect intact. This is how dnd5e's own 2024 content is built.
+
+**Chat cards**
+* Usage cards are a chat-message sub-type rendered from `dnd5e.card-face`; midi no longer builds its own card markup.
+* `usage.chatCard`, the `_usageChatContext` override, the content-splicing machinery and `activity-card.hbs` are gone.
+* Roll sections stored in `system.midi.sections` and rendered from `message.rolls`, or from a template plus data.
+* Button visibility is resolved per viewer at render rather than stripped from the stored card, so the GM and player `Remove chat card buttons after roll` settings both apply.
+* Chat buttons use the dnd5e 6.0 button format; labels follow the language setting.
+* Save rolls are carried on the card, so macros, Dice So Nice and `getAssociatedRolls` can see them.
+* Attack roll is located by roll type rather than by position in `message.rolls`.
+* Bonus damage rolls are shown in the bonus damage section; previously only its label appeared, though the damage was always applied.
+* Other and bonus damage rolls no longer render inside the section label.
+* Target rows carry their token uuid; `data-uuid` had always rendered empty.
+* Use card 9.9kB -> 7.2kB; bytes written per attack 19.0kB -> 4.1kB; saves section 4.5kB -> 1.5kB.
+
+**Damage tray**
+* Targets are recorded on the card, so the tray lists all of them rather than whatever was selected before the roll.
+* `system.targets` extended with midi's per-target detail: save results and multipliers, super and semi-super saver, uncanny dodge.
+* Per-target detail records what the damage calculation applied, so reaction-based effects such as uncanny dodge are reflected.
+* Resistance and immunity icons shown on the target row with state on hover, in addition to dnd5e's right-click menu.
+* midi no longer writes `flags.dnd5e.targets`.
+
+**Templates**
+* Templates use regions throughout; the deprecated `AbilityTemplate` API and the `refreshMeasuredTemplate`, `preCreateMeasuredTemplate` and `dnd5e.preCreateActivityTemplate` handlers are gone.
+* AoE template targeting no longer fails for templates with no elevation set.
+* Targets update live while a template is dragged.
+* Placement clamped to range, and cones anchored to the caster, while dragging.
+* Trap workflow templates use the activity's units, so they are the correct size.
+
+**Distance**
+* The distance fudge factor now applies on every scene and measurement mode, not only gridless scenes with Gridless Grid enabled. Perimeter measurement still floors at one grid unit; centre and default measurement can reach 0.
+* `getDistance` is available in evaluated conditions and macros, and is the preferred call: it honours the Distance Measurement setting, so it includes perimeter measurement and agrees with midi's own range checks. `computeDistance` remains available as the centre-based primitive.
+
+**Over-time and rolls**
+* Advantage from dnd5e 6.0's own d20 rules is preserved; midi now only asserts advantage it grants or denies, instead of overwriting the system's on every tool, skill, check, save and death save.
+* Over-time saves read the dnd5e 6.0 message sub-types rather than `flags.dnd5e.roll`.
+* Death saves no longer trigger over-time save effects.
+* A failed save, check, skill or tool roll requested over the socket settles instead of leaving the workflow waiting forever.
+* Effects set to expire on a failed concentration save now expire; DAE registered the option as `isConcentrationSaveFail`, which never matched. Both spellings are accepted.
+* midi owns the registration of its special durations; the Long Rest, Short Rest and New Day labels use the dnd5e 6.0 keys.
+* DDB Game Log attack and damage rolls are recognised under the 6.0 message types.
+
+**Deprecations**
+* `DocumentSheetConfig`, `CanvasOcclusionMask` and `Scene#templates` replaced with their v14 equivalents.
+
 ### 14.0.12
 
 **Damage cards**

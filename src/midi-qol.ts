@@ -175,6 +175,7 @@ Hooks.once("init", () => {
   registerHandlebarsHelpers();
   setupChatMessageMidi();
   setupDamageCardMessage();
+  setupUsageCardMessage();
   //@ts-expect-error
   CONFIG.ChatMessage.documentClass = ChatMessageMidi;
   // @ts-expect-error
@@ -381,7 +382,7 @@ Hooks.once('init', async function () {
   CONFIG.RegionBehavior.typeIcons[`${MODULE_ID}.regionActivity`] = "fa-solid fa-hat-wizard";
 
   // Register custom sheet for regionActivity behavior config (renders the rules ArrayField)
-  DocumentSheetConfig.registerSheet(RegionBehavior, MODULE_ID, MidiRegionBehaviorConfig as any, {
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(RegionBehavior, MODULE_ID, MidiRegionBehaviorConfig as any, {
     types: [`${MODULE_ID}.regionActivity`],
     makeDefault: true,
     label: "Midi QOL Region Activity"
@@ -625,9 +626,9 @@ Hooks.on("dae.addSpecialDurations", daeSpecialDurations => {
   daeSpecialDurations["isInitiative"] = `${i18n("dae.isRollBase")} ${i18n("dae.isInitiativeDetail")}`;
 
   daeSpecialDurations["isMoved"] = i18n("dae.isMoved");
-  daeSpecialDurations["longRest"] = i18n("DND5E.LongRest");
-  daeSpecialDurations["shortRest"] = i18n("DND5E.ShortRest");
-  daeSpecialDurations["newDay"] = `${i18n("DND5E.NewDay")}`;
+  daeSpecialDurations["longRest"] = i18n("DND5E.REST.Long.Label");
+  daeSpecialDurations["shortRest"] = i18n("DND5E.REST.Short.Label");
+  daeSpecialDurations["newDay"] = `${i18n("DND5E.REST.NewDay.Label")}`;
   Object.keys(GameSystemConfig.abilities).forEach(abl => {
     let ablString = GameSystemConfig.abilities[abl].label;
     daeSpecialDurations[`isSave.${abl}`] = `${i18n("dae.isRollBase")} ${ablString} ${i18n("dae.isSaveDetail")}`;
@@ -676,6 +677,11 @@ Hooks.once('setup', function () {
 Hooks.once("dae.setupComplete", () => {
   applyPendingLocalizations();
 });
+
+/*
+ * At ready, not init: the `usage` slot is contended — CPR and CAT may claim it too — and the model
+ * subclasses whatever is registered at that moment, so it must go last rather than first.
+ */
 
 Hooks.once("ready", () => {
   // can't hook off simple cover ready as it fires too early to be able to call api.setLibraryMode
@@ -877,6 +883,7 @@ Hooks.once('ready', function () {
 
 import { setupChatMessageMidi, ChatMessageMidi } from './module/ChatClasses/ChatMessageMidi.js';
 import { setupDamageCardMessage } from './module/ChatClasses/DamageCardMessage.js';
+import { setupUsageCardMessage } from './module/ChatClasses/UsageCardMessage.js';
 import { MidiSaveActivity, setupSaveActivity } from './module/activities/SaveActivity.js';
 import { MidiUtilityActivity, setupUtilityActivity } from './module/activities/UtilityActivity.js';
 import { MidiSummonActivity, setupSummonActivity } from './module/activities/SummonActivity.js';

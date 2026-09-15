@@ -133,7 +133,15 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         title: configSettings.activityNamePrefix ? "midi-qol.ATTACK.Title.one" : ActivityClass.metadata.title,
         dnd5eTitle: ActivityClass.metadata.title,
         usage: {
-          chatCard: "modules/midi-qol/templates/activity-card.hbs",
+          /*
+           * No `chatCard`. Supplying one puts the activity on dnd5e's legacy content path
+           * (`activity/mixin.mjs#legacyUsageContent`), which renders the template into
+           * `message.content` — and `usage-card.hbs` short-circuits on `content`, so the system's own
+           * card face never runs. That is what cost the card its background, its colours and the
+           * damage tray. The card is now rendered by `MidiUsageMessageData` from stored state.
+           *
+           * `usage.chatCard` is deprecated in dnd5e 6.0 and removed in 6.2, so this had to go anyway.
+           */
           actions: {
             rollAttack: MidiAttackActivity.#rollAttack,
             rollAttackAdvantage: MidiAttackActivity.#rollAttackAdvantage,
@@ -748,8 +756,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     get requireAmmunition(): boolean {
       return game.user?.isGM ? configSettings.gmRequireAmmunition : configSettings.playerRequireAmmunition;
     }
-    async _usageChatContext(message) {
-      const context = await super._usageChatContext(message);
+    async _midiUsageContext(message) {
+      const context = await super._midiUsageContext(message);
 
       context.hasAttack = this.attack; // && !minimalCard && (systemCard || needAttackButton || configSettings.confirmAttackDamage !== "none"),
       return context;

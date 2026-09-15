@@ -1,9 +1,10 @@
-import { Activity, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig } from "../../globals.js";
+import { Activity, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext } from "../../globals.js";
 import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn, busyWait } from "../../midi-qol.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFirstWorkflow } from "../Workflow.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
+import { midiButtonVisibility } from "../ChatClasses/UsageCardMessage.js";
 import { ConditionEditor } from "../apps/ConditionEditor.js";
 import { RegionBehaviorEditor } from "../apps/RegionBehaviorEditor.js";
 import { averageDice, skipConcentrationActorUuids } from "../patching.js"
@@ -75,7 +76,7 @@ import {
   toMessageMode,
   rollModeToMessageMode,
 } from "../utils.js";
-import { activityHasScaledTargetCount, attachTokenOptions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
+import { activityHasScaledTargetCount, attachTokenOptions, createActivityTemplateRegions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
   _validateType(value: unknown) {
@@ -536,20 +537,12 @@ export let MidiActivityMixin = Base => {
      * Places all templates sequentially and delegates to workflow for validation and processing.
      */
     static async #placeTemplate(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
-      // @ts-expect-error .canvas
-      const AbilityTemplate = game.system.canvas.AbilityTemplate;
-      const templates: MeasuredTemplateDocument[] = [];
-
+      // `TemplatePlacement.fromActivity` runs the placement UI and creates the Regions itself,
+      // returning them; the deprecated `AbilityTemplate` preview/draw dance is gone.
+      let templates: MeasuredTemplateDocument[] = [];
       try {
-        const previews = AbilityTemplate.fromActivity(this);
-        if (!previews) return;
-        for (const template of previews) {
-          const result = await template.drawPreview();
-          if (result) {
-            const docs = Array.isArray(result) ? result : [result];
-            templates.push(...docs);
-          }
-        }
+        const created = await globalThis.dnd5e.canvas.TemplatePlacement.fromActivity(this);
+        if (created?.length) templates = created as unknown as MeasuredTemplateDocument[];
       } catch (err) {
         // User cancelled during placement — fall through to validation
       }
@@ -1294,7 +1287,12 @@ export let MidiActivityMixin = Base => {
           title,
           flavor,
           speaker,
-        }, { "flags.dnd5e.roll": { type: "damage", itemId: this.item.id, itemUuid: this.item.uuid } });
+          // `type` is carried by the message sub-type in 6.0 and the item by `system.item`; the flag
+          // stays alongside for pre-6.0 readers until 6.2 drops it.
+        }, {
+          "system.item": { id: this.item.id, uuid: this.item.uuid, name: this.item.name, img: this.item.img },
+          "flags.dnd5e.roll": { type: "damage", itemId: this.item.id, itemUuid: this.item.uuid }
+        });
         if (needsMaxDamage) {
           for (let i = 0; i < result.length; i++) {
             result[i] = await result[i].reroll({ maximize: true });
@@ -1775,19 +1773,31 @@ export let MidiActivityMixin = Base => {
       const autoCreateTemplate = activityHasAutoPlaceTemplate(this);
       const emanationNoTemplate = activityHasEmanationNoTemplate(this);
       if (autoCreateTemplate || emanationNoTemplate) {
-        buttons = buttons.filter(b => b.dataset?.action !== "placeTemplate")
+        // dnd5e 6.0 carries the action at the top level and leaves `dataset` empty on its own
+        // buttons, so matching on the dataset alone stopped matching anything and the Place Template
+        // button survived auto placement.
+        buttons = buttons.filter(b => (b.action ?? b.dataset?.action) !== "placeTemplate")
       }
 
-      // Add other activity consumption buttons (mirroring dnd5e pattern)
+      /*
+       * Other-activity consumption buttons, in 6.0's button format: `action` at the top level, a
+       * `label` object, and `icon` as FontAwesome classes rather than markup. The old shape triggered
+       * `#migrateLegacyChatButtons`, deprecated in 6.0 and removed in 6.2.
+       *
+       * The label is a key, not localized text — `card-buttons.hbs` localizes it at render, so a
+       * stored string would not follow a language change.
+       */
       if (this.otherActivity?.hasConsumption()) {
         buttons.push({
-          label: i18n("midi-qol.ConsumeOtherActivityResource"),
-          icon: '<i class="fa-solid fa-cubes-stacked" inert></i>',
-          dataset: { action: "consumeOtherActivity" }
+          action: "consumeOtherActivity",
+          label: { value: "midi-qol.ConsumeOtherActivityResource" },
+          icon: "fa-solid fa-cubes-stacked",
+          visibility: "creator"
         }, {
-          label: i18n("midi-qol.RefundOtherActivityResource"),
-          icon: '<i class="fa-solid fa-clock-rotate-left" inert></i>',
-          dataset: { action: "refundOtherActivity" }
+          action: "refundOtherActivity",
+          label: { value: "midi-qol.RefundOtherActivityResource" },
+          icon: "fa-solid fa-clock-rotate-left",
+          visibility: "creator"
         });
       }
 
@@ -1798,9 +1808,33 @@ export let MidiActivityMixin = Base => {
      * Determine whether a chat button should be hidden based on current state.
      * Mirrors dnd5e's shouldHideChatButton pattern.
      */
-    shouldHideChatButton(button: HTMLButtonElement, message: ChatMessage.Implementation): boolean {
+    shouldHideChatButton(
+      button: HTMLButtonElement | { action?: string, dataset?: Record<string, string> },
+      message: ChatMessage.Implementation
+    ): boolean {
       const consumed = message.getFlag(MODULE_ID, "use.consumed");
-      switch (button.dataset.action) {
+      // dnd5e 6.0 calls this from `_prepareButtons` with the stored button descriptor, which carries
+      // `action` at the top level; before that it was called with the rendered element, where the
+      // action lives on the dataset. Accept either.
+      // `||` not `??`: the button schema always defines `action`, so midi's own buttons — which
+      // carry theirs on the dataset — arrive with it set to the empty string rather than absent.
+      const action = ("action" in button ? button.action : undefined) || button.dataset?.action;
+      const midi = (message?.system as { midi?: { hasAttack?: boolean, hasDamage?: boolean } })?.midi;
+      // The same rule midi's own buttons are drawn by, so the two cannot disagree.
+      const visible = midiButtonVisibility(message, this);
+      if (visible.allRemoved) return true;
+      switch (action) {
+        /*
+         * midi draws its own attack and damage controls, with the advantage, disadvantage and
+         * critical variants dnd5e has no equivalent for, so the system's plain pair would be a second
+         * way to do the same thing — and one that ignores midi's fast-forward settings.
+         *
+         * Suppressed here rather than dropped in `_usageChatButtons` so the buttons still exist in
+         * `message.system.buttons`: a card midi did not draw (`midi.hasAttack` unset, e.g. an
+         * activity used while midi's automation is off) falls through and gets the system's own.
+         */
+        case "rollAttack": if (midi?.hasAttack || visible.attackSpent) return true; break;
+        case "rollDamage": if (midi?.hasDamage || visible.damageSpent) return true; break;
         // Show consume button only when rolled but didn't consume (empty object {})
         // Hide if: cancelled (false), not checked (undefined), or already consumed (non-empty object)
         case "consumeOtherActivity": return !(consumed && foundry.utils.isEmpty(consumed));
@@ -1809,7 +1843,13 @@ export let MidiActivityMixin = Base => {
         // dnd5e hides placeTemplate when !game.canvas.scene, which is true during page reload
         // before canvas is ready — only check permission here
         // REGION_CREATE replaced the deprecated TEMPLATE_CREATE in v14 (templates are regions); cast until fvtt-types catches up
-        case "placeTemplate": return !game.user?.can("REGION_CREATE" as User.ActionPermission);
+        case "placeTemplate":
+          if (visible.templatesPlaced) return true;
+          return !game.user?.can("REGION_CREATE" as User.ActionPermission);
+        case "rollSave":
+        case "rollCheck":
+          if (visible.savesResolved) return true;
+          break;
       }
       return super.shouldHideChatButton?.(button, message) ?? false;
     }
@@ -1881,23 +1921,18 @@ export let MidiActivityMixin = Base => {
         foundry.utils.setProperty(templateOptions, `flags.${MODULE_ID}.workflowId`, this.uuid); // TODO look at this when workflow ids are chat card ids
         foundry.utils.setProperty(templateOptions, `flags.${MODULE_ID}.itemUuid`, this.item.uuid);
 
-        // @ts-expect-error .canvas
-        let templates = game.system.canvas.AbilityTemplate.fromActivity(this, templateOptions) as foundry.canvas.placeables.MeasuredTemplate.Implementation[];
-        // fromActivity returns an array of templates - work out if we need more than one
-        if (!templates) error("No templates returned from fromActivity");
-        let template = templates[0];
-        const templateData = template.document.toObject();
-        if (this.item) foundry.utils.setProperty(templateData, `flags.${MODULE_ID}.itemUuid`, this.item.uuid);
-        if (this.actor) foundry.utils.setProperty(templateData, `flags.${MODULE_ID}.actorUuid`, this.actor.uuid);
-        if (!foundry.utils.getProperty(templateData, `flags.dnd5e.origin`)) foundry.utils.setProperty(templateData, `flags.${game.system?.id}.origin`, this.item?.uuid);
-        const templateDocuments = await canvas.scene?.createEmbeddedDocuments("MeasuredTemplate", [templateData]);
+        const templateDocuments = await createActivityTemplateRegions(this, [{
+          x: templateOptions.x, y: templateOptions.y, direction: 0
+        }], {
+          actorUuid: actor?.uuid,
+          tokenId: tokenToUse.id,
+          workflowId: this.uuid,
+          itemUuid: this.item?.uuid
+        });
 
         if (templateDocuments && templateDocuments.length > 0) {
-          let td = templateDocuments[0];
-          // v14: resolve proxy MeasuredTemplate to actual RegionDocument
-          const regionDoc = canvas.scene?.regions.get(td._id);
-          const docToStore = regionDoc ?? td;
-          td.object?.refresh();
+          const regionDoc = templateDocuments[0];
+          const docToStore = regionDoc;
           await busyWait(10);
 
           if (regionDoc) {
@@ -2065,7 +2100,16 @@ export let MidiActivityMixin = Base => {
       await writeRegion(regionDoc, { update: regionUpdate, behaviors });
     }
 
-    async _usageChatContext(message) {
+    /**
+     * midi's additions to the usage context.
+     *
+     * Deliberately *not* named `_usageChatContext`. Overriding that name keeps the activity on
+     * dnd5e's legacy content path even with no `chatCard` — the guard is
+     * `!chatCard && getDefiningClass(this, "_usageChatContext") === Activity` — so the system would
+     * render its own card into `message.content` and the data model's template would never run.
+     * Both hooks are deprecated in 6.0 and removed in 6.2 regardless.
+     */
+    async _midiUsageContext(message) {
       // TODO major revisit needed for this
       const workflow = message.workflow as Workflow;
       let systemCard = message.systemCard ?? false;
@@ -2152,6 +2196,42 @@ export let MidiActivityMixin = Base => {
       if (!showSaveButtons) context.buttons = context.buttons?.filter(b => !["rollSave", "rollCheck"].includes(b.dataset?.action));
       if (configSettings.autoCheckSaves !== "none") context.buttons?.forEach(b => { b.isDisabled = ["rollSave", "rollCheck"].includes(b.dataset?.action) ? "disabled" : "" });
       return foundry.utils.mergeObject(context, midiContextData)
+    }
+
+    /**
+     * Settle the card's rendering decisions into the message's system data.
+     *
+     * They depend on the workflow, which exists here and is gone by the time the card is rendered
+     * again after a reload — so they are decided once, now, and stored. `MidiUsageMessageData` reads
+     * them back; see the schema there for why they cannot live in the template's context alone.
+     *
+     * The decisions themselves are not recomputed: `_usageChatContext` already works them out at
+     * exactly this moment, so this takes what it produced rather than keeping a second copy of the
+     * reasoning that would drift from it.
+     */
+    async _createUsageMessage(message: RollMessageConfig = {}) {
+      try {
+        const context: MidiUsageChatContext = await this._midiUsageContext(message);
+        const midi = {
+          hasButtons: !!context.hasButtons,
+          hasAttack: !!context.hasAttack,
+          hasAttackRoll: !!context.hasAttackRoll,
+          hasDamage: !!context.hasDamage,
+          hasEffects: !!context.hasEffects,
+          condensed: !!context.condensed,
+          mergeCardMulti: !!context.mergeCardMulti,
+          confirmAttackDamage: !!context.confirmAttackDamage,
+          hideItemDetails: !!context.hideItemDetails,
+          displayProperties: !!context.displayProperties,
+          dmgBtnText: context.dmgBtnText ?? ""
+        };
+        message = foundry.utils.mergeObject({ data: { system: { midi } } }, message ?? {},
+                                            { inplace: false });
+      } catch (err) {
+        // A card that cannot describe itself is still better than no card at all.
+        console.error(`${MODULE_ID} | could not record usage card state`, err);
+      }
+      return super._createUsageMessage(message);
     }
 
     get actionType() { // the default actionType method in dnd5e mixin returns this.metadata.data instead of this.metadata.type

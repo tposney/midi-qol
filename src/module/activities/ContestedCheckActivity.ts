@@ -38,7 +38,12 @@ let defineMidiContestedCheckActivityClass = <T extends Activity>(ActivityClass: 
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiCheckSheet,
         usage: {
-          chatCard: "modules/midi-qol/templates/activity-card.hbs",
+          /*
+           * No `chatCard`. Supplying one keeps the activity on dnd5e's legacy content path — the
+           * system renders the template into `message.content` and `MidiUsageMessageData`'s own
+           * template short-circuits on it, so the card face never runs. Deprecated in dnd5e 6.0 and
+           * removed in 6.2 (`activity/mixin.mjs#legacyUsageContent`) regardless. See AttackActivity.
+           */
           actions: {
             // rollCheck: this.#rollCheck, // ContestedCheckActivity.metadata.usage.actions.rollCheck,
             rollDamage: MidiSaveActivity.metadata.usage.actions.rollDamage
@@ -119,7 +124,10 @@ let defineMidiContestedCheckActivityClass = <T extends Activity>(ActivityClass: 
     }
 
     async rollDamage(config: RollProcessConfig, dialog: RollDialogConfig={}, message: RollMessageConfig={}) {
+        // dnd5e 6.0 reads this from the damage message's own data, not the flag; the flag is written
+        // too so pre-6.0 readers and midi's own compat path keep working until 6.2 removes it.
       message = foundry.utils.mergeObject({
+        "data.system.onSave": this.damage?.onSave ?? null,
         "data.flags.dnd5e.roll": {
           damageOnSave: this.damage?.onSave
         }
@@ -134,12 +142,12 @@ let defineMidiContestedCheckActivityClass = <T extends Activity>(ActivityClass: 
 
     _usageChatButtons(message) {
       const buttons: any[] = [];
+      // 6.0 button format: action at the top level, a label object holding the i18n key, and icon as
+      // FontAwesome classes. The old shape triggered `#migrateLegacyChatButtons` (removed in 6.2).
       if (this.damage?.parts.length) buttons.push({
-        label: i18n("DND5E.Damage"),
-        icon: '<i class="fas fa-burst" inert></i>',
-        dataset: {
-          action: "rollDamage"
-        }
+        action: "rollDamage",
+        label: { value: "DND5E.Damage" },
+        icon: "fa-solid fa-burst"
       });
       return buttons.concat(super._usageChatButtons(message));
     }

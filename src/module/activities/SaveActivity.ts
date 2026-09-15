@@ -34,7 +34,12 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiSaveSheet,
         usage: {
-          chatCard: "modules/midi-qol/templates/activity-card.hbs",
+          /*
+           * No `chatCard`. Supplying one keeps the activity on dnd5e's legacy content path — the
+           * system renders the template into `message.content` and `MidiUsageMessageData`'s own
+           * template short-circuits on it, so the card face never runs. Deprecated in dnd5e 6.0 and
+           * removed in 6.2 (`activity/mixin.mjs#legacyUsageContent`) regardless. See AttackActivity.
+           */
           actions: {
             rollDamage: MidiSaveActivity.#rollDamage,
             rollSave: MidiSaveActivity.#rollSave, // Having this means needing to track the dnd5e SaveActivity.#rollSave changes
@@ -148,7 +153,10 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
       return rollConfig;
     }
     async rollDamage(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
+        // dnd5e 6.0 reads this from the damage message's own data, not the flag; the flag is written
+        // too so pre-6.0 readers and midi's own compat path keep working until 6.2 removes it.
       message = foundry.utils.mergeObject({
+        "data.system.onSave": this.damage?.onSave ?? null,
         "data.flags.dnd5e.roll": {
           damageOnSave: this.damage?.onSave
         }

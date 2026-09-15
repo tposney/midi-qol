@@ -1,0 +1,133 @@
+{{!--
+  midi's usage card.
+
+  Composed from dnd5e's own partials rather than reproducing them: the header, description, rows and
+  system buttons are `dnd5e.card-face`, and midi contributes only what dnd5e has no equivalent for —
+  its attack and damage buttons, the containers its enrichment fills, and the damage tray.
+
+  Reproducing the card face is what cost the card its appearance under 6.0. midi's copy did not paint
+  dnd5e's card background but still inherited its card *text* colour, so dark text landed on the dark
+  chat panel at about 1.2:1 contrast; it kept a speaker avatar the card had asked not to draw; and it
+  had nowhere for the tray dnd5e now declares in markup. One duplication, four symptoms.
+
+  The `content` branch stays. Cards written before this template, and any activity still supplying the
+  deprecated `usage.chatCard`, arrive with their markup already rendered into `content`; dnd5e's own
+  usage card branches the same way, for the same reason.
+--}}
+{{#if content}}
+{{{ content }}}
+{{else}}
+
+{{> "dnd5e.card-face" }}
+
+{{#each summaries}}
+<div class="card-summary" data-message-id="{{ id }}" data-target-uuid="{{ token.uuid }}">{{{ html }}}</div>
+{{/each}}
+
+{{#if midi.hasButtons}}
+<div class="card-buttons midi-buttons">
+
+  {{#if midi.buttons.attack}}
+  {{#if midi.mergeCardMulti}}
+  <div class="midi-qol-attack-buttons flexrow 5">
+    <button data-action="rollAttackDisadvantage" style="flex: 1 1 0"
+      data-tooltip="{{localize 'DND5E.Disadvantage'}}"><i class="fas fa-caret-down"></i><i
+        class="fas fa-dice-d20"></i><i class="fas fa-dice-d20"></i></button>
+    <button data-action="rollAttack" style="flex: 3 1 0">{{#if (gt midi.attackRollCount 1)}}[{{ midi.attackRollCount }}] {{/if}}{{ localize "DND5E.Attack" }}</button>
+    <button data-action="rollAttackAdvantage" style="flex: 1 1 0" data-tooltip="{{localize 'DND5E.Advantage'}}"><i
+        class="fas fa-caret-up"></i><i class="fas fa-dice-d20"></i><i class="fas fa-dice-d20"></i></button>
+  </div>
+  {{else}}
+  <div class="midi-qol-attack-buttons flexrow 1">
+    <button type="button" data-action="rollAttack"><span>{{#if (gt midi.attackRollCount 1)}}[{{ midi.attackRollCount }}] {{/if}}{{ localize "DND5E.Attack" }}</span></button>
+  </div>
+  {{/if}}
+  {{/if}}
+
+  {{#if midi.buttons.damage}}
+  {{#if midi.mergeCardMulti}}
+  <div class="midi-qol-damage-buttons flexrow 5">
+    <button data-action="rollDamageNoCritical" style="flex: 1 1 0" data-tooltip="{{localize 'DND5E.Normal'}}"><i
+        class="fas fa-dice-d6"></i></button>
+    <button data-action="rollDamage" style="flex:3 1 0">{{ midi.dmgBtnText }}</button>
+    <button data-action="rollDamageCritical" style="flex: 1 1 0" data-tooltip="{{localize 'DND5E.Critical'}}"><i
+        class="fas fa-dice-d6"></i><i class="fas fa-dice-d6"></i></button>
+  </div>
+  {{else}}
+  <div class="midi-qol-damage-buttons flexrow 1">
+    <button data-action="rollDamage"><span>{{ midi.dmgBtnText }}</span></button>
+  </div>
+  {{/if}}
+  {{/if}}
+
+  {{#if midi.buttons.effects}}
+  <button data-action="midiApplyEffects">{{ localize "midi-qol.ApplyEffects" }}</button>
+  {{/if}}
+
+  {{#if midi.buttons.confirm}}
+  <div class="midi-qol-confirm-damage-roll">
+    {{#if midi.buttons.confirmHitMiss}}
+    <div class="flexrow 3">
+      <button class="midi-qol-confirm-damage-roll-complete-miss"
+        data-action="confirmDamageRollCompleteMiss">{{localize "midi-qol.ConfirmMiss"}}</button>
+      <button class="midi-qol-confirm-damage-roll-complete"
+        data-action="confirmDamageRollComplete">{{#if (gt midi.attackRollCount 1)}}[{{ midi.attackRollCount }} {{ midi.nextDamageRollCount }}] {{/if}}{{localize "midi-qol.ConfirmHit"}}</button>
+    </div>
+    {{else}}
+    <div class="midi-qol-confirm-damage-roll flexrow 1">
+      <button class="midi-qol-confirm-damage-roll-complete"
+        data-action="confirmDamageRollComplete">{{localize "midi-qol.ConfirmRoll"}}</button>
+    </div>
+    {{/if}}
+    {{#if midi.buttons.cancel}}
+    <button class="midi-qol-confirm-damage-roll-cancel"
+      data-action="confirmDamageRollCancel">{{localize "Cancel"}}</button>
+    {{/if}}
+  </div>
+  {{/if}}
+
+  {{!--
+    The roll sections, rendered from `system.midi.sections` rather than spliced into `content`.
+
+    `midi-section` keeps the class names and the `end-` sentinel divs the old markup had. They are no
+    longer load-bearing — nothing regex-matches them now — but midi's stylesheet, its DSN hooks and
+    third-party macros all select on them, so removing them would break more than it tidied.
+  --}}
+  <div class="midi-results">
+    {{#if midi.condensed}}
+    <div class="flexrow 2">
+      {{> "midi.section" name="attack-roll" section=midi.sections.attack }}
+      {{> "midi.section" name="damage-roll" section=midi.sections.damage }}
+    </div>
+    {{> "midi.section" name="hits-display" section=midi.sections.hits }}
+    {{else}}
+    {{> "midi.section" name="attack-roll" section=midi.sections.attack }}
+    {{> "midi.section" name="hits-display" section=midi.sections.hits }}
+    {{> "midi.section" name="damage-roll" section=midi.sections.damage }}
+    {{/if}}
+    {{> "midi.section" name="other-damage-roll" section=midi.sections.otherDamage }}
+    {{> "midi.section" name="bonus-damage-roll" section=midi.sections.bonusDamage }}
+    {{> "midi.section" name="utility-roll"      section=midi.sections.utility }}
+    {{> "midi.section" name="saves-display"     section=midi.sections.saves }}
+  </div>
+</div>
+{{/if}}
+
+{{!--
+  Declared, not appended. dnd5e 6.0 emits `<damage-application>` from its own template and dropped the
+  call to `_enrichDamageTooltip`, where midi used to insert this — so it stopped appearing entirely.
+  The element is midi's subclass of dnd5e's, which delegates to `super` for the work.
+--}}
+{{#if midi.showDamageApplication}}
+<midi-damage-application class="dnd5e2"></midi-damage-application>
+{{/if}}
+
+{{#if (and effects.length showTargets)}}
+<effect-application class="dnd5e2">
+    {{#each effects}}
+    <option value="{{ uuid }}"></option>
+    {{/each}}
+</effect-application>
+{{/if}}
+
+{{/if}}

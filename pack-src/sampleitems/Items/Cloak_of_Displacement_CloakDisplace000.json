@@ -47,12 +47,7 @@
         "lastModifiedBy": null,
         "exportSource": null
       },
-      "start": {
-        "time": null,
-        "round": null,
-        "turn": null,
-        "combat": null
-      },
+      "start": null,
       "showIcon": 2,
       "_key": "!items.effects!CloakDisplace000.CloakDispEffect0"
     }
@@ -111,7 +106,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "14.0.1"
+        "version": "14.6.0"
       }
     }
   },

@@ -1,10 +1,10 @@
 import { Activity, ActivityUseConfiguration, RollMessageConfig, TokenOrDocument } from "../../globals.js";
-import { MODULE_ID, debugEnabled, warn, error, i18n } from "../../midi-qol.js";
+import { MODULE_ID, debugEnabled, warn, error, i18n, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog, TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 import { configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
-import { getFlankingEffect, CERemoveEffect, sumRolls, evalActivationCondition, computeTemplateShapeDistance, getToken, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, getSpeaker, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, getUnitDist, updateUserTargets, MidiOptions } from "../utils.js";
+import { getFlankingEffect, CERemoveEffect, sumRolls, evalActivationCondition, computeTemplateShapeDistance, getToken, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, getSpeaker, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, getUnitDist, updateUserTargets, rangeToSceneUnits, MidiOptions } from "../utils.js";
 import { allAttackTypes } from "../../midi-qol.js";
 const { DialogV2 } = foundry.applications.api;
 import Token = foundry.canvas.placeables.Token;
@@ -487,8 +487,103 @@ export function isAoETargetable(targetToken: Token.Implementation, options: { se
   }
 }
 
+/**
+ * midi's flags for an activity template region — the caster token and, when
+ * `constrainTemplatePlacement` is on, the range limit `preCreateRegion` enforces.
+ *
+ * Shared so a region placed interactively (via `dnd5e.createMeasuredTemplate`) and one placed
+ * programmatically (via `createActivityTemplateRegions`) carry the same flags.
+ */
+export function midiTemplateFlags(activity: any): Record<string, unknown> {
+  const flags: Record<string, unknown> = {};
+  const casterToken = activity?.actor ? tokenForActor(activity.actor) : undefined;
+  if (casterToken) flags.sourceTokenUuid = casterToken.document.uuid;
+  if (activity?.item) flags.itemUuid = activity.item.uuid;
+  if (activity?.actor) flags.actorUuid = activity.actor.uuid;
+  const range = activity?.range;
+  const rangeUnits = range?.units;
+  if (configSettings.constrainTemplatePlacement && rangeUnits && !["self", "none", "any"].includes(rangeUnits)) {
+    const declared = range.long || range.value;
+    if (declared && declared > 0) {
+      flags.maxRange = rangeUnits === "touch"
+        ? (canvas?.dimensions?.distance ?? 5) : rangeToSceneUnits(declared, rangeUnits);
+    }
+  }
+  return flags;
+}
+
+/**
+ * Create template Regions for an activity at known positions, without the placement UI.
+ *
+ * dnd5e's `TemplatePlacement.fromActivity` bundles the interactive placement with the region
+ * creation, so there is no system API for "put this activity's template here" — which is what a
+ * TrapWorkflow and midi's auto-placed templates need. The region data mirrors what
+ * `TemplatePlacement.fromActivity` builds, so a template placed this way is indistinguishable from
+ * one the player positioned by hand.
+ *
+ * Sizes go through dnd5e's own `convertLength`, from the activity's units to the scene's, then to
+ * pixels. The deprecated `AbilityTemplate` path skipped that conversion.
+ */
+export async function createActivityTemplateRegions(
+  activity: any,
+  placements: { x: number, y: number, direction?: number }[],
+  extraFlags: Record<string, unknown> = {}
+): Promise<RegionDocument.Implementation[]> {
+  const scene = canvas?.scene;
+  if (!scene || !placements.length) return [];
+  const target = activity?.target?.template ?? {};
+  const shapeType = GameSystemConfig.areaTargetTypes?.[target.type]?.template;
+  if (!shapeType) return [];
+
+  const convert = (value: number | undefined) => {
+    if (!value) return 0;
+    const converted = globalThis.dnd5e?.utils?.convertLength?.(value, target.units, scene.grid.units, { strict: false });
+    return (typeof converted === "number" ? converted : value) * (scene.grid.size / scene.grid.distance);
+  };
+  const size = convert(target.size);
+  const width = convert(target.width) || (scene.grid.size);
+
+  const shapeFor = (x: number, y: number, rotation: number) => {
+    const base = { x, y, rotation };
+    switch (shapeType) {
+      case "circle": return { ...base, type: "circle", radius: size };
+      case "cone": return { ...base, type: "cone", angle: CONFIG.MeasuredTemplate.defaults.angle, radius: size };
+      case "ray":
+      case "line": return { ...base, type: "line", length: size, width };
+      case "rect":
+      case "rectangle": return { ...base, type: "rectangle", width: size, height: size };
+      case "ring": return { ...base, type: "ring", radius: size, outerWidth: width, innerWidth: 0 };
+      default: return { ...base, type: "circle", radius: size };
+    }
+  };
+
+  const rollData = activity.getRollData?.() ?? {};
+  const regionData = placements.map(({ x, y, direction }) => foundry.utils.mergeObject({
+    name: `${activity.item?.name ?? "Template"} [${game.user?.name}]`,
+    color: game.user?.color,
+    shapes: [shapeFor(x, y, direction ?? 0)],
+    levels: [(canvas as unknown as { level?: { id: string } }).level?.id],
+    restriction: { enabled: true, type: "move" },
+    visibility: CONST.REGION_VISIBILITY.ALWAYS,
+    highlightMode: "coverage",
+    displayMeasurements: true,
+    flags: {
+      core: { MeasuredTemplate: true },
+      dnd5e: {
+        activity: activity.uuid,
+        item: activity.item?.uuid,
+        origin: activity.getUsageToken?.()?.uuid,
+        spellLevel: rollData?.item?.level
+      }
+    }
+  }, { flags: { [MODULE_ID]: { ...midiTemplateFlags(activity), ...extraFlags } } }));
+
+  return await scene.createEmbeddedDocuments("Region", regionData as unknown as RegionDocument.CreateData[]) as unknown as RegionDocument.Implementation[];
+}
+
 export function selectTargetsFromTemplates(
-  templates: (foundry.canvas.placeables.MeasuredTemplate.Implementation | MeasuredTemplateDocument | string)[],
+  templates: (foundry.canvas.placeables.MeasuredTemplate.Implementation | MeasuredTemplateDocument
+    | RegionDocument.Implementation | string)[],
   selfTokenRef: TokenOrDocument | string | null | undefined = "",
   ignoreSelf: boolean = false,
   AoETargetType: string = "any",
@@ -511,7 +606,8 @@ export function selectTargetsFromTemplates(
  * side effect of computeRegion3d — the returned array is still the authoritative result.
  */
 export function computeTargetsFromTemplate(
-  template: foundry.canvas.placeables.MeasuredTemplate.Implementation | MeasuredTemplateDocument | string,
+  template: foundry.canvas.placeables.MeasuredTemplate.Implementation | MeasuredTemplateDocument
+    | RegionDocument.Implementation | string,
   selfTokenRef: TokenOrDocument | string | null | undefined = "",
   ignoreSelf: boolean = false,
   AoETargetType: string = "any",
@@ -537,13 +633,21 @@ export function computeTargetsFromTemplate(
         regionDoc = canvas.scene?.regions.get(mtDoc._id) ?? undefined;
       }
     }
+  } else if ((template as { documentName?: string })?.documentName === "Region") {
+    /*
+     * A Region document passed directly — including an *unsaved* one. That is what
+     * `canvas.regions.placeRegions` hands to its `onChange` callback on every move during
+     * placement, and `testPoint` is pure geometry, so it answers correctly before the region is
+     * ever saved. This is the live targeting preview.
+     */
+    regionDoc = template as unknown as RegionDocument.Implementation;
   } else if (template instanceof MeasuredTemplateDocument) {
     mTemplate = template.object ?? undefined;
     if (!mTemplate && template._id) {
       regionDoc = canvas.scene?.regions.get(template._id) ?? undefined;
     }
   } else {
-    mTemplate = template;
+    mTemplate = template as foundry.canvas.placeables.MeasuredTemplate.Implementation;
   }
 
   // v14: Region-based targeting when no placeable is available
@@ -623,7 +727,8 @@ function aoeHeight(shapeType: string, dims: { radius?: number, width?: number, a
 
 /** Region elevation band, deriving top from the shape when core leaves it null. */
 function regionElevationBand(regionDoc: RegionDocument.Implementation): { bottom: number, top: number } {
-  const bottom = regionDoc.elevation?.bottom ?? -Infinity;
+  const declaredBottom = regionDoc.elevation?.bottom;
+  const bottom = Number.isFinite(declaredBottom) ? declaredBottom as number : -Infinity;
   const declaredTop = regionDoc.elevation?.top;
   if (Number.isFinite(declaredTop)) return { bottom, top: declaredTop as number };
   const shape = regionDoc.shapes?.at?.(0) as any;
@@ -634,7 +739,14 @@ function regionElevationBand(regionDoc: RegionDocument.Implementation): { bottom
     angle: shape.angle,
     curvature: shape.curvature
   }) : undefined;
-  return { bottom, top: height === undefined ? Infinity : bottom + height };
+  /*
+   * A region with no declared bottom is unbounded below, and there is no base to measure a derived
+   * height from — `-Infinity + height` is still `-Infinity`, which collapsed the band to
+   * (-Infinity, -Infinity) and excluded every token. dnd5e 6.0's `TemplatePlacement` sets no
+   * elevation at all, so every template region placed through it targeted nobody.
+   */
+  if (height === undefined || !Number.isFinite(bottom)) return { bottom, top: Infinity };
+  return { bottom, top: bottom + height };
 }
 
 /** Template elevation band - used during preview, before a Region exists. */
@@ -794,7 +906,8 @@ function isTokenInsideRegion(
 }
 
 export function computeTargetsFromTemplates(
-  templates: (foundry.canvas.placeables.MeasuredTemplate.Implementation | MeasuredTemplateDocument | string)[],
+  templates: (foundry.canvas.placeables.MeasuredTemplate.Implementation | MeasuredTemplateDocument
+    | RegionDocument.Implementation | string)[],
   selfTokenRef: TokenOrDocument | string | null | undefined = "",
   ignoreSelf: boolean = false,
   AoETargetType: string = "any",

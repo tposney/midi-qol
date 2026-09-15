@@ -1860,3 +1860,65 @@ body.theme-dark input[type="checkbox"] {
 }
 
 } /* @layer modules */
+
+/* ----------------------------------------- */
+/* Damage tray: change sources on the row     */
+/* ----------------------------------------- */
+/* dnd5e 6.0 shows resistance/immunity controls only inside the target pill's popover, which opens on
+   right-click. midi also shows them on the row, as dnd5e did up to 5.3.
+
+   The row carries dnd5e's own `.target-pane > .menu-change-sources` classes so its styling for these
+   buttons applies unchanged and keeps following the system. All that is overridden here is the
+   pane's chrome, since this one is inline rather than a floating popover. */
+.dnd5e2 .pills target-pill.pill .target-pane.midi-inline-changes {
+  display: flex;
+  position: static;
+  inline-size: auto;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.dnd5e2 .pills target-pill.pill .target-pane.midi-inline-changes .menu-change-sources {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+
+.dnd5e2 .pills target-pill.pill .target-pane.midi-inline-changes .menu-change-sources li {
+  padding-inline-end: 0;
+}
+
+/* Item images are full-colour raster, not the tintable monochrome SVGs dnd5e's icons assume, so they
+   get a ring and a neutral backing to stay legible against both the parchment card and a dark theme. */
+/* Slightly larger than the 13px system glyphs: these are detailed artwork rather than a symbol, and
+   at glyph size they read as a smudge. Negative margin keeps the row visually level. */
+.midi-inline-changes .icon.midi-icon-image,
+.menu-change-sources .icon.midi-icon-image {
+  inline-size: 16px;
+  block-size: 16px;
+  margin-block: -2px;
+}
+
+.midi-change-source-img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  border-radius: 3px;
+  background: var(--color-light-1, #fff);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 55%), 0 0 0 2px rgb(255 255 255 / 25%);
+}
+
+.change-source[aria-pressed="true"] .midi-change-source-img {
+  opacity: 0.4;
+}
+
+/* dnd5e pads these for a menu row; inline they only need to be the icon. */
+.dnd5e2 .pills target-pill.pill .target-pane.midi-inline-changes .change-source {
+  padding: 0;
+  gap: 0;
+}

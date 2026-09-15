@@ -74,12 +74,7 @@
       },
       "sort": 0,
       "_key": "!items.effects!PK7zGIdSuauon3TR.5YQAiFBcKFBjPEnq",
-      "start": {
-        "time": 47178646117,
-        "round": 249,
-        "turn": 0,
-        "combat": null
-      }
+      "start": null
     }
   ],
   "flags": {
@@ -174,7 +169,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.55"
+        "version": "14.6.0"
       }
     }
   },

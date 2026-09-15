@@ -66,12 +66,7 @@
       },
       "sort": 0,
       "_key": "!items.effects!BtuJVytzMV8jUJFs.4X2IaiMLJjtZdx6w",
-      "start": {
-        "time": 47178646213,
-        "round": 265,
-        "turn": 5,
-        "combat": null
-      }
+      "start": null
     },
     {
       "name": "Severed Limb",
@@ -338,7 +333,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.55"
+        "version": "14.6.0"
       }
     }
   },

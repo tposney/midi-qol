@@ -66,7 +66,14 @@ declare module "fvtt-types/configuration" {
       "dnd5e.preApplyDamage": (actor: Actor.Implementation, amount: number, updates: Actor.UpdateData, options: DamageApplicationOptions) => boolean | void;
       "dnd5e.preCalculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;
       "dnd5e.preConfigureInitiative": (actor: Actor.Implementation, rollConfig: { data: AnyMutableObject, parts: string[], options: D20RollOptions }) => void;
-      "dnd5e.preCreateActivityTemplate": (activity: Activity, templateData: MeasuredTemplateDocument.CreateData) => boolean | void;
+      /**
+       * dnd5e 6.0 template placement. Templates are Regions now, so the payloads are region data
+       * rather than MeasuredTemplate data. `preCreateActivityTemplate` still exists upstream but
+       * fires only from the deprecated `AbilityTemplate`, which midi no longer uses.
+       */
+      "dnd5e.preCreateMeasuredTemplate": (activity: Activity, placementConfig: Record<string, unknown>) => boolean | void;
+      "dnd5e.createMeasuredTemplate": (activity: Activity, regionData: Record<string, any>[]) => boolean | void;
+      "dnd5e.postCreateMeasuredTemplate": (activity: Activity, templates: RegionDocument.Implementation[]) => void;
       "dnd5e.preRollAbilityCheck": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.preRollAttack": (rollConfig: RollProcessConfig & { attackMode: string }, dialogConfig: RollDialogConfig, messageConfig: RollMessageConfig) => boolean | void;
       "dnd5e.preRollAttackV2": (rollConfig: RollProcessConfig & { attackMode: string }, dialogConfig: RollDialogConfig, messageConfig: RollMessageConfig) => boolean | void;
@@ -1017,6 +1024,8 @@ export type DamageApplicationOptions = {
     saveMultiplier?: number
     sourceActorUuid?: string;
     uncannyDodge?: boolean;
+    /** Image of whatever granted uncanny dodge; resolved while the reaction's effect still exists. */
+    uncannyDodgeIcon?: string;
   };
   midiIgnoreComputed?: boolean;
   midiVitalityHandled?: boolean;
@@ -1465,6 +1474,53 @@ export type RollDialogConfig = {
     window?: { subtitle?: string };
   };
 };
+/**
+ * A dnd5e chat message, with the 6.0 accessors fvtt-types does not describe.
+ *
+ * dnd5e 6.0 moved the item/activity/actor a card came from out of `flags.dnd5e` and behind these
+ * accessors on `ChatMessage5e` (`chat-message.mjs`). They are optional here because a world can be
+ * running a dnd5e old enough not to have them.
+ */
+export type Dnd5eChatMessage = ChatMessage.Implementation & {
+  getAssociatedActivity?(options?: { scaled?: boolean }): Activity | undefined;
+  getAssociatedActor?(): Actor.Implementation | undefined;
+  getAssociatedItem?(options?: { scaled?: boolean }): Item.Implementation | undefined;
+  getAssociatedRolls?(type: string): Roll[];
+  getAssociatedToken?(): TokenDocument.Implementation | undefined;
+};
+
+/**
+ * Render options passed down to `ChatMessageDataModel#_prepareContext`.
+ *
+ * `summary` is the only field the system itself reads — it selects `summaryTemplate` over
+ * `template` in `render()`. Left open because the options object is forwarded from `renderHTML`,
+ * where callers may add their own.
+ */
+export type ChatMessageRenderOptions = AnyObject & {
+  summary?: boolean;
+};
+
+/**
+ * The usage-card render context, as midi extends it.
+ *
+ * dnd5e supplies the rest (item, activity, description, subtitle, buttons, effects, summaries);
+ * these are the decisions midi settles when the activity is used and stores on the card, because
+ * they depend on a workflow that no longer exists by the time the card is re-rendered.
+ */
+export type MidiUsageChatContext = AnyMutableObject & {
+  hasButtons?: boolean;
+  hasAttack?: boolean;
+  hasAttackRoll?: boolean;
+  hasDamage?: boolean;
+  hasEffects?: boolean;
+  condensed?: boolean;
+  mergeCardMulti?: boolean;
+  confirmAttackDamage?: boolean;
+  hideItemDetails?: boolean;
+  displayProperties?: boolean;
+  dmgBtnText?: string;
+};
+
 export type RollMessageConfig = {
   create?: boolean;
   document?: ChatMessage.Implementation;

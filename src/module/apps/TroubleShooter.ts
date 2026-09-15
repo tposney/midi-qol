@@ -449,7 +449,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
       data.summary["coreSettings"]["Scene Details"] =
         `${canvas.scene.dimensions.height} x ${canvas.scene.dimensions.width} | Size: ${canvas.scene.grid.size} | Type: ${Object.keys(CONST.GRID_TYPES)[canvas.scene.grid.type]} | Distance: ${canvas.scene.grid.distance} | Global Illumination ${globalIllumination}`;
 
-      const sceneObjects = ["tokens", "sounds", "tiles", "walls", "lights", "templates", "notes"];
+      const sceneObjects = ["tokens", "sounds", "tiles", "walls", "lights", "regions", "notes"];
       const report: string[] = []
       for (let c of sceneObjects) {
         const collection = canvas.scene[c];

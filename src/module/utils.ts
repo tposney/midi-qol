@@ -1,4 +1,4 @@
-import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface } from "../midi-qol.js";
+import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface, i18nFormat } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
@@ -514,6 +514,24 @@ export function setupDamageDetails(actorDamage: PreSetupDamageListEntry, selecto
   return completeActorDamage;
 }
 
+/**
+ * The image of whatever granted uncanny dodge, for the damage tray.
+ *
+ * Resolved while the damage is being calculated because the flag is a reaction's: it is set during
+ * the workflow and gone before anything re-renders.
+ */
+function uncannyDodgeSourceIcon(actor: Actor.Implementation): string | undefined {
+  for (const effect of actor.allApplicableEffects?.() ?? []) {
+    // dnd5e-only sub-type; skip enchantments that are not actually applied.
+    const ae = effect as ActiveEffect.Implementation & { isAppliedEnchantment?: boolean };
+    if (String(ae.type) === "enchantment" && !ae.isAppliedEnchantment) continue;
+    if (!effect.changes?.some(c => c.key === `flags.${MODULE_ID}.uncanny-dodge`)) continue;
+    const origin = effect.origin ? fromUuidSync(effect.origin) : undefined;
+    return (origin instanceof Item ? origin.img : undefined) ?? effect.img ?? undefined;
+  }
+  return undefined;
+}
+
 export async function processDamageRoll(workflow: Workflow, defaultDamageType: string) {
   if (debugEnabled > 0) warn("processDamageRoll |", workflow)
   let hitTargets = new Set([...(workflow.hitTargets ?? []), ...(workflow.hitTargetsEC ?? [])]);
@@ -629,9 +647,21 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           superSaver,
           targetUuid: token.document.uuid,
           // @ts-expect-error no dnd5e-types
-          uncannyDodge: actor.flags?.[MODULE_ID]?.["uncanny-dodge"] && workflow.item?.hasAttack
+          uncannyDodge: actor.flags?.[MODULE_ID]?.["uncanny-dodge"] && workflow.item?.hasAttack,
+          uncannyDodgeIcon: uncannyDodgeSourceIcon(actor)
         }
       };
+      /*
+       * Keep what was actually applied, keyed by target.
+       *
+       * The card cannot recompute this later: uncanny dodge is a reaction, so the flag it reads is
+       * set during the workflow and gone by the time anything re-renders. `processDamageRoll` runs
+       * after the damage is displayed, so this is the only point at which the real answer exists.
+       */
+      if (tokenDocument?.uuid) {
+        workflow.midiTargetDetail ??= {};
+        workflow.midiTargetDetail[tokenDocument.uuid] = foundry.utils.deepClone(calcDamageOptions.midi);
+      }
       const categories: Record<string, string> = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption", "idm": "modification" };
       const ignoreTraits = workflow?.activity?.midiProperties?.ignoreTraits;
       if (ignoreTraits) {
@@ -3428,7 +3458,7 @@ export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): nu
     // Committed centres, not the animated ones - see tokenSourceCenter.
     const result = canvas.grid.measurePath(
       [tokenSourceCenter(token1), tokenSourceCenter(token2)], {});
-    distance = result?.distance ?? 0;
+    distance = Math.max(0, (result?.distance ?? 0) - fudgeFactor);
   } else if (measurementMode === "center") {
     distance = computeDistance(t1, t2, { wallsBlock, includeCover, includeElevation });
   } else if (measurementMode === "perimeter") {
@@ -4303,6 +4333,47 @@ export function getAutoRollAttack(workflow?: Workflow): boolean {
   return game.user?.isGM ? configSettings.gmAutoAttack : configSettings.autoRollAttack;
 }
 
+/**
+ * The roll type of a chat message, in `flags.dnd5e.roll.type` vocabulary.
+ *
+ * dnd5e 6.0 replaced that flag with chat-message sub-types and its migration deletes it outright
+ * (`updateData["flags.dnd5e.roll"] = _del`). Measured on 6.0: a saving throw arrives as
+ * `type: "save"` with `system.ability`, a skill check as `type: "check"` with `system.skill`, and
+ * `flags.dnd5e` empty. Every midi comparison against the old strings therefore stopped matching —
+ * silently, since they all read through optional chaining.
+ *
+ * Answering in the old vocabulary keeps those comparisons as they were, and reading the flag first
+ * keeps messages written before the upgrade working. Accepts a document or raw create data, because
+ * midi asks this question in both pre-create hooks and render paths.
+ */
+export function dnd5eRollType(source: any): string | undefined {
+  const legacy = foundry.utils.getProperty(source, "flags.dnd5e.roll.type");
+  if (typeof legacy === "string" && legacy) return legacy;
+  switch (source?.type) {
+    // 6.0 files death saves under "save" and distinguishes them by system.type; the old vocabulary
+    // gave them their own string, and midi's callers rely on telling them apart.
+    case "save": return foundry.utils.getProperty(source, "system.type") === "death" ? "death" : "save";
+    case "check": return foundry.utils.getProperty(source, "system.tool") ? "tool"
+      : foundry.utils.getProperty(source, "system.skill") ? "skill" : "ability";
+    case "healing": return "healing";
+    case "attack":
+    case "damage": return source.type;
+    default: return undefined;
+  }
+}
+
+/** The item a roll message came from, across both layouts. */
+export function dnd5eRollItemId(source: any): string | undefined {
+  const id = foundry.utils.getProperty(source, "flags.dnd5e.roll.itemId")
+    ?? foundry.utils.getProperty(source, "system.item.id");
+  return typeof id === "string" ? id : undefined;
+}
+
+/** Whether a message is one of dnd5e's roll cards rather than an item/usage card. */
+export function isDnd5eRollMessage(source: any): boolean {
+  return dnd5eRollType(source) !== undefined;
+}
+
 export function getRemoveAllButtons(activity?: Activity): boolean {
   if (activity) {
     const activitySetting = activity.midiProperties?.removeChatButtons;
@@ -4725,6 +4796,9 @@ export async function expireRollEffect(this: Actor.Implementation, rolltype: str
     if (success === true && specialDuration.includes(`is${rollType}Success`)) return true;
     if (success === true && specialDuration.includes(`is${rollType}Success.${abilityId}`)) return true;
     if (success === false && specialDuration.includes(`is${rollType}Failure`)) return true;
+    // DAE offered "isConcentrationSaveFail" (no -ure) as the dropdown label until dae 14.0.14, so it
+    // never matched here. Effects saved with it still exist in worlds.
+    if (success === false && specialDuration.includes(`is${rollType}Fail`)) return true;
     if (success === false && specialDuration.includes(`is${rollType}Failure.${abilityId}`)) return true;
     return false;
   }).map(ef => ef.uuid);
@@ -6361,6 +6435,10 @@ function buildEvalSandbox(sandbox: AnyMutableObject, asyncEval: boolean): AnyMut
     checkIncapacitated,
     canSee,
     canSense,
+    // getDistance is the preferred call: it honours the Distance Measurement setting, so it
+    // includes perimeter measurement and agrees with midi's own range checks. computeDistance is
+    // the centre-based primitive it delegates to for "center" mode and is kept for compatibility.
+    getDistance,
     computeDistance,
     checkActivityRange,
     checkDistance,
@@ -6628,7 +6706,7 @@ export function createConditionData(data: {
   rollData.isAttuned = rollData.item?.attuned || rollData.item?.attunement === "";
   rollData.options = data?.options;
   rollData.isConcentrationCheck = foundry.utils.getProperty(rollData, "options.messageData.flags.midi-qol.isConcentrationCheck");
-  rollData.isDeathSave = foundry.utils.getProperty(rollData, "options.messageData.flags.dnd5e.roll.type") === "death";
+  rollData.isDeathSave = dnd5eRollType(foundry.utils.getProperty(rollData, "options.messageData")) === "death";
   rollData.actor = {};
   rollData.actor.raceOrType = actor ? raceOrType(actor) : "";
   rollData.actor.typeOrRace = actor ? typeOrRace(actor) : "";
@@ -7316,6 +7394,57 @@ export function getAdvantageModeTitle(mode: number | null | undefined): string {
  * @param title - Optional title for the tooltip (e.g., "Advantage" or "Disadvantage")
  * @returns Promise resolving to the rendered HTML string
  */
+/**
+ * The attribution info icon for a roll, built from the entries the roll already carries.
+ *
+ * `addAttribution` stores the same array on `roll.options.attributions` that
+ * `renderAttributionTooltip` derives from the map, so the icon can be produced at render time from
+ * the persisted roll instead of being baked into the card. The escaped tooltip is around 550 bytes —
+ * on a card whose whole attack section is now 40, it was the largest thing left in it.
+ */
+/**
+ * A save roll as the saves section shows it: the roll, prefixed with which ability, skill or tool
+ * was chosen when the target had a choice.
+ *
+ * Shared so the card can rebuild it from `message.rolls` instead of storing it — the rendered form
+ * measured 1,036 B per target, the largest single field on a save card.
+ */
+export async function renderSaveRollHTML(roll: Roll | undefined): Promise<string> {
+  if (!roll) return "";
+  let html = await midiRenderRoll(roll);
+  const midiChosenId = foundry.utils.getProperty(roll, "options.midiChosenId");
+  if (typeof midiChosenId !== "string" || !midiChosenId) return html;
+  let choiceTitle = "";
+  if (GameSystemConfig.abilities[midiChosenId]) {
+    choiceTitle = i18nFormat("DND5E.SavePromptTitle", { ability: GameSystemConfig.abilities[midiChosenId].label ?? "" });
+  } else if (GameSystemConfig.skills[midiChosenId]) {
+    choiceTitle = i18nFormat("DND5E.SkillPromptTitle", { skill: GameSystemConfig.skills[midiChosenId].label ?? "", ability: "" });
+  } else {
+    const toolLabel = getToolLabel(midiChosenId);
+    if (toolLabel && toolLabel !== midiChosenId) choiceTitle = i18nFormat("DND5E.ToolPromptTitle", { tool: toolLabel });
+  }
+  if (choiceTitle) html = `<div style="font-weight:bold; text-align:center;">${choiceTitle}</div>${html}`;
+  return html;
+}
+
+export async function renderRollAttributionIcon(roll: Roll | undefined): Promise<string> {
+  const stored = roll ? foundry.utils.getProperty(roll, "options.attributions") : undefined;
+  const entries: AttributionEntry[] = Array.isArray(stored) ? stored : [];
+  if (!entries.length) return "";
+  const localizedEntries = entries.map(attr => ({
+    ...attr,
+    localizedType: i18n(attributionTypeLocalization[attr.type] ?? attr.type)
+  }));
+  const mode = roll ? foundry.utils.getProperty(roll, "options.advantageMode") : undefined;
+  const title = getAdvantageModeTitle(typeof mode === "number" ? mode : 0);
+  const tooltip = compactHTML(await foundry.applications.handlebars.renderTemplate(
+    "modules/midi-qol/templates/attribution-tooltip.html",
+    { attributions: localizedEntries, title }
+  ));
+  if (!tooltip) return "";
+  return ` <span class="midi-attribution-info" data-tooltip-html="${foundry.utils.escapeHTML(tooltip)}" data-tooltip-direction="DOWN"><i class="fas fa-info-circle"></i></span>`;
+}
+
 export async function renderAttributionTooltip(attributions: AttributionMap, title?: string): Promise<string> {
   const entries = attributionMapToArray(attributions);
 
@@ -8901,8 +9030,12 @@ export function createSquareGridProxy(): foundry.grid.BaseGrid {
 
 export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}) {
   let isGridless = canvas.grid?.constructor.name === "GridlessGrid";
+  const fudgeFactor = configSettings.gridlessFudge ?? 0;
+  // The fudge applies on every scene and grid type, not only the gridded-gridless path below.
+  // Floored at 0: a zero gap stays zero, only perimeter measurement floors at one grid unit.
   if (!isGridless || !options.gridSpaces || !configSettings.griddedGridless || !canvas.grid) {
-    return segments.map(s => canvas.grid?.measurePath([s.ray.A, s.ray.B], {})).map(d => d?.distance ?? 0);
+    return segments.map(s => canvas.grid?.measurePath([s.ray.A, s.ray.B], {}))
+      .map(d => Math.max(0, (d?.distance ?? 0) - fudgeFactor));
   }
   if (!canvas.grid) return [0];
   const diagonals = safeGetGameSetting("core", "gridDiagonals");
@@ -8922,7 +9055,6 @@ export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}
   let distances = segments.map(s => canvasGridProxy.measurePath([s.ray.A, s.ray.B], {}));
   return distances.map(d => {
     let distance = d.distance;
-    let fudgeFactor = configSettings.gridlessFudge ?? 0;
     switch (diagonals) {
       case GridDiagonals.EQUIDISTANT:
       case GridDiagonals.ALTERNATING_1:
@@ -9179,6 +9311,13 @@ export function getThrottlingFunction(): (document: foundry.abstract.Document.An
   return foundry.utils.throttle(_updateAction, debounceInterval) as (document: foundry.abstract.Document.Any, updates: ChatMessage.UpdateData) => Promise<void>;
 }
 export const updatesCache = {};
+/** Whether two roll arrays are the same rolls, by serialised form. */
+function rollsMatch(current: readonly unknown[] | undefined, incoming: readonly unknown[]): boolean {
+  if ((current?.length ?? 0) !== incoming.length) return false;
+  const norm = (r: any) => typeof r === "string" ? r : JSON.stringify(r?.toJSON?.() ?? r);
+  return (current ?? []).every((r, i) => norm(r) === norm(incoming[i]));
+}
+
 async function _updateAction(document: foundry.abstract.Document.Any, updates: ChatMessage.UpdateData) {
   if (!updates) {
     if (debugEnabled > 0) warn(`_updateAction | No updates found for ${document.uuid}`);
@@ -9197,6 +9336,26 @@ async function _updateAction(document: foundry.abstract.Document.Any, updates: C
   const updateDelay = 0;
   if (debugEnabled) warn("_updateAction | Starting for", Date.now(), updates)
   delete updates._id
+
+  /*
+   * Drop `rolls` when it matches what the card already has.
+   *
+   * Every display method passes `this.chatRolls` and `persistRolls` puts the same array in the
+   * cache, so one attack rewrote the whole roll array eight or nine times. Measured before this:
+   * 18,963 B written for a 9,862 B card, two of the ten writes carrying nothing but the repeat.
+   * The accumulated-cache trimming could not catch it because `diffObject` compares the array
+   * structurally against a freshly built one and always finds a difference.
+   *
+   * Comparing against the stored rolls is sufficient — rolls are only ever appended to.
+   */
+  if (Array.isArray(updates.rolls) && rollsMatch(baseDocument.rolls, updates.rolls)) {
+    delete updates.rolls;
+    delete (updatesCache[baseDocument.uuid] ?? {}).rolls;
+  }
+  if (foundry.utils.isEmpty(updates)) {
+    if (debugEnabled > 1) warn(`_updateAction | nothing left to write for ${document.uuid}`);
+    return document;
+  }
   if (updateDelay) {
     await busyWait(updateDelay); // let other stuff happen.
   }

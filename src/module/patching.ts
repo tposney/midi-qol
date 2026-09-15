@@ -1,6 +1,7 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget } from "./utils.js";
+import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType } from "./utils.js";
+import { selectTargetsFromTemplates } from "./activities/activityHelpers.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -155,7 +156,7 @@ export function initPatching() {
   // (tiles transparent, exposure skipped) even if the token's test points don't fall
   // within the surface polygon. Without this, tokens on the First Floor have their
   // vision clipped by the Second Floor Surface if they're not directly underneath it.
-  libWrapper.register(MODULE_ID, "CanvasOcclusionMask.prototype._updateOccludedSurfaces",
+  libWrapper.register(MODULE_ID, "foundry.canvas.layers.CanvasOcclusionMask.prototype._updateOccludedSurfaces",
     _updateOccludedSurfacesWrapper, "WRAPPER");
 
   // Surface vision fog: draw a fog overlay for areas blocked by floor surfaces.
@@ -379,7 +380,9 @@ function userInitiatedTargetWrapper(this: any, wrapped: Function, ...args: any[]
 }
 
 export function readyPatching() {
-  libWrapper.register(MODULE_ID, "game.dnd5e.canvas.AbilityTemplate.prototype._onMovePlacement", midiATOnMovePlacement, "MIXED");
+  // Constrain template placement to range / anchor cones to the caster while dragging. Only the
+  // interactive step is wrapped; dnd5e still builds and creates the template regions.
+  libWrapper.register(MODULE_ID, "game.dnd5e.canvas.TemplatePlacement.prototype._place", midiTemplatePlace, "MIXED");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['dnd5e.CharacterActorSheet'].cls.prototype._filterItems", _filterItems, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.npc['dnd5e.NPCActorSheet'].cls.prototype._filterItems", _filterItems, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.createConcentrationEffectData", createConcentrationEffectData, "WRAPPER");
@@ -695,7 +698,7 @@ export function collectBonusFlags(actor: Actor.Implementation, category: string,
 }
 
 export async function bonusCheck(actor: Actor.Implementation, result: Roll, category: string, detail = "", messageData: any = {}): Promise<Roll> {
-  detail ||= foundry.utils.getProperty(messageData, "flags.dnd5e.roll.type") as string; // death saves -> "death", tool checks -> "tool"
+  detail ||= dnd5eRollType(messageData) ?? ""; // death saves -> "death", tool checks -> "tool"
   let bonusFlags = collectBonusFlags(actor, category, detail);
   if (bonusFlags.length > 0) {
     const data = {
@@ -833,8 +836,11 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
           // Only override advantage/disadvantage if not pre-computed from external module
           // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
           if (!hasPreComputedAdvantage) {
-            configData.advantage = chosenAdvantage.hasAdvantage;
-            configData.disadvantage = chosenAdvantage.hasDisadvantage;
+            if (chosenAdvantage.tracker instanceof RollModifierTracker) applyTrackerAdvantage(configData, chosenAdvantage.tracker);
+            else {
+              configData.advantage = chosenAdvantage.hasAdvantage;
+              configData.disadvantage = chosenAdvantage.hasDisadvantage;
+            }
           }
           const chosenTracker = chosenAdvantage.tracker instanceof RollModifierTracker ? chosenAdvantage.tracker : undefined;
           if (chosenTracker) {
@@ -1100,6 +1106,28 @@ function setRollDialogOptions(config: RollProcessConfig, dialog: RollDialogConfi
  * Applies pre-computed advantage/disadvantage to config if found.
  * Returns true if pre-computed values were found (caller should skip computing from flags).
  */
+/**
+ * Hand midi's advantage verdict to dnd5e without discarding the system's own.
+ *
+ * dnd5e 6.0 derives advantage from `D20RollModificationField` and then merges the caller's config
+ * over the top, so writing a falsy value here silently erases native advantage. midi's tracker has
+ * three states and only two are ours to assert: granted, denied (a `noAdvantage`/`noDisadvantage`
+ * flag), and no opinion.
+ *
+ * No opinion must leave the key completely untouched. Assigning `undefined` is not neutral —
+ * `mergeObject` treats it as an own key and it overwrites native advantage as surely as `false`.
+ * Deleting is not neutral either: called from a `preRoll*` hook the key already holds the value
+ * dnd5e derived, and before the call it may hold an explicit request from the caller. Either way
+ * it is not ours to discard.
+ */
+export function applyTrackerAdvantage(config: RollProcessConfig, tracker: RollModifierTracker): void {
+  for (const key of ["advantage", "disadvantage"] as const) {
+    const sub = tracker[key];
+    if (sub.isActive) config[key] = true;
+    else if (sub.isSuppressed && !sub.hasOverride) config[key] = false;
+  }
+}
+
 function applyPreComputedAdvantage(config: RollProcessConfig): boolean {
   const sourceInfo = getAdvantageSourceInfo(config);
   if (!sourceInfo.hasPreComputed) {
@@ -1140,8 +1168,11 @@ function setupChoiceDialog(
     if (hasMultiple) (config as AnyMutableObject)[choiceType] = best.value;
     const bestAdvantage = advantageMap[best.value];
     if (bestAdvantage && !hasPreComputedAdvantage) {
-      config.advantage = bestAdvantage.hasAdvantage;
-      config.disadvantage = bestAdvantage.hasDisadvantage;
+      if (bestAdvantage.tracker instanceof RollModifierTracker) applyTrackerAdvantage(config, bestAdvantage.tracker);
+      else {
+        config.advantage = bestAdvantage.hasAdvantage;
+        config.disadvantage = bestAdvantage.hasDisadvantage;
+      }
     }
   }
 
@@ -1520,8 +1551,11 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
           // Only override advantage/disadvantage if not pre-computed from external module
           // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
           if (!hasPreComputedAdvantage) {
-            configData.advantage = chosenAdvantage.hasAdvantage;
-            configData.disadvantage = chosenAdvantage.hasDisadvantage;
+            if (chosenAdvantage.tracker instanceof RollModifierTracker) applyTrackerAdvantage(configData, chosenAdvantage.tracker);
+            else {
+              configData.advantage = chosenAdvantage.hasAdvantage;
+              configData.disadvantage = chosenAdvantage.hasDisadvantage;
+            }
           }
           if (chosenAdvantage.tracker instanceof RollModifierTracker) {
             abilityModifiers = applyRollModifiers(chosenAdvantage.tracker, configData, dialogData);
@@ -1673,14 +1707,15 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
       ...config.midiOptions,
       grantsActor: config.midiOptions.workflow?.actor
     });
-    config.advantage = tracker.hasAdvantage;
-    config.disadvantage = tracker.hasDisadvantage;
+    applyTrackerAdvantage(config, tracker);
   }
 
   let advantage = config.advantage;
   let disadvantage = config.disadvantage;
 
-  const options: MidiOptions = { advantage, disadvantage };
+  const options: MidiOptions = {};
+  if (advantage !== undefined) options.advantage = advantage;
+  if (disadvantage !== undefined) options.disadvantage = disadvantage;
 
   // Handle death save bonus
   if (deathSaveBonus) {
@@ -1697,8 +1732,6 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
   }
 
   foundry.utils.mergeObject(config.midiOptions, options);
-  config.advantage = advantage;
-  config.disadvantage = disadvantage;
   const blindSaveRoll = configSettings.rollSavesBlind.includes("all") || configSettings.rollSavesBlind.includes("death");
   const actor = this;
 
@@ -1708,8 +1741,8 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
     configData.midiOptions = { ...(configData.midiOptions ?? {}), ...(config.midiOptions ?? {}) };
 
     // Set advantage/disadvantage on configData so dnd5e rolls 2 dice when appropriate
-    configData.advantage = advantage;
-    configData.disadvantage = disadvantage;
+    if (advantage !== undefined) configData.advantage = advantage;
+    if (disadvantage !== undefined) configData.disadvantage = disadvantage;
 
     // Apply roll modifiers (auto-fail/auto-success) for death saves
     const modifierFlags: RollModifierFlags = {
@@ -1724,8 +1757,8 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
 
     for (let roll of configData.rolls ?? []) {
       roll.options ??= {};
-      roll.options.advantage = advantage;
-      roll.options.disadvantage = disadvantage;
+      if (advantage !== undefined) roll.options.advantage = advantage;
+      if (disadvantage !== undefined) roll.options.disadvantage = disadvantage;
       if (!autoFail && !autoSuccess && configData.midiOptions?.parts?.length) roll.parts = [...(roll.parts ?? []), ...configData.midiOptions.parts];
       if (blindSaveRoll) roll.options.rollMode = "blind" as keyof CONFIG.Dice.RollModes;
     }
@@ -2157,6 +2190,74 @@ let rangeClampesMoveTime = 0;
  * Snap a point for template placement based on the templateSnapping setting.
  * "full" snaps to grid intersections (vertices) only, "half" adds centers and side midpoints.
  */
+/**
+ * Constrain template placement to the activity's range, and anchor cones/rays to the caster.
+ *
+ * Wraps only the interactive step. Everything around it stays dnd5e's: `TemplatePlacement`
+ * builds the shape config, the region data, the flags and fires
+ * `dnd5e.preCreateMeasuredTemplate`/`createMeasuredTemplate`/`postCreateMeasuredTemplate`, and
+ * creates the documents. midi supplies the two callbacks `placeRegions` accepts and dnd5e does not
+ * use — `onMove`, to clamp or anchor the position, and `onChange`, for live target highlighting.
+ *
+ * This replaces the old wrapper on `AbilityTemplate.prototype._onMovePlacement`, which is gone.
+ * Returning `false` from `onMove` suppresses the default move so midi's position wins.
+ */
+async function midiTemplatePlace(this: any, wrapped: () => Promise<any>) {
+  const activity = this.config?.activity ?? this.config?.midiActivity;
+  const sourceToken = activity?.actor ? tokenForActor(activity.actor) : undefined;
+  const maxRange = configSettings.constrainTemplatePlacement ? this.config?.midiMaxRange : undefined;
+  const anchorToToken = this.config?.midiAnchorToToken;
+  if (!sourceToken || (!maxRange && !anchorToToken)) return wrapped();
+
+  const results: any[] = [];
+  await (canvas.regions as unknown as { placeRegions: Function } | undefined)?.placeRegions(this.config.shapes.map((s: any) => midiShapeData(s)), {
+    create: false,
+    onMove: ({ shape, position, snap }: any) => {
+      if (anchorToToken) {
+        const border = getTokenBorderPoint(sourceToken, position.x, position.y);
+        shape.move(snapTemplatePosition(border), { snap: false });
+        const direction = Math.toDegrees(Math.atan2(position.y - border.y, position.x - border.x));
+        shape.rotate(direction - (shape.rotation ?? 0));
+      } else {
+        const clamped = clampPointToRange(sourceToken, position.x, position.y, maxRange!);
+        shape.move(clamped.clamped ? snapTemplatePosition(clamped) : position, { snap });
+      }
+      return false;
+    },
+    onChange: ({ document }: any) => {
+      if (configSettings.autoTarget !== "none") selectTargetsFromTemplates([document]);
+    },
+    preConfirm: ({ document }: any) => {
+      const obj = document.toObject();
+      results.push({ ...obj.shapes.at(-1), token: obj.attachment?.token });
+    }
+  });
+  return results;
+}
+
+/** The region shape data for one placement shape — mirrors dnd5e's private `#createShapeData`. */
+function midiShapeData({ type, ...baseSizes }: any) {
+  const gridMultiplier = (canvas.scene?.grid.size ?? 100) / (canvas.scene?.grid.distance ?? 5);
+  const size = (baseSizes.size ?? 0) * gridMultiplier;
+  const width = (baseSizes.width ?? 0) * gridMultiplier;
+  const data: any = { x: 0, y: 0, rotation: 0, type };
+  switch (type) {
+    case "circle": return { ...data, radius: size };
+    case "cone": return { ...data, angle: CONFIG.MeasuredTemplate.defaults.angle, radius: size };
+    case "emanation": return {
+      base: { ...data, width: 1, height: 1, type: "token",
+        shape: canvas.grid?.isHexagonal ? CONST.TOKEN_SHAPES.ELLIPSE_1 : CONST.TOKEN_SHAPES.RECTANGLE_1 },
+      radius: size, type: "emanation"
+    };
+    case "ray":
+    case "line": return { ...data, length: size, width, type: "line" };
+    case "rect":
+    case "rectangle": return { ...data, width: size, height: size, type: "rectangle" };
+    case "ring": return { ...data, radius: size, outerWidth: width, innerWidth: 0 };
+    default: return { ...data, radius: size };
+  }
+}
+
 function snapTemplatePosition(point: { x: number; y: number }): { x: number; y: number } {
   if (!canvas?.grid) return point;
   const M = CONST.GRID_SNAPPING_MODES;
@@ -2275,109 +2376,7 @@ export function getTemplateSourceToken(templateDoc: MeasuredTemplateDocument.Imp
   return tokenDoc?.object ?? undefined;
 }
 
-/**
- * Wrapper for AbilityTemplate._onMovePlacement to:
- * 1. Anchor cone/ray templates to the caster's token when anchorToToken flag is set
- * 2. Clamp template placement to activity range when checkRange is enabled
- * 3. Apply midi template snapping setting for all template placements
- */
-function midiATOnMovePlacement(this: foundry.canvas.placeables.MeasuredTemplate.Implementation, wrapped, event: PIXI.FederatedPointerEvent) {
-  // Check if this template should be anchored to a token (cones/rays from token border)
-  const anchorToToken = this.document.flags?.[MODULE_ID]?.anchorToToken;
 
-  if (anchorToToken) {
-    // Handle anchored template movement (cones/rays from token border)
-    return handleAnchoredTemplateMovement.call(this, event);
-  }
-
-  // For range-clamped templates, we must handle placement ourselves
-  const maxRange = getTemplateMaxRange(this.document);
-  const sourceToken = getTemplateSourceToken(this.document);
-  if (maxRange && sourceToken) {
-    // Apply throttling like the original method (20ms)
-    event.stopPropagation();
-    const now = Date.now();
-    if (now - rangeClampesMoveTime <= 20) return;
-
-    // Get mouse position in canvas coordinates
-    const mouse = event.data?.getLocalPosition(this.layer) ?? (event as any).getLocalPosition(this.layer);
-
-    // Clamp position to be within range
-    const position = clampPointToRange(sourceToken, mouse.x, mouse.y, maxRange);
-
-    // Snap to grid based on templateSnapping setting
-    const snapped = snapTemplatePosition(position);
-    const updates: { x: number; y: number; distance?: number } = { x: snapped.x, y: snapped.y };
-
-    // Handle adjusted size for radius templates (same as dnd5e)
-    const dnd5eFlags = this.document.flags.dnd5e as any;
-    const baseDistance = dnd5eFlags?.dimensions?.size;
-    if (dnd5eFlags?.dimensions?.adjustedSize && baseDistance && canvas?.tokens) {
-      const rectangle = new PIXI.Rectangle(position.x, position.y, 1, 1);
-      const hoveredToken = canvas.tokens.quadtree?.getObjects(rectangle, {
-        collisionTest: ({ t }: any) => t.visible && !t.document.isSecret
-      }).first();
-      if (hoveredToken) {
-        const size = Math.max(hoveredToken.document.width, hoveredToken.document.height);
-        updates.distance = baseDistance + (size * (canvas.grid?.distance ?? 5) / 2);
-      } else {
-        updates.distance = baseDistance;
-      }
-    }
-
-    this.document.updateSource(updates);
-    this.refresh();
-    rangeClampesMoveTime = now;
-    return;
-  }
-
-  // No range restriction - let the wrapper chain run (dnd5e + other modules),
-  // then re-snap the position using our templateSnapping setting
-  wrapped(event);
-  const snapped = snapTemplatePosition({ x: this.document.x, y: this.document.y });
-  if (snapped.x !== this.document.x || snapped.y !== this.document.y) {
-    this.document.updateSource({ x: snapped.x, y: snapped.y });
-    this.refresh();
-  }
-}
-
-/**
- * Handle movement for anchored templates (cones/rays originating from token border).
- */
-function handleAnchoredTemplateMovement(this: foundry.canvas.placeables.MeasuredTemplate.Implementation, event: PIXI.FederatedPointerEvent) {
-  const sourceToken = getTemplateSourceToken(this.document);
-  if (!sourceToken) return;
-
-  event.stopPropagation();
-
-  // Apply throttling like the original method (20ms)
-  const now = Date.now();
-  if (now - anchoredMoveTime <= 20) return;
-
-  // Get mouse position in canvas coordinates
-  const mouse = event.data?.getLocalPosition(this.layer) ?? (event as any).getLocalPosition(this.layer);
-
-  // Calculate the point on the token border closest to the mouse direction
-  const borderPoint = getTokenBorderPoint(sourceToken, mouse.x, mouse.y);
-
-  // Calculate direction from border point to mouse (in degrees)
-  const dx = mouse.x - borderPoint.x;
-  const dy = mouse.y - borderPoint.y;
-  const direction = Math.toDegrees(Math.atan2(dy, dx));
-
-  // Snap to grid based on templateSnapping setting
-  const snapped = snapTemplatePosition(borderPoint);
-
-  // Update source and refresh like dnd5e does
-  this.document.updateSource({
-    x: snapped.x,
-    y: snapped.y,
-    direction
-  });
-  this.refresh();
-
-  anchoredMoveTime = now;
-}
 
 export function _prepareDerivedData(this: Actor.Implementation, wrapped, ...args) {
   wrapped(...args);
@@ -2780,8 +2779,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
         config.midiOptions.workflow = Workflow.getWorkflow(config.midiOptions.workflowId);
       }
       const toolRollModifierTracker = await computeToolAdvantage(this, config.tool ?? "", config.ability ?? "", config.midiOptions);
-      config.advantage = toolRollModifierTracker.hasAdvantage;
-      config.disadvantage = toolRollModifierTracker.hasDisadvantage;
+      applyTrackerAdvantage(config, toolRollModifierTracker);
     }
 
     let toolModifiers: RollModifierResult | undefined;
@@ -2822,8 +2820,11 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
           // Only override advantage/disadvantage if not pre-computed from external module
           // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
           if (!hasPreComputedAdvantage) {
-            configData.advantage = chosenAdvantage.hasAdvantage;
-            configData.disadvantage = chosenAdvantage.hasDisadvantage;
+            if (chosenAdvantage.tracker instanceof RollModifierTracker) applyTrackerAdvantage(configData, chosenAdvantage.tracker);
+            else {
+              configData.advantage = chosenAdvantage.hasAdvantage;
+              configData.disadvantage = chosenAdvantage.hasDisadvantage;
+            }
           }
           if (chosenAdvantage.tracker instanceof RollModifierTracker) {
             toolModifiers = applyRollModifiers(chosenAdvantage.tracker, configData, dialogData);

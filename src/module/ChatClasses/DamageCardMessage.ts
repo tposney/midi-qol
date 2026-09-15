@@ -7,6 +7,7 @@
  */
 
 import { error } from "../../midi-qol.js";
+import { ChatMessageRenderOptions } from "../../globals.js";
 import { buildDamageCardContext, DamageListContextEntry, processUndoDamageCard } from "../GMAction.js";
 
 /** Registered at setup, once dnd5e's base class is on `game.dnd5e`. */
@@ -62,7 +63,12 @@ export function setupDamageCardMessage() {
                 : "modules/midi-qol/templates/damage-results.html";
         }
 
-        async _prepareContext(): Promise<{
+        /*
+         * Takes `options` even though the context is built from scratch: the base passes rendering
+         * options through (notably `summary`), and narrowing the signature is how a card silently
+         * stops honouring them.
+         */
+        async _prepareContext(_options?: ChatMessageRenderOptions): Promise<{
             damageApplied: string;
             damageWasApplied: boolean;
             damageList: DamageListContextEntry[];
