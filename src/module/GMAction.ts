@@ -1006,6 +1006,7 @@ async function rollAbility(data: {
     };
     if (configSettings.playerSaveTimeout > 0) timeoutId = setTimeout(() => {
       warn(`Roll request for ${actor.name} timed out. Doing roll`);
+      foundry.utils.setProperty(config, "flags.midi-qol.timedOut", true);
       dialog.configure = false; // assume player is asleep force roll without dialog
       performRoll().then(settle).catch(fail);
     }, configSettings.playerSaveTimeout * 1000);
