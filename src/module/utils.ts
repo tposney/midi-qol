@@ -7756,10 +7756,18 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
   if (allies.length <= 1) return false; // length 1 means no other allies nearby
   const gridW = canvas.grid?.sizeX ?? 100;
   const gridH = canvas.grid?.sizeY ?? 100;
-  const tl = { x: target.x, y: target.y };
-  const tr = { x: target.x + target.document.width * gridW, y: target.y };
-  const bl = { x: target.x, y: target.y + target.document.height * gridH };
-  const br = { x: target.x + target.document.width * gridW, y: target.y + target.document.height * gridH };
+  /*
+   * Corners come from the token DOCUMENT, not the placeable. Under dnd5e 6.0 a Token placeable's
+   * x/y are the PIXI container transform, which is only current once the canvas has drawn — in a
+   * background tab it reads 0,0 while the document keeps the scene coordinates. The document is the
+   * source of truth.
+   */
+  const targetX = target.document.x;
+  const targetY = target.document.y;
+  const tl = { x: targetX, y: targetY };
+  const tr = { x: targetX + target.document.width * gridW, y: targetY };
+  const bl = { x: targetX, y: targetY + target.document.height * gridH };
+  const br = { x: targetX + target.document.width * gridW, y: targetY + target.document.height * gridH };
   const top: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, tr.x, tr.y];
   const bottom: [x0: number, y0: number, x1: number, y1: number] = [bl.x, bl.y, br.x, br.y];
   const left: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, bl.x, bl.y];
@@ -7867,10 +7875,18 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
   if (allies.length <= 1) return false; // length 1 means no other allies nearby
   const gridW = canvas.grid?.sizeX ?? 100;
   const gridH = canvas.grid?.sizeY ?? 100;
-  const tl = { x: target.x, y: target.y };
-  const tr = { x: target.x + target.document.width * gridW, y: target.y };
-  const bl = { x: target.x, y: target.y + target.document.height * gridH };
-  const br = { x: target.x + target.document.width * gridW, y: target.y + target.document.height * gridH };
+  /*
+   * Corners come from the token DOCUMENT, not the placeable. Under dnd5e 6.0 a Token placeable's
+   * x/y are the PIXI container transform, which is only current once the canvas has drawn — in a
+   * background tab it reads 0,0 while the document keeps the scene coordinates. The document is the
+   * source of truth.
+   */
+  const targetX = target.document.x;
+  const targetY = target.document.y;
+  const tl = { x: targetX, y: targetY };
+  const tr = { x: targetX + target.document.width * gridW, y: targetY };
+  const bl = { x: targetX, y: targetY + target.document.height * gridH };
+  const br = { x: targetX + target.document.width * gridW, y: targetY + target.document.height * gridH };
   const top: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, tr.x, tr.y];
   const bottom: [x0: number, y0: number, x1: number, y1: number] = [bl.x, bl.y, br.x, br.y];
   const left: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, bl.x, bl.y];
