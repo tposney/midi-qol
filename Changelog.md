@@ -3,6 +3,7 @@
 * New activity option "Downgrade Immunity" - treats damage immunity as resistance rather than ignoring it, which leaves full damage.
 * An attack of opportunity is classified for every target of a use, not only the first, so "Roll a separate attack per target" no longer judges the first target by different range rules to the rest.
 * "Roll a separate attack per target" completes when the last target finishes, not the first, so callers of completeItemUse/completeActivityUse no longer see a half-applied use.
+* "Roll a separate attack per target" applies to attacks whose template type is unset, which it skipped silently; only empty was recognised.
 * Target confirmation on an activity sheet shows the effective value and is read-only when the activity forces one — self-target activities now report "never", as forward and cast activities already did.
 * "Choose Targets" only forces target confirmation when the activity actually has a template type. dnd5e only offers the checkbox while one is set, so clearing the template left a stored value that still forced confirmation but was no longer visible.
 * A triggered activity no longer inherits the triggering workflow's target confirmation or per-target attack flag, so "Roll a separate attack per target" no longer suppresses the target prompt on the activity it triggers.

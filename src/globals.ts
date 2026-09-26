@@ -636,6 +636,10 @@ declare global {
     interface _Options {
       /** dnd5e D20Roll advantage mode: -1 (disadvantage), 0 (normal), 1 (advantage) */
       advantageMode?: number;
+      /** dnd5e DamageRoll damage type. */
+      type?: string;
+      /** dnd5e DamageRoll properties (e.g. "mgc"). */
+      properties?: string[];
     }
   }
 
@@ -1481,6 +1485,17 @@ export type RollDialogConfig = {
  * accessors on `ChatMessage5e` (`chat-message.mjs`). They are optional here because a world can be
  * running a dnd5e old enough not to have them.
  */
+/**
+ * `game.system` with dnd5e's additions. fvtt-types' `System` is a default-exported class, which a
+ * module augmentation cannot extend, so this is applied as `(game.system as Dnd5eSystem)`.
+ */
+export type Dnd5eSystem = foundry.packages.System & {
+  dice: {
+    aggregateDamageRolls(rolls: Roll[], options?: { respectProperties?: boolean }): Roll[];
+    DamageRoll: typeof Roll;
+  };
+};
+
 export type Dnd5eChatMessage = ChatMessage.Implementation & {
   getAssociatedActivity?(options?: { scaled?: boolean }): Activity | undefined;
   getAssociatedActor?(): Actor.Implementation | undefined;

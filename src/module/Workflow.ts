@@ -3983,7 +3983,6 @@ export class Workflow {
           if (!damageRoll) continue;
           damageType = getDamageType(damageType);
           if (!damageType && flavor && getDamageType(flavor)) damageType = getDamageType(flavor);
-          // @ts-expect-error no dnd5e-types
           if (!damageType && this.damageRolls) damageType = this.damageRolls[0].options?.type;
           if (!damageType) damageType = MidiQOL.MQdefaultDamageType;
           const rollOptions = {
@@ -7623,7 +7622,6 @@ export class Workflow {
     };
 
     if (rolls instanceof Roll) rolls = [rolls];
-    // @ts-expect-error no dnd5e-types
     const baseRollProperties = rolls[0]?.options?.properties ?? [];
     rolls.forEach(roll => {
       setRollOperatorEvaluated(roll);
@@ -7635,7 +7633,6 @@ export class Workflow {
       if (!rolls[i]._evaluated) rolls[i] = await rolls[i].evaluate();
     }
     for (let i = 1; i < rolls.length; i++) {
-      // @ts-expect-error no dnd5e-types
       foundry.utils.setProperty(rolls[i], "options.properties", (rolls[i].options?.properties ?? []).concat(baseRollProperties));
     }
     this.damageRolls = rolls;
@@ -8196,7 +8193,6 @@ export class DamageOnlyWorkflow extends Workflow {
             type: "damage",
             _id: foundry.utils.randomID(),
             damage: {
-              // @ts-expect-error no dnd5e-types
               parts: [{ custom: { enabled: true, formula: damageRoll.formula }, types: [damageRoll.options.type] }],
             },
             range: {

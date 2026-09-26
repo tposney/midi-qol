@@ -94,7 +94,6 @@ export function createDamageDetail({
   }
   rolls = rolls.map(r => {
     r = foundry.utils.deepClone(r);
-    // @ts-expect-error no dnd5e-types
     if (!r.options.type) r.options.type = defaultType;
     return r;
   })
@@ -7597,7 +7596,6 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
   }
 
   // Extract damage type icon for display next to total
-  // @ts-expect-error no dnd5e types
   const damageType: string | undefined = roll.options?.type;
   const damageConfig = damageType
     ? (GameSystemConfig.damageTypes[damageType] ?? GameSystemConfig.healingTypes?.[damageType])
@@ -8717,7 +8715,6 @@ export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string
         }
         displayRoll.terms.forEach(term => {
           if (term.options?.flavor) term.options.flavor = (term.options.flavor as string).toLocaleLowerCase();
-          // @ts-expect-error no dnd5e-types
           else term.options.flavor = displayRoll.options.type;
         });
         if (ghostRoll) {
@@ -9328,8 +9325,7 @@ export function sumRolls(rolls: Array<Roll> | undefined = [], countHealing?: "ig
   if (!rolls) return 0;
   if (countHealing === undefined) countHealing = "positive";
   return rolls.reduce((total, roll) => {
-    // @ts-expect-error no dnd5e-types
-    const type = roll.options.type;
+    const type = roll.options.type ?? "";
     if (type === "midi-none") return total;
     if (["temphp"].includes(type) && countHealing === "negativeIgnoreTemp") return total;
     if (["temphp"].includes(type) && countHealing === "positiveIgnoreTemp") return total;

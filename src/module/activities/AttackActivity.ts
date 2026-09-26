@@ -319,7 +319,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       const itemAttackPerTarget = this.attackRollPerTarget ?? "default";
       let isAttackPerTarget = itemAttackPerTarget === "always"
         || (configSettings.attackPerTarget && itemAttackPerTarget !== "never")
-      isAttackPerTarget &&= this.target?.template?.type === ""; // only works if there is no AoE template targeting.
+      isAttackPerTarget &&= !this.target?.template?.type; // only works without AoE template targeting; unset on newer items
       // Solution for this is to have a lead Use activity that sets the targets and then calls the attack activity as a trigger activity
       const willHaveTargets = (usage.midiOptions?.targetsToUse?.size ?? 0) > 0 || (game.user?.targets?.size ?? 0) > 0 || requiresTargetConfirmation(this, {})
       if (!isAttackPerTarget || !willHaveTargets)
@@ -733,6 +733,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
 
     set ammunitionItem(value) {
       this._ammunitionItem = value;
+      this._ammunitionActivity = undefined; // resolved again from the new ammunition
     }
 
     get ammunitionItem() {

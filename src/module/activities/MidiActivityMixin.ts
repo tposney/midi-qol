@@ -1,4 +1,4 @@
-import { Activity, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext } from "../../globals.js";
+import { Activity, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext, Dnd5eSystem } from "../../globals.js";
 import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn, busyWait } from "../../midi-qol.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFirstWorkflow } from "../Workflow.js";
@@ -1101,33 +1101,24 @@ export let MidiActivityMixin = Base => {
     }
 
     /**
-     * Roll damage for the other activity referenced by this activity.
-     * @param config - The roll process configuration
-     * @param dialog - The roll dialog configuration
-     * @returns The damage rolls from the other activity, or undefined if not rolled
+     * Roll the other damage: the item's own other activity and the loaded ammunition's activity
+     * both roll. Ammunition is resolved separately from otherActivity, and SRD ammunition such as
+     * Arrow of Slaying carries its damage on an activity of its own.
+     * @returns The other damage rolls, or undefined if none were rolled
      */
     async rollOtherDamage(
       config: RollProcessConfig,
       dialog: RollDialogConfig
     ): Promise<Roll[] | undefined> {
-      /*
-       * The item's own other activity if it has one, otherwise the ammunition's. Ammunition is no
-       * longer resolved as otherActivity, so without this an ammunition activity's damage would
-       * never roll — which would silently break SRD ammunition like Arrow of Slaying, whose damage
-       * lives on a save activity it carries.
-       */
-      const sourceActivity = this.otherActivity ?? this.ammunitionActivity;
-      const isAmmunitionSource = !this.otherActivity && !!this.ammunitionActivity;
-      if (!sourceActivity || !config.workflow) return undefined;
-      if (!(sourceActivity.hasDamage || sourceActivity.hasHealing || sourceActivity.roll?.formula)) {
-        return undefined;
-      }
+      const sources = [this.otherActivity, this.ammunitionActivity].filter((activity, index, all) =>
+        !!activity && all.indexOf(activity) === index
+        && !!(activity.hasDamage || activity.hasHealing || activity.roll?.formula)) as MidiActivityMixin[];
+      if (!sources.length || !config.workflow) return undefined;
 
       // Build otherDamageMatches (no-op if already built)
       await config.workflow.buildOtherDamageMatches();
       if (this.otherCondition && !config.workflow.otherDamageMatches?.size) return undefined;
 
-      let otherResult: Roll[] | undefined;
       const otherConfig = {
         ...config,
         midiOptions: {
@@ -1139,16 +1130,37 @@ export let MidiActivityMixin = Base => {
       };
 
       // Undo the roll toggle since rollFormula will look at it as well
-      if (sourceActivity.ac && config.workflow.rollOptions?.rollToggle) {
+      if (sources[0].ac && config.workflow.rollOptions?.rollToggle) {
         dialog.configure = !dialog.configure;
       }
 
-      // Apply scaling to the other activity's item if specified
-      // Scaling is stored on the chat card by checkOtherActivityConsumption
-      let otherActivity = sourceActivity;
-      const scaling = config.workflow?.chatCard?.getFlag(MODULE_ID, "use.otherScaling");
+      const otherResult: Roll[] = [];
+      for (const source of sources) {
+        otherResult.push(...(await this._rollOtherDamageSource(source, source === this.ammunitionActivity, otherConfig, dialog, config) ?? []));
+      }
+      if (!otherResult.length) return undefined;
+
+      // Update workflow with other damage rolls
+      if (config.midiOptions?.updateWorkflow !== false) {
+        await config.workflow.setOtherDamageRolls(otherResult);
+      }
+      return otherResult;
+    }
+
+    /** Roll one source of other damage. */
+    async _rollOtherDamageSource(
+      source: MidiActivityMixin,
+      isAmmunition: boolean,
+      otherConfig: RollProcessConfig,
+      dialog: RollDialogConfig,
+      config: RollProcessConfig
+    ): Promise<Roll[] | undefined> {
+      let otherActivity = source;
+      // Scaling of the item's own other activity, stored on the chat card by checkOtherActivityConsumption
+      const scaling = isAmmunition ? undefined : config.workflow?.chatCard?.getFlag(MODULE_ID, "use.otherScaling");
       if (scaling) {
         const item = otherActivity.item.clone({ flags: { dnd5e: { scaling } } }, { keepId: true });
+        // @ts-expect-error no dnd5e-types
         otherActivity = item.system.activities.get(otherActivity.id);
       }
 
@@ -1158,44 +1170,35 @@ export let MidiActivityMixin = Base => {
        * of type "ammo" reports offersBaseDamage === true. An activity on the ammunition with
        * damage.includeBase left at its schema default would pull the same base damage in twice.
        */
-      if (isAmmunitionSource && otherActivity?.damage?.includeBase) {
+      // @ts-expect-error no dnd5e-types
+      if (isAmmunition && otherActivity?.damage?.includeBase) {
         const item = otherActivity.item.clone(
           { [`system.activities.${otherActivity.id}.damage.includeBase`]: false }, { keepId: true });
+        // @ts-expect-error no dnd5e-types
         otherActivity = item.system.activities.get(otherActivity.id);
       }
 
-      // Roll damage or formula
+      let rolls: Roll[] | undefined;
       if (otherActivity?.hasDamage) {
-        otherResult = await otherActivity.rollDamage(otherConfig, dialog, { create: false }) as Roll[] | undefined;
+        rolls = await otherActivity.rollDamage(otherConfig, dialog, { create: false }) as Roll[] | undefined;
       } else if (otherActivity?.roll?.formula) {
-        otherResult = await otherActivity.rollFormula!(otherConfig, dialog, { create: false }) as Roll[] | undefined;
-        if (otherResult) {
-          if (!(otherResult instanceof Array)) otherResult = [otherResult];
-          otherResult = otherResult.map(roll =>
-            //@ts-expect-error
-            new game.system.dice.DamageRoll(roll.formula, {}, {})
-          );
+        rolls = await otherActivity.rollFormula!(otherConfig, dialog, { create: false }) as Roll[] | undefined;
+        if (rolls) {
+          if (!(rolls instanceof Array)) rolls = [rolls];
+          rolls = rolls.map(roll => new (game.system as Dnd5eSystem).dice.DamageRoll(roll.formula, {}, {}));
         }
       }
 
       // Apply parent activity type to damage properties if configured
-      if (otherResult && this.otherActivityAsParentType) {
-        otherResult.forEach(r => {
-          //@ts-expect-error no dnd5e-types
+      if (rolls && this.otherActivityAsParentType) {
+        rolls.forEach(r => {
           const properties = new Set(r.options.properties ?? []);
-          properties?.delete(sourceActivity.actionType);
-          properties?.add(this.actionType);
-          //@ts-expect-error no dnd5e-types
+          properties.delete(source.actionType);
+          properties.add(this.actionType);
           r.options.properties = Array.from(properties);
         });
       }
-
-      // Update workflow with other damage rolls
-      if (otherResult && config.midiOptions?.updateWorkflow !== false) {
-        await config.workflow.setOtherDamageRolls(otherResult);
-      }
-
-      return otherResult;
+      return rolls;
     }
 
     configureDamageRoll(config: RollProcessConfig): void {
