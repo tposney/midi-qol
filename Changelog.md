@@ -1,4 +1,6 @@
 ### 14.6.0 (dnd6 branch)
+* "Ignore Damage Immunity/Resistance/Vulnerability" for all damage types now also covers a creature's "All Damage" trait, which it previously left in force.
+* New activity option "Downgrade Immunity" - treats damage immunity as resistance rather than ignoring it, which leaves full damage.
 * An attack of opportunity is classified for every target of a use, not only the first, so "Roll a separate attack per target" no longer judges the first target by different range rules to the rest.
 * "Roll a separate attack per target" completes when the last target finishes, not the first, so callers of completeItemUse/completeActivityUse no longer see a half-applied use.
 * Target confirmation on an activity sheet shows the effective value and is read-only when the activity forces one — self-target activities now report "never", as forward and cast activities already did.

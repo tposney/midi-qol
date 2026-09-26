@@ -394,6 +394,7 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
       // Special cases
       if (options.downgrade instanceof Set) {
         active.immunity = (active.immunity as Set<string>).union(options.downgrade);
+        active.resistance = (active.resistance as Set<string>).difference(options.downgrade);
       }
       // @ts-expect-error threshold exists on dnd5e's ignore type
       active.threshold ||= options.ignore?.threshold ?? false;

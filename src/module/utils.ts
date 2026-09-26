@@ -1,5 +1,5 @@
 import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface, i18nFormat } from "../midi-qol.js";
-import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC, DOWNGRADE_IMMUNITY_KEY, ALL_DAMAGE_KEY } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
@@ -665,27 +665,54 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       const categories: Record<string, string> = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption", "idm": "modification" };
       const ignoreTraits = workflow?.activity?.midiProperties?.ignoreTraits;
       if (ignoreTraits) {
-        for (let key of Object.keys(categories)) {
-          const category = categories[key];
-          // Check for base key (e.g., "idi") - applies to all damage types
-          if (ignoreTraits.has(key)) {
-            if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
-            for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
-              calcDamageOptions.ignore![category].add(dt);
-            }
+        /*
+         * Ignore an entire category. "All Damage" traits are stored under the literal "ALL", which
+         * is not a member of damageTypes, so enumerating damage types alone left an all-damage
+         * trait fully in force.
+         */
+        const ignoreWholeCategory = (category: string) => {
+          if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
+          for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
+            calcDamageOptions.ignore![category].add(dt);
           }
+          calcDamageOptions.ignore![category].add(ALL_DAMAGE_KEY);
+        };
+        for (let key of Object.keys(categories)) {
+          // Check for base key (e.g., "idi") - applies to all damage types
+          if (ignoreTraits.has(key)) ignoreWholeCategory(categories[key]);
         }
         // Check for damage-type specific keys (e.g., "idi.fire")
         for (const trait of ignoreTraits) {
           if (trait.includes('.')) {
             const [categoryKey, damageType] = trait.split('.');
             const category = categories[categoryKey];
-            if (category && GameSystemConfig.damageTypes[damageType]) {
+            if (!category) continue;
+            // "ALL" is not offered in the UI - the blanket key covers it - but tolerate it
+            // from hand-edited data or a macro: it is shorthand for every damage type.
+            if (damageType === ALL_DAMAGE_KEY) {
+              ignoreWholeCategory(category);
+              continue;
+            }
+            if (GameSystemConfig.damageTypes[damageType]) {
               if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
               calcDamageOptions.ignore![category].add(damageType);
             }
           }
         }
+        /*
+         * Downgrade immunity to resistance - ignoring an immunity would leave full damage. Only the
+         * types this target is immune to: dnd5e ignores the resistance of a downgraded type that has
+         * no immunity to downgrade.
+         */
+        // @ts-expect-error no dnd5e-types
+        const immunities: Set<string> = actor.system.traits?.di?.value ?? new Set();
+        const downgradeTypes = (ignoreTraits.has(DOWNGRADE_IMMUNITY_KEY) || ignoreTraits.has(`${DOWNGRADE_IMMUNITY_KEY}.${ALL_DAMAGE_KEY}`))
+          ? new Set(immunities)
+          : new Set(Array.from(ignoreTraits)
+            .filter(trait => trait.startsWith(`${DOWNGRADE_IMMUNITY_KEY}.`))
+            .map(trait => trait.split('.')[1])
+            .filter(damageType => immunities.has(damageType)));
+        if (downgradeTypes.size) calcDamageOptions.downgrade = downgradeTypes;
       }
       return calcDamageOptions;
     };
