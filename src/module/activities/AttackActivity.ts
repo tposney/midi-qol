@@ -5,7 +5,7 @@ import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRoll
 import { MidiOptions } from "../utils.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
 import { addAttribution, areMidiKeysPressed, callActivityHooks, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets, validTargetTokens } from "../utils.js";
-import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
+import { MidiActivityMixin, MidiActivityMixinSheet, findAmmunitionActivity } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { Activity, ActivityUseConfiguration, DND5ETargetDescriptor, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
@@ -311,7 +311,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       const itemAttackPerTarget = this.attackRollPerTarget ?? "default";
       let isAttackPerTarget = itemAttackPerTarget === "always"
         || (configSettings.attackPerTarget && itemAttackPerTarget !== "never")
-      isAttackPerTarget &&= this.target?.template?.type === ""; // only works if there is no AoE template targeting.
+      isAttackPerTarget &&= !this.target?.template?.type; // only works without AoE template targeting; unset on newer items
       // Solution for this is to have a lead Use activity that sets the targets and then calls the attack activity as a trigger activity
       const willHaveTargets = (usage.midiOptions?.targetsToUse?.size ?? 0) > 0 || (game.user?.targets?.size ?? 0) > 0 || requiresTargetConfirmation(this, {})
       if (!isAttackPerTarget || !willHaveTargets)
@@ -325,11 +325,20 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       const localSavedTargetIds = Array.from(game.user?.targets ?? []).map(t => t.id);
       if (usage.midiOptions.targetsToUse) targets = usage.midiOptions.targetsToUse;
       if (!targets) targets = new Set(game.user?.targets);
-      for (let target of targets) {
+      const targetList = Array.from(targets);
+      for (const [index, target] of targetList.entries()) {
         let item = this.item.clone({}, { keepId: true });
         // @ts-expect-error no dnd5e-types
         let activity = item.system.activities.get(this.id);
         const attackConfig = foundry.utils.deepClone(usage);
+        /*
+         * completeActivityUse resolves on the first postCleanup carrying usage.sequenceId, and the
+         * clone above copies that id to every sub-use. Sharing it made the whole call resolve once
+         * the first target finished - while later targets were still rolling - so callers observed a
+         * half-applied use and cleanupAndResolve restored game.user.targets mid-loop. Only the last
+         * sub-use keeps the id, so the call completes when the final target does.
+         */
+        if (index < targetList.length - 1) attackConfig.sequenceId = foundry.utils.randomID();
         attackConfig.midiOptions ??= {};
         attackConfig.midiOptions.targetsToUse = new Set([target]);
         attackConfig.midiOptions.workflowOptions ??= {};
@@ -555,6 +564,14 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
             const storedData = foundry.utils.getProperty(workflow.chatCard, "flags.midi-qol.ammunitionData") as any;
             if (storedData) workflow.ammunition = new Item.implementation(storedData, { parent: this.actor })
           } else workflow.ammunition = this.ammunitionItem;
+          /*
+           * Resolve from workflow.ammunition, not the live item. When the last piece is spent and
+           * the ammunition has uses.autoDestroy, dnd5e deletes the item during the attack roll — the
+           * live lookup is then empty, but workflow.ammunition has just been rebuilt from the copy
+           * stashed on the chat card.
+           */
+          workflow.ammunitionActivity = this.ammunitionActivity
+            ?? findAmmunitionActivity(workflow.ammunition);
           if (this.ammunition) this.update({ ammunition: this.ammunitionItem?.id ?? "" });
           if (configSettings.allowUseMacro) {
             workflow.ammunitionOnUseMacros = workflow.ammunition?.flags?.[MODULE_ID]?.onUseMacroParts ?? new OnUseMacros();

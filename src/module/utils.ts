@@ -1,5 +1,5 @@
 import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface } from "../midi-qol.js";
-import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC, DOWNGRADE_IMMUNITY_KEY, ALL_DAMAGE_KEY } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
@@ -635,26 +635,55 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       const categories: Record<string, string> = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption", "idm": "modification" };
       const ignoreTraits = workflow?.activity?.midiProperties?.ignoreTraits;
       if (ignoreTraits) {
-        for (let key of Object.keys(categories)) {
-          const category = categories[key];
-          // Check for base key (e.g., "idi") - applies to all damage types
-          if (ignoreTraits.has(key)) {
-            if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
-            for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
-              calcDamageOptions.ignore![category].add(dt);
-            }
+        /*
+         * Ignore an entire category. "All Damage" traits are stored under the literal "ALL", which
+         * is not a member of damageTypes, so enumerating damage types alone left an all-damage
+         * trait fully in force.
+         */
+        const ignoreWholeCategory = (category: string) => {
+          if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
+          for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
+            calcDamageOptions.ignore![category].add(dt);
           }
+          calcDamageOptions.ignore![category].add(ALL_DAMAGE_KEY);
+        };
+        for (let key of Object.keys(categories)) {
+          // Check for base key (e.g., "idi") - applies to all damage types
+          if (ignoreTraits.has(key)) ignoreWholeCategory(categories[key]);
         }
         // Check for damage-type specific keys (e.g., "idi.fire")
         for (const trait of ignoreTraits) {
           if (trait.includes('.')) {
             const [categoryKey, damageType] = trait.split('.');
             const category = categories[categoryKey];
-            if (category && GameSystemConfig.damageTypes[damageType]) {
+            if (!category) continue;
+            // "ALL" is not offered in the UI - the blanket key covers it - but tolerate it
+            // from hand-edited data or a macro: it is shorthand for every damage type.
+            if (damageType === ALL_DAMAGE_KEY) {
+              ignoreWholeCategory(category);
+              continue;
+            }
+            if (GameSystemConfig.damageTypes[damageType]) {
               if (!calcDamageOptions.ignore?.[category]) foundry.utils.setProperty(calcDamageOptions, `ignore.${category}`, new Set())
               calcDamageOptions.ignore![category].add(damageType);
             }
           }
+        }
+        /*
+         * Downgrade immunity to resistance. dnd5e models this as an option separate from ignore, and
+         * the two are not interchangeable: ignoring an immunity leaves the target taking full damage
+         * (immunity and resistance are independent trait lookups, and dnd5e's trait preparation
+         * deletes from dr anything present in di, so no resistance is left behind to apply). Only
+         * downgrade yields half damage.
+         */
+        if (ignoreTraits.has(DOWNGRADE_IMMUNITY_KEY)
+          || ignoreTraits.has(`${DOWNGRADE_IMMUNITY_KEY}.${ALL_DAMAGE_KEY}`)) calcDamageOptions.downgrade = true;
+        else {
+          const downgradeTypes = Array.from(ignoreTraits)
+            .filter(trait => trait.startsWith(`${DOWNGRADE_IMMUNITY_KEY}.`))
+            .map(trait => trait.split('.')[1])
+            .filter(damageType => GameSystemConfig.damageTypes[damageType]);
+          if (downgradeTypes.length) calcDamageOptions.downgrade = new Set(downgradeTypes);
         }
       }
       return calcDamageOptions;
@@ -7627,10 +7656,17 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
   if (allies.length <= 1) return false; // length 1 means no other allies nearby
   const gridW = canvas.grid?.sizeX ?? 100;
   const gridH = canvas.grid?.sizeY ?? 100;
-  const tl = { x: target.x, y: target.y };
-  const tr = { x: target.x + target.document.width * gridW, y: target.y };
-  const bl = { x: target.x, y: target.y + target.document.height * gridH };
-  const br = { x: target.x + target.document.width * gridW, y: target.y + target.document.height * gridH };
+  /*
+   * Corners come from the token DOCUMENT, not the placeable. A Token placeable's x/y are the PIXI
+   * container transform, which is only current once the canvas has drawn — in a background tab it
+   * reads 0,0 while the document keeps the scene coordinates. The document is the source of truth.
+   */
+  const targetX = target.document.x;
+  const targetY = target.document.y;
+  const tl = { x: targetX, y: targetY };
+  const tr = { x: targetX + target.document.width * gridW, y: targetY };
+  const bl = { x: targetX, y: targetY + target.document.height * gridH };
+  const br = { x: targetX + target.document.width * gridW, y: targetY + target.document.height * gridH };
   const top: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, tr.x, tr.y];
   const bottom: [x0: number, y0: number, x1: number, y1: number] = [bl.x, bl.y, br.x, br.y];
   const left: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, bl.x, bl.y];
@@ -7738,10 +7774,17 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
   if (allies.length <= 1) return false; // length 1 means no other allies nearby
   const gridW = canvas.grid?.sizeX ?? 100;
   const gridH = canvas.grid?.sizeY ?? 100;
-  const tl = { x: target.x, y: target.y };
-  const tr = { x: target.x + target.document.width * gridW, y: target.y };
-  const bl = { x: target.x, y: target.y + target.document.height * gridH };
-  const br = { x: target.x + target.document.width * gridW, y: target.y + target.document.height * gridH };
+  /*
+   * Corners come from the token DOCUMENT, not the placeable. A Token placeable's x/y are the PIXI
+   * container transform, which is only current once the canvas has drawn — in a background tab it
+   * reads 0,0 while the document keeps the scene coordinates. The document is the source of truth.
+   */
+  const targetX = target.document.x;
+  const targetY = target.document.y;
+  const tl = { x: targetX, y: targetY };
+  const tr = { x: targetX + target.document.width * gridW, y: targetY };
+  const bl = { x: targetX, y: targetY + target.document.height * gridH };
+  const br = { x: targetX + target.document.width * gridW, y: targetY + target.document.height * gridH };
   const top: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, tr.x, tr.y];
   const bottom: [x0: number, y0: number, x1: number, y1: number] = [bl.x, bl.y, br.x, br.y];
   const left: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, bl.x, bl.y];

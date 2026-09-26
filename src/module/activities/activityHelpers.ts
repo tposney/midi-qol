@@ -192,7 +192,14 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
   if (["none", "never"].includes(options.workflowOptions?.targetConfirmation ?? "")) return false;
   if (options.workflowOptions?.targetConfirmation === "always") return true;
   if (["enchant", "summon"].includes(activity.type)) return false;
-  if (activity.target?.affects?.choice) return true;
+  /*
+   * "Choose Targets" (target.affects.choice) means "when targeting an area, can the user choose who
+   * it affects?". dnd5e only renders the checkbox while a template type is set
+   * (shared/fields/field-targets.hbs), so clearing the template type leaves a stored true that is
+   * invisible on the sheet but was still forcing confirmation on every use. Apply it only under the
+   * condition it can be set.
+   */
+  if (activity.target?.affects?.choice && activity.target?.template?.type) return true;
   if (["", "self", undefined].includes(activity.target?.affects?.type) && ["", undefined, "self"].includes(activity.range?.units)) return false;
   if (activity.target?.affects.type === "self") return false;
   if (options.workflowOptions?.attackPerTarget === true) return false;
@@ -623,7 +630,8 @@ function aoeHeight(shapeType: string, dims: { radius?: number, width?: number, a
 
 /** Region elevation band, deriving top from the shape when core leaves it null. */
 function regionElevationBand(regionDoc: RegionDocument.Implementation): { bottom: number, top: number } {
-  const bottom = regionDoc.elevation?.bottom ?? -Infinity;
+  const declaredBottom = regionDoc.elevation?.bottom;
+  const bottom = Number.isFinite(declaredBottom) ? declaredBottom as number : -Infinity;
   const declaredTop = regionDoc.elevation?.top;
   if (Number.isFinite(declaredTop)) return { bottom, top: declaredTop as number };
   const shape = regionDoc.shapes?.at?.(0) as any;
@@ -634,7 +642,17 @@ function regionElevationBand(regionDoc: RegionDocument.Implementation): { bottom
     angle: shape.angle,
     curvature: shape.curvature
   }) : undefined;
-  return { bottom, top: height === undefined ? Infinity : bottom + height };
+  /*
+   * A region with no declared bottom is unbounded below, and there is no base to derive a height
+   * from — `-Infinity + height` is still `-Infinity`, which collapsed the band to
+   * (-Infinity, -Infinity) and excluded every token, so the template targeted nobody.
+   *
+   * midi's own templates set an elevation from the caster, so this only bites a region that reached
+   * here without one: an activity used by an actor with no token on canvas, or a template region
+   * created by something other than midi.
+   */
+  if (height === undefined || !Number.isFinite(bottom)) return { bottom, top: Infinity };
+  return { bottom, top: bottom + height };
 }
 
 /** Template elevation band - used during preview, before a Region exists. */

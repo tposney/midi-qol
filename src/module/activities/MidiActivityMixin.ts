@@ -150,6 +150,26 @@ async function writeRegion(
   });
 }
 
+/**
+ * The activity an ammunition item contributes, if any.
+ *
+ * `automationOnly` wins: that is the deliberate marker for an activity meant to be triggered rather
+ * than used directly. The fallback exists because `otherActivityCompatible` defaults to true, so
+ * most activities qualify and a homebrew item may not mark one.
+ *
+ * Takes the item rather than reading it off an activity, because the caller sometimes holds a
+ * rebuilt copy: ammunition with `uses.autoDestroy` is deleted by dnd5e as the last piece is spent,
+ * and midi reconstructs it from the chat card.
+ */
+export function findAmmunitionActivity(ammunitionItem: any): any | undefined {
+  if (!ammunitionItem) return undefined;
+  const activities = ammunitionItem.system?.activities;
+  const found = activities?.find((a: any) => a.midiProperties?.automationOnly && a.isOtherActivityCompatible)
+    ?? activities?.find((a: any) => a.isOtherActivityCompatible);
+  found?.prepareData();
+  return found;
+}
+
 export let MidiActivityMixin = Base => {
   interface MidiActivityMixin extends Activity { };
   class MidiActivityMixin extends Base {
@@ -304,6 +324,13 @@ export let MidiActivityMixin = Base => {
     }
 
     get forcedTargetConfirmation(): string | undefined {
+      /*
+       * A self-target activity can never confirm targets: requiresTargetConfirmation returns false
+       * on affects.type === "self" before it ever reaches confirmTargets. Reporting that here makes
+       * the sheet show the effective value rather than a stored one that does nothing — the same
+       * treatment ForwardActivity and CastActivity already give themselves.
+       */
+      if (this.target?.affects?.type === "self") return "never";
       return undefined;
     }
     /**
@@ -758,6 +785,22 @@ export let MidiActivityMixin = Base => {
           usage.spell ??= {} as { slot: string };
           usage.spell.slot = `spell${usage.midiOptions.spellLevel}`;
         }
+        /*
+         * Concentration is begun inside Activity#use - consume() then beginConcentrating() - which
+         * is before any of midi's checks have run. A use midi then rejects would leave the caster
+         * concentrating on a spell that never happened, and because ending the PREVIOUS
+         * concentration is nested in the same block, an existing concentration would be dropped
+         * for a cast that never landed. Suppress it here; the workflow begins it once the checks
+         * pass (Workflow#beginDeferredConcentration).
+         *
+         * _prepareUsageConfig only does `config.concentration.begin ??= true`, so an explicit
+         * false survives, and it leaves `end` untouched for us to apply later.
+         */
+        const deferConcentration = activity.requiresConcentration
+          && !safeGetGameSetting("dnd5e", "disableConcentration");
+        if (deferConcentration) {
+          usage.concentration = { begin: false, end: usage.concentration?.end ?? null };
+        }
         try {
           useResults = await super.use.bind(activity)(usage, dialog, message);
         } catch (err) {
@@ -771,6 +814,12 @@ export let MidiActivityMixin = Base => {
         if (!useResults) { // activity use was aborted
           Workflow.removeWorkflow(usage.workflow?.id);
           return false;
+        }
+        if (deferConcentration && usage.workflow) {
+          usage.workflow.deferredConcentration = {
+            scaling: typeof usage.scaling === "number" ? usage.scaling : undefined,
+            end: usage.concentration?.end ?? undefined
+          };
         }
         // Remove the copy stored by activity uuid
         Workflow.workflows.delete(usage.workflow!.activity?.uuid ?? "");
@@ -1000,7 +1049,10 @@ export let MidiActivityMixin = Base => {
           if (result) result = await this.postProcessDamageRoll(config, result);
           if (config.workflow && config.midiOptions?.updateWorkflow !== false) await config.workflow.setDamageRolls(result);
         }
-        if (this.otherActivity && config.workflow.otherActivity !== this && config.midiOptions?.updateWorkflow !== false) {
+        // Ammunition counts here too: it is no longer resolved as otherActivity, and rollOtherDamage
+        // sources from it when the item has no other activity of its own.
+        if ((this.otherActivity ?? this.ammunitionActivity) && config.workflow.otherActivity !== this
+          && config.midiOptions?.updateWorkflow !== false) {
           // Check if we need to defer rolling until after consumption is confirmed
           if (!this.deferOtherDamage(config, dialog)) {
             otherResult = await this.rollOtherDamage(config, dialog);
@@ -1065,9 +1117,16 @@ export let MidiActivityMixin = Base => {
       config: RollProcessConfig,
       dialog: RollDialogConfig
     ): Promise<Roll[] | undefined> {
-      if (!this.otherActivity || !config.workflow) return undefined;
-      // Check if other activity has something to roll
-      if (!(this.otherActivity.hasDamage || this.otherActivity.hasHealing || this.otherActivity.roll?.formula)) {
+      /*
+       * The item's own other activity if it has one, otherwise the ammunition's. Ammunition is no
+       * longer resolved as otherActivity, so without this an ammunition activity's damage would
+       * never roll — which would silently break SRD ammunition like Arrow of Slaying, whose damage
+       * lives on a save activity it carries.
+       */
+      const sourceActivity = this.otherActivity ?? this.ammunitionActivity;
+      const isAmmunitionSource = !this.otherActivity && !!this.ammunitionActivity;
+      if (!sourceActivity || !config.workflow) return undefined;
+      if (!(sourceActivity.hasDamage || sourceActivity.hasHealing || sourceActivity.roll?.formula)) {
         return undefined;
       }
 
@@ -1087,16 +1146,28 @@ export let MidiActivityMixin = Base => {
       };
 
       // Undo the roll toggle since rollFormula will look at it as well
-      if (this.otherActivity.ac && config.workflow.rollOptions?.rollToggle) {
+      if (sourceActivity.ac && config.workflow.rollOptions?.rollToggle) {
         dialog.configure = !dialog.configure;
       }
 
       // Apply scaling to the other activity's item if specified
       // Scaling is stored on the chat card by checkOtherActivityConsumption
-      let otherActivity = this.otherActivity;
+      let otherActivity = sourceActivity;
       const scaling = config.workflow?.chatCard?.getFlag(MODULE_ID, "use.otherScaling");
       if (scaling) {
         const item = otherActivity.item.clone({ flags: { dnd5e: { scaling } } }, { keepId: true });
+        otherActivity = item.system.activities.get(otherActivity.id);
+      }
+
+      /*
+       * Ammunition base damage is dnd5e's to add, not ours: AttackActivity#getDamageConfig has
+       * already spliced `ammo.system.damage.base` into the weapon's damage rolls, and a consumable
+       * of type "ammo" reports offersBaseDamage === true. An activity on the ammunition with
+       * damage.includeBase left at its schema default would pull the same base damage in twice.
+       */
+      if (isAmmunitionSource && otherActivity?.damage?.includeBase) {
+        const item = otherActivity.item.clone(
+          { [`system.activities.${otherActivity.id}.damage.includeBase`]: false }, { keepId: true });
         otherActivity = item.system.activities.get(otherActivity.id);
       }
 
@@ -1119,7 +1190,7 @@ export let MidiActivityMixin = Base => {
         otherResult.forEach(r => {
           //@ts-expect-error no dnd5e-types
           const properties = new Set(r.options.properties ?? []);
-          properties?.delete(this.otherActivity.actionType);
+          properties?.delete(sourceActivity.actionType);
           properties?.add(this.actionType);
           //@ts-expect-error no dnd5e-types
           r.options.properties = Array.from(properties);
@@ -1608,20 +1679,28 @@ export let MidiActivityMixin = Base => {
       }
       workflow.AoO = false;
       workflow.itemUsesReaction = false;
-      if (!usage.midiOptions?.workflowOptions?.notReaction && options.checkReaction && this.actor?.inCombat) {
-        const isTurn = game.combat?.combatant === game.combat?.getCombatantsByActor(this.actor)[0];
+      const reactingActor = this.actor;
+      const inReactionContext = !usage.midiOptions?.workflowOptions?.notReaction && !!reactingActor?.inCombat;
+      // options.checkReaction is deliberately NOT part of the AoO classification: the attackPerTarget
+      // loop runs the reaction check for the first target only, so gating AoO on it left every later
+      // target with AoO false. !workflow.AoO is what suppresses the range check, so one use judged
+      // its first target by different rules to the rest. Reaction consumption stays gated below -
+      // only the classification is hoisted.
+      if (inReactionContext && reactingActor) {
+        const isTurn = game.combat?.combatant === game.combat?.getCombatantsByActor(reactingActor)[0];
+        if (!isTurn && needsAOOCheck(reactingActor) && this.attack && this.effectiveActivationType !== "special")
+          workflow.AoO = true;
+      }
+      if (inReactionContext && reactingActor && options.checkReaction) {
         if (["reaction", "reactiondamage", "reactionmanual", "reactionpreattack"].includes(this.effectiveActivationType ?? "")
           && (this.activation?.cost ?? 1) > 0) {
           workflow.itemUsesReaction = true;
         }
 
-        if (!isTurn && needsAOOCheck(this.actor) && this.attack && this.effectiveActivationType !== "special") {
-          workflow.itemUsesReaction = true;
-          workflow.AoO = true;
-        }
+        if (workflow.AoO) workflow.itemUsesReaction = true;
 
-        const queryReaction = workflow.itemUsesReaction && hasUsedReaction(this.actor) && this.actor.inCombat
-          && needsReactionCheck(this.actor)
+        const queryReaction = workflow.itemUsesReaction && hasUsedReaction(reactingActor) && reactingActor.inCombat
+          && needsReactionCheck(reactingActor)
         if (queryReaction) {
           const shouldRoll = await foundry.applications.api.DialogV2.confirm({
             window: {
@@ -1637,7 +1716,12 @@ export let MidiActivityMixin = Base => {
       }
 
       workflow.itemUsesBonusAction = false;
-      if (!usage.midiOptions?.workflowOptions?.notBonusAction && options.checkBonusAction && this.actor?.inCombat && needsBonusActionCheck(this.actor)) {
+      // needsBonusActionCheck() is deliberately NOT part of this condition: it is false for
+      // "displayOnly", which would stop itemUsesBonusAction ever being set and so stop the used-
+      // bonus-action marker being applied at all. setBonusActionUsed() already admits "displayOnly"
+      // explicitly, and the reaction branch above gates the same way - only the prompt below is
+      // conditional on needsBonusActionCheck.
+      if (!usage.midiOptions?.workflowOptions?.notBonusAction && options.checkBonusAction && this.actor?.inCombat) {
         workflow.itemUsesBonusAction = ["bonus"].includes(this.effectiveActivationType ?? "");
         const queryBonus = workflow.itemUsesBonusAction && hasUsedBonusAction(this.actor) && needsBonusActionCheck(this.actor);
         if (queryBonus) {
@@ -2158,28 +2242,23 @@ export let MidiActivityMixin = Base => {
       return this.metadata.type;
     }
 
+    _ammunitionActivity: MidiActivityMixin | null | undefined;
+
+    /**
+     * An activity carried by the loaded ammunition. Resolved independently of otherActivity so an
+     * item's own other activity and its ammunition can both run — previously ammunition won the
+     * single slot, and `otherActivityId: "none"` silenced it even though that setting exists to stop
+     * auto-detection from the item's *own* activities.
+     */
+    get ammunitionActivity(): MidiActivityMixin | undefined {
+      if (this._ammunitionActivity !== undefined) return this._ammunitionActivity ?? undefined;
+      this._ammunitionActivity = findAmmunitionActivity(this.ammunitionItem) ?? null;
+      return this._ammunitionActivity ?? undefined;
+    }
+
     get otherActivity() {
       if (this._otherActivity !== undefined) return this._otherActivity as MidiActivityMixin;
       if (this.otherActivityId === "none") return undefined;
-      if (this.ammunitionItem) {
-        //TODO consider making this a choice of activity
-        // @ts-expect-error no dnd5e-types
-        this._otherActivity = this.ammunitionItem.system.activities?.find(
-          a => a.midiProperties?.automationOnly && a.isOtherActivityCompatible
-        ) as MidiActivityMixin | undefined;
-        if (!this._otherActivity) {
-          // @ts-expect-error no dnd5e-types
-          this._otherActivity = this.ammunitionItem.system.activities.find(
-            a => a.isOtherActivityCompatible
-          ) as MidiActivityMixin | undefined;
-        }
-
-        if (this._otherActivity) {
-          this._otherActivity.prepareData();
-          return this._otherActivity as MidiActivityMixin;
-        }
-      }
-
       if (this.otherActivityId) {
         // @ts-expect-error no dnd5e-types
         this._otherActivity = this.item.system.activities.get(this.otherActivityId) as MidiActivityMixin | undefined;
@@ -2355,7 +2434,13 @@ export let MidiActivityMixinSheet = Base => {
     async _prepareMidiQolContext(context) {
       // context = await super._prepareEffectContext(context);
       context.ConfirmTargetOptions = Object.entries(confirmTargetOptions).map(([value, label]) => ({ value, label }));
-      if (this.activity.forcedTargetConfirmation) context.ConfirmTargetOptions = context.ConfirmTargetOptions.filter(o => o.value === this.activity.forcedTargetConfirmation);
+      if (this.activity.forcedTargetConfirmation) {
+        context.ConfirmTargetOptions = context.ConfirmTargetOptions.filter(o => o.value === this.activity.forcedTargetConfirmation);
+        // Show the effective value, not the stored one, and stop it being edited: the stored value
+        // has no effect while the activity forces a result.
+        context.confirmTargetsForced = true;
+        context.confirmTargetsValue = this.activity.forcedTargetConfirmation;
+      }
       // v14 message-mode values (was legacy CONST.DICE_ROLL_MODES). Stored legacy values are migrated
       // to v14 below so the picker matches and re-saves the new value.
       context.RollModeOptions = [

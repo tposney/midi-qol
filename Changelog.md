@@ -1,3 +1,25 @@
+### 14.0.13 (unreleased)
+* "Ignore Damage Immunity/Resistance/Vulnerability" for all damage types now also covers a creature's "All Damage" trait, which it previously left in force.
+* New activity option "Downgrade Immunity" - treats damage immunity as resistance rather than ignoring it, which leaves full damage.
+* An attack of opportunity is classified for every target of a use, not only the first, so "Roll a separate attack per target" no longer judges the first target by different range rules to the rest.
+* "Roll a separate attack per target" completes when the last target finishes, not the first, so callers of completeItemUse/completeActivityUse no longer see a half-applied use.
+* "Roll a separate attack per target" applies to attacks whose template type is unset, which it skipped silently; only empty was recognised.
+
+**Templates**
+* AoE template targeting no longer fails for a region template with no elevation set.
+
+**Workflow**
+* Target confirmation on an activity sheet shows the effective value and is read-only when the activity forces one — self-target activities now report "never", as forward and cast activities already did.
+* "Choose Targets" only forces target confirmation when the activity actually has a template type. dnd5e only offers the checkbox while one is set, so clearing the template left a stored value that still forced confirmation but was no longer visible.
+* A triggered activity no longer inherits the triggering workflow's target confirmation or per-target attack flag, so "Roll a separate attack per target" no longer suppresses the target prompt on the activity it triggers.
+* Ammunition activities are resolved independently of the other activity: an item's own other activity and its ammunition can both run, and `otherActivityId: "none"` no longer silences ammunition.
+* Ammunition activity effects are applied whether or not the ammunition supplies the other activity.
+* An ammunition activity's damage rolls without double-counting the ammunition's base damage, which dnd5e has already added to the weapon's damage roll.
+* Aborting a use for the wrong number of targets, or cancelling target confirmation, refunds the consumed spell slot or uses.
+* Concentration begins only after a use passes midi's checks, so a rejected use no longer leaves the caster concentrating or drops an existing concentration.
+* A bonus action is recorded when Enforce Bonus Actions is "Display status icon", matching reactions and what setBonusActionUsed already allowed; only the prompt stays conditional on enforcement.
+* Flanking reads token positions from the token document rather than the placeable transform, which is only current once the canvas has drawn.
+
 ### 14.0.12
 
 **Damage cards**
