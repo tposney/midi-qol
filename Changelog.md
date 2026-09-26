@@ -11,7 +11,8 @@
 * Ammunition activity effects are applied whether or not the ammunition supplies the other activity.
 * An ammunition activity's damage rolls without double-counting the ammunition's base damage, which dnd5e has already added to the weapon's damage roll.
 * Aborting a use for the wrong number of targets, or cancelling target confirmation, refunds the consumed spell slot or uses.
-* Concentration begins only after a use passes midi's checks, so a rejected use no longer leaves the caster concentrating or drops an existing concentration.
+* Concentration begins, and replaces the existing one, only once targeting is complete, so a use cancelled before then keeps the existing concentration.
+* Consecutive uses of the same activity no longer pick up the previous use's configuration.
 * A bonus action is recorded when Enforce Bonus Actions is "Display status icon", matching reactions and what setBonusActionUsed already allowed; only the prompt stays conditional on enforcement.
 * Flanking reads token positions from the token document rather than the placeable transform, which is only current once the canvas has drawn.
 * Version reads Foundry-major dot dnd5e-major: 14.0.x is the dnd5e 5.x line, 14.6.x the 6.x line.
@@ -29,12 +30,17 @@
 * `usage.chatCard`, the `_usageChatContext` override, the content-splicing machinery and `activity-card.hbs` are gone.
 * Roll sections stored in `system.midi.sections` and rendered from `message.rolls`, or from a template plus data.
 * Button visibility is resolved per viewer at render rather than stripped from the stored card, so the GM and player `Remove chat card buttons after roll` settings both apply.
+* Damage type icons sit to the left of the total instead of before it, so the total stays centred.
+* Removed `ChatMessage#collectRolls` and the hidden `mergeCardMultiDamage` setting.
 * Chat buttons use the dnd5e 6.0 button format; labels follow the language setting.
 * Save rolls are carried on the card, so macros, Dice So Nice and `getAssociatedRolls` can see them.
 * Attack roll is located by roll type rather than by position in `message.rolls`.
 * Bonus damage rolls are shown in the bonus damage section; previously only its label appeared, though the damage was always applied.
 * Other and bonus damage rolls no longer render inside the section label.
 * Target rows carry their token uuid; `data-uuid` had always rendered empty.
+* midi's messages carry no `flags.dnd5e`: targets are in `system.targets`, and save and check rolls name their card in `system.origin` rather than `flags.dnd5e.originatingMessage`.
+* A synthetic item's snapshot is kept in `flags.midi-qol.itemData` rather than `flags.dnd5e.item.data`.
+* Convenient Effects applied by a concentration spell depend on the concentration, and effect data carries the use's scaling and spell level.
 * Use card 9.9kB -> 7.2kB; bytes written per attack 19.0kB -> 4.1kB; saves section 4.5kB -> 1.5kB.
 
 **Damage tray**
@@ -42,13 +48,11 @@
 * `system.targets` extended with midi's per-target detail: save results and multipliers, super and semi-super saver, uncanny dodge.
 * Per-target detail records what the damage calculation applied, so reaction-based effects such as uncanny dodge are reflected.
 * Resistance and immunity icons shown on the target row with state on hover, in addition to dnd5e's right-click menu.
-* midi no longer writes `flags.dnd5e.targets`.
 
 **Templates**
 * Templates use regions throughout; the deprecated `AbilityTemplate` API and the `refreshMeasuredTemplate`, `preCreateMeasuredTemplate` and `dnd5e.preCreateActivityTemplate` handlers are gone.
 * AoE template targeting no longer fails for templates with no elevation set.
 * Targets update live while a template is dragged.
-* Placement clamped to range, and cones anchored to the caster, while dragging.
 * Trap workflow templates use the activity's units, so they are the correct size.
 
 **Distance**

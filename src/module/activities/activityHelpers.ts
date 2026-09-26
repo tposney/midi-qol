@@ -495,14 +495,14 @@ export function isAoETargetable(targetToken: Token.Implementation, options: { se
 }
 
 /**
- * midi's flags for an activity template region — the caster token and, when
- * `constrainTemplatePlacement` is on, the range limit `preCreateRegion` enforces.
+ * midi's flags for an activity template region — the marker `isTemplateRegion` tests, the caster
+ * token and, when `constrainTemplatePlacement` is on, the range limit `preCreateRegion` enforces.
  *
  * Shared so a region placed interactively (via `dnd5e.createMeasuredTemplate`) and one placed
  * programmatically (via `createActivityTemplateRegions`) carry the same flags.
  */
 export function midiTemplateFlags(activity: any): Record<string, unknown> {
-  const flags: Record<string, unknown> = {};
+  const flags: Record<string, unknown> = { activityTemplate: true };
   const casterToken = activity?.actor ? tokenForActor(activity.actor) : undefined;
   if (casterToken) flags.sourceTokenUuid = casterToken.document.uuid;
   if (activity?.item) flags.itemUuid = activity.item.uuid;
@@ -520,6 +520,16 @@ export function midiTemplateFlags(activity: any): Record<string, unknown> {
 }
 
 /**
+ * Whether a region is a template: one midi marked when an activity placed it, or one created
+ * through Foundry's MeasuredTemplate compatibility layer. `flags.dnd5e.activity` is not a test —
+ * dnd5e sets it on any region that belongs to an activity.
+ */
+export function isTemplateRegion(region: unknown): boolean {
+  return !!(foundry.utils.getProperty(region as object, "flags.core.MeasuredTemplate")
+    || foundry.utils.getProperty(region as object, `flags.${MODULE_ID}.activityTemplate`));
+}
+
+/**
  * Create template Regions for an activity at known positions, without the placement UI.
  *
  * dnd5e's `TemplatePlacement.fromActivity` bundles the interactive placement with the region
@@ -533,7 +543,7 @@ export function midiTemplateFlags(activity: any): Record<string, unknown> {
  */
 export async function createActivityTemplateRegions(
   activity: any,
-  placements: { x: number, y: number, direction?: number }[],
+  placements: { x: number, y: number, direction?: number, token?: TokenDocument.Implementation }[],
   extraFlags: Record<string, unknown> = {}
 ): Promise<RegionDocument.Implementation[]> {
   const scene = canvas?.scene;
@@ -550,10 +560,17 @@ export async function createActivityTemplateRegions(
   const size = convert(target.size);
   const width = convert(target.width) || (scene.grid.size);
 
-  const shapeFor = (x: number, y: number, rotation: number) => {
+  const shapeFor = (x: number, y: number, rotation: number, token?: TokenDocument.Implementation) => {
     const base = { x, y, rotation };
     switch (shapeType) {
       case "circle": return { ...base, type: "circle", radius: size };
+      case "emanation":
+        // As TemplatePlacement.fromActivity builds it: measured from the token's edge, not its centre.
+        if (!token) return { ...base, type: "circle", radius: size };
+        return {
+          type: "emanation", radius: size,
+          base: { type: "token", x: token.x, y: token.y, width: token.width, height: token.height, shape: token.shape, rotation: 0 }
+        };
       case "cone": return { ...base, type: "cone", angle: CONFIG.MeasuredTemplate.defaults.angle, radius: size };
       case "ray":
       case "line": return { ...base, type: "line", length: size, width };
@@ -565,10 +582,10 @@ export async function createActivityTemplateRegions(
   };
 
   const rollData = activity.getRollData?.() ?? {};
-  const regionData = placements.map(({ x, y, direction }) => foundry.utils.mergeObject({
+  const regionData = placements.map(({ x, y, direction, token }) => foundry.utils.mergeObject({
     name: `${activity.item?.name ?? "Template"} [${game.user?.name}]`,
     color: game.user?.color,
-    shapes: [shapeFor(x, y, direction ?? 0)],
+    shapes: [shapeFor(x, y, direction ?? 0, token)],
     levels: [(canvas as unknown as { level?: { id: string } }).level?.id],
     restriction: { enabled: true, type: "move" },
     visibility: CONST.REGION_VISIBILITY.ALWAYS,

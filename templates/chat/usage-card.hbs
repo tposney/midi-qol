@@ -33,13 +33,13 @@
     <button data-action="rollAttackDisadvantage" style="flex: 1 1 0"
       data-tooltip="{{localize 'DND5E.Disadvantage'}}"><i class="fas fa-caret-down"></i><i
         class="fas fa-dice-d20"></i><i class="fas fa-dice-d20"></i></button>
-    <button data-action="rollAttack" style="flex: 3 1 0">{{#if (gt midi.attackRollCount 1)}}[{{ midi.attackRollCount }}] {{/if}}{{ localize "DND5E.Attack" }}</button>
+    <button data-action="rollAttack" style="flex: 3 1 0">{{#if (gt midi.attackRollCount 1)}}[{{ midi.attackRollCount }}] {{/if}}{{#if midi.attackBtnText}}{{ midi.attackBtnText }}{{else}}{{ localize "DND5E.Attack" }}{{/if}}</button>
     <button data-action="rollAttackAdvantage" style="flex: 1 1 0" data-tooltip="{{localize 'DND5E.Advantage'}}"><i
         class="fas fa-caret-up"></i><i class="fas fa-dice-d20"></i><i class="fas fa-dice-d20"></i></button>
   </div>
   {{else}}
   <div class="midi-qol-attack-buttons flexrow 1">
-    <button type="button" data-action="rollAttack"><span>{{#if (gt midi.attackRollCount 1)}}[{{ midi.attackRollCount }}] {{/if}}{{ localize "DND5E.Attack" }}</span></button>
+    <button type="button" data-action="rollAttack"><span>{{#if (gt midi.attackRollCount 1)}}[{{ midi.attackRollCount }}] {{/if}}{{#if midi.attackBtnText}}{{ midi.attackBtnText }}{{else}}{{ localize "DND5E.Attack" }}{{/if}}</span></button>
   </div>
   {{/if}}
   {{/if}}
@@ -71,7 +71,9 @@
       <button class="midi-qol-confirm-damage-roll-complete-miss"
         data-action="confirmDamageRollCompleteMiss">{{localize "midi-qol.ConfirmMiss"}}</button>
       <button class="midi-qol-confirm-damage-roll-complete"
-        data-action="confirmDamageRollComplete">{{#if (gt midi.attackRollCount 1)}}[{{ midi.attackRollCount }} {{ midi.nextDamageRollCount }}] {{/if}}{{localize "midi-qol.ConfirmHit"}}</button>
+        data-action="confirmDamageRollComplete">{{#if (gt midi.attackRollCount 1)}}[{{ midi.attackRollCount }} {{ midi.nextDamageRollCount }}] {{/if}}{{localize "midi-qol.ConfirmRoll"}}</button>
+      <button class="midi-qol-confirm-damage-roll-complete-hit"
+        data-action="confirmDamageRollCompleteHit">{{localize "midi-qol.ConfirmHit"}}</button>
     </div>
     {{else}}
     <div class="midi-qol-confirm-damage-roll flexrow 1">
@@ -113,16 +115,12 @@
 </div>
 {{/if}}
 
-{{!--
-  Declared, not appended. dnd5e 6.0 emits `<damage-application>` from its own template and dropped the
-  call to `_enrichDamageTooltip`, where midi used to insert this — so it stopped appearing entirely.
-  The element is midi's subclass of dnd5e's, which delegates to `super` for the work.
---}}
-{{#if midi.showDamageApplication}}
-<midi-damage-application class="dnd5e2"></midi-damage-application>
-{{/if}}
+{{!-- One tray per damage roll type: each applies its own save multiplier. --}}
+{{#each midi.damageApplicationTypes}}
+<midi-damage-application class="dnd5e2" data-damage-type="{{this}}"></midi-damage-application>
+{{/each}}
 
-{{#if (and effects.length showTargets)}}
+{{#if effects.length}}
 <effect-application class="dnd5e2">
     {{#each effects}}
     <option value="{{ uuid }}"></option>

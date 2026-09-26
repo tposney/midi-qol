@@ -452,28 +452,14 @@ declare module "fvtt-types/configuration" {
       };
     };
     ChatMessage: {
+      // dnd5e 6 keeps a message's data in `system`; transform is the one flag it still uses.
       dnd5e?: {
-        item?: {
-          id: string;
-          type: string;
-          uuid: string;
-          data?: Item.CreateData;
-        };
-        scaling?: number;
-        "use.concentrationId"?: string;
-        "use.spellLevel"?: number;
-        "use.consumed"?: unknown;
         "transform.uuid"?: string;
         "transform.profile"?: string;
-        targets?: unknown;
-        messageType?: string;
-        roll?: {
-          type?: string;
-          itemId?: string;
-        };
       };
       "midi-qol"?: {
         activityUuid?: string;
+        itemData?: Item.CreateData;
         actorUuid?: string;
         sourceActorUuid?: string;
         advantageSaveUuids?: string[];
@@ -902,10 +888,15 @@ declare global {
         label: string;
         subtypes?: Record<string, string>;
       }>;
+      // Whether the damage card merges its rolls by damage type for display.
+      aggregateDamageDisplay: boolean;
       // This one's added by midi
       customDamageResistanceTypes: Record<string, string>;
       damageTypes: Record<string, {
         label: string;
+        // Only healingTypes are localized with a short label today, but dnd5e reads
+        // `config?.labelShort ?? config?.label` off either config, so both carry it.
+        labelShort?: string;
         icon: string;
         isPhysical?: boolean;
         reference?: string;
@@ -914,6 +905,7 @@ declare global {
       equipmentTypes: Record<string, string>;
       healingTypes: Record<string, {
         label: string;
+        labelShort?: string;
         icon: string;
         color?: Color;
       }>;
@@ -1590,10 +1582,12 @@ export type D20RollOptions = {
   minimum?: number;
 };
 
+/** An entry of a usage card's `system.targets` (dnd5e's TargetsField): actor and token are uuids. */
 export type DND5ETargetDescriptor = {
   name: string,
   img: string,
-  uuid: string,
+  actor: string,
+  token?: string,
   ac: number | null,
 };
 
@@ -1608,6 +1602,7 @@ export type MidiTargetDescriptor = {
   };
   itemType?: string;
   uncannyDodge?: boolean;
+  uncannyDodgeIcon?: string;
   flankingBonus?: number;
 };
 

@@ -202,7 +202,6 @@ class ConfigSettings {
   mergeCardCondensed: boolean = false;
   addSheetButtons: boolean = true;
   mergeCardMulti: boolean = false;
-  mergeCardMultiDamage: boolean = false;
   displayProperties: boolean = true;
   midiPropertiesTabRole: number = CONST.USER_ROLES.PLAYER;
   confirmAttackDamage: string = "none";
@@ -772,7 +771,6 @@ export let fetchParams = () => {
     removeHiddenInvis: true,
     wallsBlockRange: "center",
     mergeCardMulti: false,
-    mergeCardMultiDamage: false,
     displayProperties: true,
   }, configSettings.optionalRules ?? {}, { overwrite: true, insertKeys: true, insertValues: true });
   if (!configSettings.optionalRules.incapacitated) configSettings.optionalRules.incapacitated = "nothing";

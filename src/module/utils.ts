@@ -9,7 +9,7 @@ import { concentrationCheckItemDisplayName } from "./Hooks.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
-import { Activity, ActivityUseConfiguration, CalcDamageOptions, MidiChangeData, DamageDescription, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails } from "../globals.js";
+import { Activity, ActivityUseConfiguration, CalcDamageOptions, MidiChangeData, DamageDescription, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails, Dnd5eSystem } from "../globals.js";
 
 import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject, AnyObject } from "fvtt-types/utils";
@@ -98,10 +98,10 @@ export function createDamageDetail({
     return r;
   })
 
-  //@ts-expect-error no dnd5e-types
-  const aggregatedRolls: CONFIG.Dice.DamageRoll[] = game.system.dice.aggregateDamageRolls(rolls, { respectProperties: true });
+  const aggregatedRolls = (game.system as Dnd5eSystem).dice.aggregateDamageRolls(rolls, { respectProperties: true });
   let detail = aggregatedRolls.map(roll => {
-    const value = roll.options.type !== "healing" ? Math.max(0, roll.total) : roll.total;
+    const total = roll.total ?? 0;
+    const value = roll.options.type !== "healing" ? Math.max(0, total) : total;
     return { value, damage: value, type: roll.options.type as string, formula: roll.formula as string, properties: new Set(roll.options.properties as string[] ?? []) }
   });
   return detail;
@@ -4324,18 +4324,10 @@ export function autoConsumeResource(workflow?: Workflow): string {
   return game.user?.isGM ? configSettings.gmConsumeResource : configSettings.consumeResource;
 }
 
-/**
- * Retrieve consumption deltas from a ChatMessage or a messageConfig object.
- * dnd5e 5.3+ stores consumption in system.deltas / data.system.deltas.
- * dnd5e 5.2.x stored consumption in flags.dnd5e.use.consumed / data.flags.dnd5e.use.consumed.
- */
+/** Consumption deltas from a ChatMessage (`system.deltas`) or a messageConfig (`data.system.deltas`). */
 export function getConsumptionData(source: any): any {
   if (!source) return undefined;
-  // ChatMessage case
-  if (source.system?.deltas != null) return source.system.deltas;
-  if (typeof source.getFlag === "function") return source.getFlag("dnd5e", "use.consumed");
-  // messageConfig case (plain object with .data passed to activity.consume())
-  return source.data?.system?.deltas ?? source.data?.flags?.dnd5e?.use?.consumed;
+  return source.system?.deltas ?? source.data?.system?.deltas;
 }
 
 export function getAutoRollDamage(workflow?: Workflow): string {
@@ -4360,21 +4352,11 @@ export function getAutoRollAttack(workflow?: Workflow): boolean {
 }
 
 /**
- * The roll type of a chat message, in `flags.dnd5e.roll.type` vocabulary.
- *
- * dnd5e 6.0 replaced that flag with chat-message sub-types and its migration deletes it outright
- * (`updateData["flags.dnd5e.roll"] = _del`). Measured on 6.0: a saving throw arrives as
- * `type: "save"` with `system.ability`, a skill check as `type: "check"` with `system.skill`, and
- * `flags.dnd5e` empty. Every midi comparison against the old strings therefore stopped matching —
- * silently, since they all read through optional chaining.
- *
- * Answering in the old vocabulary keeps those comparisons as they were, and reading the flag first
- * keeps messages written before the upgrade working. Accepts a document or raw create data, because
- * midi asks this question in both pre-create hooks and render paths.
+ * The roll type of a chat message, derived from dnd5e 6's message sub-type and system data, in the
+ * vocabulary midi's callers compare against ("save", "death", "skill", "tool", "ability", ...).
+ * Accepts a document or raw create data.
  */
 export function dnd5eRollType(source: any): string | undefined {
-  const legacy = foundry.utils.getProperty(source, "flags.dnd5e.roll.type");
-  if (typeof legacy === "string" && legacy) return legacy;
   switch (source?.type) {
     // 6.0 files death saves under "save" and distinguishes them by system.type; the old vocabulary
     // gave them their own string, and midi's callers rely on telling them apart.
@@ -4388,10 +4370,9 @@ export function dnd5eRollType(source: any): string | undefined {
   }
 }
 
-/** The item a roll message came from, across both layouts. */
+/** The item a roll message came from. */
 export function dnd5eRollItemId(source: any): string | undefined {
-  const id = foundry.utils.getProperty(source, "flags.dnd5e.roll.itemId")
-    ?? foundry.utils.getProperty(source, "system.item.id");
+  const id = foundry.utils.getProperty(source, "system.item.id");
   return typeof id === "string" ? id : undefined;
 }
 
@@ -7571,6 +7552,77 @@ export function midiRenderFormulaRoll(roll: Roll, options?: any) {
   return midiRenderTemplateRoll(roll, "modules/midi-qol/templates/roll.html", options);
 }
 
+/**
+ * Render a damage section's rolls as one block rather than one block per roll.
+ *
+ * dnd5e aggregates damage for display (`CONFIG.DND5E.aggregateDamageDisplay`) and midi follows that
+ * flag rather than adding its own: `aggregateDamageRolls` merges the rolls by damage type, and each
+ * merged roll's `aggregateTerms()` supplies the breakdown `_simplifyDamageRoll` used to - that method
+ * was removed in 6.0. The result is one formula, one total and one icon per damage type, which is
+ * what the card showed before the rolls were stored individually.
+ */
+export async function midiRenderAggregatedDamageRolls(rolls: Roll[], template: string, options: any = {}) {
+  if (!rolls?.length) return "";
+  const aggregate = GameSystemConfig.aggregateDamageDisplay ?? true;
+  const damageRolls = aggregate ? (game.system as Dnd5eSystem).dice.aggregateDamageRolls(rolls) : rolls;
+
+  const breakdowns = damageRolls.map((roll: any) => {
+    const part = roll.aggregateTerms();
+    const config = GameSystemConfig.damageTypes[part.type] ?? GameSystemConfig.healingTypes?.[part.type];
+    return { ...part, config, label: config?.labelShort ?? config?.label ?? "" };
+  });
+
+  // aggregateTerms clamps each part at zero, so the displayed total matches the damage tray.
+  const total = breakdowns.reduce((sum: number, p: any) => sum + (p.total ?? 0), 0);
+  // As DamageMessageData joins them: aggregated rolls carry their own leading operator, others do not.
+  const formula = damageRolls.map(r => aggregate ? r.formula : ` + ${r.formula}`).join("").replace(/^ \+ /, "");
+
+  // @ts-expect-error options.attributions
+  const rawAttributions: AttributionEntry[] = rolls[0]?.options?.attributions ?? [];
+  const attributions = rawAttributions.map(attr => ({
+    ...attr,
+    localizedType: i18n(attributionTypeLocalization[attr.type] ?? attr.type)
+  }));
+
+  const tooltipFormula = options.tooltipFormula
+    ?? ["formula", "formulaadv"].includes(configSettings.rollAlternate);
+  const tooltip = await foundry.applications.handlebars.renderTemplate(
+    "modules/midi-qol/templates/tooltip.html", {
+      // @ts-expect-error advTooltip
+      advTooltip: rolls[0]?.options?.advTooltip,
+      attributions,
+      tooltipFormula,
+      formula,
+      // One section per damage type, in the shape tooltip.html already renders.
+      parts: breakdowns.map((b: any) => ({ rolls: b.dice, flavor: b.label, total: b.total,
+        constant: b.constant ? { sign: b.constant < 0 ? "-" : "+", value: Math.abs(b.constant) } : null }))
+    });
+
+  return foundry.applications.handlebars.renderTemplate(template, {
+    formula,
+    total,
+    tooltip,
+    tooltipFormula,
+    user: game.user?.id,
+    flavor: options.flavor,
+    damageTypes: breakdowns
+      .filter((b: any) => b.config?.icon)
+      .map((b: any) => ({ icon: b.config.icon, label: b.config.label ?? b.label }))
+  });
+}
+
+export function midiRenderDamageRolls(rolls: Roll[], options?: any) {
+  return midiRenderAggregatedDamageRolls(rolls, "modules/midi-qol/templates/damage-roll.html", options ?? {});
+}
+
+export function midiRenderOtherDamageRolls(rolls: Roll[], options?: any) {
+  return midiRenderAggregatedDamageRolls(rolls, "modules/midi-qol/templates/other-damage-roll.html", options ?? {});
+}
+
+export function midiRenderBonusDamageRolls(rolls: Roll[], options?: any) {
+  return midiRenderAggregatedDamageRolls(rolls, "modules/midi-qol/templates/bonus-damage-roll.html", options ?? {});
+}
+
 export async function midiRenderTemplateRoll(roll: Roll | undefined, template: string, options?: any) {
   if (!roll) return "";
   const advantageMode = roll.options?.advantageMode;
@@ -7612,7 +7664,9 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
     advantageMode: advantageModeStr,
     attributionTooltip,
     damageTypeIcon: damageConfig?.icon,
-    damageTypeLabel: damageConfig?.label
+    damageTypeLabel: damageConfig?.label,
+    // Same shape the aggregated renderer emits, so one template serves both paths.
+    damageTypes: damageConfig?.icon ? [{ icon: damageConfig.icon, label: damageConfig.label }] : []
   };
   return foundry.applications.handlebars.renderTemplate(template, chatData);
 }
@@ -9216,8 +9270,8 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
   }
   let targets = workflow.effectTargets;
   let origin = effects[0].uuid; // item?.uuid;
-  if (workflow?.chatCard.getFlag("dnd5e", "use.concentrationId")) {
-    origin = workflow.actor.effects.get(workflow.chatCard.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid ?? item?.uuid;
+  if (workflow?.concentrationId) {
+    origin = workflow.actor.effects.get(workflow.concentrationId)?.uuid ?? item?.uuid;
   }
   if (!targets || targets.size === 0) return;
 
@@ -10180,9 +10234,9 @@ const b = "The 🐶 sits   on a mat!";
 console.log(diffStringsFull(a, b, { ignoreWhitespace: true, ignoreNewlines: true }));
 --------------------------------------------------- */
 
-export function getTargetDescriptor(uuid: string, targetDescriptors: Array<DND5ETargetDescriptor> | undefined): DND5ETargetDescriptor | undefined {
+export function getTargetDescriptor<T extends DND5ETargetDescriptor>(uuid: string, targetDescriptors: Array<T> | undefined): T | undefined {
   if (!uuid || !targetDescriptors) return undefined;
-  return targetDescriptors?.find(td => td.uuid === uuid);
+  return targetDescriptors?.find(td => td.actor === uuid);
 }
 
 export const throttledScrollBottom = foundry.utils.throttle(() => {

@@ -30,6 +30,9 @@
           {{#each rolls}}
           <li class="roll {{ classes }}">{{{ result }}}</li>
           {{/each}}
+          {{#if constant}}
+          <li class="constant"><span class="sign">{{ constant.sign }}</span>{{ constant.value }}</li>
+          {{/if}}
         </ol>
         <div class="total">
           <span class="label">{{ flavor }}</span>

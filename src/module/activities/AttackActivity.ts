@@ -503,7 +503,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         // Capture target descriptors last, after all other modules have had a chance to modify AC (e.g. cover)
         //@ts-expect-error dnd5e hook not in fvtt-types
         hookIds["dnd5e.postRollConfiguration"] = Hooks.once("dnd5e.postRollConfiguration", (rolls, config, dialog, message) => {
-          const targetDescriptors = foundry.utils.getProperty(message, "data.flags.dnd5e.targets") as DND5ETargetDescriptor[] | undefined;
+          const targetDescriptors = foundry.utils.getProperty(message, "data.system.targets") as DND5ETargetDescriptor[] | undefined;
           if (targetDescriptors && workflow) {
             // Don't mutate td.ac — it's a shared reference with the chat message data.
             // null AC (coverTotal) is handled downstream in checkHits() as auto-miss.
@@ -626,18 +626,9 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           if (workflow.damageRollCount > 0) { // re-rolling damage counts as new damage
             const messageConfig = foundry.utils.mergeObject({
               create: true,
-              data: {
-                flags: {
-                  dnd5e: {
-                    // @ts-expect-error
-                    ...this.messageFlags,
-                    messageType: "usage",
-                    use: {
-                      effects: this.applicableEffects?.map(e => e.id)
-                    }
-                  }
-                }
-              },
+              // dnd5e 6 applicable effects are references carrying `relativeUUID`, not ActiveEffects (M3/M4).
+              // @ts-expect-error dnd5e 6 applicable effects are references carrying relativeUUID, not ActiveEffects (M3/M4)
+              data: { system: { effects: this.applicableEffects?.map(e => e.relativeUUID) } },
               hasConsumption: false
             }, { flags: workflow.chatCard.flags })
             // @ts-expect-error

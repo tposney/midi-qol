@@ -411,10 +411,6 @@
   }
 }
 
-.midi-bonus-damage-flavor {
-  text-align: center;
-}
-
 .dnd5e2 .midi-buttons button {
   background: var(--dnd5e-color-card);
   font-family: var(--dnd5e-font-roboto);
@@ -671,6 +667,19 @@
 
 .midi-qol-ac-value {
   font-weight: bold;
+}
+
+/* Damage type icons sit in their own out-of-flow slot beside the total.
+   dnd5e's `.icons` slot cannot be used: _applyMidiHighlightSettings clears it to rebuild the
+   crit/fumble markers. Positioned as dnd5e positions `.icons`, so the total stays centred and its
+   flanking gradient rules stay visible. */
+.dice-result .dice-total > .midi-damage-icons {
+  position: absolute;
+  inset: 0 auto 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0.6;
 }
 
 /* Damage type icon next to total */

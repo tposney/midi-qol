@@ -57,13 +57,12 @@ export function checkOverTimeSaves(message: ChatMessage.Implementation, data: Ch
   }
 
   try {
-    // The shape doOverTimeEffect expects, rebuilt from wherever the data now lives.
-    const legacy = (key: string) => foundry.utils.getProperty(data, `flags.dnd5e.roll.${key}`);
+    // The shape doOverTimeEffect expects.
     const rollFlags: Record<string, unknown> = {
       type: dnd5eRollType(message),
-      ability: foundry.utils.getProperty(message, "system.ability") ?? legacy("ability"),
-      skillId: foundry.utils.getProperty(message, "system.skill") ?? legacy("skillId"),
-      toolId: foundry.utils.getProperty(message, "system.tool") ?? legacy("toolId")
+      ability: foundry.utils.getProperty(message, "system.ability"),
+      skillId: foundry.utils.getProperty(message, "system.skill"),
+      toolId: foundry.utils.getProperty(message, "system.tool")
     };
     let func = async (actor: Actor, _rollFlags: any, roll: Roll) => {
       // @ts-expect-error fvtt-types v14 ActiveEffect

@@ -8,7 +8,7 @@ import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { Workflow } from "./Workflow.js";
 import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
 import { installedModules } from "./setupModules.js";
-import { preActivityConsumptionHook, activityConsumptionHook, midiTemplateFlags, selectTargetsFromTemplates } from "./activities/activityHelpers.js";
+import { preActivityConsumptionHook, activityConsumptionHook, midiTemplateFlags, selectTargetsFromTemplates, isTemplateRegion } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
 import { MidiDependentsRegistry } from "./lib/MidiDependentsRegistry.js";
@@ -74,9 +74,8 @@ export let readyHooks = async () => {
   });
 
   // v14: deleteMeasuredTemplate hook does NOT fire — only deleteRegion fires.
-  // Filter for template-backed regions (flags.core.MeasuredTemplate) and delegate to checkDeleteTemplate.
   Hooks.on("deleteRegion", async (regionDoc, options, userId) => {
-    if (!foundry.utils.getProperty(regionDoc, "flags.core.MeasuredTemplate")) return;
+    if (!isTemplateRegion(regionDoc)) return;
     await checkDeleteTemplate(regionDoc, options, userId);
   });
 
@@ -99,7 +98,7 @@ export let readyHooks = async () => {
     if (!flags?.refreshShapes && !flags?.refreshGeometry) return;
     if (!canvas?.tokens || !canvas.scene) return;
     const doc = region?.document;
-    if (!doc || !foundry.utils.getProperty(doc, "flags.core.MeasuredTemplate")) return;
+    if (!doc || !isTemplateRegion(doc)) return;
     if (doc.id && canvas.scene.regions.has(doc.id)) return;
     if (configSettings.autoTarget === "none") return;
     selectTargetsFromTemplates([doc]);
@@ -333,7 +332,7 @@ export let readyHooks = async () => {
   Hooks.on("deleteRegion", (deletedRegion: any, options: any, user) => {
     if (!preferredActiveGM()?.isSelf) return;
     if (options.undo) return;
-    if (foundry.utils.getProperty(deletedRegion, "flags.core.MeasuredTemplate")) return;
+    if (isTemplateRegion(deletedRegion)) return;
     MidiDependentsRegistry.deleteDependents(deletedRegion.uuid);
   });
 
@@ -1943,6 +1942,7 @@ Hooks.on("dnd5e.preCreateMeasuredTemplate", (activity, placementConfig: Record<s
   const flags = midiTemplateFlags(activity);
   if (flags.maxRange !== undefined) placementConfig.midiMaxRange = flags.maxRange;
 
+  if (!configSettings.constrainTemplatePlacement) return true;
   // Cones and rays with no meaningful range originate from the caster's own border.
   const shapeType = GameSystemConfig.areaTargetTypes?.[activity.target?.template?.type]?.template;
   if (shapeType === "cone" || shapeType === "ray") {
@@ -1964,7 +1964,7 @@ Hooks.on("dnd5e.createMeasuredTemplate", (activity, regionData: Record<string, a
 });
 
 Hooks.on("preCreateRegion", (regionDoc, regionData, options, userId) => {
-  if (!foundry.utils.getProperty(regionData, "flags.core.MeasuredTemplate")) return true;
+  if (!isTemplateRegion(regionData)) return true;
   if (userId !== game.user?.id) return true;
 
   const midiFlags = regionDoc.flags?.[MODULE_ID] as { maxRange?: number, sourceTokenUuid?: string } | undefined;

@@ -25,16 +25,22 @@ import { error } from "../../midi-qol.js";
 import { Activity, ChatMessageRenderOptions, Dnd5eChatMessage } from "../../globals.js";
 import { configSettings } from "../settings.js";
 import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll,
-  midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderBonusDamageRoll, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML } from "../utils.js";
+  midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML } from "../utils.js";
 import { MODULE_ID } from "../../midi-qol.js";
 
-/** The renderer each roll-backed section uses, keyed by the roll type it is built from. */
-const SECTION_ROLL_RENDERERS: Record<string, (roll: Roll) => Promise<string> | string> = {
-  attack: midiRenderAttackRoll,
-  defaultDamage: midiRenderDamageRoll,
-  otherDamage: midiRenderOtherDamageRoll,
-  bonusDamage: midiRenderBonusDamageRoll,
-  utility: midiRenderFormulaRoll
+/**
+ * The renderer each roll-backed section uses, keyed by the roll type it is built from.
+ *
+ * Every renderer takes the section's whole roll list. The damage ones aggregate it into a single
+ * block - one formula, one total, an icon per damage type - which is how the card read before the
+ * rolls were stored separately. Attack and utility sections carry one roll, so they render it.
+ */
+const SECTION_ROLL_RENDERERS: Record<string, (rolls: Roll[]) => Promise<string> | string> = {
+  attack: rolls => midiRenderAttackRoll(rolls[0]),
+  defaultDamage: midiRenderDamageRolls,
+  otherDamage: midiRenderOtherDamageRolls,
+  bonusDamage: midiRenderBonusDamageRolls,
+  utility: rolls => midiRenderFormulaRoll(rolls[0])
 };
 
 /** Roll types midi tags damage rolls with; the presence of one means damage has been rolled. */
@@ -77,7 +83,8 @@ export function midiButtonVisibility(message: Dnd5eChatMessage | undefined, acti
    * `progress.confirmed` is set by callers that merely wanted the confirm buttons gone, including
    * when confirmation is switched off entirely, so it must not by itself imply the card is finished.
    */
-  const confirmEnabled = configSettings.confirmAttackDamage !== "none";
+  // Recorded on the card: the setting at the time of use, and whether the activity had anything to confirm.
+  const confirmEnabled = !!midi.confirmAttackDamage;
   const confirmPending = confirmEnabled && !progress.confirmed;
   const done = !!progress.allRemoved;
   const removeAll = done || getRemoveAllButtons(activity);
@@ -196,6 +203,7 @@ export function setupUsageCardMessage() {
         Object.assign(targets.element.fields, {
           uncannyDodge: new BooleanField({ required: false }),
           uncannyDodgeIcon: new StringField({ required: false, blank: true }),
+          flankingBonus: new NumberField({ required: false }),
           saved: new BooleanField({ required: false }),
           superSaver: new BooleanField({ required: false }),
           semiSuperSaver: new BooleanField({ required: false }),
@@ -217,6 +225,8 @@ export function setupUsageCardMessage() {
           hideItemDetails: new BooleanField({ initial: false }),
           displayProperties: new BooleanField({ initial: true }),
           dmgBtnText: new StringField({ required: false, blank: true }),
+          // Set while the workflow waits for a manual attack roll: the advantage state it will use.
+          attackBtnText: new StringField({ required: false, blank: true }),
 
           /*
            * How many times each roll has been made, shown as a `[n]` prefix on the buttons once past
@@ -292,6 +302,21 @@ export function setupUsageCardMessage() {
     }, { inplace: false }));
 
     /**
+     * dnd5e never consults `shouldHideChatButton` for buttons visible to everyone, so midi's own
+     * removal — all buttons removed, or saves resolved — is applied to those here.
+     */
+    _prepareButtons() {
+      const buttons = super._prepareButtons() as { action: string, visibility: string, hidden: boolean }[];
+      const parent = this.parent as Dnd5eChatMessage;
+      const visible = midiButtonVisibility(parent, parent.getAssociatedActivity?.());
+      return buttons.map(button => {
+        if (button.hidden || button.visibility !== "all") return button;
+        const spent = visible.allRemoved || (visible.savesResolved && ["rollSave", "rollCheck"].includes(button.action));
+        return spent ? { ...button, hidden: true } : button;
+      });
+    }
+
+    /**
      * Everything the card face needs is already supplied by the parent model — item, activity,
      * description, subtitle, buttons, effects, summaries. midi adds only its own keys.
      *
@@ -318,11 +343,10 @@ export function setupUsageCardMessage() {
       if (this.midi?.hideItemDetails) delete context.description;
       if (this.midi && this.midi.displayProperties === false) {
         if (context.rows) delete context.rows.properties;
-        // The materials line is a supplement, not a row, but belongs to the same setting.
-        const materials = game.i18n?.localize("DND5E.Materials");
-        if (context.supplements && materials) {
-          context.supplements = context.supplements.filter((sup: any) =>
-            !String(sup?.label ?? sup).includes(materials));
+        // The materials line is a supplement, not a row, but belongs to the same setting. dnd5e labels
+        // it with the unlocalised key.
+        if (context.supplements) {
+          context.supplements = context.supplements.filter((sup: any) => sup?.label !== "DND5E.Materials");
         }
       }
 
@@ -334,7 +358,7 @@ export function setupUsageCardMessage() {
         // The confirm button counts the damage roll about to be made, not the last one. Derived here
         // rather than in the template because core registers no arithmetic Handlebars helper.
         nextDamageRollCount: (this.midi?.damageRollCount ?? 0) + 1,
-        showDamageApplication: this.#shouldShowDamageApplication()
+        damageApplicationTypes: this.#damageApplicationTypes()
       };
       return context;
     }
@@ -359,7 +383,8 @@ export function setupUsageCardMessage() {
         value: () => ({
           metadata: {},
           target: { affects: {}, template: {} },
-          shouldHideChatButton: () => false
+          // No activity to act on, so none of the stored buttons would do anything.
+          shouldHideChatButton: () => true
         }),
         configurable: true, writable: true
       });
@@ -424,29 +449,26 @@ export function setupUsageCardMessage() {
           foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === section.rollType);
         // No rolls to render from — a card mid-workflow, or one whose rolls were pruned.
         if (!renderer || !rolls.length) { out[name] = { ...section, html: section.html ?? "" }; continue; }
-        const parts: string[] = [];
-        for (const roll of rolls) parts.push(await renderer(roll));
+        const html = await renderer(rolls as Roll[]);
         // The attribution icon sits on the label, where the splice used to put it.
         const label = `${section.label ?? ""}${await renderRollAttributionIcon(rolls[0])}`;
-        out[name] = { ...section, label, html: parts.join("") };
+        out[name] = { ...section, label, html };
       }
       return out;
     }
 
-    /** Mirrors the conditions the old append path used, so the tray appears exactly where it did. */
-    #shouldShowDamageApplication(): boolean {
-      const { configSettings } = globalThis.MidiQOL ?? {};
-      const settings = typeof configSettings === "function" ? configSettings() : configSettings;
-      if (!settings) return false;
-      const byRole = settings.addChatDamageButtons === "both"
-        || (settings.addChatDamageButtons === "gm" && game.user?.isGM)
-        || (settings.addChatDamageButtons === "pc" && !game.user?.isGM);
-      const gmWithoutAutoApply = !!game.user?.isGM && settings.autoApplyDamage === "none";
-      if (!byRole && !gmWithoutAutoApply) return false;
-      // Nothing to apply if the message carries no damage rolls midi recognises.
-      return (this.parent.rolls ?? []).some(r =>
-        ["defaultDamage", "otherDamage", "bonusDamage"]
-          .includes(String(foundry.utils.getProperty(r, "options.midi-qol.rollType"))));
+    /**
+     * The damage roll types to give a tray of their own: each applies its own save multiplier.
+     * Empty when this viewer is not offered trays.
+     */
+    #damageApplicationTypes(): string[] {
+      const byRole = configSettings.addChatDamageButtons === "both"
+        || (configSettings.addChatDamageButtons === "gm" && game.user?.isGM)
+        || (configSettings.addChatDamageButtons === "pc" && !game.user?.isGM);
+      const gmWithoutAutoApply = !!game.user?.isGM && configSettings.autoApplyDamage === "none";
+      if (!byRole && !gmWithoutAutoApply) return [];
+      const present = new Set((this.parent.rolls ?? []).map(r => foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`)));
+      return DAMAGE_ROLL_TYPES.filter(type => present.has(type));
     }
   };
 

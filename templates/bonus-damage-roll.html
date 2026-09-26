@@ -3,12 +3,14 @@
   <div class="dice-flavor">{{flavor}}</div>
   {{/if}}
   <div class="dice-result">
-    <h4 class="dice-total">{{total}}{{#if damageTypeIcon}}<dnd5e-icon class="midi-damage-type-icon" src="{{damageTypeIcon}}" aria-label="{{damageTypeLabel}}" data-tooltip="{{damageTypeLabel}}"></dnd5e-icon>{{/if}}</h4>
+    <h4 class="dice-total">{{total}}{{#if damageTypes.length}}<div class="midi-damage-icons">{{#each damageTypes}}<dnd5e-icon class="midi-damage-type-icon" src="{{icon}}" aria-label="{{label}}" data-tooltip="{{label}}"></dnd5e-icon>{{/each}}</div>{{/if}}</h4>
+    {{#unless tooltipFormula}}
     <div class="midi-dice-tooltip">
       <section class="tooltip-part">
         <div class="dice-formula">{{formula}}</div>
       </section>
     </div>
+    {{/unless}}
     {{{tooltip}}}
   </div>
 </div>

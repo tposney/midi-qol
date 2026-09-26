@@ -1,7 +1,7 @@
 import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats } from "../midi-qol.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions, shouldDisplaySaveDC, isDnd5e53 } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions, shouldDisplaySaveDC } from "./settings.js";
 import {
   createDamageDetail,
   processDamageRoll,
@@ -107,6 +107,7 @@ import {
   getConsumptionData,
   toMessageMode,
   toLegacyRollMode,
+  isDnd5eRollMessage,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, computeAbilityAdvantage, buildPreComputedAdvantageMap } from "./patching.js";
@@ -115,8 +116,8 @@ import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { SAVE_TEMPLATE_FIELDS, type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
-import { activityHasScaledTargetCount, computeTargetsFromTemplates, createActivityTemplateRegions, postTemplateConfirmTargets } from "./activities/activityHelpers.js";
-import { Activity, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
+import { activityHasScaledTargetCount, computeTargetsFromTemplates, createActivityTemplateRegions, postTemplateConfirmTargets, setDamageRollMinTerms } from "./activities/activityHelpers.js";
+import { Activity, Dnd5eChatMessage, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
 import { MidiTransformActivity } from "./activities/TransformActivity.js";
@@ -177,7 +178,6 @@ export enum WorkflowDataFlags {
   /** Structured save attribution - keyed by target UUID */
   saveAttribution = "saveAttribution",
   saveDisplayData = "saveDisplayData",
-  targetDescriptors = "flags.dnd5e.targets",
   otherActivityConsumed = "use.consumed",
   otherActivityScaling = "use.otherScaling",
 }
@@ -502,19 +502,8 @@ export class Workflow {
   get activity(): Activity {
     if (this.#activity) return this.#activity;
 
-    // Use dnd5e's chat card methods — handles both regular and synthetic items
     if (this.chatCard) {
-      // @ts-expect-error no dnd5e-types
-      this.#activity = this.chatCard.getAssociatedActivity() as Activity;
-      // Apply scaling (stored on message, not on item) — same as dnd5e's _fetchActivity()
-      if (this.#activity) {
-        const scaling = this.chatCard.getFlag("dnd5e", "scaling");
-        if (scaling) {
-          const item = this.#activity.item.clone({ flags: { dnd5e: { scaling } } }, { keepId: true });
-          // @ts-expect-error no dnd5e-types
-          this.#activity = item.system.activities.get(this.#activity.id);
-        }
-      }
+      this.#activity = (this.chatCard as Dnd5eChatMessage).getAssociatedActivity?.({ scaled: true });
     }
 
     // Fallback: UUID from store (for workflows without a chat card)
@@ -541,11 +530,9 @@ export class Workflow {
   get item(): Item.Implementation {
     if (this.#item) return this.#item;
     if (this.itemCardUuid && saveToChatCard) {
-      const itemUuid = this.chatCard?.getFlag("dnd5e", "item")?.uuid;
-      this.#item = fromUuidSync(itemUuid) as Item.Implementation;
+      this.#item = (this.chatCard as Dnd5eChatMessage | undefined)?.getAssociatedItem?.();
       if (!this.#item) {
-        // foundry.utils.getProperty(this.chatCard, "flags." + chatCardFlags.item)?.itemData - can use this get the item back?
-        const message = `get item() | Could not find item for workflow ${this.id} with itemUuid ${itemUuid}`;
+        const message = `get item() | Could not find item for workflow ${this.id}`;
         TroubleShooter.recordError(new Error(message));
         error(message);
       }
@@ -554,10 +541,8 @@ export class Workflow {
   }
   set item(item: Item.Implementation) {
     this.#item = item;
-    if (this.itemCardUuid && saveToChatCard) {
-      addUpdatesCacheFlags(this.id, { ["dnd5e.item.uuid"]: item?.uuid });
-    }
   }
+
 
   // This value is not stored in flags
   #speaker: ChatMessage.SpeakerData | undefined = undefined;
@@ -886,20 +871,13 @@ export class Workflow {
     }
   }
 
-  get dnd5eFlags(): any | undefined {
-    return foundry.utils.getProperty(this.chatCard, "flags.dnd5e") as AnyObject | undefined;
-  }
-  set dnd5eFlags(dnd5eFlags: any | undefined) {
-    if (this.chatCard)
-      addUpdatesCache(this.id, { "flags.dnd5e": dnd5eFlags });
-  }
-
-  get targetDescriptors(): Array<DND5ETargetDescriptor> | undefined {
-    return foundry.utils.getProperty(this.chatCard, WorkflowDataFlags.targetDescriptors) as Array<DND5ETargetDescriptor>;
+  get targetDescriptors(): Array<CombinedTargetDescriptor> | undefined {
+    // @ts-expect-error no dnd5e-types
+    return this.chatCard?.system.targets;
   }
   set targetDescriptors(targetDescriptors: Array<DND5ETargetDescriptor>) {
     if (this.chatCard)
-      addUpdatesCache(this.id, { [WorkflowDataFlags.targetDescriptors]: targetDescriptors });
+      addUpdatesCache(this.id, { "system.targets": targetDescriptors });
   }
   noAutoAttack: boolean | undefined; // override attack roll for standard care
 
@@ -1289,12 +1267,17 @@ export class Workflow {
     return this.rollOptions?.rollToggle ? !normalRoll : normalRoll;
   }
 
+  /** The id of the concentration effect this use began, from the usage card. */
+  get concentrationId(): string | undefined {
+    // @ts-expect-error no dnd5e-types
+    return this.chatCard?.system.concentration;
+  }
+
   get spellLevel(): number {
     let spellLevel;
     if (this.chatCard) {
-      spellLevel = isDnd5e53
-        ? foundry.utils.getProperty(this.chatCard, "system.spellLevel")
-        : foundry.utils.getProperty(this.chatCard, "flags.dnd5e.use.spellLevel");
+      // @ts-expect-error no dnd5e-types
+      spellLevel = this.chatCard.system.level;
     }
     return spellLevel ?? this.castData?.castLevel ?? 0;
   }
@@ -2063,7 +2046,6 @@ export class Workflow {
   }
 
   async WorkflowState_PreambleComplete(context: WorkflowContext = {}): Promise<WorkflowState> {
-    await this.beginDeferredConcentration();
     if (configSettings.undoWorkflow) await saveTargetsUndoData(this);
     this.effectsAlreadyExpired = [];
 
@@ -2071,6 +2053,7 @@ export class Workflow {
       ui.notifications?.warn(`midi-qol | Targeting complete hook cancelled roll`);
       return this.WorkflowState_Abort;
     }
+    await this.beginDeferredConcentration();
     if ((!getAutoRollAttack(this) && this.activity.attack) || this.activity instanceof MidiTransformActivity) {
       // Not auto rolling so display targets
       const rollMode = safeGetGameSetting("core", "messageMode") as string;
@@ -2111,6 +2094,11 @@ export class Workflow {
         const message = `WaitForAttackRoll | no chat message`;
         error(message);
         TroubleShooter.recordError(new Error(message), message);
+      } else if (!isFastRoll) {
+        const hasAdvantage = this.advantage && !this.disadvantage;
+        const hasDisadvantage = this.disadvantage && !this.advantage;
+        const attackBtnText = i18n(hasAdvantage ? "DND5E.Advantage" : hasDisadvantage ? "DND5E.Disadvantage" : "DND5E.Attack");
+        await this.performThrottledUpdate(chatMessage, { "system.midi.attackBtnText": attackBtnText } as ChatMessage.UpdateData);
       }
     }
 
@@ -2225,16 +2213,17 @@ export class Workflow {
 
     if (this.shouldRollDamage) {
       if (debugEnabled > 0) warn("waitForDamageRoll | rolling damage ", this.rollOptions.event, configSettings.autoRollAttack, configSettings.autoFastForward)
-      const storedData = this.chatCard?.getFlag("dnd5e", "item")?.data;
-      if (storedData) { // If magic items is being used it fiddles the roll to include the item data
-        this.item = new CONFIG.Item.documentClass(storedData, { parent: this.actor })
-      }
-
       this.rollOptions.isCritical = this.isCritical;
       this.rollOptions.fastForwardDamage = isAutoFastForward("damage", { workflow: this });
       this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, { create: false });
       return this.WorkflowState_Suspend;
-    } else {
+    }
+    const chatMessage = this.chatCard;
+    if (chatMessage) {
+      let dmgBtnText = (this.rollOptions.isCritical || this.isCritical) ? i18n("DND5E.Critical")
+        : i18n(this.activity.actionType === "heal" ? "DND5E.HEAL.HealingButton" : "DND5E.Damage");
+      if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
+      await this.performThrottledUpdate(chatMessage, { "system.midi.dmgBtnText": dmgBtnText } as ChatMessage.UpdateData);
     }
     return this.WorkflowState_Suspend; // wait for a damage roll to advance the state.
   }
@@ -2715,7 +2704,7 @@ export class Workflow {
         }
       }
     };
-    let origin = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid
+    let origin = this.actor.effects.get(this.concentrationId ?? "")?.uuid
       ?? getConcentrationEffect(this.actor, this.item)?.uuid;
     let damageComponents = {};
     let damageListItem;
@@ -2749,8 +2738,10 @@ export class Workflow {
         activity: this.activity?.getRollData?.()?.activity,
         flags: {
           dnd5e: {
-            scaling: this.chatCard?.getFlag("dnd5e", "scaling"),
-            spellLevel: this.chatCard?.getFlag("dnd5e", "use.spellLevel")
+            // @ts-expect-error no dnd5e-types
+            scaling: this.chatCard?.system.scaling,
+            // @ts-expect-error no dnd5e-types
+            spellLevel: this.chatCard?.system.level
           }
         },
         utilityRollTotal: this.utilityRoll?.total,
@@ -2814,7 +2805,7 @@ export class Workflow {
                 effectData.duration = { value: Math.ceil((effectData.duration.value ?? 0) / CONFIG.time.roundTime), units: "rounds" };
               }
               effectData.origin = origin ?? this.activity.uuid ?? this.activity.item.uuid;
-              const concentrationUuid = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid;
+              const concentrationUuid = this.actor.effects.get(this.concentrationId ?? "")?.uuid;
               if (concentrationUuid) {
                 foundry.utils.setProperty(effectData, "flags.dnd5e.dependentOn", concentrationUuid);
               }
@@ -2894,7 +2885,7 @@ export class Workflow {
           }
           const effectData: ActiveEffect.CreateData = foundry.utils.mergeObject(ceEffect!.toObject(), metaData);
           effectData.origin = origin;
-          const concentrationUuid = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid;
+          const concentrationUuid = this.actor.effects.get(this.concentrationId ?? "")?.uuid;
           if (concentrationUuid) {
             foundry.utils.setProperty(effectData, "flags.dnd5e.dependentOn", concentrationUuid);
           }
@@ -3076,19 +3067,17 @@ export class Workflow {
   }
 
   /**
-   * Start the concentration that MidiActivityMixin deferred, now the checks have passed.
-   *
-   * Mirrors what Activity#use does: begin, record the effect id on the card (midi and dnd5e both
-   * read system.concentration from there), then end the previous concentration if the actor was
-   * at its limit - in that order, so a cast that never happens costs the caster nothing.
+   * Begin the concentration MidiActivityMixin deferred, once the use can no longer be cancelled.
+   * Same order as Activity#use: begin, record it on the card, then end the one it replaces.
    */
   async beginDeferredConcentration(): Promise<void> {
     const deferred = this.deferredConcentration;
     if (!deferred) return;
     this.deferredConcentration = undefined;
+    let effect: ActiveEffect.Implementation | undefined;
     try {
       // @ts-expect-error no dnd5e-types
-      const effect = await this.actor.beginConcentrating(this.activity, { "flags.dnd5e.scaling": deferred.scaling });
+      effect = await this.actor.beginConcentrating(this.activity, { "flags.dnd5e.scaling": deferred.scaling });
       if (!effect) return;
       // @ts-expect-error no dnd5e-types
       if (this.chatCard) await this.chatCard.update({ "system.concentration": effect.id });
@@ -3105,6 +3094,14 @@ export class Workflow {
       const message = `${this.workflowName} could not begin deferred concentration`;
       error(message, err);
       TroubleShooter.recordError(err, message);
+    } finally {
+      // Templates held back for the concentration link get the non-concentration cleanup instead.
+      if (!effect) {
+        for (const templateUuid of this.templateUuids) {
+          const templateDocument = await fromUuid(templateUuid) as MeasuredTemplateDocument | undefined;
+          if (templateDocument) await this.setupTemplateCleanup(templateDocument);
+        }
+      }
     }
   }
 
@@ -4017,6 +4014,7 @@ export class Workflow {
     // wrapper and a future macro author may return undefined rolls directly.
     const validRolls = rolls.filter((r): r is Roll => r instanceof Roll);
     if (!validRolls.length) return;
+    setDamageRollMinTerms(validRolls);
     await this.setBonusDamageRolls(validRolls);
     if (this.workflowOptions?.damageRollDSN !== false) {
       await displayDSNForRoll(this.bonusDamageRolls!, "damageRoll");
@@ -4895,7 +4893,7 @@ export class Workflow {
         const section = { label: "", template: "modules/midi-qol/templates/saves.html",
           data: this.#saveSectionData(templateData) };
         const update = {
-          /* rolls: this.chatRolls */
+          rolls: this.chatRolls,
           flags: {
             "midi-qol": {
               type: MESSAGE_TYPES.SAVES,
@@ -4939,13 +4937,12 @@ export class Workflow {
     const descriptors = TargetsField.getDescriptors(tokens) as Record<string, unknown>[];
     const midiByToken = new Map(this.buildMidiTargetDescriptors(
       tokens.map(t => getTokenDocument(t)).filter(Boolean) as TokenDocument.Implementation[])
-      .map(d => [(d as { tokenUuid?: string }).tokenUuid ?? d.uuid, d]));
+      .map(d => [d.token, d]));
     for (const descriptor of descriptors) {
-      const detail = midiByToken.get(descriptor.token as string) ?? midiByToken.get(descriptor.actor as string);
+      const detail = midiByToken.get(descriptor.token as string);
       if (!detail) continue;
-      const { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon } =
-        detail as Record<string, unknown>;
-      Object.assign(descriptor, { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon });
+      const { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon, flankingBonus } = detail;
+      Object.assign(descriptor, { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon, flankingBonus });
     }
     return { "system.targets": descriptors };
   }
@@ -4974,14 +4971,16 @@ export class Workflow {
         defaultDamage: getSaveMultiplierForActivity(this.activity),
         bonusDamage: getSaveMultiplierForActivity(this.activity)
       };
-      const targetDescriptor = getTargetDescriptor(t.actor?.uuid ?? "", existing) ?? {};
-      return foundry.utils.mergeObject({
+      // The card's entry keeps what was recorded at roll time; midi's own detail is always recomputed.
+      const recorded = getTargetDescriptor(t.actor?.uuid ?? "", existing);
+      return {
         name: t.name,
         img: t.actor?.img as string,
-        uuid: t.actor?.uuid ?? "",
-        tokenUuid: t.uuid,
+        actor: t.actor?.uuid ?? "",
+        token: t.uuid,
         //@ts-expect-error no dnd5e-types
-        ac: hasCoverTotal(t.actor) ? null : t?.actor?.system.attributes.ac.value as number,
+        ac: recorded ? recorded.ac : (hasCoverTotal(t.actor) ? null : t?.actor?.system.attributes.ac.value as number),
+        flankingBonus: recorded?.flankingBonus,
         saved: saves?.has(t.uuid),
         semiSuperSaver: semiSuperSavers?.has(t.uuid),
         superSaver: superSavers?.has(t.uuid),
@@ -4989,7 +4988,7 @@ export class Workflow {
         itemType: this.item?.type,
         uncannyDodge,
         uncannyDodgeIcon
-      }, targetDescriptor) as CombinedTargetDescriptor;
+      } as CombinedTargetDescriptor;
     });
   }
 
@@ -6729,7 +6728,7 @@ export class Workflow {
     if (!this.saveRequests) return {};
     const ddbglFlags = message.flags && message.flags["ddb-game-log"];
     const isDDBGL = ddbglFlags?.cls === "save" && !ddbglFlags?.pending;
-    const isRoll = message.flags?.dnd5e?.messageType === "roll";
+    const isRoll = isDnd5eRollMessage(message);
     let requestId = message?.speaker?.token;
     if (!requestId && isDDBGL) requestId = message?.speaker?.actor;
     if (debugEnabled > 0) warn("processSaveRoll |", requestId, this.saveRequests)
@@ -8281,16 +8280,9 @@ export class DamageOnlyWorkflow extends Workflow {
       const messageConfig = foundry.utils.mergeObject({
         create: true,
         data: {
-          flags: {
-            dnd5e: {
-              ...(this.activity.messageFlags as AnyObject),
-              messageType: "usage",
-              use: {
-                // @ts-expect-error TODO: is this right?
-                effects: this.applicableEffects?.map(e => e.id)
-              }
-            }
-          },
+          // dnd5e 6 applicable effects are references carrying `relativeUUID`, not ActiveEffects (M3/M4).
+          // @ts-expect-error dnd5e 6 applicable effects are references carrying relativeUUID, not ActiveEffects (M3/M4)
+          system: { effects: this.activity?.applicableEffects?.map(e => e.relativeUUID) },
           rolls: this.damageRolls,
         },
         hasConsumption: false

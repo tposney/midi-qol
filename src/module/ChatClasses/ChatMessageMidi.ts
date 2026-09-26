@@ -1,11 +1,14 @@
 import { GameSystemConfig, MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n, log } from "../../midi-qol.js";
+import { TroubleShooter } from "../apps/TroubleShooter.js";
+import { Dnd5eSystem } from "../../globals.js";
 import { configSettings, safeGetGameSetting, saveToChatCard } from "../settings.js";
 import { getToken, isDnd5eRollMessage } from "../utils.js";
-import { setDamageRollMinTerms } from "../activities/activityHelpers.js";
 
 // Damage is auto-applied by midi when autoApplyDamage is one of the "yes*" modes.
 const midiAutoAppliesDamage = () => !!configSettings.autoApplyDamage?.toLowerCase().includes("yes");
 
+// Each damage section's root element is its .dice-roll.
+const DAMAGE_ROLLS = ":is(.midi-damage-roll, .midi-other-damage-roll, .midi-bonus-damage-roll)";
 const removeAll = (html: HTMLElement, sel: string) => html.querySelectorAll(sel).forEach(el => el.remove());
 const hideAll = (html: HTMLElement, sel: string) => html.querySelectorAll<HTMLElement>(sel).forEach(el => el.style.display = "none");
 const stripHighlight = (html: HTMLElement, sel: string) => html.querySelectorAll<HTMLElement>(sel).forEach(
@@ -81,6 +84,24 @@ export function setupChatMessageMidi() {
 
 export function defineChatMessageMidiClass(baseClass: ChatMessage.ImplementationClass) {
   return class ChatMessageMidi extends baseClass /*globalThis.dnd5e.documents.ChatMessage5e*/ {
+
+    /**
+     * dnd5e's lookup, then a synthetic item rebuilt from the snapshot midi keeps on the card. Every
+     * dnd5e caller (card context, button actions, effects tray) and `getAssociatedActivity` go through
+     * this. midi does not use dnd5e's own snapshot slot, `system.deltas.deleted`: a refund recreates
+     * everything listed there on the actor.
+     */
+    getAssociatedItem(options: { scaled?: boolean } = {}): Item.Implementation | undefined {
+      // @ts-expect-error no dnd5e-types
+      const item = super.getAssociatedItem(options);
+      if (item) return item;
+      const data = this.getFlag(MODULE_ID, "itemData") as Item.CreateData | undefined;
+      // @ts-expect-error no dnd5e-types
+      const actor = this.getAssociatedActor();
+      if (!data || !actor) return undefined;
+      // @ts-expect-error no dnd5e-types
+      return new CONFIG.Item.documentClass(data, { parent: actor }).scaledClone(options.scaled ? this.system.scaling : null);
+    }
 
     prepareDerivedData() {
       super.prepareDerivedData();
@@ -214,8 +235,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       // @ts-expect-error no dnd5e-types
       if (type !== undefined || !this.flags?.[MODULE_ID]) return super.applyChatCardDamage(li, multiplier);
       const rollsToCheck = this.rolls.filter(r => MQDamageRollTypes.includes(foundry.utils.getProperty(r, "options.midi-qol.rollType") as string));
-      //@ts-expect-error no dnd5e-types
-      const damages = game.system.dice.aggregateDamageRolls(rollsToCheck, { respectProperties: true }).map(roll => ({
+      const damages = (game.system as Dnd5eSystem).dice.aggregateDamageRolls(rollsToCheck, { respectProperties: true }).map(roll => ({
         value: roll.total,
         type: roll.options.type,
         properties: new Set(roll.options.properties ?? [])
@@ -239,87 +259,6 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }));
     }
 
-    collectRolls(rollsToAccumulate: Roll[], multiRolls: boolean = false, options: { blind?: boolean }): any[] {
-      const returns: any[] = [];
-      setDamageRollMinTerms(rollsToAccumulate);
-      const formulaInToolTip = ["formula", "formulaadv"].includes(configSettings.rollAlternate);
-      const hideDetails = this.author?.isGM && !game.user?.isGM && ((configSettings.gmDamageDisplay ?? "full") !== "full");
-      const hideFormula = hideDetails || (options.blind && !game.user?.isGM);
-      const rollSets: Roll[][] = multiRolls ? rollsToAccumulate.map(r => [r]) : [rollsToAccumulate];
-      for (const rolls of rollSets) {
-        //@ts-expect-error
-        let { formula, total, breakdown } = game.system.dice.aggregateDamageRolls(rolls).reduce((obj: any, r) => {
-          obj.formula.push(r.formula);
-          obj.total += Math.max(0, r.total);
-          // @ts-expect-error no dnd5e-types
-          obj.breakdown.push(this._simplifyDamageRoll(r));
-          return obj;
-        }, { formula: [], total: 0, breakdown: [] });
-        formula = formula.join(" ");
-        formula = formula.replace(/^\s+\+\s+/, "");
-        formula = formula.replaceAll(/  /g, " ");
-        if (multiRolls) {
-          foundry.utils.setProperty(rolls[0], "flags.midi-qol.breakdown", breakdown);
-          foundry.utils.setProperty(rolls[0], "flags.midi-qol.total", total);
-        }
-        if (hideDetails && (configSettings.gmDamageDisplay ?? "full") === "hidden") {
-          total = "--";
-        }
-        if (options.blind && !game.user?.isGM) total = "--";
-        const roll = document.createElement("div");
-        roll.classList.add("dice-roll");
-        let tooltipContents = ""
-        if (!hideDetails) tooltipContents = breakdown.reduce((str, { type, total, constant, dice }) => {
-          const config = GameSystemConfig.damageTypes[type] ?? GameSystemConfig.healingTypes[type];
-          return `${str}
-              <section class="tooltip-part">
-                <div class="dice">
-                  <ol class="dice-rolls">
-                    ${dice.reduce((str, { result, classes }) => `
-                      ${str}<li class="roll ${classes}">${result}</li>
-                    `, "")}
-                    ${constant ? `
-                    <li class="constant"><span class="sign">${constant < 0 ? "-" : "+"}</span>${Math.abs(constant)}</li>
-                    ` : ""}
-                  </ol>
-                  <div class="total">
-                    ${config ? `<img src="${config.icon}" alt="${config.label}">` : ""}
-                    <span class="label">${config?.label ?? ""}</span>
-                    <span class="value">${total}</span>
-                  </div>
-                </div>
-              </section>
-            `;
-        }, "");
-
-        let diceFormula = "";
-        if (!hideFormula) diceFormula = `<div class="dice-formula">${formula}</div>`;
-        roll.innerHTML = `
-      <div class="dice-result">
-      ${formulaInToolTip ? "" : diceFormula}
-        <div class="dice-tooltip-collapser">
-          <div class="dice-tooltip">
-            ${formulaInToolTip ? diceFormula : ""}
-            ${tooltipContents}
-          </div>
-        </div>
-        <h4 class="dice-total">${total}${this._buildDamageTypeIcons(breakdown)}</h4>
-      </div>
-    `;
-        returns.push(roll);
-      }
-      return returns;
-    }
-
-    _buildDamageTypeIcons(breakdown: { type: string }[]): string {
-      const uniqueTypes = [...new Set(breakdown.map(b => b.type).filter(Boolean))];
-      return uniqueTypes.map(type => {
-        const config = GameSystemConfig.damageTypes[type] ?? GameSystemConfig.healingTypes?.[type];
-        if (!config?.icon) return "";
-        return `<dnd5e-icon class="midi-damage-type-icon" src="${config.icon}" aria-label="${config.label ?? ""}" data-tooltip="${config.label ?? ""}"></dnd5e-icon>`;
-      }).join("");
-    }
-
     // Removes the dnd5e effects tray from the rendered chat card when midi's
     // autoItemEffects suppresses the apply button. dnd5e v5.x emits an
     // <effect-application> custom element from usage-card.hbs which renders
@@ -328,59 +267,6 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     _maybeStripEffectsTray(html: HTMLElement) {
       if (["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects)) {
         html.querySelectorAll("effect-application").forEach(el => el.remove());
-      }
-    }
-
-    _enrichDamageTooltip(rolls: Roll[], html: HTMLElement) {
-      if (isDnd5eRollMessage(this) || !this.flags?.[MODULE_ID])
-        // @ts-expect-error no dnd5e-types
-        return super._enrichDamageTooltip(rolls, html);
-      for (let rollType of MQDamageRollTypes) {
-        const rollsToCheck = this.rolls.filter(r => foundry.utils.getProperty(r, "options.midi-qol.rollType") === rollType);
-        let rType = "damage";
-        if (rollType === "otherDamage") rType = "other-damage";
-        else if (rollType === "bonusDamage") rType = "bonus-damage";
-        if (rollsToCheck?.length) {
-          html.querySelectorAll(`.midi-${rType}-roll`)?.forEach(el => el.remove());
-          for (let roll of this.collectRolls(rollsToCheck, configSettings.mergeCardMultiDamage, { blind: this.blind })) {
-            roll.classList.add(`midi-${rType}-roll`);
-            if (rType === "bonus-damage") {
-              const flavor = document.createElement("div");
-              // @ts-expect-error no dnd5e-types
-              const flavors = rollsToCheck.map(r => r.options.flavor ?? r.options.type);
-              const bonusDamageFlavor = flavors.join(", ");
-              flavor.classList.add("midi-bonus-damage-flavor");
-              flavor.innerHTML = bonusDamageFlavor;
-              html.querySelector(`.midi-qol-${rType}-roll`)?.appendChild(flavor);
-            }
-            html.querySelector(`.midi-qol-${rType}-roll`)?.appendChild(roll);
-          }
-        }
-      }
-
-      let shouldAddButtons = (configSettings.addChatDamageButtons === "both")
-        || ((configSettings.addChatDamageButtons === "gm") && game.user?.isGM)
-        || ((configSettings.addChatDamageButtons === "pc") && !game.user?.isGM);
-      if (game.user?.isGM && configSettings.autoApplyDamage === "none") shouldAddButtons = true;
-      if (shouldAddButtons) {
-        for (let dType of MQDamageRollTypes) {
-          rolls = this.rolls.filter(r => foundry.utils.getProperty(r, "options.midi-qol.rollType") === dType);
-          if (!rolls.length) continue;
-          let damageApplication = document.createElement("midi-damage-application");
-          //@ts-expect-error
-          damageApplication.damageType = dType;
-          //@ts-expect-error
-          damageApplication.damages = game.system.dice.aggregateDamageRolls(rolls, { respectProperties: true }).map(roll => ({
-            value: Math.max(0, roll.total),
-            type: roll.options.type,
-            properties: new Set(roll.options.properties ?? [])
-          }));
-          // Set the initial open state directly so connectedCallback renders correctly.
-          // _collapseTrays (overridden below) keeps it in sync on re-render, bypassing the
-          // dnd5e _trayStates className/tagName collision.
-          damageApplication.toggleAttribute("open", !midiAutoAppliesDamage());
-          html.querySelector(".message-content")?.appendChild(damageApplication);
-        }
       }
     }
 
@@ -449,9 +335,18 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         icon.setAttribute("inert", "");
         return icon;
       }
-      const totals = html.querySelectorAll(".dice-total");
-      for (let [index, d20Roll] of this.rolls.entries()) {
-        const total = totals[index];
+      // Each d20 roll with its own total: the rendered totals do not line up with `rolls` (damage is
+      // aggregated into one block, and save rolls render inside their target's row).
+      const pairs: [Roll, Element | null | undefined][] = [];
+      const attack = attackRollOf(this);
+      if (attack) pairs.push([attack, html.querySelector(".midi-attack-roll .dice-total")]);
+      for (const roll of this.rolls) {
+        if (foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`) !== "save") continue;
+        const uuid = foundry.utils.getProperty(roll, `options.${MODULE_ID}.targetUuid`);
+        const row = html.querySelector(`.midi-qol-save-name[data-uuid="${uuid}"]`)?.closest("li");
+        pairs.push([roll, row?.querySelector(".midi-qol-save-tooltip .dice-total")]);
+      }
+      for (const [d20Roll, total] of pairs) {
         if (!total) continue;
         total.classList.remove("success", "failure", "critical", "fumble");
         total.querySelector(".icons")?.remove();
@@ -500,6 +395,21 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     /**
+     * dnd5e's enrichment, deliberately not awaited: dnd5e does not await `_enrichChatCard` for card
+     * models either, so waiting here would apply midi's masking only after the card is on screen.
+     * Nothing dnd5e does after its first await touches what midi masks or highlights.
+     */
+    #enrichSystemCard(html: HTMLElement, options: object) {
+      // @ts-expect-error no dnd5e-types
+      const enriched = super._enrichChatCard(html, options) as Promise<void> | undefined;
+      enriched?.catch?.(err => {
+        const message = `${MODULE_ID} | dnd5e chat card enrichment failed`;
+        error(message, err);
+        TroubleShooter.recordError(err, message);
+      });
+    }
+
+    /**
      * Mask the dice of a blind roll, and blank an obscured roll's result, for non-GMs.
      *
      * Lives here rather than on `renderChatMessageHTML` because core fires that hook inside
@@ -514,7 +424,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (game.user?.isGM) return;
       const placeholder = () => {
         const span = document.createElement("span");
-        span.textContent = i18n("midi-qol.DiceRolled");
+        span.innerHTML = i18n("midi-qol.DiceRolled"); // the localised string carries its own markup
         return span;
       };
       if (this.blind) {
@@ -593,14 +503,14 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
       // Damage roll masking
       if (damageDisplay === "totalOnly") {
-        removeAll(html, ".midi-damage-roll .dice-formula");
-        removeAll(html, ".midi-damage-roll .dice-tooltip");
-        html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
+        removeAll(html, `${DAMAGE_ROLLS} .dice-formula`);
+        removeAll(html, `${DAMAGE_ROLLS} .dice-tooltip`);
+        html.querySelectorAll(DAMAGE_ROLLS).forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
       } else if (damageDisplay === "hidden") {
-        removeAll(html, ".midi-damage-roll .dice-formula");
-        removeAll(html, ".midi-damage-roll .dice-tooltip");
-        html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
-        html.querySelectorAll(".midi-damage-roll .dice-total")?.forEach(el => el.innerHTML = "--");
+        removeAll(html, `${DAMAGE_ROLLS} .dice-formula`);
+        removeAll(html, `${DAMAGE_ROLLS} .dice-tooltip`);
+        html.querySelectorAll(DAMAGE_ROLLS).forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
+        html.querySelectorAll(`${DAMAGE_ROLLS} .dice-total`)?.forEach(el => el.innerHTML = "--");
       }
     }
 
@@ -667,8 +577,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
             html.querySelectorAll<HTMLDivElement>(".midi-attack-roll .dice-tooltip").forEach(el => el.style.height = "0");
           }
           if (damageHidden) {
-            html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", noDice));
-            html.querySelectorAll<HTMLDivElement>(".midi-damage-roll .dice-tooltip").forEach(el => el.style.height = "0");
+            html.querySelectorAll(DAMAGE_ROLLS).forEach(el => el.addEventListener("click", noDice));
+            html.querySelectorAll<HTMLDivElement>(`${DAMAGE_ROLLS} .dice-tooltip`).forEach(el => el.style.height = "0");
           }
         }
       }
@@ -762,8 +672,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     _enrichChatCard(html: HTMLElement, options: object = {}) {
       if (!this.flags?.[MODULE_ID]?.messageType) {
         this.applyChatVisibility(html);
-        // @ts-expect-error no dnd5e-types
-        super._enrichChatCard(html, options);
+        this.#enrichSystemCard(html, options);
         this._maybeStripEffectsTray(html);
         this._addMarkerClasses(html);
         this._addLegacyCardDataset(html);
@@ -771,10 +680,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         return;
       }
       if (debugEnabled > 1) log("Enriching chat card", Date.now(), this.id);
-      this.maskAttackRolls(html); // This has to run first to stop errors when ChatMessage5e._enrichDamageTooltip runs
+      this.maskAttackRolls(html); // This has to run first to stop errors when dnd5e enriches the damage rolls
 
-      // @ts-expect-error no dnd5e-types
-      super._enrichChatCard(html, options);
+      this.#enrichSystemCard(html, options);
       this._maybeStripEffectsTray(html);
       this.applyChatVisibility(html);
       // For usage-type messages, Foundry skips _highlightCriticalSuccessFailure.
@@ -803,9 +711,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       const system = this.system as unknown as Record<string, any> | undefined;
       const item = system?.item?.uuid ? fromUuidSync(system.item.uuid) as Item.Implementation | null : null;
       const actor = this.speakerActor ?? item?.actor;
-      const tokenUuid = system?.origin?.uuid
-        ?? (this.speaker?.scene && this.speaker?.token
-          ? `Scene.${this.speaker.scene}.Token.${this.speaker.token}` : undefined);
+      // Not system.origin: on dnd5e 6 that is the originating chat message.
+      const tokenUuid = this.speaker?.scene && this.speaker?.token
+        ? `Scene.${this.speaker.scene}.Token.${this.speaker.token}` : undefined;
       const set = (name: string, value: unknown) => {
         if (value !== undefined && value !== null && value !== "") card.setAttribute(name, String(value));
       };

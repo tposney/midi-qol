@@ -873,10 +873,10 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     const saveCreate = message.create;
     message.create = false;
 
-    // Set originatingMessage so dnd5e's MessageRegistry and getOriginatingMessage() work correctly
+    // dnd5e's MessageRegistry and getOriginatingMessage() link a roll to its card through system.origin.
     const originatingCardId = config.midiOptions?.workflow?.itemCardId
       ?? (config.midiOptions?.itemCardUuid ? fromUuidSync(config.midiOptions.itemCardUuid)?.id : undefined);
-    if (originatingCardId) foundry.utils.setProperty(message, "data.flags.dnd5e.originatingMessage", originatingCardId);
+    if (originatingCardId) foundry.utils.setProperty(message, "data.system.origin", originatingCardId);
 
     if (this.token) foundry.utils.setProperty(dialog, "options.window.subtitle", this.token.name);
     result = await wrapped(config, dialog, message);
@@ -918,7 +918,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     if ((config.midiOptions?.rollSkills?.length ?? 0) > 1) result.forEach(r => { if (r?.options) r.options.midiChosenId = _chosenSkill; });
 
     // Set originatingMessage on roll options so modules can access it without .parent
-    const rollOriginatingId = foundry.utils.getProperty(message, "data.flags.dnd5e.originatingMessage") as string | undefined
+    const rollOriginatingId = foundry.utils.getProperty(message, "data.system.origin") as string | undefined
       ?? originatingCardId;
     if (rollOriginatingId) result.forEach(r => { if (r?.options) r.options.originatingMessage = rollOriginatingId; });
 
@@ -1507,10 +1507,10 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     const saveCreate = message.create;
     message.create = false;
 
-    // Set originatingMessage so dnd5e's MessageRegistry and getOriginatingMessage() work correctly
+    // dnd5e's MessageRegistry and getOriginatingMessage() link a roll to its card through system.origin.
     const originatingCardId = config.midiOptions.workflow?.itemCardId
       ?? (config.midiOptions.itemCardUuid ? fromUuidSync(config.midiOptions.itemCardUuid)?.id : undefined);
-    if (originatingCardId) foundry.utils.setProperty(message, "data.flags.dnd5e.originatingMessage", originatingCardId);
+    if (originatingCardId) foundry.utils.setProperty(message, "data.system.origin", originatingCardId);
 
     let abilityModifiers: RollModifierResult | undefined;
     const midiOptions = config.midiOptions;
@@ -1629,7 +1629,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     if (hasMultipleChoices) result.forEach(r => { if (r?.options) r.options.midiChosenId = chosenAbility; });
 
     // Set originatingMessage on roll options so modules can access it without .parent
-    const rollOriginatingId = foundry.utils.getProperty(message, "data.flags.dnd5e.originatingMessage") as string | undefined
+    const rollOriginatingId = foundry.utils.getProperty(message, "data.system.origin") as string | undefined
       ?? originatingCardId;
     //@ts-expect-error originatingMessage is a custom roll option
     if (rollOriginatingId) result.forEach(r => { if (r?.options) r.options.originatingMessage = rollOriginatingId; });
@@ -2181,83 +2181,51 @@ export async function computeToolAdvantage(actor: Actor.Implementation, toolId: 
   return tracker;
 }
 
-// Throttle timer for anchored template movement (mirrors dnd5e's private #moveTime)
-let anchoredMoveTime = 0;
-// Throttle timer for range-clamped template movement
-let rangeClampesMoveTime = 0;
-
-/**
- * Snap a point for template placement based on the templateSnapping setting.
- * "full" snaps to grid intersections (vertices) only, "half" adds centers and side midpoints.
- */
 /**
  * Constrain template placement to the activity's range, and anchor cones/rays to the caster.
  *
- * Wraps only the interactive step. Everything around it stays dnd5e's: `TemplatePlacement`
- * builds the shape config, the region data, the flags and fires
- * `dnd5e.preCreateMeasuredTemplate`/`createMeasuredTemplate`/`postCreateMeasuredTemplate`, and
- * creates the documents. midi supplies the two callbacks `placeRegions` accepts and dnd5e does not
- * use — `onMove`, to clamp or anchor the position, and `onChange`, for live target highlighting.
- *
- * This replaces the old wrapper on `AbilityTemplate.prototype._onMovePlacement`, which is gone.
- * Returning `false` from `onMove` suppresses the default move so midi's position wins.
+ * dnd5e's `_place` builds the region data and calls `placeRegions`; midi adds the two callbacks
+ * dnd5e does not use for that call — `onMove` to clamp or anchor the position (returning `false`
+ * so midi's position wins), and `onChange` for live targeting.
  */
 async function midiTemplatePlace(this: any, wrapped: () => Promise<any>) {
   const activity = this.config?.activity ?? this.config?.midiActivity;
   const sourceToken = activity?.actor ? tokenForActor(activity.actor) : undefined;
   const maxRange = configSettings.constrainTemplatePlacement ? this.config?.midiMaxRange : undefined;
   const anchorToToken = this.config?.midiAnchorToToken;
-  if (!sourceToken || (!maxRange && !anchorToToken)) return wrapped();
+  const regions = canvas?.regions as unknown as { placeRegions: (data: object[], options?: object) => Promise<unknown> } | undefined;
+  if (!sourceToken || !regions || (!maxRange && !anchorToToken)) return wrapped();
 
-  const results: any[] = [];
-  await (canvas.regions as unknown as { placeRegions: Function } | undefined)?.placeRegions(this.config.shapes.map((s: any) => midiShapeData(s)), {
-    create: false,
-    onMove: ({ shape, position, snap }: any) => {
-      if (anchorToToken) {
-        const border = getTokenBorderPoint(sourceToken, position.x, position.y);
-        shape.move(snapTemplatePosition(border), { snap: false });
-        const direction = Math.toDegrees(Math.atan2(position.y - border.y, position.x - border.x));
-        shape.rotate(direction - (shape.rotation ?? 0));
-      } else {
-        const clamped = clampPointToRange(sourceToken, position.x, position.y, maxRange!);
-        shape.move(clamped.clamped ? snapTemplatePosition(clamped) : position, { snap });
-      }
-      return false;
-    },
-    onChange: ({ document }: any) => {
-      if (configSettings.autoTarget !== "none") selectTargetsFromTemplates([document]);
-    },
-    preConfirm: ({ document }: any) => {
-      const obj = document.toObject();
-      results.push({ ...obj.shapes.at(-1), token: obj.attachment?.token });
+  const onMove = ({ shape, position, snap }: any) => {
+    if (anchorToToken) {
+      const border = getTokenBorderPoint(sourceToken, position.x, position.y);
+      shape.move(snapTemplatePosition(border), { snap: false });
+      const direction = Math.toDegrees(Math.atan2(position.y - border.y, position.x - border.x));
+      shape.rotate(direction - (shape.rotation ?? 0));
+    } else {
+      const clamped = clampPointToRange(sourceToken, position.x, position.y, maxRange!);
+      shape.move(clamped.clamped ? snapTemplatePosition(clamped) : position, { snap });
     }
-  });
-  return results;
-}
-
-/** The region shape data for one placement shape — mirrors dnd5e's private `#createShapeData`. */
-function midiShapeData({ type, ...baseSizes }: any) {
-  const gridMultiplier = (canvas.scene?.grid.size ?? 100) / (canvas.scene?.grid.distance ?? 5);
-  const size = (baseSizes.size ?? 0) * gridMultiplier;
-  const width = (baseSizes.width ?? 0) * gridMultiplier;
-  const data: any = { x: 0, y: 0, rotation: 0, type };
-  switch (type) {
-    case "circle": return { ...data, radius: size };
-    case "cone": return { ...data, angle: CONFIG.MeasuredTemplate.defaults.angle, radius: size };
-    case "emanation": return {
-      base: { ...data, width: 1, height: 1, type: "token",
-        shape: canvas.grid?.isHexagonal ? CONST.TOKEN_SHAPES.ELLIPSE_1 : CONST.TOKEN_SHAPES.RECTANGLE_1 },
-      radius: size, type: "emanation"
-    };
-    case "ray":
-    case "line": return { ...data, length: size, width, type: "line" };
-    case "rect":
-    case "rectangle": return { ...data, width: size, height: size, type: "rectangle" };
-    case "ring": return { ...data, radius: size, outerWidth: width, innerWidth: 0 };
-    default: return { ...data, radius: size };
+    return false;
+  };
+  const onChange = ({ document }: any) => {
+    if (configSettings.autoTarget !== "none") selectTargetsFromTemplates([document]);
+  };
+  const placeRegions = regions.placeRegions;
+  const hadOwn = Object.hasOwn(regions, "placeRegions");
+  regions.placeRegions = (data, options = {}) => placeRegions.call(regions, data, { ...options, onMove, onChange });
+  try {
+    return await wrapped();
+  } finally {
+    if (hadOwn) regions.placeRegions = placeRegions;
+    else delete (regions as Partial<typeof regions>).placeRegions;
   }
 }
 
+/**
+ * Snap a point for template placement based on the templateSnapping setting.
+ * "full" snaps to grid intersections (vertices) only, "half" adds centers and side midpoints.
+ */
 function snapTemplatePosition(point: { x: number; y: number }): { x: number; y: number } {
   if (!canvas?.grid) return point;
   const M = CONST.GRID_SNAPPING_MODES;
@@ -2265,16 +2233,6 @@ function snapTemplatePosition(point: { x: number; y: number }): { x: number; y: 
     ? M.CENTER | M.VERTEX | M.CORNER | M.SIDE_MIDPOINT
     : M.VERTEX;
   return canvas.grid.getSnappedPoint({ x: point.x, y: point.y }, { mode, resolution: 1 });
-}
-
-/**
- * Get the maximum range for a template from its midi-qol flags.
- * Returns undefined if range should not be enforced.
- * The maxRange is pre-calculated and set in the dnd5e.preCreateActivityTemplate hook.
- */
-function getTemplateMaxRange(templateDoc: MeasuredTemplateDocument.Implementation): number | undefined {
-  const midiFlags = templateDoc.flags?.[MODULE_ID] as any;
-  return midiFlags?.maxRange as number | undefined;
 }
 
 /**
@@ -2755,10 +2713,10 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     const chatMessage = message.create;
     message.create = false;
 
-    // Set originatingMessage so dnd5e's MessageRegistry and getOriginatingMessage() work correctly
+    // dnd5e's MessageRegistry and getOriginatingMessage() link a roll to its card through system.origin.
     const originatingCardId = config.midiOptions?.workflow?.itemCardId
       ?? (config.midiOptions?.itemCardUuid ? fromUuidSync(config.midiOptions.itemCardUuid)?.id : undefined);
-    if (originatingCardId) foundry.utils.setProperty(message, "data.flags.dnd5e.originatingMessage", originatingCardId);
+    if (originatingCardId) foundry.utils.setProperty(message, "data.system.origin", originatingCardId);
 
     if (dialog.configure === undefined && isAutoFastForward("tool")) dialog.configure = false;
 
@@ -2873,7 +2831,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     if (hasMultipleTools) result.forEach(r => { if (r?.options) r.options.midiChosenId = _chosenTool; });
 
     // Set originatingMessage on roll options so modules can access it without .parent
-    const rollOriginatingId = foundry.utils.getProperty(message, "data.flags.dnd5e.originatingMessage") as string | undefined
+    const rollOriginatingId = foundry.utils.getProperty(message, "data.system.origin") as string | undefined
       ?? originatingCardId;
     //@ts-expect-error originatingMessage is a custom roll option
     if (rollOriginatingId) result.forEach(r => { if (r?.options) r.options.originatingMessage = rollOriginatingId; });

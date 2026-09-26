@@ -1,8 +1,7 @@
 import { configSettings, isDnd5e53 } from "../settings.js";
 import { GameSystemConfig, MODULE_ID, MQDamageRollTypes, debugEnabled, i18nFormat, log, warn } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { CombinedTargetDescriptor, DamageApplicationOptions } from "../../globals.js";
-import { WorkflowDataFlags } from "../Workflow.js";
+import { CombinedTargetDescriptor, DamageApplicationOptions, Dnd5eSystem } from "../../globals.js";
 
 // SVG Icons for midi-qol custom change sources (using dnd5e SVGs for consistent styling)
 /** The two fields change-source cycling mutates, viewed generically. */
@@ -24,6 +23,20 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
   chatMessage;
   damages: any[] = [];
   damageType: string = "defaultDamage";
+
+  /** dnd5e fills `damages` from every damage roll on the card; this tray applies only its own type's. */
+  connectedCallback() {
+    this.damageType = this.dataset.damageType ?? "defaultDamage";
+    super.connectedCallback();
+    const rolls = (this.chatMessage?.rolls ?? []).filter((r: Roll) =>
+      foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === this.damageType);
+    this.damages = (game.system as Dnd5eSystem).dice.aggregateDamageRolls(rolls, { respectProperties: true }).map(roll => ({
+      properties: new Set(roll.options.properties ?? []),
+      type: roll.options.type,
+      value: Math.max(0, roll.total ?? 0)
+    }));
+    this.targetList?.buildTargetsList();
+  }
 
 
   /**
@@ -64,55 +77,16 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
    * exist.
    */
   buildTargetListEntry(targetList: HTMLElement, { uuid, name }: { uuid: string, name?: string }): HTMLLIElement | void {
-    // Let parent build the base entry
     const li = super.buildTargetListEntry(targetList, { uuid, name }) as HTMLLIElement | undefined;
     if (!li) return;
 
-    /*
-     * `uuid` is a *token* uuid in 6.0 — dnd5e resolves it and uses `token.actor`. Treating it as an
-     * actor made `calculateDamage` throw inside `buildTargetsList`, which aborted the whole map: the
-     * tray drew no target rows at all, so Apply had nothing to apply to.
-     *
-     * `getMergedOptions` rather than `getTargetOptions` for the same reason dnd5e uses it — it is
-     * what folds in the chosen multiplier.
-     */
+    // dnd5e shows no damage detail for tokens the user does not own, and neither does midi.
+    const token = fromUuidSync(uuid) as TokenDocument.Implementation | null;
+    if (!token?.isOwner || !(token.actor instanceof Actor)) return li;
+
     const targetOptions = this.getMergedOptions(uuid);
-    const resolved = fromUuidSync(uuid);
-    const actor = ((resolved as TokenDocument.Implementation | null)?.actor
-      ?? resolved) as Actor.Implementation | null;
-    if (!(actor instanceof Actor)) return li;
-
-    const { active } = this.calculateDamage(actor, targetOptions);
-
-    /*
-     * Add the change sources dnd5e drops.
-     *
-     * `#buildChangeSources` skips any type without an icon in `CONFIG.DND5E.damageTypes` —
-     * `if (!icon) continue` — so midi's own categories (a save, super/semi-super saver, uncanny
-     * dodge, DR, magical/non-magical) never appear, and neither do damage types dnd5e does not know.
-     *
-     * The 5.x version of this wrote into `.subtitle` and called `getChangeSourceButton`. 6.0
-     * restructured the row into a `<target-pill>` with a `.target-pane`, and removed that method, so
-     * the old code bailed on the missing selector and silently added nothing.
-     */
-    this.#addInlineChangeSources(li, uuid, active as Record<string, Set<string> | boolean>, targetOptions);
-
-    const sources = this.#changeSourceList(li);
-    if (!sources) return li;
-    for (const [change, values] of Object.entries(active as Record<string, Set<string> | boolean>)) {
-      // `threshold` is a boolean flag; every other change carries a Set of damage types.
-      const types: string[] = change === "threshold"
-        ? (values ? ["threshold"] : [])
-        : Array.from((values ?? []) as Set<string>);
-      for (const type of types) {
-        // Anything dnd5e can draw, it already has.
-        if (GameSystemConfig.damageTypes[type] || GameSystemConfig.healingTypes?.[type]) continue;
-        const icon = MIDI_CHANGE_ICONS[change];
-        if (!icon) continue;
-        sources.insertAdjacentHTML("beforeend", this.#changeSourceEntry(type, change, icon, targetOptions));
-      }
-    }
-
+    const { active } = this.calculateDamage(token.actor, targetOptions);
+    this.#addInlineChangeSources(li, active as Record<string, Set<string> | boolean>, targetOptions);
     return li;
   }
 
@@ -128,7 +102,6 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
    */
   #addInlineChangeSources(
     li: HTMLLIElement,
-    uuid: string,
     active: Record<string, Set<string> | boolean>,
     options: DamageApplicationOptions
   ): void {
@@ -183,7 +156,7 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
       }
     }
     if (!menu.children.length) return;
-    row.addEventListener("click", event => this.#onInlineChangeSource(event, li, uuid));
+    row.addEventListener("click", event => this.#onInlineChangeSource(event, li));
     pill.append(row);
   }
 
@@ -202,78 +175,49 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
     return { html: `<img class="midi-change-source-img" src="${icon}" alt="" inert>`, wrapperClass: " midi-icon-image" };
   }
 
-  /** Cycle a change source from the inline row, mirroring dnd5e's own state machine. */
-  #onInlineChangeSource(event: MouseEvent, li: HTMLLIElement, uuid: string): void {
+  /**
+   * Cycle a change source from the inline row, mirroring dnd5e's own state machine, for every token
+   * in the pill: dnd5e groups tokens that share their options, and Apply applies each one's own.
+   */
+  #onInlineChangeSource(event: MouseEvent, li: HTMLLIElement): void {
     const button = (event.target as HTMLElement)?.closest<HTMLElement>("[data-midi-change-source]");
     if (!button) return;
     event.preventDefault();
     event.stopPropagation();   // the row is inside the pill's list; do not also toggle the target
     const { type, change } = button.dataset as { type: string, change: string };
-    // The declared shape of `ignore` is a fixed set of keys; cycling treats it generically, so a
-    // structural view of just the two fields being mutated keeps this readable without `any`.
-    const options = this.getTargetOptions(uuid) as unknown as CyclableOptions;
-    const ignored = () => (options.ignore ??= {});
-    const setFor = (key: string): Set<string> => {
-      const current = ignored()[key];
-      if (current instanceof Set) return current;
-      const created = new Set<string>();
-      ignored()[key] = created;
-      return created;
-    };
-    if (change === "immunity") {
-      const immunity = ignored().immunity;
-      if (immunity instanceof Set && immunity.has(type)) {
-        immunity.delete(type);
-        (options.downgrade ??= new Set()).add(type);
-      } else if (options.downgrade?.has(type)) options.downgrade.delete(type);
-      else setFor(change).add(type);
-    } else if (change === "threshold") {
-      ignored().threshold = !ignored().threshold;
-    } else {
-      const current = ignored()[change];
-      if (current instanceof Set && current.has(type)) current.delete(type);
-      else setFor(change).add(type);
+    const uuids = Array.from(li.querySelectorAll<HTMLOptionElement>("target-pill option"), o => o.value);
+    for (const uuid of uuids) {
+      // The declared shape of `ignore` is a fixed set of keys; cycling treats it generically.
+      const options = this.getTargetOptions(uuid) as unknown as CyclableOptions;
+      const ignored = () => (options.ignore ??= {});
+      const setFor = (key: string): Set<string> => {
+        const current = ignored()[key];
+        if (current instanceof Set) return current;
+        const created = new Set<string>();
+        ignored()[key] = created;
+        return created;
+      };
+      if (change === "immunity") {
+        const immunity = ignored().immunity;
+        if (immunity instanceof Set && immunity.has(type)) {
+          immunity.delete(type);
+          (options.downgrade ??= new Set()).add(type);
+        } else if (options.downgrade?.has(type)) options.downgrade.delete(type);
+        else setFor(change).add(type);
+      } else if (change === "threshold") {
+        ignored().threshold = !ignored().threshold;
+      } else {
+        const current = ignored()[change];
+        if (current instanceof Set && current.has(type)) current.delete(type);
+        else setFor(change).add(type);
+      }
     }
-    const token = fromUuidSync(uuid) as TokenDocument.Implementation | null;
-    const actor = token?.actor;
+    const actor = (fromUuidSync(uuids[0] ?? "") as TokenDocument.Implementation | null)?.actor;
     if (!actor) return;
-    this.refreshListEntry(li, this.calculateDamage(actor, this.getMergedOptions(uuid)));
-    this.#addInlineChangeSources(li, uuid, this.calculateDamage(actor, this.getMergedOptions(uuid)).active, this.getMergedOptions(uuid));
-  }
-
-  /** The list dnd5e puts its change sources in; created if it had none of its own to show. */
-  #changeSourceList(li: HTMLLIElement): HTMLElement | undefined {
-    const existing = li.querySelector<HTMLElement>("menu.menu-change-sources");
-    if (existing) return existing;
-    const pane = li.querySelector(".target-pane");
-    if (!pane) return undefined;
-    const label = document.createElement("div");
-    label.classList.add("menu-section");
-    label.textContent = game.i18n?.localize("DND5E.DamageApplication.Changes") ?? "Changes";
-    const menu = document.createElement("menu");
-    menu.classList.add("menu-change-sources", "unlist");
-    pane.append(label, menu);
-    return menu;
-  }
-
-  /** One change-source entry, in the shape dnd5e builds them. */
-  #changeSourceEntry(type: string, change: string, icon: string, options: DamageApplicationOptions): string {
-    const { label, mode, pressed, title } = this.getChangeSourceOptions(type, change, options);
-    const graphic = this.#changeSourceGraphic(icon);
-    const state = game.i18n?.localize(`DND5E.DamageApplication.State.${mode}`) ?? "";
-    return `
-      <li class="menu-change-source">
-        <button type="button" class="change-source unbutton" data-type="${type}" data-change="${change}"
-                aria-pressed="${pressed}" aria-label="${label}">
-          <span class="icon${graphic.wrapperClass}">
-            ${graphic.html}
-            <i class="fa-solid fa-slash" inert></i>
-            <i class="fa-solid fa-arrow-turn-down" inert></i>
-          </span>
-          <span class="title">${title}</span>
-          <span class="menu-section">${state}</span>
-        </button>
-      </li>`;
+    const options = this.getMergedOptions(uuids[0]);
+    const damage = this.calculateDamage(actor, options);
+    this.refreshListEntry(li, damage);
+    this.#addInlineChangeSources(li, damage.active as Record<string, Set<string> | boolean>, options);
   }
 
   /**
@@ -289,21 +233,10 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
     let sourceActorUuid = foundry.utils.getProperty(this.chatMessage, "flags.midi-qol.sourceActorUuid");
     try {
       let targetDetails;
-        /*
-         * `system.targets` — dnd5e's own list, which `MidiUsageMessageData` extends with midi's
-         * per-target detail. `flags.dnd5e.targets` is read but never written any more; it is where
-         * this lived before 6.0 moved targets onto the message system data.
-         *
-         * Matched on the token uuid first: 6.0 passes a token uuid here, and a target's entry is
-         * identified by `token`, with `actor`/`uuid` covering older cards.
-         */
-        const systemTargets = (foundry.utils.getProperty(this.chatMessage, "system.targets") ?? []) as Array<Record<string, any>>;
-        const legacyTargets = (foundry.utils.getProperty(this.chatMessage, WorkflowDataFlags.targetDescriptors)
-          ?? []) as Array<CombinedTargetDescriptor>;
-        const targets = (systemTargets.length ? systemTargets : legacyTargets) as Array<CombinedTargetDescriptor>;
-        targetDetails = targets.find(target =>
-          (target as { token?: string }).token === uuid || target.uuid === uuid
-          || (target as { actor?: string }).actor === uuid);
+        // `system.targets`, which MidiUsageMessageData extends with midi's per-target detail. 6.0
+        // passes a token uuid here; an actor uuid covers targets recorded without a token.
+        const targets = (foundry.utils.getProperty(this.chatMessage, "system.targets") ?? []) as Array<CombinedTargetDescriptor>;
+        targetDetails = targets.find(target => target.token === uuid || target.actor === uuid);
         if (!targetDetails) return options;
         options.midi = foundry.utils.duplicate(targetDetails);
         const saveMultiplier = targetDetails.saveMults?.[this.damageType];

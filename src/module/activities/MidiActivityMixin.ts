@@ -377,28 +377,6 @@ export let MidiActivityMixin = Base => {
       //@ts-expect-error
       return this.update({ macroData: { name: macro.name, command: macro.command } });
     }
-    get messageFlags() {
-      const baseFlags = super.messageFlags;
-      // Lock target membership to workflow.targets, but use dnd5e's fresh AC values.
-      // dnd5e's getTargetDescriptors() reads live ac.value (which includes cover bonuses)
-      // and returns null for coverTotal. getWorkflowByActivityUuid uses a direct map
-      // lookup so it only finds the current workflow (not stale re-keyed ones).
-      const targets = new Map();
-      if (this.workflow?.targets) {
-        const dnd5eDescriptors = baseFlags.targets as Array<{uuid: string, ac: number | null}> | undefined;
-        for (const token of this.workflow.targets) {
-          const { name } = token;
-          const { img, system, uuid } = token.actor ?? {};
-          if (!uuid) continue;
-          const dnd5eTarget = dnd5eDescriptors?.find(td => td.uuid === uuid);
-          //@ts-expect-error no dnd5e types
-          const ac = dnd5eTarget ? dnd5eTarget.ac : system?.attributes?.ac?.value ?? null;
-          targets.set(uuid, { name, img, uuid, ac });
-        }
-        baseFlags.targets = Array.from(targets.values());
-      }
-      return baseFlags;
-    }
     async getTriggeredActivity() {
       // @ts-expect-error no dnd5e-types
       let activity = this.item.system.activities.find(a => a.id === this.midiProperties?.triggeredActivityId);
@@ -728,9 +706,11 @@ export let MidiActivityMixin = Base => {
           dialog.configure = !dialog.configure; // toggle the configure dialog
         }
         // if (rollToggle) dialog.configure = !dialog.configure; Should this always be looked at
-        // Synthetic items don't have an _id so setup for them to be recovered from the chat card
+        // Synthetic items can't be resolved by uuid, so the card keeps a snapshot to rebuild them from.
+        // Not dnd5e's `item.data` flag: dnd5e 6 moves that into `system.deltas.deleted`, and a refund
+        // recreates everything listed there on the actor.
         if (!activity.item._id || foundry.utils.getProperty(activity.item, `flags.${MODULE_ID}.syntheticItem`))
-          foundry.utils.setProperty(message, "data.flags.dnd5e.item.data", activity.item.toObject());
+          foundry.utils.setProperty(message, `data.flags.${MODULE_ID}.itemData`, activity.item.toObject());
 
         let useResults: any;
         preUseActivityHookId = Hooks.on("dnd5e.preUseActivity", (newActivity, usageConfig, messageConfig) => {
@@ -744,11 +724,27 @@ export let MidiActivityMixin = Base => {
           return true;
         });
         let usageData: ActivityUseConfiguration | undefined;
+        /*
+         * Activity#use begins concentration, and ends the one it replaces, before midi's checks run,
+         * so a use midi then cancels would cost the caster their existing concentration. Take the
+         * player's choice from dnd5e's working copy of the config - after the dialog and dnd5e's own
+         * concentration validation - and begin it once the use can no longer be backed out of
+         * (Workflow#beginDeferredConcentration).
+         * Transform-to-form links the new form to the concentration effect inside Activity#use, so
+         * it is left to dnd5e.
+         */
+        const deferConcentration = activity.requiresConcentration
+          && !safeGetGameSetting("dnd5e", "disableConcentration")
+          && !(activity.type === "transform" && activity.transform?.mode === "form");
         activityConsumptionHookId = Hooks.on("dnd5e.activityConsumption", (newActivity, usageConfig, messageConfig) => {
           if (usage.workflow!.activity?.uuid !== newActivity.uuid) return;
           usageData = usageConfig;
           usageConfig.workflow!.activity = newActivity;
           usageConfig.activity = newActivity;
+          if (deferConcentration && usageConfig.concentration?.begin) {
+            usage.workflow!.deferredConcentration = { scaling: usageConfig.scaling || undefined, end: usageConfig.concentration.end ?? undefined };
+            usageConfig.concentration.begin = false;
+          }
         });
 
         if (!await activity.preTargetingChecks(usage, dialog, message)) return false;
@@ -778,22 +774,6 @@ export let MidiActivityMixin = Base => {
           usage.spell ??= {} as { slot: string };
           usage.spell.slot = `spell${usage.midiOptions.spellLevel}`;
         }
-        /*
-         * Concentration is begun inside Activity#use - consume() then beginConcentrating() - which
-         * is before any of midi's checks have run. A use midi then rejects would leave the caster
-         * concentrating on a spell that never happened, and because ending the PREVIOUS
-         * concentration is nested in the same block, an existing concentration would be dropped
-         * for a cast that never landed. Suppress it here; the workflow begins it once the checks
-         * pass (Workflow#beginDeferredConcentration).
-         *
-         * _prepareUsageConfig only does `config.concentration.begin ??= true`, so an explicit
-         * false survives, and it leaves `end` untouched for us to apply later.
-         */
-        const deferConcentration = activity.requiresConcentration
-          && !safeGetGameSetting("dnd5e", "disableConcentration");
-        if (deferConcentration) {
-          usage.concentration = { begin: false, end: usage.concentration?.end ?? null };
-        }
         try {
           useResults = await super.use.bind(activity)(usage, dialog, message);
         } catch (err) {
@@ -801,18 +781,18 @@ export let MidiActivityMixin = Base => {
           TroubleShooter.recordError(err, "Error in super.use");
           Workflow.removeWorkflow(usage.workflow?.id);
           return false;
+        } finally {
+          // The rest of use() can outlive the workflow, and these match by activity uuid, so a
+          // following use of the same activity would otherwise be handled by this use's hooks.
+          if (preUseActivityHookId) Hooks.off("dnd5e.preUseActivity", preUseActivityHookId);
+          if (activityConsumptionHookId) Hooks.off("dnd5e.activityConsumption", activityConsumptionHookId);
+          preUseActivityHookId = activityConsumptionHookId = undefined;
         }
         // Cleanup skipConcentrationCheck flag in case workflow was interrupted before concentration check
         if (this.actor) skipConcentrationActorUuids.delete(this.actor.uuid);
         if (!useResults) { // activity use was aborted
           Workflow.removeWorkflow(usage.workflow?.id);
           return false;
-        }
-        if (deferConcentration && usage.workflow) {
-          usage.workflow.deferredConcentration = {
-            scaling: typeof usage.scaling === "number" ? usage.scaling : undefined,
-            end: usage.concentration?.end ?? undefined
-          };
         }
         // Remove the copy stored by activity uuid
         Workflow.workflows.delete(usage.workflow!.activity?.uuid ?? "");
@@ -992,12 +972,12 @@ export let MidiActivityMixin = Base => {
           // If the activity damage has any choice force configuration dialog
           // if (dialog.configure) config.midiOptions.isCritical = false;
           preRollDamageHookId = Hooks.once("dnd5e.preRollDamage", (rollConfig, dialogConfig, messageConfig) => {
-            const targetDescriptors = foundry.utils.getProperty(messageConfig, "data.flags.dnd5e.targets") as Array<DND5ETargetDescriptor>;
+            const targetDescriptors = foundry.utils.getProperty(messageConfig, "data.system.targets") as Array<DND5ETargetDescriptor>;
             // since saves might have been rolled merge the target descriptors
             if (targetDescriptors && config.workflow) {
               config.workflow.targetDescriptors ??= [];
               for (let targetDetails of targetDescriptors) {
-                const existing = config.workflow.targetDescriptors.find(td => td.uuid === targetDetails.uuid);
+                const existing = config.workflow.targetDescriptors.find(td => td.actor === targetDetails.actor);
                 if (existing) {
                   Object.assign(existing, foundry.utils.mergeObject(existing, targetDetails));
                 } else {
@@ -1357,16 +1337,13 @@ export let MidiActivityMixin = Base => {
           // @ts-expect-error no dnd5e-types
           flavor = `${title} (${this.item.labels.damages.map(d => d.damageType)})`;
         }
-        let messageData = foundry.utils.mergeObject({
+        const messageData = {
           title,
           flavor,
           speaker,
-          // `type` is carried by the message sub-type in 6.0 and the item by `system.item`; the flag
-          // stays alongside for pre-6.0 readers until 6.2 drops it.
-        }, {
-          "system.item": { id: this.item.id, uuid: this.item.uuid, name: this.item.name, img: this.item.img },
-          "flags.dnd5e.roll": { type: "damage", itemId: this.item.id, itemUuid: this.item.uuid }
-        });
+          type: "damage",
+          system: { item: { id: this.item.id, uuid: this.item.uuid } }
+        };
         if (needsMaxDamage) {
           for (let i = 0; i < result.length; i++) {
             result[i] = await result[i].reroll({ maximize: true });
@@ -1986,30 +1963,14 @@ export let MidiActivityMixin = Base => {
       return selectedId;
     }
 
-    async _placeEmanationTemplate(workflow: Workflow, castLevel?: number) {
+    async _placeEmanationTemplate(workflow: Workflow) {
       const autoCreateTemplate = activityHasAutoPlaceTemplate(this);
       const actor = this.item.parent;
       const tokenToUse = workflow.token ?? getToken(actor);
       if (!tokenToUse) return;
       if (autoCreateTemplate) {
-        const gs = canvas.dimensions?.distance ?? 5;
-        const templateOptions: any = {};
-        // square templates don't respect the options distance field
-        let item = this;
-        let target = this.target ?? { value: 0, template: { size: 0 } };
-        const fudge = 0.1;
-        const { width, height } = tokenToUse.document;
-
-        templateOptions.distance = Math.ceil(Number(target.template.size) + Math.max((width ?? 1) / 2, (height ?? 1) / 2, 0) * (canvas.dimensions?.distance ?? 0));
-        templateOptions.x = tokenToUse.center?.x ?? 0;
-        templateOptions.y = tokenToUse.center?.y ?? 0;
-        foundry.utils.setProperty(templateOptions, `flags.${MODULE_ID}.actorUuid`, actor?.uuid);
-        foundry.utils.setProperty(templateOptions, `flags.${MODULE_ID}.tokenId`, tokenToUse.id);
-        foundry.utils.setProperty(templateOptions, `flags.${MODULE_ID}.workflowId`, this.uuid); // TODO look at this when workflow ids are chat card ids
-        foundry.utils.setProperty(templateOptions, `flags.${MODULE_ID}.itemUuid`, this.item.uuid);
-
         const templateDocuments = await createActivityTemplateRegions(this, [{
-          x: templateOptions.x, y: templateOptions.y, direction: 0
+          x: tokenToUse.center?.x ?? 0, y: tokenToUse.center?.y ?? 0, direction: 0, token: tokenToUse.document
         }], {
           actorUuid: actor?.uuid,
           tokenId: tokenToUse.id,
@@ -2209,13 +2170,12 @@ export let MidiActivityMixin = Base => {
       const emanationNoTemplate = activityHasEmanationNoTemplate(this);
       // If emanationTemplate or emanationNoTemplate setup game.user?.targets.
       if (tokenToUse && autoCreateTemplate) {
-        const castLevel = foundry.utils.getProperty(message, "data.system.spellLevel") as number | undefined;
-        this.templates = await this._placeEmanationTemplate(workflow, castLevel);
+        this.templates = await this._placeEmanationTemplate(workflow);
       }
       if (tokenToUse && emanationNoTemplate) {
         setRangedTargets(tokenToUse, this.target);
         message.workflow?.setTargets(validTargetTokens(new Set(game.user?.targets)));
-        foundry.utils.setProperty(message.data, "flags.dnd5e.targets", globalThis.dnd5e.utils.getTargetDescriptors());
+        foundry.utils.setProperty(message.data, "system.targets", globalThis.dnd5e.dataModels.chatMessage.fields.TargetsField.getDescriptors());
       }
       const context = await super._usageChatContext(message);
       if (debugEnabled > 0) warn("show item card ", this, this.actor, this.actor?.token, systemCard, workflow);
