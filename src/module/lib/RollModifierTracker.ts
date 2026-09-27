@@ -1078,3 +1078,29 @@ export async function computeTargetCriticalModifiers(
     }
   }
 }
+
+/**
+ * Hand midi's advantage verdict to dnd5e without discarding the system's own.
+ *
+ * dnd5e 6.0 derives advantage from `D20RollModificationField` and then merges the caller's config
+ * over the top, so writing a falsy value here silently erases native advantage. midi's tracker has
+ * three states and only two are ours to assert: granted, denied (a `noAdvantage`/`noDisadvantage`
+ * flag), and no opinion.
+ *
+ * No opinion must leave the key completely untouched. Assigning `undefined` is not neutral —
+ * `mergeObject` treats it as an own key and it overwrites native advantage as surely as `false`.
+ * Deleting is not neutral either: called from a `preRoll*` hook the key already holds the value
+ * dnd5e derived, and before the call it may hold an explicit request from the caller. Either way
+ * it is not ours to discard.
+ */
+export function applyTrackerAdvantage(config: RollProcessConfig, tracker: RollModifierTracker): void {
+  for (const key of ["advantage", "disadvantage"] as const) {
+    const sub = tracker[key];
+    if (sub.isActive) config[key] = true;
+    else if (sub.isSuppressed && !sub.hasOverride) {
+      config[key] = false;
+      // dnd5e ORs this with each built roll's own verdict, so a denial has to clear those too.
+      for (const roll of config.rolls ?? []) if (roll.options) roll.options[key] = false;
+    }
+  }
+}

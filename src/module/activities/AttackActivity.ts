@@ -1,7 +1,7 @@
 import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, log, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { unTimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
-import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags } from "../lib/RollModifierTracker.js";
+import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, applyTrackerAdvantage } from "../lib/RollModifierTracker.js";
 import { MidiOptions } from "../utils.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
 import { addAttribution, areMidiKeysPressed, callActivityHooks, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets, validTargetTokens } from "../utils.js";
@@ -460,6 +460,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
             minFlags: ["min.attack.all", `min.attack.${actType}`]
           };
           if (workflow?.attackRollModifierTracker) {
+            // Again now dnd5e has built the rolls: a denial has to clear the advantage it put in their options.
+            applyTrackerAdvantage(rollConfig, workflow.attackRollModifierTracker);
             computeRollModifiers(this.actor!, attackModifierFlags, workflow.attackRollModifierTracker, { workflow });
             applyRollModifiers(workflow.attackRollModifierTracker, rollConfig, dialogConfig);
           }
@@ -672,8 +674,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       }
 
       // Set config advantage/disadvantage from tracker (after all hooks/macros have had a chance to modify)
-      if (workflow.attackRollModifierTracker.hasAdvantage) config.advantage = true;
-      if (workflow.attackRollModifierTracker.hasDisadvantage) config.disadvantage = true;
+      applyTrackerAdvantage(config, workflow.attackRollModifierTracker);
 
       workflow.attackRollCount += 1;
       if (workflow.attackRollCount > 1) workflow.damageRollCount = 0;
@@ -829,7 +830,7 @@ export async function computeAttackAdvantage(
       ...(abilityId ? [`noDisadvantage.attack.${abilityId}`] : []),
       ...(attackSchool ? [`noDisadvantage.attack.school.${attackSchool}`] : [])
     ],
-    systemRollModeFields: [], // dnd5e doesn't have native attack roll modes at actor level
+    systemRollModeFields: [...(abilityId ? [`abilities.${abilityId}.attack.roll.mode`] : []), "rolls.attack.mode", `rolls.attack.${actionType}.mode`],
     // Target grants flags (checked on target actor)
     sourceAdvantageFlags: [
       "grants.advantage.all",

@@ -3,6 +3,8 @@
 * New activity option "Downgrade Immunity" - treats damage immunity as resistance rather than ignoring it, which leaves full damage.
 * An attack of opportunity is classified for every target of a use, not only the first, so "Roll a separate attack per target" no longer judges the first target by different range rules to the rest.
 * `proceedChecks.checkAoO` sets whether a use is classified as an attack of opportunity; defaults to `checkReaction`.
+* midi's noAdvantage and noDisadvantage flags cancel dnd5e's own advantage and disadvantage, not only midi's.
+* dnd5e's own roll modes for tools, attacks and ability checks combine with midi's advantage flags instead of being replaced by them.
 * "Roll a separate attack per target" completes when the last target finishes, not the first, so callers of completeItemUse/completeActivityUse no longer see a half-applied use.
 * "Roll a separate attack per target" applies to attacks whose template type is unset, which it skipped silently; only empty was recognised.
 * Target confirmation on an activity sheet shows the effective value and is read-only when the activity forces one — self-target activities now report "never", as forward and cast activities already did.

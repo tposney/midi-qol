@@ -14,7 +14,7 @@ import { Activity, ActivityUseConfiguration, DamageApplicationOptions, DamageDes
 import { Workflow } from "./Workflow.js";
 import { preferredActiveGM } from "./GMAction.js";
 import { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./lib/MidiDependentsRegistry.js";
-import { RollModifierTracker, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, RollModifierResult, AdvantageFlags } from "./lib/RollModifierTracker.js";
+import { RollModifierTracker, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, RollModifierResult, AdvantageFlags, applyTrackerAdvantage } from "./lib/RollModifierTracker.js";
 
 let libWrapper;
 
@@ -179,18 +179,7 @@ export function initPatching() {
   // ActiveEffect, Item, Actor already have dnd5e's DependentDocumentMixin in their class hierarchy
   // Just add MidiDependentDocumentMixin for our registry tracking
   //@ts-expect-error - Mixin pattern type inference
-  class MidiActiveEffect extends MidiDependentDocumentMixin(CONFIG.ActiveEffect.documentClass) {
-    // dnd5e's isAppliedEnchantment getter dereferences this.parent.uuid, which throws when
-    // an enchantment effect is loaded standalone (e.g. fromUuid on a compendium-stored
-    // top-level ActiveEffect). Treat the no-parent case as "not applied" and otherwise
-    // fall through to the system's logic.
-    get isAppliedEnchantment() {
-      // @ts-expect-error parent not on MixinDocumentInstance
-      if (!this.parent) return false;
-      // @ts-expect-error no dnd5e types
-      return super.isAppliedEnchantment;
-    }
-  };
+  class MidiActiveEffect extends MidiDependentDocumentMixin(CONFIG.ActiveEffect.documentClass) { };
   //@ts-expect-error
   CONFIG.ActiveEffect.documentClass = MidiActiveEffect;
 
@@ -1030,7 +1019,8 @@ function getAdvantageSourceInfo(config: RollProcessConfig): AdvantageSourceInfo 
   return {
     advantage,
     disadvantage,
-    hasPreComputed: hasDirect || hasEventAdvantage || hasRolls || hasMidiOptions,
+    // dnd5e 6 fills rolls[0].options itself when it builds rolls before a save (concentration), so only Epic Rolls' counts.
+    hasPreComputed: hasDirect || hasEventAdvantage || (hasRolls && sourceType === "epic-rolls-5e") || hasMidiOptions,
     isExternalModule: hasExternalSource,
     sourceType,
     hasEvent
@@ -1106,28 +1096,6 @@ function setRollDialogOptions(config: RollProcessConfig, dialog: RollDialogConfi
  * Applies pre-computed advantage/disadvantage to config if found.
  * Returns true if pre-computed values were found (caller should skip computing from flags).
  */
-/**
- * Hand midi's advantage verdict to dnd5e without discarding the system's own.
- *
- * dnd5e 6.0 derives advantage from `D20RollModificationField` and then merges the caller's config
- * over the top, so writing a falsy value here silently erases native advantage. midi's tracker has
- * three states and only two are ours to assert: granted, denied (a `noAdvantage`/`noDisadvantage`
- * flag), and no opinion.
- *
- * No opinion must leave the key completely untouched. Assigning `undefined` is not neutral —
- * `mergeObject` treats it as an own key and it overwrites native advantage as surely as `false`.
- * Deleting is not neutral either: called from a `preRoll*` hook the key already holds the value
- * dnd5e derived, and before the call it may hold an explicit request from the caller. Either way
- * it is not ours to discard.
- */
-export function applyTrackerAdvantage(config: RollProcessConfig, tracker: RollModifierTracker): void {
-  for (const key of ["advantage", "disadvantage"] as const) {
-    const sub = tracker[key];
-    if (sub.isActive) config[key] = true;
-    else if (sub.isSuppressed && !sub.hasOverride) config[key] = false;
-  }
-}
-
 function applyPreComputedAdvantage(config: RollProcessConfig): boolean {
   const sourceInfo = getAdvantageSourceInfo(config);
   if (!sourceInfo.hasPreComputed) {
@@ -1848,7 +1816,7 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
       `noDisadvantage.${rollType}.all`,
       `noDisadvantage.${rollType}.${abilityId}`
     ],
-    systemRollModeFields: [`abilities.${abilityId}.${rollType}.roll.mode`],
+    systemRollModeFields: [`abilities.${abilityId}.${rollType}.roll.mode`, `rolls.ability.${rollType}.mode`],
   };
 
   // Add spell school-specific save advantage/disadvantage flags
@@ -2089,7 +2057,7 @@ export async function computeSkillAdvantage(actor: Actor.Implementation, skillId
       "noDisadvantage.skill.all",
       `noDisadvantage.skill.${skillId}`
     ],
-    systemRollModeFields: [`skills.${skillId}.roll.mode`],
+    systemRollModeFields: [`skills.${skillId}.roll.mode`, `abilities.${abilityId}.check.roll.mode`, "rolls.ability.check.mode", "rolls.ability.skill.mode"],
     // Source grants flags for skills (checked on workflow.actor, e.g., caster)
     sourceAdvantageFlags: ["grants.advantage.all", "grants.advantage.skill.all", `grants.advantage.skill.${skillId}`],
     sourceDisadvantageFlags: ["grants.disadvantage.all", "grants.disadvantage.skill.all", `grants.disadvantage.skill.${skillId}`],
@@ -2153,7 +2121,7 @@ export async function computeToolAdvantage(actor: Actor.Implementation, toolId: 
       "noDisadvantage.tool.all",
       `noDisadvantage.tool.${toolId}`
     ],
-    systemRollModeFields: [], // dnd5e doesn't have native tool roll modes
+    systemRollModeFields: [`tools.${toolId}.roll.mode`, `abilities.${abilityId}.check.roll.mode`, "rolls.ability.check.mode", "rolls.ability.tool.mode"],
     // Source grants flags for tools (checked on workflow.actor, e.g., caster)
     sourceAdvantageFlags: ["grants.advantage.all", "grants.advantage.tool.all", `grants.advantage.tool.${toolId}`],
     sourceDisadvantageFlags: ["grants.disadvantage.all", "grants.disadvantage.tool.all", `grants.disadvantage.tool.${toolId}`],

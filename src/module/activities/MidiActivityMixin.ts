@@ -171,6 +171,12 @@ export function findAmmunitionActivity(ammunitionItem: any): any | undefined {
   return found;
 }
 
+/** Whether saves are rolled from the card's buttons rather than by midi. */
+function savesRolledFromChat(): boolean {
+  const rollSaveOptions = new Set([configSettings.rollNPCLinkedSaves, configSettings.rollNPCSaves, configSettings.playerRollSaves]);
+  return rollSaveOptions.has("none") || rollSaveOptions.has("chat") || configSettings.autoCheckSaves === "none";
+}
+
 export let MidiActivityMixin = Base => {
   interface MidiActivityMixin extends Activity { };
   class MidiActivityMixin extends Base {
@@ -405,6 +411,36 @@ export let MidiActivityMixin = Base => {
         }
       },
     }, { inplace: false, insertValues: true, insertKeys: true });
+
+    // Only where the activity has no handler of its own: save and check activities keep theirs.
+    static {
+      this.metadata = foundry.utils.mergeObject(this.metadata, {
+        usage: { actions: { rollSave: MidiActivityMixin.#rollOtherSave, rollCheck: MidiActivityMixin.#rollOtherSave } }
+      }, { inplace: false, overwrite: false });
+    }
+
+    /** The activity supplying this one's other save or check: its own other activity's, else its ammunition's. */
+    get otherSaveSource(): MidiActivityMixin | undefined {
+      return [this.otherActivity, this.ammunitionActivity]
+        .find(activity => activity && activity !== this && (activity.save || activity.check));
+    }
+
+    /** A save or check button for another activity's save, on this activity's card: that activity rolls it. */
+    static async #rollOtherSave(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+      const workflow = Workflow.getWorkflow(message.uuid);
+      const source = workflow?.otherSaveActivity ?? this.otherSaveSource;
+      // @ts-expect-error no dnd5e-types
+      const action = target.dataset.action ?? message.system.getButton(target)?.action;
+      const handler = source?.metadata?.usage?.actions?.[action];
+      if (!source || source === this || !handler) return;
+      // A save activity's handler adopts the card's workflow as its own; this card's workflow stays this activity's.
+      const activity = workflow?.activity;
+      try {
+        return await handler.call(source, event, target, message);
+      } finally {
+        if (workflow && activity) workflow.activity = activity;
+      }
+    }
 
     static async #applyEffects(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.getWorkflow(message.uuid);
@@ -1848,6 +1884,13 @@ export let MidiActivityMixin = Base => {
        * The label is a key, not localized text — `card-buttons.hbs` localizes it at render, so a
        * stored string would not follow a language change.
        */
+      // Rolled from the card when saves are not auto-rolled; #rollOtherSave hands them to the activity they belong to.
+      const saveSource = this.otherSaveSource;
+      if (saveSource && !this.save && !this.check && savesRolledFromChat()) {
+        buttons.push(...saveSource._usageChatButtons(message)
+          .filter(b => ["rollSave", "rollCheck"].includes(b.action ?? b.dataset?.action)));
+      }
+
       if (this.otherActivity?.hasConsumption()) {
         buttons.push({
           action: "consumeOtherActivity",
@@ -2236,16 +2279,7 @@ export let MidiActivityMixin = Base => {
         const materialsLabel = i18n("DND5E.Materials");
         context.supplements = context.supplements.filter(s => !s.includes(`>${materialsLabel}</`));
       }
-      const rollSaveOptions = new Set();
-      rollSaveOptions.add(configSettings.rollNPCLinkedSaves);
-      rollSaveOptions.add(configSettings.rollNPCSaves);
-      rollSaveOptions.add(configSettings.playerRollSaves);
-      const showSaveButtons = rollSaveOptions.has("none") || rollSaveOptions.has("chat") || configSettings.autoCheckSaves === "none";
-      if (this.otherActivity?.save && !this.save && showSaveButtons) {
-        context.buttons = context.buttons.concat(this.otherActivity!._usageChatButtons(message));
-      } else if (this.otherActivity?.check && !this.check && showSaveButtons) {
-        context.buttons = context.buttons.concat(this.otherActivity!._usageChatButtons(message));
-      }
+      const showSaveButtons = savesRolledFromChat();
       context.buttons = context.buttons?.filter(b => !["rollAttack", "rollDamage", "rollHealing"].includes(b.dataset?.action));
       if (!showSaveButtons) context.buttons = context.buttons?.filter(b => !["rollSave", "rollCheck"].includes(b.dataset?.action));
       if (configSettings.autoCheckSaves !== "none") context.buttons?.forEach(b => { b.isDisabled = ["rollSave", "rollCheck"].includes(b.dataset?.action) ? "disabled" : "" });

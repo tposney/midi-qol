@@ -520,10 +520,8 @@ export function setupDamageDetails(actorDamage: PreSetupDamageListEntry, selecto
  * the workflow and gone before anything re-renders.
  */
 function uncannyDodgeSourceIcon(actor: Actor.Implementation): string | undefined {
+  // dnd5e yields only effects that apply to the actor, so unapplied enchantments are already excluded.
   for (const effect of actor.allApplicableEffects?.() ?? []) {
-    // dnd5e-only sub-type; skip enchantments that are not actually applied.
-    const ae = effect as ActiveEffect.Implementation & { isAppliedEnchantment?: boolean };
-    if (String(ae.type) === "enchantment" && !ae.isAppliedEnchantment) continue;
     if (!effect.changes?.some(c => c.key === `flags.${MODULE_ID}.uncanny-dodge`)) continue;
     const origin = effect.origin ? fromUuidSync(effect.origin) : undefined;
     return (origin instanceof Item ? origin.img : undefined) ?? effect.img ?? undefined;
