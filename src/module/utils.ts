@@ -689,9 +689,9 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       return calcDamageOptions;
     };
 
-    const otherSaveMultiplier = (workflow.otherActivity?.save || workflow.otherActivity?.check)
+    const otherSaveMultiplier = workflow.otherSaveActivity
       ? (() => {
-        const defaultOtherMultiplier = getSaveMultiplierForActivity(workflow.otherActivity);
+        const defaultOtherMultiplier = getSaveMultiplierForActivity(workflow.otherSaveActivity);
         return hasSaved
           ? superSaver || semiSuperSaver
             ? 0
@@ -2550,6 +2550,8 @@ export type MidiOptions = {
   parts?: string[];
   powerLevel?: number;
   proceedChecks?: {
+    // Whether to classify the use as an attack of opportunity; defaults to checkReaction.
+    checkAoO?: boolean;
     checkBonusAction?: boolean;
     checkReaction?: boolean;
     none?: boolean;

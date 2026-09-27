@@ -2,6 +2,7 @@
 * "Ignore Damage Immunity/Resistance/Vulnerability" for all damage types now also covers a creature's "All Damage" trait, which it previously left in force.
 * New activity option "Downgrade Immunity" - treats damage immunity as resistance rather than ignoring it, which leaves full damage.
 * An attack of opportunity is classified for every target of a use, not only the first, so "Roll a separate attack per target" no longer judges the first target by different range rules to the rest.
+* `proceedChecks.checkAoO` sets whether a use is classified as an attack of opportunity; defaults to `checkReaction`.
 * "Roll a separate attack per target" completes when the last target finishes, not the first, so callers of completeItemUse/completeActivityUse no longer see a half-applied use.
 * "Roll a separate attack per target" applies to attacks whose template type is unset, which it skipped silently; only empty was recognised.
 

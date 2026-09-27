@@ -342,7 +342,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         attackConfig.midiOptions ??= {};
         attackConfig.midiOptions.targetsToUse = new Set([target]);
         attackConfig.midiOptions.workflowOptions ??= {};
-        attackConfig.midiOptions.proceedChecks = { checkReaction, checkBonusAction };
+        attackConfig.midiOptions.proceedChecks = { checkReaction, checkBonusAction, checkAoO: !usage.midiOptions.isTriggered };
         attackConfig.midiOptions.workflowOptions.targetConfirmation = "never";
         const attackDialog = foundry.utils.deepClone(dialog);
         delete attackDialog.configure;

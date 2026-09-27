@@ -1598,7 +1598,7 @@ export let MidiActivityMixin = Base => {
         return false;
       }
       if (!workflow) return false;
-      let options: any = { none: false, checkAoO: true, checkReaction: true, checkBonusAction: true, checkAllowIncapacitated: false, callMacros: true, callHooks: true, checkTargets: true, checkComponents: true, checkUse: true }
+      let options: any = { none: false, checkReaction: true, checkBonusAction: true, checkAllowIncapacitated: false, callMacros: true, callHooks: true, checkTargets: true, checkComponents: true, checkUse: true }
       if (optionsConfig.none) options = optionsConfig;
       else
         options = foundry.utils.mergeObject(options, optionsConfig, { insertKeys: true, overwrite: true });
@@ -1681,12 +1681,9 @@ export let MidiActivityMixin = Base => {
       workflow.itemUsesReaction = false;
       const reactingActor = this.actor;
       const inReactionContext = !usage.midiOptions?.workflowOptions?.notReaction && !!reactingActor?.inCombat;
-      // options.checkReaction is deliberately NOT part of the AoO classification: the attackPerTarget
-      // loop runs the reaction check for the first target only, so gating AoO on it left every later
-      // target with AoO false. !workflow.AoO is what suppresses the range check, so one use judged
-      // its first target by different rules to the rest. Reaction consumption stays gated below -
-      // only the classification is hoisted.
-      if (inReactionContext && reactingActor) {
+      // Classified unless the caller says otherwise; follows checkReaction when not given. The
+      // attackPerTarget loop checks reactions on its first target only but classifies every target.
+      if (inReactionContext && reactingActor && (options.checkAoO ?? options.checkReaction)) {
         const isTurn = game.combat?.combatant === game.combat?.getCombatantsByActor(reactingActor)[0];
         if (!isTurn && needsAOOCheck(reactingActor) && this.attack && this.effectiveActivationType !== "special")
           workflow.AoO = true;

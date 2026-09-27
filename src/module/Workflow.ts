@@ -996,9 +996,14 @@ export class Workflow {
   get activityHasSave() {
     return this.hasValidSaveOrCheck(this.saveActivity);
   }
-  get saveActivity() {
+  get saveActivity(): Activity | undefined {
     if (this.hasValidSaveOrCheck(this.activity)) return this.activity;
-    if (this.hasValidSaveOrCheck(this.otherActivity)) return this.otherActivity;
+    return this.otherSaveActivity;
+  }
+  /** The save behind the other damage: the item's own other activity's, else the ammunition's. */
+  get otherSaveActivity(): Activity | undefined {
+    if (this.hasValidSaveOrCheck(this.otherActivity)) return this.otherActivity ?? undefined;
+    if (this.hasValidSaveOrCheck(this.ammunitionActivity)) return this.ammunitionActivity;
     return undefined;
   }
   get saveActivityDetails(): ActivitySave | ActivityCheck | undefined {
@@ -1239,7 +1244,7 @@ export class Workflow {
   }
 
   get hasSave(): boolean {
-    return Boolean(this.activity.save || this.activity.check || this.otherActivity?.save || this.otherActivity?.check);
+    return Boolean(this.activity.save || this.activity.check || this.otherActivity?.save || this.otherActivity?.check || this.otherSaveActivity);
   }
 
   get otherDamageFormula() {
@@ -4789,8 +4794,8 @@ export class Workflow {
           halfDamage.push(`${this.damageFlavor} &frac12;`);
       }
     }
-    if ((this.otherActivity?.save || this.otherActivity?.check) && (this.otherActivity?.damage?.parts.length ?? 0) > 0) {
-      switch (getSaveMultiplierForActivity(this.otherActivity)) {
+    if (this.otherSaveActivity && (this.otherSaveActivity.damage?.parts.length ?? 0) > 0) {
+      switch (getSaveMultiplierForActivity(this.otherSaveActivity)) {
         case 0:
           noDamage.push(`${this.otherDamageFlavor} &#48;`)
           break;
@@ -4918,7 +4923,7 @@ export class Workflow {
         midiTargetDescriptors = midiTargets.map(t => {
           let uncannyDodge = !!(t.actor?.flags?.[MODULE_ID]?.["uncanny-dodge"] && this.activity.attack);
           let saveMults = {
-            otherDamage: this.otherActivity ? getSaveMultiplierForActivity(this.otherActivity) : 1,
+            otherDamage: this.otherSaveActivity ? getSaveMultiplierForActivity(this.otherSaveActivity) : 1,
             defaultDamage: getSaveMultiplierForActivity(this.activity),
             bonusDamage: getSaveMultiplierForActivity(this.activity)
           };
