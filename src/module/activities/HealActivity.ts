@@ -47,9 +47,6 @@ let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
     get possibleOtherActivity() { 
       return true;
     }
-    get canUseOtherActivity() {
-      return true;
-    }
     
     async rollDamage(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       config.midiOptions ??= {};

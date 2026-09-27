@@ -1,4 +1,29 @@
+### 13.0.66 (unreleased)
+* "Ignore Damage Immunity/Resistance/Vulnerability" for all damage types now also covers a creature's "All Damage" trait, which it previously left in force.
+* New activity option "Downgrade Immunity" - treats damage immunity as resistance rather than ignoring it, which leaves full damage.
+* An attack of opportunity is classified for every target of a use, not only the first, so "Roll a separate attack per target" no longer judges the first target by different range rules to the rest.
+* "Roll a separate attack per target" completes when the last target finishes, not the first, so callers of completeItemUse/completeActivityUse no longer see a half-applied use.
+* "Roll a separate attack per target" applies to attacks whose template type is unset, which it skipped silently; only empty was recognised.
+* With "Roll a separate attack per target", each target's card lists only that target.
+* Target confirmation on an activity sheet shows the effective value and is read-only when the activity forces one — self-target activities now report "never", as forward and cast activities already did.
+* "Choose Targets" only forces target confirmation when the activity actually has a template type. dnd5e only offers the checkbox while one is set, so clearing the template left a stored value that still forced confirmation but was no longer visible.
+* A triggered activity no longer inherits the triggering workflow's target confirmation or per-target attack flag, so "Roll a separate attack per target" no longer suppresses the target prompt on the activity it triggers.
+* Ammunition activities are resolved independently of the other activity: an item's own other activity and its ammunition can both run, and `otherActivityId: "none"` no longer silences ammunition.
+* Ammunition activity effects are applied whether or not the ammunition supplies the other activity.
+* An ammunition activity's damage rolls without double-counting the ammunition's base damage, which dnd5e has already added to the weapon's damage roll.
+* Added "Other Activity Default" setting (auto/none) for activities that have never had an other activity chosen, e.g. from the SRD compendia.
+* Instantaneous summons no longer expire at the next time advance.
+* The distance fudge factor now applies on every scene and measurement mode, not only gridless scenes with Gridless Grid enabled. Perimeter measurement still floors at one grid unit; centre and default measurement can reach 0.
+* `getDistance` is available in evaluated conditions and macros, and is the preferred call: it honours the Distance Measurement setting, so it includes perimeter measurement and agrees with midi's own range checks. `computeDistance` remains available as the centre-based primitive.
+* Aborting a use for the wrong number of targets, or cancelling target confirmation, refunds the consumed spell slot or uses.
+* Concentration begins only after a use passes midi's checks, so a rejected use no longer leaves the caster concentrating or drops an existing concentration.
+* A bonus action is recorded when Enforce Bonus Actions is "Display status icon", matching reactions and what setBonusActionUsed already allowed; only the prompt stays conditional on enforcement.
+* Flanking reads token positions from the token document rather than the placeable transform, which is only current once the canvas has drawn.
+* Add a "Cataclysm Bolts" sample item.
+* Gloves of Soul Catching sample items (both versions) are legendary rather than artifacts.
+
 ### 13.0.65
+* The activity choice dialog no longer shows a stale activity list.
 * Fixed the damage card no longer showing which modifications applied (DR, resistance, immunity); the markers are stored with the card rather than recomputed from the raw damage detail.
 * Fixed the damage card total freezing after a multiplier was used: the preview replaced the total span's contents, so later refreshes had nothing to write to.
 * Damage cards now store only the fields undo/apply reads in `flags.midi-qol.undoDamage` (~53% smaller); the socket payload is unchanged.
@@ -21,6 +46,11 @@
 * Add a "Gloves of Soul Catching (Elemental)" sample item: adds the 2d10 to the attack's damage roll so Elemental Attunement re-types it.
 
 ### 13.0.64
+* Fixed the DDB Game Log integration never finding the actor.
+* Effect dependents no longer re-allow an update another handler has blocked.
+* The damage tray honours its expand/collapse state.
+* The actor on-use macro pass dropdown marks the selected option.
+* The consume dialog is no longer forced when consumption reports no errors.
 * Organise the Midi activity settings into subtabs (MR !420, thanks @garrysmod367).
 * Fix socketed (GM-executed) workflows (MR !427, thanks @baconnugget).
 * Fix temp-max HP handling on the undo card (MR !417, thanks @baconnugget).

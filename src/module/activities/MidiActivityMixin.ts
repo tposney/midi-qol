@@ -119,6 +119,45 @@ export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.Formu
   }
 }
 
+/**
+ * The activity an ammunition item contributes, if any.
+ *
+ * `automationOnly` wins: that is the deliberate marker for an activity meant to be triggered rather
+ * than used directly. The fallback exists because `otherActivityCompatible` defaults to true, so
+ * most activities qualify and a homebrew item may not mark one.
+ *
+ * Takes the item rather than reading it off an activity, because the caller sometimes holds a
+ * rebuilt copy: ammunition with `uses.autoDestroy` is deleted by dnd5e as the last piece is spent,
+ * and midi reconstructs it from the chat card.
+ */
+export function findAmmunitionActivity(ammunitionItem: any): any | undefined {
+  if (!ammunitionItem) return undefined;
+  const activities = ammunitionItem.system?.activities;
+  const found = activities?.find((a: any) => a.midiProperties?.automationOnly && a.isOtherActivityCompatible)
+    ?? activities?.find((a: any) => a.isOtherActivityCompatible);
+  found?.prepareData();
+  return found;
+}
+
+/**
+ * Card target descriptors for a workflow's targets, with dnd5e's live AC where it has one:
+ * getTargetDescriptors() includes cover bonuses and returns null for total cover.
+ */
+export function workflowTargetDescriptors(tokens: Iterable<Token.Implementation>, dnd5eDescriptors?: Array<{ uuid: string, ac: number | null }>) {
+  dnd5eDescriptors ??= globalThis.dnd5e.utils.getTargetDescriptors();
+  const targets = new Map();
+  for (const token of tokens) {
+    const { name } = token;
+    const { img, system, uuid } = token.actor ?? {};
+    if (!uuid) continue;
+    const dnd5eTarget = dnd5eDescriptors?.find(td => td.uuid === uuid);
+    //@ts-expect-error no dnd5e types
+    const ac = dnd5eTarget ? dnd5eTarget.ac : system?.attributes?.ac?.value ?? null;
+    targets.set(uuid, { name, img, uuid, ac });
+  }
+  return Array.from(targets.values());
+}
+
 export let MidiActivityMixin = Base => {
   interface MidiActivityMixin extends Activity { };
   class MidiActivityMixin extends Base {
@@ -153,6 +192,8 @@ export let MidiActivityMixin = Base => {
         useConditionText: new MidiConditionField({ name: "useCondition", initial: "" }),
         useConditionReason: new StringField({ name: "useConditionReason", initial: "" }),
         effectConditionText: new MidiConditionField({ name: "effectCondition", initial: "" }),
+        // null means never set, so imported items follow configSettings.defaultOtherActivity
+        otherActivityId: new StringField({ name: "otherActivity", initial: null, nullable: true }),
         // disabled pending a way to make it work 
         // useSystemActivity: new BooleanField({ name: "useSystemActivity", initial: false }),
         macroData: new SchemaField({
@@ -250,6 +291,13 @@ export let MidiActivityMixin = Base => {
     }
 
     get forcedTargetConfirmation(): string | undefined {
+      /*
+       * A self-target activity can never confirm targets: requiresTargetConfirmation returns false
+       * on affects.type === "self" before it ever reaches confirmTargets. Reporting that here makes
+       * the sheet show the effective value rather than a stored one that does nothing — the same
+       * treatment ForwardActivity and CastActivity already give themselves.
+       */
+      if (this.target?.affects?.type === "self") return "never";
       return undefined;
     }
     /**
@@ -263,9 +311,6 @@ export let MidiActivityMixin = Base => {
       return false;
     }
 
-    get canUseOtherActivity() {
-      return false;
-    }
 
     get canUse() {
       // if (this.midiProperties?.automationOnly) return false;
@@ -300,24 +345,7 @@ export let MidiActivityMixin = Base => {
     }
     get messageFlags() {
       const baseFlags = super.messageFlags;
-      // Lock target membership to workflow.targets, but use dnd5e's fresh AC values.
-      // dnd5e's getTargetDescriptors() reads live ac.value (which includes cover bonuses)
-      // and returns null for coverTotal. getWorkflowByActivityUuid uses a direct map
-      // lookup so it only finds the current workflow (not stale re-keyed ones).
-      const targets = new Map();
-      if (this.workflow?.targets) {
-        const dnd5eDescriptors = baseFlags.targets as Array<{uuid: string, ac: number | null}> | undefined;
-        for (const token of this.workflow.targets) {
-          const { name } = token;
-          const { img, system, uuid } = token.actor ?? {};
-          if (!uuid) continue;
-          const dnd5eTarget = dnd5eDescriptors?.find(td => td.uuid === uuid);
-          //@ts-expect-error no dnd5e types
-          const ac = dnd5eTarget ? dnd5eTarget.ac : system?.attributes?.ac?.value ?? null;
-          targets.set(uuid, { name, img, uuid, ac });
-        }
-        baseFlags.targets = Array.from(targets.values());
-      }
+      if (this.workflow?.targets) baseFlags.targets = workflowTargetDescriptors(this.workflow.targets, baseFlags.targets);
       return baseFlags;
     }
     async getTriggeredActivity() {
@@ -662,14 +690,19 @@ export let MidiActivityMixin = Base => {
           foundry.utils.setProperty(message, "data.flags.dnd5e.item.data", activity.item.toObject());
 
         let useResults: any;
-        preUseActivityHookId = Hooks.on("dnd5e.preUseActivity", (newActivity, usageConfig, messageConfig) => {
+        preUseActivityHookId = Hooks.on("dnd5e.preUseActivity", (newActivity, usageConfig, dialogConfig, messageConfig) => {
           if (usage.workflow!.activity?.uuid !== newActivity.uuid) return true;
           // Not sure if required but set the workflow in the super.usageConfig.
           usageConfig.workflow = usage.workflow;
           // newActivity will be the scaled activity to use that instead of what we have
           usage.workflow!.activity = newActivity;
           // TODO fix this nasty hack
-          messageConfig.workflow = usage.workflow;
+          dialogConfig.workflow = usage.workflow;
+          // The card's targets are this use's. messageFlags finds the workflow by activity uuid, which
+          // per-target sub-uses share, so it can list another sub-use's targets.
+          // @ts-expect-error no dnd5e-types
+          const dnd5eFlags = messageConfig?.data?.flags?.dnd5e;
+          if (dnd5eFlags && usage.workflow?.targets) dnd5eFlags.targets = workflowTargetDescriptors(usage.workflow.targets);
           return true;
         });
         let usageData: ActivityUseConfiguration | undefined;
@@ -707,6 +740,22 @@ export let MidiActivityMixin = Base => {
           usage.spell ??= {} as { slot: string };
           usage.spell.slot = `spell${usage.midiOptions.spellLevel}`;
         }
+        /*
+         * Concentration is begun inside Activity#use - consume() then beginConcentrating() - which
+         * is before any of midi's checks have run. A use midi then rejects would leave the caster
+         * concentrating on a spell that never happened, and because ending the PREVIOUS
+         * concentration is nested in the same block, an existing concentration would be dropped
+         * for a cast that never landed. Suppress it here; the workflow begins it once the checks
+         * pass (Workflow#beginDeferredConcentration).
+         *
+         * _prepareUsageConfig only does `config.concentration.begin ??= true`, so an explicit
+         * false survives, and it leaves `end` untouched for us to apply later.
+         */
+        const deferConcentration = activity.requiresConcentration
+          && !safeGetGameSetting("dnd5e", "disableConcentration");
+        if (deferConcentration) {
+          usage.concentration = { begin: false, end: usage.concentration?.end ?? null };
+        }
         try {
           useResults = await super.use.bind(activity)(usage, dialog, message);
         } catch (err) {
@@ -720,6 +769,12 @@ export let MidiActivityMixin = Base => {
         if (!useResults) { // activity use was aborted
           Workflow.removeWorkflow(usage.workflow?.id);
           return false;
+        }
+        if (deferConcentration && usage.workflow) {
+          usage.workflow.deferredConcentration = {
+            scaling: typeof usage.scaling === "number" ? usage.scaling : undefined,
+            end: usage.concentration?.end ?? undefined
+          };
         }
         // Remove the copy stored by activity uuid
         Workflow.workflows.delete(usage.workflow!.activity?.uuid ?? "");
@@ -949,7 +1004,10 @@ export let MidiActivityMixin = Base => {
           if (result) result = await this.postProcessDamageRoll(config, result);
           if (config.workflow && config.midiOptions?.updateWorkflow !== false) await config.workflow.setDamageRolls(result);
         }
-        if (this.otherActivity && config.workflow.otherActivity !== this && config.midiOptions?.updateWorkflow !== false) {
+        // Ammunition counts here too: it is no longer resolved as otherActivity, and rollOtherDamage
+        // sources from it when the item has no other activity of its own.
+        if ((this.otherActivity ?? this.ammunitionActivity) && config.workflow.otherActivity !== this
+          && config.midiOptions?.updateWorkflow !== false) {
           // Check if we need to defer rolling until after consumption is confirmed
           if (!this.deferOtherDamage(config, dialog)) {
             otherResult = await this.rollOtherDamage(config, dialog);
@@ -1014,9 +1072,17 @@ export let MidiActivityMixin = Base => {
       config: RollProcessConfig,
       dialog: RollDialogConfig
     ): Promise<Roll[] | undefined> {
-      if (!this.otherActivity || !config.workflow) return undefined;
-      // Check if other activity has something to roll
-      if (!(this.otherActivity.hasDamage || this.otherActivity.hasHealing || this.otherActivity.roll?.formula)) {
+      /*
+       * The item's own other activity if it has one, otherwise the ammunition's. Ammunition is no
+       * longer resolved as otherActivity, so without this an ammunition activity's damage would
+       * never roll — which would silently break SRD ammunition like Arrow of Slaying, whose damage
+       * lives on a save activity it carries.
+       */
+      const sourceActivity = this.otherActivity ?? this.ammunitionActivity;
+      const isAmmunitionSource = !this.otherActivity && !!this.ammunitionActivity;
+      if (!sourceActivity || !config.workflow) return undefined;
+      // Check if the source activity has something to roll
+      if (!(sourceActivity.hasDamage || sourceActivity.hasHealing || sourceActivity.roll?.formula)) {
         return undefined;
       }
 
@@ -1036,16 +1102,29 @@ export let MidiActivityMixin = Base => {
       };
 
       // Undo the roll toggle since rollFormula will look at it as well
-      if (this.otherActivity.ac && config.workflow.rollOptions?.rollToggle) {
+      if (sourceActivity.ac && config.workflow.rollOptions?.rollToggle) {
         dialog.configure = !dialog.configure;
       }
 
       // Apply scaling to the other activity's item if specified
       // Scaling is stored on the chat card by checkOtherActivityConsumption
-      let otherActivity = this.otherActivity;
+      let otherActivity = sourceActivity;
       const scaling = config.workflow?.chatCard?.getFlag(MODULE_ID, "use.otherScaling");
       if (scaling) {
         const item = otherActivity.item.clone({ flags: { dnd5e: { scaling } } }, { keepId: true });
+        otherActivity = item.system.activities.get(otherActivity.id);
+      }
+
+      /*
+       * Ammunition base damage is dnd5e's to add, not ours. AttackActivity#getDamageConfig has
+       * already spliced `ammo.system.damage.base` into the weapon's damage rolls, and a consumable
+       * of type "ammo" reports offersBaseDamage === true — so an activity on the ammunition whose
+       * damage.includeBase is left at its schema default of true would pull the same base damage in
+       * a second time. Roll only the activity's own additional parts.
+       */
+      if (isAmmunitionSource && otherActivity?.damage?.includeBase) {
+        const item = otherActivity.item.clone(
+          { [`system.activities.${otherActivity.id}.damage.includeBase`]: false }, { keepId: true });
         otherActivity = item.system.activities.get(otherActivity.id);
       }
 
@@ -1068,7 +1147,7 @@ export let MidiActivityMixin = Base => {
         otherResult.forEach(r => {
           //@ts-expect-error no dnd5e-types
           const properties = new Set(r.options.properties ?? []);
-          properties?.delete(this.otherActivity.actionType);
+          properties?.delete(sourceActivity.actionType);
           properties?.add(this.actionType);
           //@ts-expect-error no dnd5e-types
           r.options.properties = Array.from(properties);
@@ -1546,20 +1625,28 @@ export let MidiActivityMixin = Base => {
       }
       workflow.AoO = false;
       workflow.itemUsesReaction = false;
-      if (!usage.midiOptions?.workflowOptions?.notReaction && options.checkReaction && this.actor?.inCombat) {
-        const isTurn = game.combat?.combatant === game.combat?.getCombatantsByActor(this.actor)[0];
+      const reactingActor = this.actor;
+      const inReactionContext = !usage.midiOptions?.workflowOptions?.notReaction && !!reactingActor?.inCombat;
+      // options.checkReaction is deliberately NOT part of the AoO classification: the attackPerTarget
+      // loop runs the reaction check for the first target only, so gating AoO on it left every later
+      // target with AoO false. !workflow.AoO is what suppresses the range check, so one use judged
+      // its first target by different rules to the rest. Reaction consumption stays gated below -
+      // only the classification is hoisted.
+      if (inReactionContext && reactingActor) {
+        const isTurn = game.combat?.combatant === game.combat?.getCombatantsByActor(reactingActor)[0];
+        if (!isTurn && needsAOOCheck(reactingActor) && this.attack && this.effectiveActivationType !== "special")
+          workflow.AoO = true;
+      }
+      if (inReactionContext && reactingActor && options.checkReaction) {
         if (["reaction", "reactiondamage", "reactionmanual", "reactionpreattack"].includes(this.effectiveActivationType ?? "")
           && (this.activation?.cost ?? 1) > 0) {
           workflow.itemUsesReaction = true;
         }
 
-        if (!isTurn && needsAOOCheck(this.actor) && this.attack && this.effectiveActivationType !== "special") {
-          workflow.itemUsesReaction = true;
-          workflow.AoO = true;
-        }
+        if (workflow.AoO) workflow.itemUsesReaction = true;
 
-        const queryReaction = workflow.itemUsesReaction && hasUsedReaction(this.actor) && this.actor.inCombat
-          && needsReactionCheck(this.actor)
+        const queryReaction = workflow.itemUsesReaction && hasUsedReaction(reactingActor) && reactingActor.inCombat
+          && needsReactionCheck(reactingActor)
         if (queryReaction) {
           const shouldRoll = await foundry.applications.api.DialogV2.confirm({
             window: {
@@ -1575,7 +1662,12 @@ export let MidiActivityMixin = Base => {
       }
 
       workflow.itemUsesBonusAction = false;
-      if (!usage.midiOptions?.workflowOptions?.notBonusAction && options.checkBonusAction && this.actor?.inCombat && needsBonusActionCheck(this.actor)) {
+      // needsBonusActionCheck() is deliberately NOT part of this condition: it is false for
+      // "displayOnly", which would stop itemUsesBonusAction ever being set and so stop the used-
+      // bonus-action marker being applied at all. setBonusActionUsed() already admits "displayOnly"
+      // explicitly, and the reaction branch above gates the same way - only the prompt below is
+      // conditional on needsBonusActionCheck.
+      if (!usage.midiOptions?.workflowOptions?.notBonusAction && options.checkBonusAction && this.actor?.inCombat) {
         workflow.itemUsesBonusAction = ["bonus"].includes(this.effectiveActivationType ?? "");
         const queryBonus = workflow.itemUsesBonusAction && hasUsedBonusAction(this.actor) && needsBonusActionCheck(this.actor);
         if (queryBonus) {
@@ -1895,29 +1987,28 @@ export let MidiActivityMixin = Base => {
       return this.metadata.type;
     }
 
+    _ammunitionActivity: MidiActivityMixin | null | undefined;
+
+    /**
+     * An activity carried by the loaded ammunition, if any.
+     *
+     * Ammunition used to be resolved inside `otherActivity`, which gave one slot two jobs: the
+     * ammunition won it, so an item's own other activity could not run alongside its ammunition,
+     * and `otherActivityId: "none"` silenced ammunition even though that setting exists to stop
+     * auto-detection from the item's *own* activities. The two are now independent, and because an
+     * activity can no longer be both, their effects and damage cannot be applied twice.
+     */
+    get ammunitionActivity(): MidiActivityMixin | undefined {
+      if (this._ammunitionActivity !== undefined) return this._ammunitionActivity ?? undefined;
+      this._ammunitionActivity = findAmmunitionActivity(this.ammunitionItem) ?? null;
+      return this._ammunitionActivity ?? undefined;
+    }
+
     get otherActivity() {
       if (this._otherActivity !== undefined) return this._otherActivity as MidiActivityMixin;
-      if (this.otherActivityId === "none" || this.otherActivityId === undefined) return undefined;
-      if (this.ammunitionItem) {
-        //TODO consider making this a choice of activity
-        // @ts-expect-error no dnd5e-types
-        this._otherActivity = this.ammunitionItem.system.activities?.find(
-          a => a.midiProperties?.automationOnly && a.isOtherActivityCompatible
-        ) as MidiActivityMixin | undefined;
-        if (!this._otherActivity) {
-          // @ts-expect-error no dnd5e-types
-          this._otherActivity = this.ammunitionItem.system.activities.find(
-            a => a.isOtherActivityCompatible
-          ) as MidiActivityMixin | undefined;
-        }
+      if (this.otherActivityId === "none") return undefined;
 
-        if (this._otherActivity) {
-          this._otherActivity.prepareData();
-          return this._otherActivity as MidiActivityMixin;
-        }
-      }
-
-      if (this.otherActivityId !== "") {
+      if (this.otherActivityId) {
         // @ts-expect-error no dnd5e-types
         this._otherActivity = this.item.system.activities.get(this.otherActivityId) as MidiActivityMixin | undefined;
         // @ts-expect-error no dnd5e-types
@@ -1932,23 +2023,19 @@ export let MidiActivityMixin = Base => {
         return this._otherActivity as null;
       }
 
-      if (!this._otherActivity) {
-        // Is there exactly 1 automation only and otherActivityCompatible activity on the item
-        // @ts-expect-error no dnd5e-types
-        const otherActivityOptions = this.item.system.activities.filter(a => a.midiProperties?.automationOnly && a.isOtherActivityCompatible && a.uuid !== this.uuid);
-        if (otherActivityOptions.length === 1) {
-          this._otherActivity = otherActivityOptions[0];
-        }
+      // unset ("" or null) follows the configured default; new activities are stamped "none"
+      if (configSettings.defaultOtherActivity === "none") {
+        this._otherActivity = null;
+        return this._otherActivity as null;
       }
-      if (!this._otherActivity) {
-        // Is there exactly 1 other activity compatible activity on the item
+
+      // Prefer a sole automationOnly candidate, else a sole compatible one; ambiguity means no pairing
+      const soleCandidate = (filter: (a: any) => boolean) => {
         // @ts-expect-error no dnd5e-types
-        const otherActivityOptions = this.item.system.activities.filter(a => a.isOtherActivityCompatible && a.uuid !== this.uuid);
-        if (otherActivityOptions.length === 1) {
-          this._otherActivity = otherActivityOptions[0];
-        }
-      }
-      // If none of the above match we can't tell which one to use.
+        const options = this.item.system.activities.filter(a => filter(a) && a.isOtherActivityCompatible && a.uuid !== this.uuid);
+        return options.length === 1 ? options[0] : undefined;
+      };
+      this._otherActivity = soleCandidate(a => a.midiProperties?.automationOnly) ?? soleCandidate(() => true);
       this._otherActivity?.prepareData();
       if (!this._otherActivity) this._otherActivity = null;
       return this._otherActivity as MidiActivityMixin | undefined | null;
@@ -2084,7 +2171,13 @@ export let MidiActivityMixinSheet = Base => {
     async _prepareMidiQolContext(context) {
       // context = await super._prepareEffectContext(context);
       context.ConfirmTargetOptions = Object.entries(confirmTargetOptions).map(([value, label]) => ({ value, label }));
-      if (this.activity.forcedTargetConfirmation) context.ConfirmTargetOptions = context.ConfirmTargetOptions.filter(o => o.value === this.activity.forcedTargetConfirmation);
+      if (this.activity.forcedTargetConfirmation) {
+        context.ConfirmTargetOptions = context.ConfirmTargetOptions.filter(o => o.value === this.activity.forcedTargetConfirmation);
+        // Show the effective value, not the stored one, and stop it being edited: the stored value
+        // has no effect while the activity forces a result.
+        context.confirmTargetsForced = true;
+        context.confirmTargetsValue = this.activity.forcedTargetConfirmation;
+      }
       const ROLL_MODES = CONST.DICE_ROLL_MODES;
       context.RollModeOptions = [
         { value: "default", label: i18n("Default") },
@@ -2113,8 +2206,9 @@ export let MidiActivityMixinSheet = Base => {
           const identifierString = a.identifier === a.name.slugify() ? "" : ` (${a.identifier})`;
           ret.push({ label: `${a.name}${identifierString}`, value: a.identifier, id: a.id });
           return ret
-        }, [{ label: "Auto", value: "" }, { label: "None", value: "none" }]);
-      context.otherActivityOptions?.forEach(option => { option.selected = option.value === this.activity.otherActivityId || option.id === this.activity.otherActivityId });
+        }, [{ label: "Default", value: "" }, { label: "None", value: "none" }]);
+      const selectedOtherActivity = this.activity.otherActivityId ?? "";
+      context.otherActivityOptions?.forEach(option => { option.selected = option.value === selectedOtherActivity || option.id === selectedOtherActivity });
       context.triggeredActivityOptions = this.item.system.activities
         .filter(a => a.id !== this.activity.id && a.isTriggerableActivity)
         .reduce((ret, a) => {

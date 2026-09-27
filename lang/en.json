@@ -1113,7 +1113,7 @@
   },
   "midi-qol.GriddedGridless.Name": "Gridless Grid",
   "midi-qol.GridlessFudge.Name": "Fudge factor",
-  "midi-qol.GridlessFudge.Hint": "Subtract the fudge factor from the measured distance when checking range. Specified in grid scale units, i.e. ft/m",
+  "midi-qol.GridlessFudge.Hint": "Subtracted from measured distances when checking range, on every grid type. Edge-to-edge token distances never drop below one grid unit; centre-to-centre and path distances can reach 0. Specified in grid scale units, i.e. ft/m",
   "midi-qol.GriddedGridless.Hint": "If set midi will use the square grid for all distance calculations in gridless scenes",
   "midi-qol.targetConfirmationPosition": "Target Confirmation Position",
   "midi-qol.TargetConfirmationEnabled": "Enable Target Confirmation",
@@ -1412,6 +1412,11 @@
             "label": "Modification",
             "short": "Ignore Modification",
             "hint": "Ignore damage modification when applying damage"
+          },
+          "ddi": {
+            "label": "Downgrade Immunity",
+            "short": "Downgrade Immunity",
+            "hint": "Treat damage immunity as resistance (half damage) rather than ignoring it. Ignoring an immunity leaves the target taking full damage."
           }
         },
         "autoCEEffects": {
@@ -2278,5 +2283,15 @@
   "midi-qol.ModuleReview.Installed": "Installed",
   "midi-qol.ModuleReview.NotInstalled": "Not Installed",
   "midi-qol.ModuleReview.NoChanges": "All selected modules are already active.",
-  "midi-qol.ModuleReview.ReloadPrompt": "Module configuration updated. Reloading world."
+  "midi-qol.ModuleReview.ReloadPrompt": "Module configuration updated. Reloading world.",
+  "midi-qol.DefaultOtherActivityOptions": {
+    "auto": "Auto - roll a single matching activity",
+    "none": "None - roll nothing"
+  },
+  "midi-qol.DefaultOtherActivityOptions.expandedHints": {
+    "auto": "An attack with exactly one compatible activity rolls it as its other activity.",
+    "none": "Nothing is rolled unless the activity names an other activity."
+  },
+  "midi-qol.defaultOtherActivity.Name": "Other Activity Default",
+  "midi-qol.defaultOtherActivity.Hint": "What <b>Default</b> means in an activity's Other Activity field. Many dnd5e items pair an attack with a save - poison, say - without linking the two."
 }

@@ -1,0 +1,844 @@
+{
+  "name": "Cataclysm Bolts",
+  "type": "consumable",
+  "img": "icons/weapons/ammunition/arrow-head-war-flight.webp",
+  "effects": [
+    {
+      "_id": "cataIceRestrain0",
+      "_key": "!items.effects!CataclysmBolts00.cataIceRestrain0",
+      "name": "Cataclysm: Restrained",
+      "img": "icons/magic/water/snowflake-ice-blue.webp",
+      "type": "base",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [
+        "restrained"
+      ],
+      "changes": [],
+      "description": "",
+      "origin": null,
+      "sort": 0,
+      "tint": "#ffffff",
+      "system": {},
+      "duration": {
+        "startTime": null,
+        "seconds": 6,
+        "combat": null,
+        "rounds": 1,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "flags": {
+        "dae": {
+          "specialDuration": [
+            "turnEndSource"
+          ]
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.351",
+        "systemId": "dnd5e",
+        "systemVersion": "5.3.3",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null
+      }
+    },
+    {
+      "_id": "cataNecroStun000",
+      "_key": "!items.effects!CataclysmBolts00.cataNecroStun000",
+      "name": "Cataclysm: Stunned",
+      "img": "icons/magic/unholy/strike-body-explode-disintegrate.webp",
+      "type": "base",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [
+        "stunned"
+      ],
+      "changes": [],
+      "description": "",
+      "origin": null,
+      "sort": 0,
+      "tint": "#ffffff",
+      "system": {},
+      "duration": {
+        "startTime": null,
+        "seconds": 6,
+        "combat": null,
+        "rounds": 1,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "flags": {
+        "dae": {
+          "specialDuration": [
+            "turnEndSource"
+          ]
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.351",
+        "systemId": "dnd5e",
+        "systemVersion": "5.3.3",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null
+      }
+    }
+  ],
+  "flags": {
+    "midi-qol": {
+      "criticalThreshold": "20",
+      "onUseMacroName": "",
+      "effectActivation": false,
+      "fumbleThreshold": null,
+      "removeAttackDamageButtons": "default",
+      "itemCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "effectCondition": "",
+      "rollAttackPerTarget": "default",
+      "AoETargetType": "any",
+      "AoETargetTypeIncludeSelf": true,
+      "autoTarget": "default",
+      "onUseMacroParts": {
+        "items": [
+          {
+            "macroName": "ItemMacro",
+            "option": "postActiveEffects"
+          }
+        ]
+      }
+    },
+    "magicitems": {
+      "enabled": false,
+      "equipped": false,
+      "attuned": false,
+      "charges": "0",
+      "chargeType": "c1",
+      "destroy": false,
+      "destroyFlavorText": "reaches 0 charges: it crumbles into ashes and is destroyed.",
+      "rechargeable": false,
+      "recharge": "0",
+      "rechargeType": "t1",
+      "rechargeUnit": "r1",
+      "sorting": "l"
+    },
+    "core": {},
+    "betterRolls5e": {
+      "quickOther": {
+        "context": "",
+        "value": true,
+        "altValue": true
+      },
+      "quickDesc": {
+        "value": true,
+        "altValue": true
+      },
+      "quickAttack": {
+        "value": true,
+        "altValue": true
+      },
+      "quickSave": {
+        "value": true,
+        "altValue": true
+      },
+      "quickProperties": {
+        "value": true,
+        "altValue": true
+      },
+      "quickFlavor": {
+        "value": true,
+        "altValue": true
+      },
+      "quickCharges": {
+        "value": {
+          "quantity": false
+        },
+        "altValue": {
+          "quantity": false
+        }
+      }
+    },
+    "cf": {
+      "id": "temp_mxc6kjqa6kp",
+      "color": "#000000"
+    },
+    "midiProperties": {
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "rollOther": true,
+      "critOther": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "offHandWeapon": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "otherSaveDamage": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "scene-packer": {
+      "sourceId": "Compendium.world.backup-sample-items.Item.cO9peyFd7VWrFEM5",
+      "hash": "b8e8c381483d58394363257a9f236ba712f811b8"
+    },
+    "dnd5e": {
+      "persistSourceMigration": true,
+      "riders": {
+        "activity": [],
+        "effect": []
+      },
+      "last": {
+        "dnd5eactivity000": {
+          "attackMode": "oneHanded",
+          "damageType": {
+            "0": "piercing"
+          }
+        }
+      }
+    },
+    "tidy5e-sheet": {
+      "section": "",
+      "actionSection": ""
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.65"
+      }
+    },
+    "dae": {
+      "macro": {
+        "name": "Cataclysm Bolts",
+        "img": "icons/weapons/ammunition/arrow-head-war-flight.webp",
+        "type": "script",
+        "scope": "global",
+        "command": "// Cataclysm Bolts — on hit, roll d6 for the effect (postActiveEffects)\nconst version = \"13.0.66\";\ntry {\n  if (args[0].tag !== \"OnUse\" || args[0].macroPass !== \"postActiveEffects\") return;\n  const workflow = MidiQOL.Workflow.getWorkflow(args[0].workflowId ?? args[0].itemCardUuid);\n  const hit = [...(workflow?.hitTargets ?? [])];\n  if (!hit.length) return;                       // the bolt only triggers on a hit\n  const target = hit[0];\n\n  const ammo = workflow.ammunition;              // the bolt itself\n  if (!ammo) return;\n  // Look up by id: dnd5e regenerates `identifier` from the activity name, so it is not stable.\n  const pick = (id) => ammo.system.activities.get(id);\n\n  const roll = await new Roll(\"1d6\").evaluate();\n  await roll.toMessage({ flavor: \"Cataclysm Bolt effect\", speaker: ChatMessage.getSpeaker({ actor: workflow.actor }) });\n  const r = roll.total;\n\n  // 1-2 fire burst, 3-4 jagged ice, 5 necrotic pulse, 6 shrapnel\n  const FIRE = \"cataBoltFire0000\", ICE = \"cataBoltIce00000\",\n        NECRO = \"cataBoltNecro000\", SHRAPNEL = \"cataBoltShrap000\";\n  const chosen = r <= 2 ? FIRE : r <= 4 ? ICE : r === 5 ? NECRO : SHRAPNEL;\n  const activity = pick(chosen);\n  if (!activity) return ui.notifications?.warn(`Cataclysm Bolts: no activity ${chosen}`);\n\n  // Fire and ice also catch everything within 5 feet of the target.\n  let targetUuids = [target.document.uuid];\n  if (chosen === FIRE || chosen === ICE) {\n    const nearby = MidiQOL.findNearby(null, target, 5, { includeIncapacitated: true }) ?? [];\n    targetUuids = [target.document.uuid, ...nearby.map(t => t.document.uuid)];\n  }\n\n  if (chosen === SHRAPNEL) {\n    // Six separate ranged attacks at the same target rather than one bundled roll.\n    for (let i = 0; i < 6; i++) {\n      await MidiQOL.completeActivityUse(activity,\n        { midiOptions: { targetUuids: [target.document.uuid], targetConfirmation: \"none\", configureDialog: false } },\n        { configure: false }, {});\n    }\n  } else {\n    await MidiQOL.completeActivityUse(activity,\n      { midiOptions: { targetUuids, targetConfirmation: \"none\", configureDialog: false } },\n      { configure: false }, {});\n  }\n} catch (err) {\n  console.error(\"Cataclysm Bolts macro error\", err);\n}\n",
+        "author": null,
+        "ownership": {
+          "default": 3
+        },
+        "_id": null,
+        "folder": null,
+        "sort": 0,
+        "flags": {},
+        "_stats": {
+          "systemId": "dnd5e",
+          "systemVersion": "5.3.3",
+          "coreVersion": "13.351",
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null,
+          "compendiumSource": null,
+          "duplicateSource": null
+        }
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>When you hit with an attack using a cataclysm bolt, the attack deals normal damage. Then roll a d6 to determine its additional effect: <strong>1-2</strong> a blast of fire (3d8 fire to the target and each creature within 5 feet); <strong>3-4</strong> jagged ice (DC 17 Dexterity save or 1d10 cold and restrained until the end of your next turn); <strong>5</strong> a necrotic pulse (2d6 necrotic, DC 16 Strength save or stunned until the end of your next turn); <strong>6</strong> shrapnel (six ranged attacks at +7 for 1d6 piercing each).</p>",
+      "chat": "",
+      "unidentified": ""
+    },
+    "source": {
+      "custom": "DMG pg. 152",
+      "revision": 1,
+      "rules": "2024"
+    },
+    "quantity": 10,
+    "weight": {
+      "value": 0.05,
+      "units": "lb"
+    },
+    "price": {
+      "value": 600,
+      "denomination": "gp"
+    },
+    "attunement": "",
+    "rarity": "veryRare",
+    "identified": true,
+    "uses": {
+      "max": "",
+      "autoDestroy": false,
+      "spent": 0,
+      "recovery": []
+    },
+    "damage": {
+      "base": {
+        "number": null,
+        "denomination": null,
+        "bonus": "",
+        "types": [],
+        "custom": {
+          "enabled": false
+        },
+        "scaling": {
+          "number": 1
+        }
+      },
+      "replace": false
+    },
+    "properties": [
+      "mgc"
+    ],
+    "unidentified": {
+      "description": ""
+    },
+    "type": {
+      "value": "ammo",
+      "subtype": ""
+    },
+    "container": null,
+    "activities": {
+      "cataBoltFire0000": {
+        "_id": "cataBoltFire0000",
+        "type": "damage",
+        "activation": {
+          "type": "special",
+          "value": 1,
+          "condition": "",
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": false
+        },
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false,
+          "value": null
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "type": "creature",
+            "count": "",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "name": "Cataclysm: Fire Burst",
+        "sort": 0,
+        "useConditionText": "[\"dragon\"].includes(raceOrType)",
+        "effectConditionText": "",
+        "midiProperties": {
+          "automationOnly": true,
+          "forceDialog": false,
+          "confirmTargets": "never",
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "effects": [],
+        "damage": {
+          "parts": [
+            {
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "number": 3,
+              "denomination": 8,
+              "bonus": "",
+              "types": [
+                "fire"
+              ],
+              "scaling": {
+                "number": 1
+              }
+            }
+          ]
+        }
+      },
+      "cataBoltIce00000": {
+        "_id": "cataBoltIce00000",
+        "type": "save",
+        "activation": {
+          "type": "special",
+          "value": 1,
+          "condition": "",
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": false
+        },
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false,
+          "value": null
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "type": "creature",
+            "count": "",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "name": "Cataclysm: Jagged Ice",
+        "sort": 0,
+        "useConditionText": "[\"dragon\"].includes(raceOrType)",
+        "effectConditionText": "",
+        "midiProperties": {
+          "automationOnly": true,
+          "forceDialog": false,
+          "confirmTargets": "never",
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "effects": [
+          {
+            "_id": "cataIceRestrain0",
+            "onSave": false
+          }
+        ],
+        "save": {
+          "ability": [
+            "dex"
+          ],
+          "dc": {
+            "calculation": "",
+            "formula": "17"
+          }
+        },
+        "damage": {
+          "onSave": "none",
+          "parts": [
+            {
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "number": 1,
+              "denomination": 10,
+              "bonus": "",
+              "types": [
+                "cold"
+              ],
+              "scaling": {
+                "number": 1
+              }
+            }
+          ]
+        }
+      },
+      "cataBoltNecro000": {
+        "_id": "cataBoltNecro000",
+        "type": "save",
+        "activation": {
+          "type": "special",
+          "value": 1,
+          "condition": "",
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": false
+        },
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false,
+          "value": null
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "type": "creature",
+            "count": "",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "name": "Cataclysm: Necrotic Pulse",
+        "sort": 0,
+        "useConditionText": "[\"dragon\"].includes(raceOrType)",
+        "effectConditionText": "",
+        "midiProperties": {
+          "automationOnly": true,
+          "forceDialog": false,
+          "confirmTargets": "never",
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "effects": [
+          {
+            "_id": "cataNecroStun000",
+            "onSave": false
+          }
+        ],
+        "save": {
+          "ability": [
+            "str"
+          ],
+          "dc": {
+            "calculation": "",
+            "formula": "16"
+          }
+        },
+        "damage": {
+          "onSave": "full",
+          "parts": [
+            {
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "number": 2,
+              "denomination": 6,
+              "bonus": "",
+              "types": [
+                "necrotic"
+              ],
+              "scaling": {
+                "number": 1
+              }
+            }
+          ]
+        }
+      },
+      "cataBoltShrap000": {
+        "_id": "cataBoltShrap000",
+        "type": "attack",
+        "activation": {
+          "type": "special",
+          "value": 1,
+          "condition": "",
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": false
+        },
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false,
+          "value": null
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "type": "creature",
+            "count": "",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "name": "Cataclysm: Shrapnel",
+        "sort": 0,
+        "useConditionText": "[\"dragon\"].includes(raceOrType)",
+        "effectConditionText": "",
+        "midiProperties": {
+          "automationOnly": true,
+          "forceDialog": false,
+          "confirmTargets": "never",
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "effects": [],
+        "attack": {
+          "ability": "none",
+          "bonus": "7",
+          "flat": true,
+          "critical": {
+            "threshold": null
+          },
+          "type": {
+            "value": "ranged",
+            "classification": "weapon"
+          }
+        },
+        "damage": {
+          "includeBase": false,
+          "parts": [
+            {
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "number": 1,
+              "denomination": 6,
+              "bonus": "",
+              "types": [
+                "piercing"
+              ],
+              "scaling": {
+                "number": 1
+              }
+            }
+          ]
+        }
+      }
+    },
+    "identifier": "cataclysm-bolts",
+    "magicalBonus": null,
+    "attuned": false,
+    "equipped": false
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782992877,
+    "modifiedTime": 1741782992877,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
+  },
+  "folder": "5Ok9Jbl5nOokCkqf",
+  "_id": "CataclysmBolts00",
+  "sort": 200000,
+  "ownership": {
+    "default": 0,
+    "Zl1BOUaPLwDEujaL": 3
+  },
+  "_key": "!items!CataclysmBolts00"
+}

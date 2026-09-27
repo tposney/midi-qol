@@ -167,6 +167,7 @@ class ConfigSettings {
   autoCompleteWorkflow = true;
   saveDROrder = "DRSaveDr";
   autoTarget: string = "none";
+  defaultOtherActivity: string = "auto";
   averageDamage: string = "none";
   checkSaveText: boolean = false;
   checkTwoHanded: boolean = false;
@@ -1374,6 +1375,12 @@ export const triggeredActivityRollAsOptions = keysToOptionsObj("TriggeredActivit
   "firstFailedSaveTarget"
 ]);
 
+/** Key for "downgrade immunity to resistance". Lives alongside the ignore keys in the same set. */
+export const DOWNGRADE_IMMUNITY_KEY = "ddi";
+
+/** dnd5e's trait value for "All Damage". Not a member of CONFIG.DND5E.damageTypes. */
+export const ALL_DAMAGE_KEY = "ALL";
+
 // Base ignore traits options (apply to all damage types)
 export const ignoreTraitsOptionsBase = {
   idi: {
@@ -1395,6 +1402,10 @@ export const ignoreTraitsOptionsBase = {
   idm: {
     label: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idm.label",
     hint: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idm.hint"
+  },
+  ddi: {
+    label: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.ddi.label",
+    hint: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.ddi.hint"
   }
 };
 
@@ -1407,7 +1418,8 @@ export const ignoreTraitsCategoryLabels = {
   idr: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idr.short",
   idv: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idv.short",
   ida: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.ida.short",
-  idm: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idm.short"
+  idm: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.idm.short",
+  ddi: "midi-qol.SHARED.FIELDS.midiProperties.ignoreTraits.ddi.short"
 };
 
 /**
@@ -1626,6 +1638,11 @@ export const challengeModeArmorOptions = keysToExtendedOptionsObj("ChallengeMode
   "challenge",
   "scale",
   "scaleNoAR"
+]);
+
+export const defaultOtherActivityOptions = keysToExtendedOptionsObj("DefaultOtherActivityOptions", [
+  "auto",
+  "none"
 ]);
 
 export const saveDROrderOptions = keysToExtendedOptionsObj("SaveDROrderOptions", [

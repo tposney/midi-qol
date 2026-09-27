@@ -40,6 +40,14 @@
   <div class="midi-qol-box">
     <div class="midi-qol-settings heading">{{ localize "midi-qol.Special"}}</div>
     <div class="form-group">
+      <label>{{localize "midi-qol.defaultOtherActivity.Name"}}</label>
+      <select name="defaultOtherActivity" data-dtype="String">
+        {{midiSelectOptions defaultOtherActivityOptions selected=configSettings.defaultOtherActivity localize=true}}
+      </select>
+      <div class="notes midi-qol-faint">{{{localize "midi-qol.defaultOtherActivity.Hint"}}}</div>
+    </div>
+
+    <div class="form-group">
       <label>{{localize "midi-qol.AutoRemoveTemplate.Name"}}</label>
       <input id="autoRemoveTemplate" type="checkbox" name="autoRemoveTemplate" data-dtype="Boolean" {{checked
         configSettings.autoRemoveTemplate}} />

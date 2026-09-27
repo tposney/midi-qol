@@ -184,7 +184,14 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
   if (["none", "never"].includes(options.workflowOptions?.targetConfirmation ?? "")) return false;
   if (options.workflowOptions?.targetConfirmation === "always") return true;
   if (["enchant", "summon"].includes(activity.type)) return false;
-  if (activity.target?.affects?.choice) return true;
+  /*
+   * "Choose Targets" (target.affects.choice) means "when targeting an area, can the user choose who
+   * it affects?". dnd5e only renders the checkbox while a template type is set
+   * (shared/fields/field-targets.hbs), so clearing the template type leaves a stored true that is
+   * invisible on the sheet but was still forcing confirmation on every use. Apply it only under the
+   * condition it can be set.
+   */
+  if (activity.target?.affects?.choice && activity.target?.template?.type) return true;
   if (["", "self", undefined].includes(activity.target?.affects?.type) && ["", undefined, "self"].includes(activity.range?.units)) return false;
   if (activity.target?.affects.type === "self") return false;
   if (options.workflowOptions?.attackPerTarget === true) return false;

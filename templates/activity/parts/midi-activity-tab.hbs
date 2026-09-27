@@ -28,7 +28,11 @@
         {{ formField fields.forceConsumeDialog value=../source.midiProperties.forceConsumeDialog options=../ConsumeDialogOptions localize=true}}
         {{ formField fields.forceRollDialog value=../source.midiProperties.forceRollDialog options=../RollDialogOptions localize=true}}
         {{ formField fields.forceDamageDialog value=../source.midiProperties.forceDamageDialog options=../DamageDialogOptions localize=true}}
-        {{ formField fields.confirmTargets value=../source.midiProperties.confirmTargets options=../ConfirmTargetOptions localize=true}}
+        {{#if ../confirmTargetsForced}}
+          {{ formField fields.confirmTargets value=../confirmTargetsValue options=../ConfirmTargetOptions localize=true disabled=true}}
+        {{else}}
+          {{ formField fields.confirmTargets value=../source.midiProperties.confirmTargets options=../ConfirmTargetOptions localize=true}}
+        {{/if}}
 
         {{#if ../hasAreaTarget}}
           {{ formField fields.autoTargetType value=../source.midiProperties.autoTargetType options=../AutoTargetTypeOptions localize=true}}

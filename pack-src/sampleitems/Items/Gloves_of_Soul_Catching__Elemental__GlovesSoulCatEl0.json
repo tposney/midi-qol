@@ -24,7 +24,7 @@
       "value": 0,
       "denomination": "gp"
     },
-    "rarity": "artifact",
+    "rarity": "legendary",
     "attunement": "required",
     "attuned": false,
     "equipped": false,
@@ -127,7 +127,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.64"
+        "version": "13.0.65"
       }
     }
   },

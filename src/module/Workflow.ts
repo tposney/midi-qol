@@ -1030,6 +1030,16 @@ export class Workflow {
   }
 
   /**
+   * The other activity if there is one, otherwise the ammunition's. Used where the question is
+   * "does the extra activity have a save/check", which decides how otherEffectTargets is derived —
+   * ammunition effects share that collection, so its save must count when the item has no other
+   * activity of its own.
+   */
+  get otherActivityOrAmmunition() {
+    return this.otherActivity ?? this.ammunitionActivity;
+  }
+
+  /**
    * Check if an activity has a valid save configuration (save with abilities, or check with ability/associated)
    */
   protected hasValidSaveOrCheck(activity: Activity | null | undefined): boolean {
@@ -1121,6 +1131,14 @@ export class Workflow {
   set effectsAlreadyExpired(effectsAlreadyExpired: string[]) { this.#persisted.setScalar("effectsAlreadyExpired", effectsAlreadyExpired); }
 
   noAutoDamage: boolean | undefined; // override damage roll for damage rolls
+
+  #consumptionRefunded = false;
+
+  /**
+   * Set when MidiActivityMixin suppressed dnd5e's concentration so it can be started after the
+   * workflow's checks pass. Carries what Activity#use would have used. Cleared once begun.
+   */
+  deferredConcentration: { scaling?: number, end?: string } | undefined;
 
   get saves(): Set<Token.Implementation> { return this.#persisted.tokenSet("saveUuids"); }
   set saves(saves: Set<TokenOrDocument> | undefined) { this.#persisted.setTokenSet("saveUuids", saves); }
@@ -1354,6 +1372,8 @@ export class Workflow {
   }
 
   ammunition: Item.Implementation | undefined;
+  /** An activity carried by the loaded ammunition. Independent of otherActivity — both can run. */
+  ammunitionActivity: any | undefined;
   systemCard: boolean | undefined;
   aborted: boolean = false;
   workflowName: string | undefined;
@@ -1848,6 +1868,11 @@ export class Workflow {
       return false;
     }
 
+    // Concentration deferred: the effect does not exist yet, so neither link to a stale one from
+    // an earlier cast of the same item nor fall through to the non-concentration deletion effect.
+    // beginDeferredConcentration links every template in templateUuids once it has the effect.
+    if (this.deferredConcentration) return true;
+
     // Check for concentration effect first
     const concentrationEffect = getConcentrationEffect(this.actor, this.item);
     if (concentrationEffect) {
@@ -2107,6 +2132,7 @@ export class Workflow {
     // the confirmation dialog — covers AoE templates, scaled counts, activity/global settings,
     // and workflowOptions.targetConfirmation overrides.
     if (!await postTemplateConfirmTargets(this.activity, { workflowOptions: this.workflowOptions }, this)) {
+      await this.refundConsumption();
       return this.WorkflowState_Abort;
     }
     // Enforce target count after confirmation — for scaled activities this is the first check,
@@ -2116,6 +2142,7 @@ export class Workflow {
       const allowedTargets = Number(this.activity.target?.affects?.count);
       if (allowedTargets && this.targets.size > allowedTargets) {
         ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
+        await this.refundConsumption();
         return this.WorkflowState_Abort;
       }
     }
@@ -2146,6 +2173,7 @@ export class Workflow {
     return this.WorkflowState_PreambleComplete;
   }
   async WorkflowState_PreambleComplete(context: WorkflowContext = {}): Promise<WorkflowState> {
+    await this.beginDeferredConcentration();
     if (configSettings.undoWorkflow) await saveTargetsUndoData(this);
     this.effectsAlreadyExpired = [];
 
@@ -2679,7 +2707,7 @@ export class Workflow {
    */
   async rollDeferredOtherDamage(): Promise<void> {
     const config = this.otherDamageConfig;
-    if (!config || !this.otherActivity) return;
+    if (!config || !this.otherActivityOrAmmunition) return;
 
     const dialog = this.otherDamageDialog ?? {};
 
@@ -2747,12 +2775,12 @@ export class Workflow {
 
     if (this.forceApplyEffects) {
       this.otherEffectTargets = this.targets;
-    } else if ((this.otherActivity?.save || this.otherActivity?.check) && this.activity.attack) {
+    } else if ((this.otherActivityOrAmmunition?.save || this.otherActivityOrAmmunition?.check) && this.activity.attack) {
       this.otherEffectTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
       // check saves when selecting the effects to apply - deal with always apply effects
       if (!this.otherEffectActivationCondition)
         this.otherEffectTargets = new Set([...this.otherEffectTargets].filter(t => this.failedSaves.has(t)));
-    } else if (this.otherActivity?.save || this.otherActivity?.check) this.otherEffectTargets = this.failedSaves;
+    } else if (this.otherActivityOrAmmunition?.save || this.otherActivityOrAmmunition?.check) this.otherEffectTargets = this.failedSaves;
     else if (this.activity.attack) {
       this.otherEffectTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
     } else
@@ -2823,6 +2851,27 @@ export class Workflow {
     let onSaveActivityEffects = (this.activity.effects ?? []).filter(efData => isApplicableEffect(this.activity, efData) && efData.onSave === true).map(efData => efData.effect!);
     let otherActivityEffects = (this.otherActivity?.effects ?? []).filter(efData => isApplicableEffect(this.otherActivity, efData) && efData.onSave !== true).map(efData => efData.effect!);
     let onSaveOtherActivityEffects = (this.otherActivity?.effects ?? []).filter(efData => isApplicableEffect(this.otherActivity, efData) && efData.onSave === true).map(efData => efData.effect!);
+    /*
+     * Ammunition effects. The ammunition activity is resolved independently of otherActivity, so an
+     * item's own other activity and its ammunition can both contribute - previously the ammunition
+     * won the single slot and the item's own activity was skipped.
+     *
+     * They join the other-activity collections rather than getting a third application path of
+     * their own: the targeting and consumption handling below is exactly what ammunition effects
+     * need, and an activity can no longer be both, so nothing is collected twice. The consequence
+     * is that ammunition effects share otherEffectTargets with the item's other activity - correct
+     * for the common cases (attack hits, or a save on either), and worth revisiting if the two ever
+     * need to target differently.
+     */
+    const ammunitionActivity = this.ammunitionActivity;
+    if (ammunitionActivity && ammunitionActivity !== this.otherActivity) {
+      const ammunitionEffects = (ammunitionActivity.effects ?? [])
+        .filter((efData: any) => isApplicableEffect(ammunitionActivity, efData));
+      otherActivityEffects = otherActivityEffects.concat(
+        ammunitionEffects.filter((efData: any) => efData.onSave !== true).map((efData: any) => efData.effect!));
+      onSaveOtherActivityEffects = onSaveOtherActivityEffects.concat(
+        ammunitionEffects.filter((efData: any) => efData.onSave === true).map((efData: any) => efData.effect!));
+    }
     if (activityEffects.length > 0 && this.effectTargets.size > 0 && this.activity.midiProperties?.chooseEffects) { // WIP
       activityEffects = await this.chooseEffects(activityEffects, { activity: this.activity, activityUuid: this.activity.uuid, isOtherActivity: false });
     }
@@ -3114,7 +3163,22 @@ export class Workflow {
         if (shouldTrigger) {
           let usage: { midiOptions: MidiOptions } = { midiOptions: {} };
           usage.midiOptions.event = this.rollOptions.event;
-          usage.midiOptions.workflowOptions = this.workflowOptions;
+          /*
+           * Inherit the triggering workflow's options, but not targetConfirmation. That one
+           * describes how a particular invocation was made, not the workflow: AttackActivity sets
+           * it to "never" for each iteration of the roll-attack-per-target loop, because the loop
+           * already knows its target. Passing it on suppressed confirmation for the triggered
+           * activity too, overriding that activity's own confirmTargets setting.
+           *
+           * rollAttackPerTarget leaks the same way and from the same loop: it says this attack is
+           * being rolled once per target, which has no bearing on the activity it triggers.
+           */
+          const {
+            targetConfirmation: _triggeringTargetConfirmation,
+            rollAttackPerTarget: _triggeringRollAttackPerTarget,
+            ...inheritedWorkflowOptions
+          } = this.workflowOptions ?? {};
+          usage.midiOptions.workflowOptions = inheritedWorkflowOptions;
           usage.midiOptions.rollOptions = this.rollOptions;
           usage.midiOptions.isTriggered = true;
           let targetUuids: string[] = [];
@@ -3173,6 +3237,64 @@ export class Workflow {
     }
     return this.WorkflowState_Suspend;
 
+  }
+
+  /**
+   * Hand back whatever dnd5e consumed for this use.
+   *
+   * Aborting deletes the activity card, and the card is where dnd5e keeps the consumption deltas
+   * and its own "Refund Resource" button - so an abort that happens before the roll has to refund
+   * itself or the slot/uses are lost with no way to recover them. postChatCardChecks already does
+   * this for the checks it runs; the checks deferred to WorkflowState_AoETargetConfirmation (which
+   * is where a scaled target count such as Banishment's is first known) did not.
+   *
+   * Idempotent: a workflow can reach more than one abort path.
+   */
+  async refundConsumption(): Promise<void> {
+    if (this.#consumptionRefunded) return;
+    const consumed = getConsumptionData(this.chatCard);
+    if (!consumed || foundry.utils.isEmpty(consumed)) return;
+    this.#consumptionRefunded = true;
+    try {
+      await this.activity?.refund(consumed);
+    } catch (err) {
+      const message = `${this.workflowName} could not refund consumption`;
+      error(message, err);
+      TroubleShooter.recordError(err, message);
+    }
+  }
+
+  /**
+   * Start the concentration that MidiActivityMixin deferred, now the checks have passed.
+   *
+   * Mirrors what Activity#use does: begin, record the effect id on the card (midi and dnd5e both
+   * read system.concentration from there), then end the previous concentration if the actor was
+   * at its limit - in that order, so a cast that never happens costs the caster nothing.
+   */
+  async beginDeferredConcentration(): Promise<void> {
+    const deferred = this.deferredConcentration;
+    if (!deferred) return;
+    this.deferredConcentration = undefined;
+    try {
+      // @ts-expect-error no dnd5e-types
+      const effect = await this.actor.beginConcentrating(this.activity, { "flags.dnd5e.scaling": deferred.scaling });
+      if (!effect) return;
+      // @ts-expect-error no dnd5e-types
+      if (this.chatCard) await this.chatCard.update({ "system.concentration": effect.id });
+      // Templates placed by this use could not be linked while the effect did not exist yet.
+      for (const templateUuid of this.templateUuids) {
+        const templateDocument = await fromUuid(templateUuid) as MeasuredTemplateDocument | undefined;
+        if (templateDocument) await templateDocument.setFlag("dnd5e", "dependentOn", effect.uuid);
+      }
+      if (deferred.end) {
+        // @ts-expect-error no dnd5e-types
+        await this.actor.endConcentration(deferred.end);
+      }
+    } catch (err) {
+      const message = `${this.workflowName} could not begin deferred concentration`;
+      error(message, err);
+      TroubleShooter.recordError(err, message);
+    }
   }
 
   async WorkflowState_Abort(context: WorkflowContext = {}): Promise<WorkflowState> {
@@ -3310,8 +3432,8 @@ export class Workflow {
           }
           const inCombat = !!(game.combat?.turns.some(combatant => combatant.token?.id === selfTarget?.id));
           const converted = convertDuration(activityDuration, inCombat);
-          if (converted.type === "none") {
-            // Permanent/special duration - no expiry
+          if (converted.type === "none" || activityDuration?.units === "inst") {
+            // Permanent/special duration - no expiry. dnd5e summons are often instantaneous (e.g. find familiar)
             effectData.duration = {
               startRound: game.combat?.round,
               startTurn: game.combat?.turn,
@@ -8765,7 +8887,19 @@ type TrapWorkflowConstructorOptions = WorkflowConstructorOptions & {
 export type WorkflowOptions = InexactPartial<{
   advantage: boolean;
   allowIncapacitated: boolean;
+  /**
+   * Caller-supplied control over per-target attack splitting: true forces it on, false off,
+   * absent falls through to the activity flag and the world setting. The pre-13 item-based
+   * implementation passed false into each iteration of its own loop to stop it re-splitting.
+   * Nothing has written it since that implementation was replaced (68664c1f, 2024-11-10), so
+   * the sole remaining read — activityHelpers.requiresTargetConfirmation — is vestigial.
+   */
   attackPerTarget: boolean;
+  /**
+   * Status, not control: this invocation is one iteration of a per-target attack roll. Set by
+   * AttackActivity via setProperty. Distinct from attackPerTarget above, which is an input.
+   */
+  rollAttackPerTarget: boolean;
   attackRollDSN: boolean;
   autoConsumeResource: string;
   autoFastAttack: boolean;
