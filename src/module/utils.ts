@@ -716,9 +716,9 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       return calcDamageOptions;
     };
 
-    const otherSaveMultiplier = (workflow.otherActivity?.save || workflow.otherActivity?.check)
+    const otherSaveMultiplier = workflow.otherSaveActivity
       ? (() => {
-        const defaultOtherMultiplier = getSaveMultiplierForActivity(workflow.otherActivity);
+        const defaultOtherMultiplier = getSaveMultiplierForActivity(workflow.otherSaveActivity);
         return hasSaved
           ? superSaver || semiSuperSaver
             ? 0
@@ -2577,6 +2577,8 @@ export type MidiOptions = {
   parts?: string[];
   powerLevel?: number;
   proceedChecks?: {
+    // Whether to classify the use as an attack of opportunity; defaults to checkReaction.
+    checkAoO?: boolean;
     checkBonusAction?: boolean;
     checkReaction?: boolean;
     none?: boolean;
@@ -6761,9 +6763,13 @@ export function createConditionData(data: {
       rollData.workflow = data.workflow;
       rollData.activity = data.workflow.activity;
       rollData.riderStatuses = {};
-      data.workflow.activity.applicableEffects?.forEach((effect) => {
-        Array.from(effect?.statuses).forEach((status) => (rollData.riderStatuses[status] = true));
-        effect.flags?.dnd5e?.riders?.statuses?.forEach((rider) => (rollData.riderStatuses[rider] = true));
+      // dnd5e 6 lists effect profiles here, not effects: local ones resolve from the item, remote ones by uuid.
+      const activity = data.workflow.activity;
+      activity.applicableEffects?.forEach((profile) => {
+        const effect = (profile.uuid ? fromUuidSync(profile.uuid) : activity.item?.effects.get(profile._id ?? "")) as ActiveEffect.Implementation | null | undefined;
+        effect?.statuses?.forEach(status => (rollData.riderStatuses[status] = true));
+        // @ts-expect-error no dnd5e-types
+        effect?.system?.rider?.statuses?.forEach((rider: string) => (rollData.riderStatuses[rider] = true));
       });
       rollData.otherDamageActivity = data.workflow?.otherActivity;
       rollData.hasSave = data.workflow.hasSave;
@@ -7707,10 +7713,10 @@ function isCellAdjacentToToken(cellPoint: { x: number; y: number }, target: Toke
   const cellBottom = cellTop + gridH;
 
   // Target bounding box
-  const targetLeft = target.x;
-  const targetTop = target.y;
-  const targetRight = target.x + target.document.width * gridW;
-  const targetBottom = target.y + target.document.height * gridH;
+  const targetLeft = target.document.x;
+  const targetTop = target.document.y;
+  const targetRight = target.document.x + target.document.width * gridW;
+  const targetBottom = target.document.y + target.document.height * gridH;
 
   // Compute the gap between the two bounding boxes along each axis
   const dx = Math.max(0, cellLeft - targetRight, targetLeft - cellRight);
@@ -7791,12 +7797,12 @@ export function findPotentialFlankers(target: Token.Implementation) {
 
 /**
  * Compute the centroid (average pixel position) of a token's occupied hex centers.
- * Falls back to token.center if the grid is not hexagonal or offsets can't be obtained.
+ * Falls back to the token document's center if the grid is not hexagonal or offsets can't be obtained.
  */
 function getHexCentroid(target: Token.Implementation): { x: number; y: number } {
-  if (!canvas?.grid?.isHexagonal) return target.center;
+  if (!canvas?.grid?.isHexagonal) return target.document.getCenterPoint();
   const offsets = target.document.getOccupiedGridSpaceOffsets();
-  if (!offsets.length) return target.center;
+  if (!offsets.length) return target.document.getCenterPoint();
   let sumX = 0, sumY = 0;
   for (const offset of offsets) {
     const center = canvas.grid.getCenterPoint(offset);
@@ -7817,9 +7823,11 @@ function isAngleFlanking(
   target: Token.Implementation
 ): boolean {
   // Use hex centroid for hex grids, target center for gridless
-  const referencePoint = canvas?.grid?.isHexagonal ? getHexCentroid(target) : target.center;
-  const angleToken = Math.atan2(token.center.y - referencePoint.y, token.center.x - referencePoint.x);
-  const angleAlly = Math.atan2(ally.center.y - referencePoint.y, ally.center.x - referencePoint.x);
+  const referencePoint = canvas?.grid?.isHexagonal ? getHexCentroid(target) : target.document.getCenterPoint();
+  const tokenCenter = token.document.getCenterPoint();
+  const allyCenter = ally.document.getCenterPoint();
+  const angleToken = Math.atan2(tokenCenter.y - referencePoint.y, tokenCenter.x - referencePoint.x);
+  const angleAlly = Math.atan2(allyCenter.y - referencePoint.y, allyCenter.x - referencePoint.x);
   let diff = Math.abs(angleToken - angleAlly);
   if (diff > Math.PI) diff = 2 * Math.PI - diff; // normalize to [0, π]
   const MIN_FLANKING_ANGLE = (150 / 180) * Math.PI; // 150° in radians
@@ -7874,11 +7882,12 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
     // measurement-mode-dependent distance calculations (center vs perimeter)
     const tokenStartX = -Math.max(0, token.document.width / 2 - 0.5);
     const tokenStartY = -Math.max(0, token.document.height / 2 - 0.5);
+    const tokenCenter = token.document.getCenterPoint();
     const tokenPoints: any[] = [];
     for (let x = tokenStartX; x < token.document.width / 2; x++) {
       for (let y = tokenStartY; y < token.document.height / 2; y++) {
-        let tx = token.center.x + x * gridW;
-        let ty = token.center.y + y * gridH;
+        let tx = tokenCenter.x + x * gridW;
+        let ty = tokenCenter.y + y * gridH;
         if (!isCellAdjacentToToken({ x: tx, y: ty }, target)) continue;
         tokenPoints.push({ x: tx, y: ty });
       }
@@ -7905,11 +7914,12 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
       }
       const allyStartX = -Math.max(0, ally.document.width / 2 - 0.5);
       const allyStartY = -Math.max(0, ally.document.height / 2 - 0.5);
+      const allyCenter = ally.document.getCenterPoint();
       const allyPoints: any[] = [];
       for (let x1 = allyStartX; x1 < ally.document.width / 2; x1++) {
         for (let y1 = allyStartY; y1 < ally.document.height / 2; y1++) {
-          let ax = ally.center.x + x1 * gridW;
-          let ay = ally.center.y + y1 * gridH;
+          let ax = allyCenter.x + x1 * gridW;
+          let ay = allyCenter.y + y1 * gridH;
           if (!isCellAdjacentToToken({ x: ax, y: ay }, target)) continue;
           allyPoints.push({ x: ax, y: ay });
         }
@@ -7976,11 +7986,12 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
   // measurement-mode-dependent distance calculations (center vs perimeter)
   const tokenStartX = -Math.max(0, token.document.width / 2 - 0.5);
   const tokenStartY = -Math.max(0, token.document.height / 2 - 0.5);
+  const tokenCenter = token.document.getCenterPoint();
   const tokenPoints: any[] = [];
   for (let x = tokenStartX; x < token.document.width / 2; x++) {
     for (let y = tokenStartY; y < token.document.height / 2; y++) {
-      let tx = token.center.x + x * gridW;
-      let ty = token.center.y + y * gridH;
+      let tx = tokenCenter.x + x * gridW;
+      let ty = tokenCenter.y + y * gridH;
       if (!isCellAdjacentToToken({ x: tx, y: ty }, target)) continue;
       tokenPoints.push({ x: tx, y: ty });
     }
@@ -8004,11 +8015,12 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
     const allyStartX = -Math.max(0, ally.document.width / 2 - 0.5);
     const allyStartY = -Math.max(0, ally.document.height / 2 - 0.5);
 
+    const allyCenter = ally.document.getCenterPoint();
     const allyPoints: any[] = [];
     for (let x1 = allyStartX; x1 < ally.document.width / 2; x1++) {
       for (let y1 = allyStartY; y1 < ally.document.height / 2; y1++) {
-        let ax = ally.center.x + x1 * gridW;
-        let ay = ally.center.y + y1 * gridH;
+        let ax = allyCenter.x + x1 * gridW;
+        let ay = allyCenter.y + y1 * gridH;
         if (!isCellAdjacentToToken({ x: ax, y: ay }, target)) {
           continue;
         }
@@ -8672,13 +8684,6 @@ async function _doConcentrationCheck(actor: Actor.Implementation, itemData: Item
   } finally {
     return result;
   }
-}
-
-export function hasDAE(workflow: Workflow) {
-  return installedModules.get("dae") && (
-    workflow.item.effects?.some(ef => ef?.transfer === false)
-    || workflow.ammunition?.effects?.some(ef => ef?.transfer === false)
-  );
 }
 
 

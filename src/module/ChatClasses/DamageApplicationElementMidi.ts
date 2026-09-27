@@ -1,4 +1,4 @@
-import { configSettings, isDnd5e53 } from "../settings.js";
+import { configSettings, isDnd5e53, ALL_DAMAGE_KEY } from "../settings.js";
 import { GameSystemConfig, MODULE_ID, MQDamageRollTypes, debugEnabled, i18nFormat, log, warn } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { CombinedTargetDescriptor, DamageApplicationOptions, Dnd5eSystem } from "../../globals.js";
@@ -133,9 +133,10 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
         const midiIcon = change === "uncannyDodge"
           ? (foundry.utils.getProperty(options, "midi.uncannyDodgeIcon") as string | undefined) ?? MIDI_CHANGE_ICONS[change]
           : MIDI_CHANGE_ICONS[change];
+        // As dnd5e's own change sources: "ALL" is the All Damage trait, not a damage type.
         const icon = midiIcon
-          ?? (type === "threshold"
-            ? "systems/dnd5e/icons/svg/damage/threshold.svg"
+          ?? (type === ALL_DAMAGE_KEY ? "systems/dnd5e/icons/svg/damage/all.svg"
+            : type === "threshold" ? "systems/dnd5e/icons/svg/damage/threshold.svg"
             : GameSystemConfig.damageTypes[type]?.icon ?? GameSystemConfig.healingTypes?.[type]?.icon);
         if (!icon) continue;
         const { label, pressed } = this.getChangeSourceOptions(type, change, options);

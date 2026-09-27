@@ -2,6 +2,7 @@
 * "Ignore Damage Immunity/Resistance/Vulnerability" for all damage types now also covers a creature's "All Damage" trait, which it previously left in force.
 * New activity option "Downgrade Immunity" - treats damage immunity as resistance rather than ignoring it, which leaves full damage.
 * An attack of opportunity is classified for every target of a use, not only the first, so "Roll a separate attack per target" no longer judges the first target by different range rules to the rest.
+* `proceedChecks.checkAoO` sets whether a use is classified as an attack of opportunity; defaults to `checkReaction`.
 * "Roll a separate attack per target" completes when the last target finishes, not the first, so callers of completeItemUse/completeActivityUse no longer see a half-applied use.
 * "Roll a separate attack per target" applies to attacks whose template type is unset, which it skipped silently; only empty was recognised.
 * Target confirmation on an activity sheet shows the effective value and is read-only when the activity forces one — self-target activities now report "never", as forward and cast activities already did.
@@ -30,6 +31,7 @@
 * `usage.chatCard`, the `_usageChatContext` override, the content-splicing machinery and `activity-card.hbs` are gone.
 * Roll sections stored in `system.midi.sections` and rendered from `message.rolls`, or from a template plus data.
 * Button visibility is resolved per viewer at render rather than stripped from the stored card, so the GM and player `Remove chat card buttons after roll` settings both apply.
+* A usage card whose item is deleted loses its buttons.
 * Damage type icons sit to the left of the total instead of before it, so the total stays centred.
 * Removed `ChatMessage#collectRolls` and the hidden `mergeCardMultiDamage` setting.
 * Chat buttons use the dnd5e 6.0 button format; labels follow the language setting.
@@ -41,6 +43,7 @@
 * midi's messages carry no `flags.dnd5e`: targets are in `system.targets`, and save and check rolls name their card in `system.origin` rather than `flags.dnd5e.originatingMessage`.
 * A synthetic item's snapshot is kept in `flags.midi-qol.itemData` rather than `flags.dnd5e.item.data`.
 * Convenient Effects applied by a concentration spell depend on the concentration, and effect data carries the use's scaling and spell level.
+* Activity effects referenced by uuid, such as compendium effects, are applied, including those applied on a save.
 * Use card 9.9kB -> 7.2kB; bytes written per attack 19.0kB -> 4.1kB; saves section 4.5kB -> 1.5kB.
 
 **Damage tray**
@@ -52,7 +55,8 @@
 **Templates**
 * Templates use regions throughout; the deprecated `AbilityTemplate` API and the `refreshMeasuredTemplate`, `preCreateMeasuredTemplate` and `dnd5e.preCreateActivityTemplate` handlers are gone.
 * AoE template targeting no longer fails for templates with no elevation set.
-* Targets update live while a template is dragged.
+* Targets update live while a template is dragged, by the activity's auto-target settings.
+* An emanation set to attach to the caster or a target ("Attach Region To") is centred on that token.
 * Trap workflow templates use the activity's units, so they are the correct size.
 
 **Distance**

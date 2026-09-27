@@ -828,8 +828,8 @@ export function injectMidiCompletions(): void {
       },
 
       // Effects
-      effects: { type: "property", detail: "ActivityEffectData[]", info: "Activity effect data entries" },
-      applicableEffects: { type: "property", detail: "ActiveEffect[]", info: "Active effects applicable from this activity" },
+      effects: { type: "property", detail: "ActivityEffectData[]", info: "Effect profiles: a local effect by _id or a standalone one by uuid; resolve with await profile.getEffect()" },
+      applicableEffects: { type: "property", detail: "ActivityEffectData[]", info: "Effect profiles applicable at this activity's level; resolve with await profile.getEffect()" },
 
       // Conditions (midi-qol MidiActivityMixin getters)
       useCondition: { type: "property", detail: "string", info: "Use activation condition text" },

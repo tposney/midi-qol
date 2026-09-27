@@ -86,7 +86,8 @@ export function midiButtonVisibility(message: Dnd5eChatMessage | undefined, acti
   // Recorded on the card: the setting at the time of use, and whether the activity had anything to confirm.
   const confirmEnabled = !!midi.confirmAttackDamage;
   const confirmPending = confirmEnabled && !progress.confirmed;
-  const done = !!progress.allRemoved;
+  // midi's card actions dispatch through the activity: once its item is gone none of them can run.
+  const done = !!progress.allRemoved || !activity;
   const removeAll = done || getRemoveAllButtons(activity);
 
   /*
@@ -383,13 +384,17 @@ export function setupUsageCardMessage() {
         value: () => ({
           metadata: {},
           target: { affects: {}, template: {} },
-          // No activity to act on, so none of the stored buttons would do anything.
           shouldHideChatButton: () => true
         }),
         configurable: true, writable: true
       });
       try {
-        return await super._prepareContext(options);
+        const context = await super._prepareContext(options);
+        // Button actions dispatch through the activity, so there is nothing for them to do. dnd5e
+        // prepares no buttons without an activity; the stand-in must not give it any.
+        delete context.buttons;
+        delete context.buttonGroups;
+        return context;
       } finally {
         delete (parent as unknown as Record<string, unknown>).getAssociatedActivity;
       }
@@ -473,4 +478,14 @@ export function setupUsageCardMessage() {
   };
 
   CONFIG.ChatMessage.dataModels[USAGE_MESSAGE_TYPE] = MidiUsageMessageData;
+
+  // A card whose item is deleted loses its buttons, but only when rendered again; redraw the ones on screen.
+  Hooks.on("deleteItem", (item: Item.Implementation) => {
+    for (const message of game.messages ?? []) {
+      if (!(message.system instanceof MidiUsageMessageData)) continue;
+      // @ts-expect-error no dnd5e-types
+      if (message.system.item?.uuid !== item.uuid) continue;
+      if (ui.chat?.element?.querySelector(`.message[data-message-id="${message.id}"]`)) ui.chat.updateMessage(message);
+    }
+  });
 }

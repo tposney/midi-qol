@@ -619,6 +619,23 @@ export function selectTargetsFromTemplates(
   return tokens;
 }
 
+/**
+ * The tokens an activity's templates target, by the activity's own settings: auto-target action,
+ * AoE target type, "-self" and target count. Undefined when the activity does not auto-target.
+ */
+export function computeActivityTemplateTargets(
+  activity: Activity | undefined,
+  templates: Parameters<typeof computeTargetsFromTemplates>[0]
+): Token.Implementation[] | undefined {
+  const autoTarget = getActivityAutoTargetAction(activity);
+  if (autoTarget === "none") return undefined;
+  const ignoreSelf = (activity?.target?.affects.special ?? "").split(";").includes("-self");
+  const tokens = computeTargetsFromTemplates(templates, getToken(activity?.actor), ignoreSelf,
+    activity ? getAoETargetType(activity) : "any", autoTarget);
+  const maxTargets = Number(activity?.target?.affects.count) || 0;
+  return maxTargets > 0 ? tokens.slice(0, maxTargets) : tokens;
+}
+
 
 /**
  * Returns tokens inside a template without modifying game.user.targets.

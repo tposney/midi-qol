@@ -350,7 +350,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         attackConfig.midiOptions ??= {};
         attackConfig.midiOptions.targetsToUse = new Set([target]);
         attackConfig.midiOptions.workflowOptions ??= {};
-        attackConfig.midiOptions.proceedChecks = { checkReaction, checkBonusAction };
+        attackConfig.midiOptions.proceedChecks = { checkReaction, checkBonusAction, checkAoO: !usage.midiOptions.isTriggered };
         attackConfig.midiOptions.workflowOptions.targetConfirmation = "never";
         const attackDialog = foundry.utils.deepClone(dialog);
         delete attackDialog.configure;
@@ -626,8 +626,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           if (workflow.damageRollCount > 0) { // re-rolling damage counts as new damage
             const messageConfig = foundry.utils.mergeObject({
               create: true,
-              // dnd5e 6 applicable effects are references carrying `relativeUUID`, not ActiveEffects (M3/M4).
-              // @ts-expect-error dnd5e 6 applicable effects are references carrying relativeUUID, not ActiveEffects (M3/M4)
               data: { system: { effects: this.applicableEffects?.map(e => e.relativeUUID) } },
               hasConsumption: false
             }, { flags: workflow.chatCard.flags })

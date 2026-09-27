@@ -8,7 +8,7 @@ import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { Workflow } from "./Workflow.js";
 import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
 import { installedModules } from "./setupModules.js";
-import { preActivityConsumptionHook, activityConsumptionHook, midiTemplateFlags, selectTargetsFromTemplates, isTemplateRegion } from "./activities/activityHelpers.js";
+import { preActivityConsumptionHook, activityConsumptionHook, midiTemplateFlags, isTemplateRegion } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
 import { MidiDependentsRegistry } from "./lib/MidiDependentsRegistry.js";
@@ -79,30 +79,6 @@ export let readyHooks = async () => {
     await checkDeleteTemplate(regionDoc, options, userId);
   });
 
-
-  /*
-   * Live targeting while a template is being dragged — the region-era counterpart of the
-   * `refreshMeasuredTemplate` handler above.
-   *
-   * dnd5e 6.0 places templates with `canvas.regions.placeRegions`, so the thing being dragged is a
-   * Region preview whose document is not in the scene; every move sets `refreshShapes` on it.
-   * Targeting reads that unsaved document directly, which is fine because `polygonTree.testPoint`
-   * is pure geometry and answers before the region is ever saved.
-   *
-   * Placed regions are deliberately excluded: they are targeted once, by `processPlacedTemplates`.
-   */
-  // `flags` is optional because fvtt-types declares the hook with only the placeable; Foundry
-  // passes the render flags as a second argument (placeable-object.mjs: `Hooks.callAll(...)`).
-  Hooks.on("refreshRegion", (region: foundry.canvas.placeables.Region.Implementation,
-    flags?: Record<string, boolean>) => {
-    if (!flags?.refreshShapes && !flags?.refreshGeometry) return;
-    if (!canvas?.tokens || !canvas.scene) return;
-    const doc = region?.document;
-    if (!doc || !isTemplateRegion(doc)) return;
-    if (doc.id && canvas.scene.regions.has(doc.id)) return;
-    if (configSettings.autoTarget === "none") return;
-    selectTargetsFromTemplates([doc]);
-  });
 
   // Handle updates to the characters HP
   // Note: Wounded/dead status is now handled by _onUpdate wrapper in patching.ts

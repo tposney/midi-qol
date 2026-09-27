@@ -1,4 +1,4 @@
-import { Activity, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext, Dnd5eSystem } from "../../globals.js";
+import { Activity, ActivityEffectData, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext, Dnd5eSystem, EmanationShapeData } from "../../globals.js";
 import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn, busyWait } from "../../midi-qol.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFirstWorkflow } from "../Workflow.js";
@@ -1576,7 +1576,7 @@ export let MidiActivityMixin = Base => {
         return false;
       }
       if (!workflow) return false;
-      let options: any = { none: false, checkAoO: true, checkReaction: true, checkBonusAction: true, checkAllowIncapacitated: false, callMacros: true, callHooks: true, checkTargets: true, checkComponents: true, checkUse: true }
+      let options: any = { none: false, checkReaction: true, checkBonusAction: true, checkAllowIncapacitated: false, callMacros: true, callHooks: true, checkTargets: true, checkComponents: true, checkUse: true }
       if (optionsConfig.none) options = optionsConfig;
       else
         options = foundry.utils.mergeObject(options, optionsConfig, { insertKeys: true, overwrite: true });
@@ -1659,12 +1659,9 @@ export let MidiActivityMixin = Base => {
       workflow.itemUsesReaction = false;
       const reactingActor = this.actor;
       const inReactionContext = !usage.midiOptions?.workflowOptions?.notReaction && !!reactingActor?.inCombat;
-      // options.checkReaction is deliberately NOT part of the AoO classification: the attackPerTarget
-      // loop runs the reaction check for the first target only, so gating AoO on it left every later
-      // target with AoO false. !workflow.AoO is what suppresses the range check, so one use judged
-      // its first target by different rules to the rest. Reaction consumption stays gated below -
-      // only the classification is hoisted.
-      if (inReactionContext && reactingActor) {
+      // Classified unless the caller says otherwise; follows checkReaction when not given. The
+      // attackPerTarget loop checks reactions on its first target only but classifies every target.
+      if (inReactionContext && reactingActor && (options.checkAoO ?? options.checkReaction)) {
         const isTurn = game.combat?.combatant === game.combat?.getCombatantsByActor(reactingActor)[0];
         if (!isTurn && needsAOOCheck(reactingActor) && this.attack && this.effectiveActivationType !== "special")
           workflow.AoO = true;
@@ -2142,6 +2139,14 @@ export let MidiActivityMixin = Base => {
         const attachId = await this._resolveAttachTokenId(workflow, effectiveAttachMode);
         if (attachId) {
           regionUpdate = { ...(regionUpdate ?? {}), attachment: { token: attachId } };
+          // An emanation is measured from its base, so seat it on the token it now follows, as core's attach does.
+          const token = regionDoc.parent?.tokens.get(attachId)?._source;
+          const shapes = regionDoc._source.shapes as (typeof regionDoc._source.shapes[number] | EmanationShapeData)[];
+          if (token && shapes.some(s => s.type === "emanation")) {
+            regionUpdate.shapes = shapes.map(s => (s.type === "emanation" && s.base?.type === "token")
+              ? { ...s, base: { ...s.base, x: token.x, y: token.y, width: token.width, height: token.height, shape: token.shape } }
+              : s);
+          }
         }
       }
 
@@ -2193,7 +2198,9 @@ export let MidiActivityMixin = Base => {
       const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned))
         || !configSettings.itemTypeList?.includes(this.item.type);
       // Are there any potential effects to apply
-      let hasEffects = workflow?.workflowType === "BaseWorkflow" && this.effects.some(ae => !ae.effect?.transfer && !ae.effect?.flags?.dae?.dontApply);;
+      const effects = workflow?.workflowType === "BaseWorkflow"
+        ? await Promise.all(((this.effects ?? []) as ActivityEffectData[]).map(profile => profile.getEffect())) : [];
+      let hasEffects = effects.some(effect => effect && !effect.transfer && !effect.flags?.dae?.dontApply);
       // if target type is not blank or there are targets only set hasEffects if we are not going to remove the button later
       if (this.target?.affects.type !== "" || workflow?.targets.size !== 0)
         hasEffects &&= !["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects);

@@ -1,7 +1,7 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType } from "./utils.js";
-import { selectTargetsFromTemplates } from "./activities/activityHelpers.js";
+import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets } from "./utils.js";
+import { computeActivityTemplateTargets } from "./activities/activityHelpers.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -2182,34 +2182,38 @@ export async function computeToolAdvantage(actor: Actor.Implementation, toolId: 
 }
 
 /**
- * Constrain template placement to the activity's range, and anchor cones/rays to the caster.
- *
- * dnd5e's `_place` builds the region data and calls `placeRegions`; midi adds the two callbacks
- * dnd5e does not use for that call — `onMove` to clamp or anchor the position (returning `false`
- * so midi's position wins), and `onChange` for live targeting.
+ * midi's part in dnd5e's template placement. dnd5e's `_place` builds the region data and calls
+ * `placeRegions`; midi supplies the two callbacks dnd5e does not use for that call — `onMove`, to
+ * snap by `templateSnapping`, clamp to range and anchor cones/rays to the caster (returning `false`
+ * so midi's position wins), and `onChange`, for live targeting by the activity's own settings.
  */
 async function midiTemplatePlace(this: any, wrapped: () => Promise<any>) {
+  const regions = canvas?.regions as unknown as { placeRegions: (data: object[], options?: object) => Promise<unknown> } | undefined;
+  if (!regions) return wrapped();
   const activity = this.config?.activity ?? this.config?.midiActivity;
   const sourceToken = activity?.actor ? tokenForActor(activity.actor) : undefined;
   const maxRange = configSettings.constrainTemplatePlacement ? this.config?.midiMaxRange : undefined;
   const anchorToToken = this.config?.midiAnchorToToken;
-  const regions = canvas?.regions as unknown as { placeRegions: (data: object[], options?: object) => Promise<unknown> } | undefined;
-  if (!sourceToken || !regions || (!maxRange && !anchorToToken)) return wrapped();
 
   const onMove = ({ shape, position, snap }: any) => {
-    if (anchorToToken) {
+    // dnd5e places emanations with attachToToken; handling the move here would stop core attaching them.
+    if (shape.type === "emanation") return;
+    const place = (point: { x: number, y: number }) => snap ? snapTemplatePosition(point) : point;
+    if (anchorToToken && sourceToken) {
       const border = getTokenBorderPoint(sourceToken, position.x, position.y);
-      shape.move(snapTemplatePosition(border), { snap: false });
+      shape.move(place(border), { snap: false });
       const direction = Math.toDegrees(Math.atan2(position.y - border.y, position.x - border.x));
       shape.rotate(direction - (shape.rotation ?? 0));
+    } else if (maxRange && sourceToken) {
+      shape.move(place(clampPointToRange(sourceToken, position.x, position.y, maxRange)), { snap: false });
     } else {
-      const clamped = clampPointToRange(sourceToken, position.x, position.y, maxRange!);
-      shape.move(clamped.clamped ? snapTemplatePosition(clamped) : position, { snap });
+      shape.move(place(position), { snap: false });
     }
     return false;
   };
   const onChange = ({ document }: any) => {
-    if (configSettings.autoTarget !== "none") selectTargetsFromTemplates([document]);
+    const tokens = computeActivityTemplateTargets(activity, [document]);
+    if (tokens) updateUserTargets(tokens.map(t => t.id).filter(Boolean) as string[]);
   };
   const placeRegions = regions.placeRegions;
   const hadOwn = Object.hasOwn(regions, "placeRegions");
@@ -2322,7 +2326,7 @@ function getTokenBorderPoint(token: Token.Implementation, targetX: number, targe
 
 /**
  * Get the caster's token from a template's midi-qol flags.
- * The sourceTokenUuid is pre-set in the dnd5e.preCreateActivityTemplate hook.
+ * The sourceTokenUuid is set by midiTemplateFlags when the template is created.
  * @returns The token, or undefined if not found
  */
 export function getTemplateSourceToken(templateDoc: MeasuredTemplateDocument.Implementation): Token.Implementation | undefined {

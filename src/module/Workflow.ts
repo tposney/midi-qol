@@ -35,7 +35,6 @@ import {
   createConditionData,
   evalCondition,
   removeHidden,
-  hasDAE,
   computeCoverBonus,
   computeTargetAC,
   TOTAL_COVER,
@@ -99,7 +98,6 @@ import {
   resolveActivityMacro,
   resolveDAEItemData,
   midiFlag,
-  getAoETargetType,
   updateUserTargets,
   popTargetSave,
   clearTargetSave,
@@ -116,7 +114,7 @@ import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { SAVE_TEMPLATE_FIELDS, type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
-import { activityHasScaledTargetCount, computeTargetsFromTemplates, createActivityTemplateRegions, postTemplateConfirmTargets, setDamageRollMinTerms } from "./activities/activityHelpers.js";
+import { activityHasScaledTargetCount, computeActivityTemplateTargets, createActivityTemplateRegions, postTemplateConfirmTargets, setDamageRollMinTerms } from "./activities/activityHelpers.js";
 import { Activity, Dnd5eChatMessage, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
@@ -997,9 +995,14 @@ export class Workflow {
   get activityHasSave() {
     return this.hasValidSaveOrCheck(this.saveActivity);
   }
-  get saveActivity() {
+  get saveActivity(): Activity | undefined {
     if (this.hasValidSaveOrCheck(this.activity)) return this.activity;
-    if (this.hasValidSaveOrCheck(this.otherActivity)) return this.otherActivity;
+    return this.otherSaveActivity;
+  }
+  /** The save behind the other damage: the item's own other activity's, else the ammunition's. */
+  get otherSaveActivity(): Activity | undefined {
+    if (this.hasValidSaveOrCheck(this.otherActivity)) return this.otherActivity ?? undefined;
+    if (this.hasValidSaveOrCheck(this.ammunitionActivity)) return this.ammunitionActivity;
     return undefined;
   }
   get saveActivityDetails(): ActivitySave | ActivityCheck | undefined {
@@ -1240,7 +1243,7 @@ export class Workflow {
   }
 
   get hasSave(): boolean {
-    return Boolean(this.activity.save || this.activity.check || this.otherActivity?.save || this.otherActivity?.check);
+    return Boolean(this.activity.save || this.activity.check || this.otherActivity?.save || this.otherActivity?.check || this.otherSaveActivity);
   }
 
   get otherDamageFormula() {
@@ -1714,25 +1717,9 @@ export class Workflow {
   }
 
   selectAllTemplateTargets(activity?: Activity): void {
-    if (!activity) activity = this.activity;
-    const selfToken = getToken(activity?.actor);
-    const ignoreSelf = (activity?.target?.affects.special ?? "").split(";").some(spec => ["-self"].includes(spec));
-    const AoETargetType = activity ? getAoETargetType(activity) : "any";
-    const targeting = getActivityAutoTargetAction(activity);
-    if (targeting === "none") return;
-
-    let allTargetTokens = computeTargetsFromTemplates(this.templateUuids, selfToken, ignoreSelf, AoETargetType, targeting);
-
-    // Apply target count limit if configured
-    if (activity?.target?.affects.count) {
-      const maxTargets = Number(activity.target.affects.count) || 0;
-      if (maxTargets > 0 && allTargetTokens.length > maxTargets) {
-        allTargetTokens = allTargetTokens.slice(0, maxTargets);
-      }
-    }
-
-    const allIds = allTargetTokens.map(t => t.id).filter(Boolean) as string[];
-    updateUserTargets(allIds);
+    const tokens = computeActivityTemplateTargets(activity ?? this.activity, this.templateUuids);
+    if (!tokens) return;
+    updateUserTargets(tokens.map(t => t.id).filter(Boolean) as string[]);
     this.setTargets(new Set(game.user?.targets ?? []));
   }
 
@@ -2643,20 +2630,30 @@ export class Workflow {
     }
     let ceEffect = getCEEffectByName(this.activity.name);
     if (!ceEffect) ceEffect = getCEEffectByName(this.activity.item.name);
-    const isApplicableEffect = (activity: Activity | undefined | null, efData: ActivityEffectData | undefined | null): boolean => {
-      if (!efData || !activity) return false;
+    /*
+     * An activity's effects, resolved from their dnd5e 6 profiles and split by onSave. Not
+     * applicableEffects: that drops onSave. A profile names a local effect or, by uuid, a standalone
+     * one such as a compendium effect, which only resolves asynchronously.
+     */
+    const resolveEffects = async (activity: Activity | undefined | null) => {
+      const resolved = { applied: [] as ActiveEffect.Implementation[], onSave: [] as ActiveEffect.Implementation[] };
+      if (!activity) return resolved;
       const level = activity.relevantLevel;
-      //@ts-expect-error no dnd5e-types
-      if (((efData.level?.min ?? -Infinity) > level) || (level > (efData.level?.max ?? Infinity)))
-        return false;
-      // @ts-expect-error no dnd5e-types
-      return !!efData.effect && efData.effect?.transfer !== true && efData.effect?.type !== "enchantment";
-    }
-    // can't use this.activity.applicableEffects since we need to know about onSave or not
-    let activityEffects = (this.activity.effects ?? []).filter(efData => isApplicableEffect(this.activity, efData) && efData.onSave !== true).map(efData => efData.effect!);
-    let onSaveActivityEffects = (this.activity.effects ?? []).filter(efData => isApplicableEffect(this.activity, efData) && efData.onSave === true).map(efData => efData.effect!);
-    let otherActivityEffects = (this.otherActivity?.effects ?? []).filter(efData => isApplicableEffect(this.otherActivity, efData) && efData.onSave !== true).map(efData => efData.effect!);
-    let onSaveOtherActivityEffects = (this.otherActivity?.effects ?? []).filter(efData => isApplicableEffect(this.otherActivity, efData) && efData.onSave === true).map(efData => efData.effect!);
+      for (const profile of (activity.effects ?? []) as ActivityEffectData[]) {
+        if (((profile.level?.min ?? -Infinity) > level) || (level > (profile.level?.max ?? Infinity))) continue;
+        const effect = await profile.getEffect();
+        // @ts-expect-error no dnd5e-types
+        if (!effect || effect.transfer || effect.type === "enchantment") continue;
+        (profile.onSave === true ? resolved.onSave : resolved.applied).push(effect);
+      }
+      return resolved;
+    };
+    const activityResolved = await resolveEffects(this.activity);
+    let activityEffects = activityResolved.applied;
+    let onSaveActivityEffects = activityResolved.onSave;
+    const otherResolved = await resolveEffects(this.otherActivity);
+    let otherActivityEffects = otherResolved.applied;
+    let onSaveOtherActivityEffects = otherResolved.onSave;
     /*
      * Ammunition effects. The ammunition activity is resolved independently of otherActivity, so an
      * item's own other activity and its ammunition can both contribute. They join the other-activity
@@ -2666,12 +2663,9 @@ export class Workflow {
      */
     const ammunitionActivity = this.ammunitionActivity;
     if (ammunitionActivity && ammunitionActivity !== this.otherActivity) {
-      const ammunitionEffects = (ammunitionActivity.effects ?? [])
-        .filter((efData: any) => isApplicableEffect(ammunitionActivity, efData));
-      otherActivityEffects = otherActivityEffects.concat(
-        ammunitionEffects.filter((efData: any) => efData.onSave !== true).map((efData: any) => efData.effect!));
-      onSaveOtherActivityEffects = onSaveOtherActivityEffects.concat(
-        ammunitionEffects.filter((efData: any) => efData.onSave === true).map((efData: any) => efData.effect!));
+      const ammunitionResolved = await resolveEffects(ammunitionActivity);
+      otherActivityEffects = otherActivityEffects.concat(ammunitionResolved.applied);
+      onSaveOtherActivityEffects = onSaveOtherActivityEffects.concat(ammunitionResolved.onSave);
     }
     if (activityEffects.length > 0 && this.effectTargets.size > 0 && this.activity.midiProperties?.chooseEffects) { // WIP
       activityEffects = await this.chooseEffects(activityEffects, { activity: this.activity, activityUuid: this.activity.uuid, isOtherActivity: false });
@@ -2681,8 +2675,10 @@ export class Workflow {
     }
     const ceTargetEffect = ceEffect && !(ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
     const ceSelfEffect = ceEffect && (ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
-    const hasActivityEffects = hasDAE(this) && activityEffects.length > 0;
-    const hasOtherActivityEffects = hasDAE(this) && otherActivityEffects.length > 0;
+    // The resolved effects, not the item's: a profile can name an effect that is not on the item.
+    const daeInstalled = !!installedModules.get("dae");
+    const hasActivityEffects = daeInstalled && activityEffects.length > 0;
+    const hasOtherActivityEffects = daeInstalled && otherActivityEffects.length > 0;
 
     const activitySelfEffects = [...activityEffects, ...onSaveActivityEffects].filter(ef => ef.flags?.dae?.selfTarget || ef.flags?.dae?.selfTargetAlways) ?? [];
     const activitySelfAllEffect = [...activityEffects, ...onSaveActivityEffects].filter(ef => ef.flags?.dae?.selfTargetAlways) ?? [];
@@ -2776,7 +2772,6 @@ export class Workflow {
               this.effectTargets?.has(token) && (
                 !(this.activity.save || this.activity.check)
                 || this.failedSaves.has(token)
-                || this.activity.effects.some(effectDetail => effectDetail.onSave == true && effectDetail._id === ef.id)
               )
             );
           }
@@ -2832,7 +2827,6 @@ export class Workflow {
               this.otherActivationMatches?.has(token) && this.otherEffectTargets?.has(token) && (
                 !(this.otherActivity?.save || this.otherActivity?.check)
                 || this.failedSaves.has(token)
-                || this.otherActivity?.effects.some(effectDetail => effectDetail.onSave == true && effectDetail._id === ef.id)
               )
             );
           }
@@ -4766,8 +4760,8 @@ export class Workflow {
           halfDamage.push(`${this.damageFlavor} &frac12;`);
       }
     }
-    if ((this.otherActivity?.save || this.otherActivity?.check) && (this.otherActivity?.damage?.parts.length ?? 0) > 0) {
-      switch (getSaveMultiplierForActivity(this.otherActivity)) {
+    if (this.otherSaveActivity && (this.otherSaveActivity.damage?.parts.length ?? 0) > 0) {
+      switch (getSaveMultiplierForActivity(this.otherSaveActivity)) {
         case 0:
           noDamage.push(`${this.otherDamageFlavor} &#48;`)
           break;
@@ -4967,7 +4961,7 @@ export class Workflow {
         : !!(t.actor?.flags?.[MODULE_ID]?.["uncanny-dodge"] && this.activity?.attack);
       const uncannyDodgeIcon = applied?.uncannyDodgeIcon as string | undefined;
       const saveMults = {
-        otherDamage: this.otherActivity ? getSaveMultiplierForActivity(this.otherActivity) : 1,
+        otherDamage: this.otherSaveActivity ? getSaveMultiplierForActivity(this.otherSaveActivity) : 1,
         defaultDamage: getSaveMultiplierForActivity(this.activity),
         bonusDamage: getSaveMultiplierForActivity(this.activity)
       };
@@ -8280,8 +8274,6 @@ export class DamageOnlyWorkflow extends Workflow {
       const messageConfig = foundry.utils.mergeObject({
         create: true,
         data: {
-          // dnd5e 6 applicable effects are references carrying `relativeUUID`, not ActiveEffects (M3/M4).
-          // @ts-expect-error dnd5e 6 applicable effects are references carrying relativeUUID, not ActiveEffects (M3/M4)
           system: { effects: this.activity?.applicableEffects?.map(e => e.relativeUUID) },
           rolls: this.damageRolls,
         },
@@ -8580,8 +8572,14 @@ export class DDBGameLogWorkflow extends Workflow {
 
   async WorkflowState_AwaitTemplate(context: WorkflowContext = {}): Promise<WorkflowState> {
     if (!activityHasAreaTarget(this.activity)) return super.WorkflowState_AwaitTemplate;
-    // `TemplatePlacement.fromActivity` runs the placement UI and creates the Regions itself.
-    await globalThis.dnd5e.canvas.TemplatePlacement.fromActivity(this.activity);
+    // `TemplatePlacement.fromActivity` runs the placement UI and creates the Regions; record them as
+    // the place-template button does.
+    try {
+      const created = await globalThis.dnd5e.canvas.TemplatePlacement.fromActivity(this.activity);
+      if (created?.length) await this.processPlacedTemplates(created as unknown as MeasuredTemplateDocument[], this.activity);
+    } catch (err) {
+      // Placement cancelled: the base state handles the missing template.
+    }
     return super.WorkflowState_AwaitTemplate;
   }
   async WorkflowState_WaitForDamageRoll(context: WorkflowContext = {}): Promise<WorkflowState> {

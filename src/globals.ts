@@ -618,6 +618,14 @@ declare global {
     };
   }
 
+  /** fvtt-types' v14 ChatLog is a stub; merged into `ui.chat`'s type. */
+  interface UI {
+    chat?: {
+      /** Re-render a message in the log, or insert it if it has become visible to this user. */
+      updateMessage(message: ChatMessage.Implementation, options?: { notify?: boolean }): Promise<void>;
+    };
+  }
+
   namespace Roll {
     interface _Options {
       /** dnd5e D20Roll advantage mode: -1 (disadvantage), 0 (normal), 1 (advantage) */
@@ -1146,14 +1154,24 @@ export type ActivityCheck = {
   };
 }
 
+/**
+ * A dnd5e 6 activity effect profile: a local effect on the item by `_id`, or a standalone one (such as
+ * a compendium effect) by `uuid`. `getEffect()` is synchronous for a local effect, async for a uuid.
+ */
 export interface ActivityEffectData {
-    _id: string;
-    get effect(): ActiveEffect.Implementation | undefined;
+    _id: string | null;
+    uuid?: string | null;
+    level?: { min?: number | null, max?: number | null };
     onSave?: boolean;
+    /** `.ActiveEffect.<id>` for a local effect, otherwise its uuid. */
+    readonly relativeUUID: string;
+    getEffect(): ActiveEffect.Implementation | undefined | Promise<ActiveEffect.Implementation | null>;
 }
 
 export interface Activity extends AnyMutableObject {
-  get applicableEffects(): ActiveEffect[] | null;
+  get applicableEffects(): ActivityEffectData[] | null;
+  /** The level effect profiles are filtered against. */
+  relevantLevel: number;
   actor?: Actor.Implementation;
   item: Item.Implementation;
   ammunitionItem?: Item.Implementation;
@@ -1486,6 +1504,13 @@ export type Dnd5eSystem = foundry.packages.System & {
     aggregateDamageRolls(rolls: Roll[], options?: { respectProperties?: boolean }): Roll[];
     DamageRoll: typeof Roll;
   };
+};
+
+/** Core v14's emanation region shape, which fvtt-types' shape union does not include. */
+export type EmanationShapeData = {
+  type: "emanation";
+  radius: number;
+  base: { type: string; x: number; y: number; width: number; height: number; shape?: number; rotation?: number };
 };
 
 export type Dnd5eChatMessage = ChatMessage.Implementation & {
