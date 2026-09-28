@@ -1666,7 +1666,8 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
       // Actor noAdvantage/noDisadvantage flags (prevent actor's own advantage/disadvantage)
       noAdvantageFlags: ["noAdvantage.all", "noAdvantage.deathSave"],
       noDisadvantageFlags: ["noDisadvantage.all", "noDisadvantage.deathSave"],
-      systemRollModeFields: ["attributes.death.roll.mode"]
+      systemRollModeFields: ["attributes.death.roll.mode"],
+      systemRules: { category: "save", rollData: { ...this.getRollData(), roll: { type: "death" } } }
     };
 
     // Process advantage/disadvantage flags using centralized helper
@@ -1769,7 +1770,7 @@ export function deathSaveHook(rolls: Roll[], { chatString, subject: actor }: { c
   }
 }
 
-export async function computeAbilityAdvantage(actor: Actor.Implementation, rollType: string, abilityId: string, options: MidiOptions, tracker?: RollModifierTracker): Promise<{ tracker: RollModifierTracker, magicResistance: boolean, magicVulnerability: boolean }> {
+export async function computeAbilityAdvantage(actor: Actor.Implementation, rollType: string, abilityId: string, options: MidiOptions, tracker?: RollModifierTracker, rollKind = "ability"): Promise<{ tracker: RollModifierTracker, magicResistance: boolean, magicVulnerability: boolean }> {
   // Create RollModifierTracker if not provided (will be discarded by caller if they don't need attribution)
   tracker = tracker ?? new RollModifierTracker();
 
@@ -1817,6 +1818,12 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
       `noDisadvantage.${rollType}.${abilityId}`
     ],
     systemRollModeFields: [`abilities.${abilityId}.${rollType}.roll.mode`, `rolls.ability.${rollType}.mode`],
+    systemRules: {
+      category: rollType as "save" | "check",
+      rollData: { ...actor.getRollData(), roll: { ability: abilityId, type: rollKind,
+        // @ts-expect-error no dnd5e-types
+        proficient: actor.system.abilities?.[abilityId]?.[rollType]?.prof?.multiplier >= 1 } }
+    }
   };
 
   // Add spell school-specific save advantage/disadvantage flags
@@ -1950,7 +1957,7 @@ const rollTypeHandlers: Record<string, RollTypeHandler> = {
       // @ts-expect-error .attributes.concentration
       const abilityId = actor.system?.attributes?.concentration?.ability || id || GameSystemConfig.defaultAbilities?.concentration || "con";
       // Get the ability save advantage
-      const saveResult = await computeAbilityAdvantage(actor, "save", abilityId, options);
+      const saveResult = await computeAbilityAdvantage(actor, "save", abilityId, options, undefined, "concentration");
 
       // Add concentration-specific flags to the same tracker
       const concentrationFlags: AdvantageFlags = {
@@ -2058,6 +2065,12 @@ export async function computeSkillAdvantage(actor: Actor.Implementation, skillId
       `noDisadvantage.skill.${skillId}`
     ],
     systemRollModeFields: [`skills.${skillId}.roll.mode`, `abilities.${abilityId}.check.roll.mode`, "rolls.ability.check.mode", "rolls.ability.skill.mode"],
+    systemRules: {
+      category: "check",
+      rollData: { ...actor.getRollData(), roll: { ability: abilityId, skill: skillId, type: "skill",
+        // @ts-expect-error no dnd5e-types
+        proficient: !!actor.system.skills && dnd5e.dataModels.actor.CommonTemplate.calculateSkillToolProficiency(actor, abilityId, { skill: skillId }).multiplier >= 1 } }
+    },
     // Source grants flags for skills (checked on workflow.actor, e.g., caster)
     sourceAdvantageFlags: ["grants.advantage.all", "grants.advantage.skill.all", `grants.advantage.skill.${skillId}`],
     sourceDisadvantageFlags: ["grants.disadvantage.all", "grants.disadvantage.skill.all", `grants.disadvantage.skill.${skillId}`],
@@ -2122,6 +2135,12 @@ export async function computeToolAdvantage(actor: Actor.Implementation, toolId: 
       `noDisadvantage.tool.${toolId}`
     ],
     systemRollModeFields: [`tools.${toolId}.roll.mode`, `abilities.${abilityId}.check.roll.mode`, "rolls.ability.check.mode", "rolls.ability.tool.mode"],
+    systemRules: {
+      category: "check",
+      rollData: { ...actor.getRollData(), roll: { ability: abilityId, tool: toolId, type: "tool",
+        // @ts-expect-error no dnd5e-types
+        proficient: !!actor.system.tools && dnd5e.dataModels.actor.CommonTemplate.calculateSkillToolProficiency(actor, abilityId, { tool: toolId }).multiplier >= 1 } }
+    },
     // Source grants flags for tools (checked on workflow.actor, e.g., caster)
     sourceAdvantageFlags: ["grants.advantage.all", "grants.advantage.tool.all", `grants.advantage.tool.${toolId}`],
     sourceDisadvantageFlags: ["grants.disadvantage.all", "grants.disadvantage.tool.all", `grants.disadvantage.tool.${toolId}`],

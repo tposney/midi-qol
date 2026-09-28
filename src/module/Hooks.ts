@@ -1975,15 +1975,16 @@ Hooks.on("preCreateRegion", (regionDoc, regionData, options, userId) => {
 Hooks.on("dnd5e.preConfigureInitiative", (actor, rollConfig) => {
   let { parts, data, options } = rollConfig;
   //@ts-expect-error no dnd5e-types
-  const init: string = actor.system.attributes.init.value ?? "dex";
+  const init: string = actor.system.attributes.init?.ability || GameSystemConfig.defaultAbilities?.initiative || "dex";
   const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: actor });
 
+  let midiAdvantage = false, midiDisadvantage = false, midiNoAdvantage = false, midiNoDisadvantage = false;
   // Check for advantage
   if (evalAllConditions(actor, "flags.midi-qol.advantage.all", conditionData)
     || evalAllConditions(actor, "flags.midi-qol.advantage.check.all", conditionData)
     || evalAllConditions(actor, `flags.midi-qol.advantage.check.${init}`, conditionData)
     || evalAllConditions(actor, `flags.${game.system?.id}.initiativeAdv`, conditionData)) {
-    options.advantage ||= true;
+    midiAdvantage = true;
   }
 
   // Check for disadvantage
@@ -1991,22 +1992,32 @@ Hooks.on("dnd5e.preConfigureInitiative", (actor, rollConfig) => {
     || evalAllConditions(actor, "flags.midi-qol.disadvantage.check.all", conditionData)
     || evalAllConditions(actor, `flags.midi-qol.disadvantage.check.${init}`, conditionData)
     || evalAllConditions(actor, `flags.${game.system?.id}.initiativeDisadv`, conditionData)) {
-    options.disadvantage ||= true;
+    midiDisadvantage = true;
   }
 
   // Check for noAdvantage (prevents advantage)
   if (evalAllConditions(actor, "flags.midi-qol.noAdvantage.all", conditionData)
     || evalAllConditions(actor, "flags.midi-qol.noAdvantage.initiative", conditionData)
     || evalAllConditions(actor, `flags.${game.system?.id}.initiativeNoAdv`, conditionData)) {
-    options.advantage = false;
+    midiNoAdvantage = true;
   }
 
   // Check for noDisadvantage (prevents disadvantage)
   if (evalAllConditions(actor, "flags.midi-qol.noDisadvantage.all", conditionData)
     || evalAllConditions(actor, "flags.midi-qol.noDisadvantage.initiative", conditionData)
     || evalAllConditions(actor, `flags.${game.system?.id}.initiativeNoDisadv`, conditionData)) {
-    options.disadvantage = false;
+    midiNoDisadvantage = true;
   }
+
+  // options already holds dnd5e's own result; combine midi's flags with the same rules dnd5e used (suppression, override).
+  // @ts-expect-error no dnd5e-types
+  const counts: { override: number | null, advantages: { suppressed: boolean }, disadvantages: { suppressed: boolean } } = dnd5e.documents.AppliedRules
+    .collect("check:advantage", actor).filterWith({ ...actor.getRollData(), roll: { ability: init, type: "initiative" } }).toAdvantageCounts();
+  const override = counts.override ?? null;
+  options.advantage = override === 1 || (override === null && (!!options.advantage || midiAdvantage)
+    && !counts.advantages.suppressed && !midiNoAdvantage);
+  options.disadvantage = override === -1 || (override === null && (!!options.disadvantage || midiDisadvantage)
+    && !counts.disadvantages.suppressed && !midiNoDisadvantage);
 
   if (foundry.utils.getProperty(actor, `flags.${game.system?.id}.initiativeHalfProficiency`) && !parts.includes("@prof")) {
     parts.push("@prof");

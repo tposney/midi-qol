@@ -831,6 +831,9 @@ export async function computeAttackAdvantage(
       ...(attackSchool ? [`noDisadvantage.attack.school.${attackSchool}`] : [])
     ],
     systemRollModeFields: [...(abilityId ? [`abilities.${abilityId}.attack.roll.mode`] : []), "rolls.attack.mode", `rolls.attack.${actionType}.mode`],
+    ...(options.workflow?.activity ? { systemRules: { category: "attack" as const, item: options.workflow.activity.item,
+      // @ts-expect-error no dnd5e-types
+      rollData: options.workflow.activity.getRollData({ roll: { ability: abilityId, attackMode: options.workflow.attackMode } }) } } : {}),
     // Target grants flags (checked on target actor)
     sourceAdvantageFlags: [
       "grants.advantage.all",

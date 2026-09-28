@@ -41,6 +41,8 @@ export interface AdvantageFlags {
   advantageFlags: string[];
   disadvantageFlags: string[];
   systemRollModeFields: string[];
+  // dnd5e advantage rules (`dnd5e.advantage` changes) for this roll, filtered by its roll data
+  systemRules?: { category: "save" | "check" | "attack", rollData: object, item?: Item.Implementation };
   // Actor noAdvantage/noDisadvantage flags (prevent advantage/disadvantage on actor's own rolls)
   noAdvantageFlags?: string[];
   noDisadvantageFlags?: string[];
@@ -855,6 +857,32 @@ export async function computeAdvantageFlags(
         tracker.advantage.add("system.rollMode", "System Roll Mode");
       } else if (rollMode === -1) {
         tracker.disadvantage.add("system.rollMode", "System Roll Mode");
+      }
+    }
+  }
+
+  if (flags.systemRules) {
+    const { category, rollData, item } = flags.systemRules;
+    // @ts-expect-error no dnd5e-types
+    const rules: Iterable<{ value?: unknown, effect?: { name: string } }> = dnd5e.documents.AppliedRules
+      .collect(`${category}:advantage`, actor, item).filterWith(rollData);
+    for (const rule of rules) {
+      const name = rule.effect?.name ?? "System Rule";
+      switch (String(rule.value)) {
+        case "1": case "+1": tracker.advantage.add("system.rule", name); break;
+        case "-1": tracker.disadvantage.add("system.rule", name); break;
+        case "=1": case "=+1":
+          tracker.advantage.add("system.rule", name);
+          tracker.advantage.setOverride("system.rule", name);
+          tracker.disadvantage.suppress("system.rule", name);
+          break;
+        case "=-1":
+          tracker.disadvantage.add("system.rule", name);
+          tracker.disadvantage.setOverride("system.rule", name);
+          tracker.advantage.suppress("system.rule", name);
+          break;
+        case "<=0": tracker.advantage.suppress("system.rule", name); break;
+        case ">=0": tracker.disadvantage.suppress("system.rule", name); break;
       }
     }
   }
