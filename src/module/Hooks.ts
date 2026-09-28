@@ -202,7 +202,7 @@ export let readyHooks = async () => {
           // @ts-expect-error no dnd5e-types
           if (origin.statuses?.has(CONFIG.specialStatusEffects.CONCENTRATING) && origin.getDependents()?.length === 0) {
             // @ts-expect-error duration.remaining
-            if (!installedModules.get("times-up") || (origin?.duration?.remaining ?? 1) > 0) {
+            if ((origin?.duration?.remaining ?? 1) > 0) { // an expired origin is DAE's to remove
               await origin.delete();
             }
           }

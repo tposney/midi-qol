@@ -708,7 +708,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           : new Set(Array.from(ignoreTraits)
             .filter(trait => trait.startsWith(`${DOWNGRADE_IMMUNITY_KEY}.`))
             .map(trait => trait.split('.')[1])
-            .filter(damageType => immunities.has(damageType)));
+            .filter(damageType => immunities.has(damageType) || immunities.has(ALL_DAMAGE_KEY)));
         if (downgradeTypes.size) calcDamageOptions.downgrade = downgradeTypes;
       }
       return calcDamageOptions;
@@ -2398,11 +2398,8 @@ export async function _processOverTime(combat: Combat.Implementation, data: Comb
     const endTurn = toTest < last;
     const startTurn = toTest > prev || combatStart;
 
-    // Remove reaction used status from each combatant
-    if (actor && toTest !== prev && !installedModules.get("times-up")) {
-      // do the whole thing as a GM to avoid multiple calls to the GM to set/remove flags/conditions
-      await unTimedExecuteAsGM("removeActionBonusReaction", { actorUuid: actor.uuid });
-    }
+    // Reaction and bonus action markers expire through DAE (specialDuration turnStart); deleting them
+    // here as well raced that expiry and threw "ActiveEffect dnd5ereaction000 does not exist".
     if (actor && toTest !== prev) {
       removeActionUsed(actor);
     }
@@ -2639,7 +2636,7 @@ export async function completeItemUse(itemRef: Item.Implementation | string, con
   // Filter usable activities: exclude riders, automationOnly, and activities that fail visibility checks (canUse)
   const activities = item.system.activities?.filter(a =>
     a.canUse !== false &&
-    !item.flags.dnd5e?.riders?.activity?.includes(a.id) &&
+    !a.isRider &&
     !a.midiProperties?.automationOnly
   );
   if (activities.length === 0) {
@@ -6765,7 +6762,12 @@ export function createConditionData(data: {
       const activity = data.workflow.activity;
       activity.applicableEffects?.forEach((profile) => {
         const effect = (profile.uuid ? fromUuidSync(profile.uuid) : activity.item?.effects.get(profile._id ?? "")) as ActiveEffect.Implementation | null | undefined;
-        effect?.statuses?.forEach(status => (rollData.riderStatuses[status] = true));
+        effect?.statuses?.forEach(status => {
+          rollData.riderStatuses[status] = true;
+          // dnd5e 6 also applies a status's own riders, e.g. unconscious adds prone.
+          // @ts-expect-error no dnd5e-types
+          CONFIG.statusEffects.find(se => se.id === status)?.riders?.forEach((rider: string) => (rollData.riderStatuses[rider] = true));
+        });
         // @ts-expect-error no dnd5e-types
         effect?.system?.rider?.statuses?.forEach((rider: string) => (rollData.riderStatuses[rider] = true));
       });
@@ -7161,7 +7163,7 @@ export async function removeActionUsed(actor: Actor.Implementation) {
 
 export async function removeReactionUsed(actor: Actor.Implementation, force = false) {
   if (debugEnabled > 0) warn("removeReactionUsed | starting", actor);
-  if (force || !installedModules.get("times-up")) { // if times-up installed the special duration will expire the effect
+  if (force) { // otherwise DAE expires it through its special duration
     await actor.effects.get(getStaticID("reaction"))?.delete(); // reaction always non-transfer
   }
   // safety net unset of flags - just in case.
@@ -7226,7 +7228,7 @@ export function hasUsedAnyBonusAction(actor: Actor.Implementation) {
   return (actor.getFlag(MODULE_ID, "actions")?.bonusActionsUsed ?? 0) > 0;
 }
 export async function removeBonusActionUsed(actor: Actor, force = false) {
-  if (force || !installedModules.get("times-up")) { // bonus action will be expired by times-up if installed
+  if (force) { // otherwise DAE expires it through its special duration
     await actor.effects.get(getStaticID("bonusaction"))?.delete()
   }
   // Safety net flag reset just in case
@@ -9527,11 +9529,7 @@ export function getCachedDocument(uuid: string | undefined | null) {
 }
 
 export function isEffectExpired(effect: ActiveEffect.Implementation): boolean {
-  if (installedModules.get("times-up") && globalThis.TimesUp.isEffectExpired) {
-    return globalThis.TimesUp.isEffectExpired(effect);
-  }
-  // TODO find out how to check some other module can delete expired effects
-  // return effect.updateDuration().remaining ?? false;
+  if (typeof globalThis.DAE?.isEffectExpired === "function") return globalThis.DAE.isEffectExpired(effect);
   // @ts-expect-error types doesn't realize
   return effect.duration.remaining <= 0;
 }

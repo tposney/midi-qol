@@ -22,9 +22,8 @@ export class MidiActivityChoiceDialog extends ActivityChoiceDialog {
   static async getActivities(item: Item.Implementation) {
     // @ts-expect-error no dnd5e types — item.system.activities / item.flags.dnd5e aren't typed
     const all = [...item.system.activities];
-    const riders: string[] = item.flags.dnd5e?.riders?.activity ?? [];
     const activities = all
-      .filter(a => a.canUse !== false && !riders.includes(a.id) && !a.midiProperties?.automationOnly && !a.inProgress)
+      .filter(a => a.canUse !== false && !a.isRider && !a.midiProperties?.automationOnly && !a.inProgress)
       .map(a => ({ id: a.id, name: a.name, img: a.img, sort: a.sort }))
       .sort((a, b) => a.sort - b.sort);
     // Modules may remove entries from `activities` to make them unavailable for this use.

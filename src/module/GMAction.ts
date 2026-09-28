@@ -653,12 +653,8 @@ async function deleteItemEffects(data: { targets: { tokenUuid?: string; actorUui
           if (originEntity instanceof ActiveEffect) originEntity = originEntity.parent;
           return ef.origin === originEntity?.uuid && !ignore.includes(ef.uuid) && (!data.ignoreTransfer || !ef.transfer)
         });
-        if (installedModules.get("times-up")) {
-          if (globalThis.TimesUp.isEffectExpired) {
-            effectsToDelete = effectsToDelete.filter(ef => !globalThis.TimesUp.isEffectExpired(ef), {});
-          }
-          else effectsToDelete = effectsToDelete.filter(ef => !(ef.updateDuration().remaining <= 0));
-        }
+        // Already expired: DAE is removing it, and deleting it here too would race that.
+        effectsToDelete = effectsToDelete.filter(ef => !isEffectExpired(ef));
         debug("deleteItemEffects: effectsToDelete ", actor.name, effectsToDelete, options)
         if (effectsToDelete?.length > 0) {
           try {

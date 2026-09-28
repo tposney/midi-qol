@@ -1,6 +1,6 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets } from "./utils.js";
+import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired } from "./utils.js";
 import { computeActivityTemplateTargets } from "./activities/activityHelpers.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
@@ -49,6 +49,7 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareData", actorPrepareData, "WRAPPER");
   // I think this can be removed in v13 libWrapper.register(MODULE_ID, "KeyboardManager.prototype._onFocusIn", _onFocusIn, "OVERRIDE");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.getRollData", actorGetRollData, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.calculateDamage", calculateDamageAllTraits, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.getRollData", itemGetRollData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
@@ -1218,22 +1219,58 @@ function applyDamageModifiers(damageRoll: Roll): Roll {
   return damageRoll;
 }
 
+const DAMAGE_TRAIT_KEYS = { immunity: "di", resistance: "dr", vulnerability: "dv" } as const;
+
+/**
+ * A per-type ignore or downgrade also reaches an "All Damage" trait: for the (synchronous) calculation the trait
+ * lists the concrete damage types instead. dnd5e decides "All Damage" before, and apart from, per-type options.
+ */
+function calculateDamageAllTraits(this: Actor.Implementation, wrapped, damages, options: any = {}) {
+  const perType = (value: unknown) => value instanceof Set && value.size > 0 && !value.has("ALL");
+  // @ts-expect-error no dnd5e-types
+  const traits = this.system.traits;
+  const restore: [{ value: Set<string> }, Set<string>][] = [];
+  for (const [category, key] of Object.entries(DAMAGE_TRAIT_KEYS)) {
+    const trait = traits?.[key];
+    if (!(trait?.value instanceof Set) || !trait.value.has("ALL")) continue;
+    // Downgrades act on immunity, and through it on resistance.
+    if (!perType(options.ignore?.[category]) && !(category !== "vulnerability" && perType(options.downgrade))) continue;
+    restore.push([trait, trait.value]);
+    trait.value = new Set([...trait.value, ...Object.keys(GameSystemConfig.damageTypes)].filter(t => t !== "ALL"));
+  }
+  try {
+    return wrapped(damages, options);
+  } finally {
+    for (const [trait, value] of restore) trait.value = value;
+  }
+}
+
+const BINDING_OPERATORS = new Set(["*", "/", "%"]);
+
+/**
+ * Place a term's critical extras as dnd5e 6 places its own: wrapped with the term when a *, / or % binds it,
+ * otherwise inline carrying the term's sign.
+ */
+function placeCritical(terms: foundry.dice.terms.RollTerm[], term: foundry.dice.terms.RollTerm, extras: foundry.dice.terms.RollTerm[], index: number): foundry.dice.terms.RollTerm[] {
+  const OperatorTerm = foundry.dice.terms.OperatorTerm;
+  const prev = terms[index - 1], next = terms[index + 1];
+  const bound = (t: foundry.dice.terms.RollTerm | undefined) => t instanceof OperatorTerm && BINDING_OPERATORS.has(t.operator);
+  if (bound(prev) || bound(next)) {
+    // The wrapper carries the damage type; dnd5e's chunkTerms does not look inside parentheticals.
+    const options = foundry.utils.deepClone(term.options);
+    const group: foundry.dice.terms.RollTerm[] = [term];
+    for (const extra of extras) group.push(new OperatorTerm({ operator: "+" }), extra);
+    for (const t of group) t.options.flavor = "";
+    return [foundry.dice.terms.ParentheticalTerm.fromTerms(group, options)];
+  }
+  const sign = prev instanceof OperatorTerm ? prev.operator : "+";
+  return [term, ...extras.flatMap(extra => [new OperatorTerm({ operator: sign }), extra])];
+}
+
 // @ts-expect-error no dnd5e-types
 function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = { critical: {} }) {
-  // Remove existing critical damage
-  this.terms = this.terms.filter(t => !t.options.criticalBonusDamage && !t.options.criticalFlatBonus);
-  this.terms.forEach(term => {
-    if (term._number instanceof Roll) {
-      // Complex number term.
-      if (!term._number.isDeterministic) return;
-      if (!term._number._evaluated) term._number.evaluateSync();
-    }
-    term.number = term.options.baseNumber ?? term.number;
-    if (term.options.baseModifiers) {
-      term.modifiers = foundry.utils.deepClone(term.options.baseModifiers);
-    }
-  });
-  this.resetFormula();
+  // dnd5e 6 applies critical scaling exactly once; the damage dialog rebuilds rolls rather than re-running this.
+  if (this.options.configured) return;
   if (!this.configured) applyDamageModifiers(this);
   let useDefaultCritical = getCriticalDamage() === "default";
   useDefaultCritical ||= (getCriticalDamage() === "explodeCharacter" && this.data.actorType !== "character");
@@ -1256,8 +1293,8 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
   const DiceTerm = foundry.dice.terms.DiceTerm;
   const Die = foundry.dice.terms.Die;
 
-  // if (this.options.configured) return; seems this is not required.
-  let bonusTerms: foundry.dice.terms.RollTerm[] = [];
+  const extras = new Map<foundry.dice.terms.RollTerm, foundry.dice.terms.RollTerm[]>();
+  const addExtra = (term: foundry.dice.terms.RollTerm, extra: foundry.dice.terms.RollTerm) => extras.set(term, [...(extras.get(term) ?? []), extra]);
   /* criticalDamage is one of 
     "default": "DND5e Settings Only",
     "maxDamage": "Max Normal Damage",
@@ -1301,23 +1338,19 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
       case "maxDamageExplode":
         if (term instanceof DiceTerm) term.modifiers.push(`min${term.faces}`);
         if (term instanceof DiceTerm) {
-          //@ts-expect-error no dnd5e-types
-          bonusTerms.push(new OperatorTerm({ operator: "+", options: { criticalBonusDamage: true } }));
           const newTerm = new Die({ number: term.number + cb, faces: term.faces })
           newTerm.modifiers.push(`x${term.faces}`);
           newTerm.options = foundry.utils.deepClone(term.options)
           //@ts-expect-error no dnd5e-types
           newTerm.options.criticalBonusDamage = true;
           // foundry.utils.setProperty(newTerm.options, "sourceTerm", term);
-          bonusTerms.push(newTerm);
+          addExtra(term, newTerm);
         }
         break;
       case "maxCrit":  // Powerful critical
       case "maxCritRoll":
         if (term instanceof DiceTerm) {
           let critTerm;
-          //@ts-expect-error no dnd5e-types
-          bonusTerms.push(new OperatorTerm({ operator: "+", options: { criticalBonusDamage: true } }));
           if (getCriticalDamage() === "maxCrit")
             critTerm = new NumericTerm({ number: (term.number + cb) * (term.faces ?? 1) });
           else {
@@ -1327,7 +1360,7 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
           }
           critTerm.options = foundry.utils.deepClone(term.options);
           critTerm.options.criticalBonusDamage = true;
-          bonusTerms.push(critTerm);
+          addExtra(term, critTerm);
         } else if (term instanceof NumericTerm && options.multiplyNumeric) {
           term.number *= cm;
         }
@@ -1358,28 +1391,24 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
       case "explodeCharacter":
       case "explodeNPC":
         if (term instanceof DiceTerm) {
-          //@ts-expect-error no dnd5e-types
-          bonusTerms.push(new OperatorTerm({ operator: "+", options: { criticalBonusDamage: true } }));
           const newTerm = new Die({ number: term.number + cb, faces: term.faces })
           newTerm.modifiers.push(`x${term.faces}`);
           newTerm.options = foundry.utils.deepClone(term.options);
           //@ts-expect-error no dnd5e-types
           newTerm.options.criticalBonusDamage = true;
           // foundry.utils.setProperty(newTerm.options, "sourceTerm", term);
-          bonusTerms.push(newTerm);
+          addExtra(term, newTerm);
         }
         break;
       case "maxBaseRollCrit":
         if (term instanceof DiceTerm) term.modifiers.push(`min${term.faces}`);
         if (term instanceof DiceTerm) {
-          //@ts-expect-error no dnd5e-types
-          bonusTerms.push(new OperatorTerm({ operator: "+", options: { criticalBonusDamage: true } }));
           const newTerm = new Die({ number: term.number, faces: term.faces })
           newTerm.options = foundry.utils.deepClone(term.options);
           // @ts-expect-error no dnd5e-types
           newTerm.options.criticalBonusDamage = true;
           // foundry.utils.setProperty(newTerm.options, "sourceTerm", term);
-          bonusTerms.push(newTerm);
+          addExtra(term, newTerm);
         }
         break;
       case "baseDamage":
@@ -1387,7 +1416,7 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
         break;
     }
   }
-  if (bonusTerms.length > 0) this.terms.push(...bonusTerms);
+  if (extras.size) this.terms = this.terms.flatMap((term, i, terms) => extras.has(term) ? placeCritical(terms, term, extras.get(term)!, i) : [term]);
   if (this.options.critical?.bonusDamage) {
     const extra = new Roll(this.options.critical.bonusDamage, this.data);
     for (let term of extra.terms) {
@@ -2544,9 +2573,7 @@ export function getItemEffectsToDelete(args: { actor: Actor.Implementation, orig
     }
     const actorEffects: ActiveEffect[] | undefined = actor?.appliedEffects;
     effectsToDelete = actorEffects?.filter(ef => {
-      if (installedModules.get("times-up")) {
-        if (globalThis.TimesUp.isEffectExpired(ef, { combat: game.combat })) return false;
-      }
+      if (isEffectExpired(ef)) return false;
       return ef.origin === origin
         && !ignore.includes(ef.uuid)
         && (!ignoreTransfer || ef.flags?.dae?.transfer !== true)
@@ -2879,8 +2906,10 @@ export async function _preDeleteCombat(this: Combat.Implementation, wrapped, ...
   try {
     for (let combatant of this.combatants) {
       if (combatant.actor) {
-        if (hasUsedReaction(combatant.actor)) await removeReactionUsed(combatant.actor, true);
-        if (hasUsedBonusAction(combatant.actor)) await removeBonusActionUsed(combatant.actor, true);
+        // The markers carry specialDuration combatEnd, which DAE expires; forcing a delete here as well
+        // raced it. The flag safety net in removeReactionUsed still runs.
+        if (hasUsedReaction(combatant.actor)) await removeReactionUsed(combatant.actor);
+        if (hasUsedBonusAction(combatant.actor)) await removeBonusActionUsed(combatant.actor);
         if (hasUsedAction(combatant.actor)) await removeActionUsed(combatant.actor);
       }
     }
@@ -2900,7 +2929,7 @@ export async function doItemUse(this: Item.Implementation, wrapped, config: Acti
   // Filter usable activities: exclude riders, automationOnly, inProgress, and activities that fail visibility checks (canUse)
   const activities = this.system.activities?.filter(a =>
     a.canUse !== false &&
-    !this.flags.dnd5e?.riders?.activity?.includes(a.id) &&
+    !a.isRider &&
     !a.midiProperties?.automationOnly &&
     !a.inProgress
   );

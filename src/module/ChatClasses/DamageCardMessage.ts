@@ -1,10 +1,4 @@
-/**
- * The damage card as a chat message sub-type: rendered from `message.system` on display rather than
- * having its markup stored.
- *
- * `flags.midi-qol.undoDamage` stays where it is — the system data is the render source, the flag is
- * the undo source, and cards written before this change carry it.
- */
+/** The damage card as a chat message sub-type, rendered from `message.system`; `flags.midi-qol.undoDamage` stays the undo source. */
 
 import { error } from "../../midi-qol.js";
 import { ChatMessageRenderOptions } from "../../globals.js";
@@ -13,10 +7,7 @@ import { buildDamageCardContext, DamageListContextEntry, processUndoDamageCard }
 /** Registered at setup, once dnd5e's base class is on `game.dnd5e`. */
 export let MidiDamageMessageData: any;
 
-/**
- * Must match the `documentTypes` entry in module.json. A literal, not built from MODULE_ID: the
- * import cycle through GMAction leaves MODULE_ID undefined when this module initialises.
- */
+/** Matches module.json `documentTypes`; a literal because MODULE_ID is undefined here (import cycle via GMAction). */
 export const DAMAGE_MESSAGE_TYPE = "midi-qol.damage";
 
 export function setupDamageCardMessage() {
@@ -37,10 +28,7 @@ export function setupDamageCardMessage() {
         declare playerButtons: boolean;
         declare parent: ChatMessage.Implementation;
 
-        /**
-         * Only the decisions taken when the damage was applied — the figures stay in
-         * `flags.midi-qol.undoDamage` and everything else is looked up when the card renders.
-         */
+        /** Decisions taken when damage was applied; figures stay in `flags.midi-qol.undoDamage`. */
         static defineSchema() {
             return {
                 player: new BooleanField({ initial: false }),
@@ -63,11 +51,7 @@ export function setupDamageCardMessage() {
                 : "modules/midi-qol/templates/damage-results.html";
         }
 
-        /*
-         * Takes `options` even though the context is built from scratch: the base passes rendering
-         * options through (notably `summary`), and narrowing the signature is how a card silently
-         * stops honouring them.
-         */
+        // Keeps `options`: the base passes rendering options such as `summary` through.
         async _prepareContext(_options?: ChatMessageRenderOptions): Promise<{
             damageApplied: string;
             damageWasApplied: boolean;
@@ -82,10 +66,7 @@ export function setupDamageCardMessage() {
             });
         }
 
-        /**
-         * Wire the buttons here, not from renderChatMessageHTML — that hook fires before this model
-         * has filled the message body. Pre-sub-type cards keep their markup, so the hook remains.
-         */
+        /** Buttons are wired here: renderChatMessageHTML fires before the body is filled (it remains for older cards). */
         _onRender(element: HTMLElement) {
             super._onRender?.(element);
             processUndoDamageCard(this.parent, element, {});

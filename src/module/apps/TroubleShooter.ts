@@ -490,9 +490,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
       data.summary.moduleSettings["Sequencer Enable Effects"] = safeGetGameSetting("sequencer", "effectsEnabled");
       data.summary.moduleSettings["Sequencer Enable Sounds"] = safeGetGameSetting("sequencer", "soundsEnabled")
     } else data.summary.moduleSettings["Sequencer"] = i18n("midi-qol.Inactive");
-    if (game.modules.get("times-up")?.active) {
-      data.summary.moduleSettings["Times Up Disable Passive Effects Expiry"] = safeGetGameSetting("times-up", "DisablePassiveEffects");
-    } else data.summary.moduleSettings["Times-Up"] = i18n("midi-qol.Inactive");
     if (game.modules.get("tokenmagic")?.active) {
       data.summary.moduleSettings["Token Magic FX Automatic Template Effects "] = safeGetGameSetting("tokenmagic", "autoTemplateEnabled");
       data.summary.moduleSettings["Token Magic FX Default Template Grid on Hover "] = safeGetGameSetting("tokenmagic", "defaultTemplateOnHover");
@@ -666,18 +663,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
               problemDetail: undefined
             });
           };
-          break;
-        case "times-up":
-          if (!(game.modules.get("times-up")?.active)) {
-            data.problems.push({
-              moduleId: "times-up",
-              severity: "Warn",
-              problemSummary: "Times Up is not installed or not active. Effects won't expire",
-              fixer: "Install and activate times-up",
-              problemDetail: undefined
-            });
-          };
-          foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
         case "walledtemplates":
           this.checkWalledTemplates(data);

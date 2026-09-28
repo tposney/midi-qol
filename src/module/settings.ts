@@ -374,7 +374,6 @@ export const checkedModuleList = [
   "sequencer",
   "simbuls-cover-calculator",
   "socketlib",
-  "times-up",
   "tokenmagic",
   "vision-5e",
   "walledtemplates",

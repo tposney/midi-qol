@@ -2196,15 +2196,7 @@ export let MidiActivityMixin = Base => {
       await writeRegion(regionDoc, { update: regionUpdate, behaviors });
     }
 
-    /**
-     * midi's additions to the usage context.
-     *
-     * Deliberately *not* named `_usageChatContext`. Overriding that name keeps the activity on
-     * dnd5e's legacy content path even with no `chatCard` — the guard is
-     * `!chatCard && getDefiningClass(this, "_usageChatContext") === Activity` — so the system would
-     * render its own card into `message.content` and the data model's template would never run.
-     * Both hooks are deprecated in 6.0 and removed in 6.2 regardless.
-     */
+    /** midi's additions to the usage context; not named `_usageChatContext`, which would keep dnd5e's legacy content path. */
     async _midiUsageContext(message) {
       // TODO major revisit needed for this
       const workflow = message.workflow as Workflow;

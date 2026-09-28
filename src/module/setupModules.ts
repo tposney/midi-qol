@@ -33,7 +33,6 @@ export const USEFUL_MODULE_VERSIONS = {
   "simbuls-cover-calculator":  "1.0.2",
   "simplecover5e": "1.3.1",
   "socketlib": "0.0",
-  "times-up": "13.0.0",
   "tokencover": "0.6.0",
   "vision-5e": "3.0.6",
   "walledtemplates": "0.0.0",
