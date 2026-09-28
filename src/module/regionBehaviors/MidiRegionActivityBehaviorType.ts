@@ -1,17 +1,18 @@
 import { MODULE_ID, debugEnabled, error, warn } from "../../midi-qol.js";
 import { completeActivityUse, fromActorUuid, getToken, isValidTarget, playerForActor } from "../utils.js";
 import { preferredActiveGM, socketlibSocket } from "../GMAction.js";
+import { Activity } from "../../globals.js";
 
 const { ArrayField, BooleanField, NumberField, SchemaField, StringField } = foundry.data.fields;
 
 /**
- * A custom RegionBehaviorType that applies activity effects to tokens entering/exiting a region.
- * Uses a rules-based trigger→action model instead of separate per-event UUID sets.
+ * A custom RegionBehaviorType that runs activities for tokens entering/exiting a region or on their turns. Effects
+ * applied while inside are dnd5e's `applyActiveEffect` behaviour, created alongside (see `_attachRegionActivityBehavior`).
  *
  * Each rule is { trigger, action, targetUuid } where:
  * - trigger: "entry" | "exit" | "turnStart" | "turnEnd"
- * - action: "useActivity" | "applyEffect" | "removeEffect"
- * - targetUuid: full UUID of the activity or effect to act on
+ * - action: "useActivity"
+ * - targetUuid: full UUID of the activity
  *
  * Registration: CONFIG.RegionBehavior.dataModels["midi-qol.regionActivity"]
  */
@@ -169,12 +170,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
             await this._triggerActivity(token, rule.targetUuid);
             if (oncePerTurn) await this._markTriggeredThisTurn(actor, rule.targetUuid);
             break;
-          case "applyEffect":
-            await this._applyEffectsToToken(token, new Set([rule.targetUuid]));
-            break;
-          case "removeEffect":
-            await this._removeEffectsFromToken(token, new Set([rule.targetUuid]));
-            break;
+          // applyEffect/removeEffect rules on older regions: effects are now dnd5e's apply-effect behaviour.
         }
       } catch (err) {
         console.error(`MidiRegionActivity._executeRulesForTrigger | error executing rule:`, rule, err);
@@ -245,75 +241,6 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
   /* ---------------------------------------- */
   /*  Effect & Activity Execution             */
   /* ---------------------------------------- */
-
-  async _applyEffectsToToken(token: TokenDocument.Implementation, effectUuids: Set<string>): Promise<void> {
-    const actor = token.actor;
-    if (!actor) return;
-
-    const self = this as any;
-
-    if (!effectUuids.size) return;
-
-    const toCreate: ActiveEffect.CreateData[] = [];
-    for (const effectUuid of effectUuids) {
-      const sourceEffect = fromUuidSync(effectUuid) as ActiveEffect.Implementation | null;
-      if (!sourceEffect) {
-        if (debugEnabled > 0) warn(`MidiRegionActivity: effect ${effectUuid} not found`);
-        continue;
-      }
-      // JSON round-trip strips the non-enumerable `changes` getter that shimData adds
-      // to toObject() output. Without this, createEmbeddedDocuments → migrateData sees
-      // the shimmed getter, enters the v13→v14 migration block, and runs
-      // #migrateChangeValue which converts "1" → JSON.parse("1") → 1 (number).
-      const data = JSON.parse(JSON.stringify(sourceEffect.toObject()));
-      delete (data as any)._id;
-      data.origin = self.parent.uuid;
-      foundry.utils.setProperty(data, `flags.${MODULE_ID}.regionSourceEffectUuid`, effectUuid);
-      if ((data as any)._stats) {
-        (data as any)._stats.duplicateSource = sourceEffect.uuid;
-        (data as any)._stats.compendiumSource = null;
-        (data as any)._stats.exportSource = null;
-      }
-      toCreate.push(data);
-    }
-
-    if (toCreate.length) {
-      if (game.user?.isGM) {
-        await actor.createEmbeddedDocuments("ActiveEffect", toCreate);
-      } else {
-        await socketlibSocket.executeAsGM("midiRegionApplyEffects", {
-          actorUuid: actor.uuid,
-          effects: toCreate,
-        });
-      }
-    }
-  }
-
-  async _removeEffectsFromToken(token: TokenDocument.Implementation, effectUuids: Set<string>): Promise<void> {
-    const actor = token.actor;
-    if (!actor) return;
-
-    const behaviorUuid = (this as any).parent.uuid;
-    const toDelete: string[] = [];
-    for (const effect of actor.effects) {
-      if (effect.origin !== behaviorUuid) continue;
-      // @ts-expect-error dynamic flag key
-      const regionSourceEffectUuid = effect.getFlag(MODULE_ID, "regionSourceEffectUuid") as string | undefined;
-      if (regionSourceEffectUuid && effectUuids.has(regionSourceEffectUuid)) {
-        toDelete.push(effect.id!);
-      }
-    }
-    if (!toDelete.length) return;
-
-    if (game.user?.isGM) {
-      await actor.deleteEmbeddedDocuments("ActiveEffect", toDelete);
-    } else {
-      await socketlibSocket.executeAsGM("midiRegionRemoveEffects", {
-        actorUuid: actor.uuid,
-        effectIds: toDelete,
-      });
-    }
-  }
 
   async _triggerActivity(token: TokenDocument.Implementation, activityUuid: string): Promise<void> {
     const self = this as any;
@@ -395,4 +322,27 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     [CONST.REGION_EVENTS.TOKEN_TURN_START]: this._onTokenTurnStart,
     [CONST.REGION_EVENTS.TOKEN_TURN_END]: this._onTokenTurnEnd,
   };
+}
+
+/**
+ * `preCreateActiveEffect`: dnd5e's region behaviours apply to every matching token, the caster included. When the
+ * activity's midi region settings exclude the source, the caster's copy is not created, on entry or on re-application.
+ */
+export function excludeRegionSourceEffect(effect: ActiveEffect.Implementation, data: ActiveEffect.CreateData): boolean | void {
+  // @ts-expect-error no dnd5e-types
+  const behaviorUuid: string | null | undefined = data?.system?.origin?.behavior ?? data?.origin;
+  if (typeof behaviorUuid !== "string" || !behaviorUuid.includes(".RegionBehavior.")) return;
+  const behavior = fromUuidSync(behaviorUuid) as RegionBehavior.Implementation | null;
+  if (!behavior || String(behavior.type) !== "dnd5e.applyActiveEffect") return;
+  const region = behavior.parent;
+  // @ts-expect-error no dnd5e-types
+  const activity = fromUuidSync(region?.flags.dnd5e?.activity) as Activity | null;
+  const settings = activity?.regionBehavior as { enabled?: boolean, excludeSource?: boolean } | undefined;
+  // Set by midi on the behaviours it creates; otherwise the activity's midi region settings decide.
+  const excludeSource = behavior.flags[MODULE_ID]?.excludeSource ?? (settings?.enabled && settings.excludeSource);
+  if (!excludeSource) return;
+  // @ts-expect-error no dnd5e-types
+  const originToken = fromUuidSync(region?.flags.dnd5e?.origin) as TokenDocument.Implementation | null;
+  const caster = originToken?.actor ?? activity?.actor;
+  if (caster && effect.parent?.uuid === caster.uuid) return false;
 }

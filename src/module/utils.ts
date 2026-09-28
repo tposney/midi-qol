@@ -3812,14 +3812,15 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
     if (range < longRange && activity.actionType === "rwak" &&
       (actor?.flags?.dnd5e?.sharpShooter || actor?.flags?.[MODULE_ID]?.sharpShooter)) {
       const conditionData = createConditionData({ item: activity.item, actor, activity, target: targets.first() });
-      let sharpShooterEnabled = evalCondition(actor?.flags?.dnd5e?.sharpShooter, conditionData);
-      sharpShooterEnabled ||= evalCondition(actor?.flags?.[MODULE_ID]?.sharpShooter, conditionData);
+      // Read the effects' expressions: dnd5e coerces its Boolean character flags to true.
+      let sharpShooterEnabled = evalAllConditions(actor, "flags.dnd5e.sharpShooter", conditionData);
+      sharpShooterEnabled ||= evalAllConditions(actor, `flags.${MODULE_ID}.sharpShooter`, conditionData);
       if (sharpShooterEnabled) range = longRange;
     }
 
     if (activity.actionType === "rsak" && actor?.flags?.dnd5e?.spellSniper) {
       const conditionData = createConditionData({ item: activity.item, actor, activity, target: targets.first() });
-      let enabled = evalCondition(actor.flags.dnd5e.spellSniper, conditionData);
+      let enabled = evalAllConditions(actor, "flags.dnd5e.spellSniper", conditionData);
       if (enabled) {
         range = 2 * range;
         longRange = 2 * longRange;
@@ -4242,8 +4243,8 @@ export function computeTargetAC(
     && effectiveCoverBonus !== TOTAL_COVER && effectiveCoverBonus !== 0
     && (attacker.actor.flags?.[MODULE_ID]?.sharpShooter || attacker.actor.flags?.dnd5e?.sharpShooter)) {
     const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
-    let enabled = evalCondition(attacker.actor.flags?.dnd5e?.sharpShooter, conditionData);
-    enabled ||= evalCondition(attacker.actor.flags?.[MODULE_ID]?.sharpShooter, conditionData);
+    let enabled = evalAllConditions(attacker.actor, "flags.dnd5e.sharpShooter", conditionData);
+    enabled ||= evalAllConditions(attacker.actor, `flags.${MODULE_ID}.sharpShooter`, conditionData);
     if (enabled) {
       effectiveCoverBonus = 0;
       appliedCoverDelta = 0;
@@ -4257,7 +4258,7 @@ export function computeTargetAC(
     && attacker.actor.flags?.dnd5e?.spellSniper
     && effectiveCoverBonus !== TOTAL_COVER && effectiveCoverBonus !== 0) {
     const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
-    const enabled: boolean | undefined = evalCondition(attacker.actor.flags.dnd5e.spellSniper, conditionData);
+    const enabled: boolean | undefined = evalAllConditions(attacker.actor, "flags.dnd5e.spellSniper", conditionData);
     if (enabled) {
       effectiveCoverBonus = 0;
       appliedCoverDelta = 0;

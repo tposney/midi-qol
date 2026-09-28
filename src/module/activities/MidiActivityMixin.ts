@@ -2064,11 +2064,27 @@ export let MidiActivityMixin = Base => {
       // into a single GM round-trip (or runs locally if the user has permission).
       const behaviors: any[] = [];
       let regionUpdate: any | undefined;
+      // Effects applied while a token is inside are dnd5e's apply-effect behaviour; midi's own behaviour runs activities.
+      const effectBehavior = (effectUuids: string[], dispositionFilter: number, excludeSource: boolean) => {
+        if (!effectUuids.length) return;
+        const { FRIENDLY, NEUTRAL, HOSTILE } = CONST.TOKEN_DISPOSITIONS;
+        const casterDisposition = workflow?.token?.document?.disposition ?? this.actor?.prototypeToken?.disposition ?? FRIENDLY;
+        // midi's enemies are every disposition other than the caster's; allies are the caster's own.
+        const dispositions = dispositionFilter === -1 ? [FRIENDLY, NEUTRAL, HOSTILE].filter(d => d !== casterDisposition)
+          : dispositionFilter === 1 ? [casterDisposition] : [];
+        behaviors.push({
+          type: "dnd5e.applyActiveEffect",
+          name: `${this.item?.name ?? "Activity"} Region Effects`,
+          system: { effects: [...new Set(effectUuids)], dispositions },
+          flags: { [MODULE_ID]: { excludeSource } }
+        });
+      };
 
       // If explicitly configured on this activity, use stored config
       // Convert portable IDs/identifiers from the activity schema to full UUIDs for the behavior type
       if (rbConfig?.enabled) {
         const resolvedRules: Array<{trigger: string, action: string, targetUuid: string}> = [];
+        const effectUuids: string[] = [];
         for (const rule of rbConfig.rules ?? []) {
           if (rule.action === "useActivity") {
             // @ts-expect-error no dnd5e types for activities
@@ -2076,14 +2092,15 @@ export let MidiActivityMixin = Base => {
               (a: any) => (a.identifier || a.midiProperties?.identifier) === rule.targetId
             );
             if (act) resolvedRules.push({ trigger: rule.trigger, action: rule.action, targetUuid: act.uuid });
-          } else {
-            // applyEffect / removeEffect — resolve effect ID to UUID
+          } else if (rule.action === "applyEffect") {
+            // Applied on entry and removed on exit by dnd5e; removeEffect rules are implied.
             const effect = this.item?.effects.get(rule.targetId);
-            if (effect) resolvedRules.push({ trigger: rule.trigger, action: rule.action, targetUuid: effect.uuid });
+            if (effect) effectUuids.push(effect.uuid);
           }
         }
+        effectBehavior(effectUuids, rbConfig.dispositionFilter ?? -1, rbConfig.excludeSource ?? true);
 
-        behaviors.push({
+        if (resolvedRules.length) behaviors.push({
           type: `${MODULE_ID}.regionActivity` as const,
           name: `${this.item?.name ?? "Activity"} Region Activity`,
           system: {
@@ -2122,12 +2139,9 @@ export let MidiActivityMixin = Base => {
         if (activityUuid) rules.push({ trigger: "entry", action: "useActivity", targetUuid: activityUuid });
         if (triggerTurnStart && activityUuid) rules.push({ trigger: "turnStart", action: "useActivity", targetUuid: activityUuid });
         if (triggerTurnEnd && activityUuid) rules.push({ trigger: "turnEnd", action: "useActivity", targetUuid: activityUuid });
-        for (const effectUuid of effectUuids) {
-          rules.push({ trigger: "entry", action: "applyEffect", targetUuid: effectUuid });
-          rules.push({ trigger: "exit", action: "removeEffect", targetUuid: effectUuid });
-        }
+        effectBehavior(effectUuids, -1, true);
 
-        behaviors.push({
+        if (rules.length) behaviors.push({
           type: `${MODULE_ID}.regionActivity` as const,
           name: `${this.item?.name ?? "Activity"} Region Activity`,
           system: {

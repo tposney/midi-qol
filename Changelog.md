@@ -11,6 +11,8 @@
 * Initiative `advantage/disadvantage.check.<ability>` flags use the actor's initiative ability, not always dex.
 * Critical damage modes that add extra dice (max crit, explode, max base + roll crit) place them as dnd5e does: inside a term bound by `*`, `/` or `%`, and with a subtracted term's sign.
 * Condition data `riderStatuses` includes a status's own riders, e.g. an effect applying unconscious also lists prone.
+* Region effects (apply/remove effect rules and the over-time fallback's `dontApply` effects) are applied by dnd5e's apply-effect region behaviour instead of midi's own: effects with `system.origin` now come off on exit, and origin `@` values are filled in. midi's region behaviour now only runs activities; its disposition filter carries over, and a `preCreateActiveEffect` hook keeps the caster excluded where midi's region settings exclude the source.
+* Conditional `flags.dnd5e.spellSniper` / `sharpShooter` values are evaluated; dnd5e's Boolean coercion made any condition count as true.
 * Ignoring or downgrading an immunity, resistance or vulnerability for specific damage types also works against an "All Damage" trait, for midi's ignore/downgrade options and dnd5e's damage tray alike; `ddi.<type>` now applies against an "All Damage" immunity.
 * "Roll a separate attack per target" completes when the last target finishes, not the first, so callers of completeItemUse/completeActivityUse no longer see a half-applied use.
 * "Roll a separate attack per target" applies to attacks whose template type is unset, which it skipped silently; only empty was recognised.

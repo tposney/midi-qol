@@ -75,8 +75,6 @@ export let setupSocket = () => {
   socketlibSocket.register("rollActionSave", rollActionSave);
   socketlibSocket.register("toggleStatusEffect", _toggleStatusEffect);
   socketlibSocket.register("midiRegionTriggerActivity", _midiRegionTriggerActivity);
-  socketlibSocket.register("midiRegionApplyEffects", _midiRegionApplyEffects);
-  socketlibSocket.register("midiRegionRemoveEffects", _midiRegionRemoveEffects);
   socketlibSocket.register("setupRegion", _setupRegion);
 
   // socketlibSocket.register("canSense", _canSense);
@@ -123,8 +121,6 @@ export class SaferSocket {
       case "toggleStatusEffect":
       case "toggleTokenHidden":
       case "midiRegionTriggerActivity":
-      case "midiRegionApplyEffects":
-      case "midiRegionRemoveEffects":
       case "setupRegion":
         return true;
 
@@ -2766,27 +2762,6 @@ async function _midiRegionTriggerActivity(data: {
 }) {
   const { MidiRegionActivityBehaviorType } = await import("./regionBehaviors/MidiRegionActivityBehaviorType.js");
   return MidiRegionActivityBehaviorType._executeTriggerActivity(data);
-}
-
-async function _midiRegionApplyEffects(data: {
-  actorUuid: string;
-  effects: ActiveEffect.CreateData[];
-}) {
-  const actor = fromActorUuid(data.actorUuid);
-  if (!actor) return;
-  for (const effect of data.effects) {
-    if (effect.transfer === undefined) effect.transfer = false;
-  }
-  return actor.createEmbeddedDocuments("ActiveEffect", data.effects);
-}
-
-async function _midiRegionRemoveEffects(data: {
-  actorUuid: string;
-  effectIds: string[];
-}) {
-  const actor = fromActorUuid(data.actorUuid);
-  if (!actor) return;
-  return actor.deleteEmbeddedDocuments("ActiveEffect", data.effectIds);
 }
 
 // RegionDocument.update and embedded RegionBehavior creation both require GM-level scene
