@@ -633,6 +633,18 @@
       "top": "Test visibility at the top of the token (elevation + depth). Affects both the source token's vision origin and target test points. Useful for multi-level scenes where tokens near floor edges should be more visible."
     }
   },
+  "midi-qol.TemplateOriginHeight.Name": "Template Origin Height",
+  "midi-qol.TemplateOriginHeight.Hint": "The height of the caster that activity templates are measured from: a sphere is centred on it, a cylinder, cube or line stands on it. An activity can override this in its Region settings.",
+  "midi-qol.TemplateOriginHeightOptions": {
+    "base": "Caster's base",
+    "top": "Caster's top",
+    "eye": "Caster's eye level",
+    "expandedHints": {
+      "base": "The caster token's elevation.",
+      "top": "The caster token's elevation plus its height.",
+      "eye": "The caster's vision height, as used for its line of sight (Vision Test Height, or the token's vision source height)."
+    }
+  },
   "midi-qol.NearbyAllyRanged.Name": "(House Rule) Ranged Attacks at foes near allies have disadvantage",
   "midi-qol.WallsBlockRangeOptions": {
     "none": "No",
@@ -2354,6 +2366,12 @@
   "midi-qol.REGION_BEHAVIOR.attachToken.pickerTitle": "Choose Attachment Target",
   "midi-qol.REGION_BEHAVIOR.attachToken.pickerHint": "Select the targeted token the region should follow.",
   "midi-qol.REGION_BEHAVIOR.attachToken.noTarget": "Region attachment set to 'target' but no target was selected. Region will not follow any token.",
+  "midi-qol.SHARED.FIELDS.regionBehavior.templateOrigin.label": "Template Origin Height",
+  "midi-qol.SHARED.FIELDS.regionBehavior.templateOrigin.hint": "The height of the caster this activity's template is measured from. 'Default' follows the Template Origin Height setting.",
+  "midi-qol.REGION_BEHAVIOR.templateOrigin.default": "Default (setting)",
+  "midi-qol.REGION_BEHAVIOR.templateOrigin.base": "Caster's base",
+  "midi-qol.REGION_BEHAVIOR.templateOrigin.top": "Caster's top",
+  "midi-qol.REGION_BEHAVIOR.templateOrigin.eye": "Caster's eye level",
   "BEHAVIOR.TYPES.midi-qol.regionLight.label": "Midi Region Light",
   "BEHAVIOR.TYPES.midi-qol.regionLight.hint": "Create an ambient light at the region center that follows the region.",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.dim.label": "Dim Light Radius",

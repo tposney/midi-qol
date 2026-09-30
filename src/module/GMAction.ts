@@ -1,6 +1,7 @@
 import { checkRule, configSettings, safeGetGameSetting, isDnd5e53 } from "./settings.js";
+import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions } from "./utils.js";
+import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions, tokenSourceCenter } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow, WorkflowOptions } from "./Workflow.js";
@@ -16,7 +17,7 @@ export let socketlibSocket: any = undefined;
 let traitList = { di: "", dr: "", dv: "", dm: "", da: "" };
 
 export let setupSocket = () => {
-  socketlibSocket = globalThis.socketlib.registerModule(MODULE_ID);
+  socketlibSocket = withWorkflowOptionsCodec(globalThis.socketlib.registerModule(MODULE_ID));
   socketlibSocket.register("_gmSetFlag", _gmSetFlag);
   socketlibSocket.register("_gmUnsetFlag", _gmUnsetFlag);
   socketlibSocket.register("addConvenientEffect", addConvenientEffect);
@@ -653,12 +654,8 @@ async function deleteItemEffects(data: { targets: { tokenUuid?: string; actorUui
           if (originEntity instanceof ActiveEffect) originEntity = originEntity.parent;
           return ef.origin === originEntity?.uuid && !ignore.includes(ef.uuid) && (!data.ignoreTransfer || !ef.transfer)
         });
-        if (installedModules.get("times-up")) {
-          if (globalThis.TimesUp.isEffectExpired) {
-            effectsToDelete = effectsToDelete.filter(ef => !globalThis.TimesUp.isEffectExpired(ef), {});
-          }
-          else effectsToDelete = effectsToDelete.filter(ef => !(ef.updateDuration().remaining <= 0));
-        }
+        // Already expired: DAE is removing it, and deleting it here too would race that.
+        effectsToDelete = effectsToDelete.filter(ef => !isEffectExpired(ef));
         debug("deleteItemEffects: effectsToDelete ", actor.name, effectsToDelete, options)
         if (effectsToDelete?.length > 0) {
           try {
@@ -2408,10 +2405,10 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
     TroubleShooter.recordError(new Error("moveTokenAwayFromPoint failed"), message);
     return;
   }
-  const ray = new foundry.canvas.geometry.Ray(data.point, targetToken.center);
+  const ray = new foundry.canvas.geometry.Ray(data.point, tokenSourceCenter(targetToken));
   const pixelDistance = data.distance / canvas.dimensions.distance * canvas.dimensions.size;
   const newCenter = ray.project(1 + pixelDistance / ray.distance);
-  return void _moveToken({ tokenUuid: targetTokenDocument.uuid, newCenter, options: data.options });
+  await _moveToken({ tokenUuid: targetTokenDocument.uuid, newCenter, options: data.options });
 }
 
 async function _teleportToken(data: { tokenUuid: string, destination: TeleportTokenDestination }): Promise<void> {

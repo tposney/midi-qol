@@ -1,6 +1,6 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget } from "./utils.js";
+import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, isEffectExpired } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -401,7 +401,6 @@ export function readyPatching() {
   libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickRight2", userInitiatedTargetWrapper, "WRAPPER");
   libWrapper.register(MODULE_ID, "foundry.canvas.layers.TokenLayer.prototype.selectObjects", userInitiatedTargetWrapper, "WRAPPER");
 
-  patchCatGetOriginActivity();
 
   const gameVersion = game.system?.version;
   if ((game.system?.id === "dnd5e" && foundry.utils.isNewerVersion("3.3", gameVersion ?? ""))) {
@@ -409,27 +408,6 @@ export function readyPatching() {
       ui.notifications.error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
     else
       error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
-  }
-}
-
-/**
- * CAT passes midi's overTimeEffectUuid straight to getOriginActivity, which expects a document and
- * dereferences effect.flags - the throw aborts every over time save. Resolve the string first.
- * Remove once CAT fixes conditionResistanceAndVulnerability.mjs.
- */
-function patchCatGetOriginActivity() {
-  if (!game.modules.get("cat")?.active) return;
-  if (typeof (globalThis as any).cat?.utils?.effectUtils?.getOriginActivity !== "function") return;
-  try {
-    libWrapper.register(MODULE_ID, "cat.utils.effectUtils.getOriginActivity",
-      async function (wrapped: Function, effect: unknown, ...args: unknown[]) {
-        if (typeof effect === "string") effect = await fromUuid(effect);
-        return wrapped(effect, ...args);
-      }, "WRAPPER");
-  } catch (err) {
-    const message = "midi-qol | could not patch cat.utils.effectUtils.getOriginActivity";
-    TroubleShooter.recordError(err, message);
-    console.warn(message, err);
   }
 }
 
@@ -2596,9 +2574,7 @@ export function getItemEffectsToDelete(args: { actor: Actor.Implementation, orig
     }
     const actorEffects: ActiveEffect[] | undefined = actor?.appliedEffects;
     effectsToDelete = actorEffects?.filter(ef => {
-      if (installedModules.get("times-up")) {
-        if (globalThis.TimesUp.isEffectExpired(ef, { combat: game.combat })) return false;
-      }
+      if (isEffectExpired(ef)) return false;
       return ef.origin === origin
         && !ignore.includes(ef.uuid)
         && (!ignoreTransfer || ef.flags?.dae?.transfer !== true)
@@ -2929,8 +2905,10 @@ export async function _preDeleteCombat(this: Combat.Implementation, wrapped, ...
   try {
     for (let combatant of this.combatants) {
       if (combatant.actor) {
-        if (hasUsedReaction(combatant.actor)) await removeReactionUsed(combatant.actor, true);
-        if (hasUsedBonusAction(combatant.actor)) await removeBonusActionUsed(combatant.actor, true);
+        // The markers carry specialDuration combatEnd, which DAE expires; forcing a delete here as well
+        // raced it. The flag safety net in removeReactionUsed still runs.
+        if (hasUsedReaction(combatant.actor)) await removeReactionUsed(combatant.actor);
+        if (hasUsedBonusAction(combatant.actor)) await removeBonusActionUsed(combatant.actor);
         if (hasUsedAction(combatant.actor)) await removeActionUsed(combatant.actor);
       }
     }

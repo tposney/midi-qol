@@ -1,14 +1,14 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, obscureRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget, rangeToSceneUnits } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget, rangeToSceneUnits, tokenSourceElevation } from "./utils.js";
 import { checkMechanic, checkRule, configSettings, dragDropTargeting, isDnd5e53, setDnd5e53 } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook, getTemplateSourceToken } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { Workflow } from "./Workflow.js";
 import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
 import { installedModules } from "./setupModules.js";
-import { preActivityConsumptionHook, activityConsumptionHook, selectTargetsFromTemplates } from "./activities/activityHelpers.js";
+import { preActivityConsumptionHook, activityConsumptionHook, selectTargetsFromTemplates, templateElevation } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
 import { MidiDependentsRegistry } from "./lib/MidiDependentsRegistry.js";
@@ -238,7 +238,7 @@ export let readyHooks = async () => {
           // @ts-expect-error no dnd5e-types
           if (origin.statuses?.has(CONFIG.specialStatusEffects.CONCENTRATING) && origin.getDependents()?.length === 0) {
             // @ts-expect-error duration.remaining
-            if (!installedModules.get("times-up") || (origin?.duration?.remaining ?? 1) > 0) {
+            if ((origin?.duration?.remaining ?? 1) > 0) { // an expired origin is DAE's to remove
               await origin.delete();
             }
           }
@@ -1943,9 +1943,15 @@ Hooks.on("dnd5e.preCreateActivityTemplate", (activity, templateData) => {
   const casterToken = activity.actor ? tokenForActor(activity.actor) : undefined;
 
   // dnd5e leaves elevation at 0, so anchor to the caster. Covers preview and placement in one
-  // place; an explicit elevation from the caller wins.
+  // place; an explicit elevation from the caller wins. The region's full extent (templateElevation) is carried
+  // in the template's flags, which core copies to the region, and applied in preCreateRegion below.
   if (casterToken && templateData.elevation === undefined) {
-    templateData.elevation = casterToken.document.elevation;
+    const areaType = activity.target?.template?.type;
+    const dp = canvas?.scene?.dimensions?.distancePixels ?? 1;
+    const extent = ["circle", "square"].includes(areaType) ? { bottom: null, top: null }
+      : templateElevation(activity, { type: templateData.t, radius: (templateData.distance ?? 0) * dp, angle: templateData.angle });
+    templateData.elevation = typeof extent?.bottom === "number" ? extent.bottom : tokenSourceElevation(casterToken);
+    if (extent) foundry.utils.setProperty(templateData, `flags.${MODULE_ID}.templateElevation`, extent);
   }
 
   if (!configSettings.constrainTemplatePlacement) return true;
@@ -2018,6 +2024,19 @@ Hooks.on("preCreateMeasuredTemplate", (templateDoc: MeasuredTemplateDocument.Imp
   // Out of range - notify and cancel
   ui.notifications?.warn(i18n("midi-qol.TemplateOutOfRange"));
   return false;
+});
+
+/*
+ * Give an activity template's region its vertical extent. Core converts a template to a region with only a bottom
+ * (the template's elevation) and reads a null top as unbounded, so core and dnd5e's region behaviours had a sphere cast
+ * on the ground reach a flier at any height. The extent comes from dnd5e.preCreateActivityTemplate above, which has
+ * the activity; emanations carry none and are left alone.
+ */
+Hooks.on("preCreateRegion", (regionDoc, regionData) => {
+  if (!foundry.utils.getProperty(regionData, "flags.core.MeasuredTemplate")) return true;
+  const extent = foundry.utils.getProperty(regionData, `flags.${MODULE_ID}.templateElevation`) as { bottom: number | null, top: number | null, topInclusive?: boolean } | undefined;
+  if (extent) regionDoc.updateSource({ elevation: { bottom: extent.bottom, top: extent.top, topInclusive: extent.topInclusive ?? false } });
+  return true;
 });
 
 // v14: preCreateMeasuredTemplate does NOT fire after the compat layer creates a Region.

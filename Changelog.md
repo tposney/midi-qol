@@ -1,10 +1,23 @@
 ### 14.0.13 (unreleased)
+* Activity template regions have a height, set by their area type around the caster: a sphere is centred on the caster, a cone on its axis, and a cylinder, cube, line or wall stands on the caster (a cylinder or wall to its own height); the circle and square areas stay unbounded, and emanations follow their token. Core and dnd5e's region effects read the missing top as unbounded, so a sphere cast on the ground reached a flier at any height.
+* New optional rule "Template Origin Height": templates are measured from the caster's base (default), top, or eye level; an activity can override it in its Region settings.
+* Template targeting, flanking, range, cover and push direction use a token's committed position, not the drawn one: acting straight after a move used where the token was part-way through animating, and a background tab read every token at 0,0.
+* `moveTokenAwayFromPoint` resolves once the push has landed; it returned before the move.
+* A use no longer writes its target snapshot into the caller's `workflowOptions`; reusing one options object carried the first use's targets into later uses with no targets.
 * "Ignore Damage Immunity/Resistance/Vulnerability" for all damage types now also covers a creature's "All Damage" trait, which it previously left in force.
 * New activity option "Downgrade Immunity" - treats damage immunity as resistance rather than ignoring it, which leaves full damage.
 * An attack of opportunity is classified for every target of a use, not only the first, so "Roll a separate attack per target" no longer judges the first target by different range rules to the rest.
 * `proceedChecks.checkAoO` sets whether a use is classified as an attack of opportunity; defaults to `checkReaction`.
 * "Roll a separate attack per target" completes when the last target finishes, not the first, so callers of completeItemUse/completeActivityUse no longer see a half-applied use.
 * "Roll a separate attack per target" applies to attacks whose template type is unset, which it skipped silently; only empty was recognised.
+* With "Roll a separate attack per target", each target's card lists only that target.
+* Reaction/bonus action used markers are expired by DAE only; midi deleting them as well threw "ActiveEffect dnd5ereaction000 does not exist".
+* Removed checks for times-up, which is not a module in v14.
+* An attack of opportunity no longer warns that its target is out of range; the check is not enforced for one.
+* Closing a reaction dialog stops its countdown, which went on updating the closed window and threw.
+* Removed the workaround for CAT 0.0.7's OverTime save crash; fixed in CAT 0.0.8.
+* `MidiQOL.registerWorkflowOptionsSchema(namespace, schema)`: a module declares the data it keeps in `workflowOptions.<namespace>` as a DataModel schema; midi then sends and stores it losslessly (Sets and other field types come back intact) and does not pass undeclared per-use keys to other clients, chat cards or triggered activities. `MidiQOL.encodeWorkflowOptions` / `decodeWorkflowOptions` expose the conversion.
+* A remote `completeActivityUse` returns its token sets (targets, hitTargets, failedSaves, ...) as Sets of tokens again, as a local use does; `MidiQOL.restoreWorkflowTokenSets` does the same for other workflow macro data that crossed a socket.
 
 **Templates**
 * AoE template targeting no longer fails for a region template with no elevation set.

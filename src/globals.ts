@@ -15,6 +15,7 @@ import { ConditionEditor } from "./module/apps/ConditionEditor";
 import { AttributionEntry, AttributionMap, AugmentedEvent, DamageDescriptionObject, DamageOnlyWorkflow, DDBGameLogWorkflow, DummyWorkflow, TrapWorkflow, UndoData, UserWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./module/Workflow";
 import { MidiOptions } from "./module/utils";
 import * as utils from "./module/utils";
+import * as workflowOptionsCodec from "./module/lib/workflowOptionsCodec";
 import * as settings from "./module/settings";
 import { RollStats, Stats } from "./module/RollStats";
 import { checkRule, configSettings, targetConfirmation } from "./module/settings";
@@ -640,6 +641,12 @@ declare global {
     getMovementOrigin(data?: { x?: number; y?: number; elevation?: number; width?: number; height?: number; depth?: number }): { x: number; y: number; elevation: number };
   }
 
+  // Foundry v14 Region elevation.topInclusive, not yet in fvtt-types.
+  interface RegionDocument {
+    /** @param changes.elevation.topInclusive - whether a token level with the top is inside the Region */
+    updateSource(changes: { elevation: { bottom?: number | null; top?: number | null; topInclusive?: boolean } }, options?: object): object;
+  }
+
   // Note: Intentional `var` use here to add to the `globalThis`
   var DAE: {
     actionQueue: foundry.utils.Semaphore;
@@ -713,6 +720,8 @@ declare global {
     exportSettingsToJSON: typeof settings.exportSettingsToJSON;
     importSettingsFromJSON: typeof settings.importSettingsFromJSON;
     resetConfigSettingsToDefaults: typeof settings.resetConfigSettingsToDefaults;
+    registerWorkflowOptionsSchema: typeof workflowOptionsCodec.registerWorkflowOptionsSchema;
+    restoreWorkflowTokenSets: typeof utils.restoreWorkflowTokenSets;
     completeActivityUse: typeof utils.completeActivityUse;
     completeItemUse: typeof utils.completeItemUse;
     computeAbilityAdvantage: typeof patching.computeAbilityAdvantage;
@@ -729,6 +738,8 @@ declare global {
     contestedRoll: typeof utils.contestedRoll;
     createConditionData: typeof utils.createConditionData;
     createDamageDetail: typeof utils.createDamageDetail;
+    decodeWorkflowOptions: typeof workflowOptionsCodec.decodeWorkflowOptions;
+    encodeWorkflowOptions: typeof workflowOptionsCodec.encodeWorkflowOptions;
     createEffects: typeof createEffects;
     DamageOnlyWorkflow: typeof DamageOnlyWorkflow;
     debouncedUpdate: typeof utils.throttledUpdate;

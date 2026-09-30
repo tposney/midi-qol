@@ -1,4 +1,5 @@
 import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats } from "../midi-qol.js";
+import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions, shouldDisplaySaveDC, isDnd5e53 } from "./settings.js";
@@ -106,6 +107,7 @@ import {
   getConsumptionData,
   toMessageMode,
   toLegacyRollMode,
+  tokenSourceElevation,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, computeAbilityAdvantage, buildPreComputedAdvantageMap } from "./patching.js";
@@ -225,16 +227,21 @@ class PersistedFieldStore {
     this.#persistRolls = persistRolls;
   }
 
-  scalar<T>(key: string, dflt: T, legacyKey?: string): T {
+  scalar<T>(key: string, dflt: T, legacyKey?: string, restore?: (persisted: T) => T): T {
     if (this.#cache.has(key)) return this.#cache.get(key) as T;
     const flags = this.#getFlags();
-    return (flags?.[key] ?? (legacyKey ? flags?.[legacyKey] : undefined) ?? dflt) as T;
+    const persisted = (flags?.[key] ?? (legacyKey ? flags?.[legacyKey] : undefined) ?? dflt) as T;
+    if (!restore) return persisted;
+    // Cached so in-place changes to the restored copy are kept, as they would be on the flag object.
+    const restored = restore(persisted);
+    this.#cache.set(key, restored);
+    return restored;
   }
 
-  setScalar<T>(key: string, value: T): void {
+  setScalar<T>(key: string, value: T, persistAs?: (value: T) => unknown): void {
     if (value === undefined) this.#cache.delete(key);
     else this.#cache.set(key, value);
-    this.#persist({ [key]: value });
+    this.#persist({ [key]: (persistAs && value !== undefined) ? persistAs(value) : value });
   }
 
   // Token sets persist as uuid arrays (or {uuid, name} pairs for "targets") and
@@ -467,10 +474,10 @@ export class Workflow {
   }
 
   get workflowOptions(): WorkflowOptions {
-    return this.#persisted.scalar<WorkflowOptions>("workflowOptions", {});
+    return this.#persisted.scalar<WorkflowOptions>("workflowOptions", {}, undefined, decodeWorkflowOptions);
   }
   set workflowOptions(workflowOptions: WorkflowOptions) {
-    this.#persisted.setScalar("workflowOptions", workflowOptions);
+    this.#persisted.setScalar("workflowOptions", workflowOptions, encodeWorkflowOptions);
   }
 
   get needItemCard(): boolean { return !!this.itemCardUuid };
@@ -3018,7 +3025,8 @@ export class Workflow {
             rollAttackPerTarget: _triggeringRollAttackPerTarget,
             ...inheritedWorkflowOptions
           } = this.workflowOptions ?? {};
-          usage.midiOptions.workflowOptions = inheritedWorkflowOptions;
+          // Only what transmission would carry: other modules' per-use state stays with this workflow.
+          usage.midiOptions.workflowOptions = inheritableWorkflowOptions(inheritedWorkflowOptions);
           usage.midiOptions.rollOptions = this.rollOptions;
           usage.midiOptions.isTriggered = true;
           let targetUuids: string[] = [];
@@ -5311,7 +5319,7 @@ export class Workflow {
 
     // Determine the cover origin point: explicit coverOrigin > templateCoverOrigin > template placeable > caster token
     let position: { x: number, y: number } | undefined;
-    let originElevation: number = this.token?.document?.elevation ?? 0;
+    let originElevation: number = this.token ? tokenSourceElevation(this.token) : 0;
 
     if (this.workflowOptions.coverOrigin) {
       position = { x: this.workflowOptions.coverOrigin.x, y: this.workflowOptions.coverOrigin.y };

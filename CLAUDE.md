@@ -233,6 +233,10 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
 
 19. **Test keys must be verified to exercise the behaviour under test** — `system.attributes.ac.bonus` has ValidSpec phase `initial` (not final, despite comments claiming otherwise), and dnd5e coerces `system.attributes.movement.walk` to a number in derived data. Both silently made acceptance tests pass against unfixed code. Use `system.attributes.ac.flat` for phase correction and `system.bonuses.*` for FormulaField behaviour.
 
+20. **v14: times-up is not a module; DAE expires effects** — any `installedModules.get("times-up")` / `globalThis.TimesUp` check in the v14 branch is a bug. Effects with a DAE special duration (the reaction and bonus action markers carry `turnStart`, `combatEnd`, `shortRest`) are expired by DAE/core; midi deleting them too races that expiry and throws `ActiveEffect "dnd5ereaction000" does not exist`. Use `isEffectExpired` (delegates to `DAE.isEffectExpired`) and let DAE do the deleting. Core has one `duration.expiry` slot, so DAE keeps `combatEnd` as a special duration when another event takes the slot.
+
+21. **Updating an item effect on an unlinked token can silently no-op** — when the token's delta overrides the item, the server diffs an effect update against the *base* actor's copy; a value the base already has is dropped as "unchanged" while the token keeps its old one. Verify against `token.delta._source`, not the synthetic document.
+
 ## Testing
 
 Tests use the Quench framework in separate test modules (not embedded in the main module source). Each major version branch has its own test module:

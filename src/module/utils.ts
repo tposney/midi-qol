@@ -1288,7 +1288,6 @@ async function getOvertimeActivity(actor: Actor.Implementation, effect: ActiveEf
     return undefined;
   }
   const turnChoice = activity.overTimeProperties?.turnChoice ?? "start";
-  console.error(`getOvertimeActivity | found activity: ${activity.name}, turnChoice: ${turnChoice}, startTurn: ${startTurn}`);
   // Check start/end turn
   if (turnChoice === "start" && !startTurn) return undefined;
   if (turnChoice === "end" && startTurn) return undefined;
@@ -2373,11 +2372,8 @@ export async function _processOverTime(combat: Combat.Implementation, data: Comb
     const endTurn = toTest < last;
     const startTurn = toTest > prev || combatStart;
 
-    // Remove reaction used status from each combatant
-    if (actor && toTest !== prev && !installedModules.get("times-up")) {
-      // do the whole thing as a GM to avoid multiple calls to the GM to set/remove flags/conditions
-      await unTimedExecuteAsGM("removeActionBonusReaction", { actorUuid: actor.uuid });
-    }
+    // Reaction and bonus action markers expire through DAE (specialDuration turnStart); deleting them
+    // here as well raced that expiry and threw "ActiveEffect dnd5ereaction000 does not exist".
     if (actor && toTest !== prev) {
       removeActionUsed(actor);
     }
@@ -2512,10 +2508,31 @@ export async function completeActivityUse(activityRef: Activity | string | undef
       message
     }
     if (asUser)
-      return await socketlibSocket.executeAsUser("completeActivityUse", asUser.id, data);
+      return restoreWorkflowTokenSets(await socketlibSocket.executeAsUser("completeActivityUse", asUser.id, data));
     else
-      return await timedAwaitExecuteAsGM("completeActivityUse", data);
+      return restoreWorkflowTokenSets(await timedAwaitExecuteAsGM("completeActivityUse", data));
   }
+}
+
+const WORKFLOW_TOKEN_SETS = {
+  targets: "targetUuids", hitTargets: "hitTargetUuids", hitTargetsEC: "hitTargetUuidsEC", saves: "saveUuids",
+  failedSaves: "failedSaveUuids", criticalSaves: "criticalSaveUuids", fumbleSaves: "fumbleSaveUuids",
+  superSavers: "superSaverUuids", semiSuperSavers: "semiSuperSaverUuids"
+} as const;
+
+/**
+ * Workflow macro data that crossed a socket carries its token sets as uuid arrays; give it back the workflow's
+ * Sets of tokens (targets, hitTargets, failedSaves, ...). Other values pass through.
+ */
+export function restoreWorkflowTokenSets<T>(data: T): T {
+  if (foundry.utils.getType(data) !== "Object") return data;
+  const record = data as Record<string, unknown>;
+  for (const [field, uuidField] of Object.entries(WORKFLOW_TOKEN_SETS)) {
+    const uuids = record[uuidField];
+    if (!Array.isArray(uuids)) continue;
+    record[field] = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument.Implementation | null)?.object).filter(token => !!token));
+  }
+  return data;
 }
 
 export type MidiOptions = {
@@ -2767,9 +2784,8 @@ export function getUnitDist(x1: number, y1: number, z1: number, token2): number 
   if (!canvas.dimensions) return 0;
   const unitsToPixel = canvas.dimensions.size / canvas.dimensions.distance;
   z1 = z1 * unitsToPixel;
-  const x2 = token2.center.x;
-  const y2 = token2.center.y;
-  const z2 = token2.document.elevation * unitsToPixel;
+  const { x: x2, y: y2 } = tokenSourceCenter(token2);
+  const z2 = tokenSourceElevation(token2) * unitsToPixel;
 
   const d =
     Math.sqrt(
@@ -2787,16 +2803,18 @@ export function distancePointToken({ x, y, elevation = 0 }, token, wallblocking 
   if (!canvas.grid || !canvas.dimensions) undefined;
   if (!token || x === undefined || y === undefined) return undefined;
   if (!canvas || !canvas.grid || !canvas.dimensions) return undefined;
-  const t2StartX = -Math.max(0, token.document.width / 2 - 0.5);
-  const t2StartY = -Math.max(0, token.document.height / 2 - 0.5);
+  const tokenPos = tokenSourcePosition(token);
+  const tokenCenter = tokenSourceCenter(token);
+  const t2StartX = -Math.max(0, tokenPos.width / 2 - 0.5);
+  const t2StartY = -Math.max(0, tokenPos.height / 2 - 0.5);
   //  const [row, col] = canvas.grid?.getGridPositionFromPixels(x, y) || [0, 0];
   //  const [xBase, yBase] = canvas.grid?.getPixelsFromGridPosition(row, col) || [0, 0];
   let xc, yc;
   let distance = +Infinity;
-  for (let xStep = t2StartX; xStep < token.document.width / 2; xStep += 1) {
-    for (let yStep = t2StartY; yStep < token.document.height / 2; yStep += 1) {
-      const xBase = xStep * canvas.grid.size + token.center.x;
-      const yBase = yStep * canvas.grid.size + token.center.y;
+  for (let xStep = t2StartX; xStep < tokenPos.width / 2; xStep += 1) {
+    for (let yStep = t2StartY; yStep < tokenPos.height / 2; yStep += 1) {
+      const xBase = xStep * canvas.grid.size + tokenCenter.x;
+      const yBase = yStep * canvas.grid.size + tokenCenter.y;
       ({ x: xc, y: yc } = canvas.grid.getCenterPoint({ x: xBase, y: yBase }) || { x: 0, y: 0 });
       // ({ x: xc, y: yc } = canvas.grid.getCenterPoint.bind(canvas.grid)({ x, y }) || { x: 0, y: 0 });
       const newDistance = canvas.grid.measurePath([new PIXI.Point(x, y), { x: xc, y: yc }], {}).distance;
@@ -2988,7 +3006,7 @@ function getTokenHeightFraction(token: Token.Implementation, flagName: "visionSo
  * Compute the effective elevation for a token based on its vision height flags/setting.
  */
 export function getTokenVisionElevation(token: Token.Implementation, flagName: "visionSourceHeight" | "visionTargetHeight"): number {
-  const baseElev = token.document.elevation ?? 0;
+  const baseElev = tokenSourceElevation(token);
   const gridDistance = canvas.dimensions?.distance ?? 5;
   const depth = token.document.depth ?? 1;
   return baseElev + (depth * gridDistance * getTokenHeightFraction(token, flagName));
@@ -3226,8 +3244,8 @@ export function computePerimeterDistance(
       // a grid of 17 boundary test points on the target (same pattern as _canSenseModes).
       // Block only if ALL rays are blocked by walls.
       if (preCheck.coverVisible === undefined) {
-        const srcCenter = (token1 as Token).center;
-        const tgtCenter = (token2 as Token).center;
+        const srcCenter = tokenSourceCenter(token1);
+        const tgtCenter = tokenSourceCenter(token2);
         const t = Math.min((token2 as Token).w, (token2 as Token).h) / 4;
         const t2half = Math.min((token2 as Token).w, (token2 as Token).h) / 2 - 2;
         const offsets = t > 0 ? [
@@ -3237,8 +3255,8 @@ export function computePerimeterDistance(
         const testPoints = offsets.map(o => new PIXI.Point(tgtCenter.x + o[0], tgtCenter.y + o[1]));
         const srcOrigin = new PIXI.Point(srcCenter.x, srcCenter.y);
 
-        const t1Elevation = (token1 as Token.Implementation).document.elevation ?? 0;
-        const t2Elevation = (token2 as Token.Implementation).document.elevation ?? 0;
+        const t1Elevation = tokenSourceElevation(token1);
+        const t2Elevation = tokenSourceElevation(token2);
         const gridDist = canvas.dimensions?.distance ?? 5;
         const t1DocSize = Math.max((token1 as Token).document.height ?? 1, (token1 as Token).document.width ?? 1);
         const t2DocSize = Math.min((token2 as Token).document.height ?? 1, (token2 as Token).document.width ?? 1);
@@ -3404,12 +3422,16 @@ export interface DistanceOptions {
  * Note this is committed state, not intended state: in the few milliseconds between calling move()
  * and the write landing, `_source` is still the origin, and during an uncommitted drag preview it
  * remains the pre-drag position. Both are the correct answer to "where is this token now".
+ *
+ * Elevation, width and height animate the same way, and a background tab never applies the drawn
+ * position at all: `token.x`/`token.y` read 0 there.
  */
-export function tokenSourcePosition(tokenRef: any): { x: number, y: number } {
+export function tokenSourcePosition(tokenRef: any): { x: number, y: number, elevation: number, width: number, height: number } {
   const doc = tokenRef?.document ?? tokenRef;
   const source = doc?._source;
-  if (Number.isFinite(source?.x) && Number.isFinite(source?.y)) return { x: source.x, y: source.y };
-  return { x: doc?.x ?? 0, y: doc?.y ?? 0 };
+  const committed = (key: string, fallback: number): number =>
+    Number.isFinite(source?.[key]) ? source[key] : (Number.isFinite(doc?.[key]) ? doc[key] : fallback);
+  return { x: committed("x", 0), y: committed("y", 0), elevation: committed("elevation", 0), width: committed("width", 1), height: committed("height", 1) };
 }
 
 /** Centre of a token at its committed position. */
@@ -3420,8 +3442,11 @@ export function tokenSourceCenter(tokenRef: any): { x: number, y: number } {
     try { return doc.getCenterPoint({ ...pos }); } catch { /* fall through */ }
   }
   const size = canvas?.dimensions?.size ?? 100;
-  return { x: pos.x + ((doc?.width ?? 1) * size) / 2, y: pos.y + ((doc?.height ?? 1) * size) / 2 };
+  return { x: pos.x + (pos.width * size) / 2, y: pos.y + (pos.height * size) / 2 };
 }
+
+/** Elevation of a token at its committed position. */
+export const tokenSourceElevation = (tokenRef: any): number => tokenSourcePosition(tokenRef).elevation;
 
 export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): number {
   const { wallsBlock = false, includeCover = true, includeElevation = configSettings.optionalRules.distanceIncludesHeight } = options;
@@ -3444,8 +3469,10 @@ export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): nu
       if (preCheck.blocked) return -1;
       // If no module pre-check resolved (coverVisible is undefined), do a basic center-to-center sight check
       if (preCheck.coverVisible === undefined) {
-        const origin = new PIXI.Point(token1.center.x, token1.center.y);
-        const dest = new PIXI.Point(token2.center.x, token2.center.y);
+        const center1 = tokenSourceCenter(token1);
+        const center2 = tokenSourceCenter(token2);
+        const origin = new PIXI.Point(center1.x, center1.y);
+        const dest = new PIXI.Point(center2.x, center2.y);
         const collision = checkWallCollision(origin, dest, {
           source: token1.document,
           wallsBlockRange: configSettings.optionalRules.wallsBlockRange,
@@ -3489,12 +3516,8 @@ function computeTokenHeightDifference(token1: Token, token2: Token): number {
   if (!canvas?.dimensions) return 0;
   const gridDistance = canvas.dimensions.distance ?? 5;
 
-  const t1Elevation = token1.document.elevation ?? 0;
-  const t2Elevation = token2.document.elevation ?? 0;
-  const t1DocWidth = token1.document.width ?? 1;
-  const t1DocHeight = token1.document.height ?? 1;
-  const t2DocWidth = token2.document.width ?? 1;
-  const t2DocHeight = token2.document.height ?? 1;
+  const { elevation: t1Elevation, width: t1DocWidth, height: t1DocHeight } = tokenSourcePosition(token1);
+  const { elevation: t2Elevation, width: t2DocWidth, height: t2DocHeight } = tokenSourcePosition(token2);
   const t1TopElevation = t1Elevation + Math.max(t1DocHeight, t1DocWidth) * gridDistance;
   const t2TopElevation = t2Elevation + Math.min(t2DocHeight, t2DocWidth) * gridDistance;
 
@@ -3563,17 +3586,27 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: {
   if (ignoreWallsFlag) {
     wallsBlock = false;
   }
-  let t1DocWidth = t1.document.width ?? 1;
-  let t1DocHeight = t1.document.height ?? 1;
-  let t2DocWidth = t2.document.width ?? 1;
-  let t2DocHeight = t2.document.height ?? 1;
+  /*
+   * Both source positions are read once rather than inside the loops.
+   *
+   * `tokenSourcePosition` reads `_source` and neither token moves while the rays are built, so
+   * these were loop-invariant — the outer one recomputed per square of t1, the inner one per *pair*
+   * of squares. For two Gargantuan tokens that is well over a hundred redundant calls for a single
+   * distance, on a path taken for every attack, target check and range test.
+   */
+  const t1Source = tokenSourcePosition(t1);
+  const t2Source = tokenSourcePosition(t2);
+  const t1DocWidth = t1Source.width;
+  const t1DocHeight = t1Source.height;
+  const t2DocWidth = t2Source.width;
+  const t2DocHeight = t2Source.height;
 
   const t1StartX = t1DocWidth >= 1 ? 0.5 : t1DocWidth / 2;
   const t1StartY = t1DocHeight >= 1 ? 0.5 : t1DocHeight / 2;
   const t2StartX = t2DocWidth >= 1 ? 0.5 : t2DocWidth / 2;
   const t2StartY = t2DocHeight >= 1 ? 0.5 : t2DocHeight / 2;
-  const t1Elevation = t1.document.elevation ?? 0;
-  const t2Elevation = t2.document.elevation ?? 0;
+  const t1Elevation = t1Source.elevation;
+  const t2Elevation = t2Source.elevation;
   const t1TopElevation = t1Elevation + Math.max(t1DocHeight, t1DocWidth) * (canvas.dimensions?.distance ?? 5);
   const t2TopElevation = t2Elevation + Math.min(t2DocHeight, t2DocWidth) * (canvas.dimensions?.distance ?? 5); // assume t2 is trying to make itself small
   const t1VisionElev = getTokenVisionElevation(t1 as Token.Implementation, "visionSourceHeight");
@@ -3587,16 +3620,6 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: {
   let segments: { ray: Ray }[] = [];
   let rayDistance, distance;
   let heightDifference = 0;
-  /*
-   * Both source positions are read once rather than inside the loops.
-   *
-   * `tokenSourcePosition` reads `_source.x/y` and neither token moves while the rays are built, so
-   * these were loop-invariant — the outer one recomputed per square of t1, the inner one per *pair*
-   * of squares. For two Gargantuan tokens that is well over a hundred redundant calls for a single
-   * distance, on a path taken for every attack, target check and range test.
-   */
-  const t1Source = tokenSourcePosition(t1);
-  const t2Source = tokenSourcePosition(t2);
   if (!(t2.document instanceof WallDocument)) {
     for (let x = t1StartX; x < t1DocWidth; x++) {
       for (let y = t1StartY; y < t1DocHeight; y++) {
@@ -3646,8 +3669,9 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: {
     }
   } else {
     const w = t2.document
-    const closestPoint = foundry.utils.closestPointToSegment(t1.center, w.object.edge.a, w.object.edge.b);
-    distance = midiMeasureDistances([{ ray: new foundry.canvas.geometry.Ray(t1.center, closestPoint) }], { gridSpaces: true });
+    const t1Center = tokenSourceCenter(t1);
+    const closestPoint = foundry.utils.closestPointToSegment(t1Center, w.object.edge.a, w.object.edge.b);
+    distance = midiMeasureDistances([{ ray: new foundry.canvas.geometry.Ray(t1Center, closestPoint) }], { gridSpaces: true });
     if (includeElevation) {
       if (!w.flags?.["wall-height"]) heightDifference = 0;
       else {
@@ -4011,7 +4035,7 @@ export function tokenAtPosition(token: Token.Implementation, position: CoverPosi
   const gridY = canvas?.grid?.sizeY ?? 100;
   const width = (token.document?.width ?? 1) * gridX;
   const height = (token.document?.height ?? 1) * gridY;
-  const elevation = position.elevation ?? token.document?.elevation ?? 0;
+  const elevation = position.elevation ?? tokenSourceElevation(token);
   const center = { x: position.x + width / 2, y: position.y + height / 2 };
 
   let view: Token.Implementation;
@@ -6220,7 +6244,7 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     this.timeRemaining = this.data.timeout;
     this.startTime = this.endTime = Date.now();
     this.data.completed = false;
-    this.timeoutId = this.set1Secondtimeout();
+    this.set1Secondtimeout();
   }
 
   static PARTS = {
@@ -6288,6 +6312,8 @@ export class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
   set1Secondtimeout() {
     this.timeoutId = setTimeout(() => {
+      // Answered or closed while the second was running: there is no frame left to update.
+      if (!this.rendered) return;
       this.timeRemaining -= 1;
       let color = "red";
       if (this.timeRemaining >= this.data.timeout * 0.75) color = "chartreuse";
@@ -7103,7 +7129,7 @@ export async function removeActionUsed(actor: Actor.Implementation) {
 
 export async function removeReactionUsed(actor: Actor.Implementation, force = false) {
   if (debugEnabled > 0) warn("removeReactionUsed | starting", actor);
-  if (force || !installedModules.get("times-up")) { // if times-up installed the special duration will expire the effect
+  if (force) { // otherwise DAE expires it through its special duration
     await actor.effects.get(getStaticID("reaction"))?.delete(); // reaction always non-transfer
   }
   // safety net unset of flags - just in case.
@@ -7168,7 +7194,7 @@ export function hasUsedAnyBonusAction(actor: Actor.Implementation) {
   return (actor.getFlag(MODULE_ID, "actions")?.bonusActionsUsed ?? 0) > 0;
 }
 export async function removeBonusActionUsed(actor: Actor, force = false) {
-  if (force || !installedModules.get("times-up")) { // bonus action will be expired by times-up if installed
+  if (force) { // otherwise DAE expires it through its special duration
     await actor.effects.get(getStaticID("bonusaction"))?.delete()
   }
   // Safety net flag reset just in case
@@ -7494,10 +7520,12 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
   return foundry.applications.handlebars.renderTemplate(template, chatData);
 }
 export function heightIntersects(targetDocument: TokenDocument.Implementation, flankerDocument: TokenDocument.Implementation): boolean {
-  const targetElevation = targetDocument.elevation ?? 0;
-  const flankerElevation = flankerDocument.elevation ?? 0;
-  const targetTopElevation = targetElevation + Math.max(targetDocument.height, targetDocument.width) * (canvas.dimensions?.distance ?? 5);
-  const flankerTopElevation = flankerElevation + Math.min(flankerDocument.height, flankerDocument.width) * (canvas.dimensions?.distance ?? 5); // assume t2 is trying to make itself small
+  const target = tokenSourcePosition(targetDocument);
+  const flanker = tokenSourcePosition(flankerDocument);
+  const targetElevation = target.elevation;
+  const flankerElevation = flanker.elevation;
+  const targetTopElevation = targetElevation + Math.max(target.height, target.width) * (canvas.dimensions?.distance ?? 5);
+  const flankerTopElevation = flankerElevation + Math.min(flanker.height, flanker.width) * (canvas.dimensions?.distance ?? 5); // assume t2 is trying to make itself small
   /* This is for requiring the centers to intersect the height range 
      Which is an alternative rule possiblity
   const flankerCenter = (flankerElevation + flankerTopElevation) / 2;
@@ -7530,10 +7558,11 @@ function isCellAdjacentToToken(cellPoint: { x: number; y: number }, target: Toke
   const cellBottom = cellTop + gridH;
 
   // Target bounding box
-  const targetLeft = target.x;
-  const targetTop = target.y;
-  const targetRight = target.x + target.document.width * gridW;
-  const targetBottom = target.y + target.document.height * gridH;
+  const targetPos = tokenSourcePosition(target);
+  const targetLeft = targetPos.x;
+  const targetTop = targetPos.y;
+  const targetRight = targetPos.x + targetPos.width * gridW;
+  const targetBottom = targetPos.y + targetPos.height * gridH;
 
   // Compute the gap between the two bounding boxes along each axis
   const dx = Math.max(0, cellLeft - targetRight, targetLeft - cellRight);
@@ -7614,12 +7643,12 @@ export function findPotentialFlankers(target: Token.Implementation) {
 
 /**
  * Compute the centroid (average pixel position) of a token's occupied hex centers.
- * Falls back to token.center if the grid is not hexagonal or offsets can't be obtained.
+ * Falls back to the token's committed centre if the grid is not hexagonal or offsets can't be obtained.
  */
 function getHexCentroid(target: Token.Implementation): { x: number; y: number } {
-  if (!canvas?.grid?.isHexagonal) return target.center;
-  const offsets = target.document.getOccupiedGridSpaceOffsets();
-  if (!offsets.length) return target.center;
+  if (!canvas?.grid?.isHexagonal) return tokenSourceCenter(target);
+  const offsets = target.document.getOccupiedGridSpaceOffsets(tokenSourcePosition(target));
+  if (!offsets.length) return tokenSourceCenter(target);
   let sumX = 0, sumY = 0;
   for (const offset of offsets) {
     const center = canvas.grid.getCenterPoint(offset);
@@ -7640,9 +7669,11 @@ function isAngleFlanking(
   target: Token.Implementation
 ): boolean {
   // Use hex centroid for hex grids, target center for gridless
-  const referencePoint = canvas?.grid?.isHexagonal ? getHexCentroid(target) : target.center;
-  const angleToken = Math.atan2(token.center.y - referencePoint.y, token.center.x - referencePoint.x);
-  const angleAlly = Math.atan2(ally.center.y - referencePoint.y, ally.center.x - referencePoint.x);
+  const referencePoint = canvas?.grid?.isHexagonal ? getHexCentroid(target) : tokenSourceCenter(target);
+  const tokenCenter = tokenSourceCenter(token);
+  const allyCenter = tokenSourceCenter(ally);
+  const angleToken = Math.atan2(tokenCenter.y - referencePoint.y, tokenCenter.x - referencePoint.x);
+  const angleAlly = Math.atan2(allyCenter.y - referencePoint.y, allyCenter.x - referencePoint.x);
   let diff = Math.abs(angleToken - angleAlly);
   if (diff > Math.PI) diff = 2 * Math.PI - diff; // normalize to [0, π]
   const MIN_FLANKING_ANGLE = (150 / 180) * Math.PI; // 150° in radians
@@ -7663,12 +7694,13 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
    * container transform, which is only current once the canvas has drawn — in a background tab it
    * reads 0,0 while the document keeps the scene coordinates. The document is the source of truth.
    */
-  const targetX = target.document.x;
-  const targetY = target.document.y;
+  const targetPos = tokenSourcePosition(target);
+  const targetX = targetPos.x;
+  const targetY = targetPos.y;
   const tl = { x: targetX, y: targetY };
-  const tr = { x: targetX + target.document.width * gridW, y: targetY };
-  const bl = { x: targetX, y: targetY + target.document.height * gridH };
-  const br = { x: targetX + target.document.width * gridW, y: targetY + target.document.height * gridH };
+  const tr = { x: targetX + targetPos.width * gridW, y: targetY };
+  const bl = { x: targetX, y: targetY + targetPos.height * gridH };
+  const br = { x: targetX + targetPos.width * gridW, y: targetY + targetPos.height * gridH };
   const top: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, tr.x, tr.y];
   const bottom: [x0: number, y0: number, x1: number, y1: number] = [bl.x, bl.y, br.x, br.y];
   const left: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, bl.x, bl.y];
@@ -7694,13 +7726,15 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
     // Loop through each square covered by attacker and ally
     // Use geometric bounding-box adjacency instead of distancePointToken to avoid
     // measurement-mode-dependent distance calculations (center vs perimeter)
-    const tokenStartX = -Math.max(0, token.document.width / 2 - 0.5);
-    const tokenStartY = -Math.max(0, token.document.height / 2 - 0.5);
+    const tokenPos = tokenSourcePosition(token);
+    const tokenCenter = tokenSourceCenter(token);
+    const tokenStartX = -Math.max(0, tokenPos.width / 2 - 0.5);
+    const tokenStartY = -Math.max(0, tokenPos.height / 2 - 0.5);
     const tokenPoints: any[] = [];
-    for (let x = tokenStartX; x < token.document.width / 2; x++) {
-      for (let y = tokenStartY; y < token.document.height / 2; y++) {
-        let tx = token.center.x + x * gridW;
-        let ty = token.center.y + y * gridH;
+    for (let x = tokenStartX; x < tokenPos.width / 2; x++) {
+      for (let y = tokenStartY; y < tokenPos.height / 2; y++) {
+        let tx = tokenCenter.x + x * gridW;
+        let ty = tokenCenter.y + y * gridH;
         if (!isCellAdjacentToToken({ x: tx, y: ty }, target)) continue;
         tokenPoints.push({ x: tx, y: ty });
       }
@@ -7725,13 +7759,15 @@ export async function computeFlankedStatus(target: Token.Implementation): Promis
         if (isAngleFlanking(token, ally, target)) return true;
         continue;
       }
-      const allyStartX = -Math.max(0, ally.document.width / 2 - 0.5);
-      const allyStartY = -Math.max(0, ally.document.height / 2 - 0.5);
+      const allyPos = tokenSourcePosition(ally);
+      const allyCenter = tokenSourceCenter(ally);
+      const allyStartX = -Math.max(0, allyPos.width / 2 - 0.5);
+      const allyStartY = -Math.max(0, allyPos.height / 2 - 0.5);
       const allyPoints: any[] = [];
-      for (let x1 = allyStartX; x1 < ally.document.width / 2; x1++) {
-        for (let y1 = allyStartY; y1 < ally.document.height / 2; y1++) {
-          let ax = ally.center.x + x1 * gridW;
-          let ay = ally.center.y + y1 * gridH;
+      for (let x1 = allyStartX; x1 < allyPos.width / 2; x1++) {
+        for (let y1 = allyStartY; y1 < allyPos.height / 2; y1++) {
+          let ax = allyCenter.x + x1 * gridW;
+          let ay = allyCenter.y + y1 * gridH;
           if (!isCellAdjacentToToken({ x: ax, y: ay }, target)) continue;
           allyPoints.push({ x: ax, y: ay });
         }
@@ -7781,12 +7817,13 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
    * container transform, which is only current once the canvas has drawn — in a background tab it
    * reads 0,0 while the document keeps the scene coordinates. The document is the source of truth.
    */
-  const targetX = target.document.x;
-  const targetY = target.document.y;
+  const targetPos = tokenSourcePosition(target);
+  const targetX = targetPos.x;
+  const targetY = targetPos.y;
   const tl = { x: targetX, y: targetY };
-  const tr = { x: targetX + target.document.width * gridW, y: targetY };
-  const bl = { x: targetX, y: targetY + target.document.height * gridH };
-  const br = { x: targetX + target.document.width * gridW, y: targetY + target.document.height * gridH };
+  const tr = { x: targetX + targetPos.width * gridW, y: targetY };
+  const bl = { x: targetX, y: targetY + targetPos.height * gridH };
+  const br = { x: targetX + targetPos.width * gridW, y: targetY + targetPos.height * gridH };
   const top: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, tr.x, tr.y];
   const bottom: [x0: number, y0: number, x1: number, y1: number] = [bl.x, bl.y, br.x, br.y];
   const left: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, bl.x, bl.y];
@@ -7795,13 +7832,15 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
   // Loop through each square covered by attacker and ally
   // Use geometric bounding-box adjacency instead of distancePointToken to avoid
   // measurement-mode-dependent distance calculations (center vs perimeter)
-  const tokenStartX = -Math.max(0, token.document.width / 2 - 0.5);
-  const tokenStartY = -Math.max(0, token.document.height / 2 - 0.5);
+  const tokenPos = tokenSourcePosition(token);
+  const tokenCenter = tokenSourceCenter(token);
+  const tokenStartX = -Math.max(0, tokenPos.width / 2 - 0.5);
+  const tokenStartY = -Math.max(0, tokenPos.height / 2 - 0.5);
   const tokenPoints: any[] = [];
-  for (let x = tokenStartX; x < token.document.width / 2; x++) {
-    for (let y = tokenStartY; y < token.document.height / 2; y++) {
-      let tx = token.center.x + x * gridW;
-      let ty = token.center.y + y * gridH;
+  for (let x = tokenStartX; x < tokenPos.width / 2; x++) {
+    for (let y = tokenStartY; y < tokenPos.height / 2; y++) {
+      let tx = tokenCenter.x + x * gridW;
+      let ty = tokenCenter.y + y * gridH;
       if (!isCellAdjacentToToken({ x: tx, y: ty }, target)) continue;
       tokenPoints.push({ x: tx, y: ty });
     }
@@ -7822,14 +7861,16 @@ export async function computeFlankingStatus(token: Token.Implementation, target:
       if (isAngleFlanking(token, ally, target)) return true;
       continue;
     }
-    const allyStartX = -Math.max(0, ally.document.width / 2 - 0.5);
-    const allyStartY = -Math.max(0, ally.document.height / 2 - 0.5);
+    const allyPos = tokenSourcePosition(ally);
+    const allyCenter = tokenSourceCenter(ally);
+    const allyStartX = -Math.max(0, allyPos.width / 2 - 0.5);
+    const allyStartY = -Math.max(0, allyPos.height / 2 - 0.5);
 
     const allyPoints: any[] = [];
-    for (let x1 = allyStartX; x1 < ally.document.width / 2; x1++) {
-      for (let y1 = allyStartY; y1 < ally.document.height / 2; y1++) {
-        let ax = ally.center.x + x1 * gridW;
-        let ay = ally.center.y + y1 * gridH;
+    for (let x1 = allyStartX; x1 < allyPos.width / 2; x1++) {
+      for (let y1 = allyStartY; y1 < allyPos.height / 2; y1++) {
+        let ax = allyCenter.x + x1 * gridW;
+        let ay = allyCenter.y + y1 * gridH;
         if (!isCellAdjacentToToken({ x: ax, y: ay }, target)) {
           continue;
         }
@@ -9317,11 +9358,7 @@ export function getCachedDocument(uuid: string | undefined | null) {
 }
 
 export function isEffectExpired(effect: ActiveEffect.Implementation): boolean {
-  if (installedModules.get("times-up") && globalThis.TimesUp.isEffectExpired) {
-    return globalThis.TimesUp.isEffectExpired(effect);
-  }
-  // TODO find out how to check some other module can delete expired effects
-  // return effect.updateDuration().remaining ?? false;
+  if (typeof globalThis.DAE?.isEffectExpired === "function") return globalThis.DAE.isEffectExpired(effect);
   // @ts-expect-error types doesn't realize
   return effect.duration.remaining <= 0;
 }
@@ -9697,7 +9734,7 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
 
       if (maxTargets !== "" && (targetIds.length ?? 0) >= Number(maxTargets)) break;
       if (!isValidTarget(target)) continue;
-      const ray = new foundry.canvas.geometry.Ray(target.center, tokenToUse.center);
+      const ray = new foundry.canvas.geometry.Ray(tokenSourceCenter(target), tokenSourceCenter(tokenToUse));
       const wallsBlock = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(configSettings.rangeTarget)
       let inRange = target.actor && dispositions.includes(targetDocument.disposition);
       if (target.actor && ["wallsBlockIgnoreIncapacited", "alwaysIgnoreIncapacitated"].includes(configSettings.rangeTarget))

@@ -4,7 +4,7 @@ import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog, TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 import { configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
-import { getFlankingEffect, CERemoveEffect, sumRolls, evalActivationCondition, computeTemplateShapeDistance, getToken, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, getSpeaker, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, getUnitDist, updateUserTargets, MidiOptions } from "../utils.js";
+import { getFlankingEffect, CERemoveEffect, sumRolls, evalActivationCondition, computeTemplateShapeDistance, getToken, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, getSpeaker, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, getUnitDist, updateUserTargets, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, MidiOptions } from "../utils.js";
 import { allAttackTypes } from "../../midi-qol.js";
 const { DialogV2 } = foundry.applications.api;
 import Token = foundry.canvas.placeables.Token;
@@ -22,6 +22,14 @@ export function attachTokenOptions(selected: string) {
   return ["default", "caster", "target"].map(value => ({
     value,
     label: i18n(`midi-qol.REGION_BEHAVIOR.attachToken.${value}`),
+    selected: selected === value
+  }));
+}
+
+export function templateOriginOptions(selected: string) {
+  return ["default", "base", "top", "eye"].map(value => ({
+    value,
+    label: i18n(`midi-qol.REGION_BEHAVIOR.templateOrigin.${value}`),
     selected: selected === value
   }));
 }
@@ -429,13 +437,14 @@ function isTokenInside(template: foundry.canvas.placeables.MeasuredTemplate.Impl
   // TODO: This can be vastly simplified, _IF_ we can assume gridded scenes
   // Check for center of each square the token uses.
   // e.g. for large tokens all 4 squares
-  const startX = token.document.width >= 1 ? 0.5 : (token.document.width / 2);
-  const startY = token.document.height >= 1 ? 0.5 : (token.document.height / 2);
-  for (let x = startX; x < token.document.width; x++) {
-    for (let y = startY; y < token.document.height; y++) {
+  const pos = tokenSourcePosition(token);
+  const startX = pos.width >= 1 ? 0.5 : (pos.width / 2);
+  const startY = pos.height >= 1 ? 0.5 : (pos.height / 2);
+  for (let x = startX; x < pos.width; x++) {
+    for (let y = startY; y < pos.height; y++) {
       const currGrid = {
-        x: token.x + x * grid.size! - templatePos.x,
-        y: token.y + y * grid.size! - templatePos.y,
+        x: pos.x + x * grid.size! - templatePos.x,
+        y: pos.y + y * grid.size! - templatePos.y,
       };
       let contains = template.shape?.contains(currGrid.x, currGrid.y);
       if (contains && wallsBlockTargeting) {
@@ -628,20 +637,71 @@ function aoeHeight(shapeType: string, dims: { radius?: number, width?: number, a
   return undefined;
 }
 
+/**
+ * The height a template is measured from: the caster's base, top (base plus its height) or eye level (midi's vision height),
+ * per the activity's override or else the Template Origin Height setting.
+ */
+function templateOriginElevation(activity: any, casterToken: Token.Implementation): number {
+  const override: string | undefined = activity?.regionBehavior?.templateOrigin;
+  const origin = override && override !== "default" ? override : (configSettings.optionalRules.templateOriginHeight ?? "base");
+  if (origin === "eye") return getTokenVisionElevation(casterToken, "visionSourceHeight");
+  const base = tokenSourceElevation(casterToken);
+  if (origin === "top") return base + (casterToken.document.depth ?? 1) * (canvas?.scene?.grid.distance ?? 5);
+  return base;
+}
+
+/**
+ * The vertical extent of an activity's template region, by area type, around its caster's elevation `e`: a sphere is
+ * centred on it, a cone is centred on its axis, and a cylinder, ring, cube or line stands on it. `e` is the origin height
+ * (templateOriginElevation). dnd5e 6 leaves template
+ * regions without an elevation, which core - and so dnd5e's region behaviours - reads as reaching from -Infinity to
+ * Infinity; the flat circle and square areas are meant to, and emanations follow their token, so both are left alone.
+ */
+export function templateElevation(activity: any, shape: any): { bottom: number, top: number | null, topInclusive: boolean } | undefined {
+  const template = activity?.target?.template ?? {};
+  const type: string | undefined = template.type;
+  if (!type || ["radius", "circle", "square"].includes(type) || shape?.type === "emanation") return undefined;
+  const casterToken = activity?.actor ? tokenForActor(activity.actor) : undefined;
+  if (!casterToken) return undefined;
+  const e = templateOriginElevation(activity, casterToken);
+  const sceneUnits = (value: unknown): number | undefined => {
+    const size = Number(value);
+    if (!Number.isFinite(size) || size <= 0) return undefined;
+    const converted = globalThis.dnd5e?.utils?.convertLength?.(size, template.units, canvas?.scene?.grid.units, { strict: false });
+    return typeof converted === "number" ? converted : size;
+  };
+  // Inclusive, as midi's own band is: a creature level with the top is inside.
+  const band = (bottom: number, top: number | undefined) => ({ bottom, top: top ?? null, topInclusive: true });
+  const centred = (height: number | undefined) => height === undefined ? band(e, undefined) : band(e - height / 2, e + height / 2);
+  switch (type) {
+    case "sphere": { const radius = sceneUnits(template.size); return radius === undefined ? undefined : band(e - radius, e + radius); }
+    case "cylinder": case "ring": case "wall": { const height = sceneUnits(template.height); return band(e, height === undefined ? undefined : e + height); }
+    case "cube": { const side = sceneUnits(template.size); return band(e, side === undefined ? undefined : e + side); }
+    case "line": return band(e, e + (sceneUnits(template.width) ?? canvas?.scene?.grid.distance ?? 5));
+    case "cone": return centred(regionShapeHeight(shape));
+    default: { const height = regionShapeHeight(shape); return band(e, height === undefined ? undefined : e + height); }
+  }
+}
+
+/** Vertical extent of a region shape (document or source data) in scene units. */
+export function regionShapeHeight(shape: any): number | undefined {
+  if (!shape) return undefined;
+  const dp = canvas.scene?.dimensions?.distancePixels ?? 1;
+  return aoeHeight(shape.type, {
+    radius: (shape.radius ?? shape.radiusX ?? shape.outerWidth) / dp,
+    width: (shape.width ?? shape.outerWidth) / dp,
+    angle: shape.angle,
+    curvature: shape.curvature
+  });
+}
+
 /** Region elevation band, deriving top from the shape when core leaves it null. */
 function regionElevationBand(regionDoc: RegionDocument.Implementation): { bottom: number, top: number } {
   const declaredBottom = regionDoc.elevation?.bottom;
   const bottom = Number.isFinite(declaredBottom) ? declaredBottom as number : -Infinity;
   const declaredTop = regionDoc.elevation?.top;
   if (Number.isFinite(declaredTop)) return { bottom, top: declaredTop as number };
-  const shape = regionDoc.shapes?.at?.(0) as any;
-  const dp = canvas.scene?.dimensions?.distancePixels ?? 1;
-  const height = shape ? aoeHeight(shape.type, {
-    radius: (shape.radius ?? shape.radiusX ?? shape.outerWidth) / dp,
-    width: (shape.width ?? shape.outerWidth) / dp,
-    angle: shape.angle,
-    curvature: shape.curvature
-  }) : undefined;
+  const height = regionShapeHeight(regionDoc.shapes?.at?.(0));
   /*
    * A region with no declared bottom is unbounded below, and there is no base to derive a height
    * from — `-Infinity + height` is still `-Infinity`, which collapsed the band to
@@ -668,7 +728,7 @@ function templateElevationBand(templateDoc: any): { bottom: number, top: number 
 }
 
 function withinBand(band: { bottom: number, top: number }, token: Token.Implementation): boolean {
-  const elev = token.document.elevation ?? 0;
+  const elev = tokenSourcePosition(token).elevation;
   return band.bottom <= elev && elev <= band.top;
 }
 
@@ -702,7 +762,7 @@ function regionWallBlocked(regionDoc: RegionDocument.Implementation, token: Toke
   }
   return !!CONFIG.Canvas.polygonBackends.sight.testCollision(
     { x: originX, y: originY },
-    { x: token.center.x, y: token.center.y },
+    tokenSourceCenter(token),
     { mode: "any", type: "move" }
   );
 }
@@ -780,12 +840,13 @@ function isTokenInsideRegion(
     }
   }
 
-  const startX = token.document.width >= 1 ? 0.5 : (token.document.width / 2);
-  const startY = token.document.height >= 1 ? 0.5 : (token.document.height / 2);
-  for (let x = startX; x < token.document.width; x++) {
-    for (let y = startY; y < token.document.height; y++) {
-      const testX = token.x + x * grid.size!;
-      const testY = token.y + y * grid.size!;
+  const pos = tokenSourcePosition(token);
+  const startX = pos.width >= 1 ? 0.5 : (pos.width / 2);
+  const startY = pos.height >= 1 ? 0.5 : (pos.height / 2);
+  for (let x = startX; x < pos.width; x++) {
+    for (let y = startY; y < pos.height; y++) {
+      const testX = pos.x + x * grid.size!;
+      const testY = pos.y + y * grid.size!;
 
       // Use polygonTree.testPoint with tolerance=1 to include boundary tokens.
       // regionDoc.testPoint uses Clipper strict containment (boundary = outside),

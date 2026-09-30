@@ -74,8 +74,10 @@ import {
   getConsumptionData,
   toMessageMode,
   rollModeToMessageMode,
+  tokenSourceCenter,
+  tokenSourcePosition,
 } from "../utils.js";
-import { activityHasScaledTargetCount, attachTokenOptions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
+import { activityHasScaledTargetCount, attachTokenOptions, templateOriginOptions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
   _validateType(value: unknown) {
@@ -168,6 +170,25 @@ export function findAmmunitionActivity(ammunitionItem: any): any | undefined {
     ?? activities?.find((a: any) => a.isOtherActivityCompatible);
   found?.prepareData();
   return found;
+}
+
+/**
+ * Card target descriptors for a workflow's targets, with dnd5e's live AC where it has one:
+ * getTargetDescriptors() includes cover bonuses and returns null for total cover.
+ */
+export function workflowTargetDescriptors(tokens: Iterable<Token.Implementation>, dnd5eDescriptors?: Array<{ uuid: string, ac: number | null }>) {
+  dnd5eDescriptors ??= globalThis.dnd5e.utils.getTargetDescriptors();
+  const targets = new Map();
+  for (const token of tokens) {
+    const { name } = token;
+    const { img, system, uuid } = token.actor ?? {};
+    if (!uuid) continue;
+    const dnd5eTarget = dnd5eDescriptors?.find(td => td.uuid === uuid);
+    //@ts-expect-error no dnd5e types
+    const ac = dnd5eTarget ? dnd5eTarget.ac : system?.attributes?.ac?.value ?? null;
+    targets.set(uuid, { name, img, uuid, ac });
+  }
+  return Array.from(targets.values());
 }
 
 export let MidiActivityMixin = Base => {
@@ -265,6 +286,8 @@ export let MidiActivityMixin = Base => {
           // "default" leaves the region stationary. "caster" attaches it to the caster's token;
           // "target" attaches it to a chosen target (prompts if multiple targets are selected).
           attachToken: new StringField({ initial: "default", choices: ["default", "caster", "target"] }),
+          // The caster's height a template is measured from; "default" follows the Template Origin Height setting.
+          templateOrigin: new StringField({ initial: "default", required: true, blank: false, choices: ["default", "base", "top", "eye"] }),
           rules: new ArrayField(new SchemaField({
             trigger: new StringField({ required: true, blank: false, initial: "entry" }),
             action: new StringField({ required: true, blank: false, initial: "useActivity" }),
@@ -378,24 +401,7 @@ export let MidiActivityMixin = Base => {
     }
     get messageFlags() {
       const baseFlags = super.messageFlags;
-      // Lock target membership to workflow.targets, but use dnd5e's fresh AC values.
-      // dnd5e's getTargetDescriptors() reads live ac.value (which includes cover bonuses)
-      // and returns null for coverTotal. getWorkflowByActivityUuid uses a direct map
-      // lookup so it only finds the current workflow (not stale re-keyed ones).
-      const targets = new Map();
-      if (this.workflow?.targets) {
-        const dnd5eDescriptors = baseFlags.targets as Array<{uuid: string, ac: number | null}> | undefined;
-        for (const token of this.workflow.targets) {
-          const { name } = token;
-          const { img, system, uuid } = token.actor ?? {};
-          if (!uuid) continue;
-          const dnd5eTarget = dnd5eDescriptors?.find(td => td.uuid === uuid);
-          //@ts-expect-error no dnd5e types
-          const ac = dnd5eTarget ? dnd5eTarget.ac : system?.attributes?.ac?.value ?? null;
-          targets.set(uuid, { name, img, uuid, ac });
-        }
-        baseFlags.targets = Array.from(targets.values());
-      }
+      if (this.workflow?.targets) baseFlags.targets = workflowTargetDescriptors(this.workflow.targets, baseFlags.targets);
       return baseFlags;
     }
     async getTriggeredActivity() {
@@ -674,8 +680,9 @@ export let MidiActivityMixin = Base => {
       let preUseActivityHookId: number | undefined;
       let activityConsumptionHookId: number | undefined;
       try {
-        usage.midiOptions ??= {};
-        usage.midiOptions.workflowOptions ??= {};
+        // Copies: a caller may reuse one options object across uses, and this snapshot belongs to this use alone.
+        usage.midiOptions = { ...usage.midiOptions };
+        usage.midiOptions.workflowOptions = { ...usage.midiOptions.workflowOptions };
         // Capture current targets before template placement can replace them
         usage.midiOptions.workflowOptions.preSelectedTargetUuids ??= Array.from(game.user?.targets ?? []).map(t => t.document.uuid);
         if (debugEnabled > 0) warn("MidiQOL | MidiActivity | use | Called", usage, dialog, message);
@@ -740,14 +747,19 @@ export let MidiActivityMixin = Base => {
           foundry.utils.setProperty(message, "data.flags.dnd5e.item.data", activity.item.toObject());
 
         let useResults: any;
-        preUseActivityHookId = Hooks.on("dnd5e.preUseActivity", (newActivity, usageConfig, messageConfig) => {
+        preUseActivityHookId = Hooks.on("dnd5e.preUseActivity", (newActivity, usageConfig, dialogConfig, messageConfig) => {
           if (usage.workflow!.activity?.uuid !== newActivity.uuid) return true;
           // Not sure if required but set the workflow in the super.usageConfig.
           usageConfig.workflow = usage.workflow;
           // newActivity will be the scaled activity to use that instead of what we have
           usage.workflow!.activity = newActivity;
           // TODO fix this nasty hack
-          messageConfig.workflow = usage.workflow;
+          dialogConfig.workflow = usage.workflow;
+          // The card's targets are this use's. messageFlags finds the workflow by activity uuid, which
+          // per-target sub-uses share, so it can list another sub-use's targets.
+          // @ts-expect-error no dnd5e-types
+          const dnd5eFlags = messageConfig?.data?.flags?.dnd5e;
+          if (dnd5eFlags && usage.workflow?.targets) dnd5eFlags.targets = workflowTargetDescriptors(usage.workflow.targets);
           return true;
         });
         let usageData: ActivityUseConfiguration | undefined;
@@ -1818,7 +1830,7 @@ export let MidiActivityMixin = Base => {
 
         let tokenToUse: foundry.canvas.placeables.Token.Implementation | undefined;
         if (speaker.token) tokenToUse = canvas.tokens?.get(speaker.token);
-        const rangeDetails = checkActivityRange(this, tokenToUse, workflow.targets, checkMechanic("checkRange") !== "none" && !isAoETargeting)
+        const rangeDetails = checkActivityRange(this, tokenToUse, workflow.targets, checkMechanic("checkRange") !== "none" && !isAoETargeting && !workflow.AoO)
         if (checkMechanic("checkRange") !== "none" && !isAoETargeting && !isEmanationTargeting && !workflow.AoO && speaker.token) {
           if (tokenToUse && workflow.targets.size > 0) {
             if (rangeDetails.result === "fail")
@@ -1952,11 +1964,12 @@ export let MidiActivityMixin = Base => {
         let item = this;
         let target = this.target ?? { value: 0, template: { size: 0 } };
         const fudge = 0.1;
-        const { width, height } = tokenToUse.document;
+        const { width, height } = tokenSourcePosition(tokenToUse);
 
         templateOptions.distance = Math.ceil(Number(target.template.size) + Math.max((width ?? 1) / 2, (height ?? 1) / 2, 0) * (canvas.dimensions?.distance ?? 0));
-        templateOptions.x = tokenToUse.center?.x ?? 0;
-        templateOptions.y = tokenToUse.center?.y ?? 0;
+        const casterCenter = tokenSourceCenter(tokenToUse);
+        templateOptions.x = casterCenter.x;
+        templateOptions.y = casterCenter.y;
         foundry.utils.setProperty(templateOptions, `flags.${MODULE_ID}.actorUuid`, actor?.uuid);
         foundry.utils.setProperty(templateOptions, `flags.${MODULE_ID}.tokenId`, tokenToUse.id);
         foundry.utils.setProperty(templateOptions, `flags.${MODULE_ID}.workflowId`, this.uuid); // TODO look at this when workflow ids are chat card ids
@@ -2532,6 +2545,7 @@ export let MidiActivityMixinSheet = Base => {
         // GameSystemConfig.areaTargetTypes, so emanationNoTemplate (no template at all) is excluded.
         context.showRegionBehaviorPanel = activityHasAreaTarget(this.activity);
         context.attachTokenOptions = attachTokenOptions(this.activity.regionBehavior?.attachToken ?? "default");
+        context.templateOriginOptions = templateOriginOptions(this.activity.regionBehavior?.templateOrigin ?? "default");
       }
       return context;
     }

@@ -5,7 +5,7 @@ import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRoll
 import { MidiOptions } from "../utils.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
 import { addAttribution, areMidiKeysPressed, callActivityHooks, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets, validTargetTokens } from "../utils.js";
-import { MidiActivityMixin, MidiActivityMixinSheet, findAmmunitionActivity } from "./MidiActivityMixin.js";
+import { MidiActivityMixin, MidiActivityMixinSheet, workflowTargetDescriptors, findAmmunitionActivity } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { Activity, ActivityUseConfiguration, DND5ETargetDescriptor, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
@@ -499,7 +499,8 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           if (targetDescriptors && workflow) {
             // Don't mutate td.ac — it's a shared reference with the chat message data.
             // null AC (coverTotal) is handled downstream in checkHits() as auto-miss.
-            workflow.targetDescriptors = targetDescriptors as DND5ETargetDescriptor[];
+            // dnd5e lists the user's targets; the card lists this use's, with dnd5e's roll-time AC.
+            workflow.targetDescriptors = workflowTargetDescriptors(workflow.targets, targetDescriptors) as DND5ETargetDescriptor[];
           }
         });
         // Active defence resolves by triggering saving throws and returns early
