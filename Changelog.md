@@ -34,6 +34,26 @@
 * A bonus action is recorded when Enforce Bonus Actions is "Display status icon", matching reactions and what setBonusActionUsed already allowed; only the prompt stays conditional on enforcement.
 * Flanking reads token positions from the token document rather than the placeable transform, which is only current once the canvas has drawn.
 
+* "Downgrade Immunity" no longer drops the resistance of a damage type the target is not immune to; it only acts on immunities.
+* Ignoring or downgrading an immunity, resistance or vulnerability for specific damage types also works against an "All Damage" trait; `idi.<type>`/`ddi.<type>` apply against an "All Damage" immunity.
+* Critical damage modes that add extra dice (max crit, explode, max base + roll crit) place them as dnd5e does: inside a term bound by `*`, `/` or `%`, and with a subtracted term's sign. Reconfiguring the roll does not add them twice.
+* Conditional Spell Sniper and Sharpshooter flags are evaluated; any condition used to count as true.
+* Initiative `advantage/disadvantage.check.<ability>` flags use the actor's initiative ability; they never matched.
+* The Long Rest, Short Rest and New Day special duration labels display correctly.
+* New special durations: `isMissed` (the actor is attacked and missed), `1Miss` / `1Miss:<actionType>` (the actor's attack hits no target), and `isAttacked:<actionType>` / `isHit:<actionType>`.
+* Effects set to expire on a failed concentration save with the old `isConcentrationSaveFail` spelling expire.
+* Convenient Effects applied by a concentration spell end with the concentration: the use's concentration effect was read from a flag dnd5e no longer writes. `workflow.concentrationId` gives it.
+* Condition data `riderStatuses` includes a status's own riders, e.g. unconscious also lists prone.
+* `getDistance` is available in evaluated conditions and macros.
+* The distance fudge factor applies in every measurement mode and on every scene, not only gridless scenes with Gridless Grid enabled.
+* A save, check, skill or tool roll requested from another client that fails settles instead of leaving the use waiting.
+* DDB Game Log places each of an activity's templates and records them for targeting; it called `drawPreview` on the list and threw.
+* The damage button says Critical as soon as a critical attack is shown, instead of briefly showing the plain damage label.
+* OverTime and ActivityOverTime effects run from core's turn events, by combatant: the right combatant's turn after initiative is rerolled, and a combatant whose turn is skipped gets both its start and end of turn.
+* Auto reroll initiative rolls inside the round advance (new initiatives and the first turn in one update); a player's round advance is passed to the GM to roll.
+* An attack whose ammunition carries a save shows the save button when saves are rolled from the card, and the save button on an attack card rolls the other activity's or ammunition's save; it did nothing.
+* The damage tray lists the use's targets, including creatures caught by a template or chosen at target confirmation; it listed only what was targeted when the card was created (usually nothing for an area spell), so it fell back to selected tokens.
+
 ### 14.0.12
 
 **Damage cards**

@@ -1,6 +1,6 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, isEffectExpired } from "./utils.js";
+import { processTurnOverTime, bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, isEffectExpired } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -11,7 +11,7 @@ import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, ActivityUseConfiguration, DamageApplicationOptions, DamageDescription, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
 import { Workflow } from "./Workflow.js";
-import { preferredActiveGM } from "./GMAction.js";
+import { preferredActiveGM, socketlibSocket } from "./GMAction.js";
 import { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./lib/MidiDependentsRegistry.js";
 import { RollModifierTracker, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, RollModifierResult, AdvantageFlags } from "./lib/RollModifierTracker.js";
 
@@ -48,6 +48,10 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareData", actorPrepareData, "WRAPPER");
   // I think this can be removed in v13 libWrapper.register(MODULE_ID, "KeyboardManager.prototype._onFocusIn", _onFocusIn, "OVERRIDE");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.getRollData", actorGetRollData, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.calculateDamage", calculateDamageAllTraits, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preUpdate", combatPreUpdate, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._onStartTurn", combatOnStartTurn, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._onEndTurn", combatOnEndTurn, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.getRollData", itemGetRollData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
@@ -1197,10 +1201,131 @@ function applyDamageModifiers(damageRoll: Roll): Roll {
   return damageRoll;
 }
 
+/**
+ * With auto reroll on, initiative is rerolled inside the round advance itself, with the new round's first turn, so the
+ * order changes once and core's turn events see a single transition. A player's round advance is redone by the GM.
+ */
+async function combatPreUpdate(this: Combat.Implementation, wrapped, changed: Combat.UpdateData, options: Combat.Database.PreUpdateOptions, user: User.Implementation) {
+  const allowed = await wrapped(changed, options, user);
+  if (allowed === false) return false;
+  if (!checkMechanic("autoRerollInitiative") || !this.combatants.size) return allowed;
+  if (typeof changed.round !== "number" || changed.round <= (this.current.round ?? 0)) return allowed;
+  if (!game.user?.isGM) {
+    socketlibSocket.executeAsGM("advanceCombatRound", { combatUuid: this.uuid, changed: { round: changed.round, turn: changed.turn },
+      options: { direction: options.direction, worldTime: options.worldTime } });
+    return false;
+  }
+  await rerollInitiativeInUpdate(this, changed);
+  return allowed;
+}
+
+/** Rolls as core's rollInitiative does, one roll per dnd5e initiative group, and writes the results into `changed`. */
+async function rerollInitiativeInUpdate(combat: Combat.Implementation, changed: Combat.UpdateData) {
+  const byGroup = new Map<string, number>();
+  const updates: { _id: string, initiative: number }[] = [];
+  const messages: object[] = [];
+  for (const combatant of combat.combatants) {
+    // @ts-expect-error no dnd5e-types
+    const group: string = combatant.getInitiativeGroupingKey?.() ?? combatant.id;
+    let initiative = byGroup.get(group);
+    if (initiative === undefined) {
+      const roll = combatant.getInitiativeRoll();
+      await roll.evaluate();
+      initiative = roll.total ?? 0;
+      byGroup.set(group, initiative);
+      // Private for hidden combatants, as core's rollInitiative.
+      const messageOptions = { messageMode: combatant.hidden ? "gm" : undefined, create: false as const };
+      const chatData: any = await roll.toMessage({
+        speaker: ChatMessage.implementation.getSpeaker({ actor: combatant.actor, token: combatant.token, alias: combatant.name }),
+        flavor: game.i18n?.format("COMBAT.RollsInitiative", { name: foundry.utils.escapeHTML(combatant.name ?? "") }),
+        flags: { core: { initiativeRoll: true } }
+      }, messageOptions);
+      if (messages.length) chatData.sound = null;
+      messages.push(chatData);
+    }
+    updates.push({ _id: combatant.id!, initiative });
+  }
+  changed.combatants = updates;
+  // The round starts with the first combatant of the new order, skipping the defeated when core would.
+  const order = combat.combatants.map(c => c.clone({ initiative: updates.find(u => u._id === c.id)?.initiative }, { keepId: true }))
+    // @ts-expect-error _sortCombatants is protected in fvtt-types
+    .sort((a, b) => combat._sortCombatants(a, b));
+  const first = combat.settings?.skipDefeated ? order.findIndex(c => !c.isDefeated) : 0;
+  changed.turn = Math.max(first, 0);
+  await ChatMessage.implementation.create(messages as ChatMessage.CreateData[]);
+}
+
+async function combatOnStartTurn(this: Combat.Implementation, wrapped, combatant: Combatant.Implementation, context: object) {
+  await wrapped(combatant, context);
+  await processTurnOverTime(this, combatant, true);
+}
+
+async function combatOnEndTurn(this: Combat.Implementation, wrapped, combatant: Combatant.Implementation, context: object) {
+  await wrapped(combatant, context);
+  await processTurnOverTime(this, combatant, false);
+}
+
+const DAMAGE_TRAIT_KEYS = { immunity: "di", resistance: "dr", vulnerability: "dv" } as const;
+
+/**
+ * A per-type ignore or downgrade also reaches an "All Damage" trait: for the (synchronous) calculation the trait
+ * lists the concrete damage types instead. dnd5e decides "All Damage" before, and apart from, per-type options.
+ */
+function calculateDamageAllTraits(this: Actor.Implementation, wrapped, damages, options: any = {}) {
+  const perType = (value: unknown) => value instanceof Set && value.size > 0 && !value.has("ALL");
+  // @ts-expect-error no dnd5e-types
+  const traits = this.system.traits;
+  const restore: [{ value: Set<string> }, Set<string>][] = [];
+  for (const [category, key] of Object.entries(DAMAGE_TRAIT_KEYS)) {
+    const trait = traits?.[key];
+    if (!(trait?.value instanceof Set) || !trait.value.has("ALL")) continue;
+    // Downgrades act on immunity, and through it on resistance.
+    if (!perType(options.ignore?.[category]) && !(category !== "vulnerability" && perType(options.downgrade))) continue;
+    restore.push([trait, trait.value]);
+    trait.value = new Set([...trait.value, ...Object.keys(GameSystemConfig.damageTypes)].filter(t => t !== "ALL"));
+  }
+  try {
+    return wrapped(damages, options);
+  } finally {
+    for (const [trait, value] of restore) trait.value = value;
+  }
+}
+
+const BINDING_OPERATORS = new Set(["*", "/", "%"]);
+
+/**
+ * Place a term's critical extras as dnd5e places its own: wrapped with the term when a *, / or % binds it,
+ * otherwise inline carrying the term's sign. Everything added is marked, so a reconfigure can take it out again.
+ */
+function placeCritical(terms: foundry.dice.terms.RollTerm[], term: foundry.dice.terms.RollTerm, extras: foundry.dice.terms.RollTerm[], index: number): foundry.dice.terms.RollTerm[] {
+  const OperatorTerm = foundry.dice.terms.OperatorTerm;
+  const prev = terms[index - 1], next = terms[index + 1];
+  const bound = (t: foundry.dice.terms.RollTerm | undefined) => t instanceof OperatorTerm && BINDING_OPERATORS.has(t.operator);
+  if (bound(prev) || bound(next)) {
+    // The wrapper carries the damage type; dnd5e's chunkTerms does not look inside parentheticals.
+    const options = { ...foundry.utils.deepClone(term.options), criticalWrapper: true };
+    const group: foundry.dice.terms.RollTerm[] = [term];
+    for (const extra of extras) group.push(new OperatorTerm({ operator: "+" }), extra);
+    for (const t of group) t.options.flavor = "";
+    return [foundry.dice.terms.ParentheticalTerm.fromTerms(group, options)];
+  }
+  const sign = prev instanceof OperatorTerm ? prev.operator : "+";
+  //@ts-expect-error no dnd5e-types
+  return [term, ...extras.flatMap(extra => [new OperatorTerm({ operator: sign, options: { criticalBonusDamage: true } }), extra])];
+}
+
+/** The term a previous configure wrapped with its critical extras; wrapping only cleared its flavor. */
+function unwrapCritical(wrapper: foundry.dice.terms.ParentheticalTerm): foundry.dice.terms.RollTerm {
+  const original = wrapper.roll?.terms[0];
+  if (!original) return wrapper;
+  original.options.flavor = wrapper.options.flavor;
+  return original;
+}
+
 // @ts-expect-error no dnd5e-types
 function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = { critical: {} }) {
   // Remove existing critical damage
-  this.terms = this.terms.filter(t => !t.options.criticalBonusDamage && !t.options.criticalFlatBonus);
+  this.terms = this.terms.map(t => t.options?.criticalWrapper ? unwrapCritical(t) : t).filter(t => !t.options.criticalBonusDamage && !t.options.criticalFlatBonus);
   this.terms.forEach(term => {
     if (term._number instanceof Roll) {
       // Complex number term.
@@ -1236,7 +1361,8 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
   const Die = foundry.dice.terms.Die;
 
   // if (this.options.configured) return; seems this is not required.
-  let bonusTerms: foundry.dice.terms.RollTerm[] = [];
+  const extras = new Map<foundry.dice.terms.RollTerm, foundry.dice.terms.RollTerm[]>();
+  const addExtra = (term: foundry.dice.terms.RollTerm, extra: foundry.dice.terms.RollTerm) => extras.set(term, [...(extras.get(term) ?? []), extra]);
   /* criticalDamage is one of 
     "default": "DND5e Settings Only",
     "maxDamage": "Max Normal Damage",
@@ -1280,23 +1406,19 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
       case "maxDamageExplode":
         if (term instanceof DiceTerm) term.modifiers.push(`min${term.faces}`);
         if (term instanceof DiceTerm) {
-          //@ts-expect-error no dnd5e-types
-          bonusTerms.push(new OperatorTerm({ operator: "+", options: { criticalBonusDamage: true } }));
           const newTerm = new Die({ number: term.number + cb, faces: term.faces })
           newTerm.modifiers.push(`x${term.faces}`);
           newTerm.options = foundry.utils.deepClone(term.options)
           //@ts-expect-error no dnd5e-types
           newTerm.options.criticalBonusDamage = true;
           // foundry.utils.setProperty(newTerm.options, "sourceTerm", term);
-          bonusTerms.push(newTerm);
+          addExtra(term, newTerm);
         }
         break;
       case "maxCrit":  // Powerful critical
       case "maxCritRoll":
         if (term instanceof DiceTerm) {
           let critTerm;
-          //@ts-expect-error no dnd5e-types
-          bonusTerms.push(new OperatorTerm({ operator: "+", options: { criticalBonusDamage: true } }));
           if (getCriticalDamage() === "maxCrit")
             critTerm = new NumericTerm({ number: (term.number + cb) * (term.faces ?? 1) });
           else {
@@ -1306,7 +1428,7 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
           }
           critTerm.options = foundry.utils.deepClone(term.options);
           critTerm.options.criticalBonusDamage = true;
-          bonusTerms.push(critTerm);
+          addExtra(term, critTerm);
         } else if (term instanceof NumericTerm && options.multiplyNumeric) {
           term.number *= cm;
         }
@@ -1337,28 +1459,24 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
       case "explodeCharacter":
       case "explodeNPC":
         if (term instanceof DiceTerm) {
-          //@ts-expect-error no dnd5e-types
-          bonusTerms.push(new OperatorTerm({ operator: "+", options: { criticalBonusDamage: true } }));
           const newTerm = new Die({ number: term.number + cb, faces: term.faces })
           newTerm.modifiers.push(`x${term.faces}`);
           newTerm.options = foundry.utils.deepClone(term.options);
           //@ts-expect-error no dnd5e-types
           newTerm.options.criticalBonusDamage = true;
           // foundry.utils.setProperty(newTerm.options, "sourceTerm", term);
-          bonusTerms.push(newTerm);
+          addExtra(term, newTerm);
         }
         break;
       case "maxBaseRollCrit":
         if (term instanceof DiceTerm) term.modifiers.push(`min${term.faces}`);
         if (term instanceof DiceTerm) {
-          //@ts-expect-error no dnd5e-types
-          bonusTerms.push(new OperatorTerm({ operator: "+", options: { criticalBonusDamage: true } }));
           const newTerm = new Die({ number: term.number, faces: term.faces })
           newTerm.options = foundry.utils.deepClone(term.options);
           // @ts-expect-error no dnd5e-types
           newTerm.options.criticalBonusDamage = true;
           // foundry.utils.setProperty(newTerm.options, "sourceTerm", term);
-          bonusTerms.push(newTerm);
+          addExtra(term, newTerm);
         }
         break;
       case "baseDamage":
@@ -1366,7 +1484,7 @@ function configureDamage(this: CONFIG.Dice.DamageRoll, wrapped, options: any = {
         break;
     }
   }
-  if (bonusTerms.length > 0) this.terms.push(...bonusTerms);
+  if (extras.size) this.terms = this.terms.flatMap((term, i, terms) => extras.has(term) ? placeCritical(terms, term, extras.get(term)!, i) : [term]);
   if (this.options.critical?.bonusDamage) {
     const extra = new Roll(this.options.critical.bonusDamage, this.data);
     for (let term of extra.terms) {

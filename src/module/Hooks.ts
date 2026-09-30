@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, obscureRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, _processOverTime, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget, rangeToSceneUnits, tokenSourceElevation } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget, rangeToSceneUnits, tokenSourceElevation } from "./utils.js";
 import { checkMechanic, checkRule, configSettings, dragDropTargeting, isDnd5e53, setDnd5e53 } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook, getTemplateSourceToken } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -353,19 +353,6 @@ export let readyHooks = async () => {
   Hooks.on("dnd5e.preActivityConsumption", preActivityConsumptionHook);
   Hooks.on("dnd5e.activityConsumption", activityConsumptionHook);
   Hooks.on("dnd5e.rollDeathSave", deathSaveHook);
-  Hooks.on("updateCombat", (combat, update, options, userId) => {
-    if (userId != preferredActiveGM()?.id) return;
-    if (!update.hasOwnProperty("round")) return;
-    if (!checkMechanic("autoRerollInitiative")) return;
-    let combatantIds: any = combat.combatants.map(c => c.id);
-    if (combat.combatants?.size > 0 && combat.id) {
-      const combatId = combat.id;
-      combat.rollInitiative(combatantIds, { updateTurn: true }).then(() => {
-        // Check if combat was deleted during async operation
-        if (game.combats?.get(combatId)) combat.update({ turn: 0 });
-      }).catch(err => TroubleShooter.recordError(err, "autoRerollInitiative"));
-    }
-  });
 }
 
 export async function restManager(actor: Actor.Implementation, result: { longRest: boolean; newDay: boolean }) {
@@ -422,11 +409,6 @@ export function initHooks() {
     if (data.round === undefined && data.turn === undefined) return;
     untargetAllTokens(combat);
     untargetDeadTokens();
-    if (preferredActiveGM()?.isSelf) {
-      _processOverTime(combat, data, options, user);
-      _processActivityOverTime(combat, data, options, user);
-    }
-    // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
   });
 
   Hooks.on("renderChatMessageHTML", (message, html, data) => {
@@ -2077,7 +2059,7 @@ Hooks.on("preCreateRegion", (regionDoc, regionData, options, userId) => {
 Hooks.on("dnd5e.preConfigureInitiative", (actor, rollConfig) => {
   let { parts, data, options } = rollConfig;
   //@ts-expect-error no dnd5e-types
-  const init: string = actor.system.attributes.init.value ?? "dex";
+  const init: string = actor.system.attributes.init?.ability || GameSystemConfig.defaultAbilities?.initiative || "dex";
   const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: actor });
 
   // Check for advantage

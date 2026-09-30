@@ -339,6 +339,9 @@ class PersistedFieldStore {
   }
 }
 
+/** The card's damage button, with or without its label span. */
+const DAMAGE_BUTTON_RE = /(<button[^>]*data-action="rollDamage"[^>]*>)(?:<span>)?[^<]*(?:<\/span>)?(<\/button>)/;
+
 export class Workflow {
   public static WorkflowDataFlags = WorkflowDataFlags;
 
@@ -1276,6 +1279,38 @@ export class Workflow {
       || !!(getAutoRollDamage(this) === "onHit" && (this.hitTargets.size > 0 || this.hitTargetsEC?.size > 0 || this.targets.size === 0))
       || !!(getAutoRollDamage(this) === "onHit" && (this.hitTargetsEC?.size > 0));
     return this.rollOptions?.rollToggle ? !normalRoll : normalRoll;
+  }
+
+  #damageButtonText(): string {
+    let text = (this.rollOptions.isCritical || this.isCritical) ? i18n("DND5E.Critical")
+      : i18n(this.activity.actionType === "heal" ? "DND5E.HEAL.HealingButton" : "DND5E.Damage");
+    if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) text += ` ${i18n("midi-qol.fastForward")}`;
+    return text;
+  }
+
+  /**
+   * The workflow's targets in the card field dnd5e's damage tray reads. dnd5e records them from the user's targets when
+   * the card is created, before a template or target confirmation settles them, so a Fireball that caught four
+   * creatures listed none. Per-target data midi has already stored on an entry, such as a flanking bonus, is kept.
+   */
+  #targetDescriptors(): Array<DND5ETargetDescriptor> | undefined {
+    const tokens = Array.from(this.targets ?? []).filter(t => t.actor);
+    if (!tokens.length) return undefined;
+    const existing = this.targetDescriptors ?? [];
+    return tokens.map(t => ({
+      ...(getTargetDescriptor(t.actor!.uuid, existing) ?? {}),
+      name: t.name,
+      img: t.actor!.img as string,
+      uuid: t.actor!.uuid,
+      //@ts-expect-error no dnd5e-types
+      ac: hasCoverTotal(t.actor) ? null : t.actor!.system.attributes.ac.value as number
+    }));
+  }
+
+  /** The id of the concentration effect this use began, from the usage card. */
+  get concentrationId(): string | undefined {
+    // @ts-expect-error no dnd5e-types
+    return this.chatCard?.system.concentration;
   }
 
   get spellLevel(): number {
@@ -2266,13 +2301,8 @@ export class Workflow {
     } else {
       const chatMessage = this.chatCard;
       if (chatMessage?.content) {
-        const searchRe = /(<button[^>]*data-action="rollDamage"[^>]*>)(?:<span>)?[^<]*(?:<\/span>)?(<\/button>)/;
-        const damageTypeString = (this.activity.actionType === "heal") ? i18n("DND5E.HEAL.HealingButton") : i18n("DND5E.Damage");
-        let damageString = (this.rollOptions.isCritical || this.isCritical) ? i18n("DND5E.Critical") : damageTypeString;
-        if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) damageString += ` ${i18n("midi-qol.fastForward")}`;
         // Preserve button tag, replace content with span for consistency
-        let replaceString = `$1<span>${damageString}</span>$2`;
-        let content = chatMessage.content.replace(searchRe, replaceString);
+        let content = chatMessage.content.replace(DAMAGE_BUTTON_RE, `$1<span>${this.#damageButtonText()}</span>$2`);
         await this.performThrottledUpdate(chatMessage, { content });
       }
     }
@@ -2751,7 +2781,7 @@ export class Workflow {
         }
       }
     };
-    let origin = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid
+    let origin = this.actor.effects.get(this.concentrationId ?? "")?.uuid
       ?? getConcentrationEffect(this.actor, this.item)?.uuid;
     let damageComponents = {};
     let damageListItem;
@@ -2850,7 +2880,7 @@ export class Workflow {
                 effectData.duration = { value: Math.ceil((effectData.duration.value ?? 0) / CONFIG.time.roundTime), units: "rounds" };
               }
               effectData.origin = origin ?? this.activity.uuid ?? this.activity.item.uuid;
-              const concentrationUuid = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid;
+              const concentrationUuid = this.actor.effects.get(this.concentrationId ?? "")?.uuid;
               if (concentrationUuid) {
                 foundry.utils.setProperty(effectData, "flags.dnd5e.dependentOn", concentrationUuid);
               }
@@ -2930,7 +2960,7 @@ export class Workflow {
           }
           const effectData: ActiveEffect.CreateData = foundry.utils.mergeObject(ceEffect!.toObject(), metaData);
           effectData.origin = origin;
-          const concentrationUuid = this.actor.effects.get(this.chatCard?.getFlag("dnd5e", "use.concentrationId") ?? "")?.uuid;
+          const concentrationUuid = this.actor.effects.get(this.concentrationId ?? "")?.uuid;
           if (concentrationUuid) {
             foundry.utils.setProperty(effectData, "flags.dnd5e.dependentOn", concentrationUuid);
           }
@@ -3946,9 +3976,18 @@ export class Workflow {
           wasExpired = true;
           expiryReason.push("isAttacked")
         }
+        const actionType = this.activity?.actionType;
+        if (wasAttacked && expireList.includes("isAttacked") && specialDuration.includes(`isAttacked:${actionType}`)) {
+          wasExpired = true;
+          expiryReason.push(`isAttacked:${actionType}`);
+        }
         if (wasHit && this.isCritical && expireList.includes("isAttacked") && specialDuration.includes("isHitCritical")) {
           wasExpired = true;
           expiryReason.push("isHitCritical")
+        }
+        if (wasAttacked && !wasHit && expireList.includes("isAttacked") && specialDuration.includes("isMissed")) {
+          wasExpired = true;
+          expiryReason.push("isMissed")
         }
         // If auto applying damage can do a better test when damage application has been calculdated
         if (wasDamaged && expireList.includes("isDamaged") && !configSettings.autoApplyDamage.toLocaleLowerCase().includes("yes")
@@ -3966,6 +4005,10 @@ export class Workflow {
           wasExpired = true;
           expiryReason.push("isHit");
 
+        }
+        if (wasHit && expireList.includes("isHit") && specialDuration.includes(`isHit:${actionType}`)) {
+          wasExpired = true;
+          expiryReason.push(`isHit:${actionType}`);
         }
         if ((target.actor?.uuid !== this.actor.uuid && expireList.includes("1Reaction") && specialDuration.includes("1Reaction"))) {
           wasExpired = true;
@@ -4594,6 +4637,8 @@ export class Workflow {
         const confirmButtonRe = /<button class="midi-qol-confirm-damage-roll-complete" data-action="confirm-damage-roll-complete">(\[[\d ]*\])*([^<]+)<\/button>/;
         content = content.replace(confirmButtonRe, `<button class="midi-qol-confirm-damage-roll-complete" data-action="confirm-damage-roll-complete">[${this.attackRollCount} ${this.damageRollCount + 1}] $2</button>`);
       }
+      // The damage button is already showing, so it takes its label with the roll that decides a critical.
+      content = content.replace(DAMAGE_BUTTON_RE, `$1<span>${this.#damageButtonText()}</span>$2`);
 
       if (this.attackRoll?.dice.length) {
         const d: any = this.attackRoll.dice[0]; // should be a dice term but DiceTerm.options not defined
@@ -4623,6 +4668,8 @@ export class Workflow {
 
       }
     }
+    const attackTargets = this.#targetDescriptors();
+    if (attackTargets) foundry.utils.setProperty(newFlags, "dnd5e.targets", attackTargets);
     await this.performThrottledUpdate(chatMessage, { content, flags: newFlags, rolls: this.chatRolls });
   }
 
@@ -4712,6 +4759,8 @@ export class Workflow {
       const damageButtonRe = /(<button[^>]*data-action="rollDamage"[^>]*>)(?:<span>)?(\[\d*\] )*([^<]+)(?:<\/span>)?(<\/button>)/;
       content = content.replace(damageButtonRe, `$1<span>$3</span>$4`);
     }
+    const damageTargets = this.#targetDescriptors();
+    if (damageTargets) foundry.utils.setProperty(newFlags, "dnd5e.targets", damageTargets);
     return await this.performThrottledUpdate(chatMessage, { "content": content, flags: newFlags, rolls: this.chatRolls }, false);
   }
 
@@ -4778,6 +4827,8 @@ export class Workflow {
         // TODO: May not be required
         style: CONST.CHAT_MESSAGE_STYLES.OTHER
       }
+      const hitTargets = this.#targetDescriptors();
+      if (hitTargets) foundry.utils.setProperty(update.flags, "dnd5e.targets", hitTargets);
       await this.performThrottledUpdate(chatMessage, update);
     }
   }
@@ -8603,9 +8654,17 @@ export class DDBGameLogWorkflow extends Workflow {
   async WorkflowState_AwaitTemplate(context: WorkflowContext = {}): Promise<WorkflowState> {
     if (!activityHasAreaTarget(this.activity)) return super.WorkflowState_AwaitTemplate;
     let system: any = game.system;
-    // Create the template
-    const template = system.canvas.AbilityTemplate.fromActivity(this.activity);
-    if (template) template.drawPreview();
+    // fromActivity returns one preview per template; place each and record them as the place-template button does.
+    const templates: MeasuredTemplateDocument[] = [];
+    try {
+      for (const preview of system.canvas.AbilityTemplate.fromActivity(this.activity) ?? []) {
+        const result = await preview.drawPreview();
+        if (result) templates.push(...(Array.isArray(result) ? result : [result]));
+      }
+    } catch (err) {
+      // Placement cancelled: the base state handles the missing template.
+    }
+    if (templates.length) await this.processPlacedTemplates(templates, this.activity);
     return super.WorkflowState_AwaitTemplate;
   }
   async WorkflowState_WaitForDamageRoll(context: WorkflowContext = {}): Promise<WorkflowState> {

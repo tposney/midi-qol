@@ -670,21 +670,19 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           }
         }
         /*
-         * Downgrade immunity to resistance. dnd5e models this as an option separate from ignore, and
-         * the two are not interchangeable: ignoring an immunity leaves the target taking full damage
-         * (immunity and resistance are independent trait lookups, and dnd5e's trait preparation
-         * deletes from dr anything present in di, so no resistance is left behind to apply). Only
-         * downgrade yields half damage.
+         * Downgrade immunity to resistance - ignoring an immunity would leave full damage. Only the
+         * types this target is immune to: dnd5e ignores the resistance of a downgraded type that has
+         * no immunity to downgrade.
          */
-        if (ignoreTraits.has(DOWNGRADE_IMMUNITY_KEY)
-          || ignoreTraits.has(`${DOWNGRADE_IMMUNITY_KEY}.${ALL_DAMAGE_KEY}`)) calcDamageOptions.downgrade = true;
-        else {
-          const downgradeTypes = Array.from(ignoreTraits)
+        // @ts-expect-error no dnd5e-types
+        const immunities: Set<string> = actor.system.traits?.di?.value ?? new Set();
+        const downgradeTypes = (ignoreTraits.has(DOWNGRADE_IMMUNITY_KEY) || ignoreTraits.has(`${DOWNGRADE_IMMUNITY_KEY}.${ALL_DAMAGE_KEY}`))
+          ? new Set(immunities)
+          : new Set(Array.from(ignoreTraits)
             .filter(trait => trait.startsWith(`${DOWNGRADE_IMMUNITY_KEY}.`))
             .map(trait => trait.split('.')[1])
-            .filter(damageType => GameSystemConfig.damageTypes[damageType]);
-          if (downgradeTypes.length) calcDamageOptions.downgrade = new Set(downgradeTypes);
-        }
+            .filter(damageType => immunities.has(damageType) || immunities.has(ALL_DAMAGE_KEY)));
+        if (downgradeTypes.size) calcDamageOptions.downgrade = downgradeTypes;
       }
       return calcDamageOptions;
     };
@@ -2320,76 +2318,21 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
   }
 }
 
-export async function _processActivityOverTime(combat: Combat.Implementation, data: Combat.UpdateData, options: Combat.Database.UpdateOptions, userId: string) {
-  if (!preferredActiveGM()?.isSelf) return;
-  const combatStart = combat.round === 1 && combat.turn === 0;
-  let prev = (combat.previous?.round ?? 0) * 100 + (combat.previous?.turn ?? 0);
-  let testTurn = combat.previous?.turn ?? 0;
-  let testRound = combat.previous?.round ?? 0;
-  const last = (data.round ?? combat.current.round ?? 0) * 100 + (data.turn ?? combat.current.turn ?? 0);
-
-  let toTest = prev;
-  let count = 0;
-  const maxIterations = combatStart ? 1 : 200;
-  while (toTest <= last && count < maxIterations) { // step through each turn from prev to current
-    count += 1; // make sure we don't do an infinite loop
-    // Check if combat was deleted during processing (can happen with async operations)
-    if (!combat.id || !game.combats?.get(combat.id)) return;
-    const actor = combat.turns[testTurn]?.actor;
-    const endTurn = toTest < last;
-    const startTurn = toTest > prev || combatStart;
-
-    if (actor) for (let effect of actor.appliedEffects) {
-      // @ts-expect-error fvtt-types v14 ActiveEffect
-      if (effect.system.changes.some(change => change.key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`))) {
-        await doActivityOverTimeEffect(actor, effect, startTurn);
-      }
-    }
-    testTurn += 1;
-    if (testTurn === combat.turns.length) {
-      testTurn = 0;
-      testRound += 1;
-      toTest = testRound * 100;
-    } else toTest += 1;
-  }
-}
-export async function _processOverTime(combat: Combat.Implementation, data: Combat.UpdateData, options: Combat.Database.UpdateOptions, userId: string) {
-  if (!preferredActiveGM()?.isSelf) return;
-  const combatStart = combat.round === 1 && combat.turn === 0;
-  let prev = (combat.previous?.round ?? 0) * 100 + (combat.previous?.turn ?? 0);
-  let testTurn = combat.previous?.turn ?? 0;
-  let testRound = combat.previous?.round ?? 0;
-  const last = (data.round ?? combat.current.round ?? 0) * 100 + (data.turn ?? combat.current.turn ?? 0);
-
-  let toTest = prev;
-  let count = 0;
-  const maxIterations = combatStart ? 1 : 200;
-  while (toTest <= last && count < maxIterations) { // step through each turn from prev to current
-    count += 1; // make sure we don't do an infinite loop
-    // Check if combat was deleted during processing (can happen with async operations)
-    if (!combat.id || !game.combats?.get(combat.id)) return;
-    const actor = combat.turns[testTurn]?.actor;
-    const endTurn = toTest < last;
-    const startTurn = toTest > prev || combatStart;
-
-    // Reaction and bonus action markers expire through DAE (specialDuration turnStart); deleting them
-    // here as well raced that expiry and threw "ActiveEffect dnd5ereaction000 does not exist".
-    if (actor && toTest !== prev) {
-      removeActionUsed(actor);
-    }
-
-    if (actor) for (let effect of actor.appliedEffects) {
-      // @ts-expect-error fvtt-types v14 ActiveEffect
-      if (effect.system.changes.some(change => change.key.startsWith(`flags.${MODULE_ID}.OverTime`))) {
-        await doOverTimeEffect(actor, effect, startTurn);
-      }
-    }
-    testTurn += 1;
-    if (testTurn === combat.turns.length) {
-      testTurn = 0;
-      testRound += 1;
-      toTest = testRound * 100;
-    } else toTest += 1;
+/**
+ * A combatant's OverTime and ActivityOverTime effects at the start or end of its turn, driven by core's turn events,
+ * which name the combatant rather than a position in the (possibly re-sorted) turn order.
+ */
+export async function processTurnOverTime(combat: Combat.Implementation, combatant: Combatant.Implementation, startTurn: boolean) {
+  // Core also fires turn events when a re-sort changes who holds the current turn; no turn has passed.
+  if (combat.previous?.round === combat.current.round && combat.previous?.turn === combat.current.turn) return;
+  const actor = combatant?.actor;
+  if (!actor) return;
+  if (startTurn) removeActionUsed(actor);
+  for (const effect of actor.appliedEffects) {
+    // @ts-expect-error fvtt-types v14 ActiveEffect
+    const keys: string[] = effect.system.changes.map(change => change.key);
+    if (keys.some(key => key.startsWith(`flags.${MODULE_ID}.OverTime`))) await doOverTimeEffect(actor, effect, startTurn);
+    if (keys.some(key => key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`))) await doActivityOverTimeEffect(actor, effect, startTurn);
   }
 }
 export async function completeActivityUse(activityRef: Activity | string | undefined,
@@ -3486,7 +3429,7 @@ export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): nu
     // Committed centres, not the animated ones - see tokenSourceCenter.
     const result = canvas.grid.measurePath(
       [tokenSourceCenter(token1), tokenSourceCenter(token2)], {});
-    distance = result?.distance ?? 0;
+    distance = Math.max(0, (result?.distance ?? 0) - fudgeFactor);
   } else if (measurementMode === "center") {
     distance = computeDistance(t1, t2, { wallsBlock, includeCover, includeElevation });
   } else if (measurementMode === "perimeter") {
@@ -3814,14 +3757,15 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
     if (range < longRange && activity.actionType === "rwak" &&
       (actor?.flags?.dnd5e?.sharpShooter || actor?.flags?.[MODULE_ID]?.sharpShooter)) {
       const conditionData = createConditionData({ item: activity.item, actor, activity, target: targets.first() });
-      let sharpShooterEnabled = evalCondition(actor?.flags?.dnd5e?.sharpShooter, conditionData);
-      sharpShooterEnabled ||= evalCondition(actor?.flags?.[MODULE_ID]?.sharpShooter, conditionData);
+      // Read the effects' expressions: dnd5e coerces its Boolean character flags to true.
+      let sharpShooterEnabled = evalAllConditions(actor, "flags.dnd5e.sharpShooter", conditionData);
+      sharpShooterEnabled ||= evalAllConditions(actor, `flags.${MODULE_ID}.sharpShooter`, conditionData);
       if (sharpShooterEnabled) range = longRange;
     }
 
     if (activity.actionType === "rsak" && actor?.flags?.dnd5e?.spellSniper) {
       const conditionData = createConditionData({ item: activity.item, actor, activity, target: targets.first() });
-      let enabled = evalCondition(actor.flags.dnd5e.spellSniper, conditionData);
+      let enabled = evalAllConditions(actor, "flags.dnd5e.spellSniper", conditionData);
       if (enabled) {
         range = 2 * range;
         longRange = 2 * longRange;
@@ -4244,8 +4188,8 @@ export function computeTargetAC(
     && effectiveCoverBonus !== TOTAL_COVER && effectiveCoverBonus !== 0
     && (attacker.actor.flags?.[MODULE_ID]?.sharpShooter || attacker.actor.flags?.dnd5e?.sharpShooter)) {
     const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
-    let enabled = evalCondition(attacker.actor.flags?.dnd5e?.sharpShooter, conditionData);
-    enabled ||= evalCondition(attacker.actor.flags?.[MODULE_ID]?.sharpShooter, conditionData);
+    let enabled = evalAllConditions(attacker.actor, "flags.dnd5e.sharpShooter", conditionData);
+    enabled ||= evalAllConditions(attacker.actor, `flags.${MODULE_ID}.sharpShooter`, conditionData);
     if (enabled) {
       effectiveCoverBonus = 0;
       appliedCoverDelta = 0;
@@ -4259,7 +4203,7 @@ export function computeTargetAC(
     && attacker.actor.flags?.dnd5e?.spellSniper
     && effectiveCoverBonus !== TOTAL_COVER && effectiveCoverBonus !== 0) {
     const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
-    const enabled: boolean | undefined = evalCondition(attacker.actor.flags.dnd5e.spellSniper, conditionData);
+    const enabled: boolean | undefined = evalAllConditions(attacker.actor, "flags.dnd5e.spellSniper", conditionData);
     if (enabled) {
       effectiveCoverBonus = 0;
       appliedCoverDelta = 0;
@@ -4730,11 +4674,15 @@ export async function expireMyEffects(this: Workflow, effectsToExpire: string[])
   const expireTurnAction = (effectsToExpire.includes("1Action") || effectsToExpire.includes("Turn Action")) && !this.effectsAlreadyExpired.includes("Turn Action");
   const expireSpell = effectsToExpire.includes("1Spell") && !this.effectsAlreadyExpired.includes("1Spell");
   const expireAttack = effectsToExpire.includes("1Attack") && !this.effectsAlreadyExpired.includes("1Attack");
+  // Judged with 1Attack: every path that expires it has settled the hits. A miss is an attack that hits no target.
+  const expireMiss = expireAttack && !this.effectsAlreadyExpired.includes("1Miss");
+  const missed = !!this.activity?.hasAttack && this.targets.size > 0 && !this.hitTargets.size && !this.hitTargetsEC?.size;
   const expireDamage = effectsToExpire.includes("DamageDealt") && !this.effectsAlreadyExpired.includes("DamageDealt");
   const expireInitiative = effectsToExpire.includes("Initiative") && !this.effectsAlreadyExpired.includes("Initiative");
   //
   expireAnyAction ||= expireBonusAction || expireReaction || expireTurnAction;
   if (expireAnyAction) effectsToExpire.push("1Action");
+  if (expireMiss) effectsToExpire.push("1Miss");
   // expire any effects on the actor that require it
   // if (debugEnabled && false) {
   //   const test = this.actor.effects.map(ef => {
@@ -4760,6 +4708,8 @@ export async function expireMyEffects(this: Workflow, effectsToExpire: string[])
       (expireAttack && this.activity?.hasAttack && specialDuration.includes(`1Attack:${this.activity?.actionType}`)) ||
       (expireHit && this.activity?.hasAttack && specialDuration.includes("1Hit") && this.hitTargets.size > 0) ||
       (expireHit && this.activity?.hasAttack && specialDuration.includes(`1Hit:${this.activity?.actionType}`) && this.hitTargets.size > 0) ||
+      (expireMiss && missed && specialDuration.includes("1Miss")) ||
+      (expireMiss && missed && specialDuration.includes(`1Miss:${this.activity?.actionType}`)) ||
       (expireCritical && this.activity?.hasAttack && specialDuration.includes("1Critical") && this.isCritical) ||
       (expireFumble && this.activity?.hasAttack && specialDuration.includes("1Fumble") && this.isFumble) ||
       (expireDamage && this.activity?.hasDamage && specialDuration.includes("DamageDealt")) ||
@@ -4780,6 +4730,9 @@ export async function expireRollEffect(this: Actor.Implementation, rolltype: str
     if (success === true && specialDuration.includes(`is${rollType}Success`)) return true;
     if (success === true && specialDuration.includes(`is${rollType}Success.${abilityId}`)) return true;
     if (success === false && specialDuration.includes(`is${rollType}Failure`)) return true;
+    // DAE offered "isConcentrationSaveFail" (no -ure) as the dropdown label until dae 14.0.14, so it
+    // never matched here. Effects saved with it still exist in worlds.
+    if (success === false && specialDuration.includes(`is${rollType}Fail`)) return true;
     if (success === false && specialDuration.includes(`is${rollType}Failure.${abilityId}`)) return true;
     return false;
   }).map(ef => ef.uuid);
@@ -6418,6 +6371,7 @@ function buildEvalSandbox(sandbox: AnyMutableObject, asyncEval: boolean): AnyMut
     checkIncapacitated,
     canSee,
     canSense,
+    getDistance,
     computeDistance,
     checkActivityRange,
     checkDistance,
@@ -6734,7 +6688,12 @@ export function createConditionData(data: {
       rollData.activity = data.workflow.activity;
       rollData.riderStatuses = {};
       data.workflow.activity.applicableEffects?.forEach((effect) => {
-        Array.from(effect?.statuses).forEach((status) => (rollData.riderStatuses[status] = true));
+        Array.from(effect?.statuses).forEach((status) => {
+          rollData.riderStatuses[status] = true;
+          // A status's own riders apply with it, e.g. unconscious adds prone.
+          // @ts-expect-error no dnd5e-types
+          CONFIG.statusEffects.find(se => se.id === status)?.riders?.forEach((rider: string) => (rollData.riderStatuses[rider] = true));
+        });
         effect.flags?.dnd5e?.riders?.statuses?.forEach((rider) => (rollData.riderStatuses[rider] = true));
       });
       rollData.otherDamageActivity = data.workflow?.otherActivity;
@@ -8987,8 +8946,12 @@ export function createSquareGridProxy(): foundry.grid.BaseGrid {
 
 export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}) {
   let isGridless = canvas.grid?.constructor.name === "GridlessGrid";
+  const fudgeFactor = configSettings.gridlessFudge ?? 0;
+  // The fudge applies on every scene and grid type, not only the gridded-gridless path below.
+  // Floored at 0: a zero gap stays zero, only perimeter measurement floors at one grid unit.
   if (!isGridless || !options.gridSpaces || !configSettings.griddedGridless || !canvas.grid) {
-    return segments.map(s => canvas.grid?.measurePath([s.ray.A, s.ray.B], {})).map(d => d?.distance ?? 0);
+    return segments.map(s => canvas.grid?.measurePath([s.ray.A, s.ray.B], {}))
+      .map(d => Math.max(0, (d?.distance ?? 0) - fudgeFactor));
   }
   if (!canvas.grid) return [0];
   const diagonals = safeGetGameSetting("core", "gridDiagonals");
@@ -9008,7 +8971,6 @@ export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}
   let distances = segments.map(s => canvasGridProxy.measurePath([s.ray.A, s.ray.B], {}));
   return distances.map(d => {
     let distance = d.distance;
-    let fudgeFactor = configSettings.gridlessFudge ?? 0;
     switch (diagonals) {
       case GridDiagonals.EQUIDISTANT:
       case GridDiagonals.ALTERNATING_1:
