@@ -75,8 +75,9 @@ import {
   getConsumptionData,
   toMessageMode,
   rollModeToMessageMode,
+  tokenSourceCenter,
 } from "../utils.js";
-import { activityHasScaledTargetCount, attachTokenOptions, createActivityTemplateRegions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
+import { activityHasScaledTargetCount, attachTokenOptions, templateOriginOptions, createActivityTemplateRegions, preTemplateTargets, removeFlanking, requiresTargetConfirmation, selectTargetsFromTemplates, setDamageRollMinTerms, shouldEnforceSingleTarget } from "./activityHelpers.js";
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
   _validateType(value: unknown) {
@@ -272,6 +273,8 @@ export let MidiActivityMixin = Base => {
           // "default" leaves the region stationary. "caster" attaches it to the caster's token;
           // "target" attaches it to a chosen target (prompts if multiple targets are selected).
           attachToken: new StringField({ initial: "default", choices: ["default", "caster", "target"] }),
+          // The caster's height a template is measured from; "default" follows the Template Origin Height setting.
+          templateOrigin: new StringField({ initial: "default", required: true, blank: false, choices: ["default", "base", "top", "eye"] }),
           rules: new ArrayField(new SchemaField({
             trigger: new StringField({ required: true, blank: false, initial: "entry" }),
             action: new StringField({ required: true, blank: false, initial: "useActivity" }),
@@ -681,8 +684,9 @@ export let MidiActivityMixin = Base => {
       let preUseActivityHookId: number | undefined;
       let activityConsumptionHookId: number | undefined;
       try {
-        usage.midiOptions ??= {};
-        usage.midiOptions.workflowOptions ??= {};
+        // Copies: a caller may reuse one options object across uses, and this snapshot belongs to this use alone.
+        usage.midiOptions = { ...usage.midiOptions };
+        usage.midiOptions.workflowOptions = { ...usage.midiOptions.workflowOptions };
         // Capture current targets before template placement can replace them
         usage.midiOptions.workflowOptions.preSelectedTargetUuids ??= Array.from(game.user?.targets ?? []).map(t => t.document.uuid);
         if (debugEnabled > 0) warn("MidiQOL | MidiActivity | use | Called", usage, dialog, message);
@@ -1832,7 +1836,7 @@ export let MidiActivityMixin = Base => {
 
         let tokenToUse: foundry.canvas.placeables.Token.Implementation | undefined;
         if (speaker.token) tokenToUse = canvas.tokens?.get(speaker.token);
-        const rangeDetails = checkActivityRange(this, tokenToUse, workflow.targets, checkMechanic("checkRange") !== "none" && !isAoETargeting)
+        const rangeDetails = checkActivityRange(this, tokenToUse, workflow.targets, checkMechanic("checkRange") !== "none" && !isAoETargeting && !workflow.AoO)
         if (checkMechanic("checkRange") !== "none" && !isAoETargeting && !isEmanationTargeting && !workflow.AoO && speaker.token) {
           if (tokenToUse && workflow.targets.size > 0) {
             if (rangeDetails.result === "fail")
@@ -2010,7 +2014,7 @@ export let MidiActivityMixin = Base => {
       if (!tokenToUse) return;
       if (autoCreateTemplate) {
         const templateDocuments = await createActivityTemplateRegions(this, [{
-          x: tokenToUse.center?.x ?? 0, y: tokenToUse.center?.y ?? 0, direction: 0, token: tokenToUse.document
+          ...tokenSourceCenter(tokenToUse), direction: 0, token: tokenToUse.document
         }], {
           actorUuid: actor?.uuid,
           tokenId: tokenToUse.id,
@@ -2625,6 +2629,7 @@ export let MidiActivityMixinSheet = Base => {
         // GameSystemConfig.areaTargetTypes, so emanationNoTemplate (no template at all) is excluded.
         context.showRegionBehaviorPanel = activityHasAreaTarget(this.activity);
         context.attachTokenOptions = attachTokenOptions(this.activity.regionBehavior?.attachToken ?? "default");
+        context.templateOriginOptions = templateOriginOptions(this.activity.regionBehavior?.templateOrigin ?? "default");
       }
       return context;
     }

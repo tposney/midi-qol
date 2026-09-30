@@ -171,7 +171,8 @@
           "stackable": "multi",
           "durationExpression": "",
           "macroRepeat": "none",
-          "specialDuration": []
+          "specialDuration": [],
+          "legacyApplication": true
         },
         "core": {
           "overlay": false

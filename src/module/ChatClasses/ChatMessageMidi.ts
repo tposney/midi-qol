@@ -259,17 +259,6 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }));
     }
 
-    // Removes the dnd5e effects tray from the rendered chat card when midi's
-    // autoItemEffects suppresses the apply button. dnd5e v5.x emits an
-    // <effect-application> custom element from usage-card.hbs which renders
-    // itself in connectedCallback — there's no longer a _enrichUsageEffects
-    // method to skip, so we strip the element from the DOM after super runs.
-    _maybeStripEffectsTray(html: HTMLElement) {
-      if (["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects)) {
-        html.querySelectorAll("effect-application").forEach(el => el.remove());
-      }
-    }
-
     _collapseTrays(html: HTMLElement) {
       // @ts-expect-error no dnd5e-types
       super._collapseTrays(html);
@@ -673,7 +662,6 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (!this.flags?.[MODULE_ID]?.messageType) {
         this.applyChatVisibility(html);
         this.#enrichSystemCard(html, options);
-        this._maybeStripEffectsTray(html);
         this._addMarkerClasses(html);
         this._addLegacyCardDataset(html);
         this.maskHiddenRolls(html);
@@ -683,7 +671,6 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       this.maskAttackRolls(html); // This has to run first to stop errors when dnd5e enriches the damage rolls
 
       this.#enrichSystemCard(html, options);
-      this._maybeStripEffectsTray(html);
       this.applyChatVisibility(html);
       // For usage-type messages, Foundry skips _highlightCriticalSuccessFailure.
       // Add classes + icons directly for midi messages, then apply midi settings.

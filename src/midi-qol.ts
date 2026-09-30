@@ -1,4 +1,5 @@
 import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, exportSettingsToJSON, importSettingsFromJSON, safeGetGameSetting, shouldDisplaySaveDC, triggeredActivityTargetOptions, triggeredActivityRollAsOptions, resetConfigSettingsToDefaults } from './module/settings.js';
+import { decodeWorkflowOptions, encodeWorkflowOptions, registerWorkflowOptionsSchema } from "./module/lib/workflowOptionsCodec.js";
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, readyPatching, initPatching, addDiceTermModifiers, computeAbilityAdvantage, computeSkillAdvantage, computeToolAdvantage, processWoundedStatus, getActorWoundedSemaphore } from './module/patching.js';
@@ -7,7 +8,7 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, tokenAtPosition, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, convertDuration, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, tokenAtPosition, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, convertDuration, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
@@ -216,6 +217,8 @@ Object.assign(globalThis.MidiQOL, {
   contestedRoll,
   createConditionData,
   createDamageDetail,
+  decodeWorkflowOptions,
+  encodeWorkflowOptions,
   createEffects,
   DamageOnlyWorkflow,
   DDBGameLogWorkflow,
@@ -599,6 +602,7 @@ Hooks.on("dae.addSpecialDurations", daeSpecialDurations => {
   daeSpecialDurations["1Spell"] = i18n("dae.1Spell");
   daeSpecialDurations["1Attack"] = i18nFormat("dae.1Attack", { type: `${i18n("dae.spell")}/${i18n("dae.weapon")} ${i18n("dae.attack")}` });
   daeSpecialDurations["1Hit"] = i18nFormat("dae.1Hit", { type: `${i18n("dae.spell")}/${i18n("dae.weapon")}` });
+  daeSpecialDurations["1Miss"] = i18nFormat("dae.1Miss", { type: `${i18n("dae.spell")}/${i18n("dae.weapon")}` });
   daeSpecialDurations["1Critical"] = i18n("dae.1Critical");
   daeSpecialDurations["1Fumble"] = i18n("dae.1Fumble");
   //    daeSpecialDurations["1Hit"] = i18n("dae.1Hit");
@@ -607,6 +611,9 @@ Hooks.on("dae.addSpecialDurations", daeSpecialDurations => {
   attackTypes.forEach(at => {
     daeSpecialDurations[`1Attack:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${i18nFormat("dae.1Attack", { type: GameSystemConfig.itemActionTypes[at] })}`;
     daeSpecialDurations[`1Hit:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${i18nFormat("dae.1Hit", { type: GameSystemConfig.itemActionTypes[at] })}`;
+    daeSpecialDurations[`1Miss:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${i18nFormat("dae.1Miss", { type: GameSystemConfig.itemActionTypes[at] })}`;
+    daeSpecialDurations[`isAttacked:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${i18n("dae.isAttacked")}`;
+    daeSpecialDurations[`isHit:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${i18n("dae.isHit")}`;
   })
   daeSpecialDurations["DamageDealt"] = i18n("dae.DamageDealt");
   daeSpecialDurations["isAttacked"] = i18n("dae.isAttacked");
@@ -615,6 +622,7 @@ Hooks.on("dae.addSpecialDurations", daeSpecialDurations => {
   daeSpecialDurations["zeroHP"] = i18n("dae.ZeroHP");
   daeSpecialDurations["isHit"] = i18n("dae.isHit");
   daeSpecialDurations["isHitCritical"] = i18n("dae.isHitCritical");
+  daeSpecialDurations["isMissed"] = i18n("dae.isMissed");
   daeSpecialDurations["isSave"] = `${i18n("dae.isRollBase")} ${i18n("dae.isSaveDetail")}`;
   daeSpecialDurations["isSaveSuccess"] = `${i18n("dae.isRollBase")} ${i18n("dae.isSaveDetail")}: ${i18n("dae.success")}`;
   daeSpecialDurations["isSaveFailure"] = `${i18n("dae.isRollBase")} ${i18n("dae.isSaveDetail")}: ${i18n("dae.failure")}`;
@@ -937,6 +945,8 @@ function setupMidiQOLApi() {
       }),
     },
     MQOnUseOptions,
+    registerWorkflowOptionsSchema,
+    restoreWorkflowTokenSets,
     resetConfigSettingsToDefaults,
     safeGetGameSetting,
     selectTargetsFromTemplates,

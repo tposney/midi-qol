@@ -17,7 +17,8 @@
           "transfer": false,
           "durationExpression": "",
           "selfTarget": false,
-          "selfTargetAlways": false
+          "selfTargetAlways": false,
+          "legacyApplication": true
         },
         "ActiveAuras": {
           "isAura": false,

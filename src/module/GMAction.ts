@@ -1,6 +1,7 @@
 import { checkRule, configSettings, safeGetGameSetting, isDnd5e53 } from "./settings.js";
+import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions } from "./utils.js";
+import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions, tokenSourceCenter } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow, WorkflowOptions } from "./Workflow.js";
@@ -16,7 +17,7 @@ export let socketlibSocket: any = undefined;
 let traitList = { di: "", dr: "", dv: "", dm: "", da: "" };
 
 export let setupSocket = () => {
-  socketlibSocket = globalThis.socketlib.registerModule(MODULE_ID);
+  socketlibSocket = withWorkflowOptionsCodec(globalThis.socketlib.registerModule(MODULE_ID));
   socketlibSocket.register("_gmSetFlag", _gmSetFlag);
   socketlibSocket.register("_gmUnsetFlag", _gmUnsetFlag);
   socketlibSocket.register("addConvenientEffect", addConvenientEffect);
@@ -76,6 +77,7 @@ export let setupSocket = () => {
   socketlibSocket.register("toggleStatusEffect", _toggleStatusEffect);
   socketlibSocket.register("midiRegionTriggerActivity", _midiRegionTriggerActivity);
   socketlibSocket.register("setupRegion", _setupRegion);
+  socketlibSocket.register("advanceCombatRound", _advanceCombatRound);
 
   // socketlibSocket.register("canSense", _canSense);
 }
@@ -122,6 +124,7 @@ export class SaferSocket {
       case "toggleTokenHidden":
       case "midiRegionTriggerActivity":
       case "setupRegion":
+      case "advanceCombatRound":
         return true;
 
       case "addConvenientEffect":
@@ -2411,10 +2414,10 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
     TroubleShooter.recordError(new Error("moveTokenAwayFromPoint failed"), message);
     return;
   }
-  const ray = new foundry.canvas.geometry.Ray(data.point, targetToken.center);
+  const ray = new foundry.canvas.geometry.Ray(data.point, tokenSourceCenter(targetToken));
   const pixelDistance = data.distance / canvas.dimensions.distance * canvas.dimensions.size;
   const newCenter = ray.project(1 + pixelDistance / ray.distance);
-  return void _moveToken({ tokenUuid: targetTokenDocument.uuid, newCenter, options: data.options });
+  await _moveToken({ tokenUuid: targetTokenDocument.uuid, newCenter, options: data.options });
 }
 
 async function _teleportToken(data: { tokenUuid: string, destination: TeleportTokenDestination }): Promise<void> {
@@ -2762,6 +2765,18 @@ async function _midiRegionTriggerActivity(data: {
 }) {
   const { MidiRegionActivityBehaviorType } = await import("./regionBehaviors/MidiRegionActivityBehaviorType.js");
   return MidiRegionActivityBehaviorType._executeTriggerActivity(data);
+}
+
+/**
+ * A player's round advance, redone by the GM so the auto initiative reroll is rolled once, by the GM, inside the round
+ * update. Only when the player could have advanced the combat themselves.
+ */
+async function _advanceCombatRound(this: { socketdata?: { userId?: string } }, data: { combatUuid: string, changed: { round: number, turn?: number | null }, options?: object }) {
+  const combat = fromUuidSync(data.combatUuid) as Combat.Implementation | null;
+  const user = game.users?.get(this?.socketdata?.userId ?? "");
+  if (!combat || !user || (combat.round ?? 0) >= data.changed.round) return;
+  if (!combat.combatant?.testUserPermission(user, "OWNER")) return;
+  return combat.update(data.changed, data.options);
 }
 
 // RegionDocument.update and embedded RegionBehavior creation both require GM-level scene

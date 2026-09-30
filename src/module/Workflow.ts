@@ -1,4 +1,5 @@
 import { warn, debug, log, i18n, i18nFormat, busyWait, MESSAGE_TYPES, error, debugEnabled, MQItemMacroLabel, GameSystemConfig, MODULE_ID, MQActivityMacroLabel, gameStats } from "../midi-qol.js";
+import { decodeWorkflowOptions, encodeWorkflowOptions, inheritableWorkflowOptions } from "./lib/workflowOptionsCodec.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, useWeakReferences, saveToChatCard, onUseMacroOptions, shouldDisplaySaveDC } from "./settings.js";
@@ -106,6 +107,7 @@ import {
   toMessageMode,
   toLegacyRollMode,
   isDnd5eRollMessage,
+  tokenSourceElevation,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, computeAbilityAdvantage, buildPreComputedAdvantageMap } from "./patching.js";
@@ -225,16 +227,21 @@ class PersistedFieldStore {
     this.#persistRolls = persistRolls;
   }
 
-  scalar<T>(key: string, dflt: T, legacyKey?: string): T {
+  scalar<T>(key: string, dflt: T, legacyKey?: string, restore?: (persisted: T) => T): T {
     if (this.#cache.has(key)) return this.#cache.get(key) as T;
     const flags = this.#getFlags();
-    return (flags?.[key] ?? (legacyKey ? flags?.[legacyKey] : undefined) ?? dflt) as T;
+    const persisted = (flags?.[key] ?? (legacyKey ? flags?.[legacyKey] : undefined) ?? dflt) as T;
+    if (!restore) return persisted;
+    // Cached so in-place changes to the restored copy are kept, as they would be on the flag object.
+    const restored = restore(persisted);
+    this.#cache.set(key, restored);
+    return restored;
   }
 
-  setScalar<T>(key: string, value: T): void {
+  setScalar<T>(key: string, value: T, persistAs?: (value: T) => unknown): void {
     if (value === undefined) this.#cache.delete(key);
     else this.#cache.set(key, value);
-    this.#persist({ [key]: value });
+    this.#persist({ [key]: (persistAs && value !== undefined) ? persistAs(value) : value });
   }
 
   // Token sets persist as uuid arrays (or {uuid, name} pairs for "targets") and
@@ -488,10 +495,10 @@ export class Workflow {
   }
 
   get workflowOptions(): WorkflowOptions {
-    return this.#persisted.scalar<WorkflowOptions>("workflowOptions", {});
+    return this.#persisted.scalar<WorkflowOptions>("workflowOptions", {}, undefined, decodeWorkflowOptions);
   }
   set workflowOptions(workflowOptions: WorkflowOptions) {
-    this.#persisted.setScalar("workflowOptions", workflowOptions);
+    this.#persisted.setScalar("workflowOptions", workflowOptions, encodeWorkflowOptions);
   }
 
   get needItemCard(): boolean { return !!this.itemCardUuid };
@@ -2207,10 +2214,7 @@ export class Workflow {
     }
     const chatMessage = this.chatCard;
     if (chatMessage) {
-      let dmgBtnText = (this.rollOptions.isCritical || this.isCritical) ? i18n("DND5E.Critical")
-        : i18n(this.activity.actionType === "heal" ? "DND5E.HEAL.HealingButton" : "DND5E.Damage");
-      if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
-      await this.performThrottledUpdate(chatMessage, { "system.midi.dmgBtnText": dmgBtnText } as ChatMessage.UpdateData);
+      await this.performThrottledUpdate(chatMessage, { "system.midi.dmgBtnText": this.#damageButtonText() } as ChatMessage.UpdateData);
     }
     return this.WorkflowState_Suspend; // wait for a damage roll to advance the state.
   }
@@ -2974,7 +2978,8 @@ export class Workflow {
             rollAttackPerTarget: _triggeringRollAttackPerTarget,
             ...inheritedWorkflowOptions
           } = this.workflowOptions ?? {};
-          usage.midiOptions.workflowOptions = inheritedWorkflowOptions;
+          // Only what transmission would carry: other modules' per-use state stays with this workflow.
+          usage.midiOptions.workflowOptions = inheritableWorkflowOptions(inheritedWorkflowOptions);
           usage.midiOptions.rollOptions = this.rollOptions;
           usage.midiOptions.isTriggered = true;
           let targetUuids: string[] = [];
@@ -3882,9 +3887,18 @@ export class Workflow {
           wasExpired = true;
           expiryReason.push("isAttacked")
         }
+        const actionType = this.activity?.actionType;
+        if (wasAttacked && expireList.includes("isAttacked") && specialDuration.includes(`isAttacked:${actionType}`)) {
+          wasExpired = true;
+          expiryReason.push(`isAttacked:${actionType}`);
+        }
         if (wasHit && this.isCritical && expireList.includes("isAttacked") && specialDuration.includes("isHitCritical")) {
           wasExpired = true;
           expiryReason.push("isHitCritical")
+        }
+        if (wasAttacked && !wasHit && expireList.includes("isAttacked") && specialDuration.includes("isMissed")) {
+          wasExpired = true;
+          expiryReason.push("isMissed")
         }
         // If auto applying damage can do a better test when damage application has been calculdated
         if (wasDamaged && expireList.includes("isDamaged") && !configSettings.autoApplyDamage.toLocaleLowerCase().includes("yes")
@@ -3902,6 +3916,10 @@ export class Workflow {
           wasExpired = true;
           expiryReason.push("isHit");
 
+        }
+        if (wasHit && expireList.includes("isHit") && specialDuration.includes(`isHit:${actionType}`)) {
+          wasExpired = true;
+          expiryReason.push(`isHit:${actionType}`);
         }
         if ((target.actor?.uuid !== this.actor.uuid && expireList.includes("1Reaction") && specialDuration.includes("1Reaction"))) {
           wasExpired = true;
@@ -4535,8 +4553,17 @@ export class Workflow {
 
       }
     }
+    // The damage button is already showing, so it takes its label with the roll that decides a critical.
     await this.performThrottledUpdate(chatMessage, this.#sectionUpdate("attack", section,
-      { flags: newFlags, rolls: this.chatRolls, "system.midi.attackRollCount": this.attackRollCount }));
+      { flags: newFlags, rolls: this.chatRolls, "system.midi.attackRollCount": this.attackRollCount,
+        "system.midi.dmgBtnText": this.#damageButtonText() }));
+  }
+
+  #damageButtonText(): string {
+    let text = (this.rollOptions.isCritical || this.isCritical) ? i18n("DND5E.Critical")
+      : i18n(this.activity.actionType === "heal" ? "DND5E.HEAL.HealingButton" : "DND5E.Damage");
+    if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) text += ` ${i18n("midi-qol.fastForward")}`;
+    return text;
   }
 
   /**
@@ -5323,7 +5350,7 @@ export class Workflow {
 
     // Determine the cover origin point: explicit coverOrigin > templateCoverOrigin > template placeable > caster token
     let position: { x: number, y: number } | undefined;
-    let originElevation: number = this.token?.document?.elevation ?? 0;
+    let originElevation: number = this.token ? tokenSourceElevation(this.token) : 0;
 
     if (this.workflowOptions.coverOrigin) {
       position = { x: this.workflowOptions.coverOrigin.x, y: this.workflowOptions.coverOrigin.y };

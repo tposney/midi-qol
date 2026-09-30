@@ -4,13 +4,52 @@ import { Workflow } from "../Workflow.js";
 import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, applyTrackerAdvantage } from "../lib/RollModifierTracker.js";
 import { MidiOptions } from "../utils.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
-import { addAttribution, areMidiKeysPressed, callActivityHooks, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets, validTargetTokens } from "../utils.js";
+import { addAttribution, areMidiKeysPressed, callActivityHooks, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets, validTargetTokens, getToken, tokenSourceCenter } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet, findAmmunitionActivity } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
 import { Activity, ActivityUseConfiguration, DND5ETargetDescriptor, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 
 export let MidiAttackSheet: ReturnType<typeof defineMidiAttackSheetClass>;
+/**
+ * Show the player which token an attack dialog is for: give the attack's targets the targeting reticle and pan the
+ * canvas to them (their centre, for several).
+ */
+function showAttackTargets(workflow: Workflow) {
+  if (!canvas?.ready) return;
+  const tokens = [...(workflow.targets ?? [])].map(target => getToken(target))
+    .filter((token): token is Token.Implementation => !!token && token.scene === canvas.scene);
+  if (!tokens.length) return;
+  updateUserTargets(tokens.map(token => token.id));
+  const centres = tokens.map(token => tokenSourceCenter(token));
+  canvas.animatePan({
+    x: centres.reduce((sum, c) => sum + c.x, 0) / centres.length,
+    y: centres.reduce((sum, c) => sum + c.y, 0) / centres.length,
+    duration: 250
+  });
+}
+
+/**
+ * Resolves when the workflow started with `sequenceId` has cleaned up or aborted, or after `maxWait` seconds, as
+ * completeActivityUse waits. `cancel()` stops waiting (the use never started).
+ */
+function workflowFinished(sequenceId: string, maxWait = 90): Promise<void> & { cancel: () => void } {
+  let done!: () => void;
+  const promise = new Promise<void>(resolve => {
+    const onFinish = async (workflow: Workflow) => { if (workflow.sequenceId === sequenceId) done(); };
+    const cleanupId = Hooks.on("midi-qol.postCleanup", onFinish);
+    const abortId = Hooks.on("midi-qol.preAbort", onFinish);
+    const timeoutId = setTimeout(() => done(), maxWait * 1000);
+    done = () => {
+      Hooks.off("midi-qol.postCleanup", cleanupId);
+      Hooks.off("midi-qol.preAbort", abortId);
+      clearTimeout(timeoutId);
+      resolve();
+    };
+  });
+  return Object.assign(promise, { cancel: () => done() });
+}
+
 export let MidiAttackActivity: ReturnType<typeof defineMidiAttackActivityClass>;
 // export let MidiAttackActivityData;
 
@@ -354,8 +393,16 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         attackConfig.midiOptions.workflowOptions.targetConfirmation = "never";
         const attackDialog = foundry.utils.deepClone(dialog);
         delete attackDialog.configure;
+        // use() returns once the use starts; wait for this target's workflow so the next target's dialog,
+        // rolls and completion follow it rather than overlapping it.
+        attackConfig.sequenceId ??= foundry.utils.randomID();
+        const finished = workflowFinished(attackConfig.sequenceId);
         returnValue = await super.use.bind(activity)(attackConfig, attackDialog, message);
-        if (!returnValue) break;
+        if (!returnValue) {
+          finished.cancel();
+          break;
+        }
+        await finished;
         checkReaction = false;
         checkBonusAction = false;
       }
@@ -466,6 +513,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
             applyRollModifiers(workflow.attackRollModifierTracker, rollConfig, dialogConfig);
           }
 
+          if (dialogConfig.configure && workflow) showAttackTargets(workflow);
           return true;
         });
         hookIds["dnd5e.rollAttack"] = Hooks.once("dnd5e.rollAttack", (rolls, { ammoUpdate, subject }) => {

@@ -89,7 +89,8 @@
           "enableCondition": "",
           "disableCondition": "",
           "disableIncapacitated": false,
-          "dontApply": false
+          "dontApply": false,
+          "legacyApplication": true
         }
       },
       "_stats": {

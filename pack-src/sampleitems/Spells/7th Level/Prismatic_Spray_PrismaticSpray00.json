@@ -14,7 +14,8 @@
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
-          "dontApply": false
+          "dontApply": false,
+          "legacyApplication": true
         }
       },
       "name": "Prismatic Spray (Indigo - Restrained)",
@@ -63,7 +64,8 @@
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
-          "dontApply": false
+          "dontApply": false,
+          "legacyApplication": true
         }
       },
       "name": "Prismatic Spray (Violet - Blinded)",

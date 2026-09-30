@@ -1,6 +1,6 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired } from "./utils.js";
+import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired , processTurnOverTime } from "./utils.js";
 import { computeActivityTemplateTargets } from "./activities/activityHelpers.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
@@ -12,7 +12,7 @@ import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, ActivityUseConfiguration, DamageApplicationOptions, DamageDescription, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
 import { Workflow } from "./Workflow.js";
-import { preferredActiveGM } from "./GMAction.js";
+import { preferredActiveGM, socketlibSocket } from "./GMAction.js";
 import { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./lib/MidiDependentsRegistry.js";
 import { RollModifierTracker, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, RollModifierResult, AdvantageFlags, applyTrackerAdvantage } from "./lib/RollModifierTracker.js";
 
@@ -50,6 +50,9 @@ export function initPatching() {
   // I think this can be removed in v13 libWrapper.register(MODULE_ID, "KeyboardManager.prototype._onFocusIn", _onFocusIn, "OVERRIDE");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.getRollData", actorGetRollData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.calculateDamage", calculateDamageAllTraits, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preUpdate", combatPreUpdate, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._onStartTurn", combatOnStartTurn, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._onEndTurn", combatOnEndTurn, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.getRollData", itemGetRollData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
@@ -394,7 +397,6 @@ export function readyPatching() {
   libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickRight2", userInitiatedTargetWrapper, "WRAPPER");
   libWrapper.register(MODULE_ID, "foundry.canvas.layers.TokenLayer.prototype.selectObjects", userInitiatedTargetWrapper, "WRAPPER");
 
-  patchCatGetOriginActivity();
 
   const gameVersion = game.system?.version;
   if ((game.system?.id === "dnd5e" && foundry.utils.isNewerVersion("3.3", gameVersion ?? ""))) {
@@ -402,27 +404,6 @@ export function readyPatching() {
       ui.notifications.error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
     else
       error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
-  }
-}
-
-/**
- * CAT passes midi's overTimeEffectUuid straight to getOriginActivity, which expects a document and
- * dereferences effect.flags - the throw aborts every over time save. Resolve the string first.
- * Remove once CAT fixes conditionResistanceAndVulnerability.mjs.
- */
-function patchCatGetOriginActivity() {
-  if (!game.modules.get("cat")?.active) return;
-  if (typeof (globalThis as any).cat?.utils?.effectUtils?.getOriginActivity !== "function") return;
-  try {
-    libWrapper.register(MODULE_ID, "cat.utils.effectUtils.getOriginActivity",
-      async function (wrapped: Function, effect: unknown, ...args: unknown[]) {
-        if (typeof effect === "string") effect = await fromUuid(effect);
-        return wrapped(effect, ...args);
-      }, "WRAPPER");
-  } catch (err) {
-    const message = "midi-qol | could not patch cat.utils.effectUtils.getOriginActivity";
-    TroubleShooter.recordError(err, message);
-    console.warn(message, err);
   }
 }
 
@@ -1217,6 +1198,70 @@ function applyDamageModifiers(damageRoll: Roll): Roll {
     })
   }
   return damageRoll;
+}
+
+/**
+ * With auto reroll on, initiative is rerolled inside the round advance itself, with the new round's first turn, so the
+ * order changes once and core's turn events see a single transition. A player's round advance is redone by the GM.
+ */
+async function combatPreUpdate(this: Combat.Implementation, wrapped, changed: Combat.UpdateData, options: Combat.Database.PreUpdateOptions, user: User.Implementation) {
+  const allowed = await wrapped(changed, options, user);
+  if (allowed === false) return false;
+  if (!checkMechanic("autoRerollInitiative") || !this.combatants.size) return allowed;
+  if (typeof changed.round !== "number" || changed.round <= (this.current.round ?? 0)) return allowed;
+  if (!game.user?.isGM) {
+    socketlibSocket.executeAsGM("advanceCombatRound", { combatUuid: this.uuid, changed: { round: changed.round, turn: changed.turn },
+      options: { direction: options.direction, worldTime: options.worldTime } });
+    return false;
+  }
+  await rerollInitiativeInUpdate(this, changed);
+  return allowed;
+}
+
+/** Rolls as core's rollInitiative does, one roll per dnd5e initiative group, and writes the results into `changed`. */
+async function rerollInitiativeInUpdate(combat: Combat.Implementation, changed: Combat.UpdateData) {
+  const byGroup = new Map<string, number>();
+  const updates: { _id: string, initiative: number }[] = [];
+  const messages: object[] = [];
+  for (const combatant of combat.combatants) {
+    // @ts-expect-error no dnd5e-types
+    const group: string = combatant.getInitiativeGroupingKey?.() ?? combatant.id;
+    let initiative = byGroup.get(group);
+    if (initiative === undefined) {
+      const roll = combatant.getInitiativeRoll();
+      await roll.evaluate();
+      initiative = roll.total ?? 0;
+      byGroup.set(group, initiative);
+      // Private for hidden combatants, as core's rollInitiative.
+      const messageOptions = { messageMode: combatant.hidden ? "gm" : undefined, create: false as const };
+      const chatData: any = await roll.toMessage({
+        speaker: ChatMessage.implementation.getSpeaker({ actor: combatant.actor, token: combatant.token, alias: combatant.name }),
+        flavor: game.i18n?.format("COMBAT.RollsInitiative", { name: foundry.utils.escapeHTML(combatant.name ?? "") }),
+        flags: { core: { initiativeRoll: true } }
+      }, messageOptions);
+      if (messages.length) chatData.sound = null;
+      messages.push(chatData);
+    }
+    updates.push({ _id: combatant.id!, initiative });
+  }
+  changed.combatants = updates;
+  // The round starts with the first combatant of the new order, skipping the defeated when core would.
+  const order = combat.combatants.map(c => c.clone({ initiative: updates.find(u => u._id === c.id)?.initiative }, { keepId: true }))
+    // @ts-expect-error _sortCombatants is protected in fvtt-types
+    .sort((a, b) => combat._sortCombatants(a, b));
+  const first = combat.settings?.skipDefeated ? order.findIndex(c => !c.isDefeated) : 0;
+  changed.turn = Math.max(first, 0);
+  await ChatMessage.implementation.create(messages as ChatMessage.CreateData[]);
+}
+
+async function combatOnStartTurn(this: Combat.Implementation, wrapped, combatant: Combatant.Implementation, context: object) {
+  await wrapped(combatant, context);
+  await processTurnOverTime(this, combatant, true);
+}
+
+async function combatOnEndTurn(this: Combat.Implementation, wrapped, combatant: Combatant.Implementation, context: object) {
+  await wrapped(combatant, context);
+  await processTurnOverTime(this, combatant, false);
 }
 
 const DAMAGE_TRAIT_KEYS = { immunity: "di", resistance: "dr", vulnerability: "dv" } as const;

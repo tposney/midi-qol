@@ -5,7 +5,7 @@
 
 import { error } from "../../midi-qol.js";
 import { Activity, ChatMessageRenderOptions, Dnd5eChatMessage } from "../../globals.js";
-import { configSettings } from "../settings.js";
+import { configSettings, safeGetGameSetting } from "../settings.js";
 import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll,
   midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML } from "../utils.js";
 import { MODULE_ID } from "../../midi-qol.js";
@@ -193,6 +193,9 @@ export function setupUsageCardMessage() {
         }
       }
 
+      // midi applies the effects itself and offers no button for them, so there is nothing for a tray to do.
+      if (["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects)) context.effects = [];
+
       const sections = await this.#renderSections();
       context.midi = {
         ...(this.midi ?? {}),
@@ -280,13 +283,14 @@ export function setupUsageCardMessage() {
       return out;
     }
 
-    /** Damage roll types that get their own tray (each has its own save multiplier); empty if this viewer gets none. */
+    /**
+     * Damage roll types that get their own tray (each has its own save multiplier); empty if this viewer gets none.
+     * Who gets a tray is dnd5e's decision, made as its own damage cards make it: the GM, or players where
+     * `allowPlayerDamageTray` is on, and nobody on a card whose content is hidden from them.
+     */
     #damageApplicationTypes(): string[] {
-      const byRole = configSettings.addChatDamageButtons === "both"
-        || (configSettings.addChatDamageButtons === "gm" && game.user?.isGM)
-        || (configSettings.addChatDamageButtons === "pc" && !game.user?.isGM);
-      const gmWithoutAutoApply = !!game.user?.isGM && configSettings.autoApplyDamage === "none";
-      if (!byRole && !gmWithoutAutoApply) return [];
+      const allowed = !!game.user?.isGM || !!safeGetGameSetting("dnd5e", "allowPlayerDamageTray");
+      if (!allowed || !this.parent.isContentVisible) return [];
       const present = new Set((this.parent.rolls ?? []).map(r => foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`)));
       return DAMAGE_ROLL_TYPES.filter(type => present.has(type));
     }

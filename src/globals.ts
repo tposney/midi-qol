@@ -15,6 +15,7 @@ import { ConditionEditor } from "./module/apps/ConditionEditor";
 import { AttributionEntry, AttributionMap, AugmentedEvent, DamageDescriptionObject, DamageOnlyWorkflow, DDBGameLogWorkflow, DummyWorkflow, TrapWorkflow, UndoData, UserWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./module/Workflow";
 import { MidiOptions } from "./module/utils";
 import * as utils from "./module/utils";
+import * as workflowOptionsCodec from "./module/lib/workflowOptionsCodec";
 import * as settings from "./module/settings";
 import { RollStats, Stats } from "./module/RollStats";
 import { checkRule, configSettings, targetConfirmation } from "./module/settings";
@@ -91,6 +92,8 @@ declare module "fvtt-types/configuration" {
       "dnd5e.rollDeathSave": (rolls: Roll[], data: { chatString: string; updates: Actor.UpdateData; subject: Actor.Implementation }) => boolean | void;
       "midi-qol.ConfigSettingsChanged": () => void;
       "midi-qol.RollComplete": (workflow: Workflow) => Promise<void>;
+      "midi-qol.postCleanup": (workflow: Workflow) => Promise<void | boolean>;
+      "midi-qol.preAbort": (workflow: Workflow) => Promise<void | boolean>;
       "midi-qol.dnd5ePreCalculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;
       "midi-qol.dnd5eCalculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => void;
       "midi-qol.preItemRoll": (workflow: Workflow) => Promise<void | boolean>;
@@ -718,6 +721,8 @@ declare global {
     exportSettingsToJSON: typeof settings.exportSettingsToJSON;
     importSettingsFromJSON: typeof settings.importSettingsFromJSON;
     resetConfigSettingsToDefaults: typeof settings.resetConfigSettingsToDefaults;
+    registerWorkflowOptionsSchema: typeof workflowOptionsCodec.registerWorkflowOptionsSchema;
+    restoreWorkflowTokenSets: typeof utils.restoreWorkflowTokenSets;
     completeActivityUse: typeof utils.completeActivityUse;
     completeItemUse: typeof utils.completeItemUse;
     computeAbilityAdvantage: typeof patching.computeAbilityAdvantage;
@@ -734,6 +739,8 @@ declare global {
     contestedRoll: typeof utils.contestedRoll;
     createConditionData: typeof utils.createConditionData;
     createDamageDetail: typeof utils.createDamageDetail;
+    decodeWorkflowOptions: typeof workflowOptionsCodec.decodeWorkflowOptions;
+    encodeWorkflowOptions: typeof workflowOptionsCodec.encodeWorkflowOptions;
     createEffects: typeof createEffects;
     DamageOnlyWorkflow: typeof DamageOnlyWorkflow;
     debouncedUpdate: typeof utils.throttledUpdate;

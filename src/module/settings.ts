@@ -293,6 +293,7 @@ class ConfigSettings {
     vitalityDeadCondition: "dead", // Condition to apply when vitality reaches 0
     vitalityDeathRequires: "vitalityOnly", // "vitalityOnly" = dead when vitality=0, "vitalityAndHP" = dead when vitality=0 AND HP=0
     visionTestHeight: "center",
+    templateOriginHeight: "base",
     surfaceOcclusion: true,
     surfaceVisionFog: false,
     wallsBlockRange: "center",
@@ -1453,6 +1454,12 @@ export const autoCEEffectsOptions = keysToExtendedOptionsObj("AutoCEEffectsOptio
 export const visionTestHeightOptions = keysToExtendedOptionsObj("VisionTestHeightOptions", [
   "center",
   "top"
+]);
+
+export const templateOriginHeightOptions = keysToExtendedOptionsObj("TemplateOriginHeightOptions", [
+  "base",
+  "top",
+  "eye"
 ]);
 
 export const wallsBlockRangeOptionsNew = keysToExtendedOptionsObj("WallsBlockRangeOptionsNew", [

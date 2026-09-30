@@ -1,89 +1,138 @@
 ### 14.6.0 (dnd6 branch)
-* "Ignore Damage Immunity/Resistance/Vulnerability" for all damage types now also covers a creature's "All Damage" trait, which it previously left in force.
-* New activity option "Downgrade Immunity" - treats damage immunity as resistance rather than ignoring it, which leaves full damage.
-* An attack of opportunity is classified for every target of a use, not only the first, so "Roll a separate attack per target" no longer judges the first target by different range rules to the rest.
-* `proceedChecks.checkAoO` sets whether a use is classified as an attack of opportunity; defaults to `checkReaction`.
-* midi's noAdvantage and noDisadvantage flags cancel dnd5e's own advantage and disadvantage, not only midi's.
-* Reaction/bonus action used markers are expired by DAE only; midi deleting them as well threw "ActiveEffect dnd5ereaction000 does not exist".
-* Removed checks for times-up, which is not a module in v14.
-* dnd5e's own roll modes for tools, attacks and ability checks combine with midi's advantage flags instead of being replaced by them.
-* dnd5e advantage rules (`dnd5e.advantage` effect changes) combine with midi's advantage flags for saves, checks, skills, tools, attacks, death saves and initiative, and also cancel or force advantage from the concentration and death save roll modes.
-* Initiative `advantage/disadvantage.check.<ability>` flags use the actor's initiative ability, not always dex.
-* Critical damage modes that add extra dice (max crit, explode, max base + roll crit) place them as dnd5e does: inside a term bound by `*`, `/` or `%`, and with a subtracted term's sign.
-* Condition data `riderStatuses` includes a status's own riders, e.g. an effect applying unconscious also lists prone.
-* Region effects (apply/remove effect rules and the over-time fallback's `dontApply` effects) are applied by dnd5e's apply-effect region behaviour instead of midi's own: effects with `system.origin` now come off on exit, and origin `@` values are filled in. midi's region behaviour now only runs activities; its disposition filter carries over, and a `preCreateActiveEffect` hook keeps the caster excluded where midi's region settings exclude the source.
-* Conditional `flags.dnd5e.spellSniper` / `sharpShooter` values are evaluated; dnd5e's Boolean coercion made any condition count as true.
-* Ignoring or downgrading an immunity, resistance or vulnerability for specific damage types also works against an "All Damage" trait, for midi's ignore/downgrade options and dnd5e's damage tray alike; `ddi.<type>` now applies against an "All Damage" immunity.
-* "Roll a separate attack per target" completes when the last target finishes, not the first, so callers of completeItemUse/completeActivityUse no longer see a half-applied use.
-* "Roll a separate attack per target" applies to attacks whose template type is unset, which it skipped silently; only empty was recognised.
-* Target confirmation on an activity sheet shows the effective value and is read-only when the activity forces one — self-target activities now report "never", as forward and cast activities already did.
-* "Choose Targets" only forces target confirmation when the activity actually has a template type. dnd5e only offers the checkbox while one is set, so clearing the template left a stored value that still forced confirmation but was no longer visible.
-* A triggered activity no longer inherits the triggering workflow's target confirmation or per-target attack flag, so "Roll a separate attack per target" no longer suppresses the target prompt on the activity it triggers.
-* Ammunition activities are resolved independently of the other activity: an item's own other activity and its ammunition can both run, and `otherActivityId: "none"` no longer silences ammunition.
-* Ammunition activity effects are applied whether or not the ammunition supplies the other activity.
-* An ammunition activity's damage rolls without double-counting the ammunition's base damage, which dnd5e has already added to the weapon's damage roll.
-* Aborting a use for the wrong number of targets, or cancelling target confirmation, refunds the consumed spell slot or uses.
-* Concentration begins, and replaces the existing one, only once targeting is complete, so a use cancelled before then keeps the existing concentration.
-* Consecutive uses of the same activity no longer pick up the previous use's configuration.
-* A bonus action is recorded when Enforce Bonus Actions is "Display status icon", matching reactions and what setBonusActionUsed already allowed; only the prompt stays conditional on enforcement.
-* Flanking reads token positions from the token document rather than the placeable transform, which is only current once the canvas has drawn.
-* Version reads Foundry-major dot dnd5e-major: 14.0.x is the dnd5e 5.x line, 14.6.x the 6.x line.
+
+**Requirements**
 * Supports dnd5e 6.x only: the minimum dnd5e version is 6.0.0.
 * Requires dae 14.6.0 or later.
 * Verified against Foundry 14.368.
+* Version reads Foundry-major dot dnd5e-major: 14.0.x is the dnd5e 5.x line, 14.6.x the 6.x line.
 
 **Breaking: transfer effects with a duration**
 * A duration on a transfer effect no longer runs. dnd5e 6.0 does not start one, and transfer effects are passive by design; the old behaviour (toggle the effect on, it expires and disables itself) was times-up/DAE managing the v13 duration schema.
 * Legacy items that relied on it — the effect toggled on and expiring on its own — now stay on until toggled off again.
 * To restore it, add the effect to the activity's Effects list. dnd5e then applies it to the actor as a copy on use, which carries the duration and expires normally, leaving the item's effect intact. This is how dnd5e's own 2024 content is built.
 
-**Chat cards**
-* Usage cards are a chat-message sub-type rendered from `dnd5e.card-face`; midi no longer builds its own card markup.
-* `usage.chatCard`, the `_usageChatContext` override, the content-splicing machinery and `activity-card.hbs` are gone.
-* Roll sections stored in `system.midi.sections` and rendered from `message.rolls`, or from a template plus data.
-* Button visibility is resolved per viewer at render rather than stripped from the stored card, so the GM and player `Remove chat card buttons after roll` settings both apply.
-* A usage card whose item is deleted loses its buttons.
-* Damage type icons sit to the left of the total instead of before it, so the total stays centred.
-* Removed `ChatMessage#collectRolls` and the hidden `mergeCardMultiDamage` setting.
-* Chat buttons use the dnd5e 6.0 button format; labels follow the language setting.
-* Save rolls are carried on the card, so macros, Dice So Nice and `getAssociatedRolls` can see them.
-* Attack roll is located by roll type rather than by position in `message.rolls`.
-* Bonus damage rolls are shown in the bonus damage section; previously only its label appeared, though the damage was always applied.
-* Other and bonus damage rolls no longer render inside the section label.
-* Target rows carry their token uuid; `data-uuid` had always rendered empty.
-* midi's messages carry no `flags.dnd5e`: targets are in `system.targets`, and save and check rolls name their card in `system.origin` rather than `flags.dnd5e.originatingMessage`.
-* A synthetic item's snapshot is kept in `flags.midi-qol.itemData` rather than `flags.dnd5e.item.data`.
-* Convenient Effects applied by a concentration spell depend on the concentration, and effect data carries the use's scaling and spell level.
-* Activity effects referenced by uuid, such as compendium effects, are applied, including those applied on a save.
-* Use card 9.9kB -> 7.2kB; bytes written per attack 19.0kB -> 4.1kB; saves section 4.5kB -> 1.5kB.
+#### Changes you will notice
 
-**Damage tray**
-* Targets are recorded on the card, so the tray lists all of them rather than whatever was selected before the roll.
-* `system.targets` extended with midi's per-target detail: save results and multipliers, super and semi-super saver, uncanny dodge.
-* Per-target detail records what the damage calculation applied, so reaction-based effects such as uncanny dodge are reflected.
-* Resistance and immunity icons shown on the target row with state on hover, in addition to dnd5e's right-click menu.
+**Attacks and targeting**
+* An attack dialog gives its target(s) the targeting reticle and pans the canvas to them, so it is clear which token each dialog is for.
+* "Roll a separate attack per target" handles one target at a time: attack dialogs come one after another and targets complete in order.
+* "Roll a separate attack per target" applies to attacks whose template type is unset, which it skipped silently.
+* A triggered activity no longer inherits the triggering use's target confirmation or per-target attack setting, so "Roll a separate attack per target" no longer suppresses the target prompt on the activity it triggers.
+* Target confirmation on an activity sheet shows the effective value and is read-only when the activity forces one; self-target activities report "never", as forward and cast activities already did.
+* "Choose Targets" only forces target confirmation when the activity has a template type. dnd5e only offers the checkbox while one is set, so clearing the template left a hidden setting that still forced confirmation.
+* An attack of opportunity is classified for every target of a use, not only the first, so "Roll a separate attack per target" no longer judges the first target by different range rules to the rest.
+* An attack of opportunity no longer warns that its target is out of range; the check is not enforced for one.
+* Closing a reaction dialog stops its countdown, which went on updating the closed window and threw.
+* Template targeting, flanking, range, cover and push direction use where a token has moved to, not where it is drawn: acting straight after a move used a point part-way along it, and in a background browser tab every token counted as being at 0,0.
 
-**Templates**
-* Templates use regions throughout; the deprecated `AbilityTemplate` API and the `refreshMeasuredTemplate`, `preCreateMeasuredTemplate` and `dnd5e.preCreateActivityTemplate` handlers are gone.
+**Templates and regions**
+* Activity templates have a height, set by their area type around the caster: a sphere is centred on the caster, a cone on its axis, and a cylinder, ring, cube, line or wall stands on the caster (a cylinder, ring or wall to its own height). The flat circle and square areas stay unbounded, and emanations follow their token. A sphere cast on the ground used to reach a flier at any height, for midi's targeting and dnd5e's region effects alike.
+* New optional rule "Template Origin Height": templates are measured from the caster's base (default), top, or eye level; an activity can override it in its Region settings.
 * AoE template targeting no longer fails for templates with no elevation set.
 * Targets update live while a template is dragged, by the activity's auto-target settings.
 * An emanation set to attach to the caster or a target ("Attach Region To") is centred on that token.
-* Trap workflow templates use the activity's units, so they are the correct size.
+* Trap templates are the correct size.
+* Region effects come off when a token leaves the region, and origin `@` values in them are filled in; the caster is still excluded where midi's region settings exclude the source.
+
+**Damage and traits**
+* "Ignore Damage Immunity/Resistance/Vulnerability" for all damage types also covers a creature's "All Damage" trait, which it previously left in force.
+* New activity option "Downgrade Immunity": treats damage immunity as resistance rather than ignoring it, which leaves full damage.
+* Ignoring or downgrading an immunity, resistance or vulnerability for specific damage types also works against an "All Damage" trait, for midi's options and dnd5e's damage tray alike; `ddi.<type>` applies against an "All Damage" immunity.
+* Critical damage modes that add extra dice (max crit, explode, max base + roll crit) place them as dnd5e does: inside a term bound by `*`, `/` or `%`, and with a subtracted term's sign.
+* Conditional Spell Sniper and Sharpshooter flags are evaluated; any condition used to count as true.
+
+**Advantage, saves and rolls**
+* Advantage and disadvantage from dnd5e 6.0's own rules are no longer overwritten by midi on tool, skill, check, save and death save rolls.
+* midi's noAdvantage and noDisadvantage flags cancel dnd5e's own advantage and disadvantage, not only midi's.
+* dnd5e's own roll modes for tools, attacks and ability checks combine with midi's advantage flags instead of being replaced by them.
+* dnd5e advantage rules (`dnd5e.advantage` effect changes) combine with midi's advantage flags for saves, checks, skills, tools, attacks, death saves and initiative, and also cancel or force advantage from the concentration and death save roll modes.
+* Initiative `advantage/disadvantage.check.<ability>` flags use the actor's initiative ability, not always dex.
+* A failed save, check, skill or tool roll requested from another player settles instead of leaving the use waiting forever.
+* DDB Game Log attack and damage rolls are recognised.
+
+**Over-time effects, durations and initiative**
+* OverTime and ActivityOverTime effects run on the right combatant's turn after initiative is rerolled; a combatant whose turn is skipped gets both its start and end of turn.
+* Auto reroll initiative rolls as the round advances (new initiatives and the first turn of the round in one update); a player's round advance is passed to the GM to roll.
+* Death saves no longer trigger over-time save effects.
+* New special durations: `isMissed` (the actor is attacked and missed) and `1Miss` / `1Miss:<actionType>` (the actor's attack hits no target), mirroring `isHit` and `1Hit`; and `isAttacked:<actionType>` / `isHit:<actionType>`, which expire only for that kind of attack (e.g. `isHit:mwak` on a melee weapon hit).
+* Effects set to expire on a failed concentration save now expire.
+* The Long Rest, Short Rest and New Day special duration labels display correctly.
+* Reaction and bonus action used markers no longer throw "ActiveEffect dnd5ereaction000 does not exist" when they expire.
+* A bonus action is recorded when Enforce Bonus Actions is "Display status icon", matching reactions; only the prompt stays conditional on enforcement.
+
+**Concentration, consumption and effects**
+* Aborting a use for the wrong number of targets, or cancelling target confirmation, refunds the consumed spell slot or uses.
+* Concentration begins, and replaces the existing one, only once targeting is complete, so a use cancelled before then keeps the existing concentration.
+* Consecutive uses of the same activity no longer pick up the previous use's configuration.
+* Activity effects referenced by uuid, such as compendium effects, are applied, including those applied on a save.
+* An item's own other activity and its ammunition's activity can both run, and `otherActivityId: "none"` no longer silences ammunition.
+* Ammunition activity effects are applied whether or not the ammunition supplies the other activity.
+* An ammunition activity's damage no longer counts the ammunition's base damage twice.
+* Convenient Effects applied by a concentration spell end with the concentration.
+* Sample items whose applied effects use the caster's values (OverTime save DCs, Bardic Inspiration, Harm, Branding Smite and others) are marked for DAE's legacy application, so they keep working under DAE's dnd5e 6 default.
+
+**Chat cards and damage tray**
+* Who sees the damage and effect trays is dnd5e's decision: the GM always, players only when dnd5e's "Allow player damage/effects tray" settings are on. midi's "Add chat damage buttons" setting is removed from the config panel,. A card whose effects midi applies itself with no button ("apply, no button" / "apply and remove") offers no effects tray.
+* The damage button says Critical as soon as a critical attack is shown, instead of briefly showing the plain damage label.
+* A usage card whose item is deleted loses its buttons.
+* The GM and player `Remove chat card buttons after roll` settings both apply.
+* Chat buttons use the dnd5e 6.0 style; their labels follow the language setting.
+* Damage type icons sit to the left of the total instead of before it, so the total stays centred.
+* Bonus damage rolls are shown in the bonus damage section; previously only its label appeared, though the damage was always applied.
+* Other and bonus damage rolls no longer render inside the section label.
+* The damage tray lists all of the use's targets, rather than whatever was selected before the roll.
+* The tray's per-target detail reflects reaction-based effects such as uncanny dodge.
+* Resistance and immunity icons are shown on the tray's target row with their state on hover, in addition to dnd5e's right-click menu.
+* Smaller chat messages: use card 9.9kB -> 7.2kB; bytes written per attack 19.0kB -> 4.1kB; saves section 4.5kB -> 1.5kB.
 
 **Distance**
-* The distance fudge factor now applies on every scene and measurement mode, not only gridless scenes with Gridless Grid enabled. Perimeter measurement still floors at one grid unit; centre and default measurement can reach 0.
+* The distance fudge factor applies on every scene and measurement mode, not only gridless scenes with Gridless Grid enabled. Perimeter measurement still floors at one grid unit; centre and default measurement can reach 0.
+
+#### Implementation details
+
+**Workflow and API**
+* `MidiQOL.registerWorkflowOptionsSchema(namespace, schema)`: a module declares the data it keeps in `workflowOptions.<namespace>` as a DataModel schema; midi then sends and stores it losslessly (Sets and other field types come back intact) and does not pass undeclared per-use keys to other clients, chat cards or triggered activities. `MidiQOL.encodeWorkflowOptions` / `decodeWorkflowOptions` expose the conversion.
+* A remote `completeActivityUse` returns its token sets (targets, hitTargets, failedSaves, ...) as Sets of tokens again, as a local use does; `MidiQOL.restoreWorkflowTokenSets` does the same for other workflow macro data that crossed a socket.
+* A use no longer writes its target snapshot into the caller's `workflowOptions`; reusing one options object carried the first use's targets into later uses with no targets.
+* For "Roll a separate attack per target", each target's use waits for the previous target's workflow (`midi-qol.postCleanup` / `preAbort`, 90s limit), and `completeItemUse`/`completeActivityUse` resolve after the last target finishes, not the first.
+* `proceedChecks.checkAoO` sets whether a use is classified as an attack of opportunity; defaults to `checkReaction`.
+* `moveTokenAwayFromPoint` resolves once the push has landed; it returned before the move.
+* Game logic reads a token's committed position (`document._source`) rather than `token.x/y`, `token.center` or the animated document values; flanking no longer reads the placeable transform.
 * `getDistance` is available in evaluated conditions and macros, and is the preferred call: it honours the Distance Measurement setting, so it includes perimeter measurement and agrees with midi's own range checks. `computeDistance` remains available as the centre-based primitive.
+* Condition data `riderStatuses` includes a status's own riders, e.g. an effect applying unconscious also lists prone.
+* midi only asserts advantage it grants or denies, instead of overwriting dnd5e 6.0's d20 rules on every tool, skill, check, save and death save.
 
-**Over-time and rolls**
-* Advantage from dnd5e 6.0's own d20 rules is preserved; midi now only asserts advantage it grants or denies, instead of overwriting the system's on every tool, skill, check, save and death save.
+**Over-time and special durations**
+* OverTime and ActivityOverTime effects run from core's turn events, by combatant rather than turn position.
+* Auto reroll initiative happens inside the round-advance update.
 * Over-time saves read the dnd5e 6.0 message sub-types rather than `flags.dnd5e.roll`.
-* Death saves no longer trigger over-time save effects.
-* A failed save, check, skill or tool roll requested over the socket settles instead of leaving the workflow waiting forever.
-* Effects set to expire on a failed concentration save now expire; DAE registered the option as `isConcentrationSaveFail`, which never matched. Both spellings are accepted.
-* midi owns the registration of its special durations; the Long Rest, Short Rest and New Day labels use the dnd5e 6.0 keys.
-* DDB Game Log attack and damage rolls are recognised under the 6.0 message types.
+* midi owns the registration of its special durations; the Long Rest, Short Rest and New Day labels use the dnd5e 6.0 keys. DAE registered the concentration option as `isConcentrationSaveFail`, which never matched; both spellings are accepted.
+* Reaction/bonus action used markers are expired by DAE only; midi deleting them as well caused the error.
 
-**Deprecations**
+**Regions and templates**
+* Templates use regions throughout; the deprecated `AbilityTemplate` API and the `refreshMeasuredTemplate`, `preCreateMeasuredTemplate` and `dnd5e.preCreateActivityTemplate` handlers are gone.
+* Template regions carry `elevation.bottom`/`top` (top inclusive), from `templateElevation` in `dnd5e.createMeasuredTemplate` and `createActivityTemplateRegions`: worked out from the activity's template type and sizes (converted with dnd5e's `convertLength`), not the region shape, which is `circle` for both spheres and cylinders. The origin comes from `optionalRules.templateOriginHeight` or the activity's `regionBehavior.templateOrigin` (`default`/`base`/`top`/`eye`; eye uses `getTokenVisionElevation`).
+* Trap templates convert sizes with dnd5e's `convertLength` from the activity's units.
+* Region effects (apply/remove effect rules and the over-time fallback's `dontApply` effects) are applied by dnd5e's apply-effect region behaviour instead of midi's own; midi's region behaviour now only runs activities. Its disposition filter carries over, and a `preCreateActiveEffect` hook keeps the caster excluded.
+* Conditional `flags.dnd5e.spellSniper` / `sharpShooter` values go through `evalAllConditions`; dnd5e's Boolean coercion made any condition true.
+
+**Chat card data**
+* Usage cards are a chat-message sub-type rendered from `dnd5e.card-face`; midi no longer builds its own card markup.
+* `usage.chatCard`, the `_usageChatContext` override, the content-splicing machinery and `activity-card.hbs` are gone.
+* Roll sections are stored in `system.midi.sections` and rendered from `message.rolls`, or from a template plus data.
+* Button visibility is resolved per viewer at render rather than stripped from the stored card.
+* Save rolls are carried on the card, so macros, Dice So Nice and `getAssociatedRolls` can see them.
+* The attack roll is located by roll type rather than by position in `message.rolls`.
+* Target rows carry their token uuid; `data-uuid` had always rendered empty.
+* midi's messages carry no `flags.dnd5e`: targets are in `system.targets`, and save and check rolls name their card in `system.origin` rather than `flags.dnd5e.originatingMessage`.
+* `system.targets` is extended with midi's per-target detail: save results and multipliers, super and semi-super saver, uncanny dodge, recording what the damage calculation applied.
+* A synthetic item's snapshot is kept in `flags.midi-qol.itemData` rather than `flags.dnd5e.item.data`.
+* Convenient Effects applied by a concentration spell depend on the concentration, and effect data carries the use's scaling and spell level.
+* Removed `ChatMessage#collectRolls` and the hidden `mergeCardMultiDamage` setting.
+
+**Removed and deprecated**
+* Removed checks for times-up, which is not a module in v14.
+* Removed the workaround for CAT 0.0.7's OverTime save crash; fixed in CAT 0.0.8.
 * `DocumentSheetConfig`, `CanvasOcclusionMask` and `Scene#templates` replaced with their v14 equivalents.
 
 ### 14.0.12
