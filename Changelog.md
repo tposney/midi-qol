@@ -61,6 +61,7 @@
 * A bonus action is recorded when Enforce Bonus Actions is "Display status icon", matching reactions; only the prompt stays conditional on enforcement.
 
 **Concentration, consumption and effects**
+* A recast of a concentration spell is linked to its new concentration, not to an inactive one left from before (expired and awaiting deletion, suppressed, or disabled). `getConcentrationEffect` returns active concentration effects only, as dnd5e 6's `Actor#concentration` counts them.
 * Aborting a use for the wrong number of targets, or cancelling target confirmation, refunds the consumed spell slot or uses.
 * Concentration begins, and replaces the existing one, only once targeting is complete, so a use cancelled before then keeps the existing concentration.
 * Consecutive uses of the same activity no longer pick up the previous use's configuration.

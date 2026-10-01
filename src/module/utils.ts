@@ -6392,11 +6392,13 @@ export function getConcentrationEffect(actor?: Actor.Implementation | null, item
     // @ts-expect-error no dnd5e-types
     if (!item) item = actor.concentration.items?.find(i => i.name === itemRef)
   } else item = itemRef;
-  // concentration should not be a passive effect so don't need to do applied effects
+  // concentration should not be a passive effect so don't need to do applied effects.
+  // Active ones only, as dnd5e's Actor#concentration counts them: an expired effect awaiting deletion, or a disabled or
+  // suppressed one, is not concentration, and a recast of the same spell must not be linked to it.
   if (!item?.id)
-    return actor?.effects.find(ef => ef.statuses.has(systemConcentrationId));
+    return actor?.effects.find(ef => ef.active && ef.statuses.has(systemConcentrationId));
   else {
-    return actor?.effects.find(ef => ef.statuses.has(systemConcentrationId)
+    return actor?.effects.find(ef => ef.active && ef.statuses.has(systemConcentrationId)
       && (ef.flags?.dnd5e?.item?.id === item.id)
     );
   }
