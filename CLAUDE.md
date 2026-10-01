@@ -237,12 +237,14 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
 
 21. **Updating an item effect on an unlinked token can silently no-op** — when the token's delta overrides the item, the server diffs an effect update against the *base* actor's copy; a value the base already has is dropped as "unchanged" while the token keeps its old one. Verify against `token.delta._source`, not the synthetic document.
 
+22. **dae-dnd6-only DAE behaviour that is not backported to dae-14x** — unconditional `ATL.*` → `token.*` conversion (v14 still needs the ATL module for keys with no `token.*` equivalent, e.g. width/height/elevation), and the migration no longer rewriting pre-v10 `data.` keys / midi optional `.all` (no user-visible gain; v14 worlds are already migrated). Their tests are gated with `itDnd6` (batches 24, 25). Per-change/effect-level conditions (batch 19) are a dnd5e 6 feature, not portable.
+
 ## Testing
 
 Tests use the Quench framework in separate test modules (not embedded in the main module source). Each major version branch has its own test module:
 - **midi-qol tests (v13)**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-tests/` — for midi-qol-13x, accesses midi-qol via `globalThis.MidiQOL`
 - **midi-qol tests (v14)**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/midi-qol-tests-v14x/` — for midi-qol-14x
-- **DAE tests (v14)**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/dae-tests-14x/` — for dae-14x, accesses DAE via `game.modules.get("dae").api` and `globalThis.DAE`
+- **DAE tests (v14 and dnd6)**: `/home/timp/foundry-data/foundryalpha/Data/modulesrc/dae-tests-14x/` — one module for both dae-14x (dnd5e 5.x) and dae-dnd6, accesses DAE via `game.modules.get("dae").api` and `globalThis.DAE`. Tests of dae-dnd6-only behaviour must be gated: whole batches with `if (isDnd5eV6()) register…()`, single tests with `const itDnd6 = isDnd5eV6() ? it : it.skip`.
 
 **CRITICAL: Never remove tests without explicit user consent.**
 
