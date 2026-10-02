@@ -578,6 +578,24 @@ function isVisible(this: Token.Implementation, wrapped) {
 }
 
 /**
+ * Link a save, check or tool roll to the card and activity it was rolled for, as dnd5e's own save buttons do:
+ * `system.origin` (dnd5e's MessageRegistry, getOriginatingMessage, summaries) and the activity's message sources.
+ */
+function linkRollToCard(message: AnyMutableObject, midiOptions: MidiOptions | undefined): string | undefined {
+  const card = midiOptions?.itemCardUuid ? fromUuidSync(midiOptions.itemCardUuid) : undefined;
+  const cardId: string | undefined = midiOptions?.workflow?.itemCardId ?? (card instanceof ChatMessage ? card.id ?? undefined : undefined);
+  if (!cardId) return undefined;
+  foundry.utils.setProperty(message, "data.system.origin", cardId);
+  const activity = midiOptions?.workflow?.saveActivity
+    ?? (midiOptions?.saveActivityUuid ? fromUuidSync(midiOptions.saveActivityUuid) : undefined)
+    // @ts-expect-error no dnd5e-types
+    ?? game.messages?.get(cardId)?.getAssociatedActivity?.();
+  const sources = activity?.messageSources;
+  if (sources) for (const [key, value] of Object.entries(sources)) foundry.utils.setProperty(message, `data.system.${key}`, value);
+  return cardId;
+}
+
+/**
  * The over-time effect a roll answers, from the button that was clicked: a dnd5e 6 prompt message midi posted
  * (flags on the message), or a link carrying midi's data attributes.
  */
@@ -863,10 +881,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     const saveCreate = message.create;
     message.create = false;
 
-    // dnd5e's MessageRegistry and getOriginatingMessage() link a roll to its card through system.origin.
-    const originatingCardId = config.midiOptions?.workflow?.itemCardId
-      ?? (config.midiOptions?.itemCardUuid ? fromUuidSync(config.midiOptions.itemCardUuid)?.id : undefined);
-    if (originatingCardId) foundry.utils.setProperty(message, "data.system.origin", originatingCardId);
+    const originatingCardId = linkRollToCard(message, config.midiOptions);
 
     if (this.token) foundry.utils.setProperty(dialog, "options.window.subtitle", this.token.name);
     result = await wrapped(config, dialog, message);
@@ -1567,10 +1582,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     const saveCreate = message.create;
     message.create = false;
 
-    // dnd5e's MessageRegistry and getOriginatingMessage() link a roll to its card through system.origin.
-    const originatingCardId = config.midiOptions.workflow?.itemCardId
-      ?? (config.midiOptions.itemCardUuid ? fromUuidSync(config.midiOptions.itemCardUuid)?.id : undefined);
-    if (originatingCardId) foundry.utils.setProperty(message, "data.system.origin", originatingCardId);
+    const originatingCardId = linkRollToCard(message, config.midiOptions);
 
     let abilityModifiers: RollModifierResult | undefined;
     const midiOptions = config.midiOptions;
@@ -2794,10 +2806,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     const chatMessage = message.create;
     message.create = false;
 
-    // dnd5e's MessageRegistry and getOriginatingMessage() link a roll to its card through system.origin.
-    const originatingCardId = config.midiOptions?.workflow?.itemCardId
-      ?? (config.midiOptions?.itemCardUuid ? fromUuidSync(config.midiOptions.itemCardUuid)?.id : undefined);
-    if (originatingCardId) foundry.utils.setProperty(message, "data.system.origin", originatingCardId);
+    const originatingCardId = linkRollToCard(message, config.midiOptions);
 
     if (dialog.configure === undefined && isAutoFastForward("tool")) dialog.configure = false;
 

@@ -5841,8 +5841,8 @@ export class Workflow {
             delete this.saveTimeouts[requestId];
             let result: Roll[] | null;
 
-            // Only pass target DC if player should see success/failure (based on autoCheckSaves and visibility)
-            const showTargetDC = configSettings.autoCheckSaves !== "whisper" && shouldDisplaySaveDC(this.actor);
+            // The DC goes on the roll so dnd5e can tell success from failure; who sees it is decided when the card is shown.
+            const showTargetDC = true;
             if (!game.user?.isGM && saveDisplay === "allShow") {
               // Non-GM users don't have permission to create chat cards impersonating the GM
               const rollMode = toMessageMode(this.activity.midiProperties?.rollMode);
@@ -5870,6 +5870,7 @@ export class Workflow {
                   fastForward: true,
                   recomputeAdvantage: true, // compute advantage/disadvantage from flags in roll function
                   saveItemUuid: this.saveItem?.uuid,
+                  saveActivityUuid: this.saveActivity?.uuid,
                   isConcentrationCheck: saveDetails.isConcentrationCheck,
                   workflowOptions: saveDetails.workflowOptions,
                   rollAbilities,
@@ -5976,9 +5977,8 @@ export class Workflow {
       rollMode = "gm";
     }
 
-    // Only pass target DC if player should see success/failure (based on autoCheckSaves and visibility)
-    // GM always sees DC, non-GM only when visibility allows and not whisper mode
-    const showTargetDC = owner?.isGM || (configSettings.autoCheckSaves !== "whisper" && shouldDisplaySaveDC(this.actor));
+    // The DC goes on the roll so dnd5e can tell success from failure; who sees it is decided when the card is shown.
+    const showTargetDC = true;
     return socketlibSocket.executeAsUser("rollAbility", owner?.id, {
       saveDetails,
       displayOptions: {
@@ -6279,6 +6279,7 @@ export class Workflow {
       isConcentrationCheck: undefined,
       rollDC: rollDC ?? 0,
       saveItemUuid: this.saveItem?.uuid ?? "",
+      saveActivityUuid: this.saveActivity?.uuid,
       workflowId: this.id,
       itemCardUuid: this.itemCardUuid ?? "",
       workflowOptions: this.workflowOptions,

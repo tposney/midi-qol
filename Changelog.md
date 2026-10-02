@@ -79,6 +79,7 @@
 * Sample items whose applied effects use the caster's values (OverTime save DCs, Bardic Inspiration, Harm, Branding Smite and others) are marked for DAE's legacy application, so they keep working under DAE's dnd5e 6 default.
 
 **Chat cards and damage tray**
+* midi's save, check and tool rolls record the activity and item they were rolled for (`system.activity`, `system.item`), as dnd5e's own save buttons do, and always carry the DC, so dnd5e can tell success from failure (card outcomes, Select Success/Failure, summaries). Who sees the result is still decided when the card is shown; under Auto check Saves "whisper" players see no success or failure, their own saves included.
 * Saves requested through Flash Rolls carry the card's message id (`originMessageId`), so Flash links them to the card as dnd5e's own save buttons do.
 * A cancelled Epic Rolls request no longer leaves the workflow waiting: its saves (and any actor that did not roll) count as failed. midi read `cancelled`; Epic Rolls reports `canceled`.
 * "Select Hit Targets" on a midi card selects the hit targets; both menu entries selected the misses under dnd5e 6.

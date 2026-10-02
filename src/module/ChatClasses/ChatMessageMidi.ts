@@ -743,6 +743,10 @@ function maskSaveForPlayers(element: HTMLElement, save: ChatMessage.Implementati
   const display = card.getAssociatedActivity?.()?.saveDisplay ?? "default";
   const mode = display === "default" ? configSettings.autoCheckSaves : String(display);
   if (mode === "gmOnly") return "remove";
+  if (mode === "whisper") {
+    element.querySelectorAll<HTMLElement>(".success, .failure").forEach(el => el.classList.remove("success", "failure"));
+    element.querySelectorAll(".dice-roll .icons").forEach(el => el.replaceChildren());
+  }
   if (save.speakerActor?.hasPlayerOwner) return;
   if (mode !== "allShow") element.querySelectorAll(".roll-breakdown, .d20die, .dice-tooltip").forEach(el => el.remove());
   if (mode === "allNoRoll") element.querySelectorAll(".dice-roll .total, .dice-total").forEach(el => el.remove());

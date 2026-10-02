@@ -1737,6 +1737,7 @@ export type SaveDetails = {
   isConcentrationCheck: boolean | undefined;
   rollDC: number;
   saveItemUuid: string;
+  saveActivityUuid?: string;
   workflowId: string;
   itemCardUuid: string;
   workflowOptions: object;

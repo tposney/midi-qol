@@ -2519,6 +2519,7 @@ export type MidiOptions = {
   rollOptions?: WorkflowRollOptions;
   saveItem?: Item.Implementation;
   saveItemUuid?: string;
+  saveActivityUuid?: string;
   simulate?: boolean;
   // grantsActor/grantsToken: The opposing entity that grants advantage/disadvantage.
   // For attacks: the defender (target). For saves/checks: the caster (workflow.actor).

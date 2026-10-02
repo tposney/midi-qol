@@ -871,7 +871,8 @@ async function rollAbility(data: {
   const disadvantage = sd.disadvantage;
   const isMagicSave = sd.isMagicSave;
   const isConcentrationCheck = sd.isConcentrationCheck;
-  const rollDC = disp?.showTargetDC !== false ? sd.rollDC : undefined;
+  // Always on the roll: dnd5e derives success from it, and challenge visibility decides who sees the result.
+  const rollDC = sd.rollDC;
   const saveItemUuid = sd.saveItemUuid;
   const workflowOptions = sd.workflowOptions;
   const workflowId = sd.workflowId;
@@ -908,6 +909,7 @@ async function rollAbility(data: {
     target: rollDC,
     isMagicSave,
     saveItemUuid,
+    saveActivityUuid: sd.saveActivityUuid,
     isConcentrationCheck,
     workflowOptions,
     itemCardUuid,
