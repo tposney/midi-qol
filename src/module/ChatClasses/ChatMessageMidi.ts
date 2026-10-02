@@ -374,10 +374,14 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         }
       }
       if (foundry.utils.getProperty(this, `flags.${MODULE_ID}.obscureRoll`)) obscureRolls(html);
+      // A save on its own in the log, belonging to a midi card, shows what midi's save display allows.
+      const card = midiCardOf(this);
+      if (card && maskSaveForPlayers(html, this, card) === "remove") html.style.display = "none";
       // dnd5e 6 draws a card's save and check messages inside it as summaries, whatever their own visibility.
       html.querySelectorAll<HTMLElement>(".card-summary[data-message-id]").forEach(summary => {
         const source = game.messages?.get(summary.dataset.messageId ?? "");
         if (!source) return;
+        if (isMidiCard(this) && maskSaveForPlayers(summary, source, this) === "remove") return summary.remove();
         const view = hiddenRollView(source);
         if (view === "none") summary.remove();
         else if (view === "placeholder") summary.replaceChildren(rolledPlaceholder());
@@ -718,3 +722,29 @@ function obscureRolls(html: HTMLElement) {
     .forEach(el => el.classList.remove(...HIGHLIGHT));
   HIGHLIGHT.forEach(c => html.classList.remove(c));
 }
+
+function isMidiCard(message: ChatMessage.Implementation | undefined): boolean {
+  return !!message?.flags?.[MODULE_ID]?.messageType;
+}
+
+/** The midi card a save or check message was rolled for (dnd5e 6 links it through `system.origin`). */
+function midiCardOf(message: ChatMessage.Implementation): ChatMessage.Implementation | undefined {
+  const origin = foundry.utils.getProperty(message, "system.origin");
+  const card = typeof origin === "string" ? game.messages?.get(origin) : origin as ChatMessage.Implementation | undefined;
+  return card instanceof ChatMessage && isMidiCard(card) ? card : undefined;
+}
+
+/**
+ * What a player sees of a save rolled for a midi card follows midi's save display, as midi's own saves section
+ * does: gmOnly shows nothing, and for an NPC anything short of allShow drops the dice and allNoRoll the total.
+ */
+function maskSaveForPlayers(element: HTMLElement, save: ChatMessage.Implementation, card: ChatMessage.Implementation): "remove" | void {
+  // @ts-expect-error no dnd5e-types
+  const display = card.getAssociatedActivity?.()?.saveDisplay ?? "default";
+  const mode = display === "default" ? configSettings.autoCheckSaves : String(display);
+  if (mode === "gmOnly") return "remove";
+  if (save.speakerActor?.hasPlayerOwner) return;
+  if (mode !== "allShow") element.querySelectorAll(".roll-breakdown, .d20die, .dice-tooltip").forEach(el => el.remove());
+  if (mode === "allNoRoll") element.querySelectorAll(".dice-roll .total, .dice-total").forEach(el => el.remove());
+}
+

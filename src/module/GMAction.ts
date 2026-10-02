@@ -1040,6 +1040,7 @@ function flashTokenBarSaves(data: {
   sendAsRequest: boolean;
   rollMode: string | undefined;
   workflowId: string;
+  originMessageId?: string;
 }) {
   if (debugEnabled > 0) debug("flashTokenBarSaves | Called with data:", data);
 
@@ -1059,7 +1060,8 @@ function flashTokenBarSaves(data: {
       skipRollDialog: data.skipRollDialog,
       sendAsRequest: data.sendAsRequest,
       rollMode: data.rollMode,
-      workflowId: data.workflowId
+      workflowId: data.workflowId,
+      originMessageId: data.originMessageId
     });
   } else {
     error("flashTokenBarSaves | FlashAPI not found! Is flash-rolls-5e module active?");

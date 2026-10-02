@@ -5732,6 +5732,8 @@ export class Workflow {
         ? toLegacyRollMode(this.activity.midiProperties!.rollMode)
         : "roll",
       workflowId: this.id,
+      // Links the save messages to the card, as dnd5e's own save buttons do.
+      originMessageId: this.itemCardId,
     };
 
     timedExecuteAsGM("flashTokenBarSaves", flashRequest);
@@ -5776,28 +5778,28 @@ export class Workflow {
 
     //@ts-expect-error
     ui.EpicRolls5e.requestRoll(rerRequest).then((rerResult: {
-      cancelled: boolean;
+      canceled: boolean;
       results: {
         actor: Actor.Implementation;
         roll: unknown;
       }[];
     }) => {
-      if (rerResult.cancelled) {
-        let roll = new BasicRoll("-1");
-        roll = roll.evaluateSync({ strict: false });
-        for (let uuid of rerRequest.actors) {
-          const fn = this.saveRequests[uuid];
-          delete this.saveRequests[uuid];
-          fn(roll);
+      // A cancelled request, or an actor with no roll, counts as a failed save rather than leaving the save waiting.
+      const failed = () => new BasicRoll("-1").evaluateSync({ strict: false });
+      if (!rerResult.canceled) {
+        for (const rerRoll of rerResult.results) {
+          const actorUuid = rerRoll.actor?.uuid;
+          const fn = actorUuid ? this.saveRequests[actorUuid] : undefined;
+          if (!fn || !rerRoll.roll) continue;
+          delete this.saveRequests[actorUuid!];
+          fn(Roll.fromJSON(JSON.stringify(rerRoll.roll)));
         }
-      } else {
-        for (let rerRoll of rerResult.results) {
-          const actorUuid = rerRoll.actor.uuid;
-          const fn = this.saveRequests[actorUuid];
-          delete this.saveRequests[actorUuid];
-          const roll = Roll.fromJSON(JSON.stringify(rerRoll.roll));
-          fn(roll);
-        }
+      }
+      for (const uuid of rerRequest.actors) {
+        const fn = this.saveRequests[uuid];
+        if (!fn) continue;
+        delete this.saveRequests[uuid];
+        fn(failed());
       }
     });
   }
@@ -5948,7 +5950,7 @@ export class Workflow {
 
     let rollMode = ((this.activity.midiProperties?.rollMode ?? "default") !== "default")
       ? toMessageMode(this.activity.midiProperties!.rollMode)
-      : whisper ? "gm" : "public";
+      : ["whisper", "gmOnly"].includes(this.#saveDisplay) ? "gm" : "public";
 
     if (!owner?.isGM) {
       if ((this.activity.midiProperties?.rollMode ?? "default") === "default") {
@@ -6424,8 +6426,9 @@ export class Workflow {
 
       for (let target of allHitTargets) {
         if (!target || !target?.actor) continue;
-        let showRoll = saveDisplay === "allShow";
-        if (simulate) showRoll = false;
+        // Every save gets a message, linked to the card; each viewer's "Summarize chat cards" decides whether it
+        // shows in the log or folds into the card.
+        const showRoll = !simulate;
         if (!this.item.flags?.[MODULE_ID]?.noProvokeReaction && !this.workflowOptions.noProvokeReaction) {
           await doReactions(target, this.tokenUuid, this.attackRoll ?? new Roll(""), "reactionsave", { workflow: this, activity: this.activity, item: this.item })
         }
@@ -6746,6 +6749,12 @@ export class Workflow {
     return true;
   }
 
+  /** The activity's save display, or the world's Auto check Saves. */
+  get #saveDisplay(): string {
+    const display = this.activity.saveDisplay ?? "default";
+    return display === "default" ? configSettings.autoCheckSaves : String(display);
+  }
+
   processSaveRoll(message: ChatMessage.Implementation, _html: HTMLElement | ChatMessage.Database.CreateOptions, _dataOrUserId: ChatMessage.MessageData | string) {
     if (!this.saveRequests) return {};
     const ddbglFlags = message.flags && message.flags["ddb-game-log"];
@@ -6770,10 +6779,6 @@ export class Workflow {
         unTimedExecuteAsGM("updateUndoChatCardUuids", this.undoData);
       }
       handler(message.rolls[0])
-    }
-    const saveDisplay = (this.activity.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : (this.activity.saveDisplay as string)
-    if (game.user?.id !== message.author?.id && !["allShow"].includes(saveDisplay)) {
-      setTimeout(() => ui.chat?.element.querySelector(`[data-message-id="${message.id}"]`)?.remove(), 100);
     }
     return true;
   }

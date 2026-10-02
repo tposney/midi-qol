@@ -196,7 +196,7 @@ export function setupUsageCardMessage() {
       // midi applies the effects itself and offers no button for them, so there is nothing for a tray to do.
       if (["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects)) context.effects = [];
 
-      const sections = await this.#renderSections();
+      const sections = await this.#renderSections(this.#applySaveSummaries(context));
       context.midi = {
         ...(this.midi ?? {}),
         sections,
@@ -206,6 +206,25 @@ export function setupUsageCardMessage() {
         damageApplicationTypes: this.#damageApplicationTypes()
       };
       return context;
+    }
+
+    /**
+     * dnd5e 6 folds the card's save and check messages into it as summaries for viewers with "Summarize chat cards"
+     * on. On a midi card that summary is midi's saves section (style "midi") or dnd5e's per-roll summaries, with
+     * midi's section keeping only saves that have none: other modules' saves reach midi without a linked message.
+     * With the setting off neither is drawn and the messages show in the log. Returns the save targets to omit.
+     */
+    #applySaveSummaries(context: Record<string, any>): Set<string> | "all" {
+      if (!this.midi) return new Set();
+      if (safeGetGameSetting("dnd5e", "chatCardSummary") === false) {
+        context.summaries = [];
+        return "all";
+      }
+      if (configSettings.saveSummaryStyle !== "dnd5e") {
+        context.summaries = [];
+        return new Set();
+      }
+      return new Set((context.summaries ?? []).map((summary: any) => summary.token?.uuid).filter(Boolean));
     }
 
     /** dnd5e's context with a stand-in activity when the item is gone; dnd5e's would throw and break the log batch. */
@@ -249,11 +268,16 @@ export function setupUsageCardMessage() {
     }
 
     /** The sections for rendering: roll-backed ones from `message.rolls`, template ones per viewer, `html` as stored. */
-    async #renderSections(): Promise<Record<string, unknown>> {
+    async #renderSections(omitSaves: Set<string> | "all" = new Set()): Promise<Record<string, unknown>> {
       const stored: Record<string, any> = this.midi?.sections ?? {};
       const out: Record<string, unknown> = {};
       for (const name of SECTION_NAMES) {
-        const section = stored[name];
+        let section = stored[name];
+        if (name === "saves" && section?.data?.saves) {
+          const saves = omitSaves === "all" ? []
+            : section.data.saves.filter((save: any) => !omitSaves.has(save?.target?.document?.uuid ?? ""));
+          section = saves.length ? { ...section, data: { ...section.data, saves } } : null;
+        }
         if (!section) { out[name] = null; continue; }
         if (section.template) {
           out[name] = {

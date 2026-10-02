@@ -13,6 +13,11 @@
 
 #### Changes you will notice
 
+**Breaking: saving throw messages and summaries**
+* midi now posts a message for every saving throw it rolls, linked to its card, as dnd5e 6 does; it used to post one only with Auto check Saves "allShow" or for player rolls, and removed other users' save cards from the log. Each user's dnd5e "Summarize chat cards" setting now decides whether saves show on the card (on, dnd5e's default) or as separate messages (off).
+* Save messages are public except with Auto check Saves "whisper" or "gmOnly", which whisper them to the GMs. What players see of an NPC's save still follows Auto check Saves, on the card and on the message: "all" shows the result and total but not the dice, "allNoRoll" only the result, "gmOnly" nothing.
+* New setting "Save summary style": "midi" (default) shows midi's saves section as the card's summary and does not draw dnd5e's per-roll summaries; "dnd5e" draws dnd5e's summaries and midi's section lists only saves without one, such as those rolled through Monk's Token Bar, Flash Rolls or Epic Rolls. With "Summarize chat cards" off neither is shown on the card.
+
 **Attacks and targeting**
 * An attack dialog gives its target(s) the targeting reticle and pans the canvas to them, so it is clear which token each dialog is for.
 * "Roll a separate attack per target" handles one target at a time: attack dialogs come one after another and targets complete in order.
@@ -23,6 +28,7 @@
 * An attack of opportunity is classified for every target of a use, not only the first, so "Roll a separate attack per target" no longer judges the first target by different range rules to the rest.
 * An attack of opportunity no longer warns that its target is out of range; the check is not enforced for one.
 * Closing a reaction dialog stops its countdown, which went on updating the closed window and threw.
+* A creature immune to the configured dead condition is marked with the Dead status at 0 HP instead of nothing.
 * Template targeting, flanking, range, cover and push direction use where a token has moved to, not where it is drawn: acting straight after a move used a point part-way along it, and in a background browser tab every token counted as being at 0,0.
 
 **Templates and regions**
@@ -73,6 +79,8 @@
 * Sample items whose applied effects use the caster's values (OverTime save DCs, Bardic Inspiration, Harm, Branding Smite and others) are marked for DAE's legacy application, so they keep working under DAE's dnd5e 6 default.
 
 **Chat cards and damage tray**
+* Saves requested through Flash Rolls carry the card's message id (`originMessageId`), so Flash links them to the card as dnd5e's own save buttons do.
+* A cancelled Epic Rolls request no longer leaves the workflow waiting: its saves (and any actor that did not roll) count as failed. midi read `cancelled`; Epic Rolls reports `canceled`.
 * "Select Hit Targets" on a midi card selects the hit targets; both menu entries selected the misses under dnd5e 6.
 * An over-time effect's roll request (actionSave=roll) is posted as a dnd5e 6 prompt message, with one button per save ability; the old roll-request card template no longer exists, so the request failed. The roll from its button is still matched to the effect.
 * An initiative roll (a check message in dnd5e 6) is no longer taken as a pending save by the same token.

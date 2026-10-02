@@ -549,6 +549,12 @@ export async function processWoundedStatus(actor: Actor.Implementation) {
         effect = getUnconsciousStatus();
         useDefeated = configSettings.markPlayerDefeated;
       }
+      // A creature immune to the configured condition (a Specter cannot be Unconscious) would be left
+      // at 0 HP with no marker at all, since the immunity strips it; use the real Dead status instead.
+      // @ts-expect-error no dnd5e-types
+      if (effect?.id && actor.system.traits?.ci?.value?.has?.(effect.id)) {
+        effect = CONFIG.statusEffects.find(se => se.id === "dead") ?? effect;
+      }
       if (effect) {
         await setDeadStatus(actor, { effect, useDefeated, makeDead: needsBeaten });
       }

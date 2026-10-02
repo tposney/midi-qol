@@ -185,6 +185,13 @@
       </select>
       <div class="notes midi-qol-faint">{{localize "midi-qol.AutoCheckSaves.Hint"}}</div>
     </div>
+    <div class="form-group">
+      <label>{{localize "midi-qol.SaveSummaryStyle.Name"}}</label>
+      <select name="saveSummaryStyle" data-dtype="String">
+        {{midiSelectOptions saveSummaryStyleOptions selected=configSettings.saveSummaryStyle localize=true}}
+      </select>
+      <div class="notes midi-qol-faint">{{localize "midi-qol.SaveSummaryStyle.Hint"}}</div>
+    </div>
 
     <div class="form-group">
       <label>{{localize "midi-qol.DisplaySaveAdvantage.Name"}}</label>

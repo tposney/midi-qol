@@ -255,6 +255,16 @@
       "walledtemplates": "Delegates targeting to the Walled Templates module, which reshapes the template area around walls. Requires the Walled Templates module."
     }
   },
+  "midi-qol.SaveSummaryStyle.Name": "Save summary style",
+  "midi-qol.SaveSummaryStyle.Hint": "With dnd5e's \"Summarize chat cards\" on, a card's saving throws are shown on the card instead of as separate messages. midi: midi's saves section (DC, success/failure, damage) is the summary. dnd5e: dnd5e's per-roll summaries, with midi's section listing only saves rolled through other modules. What players see follows Auto check Saves either way. With \"Summarize chat cards\" off the saves show as separate messages.",
+  "midi-qol.saveSummaryStyleOptions": {
+    "midi": "midi saves section",
+    "dnd5e": "dnd5e summaries",
+    "expandedHints": {
+      "midi": "midi's saves section is the card's summary of its saving throws; dnd5e's per-roll summaries are not drawn.",
+      "dnd5e": "dnd5e's per-roll summaries are drawn; midi's saves section lists only saves without one, such as those rolled through other modules."
+    }
+  },
   "midi-qol.autoCheckSavesOptions": {
     "none": "Off",
     "allNoRoll": "Save - All see result only",

@@ -132,6 +132,7 @@ class ConfigSettings {
   autoCEEffects: string = "none";
   autoCheckHit: string = "none";
   autoCheckSaves: string = "none";
+  saveSummaryStyle: string = "midi";
   autoFastForward: string[] = [];
   autoItemEffects: string = "off";
   autoRemoveSummonedCreature: boolean = false;
@@ -822,6 +823,7 @@ export let fetchParams = () => {
   if (configSettings.damageImmunityMultiplier === undefined) configSettings.damageImmunityMultiplier = 0.0;
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
   if (configSettings.damageVulnerabilityMultiplier === undefined) configSettings.damageVulnerabilityMultiplier = 2;
+  if (configSettings.saveSummaryStyle === undefined) configSettings.saveSummaryStyle = "midi";
   if (configSettings.attackPerTarget === undefined) configSettings.attackPerTarget = false;
   if (configSettings.autoRemoveTemplate === undefined) configSettings.autoRemoveTemplate = true;
   if (configSettings.autoRemoveInstantaneousTemplate === undefined) configSettings.autoRemoveInstantaneousTemplate = false;
@@ -1148,6 +1150,8 @@ export const autoTargetOptions = keysToExtendedOptionsObj("autoTargetOptions", [
   "walledtemplates"
 ]);
 
+
+export const saveSummaryStyleOptions = keysToExtendedOptionsObj("saveSummaryStyleOptions", ["midi", "dnd5e"]);
 
 export const autoCheckSavesOptions = keysToExtendedOptionsObj("autoCheckSavesOptions", [
   "none",
