@@ -13,7 +13,6 @@ import {
   getAutoRollAttack,
   getRemoveDamageButtons,
   getRemoveAttackButtons,
-  getTokenPlayerName,
   checkNearby,
   hasCondition,
   expireMyEffects,
@@ -910,7 +909,6 @@ export class Workflow {
     img: string;
     isHit: boolean;
     targetClass: string;
-    playerName: string;
     showAC: boolean;
     target: Token.Implementation;
     uuid: string;
@@ -918,7 +916,6 @@ export class Workflow {
 
   saveDisplayData: {
     gmName: string;
-    playerName: string;
     img: string;
     targetClass: string;
     target: Token.Implementation;
@@ -3233,7 +3230,6 @@ export class Workflow {
           acClass: "",
           img: img ?? "",
           gmName: getTokenName(targetToken),
-          playerName: getTokenPlayerName(targetToken) ?? "",
           uuid: targetToken.document.uuid,
           showAC: false,
           isHit: true
@@ -4789,7 +4785,6 @@ export class Workflow {
         acClass: (target.actor as Actor)?.hasPlayerOwner ? "" : "midi-qol-npc-ac",
         img,
         gmName: getTokenName(target),
-        playerName: getTokenPlayerName(target) ?? "",
         uuid: tokenUuid,
         showAC: !!this.activity.attack,
         acDisplay: `${baseAc}`,
@@ -4922,7 +4917,6 @@ export class Workflow {
       let isPlayerOwned = !!target.actor?.hasPlayerOwner;
       this.saveDisplayData.push({
         gmName: getTokenName(target),
-        playerName: getTokenPlayerName(target) ?? "",
         img,
         targetClass: isPlayerOwned ? "midi-qol-player-target" : "midi-qol-npc-target",
         target,
@@ -5257,7 +5251,6 @@ export class Workflow {
 
     this.saveDisplayData?.push({
       gmName: getTokenName(target),
-      playerName: getTokenPlayerName(target) ?? "",
       img,
       targetClass: isPlayerOwned ? "midi-qol-player-target" : "midi-qol-npc-target",
       target,
@@ -7582,7 +7575,6 @@ export class Workflow {
         showAC: true,
         img,
         gmName: getTokenName(targetToken),
-        playerName: getTokenPlayerName(targetToken.document) ?? "",
         hitResultNumeric,
         attackTotal,
         isHit: ["hit", "critical", "isHitEC"].includes(isHitResult)
@@ -7971,7 +7963,6 @@ export class ActiveDefenceWorkflow extends Workflow {
             img: img as string ?? "",
             isHit,
             gmName: getTokenName(targetTokenDocument),
-            playerName: getTokenPlayerName(targetTokenDocument) ?? "",
             hitResultNumeric: String(adRoll.total),
             attackTotal: adRoll.total
           };
@@ -8466,7 +8457,11 @@ export class TrapWorkflow extends Workflow {
         let ids: string[] = templates.map(td => td._id as string)
         //TODO test this again
         // v14: templates are backed by Regions — delete as Region documents
-        setTimeout(() => canvas.scene?.deleteEmbeddedDocuments("Region", ids), this.templateLocation.removeDelay * 1000);
+        // Template cleanup may already have removed them; delete only what is left.
+        setTimeout(() => {
+          const left = ids.filter(id => canvas.scene?.regions.has(id));
+          if (left.length) canvas.scene?.deleteEmbeddedDocuments("Region", left).catch(() => { });
+        }, this.templateLocation.removeDelay * 1000);
       }
     }
     return this.WorkflowState_TemplatePlaced

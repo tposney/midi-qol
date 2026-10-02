@@ -4350,23 +4350,39 @@ export function getTokenPlayerName(token: TokenOrDocument, checkGM: boolean = fa
 }
 export function getTokenPlayerNameForUser(user: User.Implementation, token: TokenOrDocument, checkGM: boolean = false) {
   if (!token) return game.user?.name;
-  let name = getTokenName(token);
-  if (checkGM && user?.isGM) return name;
+  if (checkGM && user?.isGM) return getTokenName(token);
+  return hiddenTokenName(token) ?? getTokenName(token);
+}
+
+/**
+ * The name the current user is shown for a token (or an actor's token) on a card: as stored for the GM and the
+ * token's owners, otherwise as the name-hiding module (Anonymous, Hide NPC Names) or "Hide NPC names" has it.
+ */
+export function displayTokenName(uuid: string | undefined, name: string): string {
+  if (game.user?.isGM || !uuid) return name;
+  const document = fromUuidSync(uuid);
+  const token = document instanceof TokenDocument ? document
+    : document instanceof Actor ? (document.token ?? document.getActiveTokens(false, true)[0]) : null;
+  if (!token || token.actor?.isOwner) return name;
+  return hiddenTokenName(token) ?? name;
+}
+
+/** The name players are shown for a token, or undefined if it is not hidden. */
+function hiddenTokenName(token: TokenOrDocument): string | undefined {
   if (game.modules.get("anonymous")?.active) {
     // @ts-expect-error
     const api: any = game.modules.get("anonymous")?.api;
-    if (api?.playersSeeName(token.actor)) return name;
-    else return api?.getName(token.actor) as string;
-  } else if (game.modules.get("hide-npc-names")?.active) {
-    return getPlayerNPCNameHideNPCNAmes(token);
+    return api?.playersSeeName(token.actor) ? undefined : api?.getName(token.actor) as string;
   }
-  return name;
+  if (game.modules.get("hide-npc-names")?.active) return getPlayerNPCNameHideNPCNAmes(token);
+  if (configSettings.hideNPCNames && !token.actor?.hasPlayerOwner) return configSettings.hideNPCNames;
+  return undefined;
 }
 
-function getPlayerNPCNameHideNPCNAmes(token: TokenOrDocument) {
+function getPlayerNPCNameHideNPCNAmes(token: TokenOrDocument): string | undefined {
   const actorFlags: any = foundry.utils.getProperty(token.actor ?? {}, "flags.hide-npc-names");
   if (actorFlags?.nameHiddenOverride === true) return actorFlags.replacementNameOverride as string;
-  if (actorFlags?.nameHiddenOverride === false) return getTokenName(token);
+  if (actorFlags?.nameHiddenOverride === false) return undefined;
   /*
     hideHostile: "hideHostileNames",
     hideNeutral: "hideNeutralNames",
@@ -4401,7 +4417,7 @@ function getPlayerNPCNameHideNPCNAmes(token: TokenOrDocument) {
         break;
     }
   }
-  return getTokenName(token)
+  return undefined;
 }
 
 export function getSpeaker(actor: Actor.Implementation) {

@@ -1,6 +1,6 @@
 import { GameSystemConfig, MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n, log } from "../../midi-qol.js";
 import { configSettings, safeGetGameSetting, saveToChatCard } from "../settings.js";
-import { getToken } from "../utils.js";
+import { displayTokenName, getToken } from "../utils.js";
 import { setDamageRollMinTerms } from "../activities/activityHelpers.js";
 
 // Damage is auto-applied by midi when autoApplyDamage is one of the "yes*" modes.
@@ -65,6 +65,60 @@ function onTargetShow(event) {
 }
 
 export let ChatMessageMidi: ReturnType<typeof defineChatMessageMidiClass>;
+
+/** As dnd5e hides target AC from players short of "all", except that a player sees the AC of a token they own. */
+function removeUnownedAC(html: HTMLElement) {
+  html.querySelectorAll<HTMLElement>(".midi-qol-hits-display li[data-uuid]").forEach(row => {
+    const target = fromUuidSync(row.dataset.uuid ?? "");
+    const actor = target instanceof TokenDocument ? target.actor : target instanceof Actor ? target : null;
+    if (!actor?.isOwner) row.querySelector(".midi-qol-ac")?.remove();
+  });
+}
+
+/** Names on a card as the viewing player is shown them: the speaker (header and card text), midi's hit and save rows. */
+function applyPlayerNames(html: HTMLElement) {
+  applySpeakerName(html);
+  html.querySelectorAll<HTMLElement>(".midi-qol-hits-display li[data-uuid], .midi-qol-save-name[data-uuid]").forEach(el => {
+    const name = el.querySelector(".midi-qol-target-name");
+    if (name) name.textContent = displayTokenName(el.dataset.uuid, name.textContent?.trim() ?? "");
+  });
+}
+
+/**
+ * The speaker's name in the header and the card text, as the viewing player is shown it. dnd5e draws its avatar header
+ * after an await, so this runs again once dnd5e's enrichment is done; it is a no-op on a name already shown.
+ */
+function applySpeakerName(html: HTMLElement) {
+  if (game.user?.isGM) return;
+  // The header is the plain sender (with data-token-uuid) or dnd5e's avatar and name stack.
+  const sender = html.querySelector<HTMLElement>(".message-sender");
+  const senderName = sender?.querySelector(".name-stacked .title") ?? sender;
+  const speakerUuid = sender?.dataset.tokenUuid ?? sender?.querySelector<HTMLElement>(".avatar[data-uuid]")?.dataset.uuid;
+  const speakerName = senderName?.textContent?.trim();
+  if (!senderName || !speakerName) return;
+  const shown = displayTokenName(speakerUuid, speakerName);
+  if (shown === speakerName) return;
+  senderName.textContent = shown;
+  sender?.querySelector("img[alt]")?.setAttribute("alt", shown);
+  replaceName(html.querySelector(".message-content"), speakerName, shown);
+}
+
+/** Once dnd5e's (possibly async) enrichment of `html` is done, set the speaker's name again. */
+function applySpeakerNameAfter(enriched: unknown, html: HTMLElement): Promise<void> {
+  return Promise.resolve(enriched).then(() => applySpeakerName(html), err => {
+    error(`${MODULE_ID} | dnd5e chat card enrichment failed`, err);
+  });
+}
+
+/** Replace whole-word occurrences of `name` in the text under `root`. */
+function replaceName(root: Element | null, name: string, replacement: string) {
+  if (!root) return;
+  const pattern = new RegExp(`(?<![\\p{L}\\p{N}])${RegExp.escape(name)}(?![\\p{L}\\p{N}])`, "gu");
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node.textContent?.includes(name)) node.textContent = node.textContent.replace(pattern, replacement);
+  }
+}
 
 export function setupChatMessageMidi() {
   ChatMessageMidi = defineChatMessageMidiClass(globalThis.dnd5e.documents.ChatMessage5e);
@@ -581,8 +635,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         el.addEventListener("contextmenu", onTargetShow);
       });
 
+      // Cards rendered before names were set on display carry a second, player copy of each name.
+      removeAll(html, ".midi-qol-playerTokenName");
       if (game.user?.isGM) {
-        removeAll(html, ".midi-qol-playerTokenName");
         if (configSettings.hidePlayerDamageCard && foundry.utils.getProperty(this, "flags.midi-qol.playerDamageCard")) {
           html.style.display = "none";
         }
@@ -593,7 +648,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           stripHighlight(html, ".midi-qol-saves-display .midi-qol-save-class");
         }
       } else {
-        removeAll(html, ".midi-qol-gmTokenName");
+        applyPlayerNames(html);
         if (configSettings.autoCheckHit === "gmOnly") {
           hideAll(html, ".midi-qol-hits-display");
         }
@@ -664,9 +719,14 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }
 
       // Save DC (single, activity-level) follows the caster.
-      if (dcHidden || shouldDisplayChallenge === "none" || autoCheckSaves === "whisper" || this.blind) {
-        removeAll(html, ".midi-qol-saveDC");
-      }
+      const dcRemoved = dcHidden || shouldDisplayChallenge === "none" || autoCheckSaves === "whisper" || this.blind;
+      if (dcRemoved) removeAll(html, ".midi-qol-saveDC");
+
+      // The total's tooltip ("5 = 2 + 3 vs DC 11") carries the dice and the DC.
+      html.querySelectorAll<HTMLElement>(".midi-qol-save-total[data-tooltip]").forEach(el => {
+        const diceHidden = el.classList.contains("midi-qol-npc-save-total") && autoCheckSaves !== "allShow";
+        if (diceHidden || dcRemoved) el.removeAttribute("data-tooltip");
+      });
 
       if (!configSettings.highlightSuccess || !["all", "player"].includes(shouldDisplayChallenge) || ["whisper", "none"].includes(autoCheckSaves)) {
         stripHighlight(html, ".midi-qol-saves-display .midi-qol-save-class");
@@ -691,26 +751,26 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         removeAll(html, ".midi-attack-roll .dice-total .icons");
         removeAll(html, ".midi-qol-hits-display .midi-qol-hit-symbol");
         removeAll(html, ".midi-qol-hit-symbol");
-        removeAll(html, ".midi-qol-npc-ac");
+        removeUnownedAC(html);
       } else if (attackVisibility === "hideAC") {
-        removeAll(html, ".midi-qol-npc-ac");
+        removeUnownedAC(html);
       }
     }
 
-    _enrichChatCard(html: HTMLElement) {
+    _enrichChatCard(html: HTMLElement): Promise<void> {
       if (!this.flags?.[MODULE_ID]?.messageType) {
         this.applyChatVisibility(html);
         // @ts-expect-error no dnd5e-types
-        super._enrichChatCard(html);
+        const enriched = super._enrichChatCard(html);
         this._maybeStripEffectsTray(html);
         this._addMarkerClasses(html);
-        return;
+        return applySpeakerNameAfter(enriched, html);
       }
       if (debugEnabled > 1) log("Enriching chat card", Date.now(), this.id);
       this.maskAttackRolls(html); // This has to run first to stop errors when ChatMessage5e._enrichDamageTooltip runs
 
       // @ts-expect-error no dnd5e-types
-      super._enrichChatCard(html);
+      const enriched = super._enrichChatCard(html);
       this._maybeStripEffectsTray(html);
       this.applyChatVisibility(html);
       // For usage-type messages, Foundry skips _highlightCriticalSuccessFailure.
@@ -721,6 +781,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       this._applyMidiHighlightSettings(html);
       this._addMarkerClasses(html);
       if (debugEnabled > 1) log("Finished enriching chat card", Date.now(), this.id);
+      return applySpeakerNameAfter(enriched, html);
     }
 
     /** Add CSS marker classes to avoid expensive :has() selectors during layout */

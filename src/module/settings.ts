@@ -253,6 +253,7 @@ class ConfigSettings {
   useCustomSounds: boolean = true;
   usePlayerPortrait: boolean = false;
   useTokenNames: boolean = false;
+  hideNPCNames: string = "";
   undoChatColor: string = "Delete";
   undoWorkflow: boolean = false;
   useDamageDetail: boolean = true;

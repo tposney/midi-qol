@@ -15,6 +15,12 @@
 * Removed checks for times-up, which is not a module in v14.
 * An attack of opportunity no longer warns that its target is out of range; the check is not enforced for one.
 * Closing a reaction dialog stops its countdown, which went on updating the closed window and threw.
+* A creature immune to the configured dead condition is marked with the Dead status at 0 HP instead of nothing.
+* Target AC on the hits display follows dnd5e's Attack Result Visibility: short of "all", players see only the AC of tokens they own (character targets were always shown).
+* A save total's tooltip no longer shows players the dice (or a hidden DC) unless Auto check Saves is "All see Result + Rolls".
+* Target names hidden by Anonymous or Hide NPC Names are set on midi's hit and save rows when the card is shown, so they follow the module's current settings; a player who owns the target sees its real name. Cards no longer store a player name.
+* "Hide NPC names" (Misc) is back: the name players see for creatures with no player owner, as speaker (header and card text) and target, when neither Anonymous nor Hide NPC Names is active. Blank, the default, shows real names.
+* A trap template's delayed removal no longer throws when template cleanup has already deleted it.
 * Removed the workaround for CAT 0.0.7's OverTime save crash; fixed in CAT 0.0.8.
 * `MidiQOL.registerWorkflowOptionsSchema(namespace, schema)`: a module declares the data it keeps in `workflowOptions.<namespace>` as a DataModel schema; midi then sends and stores it losslessly (Sets and other field types come back intact) and does not pass undeclared per-use keys to other clients, chat cards or triggered activities. `MidiQOL.encodeWorkflowOptions` / `decodeWorkflowOptions` expose the conversion.
 * A remote `completeActivityUse` returns its token sets (targets, hitTargets, failedSaves, ...) as Sets of tokens again, as a local use does; `MidiQOL.restoreWorkflowTokenSets` does the same for other workflow macro data that crossed a socket.
