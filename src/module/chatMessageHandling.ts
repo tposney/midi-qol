@@ -131,6 +131,7 @@ export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLEl
   }
   // Hide rolls which are blind and not the GM if force hide is true
   if ((forceHideRoll && message.blind && !game.user?.isGM)
+    // gmHide marks the extra attack/damage messages the old GM attack/damage cards option posted
     || (foundry.utils.getProperty(message, "flags.midi-qol.gmHide") && game.user?.isGM)) {
     html.style.display = "none";
     return;

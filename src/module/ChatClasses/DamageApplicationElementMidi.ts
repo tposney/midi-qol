@@ -1,6 +1,7 @@
 import { configSettings, isDnd5e53, ALL_DAMAGE_KEY } from "../settings.js";
 import { GameSystemConfig, MODULE_ID, MQDamageRollTypes, debugEnabled, i18nFormat, log, warn } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
+import { displayTokenName } from "../utils.js";
 import { CombinedTargetDescriptor, DamageApplicationOptions, Dnd5eSystem } from "../../globals.js";
 
 // SVG Icons for midi-qol custom change sources (using dnd5e SVGs for consistent styling)
@@ -77,7 +78,7 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
    * exist.
    */
   buildTargetListEntry(targetList: HTMLElement, { uuid, name }: { uuid: string, name?: string }): HTMLLIElement | void {
-    const li = super.buildTargetListEntry(targetList, { uuid, name }) as HTMLLIElement | undefined;
+    const li = super.buildTargetListEntry(targetList, { uuid, name: name && displayTokenName(uuid, name) }) as HTMLLIElement | undefined;
     if (!li) return;
 
     // dnd5e shows no damage detail for tokens the user does not own, and neither does midi.

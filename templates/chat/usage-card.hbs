@@ -20,9 +20,11 @@
 
 {{> "dnd5e.card-face" }}
 
+{{#unless midi.hasButtons}}
 {{#each summaries}}
 <div class="card-summary" data-message-id="{{ id }}" data-target-uuid="{{ token.uuid }}">{{{ html }}}</div>
 {{/each}}
+{{/unless}}
 
 {{#if midi.hasButtons}}
 <div class="card-buttons midi-buttons">
@@ -111,6 +113,10 @@
     {{> "midi.section" name="bonus-damage-roll" section=midi.sections.bonusDamage }}
     {{> "midi.section" name="utility-roll"      section=midi.sections.utility }}
     {{> "midi.section" name="saves-display"     section=midi.sections.saves }}
+    {{!-- dnd5e's save/check summaries sit under midi's saves heading, not above the rolls as on dnd5e's card. --}}
+    {{#each summaries}}
+    <div class="card-summary" data-message-id="{{ id }}" data-target-uuid="{{ token.uuid }}">{{{ html }}}</div>
+    {{/each}}
   </div>
 </div>
 {{/if}}

@@ -29,6 +29,7 @@
 * An attack of opportunity no longer warns that its target is out of range; the check is not enforced for one.
 * Closing a reaction dialog stops its countdown, which went on updating the closed window and threw.
 * A creature immune to the configured dead condition is marked with the Dead status at 0 HP instead of nothing.
+* A trap template's delayed removal no longer throws when template cleanup has already deleted it.
 * Template targeting, flanking, range, cover and push direction use where a token has moved to, not where it is drawn: acting straight after a move used a point part-way along it, and in a background browser tab every token counted as being at 0,0.
 
 **Templates and regions**
@@ -79,7 +80,15 @@
 * Sample items whose applied effects use the caster's values (OverTime save DCs, Bardic Inspiration, Harm, Branding Smite and others) are marked for DAE's legacy application, so they keep working under DAE's dnd5e 6 default.
 
 **Chat cards and damage tray**
+* "Show players when the GM rolls privately" (was "Always display attack/damage cards for hidden merge cards") shows other players the GM's private, self or blind midi card as a "rolled some dice" stand-in. midi no longer posts hidden extra dnd5e attack and damage messages for it, which carried a second damage tray and linked themselves to the card.
+* midi's attack and damage rolls are linked to the card as dnd5e links the rolls it posts (`roll.options.originatingMessage`, `Roll#getOriginatingMessage()`, `roll.options.rollType`), and flags other modules put on those rolls' message configuration (e.g. automated-conditions-5e's tooltip visibility) are kept on the card.
+* `dnd5e.preApplyDamage` / `dnd5e.applyDamage` fired by midi carry the card as `origin` and `originatingMessage`, as dnd5e's do, and `dnd5e.applyDamage` reaches every handler (`callAll`).
 * midi's save, check and tool rolls record the activity and item they were rolled for (`system.activity`, `system.item`), as dnd5e's own save buttons do, and always carry the DC, so dnd5e can tell success from failure (card outcomes, Select Success/Failure, summaries). Who sees the result is still decided when the card is shown; under Auto check Saves "whisper" players see no success or failure, their own saves included.
+* Target names hidden by Anonymous or Hide NPC Names are hidden from players everywhere on midi's card - hit and save rows, dnd5e's save summaries and the damage tray - and follow the module's current settings when the card is shown. A player who owns the target sees its real name. Cards no longer store a player name.
+* "Hide NPC names" (Misc) is back: the name players see for creatures with no player owner, as speaker (header and card text) and target, when neither Anonymous nor Hide NPC Names is active. Blank, the default, shows real names.
+* Target AC on the hits display follows dnd5e's Attack Result Visibility: short of "all", players see only the AC of tokens they own (character targets were always shown).
+* A save total's tooltip no longer shows players the dice (or a hidden DC) unless Auto check Saves is "All see Result + Rolls".
+* Save summary style "dnd5e": the summaries sit under midi's save heading, which keeps the DC and damage-on-save text, and keep their success/failure icon when colour coding is off.
 * Saves requested through Flash Rolls carry the card's message id (`originMessageId`), so Flash links them to the card as dnd5e's own save buttons do.
 * A cancelled Epic Rolls request no longer leaves the workflow waiting: its saves (and any actor that did not roll) count as failed. midi read `cancelled`; Epic Rolls reports `canceled`.
 * "Select Hit Targets" on a midi card selects the hit targets; both menu entries selected the misses under dnd5e 6.

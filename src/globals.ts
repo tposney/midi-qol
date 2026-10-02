@@ -52,6 +52,7 @@ declare module "fvtt-types/configuration" {
       "dnd5e.calculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;
       "dnd5e.postAbilityCheckRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postAttackRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
+      "dnd5e.postRollConfiguration": (rolls: Roll[], config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.postBuildSkillRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
       "dnd5e.postBuildAbilityCheckRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
       "dnd5e.postBuildSavingThrowRollConfig": (process: RollProcessConfig, config: BasicRollConfig, index: number) => void;
@@ -1044,6 +1045,8 @@ export type DamageApplicationOptions = {
     saved?: boolean;
     saveMultiplier?: number
     sourceActorUuid?: string;
+    /** The card the damage came from, for dnd5e's damage hooks (origin / originatingMessage) */
+    itemCardUuid?: string;
     uncannyDodge?: boolean;
     /** Image of whatever granted uncanny dodge; resolved while the reaction's effect still exists. */
     uncannyDodgeIcon?: string;
@@ -1071,6 +1074,8 @@ export type CalcDamageOptions = DamageApplicationOptions & {
     saveMultiplier: number;
     semiSuperSaver: boolean;
     sourceActorUuid?: string;
+    /** The card the damage came from, for dnd5e's damage hooks (origin / originatingMessage) */
+    itemCardUuid?: string;
     superSaver: boolean;
     targetUuid?: string;
     uncannyDodge: boolean;

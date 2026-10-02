@@ -1045,15 +1045,9 @@ export let MidiActivityMixin = Base => {
               //@ts-expect-error no dnd5e-types
               config.workflow.isCritical = rolls[0].options.isCritical;
           });
-          const rollMode = safeGetGameSetting("core", "messageMode") as string;
           message.create ??= false;
-          const showChatDamageCard = game.user?.isGM && configSettings.gmAttackDamageCards && ["self", "blind", "gm"].includes(rollMode);
-          if (showChatDamageCard) {
-            // Show a chat card for damage rolls if the players are not going to see the midi card.
-            message.create = true;
-            foundry.utils.setProperty(message, "data.flags.midi-qol.gmHide", true); // since the gm will see the midi card hide the attack card for the author
-          }
-          result = await super.rollDamage(config, dialog, message);
+          result = config.workflow ? await config.workflow.keepRollMessageFlags(this, () => super.rollDamage(config, dialog, message))
+            : await super.rollDamage(config, dialog, message);
           if (!result) { // user backed out of roll 
             config.workflow.currentAction = config.workflow.WorkflowState_WaitForDamageRoll;
             // config.workflow.suspend();

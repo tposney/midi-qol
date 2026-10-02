@@ -551,7 +551,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           return true;
         })
         // Capture target descriptors last, after all other modules have had a chance to modify AC (e.g. cover)
-        //@ts-expect-error dnd5e hook not in fvtt-types
         hookIds["dnd5e.postRollConfiguration"] = Hooks.once("dnd5e.postRollConfiguration", (rolls, config, dialog, message) => {
           const targetDescriptors = foundry.utils.getProperty(message, "data.system.targets") as DND5ETargetDescriptor[] | undefined;
           if (targetDescriptors && workflow) {
@@ -567,21 +566,14 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
 
         message ??= {};
         message.create ??= config.midiOptions.chatMessage;
-        const rollMode = safeGetGameSetting("core", "messageMode") as string;
-        const showChatAttackCard = game.user?.isGM && configSettings.gmAttackDamageCards && ["self", "blind", "gm"].includes(rollMode);
-        if (showChatAttackCard) {
-          // Show a chat card for attack rolls if the players are not going to see the midi card.
-          message.create = true;
-          foundry.utils.setProperty(message, "data.flags.midi-qol.gmHide", true); // since the gm will see the midi card hide the attack card for the author
-          message.rollMode = rollMode as keyof CONFIG.Dice.RollModes;
-        }
         config.attackMode ??= this.attackMode ?? "oneHanded";
         // @ts-expect-error isVersatile is a dnd5e getter
         if (config.event && areMidiKeysPressed(config.event, "Versatile") && this.item.isVersatile) {
           config.attackMode = "twoHanded";
         }
         // @ts-expect-error weirdness with how I did the types
-        rolls = await super.rollAttack(config, dialog, message);
+        const rollAttack = (): Promise<Roll[] | null> => super.rollAttack(config, dialog, message);
+        rolls = workflow ? await workflow.keepRollMessageFlags(this, rollAttack) : await rollAttack();
 
         if (!rolls || rolls.length === 0) {
           // if (workflow) workflow.aborted = true;
@@ -635,7 +627,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           if (configSettings.allowUseMacro) {
             workflow.ammunitionOnUseMacros = workflow.ammunition?.flags?.[MODULE_ID]?.onUseMacroParts ?? new OnUseMacros();
           }
-          if (workflow.workflowOptions?.attackRollDSN !== false && !showChatAttackCard) await displayDSNForRoll(rolls[0], "attackRollD20");
+          if (workflow.workflowOptions?.attackRollDSN !== false) await displayDSNForRoll(rolls[0], "attackRollD20");
           await workflow?.setAttackRoll(rolls[0]);
           rolls[0] = await workflow.processAttackRollBonusFlags();
           // Always add attribution to roll for indicator/tooltip display

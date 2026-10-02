@@ -13,7 +13,6 @@ import {
   getAutoRollAttack,
   getRemoveDamageButtons,
   getRemoveAttackButtons,
-  getTokenPlayerName,
   checkNearby,
   hasCondition,
   expireMyEffects,
@@ -434,10 +433,10 @@ export class Workflow {
   ): Promise<void> {
     const chatCard = this.chatCard;
     if (!chatCard) return;
-    await this.performThrottledUpdate(chatCard, {
+    await this.performThrottledUpdate(chatCard, this.#withRollMessageFlags({
       [`system.midi.sections.${name}`]: section,
       ...extraUpdates
-    } as ChatMessage.UpdateData);
+    }) as ChatMessage.UpdateData);
   }
 
   itemCardUuid: string | undefined;
@@ -907,7 +906,6 @@ export class Workflow {
     img: string;
     isHit: boolean;
     targetClass: string;
-    playerName: string;
     showAC: boolean;
     target: Token.Implementation;
     uuid: string;
@@ -915,7 +913,6 @@ export class Workflow {
 
   saveDisplayData: {
     gmName: string;
-    playerName: string;
     img: string;
     targetClass: string;
     target: Token.Implementation;
@@ -3163,7 +3160,6 @@ export class Workflow {
           acClass: "",
           img: img ?? "",
           gmName: getTokenName(targetToken),
-          playerName: getTokenPlayerName(targetToken) ?? "",
           uuid: targetToken.document.uuid,
           showAC: false,
           isHit: true
@@ -4614,7 +4610,7 @@ export class Workflow {
   ): ChatMessage.UpdateData {
     const updates: Record<string, unknown> = { ...extras };
     for (const [name, section] of Object.entries(sections)) updates[`system.midi.sections.${name}`] = section;
-    return updates as ChatMessage.UpdateData;
+    return this.#withRollMessageFlags(updates) as ChatMessage.UpdateData;
   }
 
   async displayDamageRolls() {
@@ -4712,7 +4708,6 @@ export class Workflow {
         acClass: (target.actor as Actor)?.hasPlayerOwner ? "" : "midi-qol-npc-ac",
         img,
         gmName: getTokenName(target),
-        playerName: getTokenPlayerName(target) ?? "",
         uuid: tokenUuid,
         showAC: !!this.activity.attack,
         acDisplay: `${baseAc}`,
@@ -4857,7 +4852,6 @@ export class Workflow {
       let isPlayerOwned = !!target.actor?.hasPlayerOwner;
       this.saveDisplayData.push({
         gmName: getTokenName(target),
-        playerName: getTokenPlayerName(target) ?? "",
         img,
         targetClass: isPlayerOwned ? "midi-qol-player-target" : "midi-qol-npc-target",
         target,
@@ -5238,7 +5232,6 @@ export class Workflow {
 
     this.saveDisplayData?.push({
       gmName: getTokenName(target),
-      playerName: getTokenPlayerName(target) ?? "",
       img,
       targetClass: isPlayerOwned ? "midi-qol-player-target" : "midi-qol-npc-target",
       target,
@@ -7561,7 +7554,6 @@ export class Workflow {
         showAC: true,
         img,
         gmName: getTokenName(targetToken),
-        playerName: getTokenPlayerName(targetToken.document) ?? "",
         hitResultNumeric,
         attackTotal,
         isHit: ["hit", "critical", "isHitEC"].includes(isHitResult)
@@ -7574,9 +7566,47 @@ export class Workflow {
     this.persistAttackTracker();
   }
 
+  /** Link a card roll to the card as dnd5e links the rolls it posts (Roll#getOriginatingMessage, options.rollType). */
+  #linkRollToCard(roll: Roll, rollType: "attack" | "damage") {
+    if (this.itemCardId) foundry.utils.setProperty(roll, "options.originatingMessage", this.itemCardId);
+    const type = rollType === "damage" && this.activity?.type === "heal" ? "healing" : rollType;
+    if (!foundry.utils.getProperty(roll, "options.rollType")) foundry.utils.setProperty(roll, "options.rollType", type);
+  }
+
+  /**
+   * Flags other modules put on a roll's message config. midi rolls attacks and damage without dnd5e's own messages,
+   * so they are kept on the card instead, merged into its next roll update; midi's, dnd5e's and core's are left out.
+   */
+  /** Run one of dnd5e's rolls for `subject`, keeping those flags; dnd5e rolls on a copy of the message config. */
+  async keepRollMessageFlags<T>(subject: unknown, roll: () => Promise<T>): Promise<T> {
+    const id = Hooks.on("dnd5e.postRollConfiguration", (_rolls, config, _dialog, message) => {
+      if ((config as { subject?: unknown }).subject === subject) this.addRollMessageFlags(message as { data?: Record<string, unknown> });
+    });
+    try { return await roll(); } finally { Hooks.off("dnd5e.postRollConfiguration", id); }
+  }
+
+  addRollMessageFlags(message: { data?: Record<string, unknown> } | undefined) {
+    const data: { flags?: Record<string, unknown> } = foundry.utils.expandObject(message?.data ?? {});
+    const flags = data.flags;
+    if (!flags) return;
+    for (const [scope, value] of Object.entries(flags)) {
+      if ([MODULE_ID, "dnd5e", "core"].includes(scope) || !value || typeof value !== "object") continue;
+      this.#rollMessageFlags[scope] = foundry.utils.mergeObject(this.#rollMessageFlags[scope] ?? {}, value, { inplace: false });
+    }
+  }
+  #rollMessageFlags: Record<string, object> = {};
+
+  /** A card update carrying the kept roll message flags; midi's own flags in the update win. */
+  #withRollMessageFlags<T extends Record<string, unknown>>(updates: T): T {
+    if (!Object.keys(this.#rollMessageFlags).length) return updates;
+    const flags = foundry.utils.mergeObject(foundry.utils.deepClone(this.#rollMessageFlags), (updates.flags as object) ?? {}, { inplace: false });
+    return { ...updates, flags };
+  }
+
   async setAttackRoll(roll: Roll) {
     this.attackRoll = roll;
     foundry.utils.setProperty(roll, "options.midi-qol.rollType", "attack");
+    this.#linkRollToCard(roll, "attack");
     this.attackTotal = roll.total ?? 0;
     // foundry.utils.setProperty(roll, "options.flavor", `${this.otherDamageItem.name} - ${i18nSystem("Bonus")}`);
     this.attackRollHTML = await midiRenderAttackRoll(roll);
@@ -7635,6 +7665,7 @@ export class Workflow {
     this.damageRollHTML = "";
     for (let roll of this.damageRolls) {
       foundry.utils.setProperty(roll, `options.${MODULE_ID}.rollType`, "defaultDamage");
+      this.#linkRollToCard(roll, "damage");
       foundry.utils.setProperty(roll, "options.flavor", "");
       this.damageRollHTML += await midiRenderDamageRoll(roll);
     }
@@ -7669,6 +7700,7 @@ export class Workflow {
     this.damageRollHTML = "";
     for (let roll of this.damageRolls) {
       foundry.utils.setProperty(roll, `options.${MODULE_ID}.rollType`, "defaultDamage");
+      this.#linkRollToCard(roll, "damage");
       foundry.utils.setProperty(roll, "options.flavor", "");
 
       this.damageRollHTML += await midiRenderDamageRoll(roll);
@@ -7701,6 +7733,7 @@ export class Workflow {
     this.bonusDamageRollHTML = "";
     for (let roll of this.bonusDamageRolls) {
       foundry.utils.setProperty(roll, `options.${MODULE_ID}.rollType`, "bonusDamage");
+      this.#linkRollToCard(roll, "damage");
       this.bonusDamageRollHTML += await midiRenderBonusDamageRoll(roll);
     }
     this.rawBonusDamageDetail = createDamageDetail({ roll: this.bonusDamageRolls, activity: this.activity, defaultType: this.defaultDamageType });
@@ -7734,6 +7767,7 @@ export class Workflow {
     this.otherDamageRollHTML = "";
     for (let roll of this.otherDamageRolls) {
       foundry.utils.setProperty(roll, `options.${MODULE_ID}.rollType`, "otherDamage");
+      this.#linkRollToCard(roll, "damage");
       this.otherDamageRollHTML += await midiRenderOtherDamageRoll(roll);
     }
     this.rawOtherDamageDetail = createDamageDetail({ roll: this.otherDamageRolls, activity: this.activity, defaultType: this.defaultDamageType });
@@ -7948,7 +7982,6 @@ export class ActiveDefenceWorkflow extends Workflow {
             img: img as string ?? "",
             isHit,
             gmName: getTokenName(targetTokenDocument),
-            playerName: getTokenPlayerName(targetTokenDocument) ?? "",
             hitResultNumeric: String(adRoll.total),
             attackTotal: adRoll.total
           };
@@ -8420,7 +8453,11 @@ export class TrapWorkflow extends Workflow {
       this.selectAllTemplateTargets();
       if (this.templateLocation?.removeDelay) {
         const ids: string[] = templates.map(td => td.id as string);
-        setTimeout(() => canvas.scene?.deleteEmbeddedDocuments("Region", ids), this.templateLocation.removeDelay * 1000);
+        // Template cleanup may already have removed them; delete only what is left.
+        setTimeout(() => {
+          const left = ids.filter(id => canvas.scene?.regions.has(id));
+          if (left.length) canvas.scene?.deleteEmbeddedDocuments("Region", left).catch(() => { });
+        }, this.templateLocation.removeDelay * 1000);
       }
     }
     return this.WorkflowState_TemplatePlaced

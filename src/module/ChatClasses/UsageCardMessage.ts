@@ -76,7 +76,7 @@ export type SectionName = typeof SECTION_NAMES[number];
 
 /** The per-target fields `saves.html` reads. Anything else on a save entry is not worth storing. */
 export const SAVE_TEMPLATE_FIELDS = [
-  "attributionTooltip", "coverLabel", "gmName", "hasAttribution", "img", "playerName",
+  "attributionTooltip", "coverLabel", "gmName", "hasAttribution", "img",
   "rollTotal", "saveClass", "saveSymbol", "saveTooltip", "saveToolTipClass", "saveTotalClass", "targetClass"
 ] as const;
 
@@ -274,9 +274,9 @@ export function setupUsageCardMessage() {
       for (const name of SECTION_NAMES) {
         let section = stored[name];
         if (name === "saves" && section?.data?.saves) {
-          const saves = omitSaves === "all" ? []
-            : section.data.saves.filter((save: any) => !omitSaves.has(save?.target?.document?.uuid ?? ""));
-          section = saves.length ? { ...section, data: { ...section.data, saves } } : null;
+          // The heading (DC, damage on save) stays when dnd5e's summaries replace the rows; it has no DC of its own.
+          section = (omitSaves === "all" || !section.data.saves.length) ? null : { ...section, data: { ...section.data,
+            saves: section.data.saves.filter((save: any) => !omitSaves.has(save?.target?.document?.uuid ?? "")) } };
         }
         if (!section) { out[name] = null; continue; }
         if (section.template) {

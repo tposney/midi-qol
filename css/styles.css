@@ -555,10 +555,6 @@
   height: 30px;
 }
 
-.midi-qol-save-name .midi-qol-playerTokenName {
-  text-align: right;
-}
-
 .midi-qol-saves-display {
   padding-top: 0.2rem;
   font-size: 12px;

@@ -2,7 +2,7 @@ import { GameSystemConfig, MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEna
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { Dnd5eSystem } from "../../globals.js";
 import { configSettings, forceHideRoll, safeGetGameSetting, saveToChatCard } from "../settings.js";
-import { getToken, isDnd5eRollMessage } from "../utils.js";
+import { displayTokenName, getToken, isDnd5eRollMessage } from "../utils.js";
 
 // Damage is auto-applied by midi when autoApplyDamage is one of the "yes*" modes.
 const midiAutoAppliesDamage = () => !!configSettings.autoApplyDamage?.toLowerCase().includes("yes");
@@ -152,6 +152,15 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     get isRoll() {
       if (this.flags?.[MODULE_ID]?.messageType) return false // do this so that dsn won't trigger
       return super.isRoll;
+    }
+
+    /**
+     * A midi card the GM rolled privately is shown to other players as a "rolled" stand-in when "GM attack/damage
+     * cards" is on, as core shows a private roll; midi's isRoll is false, so core would hide it entirely.
+     */
+    get visible() {
+      if (this.flags?.[MODULE_ID]?.messageType && configSettings.gmAttackDamageCards && this.author?.isGM && this.hasRolls) return true;
+      return super.visible;
     }
 
     get hasRolls() {
@@ -323,6 +332,11 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       // dnd5e 6's compact roll markup carries the classes on the roll button and keeps an icons span there.
       const totals = html.querySelectorAll(".dice-total, button.dice-roll");
       for (const total of Array.from(totals)) {
+        // Save/check summaries: colour only; whether the outcome shows is dnd5e's challenge visibility and maskSaveForPlayers.
+        if (total.closest(".card-summary")) {
+          if (!configSettings.highlightSuccess) total.classList.remove("success", "failure", "critical", "fumble");
+          continue;
+        }
         if (hideResult || !configSettings.highlightSuccess) {
           total.classList.remove("success", "failure", "critical", "fumble");
           if (total.matches("button.dice-roll")) total.querySelector(".icons")?.replaceChildren();
@@ -342,10 +356,10 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
      * models either, so waiting here would apply midi's masking only after the card is on screen.
      * Nothing dnd5e does after its first await touches what midi masks or highlights.
      */
-    #enrichSystemCard(html: HTMLElement, options: object) {
+    #enrichSystemCard(html: HTMLElement, options: object): Promise<void> | undefined {
       // @ts-expect-error no dnd5e-types
       const enriched = super._enrichChatCard(html, options) as Promise<void> | undefined;
-      enriched?.catch?.(err => {
+      return enriched?.catch?.(err => {
         const message = `${MODULE_ID} | dnd5e chat card enrichment failed`;
         error(message, err);
         TroubleShooter.recordError(err, message);
@@ -481,8 +495,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         el.addEventListener("contextmenu", onTargetShow);
       });
 
+      // Cards rendered before names were set on display carry a second, player copy of each name.
+      removeAll(html, ".midi-qol-playerTokenName");
       if (game.user?.isGM) {
-        removeAll(html, ".midi-qol-playerTokenName");
         // Old separate player damage cards duplicate their GM card. Remove with dnd5e 6.2.
         if (foundry.utils.getProperty(this, "flags.midi-qol.playerDamageCard")) html.style.display = "none";
         html.querySelectorAll<HTMLDivElement>(".midi-qol-hits-display").forEach(el => el.style.display = "");
@@ -492,7 +507,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           stripHighlight(html, ".midi-qol-saves-display .midi-qol-save-class");
         }
       } else {
-        removeAll(html, ".midi-qol-gmTokenName");
+        applyPlayerNames(html);
         if (configSettings.autoCheckHit === "gmOnly") {
           hideAll(html, ".midi-qol-hits-display");
         }
@@ -563,9 +578,14 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }
 
       // Save DC (single, activity-level) follows the caster.
-      if (dcHidden || shouldDisplayChallenge === "none" || autoCheckSaves === "whisper" || this.blind) {
-        removeAll(html, ".midi-qol-saveDC");
-      }
+      const dcRemoved = dcHidden || shouldDisplayChallenge === "none" || autoCheckSaves === "whisper" || this.blind;
+      if (dcRemoved) removeAll(html, ".midi-qol-saveDC");
+
+      // The total's tooltip ("5 = 2 + 3 vs DC 11") carries the dice and the DC.
+      html.querySelectorAll<HTMLElement>(".midi-qol-save-total[data-tooltip]").forEach(el => {
+        const diceHidden = el.classList.contains("midi-qol-npc-save-total") && autoCheckSaves !== "allShow";
+        if (diceHidden || dcRemoved) el.removeAttribute("data-tooltip");
+      });
 
       if (!configSettings.highlightSuccess || !["all", "player"].includes(shouldDisplayChallenge) || ["whisper", "none"].includes(autoCheckSaves)) {
         stripHighlight(html, ".midi-qol-saves-display .midi-qol-save-class");
@@ -590,9 +610,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         removeAll(html, ".midi-attack-roll .dice-total .icons");
         removeAll(html, ".midi-qol-hits-display .midi-qol-hit-symbol");
         removeAll(html, ".midi-qol-hit-symbol");
-        removeAll(html, ".midi-qol-npc-ac");
+        removeUnownedAC(html);
       } else if (attackVisibility === "hideAC") {
-        removeAll(html, ".midi-qol-npc-ac");
+        removeUnownedAC(html);
       }
     }
 
@@ -609,20 +629,26 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
      * about two hundred and twenty pixels, on dnd5e's own cards as much as midi's, and only when
      * midi was enabled.
      */
-    _enrichChatCard(html: HTMLElement, options: object = {}) {
+    _enrichChatCard(html: HTMLElement, options: object = {}): Promise<void> | void {
       if (!this.flags?.[MODULE_ID]?.messageType) {
         this.applyChatVisibility(html);
-        this.#enrichSystemCard(html, options);
+        const enriched = this.#enrichSystemCard(html, options);
         this._applyMidiHighlightSettings(html);
         this._addMarkerClasses(html);
         this._addLegacyCardDataset(html);
         this.maskHiddenRolls(html);
+        return applySpeakerNameAfter(enriched, html);
+      }
+      // Another player's view of a private card; the author of a blind roll still gets the card, its dice masked below.
+      if (!this.isContentVisible && !this.isAuthor) {
+        html.querySelector(".message-content")?.replaceChildren(rolledPlaceholder());
+        applySpeakerName(html);
         return;
       }
       if (debugEnabled > 1) log("Enriching chat card", Date.now(), this.id);
       this.maskAttackRolls(html); // This has to run first to stop errors when dnd5e enriches the damage rolls
 
-      this.#enrichSystemCard(html, options);
+      const enriched = this.#enrichSystemCard(html, options);
       this.applyChatVisibility(html);
       // For usage-type messages, Foundry skips _highlightCriticalSuccessFailure.
       // Add classes + icons directly for midi messages, then apply midi settings.
@@ -635,6 +661,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       this._addLegacyCardDataset(html);
       this.maskHiddenRolls(html);
       if (debugEnabled > 1) log("Finished enriching chat card", Date.now(), this.id);
+      return applySpeakerNameAfter(enriched, html);
     }
 
     /**
@@ -721,6 +748,66 @@ function obscureRolls(html: HTMLElement) {
   html.querySelectorAll<HTMLElement>(".critical, .fumble, .success, .failure, .min, .max")
     .forEach(el => el.classList.remove(...HIGHLIGHT));
   HIGHLIGHT.forEach(c => html.classList.remove(c));
+}
+
+/** As dnd5e hides target AC from players short of "all", except that a player sees the AC of a token they own. */
+function removeUnownedAC(html: HTMLElement) {
+  html.querySelectorAll<HTMLElement>(".midi-qol-hits-display li[data-uuid]").forEach(row => {
+    const target = fromUuidSync(row.dataset.uuid ?? "");
+    const actor = target instanceof TokenDocument ? target.actor : target instanceof Actor ? target : null;
+    if (!actor?.isOwner) row.querySelector(".midi-qol-ac")?.remove();
+  });
+}
+
+/**
+ * Names on a card as the viewing player is shown them: the speaker (header and card text), midi's hit and save rows
+ * and dnd5e's summaries.
+ */
+function applyPlayerNames(html: HTMLElement) {
+  const rename = (el: Element | null, uuid: string | undefined) => {
+    if (el) el.textContent = displayTokenName(uuid, el.textContent?.trim() ?? "");
+  };
+  applySpeakerName(html);
+  html.querySelectorAll<HTMLElement>(".midi-qol-hits-display li[data-uuid], .midi-qol-save-name[data-uuid]")
+    .forEach(el => rename(el.querySelector(".midi-qol-target-name"), el.dataset.uuid));
+  html.querySelectorAll<HTMLElement>(".card-summary[data-target-uuid]")
+    .forEach(el => rename(el.querySelector(".pill.target"), el.dataset.targetUuid));
+}
+
+/**
+ * The speaker's name in the header and the card text, as the viewing player is shown it. dnd5e draws its avatar header
+ * after an await, so this runs again once dnd5e's enrichment is done; it is a no-op on a name already shown.
+ */
+function applySpeakerName(html: HTMLElement) {
+  if (game.user?.isGM) return;
+  // The header is the plain sender (with data-token-uuid) or dnd5e's avatar and name stack.
+  const sender = html.querySelector<HTMLElement>(".message-sender");
+  const senderName = sender?.querySelector(".name-stacked .title") ?? sender;
+  const speakerUuid = sender?.dataset.tokenUuid ?? sender?.querySelector<HTMLElement>(".avatar[data-uuid]")?.dataset.uuid;
+  const speakerName = senderName?.textContent?.trim();
+  if (!senderName || !speakerName) return;
+  const shown = displayTokenName(speakerUuid, speakerName);
+  if (shown === speakerName) return;
+  senderName.textContent = shown;
+  sender?.querySelector("img[alt]")?.setAttribute("alt", shown);
+  replaceName(html.querySelector(".message-content"), speakerName, shown);
+}
+
+/** Once dnd5e's (possibly async) enrichment of `html` is done, set the speaker's name again. */
+function applySpeakerNameAfter(enriched: unknown, html: HTMLElement): Promise<void> {
+  return Promise.resolve(enriched).then(() => applySpeakerName(html), err => {
+    error(`${MODULE_ID} | dnd5e chat card enrichment failed`, err);
+  });
+}
+
+/** Replace whole-word occurrences of `name` in the text under `root`. */
+function replaceName(root: Element | null, name: string, replacement: string) {
+  if (!root) return;
+  const pattern = new RegExp(`(?<![\\p{L}\\p{N}])${RegExp.escape(name)}(?![\\p{L}\\p{N}])`, "gu");
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node.textContent?.includes(name)) node.textContent = node.textContent.replace(pattern, replacement);
+  }
 }
 
 function isMidiCard(message: ChatMessage.Implementation | undefined): boolean {
