@@ -591,27 +591,6 @@
 }
 
 
-/* Condensed Item description */
-.dnd5e2.chat-card .description {
-  padding: 0.4rem;
-  margin-bottom: 0.4rem;
-}
-
-.dnd5e2.chat-card .description:not(:has(p),.collapsed) .details {
-  margin-top: 0.4rem;
-}
-
-/* Condensed footer pills */
-.card-footer.pills.unlist {
-  gap: 0.2rem;
-  margin-top: 0.1rem;
-
-  li.pill.pill-sm {
-    font-size: 9px;
-    padding: 0.2rem 0.3rem;
-  }
-}
-
 /* Midi Attack and Damage buttons */
 /* When card-buttons has no visible buttons, collapse gap so empty flex items don't create blank space */
 .card-buttons.midi-buttons:not(:has(button)) {
@@ -1234,11 +1213,6 @@ section.midi-qol.tab > .sheet-tabs [data-tab] label {
   display: block;
   width: 18px;
   height: 18px;
-}
-
-/* Damage Application tray change-source icons - mid-grey readable on both light/dark themes */
-.dnd5e2 :is(.card-tray, .effects-tray, .targets-tray) .targets .target .change-source > dnd5e-icon {
-  --icon-fill: #777;
 }
 
 /* OverTime Editor */

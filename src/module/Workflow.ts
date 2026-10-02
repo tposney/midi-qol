@@ -107,6 +107,7 @@ import {
   toMessageMode,
   toLegacyRollMode,
   isDnd5eRollMessage,
+  dnd5eRollType,
   tokenSourceElevation,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
@@ -6749,7 +6750,8 @@ export class Workflow {
     if (!this.saveRequests) return {};
     const ddbglFlags = message.flags && message.flags["ddb-game-log"];
     const isDDBGL = ddbglFlags?.cls === "save" && !ddbglFlags?.pending;
-    const isRoll = isDnd5eRollMessage(message);
+    // An initiative roll by the same token is not the save being waited for
+    const isRoll = isDnd5eRollMessage(message) && dnd5eRollType(message) !== "initiative";
     let requestId = message?.speaker?.token;
     if (!requestId && isDDBGL) requestId = message?.speaker?.actor;
     if (debugEnabled > 0) warn("processSaveRoll |", requestId, this.saveRequests)

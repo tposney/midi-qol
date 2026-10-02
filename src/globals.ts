@@ -42,6 +42,7 @@ declare module "fvtt-types/configuration" {
   namespace Hooks {
     interface HookConfig {
       "dae.addSpecialDurations": (daeSpecialDurations: Record<string, string>) => void;
+      "getChatMessageContextOptions": (app: unknown, options: ContextMenuEntryV14[]) => void;
       "dae.setFieldData": (fieldData: Record<string, string[]>) => void;
       "dae.addAutoFields": (addAutoFields: Function, fields: { BooleanFormulaField?: any }) => void;
       "dae.ready": (api: any) => void;
@@ -528,12 +529,13 @@ declare module "fvtt-types/configuration" {
         aborted?: boolean;
         type?: number;
         overtimeActorUuid?: string;
+        /** The roll mode an over-time roll request asks for */
+        overtimeRollMode?: string;
         messageType?: string;
         roll?: unknown[];
         syntheticItem?: boolean;
         isHit?: boolean;
         otherActivityConsumed?: object;
-        playerDamageCard?: boolean;
       };
     };
     Item: {
@@ -974,6 +976,14 @@ declare global {
 
 export type SelectOptionValue = string | { label: string; hint: string };
 export type SelectOptions = Record<string, SelectOptionValue>;
+
+/** A Foundry v14 context-menu entry; fvtt-types still describes the v13 shape (name/callback/condition). */
+export interface ContextMenuEntryV14 {
+  label: string;
+  icon?: string;
+  visible?: (li: HTMLElement) => boolean;
+  onClick: (event: Event, li: HTMLElement) => unknown;
+}
 
 export type TokenOrDocument = foundry.canvas.placeables.Token.Implementation | TokenDocument.Implementation;
 

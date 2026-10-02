@@ -369,59 +369,10 @@ export async function resolveTargetConfirmation(activity: Activity, options: Tar
   return !!shouldContinue;
 }
 
+/** Post the item's card, as dnd5e's own "display card" does. */
 export async function showItemInfo(this: Item.Implementation): Promise<ChatMessage.Implementation | undefined> {
-  const token = this.actor?.token;
-
-  const templateData = {
-    actor: this.actor,
-    // tokenId: token?.id,
-    tokenId: token?.uuid,
-    tokenUuid: token?.uuid,
-    item: this,
-    itemUuid: this.uuid,
-    // @ts-expect-error no dnd5e-types
-    data: await this.system.getCardData(),
-    // @ts-expect-error no dnd5e-types
-    labels: this.labels,
-    condensed: false,
-    hasAttack: false,
-    isHealing: false,
-    hasDamage: false,
-    // @ts-expect-error no dnd5e-types
-    isSpell: this.type === "spell",
-    isPower: false,
-    hasSave: false,
-    hasAreaTarget: false,
-    hasAttackRoll: false,
-    configSettings,
-    hideItemDetails: false,
-    hasEffects: false,
-    isMerge: false,
-  };
-
-  const templateType = ["tool"].includes(this.type) ? this.type : "item";
-  const template = `modules/midi-qol/templates/${templateType}-card.hbs`;
-  const html = await foundry.applications.handlebars.renderTemplate(template, templateData);
-
-  const chatData: ChatMessage.CreateData = {
-    content: html,
-    // @ts-expect-error no dnd5e-types
-    flavor: this.system.chatFlavor || this.name,
-    speaker: getSpeaker(this.actor!),
-    flags: {
-      "core": { "canPopout": true }
-    }
-  };
-  chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
-
-  // Toggle default roll mode (v14 message modes)
-  let rollMode = (safeGetGameSetting("core", "messageMode") as string) ?? "public";
-  if (["gm", "blind"].includes(rollMode)) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM").filter(u => u.active);
-  if (rollMode === "blind") chatData["blind"] = true;
-  if (rollMode === "self") chatData["whisper"] = [game.user?.id];
-
-  // Create the chat message
-  return ChatMessage.create(chatData);
+  // @ts-expect-error no dnd5e-types
+  return this.displayCard();
 }
 
 function isTokenInside(template: foundry.canvas.placeables.MeasuredTemplate.Implementation, token: Token.Implementation, wallsBlockTargeting: boolean): boolean {

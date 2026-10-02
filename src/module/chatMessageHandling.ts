@@ -124,6 +124,11 @@ export let hideRollUpdate = (message: ChatMessage.Implementation, data: ChatMess
 
 export let hideStuffHandler = (message: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
   if (debugEnabled > 1) debug("hideStuffHandler message: ", message.id, message)
+  // A roll forced blind by midi's settings is not shown to players at all
+  if (foundry.utils.getProperty(message, "flags.midi-qol.forcedBlind") && !game.user?.isGM) {
+    html.style.display = "none";
+    return;
+  }
   // Hide rolls which are blind and not the GM if force hide is true
   if ((forceHideRoll && message.blind && !game.user?.isGM)
     || (foundry.utils.getProperty(message, "flags.midi-qol.gmHide") && game.user?.isGM)) {

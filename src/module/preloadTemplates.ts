@@ -15,7 +15,6 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/roll.html",
     // "modules/midi-qol/templates/roll-options.html",
     "modules/midi-qol/templates/saves.html",
-    "modules/midi-qol/templates/tool-card.hbs",
     "modules/midi-qol/templates/tooltip.html",
     "modules/midi-qol/templates/activity/attack-effect.hbs",
     "modules/midi-qol/templates/activity/check-effect.hbs",

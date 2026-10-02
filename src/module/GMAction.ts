@@ -1070,7 +1070,6 @@ async function createReverseDamageCard(data: {
   damageList: SerializedDamageListEntry[];
   autoApplyDamage: string;
   flagTags: any,
-  sender: string,
   charName: string,
   actorId: string,
   actorUuid?: string,
@@ -1081,14 +1080,13 @@ async function createReverseDamageCard(data: {
   let startTime;
   startTime = Date.now();
   const newDamageList = recoverDamageListFromJSON(data.damageList);
-  let id = await createPlayerDamageCard({ ...data, damageList: newDamageList });
-  if (id) cardIds.push(id);
+  let id: string | undefined;
   if (data.damageList.some(di => di.wasHit)) {
-    id = await createGMReverseDamageCard({ ...data, damageList: newDamageList }, true);
+    id = await createDamageCard({ ...data, damageList: newDamageList }, true);
     if (id) cardIds.push(id);
   }
   if (data.damageList.some(di => !di.wasHit) && ["yesCardMisses", "noCardMisses"].includes(data.autoApplyDamage)) {
-    id = await createGMReverseDamageCard({ ...data, damageList: newDamageList }, false);
+    id = await createDamageCard({ ...data, damageList: newDamageList }, false);
     if (id) cardIds.push(id);
   }
   console.log("createReverseDamageCard took ", Date.now() - startTime, "ms");
@@ -1670,82 +1668,22 @@ async function prepareDamageListItems(
   }
 }
 
-// Fetch the token, then use the tokenData.actor.id
-async function createPlayerDamageCard(data: {
-  damageList: DamageListEntry[];
-  autoApplyDamage: string;
-  flagTags: any;
-  sender: string;
-  charName: string;
-  actorId: string;
-  actorUuid?: string;
-  forceApply: boolean;
-  updateOptions: any;
-}): Promise<string | undefined> {
-  let shouldShow = true;
-  let chatCardUuid: string | undefined;
-  if (configSettings.playerDamageCard === "none") return;
-  if (configSettings.playerCardDamageDifferent) {
-    shouldShow = false;
-    for (let damageItem of data.damageList) {
-      const { amount: rawAmount, healing: rawHealing } = calculateDamageAmounts(damageItem.rawDamageDetail);
-      // rawDamageDetail contains original positive healing values, but hpDamage is negative for healing
-      // Subtract rawHealing so the comparison works correctly for both damage and healing
-      const rawTotal = rawAmount - rawHealing;
-      if (rawTotal !== damageItem.hpDamage) {
-        shouldShow = true;
-        break;
-      }
-    }
-  }
-  if (!shouldShow) return;
-  let showNPC = ["npcplayerresults", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
-  let playerButtons = ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
-  const damageList = data.damageList;
-  let tokenDataList: DamageListEntry[] = [];
-  let templateData = {
-    damageApplied: ["yes", "yesCard", "yesCardMisses"].includes(data.autoApplyDamage) ? i18n("midi-qol.HPUpdated") : i18n("midi-qol.HPNotUpdated"),
-    damageList: [] as DamageListContextEntry[],
-    needsButtonAll: false,
-    showNPC,
-    playerButtons
-  };
-
-  await prepareDamageListItems(data, templateData, tokenDataList, false, showNPC, true)
-  if (templateData.damageList.length === 0) {
-    log("No damage data to show to player");
-    return;
-  }
-
-  templateData.needsButtonAll = damageList.length > 1;
-  templateData.playerButtons = templateData.playerButtons && templateData.damageList.some(listItem => listItem.isCharacter);
-  if (["yesCard", "noCard", "yesCardNPC", "yesCardMisses", "noCardMisses"].includes(data.autoApplyDamage)) {
-    const playerTemplate = "modules/midi-qol/templates/damage-results-player.html";
-    const speaker: any = ChatMessage.getSpeaker();
-    speaker.alias = data.sender;
-    let chatData: any = {
-      user: game.user?.id,
-      speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: game.user?.id, actor: data.actorId },
-      content: "",
-      // whisper: ChatMessage.getWhisperRecipients("players").filter(u => u.active).map(u => u.id),
-      type: DAMAGE_MESSAGE_TYPE,
-      // rendered from this on display rather than stored as markup
-      system: {
-        player: true, doHits: true, autoApplyDamage: data.autoApplyDamage,
-        forceApply: data.forceApply, showNPC, playerButtons: templateData.playerButtons
-      } satisfies DamageCardOptions,
-      flags: { "midi-qol": { "undoDamage": prepareDamageListForFlag(tokenDataList), playerDamageCard: true, actorUuid: data.actorUuid } }
-    };
-
-    chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
-    if (data.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? "", data.flagTags);
-    chatCardUuid = (await ChatMessage.create(chatData))?.uuid;
-  }
-  return chatCardUuid;
+/** Whether players are shown their view of a hits card: the playerDamageCard setting, and with playerCardDamageDifferent only when some damage was modified. */
+function showsPlayerView(damageList: DamageListEntry[]): boolean {
+  if (configSettings.playerDamageCard === "none") return false;
+  if (!configSettings.playerCardDamageDifferent) return true;
+  return damageList.some(damageItem => {
+    const { amount: rawAmount, healing: rawHealing } = calculateDamageAmounts(damageItem.rawDamageDetail);
+    // rawDamageDetail holds healing as positive values while hpDamage is negative for healing
+    return rawAmount - rawHealing !== damageItem.hpDamage;
+  });
 }
 
-// Fetch the token, then use the tokenData.actor.id
-async function createGMReverseDamageCard(
+/**
+ * One damage card serves the GM and the players: each sees their own view of it (DamageCardMessage). It is public
+ * when players are shown their view, otherwise whispered to the GMs. A misses card is GM-only.
+ */
+async function createDamageCard(
   data: {
     damageList: DamageListEntry[];
     autoApplyDamage: string;
@@ -1753,12 +1691,16 @@ async function createGMReverseDamageCard(
     forceApply: boolean,
     updateOptions: any,
     actorUuid?: string,
+    charName: string,
+    actorId: string,
   },
   doHits: boolean = true
 ): Promise<string | undefined> {
   const damageList = data.damageList;
   let tokenDataList: DamageListEntry[] = [];
   let chatCardUuid: string | undefined;
+  // Before the list is prepared: that recomputes hpDamage from the actors' current HP
+  const playerView = doHits && showsPlayerView(damageList);
   const damageWasApplied = (doHits && (["yes", "yesCard", "yesCardMisses"].includes(data.autoApplyDamage) || data.forceApply));
   let templateData = {
     damageWasApplied,
@@ -1773,13 +1715,16 @@ async function createGMReverseDamageCard(
     const speaker = ChatMessage.getSpeaker();
     speaker.alias = game.user?.name;
     let chatData: ChatMessage.CreateData = {
-      speaker: { scene: getCanvas()?.scene?.id, alias: game.user?.name },
+      speaker: playerView
+        ? { scene: getCanvas()?.scene?.id, alias: data.charName, actor: data.actorId }
+        : { scene: getCanvas()?.scene?.id, alias: game.user?.name },
       content: "",
-      whisper: ChatMessage.getWhisperRecipients("GM").filter(u => (u as User).active).map(u => u.id),
+      whisper: playerView ? [] : ChatMessage.getWhisperRecipients("GM").filter(u => (u as User).active).map(u => u.id),
       type: DAMAGE_MESSAGE_TYPE,
       system: {
-        player: false, doHits, autoApplyDamage: data.autoApplyDamage,
-        forceApply: data.forceApply, showNPC: true
+        playerView, doHits, autoApplyDamage: data.autoApplyDamage, forceApply: data.forceApply,
+        showNPC: ["npcplayerresults", "npcplayerbuttons"].includes(configSettings.playerDamageCard),
+        playerButtons: ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard)
       } satisfies DamageCardOptions,
       flags: { [MODULE_ID]: { "undoDamage": prepareDamageListForFlag(tokenDataList), actorUuid: data.actorUuid } }
     };
@@ -2551,7 +2496,8 @@ type PersistedUndoFields = Pick<DamageListEntry, typeof PERSISTED_UNDO_FIELDS[nu
  * Storing them stops a later settings change silently restyling an old card.
  */
 export interface DamageCardOptions {
-  player: boolean;
+  /** Players are shown the card, through the player view */
+  playerView: boolean;
   doHits: boolean;
   autoApplyDamage: string;
   forceApply: boolean;
@@ -2622,7 +2568,8 @@ export function prepareDamageListForFlag(damageList: DamageListEntry[]): Persist
 /** Build a damage card's context from the message. Shared by card creation and the sub-type render. */
 export async function buildDamageCardContext(
   message: ChatMessage.Implementation,
-  card: DamageCardOptions
+  card: DamageCardOptions,
+  asPlayer: boolean
 ): Promise<{
   damageApplied: string;
   damageWasApplied: boolean;
@@ -2642,13 +2589,14 @@ export async function buildDamageCardContext(
       : card.autoApplyDamage === "yesCardNPC" ? i18n("midi-qol.HPNPCUpdated") : i18n("midi-qol.HPNotUpdated"),
     damageList: [] as DamageListContextEntry[],
     needsButtonAll: damageList.length > 1,
-    showNPC: card.showNPC,
+    showNPC: asPlayer ? card.showNPC : true,
     playerButtons: card.playerButtons
   };
   // createPromises false: this builds the display only, it must never re-apply damage
   await prepareDamageListItems(
     { damageList, autoApplyDamage: card.autoApplyDamage, flagTags: null, forceApply: card.forceApply, updateOptions: {} },
-    templateData, [], false, card.showNPC, card.doHits, true);
+    templateData, [], false, templateData.showNPC, card.doHits, true);
+  if (asPlayer) templateData.playerButtons = !!card.playerButtons && templateData.damageList.some(listItem => listItem.isCharacter);
   return templateData;
 }
 

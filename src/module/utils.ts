@@ -340,7 +340,6 @@ export async function applyTokenDamage(
   }
   const cardIds: string[] = await timedAwaitExecuteAsGM("createReverseDamageCard", {
     autoApplyDamage: configSettings.autoApplyDamage,
-    sender: game.user?.name,
     actorId: workflow?.actor?.id,
     actorUuid: workflow?.actor?.uuid,
     charName: workflow?.token?.name ?? workflow?.actor?.name ?? game.user?.name,
@@ -427,7 +426,6 @@ export async function applyTokenDamageMany(
   }
   const cardIds: string[] = await timedAwaitExecuteAsGM("createReverseDamageCard", {
     autoApplyDamage: configSettings.autoApplyDamage,
-    sender: game.user?.name,
     actorId: workflow?.actor?.id,
     actorUuid: workflow?.actor?.uuid,
     charName: workflow?.token?.name ?? workflow?.actor?.name ?? game.user?.name,
@@ -812,7 +810,6 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     }
     await timedAwaitExecuteAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
-      sender: game.user?.name,
       actorId: workflow.actor.id,
       actorUuid: workflow.actor.uuid,
       charName: workflow.token?.name ?? workflow.actor.name ?? game.user?.name,
@@ -1765,50 +1762,25 @@ async function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd
   const { saveAbility, saveDC, rollMode, label, rollTypeString } = details;
 
   const MessageClass = getDocumentClass("ChatMessage");
-  let dataset;
   const chatCardUuids: string[] = [];
-
-  for (let ability of saveAbility) {
-    dataset = {
-      type: rollTypeString,
-      dc: saveDC,
-      item: effect.name,
-      action: "rollRequest",
-      midiOvertimeActorUuid: actor.uuid,
-      midiRollMode: rollMode
-    };
-    if (["check", "save"].includes(rollTypeString)) dataset.ability = ability;
-    else if (rollTypeString === "skill") dataset.skill = ability;
-
-    let whisper = ChatMessage.getWhisperRecipients(owner?.name ?? "");
-    if (owner?.isGM) {
-      whisper = ChatMessage.getWhisperRecipients("GM");
-    }
-
-    const buttonDataset = { ...dataset, action: "rollRequest", visibility: "all" };
-    const chatData = {
-      user: game.user?.id,
-      whisper: whisper.map(u => u.id ?? ""),
-      rollMode: rollMode ?? "public",
-      content: await foundry.applications.handlebars.renderTemplate("systems/dnd5e/templates/chat/roll-request-card.hbs", {
-        buttons: [{
-          // @ts-expect-error no dnd5e-types
-          buttonLabel: game.system.enrichers.createRollLabel({ ...dataset, format: "long", icon: true, hideDC: !owner?.isGM && !shouldDisplaySaveDC() }),
-          // @ts-expect-error no dnd5e-types
-          hiddenLabel: game.system.enrichers.createRollLabel({ ...dataset, format: "long", icon: true, hideDC: true }),
-          dataset: buttonDataset
-        }]
-      }),
-      flavor: `Action: ${label ?? effect.name} ${i18n(messageFlavor[details.rollType])}`,
-      speaker: MessageClass.getSpeaker({ actor })
-    };
-
-    const chatCard = await ChatMessage.create(chatData);
-    if (chatCard) {
-      chatCardUuids.push(chatCard.uuid);
-      await chatCard?.setFlag(MODULE_ID, "actorUuid", actor.uuid);
-    }
-  }
+  let whisper = ChatMessage.getWhisperRecipients(owner?.name ?? "");
+  if (owner?.isGM) whisper = ChatMessage.getWhisperRecipients("GM");
+  // A dnd5e 6 prompt message: not broadcast, so its buttons roll for the message's actor. The flags tell midi's
+  // roll wrappers which over-time effect the roll answers.
+  const buttons = saveAbility.map(ability => ({
+    type: rollTypeString, format: "long", visibility: "all", dc: Number(saveDC),
+    ...(rollTypeString === "skill" ? { skill: ability } : { ability })
+  }));
+  const chatCard = await MessageClass.create({
+    // @ts-expect-error no dnd5e-types
+    type: "prompt",
+    whisper: whisper.map(u => u.id ?? ""),
+    flavor: `Action: ${label ?? effect.name} ${i18n(messageFlavor[details.rollType])}`,
+    speaker: MessageClass.getSpeaker({ actor }),
+    system: { broadcast: false, buttons },
+    flags: { [MODULE_ID]: { overtimeActorUuid: actor.uuid, overtimeRollMode: rollMode, actorUuid: actor.uuid } }
+  });
+  if (chatCard) chatCardUuids.push(chatCard.uuid);
 
   foundry.utils.setProperty(effect, `flags.${MODULE_ID}.actionSaveSuccess`, undefined);
   await effect.setFlag(MODULE_ID, "overtimeChatCardUuids", chatCardUuids);
@@ -4331,7 +4303,9 @@ export function dnd5eRollType(source: any): string | undefined {
     // 6.0 files death saves under "save" and distinguishes them by system.type; the old vocabulary
     // gave them their own string, and midi's callers rely on telling them apart.
     case "save": return foundry.utils.getProperty(source, "system.type") === "death" ? "death" : "save";
-    case "check": return foundry.utils.getProperty(source, "system.tool") ? "tool"
+    // 6.0 posts initiative as a check message
+    case "check": if (foundry.utils.getProperty(source, "system.type") === "initiative") return "initiative";
+      return foundry.utils.getProperty(source, "system.tool") ? "tool"
       : foundry.utils.getProperty(source, "system.skill") ? "skill" : "ability";
     case "healing": return "healing";
     case "attack":

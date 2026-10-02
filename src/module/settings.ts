@@ -129,7 +129,6 @@ class ConfigSettings {
   autoApplyDamage: string = "none";
   playerDamageCard: string = "none";
   playerCardDamageDifferent: boolean = false;
-  hidePlayerDamageCard: boolean = true;
   autoCEEffects: string = "none";
   autoCheckHit: string = "none";
   autoCheckSaves: string = "none";
@@ -823,7 +822,6 @@ export let fetchParams = () => {
   if (configSettings.damageImmunityMultiplier === undefined) configSettings.damageImmunityMultiplier = 0.0;
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
   if (configSettings.damageVulnerabilityMultiplier === undefined) configSettings.damageVulnerabilityMultiplier = 2;
-  if (configSettings.hidePlayerDamageCard === undefined) configSettings.hidePlayerDamageCard = true;
   if (configSettings.attackPerTarget === undefined) configSettings.attackPerTarget = false;
   if (configSettings.autoRemoveTemplate === undefined) configSettings.autoRemoveTemplate = true;
   if (configSettings.autoRemoveInstantaneousTemplate === undefined) configSettings.autoRemoveInstantaneousTemplate = false;
@@ -835,7 +833,8 @@ export let fetchParams = () => {
   if (configSettings.confirmAmmunition === undefined) configSettings.confirmAmmunition = false;
   if (configSettings.gmConfirmAmmunition === undefined) configSettings.gmConfirmAmmunition = false;
   if (configSettings.playerRollSaves === "noneDialog") configSettings.playerRollSaves = "noneDialogPrivate";
-  configSettings.hidePlayerDamageCard = true;
+  // Removed: one damage card now serves the GM and the players
+  Reflect.deleteProperty(configSettings, "hidePlayerDamageCard");
   configSettings.quickSettings = true;
   //@ts-expect-error have removed the definition
   if (configSettings.averageNPCDamage !== undefined) {

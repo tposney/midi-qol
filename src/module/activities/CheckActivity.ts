@@ -92,11 +92,19 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
       if (workflow) workflow.activity = this;
       // return ActivityClass.#rollCheck return ActivityClass.#rollCheck.bind(this)(event, target);
       // Can't do this as it's private
-      const targets: Array<foundry.canvas.placeables.Token.Implementation | Actor.Implementation> = getSceneTargets();
+      // As dnd5e 6: the card's targets (honouring its targeted/selected toggle) and the clicked button's data from
+      // the card, which is all a grouped (dropdown) button carries.
+      const targets: Array<foundry.canvas.placeables.Token.Implementation | TokenDocument.Implementation | Actor.Implementation> =
+        // @ts-expect-error no dnd5e-types
+        [...(message?.system?.evaluatedTargets ?? getSceneTargets())];
       if (!targets.length && game.user?.character) targets.push(game.user?.character);
       if (!targets.length) ui.notifications?.warn("DND5E.ActionWarningNoToken", { localize: true });
-      let { ability, dc: dcStr, skill, tool } = target.dataset;
-      let dc = parseInt(dcStr ?? "0");
+      // @ts-expect-error no dnd5e-types
+      const button: Record<string, string | number | undefined> = message?.system?.getButton?.(target)?.dataset ?? target.dataset;
+      const ability = button.ability as string | undefined;
+      const skill = button.skill as string | undefined;
+      const tool = button.tool as string | undefined;
+      const dc = (button.dc === undefined || button.dc === "") ? NaN : Number(button.dc);
       const check = this.check;
       const item = this.item;
       const rollData: AnyMutableObject = { event, target: Number.isFinite(dc) ? dc : check!.dc.value };
@@ -104,7 +112,8 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
 
       for (const token of targets) {
         const actor = token instanceof Actor ? token : token.actor;
-        const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: token instanceof Token ? token.document : null });
+        const tokenDocument = token instanceof Token ? token.document : token instanceof TokenDocument ? token : null;
+        const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: tokenDocument });
         const messageData: AnyMutableObject = { data: { speaker } };
         if (!actor) continue;
         // v14 message-mode strings (CONFIG.ChatMessage.modes keys) so the value matches the roll dialog's options

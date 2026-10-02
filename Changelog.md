@@ -73,6 +73,15 @@
 * Sample items whose applied effects use the caster's values (OverTime save DCs, Bardic Inspiration, Harm, Branding Smite and others) are marked for DAE's legacy application, so they keep working under DAE's dnd5e 6 default.
 
 **Chat cards and damage tray**
+* "Select Hit Targets" on a midi card selects the hit targets; both menu entries selected the misses under dnd5e 6.
+* An over-time effect's roll request (actionSave=roll) is posted as a dnd5e 6 prompt message, with one button per save ability; the old roll-request card template no longer exists, so the request failed. The roll from its button is still matched to the effect.
+* An initiative roll (a check message in dnd5e 6) is no longer taken as a pending save by the same token.
+* `MidiQOL.showItemInfo` posts dnd5e's item card (its own template no longer existed); the unused tool card template is removed.
+* The weapon mastery line is shown on midi's attack cards again, and midi's success/critical highlight settings apply to dnd5e's own roll cards again; both lived in overrides dnd5e 6 no longer calls.
+* Removed CSS for card markup dnd5e 6 no longer has.
+* Save and check buttons on midi cards work with dnd5e 6's grouped buttons: choosing an ability, skill or tool from the dropdown rolls that one, against the activity's DC (it rolled the first ability against DC 0). As in dnd5e, the button's data is read from the card, and the roll is made for the card's targets (following its targeted/selected toggle) rather than the selected tokens; a missing DC falls back to the activity's.
+* Blind and obscured rolls no longer show their result to players under dnd5e 6. Its compact roll markup (total, d20 face, breakdown popover) is masked, and so are save and check messages that dnd5e draws as summaries inside midi's card: a roll a player may not read shows a "rolled" placeholder there, or nothing with "Really hide private/blind/self rolls" on, and an obscured roll shows ??. A roll forced blind by the roll-blind settings is not shown to players at all, on the card or on its own.
+* One damage card serves the GM and the players: each sees their own view of it, so the separate player damage card is gone. The card is public when the player damage card setting shows players a view (and, with "only when damage differs", only then), otherwise whispered to the GMs. The `hidePlayerDamageCard` setting is removed. GMs can see a card as players do with "View as player" on its right-click menu.
 * Who sees the damage and effect trays is dnd5e's decision: the GM always, players only when dnd5e's "Allow player damage/effects tray" settings are on. midi's "Add chat damage buttons" setting is removed from the config panel,. A card whose effects midi applies itself with no button ("apply, no button" / "apply and remove") offers no effects tray.
 * The damage button says Critical as soon as a critical attack is shown, instead of briefly showing the plain damage label.
 * A usage card whose item is deleted loses its buttons.

@@ -572,6 +572,19 @@ function isVisible(this: Token.Implementation, wrapped) {
 }
 
 /**
+ * The over-time effect a roll answers, from the button that was clicked: a dnd5e 6 prompt message midi posted
+ * (flags on the message), or a link carrying midi's data attributes.
+ */
+function overtimeRequestOf(event: Event | undefined): { actorUuid?: string, rollMode?: string } {
+  const element = event?.target instanceof HTMLElement ? event.target : undefined;
+  const link = element?.closest<HTMLElement>('.roll-link, [data-action="rollRequest"], [data-action="concentration"]');
+  if (link?.dataset.midiOvertimeActorUuid) return { actorUuid: link.dataset.midiOvertimeActorUuid, rollMode: link.dataset.midiRollMode };
+  const messageId = element?.closest<HTMLElement>("[data-message-id]")?.dataset.messageId;
+  const flags = messageId ? game.messages?.get(messageId)?.flags?.[MODULE_ID] : undefined;
+  return { actorUuid: flags?.overtimeActorUuid, rollMode: flags?.overtimeRollMode };
+}
+
+/**
  * Determines the roll mode for a roll, applying blind roll settings if configured.
  * If the roll should be blind, sets the core rollMode setting temporarily (caller must restore).
  *
@@ -603,6 +616,8 @@ function applyBlindRollMode(
     } else {
       rollMode = "blind";
       safeSetGameSetting("core", "messageMode", "blind");
+      // Players see nothing of a forced blind roll, not even that it was made (ChatMessageMidi.hiddenRollView).
+      if (messageDetails) foundry.utils.setProperty(messageDetails, "data.flags.midi-qol.forcedBlind", true);
     }
   }
 
@@ -736,9 +751,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
 
     let overtimeActorUuid: string | undefined;
     if (config.event) { // TODO Decide if we want to do this or support core behaviour of anyone rolling concentration check
-      // @ts-expect-error we know better
-      const target = config.event?.target?.closest('.roll-link, [data-action="rollRequest"], [data-action="concentration"]');
-      if (target?.dataset?.midiOvertimeActorUuid) overtimeActorUuid = target.dataset.midiOvertimeActorUuid;
+      overtimeActorUuid = overtimeRequestOf(config.event).actorUuid;
       if (overtimeActorUuid && this.uuid !== overtimeActorUuid) {
         const actualActor = fromUuidSync(overtimeActorUuid) as Actor.Implementation | undefined;
         //@ts-expect-error no dnd5e types
@@ -1507,11 +1520,10 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
       throw new Error(`doRollAbility called with no abilities to roll for ${this.name}`);
     if (config.event) {
       // Checks if we rolled from a concentration request dialog. If so use the actor specified in the request card
-      // @ts-expect-error we know better
-      const target = config?.event?.target?.closest('.roll-link, [data-action="rollRequest"], [data-action="concentration"]');
-      if (target?.dataset?.midiOvertimeActorUuid) {
-        overtimeActorUuid = target.dataset.midiOvertimeActorUuid;
-        message.rollMode = target.dataset.midiRollMode ?? message.rollMode;
+      const request = overtimeRequestOf(config.event);
+      if (request.actorUuid) {
+        overtimeActorUuid = request.actorUuid;
+        message.rollMode = (request.rollMode as keyof CONFIG.Dice.RollModes | undefined) ?? message.rollMode;
       }
       if (overtimeActorUuid && this.uuid !== overtimeActorUuid) {
         const actualActor = fromUuidSync(overtimeActorUuid) as Actor.Implementation | undefined;

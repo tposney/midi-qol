@@ -1,7 +1,7 @@
 import { GameSystemConfig, MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n, log } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { Dnd5eSystem } from "../../globals.js";
-import { configSettings, safeGetGameSetting, saveToChatCard } from "../settings.js";
+import { configSettings, forceHideRoll, safeGetGameSetting, saveToChatCard } from "../settings.js";
 import { getToken, isDnd5eRollMessage } from "../utils.js";
 
 // Damage is auto-applied by midi when autoApplyDamage is one of the "yes*" modes.
@@ -158,9 +158,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if ((this.flags?.[MODULE_ID]?.roll?.length ?? 0) > 0) return true;
       return super.isRoll;
     }
-    // midi has it's own target handling so don't display the attack targets here (however, DO display the mastery)
-    _enrichAttackTargets(html) {
-      // This code borrowed from the start of the system's ChatMessage5e#_enrichAttackTargets method
+    /** The weapon mastery line dnd5e 6 renders on its own attack cards, added to midi's card. */
+    #addMasteryLine(html: HTMLElement) {
       const attackRoll = attackRollOf(this) ?? this.rolls[0];
       // @ts-expect-error no dnd5e-types
       if (!(attackRoll instanceof dnd5e.dice.D20Roll)) return;
@@ -197,15 +196,11 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       return super.canApplyDamage;
     }
 
-    /**
-  * Select the hit or missed targets.
-  * @param {HTMLElement} li    The chat entry which contains the roll data.
-  * @param {string} type       The type of selection ('hit' or 'miss').
-  */
-    selectTargets(li: HTMLElement, type: string) {
+    /** Select the hit or missed targets (dnd5e 6 calls this with the type only). */
+    selectTargets(type: "hit" | "miss") {
       if (!canvas?.ready) return;
       // @ts-expect-error no dnd5e-types
-      if (!this.flags?.[MODULE_ID]) return super.selectTargets(li, type);
+      if (!this.flags?.[MODULE_ID]) return super.selectTargets(type);
       const targetData = this.getFlag(MODULE_ID, "targets") || [];
       const targetUuids: string[] = targetData.map(t => t.uuid);
       let hitTargetUuids: string[] = this.getFlag(MODULE_ID, "hitTargetUuids") || [];
@@ -270,52 +265,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       });
     }
 
-    _highlightCriticalSuccessFailure(html: HTMLElement) {
-      // @ts-expect-error no dnd5e-types
-      super._highlightCriticalSuccessFailure(html);
-      // dnd5e only adds critical/fumble for attack and death saves.
-      // Add critical/fumble highlighting for other d20 rolls (saves, ability checks).
-      const totals = html.querySelectorAll(".dice-total");
-      for (let [index, d20Roll] of this.rolls.entries()) {
-        const total = totals[index];
-        if (!total || total.classList.contains("critical") || total.classList.contains("fumble")) continue;
-        const d0 = d20Roll?.dice?.[0];
-        if (!d0 || d0.faces !== 20 || d0.values?.length !== 1) continue;
-        // @ts-expect-error D20Roll not typed
-        const d20 = dnd5e.dice.D20Roll.fromRoll(d20Roll);
-        if (d20.isCritical) {
-          total.classList.add("critical");
-          if (!total.querySelector(".icons")) {
-            const icons = document.createElement("div");
-            icons.classList.add("icons");
-            const icon = document.createElement("i");
-            icon.classList.add("fas", "fa-check-double");
-            icon.setAttribute("inert", "");
-            icons.append(icon);
-            total.append(icons);
-          }
-        } else if (d20.isFumble) {
-          total.classList.add("fumble");
-          if (!total.querySelector(".icons")) {
-            const icons = document.createElement("div");
-            icons.classList.add("icons");
-            for (let i = 0; i < 2; i++) {
-              const icon = document.createElement("i");
-              icon.classList.add("fas", "fa-xmark");
-              icon.setAttribute("inert", "");
-              icons.append(icon);
-            }
-            total.append(icons);
-          }
-        }
-      }
-      this._applyMidiHighlightSettings(html);
-    }
-
     /**
      * Add critical/fumble/success/failure classes and icons for midi messages.
-     * Used by _enrichChatCard for usage-type messages where _highlightCriticalSuccessFailure
-     * is not called by Foundry. Does not mutate document flags (safe during async super._enrichChatCard).
+     * Used by _enrichChatCard for midi's usage cards. Does not mutate document flags (safe during async super._enrichChatCard).
      */
     private _highlightMidiRolls(html: HTMLElement) {
       function makeIcon(cls: string) {
@@ -368,11 +320,13 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     private _applyMidiHighlightSettings(html: HTMLElement) {
       const isMidiMessage = !!this.flags?.[MODULE_ID]?.messageType;
       const hideResult = isMidiMessage && !game.user?.isGM && (["whisper", "gmOnly"].includes(configSettings.autoCheckHit) || safeGetGameSetting("dnd5e", "attackRollVisibility") === "none");
-      const totals = html.querySelectorAll(".dice-total");
+      // dnd5e 6's compact roll markup carries the classes on the roll button and keeps an icons span there.
+      const totals = html.querySelectorAll(".dice-total, button.dice-roll");
       for (const total of Array.from(totals)) {
         if (hideResult || !configSettings.highlightSuccess) {
           total.classList.remove("success", "failure", "critical", "fumble");
-          total.querySelector(".icons")?.remove();
+          if (total.matches("button.dice-roll")) total.querySelector(".icons")?.replaceChildren();
+          else total.querySelector(".icons")?.remove();
         } else if (configSettings.highLightCriticalAttackOnly) {
           const hadSuccessOrFailure = total.classList.contains("success") || total.classList.contains("failure");
           total.classList.remove("success", "failure");
@@ -411,30 +365,24 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
      */
     private maskHiddenRolls(html: HTMLElement) {
       if (game.user?.isGM) return;
-      const placeholder = () => {
-        const span = document.createElement("span");
-        span.innerHTML = i18n("midi-qol.DiceRolled"); // the localised string carries its own markup
-        return span;
-      };
       if (this.blind) {
-        html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => el.replaceWith(placeholder()));
+        html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => el.replaceWith(rolledPlaceholder()));
         // monks-tokenbar renders its own rolls and does its own hiding.
         if (!this.flags?.["monks-tokenbar"]) {
-          html.querySelectorAll(".dice-roll").forEach(el => el.replaceWith(placeholder()));
+          html.querySelectorAll(".dice-roll").forEach(el => el.replaceWith(rolledPlaceholder()));
+          html.querySelectorAll(".roll-breakdown").forEach(el => el.remove());
         }
       }
-      if (!foundry.utils.getProperty(this, `flags.${MODULE_ID}.obscureRoll`)) return;
-      // Public card, hidden result: replace the total and strip the breakdown. The colouring classes
-      // go too — a nat 1 or 20 would otherwise still be given away by the highlight.
-      const HIGHLIGHT = ["critical", "fumble", "success", "failure", "min", "max"];
-      html.querySelectorAll<HTMLElement>(".dice-total").forEach(el => {
-        el.textContent = "??";
-        el.classList.remove(...HIGHLIGHT);
+      if (foundry.utils.getProperty(this, `flags.${MODULE_ID}.obscureRoll`)) obscureRolls(html);
+      // dnd5e 6 draws a card's save and check messages inside it as summaries, whatever their own visibility.
+      html.querySelectorAll<HTMLElement>(".card-summary[data-message-id]").forEach(summary => {
+        const source = game.messages?.get(summary.dataset.messageId ?? "");
+        if (!source) return;
+        const view = hiddenRollView(source);
+        if (view === "none") summary.remove();
+        else if (view === "placeholder") summary.replaceChildren(rolledPlaceholder());
+        else if (foundry.utils.getProperty(source, `flags.${MODULE_ID}.obscureRoll`)) obscureRolls(summary);
       });
-      html.querySelectorAll(".dice-tooltip").forEach(el => el.remove());
-      html.querySelectorAll<HTMLElement>(".critical, .fumble, .success, .failure, .min, .max")
-        .forEach(el => el.classList.remove(...HIGHLIGHT));
-      HIGHLIGHT.forEach(c => html.classList.remove(c));
     }
 
     maskAttackRolls(html: HTMLElement) {
@@ -531,9 +479,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
       if (game.user?.isGM) {
         removeAll(html, ".midi-qol-playerTokenName");
-        if (configSettings.hidePlayerDamageCard && foundry.utils.getProperty(this, "flags.midi-qol.playerDamageCard")) {
-          html.style.display = "none";
-        }
+        // Old separate player damage cards duplicate their GM card. Remove with dnd5e 6.2.
+        if (foundry.utils.getProperty(this, "flags.midi-qol.playerDamageCard")) html.style.display = "none";
         html.querySelectorAll<HTMLDivElement>(".midi-qol-hits-display").forEach(el => el.style.display = "");
         hideAll(html, ".midi-qol-target-npc-Player");
         if (!configSettings.highlightSuccess) {
@@ -662,6 +609,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (!this.flags?.[MODULE_ID]?.messageType) {
         this.applyChatVisibility(html);
         this.#enrichSystemCard(html, options);
+        this._applyMidiHighlightSettings(html);
         this._addMarkerClasses(html);
         this._addLegacyCardDataset(html);
         this.maskHiddenRolls(html);
@@ -678,6 +626,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         this._highlightMidiRolls(html);
       }
       this._applyMidiHighlightSettings(html);
+      this.#addMasteryLine(html);
       this._addMarkerClasses(html);
       this._addLegacyCardDataset(html);
       this.maskHiddenRolls(html);
@@ -734,4 +683,38 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       return;
     }
   }
+}
+
+/** The "rolled" stand-in for a roll the viewer may not see. */
+function rolledPlaceholder(): HTMLElement {
+  const span = document.createElement("span");
+  span.classList.add("midi-qol-dice-rolled");
+  span.innerHTML = i18n("midi-qol.DiceRolled"); // the localised string carries its own markup
+  return span;
+}
+
+/**
+ * What a non-GM sees of a roll message: all of it when they can read it; nothing when it was forced blind or
+ * ForceHideRoll is on; otherwise a stand-in saying a roll was made.
+ */
+export function hiddenRollView(message: ChatMessage.Implementation): "show" | "placeholder" | "none" {
+  if (game.user?.isGM || message.isContentVisible) return "show";
+  if (foundry.utils.getProperty(message, `flags.${MODULE_ID}.forcedBlind`) || forceHideRoll) return "none";
+  return "placeholder";
+}
+
+/**
+ * Public roll, hidden result: replace the totals and strip the breakdown, in both dnd5e's compact roll markup
+ * (roll-compact.hbs) and the classic one. The colouring classes go too - a nat 1 or 20 would give it away.
+ */
+function obscureRolls(html: HTMLElement) {
+  const HIGHLIGHT = ["critical", "fumble", "success", "failure", "min", "max"];
+  html.querySelectorAll<HTMLElement>(".dice-total, .dice-roll .total, .d20die .roll").forEach(el => {
+    el.textContent = "??";
+    el.classList.remove(...HIGHLIGHT);
+  });
+  html.querySelectorAll(".dice-tooltip, .roll-breakdown").forEach(el => el.remove());
+  html.querySelectorAll<HTMLElement>(".critical, .fumble, .success, .failure, .min, .max")
+    .forEach(el => el.classList.remove(...HIGHLIGHT));
+  HIGHLIGHT.forEach(c => html.classList.remove(c));
 }
