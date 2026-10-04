@@ -1,4 +1,4 @@
-### 13.0.66 (unreleased)
+### 13.0.66
 * "Ignore Damage Immunity/Resistance/Vulnerability" for all damage types now also covers a creature's "All Damage" trait, which it previously left in force.
 * New activity option "Downgrade Immunity" - treats damage immunity as resistance rather than ignoring it, which leaves full damage.
 * An attack of opportunity is classified for every target of a use, not only the first, so "Roll a separate attack per target" no longer judges the first target by different range rules to the rest.
