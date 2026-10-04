@@ -1,9 +1,9 @@
 ### 14.6.0 (dnd6 branch)
 
 **Requirements**
-* Supports dnd5e 6.x only: the minimum dnd5e version is 6.0.0.
+* Supports dnd5e 6.x only: 6.0.0 to 6.999 (verified 6.0.5).
 * Requires dae 14.6.0 or later.
-* Verified against Foundry 14.368.
+* Requires Foundry 14.368 (verified 14.368).
 * Version reads Foundry-major dot dnd5e-major: 14.0.x is the dnd5e 5.x line, 14.6.x the 6.x line.
 
 **Breaking: transfer effects with a duration**
@@ -78,6 +78,7 @@
 * An ammunition activity's damage no longer counts the ammunition's base damage twice.
 * Convenient Effects applied by a concentration spell end with the concentration.
 * Sample items whose applied effects use the caster's values (OverTime save DCs, Bardic Inspiration, Harm, Branding Smite and others) are marked for DAE's legacy application, so they keep working under DAE's dnd5e 6 default.
+* New "Aid" sample item: raises temporary max HP and, through DAE's *Also raise current HP*, current HP by the same amount, with no healing roll. The SRD Aid's healing is capped at the maximum before its effect raises it, so a creature at full HP gained no current HP.
 
 **Chat cards and damage tray**
 * "Show players when the GM rolls privately" (was "Always display attack/damage cards for hidden merge cards") shows other players the GM's private, self or blind midi card as a "rolled some dice" stand-in. midi no longer posts hidden extra dnd5e attack and damage messages for it, which carried a second damage tray and linked themselves to the card.

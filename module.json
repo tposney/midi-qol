@@ -42,6 +42,7 @@
         "type": "system",
         "compatibility": {
           "minimum": "6.0.0",
+          "verified": "6.0.5",
           "maximum": "6.999"
         }
       }
@@ -155,7 +156,7 @@
     }
   ],
   "compatibility": {
-    "minimum": "14",
+    "minimum": "14.368",
     "verified": "14.368",
     "maximum": "14.999"
   },
