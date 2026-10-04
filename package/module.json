@@ -2,7 +2,7 @@
   "id": "midi-qol",
   "title": "Midi QOL",
   "description": "Automates rolling weapon/spell attacks and applying damage amongst other things",
-  "version": "14.0.12",
+  "version": "14.6.0",
   "authors": [
     {
       "name": "Tim Posney",
@@ -41,8 +41,9 @@
         "id": "dnd5e",
         "type": "system",
         "compatibility": {
-          "minimum": "5.2.4",
-          "maximum": "5.3.99"
+          "minimum": "6.0.0",
+          "verified": "6.0.5",
+          "maximum": "6.999"
         }
       }
     ],
@@ -59,7 +60,7 @@
         "id": "dae",
         "type": "module",
         "compatibility": {
-          "minimum": "14.0.0"
+          "minimum": "14.6.0"
         }
       }
     ]
@@ -110,12 +111,12 @@
     },
     {
       "lang": "cs",
-      "name": "Češky",
+      "name": "\u010ce\u0161ky",
       "path": "lang/cs.json"
     },
     {
       "lang": "ja",
-      "name": " 日本語",
+      "name": " \u65e5\u672c\u8a9e",
       "path": "lang/ja.json"
     },
     {
@@ -125,12 +126,12 @@
     },
     {
       "lang": "fr",
-      "name": "Français",
+      "name": "Fran\u00e7ais",
       "path": "lang/fr.json"
     },
     {
       "lang": "pt-BR",
-      "name": "Português (Brasil)",
+      "name": "Portugu\u00eas (Brasil)",
       "path": "lang/pt-BR.json"
     },
     {
@@ -150,13 +151,13 @@
     },
     {
       "lang": "zh-tw",
-      "name": "正體中文",
+      "name": "\u6b63\u9ad4\u4e2d\u6587",
       "path": "lang/zh-tw.json"
     }
   ],
   "compatibility": {
-    "minimum": "14",
-    "verified": "14.357",
+    "minimum": "14.368",
+    "verified": "14.368",
     "maximum": "14.999"
   },
   "bugs": "https://gitlab.com/tposney/midi-qol/-/issues",
@@ -164,7 +165,7 @@
     "allowBugReporter": true
   },
   "url": "https://gitlab.com/tposney/midi-qol",
-  "manifest": "https://gitlab.com/tposney/midi-qol/raw/v14/package/module.json",
-  "download": "https://gitlab.com/tposney/midi-qol/raw/v14/package/midi-qol-v14.0.12.zip",
-  "changelog": "https://gitlab.com/tposney/midi-qol/raw/v14/Changelog.md"
+  "manifest": "https://gitlab.com/tposney/midi-qol/raw/dnd6/package/module.json",
+  "download": "https://gitlab.com/tposney/midi-qol/raw/dnd6/package/midi-qol-v14.6.0.zip",
+  "changelog": "https://gitlab.com/tposney/midi-qol/raw/dnd6/Changelog.md"
 }
