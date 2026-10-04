@@ -1,5 +1,6 @@
 ### 14.0.13 (unreleased)
 * Requires Foundry 14.368 (verified 14.368) and dnd5e 5.3.0 to 5.9.99 (verified 5.3.3); dnd5e 5.2 does not run on Foundry 14.
+* Requires DAE 14.0.15 or later (the Aid sample item uses its raise current HP option).
 * Activity template regions have a height, set by their area type around the caster: a sphere is centred on the caster, a cone on its axis, and a cylinder, cube, line or wall stands on the caster (a cylinder or wall to its own height); the circle and square areas stay unbounded, and emanations follow their token. Core and dnd5e's region effects read the missing top as unbounded, so a sphere cast on the ground reached a flier at any height.
 * New optional rule "Template Origin Height": templates are measured from the caster's base (default), top, or eye level; an activity can override it in its Region settings.
 * Template targeting, flanking, range, cover and push direction use a token's committed position, not the drawn one: acting straight after a move used where the token was part-way through animating, and a background tab read every token at 0,0.
