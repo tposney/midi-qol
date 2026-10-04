@@ -1,4 +1,5 @@
 ### 14.0.13 (unreleased)
+* Requires Foundry 14.368 (verified 14.368) and dnd5e 5.3.0 to 5.9.99 (verified 5.3.3); dnd5e 5.2 does not run on Foundry 14.
 * Activity template regions have a height, set by their area type around the caster: a sphere is centred on the caster, a cone on its axis, and a cylinder, cube, line or wall stands on the caster (a cylinder or wall to its own height); the circle and square areas stay unbounded, and emanations follow their token. Core and dnd5e's region effects read the missing top as unbounded, so a sphere cast on the ground reached a flier at any height.
 * New optional rule "Template Origin Height": templates are measured from the caster's base (default), top, or eye level; an activity can override it in its Region settings.
 * Template targeting, flanking, range, cover and push direction use a token's committed position, not the drawn one: acting straight after a move used where the token was part-way through animating, and a background tab read every token at 0,0.
@@ -16,6 +17,7 @@
 * An attack of opportunity no longer warns that its target is out of range; the check is not enforced for one.
 * Closing a reaction dialog stops its countdown, which went on updating the closed window and threw.
 * A creature immune to the configured dead condition is marked with the Dead status at 0 HP instead of nothing.
+* New "Aid" sample item: raises temporary max HP and, through DAE's raise current HP option, current HP by the same amount, with no healing roll. The SRD Aid's healing is capped at the maximum before its effect raises it, so a creature at full HP gained no current HP.
 * Target AC on the hits display follows dnd5e's Attack Result Visibility: short of "all", players see only the AC of tokens they own (character targets were always shown).
 * A save total's tooltip no longer shows players the dice (or a hidden DC) unless Auto check Saves is "All see Result + Rolls".
 * Target names hidden by Anonymous or Hide NPC Names are set on midi's hit and save rows when the card is shown, so they follow the module's current settings; a player who owns the target sees its real name. Cards no longer store a player name.

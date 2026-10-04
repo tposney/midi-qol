@@ -1,0 +1,704 @@
+{
+  "name": "Aid",
+  "system": {
+    "description": {
+      "value": "<p>Choose up to three creatures within range. Each target's Hit Point maximum and current Hit Points increase by 5 for the duration.</p><p><strong>Using a Higher-Level Spell Slot. </strong>Each target's Hit Points increase by 5 for each spell slot level above 2.</p><p><em>Midi sample item.</em> The SRD Aid raises current hit points with a separate healing roll, which is capped at the maximum as it stands when the healing is applied: applied before the effect, a creature at full hit points gains nothing. This version has no healing roll; each level's effect raises temporary maximum hit points and, through DAE's <em>raise current HP</em> option, current hit points by the same amount, once, whatever the order.</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "rules": "2024",
+      "license": "CC-BY-4.0",
+      "book": "",
+      "revision": 1
+    },
+    "activation": {
+      "type": "action",
+      "condition": "",
+      "value": null
+    },
+    "duration": {
+      "value": "8",
+      "units": "hour"
+    },
+    "target": {
+      "affects": {
+        "choice": false,
+        "count": "3",
+        "type": "creature",
+        "special": ""
+      },
+      "template": {
+        "units": "ft",
+        "contiguous": false,
+        "type": "",
+        "stationary": false
+      }
+    },
+    "range": {
+      "units": "ft",
+      "special": "",
+      "value": "30"
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "level": 2,
+    "school": "abj",
+    "properties": [
+      "vocal",
+      "somatic",
+      "material"
+    ],
+    "materials": {
+      "value": "a strip of white cloth",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "activities": {
+      "2JEDs5yWXLOYGN9m": {
+        "type": "utility",
+        "_id": "2JEDs5yWXLOYGN9m",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": []
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "XyGKCCrIhrFlixG8",
+            "level": {
+              "min": 2,
+              "max": 2
+            }
+          },
+          {
+            "_id": "cTNQ2KRJLj4CRpQJ",
+            "level": {
+              "min": 3,
+              "max": 3
+            }
+          },
+          {
+            "_id": "6hOGzq87iQntkHE5",
+            "level": {
+              "min": 4,
+              "max": 4
+            }
+          },
+          {
+            "_id": "Fs7zeTW4u9SvteWO",
+            "level": {
+              "min": 5,
+              "max": 5
+            }
+          },
+          {
+            "_id": "o1Gvp7nIrEHqdn3g",
+            "level": {
+              "min": 6,
+              "max": 6
+            }
+          },
+          {
+            "_id": "n4jjrd9bNOaDkos7",
+            "level": {
+              "min": 7,
+              "max": 7
+            }
+          },
+          {
+            "_id": "EHMDA2J47jwUUTKu",
+            "level": {
+              "min": 8,
+              "max": 8
+            }
+          },
+          {
+            "_id": "YnQP5Rd6w5NwZVLN",
+            "level": {
+              "min": 9,
+              "max": 9
+            }
+          }
+        ],
+        "range": {
+          "override": false,
+          "units": "self"
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "stationary": false
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": false,
+          "prompt": true
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "sort": 0,
+        "name": "",
+        "img": "",
+        "visibility": {
+          "level": {
+            "min": null,
+            "max": null
+          },
+          "requireAttunement": false,
+          "requireIdentification": false,
+          "requireMagic": false
+        },
+        "flags": {},
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "otherActivityId": null,
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false,
+          "idm": false
+        },
+        "midiProperties": {
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "triggeredActivityConsume": true,
+          "triggeredActivityConfigure": true,
+          "autoConsume": false,
+          "forceConsumeDialog": "default",
+          "forceRollDialog": "default",
+          "forceDamageDialog": "default",
+          "confirmTargets": "default",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "automationOnly": false,
+          "otherActivityCompatible": true,
+          "otherActivityAsParentType": true,
+          "identifier": "",
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "toggleEffect": false,
+          "ignoreFullCover": false,
+          "removeChatButtons": "default",
+          "magicEffect": false,
+          "magicDamage": false,
+          "noConcentrationCheck": false,
+          "skipConcentrationCheck": false,
+          "autoCEEffects": "default"
+        },
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "rollAs": "target",
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "regionBehavior": {
+          "enabled": false,
+          "dispositionFilter": -1,
+          "excludeSource": true,
+          "oncePerTurn": true,
+          "wallRestriction": "none",
+          "regionVisibility": 2,
+          "attachToken": "default",
+          "templateOrigin": "default",
+          "rules": []
+        },
+        "regionLight": {
+          "enabled": false,
+          "dim": 0,
+          "bright": 0,
+          "color": null,
+          "alpha": 0.5,
+          "luminosity": 0.5,
+          "animationType": "",
+          "animationSpeed": 5,
+          "animationIntensity": 5
+        }
+      }
+    },
+    "identifier": "aid",
+    "method": "spell",
+    "prepared": 0
+  },
+  "_id": "midiAidSpell0000",
+  "type": "spell",
+  "img": "icons/magic/life/cross-flared-green.webp",
+  "effects": [
+    {
+      "name": "Level 2: +5 Max HP",
+      "img": "icons/magic/life/cross-flared-green.webp",
+      "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
+      "transfer": false,
+      "_id": "XyGKCCrIhrFlixG8",
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.hp.tempmax",
+            "value": 5,
+            "priority": null,
+            "type": "add",
+            "phase": "initial"
+          }
+        ]
+      },
+      "disabled": false,
+      "duration": {
+        "value": 28800,
+        "units": "seconds",
+        "expiry": "turnStart",
+        "expired": false
+      },
+      "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
+      "tint": "#ffffff",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "raiseCurrentHp": [
+            "system.attributes.hp.tempmax"
+          ]
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": null,
+        "systemId": null,
+        "systemVersion": null,
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "start": null,
+      "showIcon": 1,
+      "folder": null,
+      "_key": "!items.effects!midiAidSpell0000.XyGKCCrIhrFlixG8"
+    },
+    {
+      "name": "Level 3: +10 Max HP",
+      "img": "icons/magic/life/cross-flared-green.webp",
+      "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
+      "transfer": false,
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.hp.tempmax",
+            "value": 10,
+            "priority": null,
+            "type": "add",
+            "phase": "initial"
+          }
+        ]
+      },
+      "disabled": false,
+      "duration": {
+        "value": 28800,
+        "units": "seconds",
+        "expiry": "turnStart",
+        "expired": false
+      },
+      "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
+      "tint": "#ffffff",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "raiseCurrentHp": [
+            "system.attributes.hp.tempmax"
+          ]
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": null,
+        "systemId": null,
+        "systemVersion": null,
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_id": "cTNQ2KRJLj4CRpQJ",
+      "start": null,
+      "showIcon": 1,
+      "folder": null,
+      "_key": "!items.effects!midiAidSpell0000.cTNQ2KRJLj4CRpQJ"
+    },
+    {
+      "name": "Level 4: +15 Max HP",
+      "img": "icons/magic/life/cross-flared-green.webp",
+      "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
+      "transfer": false,
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.hp.tempmax",
+            "value": 15,
+            "priority": null,
+            "type": "add",
+            "phase": "initial"
+          }
+        ]
+      },
+      "disabled": false,
+      "duration": {
+        "value": 28800,
+        "units": "seconds",
+        "expiry": "turnStart",
+        "expired": false
+      },
+      "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
+      "tint": "#ffffff",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "raiseCurrentHp": [
+            "system.attributes.hp.tempmax"
+          ]
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": null,
+        "systemId": null,
+        "systemVersion": null,
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_id": "6hOGzq87iQntkHE5",
+      "start": null,
+      "showIcon": 1,
+      "folder": null,
+      "_key": "!items.effects!midiAidSpell0000.6hOGzq87iQntkHE5"
+    },
+    {
+      "name": "Level 5: +20 Max HP",
+      "img": "icons/magic/life/cross-flared-green.webp",
+      "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
+      "transfer": false,
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.hp.tempmax",
+            "value": 20,
+            "priority": null,
+            "type": "add",
+            "phase": "initial"
+          }
+        ]
+      },
+      "disabled": false,
+      "duration": {
+        "value": 28800,
+        "units": "seconds",
+        "expiry": "turnStart",
+        "expired": false
+      },
+      "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
+      "tint": "#ffffff",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "raiseCurrentHp": [
+            "system.attributes.hp.tempmax"
+          ]
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": null,
+        "systemId": null,
+        "systemVersion": null,
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_id": "Fs7zeTW4u9SvteWO",
+      "start": null,
+      "showIcon": 1,
+      "folder": null,
+      "_key": "!items.effects!midiAidSpell0000.Fs7zeTW4u9SvteWO"
+    },
+    {
+      "name": "Level 6: +25 Max HP",
+      "img": "icons/magic/life/cross-flared-green.webp",
+      "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
+      "transfer": false,
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.hp.tempmax",
+            "value": 25,
+            "priority": null,
+            "type": "add",
+            "phase": "initial"
+          }
+        ]
+      },
+      "disabled": false,
+      "duration": {
+        "value": 28800,
+        "units": "seconds",
+        "expiry": "turnStart",
+        "expired": false
+      },
+      "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
+      "tint": "#ffffff",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "raiseCurrentHp": [
+            "system.attributes.hp.tempmax"
+          ]
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": null,
+        "systemId": null,
+        "systemVersion": null,
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_id": "o1Gvp7nIrEHqdn3g",
+      "start": null,
+      "showIcon": 1,
+      "folder": null,
+      "_key": "!items.effects!midiAidSpell0000.o1Gvp7nIrEHqdn3g"
+    },
+    {
+      "name": "Level 7: +30 Max HP",
+      "img": "icons/magic/life/cross-flared-green.webp",
+      "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
+      "transfer": false,
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.hp.tempmax",
+            "value": 30,
+            "priority": null,
+            "type": "add",
+            "phase": "initial"
+          }
+        ]
+      },
+      "disabled": false,
+      "duration": {
+        "value": 28800,
+        "units": "seconds",
+        "expiry": "turnStart",
+        "expired": false
+      },
+      "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
+      "tint": "#ffffff",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "raiseCurrentHp": [
+            "system.attributes.hp.tempmax"
+          ]
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": null,
+        "systemId": null,
+        "systemVersion": null,
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_id": "n4jjrd9bNOaDkos7",
+      "start": null,
+      "showIcon": 1,
+      "folder": null,
+      "_key": "!items.effects!midiAidSpell0000.n4jjrd9bNOaDkos7"
+    },
+    {
+      "name": "Level 8: +35 Max HP",
+      "img": "icons/magic/life/cross-flared-green.webp",
+      "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
+      "transfer": false,
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.hp.tempmax",
+            "value": 35,
+            "priority": null,
+            "type": "add",
+            "phase": "initial"
+          }
+        ]
+      },
+      "disabled": false,
+      "duration": {
+        "value": 28800,
+        "units": "seconds",
+        "expiry": "turnStart",
+        "expired": false
+      },
+      "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
+      "tint": "#ffffff",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "raiseCurrentHp": [
+            "system.attributes.hp.tempmax"
+          ]
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": null,
+        "systemId": null,
+        "systemVersion": null,
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_id": "EHMDA2J47jwUUTKu",
+      "start": null,
+      "showIcon": 1,
+      "folder": null,
+      "_key": "!items.effects!midiAidSpell0000.EHMDA2J47jwUUTKu"
+    },
+    {
+      "name": "Level 9: +40 Max HP",
+      "img": "icons/magic/life/cross-flared-green.webp",
+      "origin": "Compendium.dnd5e.spells24.Item.phbsplAid0000000",
+      "transfer": false,
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.hp.tempmax",
+            "value": 40,
+            "priority": null,
+            "type": "add",
+            "phase": "initial"
+          }
+        ]
+      },
+      "disabled": false,
+      "duration": {
+        "value": 28800,
+        "units": "seconds",
+        "expiry": "turnStart",
+        "expired": false
+      },
+      "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
+      "tint": "#ffffff",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "raiseCurrentHp": [
+            "system.attributes.hp.tempmax"
+          ]
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": null,
+        "systemId": null,
+        "systemVersion": null,
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_id": "YnQP5Rd6w5NwZVLN",
+      "start": null,
+      "showIcon": 1,
+      "folder": null,
+      "_key": "!items.effects!midiAidSpell0000.YnQP5Rd6w5NwZVLN"
+    }
+  ],
+  "folder": "SpellFldr2ndLevl",
+  "sort": 100000,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "14.0.12"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "_key": "!items!midiAidSpell0000"
+}
