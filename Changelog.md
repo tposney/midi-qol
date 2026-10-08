@@ -1,3 +1,8 @@
+### 13.0.67
+* Fixed: a concentration spell's Concentration box in the cast dialog started unticked, and ticking it gave two Concentrating effects.
+* Fixed: with *Roll saves before damage* on and hits not checked, an attack was treated as missing every target, so *Autocomplete workflow* finished the workflow before damage was rolled (and *Remove buttons: everything* removed the Damage button). Thanks for discovering the exact combination @thatlonelybugbear.
+* Fixed: the *Allow GM to fudge damage application* quick setting threw an error setting a removed setting.
+
 ### 13.0.66
 * "Ignore Damage Immunity/Resistance/Vulnerability" for all damage types now also covers a creature's "All Damage" trait, which it previously left in force.
 * New activity option "Downgrade Immunity" - treats damage immunity as resistance rather than ignoring it, which leaves full damage.

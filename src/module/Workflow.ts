@@ -7896,7 +7896,8 @@ export class SavesFirstWorkflow extends Workflow {
     if (!hasDamageRoll) return this.WorkflowState_AllRollsComplete;
     if (getAutoRollDamage(this) === "always") return this.WorkflowState_WaitForDamageRoll;
     const noHits = this.hitTargets.size === 0 && this.hitTargetsEC.size === 0;
-    const allMissed = noHits && this.targets.size !== 0;
+    // With hits not checked there are no hit targets, which is not a miss.
+    const allMissed = configSettings.autoCheckHit !== "none" && noHits && this.targets.size !== 0;
     if (allMissed) {
       if (configSettings.confirmAttackDamage !== "none" && !this.workflowOptions.forceCompletion)
         return this.WorkflowState_ConfirmRoll;

@@ -703,10 +703,6 @@ let quickSettingsDetails: any = {
     shortDescription: "Allow GM to fudge damage application",
     configSettings: {
       autoApplyDamage: "noCard"
-    },
-    codeChecks: (current, settings) => {
-      //@ts-expect-error
-      game.settings.set("midi-qol", "AddChatDamageButtons", "gm");
     }
   },
   DisableConcentration: {

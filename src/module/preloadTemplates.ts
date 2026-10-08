@@ -29,7 +29,6 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/activity/parts/midi-activity-tab.hbs",
     "modules/midi-qol/templates/activity/parts/save-damage.hbs",
     "modules/midi-qol/templates/activity/parts/save-extras.hbs",
-    "modules/midi-qol/templates/activity/parts/overtime-extras.hbs",
     "modules/midi-qol/templates/apps/ActorOnUseMacroConfig/actorOnUseMacrosConfig.hbs",
     "modules/midi-qol/templates/apps/ConditionEditor/conditionEditor.hbs",
     "modules/midi-qol/templates/apps/ConfigPanel/concentration.hbs",
