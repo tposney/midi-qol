@@ -30,12 +30,6 @@
 "midi-qol.ItemRollButtons.Hint": "Aggiungi pulsanti di lancio all'oggetto - questi pulsanti supportano ctrl/alt/shift per saltare la finestra di dialogo",
 "midi-qol.AddChatDamageButtons.Name": "Aggiungi pulsanti di danno al messaggio chat",
 "midi-qol.AddChatDamageButtons.Hint": "Aggiungi pulsanti di danno a qualsiasi messaggio chat di tiro del danno: facendo clic si applica il danno a tutti i token selezionati (NON BERSAGLIATI) (come il menu a discesa)",
-"midi-qol.AddChatDamageButtonsOptions": {
-    "none": "Nessuno",
-    "gm": "Aggiungi pulsanti solo per il DM",
-    "pc": "Aggiungi pulsanti solo per i Giocatori",
-    "both": "Aggiungi pulsanti per tutti"
-},
 "midi-qol.AutoRollDamage.Name": "Tira automaticamente il Danno",
 "midi-qol.AutoRollDamage.Hint": "Tira automaticamente il danno quando viene effettuato un tiro di attacco. Se l'opzione di tiro automatico del danno è impostata su 'attacco riuscito', lancerà il danno se non sono selezionati bersagli, l'attacco colpisce (vedi controllo automatico colpi) o i colpi non vengono controllati",
 "midi-qol.AutoCheckSaves.Name": "Controllo Automatico dei Tiri Salvezza",
@@ -483,8 +477,6 @@
 "midi-qol.RemoveHiddenInvis.Name": "L'attacco rimuove la nascosta (usa CE/CV/CUB/core foundry specialStatus )",
 "midi-qol.CriticalSaves.Name": "(Regola della Casa) Successo/Fallimento critico sempre riuscito/fallito per i tiri salvezza",
 "midi-qol.MaxDRValue.Name": "(Regola della Casa) Abilitando questa opzione significa che verrà applicata solo la Riduzione Danno più efficace. Spento significa che la RD si accumula",
-"midi-qol.DRAllPerDamageDetail.Name": "(Regola della Casa) La RDAll (RD.rwak/...) viene sottratta sia dal danno dell'attacco che dal danno aggiuntivo",
-"midi-qol.DRAllPerDamageDetail.Hint": "Disabilitato significa che la RDAll si applica una sola volta al danno totale",
 "midi-qol.invisible": "Invisibile",
 "midi-qol.hidden": "Nascosto",
 "midi-qol.nevertarget": "Mai Bersaglio",
@@ -655,7 +647,6 @@
 "midi-qol.KeysOther.Hint": "Tira formula alternativa come danno",
 "midi-qol.FixStickyKeys.Name": "Risolve il problema dei tasti alt/ctrl/shift bloccati",
 "midi-qol.FixStickyKeys.Hint": "Se impostato, midi cercherà di risolvere il problema dei tasti alt/ctrl/shift bloccati",
-"midi-qol.DisplaySaveAdvantage.Name": "Mostra se il tiro salvezza aveva Vantaggio/Svantaggio",
 "midi-qol.QuickSettingsBlurb": {
   "1": "Le impostazioni rapide ti consentono di impostare una combinazione di impostazioni in una volta sola.",
   "2": "Quando uno dei pulsanti sottostanti viene premuto, le modifiche vengono apportate immediatamente alle tue impostazioni",
@@ -859,8 +850,6 @@
   "SaveDRDr": "TS -> Riduzione Danno -> Resistenza Danno",
   "SaveDrDR": "TS -> Resistenza Danno -> Riduzione Danno"
 },
-"midi-qol.WaitingForPreviousWorkflow": "Il precedente tiro di {name} non è stato completato.",
-"midi-qol.ResolvePreviousWorkflow": "Scegli cosa fare con il tiro precedente",
 "midi-qol.ConfirmTargetOptions": {
   "default": "Impostazioni Midi",
   "always": "Sempre",

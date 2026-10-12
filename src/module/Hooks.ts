@@ -3,19 +3,17 @@ import { excludeRegionSourceEffect } from "./regionBehaviors/MidiRegionActivityB
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
 import { addViewAsPlayerOption } from "./ChatClasses/DamageCardMessage.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget, rangeToSceneUnits } from "./utils.js";
-import { checkMechanic, checkRule, configSettings, dragDropTargeting, isDnd5e53, setDnd5e53 } from "./settings.js";
-import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook, getTemplateSourceToken } from "./patching.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, updateFlankingHighlight, onUserManualTarget } from "./utils.js";
+import { checkRule, configSettings, dragDropTargeting } from "./settings.js";
+import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { Workflow } from "./Workflow.js";
 import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
-import { installedModules } from "./setupModules.js";
 import { preActivityConsumptionHook, activityConsumptionHook, midiTemplateFlags, isTemplateRegion, templateElevation } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
 import { MidiDependentsRegistry } from "./lib/MidiDependentsRegistry.js";
 
-export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
 
 export let readyHooks = async () => {
@@ -179,14 +177,21 @@ export let readyHooks = async () => {
     }
   })
 
-  //@ts-expect-error
-  Hooks.on("renderActorArmorConfig", (app: never, html: HTMLElement, data) => {
-    if (!["none", undefined, false].includes(checkRule("challengeModeArmor") as string | boolean | undefined)) {
-      const ac = data.ac;
-      const element = html.querySelector(".card");
-      const arTemplate = document.createElement("template");
-      arTemplate.innerHTML = `<div>EC: ${ac.EC}</div><div>AR: ${ac.AR}</div>`;
-      element?.append(...Array.from(arTemplate.content.children));
+  // Challenge mode armor: show EC and AR in dnd5e's armor class dialog.
+  //@ts-expect-error not in fvtt-types
+  Hooks.on("renderArmorClassConfig", (app: { document?: Actor.Implementation }, html: HTMLElement) => {
+    if (["none", undefined, false].includes(checkRule("challengeModeArmor") as string | boolean | undefined)) return;
+    // @ts-expect-error no dnd5e-types
+    const ac = app.document?.system?.attributes?.ac;
+    const card = html.querySelector("fieldset.card");
+    if (!ac || !card) return;
+    card.querySelectorAll("[data-midi-challenge-armor]").forEach(el => el.remove());
+    for (const [label, value] of [["EC", ac.EC], ["AR", ac.AR]]) {
+      const row = document.createElement("div");
+      row.classList.add("form-group");
+      row.dataset.midiChallengeArmor = label;
+      row.innerHTML = `<label>${label}</label><div class="form-fields">${value ?? ""}</div>`;
+      card.append(row);
     }
   });
 
@@ -839,7 +844,6 @@ export function initHooks() {
     if (!dragDropTargeting) return true;
     if (dropData.type !== "Item") return true;
     if (!canvas.grid) return true;
-    let grid_size = canvas.scene?.grid.size ?? 100;
     // This will work for all grids except gridless
     // TODO: swap to `getTopLeftPoint` - should simplify some
     let coords = { x: dropData.x, y: dropData.y };
@@ -867,15 +871,8 @@ export function initHooks() {
     return true;
   })
 
-  // Set dnd5e version flag and register version-appropriate damage hooks
-  setDnd5e53(foundry.utils.isNewerVersion(game.system.version, "5.2.99"));
-  if (isDnd5e53) {
-    Hooks.on("dnd5e.preCalculateDamage", preCalculateDamageHandler_53);
-    Hooks.on("dnd5e.calculateDamage", calculateDamageHandler_53);
-  } else {
-    Hooks.on("dnd5e.preCalculateDamage", preCalculateDamageHandler);
-    Hooks.on("dnd5e.calculateDamage", calculateDamageHandler);
-  }
+  Hooks.on("dnd5e.preCalculateDamage", preCalculateDamageHandler_53);
+  Hooks.on("dnd5e.calculateDamage", calculateDamageHandler_53);
 }
 
 export function setupHooks() {
@@ -1011,27 +1008,17 @@ function isDRType(type: string): boolean {
 }
 
 /**
- * Set a boolean flag on damage.active in the version-appropriate structure.
- * On dnd5e 5.3+, flags are nested under `type` or `all` (e.g., `active.type.resistance`).
- * On dnd5e 5.2.x, flags are flat (e.g., `active.resistance`).
- * `multiplier` and `threshold` remain flat in both versions — do NOT use this for those.
+ * Set a boolean flag on damage.active, nested under `type` or `all` (e.g. `active.type.resistance`).
+ * `multiplier` and `threshold` are flat — do NOT use this for those.
  */
 function setDamageActiveFlag(damage: DamageDescription, flag: string, scope: "type" | "all" = "type"): void {
   damage.active ??= {};
-  if (isDnd5e53) {
-    damage.active[scope] ??= {};
-    damage.active[scope]![flag] = true;
-  } else {
-    damage.active[flag] = true;
-  }
+  damage.active[scope] ??= {};
+  damage.active[scope]![flag] = true;
 }
 
-/** Read a boolean flag from damage.active in the version-appropriate structure. */
 function getDamageActiveFlag(damage: DamageDescription, flag: string): boolean {
-  if (isDnd5e53) {
-    return !!(damage.active?.type?.[flag] || damage.active?.all?.[flag]);
-  }
-  return !!damage.active?.[flag];
+  return !!(damage.active?.type?.[flag] || damage.active?.all?.[flag]);
 }
 
 function shouldDowngrade(options: DamageApplicationOptions, type: string): boolean {
@@ -1130,13 +1117,13 @@ function applySaves({ damages, options }: DamageCalcParams): void {
 
     if (mo.saved && !ignoringSaved) {
       const multiplier = ignoringSuperSaver
-        ? configSettings.defaultSaveMultiplier
+        ? configSettings.defaultSaveMult
         : (mo.superSaver ? 0 : (entrySaveMultiplier ?? 1));
       damage.value = damage.value * multiplier;
       foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * multiplier);
     } else if (mo.superSaver && !ignoringSuperSaver) {
-      damage.value = damage.value * configSettings.defaultSaveMultiplier;
-      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * configSettings.defaultSaveMultiplier);
+      damage.value = damage.value * configSettings.defaultSaveMult;
+      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * configSettings.defaultSaveMult);
     }
   }
 }
@@ -1154,93 +1141,6 @@ function applyUncannyDodge({ actor, damages, options }: DamageCalcParams): void 
     //@ts-expect-error multiplier exists
     foundry.utils.setProperty(damage, "multiplier", (damage.multiplier ?? 1) * 0.5);
     damage.value = damage.value * 0.5;
-  }
-}
-
-function applyTraitMultipliers({ actor, damages, options }: DamageCalcParams): void {
-  if (options.midi?.noCalc) return;
-
-  //@ts-expect-error no dnd5e types
-  const actorTraits = actor.system?.traits ?? {};
-
-  for (const damage of damages) {
-    if (damage.active?.resistance) {
-      damage.value = damage.value * 2 * configSettings.damageResistanceMultiplier;
-      damage.active.multiplier = (damage.active.multiplier ?? 1) * 2 * configSettings.damageResistanceMultiplier;
-    }
-    if (damage.active?.vulnerability) {
-      damage.active.multiplier = (damage.active.multiplier ?? 1) / 2 * configSettings.damageVulnerabilityMultiplier;
-      damage.value = damage.value / 2 * configSettings.damageVulnerabilityMultiplier;
-    }
-    const absorptionValue = actorTraits.da?.[damage.type];
-    if (absorptionValue !== undefined && !shouldIgnore(options, "absorption", damage.type, actorTraits)) {
-      const multiplier = Number(absorptionValue) ?? -1;
-      damage.active ??= {};
-      damage.active.multiplier = (damage.active.multiplier ?? 1) * multiplier;
-      damage.value *= multiplier;
-      damage.damage = damage.value;
-      damage.active.absorption = true;
-    }
-  }
-}
-
-function applyCustomResistances({ actor, damages, options }: DamageCalcParams): void {
-  const categories = { di: "immunity", dr: "resistance", dv: "vulnerability", da: "absorption" };
-  const traitMultipliers = {
-    dr: configSettings.damageResistanceMultiplier,
-    di: configSettings.damageImmunityMultiplier,
-    da: -1,
-    dv: configSettings.damageVulnerabilityMultiplier,
-  };
-
-  //@ts-expect-error no dnd5e types
-  const actorTraits = actor.system?.traits ?? {};
-
-  for (const trait of ["da", "dv", "di", "dr"] as const) {
-    const traitData = actorTraits[trait];
-    if (!traitData) continue;
-
-    const bypasses = traitData.bypasses ?? new Set();
-    const customs = [
-      ...((traitData.custom ?? "").split(";").map((s: string) => s.trim())),
-      ...Object.keys(traitData.midi ?? {}),
-    ].filter((c: string) => c !== "");
-
-    for (let custom of customs) {
-      const normalizedCustom = Object.keys(GameSystemConfig.customDamageResistanceTypes ?? {})
-        .find(key => (GameSystemConfig.customDamageResistanceTypes[key] as string).toLowerCase() === custom.toLowerCase()) ?? custom;
-
-      const matcher = CUSTOM_RESISTANCE_MATCHERS[custom] ?? CUSTOM_RESISTANCE_MATCHERS[normalizedCustom];
-
-      for (const damage of damages) {
-        if (damage.type === "midi-none") continue;
-        if (GameSystemConfig.healingTypes[damage.type]) continue;
-        if (damage.active?.[categories[trait]]) continue;
-        if (damage.active?.[custom]) continue;
-        if (shouldIgnore(options, categories[trait], damage.type, actorTraits)) continue;
-        if (shouldIgnore(options, custom, damage.type, actorTraits)) continue;
-
-        const matches = matcher
-          ? matcher.match(damage, bypasses)
-          : damage.properties?.has(custom);
-
-        if (!matches) continue;
-
-        damage.active ??= {};
-        damage.active[GameSystemConfig.customDamageResistanceTypes?.[normalizedCustom] ?? custom] = true;
-        damage.active[categories[trait]] = true;
-
-        let multiplier = traitMultipliers[trait];
-        const daOverride = actorTraits.da?.midi?.[custom] ?? actorTraits.da?.midi?.all;
-        if (daOverride && Number.isNumeric(daOverride)) {
-          multiplier = Number(daOverride);
-        }
-
-        damage.active.multiplier = (damage.active.multiplier ?? 1) * multiplier;
-        damage.value = damage.value * multiplier;
-        damage.damage = damage.value;
-      }
-    }
   }
 }
 
@@ -1480,50 +1380,6 @@ function applyDamageReductionInline(
   return true;
 }
 
-function recalculateTotals({ damages }: DamageCalcParams): void {
-  //@ts-expect-error amount exists on damages array
-  damages.amount = 0;
-  //@ts-expect-error temp exists on damages array
-  damages.temp = 0;
-
-  for (const damage of damages) {
-    if (damage.active?.inlined) continue;
-    if (damage.type === "temphp") {
-      //@ts-expect-error
-      damages.temp += damage.value;
-    } else {
-      //@ts-expect-error
-      damages.amount += damage.value;
-    }
-  }
-
-  //@ts-expect-error
-  damages.amount = damages.amount > 0 ? Math.floor(damages.amount) : Math.ceil(damages.amount);
-
-  //@ts-expect-error
-  if (damages.amount < 0) {
-    for (const damage of damages) {
-      if (damage.type === "none" && damage.active?.DR && !damage.active?.inlined) {
-        //@ts-expect-error
-        damage.value -= damages.amount;
-        //@ts-expect-error
-        damages.amount = 0;
-        break;
-      }
-    }
-  }
-}
-
-function calculateTotalDamage({ damages, options }: DamageCalcParams): number {
-  return damages.reduce((total, damage) => {
-    if (damage.active?.inlined) return total;
-    let value = damage.value;
-    if (options.invertHealing !== false && damage.type === "healing") value = -value;
-    if (damage.type === "temphp" || damage.type === "midi-none") value = 0;
-    return total + value;
-  }, 0);
-}
-
 // --- dnd5e 5.3+ variants ---
 
 function applyTraitMultipliers_53({ actor, damages, options }: DamageCalcParams): void {
@@ -1665,71 +1521,6 @@ function calculateTotalDamage_53({ damages, options }: DamageCalcParams): number
     if (damage.type === "temphp" || damage.type === "midi-none" || damage.type === "maximum") value = 0;
     return total + value;
   }, 0);
-}
-
-function preCalculateDamageHandler(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {
-  try {
-    if (options.midi?.noCalc) return true;
-
-    const sourceActor = options.midi?.sourceActorUuid
-      ? fromUuidSync(options.midi.sourceActorUuid) as Actor.Implementation | undefined
-      : undefined;
-    const params = { actor, sourceActor, damages, options };
-
-    const saveDROrder = configSettings.saveDROrder;
-    computeSourceIgnores(params);
-    applyUncannyDodge(params);
-
-    // Apply saves and/or DR based on order setting
-    if (saveDROrder === "DRSaveDr") {
-      if (!applyDamageReduction(params)) return false;
-    } else if (["SaveDrDR", "SaveDRDr"].includes(saveDROrder)) {
-      applySaves(params);
-      if (saveDROrder === "SaveDRDr") {
-        if (!applyDamageReduction(params)) return false;
-      }
-    }
-
-    foundry.utils.setProperty(options, "midi.totalDamage", calculateTotalDamage(params));
-    if (Hooks.call("midi-qol.dnd5ePreCalculateDamage", actor, damages, options) === false) return false;
-  } catch (err) {
-    const message = `Error in preCalculateDamage`;
-    error(message, err);
-    TroubleShooter.recordError(err, message);
-  }
-  return true;
-}
-
-function calculateDamageHandler(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {
-  try {
-    if (options.midi?.noCalc) return true;
-
-    const sourceActor = options.midi?.sourceActorUuid
-      ? fromUuidSync(options.midi.sourceActorUuid) as Actor.Implementation | undefined
-      : undefined;
-    const params = { actor, sourceActor, damages, options };
-
-    const saveDROrder = configSettings.saveDROrder;
-
-    // Apply saves if not already done
-    if (saveDROrder === "DRSaveDr") {
-      applySaves(params);
-    }
-
-    applyTraitMultipliers(params);
-    applyCustomResistances(params);
-
-    // Apply DR if not already done
-    if (saveDROrder === "SaveDrDR") {
-      if (!applyDamageReduction(params)) return false;
-    }
-
-    recalculateTotals(params);
-    if (Hooks.call("midi-qol.dnd5eCalculateDamage", actor, damages, options) === false) return false;
-  } catch (err) {
-    error(err);
-  }
-  return true;
 }
 
 function preCalculateDamageHandler_53(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {

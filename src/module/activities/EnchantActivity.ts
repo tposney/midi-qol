@@ -1,5 +1,5 @@
 import { Activity } from "../../globals.js";
-import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
+import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
@@ -47,16 +47,7 @@ let defineMidiEnchantActivityClass = <T extends Activity>(ActivityClass: T) => {
   }
 }
 
+// The effect part is dnd5e's own: midi's copy of the template included a partial dnd5e 6 removed.
 export function defineMidiEnchantSheetClass(baseClass: any) {
-  return class MidiEnchantSheet extends MidiActivityMixinSheet(baseClass) {
-    static PARTS = {
-      ...super.PARTS,
-      effect: {
-        template: "modules/midi-qol/templates/activity/enchant-effect.hbs",
-        templates: [
-          ...super.PARTS.effect.templates
-        ]
-      }
-    };
-  }
+  return class MidiEnchantSheet extends MidiActivityMixinSheet(baseClass) {};
 }

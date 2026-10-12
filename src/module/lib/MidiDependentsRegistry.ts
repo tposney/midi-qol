@@ -1,4 +1,4 @@
-import { warn, debugEnabled, error, debug, log } from "../../midi-qol.js";
+import { warn, debugEnabled, error, log } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 
 /**

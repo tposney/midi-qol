@@ -41,7 +41,6 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       maxTargets = 1;
     }
     this.data = { actor, activity, user, targets: [], options, maxTargets };
-    const keys = {}; // TODO see if this needs to be set from the workflow event or let it get processed later
     // Handle alt/ctrl etc keypress when completing the dialog
     this.callback = function (value) {
       foundry.utils.setProperty(options, "workflowOptions.advantage", options.workflowOptions?.advantage);

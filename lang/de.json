@@ -253,12 +253,6 @@
   "midi-qol.PlayerDamageCard.Name": "Zeigen die Schadenskarte des Spielers",
   "midi-qol.PlayerDamageCard.Hint": "Eine vereinfachte Form der Schadenskarte.\nWird nur angezeigt wenn die GM Karte angezeigt wird.\nKarte wird dem GM nicht angezeigt",
   "midi-qol.PlayerCardDamageDifferent.Name": "Zeige die Schadenskarte des Spielers wenn der gewürfelte Schaden nicht mit dem angewendeten Schaden eines Zieles übereinstimmt",
-  "midi-qol.AddChatDamageButtonsOptions": {
-    "none": "Keine",
-    "gm": "Buttons nur für GM hinzufügen",
-    "pc": "Button nur für Spieler hinzufügen",
-    "both": "Buttons für Alle hinzufügen"
-  },
   "midi-qol.noTemplateSeen": "Template wurde nicht platziert",
   "midi-qol.fullDamageText": "Voller Schaden bei Rettungswurf",
   "midi-qol.fullDamage": "Voller Schaden bei Rettungswurf",

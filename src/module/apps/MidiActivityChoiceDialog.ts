@@ -1,6 +1,6 @@
 import { i18n } from "../../midi-qol.js";
 import { safeGetGameSetting } from "../settings.js";
-import { asyncHooksCall, asyncHooksCallAll } from "../utils.js";
+import { asyncHooksCallAll } from "../utils.js";
 
 //@ts-expect-error
 const ActivityChoiceDialog = dnd5e.applications?.activity?.ActivityChoiceDialog;
@@ -11,10 +11,6 @@ const ActivityChoiceDialog = dnd5e.applications?.activity?.ActivityChoiceDialog;
 const pendingChoices = new WeakMap();
 
 export class MidiActivityChoiceDialog extends ActivityChoiceDialog {
-  static get defaultOptions() {
-    return super.getDefaultOptions();
-  }
-
   /** The item's offerable activities after midi's usability filter and the module prune hook.
    *  Returns the surviving choice contexts ({id, name, img, sort}), sorted. Single source of truth
    *  for "which activities can be used" — shared by the dialog and the item-use entry points so the

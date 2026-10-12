@@ -2,7 +2,7 @@
   "id": "midi-qol",
   "title": "Midi QOL",
   "description": "Automates rolling weapon/spell attacks and applying damage amongst other things",
-  "version": "14.6.0",
+  "version": "14.6.1",
   "authors": [
     {
       "name": "Tim Posney",
@@ -41,8 +41,8 @@
         "id": "dnd5e",
         "type": "system",
         "compatibility": {
-          "minimum": "6.0.0",
-          "verified": "6.0.5",
+          "minimum": "6.0.6",
+          "verified": "6.0.6",
           "maximum": "6.999"
         }
       }
@@ -60,7 +60,7 @@
         "id": "dae",
         "type": "module",
         "compatibility": {
-          "minimum": "14.6.0"
+          "minimum": "14.6.1"
         }
       }
     ]
@@ -156,8 +156,8 @@
     }
   ],
   "compatibility": {
-    "minimum": "14.368",
-    "verified": "14.368",
+    "minimum": "14.369",
+    "verified": "14.369",
     "maximum": "14.999"
   },
   "bugs": "https://gitlab.com/tposney/midi-qol/-/issues",
@@ -166,6 +166,6 @@
   },
   "url": "https://gitlab.com/tposney/midi-qol",
   "manifest": "https://gitlab.com/tposney/midi-qol/raw/dnd6/package/module.json",
-  "download": "https://gitlab.com/tposney/midi-qol/raw/dnd6/package/midi-qol-v14.6.0.zip",
+  "download": "https://gitlab.com/tposney/midi-qol/raw/dnd6/package/midi-qol-v14.6.1.zip",
   "changelog": "https://gitlab.com/tposney/midi-qol/raw/dnd6/Changelog.md"
 }

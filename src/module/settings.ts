@@ -1,4 +1,4 @@
-import { debug, setDebugLevel, i18n, debugEnabled, error, gameStats, updateFlankingStatusEffects } from "../midi-qol.js";
+import { debug, setDebugLevel, i18n, debugEnabled, gameStats, updateFlankingStatusEffects } from "../midi-qol.js";
 import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { DependentsExplorer } from "./apps/DependentsExplorer.js";
 import { ModuleReviewDialog } from "./apps/ModuleReviewDialog.js";
@@ -79,8 +79,6 @@ export let midiSoundSettingsBackup: any = undefined;
 export let nsaFlag: boolean;
 export let playerControlsInvisibleTokens: boolean = false;
 export let replaceDefaultActivities: boolean = true;
-export let isDnd5e53: boolean = false;
-export function setDnd5e53(value: boolean) { isDnd5e53 = value; }
 export let saveRequests = {};
 export let saveTimeouts = {};
 export let saveToChatCard: boolean = false;
@@ -148,7 +146,6 @@ class ConfigSettings {
   autoTarget: string = "none";
   defaultOtherActivity: string = "auto";
   averageDamage: string = "none";
-  checkSaveText: boolean = false;
   checkTwoHanded: boolean = false;
   chooseAmmunition: boolean = true;
   collapsibleTargets: boolean = false;
@@ -157,18 +154,14 @@ class ConfigSettings {
   confirmAmmunition: boolean = false;
   gmConfirmAmmunition: boolean = false;
   consumeResource: string = "none";
-  convenientEffectsReaction: string = "Reaction";
   criticalDamage: string = "default";
   criticalDamageGM: string = "none";
-  criticalSound: string = "";
   customSoundsPlaylist: string = "none";
   damageImmunities: string = "none";
   damageImmunityMultiplier: number = 0.0;
   damageResistanceMultiplier: number = 0.5;
   damageVulnerabilityMultiplier: number = 2;
-  defaultSaveMultiplier: number = 0.5;
-  diceSound: string = "";
-  displaySaveAdvantage: boolean = true;
+  defaultSaveMult: number = 0.5;
   doConcentrationCheck: string = "chat";
   griddedGridless: boolean = false;
   gridlessFudge: number | undefined = 0;
@@ -177,8 +170,6 @@ class ConfigSettings {
   enforceReactions = "none";
   enforceBonusActions = "none";
   enforceSingleWeaponTarget: boolean = false;
-  fixStickyKeys: boolean = true;
-  fumbleSound: string = "";
   ghostRolls: boolean = false;
   gmAttackDisplay: string = "full";
   gmDamageDisplay: string = "full";
@@ -196,7 +187,6 @@ class ConfigSettings {
   hideRollDetails: string = "none";
   ignoreSpellReactionRestriction: boolean = false;
   itemTypeList: string[] | undefined = undefined;
-  itemUseSound: string = "";
   keepRollStats: boolean = false;
   keyMapping = defaultKeyMapping;
   mergeCardCondensed: boolean = false;
@@ -214,10 +204,8 @@ class ConfigSettings {
   playerRollSaves: string = "none";
   playerSaveTimeout: number = 0;
   playerStatsOnly: boolean = false;
-  potionUseSound: string = "";
   quickSettings: boolean = true;
   rangeTarget: string = "none";
-  useTemplateRangedTargeting: boolean = false;
   reactionTimeout: number = 10;
   recordAOO = "none";
   removeButtons: string = "all";
@@ -243,9 +231,6 @@ class ConfigSettings {
   singleConcentrationRoll: boolean = true;
   singleDamageCalculation: boolean = true;
   skillAbilityCheckAdvantage: boolean = true;
-  spellHitSound: string = "";
-  spellUseSound: string = "";
-  spellUseSoundRanged: string = "";
   tempHPDamageConcentrationCheck: boolean = false;
   concentrationIncapacitatedConditionCheck: boolean = false;
   toggleOptionalRules: boolean = false;
@@ -257,9 +242,6 @@ class ConfigSettings {
   undoWorkflow: boolean = false;
   useDamageDetail: boolean = true;
   waitForDamageApplication: boolean = true;
-  weaponHitSound: string = "";
-  weaponUseSound: string = "";
-  weaponUseSoundRanged: string = "";
   rollAlternate: string = "off";
   optionalRules = {
     actionSpecialDurationImmediate: false,
@@ -280,7 +262,6 @@ class ConfigSettings {
     displayBonusRolls: true,
     distanceIncludesHeight: false,
     distanceMeasurement: "center", // "center" = grid square centers, "perimeter" = token perimeters
-    DRAllPerDamageDetail: true,
     hiddenAdvantage: "none",
     incapacitated: "nothing",
     invisAdvantage: "RAW2024",
@@ -345,7 +326,7 @@ export async function resetConfigSettingsToDefaults(): Promise<void> {
   await game.settings.set("midi-qol", "SaveToChatCard", false);
   await game.settings.set("midi-qol", "UseWeakReferences", false);
   await game.settings.set("midi-qol", "splashWarnings", true);
-  // notificationVersion, last-run-version, instanceId are intentionally not reset - tracking data
+  // last-run-version, instanceId are intentionally not reset - tracking data
   // MidiSoundSettings is intentionally not reset - separate configuration
 
   Hooks.callAll("midi-qol.ConfigSettingsChanged");
@@ -674,13 +655,9 @@ export let fetchParams = () => {
     ui.notifications?.warn("invalidSaveDROrder reset to 'dm.midi/dnd5e.dm -> Saves/(dr/dv/di) - dnd5e RAW'");
     configSettings.saveDROrder = "DRSaveDr";
   }
-  if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["dice"];
-  if (!configSettings.criticalSound) configSettings.criticalSound = CONFIG.sounds["dice"];
-  if (!configSettings.diceSound) configSettings.diceSound = CONFIG.sounds["dice"];
   if (!configSettings.doReactions) configSettings.doReactions = "none";
   if (!configSettings.gmDoReactions) configSettings.gmDoReactions = "none";
   if (configSettings.reactionTimeout === undefined) configSettings.reactionTimeout = 0;
-  if (configSettings.convenientEffectsReaction === undefined) configSettings.convenientEffectsReaction = "Reaction"; //TODO come back when it is configurable in midi and set it to ""
   if (typeof configSettings.rangeTarget !== "string") configSettings.rangeTarget = "none";
   if (configSettings.showReactionAttackRoll === undefined) configSettings.showReactionAttackRoll = "all";
   //@ts-expect-error type mismatch - this is for legacy true setting
@@ -701,12 +678,10 @@ export let fetchParams = () => {
   if (typeof configSettings.consumeResource !== "string") configSettings.consumeResource = "none";
   if (!configSettings.enableDDBGL) configSettings.enableDDBGL = false;
   if (!configSettings.showReactionChatMessage) configSettings.showReactionChatMessage = false;
-  if (configSettings.fixStickyKeys === undefined) configSettings.fixStickyKeys = true;
   //@ts-expect-error legacy boolean value
   if (configSettings.autoCEEffects === true) configSettings.autoCEEffects = "both";
   if (!configSettings.autoCEEffects) configSettings.autoCEEffects = "none";
   configSettings.toggleOptionalRules = false;
-  if (configSettings.displaySaveAdvantage === undefined) configSettings.displaySaveAdvantage = true;
   if (!configSettings.recordAOO) configSettings.recordAOO = "none";
   if (!configSettings.enforceReactions) configSettings.enforceReactions = "none";
   if (!configSettings.enforceBonusActions) configSettings.enforceBonusActions = "none";
@@ -765,7 +740,6 @@ export let fetchParams = () => {
     invisAdvantage: "RAW2024",
     hiddenAdvantage: "none",
     maxDRValue: false,
-    DRAllPerDamageDetail: true,
     nearbyAllyRanged: 0,
     nearbyFoe: 5,
     optionalCritRule: -1,
@@ -803,6 +777,9 @@ export let fetchParams = () => {
     //@ts-expect-error legacy nonexistent value
     delete configSettings.optionalRules.activeDefenceShowGM;
   }
+  // Foundry 14 message modes replace the roll modes the panel used to offer.
+  const legacyMode = { publicroll: "public", gmroll: "gm", blindroll: "blind", selfroll: "self" }[configSettings.optionalRules.activeDefenceShow];
+  if (legacyMode) configSettings.optionalRules.activeDefenceShow = legacyMode;
   if (typeof configSettings.confirmAttackDamage !== "string") configSettings.confirmAttackDamage = "none";
   if (typeof configSettings.requireMagical !== "string" && configSettings.requireMagical !== true) configSettings.requireMagical = "off";
   if (typeof configSettings.requireMagical !== "string" && configSettings.requireMagical === true) configSettings.requireMagical = "nonspell";
@@ -819,7 +796,7 @@ export let fetchParams = () => {
     configSettings.itemTypeList.filter((type) => !["base", "backpack"].includes(type));
   }
   if (configSettings.itemTypeList === undefined) configSettings.itemTypeList = Object.keys(CONFIG.Item.typeLabels);
-  if (configSettings.defaultSaveMultiplier === undefined) configSettings.defaultSaveMultiplier = 0.5;
+  if (configSettings.defaultSaveMult === undefined) configSettings.defaultSaveMult = 0.5;
   if (configSettings.ignoreSpellReactionRestriction === undefined) configSettings.ignoreSpellReactionRestriction = false;
   if (configSettings.damageImmunityMultiplier === undefined) configSettings.damageImmunityMultiplier = 0.0;
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
@@ -875,7 +852,16 @@ export let fetchParams = () => {
   criticalDamage = configSettings.criticalDamage ?? "default";
   criticalDamageGM = configSettings.criticalDamageGM ?? criticalDamage;
   nsaFlag = game.settings.get("midi-qol", "showGM");
+  const previousColoredBorders = coloredBorders;
   coloredBorders = configSettings.coloredBorders ?? "none";
+  // Chat cards are styled as they render, so redraw the messages already in the log for a changed setting.
+  const chatLog = ui.chat;
+  if (previousColoredBorders !== undefined && previousColoredBorders !== coloredBorders && chatLog?.rendered) {
+    chatLog.element.querySelectorAll<HTMLElement>("li.chat-message[data-message-id]").forEach(el => {
+      const message = game.messages?.get(el.dataset.messageId ?? "");
+      if (message) chatLog.updateMessage(message);
+    });
+  }
   itemRollButtons = false; // game.settings.get("midi-qol", "ItemRollButtons");
   if (configSettings.addChatDamageButtons === undefined) configSettings.addChatDamageButtons = "none";
 
@@ -1088,13 +1074,6 @@ export const criticalDamageChoices = keysToOptionsObj("CriticalDamageChoices", [
   "baseDamage",
   "maxBaseRollCrit",
   "bestOfTwo"
-]);
-
-export const addChatDamageButtonsOptions = keysToExtendedOptionsObj("AddChatDamageButtonsOptions", [
-  "none",
-  "gm",
-  "pc",
-  "both"
 ]);
 
 export const coloredBordersOptions = keysToOptionsObj("ColoredBordersOptions", [
@@ -1721,13 +1700,6 @@ export const registerSettings = function () {
     onChange: fetchParams
   });
 
-  game.settings.register("midi-qol", "notificationVersion", {
-    scope: "world",
-    default: "0.0.0",
-    type: String,
-    config: false
-  });
-
   game.settings.register("midi-qol", "splashWarnings", {
     scope: "world",
     type: Boolean,
@@ -2008,10 +1980,6 @@ export const registerSettings = function () {
     type: TroubleShooter,
     restricted: false
   });
-}
-
-export function disableWorkflowAutomation() {
-  enableWorkflow = false;
 }
 
 export function safeGetGameSetting(moduleName: string, settingName: string): any | undefined {

@@ -6,7 +6,6 @@
   "flags": {
     "core": {},
     "midi-qol": {
-      "onUseMacroName": "",
       "effectActivation": false,
       "rollAttackPerTarget": "default",
       "itemCondition": "",
@@ -16,8 +15,7 @@
       "AoETargetType": "any",
       "AoETargetTypeIncludeSelf": true,
       "autoTarget": "default",
-      "removeAttackDamageButtons": "default",
-      "-=onUseMacroName": null
+      "removeAttackDamageButtons": "default"
     },
     "magicitems": {
       "enabled": false,
@@ -84,9 +82,8 @@
       "info": {
         "source": "midi-qol.midiqol-sample-items",
         "rules": "modern",
-        "version": "14.6.0"
-      },
-      "-=macros": null
+        "version": "14.6.1"
+      }
     },
     "crux": {
       "trayVisibility": "default"

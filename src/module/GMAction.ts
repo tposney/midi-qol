@@ -1,15 +1,14 @@
-import { checkRule, configSettings, safeGetGameSetting, isDnd5e53 } from "./settings.js";
+import { checkRule, configSettings } from "./settings.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions, tokenSourceCenter } from "./utils.js";
+import { getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
-import { DamageDescriptionObject, Workflow, WorkflowOptions } from "./Workflow.js";
-import { bonusCheck, checkWounded } from "./patching.js";
+import { DamageDescriptionObject, Workflow } from "./Workflow.js";
+import { bonusCheck } from "./patching.js";
 import { RollModifierTracker } from "./lib/RollModifierTracker.js";
 import { queueUndoData, startUndoWorkflow, updateUndoChatCardUuids, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, updateUndoChatCardUuidsById } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
-import { installedModules } from "./setupModules.js";
 import { StatUpdateMessage } from "./RollStats.js";
 import { DamageApplicationOptions, DamageDescription, DamageListEntry, DamageModDisplay, MonksTokenBarRequest, MoveTokenOptions, RollDialogConfig, RollMessageConfig, RollProcessConfig, SaveDetails, TeleportTokenDestination } from "../globals.js";
 
@@ -78,8 +77,6 @@ export let setupSocket = () => {
   socketlibSocket.register("midiRegionTriggerActivity", _midiRegionTriggerActivity);
   socketlibSocket.register("setupRegion", _setupRegion);
   socketlibSocket.register("advanceCombatRound", _advanceCombatRound);
-
-  // socketlibSocket.register("canSense", _canSense);
 }
 async function _removeWorkflow(workflowId: string) {
   return Workflow.removeWorkflow(workflowId);
@@ -267,7 +264,6 @@ async function confirmDamageRollCompleteHit(data: { workflowId: string, activity
   }
   workflow.hitTargets = new Set(workflow.targets);
   workflow.hitTargetsEC = new Set();
-  const rollMode = safeGetGameSetting("core", "messageMode") as string;
   workflow.isFumble = false;
   for (let hitDataKey in workflow.hitDisplayData) {
     workflow.hitDisplayData[hitDataKey].hitString = i18n("midi-qol.hits");
@@ -282,7 +278,6 @@ async function confirmDamageRollCompleteHit(data: { workflowId: string, activity
 
 async function confirmDamageRollCompleteMiss(data: { workflowId: string, activityUuid: string, itemCardUuid: string }) {
   const workflow = Workflow.getWorkflow(data.workflowId);
-  const activity = workflow?.activity;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     /* Confirm this needs to be awaited
     */
@@ -292,7 +287,6 @@ async function confirmDamageRollCompleteMiss(data: { workflowId: string, activit
   if (workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0) {
     workflow.hitTargets = new Set();
     workflow.hitTargetsEC = new Set();
-    const rollMode = safeGetGameSetting("core", "messageMode") as string;
     for (let hitDataKey in workflow.hitDisplayData) {
       workflow.hitDisplayData[hitDataKey].hitString = i18n("midi-qol.misses");
       if (configSettings.highlightSuccess) {
@@ -455,32 +449,6 @@ async function _gmSetFlag(data: { base: string, key: string, value: any, actorUu
   return actor.setFlag(data.base, data.key, data.value)
 }
 
-// Seems to work doing it on the client instead.
-async function _canSense(data: { tokenUuid: string, targetUuid: string }) {
-  const token = (fromUuidSync(data.tokenUuid) as TokenDocument)?.object;
-  const target = (fromUuidSync(data.targetUuid) as TokenDocument)?.object;
-  if (!target || !token) return true;
-  if (token.vision && (!token.vision.active || !token.vision.los)) {
-    token.vision.initialize({
-      x: token.center.x,
-      y: token.center.y,
-      radius: Math.clamp(token.sightRange, 0, canvas.dimensions?.maxR ?? 0),
-      externalRadius: Math.max(token.mesh?.width ?? 0, token.mesh?.height ?? 0) / 2,
-      angle: token.document.sight.angle,
-      contrast: token.document.sight.contrast,
-      saturation: token.document.sight.saturation,
-      brightness: token.document.sight.brightness,
-      attenuation: token.document.sight.attenuation,
-      rotation: token.document.rotation,
-      visionMode: token.document.sight.visionMode as foundry.canvas.perception.VisionMode.ConfiguredModes,
-      color: globalThis.Color.from(token.document.sight.color),
-      preview: !!token._original,
-      blinded: token.document.hasStatusEffect(CONFIG.specialStatusEffects.BLIND)
-    });
-  }
-  return canSense(token, target);
-}
-
 async function _gmOverTimeEffect(data: { actorUuid: string, effectUuid: string, startTurn: boolean, options: any }) {
   const actor = fromActorUuid(data.actorUuid);
   const effect = fromUuidSync(data.effectUuid) as ActiveEffect.Implementation | undefined;
@@ -605,7 +573,8 @@ async function deleteEffectsByUuid(data: { effectsToDelete: string[], options: a
   for (let effectUuid of data.effectsToDelete) {
     const effect = fromUuidSync(effectUuid) as ActiveEffect.Implementation | undefined;
     if (effect !== undefined && !isEffectExpired(effect)) {
-      if (effect.transfer)
+      // @ts-expect-error no dnd5e-types
+      if (effect.transfer && effect.type !== "enchantment")
         await effect.update({ disabled: true });
       else
         await effect.delete();
@@ -693,18 +662,12 @@ async function addConvenientEffect(options: { effectName: string, actorUuid: str
 }
 
 async function _addDependent(data: { documentUuid: string, dependentUuid: string }) {
-  if (foundry.utils.isNewerVersion(game.system.version, "5.1.99")) {
-    const dependent = fromUuidSync(data.dependentUuid) as foundry.abstract.Document.Any | undefined;
-    if (!dependent) return;
+  const dependent = fromUuidSync(data.dependentUuid) as foundry.abstract.Document.Any | undefined;
+  if (!dependent) return;
 
-    // Always use dnd5e's dependent system - dnd5e's DependentDocumentMixin handles tracking
-    //@ts-expect-error dnd5e.dependentOn
-    return dependent.setFlag("dnd5e", "dependentOn", data.documentUuid);
-  } else {
-    const document = fromUuidSync(data.documentUuid) as foundry.abstract.Document.Any | undefined;
-    //@ts-expect-error .addDependent
-    if (document?.addDependent) return document.addDependent(data.dependentUuid);
-  }
+  // dnd5e's DependentDocumentMixin handles tracking
+  //@ts-expect-error dnd5e.dependentOn
+  return dependent.setFlag("dnd5e", "dependentOn", data.documentUuid);
 }
 
 async function localDoReactions(data: { tokenUuid: string; reactionActivityList: ReactionItemReference[], triggerTokenUuid: string, reactionFlavor: string; triggerType: string; options: any }) {
@@ -749,7 +712,6 @@ async function _D20Roll(params: { request: string, targetUuid: string, formula: 
     */
   return new Promise(async (resolve) => {
     let timeoutId;
-    let result;
     //@ts-expect-error D20Roll
     const D20Roll = CONFIG.Dice.D20Roll;
     if (configSettings.playerSaveTimeout > 0) timeoutId = setTimeout(async () => {
@@ -1375,23 +1337,12 @@ function updateHPStatusHeader(html: HTMLElement, actorUuid?: string, applied?: b
 
 /** The modification labels for one calculated damage entry. */
 export function damageDetailMods(di: DamageDescription): string[] {
-  let allMods: string[];
-  if (isDnd5e53) {
-    // 5.3+: all boolean flags nested under all/type
-    allMods = [];
-    for (const cat of ["modification", "resistance", "vulnerability", "immunity",
-      "absorption", "DR", "saved", "uncannyDodge", "spell", "magic", "nonmagic"]) {
-      if (di.active?.all?.[cat] || di.active?.type?.[cat]) allMods.push(cat);
-    }
-    if (di.active?.threshold) allMods.push("threshold");
-  } else {
-    // 5.2.x: all keys flat
-    allMods = Object.keys(di.active ?? {}).reduce((acc: string[], k) => {
-      if (k === "semiSuperSaver" || k === "superSaver" || k === "inlined") return acc;
-      if (di.active?.[k] && k !== "multiplier") acc.push(k);
-      return acc;
-    }, []);
+  let allMods: string[] = [];
+  for (const cat of ["modification", "resistance", "vulnerability", "immunity",
+    "absorption", "DR", "saved", "uncannyDodge", "spell", "magic", "nonmagic"]) {
+    if (di.active?.all?.[cat] || di.active?.type?.[cat]) allMods.push(cat);
   }
+  if (di.active?.threshold) allMods.push("threshold");
   if ((di.allActives?.length ?? 0) > 0) allMods = allMods.concat(di.allActives!);
   return allMods;
 }
@@ -1731,7 +1682,6 @@ async function createDamageCard(
   await prepareDamageListItems(data, templateData, tokenDataList, true, true, doHits)
   templateData.needsButtonAll = damageList.length > 1;
   if (["yesCard", "noCard", "yesCardNPC", "yesCardMisses", "noCardMisses"].includes(data.autoApplyDamage)) {
-    const gmTemplate = "modules/midi-qol/templates/damage-results.html";
     const speaker = ChatMessage.getSpeaker();
     speaker.alias = game.user?.name;
     let chatData: ChatMessage.CreateData = {

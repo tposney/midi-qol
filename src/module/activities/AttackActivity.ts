@@ -1,10 +1,10 @@
-import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, log, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
+import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { unTimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
 import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, applyTrackerAdvantage } from "../lib/RollModifierTracker.js";
 import { MidiOptions } from "../utils.js";
-import { replaceDefaultActivities, configSettings, confirmTargetOptions, safeGetGameSetting } from "../settings.js";
-import { addAttribution, areMidiKeysPressed, callActivityHooks, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets, validTargetTokens, getToken, tokenSourceCenter } from "../utils.js";
+import { replaceDefaultActivities, configSettings, confirmTargetOptions } from "../settings.js";
+import { addAttribution, areMidiKeysPressed, callActivityHooks, addUpdatesCache, displayDSNForRoll, getSpeaker, isAutoFastForward, updateUserTargets, validTargetTokens, getToken, tokenSourceCenter } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet, findAmmunitionActivity } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
@@ -145,7 +145,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.ATTACK"];
 
     static defineSchema() {
-      const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, NumberField, DocumentIdField } = foundry.data.fields;
+      const { StringField, BooleanField, NumberField } = foundry.data.fields;
 
       const schema = {
         ...super.defineSchema(),
@@ -327,28 +327,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     }
 
     async _triggerSubsequentActions(config, results) {
-    }
-
-    async useWIP(usage: any = {}, dialog: any = {}, message: any = {}) {
-      let preValidateRollHookId;
-      try {
-        if (debugEnabled > 0) warn("MidiQOL | AttackActivity | use | Called", usage, dialog, message);
-        usage.midiOptions ??= {};
-        if (foundry.utils.getProperty(usage, "midiOptions.checkRollPerTarget") !== false) {
-          // const itemAttackPerTarget = foundry.utils.getProperty(this.item, "flags.midi-qol.rollAttackPerTarget");
-          const itemAttackPerTarget = this.attackRollPerTarget ?? "default";
-          let isAttackPerTarget = itemAttackPerTarget === "always"
-            || (configSettings.attackPerTarget && itemAttackPerTarget !== "never")
-          // isAttackPerTarget &&= this.target?.template?.type === "";
-          if (isAttackPerTarget) {
-            foundry.utils.setProperty(usage, "midiOptions.workflowOptions.rollAttackPerTarget", true);
-          }
-        }
-        return super.use(usage, dialog, message);
-      } finally {
-        //@ts-expect-error
-        if (preValidateRollHookId) Hooks.off("dnd5e.preValidateRollAttack", preValidateRollHookId);
-      }
     }
 
     async use(this: Activity, usage: ActivityUseConfiguration = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {

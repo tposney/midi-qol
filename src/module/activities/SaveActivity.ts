@@ -49,13 +49,11 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
       }, { inplace: false, overwrite: true, insertKeys: true, insertValues: true });
 
     static defineSchema() {
-      const { StringField, ArrayField, BooleanField, SchemaField, ObjectField } = foundry.data.fields;
+      const { StringField, ArrayField, BooleanField, SchemaField } = foundry.data.fields;
 
       //@ts-expect-error
       const dataModels = game.system.dataModels;
-      const { ActivationField: ActivationField, CreatureTypeField, CurrencyTemplate, DamageData,
-        DamageField, DurationField, MovementField, RangeField, RollConfigField, SensesField,
-        SourceField, TargetField, UsesField } = dataModels.shared
+      const { DamageField } = dataModels.shared
       const FormulaField = dataModels.fields.FormulaField;
 
       return {

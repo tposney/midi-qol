@@ -36,12 +36,6 @@
   "midi-qol.ItemRollButtons.Hint": "Add Roll Buttons to item description - these buttons support ctrl/alt/shift to skip the dialog",
   "midi-qol.AddChatDamageButtons.Name": "Add damage buttons to chat message",
   "midi-qol.AddChatDamageButtons.Hint": "Enable the dnd5e damage tray on chat messages.",
-  "midi-qol.AddChatDamageButtonsOptions": {
-    "none": "None",
-    "gm": "Only add buttons for GM",
-    "pc": "Only add buttons for Players",
-    "both": "Add buttons for everyone"
-  },
   "midi-qol.AutoRollDamage.Name": "Auto roll Damage",
   "midi-qol.AutoRollDamage.Hint": "Automatically roll Damage when an attack roll is made. If auto roll damage is set to attack-hits midi will roll damage if no targets are selected, the attack hits (see auto check hits) or hits are not being checked",
   "midi-qol.AutoCheckSaves.Name": "Auto check Saves",
@@ -679,8 +673,6 @@
   "midi-qol.RemoveHiddenInvis.Name": "Attacking removes hidden (use CE/CV/CUB/core foundry specialStatus )",
   "midi-qol.CriticalSaves.Name": "(House Rule) Critical/Fumble always succeed/fail for saving throws",
   "midi-qol.MaxDRValue.Name": "(House rule) Enabling this means that only the most effective Damage Reduction will apply. Off means DR accumulates",
-  "midi-qol.DRAllPerDamageDetail.Name": "(House Rule) DRALL (DR.rwak/...) is deducted from BOTH attack damage and Other damage",
-  "midi-qol.DRAllPerDamageDetail.Hint": "Unchecked means DRALL applies just once to the total damage",
   "midi-qol.invisible": "Invisible",
   "midi-qol.hidden": "Hiding",
   "midi-qol.nevertarget": "Never Target",
@@ -900,7 +892,6 @@
   "midi-qol.KeysOther.Hint": "Roll Other formula as damage",
   "midi-qol.FixStickyKeys.Name": "Fix sticky alt/ctrl/shift",
   "midi-qol.FixStickyKeys.Hint": "If set midi will attempt to resolve alt/ctrl/shift being stuck 'on'",
-  "midi-qol.DisplaySaveAdvantage.Name": "Display if save had Advantage/Disadvantage",
   "midi-qol.QuickSettingsBlurb": "Quick settings let you set a combination of settings at once.<br>When one of the buttons below is pushed the changes are immediately made to your settings<br>A list of changes is displayed once the application is complete<br>Suggestions for improvements welcome",
   "midi-qol.Reaction.Title": "Reaction Processing",
   "midi-qol.GMDoReactionsOptions": {
@@ -1169,8 +1160,6 @@
     "SaveDRDr": "Saves -> dm.midi/dm.dnd5e -> (dr/dv/di)",
     "SaveDrDR": "Saves -> dm -> (dr/dv/di) -> dm.midi"
   },
-  "midi-qol.WaitingForPreviousWorkflow": "Previous roll of {name} has not completed.",
-  "midi-qol.ResolvePreviousWorkflow": "Choose what to do with the previous roll",
   "midi-qol.ConfirmTargetOptions": {
     "default": "Midi Settings",
     "always": "Always",

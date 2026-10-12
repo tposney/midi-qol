@@ -26,12 +26,6 @@
     "midi-qol.ItemRollButtons.Hint": "아이템 설명에 굴림 버튼을 추가 - 이 버튼은 대화 상자를 스킵하기 위해 Ctl/Alt/Shift 키를 지원한다",
     "midi-qol.AddChatDamageButtons.Name": "채팅 메시지에 피해 버튼 추가",
     "midi-qol.AddChatDamageButtons.Hint": "피해 굴림 채팅 메시지에 피해 버튼 추가 - 클릭 시 선택한 모든 토큰(대상 지정이 아님)에 피해 적용.(드롭다운 메뉴와 같음)",
-    "midi-qol.AddChatDamageButtonsOptions": {
-        "none": "없음",
-        "gm": "Gm에게만 버튼 추가",
-        "pc": "플레이어에게만 버튼 추가",
-        "both": "모두에게 버튼 추가"
-    },
     "midi-qol.AutoRollDamage.Name": "자동 피해 굴림",
     "midi-qol.AutoRollDamage.Hint": "공격 굴림 시 자동으로 피해 굴림을 한다. 자동 피해 굴림을 공격 명중 시로 설정할 경우, 대상이 선택되지 않았거나 공격 명중(자동 명중 굴림 확인 보기) 혹은 명중이 확인되지 않을 경우 피해 굴림이 발생한다.",
     "midi-qol.AutoCheckSaves.Name": "자동 내성 굴림",

@@ -1,4 +1,3 @@
-import { gameStats } from "../midi-qol.js";
 import { RollStatsDisplay } from "./apps/RollStatsDisplay.js";
 import { timedExecuteAsGM } from "./GMAction.js";
 import { configSettings } from "./settings.js";

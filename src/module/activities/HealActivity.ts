@@ -1,6 +1,5 @@
-import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
-import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
+import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { isAutoFastForward } from "../utils.js";
@@ -77,15 +76,5 @@ let defineMidiHealActivityClass = <T extends Activity>(ActivityClass: T) => {
 }
 
 export function defineMidiHealSheetClass(baseClass: any) {
-  return class MidiHealSheet extends MidiActivityMixinSheet(baseClass) {
-    static PARTS = {
-      ...super.PARTS,
-      effect: {
-        template: "modules/midi-qol/templates/activity/heal-effect.hbs",
-        templates: [
-          ...super.PARTS.effect.templates
-        ]
-      }
-    };
-  }
+  return class MidiHealSheet extends MidiActivityMixinSheet(baseClass) {};
 }

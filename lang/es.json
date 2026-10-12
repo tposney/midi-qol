@@ -26,12 +26,6 @@
   "midi-qol.ItemRollButtons.Hint": "Añadir botones de tirada en la descripción del objeto - estos botones son compatibles con ctl/alt/shift para omitir el diálogo",
   "midi-qol.AddChatDamageButtons.Name": "Añadir botones de daño en el chat",
   "midi-qol.AddChatDamageButtons.Hint": "Añade botones de daño a cualquier mensaje de tirada de ataque - al hacer click se aplica el daño a los tokens seleccionados (NO OBJETIVOS) (igual que el menú desplegable)",
-  "midi-qol.AddChatDamageButtonsOptions": {
-    "none": "Nunca",
-    "gm": "Añadir botones para el GM",
-    "pc": "Añadir botones para los jugadores",
-    "both": "Añadir botones para todos"
-  },
   "midi-qol.AutoRollDamage.Name": "Auto tirar daño",
   "midi-qol.AutoRollDamage.Hint": "Tira el daño automáticamente cuando se hace una tirada de ataque. Si auto tirar daño se pone en 'ataque acierta', tirará el daño si no hay objetivos seleccionados, el ataque acierta (ver auto comprobar impacto) o si no está activado auto comprobar impacto",
   "midi-qol.AutoCheckSaves.Name": "Auto comprobar TS",
@@ -639,7 +633,6 @@
   "midi-qol.KeysAdvantage.Hint": "Tirar con ventaja",
   "midi-qol.KeysVersatile.Hint": "Tirar daño versátil",
   "midi-qol.KeysOther.Hint": "Tirar Otra fórmula como daño",
-  "midi-qol.DisplaySaveAdvantage.Name": "Mostrar si la salvación tenía Ventaja/Desventaja",
   "midi-qol.RollOtherSpellDamage.Name": "Tira otra fórmula de daño para los conjuros",
   "midi-qol.convenientEffectsOff": "No aplicar Convenient Effect",
   "midi-qol.ConsumeResource.Name": "Omitir la ventana de consumir recurso",

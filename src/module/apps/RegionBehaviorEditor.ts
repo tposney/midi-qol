@@ -1,4 +1,4 @@
-import { i18n, MODULE_ID } from "../../midi-qol.js";
+import { i18n } from "../../midi-qol.js";
 import { attachTokenOptions } from "../activities/activityHelpers.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;

@@ -1,6 +1,6 @@
 import { GameSystemConfig, i18n } from "../../midi-qol.js";
 import { MidiSounds } from "../midi-sounds.js";
-import { configSettings, midiSoundSettings } from "../settings.js";
+import { midiSoundSettings } from "../settings.js";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {

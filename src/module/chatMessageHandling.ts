@@ -1,30 +1,25 @@
-import { debug, warn, i18n, error, debugEnabled, i18nFormat, MODULE_ID } from "../midi-qol.js";
+import { debug, warn, error, debugEnabled, MODULE_ID } from "../midi-qol.js";
 import { DDBGameLogWorkflow, Workflow } from "./Workflow.js";
 import { nsaFlag, coloredBorders, configSettings, forceHideRoll } from "./settings.js";
-import { playerFor, playerForActor, doOverTimeEffect, isInCombat, isAutoFastForward, dnd5eRollType, dnd5eRollItemId } from "./utils.js";
+import { playerFor, playerForActor, doOverTimeEffect, isInCombat, dnd5eRollType, dnd5eRollItemId } from "./utils.js";
 import { preferredActiveGM, socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
-export const MAESTRO_MODULE_NAME = "maestro";
-export const MODULE_LABEL = "Maestro";
 export let colorChatMessageHandler = (message: ChatMessage.Implementation, html: HTMLElement, data: ChatMessage.MessageData) => {
   if (coloredBorders === "none") return true;
-  let actorId = message.speaker.actor ?? "";
   let userId = message.author?.id ?? "";
   let actor = message.speakerActor;
   let user = game.users?.get(userId) as User.Implementation | undefined;
 
   if (actor) user = playerForActor(actor);
   if (!user) return true;
-  html.style.borderColor = user.color.toString();
-  const sender = html.querySelector<HTMLElement>('.message-sender');
-  if (!sender) return;
-  if (coloredBorders === "borderNamesBackground") {
-    sender.style["text-shadow"] = `1px 1px 1px #FFFFFF`;
-    sender.style.backgroundColor = user.color.toString();
-  } else if (coloredBorders === "borderNamesText") {
-    sender.style.color = user.color.toString();
-    sender.style["text-shadow"] = `1px 1px 1px ${sender.style.color}`;
-  }
+  const color = user.color.toString();
+  // The colour is a variable on the message element and the styling lives in the stylesheet: dnd5e
+  // rebuilds the header (and its .title name) after this hook, so styles set on those elements are lost.
+  // Left side only: the bottom border is dnd5e's roll-mode marker (whisper/blind) and keeps its colour.
+  html.style.setProperty("--midi-qol-player-color", color);
+  html.classList.add("midi-qol-colored-border");
+  if (coloredBorders === "borderNamesBackground") html.classList.add("midi-qol-colored-name-background");
+  else if (coloredBorders === "borderNamesText") html.classList.add("midi-qol-colored-name");
   return true;
 }
 
@@ -248,7 +243,7 @@ export function processCreateDDBGLMessages(message: ChatMessage.Implementation, 
 
   let workflow: DDBGameLogWorkflow | undefined = DDBGameLogWorkflow.get(item.uuid);
   //@ts-expect-error no dnd5e-types
-  if (!workflow && rollType === "damage" && item.hasAttack && ["rwak", "mwak"].includes(item.actionType)) {
+  if (!workflow && rollType === "damage" && item.system.activities?.some(a => ["rwak", "mwak"].includes(a.actionType))) {
     warn(`ddb-game-log roll damage roll without workflow being started ${actor.name} using ${item.name}`);
     return;
   }

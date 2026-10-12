@@ -81,12 +81,6 @@
                         <input type="checkbox" name="optionalRules.maxDRValue" data-dtype="Boolean" {{checked
                         configSettings.optionalRules.maxDRValue}} />
                     </div>
-                    <div class="form-group">
-                        <label>{{localize "midi-qol.DRAllPerDamageDetail.Name"}}</label>
-                        <input type="checkbox" name="optionalRules.DRAllPerDamageDetail" data-dtype="Boolean" {{checked
-                        configSettings.optionalRules.DRAllPerDamageDetail}} />
-                        <div class="notes midi-qol-faint">{{{localize "midi-qol.DRAllPerDamageDetail.Hint"}}}</div>
-                    </div>
                 </div>
                 <div class="form-group">
                     <label style>{{localize "midi-qol.CriticalSaves.Name"}}</label>
@@ -134,7 +128,7 @@
                     <div class="form-group">
                         <label>{{localize "midi-qol.ActiveDefenceShow.Name"}}</label>
                         <select name="optionalRules.activeDefenceShow" data-dtype="String">
-                            {{selectOptions rollModes selected=configSettings.optionalRules.activeDefenceShow localize=true}}
+                            {{selectOptions messageModes selected=configSettings.optionalRules.activeDefenceShow localize=true}}
                         </select>
                         <div class="notes midi-qol-faint">{{{localize "midi-qol.ActiveDefenceShow.Hint"}}}</div>
                     </div>

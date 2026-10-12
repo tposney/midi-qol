@@ -1,4 +1,4 @@
-import { MODULE_ID, debugEnabled, error, warn } from "../../midi-qol.js";
+import { MODULE_ID, error } from "../../midi-qol.js";
 import { completeActivityUse, fromActorUuid, getToken, isValidTarget, playerForActor } from "../utils.js";
 import { preferredActiveGM, socketlibSocket } from "../GMAction.js";
 import { Activity } from "../../globals.js";

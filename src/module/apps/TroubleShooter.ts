@@ -1,4 +1,4 @@
-import { i18n, systemConcentrationId, error } from "../../midi-qol.js";
+import { i18n, systemConcentrationId } from "../../midi-qol.js";
 import { ModuleReviewDialog } from "./ModuleReviewDialog.js";
 import { autoApplyDamageOptions, autoCEEffectsOptions, autoCheckHitOptions, autoCheckSavesOptions, autoEffectsOptions, autoTargetOptions, CheckedAuthorsList, checkedModuleList, checkMechanic, collectModuleData, collectSettingData, configSettings, coverCalculationOptions, enableWorkflow, exportSettingsToJSON, fetchParams, importSettingsFromJSON, rangeTargetOptions, safeGetGameSetting } from "../settings.js";
 import { USEFUL_MODULE_VERSIONS, getModuleVersion, installedModules } from "../setupModules.js";
@@ -110,8 +110,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
   }
   public static logErrors() {
   }
-  async _updateObject(event, formData) {
-  };
 
   public static exportTroubleShooterData() {
     const data = TroubleShooter.collectTroubleShooterData();
@@ -190,7 +188,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   async _onSubmit(...args): Promise<any> {
-    let [event, options] = args;
     // error("On Submit", event, options.updateData, options.preventClose, options.preventRender);
     return {};
   }
@@ -710,7 +707,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     data.summary.outOfDate = Object.keys(data.modules)
       .filter(key => foundry.utils.isNewerVersion(baseVersion, data.modules[key].compatibility ?? 0))
       .map(key => {
-        const versionString = `${data.modules[key].active ? i18n("midi-qol.Active") : i18n("midi-qol.Inactive")} ${data.modules[key].version}`
         return {
           key,
           title: data.modules[key].title,

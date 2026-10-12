@@ -12,7 +12,7 @@ import { TargetConfirmationConfig } from "./module/apps/TargetConfirmationConfig
 import { UndoWorkflow } from "./module/apps/UndoWorkflow";
 import { OverTimeEditor } from "./module/apps/OverTimeEditor";
 import { ConditionEditor } from "./module/apps/ConditionEditor";
-import { AttributionEntry, AttributionMap, AugmentedEvent, DamageDescriptionObject, DamageOnlyWorkflow, DDBGameLogWorkflow, DummyWorkflow, TrapWorkflow, UndoData, UserWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./module/Workflow";
+import { AttributionMap, AugmentedEvent, DamageDescriptionObject, DamageOnlyWorkflow, DDBGameLogWorkflow, DummyWorkflow, TrapWorkflow, UndoData, UserWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./module/Workflow";
 import { MidiOptions } from "./module/utils";
 import * as utils from "./module/utils";
 import * as workflowOptionsCodec from "./module/lib/workflowOptionsCodec";
@@ -27,7 +27,7 @@ import { ConfigPanel } from "./module/apps/ConfigPanel";
 import { createEffects, debug, log, moveToken, moveTokenAwayFromPoint, teleportToken, removeEffects, updateEffects, warn } from "./midi-qol";
 import { TargetConfirmationDialog } from "./module/apps/TargetConfirmation";
 import { MidiSounds } from "./module/midi-sounds";
-import { computeTargetsFromTemplates, resolveTargetConfirmation, selectTargetsFromTemplates } from "./module/activities/activityHelpers";
+import { computeTargetsFromTemplates, requiresTargetConfirmation, resolveTargetConfirmation, selectTargetsFromTemplates } from "./module/activities/activityHelpers";
 import { showUndoWorkflowApp } from "./module/apps/UndoWorkflow";
 import { TroubleShooter } from "./module/apps/TroubleShooter";
 import { ChatMessageMidi } from "./module/ChatClasses/ChatMessageMidi";
@@ -147,7 +147,6 @@ declare module "fvtt-types/configuration" {
     "midi-qol.SaveToChatCard": boolean;
     "midi-qol.PreferredGM": string;
     "midi-qol.MidiSoundSettings-backup": Record<string, any>;
-    "midi-qol.notificationVersion": string;
     "midi-qol.splashWarnings": boolean;
     "midi-qol.last-run-version": string;
     "midi-qol.instanceId": string;
@@ -617,6 +616,20 @@ declare module "fvtt-types/configuration" {
 };
 
 declare global {
+  namespace ChatMessage.Database {
+    interface Create<Temporary extends boolean | undefined = boolean | undefined> {
+      /** Foundry 14: a CONFIG.ChatMessage.modes key; replaces the deprecated rollMode option. */
+      messageMode?: string;
+    }
+  }
+  // v14 data field operators, not yet in fvtt-types. `{ key: new ForcedDeletion() }` replaces the
+  // `{ "-=key": null }` deletion syntax that v14 deprecates.
+  namespace foundry.data.operators {
+    class ForcedDeletion {
+      constructor(value?: unknown);
+    }
+  }
+
   /** fvtt-types brands module sub-types, so "midi-qol.damage" needs declaring to be assignable. */
   interface DataModelConfig {
     ChatMessage: {
@@ -706,6 +719,7 @@ declare global {
     addConcentrationDependent: typeof utils.addConcentrationDependent;
     addDependent: typeof utils.addDependent;
     addRollTo: typeof utils.addRollTo;
+    addRollToAsync: typeof utils.addRollToAsync;
     addUndoChatMessage: typeof undo.addUndoChatMessage;
     RollModifierTracker: typeof RollModifierTracker;
     applyTokenDamage: typeof utils.applyTokenDamage;
@@ -819,6 +833,7 @@ declare global {
     removeInvisibleCondition: typeof utils.removeInvisibleCondition;
     removeMostRecentWorkflow: typeof undo.removeMostRecentWorkflow;
     removeReactionUsed: typeof utils.removeReactionUsed;
+    requiresTargetConfirmation: typeof requiresTargetConfirmation;
     resolveTargetConfirmation: typeof resolveTargetConfirmation;
     safeGetGameSetting: typeof settings.safeGetGameSetting;
     shouldDisplaySaveDC: typeof settings.shouldDisplaySaveDC;

@@ -1,12 +1,11 @@
 import { Activity, ActivityUseConfiguration, RollMessageConfig, TokenOrDocument } from "../../globals.js";
-import { MODULE_ID, debugEnabled, warn, error, i18n, GameSystemConfig } from "../../midi-qol.js";
+import { MODULE_ID, debugEnabled, warn, i18n, GameSystemConfig } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog, TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
-import { configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
+import { configSettings, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
-import { getFlankingEffect, CERemoveEffect, sumRolls, evalActivationCondition, computeTemplateShapeDistance, getToken, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, getSpeaker, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, getUnitDist, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, MidiOptions } from "../utils.js";
+import { getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, MidiOptions } from "../utils.js";
 import { allAttackTypes } from "../../midi-qol.js";
-const { DialogV2 } = foundry.applications.api;
 import Token = foundry.canvas.placeables.Token;
 
 // Target types that represent discrete creatures (not areas)
@@ -52,50 +51,6 @@ export function shouldEnforceSingleTarget(activity: Activity): boolean {
   return !affectsType || creatureTargetTypes.includes(affectsType);
 }
 
-export async function confirmWorkflow(existingWorkflow: Workflow): Promise<boolean> {
-  const validStates = [existingWorkflow.WorkflowState_Completed, existingWorkflow.WorkflowState_Start, existingWorkflow.WorkflowState_RollFinished]
-  if (existingWorkflow.currentAction === existingWorkflow.WorkflowState_NoAction) return true;
-  if (!(validStates.includes(existingWorkflow.currentAction!))) {// && configSettings.confirmAttackDamage !== "none") {
-    if (configSettings.autoCompleteWorkflow) {
-      existingWorkflow.aborted = true;
-      await existingWorkflow.performState(existingWorkflow.WorkflowState_Cleanup);
-      await Workflow.removeWorkflow(existingWorkflow.id);
-    } else if (existingWorkflow.currentAction === existingWorkflow.WorkflowState_WaitForDamageRoll && existingWorkflow.hitTargets.size === 0) {
-      existingWorkflow.aborted = true;
-      await existingWorkflow.performState(existingWorkflow.WorkflowState_Cleanup);
-    } else {
-      switch (await DialogV2.wait({
-        window: { title: game.i18n?.format("midi-qol.WaitingForPreviousWorkflow", { name: existingWorkflow.activity.name ?? "" }) },
-        content: game.i18n?.localize("midi-qol.ResolvePreviousWorkflow"),
-        rejectClose: false,
-        close: () => { return false },
-        buttons: [
-          { action: "complete", label: `<i class="fas fa-check"></i> Complete previous`, callback: () => { return "complete" } },
-          { action: "discard", label: `<i class="fas fa-trash"></i> Discard previous`, callback: () => { return "discard" } },
-          { action: "undo", label: `<i class="fas fa-arrow-rotate-left"></i> Undo until previous`, callback: () => { return "undo" } },
-          { action: "cancel", default: true, label: `<i class="fas fa-xmark"></i> Cancel New`, callback: () => { return "cancel" } }
-        ],
-      })) {
-        case "complete":
-          await existingWorkflow.performState(existingWorkflow.WorkflowState_Cleanup);
-          await Workflow.removeWorkflow(existingWorkflow.id);
-          break;
-        case "discard":
-          await existingWorkflow.performState(existingWorkflow.WorkflowState_Abort);
-          Workflow.removeWorkflow(existingWorkflow.id);
-          break;
-        case "undo":
-          await existingWorkflow.performState(existingWorkflow.WorkflowState_Cancel);
-          Workflow.removeWorkflow(existingWorkflow.id);
-          break;
-        case "cancel":
-        default:
-          return false;
-      }
-    }
-  }
-  return true;
-}
 export async function removeFlanking(actor: Actor.Implementation): Promise<void> {
   let CEFlanking = getFlankingEffect();
   if (CEFlanking && CEFlanking.name) await CERemoveEffect({ effectName: CEFlanking.name, uuid: actor.uuid });
@@ -183,17 +138,6 @@ function activityRequiresPostTemplateConfirmation(activity: Activity): boolean {
   return false;
 }
 
-function itemRequiresPostTemplateConfirmation(activity: Activity): boolean {
-  // @ts-expect-error no dnd5e-types
-  const isRangeTargeting = ["ft", "m"].includes(activity.item.system.range?.units) && ["creature", "ally", "enemy"].includes(activity.target?.affects.type);
-  if (activity.target?.template?.type) {
-    return true;
-  } else if (isRangeTargeting) {
-    return true;
-  }
-  return false;
-}
-
 export function requiresTargetConfirmation(activity: Activity, options: MidiOptions): boolean {
   // if (!activity.item) debugger;
   // fix for very silly value choice in midi properties.
@@ -213,7 +157,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
   if (options.workflowOptions?.attackPerTarget === true) return false;
   if ((activity.forcedTargetConfirmation ?? activity.midiProperties?.confirmTargets) === "always") return true;
   if ((activity.forcedTargetConfirmation ?? activity.midiProperties?.confirmTargets) === "never") return false;
-  if (targetConfirmation.noneTargeted && ((activity.target?.affects.type ?? "") !== "" || activity.attack) && (game.user?.targets?.size ?? 0) === 0)
+  if (targetConfirmation.enabled && targetConfirmation.noneTargeted && ((activity.target?.affects.type ?? "") !== "" || activity.attack) && (game.user?.targets?.size ?? 0) === 0)
     return true;
   let numTargets = game.user?.targets?.size ?? 0;
   // @ts-expect-error no dnd5e-types
@@ -273,7 +217,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
       (["ft", "m"].includes(activity.item.system.range?.units) || activity.item.system.range?.type === "touch")) {
       if (token) {
         for (let target of game.user?.targets) {
-          const { result, attackingToken } = checkActivityRange(activity, token, new Set([target]))
+          const { result } = checkActivityRange(activity, token, new Set([target]))
           if (result !== "normal") {
             if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.longRange");
             return true;
@@ -405,7 +349,6 @@ function isTokenInside(template: foundry.canvas.placeables.MeasuredTemplate.Impl
           tx = tx + template.shape.width / 2;
           ty = ty + template.shape.height / 2;
         }
-        const r = new foundry.canvas.geometry.Ray({ x: tx, y: ty }, { x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y });
 
         // If volumetric templates installed always leave targeting to it.
         if (!installedModules.get("levelsvolumetrictemplates")) {
@@ -915,20 +858,6 @@ function isTokenInsideRegion(
     wallOriginY += (shape.height ?? 0) / 2;
   }
 
-  // Compute template distance in grid units (for levels 3D distance check)
-  const distancePixels = (grid.size ?? 100) / (grid.distance ?? 5);
-  let templateDistance = 0;
-  if (shape) {
-    switch (shape.type) {
-      case "circle": case "cone":
-        templateDistance = (shape.radius ?? 0) / distancePixels;
-        break;
-      case "line":
-        templateDistance = (shape.length ?? 0) / distancePixels;
-        break;
-    }
-  }
-
   const pos = tokenSourcePosition(token);
   const startX = pos.width >= 1 ? 0.5 : (pos.width / 2);
   const startY = pos.height >= 1 ? 0.5 : (pos.height / 2);
@@ -976,17 +905,6 @@ export function computeTargetsFromTemplates(
     tokens.forEach(t => allTargetTokens.add(t));
   }
   return Array.from(allTargetTokens);
-}
-
-// If we are blocking the roll let anyone waiting on the roll know it is complete
-function blockRoll(item, workflow) {
-  if (item) {
-    if (workflow) workflow.aborted = true;
-    let hookName = `midi-qol.RollComplete.${item?.uuid}`;
-    //@ts-expect-error
-    Hooks.callAll(hookName, workflow)
-  }
-  return false;
 }
 
 /**

@@ -1,6 +1,5 @@
-import { error, warn, log, debugEnabled, i18n } from "../midi-qol.js";
+import { error, warn, log, debugEnabled } from "../midi-qol.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
-import { configSettings } from "./settings.js";
 
 export const DAE_REQUIRED_VERSION = "13.0.23";
 export const USEFUL_MODULE_VERSIONS = {

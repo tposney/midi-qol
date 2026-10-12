@@ -36,12 +36,6 @@
     "midi-qol.ItemRollButtons.Hint": "在物品描述中加入擲骰按鈕 — 這些按鈕支援 ctrl/alt/shift 來跳過對話框。",
     "midi-qol.AddChatDamageButtons.Name": "在聊天訊息中加入傷害按鈕",
     "midi-qol.AddChatDamageButtons.Hint": "在聊天訊息中啟用 dnd5e 傷害托盤。",
-    "midi-qol.AddChatDamageButtonsOptions": {
-        "none": "無",
-        "gm": "僅為 GM 加入按鈕",
-        "pc": "僅為玩家加入按鈕",
-        "both": "為所有人加入按鈕"
-    },
     "midi-qol.AutoRollDamage.Name": "自動擲出傷害",
     "midi-qol.AutoRollDamage.Hint": "進行攻擊擲骰時自動擲出傷害。若設定為「攻擊命中」，則在未選取目標、攻擊命中（詳見自動命中檢查）或未檢查命中時擲出傷害。",
     "midi-qol.AutoCheckSaves.Name": "自動檢查豁免檢定",
@@ -1044,8 +1038,6 @@
         "SaveDRDr": "豁免 -> 減免 -> 抗性",
         "SaveDrDR": "豁免 -> 抗性 -> 減免"
     },
-    "midi-qol.WaitingForPreviousWorkflow": "前次 {name} 的擲骰尚未完成。",
-    "midi-qol.ResolvePreviousWorkflow": "選擇如何處理前次擲骰",
     "midi-qol.ConfirmTargetOptions": {
         "default": "Midi 設定",
         "always": "總是",

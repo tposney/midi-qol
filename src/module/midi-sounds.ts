@@ -1,19 +1,8 @@
-import { debug, i18n, log, GameSystemConfig } from "../midi-qol.js";
+import { debug, i18n, GameSystemConfig } from "../midi-qol.js";
 import { configSettings, midiSoundSettings } from "./settings.js";
 import { dice3dEnabled } from "./setupModules.js";
 import { Workflow } from "./Workflow.js";
  
-interface rollSpec {
-  actorType: string // any,npc,character
-  itemType: string; // weapon/spell/equipment/consumable
-  itemSubtype: string;
-  weaponSubType: string;
-  actionType: string;
-  rollType: string; // itemRoll, attackRoll, damageRoll, consume, cast, 
-  resultType: string; // critical/fumble/success/fail/normal
-  playlistName: string;
-  soundName: string; // soundName or random
-}
 interface SoundSpec {
   playlistName: string;
   soundName: string;

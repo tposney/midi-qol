@@ -30,12 +30,6 @@
   "midi-qol.ItemRollButtons.Hint": "Přidá tlačítka hodů k popisu položky, tato tlačítka podporují použití kláves ctrl/alt/shift pro přeskočení dialogu.",
   "midi-qol.AddChatDamageButtons.Name": "Přidávání tlačítek zásahu do zprávy chatu",
   "midi-qol.AddChatDamageButtons.Hint": "Povolí ve zprávách chatu záznam zásahu původního DnD5.",
-  "midi-qol.AddChatDamageButtonsOptions": {
-    "none": "Nepřidávat žádná tlačítka",
-    "gm": "Přidávat tlačítka pouze pro PJ",
-    "pc": "Přidávat tlačítka pouze pro hráče",
-    "both": "Přidávat tlačítka všem"
-  },
 "midi-qol.AutoRollDamage.Name": "Používat automatizovaný hod na zásah?",
   "midi-qol.AutoRollDamage.Hint": "Po hodu na útok se bude automaticky házet na zásah. Pokud je zaškrtnuto automatizované házení na zásah, Midi hodí na zásah i když nejsou vybrány žádné cíle, útok zasáhne (viz automatická kontrola zásahů), nebo pokud zásahy nejsou kontrolovány.",
   "midi-qol.AutoCheckSaves.Name": "Automatizace záchranných hodů",
@@ -481,8 +475,6 @@
   "midi-qol.RemoveHiddenInvis.Name": "Má útok odstranit stav ´skrytý´ (používá speciální stavy CE/CV/CUB/Foundry)?",
   "midi-qol.CriticalSaves.Name": "(Domácí pravidlo) Má při kritu záchranný hod vždy uspět či selhat?",
   "midi-qol.MaxDRValue.Name": "(Domácí pravidlo) Má být používáno pouze nejúčinnější snížení zranění (odškrtnutí znamená, že se budou snížení zranění sčítat)?",
-  "midi-qol.DRAllPerDamageDetail.Name": "(Domácí pravidlo) Má být DRALL (DR.rwak/...) odečítán jak ze zranění útoku, tak z ostatních zranění?",
-  "midi-qol.DRAllPerDamageDetail.Hint": "Nezaškrtnutí znamená, že DRALL bude aplikováno pouze jednou na celkové zranění.",
   "midi-qol.invisible": "Neviditelný",
   "midi-qol.hidden": "Schovaný",
   "midi-qol.nevertarget": "Nikdy nevybírat jako cíl",
@@ -651,7 +643,6 @@
   "midi-qol.KeysOther.Hint": "Hod jiné formule jako zranění.",
   "midi-qol.FixStickyKeys.Name": "Opravit zaseklé alt/ctrl/shift",
   "midi-qol.FixStickyKeys.Hint": "Pokud je nastaveno, Midi se pokusí vyřešit situaci, kdy alt/ctrl/shift zůstávají 'zapnuté'.",
-  "midi-qol.DisplaySaveAdvantage.Name": "Má se zobrazovat, zda má záchranný hod Výhodu či Nevýhodu?",
   "midi-qol.QuickSettingsBlurb": {
   "1": "Rychlá nastavení umožňují nastavit kombinaci více možností najednou.",
   "2": "Když stiskneš jedno z tlačítek níže, změny se okamžitě aplikují na všechna nastavení.",
@@ -856,8 +847,6 @@
     "SaveDRDr": "Záchrany -> dm.midi/dm.DnD5e -> (dr/dv/di)",
     "SaveDrDR": "Záchrany -> dm -> (dr/dv/di) -> dm.midi"
   },
-  "midi-qol.WaitingForPreviousWorkflow": "Předchozí hod {name} nebyl dokončen.",
-  "midi-qol.ResolvePreviousWorkflow": "Zvol, co dělat s předchozím hodem",
   "midi-qol.ConfirmTargetOptions": {
     "default": "Midi nastavení",
     "always": "Vždy",

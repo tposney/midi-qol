@@ -36,12 +36,6 @@
   "midi-qol.ItemRollButtons.Hint": "Adiciona botões de rolagem na descrição do item. Esses botões aceitam ctrl/alt/shift para pular o diálogo.",
   "midi-qol.AddChatDamageButtons.Name": "Adicionar Botões de Dano no Chat",
   "midi-qol.AddChatDamageButtons.Hint": "Adiciona botões de dano em qualquer rolagem de dano no chat. Clicar aplica o dano a todos os tokens selecionados (NÃO MARCADOS) (o mesmo que o menu suspenso).",
-  "midi-qol.AddChatDamageButtonsOptions": {
-    "none": "Nenhum",
-    "gm": "Apenas para Mestre",
-    "pc": "Apenas para Jogadores",
-    "both": "Para Todos"
-  },
   "midi-qol.AutoRollDamage.Name": "Rolar Dano Automaticamente",
   "midi-qol.AutoRollDamage.Hint": "Role o dano automaticamente quando um ataque é feito. Se 'Rolar Dano Automaticamente' estiver configurado para acertos, o dano será rolado mesmo que nenhum token seja selecionado, se o ataque atingir (veja 'Verificação de Acerto') ou se acertos não forem verificados.",
   "midi-qol.AutoCheckSaves.Name": "Verificar Salvaguardas",
@@ -647,8 +641,6 @@
   "midi-qol.RemoveHiddenInvis.Name": "Atacar Remove Escondido (usa CE/CV/CUB/specialStatus do Foundry)",
   "midi-qol.CriticalSaves.Name": "(Regra da Casa) Acerto/Erro Crítico Sempre em Sucesso/Falha para Salvaguardas",
   "midi-qol.MaxDRValue.Name": "(Regra da Casa) Apenas a maior Redução de Dano será aplicada. Desabilitar significa que ela acumula",
-  "midi-qol.DRAllPerDamageDetail.Name": "(Regra da Casa) DR All (DR.rwak/...) são reduzidas tanto do dano do ataque quanto do dano de Outra Fórmula",
-  "midi-qol.DRAllPerDamageDetail.Hint": "Se desabilitado aplica redução apenas uma vez do total do dano.",
   "midi-qol.invisible": "Invisível",
   "midi-qol.hidden": "Escondido",
   "midi-qol.nevertarget": "Nunca Marcar",
@@ -865,7 +857,6 @@
   "midi-qol.KeysOther.Hint": "Rolar Outra Fórmula como dano",
   "midi-qol.FixStickyKeys.Name": "Corrijir alt/ctrl/shift Travado",
   "midi-qol.FixStickyKeys.Hint": "Se ativado, Midi QOL tentará resolver alt/ctrl/shift travado em 'Ativado'",
-  "midi-qol.DisplaySaveAdvantage.Name": "Exibe se a Salvaguarda tem Vantagem/Desvantagem",
   "midi-qol.QuickSettingsBlurb": "Configurações Rápidas permite definir uma combinação de configurações de uma só vez.<br>Quando um dos botões abaixo é pressionado, as alterações são feitas imediatamente nas suas configurações.<br>Uma lista de alterações é exibida quando as configurações são concluídas.<br>Sugestões de melhorias são bem-vindas.",
   "midi-qol.Reaction.Title": "Processo de Reação",
   "midi-qol.GMDoReactionsOptions": {
@@ -1132,8 +1123,6 @@
     "SaveDRDr": "Salv. -> Mod. Dano (dm.midi/dnd5e.dm) -> Red. Dano (dr/dv/di)",
     "SaveDrDR": "Salv. -> Mod. Dano -> Red. Dano (dr/dv/di) -> Mod. Dano (dm.midi)"
   },
-  "midi-qol.WaitingForPreviousWorkflow": "Rolagem anterior de {name} não foi completada.",
-  "midi-qol.ResolvePreviousWorkflow": "Escolha o que fazer com a rolagem anterior",
   "midi-qol.ConfirmTargetOptions": {
     "default": "Configurações Midi",
     "always": "Sempre",

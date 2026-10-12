@@ -41,8 +41,8 @@
         "id": "dnd5e",
         "type": "system",
         "compatibility": {
-          "minimum": "6.0.0",
-          "verified": "6.0.5",
+          "minimum": "6.0.6",
+          "verified": "6.0.6",
           "maximum": "6.999"
         }
       }
@@ -60,7 +60,7 @@
         "id": "dae",
         "type": "module",
         "compatibility": {
-          "minimum": "14.6.0"
+          "minimum": "14.6.1"
         }
       }
     ]
@@ -156,8 +156,8 @@
     }
   ],
   "compatibility": {
-    "minimum": "14.368",
-    "verified": "14.368",
+    "minimum": "14.369",
+    "verified": "14.369",
     "maximum": "14.999"
   },
   "bugs": "https://gitlab.com/tposney/midi-qol/-/issues",

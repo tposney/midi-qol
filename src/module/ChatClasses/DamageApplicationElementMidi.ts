@@ -1,5 +1,5 @@
-import { configSettings, isDnd5e53, ALL_DAMAGE_KEY } from "../settings.js";
-import { GameSystemConfig, MODULE_ID, MQDamageRollTypes, debugEnabled, i18nFormat, log, warn } from "../../midi-qol.js";
+import { configSettings, ALL_DAMAGE_KEY } from "../settings.js";
+import { GameSystemConfig, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { displayTokenName } from "../utils.js";
 import { CombinedTargetDescriptor, DamageApplicationOptions, Dnd5eSystem } from "../../globals.js";
@@ -243,13 +243,13 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
         options.midi = foundry.utils.duplicate(targetDetails);
         const saveMultiplier = targetDetails.saveMults?.[this.damageType];
         if (targetDetails.saved) {
-          foundry.utils.setProperty(options, "midi.saveMultiplier", saveMultiplier ?? configSettings.defaultSaveMultiplier);
+          foundry.utils.setProperty(options, "midi.saveMultiplier", saveMultiplier ?? configSettings.defaultSaveMult);
         }
         if (saveMultiplier !== undefined) {
-          if (targetDetails.superSaver && saveMultiplier === configSettings.defaultSaveMultiplier) {
-            foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : configSettings.defaultSaveMultiplier);
+          if (targetDetails.superSaver && saveMultiplier === configSettings.defaultSaveMult) {
+            foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : configSettings.defaultSaveMult);
           }
-          if (targetDetails.semiSuperSaver && saveMultiplier === configSettings.defaultSaveMultiplier) {
+          if (targetDetails.semiSuperSaver && saveMultiplier === configSettings.defaultSaveMult) {
             foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : 1);
           }
         }
@@ -297,24 +297,16 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
 
         // Set flags that use actual damage type
         for (const flag of DamageApplicationElementMidi.SET_FLAGS) {
-          if (isDnd5e53) {
-            if (damage.active?.type?.[flag]) (active[flag] as Set<string>).add(damage.type);
-            if (damage.active?.all?.[flag]) (active[flag] as Set<string>).add("ALL");
-          } else {
-            if (damage.active?.[flag]) (active[flag] as Set<string>).add(damage.type);
-          }
+          if (damage.active?.type?.[flag]) (active[flag] as Set<string>).add(damage.type);
+          if (damage.active?.all?.[flag]) (active[flag] as Set<string>).add("ALL");
         }
         // Save flags use "all" for consolidated icon, skip DR types
         if (!isDRType) {
           for (const flag of DamageApplicationElementMidi.SAVE_FLAGS) {
-            if (isDnd5e53) {
-              if (damage.active?.type?.[flag] || damage.active?.all?.[flag]) (active[flag] as Set<string>).add("all");
-            } else {
-              if (damage.active?.[flag]) (active[flag] as Set<string>).add("all");
-            }
+            if (damage.active?.type?.[flag] || damage.active?.all?.[flag]) (active[flag] as Set<string>).add("all");
           }
         }
-        // Boolean flags (threshold stays flat in both versions)
+        // Boolean flags (threshold is flat)
         for (const flag of DamageApplicationElementMidi.BOOL_FLAGS) {
           if (damage.active?.[flag]) active[flag] = true;
         }

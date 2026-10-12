@@ -1,4 +1,4 @@
-import { GameSystemConfig, MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n, log } from "../../midi-qol.js";
+import { MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n, log } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { Dnd5eSystem } from "../../globals.js";
 import { configSettings, forceHideRoll, safeGetGameSetting, saveToChatCard } from "../settings.js";
@@ -240,14 +240,15 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (type !== undefined || !this.flags?.[MODULE_ID]) return super.applyChatCardDamage(li, multiplier);
       const rollsToCheck = this.rolls.filter(r => MQDamageRollTypes.includes(foundry.utils.getProperty(r, "options.midi-qol.rollType") as string));
       const damages = (game.system as Dnd5eSystem).dice.aggregateDamageRolls(rollsToCheck, { respectProperties: true }).map(roll => ({
-        value: roll.total,
+        // @ts-expect-error no dnd5e-types
+        value: Math.max(0, roll.total) * (roll.options.type in CONFIG.DND5E.healingTypes ? -1 : 1),
         type: roll.options.type,
         properties: new Set(roll.options.properties ?? [])
       }));
       if (canvas.tokens) {
         return Promise.all(canvas.tokens.controlled.map(t => {
           //@ts-expect-error no dnd5e-types
-          return t.actor?.applyDamage(damages, { multiplier, invertHealing: false, ignore: true });
+          return t.actor?.applyDamage(damages, { multiplier, isDelta: true, originatingMessage: this });
         }));
       }
     }

@@ -30,12 +30,6 @@
   "midi-qol.ItemRollButtons.Hint": "キャラクターシートの所持品一覧に表示されるアイテムの説明にボタンを追加します。これらのボタンは、Ctrl(Cmd)/Alt/Shiftの修飾キーを併用することで確認ダイアログをスキップできます。",
   "midi-qol.AddChatDamageButtons.Name": "チャットメッセージにダメージボタンを追加する",
   "midi-qol.AddChatDamageButtons.Hint": "ダメージを表示するすべてのチャットメッセージに、ダメージボタンを表示します。このボタンは（ターゲットではなく）選択したコマにダメージを適用するものです（右クリックで表示されるダメージ適用と同じ）。",
-  "midi-qol.AddChatDamageButtonsOptions": {
-    "none": "なし",
-    "gm": "GMのみ表示する",
-    "pc": "プレイヤーにのみ表示する",
-    "both": "全員に表示する"
-  },
   "midi-qol.AutoRollDamage.Name": "自動ダメージロール",
   "midi-qol.AutoRollDamage.Hint": "攻撃ロールが行われたとき、自動的にダメージロールを行います。「ヒット時のみ」に設定しても、対象が選択されていないとき、あるいはヒット確認がなされなかったときはダメージロールが行われます（「ヒット確認を自動で行う」を参照）。",
   "midi-qol.AutoCheckSaves.Name": "自動セーヴロール",
@@ -486,8 +480,6 @@
   "midi-qol.RemoveHiddenInvis.Name": "攻撃は隠れ身状態を解除する（要CE/CV/CUBまたはコア機能の状態変化）",
   "midi-qol.CriticalSaves.Name": "（ハウスルール）セーヴ時のクリティカル（ファンブル）は常に成功（失敗）として扱う。",
   "midi-qol.MaxDRValue.Name": "（ハウスルール）最も効果的なダメージ軽減（DR）のみを適用します。オフの場合はDRを累積して計算します。",
-  "midi-qol.DRAllPerDamageDetail.Name": "（ハウスルール）DR (DR.rwak/...) をダメージの種別（メインとその他）ごとに適用します。",
-  "midi-qol.DRAllPerDamageDetail.Hint": "オフにした場合、DRはダメージの合計値に対して1度だけ適用されます",
   "midi-qol.invisible": "不可視",
   "midi-qol.hidden": "隠れ身",
   "midi-qol.nevertarget": "ターゲットなし",
@@ -658,7 +650,6 @@
   "midi-qol.KeysOther.Hint": "ダメージを「その他の式」でロールします。",
   "midi-qol.FixStickyKeys.Name": "固定キー機能を修正する",
   "midi-qol.FixStickyKeys.Hint": "有効にすると、（Token Action HUDなどで）有利/不利などがかってにオンになる問題の解決を試みます。",
-  "midi-qol.DisplaySaveAdvantage.Name": "セーヴ時に有利/不利を表示する",
   "midi-qol.QuickSettingsBlurb": {
     "1": "クイック設定により、さまざまな組み合わせの設定を一括反映できます。",
     "2": "下のいずれかのボタンを押すと、その組み合わせが反映されます。",
@@ -864,8 +855,6 @@
     "SaveDRDr": "セーヴ→dm.midi/dm→ダメージ耐性(dr/dv/di)",
     "SaveDrDR": "セーヴ→dm→ダメージ耐性(dr/dv/di)→dm.midi"
   },
-  "midi-qol.WaitingForPreviousWorkflow": "{name}のロール処理がまだが完了していません。",
-  "midi-qol.ResolvePreviousWorkflow": "前回ロールに対する処理を選択してください",
   "midi-qol.ConfirmTargetOptions": {
     "default": "Midiの設定準拠",
     "always": "常に",

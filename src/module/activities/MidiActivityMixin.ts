@@ -1,8 +1,7 @@
 import { Activity, ActivityEffectData, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext, Dnd5eSystem, EmanationShapeData } from "../../globals.js";
-import { GameSystemConfig, MODULE_ID, allAttackTypes, debugEnabled, error, i18n, i18nFormat, warn, busyWait } from "../../midi-qol.js";
+import { GameSystemConfig, MODULE_ID, debugEnabled, error, i18n, i18nFormat, warn, busyWait } from "../../midi-qol.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFirstWorkflow } from "../Workflow.js";
-import { OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { midiButtonVisibility } from "../ChatClasses/UsageCardMessage.js";
 import { ConditionEditor } from "../apps/ConditionEditor.js";
@@ -57,7 +56,6 @@ import {
   setBonusActionUsed,
   setReactionUsed,
   sumRolls,
-  tokenForActor,
   getOrCreateTokenForActor,
   validTargetTokens,
   activityHasEmanationNoTemplate,
@@ -197,8 +195,7 @@ export let MidiActivityMixin = Base => {
     static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.SHARED"];
 
     static defineSchema() {
-      const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, SetField, NumberField, ColorField } = foundry.data.fields;
-      const { FormulaField } = globalThis.dnd5e.dataModels.fields;
+      const { StringField, ArrayField, BooleanField, SchemaField, SetField, NumberField, ColorField } = foundry.data.fields;
       const schema = {
         ...super.defineSchema(),
         // flags: new ObjectField(),
@@ -358,21 +355,6 @@ export let MidiActivityMixin = Base => {
     get canUse() {
       // if (this.midiProperties?.automationOnly) return false;
       return super.canUse;
-    }
-
-    getOnUseMacros({ onlyOnUseItemMacros = false } = {}) {
-      const onUseMacros = new OnUseMacros();
-      this.ammunitionOnUseMacros = new OnUseMacros();
-      const itemOnUseMacros = this.item?.flags?.[MODULE_ID]?.onUseMacroParts ?? new OnUseMacros();
-      const ammunitionOnUseMacros = this.ammunitionItem?.flags?.[MODULE_ID]?.onUseMacroParts ?? new OnUseMacros();
-      const actorOnUseMacros = this.actor?.flags?.[MODULE_ID]?.onUseMacroParts ?? new OnUseMacros();
-      if (onlyOnUseItemMacros) {
-        onUseMacros.items = [...itemOnUseMacros.items];
-      } else {
-        onUseMacros.items = [...itemOnUseMacros.items, ...actorOnUseMacros.items];
-      }
-      this.ammunitionOnUseMacros.items = ammunitionOnUseMacros.items;
-      return onUseMacros
     }
 
     get validProperties() {
@@ -1307,7 +1289,6 @@ export let MidiActivityMixin = Base => {
     async postProcessDamageRoll(config: RollProcessConfig, result: Array<Roll>): Promise<Array<Roll>> {
       //@ts-expect-error
       const DamageRoll = CONFIG.Dice.DamageRoll;
-      const rollMode = safeGetGameSetting("core", "messageMode") as string;
 
       try {
         if (!config.workflow) return result;
@@ -1359,9 +1340,6 @@ export let MidiActivityMixin = Base => {
           const bonusDamage = await new DamageRoll(`${newDamageRoll}`, firstTargetActor?.getRollData()).roll();
           result[0] = addRollTo(result[0], bonusDamage);
         }
-
-        let actionFlavor: string;
-        actionFlavor = i18n(this.actionType === "heal" ? "DND5E.HEAL.HealingButton" : "DND5E.DamageRoll");
 
         const title = this.name;
         const speaker = getSpeaker(this.actor!);
@@ -1781,9 +1759,6 @@ export let MidiActivityMixin = Base => {
           || (configSettings.requiresTargets === "tokens" && (canvas?.scene?.tokens.size ?? 0) > 0)
           || (configSettings.requiresTargets === "combat" && inCombat);
         let speaker = getSpeaker(this.actor!);
-
-        const token = tokenForActor(this.actor);
-        let cancelWorkflow = false;
 
         let shouldAllowRoll = !options.checkTargets || !requiresTargets // we don't care about targets
           || (workflow.targets.size > 0) // there are some target selected
@@ -2650,24 +2625,6 @@ export let MidiActivityMixinSheet = Base => {
   }
 }
 
-//TODO find out why this is adding the button but the button won't trigger
-function attachActivitySheetHeaderButton(app, buttons) {
-  const Editor = globalThis.DAE?.DIMEditor;
-  if (!Editor) return;
-  let activity = app.activity;
-  if (!activity.macro) return;
-  const DIMtitle = i18n('dae.DIMEditor.Name');
-
-  buttons.unshift({
-    label: DIMtitle,
-    class: 'dae-dimeditor',
-    icon: 'fas fa-file-pen',
-    tooltip: DIMtitle,
-    // style: activity.macro?.command ? 'color: #36ba36;' : "",
-    onclick: (ev) => { new Editor({ document: app.activity }).render({ force: true }); }
-  });
-}
-
 function renderActivitySheetHook(app, [elem]) {
   const Editor = globalThis.DAE?.DIMEditor;
   if (!Editor) return;
@@ -2680,7 +2637,6 @@ function renderActivitySheetHook(app, [elem]) {
   }
   let closeButton = elem.closest('.window-header').querySelector('button[data-action="close"]');
   let daeButton = document.createElement('button');
-  const DIMtitle = i18n('dae.DIMEditor.Name');
   daeButton.setAttribute('class', 'header-control fa-solid fa-file-pen dae-dimeditor icon');
   daeButton.onclick = function (ev) { new Editor({ document: this.activity }).render({ force: true }); }.bind(app);
   if (activity.macro?.command) daeButton.style.color = '#36ba36';
@@ -2705,6 +2661,5 @@ export function setupMidiActivityMixin() {
   }
   //@ts-expect-error
   Hooks.on("renderActivitySheet", renderActivitySheetHook);
-  // TODO - get this working - Hooks.on("getHeaderControlsActivitySheet", attachActivitySheetHeaderButton);
 
 }

@@ -1,6 +1,6 @@
+import { AnyMutableObject } from "fvtt-types/utils";
 import { i18n, i18nFormat, GameSystemConfig } from "../../midi-qol.js";
 import { PreComputedAdvantageData } from "../../globals.js";
-import { RollModifierTracker } from "../lib/RollModifierTracker.js";
 import { getToolLabel } from "../utils.js";
 
 /**
@@ -268,23 +268,26 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
           const abilityData = actor.system.abilities?.[formAbility];
           if (!abilityData) return;
 
-          const rollData = actor.getRollData();
-          const profKey = `${rollType}Prof` as "saveProf" | "checkProf";
-          const typeCapitalized = rollType.charAt(0).toUpperCase() + rollType.slice(1);
+          // As dnd5e 6 builds an ability check or save (Actor5e#rollD20Test).
+          const prof = abilityData[rollType]?.prof;
+          //@ts-expect-error no dnd5e-types
+          const rollData: AnyMutableObject = actor.getRollData({ roll: true });
+          foundry.utils.mergeObject(rollData, { roll: { ability: formAbility, proficient: prof?.multiplier >= 1, type: "ability" } });
+          const { bonus } = globalThis.dnd5e.dataModels.shared.D20RollModificationField.combineFields(actor.system, [
+            `abilities.${formAbility}.${rollType}.roll`, `rolls.ability.${rollType}`
+          ], { rules: { category: rollType, actor, rollData } });
 
           //@ts-expect-error no dnd5e-types
           const { parts, data } = CONFIG.Dice.D20Roll.constructParts({
             mod: abilityData.mod,
-            prof: abilityData[profKey]?.hasProficiency ? abilityData[profKey].term : null,
-            [`${formAbility}${typeCapitalized}Bonus`]: abilityData.bonuses?.[rollType],
-            //@ts-expect-error no dnd5e-types
-            [`${rollType}Bonus`]: actor.system.bonuses?.abilities?.[rollType],
+            prof: prof?.hasProficiency ? prof.term : null,
+            ruleBonus: bonus,
             //@ts-expect-error no dnd5e-types
             cover: (formAbility === "dex" && rollType === "save") ? actor.system.attributes?.ac?.cover : null
           }, rollData);
 
           //@ts-expect-error no dnd5e-types
-          actor.addRollExhaustion?.(parts, data);
+          actor.addConditionRollReduction(parts, data);
           rollConfig.parts = parts;
           rollConfig.data = data;
           processConfig.ability = formAbility;

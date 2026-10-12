@@ -1,6 +1,6 @@
 import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity } from "../../globals.js";
-import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
+import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { isAutoFastForward } from "../utils.js";
@@ -67,15 +67,5 @@ let defineMidiDamageActivityClass = <T extends Activity>(ActivityClass: T) => {
 }
 
 export function defineMidiDamageSheetClass(baseClass: any) {
-  return class MidiDamageSheet extends MidiActivityMixinSheet(baseClass) {
-    static PARTS = {
-      ...super.PARTS,
-      effect: {
-        template: "modules/midi-qol/templates/activity/damage-effect.hbs",
-        templates: [
-          ...super.PARTS.effect.templates
-        ]
-      }
-    };
-  }
+  return class MidiDamageSheet extends MidiActivityMixinSheet(baseClass) {};
 }

@@ -1,4 +1,4 @@
-import { criticalDamage, criticalDamageChoices, nsaFlag, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, visionTestHeightOptions, templateOriginHeightOptions, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, saveSummaryStyleOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, gmAttackDisplayOptions, gmDamageDisplayOptions, gmDsnDisplayOptions, blindRollDisplayOptions, checkFlankingOptions, flankingBonusOptions, playerRollSavesOptionsReduced, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, defaultOtherActivityOptions, doConcentrationCheckOptions, activationAutomationOptions, safeGetGameSetting, resetConfigSettingsToDefaults, distanceMeasurementOptions } from "../settings.js"
+import { criticalDamage, criticalDamageChoices, nsaFlag, coloredBorders, coloredBordersOptions, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow, wallsBlockRangeOptionsNew, visionTestHeightOptions, templateOriginHeightOptions, coverCalculationOptions, hiddenAdvantageOptions, addDeadOptions, rollNPCSavesOptions, playerRollSavesOptions, autoCheckHitOptions, autoTargetOptions, rangeTargetOptions, requiresTargetsOptions, autoCheckSavesOptions, saveSummaryStyleOptions, autoRollDamageOptions, removeButtonsOptions, autoApplyDamageOptions, playerDamageCardOptions, damageImmunitiesOptions, showItemDetailsOptions, doReactionsOptions, gmDoReactionsOptions, autoCEEffectsOptions, rollOtherDamageOptions, showReactionAttackRollOptions, recordAOOOptions, EnforceReactionsOptions, autoEffectsOptions, requireMagicalOptions, hideRollDetailsOptions, gmAttackDisplayOptions, gmDamageDisplayOptions, gmDsnDisplayOptions, blindRollDisplayOptions, checkFlankingOptions, flankingBonusOptions, rollAlternateOptions, consumeResourceOptions, averageDamageOptions, removeConcentrationEffectsOptions, incapacitatedOptions, checkRangeOptions, invisAdvantageOptions, confirmAttackDamageOptions, challengeModeArmorOptions, saveDROrderOptions, defaultOtherActivityOptions, doConcentrationCheckOptions, activationAutomationOptions, safeGetGameSetting, distanceMeasurementOptions } from "../settings.js"
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, debugEnabled, log, GameSystemConfig, ceInterface } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
@@ -258,7 +258,8 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       ColorOptions: colorList.reduce((acc, c) => { acc[c] = c; return acc }, { "Delete": "Delete" }),
       DoConcentrationCheckOptions: doConcentrationCheckOptions,
       ActivationAutomationOptions: activationAutomationOptions,
-      rollModes: CONFIG.Dice.rollModes,
+      // @ts-expect-error fvtt-types lacks v14 CONFIG.ChatMessage.modes
+      messageModes: Object.fromEntries(Object.entries(CONFIG.ChatMessage.modes).filter(([mode]) => mode !== "ic").map(([mode, { label }]) => [mode, label])),
       fastForwardOptions: {
         attack: i18n("midi-qol.fastForwardOptions.attack"),
         damage: i18n("midi-qol.fastForwardOptions.damage"),
@@ -504,7 +505,7 @@ function showDiffs(current: any, changed: any, flavor: string = "", title: strin
     let dialogTitle;
     if (title !== "") dialogTitle = `${i18n("midi-qol.Config.Tabs.quick")} - ${title}`;
     else dialogTitle = i18n("midi-qol.Config.Tabs.quick");
-    let d = new DialogV2({
+    new DialogV2({
       classes: ["midi-qol-quick-config"],
       window: { title: dialogTitle },
       position: {
@@ -703,10 +704,6 @@ let quickSettingsDetails: any = {
     shortDescription: "Allow GM to fudge damage application",
     configSettings: {
       autoApplyDamage: "noCard"
-    },
-    codeChecks: (current, settings) => {
-      //@ts-expect-error
-      game.settings.set("midi-qol", "AddChatDamageButtons", "gm");
     }
   },
   DisableConcentration: {
@@ -730,7 +727,6 @@ let quickSettingsDetails: any = {
       gmDamageDisplay: "hidden",
       gmAttackDsn: "none",
       gmDamageDsn: "none",
-      displaySaveAdvantage: false,
       hideNPCNames: "Unknown Creature",
       showReactionAttackRoll: "none",
       displayHitResultNumeric: false
@@ -750,7 +746,6 @@ let quickSettingsDetails: any = {
       gmDamageDisplay: "full",
       gmAttackDsn: "show",
       gmDamageDsn: "show",
-      displaySaveAdvantage: true,
       showReactionAttackRoll: "all",
       hideNPCNames: "",
       displayHitResultNumeric: true

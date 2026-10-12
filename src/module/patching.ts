@@ -1,6 +1,6 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired , processTurnOverTime } from "./utils.js";
+import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime } from "./utils.js";
 import { computeActivityTemplateTargets } from "./activities/activityHelpers.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
@@ -10,7 +10,7 @@ import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
 import { MidiRollChoiceDialog, PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject } from "fvtt-types/utils";
-import { Activity, ActivityUseConfiguration, DamageApplicationOptions, DamageDescription, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
+import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
 import { Workflow } from "./Workflow.js";
 import { preferredActiveGM, socketlibSocket } from "./GMAction.js";
 import { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./lib/MidiDependentsRegistry.js";
@@ -41,7 +41,6 @@ export function getActorWoundedSemaphore(actorUuid: string): foundry.utils.Semap
 
 export function initPatching() {
   libWrapper = globalThis.libWrapper;
-  const ChatLog = foundry.applications.sidebar.tabs.ChatLog;
   // TODO this needs more work libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.migrateData", removeMidiProperties, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
   // For new onUse macros stuff.
@@ -397,14 +396,6 @@ export function readyPatching() {
   libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._onClickRight2", userInitiatedTargetWrapper, "WRAPPER");
   libWrapper.register(MODULE_ID, "foundry.canvas.layers.TokenLayer.prototype.selectObjects", userInitiatedTargetWrapper, "WRAPPER");
 
-
-  const gameVersion = game.system?.version;
-  if ((game.system?.id === "dnd5e" && foundry.utils.isNewerVersion("3.3", gameVersion ?? ""))) {
-    if (ui.notifications)
-      ui.notifications.error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
-    else
-      error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
-  }
 }
 
 export let visionPatching = () => {
@@ -932,7 +923,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
         messageData.speaker = ChatMessage.getSpeaker({ actor: this, token: this.token ?? undefined });
         messageData.rolls = [...result];
-        const chatMsg = await ChatMessage.create(messageData, { rollMode });
+        const chatMsg = await ChatMessage.create(messageData, { messageMode: rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
         if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
       }
@@ -1711,7 +1702,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
         messageData.speaker = ChatMessage.getSpeaker({ actor: this, token: this.token ?? undefined });
         messageData.rolls = [...result];
-        const chatMsg = await ChatMessage.create(messageData, { rollMode });
+        const chatMsg = await ChatMessage.create(messageData, { messageMode: rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
         if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
       }
@@ -2830,9 +2821,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
       applyTrackerAdvantage(config, toolRollModifierTracker);
     }
 
-    let toolModifiers: RollModifierResult | undefined;
     const midiOptions = config.midiOptions;
-    let success: boolean | undefined = undefined;
 
     // Check if advantageByChoice was passed in (from Workflow via GMAction with deserialized trackers)
     const passedToolAdvantageMap = config.midiOptions?.advantageByChoice as Record<string, PreComputedAdvantage> | undefined;
@@ -2875,7 +2864,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
             }
           }
           if (chosenAdvantage.tracker instanceof RollModifierTracker) {
-            toolModifiers = applyRollModifiers(chosenAdvantage.tracker, configData, dialogData);
+            applyRollModifiers(chosenAdvantage.tracker, configData, dialogData);
           }
         }
       }
@@ -2887,14 +2876,10 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
       // record message configuration details for later display
       message = messageDetails;
 
-      // Detect tool change from choice dialog and check auto-fail/auto-success
+      // Detect tool change from choice dialog
       if (configData.tool && configData.tool !== toolId) {
         toolId = configData.tool;
       }
-      const chosenToolData = preComputedToolAdvantageMap[toolId ?? ""];
-      const chosenToolTracker = chosenToolData?.tracker instanceof RollModifierTracker ? chosenToolData.tracker : undefined;
-      if (chosenToolTracker?.modifiers.willFail) success = false;
-      else if (chosenToolTracker?.modifiers.willSucceed) success = true;
 
       // Apply blind roll mode based on chosen tool (uses check settings since tools are ability checks)
       messageDetails.rollMode = applyBlindRollMode(configSettings.rollChecksBlind, toolId, messageDetails.rollMode, messageDetails);
@@ -2931,7 +2916,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
         messageData.speaker = ChatMessage.getSpeaker({ actor: this, token: this.token ?? undefined });
         messageData.rolls = [...result];
-        const chatMsg = await ChatMessage.create(messageData, { rollMode });
+        const chatMsg = await ChatMessage.create(messageData, { messageMode: rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
         if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
       }
@@ -2996,7 +2981,7 @@ export async function _preDeleteCombat(this: Combat.Implementation, wrapped, ...
 
 export async function doItemUse(this: Item.Implementation, wrapped, config: ActivityUseConfiguration & { chooseActivity?: boolean } = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
   if (this.pack) return;
-  const { chooseActivity, ...activityConfig } = config;
+  const { chooseActivity } = config;
   // @ts-expect-error no dnd5e-types
   // Filter usable activities: exclude riders, automationOnly, inProgress, and activities that fail visibility checks (canUse)
   const activities = this.system.activities?.filter(a =>

@@ -1,3 +1,59 @@
+### 14.6.1
+* Requires Foundry 14.369, dnd5e 6.0.6 and DAE 14.6.1.
+
+**Rolls and saves**
+* Fixed: the *Default saving throw multiplier* setting was ignored; a successful save always took half damage.
+* Changing the ability in midi's save/check dialog builds the roll as dnd5e 6 does (rule bonuses, condition reductions), without deprecated fields.
+* `flags.midi-qol.concentrationSaveBonus` maps to `system.attributes.concentration.roll.bonus`.
+* Fixed: with *Roll saves before damage* on and hits not checked, an attack was treated as missing every target, so *Autocomplete workflow* finished the workflow before damage was rolled (and *Remove buttons: everything* removed the Damage button).
+
+**Damage**
+* Fixed: the chat card context menu's Apply Damage (and Healing, Double, Half) on a midi card ignored the target's resistances, immunities and vulnerabilities; it now applies damage as dnd5e does.
+
+**Targeting**
+* Fixed: with *Enable Target Confirmation* off, a hidden *Confirm targets if none selected* option still asked for confirmation.
+* `MidiQOL.requiresTargetConfirmation(activity, options)`: whether using the activity would ask for target confirmation.
+
+**Conditions and macros**
+* Fixed: `damageTypes` and `defaultDamageType` in conditions were empty before damage was rolled; they come from the activity's damage parts.
+* Fixed: `MidiQOL.addRollTo` given an unevaluated roll failed on Foundry 14. It evaluates a dice-free roll; dice that have not been rolled give an error pointing to the new `MidiQOL.addRollToAsync`, which rolls them.
+* Fixed: `@item.actionType` in conditions and `itemData.actionType` in on-use macro arguments were always empty; they give the action type of the activity being used.
+* Fixed: ActivityOverTime effects registered their change mode with DAE as -1, so DAE's effect editor would not open for them.
+* Fixed: OverTime specs split at every comma, so a value containing one (`saveDC=max(10, @abilities.str.mod)`, `{1d6,2}kh`, a condition, a label) was cut short. A new field now starts only at `,key=` (or `#key=`); `@` fields are filled in per value.
+
+**Activities**
+* Fixed: a transform activity in dnd5e 6's *Select Form* mode tried to transform the targets into an actor instead of applying the chosen form, and applied every form to the targets.
+* Fixed: a forward activity's sheet would not open (14.6.0).
+* Fixed: challenge mode armor's EC and AR were not shown in the armor class dialog (dnd5e renamed it to `ArmorClassConfig`).
+* Fixed: with dnd5e 6, Enchant and Forward activity sheets would not open for editing.
+* Fixed: with dnd5e 6, the AoE Behaviours section was missing from activity Effect tabs.
+
+**Effects and expiry**
+* Reaction, bonus action, flanking and flanked markers use native expiry rather than DAE's deprecated special durations.
+* Fixed: an applied enchantment expired by midi was disabled instead of deleted.
+* Effects midi creates with an activity's duration no longer use DAE's retired *Elapsed Time* expiry; dnd5e 6 gives them *Turn Start* in combat.
+
+**Chat messages**
+* Fixed: midi's skill, check and save messages and Active Defence rolls used Foundry 14's deprecated `rollMode` option.
+* Fixed: the *Active Defence show* setting listed Foundry 14's deprecated roll modes and did not show the saved choice.
+* Fixed: whispered, blind and emote chat messages lost dnd5e's coloured bottom border (purple for GM/self rolls, magenta for blind) while midi was active.
+* Fixed: *Colored Border Messages* set to None still drew a coloured left bar on every chat message, in the viewing user's colour. With None, dnd5e's own card border is left as it is.
+* Fixed: *Colored Border Messages* "Border + Name Text" did not colour the speaker's name on dnd5e cards.
+* Changing *Colored Border Messages* redraws the chat cards already in the log; previously it showed only on new messages or after a reload.
+* The coloured left bar (and name colour) is the owning player's colour on every client; it no longer overrides the roll-mode bottom border.
+* Fixed: with the dark theme, midi's Attack/Damage buttons on chat cards (and its tooltips) kept a light parchment background behind light text.
+
+**Settings**
+* Removed the *DR.all per damage detail* house rule and *Display if save had Advantage/Disadvantage* options, which no longer did anything.
+* Fixed: the *Allow GM to fudge damage application* quick setting threw an error setting a removed setting.
+
+**Foundry 14 compatibility**
+* Deletions use Foundry 14's `ForcedDeletion` instead of the `-=` key syntax, which Foundry 14.369 warns about.
+* Sample items: Regeneration no longer carries stray `-=` flag keys; Goggles of Night, Lantern and Bullseye Lantern macros use `_del`.
+
+**Removed**
+* Removed code that could not run on Foundry 14 / dnd5e 6 (no behaviour change).
+
 ### 14.6.0 (dnd6 branch)
 
 **Requirements**

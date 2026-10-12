@@ -1,7 +1,6 @@
-import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
 import { debugEnabled, i18n, warn, error, GameSystemConfig } from "../../midi-qol.js";
-import { AugmentedEvent, Workflow } from "../Workflow.js";
+import { Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
 import { areMidiKeysPressed, callActivityHooks, isAutoFastForward } from "../utils.js";
@@ -49,12 +48,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
       }, { inplace: false, insertKeys: true, insertValues: true });
 
       static defineSchema() {
-        const { StringField, ArrayField, BooleanField, SchemaField, ObjectField } = foundry.data.fields;
-        //@ts-expect-error
-        const dataModels = game.system.dataModels;
-        const { ActivationField: ActivationField, CreatureTypeField, CurrencyTemplate, DamageData,
-          DamageField, DurationField, MovementField, RangeField, RollConfigField, SensesField,
-          SourceField, TargetField, UsesField } = dataModels.shared
+        const { BooleanField } = foundry.data.fields;
   
         const schema = {
           ...super.defineSchema(),
@@ -147,15 +141,5 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
 }
 
 export function defineMidiUtilitySheetClass(baseClass: any) {
-  return class MidiUtilitySheet extends MidiActivityMixinSheet(baseClass) {
-    static PARTS = {
-      ...super.PARTS,
-      effect: {
-        template: "modules/midi-qol/templates/activity/utility-effect.hbs",
-        templates: [
-          ...super.PARTS.effect.templates
-        ]
-      }
-    };
-  }
+  return class MidiUtilitySheet extends MidiActivityMixinSheet(baseClass) {};
 }

@@ -1,8 +1,6 @@
 import { Activity, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../../globals.js";
-import { debugEnabled, GameSystemConfig, i18n, warn } from "../../midi-qol.js";
-import { Workflow } from "../Workflow.js";
+import { debugEnabled, GameSystemConfig, warn } from "../../midi-qol.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
-import { asyncHooksCall } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export let MidiForwardActivity: ReturnType<typeof defineMidiForwardActivityClass>;
@@ -52,7 +50,6 @@ let defineMidiForwardActivityClass = <T extends Activity>(ActivityClass: T) => {
     get possibleOtherActivity() {
       return false;
     }
-    get effects() { return [] };
 
     /** @override */
     async use(usage: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {

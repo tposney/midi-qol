@@ -274,8 +274,8 @@ export async function applyTokenDamage(
     if (saved) {
       saveMultiplier = getSaveMultiplierForItem(item, "defaultDamage");
     }
-    /*    if (superSaver && getSaveMultiplierForItem(item, "defaultDamage") === configSettings.defaultSaveMultiplier) {
-          saveMultiplier = saves.has(token) ? 0 : configSettings.defaultSaveMultiplier;
+    /*    if (superSaver && getSaveMultiplierForItem(item, "defaultDamage") === configSettings.defaultSaveMult) {
+          saveMultiplier = saves.has(token) ? 0 : configSettings.defaultSaveMult;
         }
     */
 
@@ -844,17 +844,17 @@ export function getSaveMultiplierForActivity(activity: Activity) {
   // @ts-expect-error no dnd5e-types
   if (activity.item.type === "spell" && activity.item.system.level === 0 && damageOnSave === "none") {
     const midiFlags = activity.actor?.flags?.[MODULE_ID];
-    if (midiFlags?.potentCantrip) return configSettings.defaultSaveMultiplier;
+    if (midiFlags?.potentCantrip) return configSettings.defaultSaveMult;
   }
   switch (activity.damage.onSave) {
     case "half":
-      return configSettings.defaultSaveMultiplier;
+      return configSettings.defaultSaveMult;
     case "none":
       return 0;
     case "full":
       return 1;
     default:
-      return configSettings.defaultSaveMultiplier;
+      return configSettings.defaultSaveMult;
   }
 }
 
@@ -865,10 +865,10 @@ export let getSaveMultiplierForItem = (item?: Item.Implementation | null, itemDa
   // @ts-expect-error no dnd5e-types
   if (item.actor && item.type === "spell" && item.system.level === 0) { // cantrip
     const midiFlags = item.actor?.flags?.[MODULE_ID];
-    if (midiFlags?.potentCantrip) return configSettings.defaultSaveMultiplier;
+    if (midiFlags?.potentCantrip) return configSettings.defaultSaveMult;
     return 0;
   }
-  return configSettings.defaultSaveMultiplier;
+  return configSettings.defaultSaveMult;
 };
 
 export interface pcSaveOptions {
@@ -942,7 +942,7 @@ export function buildRollChoices(
     if (rollType === "save") {
       total = abilityData?.save?.value ?? abilityData?.mod ?? 0;
     } else {
-      total = (abilityData?.mod ?? 0) + (abilityData?.checkBonus ?? 0);
+      total = abilityData?.check?.value ?? abilityData?.mod ?? 0;
     }
     const modifier = total >= 0 ? `+${total}` : `${total}`;
     return { value: abilityId, label, modifier };
@@ -1014,8 +1014,6 @@ export function requestPCSave(ability: string, rollType: string | undefined, pla
 }
 
 export function requestPCActiveDefence(player: User, actor: Actor, saveItemName: string, requestId: string, options: { formula: string, bonus: number, coverBonus: number, rollOptions: any, workflow: Workflow }) {
-  const useUuid = true;
-  const actorId = useUuid ? actor.uuid : actor.id;
 
   let rollMode = toMessageMode((checkRule("activeDefenceShow") as string) || "self");
   // TODO: Right check?
@@ -1253,11 +1251,11 @@ function replaceAtFields<T>(value: T, context: Record<string, string>, options: 
   let result = foundry.utils.duplicate(value) as string;
   result = result.replace("@item.level", "@itemLevel") // fix for outdated item.level
   result = result.replace(`@flags.${MODULE_ID}`, "@flags.midiqol"); // allow expressions to ignore the "-" in midi-qol
-  // Remove @data references allow a little bit of recursive lookup
+  // Repeat so values that contain @ references are resolved too
   do {
     count += 1;
     for (let match of result.match(re) || []) {
-      result = result.replace(match.replace("@data.", "@"), (foundry.utils.getProperty(context, match.slice(1)) as string) ?? options.blankValue)
+      result = result.replace(match, (foundry.utils.getProperty(context, match.slice(1)) as string) ?? options.blankValue)
     }
   } while (count < options.maxIterations && result.includes("@"));
   return result;
@@ -1893,18 +1891,57 @@ export function getEffectStackCount(effect: ActiveEffect.Implementation | undefi
 /**
  * Parse raw overtime spec string into typed OvertimeDetails
  */
+const OVERTIME_KEYS = new Set(["actionSave", "allowIncapacitated", "applyCondition", "autoRollAttack", "autoRollDamage",
+  "chatFlavor", "condition", "damageBeforeSave", "damageRoll", "damageType", "failCount", "failRemove", "fastForwardAttack",
+  "fastForwardDamage", "itemName", "killAnim", "label", "macro", "name", "removeCondition", "rollMode", "rollType",
+  "saveAbility", "saveCount", "saveDamage", "saveDC", "saveMagic", "saveRemove", "turn"]);
+const warnedOvertimeSpecs = new Set<string>();
+
+/**
+ * Split an OverTime spec into its raw fields. A field is `key=` at the start or straight after a "," or "#"; its value
+ * runs to the next such field, so commas and "#" inside formulas, conditions and text stay in the value. A value that
+ * starts with a quote runs to the matching quote.
+ */
+export function splitOvertimeSpec(spec: string): Record<string, string> {
+  const fields: Record<string, string> = {};
+  const keyAt = /\s*([A-Za-z][A-Za-z0-9_]*)\s*=(?![=>])\s*/y;
+  const keyFollows = (i: number) => { keyAt.lastIndex = i; return keyAt.test(spec); };
+  let pos = 0;
+  while (pos < spec.length && /[\s,#]/.test(spec[pos])) pos++;
+  while (pos < spec.length) {
+    keyAt.lastIndex = pos;
+    const match = keyAt.exec(spec);
+    if (!match) break;
+    const start = keyAt.lastIndex;
+    let scanFrom = start;
+    const quote = spec[start];
+    if (quote && `"'\``.includes(quote)) {
+      const close = spec.indexOf(quote, start + 1);
+      if (close > start) scanFrom = close + 1;
+    }
+    let next = spec.length;
+    for (let i = scanFrom; i < spec.length; i++) {
+      if ((spec[i] === "," || spec[i] === "#") && keyFollows(i + 1)) { next = i; break; }
+    }
+    fields[match[1]] = spec.slice(start, next).replace(/[\s,#]+$/, "").trim();
+    pos = next + 1;
+  }
+  return fields;
+}
+
+const unquote = (value: string | undefined) => value && /^(["'`]).*\1$/s.test(value) ? value.slice(1, -1) : value;
+
 export function parseOvertimeDetails(specString: string, rollData: Record<string, any>, effectName: string): OvertimeDetails | null {
-  let spec = replaceAtFields(specString, rollData, { blankValue: 0, maxIterations: 3 });
-  spec = spec.replace(/\s*=\s*/g, "=").replace(/\s*,\s*/g, ",").replace("\n", "");
-
-  let parts: string[];
-  if (spec.includes("#")) parts = spec.split("#");
-  else parts = spec.split(",");
-
+  // A spec that is one @reference may hold several fields, so it is substituted before splitting.
+  const single = /^\s*@[\w.-]+\s*$/.test(specString);
+  const fields = splitOvertimeSpec(single ? replaceAtFields(specString, rollData, { blankValue: 0, maxIterations: 3 }) : specString);
   const raw: Record<string, any> = {};
-  for (let part of parts) {
-    const p = part.split("=");
-    raw[p[0]] = p.slice(1).join("=");
+  for (const [key, value] of Object.entries(fields)) {
+    if (!OVERTIME_KEYS.has(key) && !warnedOvertimeSpecs.has(specString)) {
+      warnedOvertimeSpecs.add(specString);
+      console.warn(`midi-qol | OverTime effect "${effectName}": unknown key "${key}" in ${specString}`);
+    }
+    raw[key] = replaceAtFields(value, rollData, { blankValue: 0, maxIterations: 3 });
   }
 
   // Parse turn
@@ -2004,8 +2041,8 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
     allowIncapacitated: parseBool(raw.allowIncapacitated, false),
     killAnim: parseBool(raw.killAnim, false),
     macro: raw.macro,
-    itemName: raw.itemName,
-    chatFlavor: raw.chatFlavor ?? "",
+    itemName: unquote(raw.itemName),
+    chatFlavor: unquote(raw.chatFlavor) ?? "",
     // Normalize a legacy stored over-time rollMode to its v14 equivalent (keeps "default"/undefined).
     rollMode: raw.rollMode ? rollModeToMessageMode(raw.rollMode) : raw.rollMode,
     fastForwardDamage: parseBool(raw.fastForwardDamage, true),
@@ -2075,7 +2112,7 @@ export function serializeOvertimeDetails(data: Record<string, any>): string {
  * Build activity data for save/check/skill rolls
  */
 export function buildRollActivityData(details: OvertimeDetails): Record<string, any> {
-  const { rollType, saveAbility, saveDC, saveMagic } = details;
+  const { rollType, saveAbility, saveDC } = details;
   const activityData: Record<string, any> = {};
 
   if (rollType === "save" && saveAbility[0] && saveDC > -1) {
@@ -2116,8 +2153,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
     // flags.midi-qol.OverTime turn=start/end, damageRoll=rollspec, damageType=string, saveDC=number, saveAbility=str/dex/etc, damageBeforeSave=true/[false], label="String"
     // Read the raw value - parseOvertimeDetails substitutes @fields before details.damageRoll exists.
     // Only damageRoll counts; @stackCount in a condition says nothing about damage scaling.
-    const rawDamageRoll = typeof change.value === "string"
-      ? (/(?:^|,)\s*damageRoll\s*=\s*([^,]*)/i.exec(change.value)?.[1] ?? "") : "";
+    const rawDamageRoll = typeof change.value === "string" ? (splitOvertimeSpec(change.value).damageRoll ?? "") : "";
     const authorHandlesStacks = rawDamageRoll.includes("@stackCount");
     const details = parseOvertimeDetails(change.value, rollData, effect.name);
     if (!details) continue;
@@ -2743,7 +2779,6 @@ export function distancePointToken({ x, y, elevation = 0 }, token, wallblocking 
   let coverACBonus = 0;
   let tokenTileACBonus = 0;
 
-  let coverData;
   if (!canvas.grid || !canvas.dimensions) undefined;
   if (!token || x === undefined || y === undefined) return undefined;
   if (!canvas || !canvas.grid || !canvas.dimensions) return undefined;
@@ -3395,7 +3430,6 @@ export const tokenSourceElevation = (tokenRef: any): number => tokenSourcePositi
 export function getDistance(t1: any, t2: any, options: DistanceOptions = {}): number {
   const { wallsBlock = false, includeCover = true, includeElevation = configSettings.optionalRules.distanceIncludesHeight } = options;
   const measurementMode = configSettings.optionalRules.distanceMeasurement ?? "center";
-  const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
   const gridDistance = canvas?.dimensions?.distance ?? 5;
   const fudgeFactor = configSettings.gridlessFudge ?? 0;
 
@@ -3555,7 +3589,6 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: {
   const t2TopElevation = t2Elevation + Math.min(t2DocHeight, t2DocWidth) * (canvas.dimensions?.distance ?? 5); // assume t2 is trying to make itself small
   const t1VisionElev = getTokenVisionElevation(t1 as Token.Implementation, "visionSourceHeight");
   const t2VisionElev = getTokenVisionElevation(t2 as Token.Implementation, "visionTargetHeight");
-  const wallsBlockRange = configSettings.optionalRules.wallsBlockRange;
   // Module pre-check: full cover means no attack, otherwise skip per-ray los checks
   const preCheck = wallsBlock ? computeWallBlockPreCheck(t1, t2, wallsBlock, includeCover) : { blocked: false, coverVisible: undefined };
   if (preCheck.blocked) return -1;
@@ -3632,10 +3665,6 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: {
   }
   return Math.max(distance, 0);
 }
-
-let pointWarn = foundry.utils.debounce(() => {
-  ui.notifications?.warn("4 Point LOS check selected but dnd5e-helpers not installed")
-}, 100)
 
 /**
  * Whether an attack is one the range rules bite on: a ranged attack, or a melee weapon being thrown.
@@ -3937,12 +3966,6 @@ export function initCoverConstants() {
   HALF_COVER = CONFIG.DND5E?.statusEffects?.coverHalf?.coverBonus ?? 2;
 }
 
-/** Check if an actor has any dnd5e cover status (coverHalf, coverThreeQuarters, or coverTotal). */
-export function hasCoverStatus(actor: Actor | null | undefined): boolean {
-  const statuses = actor?.statuses;
-  return !!(statuses?.has("coverHalf") || statuses?.has("coverThreeQuarters") || statuses?.has("coverTotal"));
-}
-
 /** A position to evaluate cover from, in scene pixels, as `TokenDocument#x`/`y` are. */
 export type CoverPosition = { x: number, y: number, elevation?: number };
 
@@ -4031,7 +4054,6 @@ export function computeCoverBonus(attackerIn: TokenOrDocument, targetIn: TokenOr
   const target = targetIn instanceof TokenDocument ? targetIn.object : targetIn;
   if (attacker && options.position) attacker = tokenAtPosition(attacker, options.position);
   if (activity instanceof Item) {
-    const item = activity;
     activity = undefined;
     foundry.utils.logCompatibilityWarning("computeCoverBonus(attacker, target, item) is deprecated in favor of computeCoverBonus(attacker, target, activity)");
   }
@@ -5495,7 +5517,7 @@ export async function bonusDialog(
       if (["public", "gm", "self"].includes(toMessageMode(rollMode))) content = rollHTML;
       else content = "Hidden Roll";
     }
-    const dialog = new RollModifyDialog(
+    new RollModifyDialog(
       {
         actor: this.actor,
         flags: validFlags,
@@ -5708,14 +5730,10 @@ export async function removeEffectGranting(actor: Actor.Implementation, changeKe
   }
 
   if (["turn", "each-round", "each-turn"].includes(count.value)) {
-    const flagKey = `${changeKey}.used`.replace(`flags.${MODULE_ID}.`, "");
     actorUpdates[`${changeKey}.used`] = game.combat?.uuid;
-    // await actor.setFlag(MODULE_ID, flagKey, true);
   }
   if (["turn", "each-round", "each-turn"].includes(countAlt?.value ?? "")) {
-    const flagKey = `${changeKey}.used`.replace(`flags.${MODULE_ID}.`, "");
     actorUpdates[`${changeKey}.used`] = game.combat?.uuid;
-    // await actor.setFlag(MODULE_ID, flagKey, true);
   }
   if (!foundry.utils.isEmpty(actorUpdates)) await actor.update(actorUpdates);
 
@@ -5904,7 +5922,6 @@ export async function doReactions(targetRef: TokenOrDocument | string, triggerTo
     const workflow: Workflow | undefined = options.workflow ?? Workflow.getWorkflow(options?.activity?.uuid);
 
     if (configSettings.showReactionChatMessage) {
-      const targetDocument = target.document;
       if (configSettings.enableDDBGL && installedModules.get("ddb-game-log")) {
         if (workflow?.flagTags) chatData.flags = workflow.flagTags;
       }
@@ -6643,11 +6660,8 @@ function collectActivityDamageTypes(
     }
   }
 
-  const activityType = activity.type === "heal" ? "healing" : "damage";
-  if (activityType === "healing") {
-    const part = activity[activityType];
-  } else {
-  }
+  if (activity.type === "heal") partTypes(activity.healing);
+  else for (const part of activity.damage?.parts ?? []) partTypes(part);
   if (rollData) {
     rollData.damageTypes = returnDamageTypes;
     rollData.defaultDamageType ??= returnDefaultDamageType;
@@ -6759,9 +6773,10 @@ export function createConditionData(data: {
       rollData.a = data.activity;
     }
     if (item) {
-      // define like this so it's only called if needed to avoid deprecation warnings
+      // Conditions written for items (@item.actionType) get the action type of the activity being used.
+      const activity = data.activity;
       // @ts-expect-error no dnd5e-types
-      Object.defineProperty(rollData.item, "actionType", { get() { return item.system.actionType } });
+      Object.defineProperty(rollData.item, "actionType", { get() { return (activity ?? item.system.activities?.contents[0])?.actionType } });
     }
     if (data.effect) {
       rollData.effect = data.effect;
@@ -6979,7 +6994,6 @@ export function computeTemplateShapeDistance(templateDocument: MeasuredTemplateD
   //@ts-expect-error doesn't like `object.ray`
   templateDocument.object.ray = foundry.canvas.geometry.Ray.fromAngle(x, y, direction, distance);
 
-  let shape: any;
   // @ts-expect-error protected
   templateDocument.object.shape = templateDocument.object._computeShape();
   return { shape: templateDocument.object.shape, distance: templateDocument.distance };
@@ -7083,10 +7097,12 @@ export async function setReactionUsed(actor: Actor.Implementation, active: boole
       effect.updateSource({ duration: { value: 1, units: "turns" } })
     }
     if (actions?.reactionsReset === "rest") {
-      effect.updateSource({ flags: { dae: { specialDuration: ["shortRest"] } } });
+      // @ts-expect-error fvtt-types v14 duration
+      effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: ["shortRest"] } } });
     }
     if (actions?.reactionsReset === "never") {
-      effect.updateSource({ flags: { dae: { specialDuration: [] } } });
+      // @ts-expect-error fvtt-types v14 duration
+      effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: [] } } });
     }
     if (await asyncHooksCall("midi-qol.preSetReactionUsed", actor, effect) === false) return;
     await ActiveEffect.implementation.create(effect.toObject(), { parent: actor, keepId: true });
@@ -7119,10 +7135,12 @@ export async function setBonusActionUsed(actor: Actor.Implementation) {
     effect.updateSource({ duration: { value: 1, units: "turns" } })
   }
   if (actions?.bonusActionsReset === "rest") {
-    effect.updateSource({ flags: { dae: { specialDuration: ["shortRest"] } } });
+    // @ts-expect-error fvtt-types v14 duration
+    effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: ["shortRest"] } } });
   }
   if (actions?.bonusActionsReset === "never") {
-    effect.updateSource({ flags: { dae: { specialDuration: [] } } });
+    // @ts-expect-error fvtt-types v14 duration
+    effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: [] } } });
   }
   effect.origin = actor.uuid;
 
@@ -7142,8 +7160,8 @@ export async function removeReactionUsed(actor: Actor.Implementation, force = fa
     await actor.effects.get(getStaticID("reaction"))?.delete(); // reaction always non-transfer
   }
   // safety net unset of flags - just in case.
-  // @ts-expect-error types doesn't recognize `-=validKey` as a valid key
-  if (actor.flags?.[MODULE_ID]?.actions?.reaction) await actor.update({ flags: { [MODULE_ID]: { actions: { reactionUsed: 0, "-=reactionCombatRound": null } } } });
+  // @ts-expect-error the flag types do not allow a ForcedDeletion
+  if (actor.flags?.[MODULE_ID]?.actions?.reaction) await actor.update({ flags: { [MODULE_ID]: { actions: { reactionUsed: 0, reactionCombatRound: new foundry.data.operators.ForcedDeletion() } } } });
 }
 
 export function hasUsedAction(actor: Actor.Implementation) {
@@ -7156,12 +7174,6 @@ export function hasUsedReaction(actor: Actor.Implementation) {
 
 export function hasUsedAnyReaction(actor: Actor.Implementation) {
   return (actor.getFlag(MODULE_ID, "actions")?.reactionsUsed ?? 0) > 0;
-}
-
-export function reactionsRemaining(actor: Actor.Implementation) {
-  const used = actor.getFlag(MODULE_ID, "actions")?.reactionsUsed ?? 0;
-  const max = actor.getFlag(MODULE_ID, "actions")?.reactionsMax ?? 1;
-  return Math.max(0, max - used);
 }
 
 export async function expirePerTurnBonusActions(
@@ -7199,16 +7211,13 @@ export function hasUsedBonusAction(actor: Actor.Implementation) {
   const max = actor.getFlag(MODULE_ID, "actions")?.bonusActionsMax ?? 1;
   return currentUsed >= max;
 }
-export function hasUsedAnyBonusAction(actor: Actor.Implementation) {
-  return (actor.getFlag(MODULE_ID, "actions")?.bonusActionsUsed ?? 0) > 0;
-}
 export async function removeBonusActionUsed(actor: Actor, force = false) {
   if (force) { // otherwise DAE expires it through its special duration
     await actor.effects.get(getStaticID("bonusaction"))?.delete()
   }
   // Safety net flag reset just in case
-  // @ts-expect-error
-  if (force) await actor.update({ flags: { [MODULE_ID]: { actions: { bonusActionsUsed: 0, bonus: false, "-=bonusActionCombatRound": null } } } });
+  // @ts-expect-error the flag types do not allow a ForcedDeletion
+  if (force) await actor.update({ flags: { [MODULE_ID]: { actions: { bonusActionsUsed: 0, bonus: false, bonusActionCombatRound: new foundry.data.operators.ForcedDeletion() } } } });
 }
 
 
@@ -7447,38 +7456,6 @@ export async function renderAttributionTooltip(attributions: AttributionMap, tit
     "modules/midi-qol/templates/attribution-tooltip.html",
     { attributions: localizedEntries, title }
   ));
-}
-
-/**
- * Legacy function for backwards compatibility.
- * Converts Set-based attribution to structured format and adds to roll.
- * @deprecated Use addAttribution with AttributionEntry[] instead
- */
-export function addAdvAttribution(roll: Roll, advAttribution: Set<string>) {
-  // <section class="tooltip-part">
-  let advHtml: string = "";
-  if (advAttribution && advAttribution.size > 0) {
-    // Localize the attribution prefixes
-    const prefixMap: Record<string, string> = {
-      "ADV:": `${i18n("midi-qol.AttribADV")}:`,
-      "DIS:": `${i18n("midi-qol.AttribDIS")}:`,
-      "CRIT:": `${i18n("midi-qol.AttribCRIT")}:`,
-      "NOCRIT:": `${i18n("midi-qol.AttribNOCRIT")}:`,
-      "FUMBLE:": `${i18n("midi-qol.AttribFUMBLE")}:`,
-      "NOFUMBLE:": `${i18n("midi-qol.AttribNOFUMBLE")}:`
-    };
-    advHtml = Array.from(advAttribution).reduce((prev, s) => {
-      let localized = s;
-      for (const [prefix, localizedPrefix] of Object.entries(prefixMap)) {
-        if (s.startsWith(prefix)) {
-          localized = localizedPrefix + s.slice(prefix.length);
-          break;
-        }
-      }
-      return prev + `${localized}<br>`;
-    }, "");
-    foundry.utils.setProperty(roll, "options.advTooltip", advHtml);
-  }
 }
 
 function getTooltip(roll: Roll, options: any = {}) {
@@ -8035,14 +8012,6 @@ export function getBonusActionEffect() {
   return getCPREffect(midiBonusActionEffect._id!) ?? midiBonusActionEffect;
 }
 
-export function getIncapacitatedStatusEffect() {
-  let incapEffect = CONFIG.statusEffects.find(se => se.id === "incapacitated");
-  //@ts-expect-error odd
-  if (!incapEffect) incapEffect = CONFIG.statusEffects.find(se => se.statuses?.has("incapacitated"));
-  if (!incapEffect) incapEffect = CONFIG.statusEffects.find(se => se.name === i18n("DND5E.ConIncapacitated"))
-  return incapEffect;
-}
-
 let _markFlankingPromise: Promise<boolean> = Promise.resolve(false);
 export function markFlanking(token?: Token.Implementation | null, target?: Token.Implementation | null): Promise<boolean> {
   _markFlankingPromise = _markFlankingPromise.then(
@@ -8351,8 +8320,6 @@ export async function updateFlankingHighlight(): Promise<void> {
 }
 
 export function getChanges(actorOrItem: Actor.Implementation | Item.Implementation, key: string) {
-  let contents = actorOrItem.effects.contents;
-  if (actorOrItem instanceof Actor) contents = actorOrItem.appliedEffects;
   return actorOrItem.effects.contents
     .flat()
     .map(e => {
@@ -8800,20 +8767,6 @@ export function isValidTarget(target: TokenOrDocument): boolean {
   return true;
 }
 
-function contestedRollFlavor(baseFlavor: string | undefined, rollType: string, ability: string): string {
-  let flavor: string | undefined;
-  if (rollType === "test" || rollType === "abil") {
-    const label = GameSystemConfig.abilities[ability]?.label ?? ability;
-    flavor = game.i18n?.format("DND5E.AbilityPromptTitle", { ability: label });
-  } else if (rollType === "save") {
-    const label = GameSystemConfig.abilities[ability].label;
-    flavor = game.i18n?.format("DND5E.SavePromptTitle", { ability: label });
-  } else if (rollType === "skill") {
-    flavor = game.i18n?.format("DND5E.SkillPromptTitle", { skill: GameSystemConfig.skills[ability]?.label ?? "" });
-  }
-  return `${baseFlavor ?? i18n("midi-qol.ContestedRoll")} ${flavor}`;
-}
-
 export function validRollAbility(rollType: string, ability: string): string | undefined {
   if (typeof ability !== "string") return undefined;
   ability = ability.toLocaleLowerCase().trim();
@@ -8843,7 +8796,7 @@ export async function contestedRoll(data: {
   const target = data.target;
   const sourceToken = getToken(source?.token);
   const targetToken = getToken(target?.token);
-  const { rollOptions, success, failure, drawn, displayResults, itemCardUuid, flavor } = data;
+  const { success, failure, drawn, displayResults, itemCardUuid, flavor } = data;
 
   let canProceed = true;
   if (!source || !target || !sourceToken || !targetToken || !source.rollType || !target.rollType || !source.ability || !target.ability || !validRollAbility(source.rollType, source.ability) || !validRollAbility(target.rollType, target.ability)) {
@@ -9065,19 +9018,6 @@ export function getTokenNameExact(entity?: Token.Implementation): string | undef
   return name;
 }
 
-export function getIconFreeLink(entity?: TokenOrDocument | Item | Actor | null) {
-  if (!entity) return "<unknown>";
-  let name = entity.name ?? "unknown";
-  if (entity instanceof Token && !configSettings.useTokenNames) name = entity.actor?.name ?? name;
-  if (entity instanceof Token) {
-    return name;
-    // return `<a class="content-link midi-qol" data-uuid="${entity.actor?.uuid}">${name?.slice(0, MaxNameLength)}</a>`;
-  } else {
-    return name;
-    // return `<a class="content-link midi-qol" data-uuid="${entity.uuid}">${name?.slice(0, MaxNameLength)}</a>`
-  }
-}
-
 /**
  * Creates a proxy around canvas.grid that makes it behave like a SquareGrid.
  * Used for griddedGridless mode to apply square grid measurement rules to gridless scenes.
@@ -9190,12 +9130,24 @@ export function activityHasEmanationNoTemplate(activity: Activity) {
   return activity && activity.target?.template.type === "emanationNoTemplate";
 }
 
+//@ts-expect-error protected
+const isEvaluated = (roll: Roll): boolean => !!roll._evaluated;
+
+/** An evaluated roll as is, a dice-free roll evaluated here; Foundry 14 can only roll dice asynchronously. */
+function evaluatedForAdding(roll: Roll): Roll {
+  if (isEvaluated(roll)) return roll;
+  if (!roll.isDeterministic) {
+    throw new Error(`midi-qol | addRollTo: "${roll.formula}" has dice that have not been rolled; use MidiQOL.addRollToAsync, which rolls them`);
+  }
+  return roll.clone().evaluateSync();
+}
+
+/** Add bonusRoll to roll. Dice-free rolls are evaluated here; rolls with dice must already be rolled (see addRollToAsync). */
 export function addRollTo(roll: Roll, bonusRoll: Roll | Roll.Evaluated<Roll.Any>): Roll {
   const OperatorTerm = foundry.dice.terms.OperatorTerm;
   if (!bonusRoll) return roll;
   if (!roll) return bonusRoll;
-  //@ts-expect-error protected
-  if (!roll._evaluated) roll = roll.clone().evaluate({ async: false }); // V12
+  if (!isEvaluated(roll)) roll = evaluatedForAdding(roll);
   else {
     for (let term of roll.terms) {
       //@ts-expect-error protected
@@ -9204,8 +9156,7 @@ export function addRollTo(roll: Roll, bonusRoll: Roll | Roll.Evaluated<Roll.Any>
       }
     }
   }
-  //@ts-expect-error protected
-  if (!bonusRoll._evaluated) bonusRoll = bonusRoll.clone().evaluate({ async: false }) // V12
+  bonusRoll = evaluatedForAdding(bonusRoll);
   let terms;
   for (let term of bonusRoll.terms) {
     //@ts-expect-error protected
@@ -9217,7 +9168,6 @@ export function addRollTo(roll: Roll, bonusRoll: Roll | Roll.Evaluated<Roll.Any>
     terms = roll.terms.concat(bonusRoll.terms);
   } else {
     const operatorTerm = new OperatorTerm({ operator: "+" });
-    // v13 not required operatorTerm.evaluate();
     terms = roll.terms.concat([operatorTerm]);
     terms = terms.concat(bonusRoll.terms);
   }
@@ -9226,6 +9176,13 @@ export function addRollTo(roll: Roll, bonusRoll: Roll | Roll.Evaluated<Roll.Any>
   newRoll.resetFormula();
   newRoll.options = roll.options;
   return newRoll;
+}
+
+/** Add bonusRoll to roll, rolling either one first if it has not been evaluated. */
+export async function addRollToAsync(roll: Roll, bonusRoll: Roll | Roll.Evaluated<Roll.Any>): Promise<Roll> {
+  if (roll && !isEvaluated(roll)) roll = await roll.clone().evaluate();
+  if (bonusRoll && !isEvaluated(bonusRoll)) bonusRoll = await bonusRoll.clone().evaluate();
+  return addRollTo(roll, bonusRoll);
 }
 
 export async function chooseEffect({ actor, token, item, workflow, options }: {
@@ -9516,12 +9473,13 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
   for (let effect of effects) {
     if (!effect.id) continue;
     if (!fromUuidSync(effect.uuid)) continue;
-    if (effect.transfer)
+    // @ts-expect-error no dnd5e-types
+    if (effect.parent instanceof Item && effect.type === "enchantment")
+      effectsToDelete.push(effect);
+    else if (effect.transfer)
       effectsToDisable.push(effect);
     else if (effect.parent instanceof Actor)
       actorEffectsToExpire.push(effect.id);
-    else if (effect.parent instanceof Item) // this should be enchantments
-      effectsToDelete.push(effect);
   }
   if (actorEffectsToExpire.length > 0) {
     // Resolve DAE's special duration expiry action: "default" falls through to core config
@@ -9558,7 +9516,7 @@ export async function processConcentrationRequestMessage(message: ChatMessage.Im
     let token: Token.Implementation | undefined, actor: Actor.Implementation | undefined | null;
     if (action === "concentration" && type === "midi-concentration") {
       let dc = Number(dcStr);
-      let { actor: actorId, alias, scene, token: tokenId } = message.speaker;
+      let { actor: actorId, scene, token: tokenId } = message.speaker;
       if (scene && tokenId) token = game.scenes?.get(scene)?.tokens.get(tokenId) as Token.Implementation | undefined;
       if (token) actor = token.actor;
       if (!actor && actorId) actor = game.actors?.get(actorId);
@@ -9879,7 +9837,6 @@ export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails
 
       if (maxTargets !== "" && (targetIds.length ?? 0) >= Number(maxTargets)) break;
       if (!isValidTarget(target)) continue;
-      const ray = new foundry.canvas.geometry.Ray(tokenSourceCenter(target), tokenSourceCenter(tokenToUse));
       const wallsBlock = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(configSettings.rangeTarget)
       let inRange = target.actor && dispositions.includes(targetDocument.disposition);
       if (target.actor && ["wallsBlockIgnoreIncapacited", "alwaysIgnoreIncapacitated"].includes(configSettings.rangeTarget))
@@ -10026,17 +9983,6 @@ export function getItemFromEffectOrigin(origin: string, alreadyVisited: string[]
       item = fromUuidSync(withoutActor);
     }
     if (item instanceof Item) originItem = item;
-  }
-  return originItem;
-}
-
-function getItemFromEffectOriginOLD(origin: string) {
-  let originItem: Item.Implementation | undefined;
-  const originEffect = fromUuidSync(origin) as ActiveEffect.Implementation | undefined;
-  if (originEffect?.origin) {
-    if (originEffect.parent instanceof Item) {
-      originItem = originEffect.parent;
-    } else originItem = fromUuidSync(originEffect?.origin) as Item.Implementation | undefined;
   }
   return originItem;
 }
