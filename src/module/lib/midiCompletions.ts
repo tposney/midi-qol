@@ -50,6 +50,7 @@ const MIDI_COMPLETIONS: CompletionNode = {
       checkActivityRange: { type: "function", detail: "(activity, token, targets?, showWarning?) => object", info: "Check if targets are within activity's range.\n- showWarning: display UI warning if out of range (default true)\nReturns: {result, attackingToken, range, longRange}\n- result: \"normal\", \"longRange\", or \"outOfRange\"" },
       selectTargetsFromTemplates: { type: "function", detail: "(templates, selfTokenRef?, ignoreSelf?, AoETargetType?, autoTarget?) => Token[]", info: "Target tokens in template area and update game.user.targets.\n- AoETargetType: \"any\", \"enemy\", \"ally\", \"self\", \"neutral\"\n- autoTarget: \"none\", \"wallsBlock\", \"wallsBlockIgnoreDefeated\", \"wallsBlockIgnoreIncapacitated\", \"walledtemplates\"\nReturns: Token[]" },
       computeTargetsFromTemplates: { type: "function", detail: "(templates, selfTokenRef?, ignoreSelf?, AoETargetType?, autoTarget?) => Token[]", info: "Compute tokens in template area WITHOUT modifying game.user.targets.\n- AoETargetType: \"any\", \"enemy\", \"ally\", \"self\", \"neutral\"\n- autoTarget: \"none\", \"wallsBlock\", \"wallsBlockIgnoreDefeated\", \"wallsBlockIgnoreIncapacitated\"\nReturns: Token[]" },
+      requiresTargetConfirmation: { type: "function", detail: "(activity, options) => boolean", info: "Whether using the activity with the current targets would show the target confirmation dialog" },
 
       // Conditions and effects
       hasCondition: { type: "function", detail: "(actorRef, condition) => 0 | 1", info: "Check if actor/token has a condition.\n- actorRef: Actor, Token, TokenDocument, or UUID string\n- condition: status id (e.g. \"prone\", \"blinded\", \"concentrating\", \"stunned\")\nReturns: 1 if condition exists, 0 if not or immune" },
@@ -70,7 +71,8 @@ const MIDI_COMPLETIONS: CompletionNode = {
       modifyDamageBy: { type: "function", detail: "({damageItem, value, multiplier?, type?, reason?}) => object", info: "Modify damage during isDamaged macro pass only.\n- damageItem: DamageListEntry from workflow\n- value: amount to add/subtract\n- multiplier: optional damage multiplier\n- type/reason: for logging\nReturns: damage modification object" },
 
       // Rolls
-      addRollTo: { type: "function", detail: "(roll, bonusRoll) => Roll", info: "Add a bonus roll to another roll" },
+      addRollTo: { type: "function", detail: "(roll, bonusRoll) => Roll", info: "Add a bonus roll to another roll; rolls with dice must already be rolled" },
+      addRollToAsync: { type: "function", detail: "async (roll, bonusRoll) => Roll", info: "Add a bonus roll to another roll, rolling either first if needed" },
       doConcentrationCheck: { type: "function", detail: "(actor, saveDC) => Promise<Roll>", info: "Perform a concentration check" },
       contestedRoll: { type: "function", detail: "(data) => Promise<{result, rolls}>", info: "Perform a contested roll between two actors.\n- data.source/target: {rollType, ability, token, rollOptions}\n- rollType: \"test\" (ability check), \"save\", \"skill\"\n- data.success/failure/drawn: callback functions\nReturns: {result: number (+source wins, -target wins, 0=draw), rolls}" },
       displayDSNForRoll: { type: "function", detail: "(rolls?, rollType?, rollMode?) => Promise", info: "Display Dice So Nice 3D dice animation" },

@@ -156,7 +156,7 @@
         "type": "script",
         "img": "icons/svg/dice-target.svg",
         "scope": "global",
-        "command": "const tokenDocument = token.document;\nif (args[0] === \"on\") {\n    const updates = {};\n    updates[\"flags.midi-qol.gogglesSave\"] = {\n        \"sight\": tokenDocument._source.sight\n    };\n    let newRange = 60;\n    if (tokenDocument.sight.visionMode === \"darkvision\") newRange = tokenDocument.sight.range + 60;\n\n    updates[\"sight\"] = CONFIG.Canvas.visionModes[\"lightAmplification\"].vision.defaults;\n    updates.sight.visionMode = \"lightAmplification\";\n    updates.sight.range = newRange;\n    return await tokenDocument.update(updates)\n} else if (args[0] === \"off\") {\n    const updates = tokenDocument.flags[\"midi-qol\"]?.gogglesSave ?? {};\n    updates[\"flags.midi-qol.-=gogglesSave\"] = null;\n    return await tokenDocument.update(updates)\n}",
+        "command": "const tokenDocument = token.document;\nif (args[0] === \"on\") {\n    const updates = {};\n    updates[\"flags.midi-qol.gogglesSave\"] = {\n        \"sight\": tokenDocument._source.sight\n    };\n    let newRange = 60;\n    if (tokenDocument.sight.visionMode === \"darkvision\") newRange = tokenDocument.sight.range + 60;\n\n    updates[\"sight\"] = CONFIG.Canvas.visionModes[\"lightAmplification\"].vision.defaults;\n    updates.sight.visionMode = \"lightAmplification\";\n    updates.sight.range = newRange;\n    return await tokenDocument.update(updates)\n} else if (args[0] === \"off\") {\n    const updates = tokenDocument.flags[\"midi-qol\"]?.gogglesSave ?? {};\n    updates[\"flags.midi-qol.gogglesSave\"] = _del;\n    return await tokenDocument.update(updates)\n}",
         "sort": 0,
         "ownership": {
           "default": 0
@@ -223,7 +223,7 @@
         "img": "icons/magic/control/hypnosis-mesmerism-eye.webp",
         "type": "script",
         "scope": "global",
-        "command": "const tokenDocument = token.document;\nif (args[0] === \"on\") {\n    const updates = {};\n    updates[\"flags.midi-qol.gogglesSave\"] = {\n        \"sight\": tokenDocument._source.sight\n    };\n    let newRange = 60;\n    if (tokenDocument.sight.visionMode === \"darkvision\") newRange = tokenDocument.sight.range + 60;\n\n    updates[\"sight\"] = CONFIG.Canvas.visionModes[\"lightAmplification\"].vision.defaults;\n    updates.sight.visionMode = \"lightAmplification\";\n    updates.sight.range = newRange;\n    updates.sight.angle = 135;\n    return await tokenDocument.update(updates)\n} else if (args[0] === \"off\") {\n    const updates = tokenDocument.flags[\"midi-qol\"]?.gogglesSave ?? {};\n    updates[\"flags.midi-qol.-=gogglesSave\"] = null;\n    return await tokenDocument.update(updates)\n}",
+        "command": "const tokenDocument = token.document;\nif (args[0] === \"on\") {\n    const updates = {};\n    updates[\"flags.midi-qol.gogglesSave\"] = {\n        \"sight\": tokenDocument._source.sight\n    };\n    let newRange = 60;\n    if (tokenDocument.sight.visionMode === \"darkvision\") newRange = tokenDocument.sight.range + 60;\n\n    updates[\"sight\"] = CONFIG.Canvas.visionModes[\"lightAmplification\"].vision.defaults;\n    updates.sight.visionMode = \"lightAmplification\";\n    updates.sight.range = newRange;\n    updates.sight.angle = 135;\n    return await tokenDocument.update(updates)\n} else if (args[0] === \"off\") {\n    const updates = tokenDocument.flags[\"midi-qol\"]?.gogglesSave ?? {};\n    updates[\"flags.midi-qol.gogglesSave\"] = _del;\n    return await tokenDocument.update(updates)\n}",
         "author": "STcmc1QZ0hx024Tl",
         "ownership": {
           "default": 3
@@ -256,7 +256,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.55"
+        "version": "14.0.13"
       }
     }
   },

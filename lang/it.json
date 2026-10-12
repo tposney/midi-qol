@@ -483,8 +483,6 @@
 "midi-qol.RemoveHiddenInvis.Name": "L'attacco rimuove la nascosta (usa CE/CV/CUB/core foundry specialStatus )",
 "midi-qol.CriticalSaves.Name": "(Regola della Casa) Successo/Fallimento critico sempre riuscito/fallito per i tiri salvezza",
 "midi-qol.MaxDRValue.Name": "(Regola della Casa) Abilitando questa opzione significa che verrà applicata solo la Riduzione Danno più efficace. Spento significa che la RD si accumula",
-"midi-qol.DRAllPerDamageDetail.Name": "(Regola della Casa) La RDAll (RD.rwak/...) viene sottratta sia dal danno dell'attacco che dal danno aggiuntivo",
-"midi-qol.DRAllPerDamageDetail.Hint": "Disabilitato significa che la RDAll si applica una sola volta al danno totale",
 "midi-qol.invisible": "Invisibile",
 "midi-qol.hidden": "Nascosto",
 "midi-qol.nevertarget": "Mai Bersaglio",
@@ -655,7 +653,6 @@
 "midi-qol.KeysOther.Hint": "Tira formula alternativa come danno",
 "midi-qol.FixStickyKeys.Name": "Risolve il problema dei tasti alt/ctrl/shift bloccati",
 "midi-qol.FixStickyKeys.Hint": "Se impostato, midi cercherà di risolvere il problema dei tasti alt/ctrl/shift bloccati",
-"midi-qol.DisplaySaveAdvantage.Name": "Mostra se il tiro salvezza aveva Vantaggio/Svantaggio",
 "midi-qol.QuickSettingsBlurb": {
   "1": "Le impostazioni rapide ti consentono di impostare una combinazione di impostazioni in una volta sola.",
   "2": "Quando uno dei pulsanti sottostanti viene premuto, le modifiche vengono apportate immediatamente alle tue impostazioni",

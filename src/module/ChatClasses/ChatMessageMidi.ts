@@ -1,6 +1,6 @@
 import { GameSystemConfig, MESSAGE_TYPES, MODULE_ID, MQDamageRollTypes, debugEnabled, error, i18n, log } from "../../midi-qol.js";
 import { configSettings, safeGetGameSetting, saveToChatCard } from "../settings.js";
-import { displayTokenName, getToken } from "../utils.js";
+import { applyMessageMode, displayTokenName, getToken } from "../utils.js";
 import { setDamageRollMinTerms } from "../activities/activityHelpers.js";
 
 // Damage is auto-applied by midi when autoApplyDamage is one of the "yes*" modes.
@@ -175,6 +175,13 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     static get TRAY_TYPES() {
       return globalThis.dnd5e.documents.ChatMessage5e.TRAY_TYPES.concat(["midi-damage-application"]);
     }
+    /** dnd5e 5.3 calls the deprecated applyRollMode when it prepares a roll message without creating it. */
+    applyRollMode(rollMode: ChatMessage.PassableRollMode) {
+      const data = this.toObject();
+      applyMessageMode(data, rollMode);
+      this.updateSource(data);
+    }
+
     get isRoll() {
       if (this.flags?.[MODULE_ID]?.messageType) return false // do this so that dsn won't trigger
       return super.isRoll;
@@ -261,16 +268,17 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       // @ts-expect-error no dnd5e-types
       if (type !== undefined || !this.flags?.[MODULE_ID]) return super.applyChatCardDamage(li, multiplier);
       const rollsToCheck = this.rolls.filter(r => MQDamageRollTypes.includes(foundry.utils.getProperty(r, "options.midi-qol.rollType") as string));
+      // As dnd5e's own applyChatCardDamage: healing is negative, and the target's traits apply.
       //@ts-expect-error no dnd5e-types
       const damages = game.system.dice.aggregateDamageRolls(rollsToCheck, { respectProperties: true }).map(roll => ({
-        value: roll.total,
+        value: Math.max(0, roll.total) * (roll.options.type in CONFIG.DND5E.healingTypes ? -1 : 1),
         type: roll.options.type,
         properties: new Set(roll.options.properties ?? [])
       }));
       if (canvas.tokens) {
         return Promise.all(canvas.tokens.controlled.map(t => {
           //@ts-expect-error no dnd5e-types
-          return t.actor?.applyDamage(damages, { multiplier, invertHealing: false, ignore: true });
+          return t.actor?.applyDamage(damages, { multiplier, isDelta: true, originatingMessage: this });
         }));
       }
     }

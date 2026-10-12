@@ -1,3 +1,52 @@
+### 14.0.14
+
+**Rolls and saves**
+* Fixed: the *Default saving throw multiplier* setting was ignored; a successful save always took half damage.
+* Fixed: with *Roll saves before damage* on and hits not checked, an attack was treated as missing every target, so *Autocomplete workflow* finished the workflow before damage was rolled (and *Remove buttons: everything* removed the Damage button).
+* Fixed: a concentration spell's Concentration box in the cast dialog started unticked, and ticking it gave two Concentrating effects.
+
+**Damage**
+* Fixed: the chat card context menu's Apply Damage (and Healing, Double, Half) on a midi card ignored the target's resistances, immunities and vulnerabilities; it now applies damage as dnd5e does.
+
+**Targeting**
+* Fixed: with *Enable Target Confirmation* off, a hidden *Confirm targets if none selected* option still asked for confirmation.
+* `MidiQOL.requiresTargetConfirmation(activity, options)`: whether using the activity would ask for target confirmation.
+
+**Conditions and macros**
+* Fixed: `damageTypes` and `defaultDamageType` in conditions were empty before damage was rolled; they come from the activity's damage parts.
+* Fixed: `MidiQOL.addRollTo` given an unevaluated roll failed on Foundry 14. It evaluates a dice-free roll; dice that have not been rolled give an error pointing to the new `MidiQOL.addRollToAsync`, which rolls them.
+* Fixed: `@item.actionType` in conditions and `itemData.actionType` in on-use macro arguments were always empty; they give the action type of the activity being used.
+* Fixed: OverTime specs split at every comma, so a value containing one (`saveDC=max(10, @abilities.str.mod)`, `{1d6,2}kh`, a condition, a label) was cut short. A new field now starts only at `,key=` (or `#key=`); `@` fields are filled in per value.
+* Fixed: ActivityOverTime effects registered their change mode with DAE as -1, so DAE's effect editor would not open for them.
+
+**Activities**
+* Fixed: challenge mode armor's EC and AR were not shown in the armor class dialog (dnd5e renamed it to `ArmorClassConfig`).
+
+**Effects and expiry**
+* Reaction, bonus action, flanking and flanked markers use native expiry rather than DAE's deprecated special durations.
+* Effects midi creates with an activity's duration no longer use DAE's *Elapsed Time* expiry; in combat DAE gives them *Turn Start*, as dnd5e 6 does.
+
+**Chat messages**
+* Fixed: *Colored Border Messages* set to None still drew a coloured left bar on every chat message, in the viewing user's colour; with a border set, the bar is the owning player's colour.
+* Fixed: *Colored Border Messages* "Border + Name Text" did not colour the speaker's name on dnd5e cards.
+* Changing *Colored Border Messages* redraws the chat cards already in the log; previously it showed only on new messages or after a reload.
+* Fixed: with the dark theme, midi's Attack/Damage buttons on chat cards (and its tooltips) kept a light parchment background behind light text.
+* Fixed: midi's skill, check and save messages and Active Defence rolls used Foundry 14's deprecated `rollMode` option.
+* Fixed: the *Active Defence show* setting listed Foundry 14's deprecated roll modes and did not show the saved choice.
+* Fixed: dnd5e 5.3 warned that `ChatMessage#applyRollMode` was deprecated on every midi damage roll.
+
+**Settings**
+* Removed the *DR.all per damage detail* house rule and *Display if save had Advantage/Disadvantage* options, which no longer did anything.
+* Fixed: the *Allow GM to fudge damage application* quick setting threw an error setting a removed setting.
+
+**Foundry 14 compatibility**
+* Deletions use Foundry 14's `ForcedDeletion` instead of the `-=` key syntax, which Foundry 14.369 warns about.
+* Sample items: Regeneration no longer carries stray `-=` flag keys; Goggles of Night, Lantern and Bullseye Lantern macros use `_del`.
+
+**Removed**
+* Removed two unused roll dialog templates.
+* Removed: an unused transform hook meant to give transformed tokens the caster's disposition; it never fired, and dnd5e already keeps a transformed token's own disposition.
+
 ### 14.0.13
 * Requires Foundry 14.368 (verified 14.368) and dnd5e 5.3.0 to 5.9.99 (verified 5.3.3); dnd5e 5.2 does not run on Foundry 14.
 * Requires DAE 14.0.15 or later (the Aid sample item uses its raise current HP option).

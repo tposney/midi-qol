@@ -577,8 +577,6 @@
     "midi-qol.RemoveHiddenInvis.Name": "攻擊會移除隱藏（使用 CE/CV/CUB/核心 specialStatus）",
     "midi-qol.CriticalSaves.Name": "（房規）豁免檢定達成重擊/嚴重失誤一律成功/失敗",
     "midi-qol.MaxDRValue.Name": "（房規）啟用此項表示僅套用最有效的傷害減免。關閉則為減免可疊加",
-    "midi-qol.DRAllPerDamageDetail.Name": "（房規）DRALL (DR.rwak/...) 會從攻擊傷害與「其他」傷害中「分別」扣除",
-    "midi-qol.DRAllPerDamageDetail.Hint": "未勾選表示 DRALL 僅對總傷害套用一次",
     "midi-qol.invisible": "隱形(INVISIBLE)",
     "midi-qol.hidden": "躲藏(HIDDEN)",
     "midi-qol.nevertarget": "從不選取目標",
@@ -792,7 +790,6 @@
     "midi-qol.KeysOther.Hint": "將「其他」公式擲為傷害",
     "midi-qol.FixStickyKeys.Name": "修復卡住的 alt/ctrl/shift",
     "midi-qol.FixStickyKeys.Hint": "若設定，midi 會嘗試解決按鍵卡在「按下」狀態的問題。",
-    "midi-qol.DisplaySaveAdvantage.Name": "顯示豁免是否有優勢/劣勢",
     "midi-qol.QuickSettingsBlurb": "快速設定讓你一次完成多項配置組合。<br>一旦按下按鈕，更改將立即生效並顯示列表。",
     "midi-qol.Reaction.Title": "反應(Reaction)處理",
     "midi-qol.GMDoReactionsOptions": {

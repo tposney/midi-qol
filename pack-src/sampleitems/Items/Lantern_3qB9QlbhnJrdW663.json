@@ -117,7 +117,7 @@
         "img": "icons/sundries/lights/lantern-iron-yellow.webp",
         "type": "script",
         "scope": "global",
-        "command": "if (args[0] === \"on\") {\n    const updates = {};\n    updates[\"flags.midi-qol.lanternSave\"] = {\n        \"light.angle\": token._source.light.angle,\n        \"light.bright\": token._source.light.bright,\n        \"light.dim\": token._source.light.dim,\n        \"light.animation\": token._source.light.animation,\n        \"light.alpha\": token._source.light.alpha, \n        \"light.contrast\": token._source.light.contrast,\n        \"light.color\": token._source.light.color\n    };\n    updates[\"light.angle\"] = 360;\n    updates[\"light.bright\"] = 30;\n    updates[\"light.dim\"] = 60;\n    updates[\"light.alpha\"] = 0.1;\n    updates[\"light.contrast\"] = 0.5;\n    updates[\"light.color\"] = \"#f8c3770\";\n    return await token.update(updates);\n} else if (args[0] === \"off\") {\n    const updates = token.flags[\"midi-qol\"].lanternSave;\n    updates[\"flags.midi-qol.-=lanternSave\"] = null;\n    return await token.update(updates)\n}",
+        "command": "if (args[0] === \"on\") {\n    const updates = {};\n    updates[\"flags.midi-qol.lanternSave\"] = {\n        \"light.angle\": token._source.light.angle,\n        \"light.bright\": token._source.light.bright,\n        \"light.dim\": token._source.light.dim,\n        \"light.animation\": token._source.light.animation,\n        \"light.alpha\": token._source.light.alpha, \n        \"light.contrast\": token._source.light.contrast,\n        \"light.color\": token._source.light.color\n    };\n    updates[\"light.angle\"] = 360;\n    updates[\"light.bright\"] = 30;\n    updates[\"light.dim\"] = 60;\n    updates[\"light.alpha\"] = 0.1;\n    updates[\"light.contrast\"] = 0.5;\n    updates[\"light.color\"] = \"#f8c3770\";\n    return await token.update(updates);\n} else if (args[0] === \"off\") {\n    const updates = token.flags[\"midi-qol\"].lanternSave;\n    updates[\"flags.midi-qol.lanternSave\"] = _del;\n    return await token.update(updates)\n}",
         "author": "Zl1BOUaPLwDEujaL",
         "ownership": {
           "default": 3
@@ -141,7 +141,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.55"
+        "version": "14.0.13"
       }
     }
   },

@@ -909,7 +909,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
         messageData.speaker = ChatMessage.getSpeaker({ actor: this, token: this.token ?? undefined });
         messageData.rolls = [...result];
-        const chatMsg = await ChatMessage.create(messageData, { rollMode });
+        const chatMsg = await ChatMessage.create(messageData, { messageMode: rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
         if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
       }
@@ -1707,7 +1707,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
         messageData.speaker = ChatMessage.getSpeaker({ actor: this, token: this.token ?? undefined });
         messageData.rolls = [...result];
-        const chatMsg = await ChatMessage.create(messageData, { rollMode });
+        const chatMsg = await ChatMessage.create(messageData, { messageMode: rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
         if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
       }
@@ -2982,7 +2982,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
         const messageData: any = foundry.utils.mergeObject({ sound: CONFIG.sounds.dice }, message.data ?? {});
         messageData.speaker = ChatMessage.getSpeaker({ actor: this, token: this.token ?? undefined });
         messageData.rolls = [...result];
-        const chatMsg = await ChatMessage.create(messageData, { rollMode });
+        const chatMsg = await ChatMessage.create(messageData, { messageMode: rollMode });
         // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
         if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
       }

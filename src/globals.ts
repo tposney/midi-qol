@@ -27,7 +27,7 @@ import { ConfigPanel } from "./module/apps/ConfigPanel";
 import { createEffects, debug, log, moveToken, moveTokenAwayFromPoint, teleportToken, removeEffects, updateEffects, warn } from "./midi-qol";
 import { TargetConfirmationDialog } from "./module/apps/TargetConfirmation";
 import { MidiSounds } from "./module/midi-sounds";
-import { computeTargetsFromTemplates, resolveTargetConfirmation, selectTargetsFromTemplates } from "./module/activities/activityHelpers";
+import { computeTargetsFromTemplates, requiresTargetConfirmation, resolveTargetConfirmation, selectTargetsFromTemplates } from "./module/activities/activityHelpers";
 import { showUndoWorkflowApp } from "./module/apps/UndoWorkflow";
 import { TroubleShooter } from "./module/apps/TroubleShooter";
 import { ChatMessageMidi } from "./module/ChatClasses/ChatMessageMidi";
@@ -619,10 +619,32 @@ declare module "fvtt-types/configuration" {
 };
 
 declare global {
+  namespace ChatMessage.Database {
+    interface Create<Temporary extends boolean | undefined = boolean | undefined> {
+      /** Foundry 14: a CONFIG.ChatMessage.modes key; replaces the deprecated rollMode option. */
+      messageMode?: string;
+    }
+  }
+  // v14 data field operators, not yet in fvtt-types. `{ key: new ForcedDeletion() }` replaces the
+  // `{ "-=key": null }` deletion syntax that v14 deprecates.
+  namespace foundry.data.operators {
+    class ForcedDeletion {
+      constructor(value?: unknown);
+    }
+  }
+
   /** fvtt-types brands module sub-types, so "midi-qol.damage" needs declaring to be assignable. */
   interface DataModelConfig {
     ChatMessage: {
       "midi-qol.damage": typeof import("./module/ChatClasses/DamageCardMessage.js").MidiDamageMessageData;
+    };
+  }
+
+  /** fvtt-types' v14 ChatLog is a stub; merged into `ui.chat`'s type. */
+  interface UI {
+    chat?: {
+      /** Re-render a message in the log, or insert it if it has become visible to this user. */
+      updateMessage(message: ChatMessage.Implementation, options?: { notify?: boolean }): Promise<void>;
     };
   }
 
@@ -702,6 +724,7 @@ declare global {
     addConcentrationDependent: typeof utils.addConcentrationDependent;
     addDependent: typeof utils.addDependent;
     addRollTo: typeof utils.addRollTo;
+    addRollToAsync: typeof utils.addRollToAsync;
     addUndoChatMessage: typeof undo.addUndoChatMessage;
     RollModifierTracker: typeof RollModifierTracker;
     applyTokenDamage: typeof utils.applyTokenDamage;
@@ -815,6 +838,7 @@ declare global {
     removeInvisibleCondition: typeof utils.removeInvisibleCondition;
     removeMostRecentWorkflow: typeof undo.removeMostRecentWorkflow;
     removeReactionUsed: typeof utils.removeReactionUsed;
+    requiresTargetConfirmation: typeof requiresTargetConfirmation;
     resolveTargetConfirmation: typeof resolveTargetConfirmation;
     safeGetGameSetting: typeof settings.safeGetGameSetting;
     shouldDisplaySaveDC: typeof settings.shouldDisplaySaveDC;

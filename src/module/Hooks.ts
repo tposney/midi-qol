@@ -213,14 +213,21 @@ export let readyHooks = async () => {
     }
   })
 
-  //@ts-expect-error
-  Hooks.on("renderActorArmorConfig", (app: never, html: HTMLElement, data) => {
-    if (!["none", undefined, false].includes(checkRule("challengeModeArmor") as string | boolean | undefined)) {
-      const ac = data.ac;
-      const element = html.querySelector(".card");
-      const arTemplate = document.createElement("template");
-      arTemplate.innerHTML = `<div>EC: ${ac.EC}</div><div>AR: ${ac.AR}</div>`;
-      element?.append(...Array.from(arTemplate.content.children));
+  // Challenge mode armor: show EC and AR in dnd5e's armor class dialog.
+  //@ts-expect-error not in fvtt-types
+  Hooks.on("renderArmorClassConfig", (app: { document?: Actor.Implementation }, html: HTMLElement) => {
+    if (["none", undefined, false].includes(checkRule("challengeModeArmor") as string | boolean | undefined)) return;
+    // @ts-expect-error no dnd5e-types
+    const ac = app.document?.system?.attributes?.ac;
+    const card = html.querySelector("fieldset.card");
+    if (!ac || !card) return;
+    card.querySelectorAll("[data-midi-challenge-armor]").forEach(el => el.remove());
+    for (const [label, value] of [["EC", ac.EC], ["AR", ac.AR]]) {
+      const row = document.createElement("div");
+      row.classList.add("form-group");
+      row.dataset.midiChallengeArmor = label;
+      row.innerHTML = `<label>${label}</label><div class="form-fields">${value ?? ""}</div>`;
+      card.append(row);
     }
   });
 
@@ -1163,13 +1170,13 @@ function applySaves({ damages, options }: DamageCalcParams): void {
 
     if (mo.saved && !ignoringSaved) {
       const multiplier = ignoringSuperSaver
-        ? configSettings.defaultSaveMultiplier
+        ? configSettings.defaultSaveMult
         : (mo.superSaver ? 0 : (entrySaveMultiplier ?? 1));
       damage.value = damage.value * multiplier;
       foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * multiplier);
     } else if (mo.superSaver && !ignoringSuperSaver) {
-      damage.value = damage.value * configSettings.defaultSaveMultiplier;
-      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * configSettings.defaultSaveMultiplier);
+      damage.value = damage.value * configSettings.defaultSaveMult;
+      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * configSettings.defaultSaveMult);
     }
   }
 }

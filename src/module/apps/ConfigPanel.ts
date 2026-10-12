@@ -258,7 +258,8 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       DoConcentrationCheckOptions: doConcentrationCheckOptions,
       AddChatDamageButtonsOptions: addChatDamageButtonsOptions,
       ActivationAutomationOptions: activationAutomationOptions,
-      rollModes: CONFIG.Dice.rollModes,
+      // @ts-expect-error fvtt-types lacks v14 CONFIG.ChatMessage.modes
+      messageModes: Object.fromEntries(Object.entries(CONFIG.ChatMessage.modes).filter(([mode]) => mode !== "ic").map(([mode, { label }]) => [mode, label])),
       fastForwardOptions: {
         attack: i18n("midi-qol.fastForwardOptions.attack"),
         damage: i18n("midi-qol.fastForwardOptions.damage"),
@@ -703,10 +704,6 @@ let quickSettingsDetails: any = {
     shortDescription: "Allow GM to fudge damage application",
     configSettings: {
       autoApplyDamage: "noCard"
-    },
-    codeChecks: (current, settings) => {
-      //@ts-expect-error
-      game.settings.set("midi-qol", "AddChatDamageButtons", "gm");
     }
   },
   DisableConcentration: {
@@ -730,7 +727,6 @@ let quickSettingsDetails: any = {
       gmDamageDisplay: "hidden",
       gmAttackDsn: "none",
       gmDamageDsn: "none",
-      displaySaveAdvantage: false,
       hideNPCNames: "Unknown Creature",
       showReactionAttackRoll: "none",
       displayHitResultNumeric: false
@@ -750,7 +746,6 @@ let quickSettingsDetails: any = {
       gmDamageDisplay: "full",
       gmAttackDsn: "show",
       gmDamageDsn: "show",
-      displaySaveAdvantage: true,
       showReactionAttackRoll: "all",
       hideNPCNames: "",
       displayHitResultNumeric: true

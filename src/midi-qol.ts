@@ -8,7 +8,7 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, tokenAtPosition, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, convertDuration, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, tokenAtPosition, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
@@ -190,6 +190,7 @@ Object.assign(globalThis.MidiQOL, {
   addDependent,
   addConcentrationDependent,
   addRollTo,
+  addRollToAsync,
   addUndoChatMessage,
   applyTokenDamage,
   applyTokenDamageMany,
@@ -211,6 +212,7 @@ Object.assign(globalThis.MidiQOL, {
   tokenAtPosition,
   computeDistance,
   convertDuration,
+  splitOvertimeSpec,
   computeSkillAdvantage,
   computeToolAdvantage,
   contestedRoll,
@@ -280,6 +282,7 @@ Object.assign(globalThis.MidiQOL, {
   removeReactionUsed,
   resolveItemMacro,
   resolveActivityMacro,
+  requiresTargetConfirmation,
   resolveTargetConfirmation,
   RollModifierTracker,
   setBonusActionUsed,
@@ -539,7 +542,7 @@ Hooks.on("dae.modifySpecials", (specKey, specials, _characterSpec) => {
 
 //@ts-expect-error
 Hooks.on("dae.modifyBaseValues", (specKey: string, baseValues, _characterSpec) => {
-  baseValues[`flags.${MODULE_ID}.ActivityOverTime`] = [new StringField({ initial: "" }), -1];
+  baseValues[`flags.${MODULE_ID}.ActivityOverTime`] = [new StringField({ initial: "" }), ""];
 });
 //@ts-expect-error
 Hooks.on("dae.addFieldMappings", (fieldMappings) => {
@@ -892,7 +895,7 @@ import { MidiDamageActivity, setupDamageActivity } from './module/activities/Dam
 import { MidiCastActivity, setupCastActivity } from './module/activities/CastActivity.js';
 import { MidiCheckActivity, setupCheckActivity } from './module/activities/CheckActivity.js';
 import { MidiHealActivity, setupHealActivity } from './module/activities/HealActivity.js';
-import { computeTargetsFromTemplates, resolveTargetConfirmation, selectTargetsFromTemplates, showItemInfo } from './module/activities/activityHelpers.js';
+import { computeTargetsFromTemplates, requiresTargetConfirmation, resolveTargetConfirmation, selectTargetsFromTemplates, showItemInfo } from './module/activities/activityHelpers.js';
 import { MidiActivityMixin, setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
 import { MidiForwardActivity, setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';
@@ -1865,7 +1868,9 @@ export function setupMidiStatusEffects() {
         },
         img: "modules/midi-qol/icons/bonus-action.svg",
 
-        flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } }
+        // @ts-expect-error fvtt-types v14 duration
+        duration: { expiry: "targetStart" },
+        flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
       });
     }
     ActiveEffect.implementation.fromStatusEffect("bonusaction").then(effect => {
@@ -1888,7 +1893,9 @@ export function setupMidiStatusEffects() {
         },
         img: "modules/midi-qol/icons/reaction.svg",
         // effectData: { transfer: false },
-        flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } }
+        // @ts-expect-error fvtt-types v14 duration
+        duration: { expiry: "targetStart" },
+        flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
       });
     }
     ActiveEffect.implementation.fromStatusEffect("reaction").then(effect => {
@@ -1904,7 +1911,8 @@ export function setupMidiStatusEffects() {
       system: { changes: getFlankingStatusChanges() },
       img: "icons/svg/sword.svg",
       // effectData: { transfer: false },
-      flags: { dae: { specialDuration: ["combatEnd"] } }
+      // @ts-expect-error fvtt-types v14 duration
+      duration: { expiry: "combatEnd" }
     });
   }
 
@@ -1921,7 +1929,8 @@ export function setupMidiStatusEffects() {
       system: { changes: getFlankedStatusChanges() },
       img: "modules/midi-qol/icons/encirclement.svg",
       // effectData: { transfer: false },
-      flags: { dae: { specialDuration: ["combatEnd"] } }
+      // @ts-expect-error fvtt-types v14 duration
+      duration: { expiry: "combatEnd" }
     });
   };
 

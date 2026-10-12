@@ -1867,17 +1867,17 @@ export class Workflow {
     if (converted.type === "seconds") {
       if (converted.seconds !== undefined) {
         // @ts-expect-error fvtt-types v14 duration
-        effectData.duration = { value: converted.seconds, units: "seconds", expiry: "updateWorldTime" };
+        effectData.duration = { value: converted.seconds, units: "seconds", expiry: null };
       }
       // @ts-expect-error fvtt-types v14 duration
       effectData.start = { time: game.time?.worldTime ?? 0 };
     } else if (converted.type === "turns") {
       if ((converted.rounds ?? 0) > 0) {
         // @ts-expect-error fvtt-types v14 duration
-        effectData.duration = { value: converted.rounds, units: "rounds", expiry: "updateWorldTime" };
+        effectData.duration = { value: converted.rounds, units: "rounds", expiry: null };
       } else if ((converted.turns ?? 0) > 0) {
         // @ts-expect-error fvtt-types v14 duration
-        effectData.duration = { value: Math.max(converted.turns ?? 1, 1), units: "turns", expiry: "updateWorldTime" };
+        effectData.duration = { value: Math.max(converted.turns ?? 1, 1), units: "turns", expiry: null };
       }
       // @ts-expect-error fvtt-types v14 duration
       effectData.start = { round: game.combat?.round ?? 0, turn: game.combat?.turn ?? 0 };
@@ -4198,8 +4198,10 @@ export class Workflow {
     };
     const itemData = (item?.toObject(false) ?? {}) as Item.Source & { uuid?: string };
     itemData.uuid = item?.uuid; // provide the uuid so the actual item can be recovered
+    // Macros reading itemData.actionType get the action type of the activity being used.
+    const activity = this.activity;
     //@ts-expect-error no dnd5e-types
-    Object.defineProperty(itemData, "actionType", { get() { return item?.actionType } });
+    Object.defineProperty(itemData, "actionType", { get() { return (activity ?? item?.system.activities?.contents[0])?.actionType } });
     return {
       actor: this.actor,
       actorData: this.actor.toObject(false),
@@ -5167,12 +5169,6 @@ export class Workflow {
     coverSaveBonus: number = 0,
   ): Promise<void> {
     const saveRollTotal = coverSaveBonus >= TOTAL_COVER ? Infinity : (saveRoll.total ?? 0);
-    let adv = "";
-    if (configSettings.displaySaveAdvantage) {
-      adv = this.advantageSaves.has(target) ? `(${i18n("DND5E.Advantage")})` : "";
-      if (this.disadvantageSaves?.has(target)) adv = `(${i18n("DND5E.Disadvantage")})`;
-    }
-
     const img = await this.getTargetPortraitImage(target);
     const isPlayerOwned = target.actor?.hasPlayerOwner ?? false;
 
@@ -7813,7 +7809,8 @@ export class SavesFirstWorkflow extends Workflow {
     if (!hasDamageRoll) return this.WorkflowState_AllRollsComplete;
     if (getAutoRollDamage(this) === "always") return this.WorkflowState_WaitForDamageRoll;
     const noHits = this.hitTargets.size === 0 && this.hitTargetsEC.size === 0;
-    const allMissed = noHits && this.targets.size !== 0;
+    // With hits not checked there are no hit targets, which is not a miss.
+    const allMissed = configSettings.autoCheckHit !== "none" && noHits && this.targets.size !== 0;
     if (allMissed) {
       if (configSettings.confirmAttackDamage !== "none" && !this.workflowOptions.forceCompletion)
         return this.WorkflowState_ConfirmRoll;
@@ -8095,7 +8092,7 @@ export class ActiveDefenceWorkflow extends Workflow {
         promises.push(
           new Promise(async (resolve) => {
             const result = await (new D20Roll(formula, {}, options)).evaluate();
-            result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")} ${options.criticalSuccess}/${options.criticalFailure}` }, { rollMode: toMessageMode(configSettings.optionalRules.activeDefenceShow) });
+            result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")} ${options.criticalSuccess}/${options.criticalFailure}` }, { messageMode: toMessageMode(configSettings.optionalRules.activeDefenceShow) });
             // displayDSNForRoll(result, "attackRoll")
             resolve(result);
           })

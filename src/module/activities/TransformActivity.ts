@@ -1,7 +1,6 @@
 import { Activity } from "../../globals.js";
 import { debugEnabled, GameSystemConfig, i18nFormat, warn } from "../../midi-qol.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
-import { getTokenDocument } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import type { ActivityUseConfiguration } from "../../globals.js";
 
@@ -19,12 +18,6 @@ export function setupTransformActivity() {
   } else {
     GameSystemConfig.activityTypes["midiTransform"] = { documentClass: MidiTransformActivity };
   }
-  //@ts-expect-error
-  Hooks.on("dnd5e.TransformToken", (activity, profile, tokenData, options) => {
-    if (!activity.friendlyTransform) return;
-    const caster = getTokenDocument(activity.actor);
-    if (caster) tokenData.disposition = caster.disposition;
-  });
 }
 let defineMidiTransformSheetClass = (baseClass: any) => {
   return class MidiTransformSheet extends MidiActivityMixinSheet(baseClass) {

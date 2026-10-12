@@ -112,13 +112,13 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
         options.midi = foundry.utils.duplicate(targetDetails);
         const saveMultiplier = targetDetails.saveMults?.[this.damageType];
         if (targetDetails.saved) {
-          foundry.utils.setProperty(options, "midi.saveMultiplier", saveMultiplier ?? configSettings.defaultSaveMultiplier);
+          foundry.utils.setProperty(options, "midi.saveMultiplier", saveMultiplier ?? configSettings.defaultSaveMult);
         }
         if (saveMultiplier !== undefined) {
-          if (targetDetails.superSaver && saveMultiplier === configSettings.defaultSaveMultiplier) {
-            foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : configSettings.defaultSaveMultiplier);
+          if (targetDetails.superSaver && saveMultiplier === configSettings.defaultSaveMult) {
+            foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : configSettings.defaultSaveMult);
           }
-          if (targetDetails.semiSuperSaver && saveMultiplier === configSettings.defaultSaveMultiplier) {
+          if (targetDetails.semiSuperSaver && saveMultiplier === configSettings.defaultSaveMult) {
             foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : 1);
           }
         }

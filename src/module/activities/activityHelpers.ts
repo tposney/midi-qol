@@ -139,8 +139,23 @@ export async function doActivityReactions(activity: Activity, workflow: Workflow
   return await Promise.all(promises);
 }
 
+/**
+ * Defer concentration to the workflow. dnd5e begins concentration inside Activity#use, right after
+ * consumption and before any of midi's checks; a use midi then rejects would leave the caster
+ * concentrating on a spell that never happened, and ending the previous concentration is nested in the
+ * same block. This hook runs after the usage dialog, so it takes the player's choice (the dialog's
+ * Concentration box, and which concentration to end), records it on the workflow, and stops dnd5e
+ * beginning it; Workflow#beginDeferredConcentration begins it once the checks pass.
+ */
 export function preActivityConsumptionHook(activity: Activity, usageConfig: ActivityUseConfiguration, messageConfig: RollMessageConfig): boolean {
-  // console.error("preActivityConsumptionHook", activity, usageConfig, messageConfig);
+  const workflow = usageConfig.workflow;
+  if (!workflow || !usageConfig.concentration?.begin) return true;
+  if (!activity.requiresConcentration || safeGetGameSetting("dnd5e", "disableConcentration")) return true;
+  workflow.deferredConcentration = {
+    scaling: typeof usageConfig.scaling === "number" ? usageConfig.scaling : undefined,
+    end: usageConfig.concentration.end ?? undefined
+  };
+  usageConfig.concentration.begin = false;
   return true;
 }
 
@@ -213,7 +228,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
   if (options.workflowOptions?.attackPerTarget === true) return false;
   if ((activity.forcedTargetConfirmation ?? activity.midiProperties?.confirmTargets) === "always") return true;
   if ((activity.forcedTargetConfirmation ?? activity.midiProperties?.confirmTargets) === "never") return false;
-  if (targetConfirmation.noneTargeted && ((activity.target?.affects.type ?? "") !== "" || activity.attack) && (game.user?.targets?.size ?? 0) === 0)
+  if (targetConfirmation.enabled && targetConfirmation.noneTargeted && ((activity.target?.affects.type ?? "") !== "" || activity.attack) && (game.user?.targets?.size ?? 0) === 0)
     return true;
   let numTargets = game.user?.targets?.size ?? 0;
   // @ts-expect-error no dnd5e-types

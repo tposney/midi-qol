@@ -1,5 +1,5 @@
 import { i18n } from "../../midi-qol.js"
-import { configSettings, defaultTargetConfirmationSettings, targetConfirmation } from "../settings.js";
+import { defaultTargetConfirmationSettings, targetConfirmation } from "../settings.js";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class TargetConfirmationConfig extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -37,20 +37,6 @@ export class TargetConfirmationConfig extends HandlebarsApplicationMixin(Applica
       submit: TargetConfirmationConfig.#onSubmit
     }
   };
-    // scrollY: [".tab.workflow"],
-    // tabs: [{ navSelector: ".tabs", contentSelector: ".content", initial: "gm" }]
-
-  async _updateObject(event, formData) {
-    formData = foundry.utils.expandObject(formData);
-    let newSettings = foundry.utils.mergeObject(targetConfirmation, formData, { overwrite: true, inplace: false })
-    // const newSettings = foundry.utils.mergeObject(configSettings, expand, {overwrite: true})
-    if (!newSettings.enabled) {
-      newSettings = foundry.utils.duplicate(defaultTargetConfirmationSettings);
-      newSettings.gridPosition = formData.gridPosition;
-    }
-    game.settings.set("midi-qol", "TargetConfirmation", newSettings);
-    this.render({ force: true });
-  }
 
   async _onRender(context, options) {
     await super._onRender(context, options);

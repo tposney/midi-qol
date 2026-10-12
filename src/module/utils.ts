@@ -275,8 +275,8 @@ export async function applyTokenDamage(
     if (saved) {
       saveMultiplier = getSaveMultiplierForItem(item, "defaultDamage");
     }
-    /*    if (superSaver && getSaveMultiplierForItem(item, "defaultDamage") === configSettings.defaultSaveMultiplier) {
-          saveMultiplier = saves.has(token) ? 0 : configSettings.defaultSaveMultiplier;
+    /*    if (superSaver && getSaveMultiplierForItem(item, "defaultDamage") === configSettings.defaultSaveMult) {
+          saveMultiplier = saves.has(token) ? 0 : configSettings.defaultSaveMult;
         }
     */
 
@@ -819,17 +819,17 @@ export function getSaveMultiplierForActivity(activity: Activity) {
   // @ts-expect-error no dnd5e-types
   if (activity.item.type === "spell" && activity.item.system.level === 0 && damageOnSave === "none") {
     const midiFlags = activity.actor?.flags?.[MODULE_ID];
-    if (midiFlags?.potentCantrip) return configSettings.defaultSaveMultiplier;
+    if (midiFlags?.potentCantrip) return configSettings.defaultSaveMult;
   }
   switch (activity.damage.onSave) {
     case "half":
-      return configSettings.defaultSaveMultiplier;
+      return configSettings.defaultSaveMult;
     case "none":
       return 0;
     case "full":
       return 1;
     default:
-      return configSettings.defaultSaveMultiplier;
+      return configSettings.defaultSaveMult;
   }
 }
 
@@ -840,10 +840,10 @@ export let getSaveMultiplierForItem = (item?: Item.Implementation | null, itemDa
   // @ts-expect-error no dnd5e-types
   if (item.actor && item.type === "spell" && item.system.level === 0) { // cantrip
     const midiFlags = item.actor?.flags?.[MODULE_ID];
-    if (midiFlags?.potentCantrip) return configSettings.defaultSaveMultiplier;
+    if (midiFlags?.potentCantrip) return configSettings.defaultSaveMult;
     return 0;
   }
-  return configSettings.defaultSaveMultiplier;
+  return configSettings.defaultSaveMult;
 };
 
 export interface pcSaveOptions {
@@ -1893,18 +1893,57 @@ export function getEffectStackCount(effect: ActiveEffect.Implementation | undefi
 /**
  * Parse raw overtime spec string into typed OvertimeDetails
  */
+const OVERTIME_KEYS = new Set(["actionSave", "allowIncapacitated", "applyCondition", "autoRollAttack", "autoRollDamage",
+  "chatFlavor", "condition", "damageBeforeSave", "damageRoll", "damageType", "failCount", "failRemove", "fastForwardAttack",
+  "fastForwardDamage", "itemName", "killAnim", "label", "macro", "name", "removeCondition", "rollMode", "rollType",
+  "saveAbility", "saveCount", "saveDamage", "saveDC", "saveMagic", "saveRemove", "turn"]);
+const warnedOvertimeSpecs = new Set<string>();
+
+/**
+ * Split an OverTime spec into its raw fields. A field is `key=` at the start or straight after a "," or "#"; its value
+ * runs to the next such field, so commas and "#" inside formulas, conditions and text stay in the value. A value that
+ * starts with a quote runs to the matching quote.
+ */
+export function splitOvertimeSpec(spec: string): Record<string, string> {
+  const fields: Record<string, string> = {};
+  const keyAt = /\s*([A-Za-z][A-Za-z0-9_]*)\s*=(?![=>])\s*/y;
+  const keyFollows = (i: number) => { keyAt.lastIndex = i; return keyAt.test(spec); };
+  let pos = 0;
+  while (pos < spec.length && /[\s,#]/.test(spec[pos])) pos++;
+  while (pos < spec.length) {
+    keyAt.lastIndex = pos;
+    const match = keyAt.exec(spec);
+    if (!match) break;
+    const start = keyAt.lastIndex;
+    let scanFrom = start;
+    const quote = spec[start];
+    if (quote && `"'\``.includes(quote)) {
+      const close = spec.indexOf(quote, start + 1);
+      if (close > start) scanFrom = close + 1;
+    }
+    let next = spec.length;
+    for (let i = scanFrom; i < spec.length; i++) {
+      if ((spec[i] === "," || spec[i] === "#") && keyFollows(i + 1)) { next = i; break; }
+    }
+    fields[match[1]] = spec.slice(start, next).replace(/[\s,#]+$/, "").trim();
+    pos = next + 1;
+  }
+  return fields;
+}
+
+const unquote = (value: string | undefined) => value && /^(["'`]).*\1$/s.test(value) ? value.slice(1, -1) : value;
+
 export function parseOvertimeDetails(specString: string, rollData: Record<string, any>, effectName: string): OvertimeDetails | null {
-  let spec = replaceAtFields(specString, rollData, { blankValue: 0, maxIterations: 3 });
-  spec = spec.replace(/\s*=\s*/g, "=").replace(/\s*,\s*/g, ",").replace("\n", "");
-
-  let parts: string[];
-  if (spec.includes("#")) parts = spec.split("#");
-  else parts = spec.split(",");
-
+  // A spec that is one @reference may hold several fields, so it is substituted before splitting.
+  const single = /^\s*@[\w.-]+\s*$/.test(specString);
+  const fields = splitOvertimeSpec(single ? replaceAtFields(specString, rollData, { blankValue: 0, maxIterations: 3 }) : specString);
   const raw: Record<string, any> = {};
-  for (let part of parts) {
-    const p = part.split("=");
-    raw[p[0]] = p.slice(1).join("=");
+  for (const [key, value] of Object.entries(fields)) {
+    if (!OVERTIME_KEYS.has(key) && !warnedOvertimeSpecs.has(specString)) {
+      warnedOvertimeSpecs.add(specString);
+      console.warn(`midi-qol | OverTime effect "${effectName}": unknown key "${key}" in ${specString}`);
+    }
+    raw[key] = replaceAtFields(value, rollData, { blankValue: 0, maxIterations: 3 });
   }
 
   // Parse turn
@@ -2004,8 +2043,8 @@ export function parseOvertimeDetails(specString: string, rollData: Record<string
     allowIncapacitated: parseBool(raw.allowIncapacitated, false),
     killAnim: parseBool(raw.killAnim, false),
     macro: raw.macro,
-    itemName: raw.itemName,
-    chatFlavor: raw.chatFlavor ?? "",
+    itemName: unquote(raw.itemName),
+    chatFlavor: unquote(raw.chatFlavor) ?? "",
     // Normalize a legacy stored over-time rollMode to its v14 equivalent (keeps "default"/undefined).
     rollMode: raw.rollMode ? rollModeToMessageMode(raw.rollMode) : raw.rollMode,
     fastForwardDamage: parseBool(raw.fastForwardDamage, true),
@@ -2116,8 +2155,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
     // flags.midi-qol.OverTime turn=start/end, damageRoll=rollspec, damageType=string, saveDC=number, saveAbility=str/dex/etc, damageBeforeSave=true/[false], label="String"
     // Read the raw value - parseOvertimeDetails substitutes @fields before details.damageRoll exists.
     // Only damageRoll counts; @stackCount in a condition says nothing about damage scaling.
-    const rawDamageRoll = typeof change.value === "string"
-      ? (/(?:^|,)\s*damageRoll\s*=\s*([^,]*)/i.exec(change.value)?.[1] ?? "") : "";
+    const rawDamageRoll = typeof change.value === "string" ? (splitOvertimeSpec(change.value).damageRoll ?? "") : "";
     const authorHandlesStacks = rawDamageRoll.includes("@stackCount");
     const details = parseOvertimeDetails(change.value, rollData, effect.name);
     if (!details) continue;
@@ -5105,6 +5143,11 @@ type ChatMessageWithApplyMode = typeof ChatMessage & {
   applyMode(chatData: ChatMessage.CreateData, mode?: string): ChatMessage.CreateData;
 };
 
+/** Apply a message mode, or a legacy roll mode, to chat data with v14's ChatMessage.applyMode. */
+export function applyMessageMode(chatData: ChatMessage.CreateData, rollMode?: string): ChatMessage.CreateData {
+  return (ChatMessage as ChatMessageWithApplyMode).applyMode(chatData, rollModeToMessageMode(rollMode));
+}
+
 async function displayBeforeAfterRolls(data: {
   originalRoll: Roll,
   newRoll: Roll,
@@ -5129,7 +5172,7 @@ async function displayBeforeAfterRolls(data: {
   }, { inplace: false });
   // @ts-expect-error originalRoll.options.rollMode is not typed
   const rawRollMode: string | undefined = originalRoll.options.rollMode || rollMode;
-  (ChatMessage as ChatMessageWithApplyMode).applyMode(chatData, rollModeToMessageMode(rawRollMode));
+  applyMessageMode(chatData, rawRollMode);
   foundry.utils.setProperty(newRoll, `flags.${MODULE_ID}.chatMessageShown`, true);
   return await ChatMessage.create(chatData);
 }
@@ -5344,7 +5387,7 @@ export async function bonusDialog(
         content: `${newRollHTML}`,
         whisper: [player?.id ?? ""]
       };
-      (ChatMessage as ChatMessageWithApplyMode).applyMode(chatData, rollModeToMessageMode(rollMode));
+      applyMessageMode(chatData, rollMode);
       chatMessage = await ChatMessage.create(chatData);
     }
 
@@ -6613,11 +6656,8 @@ function collectActivityDamageTypes(
     }
   }
 
-  const activityType = activity.type === "heal" ? "healing" : "damage";
-  if (activityType === "healing") {
-    const part = activity[activityType];
-  } else {
-  }
+  if (activity.type === "heal") partTypes(activity.healing);
+  else for (const part of activity.damage?.parts ?? []) partTypes(part);
   if (rollData) {
     rollData.damageTypes = returnDamageTypes;
     rollData.defaultDamageType ??= returnDefaultDamageType;
@@ -6725,9 +6765,10 @@ export function createConditionData(data: {
       rollData.a = data.activity;
     }
     if (item) {
-      // define like this so it's only called if needed to avoid deprecation warnings
+      // Conditions written for items (@item.actionType) get the action type of the activity being used.
+      const activity = data.activity;
       // @ts-expect-error no dnd5e-types
-      Object.defineProperty(rollData.item, "actionType", { get() { return item.system.actionType } });
+      Object.defineProperty(rollData.item, "actionType", { get() { return (activity ?? item.system.activities?.contents[0])?.actionType } });
     }
     if (data.effect) {
       rollData.effect = data.effect;
@@ -7049,10 +7090,12 @@ export async function setReactionUsed(actor: Actor.Implementation, active: boole
       effect.updateSource({ duration: { value: 1, units: "turns" } })
     }
     if (actions?.reactionsReset === "rest") {
-      effect.updateSource({ flags: { dae: { specialDuration: ["shortRest"] } } });
+      // @ts-expect-error fvtt-types v14 duration
+      effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: ["shortRest"] } } });
     }
     if (actions?.reactionsReset === "never") {
-      effect.updateSource({ flags: { dae: { specialDuration: [] } } });
+      // @ts-expect-error fvtt-types v14 duration
+      effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: [] } } });
     }
     if (await asyncHooksCall("midi-qol.preSetReactionUsed", actor, effect) === false) return;
     await ActiveEffect.implementation.create(effect.toObject(), { parent: actor, keepId: true });
@@ -7085,10 +7128,12 @@ export async function setBonusActionUsed(actor: Actor.Implementation) {
     effect.updateSource({ duration: { value: 1, units: "turns" } })
   }
   if (actions?.bonusActionsReset === "rest") {
-    effect.updateSource({ flags: { dae: { specialDuration: ["shortRest"] } } });
+    // @ts-expect-error fvtt-types v14 duration
+    effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: ["shortRest"] } } });
   }
   if (actions?.bonusActionsReset === "never") {
-    effect.updateSource({ flags: { dae: { specialDuration: [] } } });
+    // @ts-expect-error fvtt-types v14 duration
+    effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: [] } } });
   }
   effect.origin = actor.uuid;
 
@@ -7108,8 +7153,8 @@ export async function removeReactionUsed(actor: Actor.Implementation, force = fa
     await actor.effects.get(getStaticID("reaction"))?.delete(); // reaction always non-transfer
   }
   // safety net unset of flags - just in case.
-  // @ts-expect-error types doesn't recognize `-=validKey` as a valid key
-  if (actor.flags?.[MODULE_ID]?.actions?.reaction) await actor.update({ flags: { [MODULE_ID]: { actions: { reactionUsed: 0, "-=reactionCombatRound": null } } } });
+  // @ts-expect-error the flag types do not allow a ForcedDeletion
+  if (actor.flags?.[MODULE_ID]?.actions?.reaction) await actor.update({ flags: { [MODULE_ID]: { actions: { reactionUsed: 0, reactionCombatRound: new foundry.data.operators.ForcedDeletion() } } } });
 }
 
 export function hasUsedAction(actor: Actor.Implementation) {
@@ -7173,8 +7218,8 @@ export async function removeBonusActionUsed(actor: Actor, force = false) {
     await actor.effects.get(getStaticID("bonusaction"))?.delete()
   }
   // Safety net flag reset just in case
-  // @ts-expect-error
-  if (force) await actor.update({ flags: { [MODULE_ID]: { actions: { bonusActionsUsed: 0, bonus: false, "-=bonusActionCombatRound": null } } } });
+  // @ts-expect-error the flag types do not allow a ForcedDeletion
+  if (force) await actor.update({ flags: { [MODULE_ID]: { actions: { bonusActionsUsed: 0, bonus: false, bonusActionCombatRound: new foundry.data.operators.ForcedDeletion() } } } });
 }
 
 
@@ -9049,12 +9094,24 @@ export function activityHasEmanationNoTemplate(activity: Activity) {
   return activity && activity.target?.template.type === "emanationNoTemplate";
 }
 
+//@ts-expect-error protected
+const isEvaluated = (roll: Roll): boolean => !!roll._evaluated;
+
+/** An evaluated roll as is, a dice-free roll evaluated here; Foundry 14 can only roll dice asynchronously. */
+function evaluatedForAdding(roll: Roll): Roll {
+  if (isEvaluated(roll)) return roll;
+  if (!roll.isDeterministic) {
+    throw new Error(`midi-qol | addRollTo: "${roll.formula}" has dice that have not been rolled; use MidiQOL.addRollToAsync, which rolls them`);
+  }
+  return roll.clone().evaluateSync();
+}
+
+/** Add bonusRoll to roll. Dice-free rolls are evaluated here; rolls with dice must already be rolled (see addRollToAsync). */
 export function addRollTo(roll: Roll, bonusRoll: Roll | Roll.Evaluated<Roll.Any>): Roll {
   const OperatorTerm = foundry.dice.terms.OperatorTerm;
   if (!bonusRoll) return roll;
   if (!roll) return bonusRoll;
-  //@ts-expect-error protected
-  if (!roll._evaluated) roll = roll.clone().evaluate({ async: false }); // V12
+  if (!isEvaluated(roll)) roll = evaluatedForAdding(roll);
   else {
     for (let term of roll.terms) {
       //@ts-expect-error protected
@@ -9063,8 +9120,7 @@ export function addRollTo(roll: Roll, bonusRoll: Roll | Roll.Evaluated<Roll.Any>
       }
     }
   }
-  //@ts-expect-error protected
-  if (!bonusRoll._evaluated) bonusRoll = bonusRoll.clone().evaluate({ async: false }) // V12
+  bonusRoll = evaluatedForAdding(bonusRoll);
   let terms;
   for (let term of bonusRoll.terms) {
     //@ts-expect-error protected
@@ -9076,7 +9132,6 @@ export function addRollTo(roll: Roll, bonusRoll: Roll | Roll.Evaluated<Roll.Any>
     terms = roll.terms.concat(bonusRoll.terms);
   } else {
     const operatorTerm = new OperatorTerm({ operator: "+" });
-    // v13 not required operatorTerm.evaluate();
     terms = roll.terms.concat([operatorTerm]);
     terms = terms.concat(bonusRoll.terms);
   }
@@ -9085,6 +9140,13 @@ export function addRollTo(roll: Roll, bonusRoll: Roll | Roll.Evaluated<Roll.Any>
   newRoll.resetFormula();
   newRoll.options = roll.options;
   return newRoll;
+}
+
+/** Add bonusRoll to roll, rolling either one first if it has not been evaluated. */
+export async function addRollToAsync(roll: Roll, bonusRoll: Roll | Roll.Evaluated<Roll.Any>): Promise<Roll> {
+  if (roll && !isEvaluated(roll)) roll = await roll.clone().evaluate();
+  if (bonusRoll && !isEvaluated(bonusRoll)) bonusRoll = await bonusRoll.clone().evaluate();
+  return addRollTo(roll, bonusRoll);
 }
 
 export async function chooseEffect({ actor, token, item, workflow, options }: {

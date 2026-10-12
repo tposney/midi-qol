@@ -558,7 +558,6 @@
   "midi-qol.KeysOther.Hint": "Lancer une autre formule comme dégâts",
   "midi-qol.FixStickyKeys.Name": "Correction du blocage adv/ctl/shift",
   "midi-qol.FixStickyKeys.Hint": "Si cette option est activée, midi tentera de résoudre le problème du blocage de l'adv/ctl/shift sur 'on'",
-  "midi-qol.DisplaySaveAdvantage.Name": "Afficher si la sauvegarde a eu un Avantage/Désavantage",
   "midi-qol.QuickSettingsBlurb": {
     "1": "Les réglages rapides vous permettent de définir une combinaison de paramètres en une seule fois.",
     "2": "Lorsque vous appuyez sur l'un des boutons ci-dessous, les modifications sont immédiatement apportées à vos paramètres",
@@ -761,7 +760,6 @@
   "midi-qol.InvisVision.Name": "Vision forcée lors du contrôle",
   "midi-qol.WallsBlockRange.Hint1": "Non = le mur ne bloque pas les contrôles de portée",
   "midi-qol.WallsBlockRange.Hint2": "centre = vérifier la ligne de centre à centre",
-  "midi-qol.DRAllPerDamageDetail.Name": "(Règle maison) DRAll (DR.rwak/...) est déduit des DEUX dégâts d'attaque et des Autres dégâts.",
   "midi-qol.nevertarget": "Jamais de cible",
   "midi-qol.ContestedRoll": "Jet contesté",
   "midi-qol.versus": "contre",
@@ -773,7 +771,6 @@
   "midi-qol.WallsBlockRange.Hint3": "centre + Levels = vérification du centre, mais utilisation du module \"Levels\" pour déterminer le blocage des murs pour la ligne de vue. Utilisez également les gabarits volumétriques des niveaux pour le ciblage des gabarits",
   "midi-qol.WallsBlockRange.Hint4": "Levels Auto Cover = Utilisez levelsautocover pour tester et bloquer la couverture totale",
   "midi-qol.WallsBlockRange.Hint5": "Alternative Token Visibility = Utiliser Alternative Token Visibility pour tester et bloquer la couverture totale",
-  "midi-qol.DRAllPerDamageDetail.Hint": "Si la case n'est pas cochée, DRALL ne s'applique qu'une seule fois au total des dégâts",
   "midi-qol.EnforceSingleWeaponTarget.Name": "Les armes attaquent une seule cible",
   "midi-qol.EnforceSingleWeaponTarget.Hint": "Les armes sans spécification de cible ne peuvent attaquer qu'une seule cible",
   "midi-qol.save-drawn": "tiré",

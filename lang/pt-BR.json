@@ -647,8 +647,6 @@
   "midi-qol.RemoveHiddenInvis.Name": "Atacar Remove Escondido (usa CE/CV/CUB/specialStatus do Foundry)",
   "midi-qol.CriticalSaves.Name": "(Regra da Casa) Acerto/Erro Crítico Sempre em Sucesso/Falha para Salvaguardas",
   "midi-qol.MaxDRValue.Name": "(Regra da Casa) Apenas a maior Redução de Dano será aplicada. Desabilitar significa que ela acumula",
-  "midi-qol.DRAllPerDamageDetail.Name": "(Regra da Casa) DR All (DR.rwak/...) são reduzidas tanto do dano do ataque quanto do dano de Outra Fórmula",
-  "midi-qol.DRAllPerDamageDetail.Hint": "Se desabilitado aplica redução apenas uma vez do total do dano.",
   "midi-qol.invisible": "Invisível",
   "midi-qol.hidden": "Escondido",
   "midi-qol.nevertarget": "Nunca Marcar",
@@ -865,7 +863,6 @@
   "midi-qol.KeysOther.Hint": "Rolar Outra Fórmula como dano",
   "midi-qol.FixStickyKeys.Name": "Corrijir alt/ctrl/shift Travado",
   "midi-qol.FixStickyKeys.Hint": "Se ativado, Midi QOL tentará resolver alt/ctrl/shift travado em 'Ativado'",
-  "midi-qol.DisplaySaveAdvantage.Name": "Exibe se a Salvaguarda tem Vantagem/Desvantagem",
   "midi-qol.QuickSettingsBlurb": "Configurações Rápidas permite definir uma combinação de configurações de uma só vez.<br>Quando um dos botões abaixo é pressionado, as alterações são feitas imediatamente nas suas configurações.<br>Uma lista de alterações é exibida quando as configurações são concluídas.<br>Sugestões de melhorias são bem-vindas.",
   "midi-qol.Reaction.Title": "Processo de Reação",
   "midi-qol.GMDoReactionsOptions": {

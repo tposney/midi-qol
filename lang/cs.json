@@ -481,8 +481,6 @@
   "midi-qol.RemoveHiddenInvis.Name": "Má útok odstranit stav ´skrytý´ (používá speciální stavy CE/CV/CUB/Foundry)?",
   "midi-qol.CriticalSaves.Name": "(Domácí pravidlo) Má při kritu záchranný hod vždy uspět či selhat?",
   "midi-qol.MaxDRValue.Name": "(Domácí pravidlo) Má být používáno pouze nejúčinnější snížení zranění (odškrtnutí znamená, že se budou snížení zranění sčítat)?",
-  "midi-qol.DRAllPerDamageDetail.Name": "(Domácí pravidlo) Má být DRALL (DR.rwak/...) odečítán jak ze zranění útoku, tak z ostatních zranění?",
-  "midi-qol.DRAllPerDamageDetail.Hint": "Nezaškrtnutí znamená, že DRALL bude aplikováno pouze jednou na celkové zranění.",
   "midi-qol.invisible": "Neviditelný",
   "midi-qol.hidden": "Schovaný",
   "midi-qol.nevertarget": "Nikdy nevybírat jako cíl",
@@ -651,7 +649,6 @@
   "midi-qol.KeysOther.Hint": "Hod jiné formule jako zranění.",
   "midi-qol.FixStickyKeys.Name": "Opravit zaseklé alt/ctrl/shift",
   "midi-qol.FixStickyKeys.Hint": "Pokud je nastaveno, Midi se pokusí vyřešit situaci, kdy alt/ctrl/shift zůstávají 'zapnuté'.",
-  "midi-qol.DisplaySaveAdvantage.Name": "Má se zobrazovat, zda má záchranný hod Výhodu či Nevýhodu?",
   "midi-qol.QuickSettingsBlurb": {
   "1": "Rychlá nastavení umožňují nastavit kombinaci více možností najednou.",
   "2": "Když stiskneš jedno z tlačítek níže, změny se okamžitě aplikují na všechna nastavení.",

@@ -365,10 +365,7 @@ function getChanges(newData?: Actor.Source | TokenDocument.Source, savedData?: A
   const toDelete = {};
   for (let key of Object.keys(tempChanges)) {
     if (!changes[key]) {
-      let parts = key.split(".");
-      parts[parts.length - 1] = "-=" + parts[parts.length - 1];
-      let newKey = parts.join(".");
-      toDelete[newKey] = null
+      toDelete[key] = new foundry.data.operators.ForcedDeletion();
     }
   }
   return foundry.utils.mergeObject(changes, toDelete);

@@ -166,9 +166,8 @@ class ConfigSettings {
   damageImmunityMultiplier: number = 0.0;
   damageResistanceMultiplier: number = 0.5;
   damageVulnerabilityMultiplier: number = 2;
-  defaultSaveMultiplier: number = 0.5;
+  defaultSaveMult: number = 0.5;
   diceSound: string = "";
-  displaySaveAdvantage: boolean = true;
   doConcentrationCheck: string = "chat";
   griddedGridless: boolean = false;
   gridlessFudge: number | undefined = 0;
@@ -281,7 +280,6 @@ class ConfigSettings {
     displayBonusRolls: true,
     distanceIncludesHeight: false,
     distanceMeasurement: "center", // "center" = grid square centers, "perimeter" = token perimeters
-    DRAllPerDamageDetail: true,
     hiddenAdvantage: "none",
     incapacitated: "nothing",
     invisAdvantage: "RAW2024",
@@ -707,7 +705,6 @@ export let fetchParams = () => {
   if (configSettings.autoCEEffects === true) configSettings.autoCEEffects = "both";
   if (!configSettings.autoCEEffects) configSettings.autoCEEffects = "none";
   configSettings.toggleOptionalRules = false;
-  if (configSettings.displaySaveAdvantage === undefined) configSettings.displaySaveAdvantage = true;
   if (!configSettings.recordAOO) configSettings.recordAOO = "none";
   if (!configSettings.enforceReactions) configSettings.enforceReactions = "none";
   if (!configSettings.enforceBonusActions) configSettings.enforceBonusActions = "none";
@@ -766,7 +763,6 @@ export let fetchParams = () => {
     invisAdvantage: "RAW2024",
     hiddenAdvantage: "none",
     maxDRValue: false,
-    DRAllPerDamageDetail: true,
     nearbyAllyRanged: 0,
     nearbyFoe: 5,
     optionalCritRule: -1,
@@ -805,6 +801,9 @@ export let fetchParams = () => {
     //@ts-expect-error legacy nonexistent value
     delete configSettings.optionalRules.activeDefenceShowGM;
   }
+  // Foundry 14 message modes replace the roll modes the panel used to offer.
+  const legacyMode = { publicroll: "public", gmroll: "gm", blindroll: "blind", selfroll: "self" }[configSettings.optionalRules.activeDefenceShow];
+  if (legacyMode) configSettings.optionalRules.activeDefenceShow = legacyMode;
   if (typeof configSettings.confirmAttackDamage !== "string") configSettings.confirmAttackDamage = "none";
   if (typeof configSettings.requireMagical !== "string" && configSettings.requireMagical !== true) configSettings.requireMagical = "off";
   if (typeof configSettings.requireMagical !== "string" && configSettings.requireMagical === true) configSettings.requireMagical = "nonspell";
@@ -821,7 +820,7 @@ export let fetchParams = () => {
     configSettings.itemTypeList.filter((type) => !["base", "backpack"].includes(type));
   }
   if (configSettings.itemTypeList === undefined) configSettings.itemTypeList = Object.keys(CONFIG.Item.typeLabels);
-  if (configSettings.defaultSaveMultiplier === undefined) configSettings.defaultSaveMultiplier = 0.5;
+  if (configSettings.defaultSaveMult === undefined) configSettings.defaultSaveMult = 0.5;
   if (configSettings.ignoreSpellReactionRestriction === undefined) configSettings.ignoreSpellReactionRestriction = false;
   if (configSettings.damageImmunityMultiplier === undefined) configSettings.damageImmunityMultiplier = 0.0;
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
@@ -876,7 +875,16 @@ export let fetchParams = () => {
   criticalDamage = configSettings.criticalDamage ?? "default";
   criticalDamageGM = configSettings.criticalDamageGM ?? criticalDamage;
   nsaFlag = game.settings.get("midi-qol", "showGM");
+  const previousColoredBorders = coloredBorders;
   coloredBorders = configSettings.coloredBorders ?? "none";
+  // Chat cards are styled as they render, so redraw the messages already in the log for a changed setting.
+  const chatLog = ui.chat;
+  if (previousColoredBorders !== undefined && previousColoredBorders !== coloredBorders && chatLog?.rendered) {
+    chatLog.element.querySelectorAll<HTMLElement>("li.chat-message[data-message-id]").forEach(el => {
+      const message = game.messages?.get(el.dataset.messageId ?? "");
+      if (message) chatLog.updateMessage(message);
+    });
+  }
   itemRollButtons = false; // game.settings.get("midi-qol", "ItemRollButtons");
   if (configSettings.addChatDamageButtons === undefined) configSettings.addChatDamageButtons = "none";
 

@@ -825,22 +825,8 @@ export let MidiActivityMixin = Base => {
           usage.spell ??= {} as { slot: string };
           usage.spell.slot = `spell${usage.midiOptions.spellLevel}`;
         }
-        /*
-         * Concentration is begun inside Activity#use - consume() then beginConcentrating() - which
-         * is before any of midi's checks have run. A use midi then rejects would leave the caster
-         * concentrating on a spell that never happened, and because ending the PREVIOUS
-         * concentration is nested in the same block, an existing concentration would be dropped
-         * for a cast that never landed. Suppress it here; the workflow begins it once the checks
-         * pass (Workflow#beginDeferredConcentration).
-         *
-         * _prepareUsageConfig only does `config.concentration.begin ??= true`, so an explicit
-         * false survives, and it leaves `end` untouched for us to apply later.
-         */
-        const deferConcentration = activity.requiresConcentration
-          && !safeGetGameSetting("dnd5e", "disableConcentration");
-        if (deferConcentration) {
-          usage.concentration = { begin: false, end: usage.concentration?.end ?? null };
-        }
+        // Concentration is deferred to the workflow (see preActivityConsumptionHook), after the
+        // usage dialog, so the dialog's Concentration box keeps dnd5e's default and its answer counts.
         try {
           useResults = await super.use.bind(activity)(usage, dialog, message);
         } catch (err) {
@@ -854,12 +840,6 @@ export let MidiActivityMixin = Base => {
         if (!useResults) { // activity use was aborted
           Workflow.removeWorkflow(usage.workflow?.id);
           return false;
-        }
-        if (deferConcentration && usage.workflow) {
-          usage.workflow.deferredConcentration = {
-            scaling: typeof usage.scaling === "number" ? usage.scaling : undefined,
-            end: usage.concentration?.end ?? undefined
-          };
         }
         // Remove the copy stored by activity uuid
         Workflow.workflows.delete(usage.workflow!.activity?.uuid ?? "");

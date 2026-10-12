@@ -639,7 +639,6 @@
   "midi-qol.KeysAdvantage.Hint": "Tirar con ventaja",
   "midi-qol.KeysVersatile.Hint": "Tirar daño versátil",
   "midi-qol.KeysOther.Hint": "Tirar Otra fórmula como daño",
-  "midi-qol.DisplaySaveAdvantage.Name": "Mostrar si la salvación tenía Ventaja/Desventaja",
   "midi-qol.RollOtherSpellDamage.Name": "Tira otra fórmula de daño para los conjuros",
   "midi-qol.convenientEffectsOff": "No aplicar Convenient Effect",
   "midi-qol.ConsumeResource.Name": "Omitir la ventana de consumir recurso",

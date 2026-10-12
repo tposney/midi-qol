@@ -149,7 +149,7 @@
 .midi-qol-tooltip .midi-qol-tooltiptext {
   visibility: hidden;
   width: max-content;
-  background-color: var(--dnd5e-color-card);
+  background-color: var(--dnd5e-background-card);
   text-align: center;
   border-radius: 6px;
   padding: 3px;
@@ -416,7 +416,7 @@
 }
 
 .dnd5e2 .midi-buttons button {
-  background: var(--dnd5e-color-card);
+  background: var(--dnd5e-background-card);
   font-family: var(--dnd5e-font-roboto);
   font-weight: bold;
   font-size: var(--font-size-11);
@@ -468,10 +468,23 @@
 
 /* Chat log consolidated styles */
 :is(.chat-popout, #chat-log, .chat-log) {
-  .message {
+  /* Colored Border Messages setting: a left bar in the owning player's colour (set inline by
+     colorChatMessageHandler). With the setting off, dnd5e's own card border is left alone.
+     dnd5e 5.3 marks whispered and blind messages by their background, which is untouched. */
+  .message.midi-qol-colored-border {
     border-width: 0;
-    border-left: 0.2rem solid;
-    border-color: var(--user-color);
+    border-left: 0.2rem solid var(--midi-qol-player-color);
+  }
+
+  .message.midi-qol-colored-name .message-sender,
+  .message.midi-qol-colored-name .message-sender .title {
+    color: var(--midi-qol-player-color);
+    text-shadow: 1px 1px 1px var(--midi-qol-player-color);
+  }
+
+  .message.midi-qol-colored-name-background .message-sender {
+    background-color: var(--midi-qol-player-color);
+    text-shadow: 1px 1px 1px #FFFFFF;
   }
 
   .message.whisper::before {
@@ -526,7 +539,6 @@
   .midi-qol-player-dmg-msg {
     padding: 0;
     border: none;
-    border-left: 0.2rem solid var(--user-color);
   }
 }
 
@@ -827,7 +839,6 @@
 :is(.chat-popout, #chat-log, .chat-log) .midi-qol-dmg-app-msg {
   padding: 0;
   border: none;
-  border-left: 0.2rem solid var(--user-color);
 }
 
 /* Item sheet midi tab */
