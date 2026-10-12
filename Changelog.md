@@ -1,3 +1,8 @@
+### 14.6.2
+
+**Conditions and macros**
+* Fixed: with midi's *Debug* setting on, actors failed to prepare on dnd5e 6, so their on-use macros never ran.
+
 ### 14.6.1
 * Requires Foundry 14.369, dnd5e 6.0.6 and DAE 14.6.1.
 

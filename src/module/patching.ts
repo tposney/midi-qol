@@ -2531,25 +2531,13 @@ function _configureModifiers(this: Roll /*D20Roll*/, wrapped) {
 export function actorPrepareData(this: Actor.Implementation, wrapped) {
   try {
     foundry.utils.setProperty(this, "flags.midi-qol.onUseMacroName", this._source.flags?.[MODULE_ID]?.onUseMacroName);
-    if (debugEnabled > 0) for (let effect of this.appliedEffects) {
-      // @ts-expect-error fvtt-types v14 ActiveEffect
-      for (let change of effect.system.changes) {
-        if (change.key === "flags.midi-qol.onUseMacroName") {
-          if (change.type !== "custom") {
-            error("onUseMacro effect mode is not custom", `Actor ${this.name} Effect: ${effect.name} ${this.uuid}`);
-            TroubleShooter.recordError(new Error("onUseMacro effect mode is not custom"), `Actor ${this.name} Effect: ${effect.name} ${this.uuid} `);
-            change.type = "custom";
-          }
-        }
-      }
-    }
     processTraits(this);
-    wrapped();
-    prepareOnUseMacroData(this);
   } catch (err) {
-    const message = `actor prepare data ${this?.name}`;
-    TroubleShooter.recordError(err, message);
+    TroubleShooter.recordError(err, `actor prepare data ${this?.name}`);
   }
+  // Outside the try: an error in midi's own steps must not stop the actor being prepared.
+  wrapped();
+  prepareOnUseMacroData(this);
 }
 
 export function itemPrepareData(this: Item.Implementation, wrapped) {
@@ -2561,18 +2549,6 @@ export function itemPrepareData(this: Item.Implementation, wrapped) {
     for (const activity of Object.values(activities) as any[]) {
       if (activity.friendlySave === "FriendlyFail") activity.friendlySave = "friendlyFail";
       else if (activity.friendlySave === "FriendlySuccess") activity.friendlySave = "friendlySuccess";
-    }
-  }
-  if (debugEnabled > 0) for (let effect of this.effects) {
-    // @ts-expect-error fvtt-types v14 ActiveEffect
-    for (let change of effect.system.changes) {
-      if (change.key === "flags.midi-qol.onUseMacroName") {
-        if (change.type !== "custom") {
-          error("onUseMacro effect mode is not custom", `Actor: ${this.parent?.name} Item: ${this.name} Effect: ${effect.name} ${this.uuid} `);
-          TroubleShooter.recordError(new Error("onUseMacro effect mode is not custom - mode treated as custom"), `Actor: ${this.parent?.name} Item: ${this.name} Effect: ${effect.name} ${this.uuid} `);
-          change.type = "custom";
-        }
-      }
     }
   }
   wrapped();
