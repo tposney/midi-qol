@@ -6,3 +6,5 @@ dist
 SRD
 .last-compile
 .aider*
+.playwright-mcp/
+.claude/

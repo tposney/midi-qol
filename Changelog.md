@@ -1,3 +1,12 @@
+### 13.0.68 (unreleased)
+* Fixed: an *Always Apply* effect went to every target once any target passed the activity's *Active Effect Condition*; it now goes only to targets that pass it, as the condition's hint now says.
+* Fixed: with *Force a concentration save when damage taken* set to *Chat Message + Auto Roll*, taking damage could roll the concentration save twice.
+* Fixed: the *Default saving throw multiplier* setting was ignored; a successful save always took half damage.
+* Fixed: `damageTypes` and `defaultDamageType` in conditions were empty before damage was rolled; they come from the activity's damage parts.
+* Fixed: with *Enable Target Confirmation* off, a hidden *Confirm targets if none selected* option still asked for confirmation.
+* `MidiQOL.requiresTargetConfirmation(activity, options)`: whether using the activity would ask for target confirmation.
+* Fixed: the Longsword of Wounding sample item logged its arguments to the console as an error on every hit.
+
 ### 13.0.67
 * Fixed: a concentration spell's Concentration box in the cast dialog started unticked, and ticking it gave two Concentrating effects.
 * Fixed: with *Roll saves before damage* on and hits not checked, an attack was treated as missing every target, so *Autocomplete workflow* finished the workflow before damage was rolled (and *Remove buttons: everything* removed the Damage button). Thanks for discovering the exact combination @thatlonelybugbear.

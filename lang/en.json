@@ -1271,7 +1271,7 @@
       },
       "effectConditionText": {
         "label": "Active Effect Condition",
-        "hint": "Condition to apply active effects"
+        "hint": "Checked for each target; its effects, including Always Apply ones, apply only where it is true."
       },
       "otherActivityId": {
         "label": "Use Other Activity",

@@ -275,8 +275,8 @@ export async function applyTokenDamage(
     if (saved) {
       saveMultiplier = getSaveMultiplierForItem(item, "defaultDamage");
     }
-    /*    if (superSaver && getSaveMultiplierForItem(item, "defaultDamage") === configSettings.defaultSaveMultiplier) {
-          saveMultiplier = saves.has(token) ? 0 : configSettings.defaultSaveMultiplier;
+    /*    if (superSaver && getSaveMultiplierForItem(item, "defaultDamage") === configSettings.defaultSaveMult) {
+          saveMultiplier = saves.has(token) ? 0 : configSettings.defaultSaveMult;
         }
     */
 
@@ -825,17 +825,17 @@ export function getSaveMultiplierForActivity(activity: Activity) {
   // @ts-expect-error no dnd5e-types
   if (activity.item.type === "spell" && activity.item.system.level === 0 && damageOnSave === "none") {
     const midiFlags = activity.actor?.flags?.[MODULE_ID];
-    if (midiFlags?.potentCantrip) return configSettings.defaultSaveMultiplier;
+    if (midiFlags?.potentCantrip) return configSettings.defaultSaveMult;
   }
   switch (activity.damage.onSave) {
     case "half":
-      return configSettings.defaultSaveMultiplier;
+      return configSettings.defaultSaveMult;
     case "none":
       return 0;
     case "full":
       return 1;
     default:
-      return configSettings.defaultSaveMultiplier;
+      return configSettings.defaultSaveMult;
   }
 }
 
@@ -846,10 +846,10 @@ export let getSaveMultiplierForItem = (item?: Item.Implementation | null, itemDa
   // @ts-expect-error no dnd5e-types
   if (item.actor && item.type === "spell" && item.system.level === 0) { // cantrip
     const midiFlags = item.actor?.flags?.[MODULE_ID];
-    if (midiFlags?.potentCantrip) return configSettings.defaultSaveMultiplier;
+    if (midiFlags?.potentCantrip) return configSettings.defaultSaveMult;
     return 0;
   }
-  return configSettings.defaultSaveMultiplier;
+  return configSettings.defaultSaveMult;
 };
 
 export interface pcSaveOptions {
@@ -6369,11 +6369,8 @@ function collectActivityDamageTypes(
     }
   }
 
-  const activityType = activity.type === "heal" ? "healing" : "damage";
-  if (activityType === "healing") {
-    const part = activity[activityType];
-  } else {
-  }
+  if (activity.type === "heal") partTypes(activity.healing);
+  else for (const part of activity.damage?.parts ?? []) partTypes(part);
   if (rollData) {
     rollData.damageTypes = returnDamageTypes;
     rollData.defaultDamageType ??= returnDefaultDamageType;
@@ -9041,11 +9038,14 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
   return { deleted: actorEffectsToDelete, disabled: effectsToDisable, itemEffects: effectsToDelete };
 }
 
+/** Concentration requests already claimed by this client: a new message renders twice (log and notification). */
+const concentrationRequestsHandled = new Set<string>();
+
 export async function processConcentrationRequestMessage(message: ChatMessage.Implementation, html: HTMLElement, data) {
   if (configSettings.doConcentrationCheck !== "chat") return;
   let elt = html.querySelectorAll<HTMLElement>("[data-action=concentration]");
   const hasRolled = foundry.utils.getProperty(message, `flags.${MODULE_ID}.concentrationRolled`);
-  if (hasRolled || !preferredActiveGM()?.isSelf) return;
+  if (hasRolled || !preferredActiveGM()?.isSelf || concentrationRequestsHandled.has(message.id!)) return;
   if (elt.length === 1 && !hasRolled) {
     let { action, dc: dcStr, type } = elt[0].dataset;
     let token: Token.Implementation | undefined, actor: Actor.Implementation | undefined | null;
@@ -9056,6 +9056,8 @@ export async function processConcentrationRequestMessage(message: ChatMessage.Im
       if (token) actor = token.actor;
       if (!actor && actorId) actor = game.actors?.get(actorId);
       if (actor) {
+        // Claimed before the await, so a second render of the same message cannot roll again.
+        concentrationRequestsHandled.add(message.id!);
         await message.setFlag(MODULE_ID, "concentrationRolled", true);
         const user = playerForActor(actor);
         if (user?.active) {

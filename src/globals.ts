@@ -26,7 +26,7 @@ import { ConfigPanel } from "./module/apps/ConfigPanel";
 import { createEffects, debug, log, moveToken, moveTokenAwayFromPoint, teleportToken, removeEffects, updateEffects, warn } from "./midi-qol";
 import { TargetConfirmationDialog } from "./module/apps/TargetConfirmation";
 import { MidiSounds } from "./module/midi-sounds";
-import { computeTargetsFromTemplates, resolveTargetConfirmation, selectTargetsFromTemplates } from "./module/activities/activityHelpers";
+import { computeTargetsFromTemplates, requiresTargetConfirmation, resolveTargetConfirmation, selectTargetsFromTemplates } from "./module/activities/activityHelpers";
 import { showUndoWorkflowApp } from "./module/apps/UndoWorkflow";
 import { TroubleShooter } from "./module/apps/TroubleShooter";
 import { ChatLogMidi } from "./module/ChatClasses/ChatLogMidi";
@@ -777,6 +777,7 @@ declare global {
     removeInvisibleCondition: typeof utils.removeInvisibleCondition;
     removeMostRecentWorkflow: typeof undo.removeMostRecentWorkflow;
     removeReactionUsed: typeof utils.removeReactionUsed;
+    requiresTargetConfirmation: typeof requiresTargetConfirmation;
     resolveTargetConfirmation: typeof resolveTargetConfirmation;
     safeGetGameSetting: typeof settings.safeGetGameSetting;
     shouldDisplaySaveDC: typeof settings.shouldDisplaySaveDC;

@@ -212,7 +212,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
   if (options.workflowOptions?.attackPerTarget === true) return false;
   if ((activity.forcedTargetConfirmation ?? activity.midiProperties?.confirmTargets) === "always") return true;
   if ((activity.forcedTargetConfirmation ?? activity.midiProperties?.confirmTargets) === "never") return false;
-  if (targetConfirmation.noneTargeted && ((activity.target?.affects.type ?? "") !== "" || activity.attack) && (game.user?.targets?.size ?? 0) === 0)
+  if (targetConfirmation.enabled && targetConfirmation.noneTargeted && ((activity.target?.affects.type ?? "") !== "" || activity.attack) && (game.user?.targets?.size ?? 0) === 0)
     return true;
   let numTargets = game.user?.targets?.size ?? 0;
   // @ts-expect-error no dnd5e-types

@@ -284,6 +284,7 @@ Object.assign(globalThis.MidiQOL, {
   removeReactionUsed,
   resolveItemMacro,
   resolveActivityMacro,
+  requiresTargetConfirmation,
   resolveTargetConfirmation,
   RollModifierTracker,
   setBonusActionUsed,
@@ -880,7 +881,7 @@ import { MidiDamageActivity, setupDamageActivity } from './module/activities/Dam
 import { MidiCastActivity, setupCastActivity } from './module/activities/CastActivity.js';
 import { MidiCheckActivity, setupCheckActivity } from './module/activities/CheckActivity.js';
 import { MidiHealActivity, setupHealActivity } from './module/activities/HealActivity.js';
-import { computeTargetsFromTemplates, resolveTargetConfirmation, selectTargetsFromTemplates, showItemInfo } from './module/activities/activityHelpers.js';
+import { computeTargetsFromTemplates, requiresTargetConfirmation, resolveTargetConfirmation, selectTargetsFromTemplates, showItemInfo } from './module/activities/activityHelpers.js';
 import { MidiActivityMixin, setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
 import { MidiForwardActivity, setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';

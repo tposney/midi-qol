@@ -3011,7 +3011,7 @@ export class Workflow {
         }
       }
 
-      if (this.effectTargetsOnSave.size > 0 && onSaveActivityEffects.length > 0) {
+      if (this.effectTargetsOnSave.has(token) && onSaveActivityEffects.length > 0) {
         let selectedEffects = onSaveActivityEffects;
         const effectsToApplyUuids = onSaveActivityEffects.map(ef => ef.uuid);
         if (effectsToApplyUuids?.length > 0) {
@@ -3039,7 +3039,7 @@ export class Workflow {
           }
         }
       }
-      if (this.otherEffectTargetsOnSave.size > 0 && onSaveOtherActivityEffects.length > 0) {
+      if (this.otherEffectTargetsOnSave.has(token) && onSaveOtherActivityEffects.length > 0) {
         let selectedEffects = onSaveOtherActivityEffects;
         const effectsToApplyUuids = onSaveOtherActivityEffects.map(ef => ef.uuid);
         if (effectsToApplyUuids?.length > 0) {

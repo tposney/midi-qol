@@ -187,7 +187,7 @@ class ConfigSettings {
   damageImmunityMultiplier: number = 0.0;
   damageResistanceMultiplier: number = 0.5;
   damageVulnerabilityMultiplier: number = 2;
-  defaultSaveMultiplier: number = 0.5;
+  defaultSaveMult: number = 0.5;
   diceSound: string = "";
   displaySaveAdvantage: boolean = true;
   doConcentrationCheck: string = "chat";
@@ -844,7 +844,7 @@ export let fetchParams = () => {
     configSettings.itemTypeList.filter((type) => !["base", "backpack"].includes(type));
   }
   if (configSettings.itemTypeList === undefined) configSettings.itemTypeList = Object.keys(CONFIG.Item.typeLabels);
-  if (configSettings.defaultSaveMultiplier === undefined) configSettings.defaultSaveMultiplier = 0.5;
+  if (configSettings.defaultSaveMult === undefined) configSettings.defaultSaveMult = 0.5;
   if (configSettings.ignoreSpellReactionRestriction === undefined) configSettings.ignoreSpellReactionRestriction = false;
   if (configSettings.damageImmunityMultiplier === undefined) configSettings.damageImmunityMultiplier = 0.0;
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;

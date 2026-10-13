@@ -1242,13 +1242,13 @@ function applySaves({ damages, options }: DamageCalcParams): void {
 
     if (mo.saved && !ignoringSaved) {
       const multiplier = ignoringSuperSaver
-        ? configSettings.defaultSaveMultiplier
+        ? configSettings.defaultSaveMult
         : (mo.superSaver ? 0 : (entrySaveMultiplier ?? 1));
       damage.value = damage.value * multiplier;
       foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * multiplier);
     } else if (mo.superSaver && !ignoringSuperSaver) {
-      damage.value = damage.value * configSettings.defaultSaveMultiplier;
-      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * configSettings.defaultSaveMultiplier);
+      damage.value = damage.value * configSettings.defaultSaveMult;
+      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * configSettings.defaultSaveMult);
     }
   }
 }
