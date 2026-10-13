@@ -10,12 +10,12 @@
       "transfer": false,
       "flags": {
         "dae": {
-          "stackable": false,
+          "stackable": "none",
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
           "dontApply": false,
-          "legacyApplication": true
+          "applicationMode": "legacy"
         }
       },
       "name": "Prismatic Spray (Indigo - Restrained)",
@@ -60,12 +60,12 @@
       "transfer": false,
       "flags": {
         "dae": {
-          "stackable": false,
+          "stackable": "none",
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
           "dontApply": false,
-          "legacyApplication": true
+          "applicationMode": "legacy"
         }
       },
       "name": "Prismatic Spray (Violet - Blinded)",
@@ -164,7 +164,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "14.6.0"
+        "version": "14.6.2"
       }
     }
   },

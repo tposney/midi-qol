@@ -90,7 +90,7 @@
           "disableCondition": "",
           "disableIncapacitated": false,
           "dontApply": false,
-          "legacyApplication": true
+          "applicationMode": "legacy"
         }
       },
       "_stats": {
@@ -225,7 +225,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "14.6.0"
+        "version": "14.6.2"
       }
     }
   },

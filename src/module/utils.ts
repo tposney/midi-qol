@@ -9506,11 +9506,14 @@ export async function expireEffects(actor: Actor.Implementation, effects: Active
   return { expired: actorEffectsToExpire, disabled: effectsToDisable, itemEffects: effectsToDelete };
 }
 
+/** Concentration requests already claimed by this client: a new message renders twice (log and notification). */
+const concentrationRequestsHandled = new Set<string>();
+
 export async function processConcentrationRequestMessage(message: ChatMessage.Implementation, html: HTMLElement, data) {
   if (configSettings.doConcentrationCheck !== "chat") return;
   let elt = html.querySelectorAll<HTMLElement>("[data-action=concentration]");
   const hasRolled = foundry.utils.getProperty(message, `flags.${MODULE_ID}.concentrationRolled`);
-  if (hasRolled || !preferredActiveGM()?.isSelf) return;
+  if (hasRolled || !preferredActiveGM()?.isSelf || concentrationRequestsHandled.has(message.id!)) return;
   if (elt.length === 1 && !hasRolled) {
     let { action, dc: dcStr, type } = elt[0].dataset;
     let token: Token.Implementation | undefined, actor: Actor.Implementation | undefined | null;
@@ -9521,6 +9524,8 @@ export async function processConcentrationRequestMessage(message: ChatMessage.Im
       if (token) actor = token.actor;
       if (!actor && actorId) actor = game.actors?.get(actorId);
       if (actor) {
+        // Claimed before the await, so a second render of the same message cannot roll again.
+        concentrationRequestsHandled.add(message.id!);
         await message.setFlag(MODULE_ID, "concentrationRolled", true);
         const user = playerForActor(actor);
         if (user?.active) {

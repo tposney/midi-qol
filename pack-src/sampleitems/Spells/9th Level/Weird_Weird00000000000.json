@@ -13,12 +13,12 @@
       "transfer": false,
       "flags": {
         "dae": {
-          "stackable": false,
+          "stackable": "none",
           "macroRepeat": "none",
           "specialDuration": [],
           "transfer": false,
           "dontApply": false,
-          "legacyApplication": true
+          "applicationMode": "legacy"
         }
       },
       "name": "Weird",
@@ -93,7 +93,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "14.6.0"
+        "version": "14.6.2"
       }
     }
   },

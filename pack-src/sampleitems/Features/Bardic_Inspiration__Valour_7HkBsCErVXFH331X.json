@@ -18,7 +18,7 @@
           "durationExpression": "",
           "selfTarget": false,
           "selfTargetAlways": false,
-          "legacyApplication": true
+          "applicationMode": "legacy"
         },
         "ActiveAuras": {
           "isAura": false,
@@ -219,7 +219,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "14.6.0"
+        "version": "14.6.2"
       }
     }
   },
