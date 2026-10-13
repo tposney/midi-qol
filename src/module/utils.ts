@@ -1165,7 +1165,9 @@ export function midiCustomEffect(actor: Actor.Implementation, change: MidiChange
   } else if (change.key.startsWith(`flags.${MODULE_ID}.optional.`) && typeof change.value === "string"
     && (change.value.trim() === "ItemMacro" || change.value.trim() === MQItemMacroLabel)) {
     let macroString = change.value;
-    if (originUuid?.includes("Item.")) {
+    const sourceItemUuid = change.effect ? DAE.getEffectSource?.(change.effect)?.itemUuid : undefined;
+    if (sourceItemUuid) macroString = `ItemMacro.${sourceItemUuid}`;
+    else if (originUuid?.includes("Item.")) {
       const itemUuid = originUuid?.includes("ActiveEffect.") ? originUuid.split(".").slice(0, -2).join(".") : originUuid;
       macroString = `ItemMacro.${itemUuid}`;
     } else {
@@ -1544,7 +1546,10 @@ export function resolveDAEItemData(
   } else {
     itemId = uuid.split(".").slice(-1)[0];
   }
-  return actor.effects.find(e => e.flags?.dae?.itemData?._id === itemId)?.flags?.dae?.itemData as Item.InitializedData | undefined;
+  // Effects DAE applied from 14.6.2 carry no item copy; DAE finds the item's data (live, else on its card).
+  const effect = actor.effects.find(e => DAE.getEffectSource?.(e)?.itemUuid?.split(".").pop() === itemId
+    || e.flags?.dae?.itemData?._id === itemId);
+  return (DAE.getEffectItemData?.(effect) ?? effect?.flags?.dae?.itemData) as Item.InitializedData | undefined;
 }
 
 export interface OvertimeDetails {
@@ -9205,10 +9210,7 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
     return false;
   }
   let targets = workflow.effectTargets;
-  let origin = effects[0].uuid; // item?.uuid;
-  if (workflow?.concentrationId) {
-    origin = workflow.actor.effects.get(workflow.concentrationId)?.uuid ?? item?.uuid;
-  }
+  const concentrationUuid = workflow?.concentrationId ? workflow.actor.effects.get(workflow.concentrationId)?.uuid : undefined;
   if (!targets || targets.size === 0) return;
 
   const { DialogV2 } = foundry.applications.api;
@@ -9274,7 +9276,7 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
   await globalThis.DAE.doEffects(
     applyItem, true, targets, {
     damageTotal: 0,
-    origin,
+    concentrationUuid,
     critical: false,
     fumble: false,
     itemCardUuid: "",

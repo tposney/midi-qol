@@ -265,6 +265,8 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
 
 35. **fvtt-types (13.x) lacks Foundry 14 fields** — effect `duration.expiry`/`value`: `@ts-expect-error fvtt-types v14 duration` (midi) / `v14 duration.expiry not in fvtt-types yet` (DAE). `messageMode` on `ChatMessage.create` and `ui.chat.updateMessage` are merged in `globals.ts`. `CONFIG.ChatMessage.modes` cannot be merged (inline object type) and takes `@ts-expect-error`.
 
+36. **dnd6: an applied effect's source is `system.origin`, not its `origin`** — DAE/midi record it as dnd5e 6 does (activity or item, concentration in `effect`, card in `message`, profile); dnd5e derives `origin` as the concentration effect, else the activity, so `origin` is not an Item and an activity's `.parent` is system data. Read the source with `DAE.getEffectSource` (parses uuids; safe in preparation) and item data with `DAE.getEffectItemData`/`getEffectItem` (live item, else the card's snapshot); applied effects no longer carry `flags.dae.itemData`. midi passes concentration as `concentrationUuid`, never its own `origin`. Caster-side template/summon/transform effects keep the item as origin, like dnd5e's concentration effect.
+
 ## Testing
 
 Tests use the Quench framework in separate test modules (not embedded in the main module source). Each major version branch has its own test module:

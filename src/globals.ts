@@ -162,6 +162,11 @@ declare module "fvtt-types/configuration" {
           uuid: string;
         }[];
         itemUuid?: string;
+        activity?: {
+          type: string;
+          id: string;
+          uuid: string;
+        }
         item?: {
           type: string;
           id: string;
@@ -671,6 +676,10 @@ declare global {
     createFunctionMacro: (functionPath: string) => Macro.Implementation;
     resolveWorldMacro: (nameOrUuid: string) => Promise<Macro.Implementation | undefined>;
     getItemMacroCommand: (source: unknown) => string | undefined;
+    /** DAE 14.6.2+ (dnd5e 6): where an effect came from */
+    getEffectSource?: (effect: unknown) => { actorUuid?: string; itemUuid?: string; activityUuid?: string; controllingEffectUuid?: string; sourceEffectUuid?: string; messageUuid?: string };
+    /** DAE 14.6.2+ (dnd5e 6): an effect's item as data (live, else its card's snapshot) */
+    getEffectItemData?: (effect: unknown) => Item.Source | undefined;
     doEffects: (...args: any[]) => Promise<any>;
     doActivityEffects: (...args: any[]) => Promise<any>;
     DIMEditor: any;

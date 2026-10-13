@@ -60,7 +60,7 @@
         "id": "dae",
         "type": "module",
         "compatibility": {
-          "minimum": "14.6.1"
+          "minimum": "14.6.2"
         }
       }
     ]

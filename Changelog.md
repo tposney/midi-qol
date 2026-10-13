@@ -1,14 +1,19 @@
 ### 14.6.3 (unreleased)
+* Requires DAE 14.6.2.
 
 **Rolls and saves**
 * Fixed: with *Force a concentration save when damage taken* set to *Chat Message + Auto Roll*, taking damage could roll the concentration save twice.
 
 **Effects and expiry**
 * Fixed: an *Always Apply* effect went to every target once any target passed the activity's *Active Effect Condition*; it now goes only to targets that pass it, as the condition's hint now says.
+* Changed: effects midi applies record their source as dnd5e 6 does (see DAE 14.6.2): the activity, the caster's concentration and the card; midi no longer passes its own origin. Convenient Effects effects too; template, summon and transform caster effects record their activity and item.
 
 **Sample items**
 * Fixed: 11 sample items (Weird, Prismatic Spray, Hold Person, Rage, Bardic Inspiration (both), Branding Smite, Flesh to Stone, Harm, Irresistible Dance, Arcane Ward) used an outdated DAE flag and were applied in the wrong mode; Weird's and Prismatic Spray's over-time save DC was 0.
 * Fixed: Slayer's Prey did not remove the mark from the previous target.
+* Changed: Elemental Attunement reads `lastArg.source` instead of `lastArg.origin`.
+* Fixed: the Arcane Ward sample item used the deprecated `ChatMessage.applyRollMode`.
+* Fixed: the Longsword of Wounding sample item logged its arguments to the console as an error on every hit.
 * Fixed: 20 sample effects (Weird, Foresight, Warding Bond, Slayer's Prey…) used DAE's old boolean `stackable` flag, which statuscounter rejected; they now use *none*.
 
 ### 14.6.2

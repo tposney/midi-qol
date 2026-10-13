@@ -1778,7 +1778,8 @@ export class Workflow {
       name: this.item.name + templateString,
       duration: {},
       flags: {
-        dae: { stackable: "noneName", expiryMode: "delete" }
+        dae: { stackable: "noneName", expiryMode: "delete" },
+        dnd5e: this.casterEffectSource()
       },
     };
 
@@ -2517,6 +2518,23 @@ export class Workflow {
     this.otherDamageDialog = undefined;
   }
 
+  /**
+   * The activity and item, as dnd5e's concentration effect records them, for midi's caster-side template, summon and
+   * transform effects (which, like it, keep the item as their origin).
+   */
+  casterEffectSource() {
+    return {
+      activity: { type: this.activity.type, id: String(this.activity.id), uuid: this.activity.uuid },
+      item: { type: this.item.type, id: this.item.id ?? "", uuid: this.item.uuid }
+    };
+  }
+
+  /** A Convenient Effects effect's source, recorded as dnd5e and DAE record an applied effect's. */
+  recordEffectOrigin(effectData: ActiveEffect.CreateData, concentrationUuid: string | undefined) {
+    effectData.origin = concentrationUuid ?? this.activity.uuid;
+    foundry.utils.setProperty(effectData, "system.origin", { activity: this.activity.uuid, effect: concentrationUuid ?? null, message: this.itemCardUuid ?? null });
+  }
+
   async WorkflowState_ApplyDynamicEffects(context: WorkflowContext = {}): Promise<WorkflowState> {
     this.activationMatches = new Set();
     this.otherActivationMatches = new Set();
@@ -2700,6 +2718,7 @@ export class Workflow {
     };
     let origin = this.actor.effects.get(this.concentrationId ?? "")?.uuid
       ?? getConcentrationEffect(this.actor, this.item)?.uuid;
+    // DAE records the source in system.origin as dnd5e does: the activity, this concentration and the card.
     const doEffectsData = {
       damageTotal: 0,
       damage: 0,
@@ -2709,7 +2728,7 @@ export class Workflow {
       metaData,
       selfEffects: "none",
       spellLevel: this.spellLevel,
-      origin: "",
+      concentrationUuid: origin,
       toggleEffect: this.activity.midiProperties?.toggleEffect,
       // Is this used?
       tokenUuid: this.tokenUuid,
@@ -2771,7 +2790,6 @@ export class Workflow {
           }
           const effectsToApplyUuids = selectedEffects.map(ef => ef.uuid);
           if (effectsToApplyUuids?.length > 0) {
-            doEffectsData.origin = origin ?? effectsToApplyUuids[0];
             await globalThis.DAE.doActivityEffects(this.activity, true, [token], effectsToApplyUuids, doEffectsData);
           }
         }
@@ -2793,8 +2811,8 @@ export class Workflow {
                 // @ts-expect-error fvtt-types v14 duration
                 effectData.duration = { value: Math.ceil((effectData.duration.value ?? 0) / CONFIG.time.roundTime), units: "rounds" };
               }
-              effectData.origin = origin ?? this.activity.uuid ?? this.activity.item.uuid;
               const concentrationUuid = this.actor.effects.get(this.concentrationId ?? "")?.uuid;
+              this.recordEffectOrigin(effectData, concentrationUuid);
               if (concentrationUuid) {
                 foundry.utils.setProperty(effectData, "flags.dnd5e.dependentOn", concentrationUuid);
               }
@@ -2807,8 +2825,6 @@ export class Workflow {
       if (this.effectTargetsOnSave.has(token) && onSaveActivityEffects.length > 0) {
         const effectsToApplyUuids = onSaveActivityEffects.map(ef => ef.uuid);
         if (effectsToApplyUuids?.length > 0) {
-          // TODO: Is this right?
-          doEffectsData.origin = effectsToApplyUuids[0];
           await globalThis.DAE.doActivityEffects(this.activity, true, [token], effectsToApplyUuids, doEffectsData)
         }
       }
@@ -2825,7 +2841,6 @@ export class Workflow {
           }
           const effectsToApplyUuids = selectedEffects.map(ef => ef.uuid);
           if (effectsToApplyUuids?.length > 0) {
-            doEffectsData.origin = effectsToApplyUuids[0];
             await globalThis.DAE.doActivityEffects(this.otherActivity, true, [token], effectsToApplyUuids, doEffectsData)
           }
         }
@@ -2833,7 +2848,6 @@ export class Workflow {
       if (this.otherEffectTargetsOnSave.has(token) && onSaveOtherActivityEffects.length > 0) {
         const effectsToApplyUuids = onSaveOtherActivityEffects.map(ef => ef.uuid);
         if (effectsToApplyUuids?.length > 0) {
-          doEffectsData.origin = effectsToApplyUuids[0];
           await globalThis.DAE.doActivityEffects(this.otherActivity, true, [token], effectsToApplyUuids, doEffectsData)
         }
       }
@@ -2847,7 +2861,6 @@ export class Workflow {
     else selfEffects = activitySelfAllEffect;
     const selfToken = getOrCreateTokenForActor(this.actor);
     if (selfEffects.length > 0 && selfToken) {
-      doEffectsData.origin = origin ?? this.activity.uuid ?? this.item.uuid;
       await globalThis.DAE.doActivityEffects(this.activity, true, [selfToken], selfEffects.map(ef => ef.uuid), doEffectsData)
     }
 
@@ -2855,7 +2868,6 @@ export class Workflow {
     if (this.otherEffectTargets.size > 0) otherSelfEffects = otherActivitySelfAllEffects;
     else otherSelfEffects = otherActivitySelfEffects;
     if (otherSelfEffects.length > 0 && selfToken) {
-      doEffectsData.origin = this.otherActivity!.item.uuid;
       await globalThis.DAE.doActivityEffects(this.otherActivity, true, [selfToken], otherSelfEffects.map(ef => ef.uuid), doEffectsData)
     }
 
@@ -2870,8 +2882,8 @@ export class Workflow {
             await CERemoveEffect({ effectName: this.activity.name, uuid: this.actor.uuid, origin });
           }
           const effectData: ActiveEffect.CreateData = foundry.utils.mergeObject(ceEffect!.toObject(), metaData);
-          effectData.origin = origin;
           const concentrationUuid = this.actor.effects.get(this.concentrationId ?? "")?.uuid;
+          this.recordEffectOrigin(effectData, concentrationUuid);
           if (concentrationUuid) {
             foundry.utils.setProperty(effectData, "flags.dnd5e.dependentOn", concentrationUuid);
           }
@@ -3204,6 +3216,7 @@ export class Workflow {
               dae: {
                 stackable: "noneName"
               },
+              dnd5e: this.casterEffectSource()
             },
           }
           const inCombat = !!(game.combat?.turns.some(combatant => combatant.token?.id === selfTarget?.id));
@@ -3273,7 +3286,8 @@ export class Workflow {
               dae: {
                 stackable: "noneName"
               },
-              "midi-qol": { transformedActorUuids: this.transformedActorUuids }
+              "midi-qol": { transformedActorUuids: this.transformedActorUuids },
+              dnd5e: this.casterEffectSource()
             },
           }
           const inCombat = !!(game.combat?.turns.some(combatant => combatant.token?.id === selfTarget?.id));
