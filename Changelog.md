@@ -1,3 +1,17 @@
+### 14.0.15 (unreleased)
+
+**Rolls and saves**
+* Fixed: with *Force a concentration save when damage taken* set to *Chat Message + Auto Roll*, taking damage could roll the concentration save twice.
+
+**Effects and expiry**
+* Fixed: an *Always Apply* effect went to every target once any target passed the activity's *Active Effect Condition*; it now goes only to targets that pass it, as the condition's hint now says.
+
+**Sample items**
+* Fixed: Slayer's Prey did not remove the mark from the previous target.
+* Fixed: 20 sample effects (Weird, Foresight, Warding Bond, Slayer's Prey…) used DAE's old boolean `stackable` flag, which statuscounter rejected; they now use *none*.
+* Fixed: the Arcane Ward sample item used the deprecated `ChatMessage.applyRollMode`.
+* Fixed: the Longsword of Wounding sample item logged its arguments to the console as an error on every hit.
+
 ### 14.0.14
 
 **Rolls and saves**
