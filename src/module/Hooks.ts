@@ -1,9 +1,9 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { excludeRegionSourceEffect } from "./regionBehaviors/MidiRegionActivityBehaviorType.js";
+import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBehaviors/MidiRegionActivityBehaviorType.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
 import { addViewAsPlayerOption } from "./ChatClasses/DamageCardMessage.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, updateFlankingHighlight, onUserManualTarget } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, updateFlankingHighlight, onUserManualTarget, toggleStatus, releaseForcedNormalKeys } from "./utils.js";
 import { checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -377,6 +377,8 @@ export function initHooks() {
   });
 
 
+  Hooks.on("combatTurnChange", moveRegionsOnTurnChange);
+
   Hooks.on("updateCombat", (combat, data, options, user) => {
     if (data.round === undefined && data.turn === undefined) return;
     untargetAllTokens(combat);
@@ -447,7 +449,7 @@ export function initHooks() {
       const statusEffect = CONFIG.statusEffects.find(se => se.id === effectIdOrUuid);
       if (statusEffect) {
         // Apply as status effect using toggleStatusEffect
-        await actor.toggleStatusEffect(effectIdOrUuid, { active: true, overlay });
+        await toggleStatus(actor, effectIdOrUuid, { active: true, overlay });
       } else {
         // Assume it's an effect UUID - fetch and apply
         const sourceEffect = await fromUuid(effectIdOrUuid) as ActiveEffect.Implementation | undefined;
@@ -510,8 +512,8 @@ export function initHooks() {
         if (resolved) {
           macroItem = resolved.item;
           macro = DAE.createSyntheticMacro(resolved.macroData.command as string, String(resolved.macroData.name));
-        } else if (effect?.origin) {
-          const itemData = resolveDAEItemData(actor, effect.origin);
+        } else if (effect) {
+          const itemData = DAE.getEffectItemData(effect);
           if (itemData) {
             macroItem = itemData as unknown as Item.Implementation;
             const command = DAE.getItemMacroCommand(itemData);
@@ -1092,38 +1094,42 @@ function computeSourceIgnores({ actor, sourceActor, damages, options }: DamageCa
   options.midiIgnoreComputed = true;
 }
 
+/** Other damage applies only where its source's condition matched the target (set by midi's tray, which lists it for all). */
+function dropUnmatchedOtherDamage({ damages, options }: DamageCalcParams): void {
+  const mo = options.midi;
+  if (!mo) return;
+  for (const damage of damages) {
+    if ((damage.midiAmmunition ? mo.ammunitionApplies : mo.otherApplies) === false) damage.value = 0;
+  }
+}
+
 function applySaves({ damages, options }: DamageCalcParams): void {
   const mo = options.midi;
   if (!mo || options.ignore === true) return;
 
   for (const damage of damages) {
     if (isDRType(damage.type)) continue;
-    // Other damage carries its own multiplier - all categories share one calculateDamage call.
-    const entrySaveMultiplier = damage.midiSaveMultiplier ?? mo.saveMultiplier;
+    // What a successful save does to this damage; other and ammunition damage carry their own.
+    const onSave = damage.midiSaveMultiplier ?? (damage.midiAmmunition ? mo.ammunitionSaveMultiplier : undefined) ?? mo.saveMultiplier ?? 1;
+    // Super Saver (Evasion) and Semi Super Saver change only damage the save halves.
+    const halvedBySave = onSave === configSettings.defaultSaveMult;
+    const saved = mo.saved && !shouldIgnore(options, "saved", damage.type);
+    const superSaver = mo.superSaver && halvedBySave && !shouldIgnore(options, "superSaver", damage.type);
+    const semiSuperSaver = !superSaver && mo.semiSuperSaver && halvedBySave && !shouldIgnore(options, "semiSuperSaver", damage.type);
 
-    const ignoringSuperSaver = mo.superSaver && shouldIgnore(options, "superSaver", damage.type);
-    const ignoringSemiSuperSaver = mo.semiSuperSaver && shouldIgnore(options, "semiSuperSaver", damage.type);
-    const ignoringSaved = mo.saved && shouldIgnore(options, "saved", damage.type);
-
-    if (mo.superSaver && !ignoringSuperSaver) {
+    let multiplier = 1;
+    if (superSaver) {
       setDamageActiveFlag(damage, "superSaver");
-    }
-    if (mo.semiSuperSaver && !ignoringSemiSuperSaver && (entrySaveMultiplier ?? 1) !== 1) {
+      multiplier = saved ? 0 : configSettings.defaultSaveMult;
+    } else if (semiSuperSaver) {
       setDamageActiveFlag(damage, "semiSuperSaver");
-    }
-    if (mo.saved && !ignoringSaved && (entrySaveMultiplier ?? 1) !== 1) {
-      setDamageActiveFlag(damage, "saved");
-    }
+      multiplier = saved ? 0 : 1;
+    } else if (saved) multiplier = onSave;
+    if (saved && onSave !== 1) setDamageActiveFlag(damage, "saved");
 
-    if (mo.saved && !ignoringSaved) {
-      const multiplier = ignoringSuperSaver
-        ? configSettings.defaultSaveMult
-        : (mo.superSaver ? 0 : (entrySaveMultiplier ?? 1));
+    if (multiplier !== 1) {
       damage.value = damage.value * multiplier;
       foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * multiplier);
-    } else if (mo.superSaver && !ignoringSuperSaver) {
-      damage.value = damage.value * configSettings.defaultSaveMult;
-      foundry.utils.setProperty(damage, "active.multiplier", (damage.active?.multiplier ?? 1) * configSettings.defaultSaveMult);
     }
   }
 }
@@ -1382,6 +1388,16 @@ function applyDamageReductionInline(
 
 // --- dnd5e 5.3+ variants ---
 
+/** Whether the Damage Absorption trait's types (or "ALL", which excludes healing) cover this damage, unless bypassed. */
+function absorbsType(absorption: { value?: Set<string>, bypasses?: Set<string> } | undefined, damage: DamageDescription): boolean {
+  const types = absorption?.value;
+  if (!(types instanceof Set)) return false;
+  if (!types.has(damage.type) && !(types.has("ALL") && !GameSystemConfig.healingTypes[damage.type])) return false;
+  const bypasses = absorption?.bypasses;
+  return !(GameSystemConfig.damageTypes[damage.type]?.isPhysical && bypasses?.size
+    && [...(damage.properties ?? [])].some(property => bypasses.has(property)));
+}
+
 function applyTraitMultipliers_53({ actor, damages, options }: DamageCalcParams): void {
   if (options.midi?.noCalc) return;
 
@@ -1401,7 +1417,7 @@ function applyTraitMultipliers_53({ actor, damages, options }: DamageCalcParams)
       damage.active.multiplier = (damage.active.multiplier ?? 1) / 2 * configSettings.damageVulnerabilityMultiplier;
       damage.value = damage.value / 2 * configSettings.damageVulnerabilityMultiplier;
     }
-    const absorptionValue = actorTraits.da?.[damage.type];
+    const absorptionValue = actorTraits.da?.[damage.type] ?? (absorbsType(actorTraits.da, damage) ? -1 : undefined);
     if (absorptionValue !== undefined && !shouldIgnore(options, "absorption", damage.type, actorTraits)) {
       const multiplier = Number(absorptionValue) ?? -1;
       damage.active ??= {};
@@ -1534,6 +1550,7 @@ function preCalculateDamageHandler_53(actor: Actor.Implementation, damages: Dama
 
     const saveDROrder = configSettings.saveDROrder;
     computeSourceIgnores(params);
+    dropUnmatchedOtherDamage(params);
     applyUncannyDodge(params);
 
     // Apply saves and/or DR based on order setting
@@ -1750,6 +1767,11 @@ Hooks.on("preCreateRegion", (regionDoc, regionData, options, userId) => {
   return false;
 });
 
+// Midi's Shift+Alt+Ctrl forced normal roll, for every d20 roll. The V2 hooks fire after midi's own pre-roll hooks,
+// which still read the keys (Roll Toggle, the dialog's default button); death saves are not a d20Test.
+Hooks.on("dnd5e.preRollD20TestV2", (config, dialog) => releaseForcedNormalKeys(config, dialog));
+Hooks.on("dnd5e.preRollDeathSaveV2", (config, dialog) => releaseForcedNormalKeys(config, dialog));
+
 // insert midi initiative changes into the initiative config.
 Hooks.on("dnd5e.preConfigureInitiative", (actor, rollConfig) => {
   let { parts, data, options } = rollConfig;
@@ -1788,15 +1810,21 @@ Hooks.on("dnd5e.preConfigureInitiative", (actor, rollConfig) => {
     midiNoDisadvantage = true;
   }
 
-  // options already holds dnd5e's own result; combine midi's flags with the same rules dnd5e used (suppression, override).
+  // dnd5e decides: midi's flags (and any advantage the caller passed) count as sources in its combination of the
+  // initiative roll mode fields and advantage rules, so suppression and overrides apply across all of them.
+  const midiCounts = {
+    override: null,
+    advantages: { count: Number(midiAdvantage || !!options.advantage), suppressed: midiNoAdvantage },
+    disadvantages: { count: Number(midiDisadvantage || !!options.disadvantage), suppressed: midiNoDisadvantage }
+  };
   // @ts-expect-error no dnd5e-types
-  const counts: { override: number | null, advantages: { suppressed: boolean }, disadvantages: { suppressed: boolean } } = dnd5e.documents.AppliedRules
-    .collect("check:advantage", actor).filterWith({ ...actor.getRollData(), roll: { ability: init, type: "initiative" } }).toAdvantageCounts();
-  const override = counts.override ?? null;
-  options.advantage = override === 1 || (override === null && (!!options.advantage || midiAdvantage)
-    && !counts.advantages.suppressed && !midiNoAdvantage);
-  options.disadvantage = override === -1 || (override === null && (!!options.disadvantage || midiDisadvantage)
-    && !counts.disadvantages.suppressed && !midiNoDisadvantage);
+  const counts = dnd5e.documents.AppliedRules.collect("check:advantage", actor)
+    .filterWith({ ...actor.getRollData(), roll: { ability: init, type: "initiative" } }).toAdvantageCounts(midiCounts);
+  // @ts-expect-error no dnd5e-types
+  const verdict: { advantage: boolean, disadvantage: boolean } = dnd5e.dataModels.fields.AdvantageModeField.combineFields(
+    actor.system, [`abilities.${init}.check.roll.mode`, "attributes.init.roll.mode", "rolls.ability.check.mode"], counts);
+  options.advantage = verdict.advantage;
+  options.disadvantage = verdict.disadvantage;
 
   if (foundry.utils.getProperty(actor, `flags.${game.system?.id}.initiativeHalfProficiency`) && !parts.includes("@prof")) {
     parts.push("@prof");

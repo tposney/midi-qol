@@ -1,3 +1,5 @@
+import { rollFieldLocalizations, rollFieldMappings } from "./module/rollFields.js";
+import "./module/damageAbsorption.js";
 import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, fetchSoundSettings, midiSoundSettingsBackup, readySettingsSetup, collectSettingData, exportSettingsToJSON, importSettingsFromJSON, safeGetGameSetting, shouldDisplaySaveDC, triggeredActivityTargetOptions, triggeredActivityRollAsOptions, resetConfigSettingsToDefaults } from './module/settings.js';
 import { decodeWorkflowOptions, encodeWorkflowOptions, registerWorkflowOptionsSchema } from "./module/lib/workflowOptionsCodec.js";
 import { preloadTemplates } from './module/preloadTemplates.js';
@@ -8,7 +10,8 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, tokenAtPosition, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, getCoverBonus, tokenAtPosition, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets, setupMarkerChecks, setupCheckVision } from './module/utils.js';
+import { highlightTokens } from './module/lib/tokenHighlight.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
@@ -17,6 +20,7 @@ import { MidiSounds } from './module/midi-sounds.js';
 import { addUndoChatMessage, getUndoQueue, removeMostRecentWorkflow, showUndoQueue, undoMostRecentWorkflow } from './module/undo.js';
 import { UndoWorkflow, showUndoWorkflowApp } from './module/apps/UndoWorkflow.js';
 import { TroubleShooter } from './module/apps/TroubleShooter.js';
+import { notifyFeatureOverlaps, setupFeatureOverlaps } from './module/featureOverlaps.js';
 import { TargetConfirmationDialog } from './module/apps/TargetConfirmation.js';
 import { TargetConfirmationConfig } from './module/apps/TargetConfirmationConfig.js';
 import { MidiAttackActivity, setupAttackActivity } from './module/activities/AttackActivity.js';
@@ -209,6 +213,8 @@ Object.assign(globalThis.MidiQOL, {
   completeActivityUse,
   computeAbilityAdvantage,
   computeCoverBonus,
+  getCoverBonus,
+  highlightTokens,
   tokenAtPosition,
   computeDistance,
   convertDuration,
@@ -365,6 +371,7 @@ function setupActivities() {
   setupSummonActivity();
   globalThis.MidiQOL.activityTypes["summon"] = { documentClass: MidiSummonActivity };
   setupTransformActivity();
+  setupTeleportActivity();
   globalThis.MidiQOL.activityTypes["transform"] = { documentClass: MidiTransformActivity };
   setupUtilityActivity();
   globalThis.MidiQOL.activityTypes["utility"] = { documentClass: MidiUtilityActivity };
@@ -550,6 +557,7 @@ Hooks.on("dae.addFieldMappings", (fieldMappings) => {
   let allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
   registerSettings();
   fetchParams();
+  fieldMappings["system.traits.da.all"] = { key: "system.traits.da.value", value: "ALL", type: "add" };
   for (let key of Object.keys(GameSystemConfig.damageTypes ?? {})) {
     fieldMappings[`flags.${MODULE_ID}.DR.${key}`] = `system.traits.dm.amount.${key}`;
   }
@@ -587,7 +595,7 @@ Hooks.on("dae.addFieldMappings", (fieldMappings) => {
   }
   fieldMappings[`flags.${MODULE_ID}.max.ability.save.concentration`] = `system.attributes.concentration.roll.max`;
   fieldMappings[`flags.${MODULE_ID}.min.ability.save.concentration`] = `system.attributes.concentration.roll.min`;
-  fieldMappings[`flags.${MODULE_ID}.concentrationSaveBonus`] = `system.attributes.concentration.bonuses.save`;
+  Object.assign(fieldMappings, rollFieldMappings(Object.keys(GameSystemConfig.abilities), Object.keys(GameSystemConfig.skills ?? {}), Object.keys(GameSystemConfig.tools ?? {})));
   fieldMappings[`flags.${MODULE_ID}.sharpShooter`] = `flags.dnd5e.sharpShooter`;
   fieldMappings[`flags.${MODULE_ID}.grants.fail.advantage.attack.all`] = `flags.${MODULE_ID}.grants.noAdvantage.attack.all`;
   fieldMappings[`flags.${MODULE_ID}.grants.fail.disadvantage.attack.all`] = `flags.${MODULE_ID}.grants.noDisadvantage.attack.all`;
@@ -669,6 +677,11 @@ Hooks.on("dae.setFieldData", fieldData => {
 Hooks.once('setup', function () {
   // Do anything after initialization but before ready
   setupModules();
+  setupFeatureOverlaps();
+  setupMarkerChecks();
+  setupCheckVision();
+  // Custom D&D 5e's Conditions config replaces CONFIG.statusEffects with this list, which would drop midi's statuses.
+  Hooks.on("customDnd5e.setStatusEffectsConfig", statusEffects => addMidiStatusEffects(statusEffects));
   setupSocket();
   fetchParams();
   fetchSoundSettings();
@@ -817,6 +830,8 @@ Hooks.once('ready', function () {
     "isSaveFailure": "Target failed a saving throw",
     "preTargetDamageApplication": "Target is about to be damaged by an item",
     "postTargetEffectApplication": "Target has an effect applied by a rolled item",
+    "preTeleport": "Before a Teleport (can cancel or change who moves)",
+    "postTeleport": "After a Teleport",
     "isDamaged": "Target is damaged by an attack",
     "all": "All"
   }
@@ -888,6 +903,7 @@ Hooks.once('ready', function () {
       else console.warn(message);
     }
   }
+  notifyFeatureOverlaps();
 });
 
 import { setupChatMessageMidi, ChatMessageMidi } from './module/ChatClasses/ChatMessageMidi.js';
@@ -905,6 +921,7 @@ import { MidiActivityMixin, setupMidiActivityMixin } from './module/activities/M
 import { MidiForwardActivity, setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';
 import { MidiTransformActivity, setupTransformActivity } from './module/activities/TransformActivity.js';
+import { setupTeleportActivity } from './module/activities/TeleportActivity.js';
 import { MidiCombat5e } from './module/MidiCombat5e.js';
 import { MoveTokenOptions, TeleportTokenDestination, TokenOrDocument, SelectOptionValue } from './globals.js';
 import { DamageApplicationElementMidi } from './module/ChatClasses/DamageApplicationElementMidi.js';
@@ -990,6 +1007,8 @@ function setupMidiQOLApi() {
     checkActivityRange,
     checkRule,
     computeCoverBonus,
+    getCoverBonus,
+    highlightTokens,
     tokenAtPosition,
     computeDistance,
     getDistance,
@@ -1111,6 +1130,7 @@ function registerFlagLocalization(flagPath: string, templateKey: string, label: 
 function applyPendingLocalizations() {
   const lm = globalThis.DAE?.localizationMap;
   if (!lm || !game.i18n) return;
+  Object.assign(lm, rollFieldLocalizations());
   for (const {flagPath, templateKey, label} of pendingLocalizations) {
     const resolvedLabel = typeof label === "function" ? label() : label;
     lm[flagPath] = {
@@ -1166,7 +1186,6 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.bloodsense`);
   untyped(`flags.${MODULE_ID}.`);
   untyped(`flags.${MODULE_ID}.concentrationSaveBonus`);
-  daeFieldBrowserFields.push(`flags.${MODULE_ID}.concentrationSaveBonus`);
   booleanFormula(`flags.${MODULE_ID}.potentCantrip`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.potentCantrip`);
   booleanFormula(`flags.${MODULE_ID}.sculptSpells`);
@@ -1209,10 +1228,6 @@ function setupMidiFlags() {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.attack.${at}`);
     booleanFormula(`flags.${MODULE_ID}.noDisadvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.attack.${at}`);
-    booleanFormula(`flags.${MODULE_ID}.fail.attack.${at}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.attack.${at}`);
-    booleanFormula(`flags.${MODULE_ID}.success.attack.${at}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.attack.${at}`);
     booleanFormula(`flags.${MODULE_ID}.critical.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.critical.${at}`);
     booleanFormula(`flags.${MODULE_ID}.noCritical.${at}`);
@@ -1267,8 +1282,6 @@ function setupMidiFlags() {
     registerFlagLocalization(`flags.${MODULE_ID}.disadvantage.attack.${at}`, "disadvantage.attack", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noAdvantage.attack.${at}`, "noAdvantage.attack", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noDisadvantage.attack.${at}`, "noDisadvantage.attack", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.fail.attack.${at}`, "fail.attack", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.success.attack.${at}`, "success.attack", label);
     registerFlagLocalization(`flags.${MODULE_ID}.critical.${at}`, "critical", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noCritical.${at}`, "noCritical", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noFumble.${at}`, "noFumble", label);
@@ -1304,10 +1317,6 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.ability.all`);
   booleanFormula(`flags.${MODULE_ID}.success.ability.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.ability.all`);
-  untyped(`flags.${MODULE_ID}.max.ability.save.concentration`);
-  daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.ability.save.concentration`);
-  untyped(`flags.${MODULE_ID}.min.ability.save.concentration`);
-  daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.ability.save.concentration`);
   booleanFormula(`flags.${MODULE_ID}.sharpShooter`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.sharpShooter`);
 
@@ -1371,26 +1380,10 @@ function setupMidiFlags() {
     // daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.attack.${abl}`);
     // bs(`flags.${MODULE_ID}.disadvantage.attack.${abl}`);
     // daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.attack.${abl}`);
-    booleanFormula(`flags.${MODULE_ID}.fail.ability.check.${abl}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.ability.check.${abl}`);
-    booleanFormula(`flags.${MODULE_ID}.fail.ability.save.${abl}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.ability.save.${abl}`);
-    booleanFormula(`flags.${MODULE_ID}.success.ability.check.${abl}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.ability.check.${abl}`);
-    booleanFormula(`flags.${MODULE_ID}.success.ability.save.${abl}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.ability.save.${abl}`);
     booleanFormula(`flags.${MODULE_ID}.superSaver.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.superSaver.${abl}`);
     booleanFormula(`flags.${MODULE_ID}.semiSuperSaver.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.semiSuperSaver.${abl}`);
-    untyped(`flags.${MODULE_ID}.max.ability.save.${abl}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.ability.save.${abl}`);
-    untyped(`flags.${MODULE_ID}.min.ability.save.${abl}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.ability.save.${abl}`);
-    untyped(`flags.${MODULE_ID}.max.ability.check.${abl}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.ability.check.${abl}`);
-    untyped(`flags.${MODULE_ID}.min.ability.check.${abl}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.ability.check.${abl}`);
     untyped(`flags.${MODULE_ID}.optional.NAME.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.save.${abl}`);
     untyped(`flags.${MODULE_ID}.optional.NAME.save.fail.${abl}`);
@@ -1444,16 +1437,8 @@ function setupMidiFlags() {
     registerFlagLocalization(`flags.${MODULE_ID}.noAdvantage.save.${abl}`, "noAdvantage.save", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noDisadvantage.check.${abl}`, "noDisadvantage.check", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noDisadvantage.save.${abl}`, "noDisadvantage.save", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.fail.ability.check.${abl}`, "fail.ability.check", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.fail.ability.save.${abl}`, "fail.ability.save", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.success.ability.check.${abl}`, "success.ability.check", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.success.ability.save.${abl}`, "success.ability.save", label);
     registerFlagLocalization(`flags.${MODULE_ID}.superSaver.${abl}`, "superSaver", label);
     registerFlagLocalization(`flags.${MODULE_ID}.semiSuperSaver.${abl}`, "semiSuperSaver", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.max.ability.save.${abl}`, "max.ability.save", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.min.ability.save.${abl}`, "min.ability.save", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.max.ability.check.${abl}`, "max.ability.check", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.min.ability.check.${abl}`, "min.ability.check", label);
     registerFlagLocalization(`flags.${MODULE_ID}.optional.NAME.save.${abl}`, "optional.NAME.save", label);
     registerFlagLocalization(`flags.${MODULE_ID}.optional.NAME.save.fail.${abl}`, "optional.NAME.save.fail", label);
     registerFlagLocalization(`flags.${MODULE_ID}.optional.NAME.check.${abl}`, "optional.NAME.check", label);
@@ -1539,12 +1524,7 @@ function setupMidiFlags() {
     registerFlagLocalization(`flags.${MODULE_ID}.grants.noDisadvantage.attack.school.${school}`, "grants.noDisadvantage.attack.school", label);
   })
 
-  // advantage/disadvantage/fail/success.skill.all generated by skills loop with "all" key
-  // max/min.skill.all kept here since per-skill max/min is replaced by core
-  untyped(`flags.${MODULE_ID}.max.skill.all`);
-  daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.skill.all`);
-  untyped(`flags.${MODULE_ID}.min.skill.all`);
-  daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.skill.all`);
+  // advantage/disadvantage.skill.all generated by skills loop with "all" key; fail/success/min/max are dnd5e roll fields
   Object.keys(GameSystemConfig.skills).concat(["all"]).forEach(skill => {
     booleanFormula(`flags.${MODULE_ID}.advantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.advantage.skill.${skill}`);
@@ -1554,10 +1534,6 @@ function setupMidiFlags() {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.skill.${skill}`);
     booleanFormula(`flags.${MODULE_ID}.noDisadvantage.skill.${skill}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.skill.${skill}`);
-    booleanFormula(`flags.${MODULE_ID}.fail.skill.${skill}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.skill.${skill}`);
-    booleanFormula(`flags.${MODULE_ID}.success.skill.${skill}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.skill.${skill}`);
     // bs(`flags.${MODULE_ID}.max.skill.${skill}`); replaced by core
     // bs(`flags.${MODULE_ID}.min.skill.${skill}`); replaced by core
     untyped(`flags.${MODULE_ID}.optional.NAME.skill.${skill}`);
@@ -1576,8 +1552,6 @@ function setupMidiFlags() {
     registerFlagLocalization(`flags.${MODULE_ID}.disadvantage.skill.${skill}`, "disadvantage.skill", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noAdvantage.skill.${skill}`, "noAdvantage.skill", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noDisadvantage.skill.${skill}`, "noDisadvantage.skill", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.fail.skill.${skill}`, "fail.skill", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.success.skill.${skill}`, "success.skill", label);
     registerFlagLocalization(`flags.${MODULE_ID}.optional.NAME.skill.${skill}`, "optional.NAME.skill", label);
     registerFlagLocalization(`flags.${MODULE_ID}.grants.advantage.skill.${skill}`, "grants.advantage.skill", label);
     registerFlagLocalization(`flags.${MODULE_ID}.grants.disadvantage.skill.${skill}`, "grants.disadvantage.skill", label);
@@ -1594,10 +1568,6 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.deathSave`);
   untyped(`flags.${MODULE_ID}.deathSaveBonus`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.deathSaveBonus`);
-  booleanFormula(`flags.${MODULE_ID}.fail.deathSave`);
-  daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.deathSave`);
-  booleanFormula(`flags.${MODULE_ID}.success.deathSave`);
-  daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.deathSave`);
   // All tool .all entries generated by tools loop with "all" key
   Object.keys(GameSystemConfig.tools).concat(["all"]).forEach(tool => {
     booleanFormula(`flags.${MODULE_ID}.advantage.tool.${tool}`);
@@ -1608,14 +1578,6 @@ function setupMidiFlags() {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noAdvantage.tool.${tool}`);
     booleanFormula(`flags.${MODULE_ID}.noDisadvantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noDisadvantage.tool.${tool}`);
-    booleanFormula(`flags.${MODULE_ID}.fail.tool.${tool}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.fail.tool.${tool}`);
-    booleanFormula(`flags.${MODULE_ID}.success.tool.${tool}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.success.tool.${tool}`);
-    untyped(`flags.${MODULE_ID}.max.tool.${tool}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.max.tool.${tool}`);
-    untyped(`flags.${MODULE_ID}.min.tool.${tool}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.tool.${tool}`);
     // Per-tool grants flags
     booleanFormula(`flags.${MODULE_ID}.grants.advantage.tool.${tool}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.tool.${tool}`);
@@ -1630,10 +1592,6 @@ function setupMidiFlags() {
     registerFlagLocalization(`flags.${MODULE_ID}.disadvantage.tool.${tool}`, "disadvantage.tool", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noAdvantage.tool.${tool}`, "noAdvantage.tool", label);
     registerFlagLocalization(`flags.${MODULE_ID}.noDisadvantage.tool.${tool}`, "noDisadvantage.tool", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.fail.tool.${tool}`, "fail.tool", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.success.tool.${tool}`, "success.tool", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.max.tool.${tool}`, "max.tool", label);
-    registerFlagLocalization(`flags.${MODULE_ID}.min.tool.${tool}`, "min.tool", label);
     registerFlagLocalization(`flags.${MODULE_ID}.grants.advantage.tool.${tool}`, "grants.advantage.tool", label);
     registerFlagLocalization(`flags.${MODULE_ID}.grants.disadvantage.tool.${tool}`, "grants.disadvantage.tool", label);
     registerFlagLocalization(`flags.${MODULE_ID}.grants.noAdvantage.tool.${tool}`, "grants.noAdvantage.tool", label);
@@ -1850,94 +1808,91 @@ export async function createMidiMacros() {
   }
 }
 
-export function setupMidiStatusEffects() {
+/** midi's statuses, added to `statusEffects` where missing. */
+export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects = CONFIG.statusEffects) {
   // @ts-expect-error no dnd5e-types
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;
-  if (!CONFIG.statusEffects.find(e => e.id === systemConcentrationId)) {
+  if (!statusEffects.find(e => e.id === systemConcentrationId)) {
     // @ts-expect-error not expecting special
-    CONFIG.statusEffects.push({ id: systemConcentrationId, name: i18n("EFFECT.DND5E.StatusConcentrating"), img: "systems/dnd5e/icons/svg/statuses/concentrating.svg", special: "CONCENTRATING" });
+    statusEffects.push({ id: systemConcentrationId, name: i18n("EFFECT.DND5E.StatusConcentrating"), img: "systems/dnd5e/icons/svg/statuses/concentrating.svg", special: "CONCENTRATING" });
   }
-  // Initialise these effects so that we don't need to make a raft of code async only to fetch these
-  if (configSettings.enforceBonusActions !== "none") {
-    if (!CONFIG.statusEffects.find(e => e._id === getStaticID("bonusaction"))) {
-      CONFIG.statusEffects.push({
-        id: "bonusaction",
-        _id: getStaticID("bonusaction"),
-        name: i18n("midi-qol.bonusActionUsed"),
-        system: {
-          changes: [
-            { key: "flags.midi-qol.actions.bonus", type: "custom", value: "true" },
-            { key: "flags.midi-qol.actions.bonusActionsUsed", type: "add", value: "1", priority: 20 }
-          ]
-        },
-        img: "modules/midi-qol/icons/bonus-action.svg",
-
-        // @ts-expect-error fvtt-types v14 duration
-        duration: { expiry: "targetStart" },
-        flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
-      });
-    }
-    ActiveEffect.implementation.fromStatusEffect("bonusaction").then(effect => {
-      midiBonusActionEffect = effect
-      globalThis.MidiQOL.midiBonusActionEffect = effect;
+  if (configSettings.enforceBonusActions !== "none" && !statusEffects.find(e => e._id === getStaticID("bonusaction"))) {
+    statusEffects.push({
+      id: "bonusaction",
+      _id: getStaticID("bonusaction"),
+      name: i18n("midi-qol.bonusActionUsed"),
+      system: {
+        changes: [
+          { key: "flags.midi-qol.actions.bonus", type: "custom", value: "true" },
+          { key: "flags.midi-qol.actions.bonusActionsUsed", type: "add", value: "1", priority: 20 }
+        ]
+      },
+      img: "modules/midi-qol/icons/bonus-action.svg",
+      // @ts-expect-error fvtt-types v14 duration
+      duration: { expiry: "targetStart" },
+      flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
     });
   }
-
-  if (configSettings.enforceReactions !== "none") {
-    if (!CONFIG.statusEffects.find(e => e._id === getStaticID("reaction"))) {
-      CONFIG.statusEffects.push({
-        id: "reaction",
-        _id: getStaticID("reaction"),
-        name: i18n("midi-qol.reactionUsed"),
-        system: {
-          changes: [
-            { key: "flags.midi-qol.actions.reaction", type: "custom", value: "true" },
-            { key: "flags.midi-qol.actions.reactionsUsed", type: "add", value: "1", priority: 20 }
-          ]
-        },
-        img: "modules/midi-qol/icons/reaction.svg",
-        // effectData: { transfer: false },
-        // @ts-expect-error fvtt-types v14 duration
-        duration: { expiry: "targetStart" },
-        flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
-      });
-    }
-    ActiveEffect.implementation.fromStatusEffect("reaction").then(effect => {
-      midiReactionEffect = effect;
-      globalThis.MidiQOL.midiReactionEffect = effect;
+  if (configSettings.enforceReactions !== "none" && !statusEffects.find(e => e._id === getStaticID("reaction"))) {
+    statusEffects.push({
+      id: "reaction",
+      _id: getStaticID("reaction"),
+      name: i18n("midi-qol.reactionUsed"),
+      system: {
+        changes: [
+          { key: "flags.midi-qol.actions.reaction", type: "custom", value: "true" },
+          { key: "flags.midi-qol.actions.reactionsUsed", type: "add", value: "1", priority: 20 }
+        ]
+      },
+      img: "modules/midi-qol/icons/reaction.svg",
+      // @ts-expect-error fvtt-types v14 duration
+      duration: { expiry: "targetStart" },
+      flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
     });
   }
-  if (!CONFIG.statusEffects.find(e => e._id === getStaticID("flanking"))) {
-    CONFIG.statusEffects.push({
+  if (!statusEffects.find(e => e._id === getStaticID("flanking"))) {
+    statusEffects.push({
       id: "flanking",
       _id: getStaticID("flanking"),
       name: i18n("midi-qol.Flanking"),
       system: { changes: getFlankingStatusChanges() },
       img: "icons/svg/sword.svg",
-      // effectData: { transfer: false },
       // @ts-expect-error fvtt-types v14 duration
       duration: { expiry: "combatEnd" }
     });
   }
-
-  ActiveEffect.implementation.fromStatusEffect("flanking").then(effect => {
-    midiFlankingEffect = effect;
-    globalThis.MidiQOL.midiFlankingEffect = effect;
-  });
-
-  if (!CONFIG.statusEffects.find(e => e._id === getStaticID("flanked"))) {
-    CONFIG.statusEffects.push({
+  if (!statusEffects.find(e => e._id === getStaticID("flanked"))) {
+    statusEffects.push({
       id: "flanked",
       _id: getStaticID("flanked"),
       name: i18n("midi-qol.Flanked"),
       system: { changes: getFlankedStatusChanges() },
       img: "modules/midi-qol/icons/encirclement.svg",
-      // effectData: { transfer: false },
       // @ts-expect-error fvtt-types v14 duration
       duration: { expiry: "combatEnd" }
     });
-  };
+  }
+}
 
+export function setupMidiStatusEffects() {
+  addMidiStatusEffects();
+  // Initialise these effects so that we don't need to make a raft of code async only to fetch these
+  if (configSettings.enforceBonusActions !== "none") {
+    ActiveEffect.implementation.fromStatusEffect("bonusaction").then(effect => {
+      midiBonusActionEffect = effect
+      globalThis.MidiQOL.midiBonusActionEffect = effect;
+    });
+  }
+  if (configSettings.enforceReactions !== "none") {
+    ActiveEffect.implementation.fromStatusEffect("reaction").then(effect => {
+      midiReactionEffect = effect;
+      globalThis.MidiQOL.midiReactionEffect = effect;
+    });
+  }
+  ActiveEffect.implementation.fromStatusEffect("flanking").then(effect => {
+    midiFlankingEffect = effect;
+    globalThis.MidiQOL.midiFlankingEffect = effect;
+  });
   ActiveEffect.implementation.fromStatusEffect("flanked").then(effect => {
     midiFlankedEffect = effect;
     globalThis.MidiQOL.midiFlankedEffect = effect;

@@ -93,7 +93,6 @@ import {
   getAdvantageModeTitle,
   resolveItemMacro,
   resolveActivityMacro,
-  resolveDAEItemData,
   midiFlag,
   updateUserTargets,
   popTargetSave,
@@ -112,13 +111,13 @@ import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { SAVE_TEMPLATE_FIELDS, type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
-import { activityHasScaledTargetCount, computeActivityTemplateTargets, createActivityTemplateRegions, postTemplateConfirmTargets, setDamageRollMinTerms } from "./activities/activityHelpers.js";
+import { activityHasScaledTargetCount, computeActivityTemplateTargets, createActivityTemplateRegions, postTemplateConfirmTargets, regionShapeOrigin, setDamageRollMinTerms } from "./activities/activityHelpers.js";
 import { Activity, Dnd5eChatMessage, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
 import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-types/utils";
 import Token = foundry.canvas.placeables.Token;
 import { MidiTransformActivity } from "./activities/TransformActivity.js";
 import { computeAttackAdvantage } from "./activities/AttackActivity.js";
-import { RollModifierTracker, CriticalModifierFlags, computeCriticalModifiers, computeTargetCriticalModifiers, getFlagDisplayName } from "./lib/RollModifierTracker.js";
+import { RollModifierTracker, CriticalModifierFlags, computeCriticalModifiers, computeTargetCriticalModifiers, getFlagDisplayName, resolvePendingAdvantage } from "./lib/RollModifierTracker.js";
 
 /**
  * Result of resolving a macro specification in callMacro.
@@ -762,7 +761,64 @@ export class Workflow {
   set otherDamageMatches(matches: Set<Token.Implementation> | undefined) {
     this.#otherDamageMatches = matches;
     const uuids = matches ? Array.from(matches).map(t => getTokenDocument(t)?.uuid).filter((u): u is string => !!u) : [];
-    this.persistFields({ otherDamageMatchUuids: uuids });
+    // Always stored: the damage tray and save damage line read it.
+    this.forcePersistFields({ otherDamageMatchUuids: uuids });
+  }
+
+  /** The targets the ammunition's damage applies to: hit targets passing its own use condition. */
+  #ammunitionDamageMatches: Set<Token.Implementation> | undefined;
+  get ammunitionDamageMatches(): Set<Token.Implementation> | undefined {
+    if (this.#ammunitionDamageMatches !== undefined) return this.#ammunitionDamageMatches;
+    const uuids: string[] | undefined = this.midiFlags?.ammunitionDamageMatchUuids;
+    if (!uuids) return undefined;
+    this.#ammunitionDamageMatches = new Set(uuids.map(uuid => (fromUuidSync(uuid) as TokenDocument | undefined)?.object)
+      .filter((t): t is Token.Implementation => !!t));
+    return this.#ammunitionDamageMatches;
+  }
+  set ammunitionDamageMatches(matches: Set<Token.Implementation> | undefined) {
+    this.#ammunitionDamageMatches = matches;
+    const uuids = matches ? Array.from(matches).map(t => getTokenDocument(t)?.uuid).filter((u): u is string => !!u) : [];
+    // Always stored: the damage tray and save damage line read it.
+    this.forcePersistFields({ ammunitionDamageMatchUuids: uuids });
+  }
+
+  /**
+   * What a successful save does to each kind of damage, before Super Saver (applySaves adds that per damage entry).
+   * One save is rolled per use: the other activity's and the ammunition's damage follow it only when it is their
+   * own, else take it in full; with neither having it, other damage follows the activity's save as before.
+   */
+  damageSaveMultipliers(): { defaultDamage: number, bonusDamage: number, otherDamage: number, ammunition: number } {
+    const activityMultiplier = getSaveMultiplierForActivity(this.activity);
+    const saveSource = this.otherSaveActivity;
+    const sourceMultiplier = (source: Activity | undefined | null) => saveSource
+      ? (saveSource === source ? getSaveMultiplierForActivity(saveSource) : 1)
+      : activityMultiplier;
+    return {
+      defaultDamage: activityMultiplier,
+      bonusDamage: activityMultiplier,
+      otherDamage: sourceMultiplier(this.otherActivity),
+      ammunition: sourceMultiplier(this.ammunitionActivity)
+    };
+  }
+
+  /**
+   * A target's other damage: the other activity's where its condition matched the target, the ammunition's where the
+   * ammunition's did, each with its own save multiplier.
+   */
+  otherDamageFor(token: Token.Implementation): DamageDescription[] {
+    const multipliers = this.damageSaveMultipliers();
+    const otherApplies = this.otherDamageMatches?.has(token) ?? true;
+    const ammunitionApplies = this.ammunitionDamageMatches?.has(token) ?? true;
+    return (this.otherDamageDetail ?? [])
+      .filter(d => d.midiAmmunition ? ammunitionApplies : otherApplies)
+      .map(d => ({ ...d, midiSaveMultiplier: d.midiAmmunition ? multipliers.ammunition : multipliers.otherDamage }));
+  }
+
+  /** Drop the other activity's damage (its use was declined), keeping the ammunition's. */
+  dropOtherActivityDamage() {
+    this.otherDamageMatches = new Set();
+    this.rawOtherDamageDetail = (this.rawOtherDamageDetail ?? []).filter(d => d.midiAmmunition);
+    this.otherDamageDetail = (this.otherDamageDetail ?? []).filter(d => d.midiAmmunition);
   }
 
   get attackRoll(): Roll | undefined { return this.#persisted.roll("attackRoll"); }
@@ -1321,6 +1377,8 @@ export class Workflow {
   postSummonHookId: number | undefined;
   summonedCreatures: TokenDocument.Implementation[] | undefined;
   transformedActorUuids: string[] | undefined;
+  /** A teleport activity's moves: dnd5e's TeleportMovementResult list (token, plan, moved). */
+  teleportResults: { token: Token.Implementation, plan: unknown, moved: boolean }[] | undefined;
   transformedActors: Actor.Implementation[] | undefined;
   kickStart: boolean | undefined;
   disadvantageSaves: Set<Token.Implementation> | undefined;
@@ -2373,18 +2431,17 @@ export class Workflow {
     // Skip other damage processing entirely if consumption was already declined
     const consumedFlag = this.chatCard?.getFlag(MODULE_ID, "use.consumed");
     if (consumedFlag === false) {
-      // Consumption was declined - ensure other damage is cleared
-      this.otherDamageMatches = new Set();
-      this.rawOtherDamageDetail = [];
+      // Consumption was declined - the other activity's damage is dropped, the ammunition's kept
+      this.dropOtherActivityDamage();
     } else {
-      // Build otherDamageMatches (no-op if rollOtherDamage already built it)
-      await this.buildOtherDamageMatches();
-
       // Process consumption for other activity if it will be applied
+      await this.buildOtherDamageMatches();
       if (this.otherDamageMatches!.size > 0) {
         await this.checkOtherActivityConsumption();
       }
     }
+    // Build the matches not yet built (no-op if rollOtherDamage already built them)
+    await this.buildOtherDamageMatches();
 
     if (this.rawDamageDetail && (this.rawDamageDetail?.length || this.rawOtherDamageDetail?.length)) await processDamageRoll(this, this.rawDamageDetail[0]?.type ?? this.defaultDamageType)
     // Now that the damage calculation has run, the card can report what it applied.
@@ -2425,8 +2482,7 @@ export class Workflow {
         const messageConfig: any = { data: {} };
         const consumeResult = await this.otherActivity.consume(otherUsageConfig, messageConfig);
         if (consumeResult === false) {
-          this.otherDamageMatches = new Set();
-          this.rawOtherDamageDetail = [];
+          this.dropOtherActivityDamage();
           addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.otherActivityConsumed]: false }, "midi-qol");
           return false;
         }
@@ -2439,8 +2495,7 @@ export class Workflow {
           }, "midi-qol");
         }
       } catch (e) {
-        this.otherDamageMatches = new Set();
-        this.rawOtherDamageDetail = [];
+        this.dropOtherActivityDamage();
         addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.otherActivityConsumed]: false }, "midi-qol");
         return false;
       }
@@ -2452,8 +2507,7 @@ export class Workflow {
           itemName: this.item?.name ?? "Unknown",
           activityName: this.activity?.name ?? "Unknown"
         }));
-        this.otherDamageMatches = new Set();
-        this.rawOtherDamageDetail = [];
+        this.dropOtherActivityDamage();
         addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.otherActivityConsumed]: false }, "midi-qol");
         return false;
       }
@@ -2462,8 +2516,7 @@ export class Workflow {
       const consumeResult = await this.otherActivity.consume(otherUsageConfig, messageConfig);
       if (consumeResult === false) {
         // Consumption was cancelled by a hook
-        this.otherDamageMatches = new Set();
-        this.rawOtherDamageDetail = [];
+        this.dropOtherActivityDamage();
         addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.otherActivityConsumed]: false }, "midi-qol");
         return false;
       }
@@ -2480,21 +2533,21 @@ export class Workflow {
     return true;
   }
 
+  /** The targets the other activity's and the ammunition's damage apply to, each by its own use condition. */
   async buildOtherDamageMatches(): Promise<void> {
-    if (this.otherDamageMatches !== undefined) return; // already built (may be empty if condition matched no targets)
-    this.otherDamageMatches = new Set();
-    const otherCondition = this.otherUseCondition;
-    const targetsForOtherDamage = this.activity.attack
+    const targets = this.activity.attack
       ? new Set([...this.hitTargets, ...this.hitTargetsEC])
       : this.targets;
-    for (const token of targetsForOtherDamage) {
-      if (otherCondition) {
-        if (await evalActivationCondition(this, otherCondition, token, { async: true, errorReturn: false }))
-          this.otherDamageMatches.add(token);
-      } else {
-        this.otherDamageMatches.add(token);
+    const matching = async (condition: string | undefined) => {
+      const matches = new Set<Token.Implementation>();
+      for (const token of targets) {
+        if (!condition || await evalActivationCondition(this, condition, token, { async: true, errorReturn: false })) matches.add(token);
       }
-    }
+      return matches;
+    };
+    // Already built (may be empty if the condition matched no targets)
+    if (this.otherDamageMatches === undefined) this.otherDamageMatches = await matching(this.otherUseCondition);
+    if (this.ammunitionDamageMatches === undefined) this.ammunitionDamageMatches = await matching(this.ammunitionActivity?.useCondition);
   }
 
   async rollDeferredOtherDamage(): Promise<void> {
@@ -2544,7 +2597,14 @@ export class Workflow {
     // Special case for target affects not specified an no targets selected when rolled - assume user has selected new targets so use those
     if (this.activity.target?.affects?.type === "" && this.targets.size == 0)
       targetsToUse = new Set(game.user?.targets);
+    // The ammunition's effects apply by its own effect condition and save, not the other activity's.
+    const ammunition = this.ammunitionActivity && this.ammunitionActivity !== this.otherActivity ? this.ammunitionActivity : undefined;
+    const ammunitionEffectCondition: string | undefined = ammunition?.effectCondition;
+    const ammunitionHasSave = !!ammunition && this.otherSaveActivity === ammunition;
+    const ammunitionActivationMatches = new Set<Token.Implementation>();
     for (let token of targetsToUse) {
+      if (!ammunitionEffectCondition || await evalActivationCondition(this, ammunitionEffectCondition, token, { async: true, errorReturn: true }))
+        ammunitionActivationMatches.add(token);
       const effectCondition = this.effectActivationCondition;
       const otherEffectCondition = this.otherEffectActivationCondition
       if (effectCondition) {
@@ -2593,6 +2653,13 @@ export class Workflow {
     } else
       this.otherEffectTargets = this.targets;
     this.otherEffectTargets = this.otherEffectTargets.filter(t => this.otherActivationMatches!.has(t));
+
+    const ammunitionHits: Set<Token.Implementation> = this.activity.attack ? new Set([...this.hitTargets, ...this.hitTargetsEC]) : this.targets;
+    let ammunitionEffectTargets: Set<Token.Implementation> = this.forceApplyEffects ? this.targets : ammunitionHits;
+    if (!this.forceApplyEffects && ammunitionHasSave && !ammunitionEffectCondition)
+      ammunitionEffectTargets = ammunitionEffectTargets.filter(t => this.failedSaves.has(t));
+    ammunitionEffectTargets = ammunitionEffectTargets.filter(t => ammunitionActivationMatches.has(t));
+    const ammunitionEffectTargetsOnSave = ammunitionHits.filter(t => ammunitionActivationMatches.has(t));
 
     // Check consumption for other activity effects if not already checked
     // This handles the case where other activity has effects but no save and no damage
@@ -2678,17 +2745,17 @@ export class Workflow {
      * handling below is exactly what they need, and an activity can no longer be both, so nothing is
      * collected twice.
      */
-    const ammunitionActivity = this.ammunitionActivity;
-    if (ammunitionActivity && ammunitionActivity !== this.otherActivity) {
-      const ammunitionResolved = await resolveEffects(ammunitionActivity);
-      otherActivityEffects = otherActivityEffects.concat(ammunitionResolved.applied);
-      onSaveOtherActivityEffects = onSaveOtherActivityEffects.concat(ammunitionResolved.onSave);
-    }
+    const ammunitionResolved = await resolveEffects(ammunition);
+    let ammunitionEffects = ammunitionResolved.applied;
+    let onSaveAmmunitionEffects = ammunitionResolved.onSave;
     if (activityEffects.length > 0 && this.effectTargets.size > 0 && this.activity.midiProperties?.chooseEffects) { // WIP
       activityEffects = await this.chooseEffects(activityEffects, { activity: this.activity, activityUuid: this.activity.uuid, isOtherActivity: false });
     }
     if (otherActivityEffects.length > 0 && this.otherEffectTargets.size > 0 && this.otherActivity?.midiProperties?.chooseEffects) { // WIP
       otherActivityEffects = await this.chooseEffects(otherActivityEffects, { activity: this.otherActivity, activityUuid: this.otherActivity.uuid, isOtherActivity: true });
+    }
+    if (ammunitionEffects.length > 0 && ammunitionEffectTargets.size > 0 && ammunition?.midiProperties?.chooseEffects) {
+      ammunitionEffects = await this.chooseEffects(ammunitionEffects, { activity: ammunition, activityUuid: ammunition.uuid, isOtherActivity: true });
     }
     const ceTargetEffect = ceEffect && !(ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
     const ceSelfEffect = ceEffect && (ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
@@ -2696,6 +2763,11 @@ export class Workflow {
     const daeInstalled = !!installedModules.get("dae");
     const hasActivityEffects = daeInstalled && activityEffects.length > 0;
     const hasOtherActivityEffects = daeInstalled && otherActivityEffects.length > 0;
+    const isSelfEffect = (ef: ActiveEffect.Implementation) => !!(ef.flags?.dae?.selfTarget || ef.flags?.dae?.selfTargetAlways);
+    const ammunitionSelfEffects = [...ammunitionEffects, ...onSaveAmmunitionEffects].filter(isSelfEffect);
+    const ammunitionSelfAllEffects = ammunitionSelfEffects.filter(ef => ef.flags?.dae?.selfTargetAlways);
+    ammunitionEffects = ammunitionEffects.filter(ef => !isSelfEffect(ef));
+    onSaveAmmunitionEffects = onSaveAmmunitionEffects.filter(ef => !isSelfEffect(ef));
 
     const activitySelfEffects = [...activityEffects, ...onSaveActivityEffects].filter(ef => ef.flags?.dae?.selfTarget || ef.flags?.dae?.selfTargetAlways) ?? [];
     const activitySelfAllEffect = [...activityEffects, ...onSaveActivityEffects].filter(ef => ef.flags?.dae?.selfTargetAlways) ?? [];
@@ -2851,6 +2923,12 @@ export class Workflow {
           await globalThis.DAE.doActivityEffects(this.otherActivity, true, [token], effectsToApplyUuids, doEffectsData)
         }
       }
+      if (daeInstalled && ammunition) {
+        const applies = this.forceApplyEffects
+          || (ammunitionEffectTargets.has(token) && (!ammunitionHasSave || this.failedSaves.has(token)));
+        const uuids = [...(applies ? ammunitionEffects : []), ...(ammunitionEffectTargetsOnSave.has(token) ? onSaveAmmunitionEffects : [])].map(ef => ef.uuid);
+        if (uuids.length) await globalThis.DAE.doActivityEffects(ammunition, true, [token], uuids, doEffectsData);
+      }
     }
     // Perhaps this should use this.effectTargets
     if (configSettings.allowUseMacro && this.workflowOptions.noTargetOnUseMacro !== true) await this.triggerTargetMacros(["postTargetEffectApplication"], this.targets);
@@ -2869,6 +2947,10 @@ export class Workflow {
     else otherSelfEffects = otherActivitySelfEffects;
     if (otherSelfEffects.length > 0 && selfToken) {
       await globalThis.DAE.doActivityEffects(this.otherActivity, true, [selfToken], otherSelfEffects.map(ef => ef.uuid), doEffectsData)
+    }
+    const ammunitionSelf = ammunitionEffectTargets.size > 0 ? ammunitionSelfEffects : ammunitionSelfAllEffects;
+    if (daeInstalled && ammunition && ammunitionSelf.length > 0 && selfToken) {
+      await globalThis.DAE.doActivityEffects(ammunition, true, [selfToken], ammunitionSelf.map(ef => ef.uuid), doEffectsData);
     }
 
     if (this.actor && ceSelfEffect && (this.effectTargets?.size > 0 || ceEffect!.flags?.dae?.selfTargetAlways)) {
@@ -2955,7 +3037,7 @@ export class Workflow {
           break;
         }
         visitedActivities.add(possibleTriggerActivity.uuid);
-        possibleTriggerActivity = await possibleTriggerActivity.getTriggeredActivity();
+        possibleTriggerActivity = await possibleTriggerActivity.getTriggeredActivity?.();
       }
 
       let triggeredActivity = await this.activity.getTriggeredActivity();
@@ -3519,6 +3601,7 @@ export class Workflow {
       }
     }
     await this.checkTargetAdvantage();
+    resolvePendingAdvantage(this.attackRollModifierTracker);
   }
 
   async processCriticalFlags() {
@@ -4303,7 +4386,7 @@ export class Workflow {
 
     // DAE itemData fallback - look for item data stored in effect flags
     if (actorToUse instanceof Actor && uuid) {
-      const itemData = resolveDAEItemData(actorToUse, uuid);
+      const itemData = DAE.getActorItemData(actorToUse, uuid) as Item.InitializedData | undefined;
       const command = itemData ? DAE.getItemMacroCommand(itemData) : undefined;
       if (itemData && command) {
         return {
@@ -4526,7 +4609,8 @@ export class Workflow {
 
       if (this.attackRoll?.dice.length) {
         const d: any = this.attackRoll.dice[0]; // should be a dice term but DiceTerm.options not defined
-        const isD20 = (d.faces === 20);
+        // Or a die replacing the d20 that dnd5e accepts as one (e.g. Custom D&D 5e's 2d10).
+        const isD20 = (d.faces === 20) || ("validD20Roll" in this.attackRoll && !!this.attackRoll.validD20Roll);
         if (isD20) {
           // Success/failure/critical/fumble classes are applied at render time
           // by ChatMessageMidi._applyAttackRollHighlight, not baked into content.
@@ -4957,11 +5041,7 @@ export class Workflow {
         ? !!applied.uncannyDodge
         : !!(t.actor?.flags?.[MODULE_ID]?.["uncanny-dodge"] && this.activity?.attack);
       const uncannyDodgeIcon = applied?.uncannyDodgeIcon as string | undefined;
-      const saveMults = {
-        otherDamage: this.otherSaveActivity ? getSaveMultiplierForActivity(this.otherSaveActivity) : 1,
-        defaultDamage: getSaveMultiplierForActivity(this.activity),
-        bonusDamage: getSaveMultiplierForActivity(this.activity)
-      };
+      const saveMults = this.damageSaveMultipliers();
       // The card's entry keeps what was recorded at roll time; midi's own detail is always recomputed.
       const recorded = getTargetDescriptor(t.actor?.uuid ?? "", existing);
       return {
@@ -5098,8 +5178,12 @@ export class Workflow {
   ): Promise<{ saveRoll: Roll, saveRollTotal: number, saved: boolean } | null> {
     if (!this.item.flags?.[MODULE_ID]?.isConcentrationCheck) return null;
 
+    // Only reached when set on the actor directly; effects are mapped by DAE. Remove in 14.6.10.
     const checkBonus = target.actor?.flags?.[MODULE_ID]?.concentrationSaveBonus;
     if (!checkBonus) return null;
+    foundry.utils.logCompatibilityWarning(
+      "midi-qol | flags.midi-qol.concentrationSaveBonus is deprecated; use system.attributes.concentration.roll.bonus. Setting it on an actor directly stops working in 14.6.10.",
+      { once: true });
 
     //@ts-expect-error
     const D20Roll = CONFIG.Dice.D20Roll as typeof Roll;
@@ -5414,11 +5498,12 @@ export class Workflow {
       return { isCritical: false, isFumble: false };
     }
     const dterm = saveRoll.terms[0] as foundry.dice.terms.DiceTerm;
-    const diceRoll = dterm?.results?.find(result => result.active)?.result ?? fallbackTotal;
+    const diceRoll = activeDiceTotal(dterm) ?? fallbackTotal;
+    // dnd5e's D20Die holds the thresholds; another die (e.g. Custom D&D 5e's 3d6) brings its own.
     //@ts-expect-error no dnd5e-types
-    const isFumble = diceRoll <= (dterm.options?.fumble ?? 1);
+    const isFumble = diceRoll <= (dterm.options?.criticalFailure ?? dterm.options?.fumble ?? 1);
     //@ts-expect-error no dnd5e-types
-    const isCritical = diceRoll >= (dterm.options?.critical ?? 20);
+    const isCritical = diceRoll >= (dterm.options?.criticalSuccess ?? dterm.options?.critical ?? 20);
     return { isCritical, isFumble };
   }
 
@@ -5677,7 +5762,10 @@ export class Workflow {
       flashRequestType = "savingthrow"; // default
     }
 
-    const flashRollKey = rollAbilities?.[0] ?? rollSkills?.[0] ?? rollTools?.[0];
+    // A tool or skill check also lists the ability it is rolled with; its key is the tool or skill (#1575).
+    const flashRollKey = rollType === "skill" ? rollSkills?.[0]
+      : rollType === "tool" ? rollTools?.[0]
+        : rollAbilities?.[0];
     if (!flashRollKey) {
       flashRequestType = "custom";
     }
@@ -6256,9 +6344,11 @@ export class Workflow {
     // Check ability advantage/disadvantage from settings, source grants flags, and magic resistance/vulnerability
     // Use the shared helper to compute full trackers (advantage + roll modifiers) for all abilities
     const abilityId = this.saveActivity!.save?.ability?.first() ?? this.saveActivity!.check?.ability ?? "";
+    const isConcentrationCheck = this.item.flags?.[MODULE_ID]?.isConcentrationCheck;
+    // A concentration check's save also takes the concentration advantage flags.
     const preComputedMap = await buildPreComputedAdvantageMap(
       target.actor!,
-      rollType ?? "",
+      (rollType === "save" && isConcentrationCheck) ? "concentration" : rollType ?? "",
       rollAbilities,
       { workflow: this, isMagicSave: !!isMagicSave }
     );
@@ -6269,7 +6359,7 @@ export class Workflow {
     saveDetails.modifierTracker = defaultAbilityData?.tracker instanceof RollModifierTracker ? defaultAbilityData.tracker : undefined;
     saveDetails.advantage = defaultAbilityData?.hasAdvantage;
     saveDetails.disadvantage = defaultAbilityData?.hasDisadvantage;
-    saveDetails.isConcentrationCheck = this.item.flags?.[MODULE_ID]?.isConcentrationCheck;
+    saveDetails.isConcentrationCheck = isConcentrationCheck;
 
     // Pre-compute advantage for all choices when multiple are available.
     // A roll is always ONE type (save, skill check, or tool check), so we use a single object.
@@ -6286,14 +6376,16 @@ export class Workflow {
           target.actor!,
           "skill",
           rollSkills,
-          { workflow: this, isMagicSave: false }
+          { workflow: this, isMagicSave: false },
+          this.saveActivity?.check?.ability || undefined
         );
       } else {
         choiceMap = await buildPreComputedAdvantageMap(
           target.actor!,
           "tool",
           rollTools,
-          { workflow: this, isMagicSave: false }
+          { workflow: this, isMagicSave: false },
+          this.saveActivity?.check?.ability || undefined
         );
       }
 
@@ -6495,15 +6587,8 @@ export class Workflow {
       if (doc?.documentName === "Region") {
         // v14 Region-backed template: extract cover origin from shape data
         const regionDoc = doc as RegionDocument.Implementation;
-        const shape = regionDoc.shapes?.at?.(0) as any;
-        if (shape) {
-          templateCoverOrigin = { x: shape.x ?? 0, y: shape.y ?? 0 };
-          if (shape.type === "rectangle") {
-            templateCoverOrigin.x += (shape.width ?? 0) / 2;
-            templateCoverOrigin.y += (shape.height ?? 0) / 2;
-          }
-          templateCoverOrigin.elevation = regionDoc.elevation?.bottom ?? 0;
-        }
+        const origin = regionShapeOrigin(regionDoc);
+        if (origin) templateCoverOrigin = { ...origin, elevation: regionDoc.elevation?.bottom ?? 0 };
       } else {
         const templateDoc = doc as MeasuredTemplateDocument | null;
         template = templateDoc?.object ?? undefined;
@@ -6803,21 +6888,17 @@ export class Workflow {
     if (terms[0] instanceof foundry.dice.terms.NumericTerm) {
       this.diceRoll = Number(terms[0].total);
     } else {
-      const dterm = terms[0] as foundry.dice.terms.DiceTerm;
-      const activeResult = dterm.results?.find(d => d.active);
-      this.diceRoll = activeResult ? Number(activeResult.result) : Number(terms[0].total);
+      this.diceRoll = activeDiceTotal(terms[0] as foundry.dice.terms.DiceTerm) ?? Number(terms[0].total);
     }
 
     // For natural critical/fumble detection, use the actual die face when auto-success/fail
-    // is active (min99/max1 from success.attack/fail.attack flags), since those just force
+    // is active (min99/max1 from attack success/fail), since those just force
     // hit/miss without implying a natural crit/fumble. Regular min/max modifiers (e.g. min20
-    // from min.attack.all) should use terms[0].total which includes the modifier adjustment.
+    // from rolls.attack.min) should use terms[0].total which includes the modifier adjustment.
     let critFumbleDiceRoll = this.diceRoll;
     if (this.attackRollModifierTracker.modifiers.willSucceed || this.attackRollModifierTracker.modifiers.willFail) {
       if (!(terms[0] instanceof foundry.dice.terms.NumericTerm)) {
-        const dterm = terms[0] as foundry.dice.terms.DiceTerm;
-        const activeResult = dterm.results?.find(d => d.active);
-        if (activeResult) critFumbleDiceRoll = Number(activeResult.result);
+        critFumbleDiceRoll = activeDiceTotal(terms[0] as foundry.dice.terms.DiceTerm) ?? critFumbleDiceRoll;
       }
     }
 
@@ -7319,32 +7400,24 @@ export class Workflow {
         hitResultNumeric = this.isCritical ? "++" : !isFinite(targetAC) ? `${attackTotal}/∞` : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
       }
 
-      const midiFlagsActorFail = this.actor.flags?.[MODULE_ID]?.fail;
-      if (midiFlagsActorFail) {
+      {
         const conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
-        let failFlag: string | undefined;
-        if (await evalAllConditionsAsync(this.actor, midiFlag(`fail.attack.${this.activity.actionType}`), conditionData))
-          failFlag = `fail.attack.${this.activity.actionType}`;
-        else if (await evalAllConditionsAsync(this.actor, midiFlag(`fail.attack.all`), conditionData))
-          failFlag = "fail.attack.all";
-        else if (await evalAllConditionsAsync(this.actor, midiFlag(`fail.all`), conditionData))
-          failFlag = "fail.all";
+        const actionType = this.activity.actionType;
+        const attackFields = [`abilities.${this.activity.ability}.attack.roll`, "rolls.attack", `rolls.attack.${actionType}`];
+        // dnd5e's roll fields, then midi's flag for every roll
+        const firstMatch = async (kind: "fail" | "success"): Promise<string | undefined> => {
+          for (const path of attackFields)
+            if (await evalAllConditionsAsync(this.actor, `system.${path}.${kind}`, conditionData)) return `${path}.${kind}`;
+          if (await evalAllConditionsAsync(this.actor, midiFlag(`${kind}.all`), conditionData)) return `${kind}.all`;
+          return undefined;
+        };
+        const failFlag = await firstMatch("fail");
         if (failFlag) {
           isHit = false;
           isHitEC = false;
           this.attackRollModifierTracker.critical.setOverride(false, failFlag, getFlagDisplayName(failFlag));
         }
-      }
-      const midiFlagsActorSuccess = this.actor.flags?.[MODULE_ID]?.success;
-      if (midiFlagsActorSuccess) {
-        const conditionData = createConditionData({ workflow: this, target: targetToken, actor: this.actor });
-        let successFlag: string | undefined;
-        if (await evalAllConditionsAsync(this.actor, midiFlag(`success.attack.${this.activity.actionType}`), conditionData))
-          successFlag = `success.attack.${this.activity.actionType}`;
-        else if (await evalAllConditionsAsync(this.actor, midiFlag(`success.attack.all`), conditionData))
-          successFlag = "success.attack.all";
-        else if (await evalAllConditionsAsync(this.actor, midiFlag(`success.all`), conditionData))
-          successFlag = "success.all";
+        const successFlag = await firstMatch("success");
         if (successFlag) {
           isHit = true;
           isHitEC = false;
@@ -7736,7 +7809,10 @@ export class Workflow {
       this.#linkRollToCard(roll, "damage");
       this.otherDamageRollHTML += await midiRenderOtherDamageRoll(roll);
     }
-    this.rawOtherDamageDetail = createDamageDetail({ roll: this.otherDamageRolls, activity: this.activity, defaultType: this.defaultDamageType });
+    const isAmmunition = (roll: Roll) => !!foundry.utils.getProperty(roll, `options.${MODULE_ID}.ammunition`);
+    const detailOf = (rolls: Roll[]) => rolls.length ? createDamageDetail({ roll: rolls, activity: this.activity, defaultType: this.defaultDamageType }) : [];
+    this.rawOtherDamageDetail = detailOf(rolls.filter(roll => !isAmmunition(roll)))
+      .concat(detailOf(rolls.filter(isAmmunition)).map(d => ({ ...d, midiAmmunition: true })));
     this.otherDamageDetail = foundry.utils.deepClone(this.rawOtherDamageDetail);
     return;
   }
@@ -8970,4 +9046,11 @@ export interface AugmentedEvent extends Event {
   ctrlKey: boolean;
   metaKey: boolean;
   type: string;
+}
+
+/** The natural roll of a die term: the sum of its kept dice, so a replacement die such as 2d10 counts as a whole. */
+function activeDiceTotal(term: foundry.dice.terms.DiceTerm | undefined): number | undefined {
+  const active = term?.results?.filter(r => r.active);
+  if (!active?.length) return undefined;
+  return active.reduce((sum, r) => sum + Number(r.result), 0);
 }

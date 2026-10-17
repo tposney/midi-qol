@@ -15,6 +15,7 @@ import { ConditionEditor } from "./module/apps/ConditionEditor";
 import { AttributionMap, AugmentedEvent, DamageDescriptionObject, DamageOnlyWorkflow, DDBGameLogWorkflow, DummyWorkflow, TrapWorkflow, UndoData, UserWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./module/Workflow";
 import { MidiOptions } from "./module/utils";
 import * as utils from "./module/utils";
+import * as tokenHighlight from "./module/lib/tokenHighlight";
 import * as workflowOptionsCodec from "./module/lib/workflowOptionsCodec";
 import * as settings from "./module/settings";
 import { RollStats, Stats } from "./module/RollStats";
@@ -42,11 +43,16 @@ declare module "fvtt-types/configuration" {
   namespace Hooks {
     interface HookConfig {
       "dae.addSpecialDurations": (daeSpecialDurations: Record<string, string>) => void;
+      /** Custom D&D 5e, just before it replaces CONFIG.statusEffects with this list. */
+      "customDnd5e.setStatusEffectsConfig": (statusEffects: typeof CONFIG.statusEffects) => void;
       "getChatMessageContextOptions": (app: unknown, options: ContextMenuEntryV14[]) => void;
       "dae.setFieldData": (fieldData: Record<string, string[]>) => void;
       "dae.addAutoFields": (addAutoFields: Function, fields: { BooleanFormulaField?: any }) => void;
       "dae.ready": (api: any) => void;
       "dae.setupComplete": (api: any) => void;
+      "dnd5e.preTeleport": (activity: Activity, config: { maxDistance: number, tokens: Token.Implementation[] }) => boolean | void;
+      "dnd5e.teleport": (activity: Activity, plans: { token: Token.Implementation, plan: unknown }[]) => boolean | void;
+      "dnd5e.postTeleport": (activity: Activity, results: { token: Token.Implementation, plan: unknown, moved: boolean }[]) => void;
       "dnd5e.activityConsumption": (activity: Activity, usageConfig: ActivityUseConfiguration, messageConfig: RollMessageConfig, updates: unknown) => boolean | void;
       "dnd5e.applyDamage": (actor: Actor.Implementation, amount: number, options: DamageApplicationOptions) => void;
       "dnd5e.calculateDamage": (actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) => boolean | void;
@@ -83,6 +89,8 @@ declare module "fvtt-types/configuration" {
       "dnd5e.preRollConcentration": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.preRollDamage": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.preRollDeathSave": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
+      "dnd5e.preRollDeathSaveV2": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
+      "dnd5e.preRollD20TestV2": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.preRollSavingThrow": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.preRollSkill": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
       "dnd5e.preRollTool": (config: RollProcessConfig, dialog: RollDialogConfig, message: RollMessageConfig) => boolean | void;
@@ -129,6 +137,7 @@ declare module "fvtt-types/configuration" {
     "midi-qol.MidiSoundSettings": Record<string, any>;
     "midi-qol.playerControlsInvisibleTokens": boolean;
     "midi-qol.RollStats": Record<string, Stats>;
+    "midi-qol.acknowledgedOverlaps": string[];
     "midi-qol.ConfigSettings": typeof configSettings;
     "midi-qol.CriticalDamage": string;
     "midi-qol.CriticalDamageGM": string;
@@ -669,6 +678,24 @@ declare global {
     getMovementOrigin(data?: { x?: number; y?: number; elevation?: number; width?: number; height?: number; depth?: number }): { x: number; y: number; elevation: number };
   }
 
+  // Foundry v14 movement planning and token placement, not yet in fvtt-types (used by the teleport activity).
+  interface TokenDocument {
+    /** Start a movement planned with Token#planMovement. */
+    startMovement(id: string): Promise<boolean>;
+  }
+  interface Token {
+    planMovement(options?: { allowedActions?: string[]; direct?: boolean; maxDistance?: number; preventDrop?: boolean }): Promise<{
+      id: string; origin: { x: number; y: number; elevation?: number }; destination: { x: number; y: number; elevation?: number }; waypoints: unknown[];
+    } | null>;
+  }
+  interface TokenLayer {
+    placeTokens(data: object[], options?: {
+      create?: boolean; allowRotation?: boolean;
+      preConfirm?: (args: { document: TokenDocument.Implementation }) => boolean | void;
+      preSkip?: (args: { document: TokenDocument.Implementation }) => boolean | void;
+    }): Promise<TokenDocument.Implementation[]>;
+  }
+
   // Note: Intentional `var` use here to add to the `globalThis`
   var DAE: {
     actionQueue: foundry.utils.Semaphore;
@@ -677,9 +704,10 @@ declare global {
     resolveWorldMacro: (nameOrUuid: string) => Promise<Macro.Implementation | undefined>;
     getItemMacroCommand: (source: unknown) => string | undefined;
     /** DAE 14.6.2+ (dnd5e 6): where an effect came from */
-    getEffectSource?: (effect: unknown) => { actorUuid?: string; itemUuid?: string; activityUuid?: string; controllingEffectUuid?: string; sourceEffectUuid?: string; messageUuid?: string };
+    getEffectSource: (effect: unknown) => { actorUuid?: string; itemUuid?: string; activityUuid?: string; controllingEffectUuid?: string; sourceEffectUuid?: string; messageUuid?: string };
     /** DAE 14.6.2+ (dnd5e 6): an effect's item as data (live, else its card's snapshot) */
-    getEffectItemData?: (effect: unknown) => Item.Source | undefined;
+    getEffectItemData: (effect: unknown) => Item.Source | undefined;
+    getActorItemData: (actor: Actor.Implementation, uuid: string) => Item.Source | undefined;
     doEffects: (...args: any[]) => Promise<any>;
     doActivityEffects: (...args: any[]) => Promise<any>;
     DIMEditor: any;
@@ -697,6 +725,8 @@ declare global {
     checkActivityRange: typeof utils.checkActivityRange;
     checkRule: typeof checkRule;
     computeCoverBonus: typeof utils.computeCoverBonus;
+    getCoverBonus: typeof utils.getCoverBonus;
+    highlightTokens: typeof tokenHighlight.highlightTokens;
     tokenAtPosition: typeof utils.tokenAtPosition;
     computeDistance: typeof utils.computeDistance;
     getDistance: typeof utils.getDistance;
@@ -753,6 +783,8 @@ declare global {
     completeItemUse: typeof utils.completeItemUse;
     computeAbilityAdvantage: typeof patching.computeAbilityAdvantage;
     computeCoverBonus: typeof utils.computeCoverBonus;
+    getCoverBonus: typeof utils.getCoverBonus;
+    highlightTokens: typeof tokenHighlight.highlightTokens;
     tokenAtPosition: typeof utils.tokenAtPosition;
     computeDistance: typeof utils.computeDistance;
     convertDuration: typeof utils.convertDuration;
@@ -1068,6 +1100,10 @@ export type DamageApplicationOptions = {
     semiSuperSaver?: boolean;
     saved?: boolean;
     saveMultiplier?: number
+    /** From midi's tray, which lists other damage for every target: whether each source's damage applies to this one. */
+    otherApplies?: boolean;
+    ammunitionApplies?: boolean;
+    ammunitionSaveMultiplier?: number;
     sourceActorUuid?: string;
     /** The card the damage came from, for dnd5e's damage hooks (origin / originatingMessage) */
     itemCardUuid?: string;
@@ -1458,6 +1494,8 @@ export type DamageDescription = {
   displayValue?: number; // original DR amount for tooltip display (when inlined)
   midiCategory?: "defaultDamage" | "otherDamage" | "bonusDamage";
   midiSaveMultiplier?: number;
+  /** Other damage from the ammunition's activity rather than the item's other activity. */
+  midiAmmunition?: boolean;
 };
 
 type BasicRollConfig = {
@@ -1550,6 +1588,16 @@ export type Dnd5eSystem = foundry.packages.System & {
     aggregateDamageRolls(rolls: Roll[], options?: { respectProperties?: boolean }): Roll[];
     DamageRoll: typeof Roll;
   };
+};
+
+/** Core v14 region members fvtt-types 13 lacks. */
+export type V14RegionDocument = Omit<RegionDocument.Implementation, "shapes"> & {
+  attachment: { token: string | null };
+  shapes: Array<{
+    origin: { x: number; y: number };
+    clone(data: object, options: { parent: Scene.Implementation }):
+      { move(origin: { x: number; y: number }): void; _source: RegionDocument.Source["shapes"][number] };
+  }>;
 };
 
 /** Core v14's emanation region shape, which fvtt-types' shape union does not include. */
@@ -1670,6 +1718,7 @@ export type MidiTargetDescriptor = {
     otherDamage: number;
     defaultDamage: number;
     bonusDamage: number;
+    ammunition?: number;
   };
   itemType?: string;
   uncannyDodge?: boolean;
@@ -1808,3 +1857,4 @@ export type QueueSaveRollOptions = {
   moduleFlags: ModuleIntegrationFlags;
   moduleRequests: ModuleIntegrationRequests;
 };
+

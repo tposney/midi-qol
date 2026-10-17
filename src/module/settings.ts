@@ -162,6 +162,7 @@ class ConfigSettings {
   damageResistanceMultiplier: number = 0.5;
   damageVulnerabilityMultiplier: number = 2;
   defaultSaveMult: number = 0.5;
+  saveDamageLine: boolean = true;
   doConcentrationCheck: string = "chat";
   griddedGridless: boolean = false;
   gridlessFudge: number | undefined = 0;
@@ -230,7 +231,6 @@ class ConfigSettings {
   showReactionChatMessage: boolean = false;
   singleConcentrationRoll: boolean = true;
   singleDamageCalculation: boolean = true;
-  skillAbilityCheckAdvantage: boolean = true;
   tempHPDamageConcentrationCheck: boolean = false;
   concentrationIncapacitatedConditionCheck: boolean = false;
   toggleOptionalRules: boolean = false;
@@ -248,7 +248,7 @@ class ConfigSettings {
     activeDefence: false,
     activeDefenceModifier: 12,
     activeDefenceShow: "self",
-    ActiveDefenceDC: true,
+    activeDefenceDC: true,
     autoRerollInitiative: false,
     challengeModeArmor: "none",
     checkFlanking: "off",
@@ -340,6 +340,7 @@ export const checkedModuleList = [
   "autoanimations",
   "anonymous",
   "babonus",
+  "cat",
   "chris-premades",
   "condition-lab-triggler",
   "dae",
@@ -695,7 +696,6 @@ export let fetchParams = () => {
   //@ts-expect-error legacy boolean value
   if (configSettings.rollAlternate === true) configSettings.rollAlternate = "formula";
   if (configSettings.allowActorUseMacro === undefined) configSettings.allowActorUseMacro = configSettings.allowUseMacro;
-  if (configSettings.skillAbilityCheckAdvantage === undefined) configSettings.skillAbilityCheckAdvantage = true;
   if (!configSettings.keyMapping
     || !configSettings.keyMapping["DND5E.Advantage"]
     || !configSettings.keyMapping["DND5E.Disadvantage"]
@@ -723,7 +723,7 @@ export let fetchParams = () => {
     activeDefence: false,
     activeDefenceModifier: 12, // default value for active defence modifier
     activeDefenceShow: "self",
-    ActiveDefenceDC: true,
+    activeDefenceDC: true,
     challengeModeArmor: "none",
     challengeModeArmorScale: false,
     checkFlanking: "off",
@@ -748,6 +748,11 @@ export let fetchParams = () => {
     mergeCardMulti: false,
     displayProperties: true,
   }, configSettings.optionalRules ?? {}, { overwrite: true, insertKeys: true, insertValues: true });
+  // Was read and defaulted under a capitalised key the Rules tab never set (its checkbox saved an unticked false); carry it over once.
+  if ("ActiveDefenceDC" in configSettings.optionalRules) {
+    configSettings.optionalRules.activeDefenceDC = !!Reflect.get(configSettings.optionalRules, "ActiveDefenceDC");
+    Reflect.deleteProperty(configSettings.optionalRules, "ActiveDefenceDC");
+  }
   if (!configSettings.optionalRules.incapacitated) configSettings.optionalRules.incapacitated = "nothing";
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
   // v14 Levels has no CONFIG.Levels.API/TemplateHandler; its sight wrapper is one "center" already uses.
@@ -797,6 +802,7 @@ export let fetchParams = () => {
   }
   if (configSettings.itemTypeList === undefined) configSettings.itemTypeList = Object.keys(CONFIG.Item.typeLabels);
   if (configSettings.defaultSaveMult === undefined) configSettings.defaultSaveMult = 0.5;
+  if (configSettings.saveDamageLine === undefined) configSettings.saveDamageLine = true;
   if (configSettings.ignoreSpellReactionRestriction === undefined) configSettings.ignoreSpellReactionRestriction = false;
   if (configSettings.damageImmunityMultiplier === undefined) configSettings.damageImmunityMultiplier = 0.0;
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
@@ -1009,6 +1015,11 @@ export let fetchParams = () => {
     mixedDisposition: false,
     gridPosition: { x: 0, y: 0 }
   };
+  // The config form saved this checkbox under a misspelt key.
+  if (targetConfirmation && "mixedDispositiion" in targetConfirmation) {
+    targetConfirmation.mixedDisposition ||= !!targetConfirmation.mixedDispositiion;
+    Reflect.deleteProperty(targetConfirmation, "mixedDispositiion");
+  }
 
   setDebugLevel(debugText);
 
@@ -1301,6 +1312,8 @@ export const onUseMacroOptions = keysToExtendedOptionsObj("onUseMacroOptions", [
   "isSaveFailure",
   "preTargetDamageApplication",
   "postTargetEffectApplication",
+  "preTeleport",
+  "postTeleport",
   "isDamaged",
   "all"
 ]);
@@ -1676,6 +1689,12 @@ export const registerSettings = function () {
     config: false
   });
 
+  game.settings.register("midi-qol", "acknowledgedOverlaps", {
+    scope: "world",
+    default: [],
+    type: Array,
+    config: false
+  });
   game.settings.register("midi-qol", "RollStats", {
     scope: "world",
     default: {},

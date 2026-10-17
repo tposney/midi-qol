@@ -1,4 +1,15 @@
 {
+  "midi-qol.DamageAbsorption": "Damage Absorption",
+  "midi-qol.RollField.all": "All",
+  "midi-qol.RollField.skills": "All Skills",
+  "midi-qol.RollField.tools": "All Tools",
+  "midi-qol.RollField.death": "Death Save",
+  "midi-qol.RollField.concentration": "Concentration",
+  "midi-qol.RollField.init": "Initiative",
+  "midi-qol.RollField.fail.label": "Auto Fail",
+  "midi-qol.RollField.fail.hint": "Midi QOL: a condition; when it is true the roll fails automatically (e.g. 1, or target.statuses.has(\"prone\")).",
+  "midi-qol.RollField.success.label": "Auto Success",
+  "midi-qol.RollField.success.hint": "Midi QOL: a condition; when it is true the roll succeeds automatically.",
   "midi-qol.ResetDefaults.Name": "Reset All Settings",
   "midi-qol.ResetDefaults.Title": "Reset All Settings to Defaults",
   "midi-qol.ResetDefaults.Content": "This will reset ALL midi-qol settings to their default values. This includes ConfigSettings and all game settings. This action cannot be undone. Are you sure you want to continue?",
@@ -176,6 +187,8 @@
   "midi-qol.FriendlyAutoFail": "Friendly Auto Fail",
   "midi-qol.FriendlyAutoSuccess": "Friendly Auto Success",
   "midi-qol.KeyPress": "Key Press",
+  "midi-qol.Dnd5eRollMode.Actor": "dnd5e roll mode (actor)",
+  "midi-qol.Dnd5eRollMode.Effect": "{name} (dnd5e roll mode)",
   "midi-qol.ForcedKeyPress": "Forced Key Press",
   "midi-qol.RollOptions": "Roll Options",
   "midi-qol.WorkflowOptions": "Workflow Options",
@@ -251,6 +264,8 @@
   },
   "midi-qol.SaveSummaryStyle.Name": "Save summary style",
   "midi-qol.SaveSummaryStyle.Hint": "With dnd5e's \"Summarize chat cards\" on, a card's saving throws are shown on the card instead of as separate messages. midi: midi's saves section (DC, success/failure, damage) is the summary. dnd5e: dnd5e's per-roll summaries, with midi's section listing only saves rolled through other modules. What players see follows Auto check Saves either way. With \"Summarize chat cards\" off the saves show as separate messages.",
+  "midi-qol.SaveDamageLine.Name": "Show damage after each save",
+  "midi-qol.SaveDamageLine.Hint": "Under a target's save result, when the save spares it some damage: the damage of each type it takes after its save (before resistances), and the feature that changed it (e.g. Super Saver).",
   "midi-qol.saveSummaryStyleOptions": {
     "midi": "midi saves section",
     "dnd5e": "dnd5e summaries",
@@ -508,6 +523,8 @@
     "isSaveFailure": "Target failed a saving throw",
     "preTargetDamageApplication": "Target is about to be damaged by an item",
     "postTargetEffectApplication": "Target has an effect applied by a rolled item",
+    "preTeleport": "Before a Teleport (can cancel or change who moves)",
+    "postTeleport": "After a Teleport",
     "isDamaged": "Target is damaged by an attack",
     "all": "All"
   },
@@ -1024,8 +1041,6 @@
   "midi-qol.AutoUndoTransformations.Name": "Auto undo transformations on effect/concentration expiry/removal",
   "midi-qol.AutoUndoTransformations.Hint": "When transforming a target add an effect/concentration to the caster that tracks the transformations and automatically revert the target to their original form on expiry/concentration removal",
   "midi-qol.AttackPerTarget.Name": "Roll a separate attack per target",
-  "midi-qol.SkillAbilityCheckAdvantage.Name": "Ability Check Advantage gives Skill Advantage",
-  "midi-qol.SkillAbilityCheckAdvantage.Hint": "If an actor has advantage/disadvantage on ability checks, skills based on that ability also have advantage/disadvantage",
   "midi-qol.ignoreTotalCover": "No Full cover (Deprecated)",
   "midi-qol.InitPromptTitle": "Initiative Roll",
   "midi-qol.HighlightSuccess.Name": "Color code Hit/Miss/Save Display",
@@ -1042,6 +1057,33 @@
   "midi-qol.VitalityDeathRequires.VitalityAndHP": "Vitality of 0 AND HP of 0",
   "midi-qol.AutoRerollInitiative.Name": "Auto reroll initiative",
   "midi-qol.AutoRerollInitiative.Hint": "Auto reroll initiative for all combatants at the start of a new round. Warning: can break round/turn effect expiry",
+  "midi-qol.Overlaps.Title": "midi-qol: possible setting conflicts",
+  "midi-qol.Overlaps.Intro": "These settings may conflict.",
+  "midi-qol.Overlaps.OpenTroubleShooter": "Open TroubleShooter",
+  "midi-qol.Overlaps.Dismiss": "Don't remind me",
+  "midi-qol.Overlaps.Dismissed": "midi-qol: these overlaps won't be reported again unless the systems involved change.",
+  "midi-qol.Overlaps.Acknowledged": "dismissed",
+  "midi-qol.Overlaps.wounded.Feature": "Wounded / bloodied marker",
+  "midi-qol.Overlaps.wounded.Advice": "A wounded creature gets a marker from each system. Turn all but one off.",
+  "midi-qol.Overlaps.dead.Feature": "Dead / unconscious marker",
+  "midi-qol.Overlaps.dead.Advice": "Each system marks a creature at 0 HP, and they can disagree (e.g. dead and unconscious). Turn all but one off.",
+  "midi-qol.Overlaps.deadStatusMissing.Feature": "Status for HP = 0 not available",
+  "midi-qol.Overlaps.deadStatusMissing.Advice": "midi's Add effect when HP = 0 is set to use a status that no longer exists (e.g. hidden in Custom D&D 5e's Conditions config), so nothing is added at 0 HP. Show the status again, or choose an available one in midi's Mechanics settings.",
+  "midi-qol.Overlaps.Settings.statusMissing": "dead / unconscious status hidden or removed",
+  "midi-qol.Overlaps.StatusEffects": "Status effects",
+  "midi-qol.Overlaps.initiative.Feature": "Initiative rerolled each round",
+  "midi-qol.Overlaps.initiative.Advice": "Initiative is rolled twice each round. Turn one off; TroubleShooter Auto Fix turns off midi Auto reroll initiative, which can also break round/turn effect expiry.",
+  "midi-qol.Overlaps.averageDamage.Feature": "Average damage",
+  "midi-qol.Overlaps.averageDamage.Advice": "Custom D&D 5e's Average damage replaces the damage roll, so midi applies no damage. Use midi's 'All damage/critical rolls are average results' instead (same choices) and set Custom D&D 5e's to neither. TroubleShooter's Auto Fix does both.",
+  "midi-qol.Overlaps.Settings.customAverageDamage": "Average damage",
+  "midi-qol.Overlaps.damageReplaced.Feature": "Damage rolled outside midi",
+  "midi-qol.Overlaps.damageReplaced.Advice": "Custom D&D 5e Mob and Probabilistic damage replace the attack and damage, so midi applies no damage for those uses. Turn them off to keep midi damage application; TroubleShooter Auto Fix turns both off.",
+  "midi-qol.Overlaps.Settings.customApplyBloodied": "Bloodied: apply status",
+  "midi-qol.Overlaps.Settings.customApplyDead": "Apply Dead / Apply Unconscious",
+  "midi-qol.Overlaps.Settings.monksAutoDefeated": "Auto defeated",
+  "midi-qol.Overlaps.Settings.customRerollInitiative": "Reroll initiative each round / Speed factor initiative",
+  "midi-qol.Overlaps.Settings.midiDamage": "damage application",
+  "midi-qol.Overlaps.Settings.customDamage": "Mob / Probabilistic damage",
   "midi-qol.RollChecksBlind.Name": "Which ability checks are rolled blind",
   "midi-qol.RollSavesBlind.Name": "Which ability saves are rolled blind",
   "midi-qol.RollSkillsBlind.Name": "Which skill checks are rolled blind",
@@ -1657,6 +1699,49 @@
       "other": "Midi Transforms"
     },
     "AlreadyTransformed": "{name} already Transformed"
+  },
+  "midi-qol.TELEPORT": {
+    "Title": {
+      "one": "Midi Teleport",
+      "other": "Midi Teleports"
+    },
+    "FIELDS": {
+      "midiTeleport": {
+        "label": "Midi Teleport",
+        "movers": {
+          "label": "Who Teleports",
+          "hint": "Caster and targets: the caster plans their move and you place each target within 5 ft of the caster's destination. Targets: you place each target within the teleport distance of the caster (use a save activity that triggers this one to move only those that fail)."
+        },
+        "blocked": {
+          "label": "Blocked Destination",
+          "hint": "Refuse: an occupied space, a wall, or (if required) a space the caster can't see is refused and you pick again. Fail: the teleport fails for everyone and the item's damage activity is used on the travellers (Dimension Door)."
+        },
+        "requireSight": {
+          "label": "Destination Must Be Seen",
+          "hint": "The caster must be able to see the destination (Misty Step: \"a space you can see\")."
+        }
+      }
+    },
+    "Movers": {
+      "default": "Controlled Tokens (dnd5e)",
+      "caster": "Caster",
+      "casterAndTargets": "Caster and Targets",
+      "targets": "Targets"
+    },
+    "BlockedModes": {
+      "refuse": "Refuse",
+      "fail": "Fail"
+    },
+    "Blocked": "{name} can't teleport there: {reason}.",
+    "Occupied": "the space is occupied",
+    "InWall": "the space is inside a wall",
+    "BehindWall": "a wall is in the way",
+    "NotSeen": "the caster can't see it",
+    "OutsideScene": "it is outside the scene",
+    "TooFar": "it is too far",
+    "NoSpace": "No free space for {name} next to the destination; it stays where it is.",
+    "NoGM": "{name} wasn't moved: a GM must be online to move a token you don't own.",
+    "Failed": "The teleport fails: a destination is occupied or blocked."
   },
   "midi-qol.fields": {
     "use-condition-header": "Midi Activity Allow Use Condition",
@@ -2328,6 +2413,11 @@
   "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.castLevel.label": "Cast Level",
   "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.excludeSource.label": "Exclude Source Token",
   "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.oncePerTurn.label": "Once Per Turn",
+  "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.activationEntry.label": "Entry On Activation",
+  "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.activationEntry.hint": "Tokens already inside count as entering when the behavior is created or enabled. Off when the casting activity already affected them.",
+  "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.moveDistance.label": "Move Each Turn",
+  "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.moveDirection.label": "Move Direction",
+  "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.moveTiming.label": "Move On",
   "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.wallRestriction.label": "Wall Restriction",
   "BEHAVIOR.TYPES.midi-qol.regionActivity.FIELDS.wallRestriction.hint": "Set the region's edge restriction type. Walls of the selected type will block the region boundary.",
   "midi-qol.REGION_BEHAVIOR.header": "Region Behaviour",
@@ -2357,6 +2447,16 @@
   "midi-qol.SHARED.FIELDS.regionBehavior.excludeSource.label": "Exclude Source Token",
   "midi-qol.SHARED.FIELDS.regionBehavior.oncePerTurn.label": "Once Per Turn",
   "midi-qol.SHARED.FIELDS.regionBehavior.oncePerTurn.hint": "Each activity triggers at most once per turn per creature (e.g. Spirit Guardians).",
+  "midi-qol.SHARED.FIELDS.regionBehavior.moveDistance.label": "Move Each Turn",
+  "midi-qol.SHARED.FIELDS.regionBehavior.moveDistance.hint": "In combat, the region moves this far (0: never) at the start or end of the caster's turn: away from the caster, or in a direction the caster's owner chooses (e.g. Cloudkill, Incendiary Cloud). Creatures it passes over enter it.",
+  "midi-qol.REGION_BEHAVIOR.moveDirection.away": "Away from caster",
+  "midi-qol.REGION_BEHAVIOR.moveDirection.choose": "Caster chooses",
+  "midi-qol.REGION_BEHAVIOR.moveTiming.start": "Start of caster's turn",
+  "midi-qol.REGION_BEHAVIOR.moveTiming.end": "End of caster's turn",
+  "midi-qol.REGION_BEHAVIOR.move.prompt": "Move {distance}:",
+  "midi-qol.REGION_BEHAVIOR.move.away": "Away",
+  "midi-qol.REGION_BEHAVIOR.move.stay": "Don't move",
+  "midi-qol.REGION_BEHAVIOR.move.noDirection": "{name} is centred on its caster, so has no direction away; not moved.",
   "midi-qol.SHARED.FIELDS.regionBehavior.wallRestriction.label": "Wall Restriction",
   "midi-qol.SHARED.FIELDS.regionBehavior.wallRestriction.hint": "Set the region's edge restriction type. Walls of the selected type will block the region boundary.",
   "midi-qol.REGION_BEHAVIOR.wallRestriction.none": "None",
@@ -2396,5 +2496,6 @@
     "none": "Nothing is rolled unless the activity names an other activity."
   },
   "midi-qol.defaultOtherActivity.Name": "Other Activity Default",
-  "midi-qol.defaultOtherActivity.Hint": "What <b>Default</b> means in an activity's Other Activity field. Many dnd5e items pair an attack with a save - poison, say - without linking the two."
+  "midi-qol.defaultOtherActivity.Hint": "What <b>Default</b> means in an activity's Other Activity field. Many dnd5e items pair an attack with a save - poison, say - without linking the two.",
+  "midi-qol.TargetNotEvaluated": "Added to the card after the roll: not checked by midi."
 }

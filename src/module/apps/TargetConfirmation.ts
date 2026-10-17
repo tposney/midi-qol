@@ -23,8 +23,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     maxTargets: number | null | undefined;
   };
   notAllowedTexture: PIXI.Texture | null = null;
-  hookId: number;
-  hoverHookId: number;
+  hookId: number | undefined;
+  hoverHookId: number | undefined;
+  moveHookId: number | undefined;
 
   constructor(actor: Actor.Implementation, activity: Activity, user: User.Implementation, options: TargetConfirmationOptions = {}) {
     super(options);
@@ -58,27 +59,6 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         for (let target of game.user?.targets)
           markFlanking(token, target)
     }
-    // this.callback = options.callback;
-    this.hookId = Hooks.on("targetToken", (user, token, targeted) => {
-      if (user !== game.user) return;
-      if (game.user.targets) {
-        this.validateAndUpdateTargets();
-      }
-      // Validate max number of targets after target validation, so that invalid targets can be removed without triggering a warning
-      if (this.data.maxTargets && game.user.targets?.size > this.data.maxTargets)
-        ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets: this.data.maxTargets }));
-
-      const newTargets = Array.from(game.user.targets ?? []);
-      // Do not re-render if the targets have not changed
-      if (!newTargets.equals(this.data.targets ?? [])) {
-        this.data.targets = newTargets;
-        this.render();
-      }
-    });
-
-    this.hoverHookId = Hooks.on("hoverToken", (token, hovered) => {
-        this.hoverToken(token, hovered);
-    });
     return this;
   }
 
@@ -422,10 +402,47 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     }
   }
 
-  close(options = {}) {
-    Hooks.off("targetToken", this.hookId);
-    Hooks.off("hoverToken", this.hoverHookId);
+  /** Hooks are added once shown and removed on any close, so a dialog that never renders leaves none behind. */
+  async _onFirstRender(context, options) {
+    await super._onFirstRender(context, options);
+    this.hookId = Hooks.on("targetToken", (user, token, targeted) => {
+      if (user !== game.user) return;
+      if (game.user.targets) {
+        this.validateAndUpdateTargets();
+      }
+      // Validate max number of targets after target validation, so that invalid targets can be removed without triggering a warning
+      if (this.data.maxTargets && game.user.targets?.size > this.data.maxTargets)
+        ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets: this.data.maxTargets }));
+
+      const newTargets = Array.from(game.user.targets ?? []);
+      // Do not re-render if the targets have not changed
+      if (!newTargets.equals(this.data.targets ?? [])) {
+        this.data.targets = newTargets;
+        this.render();
+      }
+    });
+
+    this.hoverHookId = Hooks.on("hoverToken", (token, hovered) => {
+        this.hoverToken(token, hovered);
+    });
+    // The cover and range shown depend on where the attacker and targets are.
+    const refresh = foundry.utils.debounce(() => { if (this.rendered) this.render(); }, 100);
+    this.moveHookId = Hooks.on("updateToken", (tokenDocument, changed) => {
+      if (!("x" in changed || "y" in changed || "elevation" in changed)) return;
+      const attacker = tokenForActor(this.data.actor);
+      if (tokenDocument.id === attacker?.id || [...(game.user?.targets ?? [])].some(t => t.id === tokenDocument.id)) refresh();
+    });
+  }
+
+  async _onClose(options) {
+    if (this.hookId !== undefined) Hooks.off("targetToken", this.hookId);
+    if (this.hoverHookId !== undefined) Hooks.off("hoverToken", this.hoverHookId);
+    if (this.moveHookId !== undefined) Hooks.off("updateToken", this.moveHookId);
     this.removeAllNotAllowedOverlays();
+    return super._onClose(options);
+  }
+
+  close(options = {}) {
     this.doCallback(false);
     return super.close(options);
   }

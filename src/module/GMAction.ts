@@ -1,7 +1,7 @@
 import { checkRule, configSettings } from "./settings.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter } from "./utils.js";
+import { getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
@@ -373,7 +373,7 @@ async function updateItems(data: { actorUuid: string, updates: Item.UpdateData[]
 
 async function _toggleStatusEffect(data: { actorUuid: string, statusId: string, options: Actor.ToggleStatusEffectOptions }) {
   const actor = fromActorUuid(data.actorUuid);
-  return actor?.toggleStatusEffect(data.statusId, data.options);
+  return toggleStatus(actor, data.statusId, data.options);
 }
 
 function removeActorStats(data: { actorId: string }) {
@@ -2309,8 +2309,8 @@ async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: 
   const snappedCenter = canvas.grid.getSnappedPoint(data.newCenter, { mode: CONST.GRID_SNAPPING_MODES.CENTER });
   const newPosition: Record<string, any> = { x: snappedCenter.x - targetToken.w / 2, y: snappedCenter.y - targetToken.h / 2 };
   if (data.newCenter.elevation !== undefined) newPosition.elevation = data.newCenter.elevation;
-  // teleport uses "displace" action: instant, ignores walls/tokens
-  const action = teleport ? "displace" : CONFIG.Token.movement.defaultAction;
+  // teleport uses dnd5e's "blink" action (as its Teleport activity does); walls and tokens are ignored below
+  const action = teleport ? "blink" : CONFIG.Token.movement.defaultAction;
   const waypoint = { ...newPosition, action, forced: true, snapped: true };
   const moveOptions: Record<string, any> = { constrainOptions: { ignoreWalls: teleport || ignoreWalls, ignoreCost: true, ignoreTokens: teleport || ignoreTokens }, autoRotate };
   // Use animate: false for instant moves — this skips Foundry's #onUpdateAnimation entirely,

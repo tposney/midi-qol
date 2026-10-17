@@ -31,6 +31,19 @@
         </span>
       </span>
     </div>
+    {{#if save.damageLine}}<div class="midi-qol-save-damage">{{save.damageLine}}</div>{{/if}}
+  </li>
+  {{/each}}
+  {{#each unevaluated}}
+  <li class="midi-qol midi-qol-save-class target midi-qol-target-select" data-id="{{this.id}}"
+    data-tooltip="{{localize 'midi-qol.TargetNotEvaluated'}}">
+    <i class="fas fa-question"></i>
+    <img class="midi-qol-save-img" src="{{this.img}}" />
+    <div class="midi-qol-target-name midi-qol-save-name" id="{{this.id}}" data-uuid="{{this.uuid}}">
+      <div class="name-stacked">
+        <span class="midi-qol-target-name title">{{this.name}}</span>
+      </div>
+    </div>
   </li>
   {{/each}}
 </ul>

@@ -393,8 +393,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       let rolls;
       const workflow = config.workflow;
       config.midiOptions ??= {};
-      // @ts-expect-error
-      const areKeysPressed = game.system.utils.areKeysPressed;
 
       try {
         if (debugEnabled > 0) warn("MidiQOL | AttackActivity | rollAttack | Called", config, dialog, message);
@@ -429,19 +427,14 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         }
         const effectiveForceRollDialog = getEffectiveForceRollDialog(this);
 
-        // Determine dialog.configure based on forceRollDialog setting and shift key
-        // Alt/Ctrl (advantage/disadvantage) are handled by dnd5e, only shift key skips dialog
-        if (areKeysPressed(config.event, "skipDialogNormal")) {
-          // Shift key pressed - skip dialog unless forceRollDialog="always"
-          dialog.configure = effectiveForceRollDialog === "always";
-        } else if (effectiveForceRollDialog === "always") {
-          dialog.configure = true;
-        } else if (effectiveForceRollDialog === "never") {
-          dialog.configure = false;
-        } else {
-          // "default" - use fast forward settings
-          dialog.configure = !isAutoFastForward("attack", { workflow });
-        }
+        // Roll Toggle inverts fast forward and alone decides whether the dialog shows; without it, a fast forwarded
+        // attack skips the dialog and otherwise dnd5e's skip keys (Shift, Alt, Ctrl) decide, as for dnd5e's own rolls.
+        const fastForward = isAutoFastForward("attack", { workflow });
+        if (effectiveForceRollDialog === "always") dialog.configure = true;
+        else if (effectiveForceRollDialog === "never") dialog.configure = false;
+        else if (workflow?.rollOptions?.rollToggle) dialog.configure = fastForward;
+        else if (fastForward) dialog.configure = false;
+        else dialog.configure = undefined;
 
         // Ammo confirmation always requires dialog
         if (requiresAmmoConfirmation) {
@@ -465,7 +458,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
 
         hookIds["dnd5e.preRollAttack"] = Hooks.once("dnd5e.preRollAttack", (rollConfig, dialogConfig, messageConfig) => {
           if (workflow?.aborted) return false;
-          if (workflow?.rollOptions?.rollToggle) dialogConfig.configure = !dialogConfig.configure;
           if (configSettings.checkTwoHanded && ["twoHanded", "offhand"].includes(rollConfig.attackMode)) {
             // check equipment - shield other weapons for equipped status
             // @ts-expect-error no dnd5e-types
@@ -479,10 +471,11 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           // Apply roll modifiers (auto-fail/success, min/max) for attack rolls
           const actType = this.actionType;
           const attackModifierFlags: RollModifierFlags = {
-            failFlags: ["fail.all", "fail.attack.all", `fail.attack.${actType}`],
-            successFlags: ["success.all", "success.attack.all", `success.attack.${actType}`],
-            maxFlags: ["max.attack.all", `max.attack.${actType}`],
-            minFlags: ["min.attack.all", `min.attack.${actType}`]
+            failFlags: ["fail.all"],
+            successFlags: ["success.all"],
+            maxFlags: [],
+            minFlags: [],
+            fieldPaths: [`abilities.${this.ability}.attack.roll`, "rolls.attack", `rolls.attack.${actType}`]
           };
           if (workflow?.attackRollModifierTracker) {
             // Again now dnd5e has built the rolls: a denial has to clear the advantage it put in their options.
@@ -849,6 +842,8 @@ export async function computeAttackAdvantage(
       ...(attackSchool ? [`noDisadvantage.attack.school.${attackSchool}`] : [])
     ],
     systemRollModeFields: [...(abilityId ? [`abilities.${abilityId}.attack.roll.mode`] : []), "rolls.attack.mode", `rolls.attack.${actionType}.mode`],
+    // Resolved by checkAttackAdvantage once the workflow's own sources (range, flanking, visibility) are in
+    deferDnd5eResolution: true,
     ...(options.workflow?.activity ? { systemRules: { category: "attack" as const, item: options.workflow.activity.item,
       // @ts-expect-error no dnd5e-types
       rollData: options.workflow.activity.getRollData({ roll: { ability: abilityId, attackMode: options.workflow.attackMode } }) } } : {}),

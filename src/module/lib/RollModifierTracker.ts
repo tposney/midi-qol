@@ -4,6 +4,7 @@
 
 import { RollDialogConfig, RollProcessConfig } from "../../globals.js";
 import { GameSystemConfig, i18n, i18nFormat } from "../../midi-qol.js";
+import { rollFieldName } from "../rollFields.js";
 import { createConditionData, evalAllConditions, evalAllConditionsAsync, tokenForActor, MidiOptions } from "../utils.js";
 
 /** Attribution types for roll modifier tracking */
@@ -20,6 +21,8 @@ export interface RollModifierFlags {
   successFlags: string[];
   maxFlags: string[];
   minFlags: string[];
+  /** dnd5e roll fields (e.g. "abilities.dex.save.roll") whose fail/success conditions apply to the roll */
+  fieldPaths?: string[];
 }
 
 export interface CriticalModifierFlags {
@@ -51,6 +54,9 @@ export interface AdvantageFlags {
   sourceDisadvantageFlags?: string[];
   sourceNoAdvantageFlags?: string[];
   sourceNoDisadvantageFlags?: string[];
+  // dnd5e decides the roll's advantage from midi's sources with its mode fields and rules; deferred, it is left to
+  // resolvePendingAdvantage once the caller has added its own sources
+  deferDnd5eResolution?: boolean;
 }
 
 // Helper to get flag path with midi-qol prefix
@@ -71,12 +77,16 @@ function resolveKeyLabel(key: string): string {
   const dmgLabel = GameSystemConfig.damageTypes?.[key]?.label;
   if (dmgLabel) return dmgLabel;
   const toolLabel = globalThis.dnd5e?.documents?.Trait?.keyLabel?.(`tool:${key}`);
-  if (toolLabel) return toolLabel;
+  // keyLabel returns the key itself for an unknown tool
+  if (toolLabel && toolLabel !== `tool:${key}`) return toolLabel;
   return key;
 }
 
 // Helper to get a human-readable display name for a midi-qol flag path
 export function getFlagDisplayName(flag: string): string {
+  const fieldName = rollFieldName(flag);
+  if (fieldName) return fieldName;
+
   // Tier 1: Check DAE localizationMap (covers ~95% of template-generated flags)
   const lmEntry = globalThis.DAE?.localizationMap?.[midiFlag(flag)];
   if (lmEntry?.name) return lmEntry.name;
@@ -198,6 +208,15 @@ export class AdvantageDisadvantageTracker {
     if (source !== undefined) {
       this.#addAttribution(this.#type, source, displayName ?? source);
     }
+  }
+
+  /**
+   * Add a source that no suppression can remove, as dnd5e adds a held advantage/disadvantage key to the roll: it still
+   * cancels against the other side.
+   */
+  addUnsuppressed(source: string, displayName?: string): void {
+    this.add(source, displayName);
+    this.#suppressed = false;
   }
 
   /**
@@ -711,14 +730,14 @@ export class RollModifierTracker {
         if (keys.normal)
           this.disadvantage.setOverride(source, i18n("midi-qol.KeyPress"));
         else
-          this.disadvantage.add(source, i18n("midi-qol.KeyPress"));
+          this.disadvantage.addUnsuppressed(source, i18n("midi-qol.KeyPress"));
       }
       if (keys.advantage) {
         const source = keys.normal ? "forcedKeyPress" : "keyPress";
         if (keys.normal)
           this.advantage.setOverride(source, i18n("midi-qol.ForcedKeyPress"));
         else
-          this.advantage.add(source, i18n("midi-qol.KeyPress"));
+          this.advantage.addUnsuppressed(source, i18n("midi-qol.KeyPress"));
       }
     }
   }
@@ -849,45 +868,111 @@ export async function computeAdvantageFlags(
     }
   }
 
-  // Check system roll mode fields
-  if (flags.systemRollModeFields?.length) {
-    for (const field of flags.systemRollModeFields) {
-      const rollMode = foundry.utils.getProperty(actor.system, field);
-      if (rollMode === 1) {
-        tracker.advantage.add("system.rollMode", "System Roll Mode");
-      } else if (rollMode === -1) {
-        tracker.disadvantage.add("system.rollMode", "System Roll Mode");
+  if (flags.deferDnd5eResolution) pendingResolutions.set(tracker, { actor, flags });
+  else resolveWithDnd5e(actor, flags, tracker);
+  return tracker;
+}
+
+const pendingResolutions = new WeakMap<RollModifierTracker, { actor: Actor.Implementation, flags: AdvantageFlags }>();
+
+/** Let dnd5e decide a tracker's deferred advantage, after all of midi's sources are in. */
+export function resolvePendingAdvantage(tracker: RollModifierTracker): void {
+  const pending = pendingResolutions.get(tracker);
+  if (!pending) return;
+  pendingResolutions.delete(tracker);
+  resolveWithDnd5e(pending.actor, pending.flags, tracker);
+}
+
+type AdvantageCounts = { override: number | null, advantages: { count: number, suppressed: boolean }, disadvantages: { count: number, suppressed: boolean } };
+
+/** midi's sources so far, as dnd5e's advantage counts. */
+function trackerCounts(tracker: RollModifierTracker): AdvantageCounts {
+  const advantage = tracker.advantage.get;
+  const disadvantage = tracker.disadvantage.get;
+  const override = advantage.override && disadvantage.override ? 0 : advantage.override ? 1 : disadvantage.override ? -1 : null;
+  return {
+    override,
+    advantages: { count: Number(advantage.active), suppressed: advantage.suppressed && !advantage.override },
+    disadvantages: { count: Number(disadvantage.active), suppressed: disadvantage.suppressed && !disadvantage.override }
+  };
+}
+
+/** Attribute each source of a dnd5e roll mode field: the actor's own value and the effect changes to it. */
+function attributeModeField(actor: Actor.Implementation, field: string, tracker: RollModifierTracker): void {
+  // @ts-expect-error no dnd5e-types
+  const own = foundry.utils.getProperty(actor.system._source, field);
+  if (own === 1) tracker.advantage.add(`${field}:actor`, i18n("midi-qol.Dnd5eRollMode.Actor"));
+  else if (own === -1) tracker.disadvantage.add(`${field}:actor`, i18n("midi-qol.Dnd5eRollMode.Actor"));
+  for (const effect of actor.appliedEffects) {
+    // @ts-expect-error fvtt-types v14 ActiveEffect
+    for (const change of effect.system.changes as { key: string, type: string, value: unknown, applied?: boolean | null }[]) {
+      // dnd5e marks the changes it applied; one whose conditions failed is not a source
+      if (change.key !== `system.${field}` || !change.applied) continue;
+      const value = Number(change.value);
+      const source = `${field}:${effect.id}`;
+      const name = i18nFormat("midi-qol.Dnd5eRollMode.Effect", { name: effect.name });
+      switch (change.type) {
+        case "add":
+          if (value === 1) tracker.advantage.add(source, name);
+          else if (value === -1) tracker.disadvantage.add(source, name);
+          break;
+        case "downgrade":
+          tracker.advantage.suppress(source, name);
+          if (value === -1) tracker.disadvantage.add(source, name);
+          break;
+        case "upgrade":
+          tracker.disadvantage.suppress(source, name);
+          if (value === 1) tracker.advantage.add(source, name);
+          break;
+        case "override":
+          if (value === 1) tracker.advantage.setOverride(source, name);
+          else if (value === -1) tracker.disadvantage.setOverride(source, name);
+          else {
+            tracker.advantage.suppress(source, name);
+            tracker.disadvantage.suppress(source, name);
+          }
+          break;
       }
     }
   }
+}
 
+/**
+ * dnd5e decides advantage: midi's sources are passed as counts to its combination of the roll's mode fields and
+ * advantage rules, so suppression and overrides across all of them follow dnd5e. The tracker keeps every source for
+ * display, and its state is set to dnd5e's verdict. Key presses are not sources here; dnd5e adds them to the roll.
+ */
+function resolveWithDnd5e(actor: Actor.Implementation, flags: AdvantageFlags, tracker: RollModifierTracker): void {
+  let counts = trackerCounts(tracker);
+  const hadAdvantage = tracker.advantage.isAdded;
+  const hadDisadvantage = tracker.disadvantage.isAdded;
   if (flags.systemRules) {
     const { category, rollData, item } = flags.systemRules;
     // @ts-expect-error no dnd5e-types
-    const rules: Iterable<{ value?: unknown, effect?: { name: string } }> = dnd5e.documents.AppliedRules
-      .collect(`${category}:advantage`, actor, item).filterWith(rollData);
-    for (const rule of rules) {
+    const rules = dnd5e.documents.AppliedRules.collect(`${category}:advantage`, actor, item).filterWith(rollData);
+    const ruleList: Array<{ value?: unknown, effect?: { name: string } }> = [...rules];
+    // @ts-expect-error no dnd5e-types
+    counts = dnd5e.documents.AppliedRules.createIterator(ruleList).toAdvantageCounts(counts);
+    for (const rule of ruleList) {
       const name = rule.effect?.name ?? "System Rule";
       switch (String(rule.value)) {
-        case "1": case "+1": tracker.advantage.add("system.rule", name); break;
-        case "-1": tracker.disadvantage.add("system.rule", name); break;
-        case "=1": case "=+1":
-          tracker.advantage.add("system.rule", name);
-          tracker.advantage.setOverride("system.rule", name);
-          tracker.disadvantage.suppress("system.rule", name);
-          break;
-        case "=-1":
-          tracker.disadvantage.add("system.rule", name);
-          tracker.disadvantage.setOverride("system.rule", name);
-          tracker.advantage.suppress("system.rule", name);
-          break;
-        case "<=0": tracker.advantage.suppress("system.rule", name); break;
-        case ">=0": tracker.disadvantage.suppress("system.rule", name); break;
+        case "1": case "+1": tracker.advantage.add(`rule:${name}`, name); break;
+        case "-1": tracker.disadvantage.add(`rule:${name}`, name); break;
+        case "=1": case "=+1": tracker.advantage.setOverride(`rule:${name}`, name); break;
+        case "=-1": tracker.disadvantage.setOverride(`rule:${name}`, name); break;
+        case "<=0": tracker.advantage.suppress(`rule:${name}`, name); break;
+        case ">=0": tracker.disadvantage.suppress(`rule:${name}`, name); break;
       }
     }
   }
-
-  return tracker;
+  for (const field of flags.systemRollModeFields) attributeModeField(actor, field, tracker);
+  // @ts-expect-error no dnd5e-types
+  const verdict: { advantage: boolean, disadvantage: boolean } = dnd5e.dataModels.fields.AdvantageModeField
+    .combineFields(actor.system, flags.systemRollModeFields, counts);
+  const advantageClaimed = hadAdvantage || tracker.advantage.isAdded;
+  const disadvantageClaimed = hadDisadvantage || tracker.disadvantage.isAdded;
+  tracker.advantage.restore({ active: verdict.advantage || advantageClaimed, suppressed: advantageClaimed && !verdict.advantage, override: false });
+  tracker.disadvantage.restore({ active: verdict.disadvantage || disadvantageClaimed, suppressed: disadvantageClaimed && !verdict.disadvantage, override: false });
 }
 
 /**
@@ -907,16 +992,20 @@ export function computeRollModifiers(
 ): void {
   const conditionData = createConditionData({ workflow: options?.workflow, actor, target: tokenForActor(actor) });
 
-  // Evaluate auto-fail flags
-  for (const flag of flags.failFlags) {
+  // Evaluate auto-fail: the dnd5e roll fields, then midi flags
+  const failField = (flags.fieldPaths ?? []).find(path => evalAllConditions(actor, `system.${path}.fail`, conditionData, false));
+  if (failField) tracker.modifiers.fail(`${failField}.fail`, rollFieldName(`${failField}.fail`) ?? `${failField}.fail`);
+  else for (const flag of flags.failFlags) {
     if (evalAllConditions(actor, midiFlag(flag), conditionData, false)) {
       tracker.modifiers.fail(flag, getFlagDisplayName(flag));
       break;
     }
   }
 
-  // Evaluate auto-success flags
-  for (const flag of flags.successFlags) {
+  // Evaluate auto-success: the dnd5e roll fields, then midi flags
+  const successField = (flags.fieldPaths ?? []).find(path => evalAllConditions(actor, `system.${path}.success`, conditionData, false));
+  if (successField) tracker.modifiers.succeed(`${successField}.success`, rollFieldName(`${successField}.success`) ?? `${successField}.success`);
+  else for (const flag of flags.successFlags) {
     if (evalAllConditions(actor, midiFlag(flag), conditionData, false)) {
       tracker.modifiers.succeed(flag, getFlagDisplayName(flag));
       break;

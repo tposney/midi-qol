@@ -341,6 +341,34 @@ const workflow2 = await MidiQOL.completeItemUse(item, {
 });
 ```
 
+### canSee / canSense / canSenseModes
+
+```js
+MidiQOL.canSee(token, target, { forceVision })                    // boolean: sees by a sight-based sense
+MidiQOL.canSense(token, target, validModes = ["all"], { forceVision })  // boolean: senses by any of validModes
+MidiQOL.canSenseModes(token, target, validModes = ["all"], { forceVision }) // the detection modes that work
+```
+
+Whether `token` perceives `target`, with walls, lighting, levels and the token's detection modes. A token without vision enabled perceives everything (`["senseAll"]`) unless *Force vision when checking* is on or `forceVision: true` is passed, in which case it is checked as if its vision were enabled. The check never changes the token.
+
+### getCoverBonus
+
+```js
+MidiQOL.getCoverBonus(attacker, target, activity?) // number
+```
+
+The AC bonus from cover midi applies to `target` against `attacker`: total cover if the target has the *Cover Total* status, otherwise the larger of the cover status bonus and the cover midi computes.
+
+### highlightTokens
+
+```js
+const highlight = MidiQOL.highlightTokens(tokens, { color });
+highlight.setActive(token); // pulse one token brighter; none when omitted
+highlight.remove();
+```
+
+Pulsing rings around `tokens`, shown only on this client (e.g. the tokens a choice applies to). `color` defaults to the user's colour.
+
 ### reactionDialog
 
 ```js
@@ -380,6 +408,8 @@ The passed workflow is "live" so changes will affect subsequent actions. `preAtt
 | `midi-qol.preCheckSaves` | void | Before auto checking saves |
 | `midi-qol.postCheckSaves` | void | After saves checked |
 | `midi-qol.postActiveEffects` | void | After effects applied |
+| `midi-qol.preTeleport` | boolean | Teleport activity (dnd5e 6): `(workflow, { maxDistance, tokens, movers })` before anyone moves. Change `tokens` to change who moves; return false to cancel. dnd5e's `dnd5e.preTeleport` fires first. |
+| `midi-qol.postTeleport` | void | Teleport activity: `(workflow, results)` after the moves (each `{ token, plan, moved }`). |
 | `midi-qol.RollComplete` | void | After workflow completed |
 | `midi-qol.ReactionFilter` | async | Filter reactions |
 
@@ -484,6 +514,8 @@ flags.midi-qol.onUseMacroName CUSTOM macro,macroPass
 | `preDamageApplication` | Before damage applied |
 | `preActiveEffects` | Before effects applied |
 | `postActiveEffects` | After effects applied |
+| `preTeleport` | Teleport activity (dnd5e 6), before anyone moves. `options.teleport` holds `maxDistance` and `tokens` (change them to change who moves); return false to cancel |
+| `postTeleport` | Teleport activity, after the moves. `options.teleport.results` lists each token, its plan and whether it moved |
 | `all` | Called at each pass above |
 
 **Workflow State Passes (dynamically generated):**

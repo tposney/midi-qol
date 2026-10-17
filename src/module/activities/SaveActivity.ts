@@ -108,7 +108,7 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
       const dc = (button.dc === undefined || button.dc === "") ? NaN : Number(button.dc);
       for (const token of targets) {
         const actor = token instanceof Actor ? token : token.actor;
-        const tokenDocument = token instanceof Token ? token.document : token instanceof TokenDocument ? token : null;
+        const tokenDocument = token instanceof foundry.canvas.placeables.Token ? token.document : token instanceof TokenDocument ? token : null;
         const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: tokenDocument });
         const message: AnyMutableObject = { data: { speaker } };
         // if (!actor?.hasPlayerOwner && workflow) message.create = false - this breaks save checking from chat card

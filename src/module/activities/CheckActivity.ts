@@ -110,7 +110,7 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
 
       for (const token of targets) {
         const actor = token instanceof Actor ? token : token.actor;
-        const tokenDocument = token instanceof Token ? token.document : token instanceof TokenDocument ? token : null;
+        const tokenDocument = token instanceof foundry.canvas.placeables.Token ? token.document : token instanceof TokenDocument ? token : null;
         const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: tokenDocument });
         const messageData: AnyMutableObject = { data: { speaker } };
         if (!actor) continue;

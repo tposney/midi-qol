@@ -71,26 +71,33 @@ Midi-QOL is highly configurable with quick-start presets for common play styles,
    - **Important:** Each player must enable this on their client!
 
 3. **Use Quick Settings** (recommended for new users):
-   - Open Midi-QOL settings and go to the **Quick** tab
+   - Open Midi-QOL settings and go to the **Quick Settings** tab
    - Click a preset button to apply a combination of settings at once
 
 ## Quick Settings Presets
 
-The **Quick** tab in settings provides one-click presets:
+The **Quick Settings** tab in settings provides one-click presets:
 
 | Preset | Description |
 |--------|-------------|
-| **Full Automation** | Minimal button presses - everything automated |
-| **No Automation** | All rolls manual - traditional play |
-| **GM Attack/Damage: Auto** | GM rolls automated, players manual |
+| **Full Automation: As few button presses as possible** | Minimal button presses - everything automated |
+| **No Automation: All rolls manual** | All rolls manual - traditional play |
+| **GM Attack/Damage: Automatic** | GM auto rolls attack and damage (Damage Roll Needed), fast forwards both, removes attack and damage buttons, applies effects |
 | **GM Attack/Damage: Manual** | GM rolls manual |
-| **Player Attack/Damage: Auto** | Player rolls automated |
-| **Player Attack/Damage: Manual** | Player rolls manual |
-| **Auto Hits/Saves/Damage** | Automatic hit checking, saves, and damage application |
-| **No Hits/Saves/Damage** | Manual hit/save/damage handling |
-| **Show Item Info** | Display item details in chat cards |
+| **Show Item Info in chat card** | Item details on cards for all item types |
+| **Player Attack/Damage Roll: Automatic** | Player auto rolls attack and damage (Damage Roll Needed), fast forwards both, removes attack and damage buttons |
+| **Player Attack/Damage Roll: Manual** | Player rolls manual |
+| **Automatic Hits/Saves/damage application** | Checks hits and saves, players prompted by chat message (30 second timeout), NPC saves auto rolled, auto targets templates, applies effects, Yes + damage card |
+| **No Hits/Saves/damage application automation** | No hit/save checks, effects or damage applied; saves prompted by chat message |
+| **Turn on Reaction processing** | Player and GM reactions on, 30 second timeout, enforce reactions, record attacks of opportunity; turns on hit/save checks, save prompts and the damage card if off |
+| **Turn off Reaction processing** | Reactions off |
+| **Enable Concentration Automation** | Enables dnd5e concentration tracking, remove concentration on a failed save, single concentration check |
+| **Allow GM to fudge damage application (display but no auto apply)** | Auto apply damage: No + damage card |
+| **Disable Concentration Automation** | Disables dnd5e concentration tracking |
+| **Secret Squirrel: Hide most GM roll info from players** | GM attack/damage rolls Hidden with No Dice, NPC names hidden, hit/save results GM only (when auto checked), dnd5e Challenge Visibility Hide all |
+| **Full Disclosure: Players see the details of all GM rolls and the results** | GM attack/damage rolls Full Roll with Show Dice, NPC names shown, hit/save results shown to all (when auto checked), dnd5e Challenge Visibility Show all |
 
-These presets modify multiple settings at once and show you exactly what changed.
+Each preset lists the changes and asks before applying them.
 
 ## Manual Configuration
 
@@ -98,21 +105,20 @@ If you prefer to configure settings manually, here's a recommended full automati
 
 | Setting | Tab | Value |
 |---------|-----|-------|
-| Merge to One Card | Misc | Checked |
-| Auto Target on Template | Workflow | Walls Block |
-| GM Auto Roll Attack | GM | Checked |
-| GM Auto Roll Damage | GM | Always |
-| GM Auto Fast Forward Rolls | GM | Attack, Damage |
-| Player Auto Roll Attack | Player | Checked |
-| Player Auto Roll Damage | Player | Attack Hits |
-| Player Auto Fast Forward Rolls | Player | Attack, Damage |
-| Auto Check Hits | Workflow | On |
-| Auto Check Saves | Workflow | Save - players see results |
-| Players Roll Saves | Workflow | Auto roll and show roll dialog |
-| Player Save Timeout | Workflow | 30 seconds |
-| Auto Apply Damage | Workflow | Yes + undo card |
-| Damage Immunities | Workflow | Apply + physical |
-| Auto Apply Item Effects | Workflow | Checked |
+| Auto target on template draw | Workflow | Walls Block |
+| Auto roll attack | GM | Checked |
+| Auto roll damage | GM | Always |
+| Auto fast forward rolls | GM | Attack Rolls, Damage Rolls |
+| Auto roll attack | Player | Checked |
+| Auto roll damage | Player | Damage Roll Needed |
+| Auto fast forward rolls | Player | Attack Rolls, Damage Rolls |
+| Auto check if attack hits target | Workflow | Check - all see result |
+| Auto check Saves | Workflow | Save - All see result + save total |
+| Prompt Players to Roll Saves | Workflow | Auto roll and show roll dialog (private roll) |
+| Timeout before rolling for players | Workflow | 30 seconds |
+| Auto apply damage to target | Workflow | Yes + damage card |
+| Apply Damage immunities | Workflow | apply immunities + physical |
+| Auto apply item effects | Workflow | Apply Effects and remove button |
 
 > [!tip] Navigation
 > See [Configuration Reference](#configuration-reference) for all available settings.
@@ -225,33 +231,33 @@ If you prefer to configure settings manually, here's a recommended full automati
 
 | Setting | Description |
 |---------|-------------|
+| Auto fast forward rolls | Multi-select: which roll types to fast-forward (Attack Rolls/Damage Rolls/Ability Checks/Saving Throws/Skill Rolls/Tool Rolls). Skills are separate from ability checks for finer control. (Restructured in 13.0.43 from a single toggle to per-roll-type multi-select) |
+| Auto roll attack | When item is rolled, automatically roll the attack |
+| Skip consume resource dialog | No Auto consume, Auto consume spell slot, Auto consume resources/uses, Auto consume resources/spell slots |
+| Confirm Ammunition choice when rolling attack - shows attack roll configuration | Prompt before consuming ammunition |
+| Require ammunition available to roll attack | Require ammunition for ranged attacks |
+| Auto roll damage | Never/Always/Saving Throw Only/Damage Roll Needed |
+| All damage/critical rolls are 'average' results | None/NPC only damage rolls/Character ony damage rolls/All damage rolls |
+| Remove chat card buttons after roll | Off/Attack Only/Damage Only/Attack and Damage/All Buttons |
+| GM Attack Roll Display | GM Roll Hiding: what players see for GM attack rolls (Full Roll, Hide Formula, D20 Only, Attack Total Only, Hit/Miss Only, Hit/Miss/Critical/Fumble, Hidden), plus a Dice So Nice select (Show Dice/Ghost Dice/No Dice) |
+| GM Damage Roll Display | GM Roll Hiding: what players see for GM damage rolls (Full Roll/Damage Total Only/Hidden), plus a Dice So Nice select (Show Dice/Ghost Dice/No Dice) |
+| Show players when the GM rolls privately | When the GM rolls with a private, self or blind roll mode, other players see the card as a "rolled some dice" stand-in instead of nothing. "Really Hide private/blind/self-rolls" still hides it |
+| Add fake dice to GM Dice So Nice rolls | Adds random extra dice to the DSN animation so players can't count dice to deduce modifiers |
 | Preferred GM | Preferred GM for socket calls. If 'none' the first GM on the current scene will be used. (Migrated from module settings into the config panel in 13.0.43) |
-| Auto Roll Attack | When item is rolled, automatically roll the attack |
-| Consume Resource | Skip consume resource dialog (None/Spell slot/Resources/Both) |
-| Confirm Ammunition | Prompt before consuming ammunition |
-| Require Ammunition | Require ammunition for ranged attacks |
-| Auto Roll Damage | Automatically roll damage (Never/Always/Attack Hits) |
-| Average Damage | Use average damage instead of rolling |
-| Auto Fast Forward Rolls | Multi-select: which roll types to fast-forward (Attack/Damage/Ability Checks/Saving Throws/Skills/Tools). Skills are separate from ability checks for finer control. (Restructured in 13.0.43 from a single toggle to per-roll-type multi-select) |
-| Remove Buttons | Remove chat card buttons after roll (Off/Attack/Damage/All) |
-| Hide Roll Details | Choose how much of GM rolls to hide from players |
-| GM Sees All Whispered Messages | GM sees all whispered chat messages |
-| Show Attack/Damage Cards | Show separate attack/damage cards for deception |
-| Hide 3D Dice | Hide Dice So Nice for GM attack/damage/save rolls |
-| Ghost Rolls | Display with Dice So Nice ghost rolls rather than hiding |
-| Add Fake Dice | Add fake dice to confuse players |
+
+"GM Sees all whispered messages" is a module setting (Configure Settings → midi-qol), not on this tab.
 
 ## Player Tab
 
 | Setting | Description |
 |---------|-------------|
-| Auto Roll Attack | When item is rolled, automatically roll the attack |
-| Consume Resource | Skip consume resource dialog (None/Spell slot/Resources/Both) |
-| Confirm Ammunition | Prompt before consuming ammunition |
-| Require Ammunition | Require ammunition for ranged attacks |
-| Auto Roll Damage | Automatically roll damage (Never/Always/Attack Hits/Save Only) |
-| Auto Fast Forward Rolls | Multi-select: which roll types to fast-forward (Attack/Damage/Ability Checks/Saving Throws/Skills/Tools). Also applies to chat card buttons. Skills are separate from ability checks for finer control. (Restructured in 13.0.43 from a single toggle to per-roll-type multi-select) |
-| Remove Buttons | Remove chat card buttons after roll (Off/Attack/Damage/All) |
+| Auto fast forward rolls | Multi-select: which roll types to fast-forward (Attack Rolls/Damage Rolls/Ability Checks/Saving Throws/Skill Rolls/Tool Rolls). Also applies to chat card buttons. Skills are separate from ability checks for finer control. (Restructured in 13.0.43 from a single toggle to per-roll-type multi-select) |
+| Auto roll attack | When item is rolled, automatically roll the attack |
+| Skip consume resource dialog | No Auto consume, Auto consume spell slot, Auto consume resources/uses, Auto consume resources/spell slots |
+| Confirm Ammunition choice when rolling attack - shows attack roll configuration | Prompt before consuming ammunition |
+| Require ammunition available to roll attack | Require ammunition for ranged attacks |
+| Auto roll damage | Never/Always/Saving Throw Only/Damage Roll Needed |
+| Remove chat card buttons after roll | Off/Attack Only/Damage Only/Attack and Damage/All Buttons |
 
 ## Workflow Tab
 
@@ -259,12 +265,10 @@ If you prefer to configure settings manually, here's a recommended full automati
 
 | Setting | Description |
 |---------|-------------|
-| Auto Target on Template | When placing a template auto-target tokens inside (None/Always/Walls Block/Walled Templates). Now uses a Hook for better compatibility with other modules (13.0.47). Supports multiple templates per item (13.0.43). |
-| Range Target | Auto-target for radius/emanation spells if target type is creature/enemy/ally |
-| Require Targets | Require tokens to be targeted before rolls (Never/In Combat/Always) |
-| Enforce Single Weapon Target | Limit weapon attacks to single target |
-| Constrain Template Placement | Anchor ray/cone templates to token edge, and constrain template placement to item range. (Renamed from "Anchor Ray/Cone Templates" in 13.0.45) |
-| Template Grid Snapping | Snap template placement to half-grid (centers + midpoints) or full-grid (centers only). Half-grid is the Foundry/dnd5e default; full-grid is RAW. (Added in 13.0.47) |
+| Auto target on template draw | When placing a template auto-target tokens inside (None, Always, Always - Ignore Incapacitated/Dead, Always - Ignore Dead, Walls Block, Walls Block - Ignore Incapacitated/Dead, Walls Block - Ignore Dead, Use Walled Templates). Now uses a Hook for better compatibility with other modules (13.0.47). Supports multiple templates per item (13.0.43). |
+| Auto target for radius/emanation spells/attacks | Auto-target for radius/emanation spells if target type is creature/enemy/ally (same options, without Use Walled Templates) |
+| Require targets to be selected | Require tokens to be targeted before rolls (Never/In combat/Tokens in scene/Always) |
+| Weapons attack single target | Weapons with no target specification can only attack one target |
 
 ### Target Confirmation
 
@@ -301,189 +305,200 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 - Click target image to ping its location on canvas
 - Hover over target to highlight on canvas
 
-### Special
+### Specials
 
 | Setting | Description |
 |---------|-------------|
-| Auto Remove Template | Auto remove placed template on spell expiry |
-| Auto Remove Instantaneous Template | Remove instantaneous spell templates immediately |
-| Auto Remove Summoned Creature | Auto remove summoned creatures on item expiry/concentration removal |
-| Auto Apply Effects | Apply item active effects to targets if hit, failed save, or no save required |
-| Auto Undo Transformations | Auto revert target to original form on effect/concentration expiry |
-| Auto Convenient Effects | Apply Convenient Effects matching activity/item name (requires module) |
+| Other Activity Default | What *Default* means in an activity's Other Activity field: Auto - roll a single matching activity (default; an attack with exactly one compatible activity rolls it) or None - roll nothing |
+| Auto remove placed template on spell expiry | Auto remove placed template on spell expiry |
+| Auto remove instantaneous templates | Remove instantaneous spell templates at the end of the item roll |
+| Auto remove summoned creatures on item expiry/concentration removal (for dnd5e summons items) | Auto remove summoned creatures on item expiry/concentration removal |
+| Auto apply item effects | Apply item active effects to targets if hit, failed save, or no save required (Don't auto apply effects/Apply effects do not show button/Apply Effects and remove button/Apply effects but leave button) |
+| Auto undo transformations on effect/concentration expiry/removal | Auto revert target to original form on effect/concentration expiry |
+| Apply Convenient Effects | Shown when Convenient Effects is installed. Apply Convenient Effects matching activity/item name (Only activity effects; Apply activity effects, if absent apply CE; Apply CE, if absent apply activity effects; Apply CE and activity effects). Requires Auto apply item effects |
 
 ### Hits
 
 | Setting | Description |
 |---------|-------------|
-| Auto Check Hits | Check if attack roll hits targets - damage rolls if one+ targets hit and auto roll damage enabled |
-| Attack Per Target | Roll a separate attack per target |
-| Walls Block Range | How walls affect range calculation (None/Center/Center+Levels/Auto Cover modules) |
-| Cover Calculation | Calculate AC bonus for targets in cover using selected module |
-| Distance Includes Height | Include height difference in distance calculations |
+| DND5E Attack Result Visibility | dnd5e setting: Show results & target ACs/Show only results/Hide all |
+| Color code Hit/Miss/Save Display | Hits/saves in green, misses/failed saves in red |
+| Only highlight critical/fumble hits | Only highlight critical/fumble attack rolls, not normal hits/misses |
+| Auto check if attack hits target | None/Check - all see result/Check - only GM sees results/Check - only GM sees anything. Damage rolls if one+ targets hit and auto roll damage enabled; if None, midi assumes the attack hits |
+| Roll a separate attack per target | Roll a separate attack per target |
+| Walls block ranged attacks | No/Center Check/Levels Auto Cover/Simbul's Cover Calculator/Alternative Token Cover/Simple Cover 5e. If the cover module determines total cover, the attack is blocked |
+| Calculate Cover | Calculate AC bonus for targets in cover using selected module (None/Simbul's Cover Calculator/Simple Cover 5e/Levels Auto Cover/Alternative Token Cover) |
+| Vision test point height | Elevation tested for token visibility, for Foundry's rendering and midi's vision checks: Center (default) or Top |
+| Template Origin Height | Caster height activity templates are measured from: Caster's base (default)/Caster's top/Caster's eye level. An activity can override this in its Region settings |
+| Occlude upper floor surfaces | Multi-level scenes: upper floor surfaces are transparent when viewed from a lower floor, even if the token is not directly underneath (default on) |
+| Dim lower floors through surface holes | Multi-level scenes: dim areas seen through gaps in floor surfaces where the viewing angle blocks line of sight to the floor below |
 
 ### Saves
 
 | Setting | Description |
 |---------|-------------|
-| Auto Check Saves | Automatic save checking (None/No Roll/All See/All Show/Whisper/GM Only). Supports multiple saves per activity (e.g., dex or con) — auto-selects the best modifier or prompts the player via dropdown. (Multiple saves added in 13.0.43) |
-| DND5E Challenge Visibility | Show save DC to players (All/Player/None) - uses dnd5e setting. "Player" shows DC only for player-owned actor saves. |
-| Display Save Advantage | Show advantage/disadvantage status |
-| Default Save Multiplier | Damage multiplier on save (default 0.5) |
-| Player Roll Saves | How players roll saves (None/None+Dialog/Chat/Monks TB/Flash Rolls/Epic Rolls) |
-| Roll NPC Saves | How unlinked NPCs roll saves (None/Auto/Auto+Dialog/Monks TB/Flash Rolls/Epic Rolls) |
-| Roll NPC Linked Saves | How linked NPCs roll saves (same options as NPC Saves) |
-| Player Save Timeout | Seconds before auto-rolling |
+| DND5E Challenge Visibility | dnd5e setting: which roll DCs players see and whether successes/failures are highlighted (Show all/Show only from other players/Hide all) |
+| Auto check Saves | Off/Save - All see result only/Save - All see result + save total/Save - All see Result + Rolls/Save - only GM sees results + rolls/Save - only GM sees anything. If Off, midi assumes all targets failed. Supports multiple saves per activity (e.g., dex or con) — auto-selects the best modifier or prompts the player via dropdown. (Multiple saves added in 13.0.43) |
+| Save summary style | With dnd5e's "Summarize chat cards" on, a card's saves are shown on the card: *midi saves section* (default) or *dnd5e summaries* (midi's section then lists only saves rolled through other modules) |
+| Show damage after each save | Under a target's save result, when the save spares it some damage: the damage of each type it takes (before resistances) and the feature that changed it (default on) |
+| Default saving throw multiplier | Damage multiplier on save (default 0.5) |
+| Prompt Players to Roll Saves | How player saves are rolled (see below) |
+| Prompt GM to Roll Saves (Unlinked) | How unlinked NPC saves are rolled (Chat Message/Auto/Auto roll and show roll dialog/Monks Token Bar/Flash Token Bar/Rippers Epic Rolls) |
+| Prompt GM to Roll Saves (Linked) | How linked NPC saves are rolled (same options) |
+| Timeout before rolling for players | Seconds before midi rolls the player's save for them |
 
-**Player Roll Saves Options:**
-- **None** - GM rolls for players automatically
-- **None + Dialog** - GM rolls with dialog (Public/Private/Self/Blind visibility)
-- **Chat Message** - Players prompted via chat
+**Prompt Players to Roll Saves Options:**
+- **None (private roll)** / **None (public roll)** - midi rolls the save, shown privately (GM only) or publicly
+- **Auto roll and show roll dialog** (public/private/self/blind roll) - midi rolls the save after showing the roll configuration dialog
+- **Chat Message** - Players prompted via chat message button
 - **Monks Token Bar** - Use Monks Token Bar (requires module)
-- **Flash Rolls 5e** - Use Flash Rolls (requires module)
-- **Epic Rolls 5e** - Use Epic Rolls (requires module)
+- **Flash Token Bar** - Use the Flash Rolls 5e pop-up (requires module)
+- **Rippers Epic Rolls** - Use Epic Rolls 5e (requires module)
 
 ### Damage
 
 | Setting | Description |
 |---------|-------------|
-| Critical Damage (Player) | How critical hits calculate damage for player characters (DND5e Settings Only/Max Normal/Max Critical Dice/Max All/Double Dice/Explode/etc.). (Migrated from module settings into the config panel in 13.0.43) |
-| Critical Damage (GM) | How critical hits calculate damage for GM-controlled actors. (Migrated from module settings into the config panel in 13.0.43) |
-| Auto Apply Damage | Auto apply damage to hit targets (No/Yes/Yes+Card options) |
-| Damage Card Style | Flexbox (inline HP/TempHP/Vitality display) or Classic (table layout). Use Flexbox if using vitality. |
-| Add Chat Damage Buttons | Enable dnd5e damage tray on chat messages (None/GM/PC/Both) |
-| Player Damage Card | Show a simpler damage card to players (not shown to GM) |
-| Player Card Damage Different | Show player damage card if rolled damage differs from applied damage |
-| Apply Immunities | Apply target's damage immunity/vulnerability/resistance (Off/Apply/Apply+Physical) |
-| Immunity Multiplier | Immunity reduces damage to this multiplier (default 0) |
-| Resistance Multiplier | Resistance reduces damage to this multiplier (default 0.5) |
-| Vulnerability Multiplier | Vulnerability multiplies damage by this (default 2) |
-| Save DR Order | Order of save multiplier vs damage reduction calculation |
-| Require Magical | When items do magical damage (Off: non-weapons/Non-spell/All items) |
+| Choose critical damage for Players | How critical hits calculate damage for player characters (DND5e Settings Only/Max Normal Damage/Max Critical Dice/Max All Dice/Double Rolled Damage/Explode all critical dice/etc.). (Migrated from module settings into the config panel in 13.0.43) |
+| Choose critical damage for GM | How critical hits calculate damage for GM-controlled actors. (Migrated from module settings into the config panel in 13.0.43) |
+| Auto apply damage to target | No/No + damage card/No + damage card + misses/Yes/Yes + damage card/Yes + damage card + misses/Yes(NPC) No(PC) + damage card |
+| Show a player's damage card | Simpler damage card for players, shown only if the GM card is shown, not shown to the GM (Don't show/Show player results/Show player results + buttons/Show player and npc results/Show player and npc + buttons) |
+| Display the player damage card if the rolled damage does not match the applied damage for some target | Show player damage card if rolled damage differs from applied damage |
+| Apply Damage immunities | Apply target's damage immunity/vulnerability/resistance (Never/apply immunities/apply immunities + physical) |
+| Immunity reduces damage to | Default 0 |
+| Resistance reduces damage to | Default 0.5 |
+| Vulnerability multiplies damage by | Default 2 |
+| Single Damage Calculation | Calculate base, other and bonus damage in one pass; damage modification (dm) and midi damage reduction are shared across all of an activity's damage instead of applied per category (default on) |
+| Damage Reduction Save Order | Order of save multiplier vs damage reduction calculation |
+| Require 'Magical' property | Off: Non-weapons do magical damage/Non spells do non-magical damage/All Items do non-magical damage |
 
 ## Concentration Tab
 
+Shown only when dnd5e concentration tracking is enabled.
+
 | Setting | Description |
 |---------|-------------|
-| Do Concentration Check | Force concentration save when damage taken (None/Chat Only/Chat+Auto/Item Card) |
-| Remove Concentration | Remove concentration on failed concentration save |
-| Incapacitated Check | Remove concentration when incapacitated condition applied |
-| Single Concentration Roll | Single check for combined damage from attack + save + other/versatile |
-| Temp HP Damage Check | Loss of temporary HP triggers concentration check (RAW: enabled) |
-| Remove Concentration Effects | Check when effects removed - if all effects/templates gone, remove concentration |
+| Force a concentration save when damage taken | Never/Chat Message Only (dnd5e default behaviour)/Chat Message + Auto Roll/Roll Concentration Item |
+| Remove concentration on failed concentration save | Remove concentration on failed concentration save |
+| Remove concentration when incapacitated status applied | Incapacitated, Dead, Unconscious, Petrified, Paralysed and Stunned remove concentration |
+| Single Concentration Check | Single check for combined damage from attack + save + other/versatile |
+| Temporary HP Concentration Check | Loss of temporary HP triggers concentration check (RAW: enabled) |
+| Remove concentration when effects removed | Never/Check Effects/Check Effects and Templates: if all the spell's effects (and templates) are gone, remove concentration |
 
-**Do Concentration Check Options:**
-- **None** - No concentration checks
-- **Chat Only** - Display chat message with button (dnd5e default behavior)
-- **Chat + Auto** - Display chat message and auto-roll the save
-- **Item Card** - Roll concentration as an item with Constitution save targeting the damaged actor at the correct DC
+**Force a concentration save when damage taken Options:**
+- **Never** - No concentration checks
+- **Chat Message Only (dnd5e default behaviour)** - Display chat message with button
+- **Chat Message + Auto Roll** - Display chat message and auto-roll the save
+- **Roll Concentration Item** - Roll concentration as an item with Constitution save targeting the damaged actor at the correct DC
 
 ## Reactions Tab
 
 | Setting | Description |
 |---------|-------------|
-| Do Reactions | Give attacked actor option to use reaction before adjudicating roll |
-| GM Do Reactions | Check NPC/GM reactions (On/On+Magic Items/Off) |
-| Reaction Timeout | How long to wait before assuming no reaction taken (seconds) |
-| Show Reaction Chat Message | Show chat prompt for reactions |
-| Show Reaction Attack Roll | What attack info to show (Attack Hits/d20/Total/Total+Critical) |
-| Ignore Spell Reaction Restriction | Allow any reaction spell without checking slots/preparation |
-| Enforce Reactions | Prompt when using reaction if already used this round |
-| Enforce Bonus Actions | Prompt when using bonus action if already used this round |
-| Record AOO | Mark reaction used when attacking outside your turn (None/Characters/All) |
+| Check PLAYER reactions | Give attacked actor option to use reaction before adjudicating roll (On/On + Magic Items/off) |
+| Check NPC/GM reactions | Check NPC/GM reactions (On/On + Magic Items/off) |
+| Reaction check timeout | How long to wait before assuming no reaction taken (seconds) |
+| Show Chat prompt for reactions | Show chat prompt for reactions |
+| Show attack roll | What attack info to show (Attack Hits/d20 roll/Attack Roll Total/Attack Roll Total + Critical) |
+| Allow any reaction spell to be used | Allow any reaction spell without checking slots/preparation |
+| Enforce Reactions | Prompt when using reaction if already used this round (Do not check/Display status icon/Characters: prompt if used/All actors: prompt if used) |
+| Enforce Bonus Actions | Prompt when using bonus action if already used this round (same options) |
+| Record Attacks of Opportunity | Mark reaction used when attacking outside your turn (Do not check/Characters only/All actors) |
 
 ## Misc Tab
 
 | Setting | Description |
 |---------|-------------|
-| Colored Borders | Chat messages have colored borders/text in the player character's color (None/Borders Only/Border + Name Text/Border + Name Background). (Migrated from module settings into the config panel in 13.0.43) |
-| Saves Before Damage | Calculate saves before damage rolls |
-| Activity Name Prefix | Prefix activity name to chat messages |
-| Midi Properties Tab | Show midi properties tab on items (by role) |
-| Allow Actor Use Macro | Add actor on use macro field to sheet |
-| Allow Use Macro | Add item on use macro field to sheet |
-| Show Item Details | Display item details in chat card (None/Card Only/PC/All) |
+| Roll saves before damage (Experimental) | Calculate saves before damage rolls |
+| Export/Import midi-qol settings to/from json file | Buttons to save or load all midi-qol settings |
+| Activity Prefix | Prefix midi-qol activity names with Midi. Requires reload |
+| Condition Editor | Show condition editor button on condition fields in activity sheets (default on) |
+| Lowest User role for Item's properties | Lowest user role that can access an item's midi-qol properties tab. Requires reload |
+| Add actor on use macro to sheet | Add actor on use macro field to sheet |
+| Add item on use macro to sheet | Add item on use macro field to sheet |
+| Show Item details in chat card | None/Card Only/Details: PC Only/Details: NPC + PC; Show Details chooses the item types |
 | Display Item Properties | Display item properties in chat card |
-| Merge Card Condensed | Conserve chat log space with smaller attack/damage rolls |
-| Merge Card Multi | Combine multiple targets in one card |
+| Condense Attack/Damage Rolls | Conserve chat log space with smaller attack/damage rolls |
+| Add Item/Activity Buttons | Add Info/Attack/Damage buttons to items and activities on character sheets. (Added in 13.0.40) |
+| Add extra buttons to merge card | Add advantage/disadvantage and critical/no critical buttons to the item card |
 | Collapsible Targets | Make target list collapsible in chat (default: false since 13.0.39) |
-| Confirm Attack Damage | Confirm before applying attack damage |
-| Auto Complete Workflow | Complete workflow automatically (default: true since 13.0.39) |
-| Highlight Success | Color code hits (green) and misses (red) in display |
-| Highlight Critical Attack Only | Only highlight critical/fumble, not normal hits/misses |
-| Roll Alternate | Move roll formula to tooltip, optionally show advantage attribution |
+| Display Confirm Roll Button | Pause after rolling attack/damage for confirmation (No confirmation/Only GM can confirm/GM and Player can confirm) |
+| Autocomplete workflow if required | Workflows rolled before completion are marked complete; no extra rolls are performed (default: true since 13.0.39) |
+| Colored Border Messages | Chat messages have colored borders/text in the player character's color (None/Borders Only/Border + Name Text/Border + Name Background). (Migrated from module settings into the config panel in 13.0.43) |
+| Move roll formula to tooltip | default tooltip/Formula -> tooltip/Advantage Attribution/Formula -> tooltip + adv attribution |
 | Show Fast Forward | Show fast-forward indicator on attack/damage buttons |
-| Use Token Names | Chat card titles and target names use token name not actor name |
-| Use Player Portrait | Use actor portrait instead of token image for characters |
-| Show Core Sheet Buttons | Show info/attack/damage buttons on the core dnd5e character sheet per activity. (Added in 13.0.40) |
-| Keep Roll Statistics | Record attack and damage roll data for actors. Accessible from the main midi-qol settings panel. (Revived and enhanced in 13.0.43) |
-| Save Stats Every | Save statistics every N rolls (suggest 10-20+) |
-| Player Stats Only | Only keep statistics for player-owned actors |
-| Use Custom Sounds | Enable midi-qol custom sounds (configure separately) |
+| Chat cards use token name | Chat card titles and target names use token name not actor name |
+| Hide NPC names | Name players see for creatures with no player owner, on chat cards and the damage tray. Blank shows the real name. Anonymous or Hide NPC Names, when active, decide instead |
+| Use Actor portrait in chat cards | Use actor portrait instead of token image for characters |
+| Enable midi-qol custom sounds | Override system sounds; configure them with "Configure Midi Custom Sounds" (see [Custom Sounds](#custom-sounds)) |
+
+Roll statistics (Keep Roll Statistics, Save statistics Every, Player statistics only) are set in the **Show Roll Statistics** app (Configure Settings → midi-qol). (Revived and enhanced in 13.0.43)
 
 ## Mechanics Tab
 
 | Setting | Description |
 |---------|-------------|
-| Add Wounded | Add status when HP falls below specified % of max (0 disables) |
-| Add Dead | Add effect when HP = 0 (overlay/icon for unconscious/dead) |
-| Mark Player Defeated | Mark player tokens as defeated in combat tracker |
-| Mark Non-Player Defeated | Mark NPC tokens as defeated in combat tracker |
-| Roll Checks Blind | Which ability checks are rolled blind |
-| Roll Saves Blind | Which saves are rolled blind |
-| Roll Skills Blind | Which skill checks are rolled blind |
-| Action Special Duration Immediate | Expire 1Hit/1Attack/1Action on roll, don't wait for damage |
-| Wait For Damage Application | Wait for damage application before continuing workflow |
-| Incapacitated | When incapacitated actor acts: Do nothing/Enforce no actions/Warn only |
-| Check Range | Check weapon range when attacking (None/Long range fail/Long range disadvantage) |
-| Check Two-Handed | Enforce two-handed weapon rules |
-| Distance Measurement | How distances are measured between tokens: Foundry Default (center-to-center), Grid Square Center (center of all covered grid squares), or Token Perimeter (shortest distance between token boundary polygons). Token Perimeter is recommended for exact measurement; Grid Square Center for equidistant gridded scenes. (Added in 13.0.45) |
-| Gridless Fudge | Distance fudge factor for gridless maps. Not needed when using Grid Square Center or Token Perimeter measurement |
-| Gridded Gridless | Treat gridless maps as having a grid - tokens snap to nearest grid point for distance |
-| Skill Ability Check Advantage | Ability check advantage/disadvantage applies to skills using that ability |
-| Display Bonus Rolls | Show bonus rolls in chat |
-| Auto Reroll Initiative | Reroll initiative for all combatants at start of new round |
-| Undo Workflow | Store undo data for all item/activity rolls |
-| Undo Chat Color | Color for undo messages |
-| Activation Automation | Automate activation conditions (None/Chat/Auto) |
+| Add effect when hp falls below % | Add the selected status (as icon or overlay) when HP falls to or below this % of max (0 disables) |
+| Add effect when HP = 0 | Status for Player Controlled and GM Controlled actors at 0 HP (Do Not Update/Add effect as overlay/Add effect as icon) |
+| Mark defeated in combat tracker | Separate checkboxes for player and GM controlled tokens |
+| Which ability checks are rolled blind | Which ability checks are rolled blind |
+| Which ability saves are rolled blind | Which saves (including death saves) are rolled blind |
+| Which skill checks are rolled blind | Which skill checks are rolled blind |
+| Blind roll display | How rolls forced blind by the settings above appear to players: Hidden (players see nothing) (default) or Obscured (card shown, result ??) |
+| Expire 1Hit/1Attack/1Action on roll | Expire 1Hit/1Attack/1Action on roll, don't wait for damage |
+| Wait for damage application | Wait for damage application before continuing workflow |
+| When an Incapacitated actor takes an action, MidiQOL should | Do nothing/Enforce no actions/Post a warning only |
+| Check weapon range when attacking | Do not check range/target range > long range: fail/target range > long range: disadvantage |
+| Require no shield equipped for two-handed/off-hand attacks | Enforce two-handed weapon rules |
+| Distance measurement method | How distances are measured between tokens: Default (Foundry Core) (center-to-center), Grid Square Centers (default; center of all covered grid squares), or Token Perimeters (shortest distance between token boundary polygons). (Added in 13.0.45) |
+| Gridless Grid | Use the square grid for all distance calculations in gridless scenes |
+| Fudge factor | Subtracted from measured distances when checking range, on every grid type. Edge-to-edge token distances never drop below one grid unit. In grid units (ft/m) |
+| Include height difference in distance calculations | Include height difference in distance calculations |
+| Constrain Template Placement | Anchor cone/ray templates with range Self/None to the caster's token border, and keep all templates within the activity's range during preview. (Renamed from "Anchor Ray/Cone Templates" in 13.0.45) |
+| Template Grid Snapping | Full Grid (default) snaps to grid vertices only; Half Grid to centres, vertices, corners and side midpoints. (Added in 13.0.47) |
+| Show before and after optional bonus chat card | Show bonus rolls in chat |
+| Auto reroll initiative | Reroll initiative for all combatants at start of new round. Can break round/turn effect expiry |
+| Support undoing item rolls | Store undo data for all item/activity rolls. Undo via `MidiQOL.undoMostRecentWorkflow()` |
+| Undo Chat Cards Color | Delete removes the chat card on undo; otherwise undone cards are recoloured |
+| Activation Cost Automation | Short/long rest, encounter start and turn start/end activation costs (No Automation/No Chat, Default dnd5e behavior, Auto trigger self targeted activities) |
 
-## Rules Tab (Optional Rules)
+## Rules Tab
 
 | Setting | Description |
 |---------|-------------|
-| Optional Rules Enabled | Master toggle for optional rules |
-| Check Flanking | Check if you and allies flank opponent. Options: none, Advantage Only, Midi Flanking effect, Midi Flanked effect, Midi Flanked + no conga line, or CE variants (if installed). Supports hex grids |
+| Optional Game Rules | Master toggle for optional rules; the rows from Check Flanking to Enable Challenge Mode Armor Class are shown only when it is on |
+| Check Flanking | Check if you and allies flank opponent. Options: none, Advantage Only, Midi Flanking effect, Midi Flanked effect, Midi Flanked + no conga line, or Convenient Effects variants (if installed). Supports hex grids |
 | Flanking Bonus Type | What benefit flanking gives: Advantage (default) or +1 to +5 to hit (reduces target's effective AC) |
+| Flanking requires target can sense flanker | An ally only counts as a flanker if the target can sense them |
 | Show Flanking Positions | Highlight grid cells where an ally would create flanking against your current target |
-| Invisible Advantage | Invisible attackers have advantage, disadvantage if target invisible (RAW 2014/RAW 2024/Vision). The 2024 mode checks visibility rather than the invisible condition. (2024 mode added in 13.0.43) |
-| Hidden Advantage | Hidden attackers have advantage/disadvantage (None/Check Hidden/Perceptive) |
-| Invisible Vision | Behave as if all tokens have vision enabled when checking |
-| Remove Hidden/Invis | Attacking removes hidden status |
-| Nearby Foe | Ranged attacks have disadvantage when foe within this distance (0 disables) |
-| Max DR Value | (House Rule) Only most effective DR applies, doesn't accumulate |
-| DR All Per Damage Detail | (House Rule) DR.all deducted from both attack and Other damage |
-| Critical Saves | (House Rule) Natural 20/1 always succeed/fail on saves |
-| Optional Crit Rule | (House Rule) Attack rolls this much above AC are critical (-1 disables) |
-| Critical Nat 20 | (House Rule) Natural 20 still crits even if margin not met |
-| Nearby Ally Ranged | (House Rule) Ranged attacks with allies near target have disadvantage |
+| Unseen/Invisible attackers have advantage/disadvantage on attacks | Do not apply/RAW (2014)/RAW (2024)/Use Token Vision. The 2024 mode checks visibility rather than the invisible condition. (2024 mode added in 13.0.43) |
+| Hidden attackers have adv/disadv on attacks | Do not apply/Check 'Hidden' Status/Perceptive |
+| Force vision when checking | Behave as if all tokens have vision enabled when checking; unchecked, tokens without vision see everything |
+| Attacking removes hidden (use CE/CV/CUB/core foundry specialStatus ) | Attacking removes hidden status |
+| Ranged attacks when a foe is closer than this have disadvantage. 0 disables | Distance in grid units (default 5) |
+| (House rule) Enabling this means that only the most effective Damage Reduction will apply. Off means DR accumulates | Max DR value |
+| (House Rule) Critical/Fumble always succeed/fail for saving throws | Natural 20/1 always succeed/fail on saves |
+| (House Rule) Critical Roll Margin | Attack rolls this much above AC are critical (-1 disables) |
+| (House Rule) Allow normal critical rolls | A roll above the critical threshold still crits even if the margin is not met |
+| (House Rule) Ranged Attacks at foes near allies have disadvantage | Applies to targets with an ally within 5 ft, smaller than this size (w*h); 0 disables |
 | Active Defence | Players roll defence instead of GM rolling attack |
 | Active Defence Modifier | Modifier for DC and roll calculation (suggest 12, 10, or 0) |
-| Active Defence DC | Show active defence DC in chat card |
-| Active Defence Show | Roll visibility mode for active defence |
-| Challenge Mode Armor | Alternative armor class rules (see README) |
-| Vitality Item | Name of a feature item on the actor to track vitality (overflow damage at 0 HP reduces vitality). Item uses.max = max vitality, uses.spent = vitality lost. |
-| Vitality Dead Condition | Condition to apply when vitality reaches 0 (default: dead) |
+| Show Active Defence DC | Show active defence DC in chat card |
+| Default display for active defence rolls | Roll visibility mode for active defence |
+| Enable Challenge Mode Armor Class | Alternative armor class rules (No Challenge Mode Armor/Challenge Mode Armor (Base)/Challenge Mode Armor (Scaled)/Challenge Mode Armor (Scaled No AR)) |
+| (House Rule) Vitality Item | Name of a feature item on the actor to track vitality (overflow damage at 0 HP reduces vitality). Item uses.max = max vitality, uses.spent = vitality lost. Shown always, only applies with Optional Game Rules on |
+| Vitality Exhausted Condition | Condition to apply when vitality reaches 0 (default: Dead) |
 | Vitality Death Requires | When actor is dead: "Vitality of 0" or "Vitality of 0 AND HP of 0" |
-| Enable DDB Game Log | Accept rolls from ddb-game-log to trigger midi workflows |
+| Enable ddb-game-log support | Accept rolls from ddb-game-log to trigger midi workflows |
 
 ## Custom Sounds
 
-Midi-QOL provides a flexible system for playing sounds during workflow events. Enable with "Use Custom Sounds" in the Misc settings tab. Many of the supporting modules that provide visual effects also apply sound effects, so if using those you will not want midi custom sounds.
+Midi-QOL provides a flexible system for playing sounds during workflow events. Enable with "Enable midi-qol custom sounds" on the Misc settings tab. Many of the supporting modules that provide visual effects also apply sound effects, so if using those you will not want midi custom sounds.
 
 ### Getting Started
 
-1. Enable "Use Custom Sounds" in Midi-QOL Misc settings
-2. Open the Sound Configuration panel (button in Misc settings)
+1. Enable "Enable midi-qol custom sounds" in Midi-QOL Misc settings
+2. Open the Sound Configuration panel with "Configure Midi Custom Sounds" (Configure Settings → midi-qol)
 3. Go to the "Quick Settings" tab and click "Create Sample Playlist" to create the "Midi Item Tracks" playlist
 4. Choose a preset configuration: Basic, Detailed, or Full
 5. Switch to the "Sounds" tab to customize individual sound mappings
@@ -656,6 +671,24 @@ These fields appear only for activities with area targets (templates):
 | **AoE Target Type** | Filter which tokens are targeted by the template: Any/Allies/Enemies. Overrides global setting. |
 | **Target on Template Draw** | When to auto-target tokens in the template: None/Always/Walls Block/Walled Templates. |
 
+### Region Behaviour (AoE)
+
+An activity with a template can attach a **Midi Region Activity** behaviour to the region it places (activity sheet, *Region Behaviour* section). The region then runs activities or effects as creatures interact with it, as Spirit Guardians, Moonbeam and Cloudkill do in the sample items.
+
+| Field | Description |
+|-------|-------------|
+| **Enable Region Behaviour** | Attach the behaviour to the placed region. |
+| **Region Rules** | Each rule pairs a trigger (*Token Enters*, *Token Exits*, *Turn Start*, *Turn End*) with an action (*Use Activity*, *Apply Effect*, *Remove Effect*) and the activity or effect it uses. |
+| **Once Per Turn** | Each activity triggers at most once per turn for each creature, whether by entering or at turn start/end. |
+| **Entry On Activation** | Creatures already inside count as entering when the region is created or the behaviour enabled. Turn it off when the casting activity already affects them (e.g. a save on cast). |
+| **Move Each Turn** / **Move Direction** / **Move On** | In combat, the region moves this far at the start or end of the caster's turn: away from the caster, or in a direction the caster's owner picks. Creatures it passes over or lands on enter it. 0 never moves. |
+| **Disposition Filter** / **Exclude Source Token** | Which creatures the rules affect, relative to the caster. |
+| **Attach Region To** | Keep the region on a token (the caster or a target) as it moves. |
+| **Template Origin Height** | The caster height the template is measured from; *Default* follows the *Template Origin Height* optional rule. |
+| **Wall Restriction** / **Region Visibility** | The region's edge restriction and when it is shown. |
+
+A spell whose effect comes only from its region (Moonbeam, Cloudkill) can use a utility activity to place the region and let the region's rules make the saves, including for creatures inside when it is cast.
+
 ### Damage Options
 
 These fields appear only for activities that deal damage:
@@ -719,6 +752,18 @@ For activities that repeat on subsequent turns (like ongoing damage, regeneratio
 ### Activity Macro
 
 The pencil button opens a macro editor for the activity. This macro runs during the workflow with access to workflow data, allowing custom automation logic.
+
+## Teleport Activity
+
+On dnd5e 6, midi runs dnd5e's Teleport activity as a workflow (targets, on-use macros, effects, concentration) and adds:
+
+| Field | Description |
+|-------|-------------|
+| **Who Teleports** | *Controlled Tokens* (dnd5e's default), *Caster*, *Caster and Targets* (each target lands within 5 ft of the caster's destination) or *Targets* (each placed within the teleport distance of the caster). To move only creatures that fail a save, trigger the teleport from a save activity. |
+| **Destination Must Be Seen** | The caster must be able to see each destination (Misty Step). |
+| **Blocked Destination** | *Refuse*: an occupied space, a wall or an unseen space is refused and you pick again. *Fail*: the teleport fails for everyone and the item's damage activity is used on the travellers (Dimension Door). |
+
+The caster plans their own move; you place the others, and the GM moves tokens you don't own. On-use macro passes `preTeleport` (can cancel or change who moves) and `postTeleport`, and hooks `midi-qol.preTeleport` / `midi-qol.postTeleport`, fire around it.
 
 ## Concentration Automation
 
@@ -828,18 +873,33 @@ Set via active effects using **CUSTOM** or **OVERRIDE** mode.
 | No Disadvantage | `flags.midi-qol.noDisadvantage.save.all` | Suppress disadvantage even when other sources grant it (13.0.38+) |
 | Critical | `flags.midi-qol.critical.mwak` | Force critical hits |
 | No Critical | `flags.midi-qol.noCritical.all` | Prevent critical hits |
-| Auto-Fail | `flags.midi-qol.fail.save.dex` | Force automatic failure |
-| Auto-Success | `flags.midi-qol.success.attack.all` | Force automatic success |
+| Auto-Fail | `system.abilities.dex.save.roll.fail` | Force automatic failure (a condition) |
+| Auto-Success | `system.rolls.attack.success` | Force automatic success (a condition) |
 | Grants | `flags.midi-qol.grants.advantage.attack.all` | Effects on attackers targeting you |
-| Absorption | `system.traits.da.fire` | Convert damage to healing (use dnd5e native trait) |
+| Absorption | `system.traits.da.value` (add `fire`, or `ALL`) | Convert damage to healing; midi's Damage Absorption trait on the actor sheet. `system.traits.da.fire` sets that type's multiplier (default -1) |
 | Super Saver | `flags.midi-qol.superSaver.dex` | No damage on save, half on fail |
 | Magic Resistance | `flags.midi-qol.magicResistance.all` | Advantage vs magic saves |
-| Min/Max | `flags.midi-qol.min.save.all` | Set min/max roll values |
+| Min/Max | `system.rolls.ability.save.min` | Set min/max d20 values (dnd5e) |
 | Range | `flags.midi-qol.range.all` | Modify item range |
 | Optional | `flags.midi-qol.optional.NAME.attack.all` | Prompted bonus effects |
 | Damage Mod | `system.traits.dm.midi.all` | Reduce/increase damage (use negative values to reduce) |
 | Save by School | `flags.midi-qol.advantage.save.school.nec` | Advantage/disadvantage on saves vs specific spell schools (13.0.52+) |
-| Tool Checks | `flags.midi-qol.advantage.tool.thief` | Per-tool advantage/disadvantage/fail/success/min/max (13.0.38+) |
+| Tool Checks | `flags.midi-qol.advantage.tool.thief` | Per-tool advantage/disadvantage (13.0.38+); fail/success/min/max are `system.tools.thief.roll.*` |
+
+Advantage, disadvantage, noAdvantage and noDisadvantage flags for saves and checks are `…save.dex` / `…check.dex`. They are conditions midi evaluates per roll; dnd5e then decides the roll's advantage from them together with its own roll mode fields (`system.abilities.dex.save.roll.mode` and the like: Add ±1, Downgrade/Upgrade, Override) and advantage rules. For unconditional advantage prefer dnd5e's fields.
+
+Fail and success are conditions on dnd5e's roll fields, beside its `bonus`, `min`, `max` and `mode`, and are combined as dnd5e combines those (an ability's check fields also apply to its skills and tools):
+
+| Roll | Fields |
+|------|--------|
+| Save | `system.abilities.<id>.save.roll`, `system.rolls.ability.save` |
+| Ability check | `system.abilities.<id>.check.roll`, `system.rolls.ability.check` |
+| Skill / tool | the ability's check fields, `system.rolls.ability.skill` / `.tool`, `system.skills.<id>.roll` / `system.tools.<id>.roll` |
+| Concentration | the CON save fields, `system.attributes.concentration.roll` |
+| Death save | `system.attributes.death.roll` |
+| Attack | `system.abilities.<id>.attack.roll`, `system.rolls.attack`, `system.rolls.attack.<mwak/rwak/msak/rsak>` |
+
+e.g. `system.abilities.dex.save.roll.fail` = `1`. The old `flags.midi-qol.fail/success/min/max.(ability.save|ability.check|skill|tool|attack|deathSave|concentration).*` keys are deprecated; DAE moves them to these fields. `fail.all`, `success.all`, `fail.ability.all`, `success.ability.all` and `fail/success.save.school.<school>` remain midi flags.
 
 **Special Flags:**
 | Flag | Effect |
@@ -850,7 +910,7 @@ Set via active effects using **CUSTOM** or **OVERRIDE** mode.
 | `flags.midi-qol.sculptSpells` | Evocation sculpt spell feature |
 | `flags.midi-qol.carefulSpells` | Metamagic careful spell |
 | `flags.midi-qol.potentCantrip` | Cantrips do half on save |
-| `flags.midi-qol.concentrationSaveBonus` | Add to concentration saves |
+| `flags.midi-qol.concentrationSaveBonus` | Deprecated: use `system.attributes.concentration.roll.bonus` |
 | `flags.midi-qol.deathSaveBonus` | Add to death saves |
 | `flags.midi-qol.bloodSense` | No disadvantage vs hidden/invisible creatures not at full HP within range (13.0.52+) |
 
@@ -861,24 +921,31 @@ Set via active effects using **CUSTOM** or **OVERRIDE** mode.
 
 # Optional Rules
 
-Enable in the Optional Rules section of settings.
+Enabled by the **Optional Game Rules** checkbox on the Rules tab.
 
 | Rule | Description |
 |------|-------------|
-| Incapacitated Can't Attack | 0 HP tokens cannot attack |
-| Invisible Advantage | Hidden/invisible attacks with advantage |
-| Attack Removes Hidden | Attacking reveals invisible/hidden |
-| Check Weapon Range | Disadvantage at long range, fail beyond max |
-| Include Height | Height differences in range calculation |
-| Nearby Foes Disadvantage | Ranged attacks with enemy within X feet |
-| Critical/Fumble Saves | Nat 20/1 on saves auto succeed/fail |
-| Ranged Ally Disadvantage | Disadvantage shooting past allies |
+| Check Flanking | Flanking grants advantage, a to-hit bonus, or a Flanking/Flanked effect |
+| Unseen/Invisible attackers have advantage/disadvantage on attacks | Advantage for unseen attackers, disadvantage against targets they can't see |
+| Hidden attackers have adv/disadv on attacks | Advantage for hidden attackers, disadvantage if the target is hidden |
+| Attacking removes hidden (use CE/CV/CUB/core foundry specialStatus ) | Attacking reveals the attacker |
+| Ranged attacks when a foe is closer than this have disadvantage. 0 disables | Nearby foes give ranged attacks disadvantage |
+| (House rule) Enabling this means that only the most effective Damage Reduction will apply. Off means DR accumulates | Max DR value |
+| (House Rule) Critical/Fumble always succeed/fail for saving throws | Nat 20/1 on saves auto succeed/fail |
+| (House Rule) Critical Roll Margin | Attack rolls this much above AC are critical |
+| (House Rule) Allow normal critical rolls | With a margin set, rolls above the critical threshold still crit |
+| (House Rule) Ranged Attacks at foes near allies have disadvantage | Disadvantage shooting at foes next to allies |
+| Active Defence | See below |
+| Enable Challenge Mode Armor Class | See below |
+| (House Rule) Vitality Item | Damage at 0 HP reduces the Vitality Item's uses |
+
+"When an Incapacitated actor takes an action, MidiQOL should", "Check weapon range when attacking" and "Include height difference in distance calculations" are Mechanics tab settings and apply whether or not optional rules are on.
 
 ## Active Defence
 
 Variant rule where defenders roll instead of attackers.
-- DC = 12 + attacker's bonus
-- Roll = 1d20 + AC - 10
+- DC = attack bonus + Active Defence Modifier (12 by default: DC = 12 + attack bonus)
+- Roll = 1d20 + AC - (22 - Active Defence Modifier) (1d20 + AC - 10 by default)
 - Attacker advantage = defender disadvantage
 - Critical defence = fumbled attack
 
@@ -899,7 +966,7 @@ The following deprecated flags have been removed and will no longer function:
 
 | Removed Flag | Replacement |
 |-------------|-------------|
-| `flags.midi-qol.absorption.{damageType}` | `system.traits.da.{damageType}` (dnd5e native damage absorption) |
+| `flags.midi-qol.absorption.{damageType}` | `system.traits.da.{damageType}` (multiplier for midi's Damage Absorption) |
 | `flags.midi-qol.advantage.ability.save.{ability}` | `flags.midi-qol.advantage.save.{ability}` |
 | `flags.midi-qol.advantage.ability.check.{ability}` | `flags.midi-qol.advantage.check.{ability}` |
 | `flags.midi-qol.disadvantage.ability.save.{ability}` | `flags.midi-qol.disadvantage.save.{ability}` |
@@ -956,6 +1023,9 @@ Same issue - check workflow automation is enabled on all clients.
 
 ### Double effects applied
 If using Convenient Effects + DAE effects on same item, you'll get both. Choose one approach per item.
+
+### Setting conflicts
+When midi and another system or module are both set to do the same job (marking wounded or dead creatures, rerolling initiative, average or replaced damage), or midi is set to use a status that no longer exists, the GM is whispered a card listing them. *Open TroubleShooter* shows each conflict, with an **Auto Fix** where one is available; *Don't remind me* hides that card until the settings involved change.
 
 ## Bug Reports
 
@@ -1188,7 +1258,9 @@ For effects where the player must use their action to attempt a save (like escap
 | `actionSave` | `dialog` - Prompt player to use action; `roll` - Player rolls manually via chat card | - |
 
 When `actionSave=dialog`: Player is prompted at turn start to use their action for the save.
-When `actionSave=roll`: A chat card is created at turn start; player clicks to roll when using their action.
+When `actionSave=roll`: A chat card is created at turn start; player clicks to roll when using their action. The card is removed at the end of the turn.
+
+The action save's prompt or card always comes at the start of the creature's turn; `turn` sets when the effect's damage or macro is applied. For a save repeated at the end of each turn (no action needed), leave out `actionSave` and use `turn=end` with `saveCount`.
 
 #### Display Parameters
 
@@ -1237,9 +1309,9 @@ turn=start, damageRoll=2d6, damageType=poison, saveDC=14, saveAbility=con, saveD
 turn=start, damageRoll=2d6, damageType=healing, applyCondition=@attributes.hp.value < @attributes.hp.max, label="Regeneration"
 ```
 
-**Hold Person (action to save, end of turn save):**
+**Hold Person (save at the end of each turn):**
 ```
-turn=end, saveDC=@attributes.spelldc, saveAbility=wis, saveCount=1-, actionSave=roll, label="Hold Person"
+turn=end, saveDC=@attributes.spelldc, saveAbility=wis, saveCount=1-, label="Hold Person"
 ```
 
 **Damage with Condition (only if below max HP):**

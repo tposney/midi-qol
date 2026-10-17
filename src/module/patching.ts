@@ -1,6 +1,6 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
-import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime } from "./utils.js";
+import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime, toggleStatus } from "./utils.js";
 import { computeActivityTemplateTargets } from "./activities/activityHelpers.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
@@ -39,8 +39,34 @@ export function getActorWoundedSemaphore(actorUuid: string): foundry.utils.Semap
 // These functions are called during module initialization to register libWrapper patches.
 // The helper functions they reference are defined later in this file.
 
+/**
+ * Apply the fail/success conditions of the ability a skill or tool roll is built with when that is not the ability the
+ * roll started with (a choice in dnd5e's dialog). dnd5e applies that ability's min/max itself.
+ */
+function applyChosenAbilityModifiers(type: "skill" | "tool") {
+  return (process: RollProcessConfig, config: NonNullable<RollProcessConfig["rolls"]>[number]) => {
+    const actor = process.subject;
+    const abilityId = config.data?.abilityId;
+    if (!(actor instanceof Actor) || typeof abilityId !== "string" || !abilityId || abilityId === process.ability) return;
+    if (getAdvantageSourceInfo(process).isExternalModule) return;
+    const flags: RollModifierFlags = { failFlags: [], successFlags: [], maxFlags: [], minFlags: [], fieldPaths: [`abilities.${abilityId}.check.roll`] };
+    const tracker = new RollModifierTracker();
+    computeRollModifiers(actor, flags, tracker, { workflow: process.midiOptions?.workflow });
+    config.options ??= {};
+    if (tracker.modifiers.willFail) {
+      config.parts = [];
+      config.options.maximum = 1;
+    } else if (tracker.modifiers.willSucceed) {
+      config.parts = [];
+      config.options.minimum = 99;
+    }
+  };
+}
+
 export function initPatching() {
   libWrapper = globalThis.libWrapper;
+  Hooks.on("dnd5e.postBuildSkillRollConfig", applyChosenAbilityModifiers("skill"));
+  Hooks.on("dnd5e.postBuildToolRollConfig", applyChosenAbilityModifiers("tool"));
   // TODO this needs more work libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.migrateData", removeMidiProperties, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
   // For new onUse macros stuff.
@@ -50,6 +76,7 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.getRollData", actorGetRollData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.calculateDamage", calculateDamageAllTraits, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preUpdate", combatPreUpdate, "WRAPPER");
+  Hooks.on("updateCombat", recoverRerolledInitiativeUses);
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._onStartTurn", combatOnStartTurn, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._onEndTurn", combatOnEndTurn, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.getRollData", itemGetRollData, "WRAPPER");
@@ -371,7 +398,36 @@ function userInitiatedTargetWrapper(this: any, wrapped: Function, ...args: any[]
   }
 }
 
+/** The last CAT whose actor roll wrappers do not hand group actors to dnd5e (its rollSkill wrapper throws for them). */
+const CAT_GROUP_ROLL_FIX_MAX = "0.1.2";
+
+/**
+ * Temporary, while CAT <= CAT_GROUP_ROLL_FIX_MAX is active: a group actor's skill checks and saves go straight to dnd5e's
+ * hand-off (its system data posts a request card for the members), as `Actor5e#rollSkill`/`#rollSavingThrow` do. Set on
+ * each such actor, which libWrapper leaves alone, so CAT's wrappers (and midi's) never run for them.
+ */
+function setupCATGroupRollFix() {
+  const cat = game.modules.get("cat");
+  if (!cat?.active || foundry.utils.isNewerVersion(cat.version ?? "0", CAT_GROUP_ROLL_FIX_MAX)) return;
+  const patch = (actor: Actor.Implementation) => {
+    const system = actor.system as Record<string, unknown>;
+    for (const method of ["rollSkill", "rollSavingThrow"]) {
+      if (typeof system?.[method] !== "function") continue;
+      Object.defineProperty(actor, method, {
+        configurable: true, writable: true,
+        value: async (config = {}, dialog = {}, message = {}) => {
+          await (system[method] as (...args: object[]) => Promise<unknown>).call(system, config, dialog, message);
+          return null;
+        }
+      });
+    }
+  };
+  game.actors?.forEach(patch);
+  Hooks.on("createActor", patch);
+}
+
 export function readyPatching() {
+  setupCATGroupRollFix();
   // Constrain template placement to range / anchor cones to the caster while dragging. Only the
   // interactive step is wrapped; dnd5e still builds and creates the template regions.
   libWrapper.register(MODULE_ID, "game.dnd5e.canvas.TemplatePlacement.prototype._place", midiTemplatePlace, "MIXED");
@@ -519,7 +575,7 @@ export async function processWoundedStatus(actor: Actor.Implementation) {
         ui.notifications?.warn(`midi-qol | ${message}`);
       } else {
         // toggleStatusEffect handles both cases gracefully - no need to check first
-        await actor.toggleStatusEffect(woundedStatus.id!, {
+        await toggleStatus(actor, woundedStatus.id!, {
           overlay: configSettings.addWoundedStyle === "overlay",
           active: needsWounded
         });
@@ -806,7 +862,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
       ? {} // External modules handle their own advantage - don't recompute
       : hasPassedSkillAdvantage && passedSkillAdvantageMap
         ? passedSkillAdvantageMap
-        : await buildPreComputedAdvantageMap(this, "skill", rollSkills, config.midiOptions ?? {});
+        : await buildPreComputedAdvantageMap(this, "skill", rollSkills, config.midiOptions ?? {}, config.ability);
 
     // Setup dialog with MidiRollChoiceDialog helper
     let userExplicitChoice: string | undefined;
@@ -835,7 +891,10 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
           // Only override advantage/disadvantage if not pre-computed from external module
           // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
           if (!hasPreComputedAdvantage) {
-            if (chosenAdvantage.tracker instanceof RollModifierTracker) applyTrackerAdvantage(configData, chosenAdvantage.tracker);
+            if (chosenAdvantage.tracker instanceof RollModifierTracker) {
+              applyKeysToChoice(chosenAdvantage, configData.event);
+              applyTrackerAdvantage(configData, chosenAdvantage.tracker);
+            }
             else {
               configData.advantage = chosenAdvantage.hasAdvantage;
               configData.disadvantage = chosenAdvantage.hasDisadvantage;
@@ -1062,30 +1121,35 @@ function setRollDialogOptions(config: RollProcessConfig, dialog: RollDialogConfi
   // If dialog.configure was explicitly set by the caller (a boolean, not undefined),
   // respect that value. This allows macros/code to pass configure: false to skip the
   // dialog or configure: true to force it, regardless of module settings.
+  // Roll Toggle inverts fast forward and alone decides whether the dialog shows; without it, a fast forwarded roll
+  // skips the dialog and otherwise dnd5e's skip keys decide. Needs the event (none for Flash Rolls or Epic Rolls).
+  const rollToggle = areMidiKeysPressed(config.event, "RollToggle");
   if (dialog.configure !== undefined) {
-    // Caller explicitly set dialog.configure — preserve it
+    // Set by the caller
+    if (rollToggle) dialog.configure = !dialog.configure;
   } else if (sourceInfo.isExternalModule) {
     // External module (Flash Rolls, Monks TokenBar, Epic Rolls): use the module's own fast forward setting
-    // Shift key toggle is handled below for modules that pass the event (Monks TokenBar)
     const moduleFastForward = getExternalModuleFastForward(sourceInfo, rollType);
-    dialog.configure = !moduleFastForward;
+    dialog.configure = rollToggle ? moduleFastForward : !moduleFastForward;
   } else {
-    // Standard midi-qol flow (character sheet rolls, checkSaves, etc.)
-    if (config.midiOptions?.fastForward) dialog.configure = false;
-    if (isAutoFastForward(rollType)) dialog.configure = false;
-  }
-
-  // Shift key toggle - only works if event is available
-  // This handles: character sheet rolls, Monks TokenBar (has event),
-  // but NOT Flash Rolls or Epic Rolls (no event when fast-forwarding)
-  if (areMidiKeysPressed(config.event, "RollToggle")) {
-    dialog.configure = !dialog.configure;
+    const fastForward = !!config.midiOptions?.fastForward || isAutoFastForward(rollType);
+    if (rollToggle) dialog.configure = fastForward;
+    else if (fastForward) dialog.configure = false;
   }
 
   // Set advantage mode for the dialog (use source info + rolls[0].options for dnd5e native)
+  // dnd5e's held keys count as dnd5e counts them: Shift with Alt or Ctrl picks that mode outright.
   const rollOptions = config.rolls?.[0]?.options;
-  const hasAdvantage = sourceInfo.advantage || rollOptions?.advantage;
-  const hasDisadvantage = sourceInfo.disadvantage || rollOptions?.disadvantage;
+  const keys = {
+    normal: areMidiKeysPressed(config.event, "skipDialogNormal", "dnd5e"),
+    advantage: areMidiKeysPressed(config.event, "skipDialogAdvantage", "dnd5e"),
+    disadvantage: areMidiKeysPressed(config.event, "skipDialogDisadvantage", "dnd5e")
+  };
+  let hasAdvantage = sourceInfo.advantage || rollOptions?.advantage || keys.advantage;
+  let hasDisadvantage = sourceInfo.disadvantage || rollOptions?.disadvantage || keys.disadvantage;
+  if (keys.normal && keys.advantage && keys.disadvantage) [hasAdvantage, hasDisadvantage] = [false, false];
+  else if (keys.normal && keys.advantage) [hasAdvantage, hasDisadvantage] = [true, false];
+  else if (keys.normal && keys.disadvantage) [hasAdvantage, hasDisadvantage] = [false, true];
 
   if (hasAdvantage && !hasDisadvantage) {
     dialog.options.advantageMode = ADV_MODE.ADVANTAGE;
@@ -1097,6 +1161,18 @@ function setRollDialogOptions(config: RollProcessConfig, dialog: RollDialogConfi
     dialog.options.advantageMode = ADV_MODE.NORMAL;
     dialog.options.defaultButton = "normal";
   }
+}
+
+
+/**
+ * Held advantage/disadvantage keys join the chosen tracker (a copy of the config, so processKeys leaves the event for
+ * dnd5e) and its snapshot, which the skill/tool dialog's buildConfig applies.
+ */
+function applyKeysToChoice(choice: PreComputedAdvantage, event: RollProcessConfig["event"]): void {
+  if (!(choice.tracker instanceof RollModifierTracker) || !event) return;
+  choice.tracker.processKeys({ event });
+  choice.hasAdvantage = !!choice.tracker.hasAdvantage;
+  choice.hasDisadvantage = !!choice.tracker.hasDisadvantage;
 }
 
 /**
@@ -1239,12 +1315,22 @@ async function combatPreUpdate(this: Combat.Implementation, wrapped, changed: Co
       options: { direction: options.direction, worldTime: options.worldTime } });
     return false;
   }
-  await rerollInitiativeInUpdate(this, changed);
+  (options as { midiRerolledInitiative?: string[] }).midiRerolledInitiative = await rerollInitiativeInUpdate(this, changed);
   return allowed;
 }
 
+/** dnd5e recovers uses "on initiative" when it rolls initiative; do the same for midi's reroll, once the round has advanced. */
+async function recoverRerolledInitiativeUses(combat: Combat.Implementation, changed: Combat.UpdateData, options: Combat.Database.UpdateOptions, userId: string) {
+  const rerolled = (options as { midiRerolledInitiative?: string[] }).midiRerolledInitiative;
+  if (userId !== game.user?.id || !rerolled?.length) return;
+  for (const id of rerolled) {
+    // @ts-expect-error no dnd5e-types
+    await combat._recoverUses({ initiative: combat.combatants.get(id) });
+  }
+}
+
 /** Rolls as core's rollInitiative does, one roll per dnd5e initiative group, and writes the results into `changed`. */
-async function rerollInitiativeInUpdate(combat: Combat.Implementation, changed: Combat.UpdateData) {
+async function rerollInitiativeInUpdate(combat: Combat.Implementation, changed: Combat.UpdateData): Promise<string[]> {
   const byGroup = new Map<string, number>();
   const updates: { _id: string, initiative: number }[] = [];
   const messages: object[] = [];
@@ -1277,6 +1363,7 @@ async function rerollInitiativeInUpdate(combat: Combat.Implementation, changed: 
   const first = combat.settings?.skipDefeated ? order.findIndex(c => !c.isDefeated) : 0;
   changed.turn = Math.max(first, 0);
   await ChatMessage.implementation.create(messages as ChatMessage.CreateData[]);
+  return updates.map(u => u._id);
 }
 
 async function combatOnStartTurn(this: Combat.Implementation, wrapped, combatant: Combatant.Implementation, context: object) {
@@ -1614,7 +1701,10 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
           // Only override advantage/disadvantage if not pre-computed from external module
           // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
           if (!hasPreComputedAdvantage) {
-            if (chosenAdvantage.tracker instanceof RollModifierTracker) applyTrackerAdvantage(configData, chosenAdvantage.tracker);
+            if (chosenAdvantage.tracker instanceof RollModifierTracker) {
+              applyKeysToChoice(chosenAdvantage, configData.event);
+              applyTrackerAdvantage(configData, chosenAdvantage.tracker);
+            }
             else {
               configData.advantage = chosenAdvantage.hasAdvantage;
               configData.disadvantage = chosenAdvantage.hasDisadvantage;
@@ -1771,6 +1861,7 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
       ...config.midiOptions,
       grantsActor: config.midiOptions.workflow?.actor
     });
+    if (config.event) tracker.processKeys({ event: config.event });
     applyTrackerAdvantage(config, tracker);
   }
 
@@ -1810,10 +1901,11 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
 
     // Apply roll modifiers (auto-fail/auto-success) for death saves
     const modifierFlags: RollModifierFlags = {
-      failFlags: ["fail.all", "fail.deathSave"],
-      successFlags: ["success.all", "success.deathSave"],
+      failFlags: ["fail.all"],
+      successFlags: ["success.all"],
       maxFlags: [],
-      minFlags: []
+      minFlags: [],
+      fieldPaths: ["attributes.death.roll"]
     };
     computeRollModifiers(actor, modifierFlags, rollModifierTracker);
     const modifiers = applyRollModifiers(rollModifierTracker, configData, dialogData, { failValue: 2, successValue: 19 });
@@ -1921,6 +2013,15 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
     }
   };
 
+  // A concentration save also takes the concentration flags and roll mode
+  if (rollKind === "concentration") {
+    abilityFlags.advantageFlags.push("advantage.concentration");
+    abilityFlags.disadvantageFlags.push("disadvantage.concentration");
+    abilityFlags.noAdvantageFlags?.push("noAdvantage.concentration");
+    abilityFlags.noDisadvantageFlags?.push("noDisadvantage.concentration");
+    abilityFlags.systemRollModeFields.push("attributes.concentration.roll.mode");
+  }
+
   // Add spell school-specific save advantage/disadvantage flags
   // @ts-expect-error .system.school
   const saveSchool = options.workflow?.saveItem?.system?.school;
@@ -1959,8 +2060,17 @@ export async function computeAbilityAdvantage(actor: Actor.Implementation, rollT
  * Data-driven approach for easy extension to new roll types.
  */
 interface RollTypeHandler {
-  computeAdvantage: (actor: Actor.Implementation, id: string, options: MidiOptions) => Promise<RollModifierTracker>;
-  getModifierFlags: (actor: Actor.Implementation, id: string, options?: MidiOptions) => RollModifierFlags;
+  computeAdvantage: (actor: Actor.Implementation, id: string, options: MidiOptions, ability?: string) => Promise<RollModifierTracker>;
+  getModifierFlags: (actor: Actor.Implementation, id: string, options?: MidiOptions, ability?: string) => RollModifierFlags;
+}
+
+/** The ability a skill or tool check is rolled with: the one asked for, else its default. */
+function skillToolAbility(actor: Actor.Implementation, type: "skill" | "tool", id: string, ability?: string): string {
+  if (ability) return ability;
+  // @ts-expect-error no dnd5e-types
+  if (type === "skill") return actor.system?.skills?.[id]?.ability ?? GameSystemConfig.skills[id]?.ability ?? "";
+  // @ts-expect-error no dnd5e-types
+  return actor.system?.tools?.[id]?.ability || GameSystemConfig.tools[id]?.ability || "";
 }
 
 const rollTypeHandlers: Record<string, RollTypeHandler> = {
@@ -1971,10 +2081,11 @@ const rollTypeHandlers: Record<string, RollTypeHandler> = {
     },
     getModifierFlags: (_actor, id, options) => {
       const flags: RollModifierFlags = {
-        failFlags: ["fail.all", "fail.ability.all", "fail.ability.save.all", `fail.ability.save.${id}`],
-        successFlags: ["success.all", "success.ability.all", "success.ability.save.all", `success.ability.save.${id}`],
-        maxFlags: ["max.ability.save.all", `max.ability.save.${id}`],
-        minFlags: ["min.ability.save.all", `min.ability.save.${id}`]
+        failFlags: ["fail.all", "fail.ability.all"],
+        successFlags: ["success.all", "success.ability.all"],
+        maxFlags: [],
+        minFlags: [],
+        fieldPaths: [`abilities.${id}.save.roll`, "rolls.ability.save"]
       };
       // @ts-expect-error .system.school
       const saveSchool = options?.workflow?.saveItem?.system?.school;
@@ -1991,57 +2102,46 @@ const rollTypeHandlers: Record<string, RollTypeHandler> = {
       return result.tracker;
     },
     getModifierFlags: (_actor, id) => ({
-      failFlags: ["fail.all", "fail.ability.all", "fail.ability.check.all", `fail.ability.check.${id}`],
-      successFlags: ["success.all", "success.ability.all", "success.ability.check.all", `success.ability.check.${id}`],
-      maxFlags: ["max.ability.check.all", `max.ability.check.${id}`],
-      minFlags: ["min.ability.check.all", `min.ability.check.${id}`]
+      failFlags: ["fail.all", "fail.ability.all"],
+      successFlags: ["success.all", "success.ability.all"],
+      maxFlags: [],
+      minFlags: [],
+      fieldPaths: [`abilities.${id}.check.roll`, "rolls.ability.check"]
     })
   },
   skill: {
-    computeAdvantage: async (actor, id, options) => {
-      return computeSkillAdvantage(actor, id, options);
+    computeAdvantage: async (actor, id, options, ability) => {
+      return computeSkillAdvantage(actor, id, options, undefined, ability);
     },
-    getModifierFlags: (actor, id) => {
-      // @ts-expect-error no dnd5e-types
-      const abilityId = actor.system?.skills?.[id]?.ability ?? "";
+    getModifierFlags: (actor, id, _options, ability) => {
+      const abilityId = skillToolAbility(actor, "skill", id, ability);
       const flags: RollModifierFlags = {
-        failFlags: ["fail.all", "fail.skill.all", `fail.skill.${id}`],
-        successFlags: ["success.all", "success.skill.all", `success.skill.${id}`],
-        maxFlags: ["max.skill.all", `max.skill.${id}`],
-        minFlags: ["min.skill.all", `min.skill.${id}`]
+        failFlags: ["fail.all", "fail.ability.all"],
+        successFlags: ["success.all", "success.ability.all"],
+        maxFlags: [],
+        minFlags: [],
+        fieldPaths: ["rolls.ability.check", "rolls.ability.skill", `skills.${id}.roll`]
       };
-      // Include ability check flags if skillAbilityCheckAdvantage is enabled
-      if (configSettings.skillAbilityCheckAdvantage && abilityId) {
-        flags.failFlags.push("fail.ability.all", "fail.ability.check.all", `fail.ability.check.${abilityId}`);
-        flags.successFlags.push("success.ability.all", "success.ability.check.all", `success.ability.check.${abilityId}`);
-        flags.maxFlags.push("max.ability.check.all", `max.ability.check.${abilityId}`);
-        flags.minFlags.push("min.ability.check.all", `min.ability.check.${abilityId}`);
-      }
+      // As dnd5e does, the ability's check settings apply to the skill
+      if (abilityId) flags.fieldPaths!.unshift(`abilities.${abilityId}.check.roll`);
       return flags;
     }
   },
   tool: {
-    computeAdvantage: async (actor, id, options) => {
-      // @ts-expect-error no dnd5e-types
-      const abilityId = actor.system?.tools?.[id]?.ability || GameSystemConfig.tools[id]?.ability || "";
-      return computeToolAdvantage(actor, id, abilityId, options);
+    computeAdvantage: async (actor, id, options, ability) => {
+      return computeToolAdvantage(actor, id, skillToolAbility(actor, "tool", id, ability), options);
     },
-    getModifierFlags: (actor, id) => {
-      // @ts-expect-error no dnd5e-types
-      const abilityId = actor.system?.tools?.[id]?.ability || GameSystemConfig.tools[id]?.ability || "";
+    getModifierFlags: (actor, id, _options, ability) => {
+      const abilityId = skillToolAbility(actor, "tool", id, ability);
       const flags: RollModifierFlags = {
-        failFlags: ["fail.all", "fail.tool.all", `fail.tool.${id}`],
-        successFlags: ["success.all", "success.tool.all", `success.tool.${id}`],
-        maxFlags: ["max.tool.all", `max.tool.${id}`],
-        minFlags: ["min.tool.all", `min.tool.${id}`]
+        failFlags: ["fail.all", "fail.ability.all"],
+        successFlags: ["success.all", "success.ability.all"],
+        maxFlags: [],
+        minFlags: [],
+        fieldPaths: ["rolls.ability.check", "rolls.ability.tool", `tools.${id}.roll`]
       };
-      // Include ability check flags if the tool has an associated ability
-      if (abilityId) {
-        flags.failFlags.push("fail.ability.all", "fail.ability.check.all", `fail.ability.check.${abilityId}`);
-        flags.successFlags.push("success.ability.all", "success.ability.check.all", `success.ability.check.${abilityId}`);
-        flags.maxFlags.push("max.ability.check.all", `max.ability.check.${abilityId}`);
-        flags.minFlags.push("min.ability.check.all", `min.ability.check.${abilityId}`);
-      }
+      // As dnd5e does, the ability's check settings apply to the tool
+      if (abilityId) flags.fieldPaths!.unshift(`abilities.${abilityId}.check.roll`);
       return flags;
     }
   },
@@ -2053,17 +2153,6 @@ const rollTypeHandlers: Record<string, RollTypeHandler> = {
       const abilityId = actor.system?.attributes?.concentration?.ability || id || GameSystemConfig.defaultAbilities?.concentration || "con";
       // Get the ability save advantage
       const saveResult = await computeAbilityAdvantage(actor, "save", abilityId, options, undefined, "concentration");
-
-      // Add concentration-specific flags to the same tracker
-      const concentrationFlags: AdvantageFlags = {
-        advantageFlags: ["advantage.concentration"],
-        disadvantageFlags: ["disadvantage.concentration"],
-        noAdvantageFlags: ["noAdvantage.concentration"],
-        noDisadvantageFlags: ["noDisadvantage.concentration"],
-        systemRollModeFields: ["attributes.concentration.roll.mode"]
-      };
-      await computeAdvantageFlags(actor, concentrationFlags, options, saveResult.tracker);
-
       return saveResult.tracker;
     },
     getModifierFlags: (actor, id) => {
@@ -2074,10 +2163,11 @@ const rollTypeHandlers: Record<string, RollTypeHandler> = {
       const saveModifiers = rollTypeHandlers.save.getModifierFlags(actor, abilityId);
       // Add concentration-specific modifiers
       return {
-        failFlags: [...saveModifiers.failFlags, "fail.concentration"],
-        successFlags: [...saveModifiers.successFlags, "success.concentration"],
-        maxFlags: [...saveModifiers.maxFlags, "max.concentration"],
-        minFlags: [...saveModifiers.minFlags, "min.concentration"]
+        failFlags: saveModifiers.failFlags,
+        successFlags: saveModifiers.successFlags,
+        maxFlags: [],
+        minFlags: [],
+        fieldPaths: [...(saveModifiers.fieldPaths ?? []), "attributes.concentration.roll"]
       };
     }
   }
@@ -2100,7 +2190,8 @@ export async function buildPreComputedAdvantageMap(
   actor: Actor.Implementation,
   rollType: string,
   rollIds: string[],
-  options: MidiOptions
+  options: MidiOptions,
+  ability?: string
 ): Promise<Record<string, PreComputedAdvantage>> {
   const result: Record<string, PreComputedAdvantage> = {};
   const workflow = options.workflow;
@@ -2113,10 +2204,10 @@ export async function buildPreComputedAdvantageMap(
 
   for (const id of rollIds) {
     // Compute advantage/disadvantage with attribution tracking
-    const tracker = await handler.computeAdvantage(actor, id, options);
+    const tracker = await handler.computeAdvantage(actor, id, options, ability);
 
     // Add roll modifiers (fail/success/max/min) to the same tracker
-    const modifierFlags = handler.getModifierFlags(actor, id, options);
+    const modifierFlags = handler.getModifierFlags(actor, id, options, ability);
     computeRollModifiers(actor, modifierFlags, tracker, { workflow });
 
     const hasAdv = !!tracker.hasAdvantage;
@@ -2132,9 +2223,8 @@ export async function buildPreComputedAdvantageMap(
   return result;
 }
 
-export async function computeSkillAdvantage(actor: Actor.Implementation, skillId: string, options: MidiOptions, tracker?: RollModifierTracker): Promise<RollModifierTracker> {
-  // @ts-expect-error no dnd5e-types
-  const abilityId = actor.system?.skills?.[skillId]?.ability ?? "";
+export async function computeSkillAdvantage(actor: Actor.Implementation, skillId: string, options: MidiOptions, tracker?: RollModifierTracker, ability?: string): Promise<RollModifierTracker> {
+  const abilityId = skillToolAbility(actor, "skill", skillId, ability);
 
   // Build skill advantage/disadvantage flags
   const skillFlags: AdvantageFlags = {
@@ -2187,12 +2277,9 @@ export async function computeSkillAdvantage(actor: Actor.Implementation, skillId
     skillFlags.sourceNoAdvantageFlags?.push(`grants.noAdvantage.skill.${abilityId}`);
     skillFlags.sourceNoDisadvantageFlags?.push(`grants.noDisadvantage.skill.${abilityId}`);
 
-    // If skillAbilityCheckAdvantage is enabled, also check ability check flags
-    if (configSettings.skillAbilityCheckAdvantage) {
-      // New flag names (preferred)
-      skillFlags.advantageFlags.push("advantage.ability.all", "advantage.check.all", `advantage.check.${abilityId}`);
-      skillFlags.disadvantageFlags.push("disadvantage.ability.all", "disadvantage.check.all", `disadvantage.check.${abilityId}`);
-    }
+    // As dnd5e does, the ability's check advantage applies to the skill
+    skillFlags.advantageFlags.push("advantage.ability.all", "advantage.check.all", `advantage.check.${abilityId}`);
+    skillFlags.disadvantageFlags.push("disadvantage.ability.all", "disadvantage.check.all", `disadvantage.check.${abilityId}`);
   }
 
   // For skills, source actor is the caster (workflow.actor) if any
@@ -2662,14 +2749,14 @@ async function setDeadStatus(actor: Actor.Implementation, options: { effect: CON
     // Check for actual effect, not just status (which could come from a rider)
     const unconsciousEffect = actor.effects.find(e => e.statuses.has("unconscious"));
     if (unconsciousEffect) {
-      await actor.toggleStatusEffect("unconscious", { active: false });
+      await toggleStatus(actor, "unconscious", { active: false });
     }
   }
 
   // toggleStatusEffect handles both cases gracefully:
   // - active: true when already exists → returns true, no error
   // - active: false when doesn't exist → returns undefined, no error
-  const result = await actor.toggleStatusEffect(effect.id, { overlay: (configSettings.addDead === "overlay") || options.overlay, active: makeDead });
+  const result = await toggleStatus(actor, effect.id, { overlay: (configSettings.addDead === "overlay") || options.overlay, active: makeDead });
 
   // Only update defeated status if the toggle actually changed something
   if (useDefeated && result !== undefined) {
@@ -2809,7 +2896,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
       ? {} // External modules handle their own advantage - don't recompute
       : hasPassedToolAdvantage && passedToolAdvantageMap
         ? passedToolAdvantageMap
-        : await buildPreComputedAdvantageMap(this, "tool", rollTools, config.midiOptions ?? {});
+        : await buildPreComputedAdvantageMap(this, "tool", rollTools, config.midiOptions ?? {}, config.ability);
 
     // Setup dialog with MidiRollChoiceDialog helper
     let userExplicitChoice: string | undefined;
@@ -2833,7 +2920,10 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
           // Only override advantage/disadvantage if not pre-computed from external module
           // (Monks Token Bar, Flash Rolls, Epic Rolls pass their own advantage/disadvantage)
           if (!hasPreComputedAdvantage) {
-            if (chosenAdvantage.tracker instanceof RollModifierTracker) applyTrackerAdvantage(configData, chosenAdvantage.tracker);
+            if (chosenAdvantage.tracker instanceof RollModifierTracker) {
+              applyKeysToChoice(chosenAdvantage, configData.event);
+              applyTrackerAdvantage(configData, chosenAdvantage.tracker);
+            }
             else {
               configData.advantage = chosenAdvantage.hasAdvantage;
               configData.disadvantage = chosenAdvantage.hasDisadvantage;

@@ -20,6 +20,9 @@ const MIDI_CHANGE_ICONS: Record<string, string> = {
   nonmagic: "systems/dnd5e/icons/svg/activity/attack.svg"
 };
 
+/** As dnd5e's multiplier buttons show them. */
+const MULTIPLIER_LABELS: Record<string, string> = { "0.25": "¼", "0.5": "½" };
+
 export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.components.DamageApplicationElement {
   chatMessage;
   damages: any[] = [];
@@ -29,16 +32,51 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
   connectedCallback() {
     this.damageType = this.dataset.damageType ?? "defaultDamage";
     super.connectedCallback();
-    const rolls = (this.chatMessage?.rolls ?? []).filter((r: Roll) =>
+    const rolls: Roll[] = (this.chatMessage?.rolls ?? []).filter((r: Roll) =>
       foundry.utils.getProperty(r, `options.${MODULE_ID}.rollType`) === this.damageType);
-    this.damages = (game.system as Dnd5eSystem).dice.aggregateDamageRolls(rolls, { respectProperties: true }).map(roll => ({
-      properties: new Set(roll.options.properties ?? []),
-      type: roll.options.type,
-      value: Math.max(0, roll.total ?? 0)
-    }));
+    // The ammunition's other damage is kept apart: it applies by its own condition and save.
+    const isAmmunition = (r: Roll) => !!foundry.utils.getProperty(r, `options.${MODULE_ID}.ammunition`);
+    const damagesOf = (group: Roll[], midiAmmunition: boolean) => (game.system as Dnd5eSystem).dice
+      .aggregateDamageRolls(group, { respectProperties: true }).map(roll => ({
+        properties: new Set(roll.options.properties ?? []),
+        type: roll.options.type,
+        value: Math.max(0, roll.total ?? 0),
+        ...(midiAmmunition ? { midiAmmunition } : {})
+      }));
+    this.damages = [...damagesOf(rolls.filter(r => !isAmmunition(r)), false), ...damagesOf(rolls.filter(isAmmunition), true)];
     this.targetList?.buildTargetsList();
   }
 
+
+  /**
+   * dnd5e marks every multiplier in use on the tray's row but not who has which; when targets differ, each pill shows
+   * its own.
+   */
+  refreshMultiplier() {
+    super.refreshMultiplier();
+    const list: HTMLElement | undefined = this.targetList;
+    const pills = Array.from(list?.querySelectorAll<HTMLElement>("target-pill") ?? []);
+    const multipliers = pills.map(pill => {
+      const uuid = pill.querySelector("option")?.value;
+      return uuid ? this.getMergedOptions(uuid).multiplier as number : undefined;
+    });
+    const mixed = new Set(multipliers).size > 1;
+    pills.forEach((pill, index) => {
+      pill.querySelector(".midi-target-multiplier")?.remove();
+      const multiplier = multipliers[index];
+      if (!mixed || multiplier === undefined) return;
+      const marker = document.createElement("span");
+      marker.className = "midi-target-multiplier";
+      marker.textContent = `×${MULTIPLIER_LABELS[String(multiplier)] ?? multiplier}`;
+      pill.querySelector("label")?.after(marker);
+    });
+  }
+
+  /** A target's figures change with its multiplier, set from its pane; keep the markers in step. */
+  refreshListEntry(entry: HTMLElement, damage: { temp: number, tempMax: number, total: number }) {
+    super.refreshListEntry(entry, damage);
+    if (entry.isConnected && this.targetList?.isConnected) this.refreshMultiplier();
+  }
 
   /**
    * Override to handle "all" type and midi custom change types for labels
@@ -241,17 +279,17 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
         targetDetails = targets.find(target => target.token === uuid || target.actor === uuid);
         if (!targetDetails) return options;
         options.midi = foundry.utils.duplicate(targetDetails);
-        const saveMultiplier = targetDetails.saveMults?.[this.damageType];
-        if (targetDetails.saved) {
+        // What a successful save does to this tray's damage; the calculation adds Super Saver per damage entry.
+        const saveMultiplier = targetDetails.saveMults?.[this.damageType as "defaultDamage" | "otherDamage" | "bonusDamage"];
+        if (saveMultiplier !== undefined || targetDetails.saved)
           foundry.utils.setProperty(options, "midi.saveMultiplier", saveMultiplier ?? configSettings.defaultSaveMult);
-        }
-        if (saveMultiplier !== undefined) {
-          if (targetDetails.superSaver && saveMultiplier === configSettings.defaultSaveMult) {
-            foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : configSettings.defaultSaveMult);
-          }
-          if (targetDetails.semiSuperSaver && saveMultiplier === configSettings.defaultSaveMult) {
-            foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : 1);
-          }
+        if (this.damageType === "otherDamage") {
+          const flags = this.chatMessage?.flags?.[MODULE_ID] as { otherDamageMatchUuids?: string[], ammunitionDamageMatchUuids?: string[] } | undefined;
+          const token = targetDetails.token ?? uuid;
+          if (flags?.otherDamageMatchUuids) foundry.utils.setProperty(options, "midi.otherApplies", flags.otherDamageMatchUuids.includes(token));
+          if (flags?.ammunitionDamageMatchUuids) foundry.utils.setProperty(options, "midi.ammunitionApplies", flags.ammunitionDamageMatchUuids.includes(token));
+          if (targetDetails.saveMults?.ammunition !== undefined)
+            foundry.utils.setProperty(options, "midi.ammunitionSaveMultiplier", targetDetails.saveMults.ammunition);
         }
         if (targetDetails.uncannyDodge) {
           foundry.utils.setProperty(options, "midi.uncannyDodge", true);

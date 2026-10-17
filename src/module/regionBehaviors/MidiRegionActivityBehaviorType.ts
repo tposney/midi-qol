@@ -1,7 +1,7 @@
-import { MODULE_ID, error } from "../../midi-qol.js";
+import { MODULE_ID, i18n, error } from "../../midi-qol.js";
 import { completeActivityUse, fromActorUuid, getToken, isValidTarget, playerForActor } from "../utils.js";
 import { preferredActiveGM, socketlibSocket } from "../GMAction.js";
-import { Activity } from "../../globals.js";
+import { V14RegionDocument, Activity } from "../../globals.js";
 
 const { ArrayField, BooleanField, NumberField, SchemaField, StringField } = foundry.data.fields;
 
@@ -64,6 +64,17 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
         initial: true,
         label: `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.FIELDS.oncePerTurn.label`,
       }),
+      activationEntry: new BooleanField({
+        initial: true,
+        label: `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.FIELDS.activationEntry.label`,
+        hint: `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.FIELDS.activationEntry.hint`,
+      }),
+      moveDistance: new NumberField({ initial: 0, min: 0,
+        label: `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.FIELDS.moveDistance.label` }),
+      moveDirection: new StringField({ initial: "away", choices: ["away", "choose"],
+        label: `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.FIELDS.moveDirection.label` }),
+      moveTiming: new StringField({ initial: "start", choices: ["start", "end"],
+        label: `BEHAVIOR.TYPES.${MODULE_ID}.regionActivity.FIELDS.moveTiming.label` }),
       wallRestriction: new StringField({
         initial: "none",
         // @ts-expect-error fvtt-types missing EDGE_RESTRICTION_TYPES (v14 regions use EDGE not WALL)
@@ -119,40 +130,42 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
    * - Automatically cleaned up when combat ends (unlike actor flags)
    * - No pollution of actor or behavior documents
    *
-   * Flag path: `flags.midi-qol.regionTriggers.{behaviorId}.{actorId}-{activityKey}`
+   * Flag path: `flags.midi-qol.regionTriggers.{behaviorId}.{tokenId}-{activityKey}`. The token, not its actor: unlinked
+   * tokens of one actor share the actor's id.
    * Flag value: `"{round}.{turn}"` — identifies the specific combatant turn.
    * The behaviorId scopes entries per-cast so re-casting after concentration drop
    * creates a new namespace with no stale data.
    */
-  _hasTriggeredThisTurn(actor: Actor.Implementation, activityUuid: string): boolean {
+  _hasTriggeredThisTurn(token: TokenDocument.Implementation, activityUuid: string, turn?: string): boolean {
     if (!activityUuid) return false;
     const combat = game.combat;
     if (!combat?.active) return false;
     const behaviorId = (this as any).parent?.id ?? "";
     const activityKey = this._activityKeyFromUuid(activityUuid);
-    const flagPath = `regionTriggers.${behaviorId}.${actor.id}-${activityKey}`;
+    const flagPath = `regionTriggers.${behaviorId}.${token.id}-${activityKey}`;
     // @ts-expect-error dynamic flag key
     const lastValue = combat.getFlag(MODULE_ID, flagPath) as string | undefined;
     if (!lastValue) return false;
-    return lastValue === `${combat.round}.${combat.turn}`;
+    return lastValue === (turn ?? `${combat.round}.${combat.turn}`);
   }
 
-  async _markTriggeredThisTurn(actor: Actor.Implementation, activityUuid: string): Promise<void> {
+  async _markTriggeredThisTurn(token: TokenDocument.Implementation, activityUuid: string, turn?: string): Promise<void> {
     if (!activityUuid) return;
     const combat = game.combat;
     if (!combat?.active) return;
     const behaviorId = (this as any).parent?.id ?? "";
     const activityKey = this._activityKeyFromUuid(activityUuid);
-    const flagPath = `regionTriggers.${behaviorId}.${actor.id}-${activityKey}`;
+    const flagPath = `regionTriggers.${behaviorId}.${token.id}-${activityKey}`;
     // @ts-expect-error dynamic flag key
-    await combat.setFlag(MODULE_ID, flagPath, `${combat.round}.${combat.turn}`);
+    await combat.setFlag(MODULE_ID, flagPath, turn ?? `${combat.round}.${combat.turn}`);
   }
 
   /* ---------------------------------------- */
   /*  Unified Rule Execution                  */
   /* ---------------------------------------- */
 
-  async _executeRulesForTrigger(token: TokenDocument.Implementation, trigger: string): Promise<void> {
+  /** `turn` ("round.turn") is the turn a turn event belongs to: turn end fires once the combat has moved on. */
+  async _executeRulesForTrigger(token: TokenDocument.Implementation, trigger: string, turn?: string): Promise<void> {
     const self = this as any;
     const rules = self.rules as Array<{trigger: string, action: string, targetUuid: string}>;
     const oncePerTurn = self.oncePerTurn as boolean;
@@ -164,11 +177,12 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
       try {
         switch (rule.action) {
           case "useActivity":
-            if (oncePerTurn && this._hasTriggeredThisTurn(actor, rule.targetUuid)) {
+            if (oncePerTurn && this._hasTriggeredThisTurn(token, rule.targetUuid, turn)) {
               continue;
             }
+            // Marked first: the activity's workflow can outlast the turn (a save), and its end must not trigger it again.
+            if (oncePerTurn) await this._markTriggeredThisTurn(token, rule.targetUuid, turn);
             await this._triggerActivity(token, rule.targetUuid);
-            if (oncePerTurn) await this._markTriggeredThisTurn(actor, rule.targetUuid);
             break;
           // applyEffect/removeEffect rules on older regions: effects are now dnd5e's apply-effect behaviour.
         }
@@ -182,7 +196,22 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
   /*  Event Handlers                          */
   /* ---------------------------------------- */
 
+  declare sourceActorUuid: string;
+  declare activationEntry: boolean;
+  declare moveDistance: number;
+  declare moveDirection: "away" | "choose";
+  declare moveTiming: "start" | "end";
+
+  /** Core sends tokens already inside an entry right after activating a behavior, in the same synchronous pass. */
+  _activating = false;
+
+  static _onBehaviorActivated(this: MidiRegionActivityBehaviorType): void {
+    this._activating = true;
+    queueMicrotask(() => this._activating = false);
+  }
+
   static async _onTokenEnter(this: MidiRegionActivityBehaviorType, event: any): Promise<void> {
+    if (this._activating && !this.activationEntry) return;
     if (!event.user.isSelf) return;
     const { token, movement } = event.data;
     const actor = token.actor;
@@ -222,7 +251,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     if (!this._passesDispositionFilter(token)) return;
     if (!isValidTarget(token)) return;
 
-    await this._executeRulesForTrigger(token, "turnStart");
+    await this._executeRulesForTrigger(token, "turnStart", `${event.data.round}.${event.data.turn}`);
   }
 
   static async _onTokenTurnEnd(this: MidiRegionActivityBehaviorType, event: any): Promise<void> {
@@ -235,7 +264,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
     if (!this._passesDispositionFilter(token)) return;
     if (!isValidTarget(token)) return;
 
-    await this._executeRulesForTrigger(token, "turnEnd");
+    await this._executeRulesForTrigger(token, "turnEnd", `${event.data.round}.${event.data.turn}`);
   }
 
   /* ---------------------------------------- */
@@ -317,6 +346,7 @@ export class MidiRegionActivityBehaviorType extends foundry.data.regionBehaviors
   /* ---------------------------------------- */
 
   static events = {
+    [CONST.REGION_EVENTS.BEHAVIOR_ACTIVATED]: this._onBehaviorActivated,
     [CONST.REGION_EVENTS.TOKEN_ENTER]: this._onTokenEnter,
     [CONST.REGION_EVENTS.TOKEN_EXIT]: this._onTokenExit,
     [CONST.REGION_EVENTS.TOKEN_TURN_START]: this._onTokenTurnStart,
@@ -345,4 +375,97 @@ export function excludeRegionSourceEffect(effect: ActiveEffect.Implementation, d
   const originToken = fromUuidSync(region?.flags.dnd5e?.origin) as TokenDocument.Implementation | null;
   const caster = originToken?.actor ?? activity?.actor;
   if (caster && effect.parent?.uuid === caster.uuid) return false;
+}
+
+/* ---------------------------------------- */
+/*  Moving a region each turn               */
+/* ---------------------------------------- */
+
+const COMPASS: Record<string, { x: number, y: number, label: string }> = {
+  nw: { x: -1, y: -1, label: "↖" }, n: { x: 0, y: -1, label: "↑" }, ne: { x: 1, y: -1, label: "↗" },
+  w: { x: -1, y: 0, label: "←" }, away: { x: 0, y: 0, label: "" }, e: { x: 1, y: 0, label: "→" },
+  sw: { x: -1, y: 1, label: "↙" }, s: { x: 0, y: 1, label: "↓" }, se: { x: 1, y: 1, label: "↘" },
+};
+
+/** Asks which way to move: a compass direction, away from the caster, or not at all. */
+async function chooseMoveDirection(region: V14RegionDocument, distance: number, units: string): Promise<string | null> {
+  const buttons = Object.entries(COMPASS).map(([action, { label }]) => ({
+    action, label: action === "away" ? i18n("midi-qol.REGION_BEHAVIOR.move.away") : label,
+  }));
+  buttons.push({ action: "stay", label: i18n("midi-qol.REGION_BEHAVIOR.move.stay") });
+  const { DialogV2 } = foundry.applications.api;
+  const choice = await DialogV2.wait({
+    window: { title: region.name },
+    classes: ["midi-qol-move-region"],
+    position: { width: 260 },
+    content: `<p>${i18n("midi-qol.REGION_BEHAVIOR.move.prompt").replace("{distance}", `${distance} ${units}`)}</p>`,
+    buttons,
+    rejectClose: false,
+  });
+  return typeof choice === "string" && choice !== "stay" ? choice : null;
+}
+
+/** `combatTurnChange`: moves the regions whose behaviour moves them on the turn that just started or ended. */
+export async function moveRegionsOnTurnChange(combat: Combat.Implementation, previous: Combat.HistoryData | undefined, current: Combat.HistoryData) {
+  if (!previous || current.round === null || previous.round === null) return;
+  // Only forward: no moves when the GM steps back.
+  if ((current.round ?? 0) < (previous.round ?? 0) || (current.round === previous.round && (current.turn ?? 0) <= (previous.turn ?? 0))) return;
+  const scene = combat.scene ?? canvas?.scene;
+  for (const region of (scene?.regions ?? []) as Iterable<V14RegionDocument>) {
+    if (region.attachment?.token) continue;
+    for (const behavior of region.behaviors) {
+      if (behavior.disabled || String(behavior.type) !== `${MODULE_ID}.regionActivity`) continue;
+      const system = behavior.system as unknown as MidiRegionActivityBehaviorType;
+      const { moveDistance, moveDirection, moveTiming } = system;
+      if (!(moveDistance > 0)) continue;
+      const combatantId = moveTiming === "end" ? previous.combatantId : current.combatantId;
+      const combatant = combatantId ? combat.combatants.get(combatantId) : undefined;
+      const actor = combatant?.actor;
+      if (!actor || actor.uuid !== system.sourceActorUuid) continue;
+      const owner = moveDirection === "choose" ? playerForActor(actor) : undefined;
+      const mover = owner?.active ? owner : preferredActiveGM();
+      if (!mover?.isSelf) continue;
+      const casterToken = combatant?.token;
+      if (!casterToken) continue;
+      let direction: string | null = "away";
+      if (moveDirection === "choose") direction = await chooseMoveDirection(region, moveDistance, scene!.grid.units);
+      if (!direction) continue;
+      let unit = COMPASS[direction];
+      if (direction === "away") {
+        const from = casterToken.getCenterPoint();
+        const to = region.bounds.center;
+        const length = Math.hypot(to.x - from.x, to.y - from.y);
+        if (length < 1) {
+          ui.notifications?.warn(i18n("midi-qol.REGION_BEHAVIOR.move.noDirection").replace("{name}", region.name));
+          continue;
+        }
+        unit = { x: (to.x - from.x) / length, y: (to.y - from.y) / length, label: "" };
+      } else {
+        const length = Math.hypot(unit.x, unit.y);
+        unit = { x: unit.x / length, y: unit.y / length, label: "" };
+      }
+      await moveRegion(region, unit, moveDistance);
+    }
+  }
+}
+
+/** Moves in grid-sized steps, so tokens the region passes over enter it as well as those it ends on. */
+async function moveRegion(region: V14RegionDocument, unit: { x: number, y: number }, distance: number) {
+  const scene = region.parent!;
+  const stepDistance = scene.grid.distance || distance;
+  const steps = Math.max(1, Math.ceil(distance / stepDistance));
+  const pixels = distance * scene.dimensions.distancePixels;
+  const start = region.shapes.map(s => s.origin);
+  for (let i = 1; i <= steps; i++) {
+    const offset = { x: unit.x * pixels * i / steps, y: unit.y * pixels * i / steps };
+    const shapes = region.shapes.map((shape, j) => {
+      const moved = shape.clone({}, { parent: scene });
+      moved.move({ x: start[j].x + offset.x, y: start[j].y + offset.y });
+      return moved._source;
+    });
+    if (game.user?.isGM) await region.update({ shapes });
+    else await socketlibSocket.executeAsGM("setupRegion", { regionUuid: region.uuid, update: { shapes } });
+    // Let the tokens' region membership catch up, so each step's entries fire.
+    if (i < steps) await new Promise(resolve => setTimeout(resolve, 250));
+  }
 }

@@ -288,28 +288,32 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }
       // Each d20 roll with its own total: the rendered totals do not line up with `rolls` (damage is
       // aggregated into one block, and save rolls render inside their target's row).
-      const pairs: [Roll, Element | null | undefined][] = [];
+      // A save can still fail on a natural 20 or succeed on a 1 (dnd5e's canCrit is false for saves): its natural 20 or 1
+      // is marked only where it agrees with the outcome.
+      const pairs: [Roll, Element | null | undefined, boolean][] = [];
       const attack = attackRollOf(this);
-      if (attack) pairs.push([attack, html.querySelector(".midi-attack-roll .dice-total")]);
+      if (attack) pairs.push([attack, html.querySelector(".midi-attack-roll .dice-total"), true]);
       for (const roll of this.rolls) {
         if (foundry.utils.getProperty(roll, `options.${MODULE_ID}.rollType`) !== "save") continue;
         const uuid = foundry.utils.getProperty(roll, `options.${MODULE_ID}.targetUuid`);
         const row = html.querySelector(`.midi-qol-save-name[data-uuid="${uuid}"]`)?.closest("li");
-        pairs.push([roll, row?.querySelector(".midi-qol-save-tooltip .dice-total")]);
+        pairs.push([roll, row?.querySelector(".midi-qol-save-tooltip .dice-total"), false]);
       }
-      for (const [d20Roll, total] of pairs) {
+      for (const [d20Roll, total, canCrit] of pairs) {
         if (!total) continue;
         total.classList.remove("success", "failure", "critical", "fumble");
         total.querySelector(".icons")?.remove();
 
         const d0 = d20Roll?.dice?.[0];
-        if (!d0 || d0.faces !== 20 || d0.values?.length !== 1) continue;
-
+        if (!d0) continue;
         // @ts-expect-error D20Roll not typed
         const d20 = dnd5e.dice.D20Roll.fromRoll(d20Roll);
-        if (d20.isCritical) total.classList.add("critical");
-        if (d20.isFumble) total.classList.add("fumble");
-        if (d20.dice[0]?.options?.target) {
+        // A d20 (one kept die), or a die that replaces it, e.g. Custom D&D 5e's 2d10: dnd5e judges both.
+        if (!d20.validD20Roll || (d0.faces === 20 && d0.values?.length !== 1)) continue;
+        const hasTarget = !!d20.dice[0]?.options?.target;
+        if (d20.isCritical && (canCrit || !hasTarget || d20.isSuccess)) total.classList.add("critical");
+        if (d20.isFumble && (canCrit || !hasTarget || !d20.isSuccess)) total.classList.add("fumble");
+        if (hasTarget) {
           if (d20.isSuccess) total.classList.add("success");
           else total.classList.add("failure");
         }
@@ -436,8 +440,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           break;
         case "hitMissCrit":
           attackRollText = hitString;
-          if (isCritical) attackRollText = i18n("midi-qol.criticalHit");
-          else if (isFumble) attackRollText = i18n("midi-qol.fumble");
+          if (isCritical) attackRollText = i18n("midi-qol.criticals");
+          else if (isFumble) attackRollText = i18n("midi-qol.fumbles");
           break;
         case "hidden":
           hideCritFumble = true;
@@ -597,7 +601,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     private applyAttackVisibility(html: HTMLElement) {
-      if (!configSettings.optionalRules.ActiveDefenceDC) {
+      if (!configSettings.optionalRules.activeDefenceDC) {
         removeAll(html, ".midi-qol-active-defence-dc");
       }
 

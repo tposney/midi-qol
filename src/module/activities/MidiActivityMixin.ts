@@ -47,7 +47,6 @@ import {
   activityHasAutoPlaceTemplate,
   hasUsedBonusAction,
   hasUsedReaction,
-  initializeVision,
   autoConsumeResource,
   isInCombat,
   logIncapacitatedCheckResult,
@@ -122,6 +121,9 @@ export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.Formu
   }
 }
 
+/** Each use's workflow, keyed by dnd5e's copy of the activity for that use (it runs the rest of `use`). */
+const useWorkflows = new WeakMap<object, Workflow>();
+
 /**
  * Apply optional region update + region behavior creation. GMs run locally; non-GMs send
  * a single batched socket call. We gate on isGM because RegionDocument#canUserModify can
@@ -148,6 +150,15 @@ async function writeRegion(
     update: hasUpdate ? ops.update : undefined,
     behaviors: hasBehaviors ? ops.behaviors : undefined,
   });
+}
+
+/** Clears a cancelled use's state, so a resubmitted config starts afresh. */
+function clearAbandonedUse(...configs: (ActivityUseConfiguration | undefined)[]) {
+  for (const config of configs) {
+    if (!config) continue;
+    delete config.workflow;
+    delete config.midiOptions?.workflowOptions?.preSelectedTargetUuids;
+  }
 }
 
 /**
@@ -270,6 +281,10 @@ export let MidiActivityMixin = Base => {
           // "default" leaves the region stationary. "caster" attaches it to the caster's token;
           // "target" attaches it to a chosen target (prompts if multiple targets are selected).
           attachToken: new StringField({ initial: "default", choices: ["default", "caster", "target"] }),
+          // Moves the region each turn of the caster: away from it, or in a direction its owner chooses.
+          moveDistance: new NumberField({ initial: 0, min: 0 }),
+          moveDirection: new StringField({ initial: "away", choices: ["away", "choose"] }),
+          moveTiming: new StringField({ initial: "start", choices: ["start", "end"] }),
           // The caster's height a template is measured from; "default" follows the Template Origin Height setting.
           templateOrigin: new StringField({ initial: "default", required: true, blank: false, choices: ["default", "base", "top", "eye"] }),
           rules: new ArrayField(new SchemaField({
@@ -300,6 +315,11 @@ export let MidiActivityMixin = Base => {
      * @returns {boolean}
      * @description Is this activity suitable as an other activity. It must be a possible other activity (default false) and the otherActivityCompatible flag must be set to true
      */
+    /** midi wraps this activity, so using it runs a midi workflow. */
+    get isMidiActivity(): boolean {
+      return true;
+    }
+
     get isOtherActivityCompatible() {
       if (!this.possibleOtherActivity) return false;
       return this.midiProperties!.otherActivityCompatible;
@@ -664,6 +684,8 @@ export let MidiActivityMixin = Base => {
         return;
       }
       let preUseActivityHookId: number | undefined;
+      // dnd5e's copy of `usage`, which midi annotates.
+      let dnd5eUsageConfig: ActivityUseConfiguration | undefined;
       let activityConsumptionHookId: number | undefined;
       try {
         // Copies: a caller may reuse one options object across uses, and this snapshot belongs to this use alone.
@@ -680,7 +702,7 @@ export let MidiActivityMixin = Base => {
           workflowClass = ActiveDefenceWorkflow;
         }
         if (!(workflowClass.prototype instanceof Workflow)) workflowClass = Workflow;
-        const workflowOptions = { ...usage.midiOptions, ...(usage.midiOptions?.workflowOptions ?? {}), event: usage.event as AugmentedEvent | undefined, storeWorkflow: true };
+        const workflowOptions = { ...usage.midiOptions, ...(usage.midiOptions?.workflowOptions ?? {}), event: usage.event as AugmentedEvent | undefined };
         delete workflowOptions.workflowOptions;
         if (usage.workflow)
           usage.midiOptions.workflowOptions.autoRollAttack = true;
@@ -691,7 +713,6 @@ export let MidiActivityMixin = Base => {
           else usage.workflow = new workflowClass(activity.actor ?? null, activity, ChatMessage.getSpeaker({ actor: activity.item.actor }), null, { workflowOptions });
         }
         usage.workflow!.sequenceId = usage.sequenceId;
-        message.workflow = usage.workflow; // TODO: remove hack to allow card config processing
         usage.workflow!.systemCard = message.systemCard;
         if ((activity.midiProperties?.rollMode ?? "default") !== "default") message.rollMode = toMessageMode(activity.midiProperties!.rollMode) as keyof CONFIG.Dice.RollModes;
         if (activity.midiProperties?.skipConcentrationCheck && this.actor &&
@@ -735,14 +756,14 @@ export let MidiActivityMixin = Base => {
           foundry.utils.setProperty(message, `data.flags.${MODULE_ID}.itemData`, activity.item.toObject());
 
         let useResults: any;
-        preUseActivityHookId = Hooks.on("dnd5e.preUseActivity", (newActivity, usageConfig, messageConfig) => {
+        preUseActivityHookId = Hooks.on("dnd5e.preUseActivity", (newActivity, usageConfig) => {
           if (usage.workflow!.activity?.uuid !== newActivity.uuid) return true;
+          dnd5eUsageConfig = usageConfig;
           // Not sure if required but set the workflow in the super.usageConfig.
           usageConfig.workflow = usage.workflow;
           // newActivity will be the scaled activity to use that instead of what we have
           usage.workflow!.activity = newActivity;
-          // TODO fix this nasty hack
-          messageConfig.workflow = usage.workflow;
+          useWorkflows.set(newActivity, usage.workflow!);
           return true;
         });
         let usageData: ActivityUseConfiguration | undefined;
@@ -802,6 +823,7 @@ export let MidiActivityMixin = Base => {
           error("MidiQOL | MidiActivity | use | Error in super.use", err);
           TroubleShooter.recordError(err, "Error in super.use");
           Workflow.removeWorkflow(usage.workflow?.id);
+          clearAbandonedUse(usage, dnd5eUsageConfig);
           return false;
         } finally {
           // The rest of use() can outlive the workflow, and these match by activity uuid, so a
@@ -814,10 +836,10 @@ export let MidiActivityMixin = Base => {
         if (this.actor) skipConcentrationActorUuids.delete(this.actor.uuid);
         if (!useResults) { // activity use was aborted
           Workflow.removeWorkflow(usage.workflow?.id);
+          clearAbandonedUse(usage, dnd5eUsageConfig);
           return false;
         }
-        // Remove the copy stored by activity uuid
-        Workflow.workflows.delete(usage.workflow!.activity?.uuid ?? "");
+        // A use's workflow is registered only once its card exists, under the card's uuid.
         // Force a few values to be added to the updates cache now we have the chat card.
         usage.workflow.itemCardUuid = useResults.message.uuid;
         usage.workflow.id = useResults.message.uuid ?? usage.workflow.id;
@@ -1106,14 +1128,18 @@ export let MidiActivityMixin = Base => {
       config: RollProcessConfig,
       dialog: RollDialogConfig
     ): Promise<Roll[] | undefined> {
+      const workflow = config.workflow;
+      if (!workflow) return undefined;
+      // Build the other activity's and the ammunition's target matches (no-op if already built)
+      await workflow.buildOtherDamageMatches();
+      // A source whose condition matched no target is not rolled.
       const sources = [this.otherActivity, this.ammunitionActivity].filter((activity, index, all) =>
         !!activity && all.indexOf(activity) === index
-        && !!(activity.hasDamage || activity.hasHealing || activity.roll?.formula)) as MidiActivityMixin[];
-      if (!sources.length || !config.workflow) return undefined;
-
-      // Build otherDamageMatches (no-op if already built)
-      await config.workflow.buildOtherDamageMatches();
-      if (this.otherCondition && !config.workflow.otherDamageMatches?.size) return undefined;
+        && !!(activity.hasDamage || activity.hasHealing || activity.roll?.formula)
+        && (activity === this.ammunitionActivity
+          ? !activity.useCondition || !!workflow.ammunitionDamageMatches?.size
+          : !this.otherCondition || !!workflow.otherDamageMatches?.size)) as MidiActivityMixin[];
+      if (!sources.length) return undefined;
 
       const otherConfig = {
         ...config,
@@ -1126,7 +1152,7 @@ export let MidiActivityMixin = Base => {
       };
 
       // Undo the roll toggle since rollFormula will look at it as well
-      if (sources[0].ac && config.workflow.rollOptions?.rollToggle) {
+      if (sources[0].ac && workflow.rollOptions?.rollToggle) {
         dialog.configure = !dialog.configure;
       }
 
@@ -1138,7 +1164,7 @@ export let MidiActivityMixin = Base => {
 
       // Update workflow with other damage rolls
       if (config.midiOptions?.updateWorkflow !== false) {
-        await config.workflow.setOtherDamageRolls(otherResult);
+        await workflow.setOtherDamageRolls(otherResult);
       }
       return otherResult;
     }
@@ -1194,6 +1220,8 @@ export let MidiActivityMixin = Base => {
           r.options.properties = Array.from(properties);
         });
       }
+      // The ammunition's damage applies by its own condition and save (Workflow#otherDamageFor).
+      if (rolls && isAmmunition) rolls.forEach(r => foundry.utils.setProperty(r, `options.${MODULE_ID}.ammunition`, true));
       return rolls;
     }
 
@@ -1402,46 +1430,17 @@ export let MidiActivityMixin = Base => {
 
     async setupCanSeeSense(usage: { workflow?: Workflow }) {
       const workflow = usage.workflow;
-      const wasSightEnabled = {};
       if (!workflow) return;
-      let needPause = false;
-      for (let tokenRef of workflow.targets.union(new Set([workflow.token]))) {
-        const target = getToken(tokenRef);
-        if (!target) continue;
-        wasSightEnabled[target.id] = target.document.sight.enabled;
-        // Skip initializeVision only for the attacker token if it already has a
-        // properly initialized vision source — re-initializing would destroy Foundry's
-        // active vision source. Targets are always re-initialized to avoid stale LOS.
-        if (target === getToken(workflow.token) && target.vision?.active && target.vision?.los) continue;
-        const needsInit = (!target.document.sight.enabled && configSettings.optionalRules.invisVision)
-          // @ts-expect-error no dnd5e-types
-          || (target.actor?.type === "npc")
-          || (!target.isOwner && target.document.sight.enabled)
-          || (!target.vision || !target.vision?.los);
-        if (needsInit) {
-          initializeVision(target);
-          needPause = game.modules.get("levels-3d-preview")?.active ?? false;
-        }
-      }
-      if (needPause) {
-        await busyWait(100);
-        for (let tokenRef of workflow.targets) {
-          const target = getToken(tokenRef);
-          if (!target || !target.vision?.los) continue;
-          target.vision.add();
-        }
-      }
-
       for (let target of workflow.targets) {
         // TODO: This is odd - if `!workflow.token` then `true`, but then we're adding `undefined` to `targetsCanSense`
-        const tokenCanSense = workflow.token ? canSense(workflow.token, target, globalThis.MidiQOL.InvisibleDisadvantageVisionModes) : true;
-        const targetCanSense = workflow.token ? canSense(target, workflow.token, globalThis.MidiQOL.InvisibleDisadvantageVisionModes) : false;
+        const tokenCanSense = workflow.token ? canSense(workflow.token, target, globalThis.MidiQOL.InvisibleDisadvantageVisionModes, { forceVision: true }) : true;
+        const targetCanSense = workflow.token ? canSense(target, workflow.token, globalThis.MidiQOL.InvisibleDisadvantageVisionModes, { forceVision: true }) : false;
         if (targetCanSense) workflow.targetsCanSense.add(workflow.token!);
         else workflow.targetsCanSense.delete(workflow.token!);
         if (tokenCanSense) workflow.tokenCanSense.add(target);
         else workflow.tokenCanSense.delete(target);
-        const tokenCanSee = workflow.token ? canSee(workflow.token, target) : true;
-        const targetCanSee = workflow.token ? canSee(target, workflow.token) : false;
+        const tokenCanSee = workflow.token ? canSee(workflow.token, target, { forceVision: true }) : true;
+        const targetCanSee = workflow.token ? canSee(target, workflow.token, { forceVision: true }) : false;
         if (targetCanSee) workflow.targetsCanSee.add(workflow.token!);
         else workflow.targetsCanSee.delete(workflow.token!);
         if (tokenCanSee) workflow.tokenCanSee.add(target);
@@ -1473,16 +1472,6 @@ export let MidiActivityMixin = Base => {
       workflow.tokenCanSense = workflow.tokenCanSense;
       workflow.targetsCanSee = workflow.targetsCanSee;
       workflow.tokenCanSee = workflow.tokenCanSee;
-      for (let targetRef of workflow.targets) {
-        const target = getToken(targetRef);
-        if (!target) continue;
-        target.document.sight.enabled = wasSightEnabled[target.id];
-        target.initializeVisionSource();
-      }
-      if (workflow.token) {
-        workflow.token.document.sight.enabled = wasSightEnabled[workflow.token.id];
-        workflow.token.initializeVisionSource();
-      }
     }
 
     async setupTargets(config: ActivityUseConfiguration, dialog: RollDialogConfig, message: RollMessageConfig): Promise<boolean> {
@@ -1976,10 +1965,10 @@ export let MidiActivityMixin = Base => {
       return selectedId;
     }
 
-    async _placeEmanationTemplate(workflow: Workflow) {
+    async _placeEmanationTemplate(workflow: Workflow | undefined) {
       const autoCreateTemplate = activityHasAutoPlaceTemplate(this);
       const actor = this.item.parent;
-      const tokenToUse = workflow.token ?? getToken(actor);
+      const tokenToUse = workflow?.token ?? getToken(actor);
       if (!tokenToUse) return;
       if (autoCreateTemplate) {
         const templateDocuments = await createActivityTemplateRegions(this, [{
@@ -2037,6 +2026,8 @@ export let MidiActivityMixin = Base => {
       // into a single GM round-trip (or runs locally if the user has permission).
       const behaviors: any[] = [];
       let regionUpdate: any | undefined;
+      // A cast that rolls against the creatures in the area has dealt with those already inside.
+      const castAffectsTargets = ["attack", "damage", "save"].includes(this.type) && !!workflow?.targets?.size;
       // Effects applied while a token is inside are dnd5e's apply-effect behaviour; midi's own behaviour runs activities.
       const effectBehavior = (effectUuids: string[], dispositionFilter: number, excludeSource: boolean) => {
         if (!effectUuids.length) return;
@@ -2062,7 +2053,7 @@ export let MidiActivityMixin = Base => {
           if (rule.action === "useActivity") {
             // @ts-expect-error no dnd5e types for activities
             const act = this.item?.system.activities?.find(
-              (a: any) => (a.identifier || a.midiProperties?.identifier) === rule.targetId
+              (a: any) => (a.identifier || a.midiProperties?.identifier || a.id) === rule.targetId
             );
             if (act) resolvedRules.push({ trigger: rule.trigger, action: rule.action, targetUuid: act.uuid });
           } else if (rule.action === "applyEffect") {
@@ -2084,7 +2075,11 @@ export let MidiActivityMixin = Base => {
             castLevel: castLevel ?? workflow?.spellLevel ?? 0,
             excludeSource: rbConfig.excludeSource ?? true,
             oncePerTurn: rbConfig.oncePerTurn ?? true,
+            activationEntry: !castAffectsTargets,
             wallRestriction: rbConfig.wallRestriction ?? "none",
+            moveDistance: rbConfig.moveDistance ?? 0,
+            moveDirection: rbConfig.moveDirection ?? "away",
+            moveTiming: rbConfig.moveTiming ?? "start",
           },
         });
 
@@ -2125,6 +2120,7 @@ export let MidiActivityMixin = Base => {
             castLevel: castLevel ?? workflow?.spellLevel ?? 0,
             excludeSource: true,
             oncePerTurn: true,
+            activationEntry: !castAffectsTargets,
           },
         });
       }
@@ -2185,8 +2181,7 @@ export let MidiActivityMixin = Base => {
 
     /** midi's additions to the usage context; not named `_usageChatContext`, which would keep dnd5e's legacy content path. */
     async _midiUsageContext(message) {
-      // TODO major revisit needed for this
-      const workflow = message.workflow as Workflow;
+      const workflow = useWorkflows.get(this);
       let systemCard = message.systemCard ?? false;
       const minimalCard = false;
 
@@ -2201,7 +2196,7 @@ export let MidiActivityMixin = Base => {
       }
       if (tokenToUse && emanationNoTemplate) {
         setRangedTargets(tokenToUse, this.target);
-        message.workflow?.setTargets(validTargetTokens(new Set(game.user?.targets)));
+        workflow?.setTargets(validTargetTokens(new Set(game.user?.targets)));
         foundry.utils.setProperty(message.data, "system.targets", globalThis.dnd5e.dataModels.chatMessage.fields.TargetsField.getDescriptors());
       }
       const context = await super._usageChatContext(message);
@@ -2541,10 +2536,11 @@ export let MidiActivityMixinSheet = Base => {
       const selectedOtherActivity = this.activity.otherActivityId ?? "";
       context.otherActivityOptions?.forEach(option => { option.selected = option.value === selectedOtherActivity || option.id === selectedOtherActivity });
       context.triggeredActivityOptions = this.item.system.activities
-        .filter(a => a.id !== this.activity.id && a.isTriggerableActivity)
+        .filter(a => a.id !== this.activity.id && a.isTriggerableActivity !== false)
         .reduce((ret, a) => {
-          const identifierString = a.identifier === a.name.slugify() ? "" : ` (${a.identifier})`;
-          ret.push({ label: `${a.name}${identifierString}`, value: a.identifier, id: a.id }); return ret
+          // Another module's activity has no identifier; it is chosen by id.
+          const identifierString = !a.identifier || a.identifier === a.name.slugify() ? "" : ` (${a.identifier})`;
+          ret.push({ label: `${a.name}${identifierString}`, value: a.identifier ?? a.id, id: a.id }); return ret
         }, [{ label: "None", value: "none" }]);
       context.triggeredActivityOptions?.filter(option => { option.selected = option.value === this.activity.midiProperties.triggeredActivityId || option.id === this.activity.midiProperties.triggeredActivityId });
       let activity = context.activity;
@@ -2556,7 +2552,7 @@ export let MidiActivityMixinSheet = Base => {
           ui.notifications?.error(`midi-qol | Circular activity call detected ${triggerList.join("->")}`);
           break;
         }
-        triggeredActivity = await triggeredActivity.getTriggeredActivity();
+        triggeredActivity = await triggeredActivity.getTriggeredActivity?.();
       }
       context.triggeredActivityTargetOptions = Object.entries(triggeredActivityTargetOptions).map(([value, label]) => {
         return { value, label, selected: midiProperties.triggeredActivityTargets === value }

@@ -3,8 +3,8 @@
  * advantage presentation and the damage tray. Design notes: dnd5e-v6-checklist, M13.
  */
 
-import { error } from "../../midi-qol.js";
-import { Activity, ChatMessageRenderOptions, Dnd5eChatMessage } from "../../globals.js";
+import { error, GameSystemConfig, i18n } from "../../midi-qol.js";
+import { Activity, ChatMessageRenderOptions, CombinedTargetDescriptor, Dnd5eChatMessage } from "../../globals.js";
 import { configSettings, safeGetGameSetting } from "../settings.js";
 import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll,
   midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML } from "../utils.js";
@@ -21,6 +21,23 @@ const SECTION_ROLL_RENDERERS: Record<string, (rolls: Roll[]) => Promise<string> 
 
 /** Roll types midi tags damage rolls with; the presence of one means damage has been rolled. */
 const DAMAGE_ROLL_TYPES = ["defaultDamage", "otherDamage", "bonusDamage"];
+
+/** The card flag holding each damage roll type's damage by type. */
+const DAMAGE_DETAIL_FLAGS: Record<string, string> = { defaultDamage: "damageDetail", otherDamage: "otherDamageDetail", bonusDamage: "bonusDamageDetail" };
+
+/** A target's multiplier, after its save, for damage a successful save multiplies by `onSave` (as applySaves applies it). */
+function saveDamageMultiplier(target: CombinedTargetDescriptor, onSave: number): number {
+  if (onSave === configSettings.defaultSaveMult) {
+    if (target.superSaver) return target.saved ? 0 : configSettings.defaultSaveMult;
+    if (target.semiSuperSaver) return target.saved ? 0 : 1;
+  }
+  return target.saved ? onSave : 1;
+}
+
+function damageTypeLabel(type: string): string {
+  const types = { ...GameSystemConfig.damageTypes, ...GameSystemConfig.healingTypes } as Record<string, { label?: string }>;
+  return types[type]?.label ?? type;
+}
 
 /**
  * Which of the card's buttons this user should see. Policy comes from the settings at render (GM and player
@@ -183,6 +200,13 @@ export function setupUsageCardMessage() {
       const context = await this.#prepareBaseContext(options);
       if (context?.content) return context;
 
+      // A teleport that moves the controlled tokens opens its targets list on them (dnd5e's Selected view).
+      const activity = (this.parent as Dnd5eChatMessage).getAssociatedActivity?.();
+      // @ts-expect-error no dnd5e-types
+      const targetState = this.parent._targetState;
+      const teleportMovers = (activity as { midiTeleport?: { movers?: string } } | undefined)?.midiTeleport?.movers;
+      if (activity?.type === "teleport" && teleportMovers === "default" && targetState && !targetState.mode) targetState.mode = "selected";
+
       // midi's display settings act on parts dnd5e's card face renders unconditionally.
       if (this.midi?.hideItemDetails) delete context.description;
       if (this.midi && this.midi.displayProperties === false) {
@@ -196,7 +220,10 @@ export function setupUsageCardMessage() {
       // midi applies the effects itself and offers no button for them, so there is nothing for a tray to do.
       if (["applyNoButton", "applyRemove"].includes(configSettings.autoItemEffects)) context.effects = [];
 
-      const sections = await this.#renderSections(this.#applySaveSummaries(context));
+      const saveDamageLines = this.#saveDamageLines();
+      if (saveDamageLines.size) context.summaries = (context.summaries ?? []).map((summary: any) =>
+        ({ ...summary, midiDamageLine: saveDamageLines.get(summary.token?.uuid ?? "") }));
+      const sections = await this.#renderSections(this.#applySaveSummaries(context), saveDamageLines);
       context.midi = {
         ...(this.midi ?? {}),
         sections,
@@ -268,11 +295,14 @@ export function setupUsageCardMessage() {
     }
 
     /** The sections for rendering: roll-backed ones from `message.rolls`, template ones per viewer, `html` as stored. */
-    async #renderSections(omitSaves: Set<string> | "all" = new Set()): Promise<Record<string, unknown>> {
+    async #renderSections(omitSaves: Set<string> | "all" = new Set(), saveDamageLines = new Map<string, string>()): Promise<Record<string, unknown>> {
       const stored: Record<string, any> = this.midi?.sections ?? {};
       const out: Record<string, unknown> = {};
       for (const name of SECTION_NAMES) {
         let section = stored[name];
+        // Targets added to an attack card after its roll (e.g. by another module's buttons) get a hits list to show in.
+        if (name === "hits" && !section && stored.attack && this.#recordedTargets().length)
+          section = { label: "", template: "modules/midi-qol/templates/hits.html", data: { hits: [] } };
         if (name === "saves" && section?.data?.saves) {
           // The heading (DC, damage on save) stays when dnd5e's summaries replace the rows; it has no DC of its own.
           section = (omitSaves === "all" || !section.data.saves.length) ? null : { ...section, data: { ...section.data,
@@ -284,7 +314,10 @@ export function setupUsageCardMessage() {
             ...section,
             html: await foundry.applications.handlebars.renderTemplate(section.template, {
               ...(section.data ?? {}),
-              ...(section.data?.saves ? { saves: await this.#withSaveRolls(section.data.saves) } : {}),
+              ...(section.data?.saves ? { saves: (await this.#withSaveRolls(section.data.saves)).map((save: any) => ({ ...save,
+                damageLine: save.saveClass ? saveDamageLines.get(save.target?.document?.uuid ?? "") : undefined })) } : {}),
+              // Against everything midi evaluated, not just the rows left once dnd5e's summaries replace some.
+              unevaluated: this.#unevaluatedTargets(name, stored[name]?.data ?? section.data),
               // Resolved per viewer, not per roller.
               oneCard: true,
               collapsibleTargets: configSettings.collapsibleTargets,
@@ -305,6 +338,77 @@ export function setupUsageCardMessage() {
         out[name] = { ...section, label, html };
       }
       return out;
+    }
+
+    /**
+     * Per target token, the damage of each type after its save: the rolled damage times its save multiplier, before
+     * resistances. Only targets the save spares some damage, and whose save result this viewer may see.
+     */
+    #saveDamageLines(): Map<string, string> {
+      const lines = new Map<string, string>();
+      if (!configSettings.saveDamageLine) return lines;
+      const flags = (this.parent.flags as Record<string, any> | undefined)?.[MODULE_ID];
+      type Part = { value?: number, type?: string, midiAmmunition?: boolean };
+      const details = Object.entries(DAMAGE_DETAIL_FLAGS)
+        .map(([rollType, flag]) => ({ rollType, parts: (flags?.[flag] ?? []) as Part[] }))
+        .filter(detail => detail.parts.length);
+      if (!details.length) return lines;
+      const otherMatches: string[] | undefined = flags?.otherDamageMatchUuids;
+      const ammunitionMatches: string[] | undefined = flags?.ammunitionDamageMatchUuids;
+      for (const target of this.#recordedTargets() as CombinedTargetDescriptor[]) {
+        if (!target.token || typeof target.saved !== "boolean" || !this.#showsSaveResult(target)) continue;
+        // Each part this target takes, with what a successful save does to it (the ammunition's follows its own save).
+        const parts = details.flatMap(({ rollType, parts }) => parts
+          .filter(part => rollType !== "otherDamage"
+            || ((part.midiAmmunition ? ammunitionMatches : otherMatches)?.includes(target.token!) ?? true))
+          .map(part => {
+            const streamOnSave = target.saveMults?.[rollType as "defaultDamage" | "otherDamage" | "bonusDamage"] ?? configSettings.defaultSaveMult;
+            return { part, onSave: part.midiAmmunition ? (target.saveMults?.ammunition ?? streamOnSave) : streamOnSave };
+          }));
+        const mults = parts.map(({ onSave }) => saveDamageMultiplier(target, onSave));
+        if (mults.every(mult => mult === 1)) continue;
+        const byType = new Map<string, number>();
+        for (const [index, { part }] of parts.entries()) {
+          const type = part.type ?? "";
+          byType.set(type, (byType.get(type) ?? 0) + Math.floor((part.value ?? 0) * mults[index]));
+        }
+        const changesSave = parts.some(({ onSave }) => onSave === configSettings.defaultSaveMult);
+        const reason = !changesSave ? undefined
+          : target.superSaver ? i18n("DND5E.DamageApplication.Change.SuperSaver")
+          : target.semiSuperSaver ? i18n("DND5E.DamageApplication.Change.SemiSuperSaver") : undefined;
+        const amounts = [...byType].map(([type, amount]) => `${damageTypeLabel(type)} ${amount}`);
+        lines.set(target.token, [reason, ...amounts].filter(Boolean).join(" · "));
+      }
+      return lines;
+    }
+
+    /** Whether this viewer may see a target's save result, as midi's saves section shows it to players. */
+    #showsSaveResult(target: CombinedTargetDescriptor): boolean {
+      if (game.user?.isGM) return true;
+      const display = ((this.parent as Dnd5eChatMessage).getAssociatedActivity?.() as { saveDisplay?: string } | undefined)?.saveDisplay ?? "default";
+      const mode = display === "default" ? configSettings.autoCheckSaves : display;
+      if (["gmOnly", "whisper", "none"].includes(mode)) return false;
+      const challenge = safeGetGameSetting("dnd5e", "challengeVisibility");
+      if (challenge === "none") return false;
+      const actor = fromUuidSync(target.actor, { strict: false });
+      return challenge === "all" || (actor instanceof Actor && actor.hasPlayerOwner);
+    }
+
+    #recordedTargets(): { name?: string, img?: string, token?: string }[] {
+      return ((this as unknown as { targets?: { name?: string, img?: string, token?: string }[] }).targets ?? []);
+    }
+
+    /**
+     * Recorded targets with no entry in midi's hits or saves list: added to the card after the roll, so never checked
+     * by the workflow. Shown with a marker rather than a result.
+     */
+    #unevaluatedTargets(name: string, data: Record<string, any> | undefined): { id: string, uuid: string, name: string, img: string }[] {
+      const entries: any[] = name === "hits" ? (data?.hits ?? []) : name === "saves" ? (data?.saves ?? []) : [];
+      if (!["hits", "saves"].includes(name)) return [];
+      const known = new Set(entries.map(entry => entry?.target?.id).filter(Boolean));
+      return this.#recordedTargets()
+        .map(t => ({ id: t.token?.split(".").pop() ?? "", uuid: t.token ?? "", name: t.name ?? "", img: t.img ?? "" }))
+        .filter(t => t.id && !known.has(t.id));
     }
 
     /**

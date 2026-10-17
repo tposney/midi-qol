@@ -457,11 +457,6 @@
 /* CHAT - DND5E 3 AND MIDI
 /* ----------------------------------------- */
 
-:root {
-  --dnd5e-color-failure-background: rgb(245,221,221);
-  --dnd5e-color-success-background: rgb(204,215,197);
-}
-
 /* Chat log consolidated styles */
 :is(.chat-popout, #chat-log, .chat-log) {
   /* Colored Border Messages setting: a left bar in the owning player's colour (set inline by
@@ -530,6 +525,14 @@
         border-color: rgba(0,108,0,0.4);
         background-color: var(--dnd5e-color-success-background);
       }
+
+      .theme-dark &.failure {
+        background-color: rgba(110, 0, 0, 0.35);
+      }
+
+      .theme-dark &.success {
+        background-color: rgba(0, 108, 0, 0.3);
+      }
     }
 
     .flexrow {
@@ -552,6 +555,32 @@
 .midi-results .target.success {
   border-color: rgba(0,108,0,0.4);
   background-color: var(--dnd5e-color-success-background);
+}
+
+/* dnd5e's success/failure backgrounds are light and its highlights set dark text; midi's rows keep the theme's text,
+   so on the dark theme they take a dark tint instead. */
+.theme-dark .midi-results .target.failure {
+  background-color: rgba(110, 0, 0, 0.35);
+}
+
+.theme-dark .midi-results .target.success {
+  background-color: rgba(0, 108, 0, 0.3);
+}
+
+/* The attack total and the save totals in the tooltips use dnd5e's roll styling, whose success/failure backgrounds are
+   light; on the dark theme midi's card gives them the rows' dark tint, keeping dnd5e's borders and icons. */
+.theme-dark :is(.midi-attack-roll, .midi-qol-save-tooltip) .dice-total:is(.success:not(.fumble), .critical) {
+  background: rgba(0, 108, 0, 0.3);
+}
+
+.theme-dark :is(.midi-attack-roll, .midi-qol-save-tooltip) .dice-total:is(.failure:not(.critical), .fumble) {
+  background: rgba(110, 0, 0, 0.35);
+}
+
+/* Their ✓/✗ icons in the text colour, as the rows' symbols, rather than dnd5e's faded green or red. */
+:is(.midi-attack-roll, .midi-qol-save-tooltip) .dice-total > .icons {
+  color: var(--color-text-primary);
+  opacity: 1;
 }
 
 .midi-qol-tooltiptext.midi-qol-save-tooltip {
@@ -601,6 +630,17 @@
 .midi-qol-save-total {
   white-space: nowrap;
   font-weight: bold;
+}
+
+.midi-qol-saves-display li:has(> .midi-qol-save-damage) {
+  flex-wrap: wrap;
+}
+
+.midi-qol-save-damage {
+  flex-basis: 100%;
+  font-size: var(--font-size-11);
+  opacity: 0.85;
+  text-align: end;
 }
 
 
@@ -1800,6 +1840,21 @@ body.theme-dark input[type="checkbox"] {
   --checkbox-background-color: #6a6a6a;
 }
 
+/* Move region direction dialog (DialogV2): compass buttons in a 3x3 grid */
+.midi-qol-move-region .form-footer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.midi-qol-move-region .form-footer button {
+  margin: 0;
+}
+
+.midi-qol-move-region .form-footer button[data-action="stay"] {
+  grid-column: 1 / -1;
+}
+
 /* Choose Effect dialog (DialogV2) */
 .midi-qol-choose-effect .form-footer {
   flex-direction: column;
@@ -1867,6 +1922,10 @@ body.theme-dark input[type="checkbox"] {
    pane's chrome, since this one is inline rather than a floating popover. */
 .dnd5e2 .pills target-pill.pill .target-pane.midi-inline-changes {
   display: flex;
+  /* One text line, icons centred on it: a pill with icons is no taller than one without. */
+  align-items: center;
+  block-size: 1lh;
+  overflow: visible;
   position: static;
   inline-size: auto;
   margin: 0;
@@ -1886,6 +1945,13 @@ body.theme-dark input[type="checkbox"] {
 
 .dnd5e2 .pills target-pill.pill .target-pane.midi-inline-changes .menu-change-sources li {
   padding-inline-end: 0;
+}
+
+.dnd5e2 .pills target-pill.pill .midi-target-multiplier {
+  font-size: var(--font-size-11);
+  font-weight: bold;
+  padding-inline: 2px;
+  white-space: nowrap;
 }
 
 /* Item images are full-colour raster, not the tintable monochrome SVGs dnd5e's icons assume, so they
@@ -1916,4 +1982,9 @@ body.theme-dark input[type="checkbox"] {
 .dnd5e2 .pills target-pill.pill .target-pane.midi-inline-changes .change-source {
   padding: 0;
   gap: 0;
+}
+
+.midi-qol-overlaps .midi-qol-overlap-buttons {
+  display: flex;
+  gap: 4px;
 }

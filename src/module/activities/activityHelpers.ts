@@ -4,7 +4,7 @@ import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog, TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 import { configSettings, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
-import { getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, MidiOptions } from "../utils.js";
+import { collisionLevel, getFlankingEffect, CERemoveEffect, sumRolls, computeTemplateShapeDistance, getToken, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, updateUserTargets, rangeToSceneUnits, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, MidiOptions } from "../utils.js";
 import { allAttackTypes } from "../../midi-qol.js";
 import Token = foundry.canvas.placeables.Token;
 
@@ -302,7 +302,12 @@ export async function resolveTargetConfirmation(activity: Activity, options: Tar
     // create target dialog which updates the target display
     options ??= {};
     options.callback = resolve;
-    new TargetConfirmationDialog(activity.actor!, activity, game.user!, options).render({ force: true });
+    const dialog = new TargetConfirmationDialog(activity.actor!, activity, game.user!, options);
+    // A dialog that fails to render cancels the use rather than leaving it waiting.
+    dialog.render({ force: true }).catch(err => {
+      console.error("midi-qol | Target Confirmation failed to render", err);
+      dialog.doCallback(false);
+    });
   });
   let shouldContinue = await targets;
   for (let token of canvas.tokens?.placeables ?? []) token.initializeVisionSource();
@@ -352,7 +357,8 @@ function isTokenInside(template: foundry.canvas.placeables.MeasuredTemplate.Impl
 
         // If volumetric templates installed always leave targeting to it.
         if (!installedModules.get("levelsvolumetrictemplates")) {
-          contains = !CONFIG.Canvas.polygonBackends.sight.testCollision({ x: tx, y: ty }, { x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y }, { mode: "any", type: "move" })
+          // @ts-expect-error v14 collision level not in fvtt-types
+          contains = !CONFIG.Canvas.polygonBackends.sight.testCollision({ x: tx, y: ty }, { x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y }, { mode: "any", type: "move", level: collisionLevel(token) })
         }
       }
       // Check the distance from origin.
@@ -783,19 +789,50 @@ function lvtContainedIds(regionDoc: RegionDocument.Implementation | undefined, c
 }
 
 /** LOS from the region's shape origin to a token - lvt does no wall checking on v14. */
-function regionWallBlocked(regionDoc: RegionDocument.Implementation, token: Token.Implementation): boolean {
+/**
+ * The point a Region's area spreads from, for wall and cover checks. Not every shape has x/y: an emanation keeps
+ * its position on its base token (dnd5e 6's self-centred areas), a polygon in its points; reading them as 0 measured
+ * from the scene's corner.
+ */
+export function regionShapeOrigin(regionDoc: RegionDocument.Implementation): { x: number, y: number } | undefined {
   const shape = regionDoc.shapes?.at?.(0) as any;
-  if (!shape) return false;
-  let originX = shape.x ?? 0;
-  let originY = shape.y ?? 0;
-  if (shape.type === "rectangle") {
-    originX += (shape.width ?? 0) / 2;
-    originY += (shape.height ?? 0) / 2;
+  if (!shape) return undefined;
+  const gridSize = canvas.scene?.grid.size ?? 100;
+  switch (shape.type) {
+    case "emanation": {
+      // core moves an attached emanation's base with its token, so the base is where the token is
+      const base = shape.base ?? {};
+      if (base.type === "token") return { x: base.x + (base.width ?? 1) * gridSize / 2, y: base.y + (base.height ?? 1) * gridSize / 2 };
+      if (base.type === "rectangle") return { x: base.x + (base.width ?? 0) / 2, y: base.y + (base.height ?? 0) / 2 };
+      return { x: base.x ?? 0, y: base.y ?? 0 };
+    }
+    case "rectangle": {
+      const dx = (0.5 - (shape.anchorX ?? 0)) * (shape.width ?? 0);
+      const dy = (0.5 - (shape.anchorY ?? 0)) * (shape.height ?? 0);
+      const angle = Math.toRadians(shape.rotation ?? 0);
+      return { x: shape.x + dx * Math.cos(angle) - dy * Math.sin(angle), y: shape.y + dx * Math.sin(angle) + dy * Math.cos(angle) };
+    }
+    case "polygon": {
+      const points: number[] = shape.points ?? [];
+      const n = points.length / 2;
+      if (!n) return undefined;
+      let x = 0, y = 0;
+      for (let i = 0; i < points.length; i += 2) { x += points[i]; y += points[i + 1]; }
+      return { x: x / n, y: y / n };
+    }
+    default:
+      return { x: shape.x ?? 0, y: shape.y ?? 0 };
   }
+}
+
+function regionWallBlocked(regionDoc: RegionDocument.Implementation, token: Token.Implementation): boolean {
+  const origin = regionShapeOrigin(regionDoc);
+  if (!origin) return false;
   return !!CONFIG.Canvas.polygonBackends.sight.testCollision(
-    { x: originX, y: originY },
+    origin,
     tokenSourceCenter(token),
-    { mode: "any", type: "move" }
+    // @ts-expect-error v14 collision level not in fvtt-types
+    { mode: "any", type: "move", level: collisionLevel(token) }
   );
 }
 
@@ -846,17 +883,7 @@ function isTokenInsideRegion(
     return false;
   if (!isValidTarget(token)) return false;
 
-  // Extract template-equivalent data from the Region's first shape for wall collision checks
-  const shape = regionDoc.shapes?.at?.(0) as any;
-  const shapeOrigin = shape ? { x: shape.x ?? 0, y: shape.y ?? 0 } : undefined;
-
-  // Wall collision origin: for rectangles use center, for others use shape origin
-  let wallOriginX = shapeOrigin?.x ?? 0;
-  let wallOriginY = shapeOrigin?.y ?? 0;
-  if (shape?.type === "rectangle") {
-    wallOriginX += (shape.width ?? 0) / 2;
-    wallOriginY += (shape.height ?? 0) / 2;
-  }
+  const wallOrigin = regionShapeOrigin(regionDoc) ?? { x: 0, y: 0 };
 
   const pos = tokenSourcePosition(token);
   const startX = pos.width >= 1 ? 0.5 : (pos.width / 2);
@@ -878,9 +905,10 @@ function isTokenInsideRegion(
       if (contains && wallsBlockTargeting) {
         // Always check - lvt does no wall checking on v14.
         contains = !CONFIG.Canvas.polygonBackends.sight.testCollision(
-          { x: wallOriginX, y: wallOriginY },
+          wallOrigin,
           { x: testX, y: testY },
-          { mode: "any", type: "move" }
+          // @ts-expect-error v14 collision level not in fvtt-types
+          { mode: "any", type: "move", level: collisionLevel(token) }
         );
       }
 

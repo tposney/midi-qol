@@ -37,6 +37,16 @@
             {{/if}}
           </li>
           {{/each}}
+          {{#each unevaluated}}
+          <li data-uuid="{{this.uuid}}" data-id="{{this.id}}" class="target midi-qol midi-qol-target-select"
+            data-tooltip="{{localize 'midi-qol.TargetNotEvaluated'}}">
+            <i class="fas fa-question"></i>
+            <img class="midi-qol-target-img" src="{{this.img}}" />
+            <div class="name-stacked">
+              <span class="midi-qol-target-name title" id="{{this.id}}">{{this.name}}</span>
+            </div>
+          </li>
+          {{/each}}
         </ul>
         {{#if collapsibleTargets}}
       </div>
