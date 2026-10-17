@@ -2,6 +2,7 @@ import { i18n, systemConcentrationId, error } from "../../midi-qol.js";
 import { ModuleReviewDialog } from "./ModuleReviewDialog.js";
 import { autoApplyDamageOptions, autoCEEffectsOptions, autoCheckHitOptions, autoCheckSavesOptions, autoEffectsOptions, autoTargetOptions, CheckedAuthorsList, checkedModuleList, checkMechanic, collectModuleData, collectSettingData, configSettings, coverCalculationOptions, enableWorkflow, exportSettingsToJSON, fetchParams, importSettingsFromJSON, rangeTargetOptions, safeGetGameSetting } from "../settings.js";
 import { USEFUL_MODULE_VERSIONS, getModuleVersion, installedModules } from "../setupModules.js";
+import { featureOverlapProblems } from "../featureOverlaps.js";
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const minimumMidiVersion = "11.0.7";
@@ -628,17 +629,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
         case "midi-qol":
           foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
-        case "monks-combat-details":
-          if (safeGetGameSetting("monks-combat-details", "auto-defeated") !== "none" && configSettings.addDead !== "none") {
-            data.problems.push({
-              moduleId: "monks-combat-details",
-              severity: "Error",
-              problemSummary: "Both Midi and Monks Combat Details are adding defeated effects",
-              fixer: "Disable defeated effects in one of the modules",
-              problemDetail: undefined
-            });
-          }
-          break;
         case "monks-little-details":
           foundry.utils.setProperty(data.modules[moduleId], "settings", TroubleShooter.getDetailedSettings(moduleId));
           break;
@@ -930,7 +920,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
                       configSettings.autoTarget = "walledtemplates";
                       await game.settings.set("midi-qol", "ConfigSettings", configSettings);
                       //@ts-expect-error reload configure
-                      SettingsConfig.reloadConfirm({ world: true });
+                      foundry.applications.settings.SettingsConfig.reloadConfirm({ world: true });
                       TroubleShooter.data = TroubleShooter.collectTroubleShooterData();
                       app.render(true)
                     },
@@ -988,7 +978,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           // @ts-expect-error
           await game.settings.set("itemacro", "charsheet", false);
           //@ts-expect-error
-          SettingsConfig.reloadConfirm({ world: true });
+          foundry.applications.settings.SettingsConfig.reloadConfirm({ world: true });
         },
         fixerId: -1
       });
@@ -1013,6 +1003,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   public static checkCommonProblems(data: TroubleShooterData) {
+    data.problems.push(...featureOverlapProblems());
     this.checkMidiSettings(data);
     this.checkMidiCoverSettings(data)
     this.checkMidiSaveSettings(data);

@@ -214,14 +214,10 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
 13. **Spell scaling via `midiOptions.spellLevel`** — dnd5e's `_prepareUsageScaling` derives scaling from `actor.system.spells[usageConfig.spell.slot].level`. When calling `completeActivityUse` programmatically, midi sets `usage.spell.slot = "spell${midiOptions.spellLevel}"` before `super.use()` so dnd5e's scaling logic works without consuming a slot.
 
 14. **Duration management moved from times-up to DAE (v14)**
-    - In v14, all duration management (seconds↔rounds conversion, transfer effect disable-on-expiry, effect creation setup, combat start/end handling) lives in `dae-14x/src/module/specialDurations.ts`.
-    - times-up-14x is a stub — its `handleUpdates.ts` re-exports utility functions for backward compat only.
-    - DAE settings: `durationManagementEnabled`, `enablePassiveEffects`, `updatePassiveEffects`, `expireRoundEffectsOnCombatEnd` (registered under `"dae"` namespace).
-    - DAE's `maxShortDuration` (seconds, default 600) replaces times-up's `MaxRoundsToConvert` (rounds).
-    - `CONFIG.ActiveEffect.expiryAction = "delete"` is now set by DAE's init hook.
-    - `flags.times-up.durationSeconds` flag path kept for backward compat with existing effects.
-    - DAE API (`game.modules.get("dae").api`) exports: `expireEffect`, `isEffectExpired`, `isTransferEffect`, `hasDuration`, `hasExpiry`.
-    - One-time migration from times-up settings runs at `ready` via `migrateTimesUpSettings()`.
+    - All duration management lives in DAE (`specialDurations.ts`); times-up-14x is a stub re-exporting utilities.
+    - DAE settings: `expiryAction` (special durations: default/update/delete), `coreExpiryAction` (sets `CONFIG.ActiveEffect.expiryAction`), `expireRoundEffectsOnCombatEnd`. Per-effect override `flags.dae.expiryMode`. There is no `durationManagementEnabled`.
+    - DAE does no rest-time expiry; midi handles `shortRest`/`longRest` special durations.
+    - DAE API exports `expireEffect`, `isEffectExpired`, `isTransferEffect`, `hasDuration`, `hasExpiry`.
 
 15. **Persisted workflow fields go through `PersistedFieldStore`** — Workflow.ts fields backed by chat-card flags (scalars, token Sets, Roll/Roll[], DamageDescription[]) use `this.#persisted.scalar/tokenSet/roll(s)/damageDetail` accessors, not hand-rolled `#field` + getter/setter pairs. The store owns caching, flag fallback, and serialization (including `Roll.fromData` rehydration). New persisted fields should use it; only genuinely special accessors (`currentAction`, `isCritical`/`isFumble`, `activity`, `item`, `token`, `otherDamageMatches`) remain hand-written.
 
@@ -237,7 +233,7 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
 
 21. **Updating an item effect on an unlinked token can silently no-op** — when the token's delta overrides the item, the server diffs an effect update against the *base* actor's copy; a value the base already has is dropped as "unchanged" while the token keeps its old one. Verify against `token.delta._source`, not the synthetic document.
 
-22. **dae-dnd6-only DAE behaviour that is not backported to dae-14x** — unconditional `ATL.*` → `token.*` conversion (v14 still needs the ATL module for keys with no `token.*` equivalent, e.g. width/height/elevation), and the migration no longer rewriting pre-v10 `data.` keys / midi optional `.all` (no user-visible gain; v14 worlds are already migrated). Their tests are gated with `itDnd6` (batches 24, 25). Per-change/effect-level conditions (batch 19) are a dnd5e 6 feature, not portable. DAE's change-dialog additions (value suggestions and checks, the `hp.max` note, the raise-current-HP checkbox) are dnd6 only; their mechanisms are ported.
+22. **dae-dnd6-only DAE behaviour that is not backported to dae-14x** — unconditional `ATL.*` → `token.*` conversion, including `ATL.width/height/depth/shape` (dnd5e 6 implements `TokenDocument#_onOverrideSize`; dnd5e 5.x doesn't, so v14 keeps them as `ATL.*`). Keys core can't target (`elevation`, `hidden`, `rotation`) are kept, never deleted, on both branches, and the migration no longer rewriting pre-v10 `data.` keys / midi optional `.all` (no user-visible gain; v14 worlds are already migrated). Their tests are gated with `itDnd6` (batches 24, 25). Per-change/effect-level conditions (batch 19) are a dnd5e 6 feature, not portable. DAE's change-dialog additions (value suggestions and checks, the `hp.max` note, the raise-current-HP checkbox) are dnd6 only; their mechanisms are ported.
 
 23. **`hp.max` ADD replaces a calculated max** — a character whose max dnd5e calculates has `hp.max` null in source; an initial-phase add makes it `0 + X`, which dnd5e then treats as a fixed max (12 → 5). A final-phase add comes after `effectiveMax`, the healing cap and `pct` are set, so it only changes the displayed number. Bonuses go to `hp.tempmax` (any creature; dnd5e's Aid), `hp.bonuses.overall` (a character's calculated max) or `hp.formula` (NPC HP rolled at token placement). DAE's "raise current HP" grant happens once per effect (re-enabling must not heal again), only ever raises current HP, and on removal clamps the stored value — dnd5e clamps current HP only for display.
 
@@ -265,6 +261,18 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
 
 35. **fvtt-types (13.x) lacks Foundry 14 fields** — effect `duration.expiry`/`value`: `@ts-expect-error fvtt-types v14 duration` (midi) / `v14 duration.expiry not in fvtt-types yet` (DAE). `messageMode` on `ChatMessage.create` and `ui.chat.updateMessage` are merged in `globals.ts`. `CONFIG.ChatMessage.modes` cannot be merged (inline object type) and takes `@ts-expect-error`.
 
+36. **Fixed-id effects go through the actor's effect queue** — statuses (`dnd5edead0000000`…) and the reaction/bonus action markers have fixed ids, so a concurrent create/delete on one actor fails, and Foundry toasts the error before the promise rejects (catching doesn't hide it). Use `toggleStatus` / `queueActorEffects` (utils.ts), never `actor.toggleStatusEffect` or a bare create/delete. midi checks at turn start and combat end (preferred GM, after 500ms) that DAE removed expired markers.
+
+37. **Custom D&D 5e** — its Conditions config replaces `CONFIG.statusEffects` (midi re-adds its statuses on `customDnd5e.setStatusEffectsConfig`); its average/mob/probabilistic damage cancels dnd5e's damage roll; custom dice set `criticalSuccess`/`criticalFailure`, so midi's crit/fumble checks use those and the kept faces, not 20/1. Settings that clash with midi are reported by `featureOverlaps.ts` (GM card + TroubleShooter Auto Fix). Not ported to v13.
+
+38. **Test world browsers** — v14 on `http://127.0.0.1:30001`, dnd6 on `http://localhost:30002` (separate hosts, or the session cookies collide and login loops). v13 (when :30000 runs quench-test) on `http://127.0.0.2:30000`. Drive the CDP Chrome (:38287) with `~/foundry-cdp/` (`login.mjs`, `reload.mjs`, `nav.mjs`, `window.mjs`, `loadwarnings.mjs`), one window per world; never write a login loop or bring a window to the front. A full suite can outlast `cdp.mjs`'s 15-minute evaluate (dnd6 ~15 min): start it in the page, keep the results on `globalThis`, and poll.
+
+39. **Visibility checks never change the token** — `canSense`/`canSee` check a token without sight with a detached vision source cached per token (`checkVisionSource`, keyed on its vision data and a wall/light/scene generation), never by setting `sight.enabled`, assigning `token.vision` or adding to `canvas.effects.visionSources` (#1571: a later document update reset `sight.enabled` but left a stale source). Callers that must check regardless of *Force vision when checking* pass `{ forceVision: true }` (the workflow's invisible/unseen checks do).
+
+40. **Ability check flags follow the rolled ability** — a skill or tool roll's ability can be passed in or changed in the roll dialog, so `min`/`max.ability.check.*` (and `fail`/`success` for a changed ability) are applied in `dnd5e.postBuildSkillRollConfig` / `postBuildToolRollConfig` from `config.data.abilityId`, which fire for every build with or without the dialog (#1572). Flags evaluated before the dialog use `config.ability`, not the skill's default.
+
+41. **Versions** — midi's version is `package.json` (`module.json` is a template filled by gulp); DAE's is `src/module.json`. A midi release that relies on a DAE change raises the DAE minimum in midi's `module.json` and says so in the changelog.
+
 ## Testing
 
 Tests use the Quench framework in separate test modules (not embedded in the main module source). Each major version branch has its own test module:
@@ -274,7 +282,7 @@ Tests use the Quench framework in separate test modules (not embedded in the mai
 
 **CRITICAL: Never remove tests without explicit user consent.**
 
-Before running suites on :30001/:30002, "test scene" (`Ha0MAUFx9RWCQmui`) must be the ACTIVE scene (not "test scene (Copy)") with the canonical token layout (see memory `test-scene-active`); otherwise trap, vision and template-height tests fail spuriously. Baseline (2026-10-04): only 32.12/32.13 fail on every branch. Packaging (`gulp package`) deletes `dist/`, which the dev servers load from — rebuild afterwards.
+Before running suites on :30001/:30002, "test scene" (`Ha0MAUFx9RWCQmui`) must be the ACTIVE scene (not "test scene (Copy)") with the canonical token layout (see memory `test-scene-active`); otherwise trap, vision and template-height tests fail spuriously. Baseline (2026-10-16): dnd6 991 pass / 19 pending, v14 787 / 19, no failures; v13 584 pass with only 32.12/32.13 failing (the per-actor status queue is not on v13, by decision). Packaging (`gulp package`) deletes `dist/`, which the dev servers load from — rebuild afterwards.
 
 ### Test Conventions
 - **midi-qol**: Batch ID `quench.midi-qol.{camelCaseName}`, displayName `"{number}. {Title} Tests"`, export `register{Number}{PascalCaseName}Tests`

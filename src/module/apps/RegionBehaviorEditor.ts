@@ -65,6 +65,11 @@ export class RegionBehaviorEditor extends HandlebarsApplicationMixin(Application
     context.regionVisibility = rb.regionVisibility ?? CONST.REGION_VISIBILITY.ALWAYS;
     context.attachToken = rb.attachToken ?? "default";
     context.attachTokenOptions = attachTokenOptions(context.attachToken);
+    context.moveDistance = rb.moveDistance ?? 0;
+    context.moveDirectionOptions = ["away", "choose"].map(value => ({ value,
+      label: i18n(`midi-qol.REGION_BEHAVIOR.moveDirection.${value}`), selected: (rb.moveDirection ?? "away") === value }));
+    context.moveTimingOptions = ["start", "end"].map(value => ({ value,
+      label: i18n(`midi-qol.REGION_BEHAVIOR.moveTiming.${value}`), selected: (rb.moveTiming ?? "start") === value }));
 
     // Wall restriction dropdown — uses Foundry's EDGE_RESTRICTION_TYPES plus "none"
     // @ts-expect-error fvtt-types missing EDGE_RESTRICTION_TYPES
@@ -110,8 +115,8 @@ export class RegionBehaviorEditor extends HandlebarsApplicationMixin(Application
     // Target options split by type — activities vs effects
     const activityTargets: { value: string; label: string }[] = [];
     for (const act of item?.system?.activities ?? []) {
-      const id = act.identifier || act.midiProperties?.identifier;
-      if (id && act.isTriggerableActivity) {
+      const id = act.identifier || act.midiProperties?.identifier || act.id;
+      if (id && act.isTriggerableActivity !== false) {
         activityTargets.push({ value: id, label: act.name || id });
       }
     }
@@ -195,6 +200,9 @@ export class RegionBehaviorEditor extends HandlebarsApplicationMixin(Application
       "regionBehavior.wallRestriction": data.wallRestriction ?? "none",
       "regionBehavior.regionVisibility": Number(data.regionVisibility ?? CONST.REGION_VISIBILITY.ALWAYS),
       "regionBehavior.attachToken": data.attachToken ?? "default",
+      "regionBehavior.moveDistance": Math.max(0, Number(data.moveDistance) || 0),
+      "regionBehavior.moveDirection": data.moveDirection ?? "away",
+      "regionBehavior.moveTiming": data.moveTiming ?? "start",
       "regionBehavior.rules": this._workingRules,
     };
 

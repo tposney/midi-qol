@@ -1,12 +1,48 @@
 ### 14.0.15 (unreleased)
+* Requires DAE 14.0.18.
 
 **Rolls and saves**
+* Fixed: with *Attack display* set to Hit/Miss/Critical/Fumble, players saw `midi-qol.criticalHit` or `midi-qol.fumble` instead of the text for a critical or fumble.
+* Fixed: the Target Confirmation dialog didn't update a target's cover or range when the attacker or a target moved while it was open; a dialog that failed to render left the use waiting and its hooks registered (#1554).
+* Changed: with fast forward off, Alt or Ctrl on an attack skip the roll dialog with advantage or disadvantage, as dnd5e does (they opened the dialog).
+* Fixed: Roll Toggle did nothing on skill, ability, save and tool rolls with fast forward off; held, it now skips the dialog of a roll that isn't fast forwarded and shows it for one that is, keeping Alt/Ctrl's advantage or disadvantage. Bound to Shift it opens the dialog for fast forwarded rolls (#1553).
+* Fixed: tool and skill checks requested through Flash Token Bar were sent with the ability as the roll key, so players rolled a plain ability check (#1575).
+* Fixed: skill and tool checks applied the `min`/`max`/`fail`/`success.ability.check` flags of the skill's default ability, not the one rolled, passed in or chosen in the roll dialog (#1572).
+* Fixed: *Force vision when checking* left a token's vision switched on until its next update, then tested stale vision (#1571). `MidiQOL.canSee`/`canSense`/`canSenseModes` take `{ forceVision }`.
+* Fixed: criticals and fumbles on a non-d20 attack or save die (e.g. Custom D&D 5e's 2d10) were judged on the first die only.
+* Deprecated: `flags.midi-qol.concentrationSaveBonus`; use `system.attributes.concentration.bonuses.save`. Setting it on an actor directly stops working in 14.0.20.
+* Fixed: with *Concentration check* set to item, `advantage.concentration` / `disadvantage.concentration` (and the other concentration flags) were ignored.
 * Fixed: with *Force a concentration save when damage taken* set to *Chat Message + Auto Roll*, taking damage could roll the concentration save twice.
+* Fixed: on multi-level scenes, line of sight, walls blocking range and template targeting through walls were tested in the level the GM was viewing, not the token's.
 
 **Effects and expiry**
+* README: the auto-fail and min/max save examples now use the keys midi reads (`fail.ability.save.dex`, `min.ability.save.all`).
+* Fixed: an effect with an `ActivityOverTime` change logged "activity not found" each turn for its other changes, and could take the roll mode from a change value that happened to be an activity UUID.
+* Fixed: reaction and bonus action markers not ended at turn start or combat end stayed; midi removes them. The combat-end reset wrote the wrong flag.
+* Fixed: changing the same status on an actor twice at once showed an error.
+* Fixed: Custom D&D 5e's Conditions config dropped midi's flanking, reaction and bonus action statuses.
+* Fixed: an over-time action save with nothing to roll posted an empty card; README Hold Person example corrected (#1569).
+* Fixed: region *Once per turn* was shared by unlinked tokens of one actor (#1580).
+* Added: region setting *Move Each Turn*: away from the caster or in a chosen direction, at its turn start or end (#1568).
+* Fixed: a cast that rolls a save and places a region (e.g. Moonbeam) made creatures already inside save twice.
+* Fixed: region *Once per turn* let entry and turn end both trigger in one turn (#1568).
 * Fixed: an *Always Apply* effect went to every target once any target passed the activity's *Active Effect Condition*; it now goes only to targets that pass it, as the condition's hint now says.
 
+**Compatibility**
+* Changed: Chris Premades integration needs CPR 2.0.0 or later (older versions are ignored).
+* Added: GM warning and TroubleShooter entries for conflicting settings (wounded/dead markers, initiative rerolls, Custom D&D 5e damage options, a missing HP = 0 status), with Auto Fixes.
+* Fixed: TroubleShooter's Auto Fix buttons did nothing.
+* Fixed: another module's activities (e.g. Custom D&D 5e's Move) could not be a *Trigger Activity* (#1570).
+* Fixed: deprecation warnings for the globals `Token`, `SettingsConfig`, `DocumentSheetConfig` and `CanvasOcclusionMask` on Foundry 14 (#1573).
+
+**Settings**
+* Fixed: *Confirm targets if targeting allies and hostiles* had no effect (saved under a misspelt key); existing settings carry over.
+* Fixed: *Show Active Defence DC* had no effect; the DC was always shown. Existing worlds keep showing it until the box is unticked.
+* Fixed: some Quick Settings presets wrote settings that don't exist.
+
 **Sample items**
+* Changed: Moonbeam's cast is a utility activity; its region rules run the save, including for creatures inside when it is cast.
+* Added: Cloudkill sample item, built from region behaviours only (#1568).
 * Fixed: Slayer's Prey did not remove the mark from the previous target.
 * Fixed: 20 sample effects (Weird, Foresight, Warding Bond, Slayer's Prey…) used DAE's old boolean `stackable` flag, which statuscounter rejected; they now use *none*.
 * Fixed: the Arcane Ward sample item used the deprecated `ChatMessage.applyRollMode`.

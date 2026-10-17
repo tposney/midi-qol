@@ -99,7 +99,7 @@ let defineMidiCheckActivityClass = <T extends Activity>(ActivityClass: T) => {
 
       for (const token of targets) {
         const actor = token instanceof Actor ? token : token.actor;
-        const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: token instanceof Token ? token.document : null });
+        const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: token instanceof foundry.canvas.placeables.Token ? token.document : null });
         const messageData: AnyMutableObject = { data: { speaker } };
         if (!actor) continue;
         // v14 message-mode strings (CONFIG.ChatMessage.modes keys) so the value matches the roll dialog's options

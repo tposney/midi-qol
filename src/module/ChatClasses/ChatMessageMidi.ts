@@ -460,9 +460,11 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         const total = totals[index];
         if (!total || total.classList.contains("critical") || total.classList.contains("fumble")) continue;
         const d0 = d20Roll?.dice?.[0];
-        if (!d0 || d0.faces !== 20 || d0.values?.length !== 1) continue;
+        if (!d0) continue;
         // @ts-expect-error D20Roll not typed
         const d20 = dnd5e.dice.D20Roll.fromRoll(d20Roll);
+        // A d20 (one kept die), or a die that replaces it, e.g. Custom D&D 5e's 2d10: dnd5e judges both.
+        if (!d20.validD20Roll || (d0.faces === 20 && d0.values?.length !== 1)) continue;
         if (d20.isCritical) {
           total.classList.add("critical");
           if (!total.querySelector(".icons")) {
@@ -512,10 +514,11 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         total.querySelector(".icons")?.remove();
 
         const d0 = d20Roll?.dice?.[0];
-        if (!d0 || d0.faces !== 20 || d0.values?.length !== 1) continue;
-
+        if (!d0) continue;
         // @ts-expect-error D20Roll not typed
         const d20 = dnd5e.dice.D20Roll.fromRoll(d20Roll);
+        // A d20 (one kept die), or a die that replaces it, e.g. Custom D&D 5e's 2d10: dnd5e judges both.
+        if (!d20.validD20Roll || (d0.faces === 20 && d0.values?.length !== 1)) continue;
         if (d20.isCritical) total.classList.add("critical");
         if (d20.isFumble) total.classList.add("fumble");
         if (d20.dice[0]?.options?.target) {
@@ -583,8 +586,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           break;
         case "hitMissCrit":
           attackRollText = hitString;
-          if (isCritical) attackRollText = i18n("midi-qol.criticalHit");
-          else if (isFumble) attackRollText = i18n("midi-qol.fumble");
+          if (isCritical) attackRollText = i18n("midi-qol.criticals");
+          else if (isFumble) attackRollText = i18n("midi-qol.fumbles");
           break;
         case "hidden":
           hideCritFumble = true;
@@ -745,7 +748,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     private applyAttackVisibility(html: HTMLElement) {
-      if (!configSettings.optionalRules.ActiveDefenceDC) {
+      if (!configSettings.optionalRules.activeDefenceDC) {
         removeAll(html, ".midi-qol-active-defence-dc");
       }
 

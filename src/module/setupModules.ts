@@ -9,7 +9,7 @@ export const USEFUL_MODULE_VERSIONS = {
   "anonymous": "0.0.0",
   "auraeffects": "1.3.4",
   "autoanimations": "3.2.991",
-  "chris-premades": "1.3.0",
+  "chris-premades": "2.0.0",
   "condition-lab-triggler": "1.4",
   "dae": DAE_REQUIRED_VERSION,
   "ddb-game-log": "0.0.0",

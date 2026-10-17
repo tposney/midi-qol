@@ -71,6 +71,24 @@
       </div>
       <p class="hint">{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.attachToken.hint" }}</p>
     </div>
+
+    <div class="form-group">
+      <label>{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.moveDistance.label" }}</label>
+      <div class="form-fields">
+        <input type="number" name="moveDistance" min="0" step="any" value="{{moveDistance}}" />
+        <select name="moveDirection">
+          {{#each moveDirectionOptions}}
+            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+        <select name="moveTiming">
+          {{#each moveTimingOptions}}
+            <option value="{{this.value}}" {{#if this.selected}}selected{{/if}}>{{this.label}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <p class="hint">{{ localize "midi-qol.SHARED.FIELDS.regionBehavior.moveDistance.hint" }}</p>
+    </div>
   </fieldset>
 
   <fieldset>

@@ -341,6 +341,16 @@ const workflow2 = await MidiQOL.completeItemUse(item, {
 });
 ```
 
+### canSee / canSense / canSenseModes
+
+```js
+MidiQOL.canSee(token, target, { forceVision })                    // boolean: sees by a sight-based sense
+MidiQOL.canSense(token, target, validModes = ["all"], { forceVision })  // boolean: senses by any of validModes
+MidiQOL.canSenseModes(token, target, validModes = ["all"], { forceVision }) // the detection modes that work
+```
+
+Whether `token` perceives `target`, with walls, lighting, levels and the token's detection modes. A token without vision enabled perceives everything (`["senseAll"]`) unless *Force vision when checking* is on or `forceVision: true` is passed, in which case it is checked as if its vision were enabled. The check never changes the token.
+
 ### reactionDialog
 
 ```js

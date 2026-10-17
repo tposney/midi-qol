@@ -3029,7 +3029,7 @@ export class Workflow {
           break;
         }
         visitedActivities.add(possibleTriggerActivity.uuid);
-        possibleTriggerActivity = await possibleTriggerActivity.getTriggeredActivity();
+        possibleTriggerActivity = await possibleTriggerActivity.getTriggeredActivity?.();
       }
 
       let triggeredActivity = await this.activity.getTriggeredActivity();
@@ -4640,7 +4640,8 @@ export class Workflow {
 
       if (this.attackRoll?.dice.length) {
         const d: any = this.attackRoll.dice[0]; // should be a dice term but DiceTerm.options not defined
-        const isD20 = (d.faces === 20);
+        // Or a die replacing the d20 that dnd5e accepts as one (e.g. Custom D&D 5e's 2d10).
+        const isD20 = (d.faces === 20) || ("validD20Roll" in this.attackRoll && !!this.attackRoll.validD20Roll);
         if (isD20) {
           // Success/failure/critical/fumble classes are applied at render time
           // by ChatMessageMidi._applyAttackRollHighlight, not baked into content.
@@ -5135,8 +5136,12 @@ export class Workflow {
   ): Promise<{ saveRoll: Roll, saveRollTotal: number, saved: boolean } | null> {
     if (!this.item.flags?.[MODULE_ID]?.isConcentrationCheck) return null;
 
+    // Only reached when set on the actor directly; effects are mapped by DAE. Remove in 14.0.20.
     const checkBonus = target.actor?.flags?.[MODULE_ID]?.concentrationSaveBonus;
     if (!checkBonus) return null;
+    foundry.utils.logCompatibilityWarning(
+      "midi-qol | flags.midi-qol.concentrationSaveBonus is deprecated; use system.attributes.concentration.bonuses.save. Setting it on an actor directly stops working in 14.0.20.",
+      { once: true });
 
     //@ts-expect-error
     const D20Roll = CONFIG.Dice.D20Roll as typeof Roll;
@@ -5459,11 +5464,12 @@ export class Workflow {
       return { isCritical: false, isFumble: false };
     }
     const dterm = saveRoll.terms[0] as foundry.dice.terms.DiceTerm;
-    const diceRoll = dterm?.results?.find(result => result.active)?.result ?? fallbackTotal;
+    const diceRoll = activeDiceTotal(dterm) ?? fallbackTotal;
+    // dnd5e's D20Die holds the thresholds; another die (e.g. Custom D&D 5e's 3d6) brings its own.
     //@ts-expect-error no dnd5e-types
-    const isFumble = diceRoll <= (dterm.options?.fumble ?? 1);
+    const isFumble = diceRoll <= (dterm.options?.criticalFailure ?? dterm.options?.fumble ?? 1);
     //@ts-expect-error no dnd5e-types
-    const isCritical = diceRoll >= (dterm.options?.critical ?? 20);
+    const isCritical = diceRoll >= (dterm.options?.criticalSuccess ?? dterm.options?.critical ?? 20);
     return { isCritical, isFumble };
   }
 
@@ -5722,7 +5728,10 @@ export class Workflow {
       flashRequestType = "savingthrow"; // default
     }
 
-    const flashRollKey = rollAbilities?.[0] ?? rollSkills?.[0] ?? rollTools?.[0];
+    // A tool or skill check also lists the ability it is rolled with; its key is the tool or skill (#1575).
+    const flashRollKey = rollType === "skill" ? rollSkills?.[0]
+      : rollType === "tool" ? rollTools?.[0]
+        : rollAbilities?.[0];
     if (!flashRollKey) {
       flashRequestType = "custom";
     }
@@ -6298,9 +6307,11 @@ export class Workflow {
     // Check ability advantage/disadvantage from settings, source grants flags, and magic resistance/vulnerability
     // Use the shared helper to compute full trackers (advantage + roll modifiers) for all abilities
     const abilityId = this.saveActivity!.save?.ability?.first() ?? this.saveActivity!.check?.ability ?? "";
+    const isConcentrationCheck = this.item.flags?.[MODULE_ID]?.isConcentrationCheck;
+    // A concentration check's save also takes the concentration advantage flags.
     const preComputedMap = await buildPreComputedAdvantageMap(
       target.actor!,
-      rollType ?? "",
+      (rollType === "save" && isConcentrationCheck) ? "concentration" : rollType ?? "",
       rollAbilities,
       { workflow: this, isMagicSave: !!isMagicSave }
     );
@@ -6311,7 +6322,7 @@ export class Workflow {
     saveDetails.modifierTracker = defaultAbilityData?.tracker instanceof RollModifierTracker ? defaultAbilityData.tracker : undefined;
     saveDetails.advantage = defaultAbilityData?.hasAdvantage;
     saveDetails.disadvantage = defaultAbilityData?.hasDisadvantage;
-    saveDetails.isConcentrationCheck = this.item.flags?.[MODULE_ID]?.isConcentrationCheck;
+    saveDetails.isConcentrationCheck = isConcentrationCheck;
 
     // Pre-compute advantage for all choices when multiple are available.
     // A roll is always ONE type (save, skill check, or tool check), so we use a single object.
@@ -6328,14 +6339,16 @@ export class Workflow {
           target.actor!,
           "skill",
           rollSkills,
-          { workflow: this, isMagicSave: false }
+          { workflow: this, isMagicSave: false },
+          this.saveActivity?.check?.ability || undefined
         );
       } else {
         choiceMap = await buildPreComputedAdvantageMap(
           target.actor!,
           "tool",
           rollTools,
-          { workflow: this, isMagicSave: false }
+          { workflow: this, isMagicSave: false },
+          this.saveActivity?.check?.ability || undefined
         );
       }
 
@@ -6851,9 +6864,7 @@ export class Workflow {
     if (terms[0] instanceof foundry.dice.terms.NumericTerm) {
       this.diceRoll = Number(terms[0].total);
     } else {
-      const dterm = terms[0] as foundry.dice.terms.DiceTerm;
-      const activeResult = dterm.results?.find(d => d.active);
-      this.diceRoll = activeResult ? Number(activeResult.result) : Number(terms[0].total);
+      this.diceRoll = activeDiceTotal(terms[0] as foundry.dice.terms.DiceTerm) ?? Number(terms[0].total);
     }
 
     // For natural critical/fumble detection, use the actual die face when auto-success/fail
@@ -6863,9 +6874,7 @@ export class Workflow {
     let critFumbleDiceRoll = this.diceRoll;
     if (this.attackRollModifierTracker.modifiers.willSucceed || this.attackRollModifierTracker.modifiers.willFail) {
       if (!(terms[0] instanceof foundry.dice.terms.NumericTerm)) {
-        const dterm = terms[0] as foundry.dice.terms.DiceTerm;
-        const activeResult = dterm.results?.find(d => d.active);
-        if (activeResult) critFumbleDiceRoll = Number(activeResult.result);
+        critFumbleDiceRoll = activeDiceTotal(terms[0] as foundry.dice.terms.DiceTerm) ?? critFumbleDiceRoll;
       }
     }
 
@@ -6890,7 +6899,8 @@ export class Workflow {
 
     const midiFumble: number = (this.activity?.fumbleThreshold as number) ?? 1;
     //@ts-expect-error no dnd5e-types
-    const attackRollFumbleTarget = this.attackRoll.options.criticalFailure;
+    // Custom D&D 5e 5.4 can leave this unset.
+    const attackRollFumbleTarget = this.attackRoll.options.criticalFailure ?? 1;
     const fumbleTarget =
       attackRollFumbleTarget === 0 || midiFumble === 0 && attackRollFumbleTarget === 1
         ? 0
@@ -9013,4 +9023,11 @@ export interface AugmentedEvent extends Event {
   ctrlKey: boolean;
   metaKey: boolean;
   type: string;
+}
+
+/** The natural roll of a die term: the sum of its kept dice, so a replacement die such as 2d10 counts as a whole. */
+function activeDiceTotal(term: foundry.dice.terms.DiceTerm | undefined): number | undefined {
+  const active = term?.results?.filter(r => r.active);
+  if (!active?.length) return undefined;
+  return active.reduce((sum, r) => sum + Number(r.result), 0);
 }

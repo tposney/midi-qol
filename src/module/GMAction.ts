@@ -1,7 +1,7 @@
 import { checkRule, configSettings, safeGetGameSetting, isDnd5e53 } from "./settings.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions, tokenSourceCenter } from "./utils.js";
+import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow, WorkflowOptions } from "./Workflow.js";
@@ -383,7 +383,7 @@ async function updateItems(data: { actorUuid: string, updates: Item.UpdateData[]
 
 async function _toggleStatusEffect(data: { actorUuid: string, statusId: string, options: Actor.ToggleStatusEffectOptions }) {
   const actor = fromActorUuid(data.actorUuid);
-  return actor?.toggleStatusEffect(data.statusId, data.options);
+  return toggleStatus(actor, data.statusId, data.options);
 }
 
 function removeActorStats(data: { actorId: string }) {

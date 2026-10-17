@@ -1,0 +1,430 @@
+{
+  "name": "Cloudkill",
+  "type": "spell",
+  "img": "icons/magic/acid/dissolve-pool-bubbles.webp",
+  "effects": [
+    {
+      "_id": "ckConcentration0",
+      "disabled": false,
+      "duration": {},
+      "transfer": false,
+      "flags": {
+        "dae": {
+          "stackable": "none",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "transfer": false,
+          "dontApply": false,
+          "selfTarget": true,
+          "selfTargetAlways": true
+        }
+      },
+      "name": "Cloudkill",
+      "description": "<p>Concentration marker. A 20-foot-radius Sphere of poisonous fog. Creatures in it must make a Constitution save or take Poison damage.</p>",
+      "statuses": [],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/acid/dissolve-pool-bubbles.webp",
+      "type": "base",
+      "system": {
+        "changes": []
+      },
+      "sort": 0,
+      "_key": "!items.effects!midiCloudkill000.ckConcentration0",
+      "showIcon": 2
+    }
+  ],
+  "flags": {
+    "midiProperties": {
+      "magicdam": true,
+      "magiceffect": true,
+      "concentration": true,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "rollOther": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "onUseMacroName": "",
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "14.0.14"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>You create a 20-foot-radius Sphere of yellow-green fog centered on a point within range. The fog lasts for the duration or until strong wind (such as the one created by <em>Gust of Wind</em>) disperses it, ending the spell. Its area is Heavily Obscured.</p><p>Each creature in the Sphere makes a Constitution saving throw, taking 5d8 Poison damage on a failed save or half as much damage on a successful one. A creature must also make this save when the Sphere moves into its space and when it enters the Sphere or ends its turn there. A creature makes this save only once per turn.</p><p>The Sphere moves 10 feet away from you at the start of each of your turns.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d8 for each spell slot level above 5.</p><p><strong>midi-qol</strong>: Built from region behaviours, no macro. The Cast activity is a Utility activity that places a 20-foot-radius sphere Region; it rolls nothing itself. Its <em>Region Behavior</em> settings (All dispositions, caster not excluded, once per turn) attach midi's region activity behaviour with two rules, <em>Entry</em> and <em>Turn End</em>, both running the automation-only <em>Cloudkill Damage</em> save activity (identifier <code>cloudkillDamage</code>) for the creature concerned. Foundry treats creatures already in the area as entering when the behaviour is created, so they make the initial save, and once per turn stops a second save at the end of that turn. Its <em>Move Each Turn</em> setting (10 ft, away from the caster, start of the caster's turn) moves the cloud in combat; creatures it passes over enter it and save. Out of combat, drag the Region. Spell scaling is kept (+1d8 per slot above 5th). Ending concentration deletes the Region. Heavily Obscured is not automated.</p>",
+      "chat": "<p>You create a 20-foot-radius Sphere of yellow-green fog centered on a point within range. The fog lasts for the duration or until strong wind (such as the one created by <em>Gust of Wind</em>) disperses it, ending the spell. Its area is Heavily Obscured.</p><p>Each creature in the Sphere makes a Constitution saving throw, taking 5d8 Poison damage on a failed save or half as much damage on a successful one. A creature must also make this save when the Sphere moves into its space and when it enters the Sphere or ends its turn there. A creature makes this save only once per turn.</p><p>The Sphere moves 10 feet away from you at the start of each of your turns.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d8 for each spell slot level above 5.</p>"
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
+    },
+    "activation": {
+      "type": "action",
+      "condition": "",
+      "value": 1
+    },
+    "duration": {
+      "value": "10",
+      "units": "minute"
+    },
+    "target": {
+      "affects": {
+        "type": "",
+        "count": "",
+        "choice": false,
+        "special": ""
+      },
+      "template": {
+        "units": "ft",
+        "contiguous": false,
+        "type": "sphere",
+        "size": "20"
+      }
+    },
+    "range": {
+      "value": "120",
+      "units": "ft",
+      "special": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "ability": "",
+    "level": 5,
+    "school": "con",
+    "materials": {
+      "value": "",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "preparation": {
+      "mode": "prepared",
+      "prepared": false
+    },
+    "properties": [
+      "vocal",
+      "somatic",
+      "concentration"
+    ],
+    "activities": {
+      "ckCastUtility000": {
+        "_id": "ckCastUtility000",
+        "type": "utility",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": true,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "ckConcentration0"
+          }
+        ],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "type": "sphere",
+            "size": "20",
+            "units": "ft"
+          },
+          "affects": {
+            "type": "",
+            "count": "",
+            "choice": false,
+            "special": ""
+          },
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "name": "Cast Cloudkill",
+        "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "regionBehavior": {
+          "enabled": true,
+          "dispositionFilter": 0,
+          "excludeSource": false,
+          "oncePerTurn": true,
+          "rules": [
+            {
+              "trigger": "entry",
+              "action": "useActivity",
+              "targetId": "cloudkillDamage"
+            },
+            {
+              "trigger": "turnEnd",
+              "action": "useActivity",
+              "targetId": "cloudkillDamage"
+            }
+          ],
+          "moveDistance": 10,
+          "moveDirection": "away",
+          "moveTiming": "start"
+        },
+        "regionLight": {
+          "enabled": false,
+          "dim": 0,
+          "bright": 0,
+          "color": null,
+          "alpha": 0.5,
+          "luminosity": 0.5,
+          "animationType": null,
+          "animationSpeed": 5,
+          "animationIntensity": 5
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        }
+      },
+      "ckDamageSave0000": {
+        "_id": "ckDamageSave0000",
+        "type": "save",
+        "activation": {
+          "type": "",
+          "value": null,
+          "override": true,
+          "condition": ""
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": true,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": true
+        },
+        "effects": [],
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": true
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "type": "",
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false,
+            "special": ""
+          },
+          "override": true
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "damage": {
+          "onSave": "half",
+          "parts": [
+            {
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "number": 5,
+              "denomination": 8,
+              "bonus": "",
+              "types": [
+                "poison"
+              ],
+              "scaling": {
+                "mode": "whole",
+                "number": 1,
+                "formula": ""
+              }
+            }
+          ]
+        },
+        "save": {
+          "ability": [
+            "con"
+          ],
+          "dc": {
+            "calculation": "spellcasting",
+            "formula": ""
+          }
+        },
+        "name": "Cloudkill Damage",
+        "sort": 200,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "forceConsumeDialog": "never",
+          "confirmTargets": "never",
+          "automationOnly": true,
+          "identifier": "cloudkillDamage",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "isOverTimeFlag": true,
+        "overTimeProperties": {
+          "turnChoice": "end",
+          "saveRemoves": false,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    },
+    "identifier": "cloudkill",
+    "sourceClass": ""
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "folder": "SpellFldr5thLevl",
+  "_id": "midiCloudkill000",
+  "sort": 400000,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!midiCloudkill000"
+}

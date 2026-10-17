@@ -1,7 +1,8 @@
+import { moveRegionsOnTurnChange } from "./regionBehaviors/MidiRegionActivityBehaviorType.js";
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, obscureRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget, rangeToSceneUnits, tokenSourceElevation } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget, rangeToSceneUnits, tokenSourceElevation, toggleStatus } from "./utils.js";
 import { checkMechanic, checkRule, configSettings, dragDropTargeting, isDnd5e53, setDnd5e53 } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook, getTemplateSourceToken } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -412,6 +413,8 @@ export function initHooks() {
   });
 
 
+  Hooks.on("combatTurnChange", moveRegionsOnTurnChange);
+
   Hooks.on("updateCombat", (combat, data, options, user) => {
     if (data.round === undefined && data.turn === undefined) return;
     untargetAllTokens(combat);
@@ -483,7 +486,7 @@ export function initHooks() {
       const statusEffect = CONFIG.statusEffects.find(se => se.id === effectIdOrUuid);
       if (statusEffect) {
         // Apply as status effect using toggleStatusEffect
-        await actor.toggleStatusEffect(effectIdOrUuid, { active: true, overlay });
+        await toggleStatus(actor, effectIdOrUuid, { active: true, overlay });
       } else {
         // Assume it's an effect UUID - fetch and apply
         const sourceEffect = await fromUuid(effectIdOrUuid) as ActiveEffect.Implementation | undefined;

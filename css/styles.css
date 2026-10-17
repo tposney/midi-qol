@@ -1812,6 +1812,21 @@ body.theme-dark input[type="checkbox"] {
   --checkbox-background-color: #6a6a6a;
 }
 
+/* Move region direction dialog (DialogV2): compass buttons in a 3x3 grid */
+.midi-qol-move-region .form-footer {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.midi-qol-move-region .form-footer button {
+  margin: 0;
+}
+
+.midi-qol-move-region .form-footer button[data-action="stay"] {
+  grid-column: 1 / -1;
+}
+
 /* Choose Effect dialog (DialogV2) */
 .midi-qol-choose-effect .form-footer {
   flex-direction: column;
@@ -1867,3 +1882,8 @@ body.theme-dark input[type="checkbox"] {
 }
 
 } /* @layer modules */
+
+.midi-qol-overlaps .midi-qol-overlap-buttons {
+  display: flex;
+  gap: 4px;
+}

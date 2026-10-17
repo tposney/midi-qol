@@ -1154,7 +1154,7 @@ export function midiCustomEffect(actor: Actor.Implementation, change: MidiChange
     return true;
     /*
      TODO revisit this if going to allow item macro in flags evaluation
-     else if (change.key.startsWith(`flags.${MODULE_ID}.`) && (change.value.trim().includes("ItemMacro") || change.value.trim().includes(MQItemMacroLabel))) {
+     else if (change.key.startsWith(`flags.${MODULE_ID}.`) && typeof change.value === "string" && (change.value.trim().includes("ItemMacro") || change.value.trim().includes(MQItemMacroLabel))) {
        if (originUuid?.includes("Item.")) {
          const macroString = `ItemMacro.${originUuid}`;
          foundry.utils.setProperty(actor, change.key, macroString)
@@ -1250,7 +1250,7 @@ export async function doActivityOverTimeEffect(actor: Actor.Implementation, effe
   if (auraFlags.isAura && auraFlags.ignoreSelf) return;
   const owner = playerForActor(actor);
   // @ts-expect-error fvtt-types v14 ActiveEffect
-  const changes = effect.system.changes;
+  const changes = effect.system.changes.filter(change => change.key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`));
   let requiresUserExecution = false;
   for (let change of changes) {
     const activity = await getOvertimeActivity(actor, effect, change, startTurn);
@@ -2141,6 +2141,18 @@ export function buildRollActivityData(details: OvertimeDetails): Record<string, 
   return activityData;
 }
 
+async function overTimeRemoveConditionMet(removeCondition: string, rollData: any): Promise<boolean> {
+  const value = replaceAtFields(removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
+  try {
+    return !!await evalCondition(value, rollData, { errorReturn: true, async: true });
+  } catch (err) {
+    const message = `midi-qol | gmOverTimeEffect | error when evaluating overtime remove condition ${value} - assuming true`;
+    TroubleShooter.recordError(err, message);
+    console.warn(message, err);
+    return true;
+  }
+}
+
 export async function gmOverTimeEffect(actor: Actor.Implementation, effect: ActiveEffect.Implementation, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined, rollMode: undefined }) {
   const endTurn = !startTurn;
   if (effect.disabled || effect.isSuppressed) return;
@@ -2240,6 +2252,12 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
       // isPermanent is true for actionSave items OR if effect was marked permanent by saveCount/failCount
       const effectMarkedPermanent = !!effect.flags?.[MODULE_ID]?.overtime?.permanent;
       const isPermanent = !!actionSave || effectMarkedPermanent;
+      // Nothing to roll (an action save is rolled from its own card): no workflow, so no empty card.
+      if (isPermanent && !damageRoll && !macroToCall) {
+        if (actionSaveSuccess || (details.removeCondition && await overTimeRemoveConditionMet(details.removeCondition, rollData)))
+          await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime" });
+        return effect.id;
+      }
       const { itemData, activityData } = await buildOvertimeItemData({ actor, effect, details, label, isPermanent });
 
       // roll the damage and save....
@@ -2294,18 +2312,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
       }
 
       if (details.removeCondition) {
-        let value = replaceAtFields(details.removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
-        let remove;
-        try {
-          remove = await evalCondition(value, rollData, { errorReturn: true, async: true });
-          // remove = Roll.safeEval(value);
-        } catch (err) {
-          const message = `midi-qol | gmOverTimeEffect | error when evaluating overtime remove condition ${value} - assuming true`;
-          TroubleShooter.recordError(err, message);
-          console.warn(message, err);
-          remove = true;
-        }
-        if (remove) {
+        if (await overTimeRemoveConditionMet(details.removeCondition, rollData)) {
           // @ts-expect-error no dnd5e-types
           const otKey = ownedItem.system.activities.contents[0].uuid;
           overTimeEffectsToDelete[otKey] = { uuid: effect.uuid }
@@ -2466,10 +2473,14 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         cleanupAndResolve(undefined, "timeout");
       }, maxWait * 1000);
       usage.midiOptions!.targetsToUse = targetsToUse;
+      const isMidiActivity = !!(activity as { isMidiActivity?: boolean }).isMidiActivity;
+      // Another module's activity reads the user's targets, not midi's options.
+      if (!isMidiActivity) updateUserTargets(Array.from(targetsToUse).map(t => t.id));
       // @ts-expect-error no dnd5e-types
       activity.use(usage, dialog, message).then(result => {
-        if (!result) {
-          cleanupAndResolve(result);
+        // An activity midi doesn't wrap (another module's) runs no workflow, so no hook will resolve it.
+        if (!result || !isMidiActivity) {
+          cleanupAndResolve(undefined);
         }
       }).catch(err => {
         TroubleShooter.recordError(err, "completeActivityUse | activity.use failed");
@@ -3030,6 +3041,13 @@ function checkSurfaceCollision(
   return true;
 }
 
+/** A token's level, for collision tests: core tests the viewed level unless given one. */
+export function collisionLevel(token: Token.Implementation | TokenDocument.Implementation | null | undefined) {
+  const document = token instanceof TokenDocument ? token : token?.document;
+  // @ts-expect-error no dnd5e-types for document.level / scene.levels
+  return canvas?.scene?.levels?.get(document?._source.level) ?? canvas?.level;
+}
+
 /**
  * Check if a wall blocks the path between two points.
  * Respects the wallsBlockRange setting and handles different collision modes.
@@ -3045,6 +3063,7 @@ export function checkWallCollision(
   options: WallCollisionOptions
 ): boolean {
   const { wallsBlockRange, coverVisible, source } = options;
+  const level = collisionLevel(source);
   let blocked: boolean;
 
   switch (wallsBlockRange) {
@@ -3052,7 +3071,9 @@ export function checkWallCollision(
       blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
         source,
         mode: "any",
-        type: "sight"
+        type: "sight",
+        // @ts-expect-error v14 collision level not in fvtt-types
+        level
       });
       // v14: also check region surface collisions for cross-elevation rays
       if (!blocked) blocked = checkSurfaceCollision(origin, dest, options);
@@ -3067,7 +3088,9 @@ export function checkWallCollision(
       blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
         source,
         mode: "any",
-        type: "sight"
+        type: "sight",
+        // @ts-expect-error v14 collision level not in fvtt-types
+        level
       });
       if (!blocked) blocked = checkSurfaceCollision(origin, dest, options);
       return blocked;
@@ -3078,7 +3101,9 @@ export function checkWallCollision(
         blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
           source,
           mode: "any",
-          type: "sight"
+          type: "sight",
+          // @ts-expect-error v14 collision level not in fvtt-types
+          level
         });
         if (!blocked) blocked = checkSurfaceCollision(origin, dest, options);
         return blocked;
@@ -4548,7 +4573,7 @@ export function findNearby(
   if (!token) return [];
   if (!canvas || !canvas.scene) return [];
   try {
-    if (!(token instanceof Token)) { throw new Error("find nearby token is not of type token or the token uuid is invalid") };
+    if (!(token instanceof foundry.canvas.placeables.Token)) { throw new Error("find nearby token is not of type token or the token uuid is invalid") };
     let relative = options.relative ?? true;
     let targetDisposition: number[] | undefined;
     if (typeof disposition === "string") disposition = mapTokenString(disposition);
@@ -4678,7 +4703,7 @@ export async function removeInvisibleCondition(tokenRef?: TokenOrDocument | stri
 
   const invisId = CONFIG.specialStatusEffects.INVISIBLE ?? "invisible";
   if (CONFIG.statusEffects.find(se => se.id === invisId)) {
-    await (token.actor)?.toggleStatusEffect(invisId, { active: false })
+    await toggleStatus(token.actor, invisId, { active: false })
   }
   if (debugEnabled > 0) log(`Invisibility removed for ${token.name}`)
 }
@@ -4695,10 +4720,10 @@ export async function removeHiddenCondition(tokenRef?: TokenOrDocument | string)
   if (!token) return;
   if (!token.actor) return
   if (CONFIG.statusEffects.find(se => se.id === "hidden")) {
-    await token.actor.toggleStatusEffect("hidden", { active: false });
+    await toggleStatus(token.actor, "hidden", { active: false });
   }
   if (CONFIG.statusEffects.find(se => se.id === "hiding")) {
-    await token.actor.toggleStatusEffect("hiding", { active: false });
+    await toggleStatus(token.actor, "hiding", { active: false });
   }
   // Try and remove hidden if set by another active effect
   await removeTokenConditionEffect(token, i18n(`midi-qol.hidden`) ?? "");
@@ -7063,65 +7088,81 @@ export async function setActionUsed(actor: Actor.Implementation) {
   await actor.setFlag(MODULE_ID, "actions", { action: true });
 }
 
+/** The changes on midi's reaction marker when `count` reactions have been used. */
+function reactionChanges(actor: Actor.Implementation, count: number) {
+  return [
+    { key: 'flags.midi-qol.actions.reaction', type: "override", value: String(count >= (actor.getFlag(MODULE_ID, "actions")?.reactionsMax ?? 1)) },
+    { key: 'flags.midi-qol.actions.reactionsUsed', type: "override", value: String(count) },
+    { key: 'flags.midi-qol.actions.reactionCombatRound', type: "override", value: String(game.combat?.round ?? false) }
+  ];
+}
+
+/** The changes on midi's bonus action marker when `count` bonus actions have been used. */
+function bonusActionChanges(actor: Actor.Implementation, count: number) {
+  return [
+    { key: 'flags.midi-qol.actions.bonus', type: "override", value: String(count >= (actor.getFlag(MODULE_ID, "actions")?.bonusActionsMax ?? 1)) },
+    { key: 'flags.midi-qol.actions.bonusActionsUsed', type: "override", value: String(count) },
+    { key: 'flags.midi-qol.actions.bonusActionCombatRound', type: "override", value: String(game.combat?.round ?? false) }
+  ];
+}
+
+/** Replaces a marker effect, queued, recounting in case another use counted since `count` was read. */
+async function replaceMarker(actor: Actor.Implementation, effect: ActiveEffect.Implementation, count: number, flag: "reactionsUsed" | "bonusActionsUsed",
+  changes: (actor: Actor.Implementation, count: number) => object[]) {
+  await queueActorEffects(actor, async () => {
+    const current = (actor.getFlag(MODULE_ID, "actions")?.[flag] ?? 0) + 1;
+    const data = effect.toObject();
+    if (current !== count) foundry.utils.setProperty(data, "system.changes", changes(actor, current));
+    await deleteEffectIfPresent(actor, effect.id);
+    await createEffectWithId(actor, data);
+  });
+}
+
 export async function setReactionUsed(actor: Actor.Implementation, active: boolean = true) {
   if (!getReactionEffect()) return;
-  const id = "reaction";
+  const id = getStaticID("reaction");
   if (!active) {
-    await actor.effects.get(getStaticID(id))?.delete();
-  } else {
-    if (!["all", "displayOnly"].includes(configSettings.enforceReactions) && configSettings.enforceReactions !== actor.type) return;
-    const actions = actor.getFlag(MODULE_ID, "actions");
-    const newCount = (actions?.reactionsUsed ?? 0) + 1;
-    await actor.effects.get(getStaticID(id))?.delete();
-    const effect = foundry.utils.deepClone(getReactionEffect());
-    const allReactionsUsed = newCount >= (actor.getFlag(MODULE_ID, "actions")?.reactionsMax ?? 1);
-    if (!effect) return;
-    effect.updateSource({
-      origin: actor.uuid,
-      // @ts-expect-error fvtt-types v14 ActiveEffect
-      "system.changes": [
-        { key: 'flags.midi-qol.actions.reaction', type: "override", value: String(allReactionsUsed) },
-        { key: 'flags.midi-qol.actions.reactionsUsed', type: "override", value: String(newCount) },
-        { key: 'flags.midi-qol.actions.reactionCombatRound', type: "override", value: String(game.combat?.round ?? false) }
-      ]
-    });
-    if (actions?.reactionsReset === "eachTurn") {
-      // @ts-expect-error fvtt-types v14 duration
-      effect.updateSource({ duration: { value: 1, units: "turns" } })
-    }
-    if (actions?.reactionsReset === "rest") {
-      // @ts-expect-error fvtt-types v14 duration
-      effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: ["shortRest"] } } });
-    }
-    if (actions?.reactionsReset === "never") {
-      // @ts-expect-error fvtt-types v14 duration
-      effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: [] } } });
-    }
-    if (await asyncHooksCall("midi-qol.preSetReactionUsed", actor, effect) === false) return;
-    await ActiveEffect.implementation.create(effect.toObject(), { parent: actor, keepId: true });
-    await asyncHooksCallAll("midi-qol.setReactionUsed", actor, effect);
+    await queueActorEffects(actor, () => deleteEffectIfPresent(actor, id));
+    return;
   }
+  if (!["all", "displayOnly"].includes(configSettings.enforceReactions) && configSettings.enforceReactions !== actor.type) return;
+  const actions = actor.getFlag(MODULE_ID, "actions");
+  const newCount = (actions?.reactionsUsed ?? 0) + 1;
+  const effect = foundry.utils.deepClone(getReactionEffect());
+  if (!effect) return;
+  effect.updateSource({
+    origin: actor.uuid,
+    // @ts-expect-error fvtt-types v14 ActiveEffect
+    "system.changes": reactionChanges(actor, newCount)
+  });
+  if (actions?.reactionsReset === "eachTurn") {
+    // @ts-expect-error fvtt-types v14 duration
+    effect.updateSource({ duration: { value: 1, units: "turns" } })
+  }
+  if (actions?.reactionsReset === "rest") {
+    // @ts-expect-error fvtt-types v14 duration
+    effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: ["shortRest"] } } });
+  }
+  if (actions?.reactionsReset === "never") {
+    // @ts-expect-error fvtt-types v14 duration
+    effect.updateSource({ duration: { expiry: null }, flags: { dae: { specialDuration: [] } } });
+  }
+  if (await asyncHooksCall("midi-qol.preSetReactionUsed", actor, effect) === false) return;
+  await replaceMarker(actor, effect, newCount, "reactionsUsed", reactionChanges);
+  await asyncHooksCallAll("midi-qol.setReactionUsed", actor, effect);
 }
 
 export async function setBonusActionUsed(actor: Actor.Implementation) {
   if (debugEnabled > 0) warn("setBonusActionUsed | starting");
   if (!["all", "displayOnly"].includes(configSettings.enforceBonusActions) && configSettings.enforceBonusActions !== actor.type) return;
-  const id = "bonusaction";
   const actions = (actor.getFlag(MODULE_ID, "actions"));
   const newCount = (actions?.bonusActionsUsed ?? 0) + 1;
-  const bonusActionsMax = actions?.bonusActionsMax ?? 1;
-  const allBonusActionsUsed = newCount >= bonusActionsMax;
-  await actor.effects.get(getStaticID(id))?.delete();
   const effect = foundry.utils.deepClone(getBonusActionEffect());
   if (!effect) return;
   effect.updateSource({
     origin: actor.uuid,
     // @ts-expect-error fvtt-types v14 ActiveEffect
-    "system.changes": [
-      { key: 'flags.midi-qol.actions.bonus', type: "override", value: String(allBonusActionsUsed) },
-      { key: 'flags.midi-qol.actions.bonusActionsUsed', type: "override", value: String(newCount) },
-      { key: 'flags.midi-qol.actions.bonusActionCombatRound', type: "override", value: String(game.combat?.round ?? false) }
-    ]
+    "system.changes": bonusActionChanges(actor, newCount)
   });
   if (actions?.bonusActionsReset === "eachTurn") {
     // @ts-expect-error fvtt-types v14 duration
@@ -7138,7 +7179,7 @@ export async function setBonusActionUsed(actor: Actor.Implementation) {
   effect.origin = actor.uuid;
 
   if (await asyncHooksCall("midi-qol.preSetBonusActionUsed", actor, effect) === false) return;
-  await ActiveEffect.implementation.create(effect as any, { parent: actor, keepId: true });
+  await replaceMarker(actor, effect, newCount, "bonusActionsUsed", bonusActionChanges);
   await asyncHooksCallAll("midi-qol.setBonusActionUsed", actor, effect);
 }
 
@@ -7150,11 +7191,11 @@ export async function removeActionUsed(actor: Actor.Implementation) {
 export async function removeReactionUsed(actor: Actor.Implementation, force = false) {
   if (debugEnabled > 0) warn("removeReactionUsed | starting", actor);
   if (force) { // otherwise DAE expires it through its special duration
-    await actor.effects.get(getStaticID("reaction"))?.delete(); // reaction always non-transfer
+    await queueActorEffects(actor, () => deleteEffectIfPresent(actor, getStaticID("reaction"))); // reaction always non-transfer
   }
   // safety net unset of flags - just in case.
   // @ts-expect-error the flag types do not allow a ForcedDeletion
-  if (actor.flags?.[MODULE_ID]?.actions?.reaction) await actor.update({ flags: { [MODULE_ID]: { actions: { reactionUsed: 0, reactionCombatRound: new foundry.data.operators.ForcedDeletion() } } } });
+  if (actor.flags?.[MODULE_ID]?.actions?.reaction) await actor.update({ flags: { [MODULE_ID]: { actions: { reactionsUsed: 0, reactionCombatRound: new foundry.data.operators.ForcedDeletion() } } } });
 }
 
 export function hasUsedAction(actor: Actor.Implementation) {
@@ -7213,15 +7254,36 @@ export function hasUsedBonusAction(actor: Actor.Implementation) {
 export function hasUsedAnyBonusAction(actor: Actor.Implementation) {
   return (actor.getFlag(MODULE_ID, "actions")?.bonusActionsUsed ?? 0) > 0;
 }
-export async function removeBonusActionUsed(actor: Actor, force = false) {
+export async function removeBonusActionUsed(actor: Actor.Implementation, force = false) {
   if (force) { // otherwise DAE expires it through its special duration
-    await actor.effects.get(getStaticID("bonusaction"))?.delete()
+    await queueActorEffects(actor, () => deleteEffectIfPresent(actor, getStaticID("bonusaction")));
   }
   // Safety net flag reset just in case
   // @ts-expect-error the flag types do not allow a ForcedDeletion
   if (force) await actor.update({ flags: { [MODULE_ID]: { actions: { bonusActionsUsed: 0, bonus: false, bonusActionCombatRound: new foundry.data.operators.ForcedDeletion() } } } });
 }
 
+
+/** Removes action markers DAE/dnd5e should have ended (turn start, combat end) but left. */
+async function removeLingeringMarkers(actor: Actor.Implementation, shouldHaveEnded: (marker: ActiveEffect.Implementation) => boolean) {
+  for (const id of [getStaticID("reaction"), getStaticID("bonusaction")]) {
+    const marker = actor.effects.get(id);
+    if (marker && shouldHaveEnded(marker)) await queueActorEffects(actor, () => deleteEffectIfPresent(actor, id));
+  }
+}
+
+export function setupMarkerChecks() {
+  Hooks.on("deleteCombat", (combat: Combat.Implementation) => {
+    if (!preferredActiveGM()?.isSelf) return;
+    const actors = combat.combatants.contents.map(c => c.actor).filter(a => !!a) as Actor.Implementation[];
+    setTimeout(() => actors.forEach(actor => removeLingeringMarkers(actor, marker => !!marker.flags?.dae?.specialDuration?.includes("combatEnd"))), 500);
+  });
+  Hooks.on("combatTurnChange", (combat: Combat.Implementation) => {
+    if (!preferredActiveGM()?.isSelf) return;
+    const actor = combat.combatant?.actor;
+    if (actor) setTimeout(() => removeLingeringMarkers(actor, isEffectExpired), 500);
+  });
+}
 
 export function needsReactionCheck(actor: Actor.Implementation) {
   return (configSettings.enforceReactions === "all" || configSettings.enforceReactions === actor.type)
@@ -7982,11 +8044,11 @@ async function _markFlankingImpl(token?: Token.Implementation | null, target?: T
       let cprEffect: ActiveEffect | undefined = getCPREffect(MidiFlanking?._id as string)
       if (!cprEffect) {
         if (!token.actor?.isOwner) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: token.actor?.uuid, statusId: MidiFlanking.id, options: { active: needsFlanking } });
-        else await token.actor.toggleStatusEffect(MidiFlanking.id, { active: needsFlanking });
+        else await toggleStatus(token.actor, MidiFlanking.id, { active: needsFlanking });
       } else if (needsFlanking) {
         if (!token.actor?.effects.get(cprEffect.id!)) {
           if (!token.actor?.isOwner) await unTimedExecuteAsGM("createEffects", { actorUuid: token.actor?.uuid, effects: [cprEffect.toObject()], options: { keepId: true } });
-          else await token.actor.createEmbeddedDocuments("ActiveEffect", [cprEffect.toObject()], { keepId: true });
+          else await queueActorEffects(token.actor, () => createEffectWithId(token.actor!, cprEffect!.toObject()));
         }
       } else {
         if (token.actor?.effects.get(cprEffect.id!)) {
@@ -8020,11 +8082,11 @@ async function _markFlankingImpl(token?: Token.Implementation | null, target?: T
       const cprEffect: ActiveEffect | undefined = getCPREffect(MidiFlanked?._id as string)
       if (!cprEffect) {
         if (!target.actor.isOwner) await unTimedExecuteAsGM("toggleStatusEffect", { actorUuid: target.actor.uuid, statusId: MidiFlanked.id, options: { active: needsFlanked } });
-        else await target.actor.toggleStatusEffect(MidiFlanked.id, { active: needsFlanked });
+        else await toggleStatus(target.actor, MidiFlanked.id, { active: needsFlanked });
       } else if (needsFlanked) {
         if (!target.actor.effects.get(cprEffect.id!)) {
           if (!target.actor.isOwner) await unTimedExecuteAsGM("createEffects", { actorUuid: target.actor.uuid, effects: [cprEffect.toObject()], options: { keepId: true } });
-          else await target.actor.createEmbeddedDocuments("ActiveEffect", [cprEffect.toObject()], { keepId: true });
+          else await queueActorEffects(target.actor, () => createEffectWithId(target.actor!, cprEffect!.toObject()));
         }
       } else {
         if (target.actor.effects.get(cprEffect.id!)) {
@@ -8269,69 +8331,82 @@ export function getChanges(actorOrItem: Actor.Implementation | Item.Implementati
  * 
  * @returns {boolean}
  */
-export function canSense(tokenEntity: TokenOrDocument | string, targetEntity: TokenOrDocument | string, validModes: Array<string> = ["all"]): boolean {
-  return canSenseModes(tokenEntity, targetEntity, validModes).length > 0;
+/** `forceVision` checks a token without sight as if it had sight, whatever *Force vision when checking* is set to. */
+export interface SenseOptions { forceVision?: boolean }
+export function canSense(tokenEntity: TokenOrDocument | string, targetEntity: TokenOrDocument | string, validModes: Array<string> = ["all"], options: SenseOptions = {}): boolean {
+  return canSenseModes(tokenEntity, targetEntity, validModes, options).length > 0;
 }
-export function canSenseModes(tokenEntity: TokenOrDocument | string, targetEntity: TokenOrDocument | string, validModes: Array<string> = ["all"]): Array<string> {
+export function canSenseModes(tokenEntity: TokenOrDocument | string, targetEntity: TokenOrDocument | string, validModes: Array<string> = ["all"], options: SenseOptions = {}): Array<string> {
   const token = getToken(tokenEntity);
   const target = getToken(targetEntity);
   if (!token || !target) return [];
-  return _canSenseModes(token, target, validModes);
+  return _canSenseModes(token, target, validModes, options);
 }
-export function initializeVision(tk: Token.Implementation, force = false) {
-  tk.document.sight.enabled = true;
-  // @ts-expect-error protected
-  tk.document._prepareDetectionModes();
-  const sourceId = tk.sourceId;
-  tk.vision = new CONFIG.Canvas.visionSourceClass({ sourceId, object: tk });
+const newCheckVisionSource = (tk: Token.Implementation) => new CONFIG.Canvas.visionSourceClass({ sourceId: `${tk.sourceId}.midiCheck`, object: tk });
+type CheckVisionSource = ReturnType<typeof newCheckVisionSource> | NonNullable<Token.Implementation["vision"]>;
+const checkVisionSources = new WeakMap<Token.Implementation, { key: string, source: CheckVisionSource }>();
+let checkVisionGeneration = 0;
 
-  // v14: blinded is an object with per-cause states, not a single boolean
-  // @ts-expect-error protected _getVisionBlindedStates
-  const blindedStates = tk._getVisionBlindedStates?.() ?? {
-    blind: tk.document.hasStatusEffect(CONFIG.specialStatusEffects.BLIND),
-    burrow: tk.document.hasStatusEffect(CONFIG.specialStatusEffects.BURROW)
-  };
-  for (const state in blindedStates) tk.vision.blinded[state] = blindedStates[state];
+export function setupCheckVision() {
+  const invalidate = () => { checkVisionGeneration++; };
+  Hooks.on("createWall", invalidate);
+  Hooks.on("updateWall", invalidate);
+  Hooks.on("deleteWall", invalidate);
+  Hooks.on("createAmbientLight", invalidate);
+  Hooks.on("updateAmbientLight", invalidate);
+  Hooks.on("deleteAmbientLight", invalidate);
+  Hooks.on("updateScene", invalidate);
+  Hooks.on("canvasReady", invalidate);
+}
 
-  // v14: use the token's own data builder which includes level for multi-level scenes
-  // @ts-expect-error protected _getVisionSourceData
-  const visionData = tk._getVisionSourceData?.() ?? {
-    x: tk.center.x,
-    y: tk.center.y,
-    elevation: tk.document.getMovementOrigin?.()?.elevation ?? tk.document.elevation,
-    // @ts-expect-error no dnd5e-types for token.document.level
-    level: tk.document.level,
-    radius: tk.sightRange,
-    lightRadius: tk.lightPerceptionRange,
-    externalRadius: tk.externalRadius,
-    angle: tk.document.sight.angle,
-    contrast: tk.document.sight.contrast,
-    saturation: tk.document.sight.saturation,
-    brightness: tk.document.sight.brightness,
-    attenuation: tk.document.sight.attenuation,
-    rotation: tk.document.rotation,
-    visionMode: tk.document.sight.visionMode as foundry.canvas.perception.VisionMode.ConfiguredModes,
-    color: tk.document.sight.color?.toNearest(),
-    preview: !!tk._original,
-  };
-  tk.vision.initialize(visionData);
-
-  if (!tk.vision.los) {
-    // @ts-expect-error protected
-    tk.vision.shape = tk.vision._createRestrictedPolygon();
-    tk.vision.los = tk.vision.shape;
+/** A token without sight is checked with the detection modes Foundry gives one with sight. */
+function checkDetectionModes(tk: Token.Implementation) {
+  const modes = Object.fromEntries(Object.entries(tk.detectionModes));
+  if (!tk.hasSight) {
+    modes.lightPerception ??= { id: "lightPerception", enabled: true, range: Infinity };
+    modes.basicSight ??= { id: "basicSight", enabled: true, range: tk.document.sight.range };
   }
-  if (tk.vision.visionMode) tk.vision.visionMode.animated = false;
-  tk.vision.add();
-  return true;
+  return modes;
 }
-export function _canSenseModes(token: Token.Implementation, target: Token.Implementation, validModesParam: Array<string> = ["all"]): Array<string> {
+
+/**
+ * The token's own vision source while Foundry keeps one, else one detached from the canvas, so the token is left
+ * as it was (#1571). Cached until the token's vision data, the walls, lights or scene change.
+ */
+function checkVisionSource(tk: Token.Implementation, detectionModes: ReturnType<typeof checkDetectionModes>): CheckVisionSource {
+  if (tk.hasSight && tk.vision?.los) return tk.vision;
+  const lightPerception = detectionModes.lightPerception;
+  const data = {
+    // @ts-expect-error protected _getVisionSourceData
+    ...tk._getVisionSourceData(),
+    lightRadius: lightPerception?.enabled ? tk.getLightRadius(lightPerception.range ?? Infinity) : 0,
+    preview: false,
+    disabled: false
+  };
+  // @ts-expect-error protected _getVisionBlindedStates
+  const blinded: Record<string, boolean> = tk._getVisionBlindedStates();
+  const key = JSON.stringify([data, blinded, checkVisionGeneration]);
+  const cached = checkVisionSources.get(tk);
+  if (cached?.key === key) return cached.source;
+  const source = newCheckVisionSource(tk);
+  Object.assign(source.blinded, blinded);
+  source.initialize(data);
+  if (!source.los) {
+    // @ts-expect-error protected
+    source.shape = source._createRestrictedPolygon();
+    source.los = source.shape;
+  }
+  checkVisionSources.set(tk, { key, source });
+  return source;
+}
+export function _canSenseModes(token: Token.Implementation, target: Token.Implementation, validModesParam: Array<string> = ["all"], options: SenseOptions = {}): Array<string> {
   const detectionModes = CONFIG.Canvas.detectionModes;
   const DetectionModeCONST = foundry.canvas.perception.DetectionMode;
   if (!token || !target) return ["noToken"];
   if (target.document.hidden || token.document.hidden) return [];
-  if (!token.hasSight && !configSettings.optionalRules.invisVision) return ["senseAll"];
-  if ((!token.vision || !token.vision.los) && !initializeVision(token)) return ["noSight"];
+  if (!token.hasSight && !options.forceVision && !configSettings.optionalRules.invisVision) return ["senseAll"];
+  const tokenDetectionModes = checkDetectionModes(token);
+  const vision = checkVisionSource(token, tokenDetectionModes);
   const matchedModes: Set<string> = new Set();
   // Use Foundry's getVisibilityTestPoints() which returns constrained test points
   // (removes points behind walls/surfaces from the target's own movement origin).
@@ -8347,35 +8422,27 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   }));
   // @ts-expect-error CanvasVisibilityTestConfiguration not in fvtt-types
   const config: CanvasVisibilityTestConfiguration = { tests, object: target, level: targetLevel };
-  const tokenDetectionModes = token.detectionModes;
   const modes = CONFIG.Canvas.detectionModes;
   let validModes = new Set(validModesParam);
 
-  // Pre-populate the LOS cache using direct ray casting against walls.
-  // This is more precise than visionSource.los.contains() which uses a polygon
-  // approximation (ClockwiseSweepPolygon) that can miss narrow visible corridors
-  // through wall gaps. Foundry uses this same testCollision approach for restricted
-  // vision angles; we extend it to 360° vision for accuracy.
-  //
-  // For cross-level tokens, Foundry's DetectionMode._testCollision uses canvas.level
-  // to split the ray at level boundaries. If canvas.level doesn't match the source token's
-  // level, the ray splitting is incorrect (e.g., entire ray tested in target level only).
-  // We pre-populate the LOS cache for both same-level and cross-level cases.
+  // Pre-populate the LOS cache by ray casting in the token's level: core tests 360° vision against the
+  // vision polygon (misses narrow gaps between walls), and in the level the GM is viewing.
   // @ts-expect-error no dnd5e-types for document.level
   const sameLevel = token.document.level === target.document.level;
-  if (token.vision) {
-    const origin = { x: token.vision.x, y: token.vision.y };
+  if (vision) {
+    const origin = { x: vision.x, y: vision.y };
     for (const test of tests) {
       const wallCollision = CONFIG.Canvas.polygonBackends.sight.testCollision(
         origin,
         test.point,
-        { type: "sight", mode: "any", source: token.vision, useThreshold: true, priority: token.vision.priority }
+        // @ts-expect-error v14 collision level not in fvtt-types
+        { type: "sight", mode: "any", source: vision, useThreshold: true, priority: vision.priority, level: collisionLevel(token) }
       );
       let hasLOS = !wallCollision;
       // For cross-level tokens, also check surface collision (floors/ceilings between levels).
-      // token.vision.elevation already reflects the visionTestHeight setting via getVisionOrigin override.
+      // vision.elevation already reflects the visionTestHeight setting via getVisionOrigin override.
       if (hasLOS && !sameLevel) {
-        const originElev = token.vision.elevation;
+        const originElev = vision.elevation;
         const destElev = test.point.elevation;
         if (originElev !== destElev) {
           // @ts-expect-error testSurfaceCollision not in fvtt-types
@@ -8387,8 +8454,8 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
           if (surfaceBlocked) hasLOS = false;
         }
       }
-      // @ts-expect-error fvtt-types token.vision doesn't match PointVisionSource Map key
-      test.los.set(token.vision, hasLOS);
+      // @ts-expect-error fvtt-types vision doesn't match PointVisionSource Map key
+      test.los.set(vision, hasLOS);
     }
   }
 
@@ -8403,7 +8470,7 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   const lightPerception = (tokenDetectionModes as Record<string, any>).lightPerception;
   if (lightPerception && ["lightPerception", "all"].some(mode => validModes.has(mode))) {
     // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
-    const result = (lightPerception && token.vision) ? modes.lightPerception.testVisibility(token.vision, lightPerception, config) : false;
+    const result = (lightPerception && vision) ? modes.lightPerception.testVisibility(vision, lightPerception, config) : false;
     if (result === true)
       matchedModes.add(detectionModes.lightPerception?.id ?? DetectionModeCONST.BASIC_MODE_ID);
   }
@@ -8411,7 +8478,7 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   const basic = tokenDetectionModes[DetectionModeCONST.BASIC_MODE_ID];
   if (basic && ["basicSight", "all"].some(mode => validModes.has(mode))) {
     // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
-    const result = token.vision ? modes.basicSight.testVisibility(token.vision, basic, config) : false;
+    const result = vision ? modes.basicSight.testVisibility(vision, basic, config) : false;
     if (result === true)
       matchedModes.add(detectionModes.basicSight?.id ?? DetectionModeCONST.BASIC_MODE_ID);
   }
@@ -8421,16 +8488,10 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
     const dm = modes[modeId];
     if (validModes.has("all") || validModes.has(modeId)) {
       // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
-      const result = token.vision ? dm?.testVisibility(token.vision, detectionMode, config) : false;
+      const result = vision ? dm?.testVisibility(vision, detectionMode, config) : false;
       if (result === true) {
         matchedModes.add(modeId);
       }
-    }
-  }
-  for (let tk of [token, target]) {
-    if (!tk.document.sight.enabled) {
-      const sourceId = tk.sourceId;
-      canvas.effects?.visionSources.delete(sourceId);
     }
   }
   return Array.from(matchedModes);
@@ -8878,7 +8939,7 @@ export function getActor(actorRef?: Actor.Implementation | TokenOrDocument | str
   if (!actorRef) return null;
   const entity = (typeof actorRef === "string") ? fromUuidSync(actorRef) : actorRef;
   if (entity instanceof Actor) return entity;
-  if (entity instanceof Token) return entity.actor;
+  if (entity instanceof foundry.canvas.placeables.Token) return entity.actor;
   if (entity instanceof TokenDocument) return entity.actor;
   if (entity instanceof Item && entity.parent instanceof Actor) return entity.parent;
   if (entity instanceof ActiveEffect && entity.parent instanceof Actor) return entity.parent;
@@ -8890,7 +8951,7 @@ export function getTokenDocument(tokenRef?: Actor.Implementation | TokenOrDocume
   if (!tokenRef) return undefined;
   const entity = (typeof tokenRef === "string") ? fromUuidSync(tokenRef) : tokenRef;
   if (entity instanceof TokenDocument) return entity;
-  if (entity instanceof Token) return entity.document;
+  if (entity instanceof foundry.canvas.placeables.Token) return entity.document;
   if (entity instanceof Actor) return tokenForActor(entity)?.document;
   return undefined;
 }
@@ -8898,7 +8959,7 @@ export function getTokenDocument(tokenRef?: Actor.Implementation | TokenOrDocume
 export function getToken(tokenRef?: Actor.Implementation | TokenOrDocument | string | null): Token.Implementation | undefined {
   if (!tokenRef) return undefined;
   const entity = (typeof tokenRef === "string") ? fromUuidSync(tokenRef) : tokenRef;
-  if (entity instanceof Token) return entity;
+  if (entity instanceof foundry.canvas.placeables.Token) return entity;
   if (entity instanceof TokenDocument) return entity.object ?? undefined;
   if (entity instanceof Actor) return tokenForActor(entity);
   if (entity instanceof Item && entity.parent instanceof Actor) return tokenForActor(entity.parent);
@@ -8946,9 +9007,9 @@ const MaxNameLength = 20;
 export function getLinkText(entity?: TokenOrDocument | Actor.Implementation | Item.Implementation | null) {
   if (!entity) return "<unknown>";
   let name = entity.name ?? "unknown";
-  if (entity instanceof Token && !configSettings.useTokenNames) name = entity.actor?.name ?? name;
-  const uuid = entity instanceof Token ? entity.document.uuid : entity.uuid;
-  if (entity instanceof Token) return `@UUID[${uuid}]{${name.slice(0, MaxNameLength - 5)}}`;
+  if (entity instanceof foundry.canvas.placeables.Token && !configSettings.useTokenNames) name = entity.actor?.name ?? name;
+  const uuid = entity instanceof foundry.canvas.placeables.Token ? entity.document.uuid : entity.uuid;
+  if (entity instanceof foundry.canvas.placeables.Token) return `@UUID[${uuid}]{${name.slice(0, MaxNameLength - 5)}}`;
   return `@UUID[${uuid}]{${name?.slice(0, MaxNameLength - 5)}}`;
 }
 
@@ -8960,7 +9021,7 @@ export function getTokenName(entity?: TokenOrDocument | null): string {
 
 export function getTokenNameExact(entity?: Token.Implementation): string | undefined {
   // Somehow?
-  if (!(entity instanceof Token)) return undefined;
+  if (!(entity instanceof foundry.canvas.placeables.Token)) return undefined;
   let name: string;
   if (configSettings.useTokenNames) name = entity.name ?? entity.actor?.name ?? "<unknown>";
   else name = entity.actor?.name ?? entity.name ?? "<unknown>";
@@ -8972,8 +9033,8 @@ export function getTokenNameExact(entity?: Token.Implementation): string | undef
 export function getIconFreeLink(entity?: TokenOrDocument | Item | Actor | null) {
   if (!entity) return "<unknown>";
   let name = entity.name ?? "unknown";
-  if (entity instanceof Token && !configSettings.useTokenNames) name = entity.actor?.name ?? name;
-  if (entity instanceof Token) {
+  if (entity instanceof foundry.canvas.placeables.Token && !configSettings.useTokenNames) name = entity.actor?.name ?? name;
+  if (entity instanceof foundry.canvas.placeables.Token) {
     return name;
     // return `<a class="content-link midi-qol" data-uuid="${entity.actor?.uuid}">${name?.slice(0, MaxNameLength)}</a>`;
   } else {
@@ -9264,7 +9325,7 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
   return chosenEffect;
 }
 
-export function canSee(tokenEntity: TokenOrDocument, targetEntity: TokenOrDocument) {
+export function canSee(tokenEntity: TokenOrDocument, targetEntity: TokenOrDocument, options: SenseOptions = {}) {
   const NON_SIGHT_CONSIDERED_SIGHT = ["blindsight"];
   const detectionModes = CONFIG.Canvas.detectionModes;
   const sightDetectionModes = Object.keys(detectionModes).filter(
@@ -9272,7 +9333,7 @@ export function canSee(tokenEntity: TokenOrDocument, targetEntity: TokenOrDocume
       detectionModes[d].type === foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SIGHT ||
       NON_SIGHT_CONSIDERED_SIGHT.includes(d)
   );
-  return canSense(tokenEntity, targetEntity, sightDetectionModes);
+  return canSense(tokenEntity, targetEntity, sightDetectionModes, options);
 }
 
 export function sumRolls(rolls: Array<Roll> | undefined = [], countHealing?: "ignore" | "negative" | "positive" | "negativeIgnoreTemp" | "positiveIgnoreTemp"): number {
@@ -9538,7 +9599,7 @@ export async function addDependent(document: foundry.abstract.Document.Any, depe
 }
 
 export async function addConcentrationDependent(actorRef: TokenOrDocument | Actor.Implementation | string, dependent: foundry.abstract.Document.Any, item?: Item.Implementation) {
-  if (dependent instanceof Token) dependent = dependent.document;
+  if (dependent instanceof foundry.canvas.placeables.Token) dependent = dependent.document;
   if (!dependent.uuid) {
     console.warn(`midi-qol | addConcentrationDependent | dependent ${dependent?.name} must have a uuid`);
     return undefined;
@@ -9727,7 +9788,8 @@ export function getCheckRollModeFor(abilityId: string) {
   return configSettings.autoCheckSaves !== "allShow" ? "gm" : "public";
 }
 
-export function areMidiKeysPressed(event: AugmentedEvent | undefined, action: string) {
+/** Whether `action`'s keybinding (midi-qol's by default, or another namespace's such as dnd5e's) is held for `event`. */
+export function areMidiKeysPressed(event: AugmentedEvent | undefined, action: string, namespace = "midi-qol") {
   if (!event) return false;
   const activeModifiers = {};
   const KeyBoardManager = game.keyboard;
@@ -9743,7 +9805,7 @@ export function areMidiKeysPressed(event: AugmentedEvent | undefined, action: st
   addModifiers(MODIFIER_KEYS.CONTROL, event.ctrlKey || event.metaKey);
   addModifiers(MODIFIER_KEYS.SHIFT, event.shiftKey);
   addModifiers(MODIFIER_KEYS.ALT, event.altKey);
-  return ClientKeyBindings?.get("midi-qol", action).some(b => {
+  return ClientKeyBindings?.get(namespace, action).some(b => {
     if (KeyBoardManager?.downKeys.has(b.key) && b.modifiers.every(m => activeModifiers[m])) return true;
     if (b.modifiers?.length) return false;
     return activeModifiers[b.key];
@@ -10118,3 +10180,55 @@ export const throttledScrollBottom = foundry.utils.throttle(() => {
   //@ts-expect-error fvtt-missing scrollBottom
   ui.chat?.scrollBottom({ waitImages: true });
 }, 150);
+
+/** Per actor, midi's latest fixed-id effect change. */
+const actorEffectQueues = new Map<string, Promise<unknown>>();
+
+/** Runs `fn` after midi's earlier fixed-id effect changes for the actor (concurrent ones fail). `fn` must not queue for the same actor. */
+export async function queueActorEffects<T>(actor: Actor.Implementation, fn: () => Promise<T>): Promise<T> {
+  const key = actor.uuid;
+  const run = (actorEffectQueues.get(key) ?? Promise.resolve()).catch(() => {}).then(fn);
+  actorEffectQueues.set(key, run);
+  try {
+    return await run;
+  } finally {
+    if (actorEffectQueues.get(key) === run) actorEffectQueues.delete(key);
+  }
+}
+
+/** Deletes the actor's effect `id` if present; another caller deleting it first counts as done. */
+async function deleteEffectIfPresent(actor: Actor.Implementation, id: string | null) {
+  try {
+    await (id ? actor.effects.get(id) : undefined)?.delete();
+  } catch (err) {
+    if (!/does not exist/.test(String((err as Error)?.message ?? err))) throw err;
+  }
+}
+
+/** Creates an effect keeping its fixed id; another caller creating it first counts as done. */
+async function createEffectWithId(actor: Actor.Implementation, data: ActiveEffect.CreateData) {
+  try {
+    await ActiveEffect.implementation.create(data, { parent: actor, keepId: true });
+  } catch (err) {
+    if (!/already exists/.test(String((err as Error)?.message ?? err))) throw err;
+  }
+}
+
+/** actor.toggleStatusEffect, queued; losing a race with another module counts as done. */
+export async function toggleStatus(actor: Actor.Implementation | null | undefined, statusId: string,
+  options: Actor.ToggleStatusEffectOptions = {}): Promise<ActiveEffect.Implementation | boolean | undefined> {
+  if (!actor) return undefined;
+  return queueActorEffects(actor, () => applyStatus(actor, statusId, options));
+}
+
+async function applyStatus(actor: Actor.Implementation, statusId: string,
+  options: Actor.ToggleStatusEffectOptions): Promise<ActiveEffect.Implementation | boolean | undefined> {
+  try {
+    return await actor.toggleStatusEffect(statusId, options);
+  } catch (err) {
+    const message = String((err as Error)?.message ?? err);
+    if (options.active === true && /already exists/.test(message)) return true;
+    if (options.active === false && /does not exist/.test(message)) return false;
+    throw err;
+  }
+}

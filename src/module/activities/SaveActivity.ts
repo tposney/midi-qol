@@ -99,7 +99,7 @@ let defineMidiSaveActivityClass = <T extends Activity>(ActivityClass: T) => {
       const dc = parseInt(target.dataset.dc ?? "0");
       for (const token of targets) {
         const actor = token instanceof Actor ? token : token.actor;
-        const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: token instanceof Token ? token.document : null });
+        const speaker = ChatMessage.getSpeaker({ actor, scene: canvas.scene, token: token instanceof foundry.canvas.placeables.Token ? token.document : null });
         const message: AnyMutableObject = { data: { speaker } };
         // if (!actor?.hasPlayerOwner && workflow) message.create = false - this breaks save checking from chat card
         if (token instanceof foundry.canvas.placeables.Token) foundry.utils.setProperty(message, "flags.midi-qol.requestId", token.document.uuid);

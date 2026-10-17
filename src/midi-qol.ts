@@ -8,7 +8,7 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, tokenAtPosition, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, tokenAtPosition, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets, setupMarkerChecks, setupCheckVision } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
@@ -17,6 +17,7 @@ import { MidiSounds } from './module/midi-sounds.js';
 import { addUndoChatMessage, getUndoQueue, removeMostRecentWorkflow, showUndoQueue, undoMostRecentWorkflow } from './module/undo.js';
 import { UndoWorkflow, showUndoWorkflowApp } from './module/apps/UndoWorkflow.js';
 import { TroubleShooter } from './module/apps/TroubleShooter.js';
+import { notifyFeatureOverlaps, setupFeatureOverlaps } from './module/featureOverlaps.js';
 import { TargetConfirmationDialog } from './module/apps/TargetConfirmation.js';
 import { TargetConfirmationConfig } from './module/apps/TargetConfirmationConfig.js';
 import { MidiAttackActivity, setupAttackActivity } from './module/activities/AttackActivity.js';
@@ -387,7 +388,7 @@ Hooks.once('init', async function () {
   CONFIG.RegionBehavior.typeIcons[`${MODULE_ID}.regionActivity`] = "fa-solid fa-hat-wizard";
 
   // Register custom sheet for regionActivity behavior config (renders the rules ArrayField)
-  DocumentSheetConfig.registerSheet(RegionBehavior, MODULE_ID, MidiRegionBehaviorConfig as any, {
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(RegionBehavior, MODULE_ID, MidiRegionBehaviorConfig as any, {
     types: [`${MODULE_ID}.regionActivity`],
     makeDefault: true,
     label: "Midi QOL Region Activity"
@@ -587,7 +588,6 @@ Hooks.on("dae.addFieldMappings", (fieldMappings) => {
   }
   fieldMappings[`flags.${MODULE_ID}.max.ability.save.concentration`] = `system.attributes.concentration.roll.max`;
   fieldMappings[`flags.${MODULE_ID}.min.ability.save.concentration`] = `system.attributes.concentration.roll.min`;
-  fieldMappings[`flags.${MODULE_ID}.concentrationSaveBonus`] = `system.attributes.concentration.bonuses.save`;
   fieldMappings[`flags.${MODULE_ID}.sharpShooter`] = `flags.dnd5e.sharpShooter`;
   fieldMappings[`flags.${MODULE_ID}.grants.fail.advantage.attack.all`] = `flags.${MODULE_ID}.grants.noAdvantage.attack.all`;
   fieldMappings[`flags.${MODULE_ID}.grants.fail.disadvantage.attack.all`] = `flags.${MODULE_ID}.grants.noDisadvantage.attack.all`;
@@ -669,6 +669,11 @@ Hooks.on("dae.setFieldData", fieldData => {
 Hooks.once('setup', function () {
   // Do anything after initialization but before ready
   setupModules();
+  setupFeatureOverlaps();
+  setupMarkerChecks();
+  setupCheckVision();
+  // Custom D&D 5e's Conditions config replaces CONFIG.statusEffects with this list, which would drop midi's statuses.
+  Hooks.on("customDnd5e.setStatusEffectsConfig", statusEffects => addMidiStatusEffects(statusEffects));
   setupSocket();
   fetchParams();
   fetchSoundSettings();
@@ -884,6 +889,7 @@ Hooks.once('ready', function () {
       else console.warn(message);
     }
   }
+  notifyFeatureOverlaps();
 });
 
 import { setupChatMessageMidi, ChatMessageMidi } from './module/ChatClasses/ChatMessageMidi.js';
@@ -1161,7 +1167,6 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.bloodsense`);
   untyped(`flags.${MODULE_ID}.`);
   untyped(`flags.${MODULE_ID}.concentrationSaveBonus`);
-  daeFieldBrowserFields.push(`flags.${MODULE_ID}.concentrationSaveBonus`);
   booleanFormula(`flags.${MODULE_ID}.potentCantrip`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.potentCantrip`);
   booleanFormula(`flags.${MODULE_ID}.sculptSpells`);
@@ -1846,94 +1851,91 @@ export async function createMidiMacros() {
   }
 }
 
-export function setupMidiStatusEffects() {
+/** midi's statuses, added to `statusEffects` where missing. */
+export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects = CONFIG.statusEffects) {
   // @ts-expect-error no dnd5e-types
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;
-  if (!CONFIG.statusEffects.find(e => e.id === systemConcentrationId)) {
+  if (!statusEffects.find(e => e.id === systemConcentrationId)) {
     // @ts-expect-error not expecting special
-    CONFIG.statusEffects.push({ id: systemConcentrationId, name: i18n("EFFECT.DND5E.StatusConcentrating"), img: "systems/dnd5e/icons/svg/statuses/concentrating.svg", special: "CONCENTRATING" });
+    statusEffects.push({ id: systemConcentrationId, name: i18n("EFFECT.DND5E.StatusConcentrating"), img: "systems/dnd5e/icons/svg/statuses/concentrating.svg", special: "CONCENTRATING" });
   }
-  // Initialise these effects so that we don't need to make a raft of code async only to fetch these
-  if (configSettings.enforceBonusActions !== "none") {
-    if (!CONFIG.statusEffects.find(e => e._id === getStaticID("bonusaction"))) {
-      CONFIG.statusEffects.push({
-        id: "bonusaction",
-        _id: getStaticID("bonusaction"),
-        name: i18n("midi-qol.bonusActionUsed"),
-        system: {
-          changes: [
-            { key: "flags.midi-qol.actions.bonus", type: "custom", value: "true" },
-            { key: "flags.midi-qol.actions.bonusActionsUsed", type: "add", value: "1", priority: 20 }
-          ]
-        },
-        img: "modules/midi-qol/icons/bonus-action.svg",
-
-        // @ts-expect-error fvtt-types v14 duration
-        duration: { expiry: "targetStart" },
-        flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
-      });
-    }
-    ActiveEffect.implementation.fromStatusEffect("bonusaction").then(effect => {
-      midiBonusActionEffect = effect
-      globalThis.MidiQOL.midiBonusActionEffect = effect;
+  if (configSettings.enforceBonusActions !== "none" && !statusEffects.find(e => e._id === getStaticID("bonusaction"))) {
+    statusEffects.push({
+      id: "bonusaction",
+      _id: getStaticID("bonusaction"),
+      name: i18n("midi-qol.bonusActionUsed"),
+      system: {
+        changes: [
+          { key: "flags.midi-qol.actions.bonus", type: "custom", value: "true" },
+          { key: "flags.midi-qol.actions.bonusActionsUsed", type: "add", value: "1", priority: 20 }
+        ]
+      },
+      img: "modules/midi-qol/icons/bonus-action.svg",
+      // @ts-expect-error fvtt-types v14 duration
+      duration: { expiry: "targetStart" },
+      flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
     });
   }
-
-  if (configSettings.enforceReactions !== "none") {
-    if (!CONFIG.statusEffects.find(e => e._id === getStaticID("reaction"))) {
-      CONFIG.statusEffects.push({
-        id: "reaction",
-        _id: getStaticID("reaction"),
-        name: i18n("midi-qol.reactionUsed"),
-        system: {
-          changes: [
-            { key: "flags.midi-qol.actions.reaction", type: "custom", value: "true" },
-            { key: "flags.midi-qol.actions.reactionsUsed", type: "add", value: "1", priority: 20 }
-          ]
-        },
-        img: "modules/midi-qol/icons/reaction.svg",
-        // effectData: { transfer: false },
-        // @ts-expect-error fvtt-types v14 duration
-        duration: { expiry: "targetStart" },
-        flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
-      });
-    }
-    ActiveEffect.implementation.fromStatusEffect("reaction").then(effect => {
-      midiReactionEffect = effect;
-      globalThis.MidiQOL.midiReactionEffect = effect;
+  if (configSettings.enforceReactions !== "none" && !statusEffects.find(e => e._id === getStaticID("reaction"))) {
+    statusEffects.push({
+      id: "reaction",
+      _id: getStaticID("reaction"),
+      name: i18n("midi-qol.reactionUsed"),
+      system: {
+        changes: [
+          { key: "flags.midi-qol.actions.reaction", type: "custom", value: "true" },
+          { key: "flags.midi-qol.actions.reactionsUsed", type: "add", value: "1", priority: 20 }
+        ]
+      },
+      img: "modules/midi-qol/icons/reaction.svg",
+      // @ts-expect-error fvtt-types v14 duration
+      duration: { expiry: "targetStart" },
+      flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
     });
   }
-  if (!CONFIG.statusEffects.find(e => e._id === getStaticID("flanking"))) {
-    CONFIG.statusEffects.push({
+  if (!statusEffects.find(e => e._id === getStaticID("flanking"))) {
+    statusEffects.push({
       id: "flanking",
       _id: getStaticID("flanking"),
       name: i18n("midi-qol.Flanking"),
       system: { changes: getFlankingStatusChanges() },
       img: "icons/svg/sword.svg",
-      // effectData: { transfer: false },
       // @ts-expect-error fvtt-types v14 duration
       duration: { expiry: "combatEnd" }
     });
   }
-
-  ActiveEffect.implementation.fromStatusEffect("flanking").then(effect => {
-    midiFlankingEffect = effect;
-    globalThis.MidiQOL.midiFlankingEffect = effect;
-  });
-
-  if (!CONFIG.statusEffects.find(e => e._id === getStaticID("flanked"))) {
-    CONFIG.statusEffects.push({
+  if (!statusEffects.find(e => e._id === getStaticID("flanked"))) {
+    statusEffects.push({
       id: "flanked",
       _id: getStaticID("flanked"),
       name: i18n("midi-qol.Flanked"),
       system: { changes: getFlankedStatusChanges() },
       img: "modules/midi-qol/icons/encirclement.svg",
-      // effectData: { transfer: false },
       // @ts-expect-error fvtt-types v14 duration
       duration: { expiry: "combatEnd" }
     });
-  };
+  }
+}
 
+export function setupMidiStatusEffects() {
+  addMidiStatusEffects();
+  // Initialise these effects so that we don't need to make a raft of code async only to fetch these
+  if (configSettings.enforceBonusActions !== "none") {
+    ActiveEffect.implementation.fromStatusEffect("bonusaction").then(effect => {
+      midiBonusActionEffect = effect
+      globalThis.MidiQOL.midiBonusActionEffect = effect;
+    });
+  }
+  if (configSettings.enforceReactions !== "none") {
+    ActiveEffect.implementation.fromStatusEffect("reaction").then(effect => {
+      midiReactionEffect = effect;
+      globalThis.MidiQOL.midiReactionEffect = effect;
+    });
+  }
+  ActiveEffect.implementation.fromStatusEffect("flanking").then(effect => {
+    midiFlankingEffect = effect;
+    globalThis.MidiQOL.midiFlankingEffect = effect;
+  });
   ActiveEffect.implementation.fromStatusEffect("flanked").then(effect => {
     midiFlankedEffect = effect;
     globalThis.MidiQOL.midiFlankedEffect = effect;

@@ -266,7 +266,7 @@ class ConfigSettings {
     activeDefence: false,
     activeDefenceModifier: 12,
     activeDefenceShow: "self",
-    ActiveDefenceDC: true,
+    activeDefenceDC: true,
     autoRerollInitiative: false,
     challengeModeArmor: "none",
     checkFlanking: "off",
@@ -746,7 +746,7 @@ export let fetchParams = () => {
     activeDefence: false,
     activeDefenceModifier: 12, // default value for active defence modifier
     activeDefenceShow: "self",
-    ActiveDefenceDC: true,
+    activeDefenceDC: true,
     challengeModeArmor: "none",
     challengeModeArmorScale: false,
     checkFlanking: "off",
@@ -772,6 +772,11 @@ export let fetchParams = () => {
     mergeCardMultiDamage: false,
     displayProperties: true,
   }, configSettings.optionalRules ?? {}, { overwrite: true, insertKeys: true, insertValues: true });
+  // Was read and defaulted under a capitalised key the Rules tab never set (its checkbox saved an unticked false); carry it over once.
+  if ("ActiveDefenceDC" in configSettings.optionalRules) {
+    configSettings.optionalRules.activeDefenceDC = !!Reflect.get(configSettings.optionalRules, "ActiveDefenceDC");
+    Reflect.deleteProperty(configSettings.optionalRules, "ActiveDefenceDC");
+  }
   if (!configSettings.optionalRules.incapacitated) configSettings.optionalRules.incapacitated = "nothing";
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
   // v14 Levels has no CONFIG.Levels.API/TemplateHandler; its sight wrapper is one "center" already uses.
@@ -1032,6 +1037,11 @@ export let fetchParams = () => {
     mixedDisposition: false,
     gridPosition: { x: 0, y: 0 }
   };
+  // The config form saved this checkbox under a misspelt key.
+  if (targetConfirmation && "mixedDispositiion" in targetConfirmation) {
+    targetConfirmation.mixedDisposition ||= !!targetConfirmation.mixedDispositiion;
+    Reflect.deleteProperty(targetConfirmation, "mixedDispositiion");
+  }
 
   setDebugLevel(debugText);
 
@@ -1704,6 +1714,12 @@ export const registerSettings = function () {
     config: false
   });
 
+  game.settings.register("midi-qol", "acknowledgedOverlaps", {
+    scope: "world",
+    default: [],
+    type: Array,
+    config: false
+  });
   game.settings.register("midi-qol", "RollStats", {
     scope: "world",
     default: {},

@@ -4,7 +4,7 @@ import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog, TargetConfirmationOptions } from "../apps/TargetConfirmation.js";
 import { configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
-import { getFlankingEffect, CERemoveEffect, sumRolls, evalActivationCondition, computeTemplateShapeDistance, getToken, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, getSpeaker, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, getUnitDist, updateUserTargets, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, MidiOptions } from "../utils.js";
+import { collisionLevel, getFlankingEffect, CERemoveEffect, sumRolls, evalActivationCondition, computeTemplateShapeDistance, getToken, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, getSpeaker, hasWallBlockingCondition, isValidTarget, tokenForActor, activityHasAreaTarget, activityHasAutoPlaceTemplate, activityHasEmanationNoTemplate, getActivityAutoTargetAction, getAoETargetType, doReactions, getUnitDist, updateUserTargets, tokenSourcePosition, tokenSourceCenter, tokenSourceElevation, getTokenVisionElevation, MidiOptions } from "../utils.js";
 import { allAttackTypes } from "../../midi-qol.js";
 const { DialogV2 } = foundry.applications.api;
 import Token = foundry.canvas.placeables.Token;
@@ -373,7 +373,12 @@ export async function resolveTargetConfirmation(activity: Activity, options: Tar
     // create target dialog which updates the target display
     options ??= {};
     options.callback = resolve;
-    new TargetConfirmationDialog(activity.actor!, activity, game.user!, options).render({ force: true });
+    const dialog = new TargetConfirmationDialog(activity.actor!, activity, game.user!, options);
+    // A dialog that fails to render cancels the use rather than leaving it waiting.
+    dialog.render({ force: true }).catch(err => {
+      console.error("midi-qol | Target Confirmation failed to render", err);
+      dialog.doCallback(false);
+    });
   });
   let shouldContinue = await targets;
   for (let token of canvas.tokens?.placeables ?? []) token.initializeVisionSource();
@@ -473,7 +478,8 @@ function isTokenInside(template: foundry.canvas.placeables.MeasuredTemplate.Impl
 
         // If volumetric templates installed always leave targeting to it.
         if (!installedModules.get("levelsvolumetrictemplates")) {
-          contains = !CONFIG.Canvas.polygonBackends.sight.testCollision({ x: tx, y: ty }, { x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y }, { mode: "any", type: "move" })
+          // @ts-expect-error v14 collision level not in fvtt-types
+          contains = !CONFIG.Canvas.polygonBackends.sight.testCollision({ x: tx, y: ty }, { x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y }, { mode: "any", type: "move" , level: collisionLevel(token) })
         }
       }
       // Check the distance from origin.
@@ -778,7 +784,8 @@ function regionWallBlocked(regionDoc: RegionDocument.Implementation, token: Toke
   return !!CONFIG.Canvas.polygonBackends.sight.testCollision(
     { x: originX, y: originY },
     tokenSourceCenter(token),
-    { mode: "any", type: "move" }
+    // @ts-expect-error v14 collision level not in fvtt-types
+    { mode: "any", type: "move", level: collisionLevel(token) }
   );
 }
 
@@ -877,7 +884,8 @@ function isTokenInsideRegion(
         contains = !CONFIG.Canvas.polygonBackends.sight.testCollision(
           { x: wallOriginX, y: wallOriginY },
           { x: testX, y: testY },
-          { mode: "any", type: "move" }
+          // @ts-expect-error v14 collision level not in fvtt-types
+          { mode: "any", type: "move", level: collisionLevel(token) }
         );
       }
 

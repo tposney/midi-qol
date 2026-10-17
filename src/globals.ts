@@ -42,6 +42,8 @@ declare module "fvtt-types/configuration" {
   namespace Hooks {
     interface HookConfig {
       "dae.addSpecialDurations": (daeSpecialDurations: Record<string, string>) => void;
+      /** Custom D&D 5e, just before it replaces CONFIG.statusEffects with this list. */
+      "customDnd5e.setStatusEffectsConfig": (statusEffects: typeof CONFIG.statusEffects) => void;
       "dae.setFieldData": (fieldData: Record<string, string[]>) => void;
       "dae.addAutoFields": (addAutoFields: Function, fields: { BooleanFormulaField?: any }) => void;
       "dae.ready": (api: any) => void;
@@ -118,6 +120,7 @@ declare module "fvtt-types/configuration" {
     "midi-qol.MidiSoundSettings": Record<string, any>;
     "midi-qol.playerControlsInvisibleTokens": boolean;
     "midi-qol.RollStats": Record<string, Stats>;
+    "midi-qol.acknowledgedOverlaps": string[];
     "midi-qol.ConfigSettings": typeof configSettings;
     "midi-qol.CriticalDamage": string;
     "midi-qol.CriticalDamageGM": string;
@@ -1705,3 +1708,14 @@ export type QueueSaveRollOptions = {
   moduleFlags: ModuleIntegrationFlags;
   moduleRequests: ModuleIntegrationRequests;
 };
+
+/** Core v14 region members fvtt-types 13 lacks. */
+export type V14RegionDocument = Omit<RegionDocument.Implementation, "shapes"> & {
+  attachment: { token: string | null };
+  shapes: Array<{
+    origin: { x: number; y: number };
+    clone(data: object, options: { parent: Scene.Implementation }):
+      { move(origin: { x: number; y: number }): void; _source: RegionDocument.Source["shapes"][number] };
+  }>;
+};
+
