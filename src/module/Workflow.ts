@@ -117,7 +117,7 @@ import { AnyMutableObject, AnyObject, EmptyObject, InexactPartial } from "fvtt-t
 import Token = foundry.canvas.placeables.Token;
 import { MidiTransformActivity } from "./activities/TransformActivity.js";
 import { computeAttackAdvantage } from "./activities/AttackActivity.js";
-import { RollModifierTracker, CriticalModifierFlags, computeCriticalModifiers, computeTargetCriticalModifiers, getFlagDisplayName, resolvePendingAdvantage } from "./lib/RollModifierTracker.js";
+import { RollModifierTracker, CriticalModifierFlags, computeCriticalModifiers, computeTargetCriticalModifiers, getFlagDisplayName } from "./lib/RollModifierTracker.js";
 
 /**
  * Result of resolving a macro specification in callMacro.
@@ -3601,7 +3601,6 @@ export class Workflow {
       }
     }
     await this.checkTargetAdvantage();
-    resolvePendingAdvantage(this.attackRollModifierTracker);
   }
 
   async processCriticalFlags() {

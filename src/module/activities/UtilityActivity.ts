@@ -3,6 +3,7 @@ import { debugEnabled, i18n, warn, error, GameSystemConfig } from "../../midi-qo
 import { Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { replaceDefaultActivities, configSettings } from "../settings.js";
+import { heldKeys } from "../lib/rollKeys.js";
 import { areMidiKeysPressed, callActivityHooks, isAutoFastForward } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { displayDSNForRoll } from "../utils.js";
@@ -99,12 +100,8 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
         return;
       }
 
-      //@ts-expect-error
-      const areKeysPressed = game.system.utils.areKeysPressed;
-      const keys = {
-        normal: areKeysPressed(config.event, "skipDialogNormal") || areKeysPressed(config.event, "skipDialogAdvantage") || areKeysPressed(config.event, "skipDialogDisadvantage")
-      };
-      if (Object.values(keys).some((k) => k)) dialog.configure = this.midiProperties?.forceDamageDialog !== "always";
+      const keys = heldKeys(config.event);
+      if (keys.normal || keys.advantage || keys.disadvantage) dialog.configure = this.midiProperties?.forceDamageDialog !== "always";
       else if (dialog.configure === undefined) {
           switch (this.midiProperties?.forceDamageDialog) {
             case "always":

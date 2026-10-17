@@ -3,7 +3,9 @@ import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBeha
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
 import { addViewAsPlayerOption } from "./ChatClasses/DamageCardMessage.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, updateFlankingHighlight, onUserManualTarget, toggleStatus, releaseForcedNormalKeys } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getUpdatesCache, clearUpdatesCache, expireEffects, processConcentrationRequestMessage, doConcentrationCheck, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, updateFlankingHighlight, onUserManualTarget, toggleStatus } from "./utils.js";
+import { releaseForcedNormalKeys } from "./lib/rollKeys.js";
+import { computeAdvantageFlagsSync } from "./lib/RollModifierTracker.js";
 import { checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -1777,54 +1779,18 @@ Hooks.on("dnd5e.preConfigureInitiative", (actor, rollConfig) => {
   let { parts, data, options } = rollConfig;
   //@ts-expect-error no dnd5e-types
   const init: string = actor.system.attributes.init?.ability || GameSystemConfig.defaultAbilities?.initiative || "dex";
-  const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: actor });
-
-  let midiAdvantage = false, midiDisadvantage = false, midiNoAdvantage = false, midiNoDisadvantage = false;
-  // Check for advantage
-  if (evalAllConditions(actor, "flags.midi-qol.advantage.all", conditionData)
-    || evalAllConditions(actor, "flags.midi-qol.advantage.check.all", conditionData)
-    || evalAllConditions(actor, `flags.midi-qol.advantage.check.${init}`, conditionData)
-    || evalAllConditions(actor, `flags.${game.system?.id}.initiativeAdv`, conditionData)) {
-    midiAdvantage = true;
-  }
-
-  // Check for disadvantage
-  if (evalAllConditions(actor, "flags.midi-qol.disadvantage.all", conditionData)
-    || evalAllConditions(actor, "flags.midi-qol.disadvantage.check.all", conditionData)
-    || evalAllConditions(actor, `flags.midi-qol.disadvantage.check.${init}`, conditionData)
-    || evalAllConditions(actor, `flags.${game.system?.id}.initiativeDisadv`, conditionData)) {
-    midiDisadvantage = true;
-  }
-
-  // Check for noAdvantage (prevents advantage)
-  if (evalAllConditions(actor, "flags.midi-qol.noAdvantage.all", conditionData)
-    || evalAllConditions(actor, "flags.midi-qol.noAdvantage.initiative", conditionData)
-    || evalAllConditions(actor, `flags.${game.system?.id}.initiativeNoAdv`, conditionData)) {
-    midiNoAdvantage = true;
-  }
-
-  // Check for noDisadvantage (prevents disadvantage)
-  if (evalAllConditions(actor, "flags.midi-qol.noDisadvantage.all", conditionData)
-    || evalAllConditions(actor, "flags.midi-qol.noDisadvantage.initiative", conditionData)
-    || evalAllConditions(actor, `flags.${game.system?.id}.initiativeNoDisadv`, conditionData)) {
-    midiNoDisadvantage = true;
-  }
-
-  // dnd5e decides: midi's flags (and any advantage the caller passed) count as sources in its combination of the
+  // dnd5e decides from midi's flags (dnd5e's own initiative flags too), any advantage the caller passed and the
   // initiative roll mode fields and advantage rules, so suppression and overrides apply across all of them.
-  const midiCounts = {
-    override: null,
-    advantages: { count: Number(midiAdvantage || !!options.advantage), suppressed: midiNoAdvantage },
-    disadvantages: { count: Number(midiDisadvantage || !!options.disadvantage), suppressed: midiNoDisadvantage }
-  };
-  // @ts-expect-error no dnd5e-types
-  const counts = dnd5e.documents.AppliedRules.collect("check:advantage", actor)
-    .filterWith({ ...actor.getRollData(), roll: { ability: init, type: "initiative" } }).toAdvantageCounts(midiCounts);
-  // @ts-expect-error no dnd5e-types
-  const verdict: { advantage: boolean, disadvantage: boolean } = dnd5e.dataModels.fields.AdvantageModeField.combineFields(
-    actor.system, [`abilities.${init}.check.roll.mode`, "attributes.init.roll.mode", "rolls.ability.check.mode"], counts);
-  options.advantage = verdict.advantage;
-  options.disadvantage = verdict.disadvantage;
+  const system = game.system?.id;
+  const tracker = computeAdvantageFlagsSync(actor, {
+    advantageFlags: ["advantage.all", "advantage.check.all", `advantage.check.${init}`, `flags.${system}.initiativeAdv`],
+    disadvantageFlags: ["disadvantage.all", "disadvantage.check.all", `disadvantage.check.${init}`, `flags.${system}.initiativeDisadv`],
+    noAdvantageFlags: ["noAdvantage.all", "noAdvantage.initiative", `flags.${system}.initiativeNoAdv`],
+    noDisadvantageFlags: ["noDisadvantage.all", "noDisadvantage.initiative", `flags.${system}.initiativeNoDisadv`],
+    systemRollModeFields: [`abilities.${init}.check.roll.mode`, "attributes.init.roll.mode", "rolls.ability.check.mode"],
+    systemRules: { category: "check", rollData: { ...actor.getRollData(), roll: { ability: init, type: "initiative" } } }
+  }, { advantage: !!options.advantage, disadvantage: !!options.disadvantage });
+  ({ advantage: options.advantage, disadvantage: options.disadvantage } = tracker.dnd5eVerdict);
 
   if (foundry.utils.getProperty(actor, `flags.${game.system?.id}.initiativeHalfProficiency`) && !parts.includes("@prof")) {
     parts.push("@prof");

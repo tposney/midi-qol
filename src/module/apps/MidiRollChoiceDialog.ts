@@ -1,3 +1,4 @@
+import { RollModifierTracker } from "../lib/RollModifierTracker.js";
 import { AnyMutableObject } from "fvtt-types/utils";
 import { i18n, i18nFormat, GameSystemConfig } from "../../midi-qol.js";
 import { PreComputedAdvantageData } from "../../globals.js";
@@ -198,16 +199,20 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
    */
   static applyPreComputedAdvantage(rollConfig: any, preComputed: PreComputedAdvantage | undefined): void {
     if (!preComputed) return;
+    // The live tracker (with any held keys), else the values computed before the roll
+    const tracker = preComputed.tracker instanceof RollModifierTracker ? preComputed.tracker : undefined;
+    const hasAdvantage = tracker ? !!tracker.hasAdvantage : preComputed.hasAdvantage;
+    const hasDisadvantage = tracker ? !!tracker.hasDisadvantage : preComputed.hasDisadvantage;
     // Only override advantageMode if pre-computed flags grant advantage or disadvantage.
     // If neither, don't set anything - let keyboard modifiers (shift/ctrl) work.
-    if (!preComputed.hasAdvantage && !preComputed.hasDisadvantage) return;
+    if (!hasAdvantage && !hasDisadvantage) return;
 
     rollConfig.options ??= {};
     // @ts-expect-error CONFIG.Dice.D20Roll not typed
     const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
-    if (preComputed.hasAdvantage && !preComputed.hasDisadvantage) {
+    if (hasAdvantage && !hasDisadvantage) {
       rollConfig.options.advantageMode = ADV_MODE.ADVANTAGE;
-    } else if (!preComputed.hasAdvantage && preComputed.hasDisadvantage) {
+    } else if (!hasAdvantage && hasDisadvantage) {
       rollConfig.options.advantageMode = ADV_MODE.DISADVANTAGE;
     }
     // Note: If both hasAdvantage and hasDisadvantage are true, they cancel out - don't override

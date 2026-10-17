@@ -1,6 +1,7 @@
 import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { unTimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
+import { decideRollDialog, heldKeys } from "../lib/rollKeys.js";
 import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, applyTrackerAdvantage } from "../lib/RollModifierTracker.js";
 import { MidiOptions } from "../utils.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions } from "../settings.js";
@@ -398,7 +399,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         if (debugEnabled > 0) warn("MidiQOL | AttackActivity | rollAttack | Called", config, dialog, message);
 
         if (workflow) 
-          workflow.rollOptions.rollToggle = areMidiKeysPressed(config.event, "RollToggle");
+          workflow.rollOptions.rollToggle = heldKeys(config.event).toggle;
 
         let returnValue = await this.configureAttackRoll(config);
         // Check returnValue first - if false (no workflow), fall through to dnd5e base behavior
@@ -427,14 +428,9 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         }
         const effectiveForceRollDialog = getEffectiveForceRollDialog(this);
 
-        // Roll Toggle inverts fast forward and alone decides whether the dialog shows; without it, a fast forwarded
-        // attack skips the dialog and otherwise dnd5e's skip keys (Shift, Alt, Ctrl) decide, as for dnd5e's own rolls.
-        const fastForward = isAutoFastForward("attack", { workflow });
-        if (effectiveForceRollDialog === "always") dialog.configure = true;
-        else if (effectiveForceRollDialog === "never") dialog.configure = false;
-        else if (workflow?.rollOptions?.rollToggle) dialog.configure = fastForward;
-        else if (fastForward) dialog.configure = false;
-        else dialog.configure = undefined;
+        // The caller's dialog setting is not used for attacks
+        dialog.configure = decideRollDialog({ force: effectiveForceRollDialog, toggle: !!workflow?.rollOptions?.rollToggle,
+          fastForward: isAutoFastForward("attack", { workflow }) });
 
         // Ammo confirmation always requires dialog
         if (requiresAmmoConfirmation) {
@@ -558,27 +554,10 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         }
 
         if (workflow) {
-          // Sync tracker with what the player actually chose in the roll dialog
-          // @ts-expect-error CONFIG.Dice.D20Roll not typed
-          const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
+          // The roll as made: the roll dialog's choice, where it differs from midi's verdict
           const returnedAdvMode = rolls[0]?.options?.advantageMode;
-          if (returnedAdvMode !== undefined) {
-            const trackerMode = workflow.attackRollModifierTracker.advantageMode;
-            if (returnedAdvMode !== trackerMode) {
-              const label = i18n("midi-qol.ConfigButtons");
-              if (returnedAdvMode === ADV_MODE.ADVANTAGE) {
-                workflow.attackRollModifierTracker.advantage.setOverride("config-buttons", label);
-                workflow.attackRollModifierTracker.disadvantage.clearOverride();
-              } else if (returnedAdvMode === ADV_MODE.DISADVANTAGE) {
-                workflow.attackRollModifierTracker.disadvantage.setOverride("config-buttons", label);
-                workflow.attackRollModifierTracker.advantage.clearOverride();
-              } else {
-                // Player chose normal — clear any overrides
-                workflow.attackRollModifierTracker.advantage.clearOverride();
-                workflow.attackRollModifierTracker.disadvantage.clearOverride();
-              }
-            }
-          }
+          if (returnedAdvMode !== undefined && returnedAdvMode !== workflow.attackRollModifierTracker.advantageMode)
+            workflow.attackRollModifierTracker.setFinalMode(returnedAdvMode, "config-buttons", i18n("midi-qol.ConfigButtons"));
 
           workflow.attackMode = rolls[0].options.attackMode ?? config.attackMode;
           if (this.ammunition && !this.ammunitionItem) { // assume it was deleted
@@ -842,8 +821,6 @@ export async function computeAttackAdvantage(
       ...(attackSchool ? [`noDisadvantage.attack.school.${attackSchool}`] : [])
     ],
     systemRollModeFields: [...(abilityId ? [`abilities.${abilityId}.attack.roll.mode`] : []), "rolls.attack.mode", `rolls.attack.${actionType}.mode`],
-    // Resolved by checkAttackAdvantage once the workflow's own sources (range, flanking, visibility) are in
-    deferDnd5eResolution: true,
     ...(options.workflow?.activity ? { systemRules: { category: "attack" as const, item: options.workflow.activity.item,
       // @ts-expect-error no dnd5e-types
       rollData: options.workflow.activity.getRollData({ roll: { ability: abilityId, attackMode: options.workflow.attackMode } }) } } : {}),

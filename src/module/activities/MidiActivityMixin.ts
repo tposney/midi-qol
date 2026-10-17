@@ -1,3 +1,4 @@
+import { heldKeys } from "../lib/rollKeys.js";
 import { Activity, ActivityEffectData, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext, Dnd5eSystem, EmanationShapeData } from "../../globals.js";
 import { GameSystemConfig, MODULE_ID, debugEnabled, error, i18n, i18nFormat, warn, busyWait } from "../../midi-qol.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "../GMAction.js";
@@ -982,13 +983,8 @@ export let MidiActivityMixin = Base => {
             return;
           }
         }
-        //@ts-expect-error
-        const areKeysPressed = game.system.utils.areKeysPressed;
-        const keys = {
-          normal: areKeysPressed(config.event, "skipDialogNormal")
-            || areKeysPressed(config.event, "skipDialogDisadvantage"),
-          critical: areKeysPressed(config.event, "skipDialogAdvantage")
-        };
+        const held = heldKeys(config.event);
+        const keys = { normal: held.normal || held.disadvantage, critical: held.advantage };
 
         config.midiOptions!.isCritical ??= config.workflow.workflowOptions?.isCritical || config.workflow.isCritical;
         config.isCritical ??= config.midiOptions!.isCritical;

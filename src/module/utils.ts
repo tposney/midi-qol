@@ -9,7 +9,7 @@ import { concentrationCheckItemDisplayName } from "./Hooks.js";
 import { OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
-import { Activity, ActivityUseConfiguration, CalcDamageOptions, MidiChangeData, DamageDescription, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, RollProcessConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails, Dnd5eSystem } from "../globals.js";
+import { Activity, ActivityUseConfiguration, CalcDamageOptions, MidiChangeData, DamageDescription, DamageListEntry, PreComputedAdvantageData, PreSetupDamageListEntry, RollDialogConfig, RollMessageConfig, TokenOrDocument, DND5ETargetDescriptor, SaveDetails, Dnd5eSystem } from "../globals.js";
 
 import Token = foundry.canvas.placeables.Token;
 import { AnyMutableObject, AnyObject } from "fvtt-types/utils";
@@ -9830,20 +9830,6 @@ export function areMidiKeysPressed(event: AugmentedEvent | undefined, action: st
   });
 }
 
-/**
- * Shift+Alt+Ctrl forces a normal roll in midi (as processKeys records it); dnd5e would read Shift+Alt as advantage, so
- * it is given no event, and advantage with disadvantage so its own sources cancel. The keys skipped the dialog, which
- * dnd5e can no longer tell, so that is kept. Called for every d20 roll from dnd5e's pre-roll hooks.
- */
-export function releaseForcedNormalKeys(config: RollProcessConfig, dialog: RollDialogConfig): void {
-  if (!config.event) return;
-  const pressed = (action: string) => areMidiKeysPressed(config.event, action, "dnd5e");
-  if (!(pressed("skipDialogNormal") && pressed("skipDialogAdvantage") && pressed("skipDialogDisadvantage"))) return;
-  dialog.configure ??= false;
-  config.event = undefined;
-  config.advantage = true;
-  config.disadvantage = true;
-}
 export function setRangedTargets(tokenToUse: Token.Implementation, targetDetails: Activity["target"]) {
   if (!canvas || !canvas.scene) return true;
   if (!tokenToUse) {

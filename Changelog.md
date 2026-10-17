@@ -6,6 +6,7 @@
 * Added: roll field fail/success have readable names in the roll dialog and DAE's field browser (e.g. *Fail (Dexterity Saves)*).
 * Changed: every d20 roll (attacks, saves, checks, skills, tools, concentration, death saves, initiative) takes dnd5e's verdict on advantage: midi's flags and its own sources (flanking, range, visibility) count alongside dnd5e's roll mode fields and advantage rules, so a downgrade or override on any of them applies to all (e.g. `rolls.ability.save.mode` Downgrade cancels advantage from `abilities.dex.save.roll.mode`). The roll tooltip names each dnd5e roll mode source, and a held Alt/Ctrl counts as dnd5e counts it.
 * Fixed: Alt/Ctrl were ignored on a skill or tool check when midi had already found disadvantage/advantage.
+* Changed (macros): a `RollModifierTracker` side counts its sources; `advantage.setOverride` forces a side as a dnd5e override does, so a suppression of it still applies; `hasAdvantage`/`advantageMode` are dnd5e's verdict with held keys.
 * Changed: a dnd5e advantage rule that forces a mode (`=1`/`=-1`) no longer beats a suppression: with `noAdvantage` (midi's, or a dnd5e Downgrade) the roll is normal, as dnd5e rolls it.
 * Fixed: Shift+Alt+Ctrl rolled saves, checks, skills, tools, death saves and initiative with advantage (dnd5e reads Shift+Alt first); it forces a normal roll, as on attacks. With the roll dialog shown it defaults to Normal.
 * Fixed: an advantage reason for an unknown tool key (e.g. `disadvantage.concentration`) showed as `tool:<key>`.

@@ -14,6 +14,7 @@ import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig
 import { Workflow } from "./Workflow.js";
 import { preferredActiveGM, socketlibSocket } from "./GMAction.js";
 import { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./lib/MidiDependentsRegistry.js";
+import { ADVANTAGE, DISADVANTAGE, NORMAL, decideRollDialog, heldKeys, keyMode } from "./lib/rollKeys.js";
 import { RollModifierTracker, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, RollModifierResult, AdvantageFlags, applyTrackerAdvantage } from "./lib/RollModifierTracker.js";
 
 let libWrapper;
@@ -1113,66 +1114,29 @@ function getExternalModuleFastForward(sourceInfo: AdvantageSourceInfo, rollType:
 
 function setRollDialogOptions(config: RollProcessConfig, dialog: RollDialogConfig, rollType: FastForwardRollType) {
   dialog.options ??= {};
-  // @ts-expect-error CONFIG.Dice.D20Roll not typed
-  const ADV_MODE: { DISADVANTAGE: number, NORMAL: number, ADVANTAGE: number } = CONFIG.Dice.D20Roll.ADV_MODE;
   const sourceInfo = getAdvantageSourceInfo(config);
+  // Needs the event (none for Flash Rolls or Epic Rolls). An external module's roll follows its own fast forward
+  // setting, and shows the dialog unless that skips it.
+  const keys = heldKeys(config.event);
+  const fastForward = sourceInfo.isExternalModule ? getExternalModuleFastForward(sourceInfo, rollType)
+    : !!config.midiOptions?.fastForward || isAutoFastForward(rollType);
+  dialog.configure = decideRollDialog({ configure: dialog.configure, toggle: keys.toggle, fastForward })
+    ?? (sourceInfo.isExternalModule ? true : undefined);
 
-  // Determine dialog visibility (whether to show the roll configuration dialog)
-  // If dialog.configure was explicitly set by the caller (a boolean, not undefined),
-  // respect that value. This allows macros/code to pass configure: false to skip the
-  // dialog or configure: true to force it, regardless of module settings.
-  // Roll Toggle inverts fast forward and alone decides whether the dialog shows; without it, a fast forwarded roll
-  // skips the dialog and otherwise dnd5e's skip keys decide. Needs the event (none for Flash Rolls or Epic Rolls).
-  const rollToggle = areMidiKeysPressed(config.event, "RollToggle");
-  if (dialog.configure !== undefined) {
-    // Set by the caller
-    if (rollToggle) dialog.configure = !dialog.configure;
-  } else if (sourceInfo.isExternalModule) {
-    // External module (Flash Rolls, Monks TokenBar, Epic Rolls): use the module's own fast forward setting
-    const moduleFastForward = getExternalModuleFastForward(sourceInfo, rollType);
-    dialog.configure = rollToggle ? moduleFastForward : !moduleFastForward;
-  } else {
-    const fastForward = !!config.midiOptions?.fastForward || isAutoFastForward(rollType);
-    if (rollToggle) dialog.configure = fastForward;
-    else if (fastForward) dialog.configure = false;
-  }
-
-  // Set advantage mode for the dialog (use source info + rolls[0].options for dnd5e native)
-  // dnd5e's held keys count as dnd5e counts them: Shift with Alt or Ctrl picks that mode outright.
+  // The dialog's default: the roll's advantage as passed and as dnd5e built it, with the held keys as dnd5e adds them.
+  const mode = keyMode(keys);
   const rollOptions = config.rolls?.[0]?.options;
-  const keys = {
-    normal: areMidiKeysPressed(config.event, "skipDialogNormal", "dnd5e"),
-    advantage: areMidiKeysPressed(config.event, "skipDialogAdvantage", "dnd5e"),
-    disadvantage: areMidiKeysPressed(config.event, "skipDialogDisadvantage", "dnd5e")
-  };
-  let hasAdvantage = sourceInfo.advantage || rollOptions?.advantage || keys.advantage;
-  let hasDisadvantage = sourceInfo.disadvantage || rollOptions?.disadvantage || keys.disadvantage;
-  if (keys.normal && keys.advantage && keys.disadvantage) [hasAdvantage, hasDisadvantage] = [false, false];
-  else if (keys.normal && keys.advantage) [hasAdvantage, hasDisadvantage] = [true, false];
-  else if (keys.normal && keys.disadvantage) [hasAdvantage, hasDisadvantage] = [false, true];
-
-  if (hasAdvantage && !hasDisadvantage) {
-    dialog.options.advantageMode = ADV_MODE.ADVANTAGE;
-    dialog.options.defaultButton = "advantage";
-  } else if (!hasAdvantage && hasDisadvantage) {
-    dialog.options.advantageMode = ADV_MODE.DISADVANTAGE;
-    dialog.options.defaultButton = "disadvantage";
-  } else {
-    dialog.options.advantageMode = ADV_MODE.NORMAL;
-    dialog.options.defaultButton = "normal";
-  }
+  const advantage = mode.forced !== null ? mode.forced === ADVANTAGE : !!(sourceInfo.advantage || rollOptions?.advantage || mode.advantage);
+  const disadvantage = mode.forced !== null ? mode.forced === DISADVANTAGE : !!(sourceInfo.disadvantage || rollOptions?.disadvantage || mode.disadvantage);
+  const advantageMode = advantage === disadvantage ? NORMAL : advantage ? ADVANTAGE : DISADVANTAGE;
+  dialog.options.advantageMode = advantageMode;
+  dialog.options.defaultButton = advantageMode === ADVANTAGE ? "advantage" : advantageMode === DISADVANTAGE ? "disadvantage" : "normal";
 }
 
 
-/**
- * Held advantage/disadvantage keys join the chosen tracker (a copy of the config, so processKeys leaves the event for
- * dnd5e) and its snapshot, which the skill/tool dialog's buildConfig applies.
- */
+/** Held keys join the chosen tracker, whose verdict the skill/tool dialog's buildConfig applies. */
 function applyKeysToChoice(choice: PreComputedAdvantage, event: RollProcessConfig["event"]): void {
-  if (!(choice.tracker instanceof RollModifierTracker) || !event) return;
-  choice.tracker.processKeys({ event });
-  choice.hasAdvantage = !!choice.tracker.hasAdvantage;
-  choice.hasDisadvantage = !!choice.tracker.hasDisadvantage;
+  if (choice.tracker instanceof RollModifierTracker && event) choice.tracker.processKeys({ event });
 }
 
 /**
@@ -1843,6 +1807,8 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
       config.midiOptions.fastForward = true;
     }
   }
+  // Advantage, and in the pre-roll hook fail/success, on one tracker
+  const rollModifierTracker = new RollModifierTracker();
   if (!hasPreComputedAdvantage) {
     // Build death save advantage/disadvantage flags
     const advantageFlags: AdvantageFlags = {
@@ -1857,12 +1823,12 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
 
     // Process advantage/disadvantage flags using centralized helper
     // For death saves, the grants actor is the caster (if any workflow exists)
-    const tracker = await computeAdvantageFlags(this, advantageFlags, {
+    await computeAdvantageFlags(this, advantageFlags, {
       ...config.midiOptions,
       grantsActor: config.midiOptions.workflow?.actor
-    });
-    if (config.event) tracker.processKeys({ event: config.event });
-    applyTrackerAdvantage(config, tracker);
+    }, rollModifierTracker);
+    if (config.event) rollModifierTracker.processKeys({ event: config.event });
+    applyTrackerAdvantage(config, rollModifierTracker);
   }
 
   let advantage = config.advantage;
@@ -1890,7 +1856,6 @@ async function rollDeathSave(this: Actor.Implementation, wrapped, config: RollPr
   const blindSaveRoll = configSettings.rollSavesBlind.includes("all") || configSettings.rollSavesBlind.includes("death");
   const actor = this;
 
-  const rollModifierTracker = new RollModifierTracker();
   const preRollHookId = Hooks.once("dnd5e.preRollDeathSave", (configData, dialogData, messageData) => {
     // Merge midiOptions to ensure advantage/disadvantage and other values are preserved
     configData.midiOptions = { ...(configData.midiOptions ?? {}), ...(config.midiOptions ?? {}) };
@@ -2875,13 +2840,8 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
         config.midiOptions.fastForward = true;
       }
     }
-    // Only compute advantage from flags if not from external module and not pre-computed
-    if (!hasPreComputedAdvantage && !isExternalModuleRoll) {
-      if (!config.midiOptions.workflow && config.midiOptions.workflowId) {
-        config.midiOptions.workflow = Workflow.getWorkflow(config.midiOptions.workflowId);
-      }
-      const toolRollModifierTracker = await computeToolAdvantage(this, config.tool ?? "", config.ability ?? "", config.midiOptions);
-      applyTrackerAdvantage(config, toolRollModifierTracker);
+    if (!config.midiOptions.workflow && config.midiOptions.workflowId) {
+      config.midiOptions.workflow = Workflow.getWorkflow(config.midiOptions.workflowId);
     }
 
     const midiOptions = config.midiOptions;
@@ -3064,10 +3024,8 @@ export async function doItemUse(this: Item.Implementation, wrapped, config: Acti
       return await attackActivity.use(config, dialog, message);
     }
   }
-  //@ts-expect-error
-  const areKeysPressed = game.system?.utils.areKeysPressed;
-  const skipPressed = areKeysPressed(config.event, "skipDialogAdvantage") || areKeysPressed(config.event, "skipDialogDisadvantage") || areKeysPressed(config.event, "skipDialogNormal");
-  if (skipPressed) {
+  const keys = heldKeys(config.event);
+  if (keys.normal || keys.advantage || keys.disadvantage) {
     const attackActivity = attackActivities[0];
     if (attackActivity) return await attackActivity.use(config, dialog, message);
     else return await activities?.[0]?.use(config, dialog, message);
