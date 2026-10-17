@@ -6,7 +6,7 @@ import { RollDialogConfig, RollProcessConfig } from "../../globals.js";
 import { GameSystemConfig, i18n, i18nFormat } from "../../midi-qol.js";
 import { rollFieldName } from "../rollFields.js";
 import { createConditionData, evalAllConditions, evalAllConditionsAsync, tokenForActor, MidiOptions } from "../utils.js";
-import { ADVANTAGE, DISADVANTAGE, KeyMode, NORMAL, heldKeys, keyMode } from "./rollKeys.js";
+import { ADVANTAGE, DISADVANTAGE, NORMAL } from "./rollKeys.js";
 
 /** Attribution types for roll modifier tracking */
 export type AdvantageAttributionType = 'ADV' | 'DIS' | 'NOADV' | 'NODIS' | 'CRIT' | 'NOCRIT' | 'FUMBLE' | 'NOFUMBLE' | 'SUCCESS' | 'FAIL' | 'MIN' | 'MAX';
@@ -517,9 +517,7 @@ export class RollModifierTracker {
 
   /** The roll's dnd5e roll mode fields and advantage rules, which dnd5e combines with midi's sources */
   #dnd5e: { actor: Actor.Implementation, fields: string[], rules?: AdvantageFlags["systemRules"] } | undefined;
-  /** Held keys, which dnd5e adds to the roll after everything else */
-  #keys: KeyMode = { forced: null, advantage: false, disadvantage: false };
-  /** The mode the roll was made with when the roll dialog changed it */
+  /** The mode the roll was made with, when held keys or the roll dialog changed it */
   #finalMode: number | undefined;
   /** dnd5e's verdict when this tracker was saved; a restored tracker has no actor to ask */
   #savedVerdict: { advantage: boolean, disadvantage: boolean } | undefined;
@@ -632,12 +630,11 @@ export class RollModifierTracker {
     return claims;
   }
 
-  /** The roll's sides: dnd5e's verdict with the held keys as dnd5e adds them, or a mode the keys or the dialog forced */
+  /** The roll's sides: dnd5e's verdict, or the mode the roll was made with once reconciled */
   #sides(): { advantage: boolean, disadvantage: boolean } {
-    const forced = this.#finalMode ?? this.#keys.forced;
-    if (forced !== null && forced !== undefined) return { advantage: forced === ADVANTAGE, disadvantage: forced === DISADVANTAGE };
-    const verdict = this.dnd5eVerdict;
-    return { advantage: verdict.advantage || this.#keys.advantage, disadvantage: verdict.disadvantage || this.#keys.disadvantage };
+    const mode = this.#finalMode;
+    if (mode !== undefined) return { advantage: mode === ADVANTAGE, disadvantage: mode === DISADVANTAGE };
+    return this.dnd5eVerdict;
   }
 
   /** ADV_MODE: ADVANTAGE, DISADVANTAGE or NORMAL */
@@ -646,7 +643,16 @@ export class RollModifierTracker {
     return sides.advantage === sides.disadvantage ? NORMAL : sides.advantage ? ADVANTAGE : DISADVANTAGE;
   }
 
-  /** The mode the roll was made with, when the roll dialog changed it */
+  /**
+   * The roll as made, where it differs from the verdict: dnd5e adds held keys to the roll after everything else, and
+   * the roll dialog's choice replaces it.
+   */
+  reconcileWithRoll(mode: number | undefined, dialogShown: boolean): void {
+    if (mode === undefined || mode === this.advantageMode) return;
+    if (dialogShown) this.setFinalMode(mode, "config-buttons", i18n("midi-qol.ConfigButtons"));
+    else this.setFinalMode(mode, "keyPress", i18n("midi-qol.KeyPress"));
+  }
+
   setFinalMode(mode: number, source: string, displayName: string): void {
     this.#finalMode = mode;
     if (mode === ADVANTAGE) this.addAttribution("ADV", source, displayName);
@@ -693,7 +699,6 @@ export class RollModifierTracker {
     this.#attribution = {};
     this.#attributionKeys.clear();
     this.#dnd5e = undefined;
-    this.#keys = { forced: null, advantage: false, disadvantage: false };
     this.#finalMode = undefined;
     this.#savedVerdict = undefined;
   }
@@ -712,7 +717,6 @@ export class RollModifierTracker {
       modifiers: this.modifiers.get,
       attribution: this.#attribution,
       legacyAttribution: Array.from(this.#attributionKeys),
-      keys: this.#keys,
       finalMode: this.#finalMode,
       verdict: this.dnd5eVerdict
     };
@@ -728,22 +732,10 @@ export class RollModifierTracker {
     if (data.modifiers) this.modifiers.restore(data.modifiers);
     if (data.attribution) this.#attribution = data.attribution;
     if (data.legacyAttribution) this.#attributionKeys = new Set(data.legacyAttribution);
-    if (data.keys) this.#keys = data.keys;
     if (data.finalMode !== undefined) this.#finalMode = data.finalMode;
     if (data.verdict) this.#savedVerdict = data.verdict;
   }
 
-  /** Held keys, read as dnd5e reads them (and midi's Shift+Alt+Ctrl); the event is left for dnd5e */
-  processKeys(config: RollProcessConfig = {}) {
-    if (!config?.event) return;
-    this.#keys = keyMode(heldKeys(config.event));
-    const { forced, advantage, disadvantage } = this.#keys;
-    const forcedLabel = i18n("midi-qol.ForcedKeyPress");
-    if (forced === ADVANTAGE || forced === NORMAL) this.addAttribution("ADV", "forcedKeyPress", forcedLabel);
-    if (forced === DISADVANTAGE || forced === NORMAL) this.addAttribution("DIS", "forcedKeyPress", forcedLabel);
-    if (advantage) this.addAttribution("ADV", "keyPress", i18n("midi-qol.KeyPress"));
-    if (disadvantage) this.addAttribution("DIS", "keyPress", i18n("midi-qol.KeyPress"));
-  }
 
 }
 

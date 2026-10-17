@@ -1,7 +1,7 @@
 import { debugEnabled, warn, error, busyWait, GameSystemConfig, debug, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { unTimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
-import { decideRollDialog, heldKeys } from "../lib/rollKeys.js";
+import { decideRollDialog, dialogShown, heldKeys } from "../lib/rollKeys.js";
 import { RollModifierTracker, AdvantageFlags, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, applyTrackerAdvantage } from "../lib/RollModifierTracker.js";
 import { MidiOptions } from "../utils.js";
 import { replaceDefaultActivities, configSettings, confirmTargetOptions } from "../settings.js";
@@ -554,10 +554,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
         }
 
         if (workflow) {
-          // The roll as made: the roll dialog's choice, where it differs from midi's verdict
-          const returnedAdvMode = rolls[0]?.options?.advantageMode;
-          if (returnedAdvMode !== undefined && returnedAdvMode !== workflow.attackRollModifierTracker.advantageMode)
-            workflow.attackRollModifierTracker.setFinalMode(returnedAdvMode, "config-buttons", i18n("midi-qol.ConfigButtons"));
+          workflow.attackRollModifierTracker.reconcileWithRoll(rolls[0]?.options?.advantageMode, dialogShown(dialog.configure, config.event));
 
           workflow.attackMode = rolls[0].options.attackMode ?? config.attackMode;
           if (this.ammunition && !this.ammunitionItem) { // assume it was deleted
@@ -653,7 +650,6 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
       }
       await workflow.checkAttackAdvantage();
       // Process keyboard modifiers (ctrl/alt for advantage/disadvantage) after flag processing
-      workflow.attackRollModifierTracker.processKeys(config);
       if (await callActivityHooks(this, "midi-qol.preAttackRollConfig", workflow) === false) {
         console.warn("midi-qol | attack roll blocked by preAttackRollConfig hook");
         return false;

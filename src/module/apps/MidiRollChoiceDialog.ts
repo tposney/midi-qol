@@ -300,7 +300,8 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
       }
 
       // Apply midi's pre-computed advantage (midi-specific, not in dnd5e)
-      MidiRollChoiceDialog.applyPreComputedAdvantage(rollConfig, advantageByChoice?.[choiceId]);
+      // Only for the open dialog's choice: a fast forwarded roll has its mode from dnd5e, with the held keys
+      if (formData) MidiRollChoiceDialog.applyPreComputedAdvantage(rollConfig, advantageByChoice?.[choiceId]);
     };
   }
 

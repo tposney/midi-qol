@@ -61,6 +61,13 @@ export function decideRollDialog({ force, configure, toggle, fastForward }:
   return fastForward ? false : undefined;
 }
 
+/** Whether the roll dialog showed: as decided, else as dnd5e decides (any of its keys skips it) */
+export function dialogShown(configure: boolean | undefined, event: RollProcessConfig["event"]): boolean {
+  if (configure !== undefined) return configure;
+  const keys = heldKeys(event);
+  return !(keys.normal || keys.advantage || keys.disadvantage);
+}
+
 /**
  * Shift+Alt+Ctrl: dnd5e is given no event, and advantage with disadvantage so its own sources cancel. The keys skipped
  * the dialog, which dnd5e can no longer tell, so that is kept. Called for every d20 roll from dnd5e's pre-roll hooks,
