@@ -530,8 +530,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           break;
         case "hitMissCrit":
           attackRollText = hitString;
-          if (isCritical) attackRollText = i18n("midi-qol.criticalHit");
-          else if (isFumble) attackRollText = i18n("midi-qol.fumble");
+          if (isCritical) attackRollText = i18n("midi-qol.criticals");
+          else if (isFumble) attackRollText = i18n("midi-qol.fumbles");
           break;
         case "hidden":
           hideCritFumble = true;
@@ -680,7 +680,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     private applyAttackVisibility(html: HTMLElement) {
-      if (!configSettings.optionalRules.ActiveDefenceDC) {
+      if (!configSettings.optionalRules.activeDefenceDC) {
         removeAll(html, ".midi-qol-active-defence-dc");
       }
 

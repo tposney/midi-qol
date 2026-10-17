@@ -671,21 +671,19 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           }
         }
         /*
-         * Downgrade immunity to resistance. dnd5e models this as an option separate from ignore, and
-         * the two are not interchangeable: ignoring an immunity leaves the target taking full damage
-         * (immunity and resistance are independent trait lookups, and dnd5e's trait preparation
-         * deletes from dr anything present in di, so no resistance is left behind to apply). Only
-         * downgrade yields half damage.
+         * Downgrade immunity to resistance - ignoring an immunity would leave full damage. Only the
+         * types this target is immune to: dnd5e ignores the resistance of a downgraded type that has
+         * no immunity to downgrade.
          */
-        if (ignoreTraits.has(DOWNGRADE_IMMUNITY_KEY)
-          || ignoreTraits.has(`${DOWNGRADE_IMMUNITY_KEY}.${ALL_DAMAGE_KEY}`)) calcDamageOptions.downgrade = true;
-        else {
-          const downgradeTypes = Array.from(ignoreTraits)
+        // @ts-expect-error no dnd5e-types
+        const immunities: Set<string> = actor.system.traits?.di?.value ?? new Set();
+        const downgradeTypes = (ignoreTraits.has(DOWNGRADE_IMMUNITY_KEY) || ignoreTraits.has(`${DOWNGRADE_IMMUNITY_KEY}.${ALL_DAMAGE_KEY}`))
+          ? new Set(immunities)
+          : new Set(Array.from(ignoreTraits)
             .filter(trait => trait.startsWith(`${DOWNGRADE_IMMUNITY_KEY}.`))
             .map(trait => trait.split('.')[1])
-            .filter(damageType => GameSystemConfig.damageTypes[damageType]);
-          if (downgradeTypes.length) calcDamageOptions.downgrade = new Set(downgradeTypes);
-        }
+            .filter(damageType => immunities.has(damageType) || immunities.has(ALL_DAMAGE_KEY)));
+        if (downgradeTypes.size) calcDamageOptions.downgrade = downgradeTypes;
       }
       return calcDamageOptions;
     };
@@ -1160,7 +1158,7 @@ export function midiCustomEffect(actor: Actor.Implementation, change: ActiveEffe
     return true;
     /*
      TODO revisit this if going to allow item macro in flags evaluation
-     else if (change.key.startsWith(`flags.${MODULE_ID}.`) && (change.value.trim().includes("ItemMacro") || change.value.trim().includes(MQItemMacroLabel))) {
+     else if (change.key.startsWith(`flags.${MODULE_ID}.`) && typeof change.value === "string" && (change.value.trim().includes("ItemMacro") || change.value.trim().includes(MQItemMacroLabel))) {
        if (originUuid?.includes("Item.")) {
          const macroString = `ItemMacro.${originUuid}`;
          foundry.utils.setProperty(actor, change.key, macroString)
@@ -1250,7 +1248,7 @@ export async function doActivityOverTimeEffect(actor: Actor.Implementation, effe
   if (auraFlags.isAura && auraFlags.ignoreSelf) return;
   const ROLL_MODES = CONST.DICE_ROLL_MODES;
   const owner = playerForActor(actor);
-  const changes = effect.changes;
+  const changes = effect.changes.filter(change => change.key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`));
   let requiresUserExecution = false;
   for (let change of changes) {
     const activity = await getOvertimeActivity(actor, effect, change, startTurn);
@@ -2090,6 +2088,18 @@ export function buildRollActivityData(details: OvertimeDetails): Record<string, 
   return activityData;
 }
 
+async function overTimeRemoveConditionMet(removeCondition: string, rollData: any): Promise<boolean> {
+  const value = replaceAtFields(removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
+  try {
+    return !!await evalCondition(value, rollData, { errorReturn: true, async: true });
+  } catch (err) {
+    const message = `midi-qol | gmOverTimeEffect | error when evaluating overtime remove condition ${value} - assuming true`;
+    TroubleShooter.recordError(err, message);
+    console.warn(message, err);
+    return true;
+  }
+}
+
 export async function gmOverTimeEffect(actor: Actor.Implementation, effect: ActiveEffect.Implementation, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined, rollMode: undefined }) {
   const endTurn = !startTurn;
   if (effect.disabled || effect.isSuppressed) return;
@@ -2184,6 +2194,12 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
       // isPermanent is true for actionSave items OR if effect was marked permanent by saveCount/failCount
       const effectMarkedPermanent = !!effect.flags?.[MODULE_ID]?.overtime?.permanent;
       const isPermanent = !!actionSave || effectMarkedPermanent;
+      // Nothing to roll (an action save is rolled from its own card): no workflow, so no empty card.
+      if (isPermanent && !damageRoll && !macroToCall) {
+        if (actionSaveSuccess || (details.removeCondition && await overTimeRemoveConditionMet(details.removeCondition, rollData)))
+          await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime" });
+        return effect.id;
+      }
       const { itemData, activityData } = await buildOvertimeItemData({ actor, effect, details, label, isPermanent });
 
       // roll the damage and save....
@@ -2241,18 +2257,7 @@ export async function gmOverTimeEffect(actor: Actor.Implementation, effect: Acti
       }
 
       if (details.removeCondition) {
-        let value = replaceAtFields(details.removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
-        let remove;
-        try {
-          remove = await evalCondition(value, rollData, { errorReturn: true, async: true });
-          // remove = Roll.safeEval(value);
-        } catch (err) {
-          const message = `midi-qol | gmOverTimeEffect | error when evaluating overtime remove condition ${value} - assuming true`;
-          TroubleShooter.recordError(err, message);
-          console.warn(message, err);
-          remove = true;
-        }
-        if (remove) {
+        if (await overTimeRemoveConditionMet(details.removeCondition, rollData)) {
           // @ts-expect-error no dnd5e-types
           const otKey = ownedItem.system.activities.contents[0].uuid;
           overTimeEffectsToDelete[otKey] = { uuid: effect.uuid }
@@ -2469,10 +2474,14 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         cleanupAndResolve(undefined, "timeout");
       }, maxWait * 1000);
       usage.midiOptions!.targetsToUse = targetsToUse;
+      const isMidiActivity = !!(activity as { isMidiActivity?: boolean }).isMidiActivity;
+      // Another module's activity reads the user's targets, not midi's options.
+      if (!isMidiActivity) updateUserTargets(Array.from(targetsToUse).map(t => t.id));
       // @ts-expect-error no dnd5e-types
       activity.use(usage, dialog, message).then(result => {
-        if (!result) {
-          cleanupAndResolve(result);
+        // An activity midi doesn't wrap (another module's) runs no workflow, so no hook will resolve it.
+        if (!result || !isMidiActivity) {
+          cleanupAndResolve(undefined);
         }
       }).catch(err => {
         TroubleShooter.recordError(err, "completeActivityUse | activity.use failed");
@@ -7936,55 +7945,82 @@ export function getChanges(actorOrItem: Actor.Implementation | Item.Implementati
  * 
  * @returns {boolean}
  */
-export function canSense(tokenEntity: TokenOrDocument | string, targetEntity: TokenOrDocument | string, validModes: Array<string> = ["all"]): boolean {
-  return canSenseModes(tokenEntity, targetEntity, validModes).length > 0;
+/** `forceVision` checks a token without sight as if it had sight, whatever *Force vision when checking* is set to. */
+export interface SenseOptions { forceVision?: boolean }
+export function canSense(tokenEntity: TokenOrDocument | string, targetEntity: TokenOrDocument | string, validModes: Array<string> = ["all"], options: SenseOptions = {}): boolean {
+  return canSenseModes(tokenEntity, targetEntity, validModes, options).length > 0;
 }
-export function canSenseModes(tokenEntity: TokenOrDocument | string, targetEntity: TokenOrDocument | string, validModes: Array<string> = ["all"]): Array<string> {
+export function canSenseModes(tokenEntity: TokenOrDocument | string, targetEntity: TokenOrDocument | string, validModes: Array<string> = ["all"], options: SenseOptions = {}): Array<string> {
   const token = getToken(tokenEntity);
   const target = getToken(targetEntity);
   if (!token || !target) return [];
-  return _canSenseModes(token, target, validModes);
+  return _canSenseModes(token, target, validModes, options);
 }
-export function initializeVision(tk: Token.Implementation, force = false) {
-  tk.document.sight.enabled = true;
-  // @ts-expect-error protected
-  tk.document._prepareDetectionModes();
-  const sourceId = tk.sourceId;
-  tk.vision = new CONFIG.Canvas.visionSourceClass({ sourceId, object: tk });
+const newCheckVisionSource = (tk: Token.Implementation) => new CONFIG.Canvas.visionSourceClass({ sourceId: `${tk.sourceId}.midiCheck`, object: tk });
+type CheckVisionSource = ReturnType<typeof newCheckVisionSource> | NonNullable<Token.Implementation["vision"]>;
+const checkVisionSources = new WeakMap<Token.Implementation, { key: string, source: CheckVisionSource }>();
+let checkVisionGeneration = 0;
 
-  tk.vision.initialize({
-    x: tk.center.x,
-    y: tk.center.y,
-    elevation: tk.document.elevation,
-    radius: Math.clamp(tk.sightRange, 0, canvas.dimensions?.maxR ?? 0),
-    externalRadius: tk.externalRadius, // Math.max(tk.mesh.width, tk.mesh.height) / 2,
-    angle: tk.document.sight.angle,
-    contrast: tk.document.sight.contrast,
-    saturation: tk.document.sight.saturation,
-    brightness: tk.document.sight.brightness,
-    attenuation: tk.document.sight.attenuation,
-    rotation: tk.document.rotation,
-    visionMode: tk.document.sight.visionMode as foundry.canvas.perception.VisionMode.ConfiguredModes,
-    preview: !!tk._original,
-    color: tk.document.sight.color?.toNearest(),
-    blinded: tk.document.hasStatusEffect(CONFIG.specialStatusEffects.BLIND)
-  });
-  if (!tk.vision.los) {
-    // @ts-expect-error protected
-    tk.vision.shape = tk.vision._createRestrictedPolygon();
-    tk.vision.los = tk.vision.shape;
-  }
-  if (tk.vision.visionMode) tk.vision.visionMode.animated = false;
-  tk.vision.add();
-  return true;
+export function setupCheckVision() {
+  const invalidate = () => { checkVisionGeneration++; };
+  Hooks.on("createWall", invalidate);
+  Hooks.on("updateWall", invalidate);
+  Hooks.on("deleteWall", invalidate);
+  Hooks.on("createAmbientLight", invalidate);
+  Hooks.on("updateAmbientLight", invalidate);
+  Hooks.on("deleteAmbientLight", invalidate);
+  Hooks.on("updateScene", invalidate);
+  Hooks.on("canvasReady", invalidate);
 }
-export function _canSenseModes(token: Token.Implementation, target: Token.Implementation, validModesParam: Array<string> = ["all"]): Array<string> {
+
+/** A token without sight is checked with the detection modes Foundry gives one with sight. */
+function checkDetectionModes(tk: Token.Implementation) {
+  const modes = [...tk.detectionModes];
+  if (!tk.hasSight) {
+    if (!modes.some(m => m.id === "lightPerception")) modes.push({ id: "lightPerception", enabled: true, range: Infinity });
+    if (!modes.some(m => m.id === "basicSight")) modes.push({ id: "basicSight", enabled: true, range: tk.document.sight.range });
+  }
+  return modes;
+}
+
+/**
+ * The token's own vision source while Foundry keeps one, else one detached from the canvas, so the token is left
+ * as it was (#1571). Cached until the token's vision data, the walls, lights or scene change.
+ */
+function checkVisionSource(tk: Token.Implementation, detectionModes: ReturnType<typeof checkDetectionModes>): CheckVisionSource {
+  if (tk.hasSight && tk.vision?.los) return tk.vision;
+  const lightPerception = detectionModes.find(m => m.id === "lightPerception");
+  const data = {
+    // @ts-expect-error protected _getVisionSourceData
+    ...tk._getVisionSourceData(),
+    lightRadius: lightPerception?.enabled ? tk.getLightRadius(lightPerception.range ?? Infinity) : 0,
+    preview: false,
+    disabled: false
+  };
+  // @ts-expect-error protected _getVisionBlindedStates
+  const blinded: Record<string, boolean> = tk._getVisionBlindedStates();
+  const key = JSON.stringify([data, blinded, checkVisionGeneration]);
+  const cached = checkVisionSources.get(tk);
+  if (cached?.key === key) return cached.source;
+  const source = newCheckVisionSource(tk);
+  Object.assign(source.blinded, blinded);
+  source.initialize(data);
+  if (!source.los) {
+    // @ts-expect-error protected
+    source.shape = source._createRestrictedPolygon();
+    source.los = source.shape;
+  }
+  checkVisionSources.set(tk, { key, source });
+  return source;
+}
+export function _canSenseModes(token: Token.Implementation, target: Token.Implementation, validModesParam: Array<string> = ["all"], options: SenseOptions = {}): Array<string> {
   const detectionModes = CONFIG.Canvas.detectionModes;
   const DetectionModeCONST = foundry.canvas.perception.DetectionMode;
   if (!token || !target) return ["noToken"];
   if (target.document.hidden || token.document.hidden) return [];
-  if (!token.hasSight && !configSettings.optionalRules.invisVision) return ["senseAll"];
-  if ((!token.vision || !token.vision.los) && !initializeVision(token)) return ["noSight"];
+  if (!token.hasSight && !options.forceVision && !configSettings.optionalRules.invisVision) return ["senseAll"];
+  const tokenDetectionModes = checkDetectionModes(token);
+  const vision = checkVisionSource(token, tokenDetectionModes);
   const matchedModes: Set<string> = new Set();
   // Determine the array of offset points to test.
   // Inner ring at t (min dimension / 4) matches Foundry's standard tolerance.
@@ -8003,7 +8039,6 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
     los: new Map()
   }));
   const config = { tests, object: target };
-  const tokenDetectionModes = token.detectionModes;
   const modes = CONFIG.Canvas.detectionModes;
   let validModes = new Set(validModesParam);
 
@@ -8012,15 +8047,15 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   // approximation (ClockwiseSweepPolygon) that can miss narrow visible corridors
   // through wall gaps. Foundry uses this same testCollision approach for restricted
   // vision angles; we extend it to 360° vision for accuracy.
-  if (token.vision) {
-    const origin = { x: token.vision.x, y: token.vision.y };
+  if (vision) {
+    const origin = { x: vision.x, y: vision.y };
     for (const test of tests) {
       const collision = CONFIG.Canvas.polygonBackends.sight.testCollision(
         origin,
         test.point,
-        { type: "sight", mode: "any", source: token.vision, useThreshold: true, priority: token.vision.priority }
+        { type: "sight", mode: "any", source: vision, useThreshold: true, priority: vision.priority }
       );
-      test.los.set(token.vision, !collision);
+      test.los.set(vision, !collision);
     }
   }
 
@@ -8035,7 +8070,7 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   const lightPerception = tokenDetectionModes.find(m => m.id === modes.lightPerception?.id);
   if (lightPerception && ["lightPerception", "all"].some(mode => validModes.has(mode))) {
     // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
-    const result = (lightPerception && token.vision) ? modes.lightPerception.testVisibility(token.vision, lightPerception, config) : false;
+    const result = (lightPerception && vision) ? modes.lightPerception.testVisibility(vision, lightPerception, config) : false;
     if (result === true)
       matchedModes.add(detectionModes.lightPerception?.id ?? DetectionModeCONST.BASIC_MODE_ID);
   }
@@ -8043,7 +8078,7 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
   const basic = tokenDetectionModes.find(m => m.id === DetectionModeCONST.BASIC_MODE_ID);
   if (basic && ["basicSight", "all"].some(mode => validModes.has(mode))) {
     // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
-    const result = token.vision ? modes.basicSight.testVisibility(token.vision, basic, config) : false;
+    const result = vision ? modes.basicSight.testVisibility(vision, basic, config) : false;
     if (result === true)
       matchedModes.add(detectionModes.basicSight?.id ?? DetectionModeCONST.BASIC_MODE_ID);
   }
@@ -8053,16 +8088,10 @@ export function _canSenseModes(token: Token.Implementation, target: Token.Implem
     const dm = modes[detectionMode.id as string];
     if (validModes.has("all") || validModes.has(detectionMode.id as string)) {
       // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
-      const result = token.vision ? dm?.testVisibility(token.vision, detectionMode, config) : false;
+      const result = vision ? dm?.testVisibility(vision, detectionMode, config) : false;
       if (result === true) {
         matchedModes.add(detectionMode.id as string);
       }
-    }
-  }
-  for (let tk of [token, target]) {
-    if (!tk.document.sight.enabled) {
-      const sourceId = tk.sourceId;
-      canvas.effects?.visionSources.delete(sourceId);
     }
   }
   return Array.from(matchedModes);
@@ -8865,7 +8894,7 @@ export async function chooseEffect({ actor, token, item, workflow, options }: {
   return chosenEffect;
 }
 
-export function canSee(tokenEntity: TokenOrDocument, targetEntity: TokenOrDocument) {
+export function canSee(tokenEntity: TokenOrDocument, targetEntity: TokenOrDocument, options: SenseOptions = {}) {
   const NON_SIGHT_CONSIDERED_SIGHT = ["blindsight"];
   const detectionModes = CONFIG.Canvas.detectionModes;
   const sightDetectionModes = Object.keys(detectionModes).filter(
@@ -8873,7 +8902,7 @@ export function canSee(tokenEntity: TokenOrDocument, targetEntity: TokenOrDocume
       detectionModes[d].type === foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SIGHT ||
       NON_SIGHT_CONSIDERED_SIGHT.includes(d)
   );
-  return canSense(tokenEntity, targetEntity, sightDetectionModes);
+  return canSense(tokenEntity, targetEntity, sightDetectionModes, options);
 }
 
 export function sumRolls(rolls: Array<Roll> | undefined = [], countHealing?: "ignore" | "negative" | "positive" | "negativeIgnoreTemp" | "positiveIgnoreTemp"): number {
@@ -9341,7 +9370,8 @@ export function getCheckRollModeFor(abilityId: string) {
   return configSettings.autoCheckSaves !== "allShow" ? "gmroll" : "public";
 }
 
-export function areMidiKeysPressed(event: AugmentedEvent | undefined, action: string) {
+/** Whether `action`'s keybinding (midi-qol's by default, or another namespace's such as dnd5e's) is held for `event`. */
+export function areMidiKeysPressed(event: AugmentedEvent | undefined, action: string, namespace = "midi-qol") {
   if (!event) return false;
   const activeModifiers = {};
   const KeyBoardManager = game.keyboard;
@@ -9357,7 +9387,7 @@ export function areMidiKeysPressed(event: AugmentedEvent | undefined, action: st
   addModifiers(MODIFIER_KEYS.CONTROL, event.ctrlKey || event.metaKey);
   addModifiers(MODIFIER_KEYS.SHIFT, event.shiftKey);
   addModifiers(MODIFIER_KEYS.ALT, event.altKey);
-  return ClientKeyBindings?.get("midi-qol", action).some(b => {
+  return ClientKeyBindings?.get(namespace, action).some(b => {
     if (KeyBoardManager?.downKeys.has(b.key) && b.modifiers.every(m => activeModifiers[m])) return true;
     if (b.modifiers?.length) return false;
     return activeModifiers[b.key];

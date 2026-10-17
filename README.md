@@ -831,19 +831,21 @@ Set via active effects using **CUSTOM** or **OVERRIDE** mode.
 | No Disadvantage | `flags.midi-qol.noDisadvantage.save.all` | Suppress disadvantage even when other sources grant it (13.0.38+) |
 | Critical | `flags.midi-qol.critical.mwak` | Force critical hits |
 | No Critical | `flags.midi-qol.noCritical.all` | Prevent critical hits |
-| Auto-Fail | `flags.midi-qol.fail.save.dex` | Force automatic failure |
+| Auto-Fail | `flags.midi-qol.fail.ability.save.dex` | Force automatic failure |
 | Auto-Success | `flags.midi-qol.success.attack.all` | Force automatic success |
 | Grants | `flags.midi-qol.grants.advantage.attack.all` | Effects on attackers targeting you |
 | Absorption | `system.traits.da.fire` | Convert damage to healing (use dnd5e native trait) |
 | Super Saver | `flags.midi-qol.superSaver.dex` | No damage on save, half on fail |
 | Magic Resistance | `flags.midi-qol.magicResistance.all` | Advantage vs magic saves |
-| Min/Max | `flags.midi-qol.min.save.all` | Set min/max roll values |
+| Min/Max | `flags.midi-qol.min.ability.save.all` | Set min/max roll values |
 | Range | `flags.midi-qol.range.all` | Modify item range |
 | Optional | `flags.midi-qol.optional.NAME.attack.all` | Prompted bonus effects |
 | Damage Mod | `system.traits.dm.midi.all` | Reduce/increase damage (use negative values to reduce) |
 | Save by School | `flags.midi-qol.advantage.save.school.nec` | Advantage/disadvantage on saves vs specific spell schools (13.0.52+) |
 | Attack by School | `flags.midi-qol.advantage.attack.school.evo` | Advantage/disadvantage on spell attacks of specific schools (13.0.55+) |
 | Tool Checks | `flags.midi-qol.advantage.tool.thief` | Per-tool advantage/disadvantage/fail/success/min/max (13.0.38+) |
+
+Advantage, disadvantage, noAdvantage and noDisadvantage flags for saves and checks are `…save.dex` / `…check.dex`; fail, success, min and max keep `.ability.`: `fail.ability.save.dex`, `success.ability.check.all`, `max.ability.save.all`.
 
 **Special Flags:**
 | Flag | Effect |
@@ -1191,7 +1193,9 @@ For effects where the player must use their action to attempt a save (like escap
 | `actionSave` | `dialog` - Prompt player to use action; `roll` - Player rolls manually via chat card | - |
 
 When `actionSave=dialog`: Player is prompted at turn start to use their action for the save.
-When `actionSave=roll`: A chat card is created at turn start; player clicks to roll when using their action.
+When `actionSave=roll`: A chat card is created at turn start; player clicks to roll when using their action. The card is removed at the end of the turn.
+
+The action save's prompt or card always comes at the start of the creature's turn; `turn` sets when the effect's damage or macro is applied. For a save repeated at the end of each turn (no action needed), leave out `actionSave` and use `turn=end` with `saveCount`.
 
 #### Display Parameters
 
@@ -1240,9 +1244,9 @@ turn=start, damageRoll=2d6, damageType=poison, saveDC=14, saveAbility=con, saveD
 turn=start, damageRoll=2d6, damageType=healing, applyCondition=@attributes.hp.value < @attributes.hp.max, label="Regeneration"
 ```
 
-**Hold Person (action to save, end of turn save):**
+**Hold Person (save at the end of each turn):**
 ```
-turn=end, saveDC=@attributes.spelldc, saveAbility=wis, saveCount=1-, actionSave=roll, label="Hold Person"
+turn=end, saveDC=@attributes.spelldc, saveAbility=wis, saveCount=1-, label="Hold Person"
 ```
 
 **Damage with Condition (only if below max HP):**

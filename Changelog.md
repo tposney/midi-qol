@@ -1,4 +1,19 @@
 ### 13.0.68 (unreleased)
+* From this release the v13 (Foundry 13 / dnd5e 5.x) line receives only bug fixes, no feature enhancements.
+* Fixed: on dnd5e 5.3, ignoring or downgrading an immunity, resistance or vulnerability for specific damage types left an "All Damage" trait (e.g. DAE's `system.traits.dr.all`) in force; `idi.<type>`/`ddi.<type>` now apply against an "All Damage" immunity, and downgrading a type the target isn't immune to no longer drops its resistance.
+* Changed: with fast forward off, Alt or Ctrl on an attack skip the roll dialog with advantage or disadvantage, as dnd5e does (they opened the dialog).
+* Fixed: Roll Toggle did nothing on skill, ability, save and tool rolls with fast forward off; held, it now skips the dialog of a roll that isn't fast forwarded and shows it for one that is, keeping Alt/Ctrl's advantage or disadvantage. Bound to Shift it opens the dialog for fast forwarded rolls (#1553).
+* Fixed: *Confirm targets if targeting allies and hostiles* had no effect (saved under a misspelt key); existing settings carry over.
+* Fixed: *Show Active Defence DC* had no effect; the DC was always shown. Existing worlds keep showing it until the box is unticked.
+* Fixed: with *Attack display* set to Hit/Miss/Critical/Fumble, players saw `midi-qol.criticalHit` or `midi-qol.fumble` instead of the text for a critical or fumble.
+* Fixed: some Quick Settings presets wrote settings that don't exist.
+* README: the auto-fail and min/max save examples now use the keys midi reads (`fail.ability.save.dex`, `min.ability.save.all`).
+* Fixed: an effect with an `ActivityOverTime` change logged "activity not found" each turn for its other changes, and could take the roll mode from a change value that happened to be an activity UUID.
+* Fixed: tool and skill checks requested through Flash Token Bar were sent with the ability as the roll key, so players rolled a plain ability check (#1575).
+* Fixed: skill and tool checks applied the `min`/`max`/`fail`/`success.ability.check` flags of the skill's default ability, not the one rolled, passed in or chosen in the roll dialog (#1572).
+* Fixed: *Force vision when checking* left a token's vision switched on until its next update, then tested stale vision (#1571). `MidiQOL.canSee`/`canSense`/`canSenseModes` take `{ forceVision }`.
+* Fixed: another module's activities (e.g. Custom D&D 5e's Move) could not be a *Trigger Activity* (#1570).
+* Fixed: an over-time action save with nothing to roll posted an empty card; README Hold Person example corrected (#1569).
 * Fixed: an *Always Apply* effect went to every target once any target passed the activity's *Active Effect Condition*; it now goes only to targets that pass it, as the condition's hint now says.
 * Fixed: with *Force a concentration save when damage taken* set to *Chat Message + Auto Roll*, taking damage could roll the concentration save twice.
 * Fixed: the *Default saving throw multiplier* setting was ignored; a successful save always took half damage.

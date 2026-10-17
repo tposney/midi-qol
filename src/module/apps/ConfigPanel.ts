@@ -551,7 +551,6 @@ let quickSettingsDetails: any = {
       gmAutoDamage: "onHit",
       gmAutoFastForward: ["attack", "damage"],
       gmRemoveButtons: "all",
-      gmTargetConfirmation: "none",
       autoItemEffects: "applyRemove",
       allowUseMacro: true,
     },
@@ -563,8 +562,7 @@ let quickSettingsDetails: any = {
       gmAutoAttack: false,
       gmAutoDamage: "none",
       gmAutoFastForward: [],
-      gmRemoveButtons: "none",
-      gmTargetConfirmation: "none"
+      gmRemoveButtons: "none"
     },
   },
   ShowItemInfo: {
@@ -584,8 +582,7 @@ let quickSettingsDetails: any = {
       autoRollAttack: true,
       autoRollDamage: "onHit",
       autoFastForward: ["attack", "damage"],
-      removeButtons: "all",
-      targetConfirmation: "none"
+      removeButtons: "all"
     },
   },
   PlayerManual: {
@@ -595,8 +592,7 @@ let quickSettingsDetails: any = {
       autoRollAttack: false,
       autoRollDamage: "none",
       autoFastForward: [],
-      removeButtons: "none",
-      targetConfirmation: "none"
+      removeButtons: "none"
     },
   },
   DamageAuto: {
@@ -728,8 +724,7 @@ let quickSettingsDetails: any = {
       gmDamageDsn: "none",
       displaySaveAdvantage: false,
       hideNPCNames: "Unknown Creature",
-      showReactionAttackRoll: "none",
-      displayHitResultNumeric: false
+      showReactionAttackRoll: "none"
     },
     codeChecks: (current, settings) => {
       if (current.autoCheckHit !== "none") settings.autoCheckHit = "whisper";
@@ -748,8 +743,7 @@ let quickSettingsDetails: any = {
       gmDamageDsn: "show",
       displaySaveAdvantage: true,
       showReactionAttackRoll: "all",
-      hideNPCNames: "",
-      displayHitResultNumeric: true
+      hideNPCNames: ""
     },
     codeChecks: (current, settings) => {
       if (current.autoCheckHit !== "none") settings.autoCheckHit = "all";

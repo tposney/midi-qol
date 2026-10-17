@@ -3155,7 +3155,7 @@ export class Workflow {
           break;
         }
         visitedActivities.add(possibleTriggerActivity.uuid);
-        possibleTriggerActivity = await possibleTriggerActivity.getTriggeredActivity();
+        possibleTriggerActivity = await possibleTriggerActivity.getTriggeredActivity?.();
       }
 
       let triggeredActivity = await this.activity.getTriggeredActivity();
@@ -5845,7 +5845,10 @@ return {
       flashRequestType = "savingthrow"; // default
     }
 
-    const flashRollKey = rollAbilities?.[0] ?? rollSkills?.[0] ?? rollTools?.[0];
+    // A tool or skill check also lists the ability it is rolled with; its key is the tool or skill (#1575).
+    const flashRollKey = rollType === "skill" ? rollSkills?.[0]
+      : rollType === "tool" ? rollTools?.[0]
+        : rollAbilities?.[0];
     if (!flashRollKey) {
       flashRequestType = "custom";
     }
@@ -6442,14 +6445,16 @@ return {
           target.actor!,
           "skill",
           rollSkills,
-          { workflow: this, isMagicSave: false }
+          { workflow: this, isMagicSave: false },
+          this.saveActivity?.check?.ability || undefined
         );
       } else {
         choiceMap = await buildPreComputedAdvantageMap(
           target.actor!,
           "tool",
           rollTools,
-          { workflow: this, isMagicSave: false }
+          { workflow: this, isMagicSave: false },
+          this.saveActivity?.check?.ability || undefined
         );
       }
 
