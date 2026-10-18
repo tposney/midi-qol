@@ -1,4 +1,9 @@
-### 14.6.3 (unreleased)
+### 14.6.4 (unreleased)
+
+**Rolls and saves**
+* Fixed: a check activity's skill or tool check could lose the roller's fail/success, min/max and advantage (with CAT active, a Stealth check ignored `system.skills.ste.roll.success`).
+
+### 14.6.3
 * Requires DAE 14.6.2.
 
 **Rolls and saves**
