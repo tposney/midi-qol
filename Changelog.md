@@ -53,7 +53,6 @@
 * Added: GM warning and TroubleShooter Auto Fixes for settings that conflict with other modules.
 * Fixed: TroubleShooter's Auto Fix buttons did nothing.
 * Fixed: other modules' activities could not be a *Trigger Activity* (#1570).
-* Fixed (temporary, CAT ≤ 0.1.2): group actor skill checks threw and saves returned `undefined`.
 * Fixed: *Auto reroll initiative* did not recover uses that recover on initiative.
 * Added: `MidiQOL.getCoverBonus(attacker, target, activity?)`.
 * Added: `MidiQOL.highlightTokens(tokens, { color? })`.
