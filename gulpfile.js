@@ -316,7 +316,7 @@ function generateFoundryId() {
  * Also handles embedded documents (effects, activities)
  * Recursively scans subdirectories for nested folder structures.
  */
-async function ensurePackIds(packSrcDir, { documentType = "Item", compendiumSource = "midi-qol.midiqol-sample-items" } = {}) {
+async function ensurePackIds(packSrcDir, { documentType = "Item" } = {}) {
   let modified = 0;
   const midiVersion = PACKAGE.version;
   const keyPrefix = documentType === "Item" ? "items" : "effects";
@@ -396,25 +396,15 @@ async function ensurePackIds(packSrcDir, { documentType = "Item", compendiumSour
           }
         }
 
-        // Stamp chris-premades info for CPR medkit compatibility
-        // Only bump version if file was modified since last compile, or if info is missing
-        const fileMtime = fs.statSync(fullPath).mtimeMs;
-        const cprInfo = item.flags?.["chris-premades"]?.info;
-        const fileModifiedSinceCompile = fileMtime > lastCompileTime;
-        const cprInfoMissing = !cprInfo || !cprInfo.version || !cprInfo.source;
-        if (cprInfoMissing || fileModifiedSinceCompile) {
-          if (!item.flags) item.flags = {};
-          if (!item.flags["chris-premades"]) item.flags["chris-premades"] = {};
-          if (!item.flags["chris-premades"].info) item.flags["chris-premades"].info = {};
-          const info = item.flags["chris-premades"].info;
-          if (info.source !== compendiumSource || info.version !== midiVersion) {
-            const reason = cprInfoMissing ? "missing CPR info" : "file modified since last compile";
-            console.log(`CPR version updated for ${entry.name}: ${info.version || "none"} -> v${midiVersion} (${reason})`);
-            info.source = compendiumSource;
-            info.version = midiVersion;
+        // CAT's automation version: set when missing, bumped to midi's version when the file changed since the last
+        // compile. Only items marked as automations (flags.cat.automation); demos and legacy copies carry none.
+        const automation = item.flags?.cat?.automation;
+        if (automation && typeof automation === "object") {
+          const fileModifiedSinceCompile = fs.statSync(fullPath).mtimeMs > lastCompileTime;
+          if ((!automation.version || fileModifiedSinceCompile) && automation.version !== midiVersion) {
+            console.log(`CAT version updated for ${entry.name}: ${automation.version || "none"} -> ${midiVersion}`);
+            automation.version = midiVersion;
             changed = true;
-          } else if (fileModifiedSinceCompile) {
-            console.log(`CPR version unchanged for ${entry.name}: v${midiVersion} (file modified but version already current)`);
           }
         }
 
@@ -507,7 +497,7 @@ exports.compilePacks = gulp.series(
     fs.writeFileSync(itemsMarker, new Date().toISOString());
     plog("Compiled pack-src/sampleitems to packs/sampleitems");
 
-    await ensurePackIds("pack-src/activeeffects", { documentType: "ActiveEffect", compendiumSource: "midi-qol.midiqol-active-effects" });
+    await ensurePackIds("pack-src/activeeffects", { documentType: "ActiveEffect" });
     await foundryvttCli.compilePack("pack-src/activeeffects", "packs/activeeffects", { recursive: true });
     const effectsMarker = path.join("pack-src/activeeffects", ".last-compile");
     fs.writeFileSync(effectsMarker, new Date().toISOString());

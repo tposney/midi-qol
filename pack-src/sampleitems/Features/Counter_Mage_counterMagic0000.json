@@ -215,9 +215,8 @@
         "effect": []
       }
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.0"
       }
     }
@@ -244,7 +243,7 @@
     "requirements": "",
     "properties": [],
     "activities": {},
-    "identifier": "counter-magic",
+    "identifier": "counter-mage",
     "enchant": {},
     "prerequisites": {
       "level": null,

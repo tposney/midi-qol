@@ -193,9 +193,8 @@
       "section": "",
       "actionSection": ""
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.0"
       }
     }
@@ -521,7 +520,7 @@
         }
       }
     },
-    "identifier": "longsword-of-life-stealing-11438",
+    "identifier": "sword-of-life-stealing",
     "container": null,
     "ammunition": {},
     "magicalBonus": null,

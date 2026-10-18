@@ -308,9 +308,8 @@
       "section": "",
       "actionSection": ""
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.0"
       }
     }
@@ -450,7 +449,7 @@
         }
       }
     },
-    "identifier": "rakish-audacity-11438",
+    "identifier": "rakish-audacity",
     "enchant": {},
     "prerequisites": {
       "level": null,

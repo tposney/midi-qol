@@ -210,9 +210,8 @@
         "activity": []
       }
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.2"
       }
     }
@@ -364,7 +363,7 @@
         }
       }
     },
-    "identifier": "bardic-inspiration-dnd202-mq10010",
+    "identifier": "bardic-inspiration",
     "enchant": {},
     "prerequisites": {
       "level": null,

@@ -219,9 +219,8 @@
     "crux": {
       "trayVisibility": "default"
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.0"
       }
     }
@@ -364,7 +363,7 @@
         }
       }
     },
-    "identifier": "legendary-resistance-10413",
+    "identifier": "legendary-resistance",
     "enchant": {},
     "prerequisites": {
       "level": null,

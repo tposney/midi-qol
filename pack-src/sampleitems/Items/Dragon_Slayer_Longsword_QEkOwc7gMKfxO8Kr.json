@@ -154,9 +154,8 @@
       "section": "",
       "actionSection": ""
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.0"
       }
     }
@@ -485,7 +484,7 @@
         }
       }
     },
-    "identifier": "dragon-slayer-longsword-11438",
+    "identifier": "dragon-slayer",
     "ammunition": {},
     "mastery": "",
     "attuned": false,

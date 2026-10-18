@@ -156,9 +156,8 @@
         "activity": []
       }
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.0"
       }
     }
@@ -187,7 +186,7 @@
     },
     "requirements": "Paladin 10",
     "activities": {},
-    "identifier": "aura-of-courage-10010",
+    "identifier": "aura-of-courage",
     "enchant": {},
     "prerequisites": {
       "level": null,

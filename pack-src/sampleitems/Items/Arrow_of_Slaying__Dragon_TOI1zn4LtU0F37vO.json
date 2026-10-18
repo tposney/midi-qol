@@ -118,9 +118,8 @@
       "section": "",
       "actionSection": ""
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.0"
       }
     }
@@ -311,7 +310,7 @@
         }
       }
     },
-    "identifier": "arrow-of-slaying-dragon-11413",
+    "identifier": "arrow-of-slaying-dragon",
     "magicalBonus": null,
     "attuned": false,
     "equipped": false

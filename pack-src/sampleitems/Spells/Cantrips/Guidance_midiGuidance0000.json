@@ -174,12 +174,6 @@
         "effect": []
       }
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "14.6.0"
-      }
-    },
     "itemacro": {
       "macro": {
         "name": "Guidance",
@@ -191,6 +185,11 @@
           "default": 3
         },
         "flags": {}
+      }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.0"
       }
     }
   },

@@ -240,7 +240,7 @@
       "rules": "2024",
       "book": "",
       "page": "",
-      "custom": "Mid 12.4.16",
+      "custom": "midi-qol sample",
       "license": ""
     },
     "identified": true,
@@ -435,12 +435,6 @@
       "idi": false,
       "idv": false,
       "ida": false
-    },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "14.6.0"
-      }
     }
   },
   "_stats": {

@@ -172,12 +172,6 @@
       "riders": {
         "activity": []
       }
-    },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "14.6.0"
-      }
     }
   },
   "system": {
@@ -186,7 +180,7 @@
       "chat": "<p>Starting at 7th level, you and friendly creatures within 10 feet of you can’t be Charmed while you are conscious.</p>\n<p>At 18th level, the range of this aura increases to 30 feet.</p>"
     },
     "source": {
-      "custom": "Midi 12.4.7",
+      "custom": "midi-qol sample",
       "revision": 1,
       "rules": "2014",
       "book": "",

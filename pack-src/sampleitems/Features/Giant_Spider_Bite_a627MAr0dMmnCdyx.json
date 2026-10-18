@@ -8,7 +8,7 @@
       "chat": ""
     },
     "source": {
-      "custom": "Midi 12.4.25",
+      "custom": "midi-qol sample",
       "book": "",
       "page": "",
       "license": "CC-BY-4.0",
@@ -485,12 +485,6 @@
       "idi": false,
       "idv": false,
       "ida": false
-    },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "14.6.0"
-      }
     }
   },
   "_stats": {

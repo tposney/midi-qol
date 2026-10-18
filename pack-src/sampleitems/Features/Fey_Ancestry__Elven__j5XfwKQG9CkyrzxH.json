@@ -156,9 +156,8 @@
         "activity": []
       }
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.0"
       }
     }
@@ -184,7 +183,7 @@
     },
     "requirements": "Elf, Half-Elf",
     "activities": {},
-    "identifier": "fey-ancestry-elven-10044",
+    "identifier": "fey-ancestry",
     "enchant": {},
     "prerequisites": {
       "level": null,

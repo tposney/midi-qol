@@ -814,9 +814,8 @@
     "default": 0
   },
   "flags": {
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.0"
       }
     }

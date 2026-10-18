@@ -164,9 +164,8 @@
         "activity": []
       }
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.0"
       }
     }
@@ -195,7 +194,7 @@
     },
     "requirements": "Paladin 6",
     "activities": {},
-    "identifier": "aura-of-protection-hud-10010",
+    "identifier": "aura-of-protection",
     "enchant": {},
     "prerequisites": {
       "level": null,

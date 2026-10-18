@@ -8,7 +8,7 @@
       "chat": ""
     },
     "source": {
-      "custom": "Midi 11.4.23",
+      "custom": "midi-qol sample",
       "book": "SRD 5.1",
       "page": "",
       "license": "CC-BY-4.0",
@@ -324,12 +324,6 @@
     "tidy5e-sheet": {
       "section": "",
       "actionSection": ""
-    },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "14.6.0"
-      }
     }
   },
   "_stats": {

@@ -215,12 +215,6 @@
     "tidy5e-sheet": {
       "section": "",
       "actionSection": ""
-    },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "14.6.2"
-      }
     }
   },
   "system": {

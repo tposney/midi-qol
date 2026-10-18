@@ -145,9 +145,8 @@
     "crux": {
       "trayVisibility": "default"
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.0"
       }
     }
@@ -177,7 +176,7 @@
     "requirements": "",
     "properties": [],
     "activities": {},
-    "identifier": "regeneration-11426",
+    "identifier": "regeneration",
     "enchant": {},
     "prerequisites": {
       "level": null,

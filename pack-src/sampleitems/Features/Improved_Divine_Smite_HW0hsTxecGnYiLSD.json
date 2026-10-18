@@ -157,9 +157,8 @@
       "section": "",
       "actionSection": ""
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.0"
       }
     }
@@ -310,7 +309,7 @@
         }
       }
     },
-    "identifier": "improved-divine-smite-10010",
+    "identifier": "radiant-strikes",
     "enchant": {},
     "prerequisites": {
       "level": null,

@@ -139,9 +139,8 @@
     "crux": {
       "trayVisibility": "default"
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.0"
       }
     }
@@ -283,7 +282,7 @@
         }
       }
     },
-    "identifier": "indomitable-10010",
+    "identifier": "indomitable",
     "enchant": {},
     "prerequisites": {
       "level": null,

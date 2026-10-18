@@ -39,12 +39,6 @@
         "activity": []
       }
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "14.6.0"
-      }
-    },
     "itemacro": {
       "macro": {
         "name": "Shapechange",
@@ -67,6 +61,11 @@
         },
         "_id": null,
         "folder": null
+      }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.0"
       }
     }
   },

@@ -3,6 +3,11 @@
 **Rolls and saves**
 * Fixed: a check activity's skill or tool check could lose the roller's fail/success, min/max and advantage (with CAT active, a Stealth check ignored `system.skills.ste.roll.success`).
 
+**CAT**
+* Changed: sample items carry their CAT automation version in `flags.cat.automation.version` and the identifier of the item they automate (e.g. `sneak-attack`, `lucky`, `radiant-strikes`, `sword-of-wounding`), and midi registers them with CAT itself. Demos and legacy copies (versioned Sneak Attacks, "USE CPR" items, Turn into Frog, Mortar …) are no longer offered by the medkit.
+* Fixed: the Bullseye Lantern sample item is equipment, as dnd5e's Lantern, Bullseye is (it was a consumable).
+* Fixed: with CAT 0.1.2 the medkit stopped part way through an actor when replacing an item with a cast activity (e.g. Paladin's Smite) made dnd5e replace that activity's cached spell.
+
 ### 14.6.3
 * Requires DAE 14.6.2.
 

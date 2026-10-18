@@ -222,9 +222,8 @@
         "effect": []
       }
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.2"
       }
     }
@@ -396,7 +395,7 @@
         }
       }
     },
-    "identifier": "irresistible-dance",
+    "identifier": "ottos-irresistible-dance",
     "sourceClass": ""
   },
   "_stats": {

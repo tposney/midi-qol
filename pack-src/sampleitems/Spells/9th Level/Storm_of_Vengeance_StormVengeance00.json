@@ -131,12 +131,6 @@
         "activity": []
       }
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "14.6.2"
-      }
-    },
     "itemacro": {
       "macro": {
         "name": "Storm of Vengeance",
@@ -159,6 +153,11 @@
         },
         "_id": null,
         "folder": null
+      }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.2"
       }
     }
   },

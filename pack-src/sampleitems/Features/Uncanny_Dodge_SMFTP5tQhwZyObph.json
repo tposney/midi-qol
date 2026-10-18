@@ -201,9 +201,8 @@
       "section": "",
       "actionSection": ""
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.2"
       }
     }
@@ -342,7 +341,7 @@
         }
       }
     },
-    "identifier": "uncanny-dodge-11441",
+    "identifier": "uncanny-dodge",
     "enchant": {},
     "advancement": [],
     "cover": null,

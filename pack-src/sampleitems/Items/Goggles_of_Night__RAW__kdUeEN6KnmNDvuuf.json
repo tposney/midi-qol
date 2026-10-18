@@ -156,7 +156,7 @@
         }
       }
     },
-    "identifier": "goggles-of-night-item-macro-raw-10037",
+    "identifier": "goggles-of-night",
     "container": null,
     "properties": [
       "mgc"
@@ -354,9 +354,8 @@
       "section": "",
       "actionSection": ""
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.1"
       }
     }

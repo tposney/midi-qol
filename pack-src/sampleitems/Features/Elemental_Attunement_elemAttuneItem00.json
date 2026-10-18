@@ -10,7 +10,8 @@
     "source": {
       "book": "PHB'24",
       "page": "",
-      "license": ""
+      "license": "",
+      "rules": "2024"
     },
     "type": {
       "value": "class",
@@ -307,9 +308,8 @@
         }
       }
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.2"
       }
     }

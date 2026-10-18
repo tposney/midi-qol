@@ -289,9 +289,8 @@
       "section": "",
       "actionSection": ""
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.0"
       }
     }
@@ -510,7 +509,7 @@
         }
       }
     },
-    "identifier": "devils-glaive-11438",
+    "identifier": "devils-glaive",
     "container": null,
     "ammunition": {},
     "magicalBonus": null,

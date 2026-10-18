@@ -201,9 +201,8 @@
         }
       }
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
+    "cat": {
+      "automation": {
         "version": "14.6.2"
       }
     }
@@ -341,7 +340,7 @@
         }
       }
     },
-    "identifier": "emboldening-bond-10010",
+    "identifier": "emboldening-bond",
     "enchant": {},
     "prerequisites": {
       "level": null,

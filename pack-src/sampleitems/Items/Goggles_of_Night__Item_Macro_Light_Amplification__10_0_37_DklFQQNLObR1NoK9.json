@@ -247,12 +247,6 @@
       "riders": {
         "activity": []
       }
-    },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "14.6.1"
-      }
     }
   },
   "_stats": {
