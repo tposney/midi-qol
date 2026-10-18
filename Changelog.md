@@ -1,4 +1,4 @@
-### 13.0.68 (unreleased)
+### 13.0.68
 * From this release the v13 (Foundry 13 / dnd5e 5.x) line receives only bug fixes, no feature enhancements.
 * Fixed: on dnd5e 5.3, ignoring or downgrading an immunity, resistance or vulnerability for specific damage types left an "All Damage" trait (e.g. DAE's `system.traits.dr.all`) in force; `idi.<type>`/`ddi.<type>` now apply against an "All Damage" immunity, and downgrading a type the target isn't immune to no longer drops its resistance.
 * Changed: with fast forward off, Alt or Ctrl on an attack skip the roll dialog with advantage or disadvantage, as dnd5e does (they opened the dialog).
