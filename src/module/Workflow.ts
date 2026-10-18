@@ -6304,57 +6304,32 @@ export class Workflow {
       itemId: this.saveActivity?.item.id ?? "",
     };
 
-    // Check ability advantage/disadvantage from settings, source grants flags, and magic resistance/vulnerability
-    // Use the shared helper to compute full trackers (advantage + roll modifiers) for all abilities
-    const abilityId = this.saveActivity!.save?.ability?.first() ?? this.saveActivity!.check?.ability ?? "";
+    // Trackers (advantage and roll modifiers) for each choice the roll offers: abilities for a save or plain check,
+    // else the skills or tools, rolled with the check's ability.
+    const isSkillOrTool = rollType === "skill" || rollType === "tool";
+    const choiceIds = rollType === "skill" ? rollSkills : rollType === "tool" ? rollTools : rollAbilities;
+    const checkAbility = this.saveActivity?.check?.ability || undefined;
     const isConcentrationCheck = this.item.flags?.[MODULE_ID]?.isConcentrationCheck;
     // A concentration check's save also takes the concentration advantage flags.
     const preComputedMap = await buildPreComputedAdvantageMap(
       target.actor!,
       (rollType === "save" && isConcentrationCheck) ? "concentration" : rollType ?? "",
-      rollAbilities,
-      { workflow: this, isMagicSave: !!isMagicSave }
+      choiceIds,
+      { workflow: this, isMagicSave: !!isMagicSave },
+      isSkillOrTool ? checkAbility : undefined
     );
 
-    // Get the default ability's tracker for saveDetails
-    const defaultAbilityData = preComputedMap[abilityId];
+    const defaultId = isSkillOrTool ? choiceIds[0] : (this.saveActivity!.save?.ability?.first() ?? checkAbility ?? "");
+    const defaultData = preComputedMap[defaultId ?? ""];
     // tracker is always a RollModifierTracker instance here (before socketlib serialization)
-    saveDetails.modifierTracker = defaultAbilityData?.tracker instanceof RollModifierTracker ? defaultAbilityData.tracker : undefined;
-    saveDetails.advantage = defaultAbilityData?.hasAdvantage;
-    saveDetails.disadvantage = defaultAbilityData?.hasDisadvantage;
+    saveDetails.modifierTracker = defaultData?.tracker instanceof RollModifierTracker ? defaultData.tracker : undefined;
+    saveDetails.advantage = defaultData?.hasAdvantage;
+    saveDetails.disadvantage = defaultData?.hasDisadvantage;
     saveDetails.isConcentrationCheck = isConcentrationCheck;
 
-    // Pre-compute advantage for all choices when multiple are available.
-    // A roll is always ONE type (save, skill check, or tool check), so we use a single object.
+    // A roll is always ONE type (save, skill check, or tool check), so one map covers its choices.
     // tracker.toJSON() is called automatically during socketlib transmission; GMAction reconstructs.
-    const multipleChoices = rollAbilities.length > 1 || rollSkills.length > 1 || rollTools.length > 1;
-    if (multipleChoices) {
-      // Determine which type has multiple choices and build the object
-      let choiceMap: Record<string, PreComputedAdvantage>;
-      if (rollAbilities.length > 1) {
-        // Already computed above for abilities
-        choiceMap = preComputedMap;
-      } else if (rollSkills.length > 1) {
-        choiceMap = await buildPreComputedAdvantageMap(
-          target.actor!,
-          "skill",
-          rollSkills,
-          { workflow: this, isMagicSave: false },
-          this.saveActivity?.check?.ability || undefined
-        );
-      } else {
-        choiceMap = await buildPreComputedAdvantageMap(
-          target.actor!,
-          "tool",
-          rollTools,
-          { workflow: this, isMagicSave: false },
-          this.saveActivity?.check?.ability || undefined
-        );
-      }
-
-      // Copy the choice map data to saveDetails (tracker is always an instance here, before socketlib)
-      saveDetails.advantageByChoice = choiceMap;
-    }
+    if (choiceIds.length > 1) saveDetails.advantageByChoice = preComputedMap;
 
     // Check for friendly target auto-fail/success from activity settings
     if (saveDetails.isFriendly && saveDetails.modifierTracker) {

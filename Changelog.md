@@ -1,3 +1,8 @@
+### 14.0.16 (unreleased)
+
+**Rolls and saves**
+* Fixed: a check activity's skill or tool check could lose the roller's fail/success, min/max and advantage (with CAT active, a Stealth check ignored `flags.midi-qol.success.skill.ste`).
+
 ### 14.0.15
 * Requires DAE 14.0.18.
 
