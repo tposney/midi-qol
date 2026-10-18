@@ -271,7 +271,7 @@ Applied aura copies get `flags.auraeffects.fromAura: true`. Old `flags.ActiveAur
 
 40. **Ability check flags follow the rolled ability** — a skill or tool roll's ability can be passed in or changed in the roll dialog, so `min`/`max.ability.check.*` (and `fail`/`success` for a changed ability) are applied in `dnd5e.postBuildSkillRollConfig` / `postBuildToolRollConfig` from `config.data.abilityId`, which fire for every build with or without the dialog (#1572). Flags evaluated before the dialog use `config.ability`, not the skill's default.
 
-41. **Versions** — midi's version is `package.json` (`module.json` is a template filled by gulp); DAE's is `src/module.json`. A midi release that relies on a DAE change raises the DAE minimum in midi's `module.json` and says so in the changelog.
+41. **Versions** — midi's version is `package.json` (`module.json` is a template filled by gulp); DAE's is `src/module.json`. A midi release that relies on a DAE change raises the DAE minimum in midi's `module.json` and says so in the changelog. Bumping DAE's version in `src/module.json` also means updating its `download` zip name (`package/dae-v<version>.zip`) to match, and copying the changed `module.json` into DAE's `package/` folder (the manifest URL serves `package/module.json`).
 
 ## Testing
 
@@ -282,7 +282,7 @@ Tests use the Quench framework in separate test modules (not embedded in the mai
 
 **CRITICAL: Never remove tests without explicit user consent.**
 
-Before running suites on :30001/:30002, "test scene" (`Ha0MAUFx9RWCQmui`) must be the ACTIVE scene (not "test scene (Copy)") with the canonical token layout (see memory `test-scene-active`); otherwise trap, vision and template-height tests fail spuriously. Baseline (2026-10-16): dnd6 991 pass / 19 pending, v14 787 / 19, no failures; v13 584 pass with only 32.12/32.13 failing (the per-actor status queue is not on v13, by decision). Packaging (`gulp package`) deletes `dist/`, which the dev servers load from — rebuild afterwards.
+Before running suites on :30001/:30002, "test scene" (`Ha0MAUFx9RWCQmui`) must be the ACTIVE scene (not "test scene (Copy)") with the canonical token layout (see memory `test-scene-active`); otherwise trap, vision and template-height tests fail spuriously. Baseline (2026-10-18): dnd6 full suite (midi, DAE and other test modules) 1539 pass / 21 pending; v14 midi 803 / 19 and DAE 371 / 58 (dnd6-only pending); v13 midi 601 + 24 (damage cards, batch id `midi-qol.damageCardTests`) with only 32.12/32.13 failing (the per-actor status queue is not on v13, by decision). Packaging (`gulp package`) deletes `dist/`, which the dev servers load from — rebuild afterwards.
 
 ### Test Conventions
 - **midi-qol**: Batch ID `quench.midi-qol.{camelCaseName}`, displayName `"{number}. {Title} Tests"`, export `register{Number}{PascalCaseName}Tests`
