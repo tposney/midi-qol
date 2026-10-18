@@ -1510,6 +1510,8 @@ type BasicRollConfig = {
     properties?: string[];
     maximum?: number;
     minimum?: number;
+    /** The minimum/maximum is midi's auto-success/fail, which forces the result without a natural crit/fumble */
+    midiAutoResult?: "fail" | "success";
     advantage?: boolean;
     disadvantage?: boolean;
     advantageMode?: number;

@@ -5497,12 +5497,16 @@ export class Workflow {
       return { isCritical: false, isFumble: false };
     }
     const dterm = saveRoll.terms[0] as foundry.dice.terms.DiceTerm;
-    const diceRoll = activeDiceTotal(dterm) ?? fallbackTotal;
+    // The value the die counts as, except under midi's auto-success/fail, which force the result without a natural
+    // crit/fumble: the face decides, and an auto-fail is never critical nor an auto-success a fumble (as for attacks).
+    // @ts-expect-error midiAutoResult is a custom roll option
+    const autoResult: "fail" | "success" | undefined = saveRoll.options?.midiAutoResult;
+    const diceRoll = activeDiceTotal(dterm, !autoResult) ?? fallbackTotal;
     // dnd5e's D20Die holds the thresholds; another die (e.g. Custom D&D 5e's 3d6) brings its own.
     //@ts-expect-error no dnd5e-types
-    const isFumble = diceRoll <= (dterm.options?.criticalFailure ?? dterm.options?.fumble ?? 1);
+    const isFumble = autoResult !== "success" && diceRoll <= (dterm.options?.criticalFailure ?? dterm.options?.fumble ?? 1);
     //@ts-expect-error no dnd5e-types
-    const isCritical = diceRoll >= (dterm.options?.criticalSuccess ?? dterm.options?.critical ?? 20);
+    const isCritical = autoResult !== "fail" && diceRoll >= (dterm.options?.criticalSuccess ?? dterm.options?.critical ?? 20);
     return { isCritical, isFumble };
   }
 
@@ -6890,15 +6894,12 @@ export class Workflow {
       this.diceRoll = activeDiceTotal(terms[0] as foundry.dice.terms.DiceTerm) ?? Number(terms[0].total);
     }
 
-    // For natural critical/fumble detection, use the actual die face when auto-success/fail
-    // is active (min99/max1 from attack success/fail), since those just force
-    // hit/miss without implying a natural crit/fumble. Regular min/max modifiers (e.g. min20
-    // from rolls.attack.min) should use terms[0].total which includes the modifier adjustment.
+    // Critical/fumble from the value the die counts as (a min/max such as rolls.attack.min 20 counts), as dnd5e does;
+    // midi's auto-success/fail (min99/max1) force hit/miss without implying a natural crit/fumble, so they use the face.
     let critFumbleDiceRoll = this.diceRoll;
-    if (this.attackRollModifierTracker.modifiers.willSucceed || this.attackRollModifierTracker.modifiers.willFail) {
-      if (!(terms[0] instanceof foundry.dice.terms.NumericTerm)) {
-        critFumbleDiceRoll = activeDiceTotal(terms[0] as foundry.dice.terms.DiceTerm) ?? critFumbleDiceRoll;
-      }
+    const autoResult = this.attackRollModifierTracker.modifiers.willSucceed || this.attackRollModifierTracker.modifiers.willFail;
+    if (!autoResult && !(terms[0] instanceof foundry.dice.terms.NumericTerm)) {
+      critFumbleDiceRoll = activeDiceTotal(terms[0] as foundry.dice.terms.DiceTerm, true) ?? critFumbleDiceRoll;
     }
 
     // @ts-expect-error no dnd5e-types
@@ -9048,8 +9049,9 @@ export interface AugmentedEvent extends Event {
 }
 
 /** The natural roll of a die term: the sum of its kept dice, so a replacement die such as 2d10 counts as a whole. */
-function activeDiceTotal(term: foundry.dice.terms.DiceTerm | undefined): number | undefined {
+/** The active dice's faces, or with `counted` the values they count as (a minimum or maximum changes those) */
+function activeDiceTotal(term: foundry.dice.terms.DiceTerm | undefined, counted = false): number | undefined {
   const active = term?.results?.filter(r => r.active);
   if (!active?.length) return undefined;
-  return active.reduce((sum, r) => sum + Number(r.result), 0);
+  return active.reduce((sum, r) => sum + Number(counted ? r.count ?? r.result : r.result), 0);
 }

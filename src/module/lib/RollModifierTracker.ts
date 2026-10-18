@@ -994,10 +994,10 @@ export function applyRollModifiers(
 
   if (autoFail) {
     dialog.configure = false;
-    config.rolls = [{ options: { maximum: failValue }, parts: [] }];
+    config.rolls = [{ options: { maximum: failValue, midiAutoResult: "fail" }, parts: [] }];
   } else if (autoSuccess) {
     dialog.configure = false;
-    config.rolls = [{ options: { minimum: successValue }, parts: [] }];
+    config.rolls = [{ options: { minimum: successValue, midiAutoResult: "success" }, parts: [] }];
   } else {
     for (const roll of config.rolls) {
       roll.options ??= {};

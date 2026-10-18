@@ -9,6 +9,7 @@
 * Fixed: a tool check rolled from a request card for another actor was rolled for the clicker's actor; tool checks also honour `simulate` and the request card's roll mode, as saves and skills do.
 * Changed (macros): a `RollModifierTracker` side counts its sources; `advantage.setOverride` forces a side as a dnd5e override does, so a suppression of it still applies; `hasAdvantage`/`advantageMode` are dnd5e's verdict, then the roll as made (`reconcileWithRoll`); `processKeys` is removed.
 * Changed: a dnd5e advantage rule that forces a mode (`=1`/`=-1`) no longer beats a suppression: with `noAdvantage` (midi's, or a dnd5e Downgrade) the roll is normal, as dnd5e rolls it.
+* Fixed: an attack or save whose d20 a minimum or maximum changed (e.g. `system.rolls.attack.min` 20) was judged critical/fumble by the face rolled, not the value it counts as, as dnd5e does. midi's auto-success/fail are still not critical/fumble unless the face is; an auto-failed save is never critical and an auto-succeeded one never a fumble.
 * Fixed: Shift+Alt+Ctrl rolled saves, checks, skills, tools, death saves and initiative with advantage (dnd5e reads Shift+Alt first); it forces a normal roll, as on attacks. With the roll dialog shown it defaults to Normal.
 * Fixed: an advantage reason for an unknown tool key (e.g. `disadvantage.concentration`) showed as `tool:<key>`.
 * Removed: setting *Ability Check Advantage gives Skill Advantage*; an ability's check advantage always applies to its skills, as in dnd5e.
