@@ -214,6 +214,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "13.0.55"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "13.0.55"
+      }
     }
   },
   "system": {
@@ -363,7 +368,7 @@
         }
       }
     },
-    "identifier": "bardic-inspiration-dnd202-mq10010",
+    "identifier": "bardic-inspiration",
     "enchant": {},
     "prerequisites": {
       "level": null,

@@ -234,6 +234,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "13.0.55"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "13.0.55"
+      }
     }
   },
   "system": {
@@ -265,7 +270,7 @@
       "repeatable": false
     },
     "activities": {},
-    "identifier": "blessed-healer-11438",
+    "identifier": "blessed-healer",
     "enchant": {},
     "advancement": [],
     "cover": null,

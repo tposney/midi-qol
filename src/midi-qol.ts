@@ -5,6 +5,7 @@ import { checkModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, readyPatching, initPatching, addDiceTermModifiers, computeAbilityAdvantage, computeSkillAdvantage, computeToolAdvantage, processWoundedStatus, getActorWoundedSemaphore } from './module/patching.js';
 import { MidiDependentsRegistry } from './module/lib/MidiDependentsRegistry.js';
 import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
+import { setupCATIntegration } from './module/catIntegration.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
@@ -381,6 +382,7 @@ Hooks.once('init', async function () {
   log('Initializing midi-qol');
   window.customElements.define("midi-damage-application", DamageApplicationElementMidi as unknown as CustomElementConstructor);
   setupActivities();
+  setupCATIntegration();
 
   // Register custom RegionBehaviorType for region activities (emanation auras)
   CONFIG.RegionBehavior.dataModels[`${MODULE_ID}.regionActivity`] = MidiRegionActivityBehaviorType as any;

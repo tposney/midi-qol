@@ -206,6 +206,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "14.0.14"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.0.14"
+      }
     }
   },
   "system": {
@@ -341,7 +346,7 @@
         }
       }
     },
-    "identifier": "emboldening-bond-10010",
+    "identifier": "emboldening-bond",
     "enchant": {},
     "prerequisites": {
       "level": null,

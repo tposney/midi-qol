@@ -159,6 +159,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "13.0.55"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "13.0.55"
+      }
     }
   },
   "system": {
@@ -485,7 +490,7 @@
         }
       }
     },
-    "identifier": "dragon-slayer-longsword-11438",
+    "identifier": "dragon-slayer",
     "ammunition": {},
     "mastery": "",
     "attuned": false,

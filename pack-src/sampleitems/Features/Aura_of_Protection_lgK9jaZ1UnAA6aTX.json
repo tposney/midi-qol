@@ -169,6 +169,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "13.0.55"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "13.0.55"
+      }
     }
   },
   "system": {
@@ -195,7 +200,7 @@
     },
     "requirements": "Paladin 6",
     "activities": {},
-    "identifier": "aura-of-protection-hud-10010",
+    "identifier": "aura-of-protection",
     "enchant": {},
     "prerequisites": {
       "level": null,

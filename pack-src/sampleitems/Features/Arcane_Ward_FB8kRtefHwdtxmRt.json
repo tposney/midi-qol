@@ -144,6 +144,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "14.0.14"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.0.14"
+      }
     }
   },
   "img": "icons/magic/control/debuff-chains-ropes-net-white.webp",
@@ -291,7 +296,7 @@
         }
       }
     },
-    "identifier": "arcane-ward-resource-usage-10010",
+    "identifier": "arcane-ward",
     "enchant": {},
     "prerequisites": {
       "level": null,

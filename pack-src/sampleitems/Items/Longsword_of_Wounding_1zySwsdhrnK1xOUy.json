@@ -282,6 +282,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "14.0.14"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.0.14"
+      }
     }
   },
   "system": {
@@ -501,7 +506,7 @@
         }
       }
     },
-    "identifier": "greatsword-of-wounding-11438",
+    "identifier": "sword-of-wounding",
     "container": null,
     "ammunition": {},
     "magicalBonus": null,

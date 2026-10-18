@@ -150,6 +150,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "13.0.55"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "13.0.55"
+      }
     }
   },
   "system": {
@@ -177,7 +182,7 @@
     "requirements": "",
     "properties": [],
     "activities": {},
-    "identifier": "regeneration-11426",
+    "identifier": "regeneration",
     "enchant": {},
     "prerequisites": {
       "level": null,

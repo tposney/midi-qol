@@ -1,6 +1,6 @@
 {
   "name": "Bullseye Lantern",
-  "type": "consumable",
+  "type": "equipment",
   "img": "icons/sundries/lights/lantern-iron-yellow.webp",
   "system": {
     "description": {
@@ -26,30 +26,15 @@
     "identified": true,
     "uses": {
       "max": "",
-      "autoDestroy": false,
       "spent": 0,
       "recovery": []
-    },
-    "damage": {
-      "base": {
-        "number": null,
-        "denomination": null,
-        "types": [],
-        "custom": {
-          "enabled": false
-        },
-        "scaling": {
-          "number": 1
-        }
-      },
-      "replace": false
     },
     "unidentified": {
       "description": ""
     },
     "type": {
       "value": "trinket",
-      "subtype": ""
+      "baseItem": ""
     },
     "activities": {
       "dnd5eactivity000": {
@@ -160,7 +145,7 @@
         }
       }
     },
-    "identifier": "bullseye-lantern-11438",
+    "identifier": "lantern-bullseye",
     "container": null,
     "magicalBonus": null,
     "properties": [],
@@ -338,7 +323,12 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "14.0.13"
+        "version": "14.0.15"
+      }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.0.15"
       }
     }
   },

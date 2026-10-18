@@ -119,6 +119,11 @@
     "source": "midi-qol.midiqol-sample-items",
     "version": "14.0.12"
    }
+  },
+  "cat": {
+   "automation": {
+    "version": "14.0.12"
+   }
   }
  },
  "folder": "fZIl4G4qj3C894LI",

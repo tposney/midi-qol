@@ -166,6 +166,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "13.0.55"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "13.0.55"
+      }
     }
   },
   "system": {
@@ -192,7 +197,7 @@
     },
     "requirements": "Paladin 10",
     "activities": {},
-    "identifier": "aura-of-courage-10010",
+    "identifier": "aura-of-courage",
     "enchant": {},
     "prerequisites": {
       "level": null,

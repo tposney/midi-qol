@@ -294,6 +294,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "13.0.55"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "13.0.55"
+      }
     }
   },
   "system": {
@@ -510,7 +515,7 @@
         }
       }
     },
-    "identifier": "devils-glaive-11438",
+    "identifier": "devils-glaive",
     "container": null,
     "ammunition": {},
     "magicalBonus": null,

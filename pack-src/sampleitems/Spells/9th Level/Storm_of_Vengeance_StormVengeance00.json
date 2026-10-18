@@ -160,6 +160,11 @@
         "_id": null,
         "folder": null
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.0.14"
+      }
     }
   },
   "system": {

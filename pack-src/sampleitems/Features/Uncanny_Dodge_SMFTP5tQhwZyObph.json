@@ -206,6 +206,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "14.0.14"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.0.14"
+      }
     }
   },
   "system": {
@@ -342,7 +347,7 @@
         }
       }
     },
-    "identifier": "uncanny-dodge-11441",
+    "identifier": "uncanny-dodge",
     "enchant": {},
     "advancement": [],
     "cover": null,

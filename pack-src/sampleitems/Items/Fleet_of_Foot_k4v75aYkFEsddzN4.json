@@ -210,6 +210,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "13.0.55"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "13.0.55"
+      }
     }
   },
   "system": {
@@ -233,7 +238,7 @@
     },
     "requirements": "Race: Wood Elf",
     "activities": {},
-    "identifier": "fleet-of-foot-10010",
+    "identifier": "fleet-of-foot",
     "enchant": {},
     "prerequisites": {
       "level": null,

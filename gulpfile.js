@@ -316,6 +316,11 @@ function generateFoundryId() {
  * Also handles embedded documents (effects, activities)
  * Recursively scans subdirectories for nested folder structures.
  */
+function setCPRInfo(item, source, version) {
+  item.flags["chris-premades"] ??= {};
+  item.flags["chris-premades"].info = { ...item.flags["chris-premades"].info, source, version };
+}
+
 async function ensurePackIds(packSrcDir, { documentType = "Item", compendiumSource = "midi-qol.midiqol-sample-items" } = {}) {
   let modified = 0;
   const midiVersion = PACKAGE.version;
@@ -396,25 +401,21 @@ async function ensurePackIds(packSrcDir, { documentType = "Item", compendiumSour
           }
         }
 
-        // Stamp chris-premades info for CPR medkit compatibility
-        // Only bump version if file was modified since last compile, or if info is missing
-        const fileMtime = fs.statSync(fullPath).mtimeMs;
-        const cprInfo = item.flags?.["chris-premades"]?.info;
-        const fileModifiedSinceCompile = fileMtime > lastCompileTime;
-        const cprInfoMissing = !cprInfo || !cprInfo.version || !cprInfo.source;
-        if (cprInfoMissing || fileModifiedSinceCompile) {
-          if (!item.flags) item.flags = {};
-          if (!item.flags["chris-premades"]) item.flags["chris-premades"] = {};
-          if (!item.flags["chris-premades"].info) item.flags["chris-premades"].info = {};
-          const info = item.flags["chris-premades"].info;
-          if (info.source !== compendiumSource || info.version !== midiVersion) {
-            const reason = cprInfoMissing ? "missing CPR info" : "file modified since last compile";
-            console.log(`CPR version updated for ${entry.name}: ${info.version || "none"} -> v${midiVersion} (${reason})`);
-            info.source = compendiumSource;
-            info.version = midiVersion;
+        // CAT's automation version: set when missing, bumped to midi's version when the file changed since the last
+        // compile. Only items marked as automations (flags.cat.automation); demos and legacy copies carry none.
+        // flags.chris-premades.info.version is kept in step: CAT 0.0.8 reads it when it re-registers midi's pack.
+        const automation = item.flags?.cat?.automation;
+        if (automation && typeof automation === "object") {
+          const fileModifiedSinceCompile = fs.statSync(fullPath).mtimeMs > lastCompileTime;
+          if ((!automation.version || fileModifiedSinceCompile) && automation.version !== midiVersion) {
+            console.log(`CAT version updated for ${entry.name}: ${automation.version || "none"} -> ${midiVersion}`);
+            automation.version = midiVersion;
             changed = true;
-          } else if (fileModifiedSinceCompile) {
-            console.log(`CPR version unchanged for ${entry.name}: v${midiVersion} (file modified but version already current)`);
+          }
+          const info = item.flags["chris-premades"]?.info;
+          if (info?.source !== compendiumSource || info?.version !== automation.version) {
+            setCPRInfo(item, compendiumSource, automation.version);
+            changed = true;
           }
         }
 

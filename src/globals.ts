@@ -47,6 +47,7 @@ declare module "fvtt-types/configuration" {
       "dae.setFieldData": (fieldData: Record<string, string[]>) => void;
       "dae.addAutoFields": (addAutoFields: Function, fields: { BooleanFormulaField?: any }) => void;
       "dae.ready": (api: any) => void;
+      "catReady": () => void;
       "dae.setupComplete": (api: any) => void;
       "dnd5e.activityConsumption": (activity: Activity, usageConfig: ActivityUseConfiguration, messageConfig: RollMessageConfig, updates: unknown) => boolean | void;
       "dnd5e.applyDamage": (actor: Actor.Implementation, amount: number, options: DamageApplicationOptions) => void;
@@ -685,6 +686,18 @@ declare global {
     localizationMap: Record<string, { name?: string; description?: string }>;
     [key: string]: any;
   };
+  /** Coven's Automation Toolkit, when active: the parts midi uses. */
+  var cat: {
+    api: {
+      registerAutomationModule: (id: string, options?: {
+        ignoredPackIds?: string[];
+        infoFetcherCallback?: (entry: { flags?: { cat?: { automation?: { version?: string } } } }) => object;
+      }) => Promise<unknown>;
+    };
+    utils: {
+      automationUtils: { updateItem: (item: Item.Implementation, options?: object) => Promise<unknown> };
+    };
+  } | undefined;
   var MidiDAEEval: {
     testfunc: (...args: any[]) => void;
     canSee: typeof utils.canSee;

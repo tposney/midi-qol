@@ -315,12 +315,6 @@
       "otherCondition": "",
       "effectCondition": "",
       "removeAttackDamageButtons": "default"
-    },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.55"
-      }
     }
   },
   "img": "icons/magic/light/orbs-hand-gray.webp",

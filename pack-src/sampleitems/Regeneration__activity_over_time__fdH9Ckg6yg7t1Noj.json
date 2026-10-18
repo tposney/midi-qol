@@ -7,7 +7,7 @@
       "chat": ""
     },
     "source": {
-      "custom": "midi-qol 12.4.28",
+      "custom": "midi-qol sample",
       "book": "SRD 5.1",
       "page": "",
       "license": "CC-BY-4.0",
@@ -189,12 +189,6 @@
     "tidy5e-sheet": {
       "section": "",
       "actionSection": ""
-    },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.55"
-      }
     }
   },
   "img": "icons/skills/wounds/anatomy-organ-heart-red.webp",

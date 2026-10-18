@@ -123,6 +123,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "14.0.6"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.0.6"
+      }
     }
   },
   "system": {
@@ -311,7 +316,7 @@
         }
       }
     },
-    "identifier": "arrow-of-slaying-dragon-11413",
+    "identifier": "arrow-of-slaying-dragon",
     "magicalBonus": null,
     "attuned": false,
     "equipped": false

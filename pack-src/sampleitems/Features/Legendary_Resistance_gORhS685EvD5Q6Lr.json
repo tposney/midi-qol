@@ -224,6 +224,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "13.0.55"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "13.0.55"
+      }
     }
   },
   "system": {
@@ -364,7 +369,7 @@
         }
       }
     },
-    "identifier": "legendary-resistance-10413",
+    "identifier": "legendary-resistance",
     "enchant": {},
     "prerequisites": {
       "level": null,

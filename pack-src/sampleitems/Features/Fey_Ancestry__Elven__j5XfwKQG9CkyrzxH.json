@@ -161,6 +161,11 @@
         "source": "midi-qol.midiqol-sample-items",
         "version": "13.0.55"
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "13.0.55"
+      }
     }
   },
   "system": {
@@ -184,7 +189,7 @@
     },
     "requirements": "Elf, Half-Elf",
     "activities": {},
-    "identifier": "fey-ancestry-elven-10044",
+    "identifier": "fey-ancestry",
     "enchant": {},
     "prerequisites": {
       "level": null,

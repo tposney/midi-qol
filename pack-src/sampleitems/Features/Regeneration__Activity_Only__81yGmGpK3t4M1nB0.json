@@ -78,13 +78,6 @@
       "section": "",
       "actionSection": ""
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "rules": "modern",
-        "version": "14.0.13"
-      }
-    },
     "crux": {
       "trayVisibility": "default"
     }
@@ -95,7 +88,7 @@
       "chat": ""
     },
     "source": {
-      "custom": "Midi 12.4.40",
+      "custom": "midi-qol sample",
       "revision": 1,
       "rules": "2014",
       "book": "",

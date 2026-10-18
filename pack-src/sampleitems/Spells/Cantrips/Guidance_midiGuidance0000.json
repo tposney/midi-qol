@@ -192,6 +192,11 @@
         },
         "flags": {}
       }
+    },
+    "cat": {
+      "automation": {
+        "version": "13.0.55"
+      }
     }
   },
   "system": {
