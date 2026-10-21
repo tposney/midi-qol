@@ -878,13 +878,22 @@ export function getToolLabel(toolId: string): string {
 export function buildRollChoices(
   actor: Actor.Implementation,
   rollType: "save" | "check" | "skill" | "tool",
-  ids: string[]
+  ids: string[],
+  abilityFor?: (id: string) => string | undefined
 ): { value: string, label: string, modifier: string }[] {
+  // A skill or tool rolled with another ability than its own swaps that ability's modifier
+  const skillToolTotal = (entry: { total?: number, ability?: string } | undefined, ability: string | undefined): number => {
+    const total = entry?.total ?? 0;
+    if (!ability || !entry?.ability || ability === entry.ability) return total;
+    //@ts-expect-error no dnd5e-types
+    const abilities = actor.system.abilities;
+    return total - (abilities?.[entry.ability]?.mod ?? 0) + (abilities?.[ability]?.mod ?? 0);
+  };
   if (rollType === "skill") {
     return ids.map(skillId => {
       const label = GameSystemConfig.skills[skillId]?.label ?? skillId;
       //@ts-expect-error no dnd5e-types
-      const total: number = actor.system.skills?.[skillId]?.total ?? 0;
+      const total = skillToolTotal(actor.system.skills?.[skillId], abilityFor?.(skillId));
       const modifier = total >= 0 ? `+${total}` : `${total}`;
       return { value: skillId, label, modifier };
     });
@@ -893,7 +902,7 @@ export function buildRollChoices(
     return ids.map(toolId => {
       const label = getToolLabel(toolId);
       //@ts-expect-error no dnd5e-types
-      const total: number = actor.system.tools?.[toolId]?.total ?? 0;
+      const total = skillToolTotal(actor.system.tools?.[toolId], abilityFor?.(toolId));
       const modifier = total >= 0 ? `+${total}` : `${total}`;
       return { value: toolId, label, modifier };
     });
@@ -2976,7 +2985,7 @@ function checkSurfaceCollision(
     const blocked = !!canvas.scene?.testSurfaceCollision?.(
       { x: origin.x, y: origin.y, elevation: oElev },
       { x: dest.x, y: dest.y, elevation: dElev },
-      { type: "sight", mode: "any" }
+      { type: "move", mode: "any" }
     );
     if (!blocked) return false;
   }
@@ -2999,6 +3008,12 @@ export function collisionLevel(token: Token.Implementation | TokenDocument.Imple
  * @param options - Collision check options
  * @returns true if collision detected (path blocked), false if clear
  */
+/** Only walls that block movement give total cover: darkness and sight-only walls (curtains) leave a target attackable */
+function wallBlocksPath(origin: { x: number, y: number }, dest: { x: number, y: number }, source: WallCollisionOptions["source"], level: unknown): boolean {
+  // @ts-expect-error v14 collision level not in fvtt-types
+  return !!CONFIG.Canvas.polygonBackends.move.testCollision(origin, dest, { source, mode: "any", type: "move", level });
+}
+
 export function checkWallCollision(
   origin: { x: number, y: number },
   dest: { x: number, y: number },
@@ -3010,13 +3025,7 @@ export function checkWallCollision(
 
   switch (wallsBlockRange) {
     case "center": {
-      blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
-        source,
-        mode: "any",
-        type: "sight",
-        // @ts-expect-error v14 collision level not in fvtt-types
-        level
-      });
+      blocked = !!wallBlocksPath(origin, dest, source, level);
       // v14: also check region surface collisions for cross-elevation rays
       if (!blocked) blocked = checkSurfaceCollision(origin, dest, options);
       return blocked;
@@ -3027,26 +3036,14 @@ export function checkWallCollision(
       // no collision API on v14, only a Scene#testSurfaceCollision wrapper.
       if (coverVisible === false) return true;
       if (coverVisible !== undefined) return false;
-      blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
-        source,
-        mode: "any",
-        type: "sight",
-        // @ts-expect-error v14 collision level not in fvtt-types
-        level
-      });
+      blocked = !!wallBlocksPath(origin, dest, source, level);
       if (!blocked) blocked = checkSurfaceCollision(origin, dest, options);
       return blocked;
 
     case "alternative":
     case "simbuls-cover-calculator":
       if (coverVisible === undefined) {
-        blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
-          source,
-          mode: "any",
-          type: "sight",
-          // @ts-expect-error v14 collision level not in fvtt-types
-          level
-        });
+        blocked = !!wallBlocksPath(origin, dest, source, level);
         if (!blocked) blocked = checkSurfaceCollision(origin, dest, options);
         return blocked;
       }
@@ -3812,10 +3809,10 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
 
       // Wall blocking is indicated by rawDistance < 0, check it first before applying fudge factor
       if (rawDistance < 0) {
-        log(`${target.name} is blocked by a wall`)
+        log(`${target.name} has total cover`)
         return {
           result: "fail",
-          reason: `${actor?.name}'s target is blocked by a wall`,
+          reason: i18nFormat("midi-qol.TargetTotalCover", { name: actor?.name ?? "" }),
           range,
           longRange
         }
@@ -3937,6 +3934,48 @@ export function initCoverConstants() {
 
 /** A position to evaluate cover from, in scene pixels, as `TokenDocument#x`/`y` are. */
 export type CoverPosition = { x: number, y: number, elevation?: number };
+
+/** The targets an activity that needs targets it can see is used against that its token can't see */
+export function unseenTargets(activity: Activity, token: TokenOrDocument | undefined, targets: Iterable<TokenOrDocument>): TokenOrDocument[] {
+  if (!activity.midiProperties?.targetMustBeSeen || !token) return [];
+  const tokenDocument = getTokenDocument(token);
+  return [...targets].filter(target => getTokenDocument(target) !== tokenDocument && !canSee(token, target));
+}
+
+/** Warn about targets the activity needs to see and can't; false when *Targets you can see* is enforced and one isn't seen */
+export function checkTargetsSeen(activity: Activity, token: TokenOrDocument | undefined, targets: Iterable<TokenOrDocument>): boolean {
+  const mode = checkMechanic("targetMustBeSeen");
+  if (!mode || mode === "nothing") return true;
+  const unseen = unseenTargets(activity, token, targets);
+  if (!unseen.length) return true;
+  ui.notifications?.warn(i18nFormat("midi-qol.TargetNotSeen", {
+    name: activity.item?.name ?? "", targets: unseen.map(target => getTokenPlayerName(target)).join(", ")
+  }));
+  return mode !== "enforce";
+}
+
+/**
+ * The targets with total cover, which can't be targeted: with *Cover calculation* set, the Total Cover status, or a cover
+ * module's total cover. None with *Ignore total cover*.
+ */
+export function totalCoverTargets(activity: Activity, token: TokenOrDocument | undefined, targets: Iterable<TokenOrDocument>): TokenOrDocument[] {
+  const coverCalculation = configSettings.optionalRules.coverCalculation;
+  if (!coverCalculation || coverCalculation === "none" || !token || activity.midiProperties?.ignoreFullCover) return [];
+  const tokenDocument = getTokenDocument(token);
+  return [...targets].filter(target => getTokenDocument(target) !== tokenDocument
+    && (hasCoverTotal(getTokenDocument(target)?.actor)
+      || (coverCalculation !== "dnd5eStatus" && computeCoverBonus(token, target, activity) === TOTAL_COVER)));
+}
+
+/** Warn about targets with total cover; false if there are any */
+export function checkTotalCover(activity: Activity, token: TokenOrDocument | undefined, targets: Iterable<TokenOrDocument>): boolean {
+  const covered = totalCoverTargets(activity, token, targets);
+  if (!covered.length) return true;
+  ui.notifications?.warn(i18nFormat("midi-qol.TargetsTotalCover", {
+    name: activity.item?.name ?? "", targets: covered.map(target => getTokenPlayerName(target)).join(", ")
+  }));
+  return false;
+}
 
 /** Check if an actor has the coverTotal status (impossible to hit). */
 export function hasCoverTotal(actor: Actor | null | undefined): boolean {
@@ -4690,8 +4729,9 @@ export async function removeHiddenCondition(tokenRef?: TokenOrDocument | string)
 
 export async function removeTokenConditionEffect(token: Token.Implementation, condition: string) {
   if (!token) return;
-  const hasEffect = token.actor?.appliedEffects.find(ef => ef.name === condition);
-  if (hasEffect) await expireEffects(token.actor!, [hasEffect], { "expiry-reason": `midi-qol:removeTokenCondition:${condition}` });
+  const named = Array.from(token.actor?.allApplicableEffects() ?? []).filter(ef => ef.name === condition);
+  const hasEffect = named.find(ef => ef.active) ?? named[0];
+  if (hasEffect) await deleteAppliedEffects(token.actor!, [hasEffect], { "expiry-reason": `midi-qol:removeTokenCondition:${condition}` });
 }
 
 export async function expireMyEffects(this: Workflow, effectsToExpire: string[]) {
@@ -7081,7 +7121,7 @@ export async function setReactionUsed(actor: Actor.Implementation, active: boole
   if (!["all", "displayOnly"].includes(configSettings.enforceReactions) && configSettings.enforceReactions !== actor.type) return;
   const actions = actor.getFlag(MODULE_ID, "actions");
   const newCount = (actions?.reactionsUsed ?? 0) + 1;
-  const effect = foundry.utils.deepClone(getReactionEffect());
+  const effect = getReactionEffect()?.clone({}, { keepId: true });
   if (!effect) return;
   effect.updateSource({
     origin: actor.uuid,
@@ -7110,7 +7150,7 @@ export async function setBonusActionUsed(actor: Actor.Implementation) {
   if (!["all", "displayOnly"].includes(configSettings.enforceBonusActions) && configSettings.enforceBonusActions !== actor.type) return;
   const actions = (actor.getFlag(MODULE_ID, "actions"));
   const newCount = (actions?.bonusActionsUsed ?? 0) + 1;
-  const effect = foundry.utils.deepClone(getBonusActionEffect());
+  const effect = getBonusActionEffect()?.clone({}, { keepId: true });
   if (!effect) return;
   effect.updateSource({
     origin: actor.uuid,
@@ -9481,45 +9521,49 @@ export function isEffectExpired(effect: ActiveEffect.Implementation): boolean {
   return effect.duration.remaining <= 0;
 }
 
+/**
+ * End effects by a special duration (or another midi expiry): each goes to DAE's expireEffect, which deletes it or
+ * suppresses it (disabled, kept) as its Expiry Mode and DAE's Special Duration Expiry Action say.
+ */
 export async function expireEffects(actor: Actor.Implementation, effects: ActiveEffect.Implementation[], options: any): Promise<any> {
   if (!effects) return {};
-  const actorEffectsToExpire: string[] = [];
+  const expired: string[] = [];
+  for (const effect of effects) {
+    // another expiry (e.g. a concurrent one for a different key) may have removed it
+    if (!effect.id || !effect.parent?.effects.has(effect.id)) continue;
+    try {
+      await globalThis.DAE.expireEffect(effect, options);
+      expired.push(effect.id);
+    } catch (err) {
+      console.warn(`midi-qol | expireEffects: ${effect.name} (${effect.uuid})`, err);
+    }
+  }
+  return { expired };
+}
+
+/** Remove effects: applied effects and enchantments are deleted, an item's own (transfer) effects disabled. */
+export async function deleteAppliedEffects(actor: Actor.Implementation, effects: ActiveEffect.Implementation[], options: Record<string, unknown> = {}): Promise<{ deleted: string[], disabled: ActiveEffect[], itemEffects: ActiveEffect[] }> {
+  if (!effects) return { deleted: [], disabled: [], itemEffects: [] };
+  const actorEffectsToDelete: string[] = [];
   const effectsToDelete: ActiveEffect[] = [];
   const effectsToDisable: ActiveEffect[] = [];
   for (let effect of effects) {
     if (!effect.id) continue;
     if (!fromUuidSync(effect.uuid)) continue;
     // @ts-expect-error no dnd5e-types
-    if (effect.parent instanceof Item && effect.type === "enchantment")
-      effectsToDelete.push(effect);
-    else if (effect.transfer)
+    if (effect.parent instanceof Item && effect.type === "enchantment") {
+      // an applied enchantment; never an enchantment's own definition
+      // @ts-expect-error no dnd5e-types
+      if (effect.isAppliedEnchantment) effectsToDelete.push(effect);
+    } else if (effect.transfer)
       effectsToDisable.push(effect);
     else if (effect.parent instanceof Actor)
-      actorEffectsToExpire.push(effect.id);
+      actorEffectsToDelete.push(effect.id);
   }
-  if (actorEffectsToExpire.length > 0) {
-    // Resolve DAE's special duration expiry action: "default" falls through to core config
-    // @ts-expect-error dae setting not in midi-qol types
-    const daeSetting: string = game.settings.get("dae", "expiryAction");
-    // @ts-expect-error v14 CONFIG.ActiveEffect.expiryAction
-    const expiryAction = (daeSetting === "delete" || daeSetting === "update") ? daeSetting : (CONFIG.ActiveEffect.expiryAction ?? "update");
-    if (expiryAction === "delete") {
-      await actor.deleteEmbeddedDocuments("ActiveEffect", actorEffectsToExpire, options);
-    } else {
-      const updates = actorEffectsToExpire.map(id => ({ _id: id, "duration.expired": true }));
-      await actor.updateEmbeddedDocuments("ActiveEffect", updates, options);
-    }
-  }
-  if (effectsToDisable.length > 0) {
-    for (let effect of effectsToDisable) {
-      await effect.update({ "disabled": true }, options)
-    }
-  }
-  if (effectsToDelete.length > 0) {
-    for (let effect of effectsToDelete)
-      await effect.delete(options);
-  }
-  return { expired: actorEffectsToExpire, disabled: effectsToDisable, itemEffects: effectsToDelete };
+  if (actorEffectsToDelete.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", actorEffectsToDelete, options);
+  for (let effect of effectsToDisable) await effect.update({ "disabled": true }, options);
+  for (let effect of effectsToDelete) await effect.delete(options);
+  return { deleted: actorEffectsToDelete, disabled: effectsToDisable, itemEffects: effectsToDelete };
 }
 
 /** Concentration requests already claimed by this client: a new message renders twice (log and notification). */

@@ -8,14 +8,14 @@ This guide is intended for new users to midi-qol who need some guidance on setti
 ## What can midi-qol do?
 Quite a lot, depending on how you configure it; at its simplest, it can speed up rolling by reducing the number of clicks/popups. To help illustrate some of its capabilities, here's an example: a spider attacking a goblin using the base dnd5e system.  
 ![dnd5e spider bite](GettingStartedPics/Base%20Spider%20Bite.png)  
-Foundry has displayed a chat card with buttons on it for attack and damage and doing the saving throw, as well as a "versatile" damage roll for the damage to be done on a failed save. You go through the following steps
+dnd5e has displayed a chat card with Attack and Damage buttons for the bite. The poison is a second activity on the same item, a Constitution save with its own damage. You go through the following steps
   * Press the attack button which prompts you to decide if the attack is made with advantage or disadvantage and whether there are any special bonuses, like luck/bardic inspiration.
   * Decide if the attack hit remembering to deal with any reactions the target might take, like a shield spell.
   * If the attack hit, roll the damage remembering to check if it is a critical hit and if there are any special bonuses for the damage, like a mace of disruption/dragon slayer sword.
   * Apply the damage using the system damage tray
   * Roll the saving throw, remembering if the save is made with advantage/disadvantage and any bonuses to apply
-  * Roll the versatile damage as well if a failed save, or if half damage will be taken even on a success
-  * Apply the versatile damage using the system damage tray, remembering to use 0.5x if necessary
+  * Use the poison save activity and roll its damage, taking half on a successful save
+  * Apply the poison damage using the system damage tray, remembering to use 0.5x if the save succeeded
   * Manually apply any special effects that the attack might have, e.g. the poisoned condition (not in this example).
 
 Midi-qol exists to help you automate some or all of these steps. Before going through the detail of how to set this up here is the same attack done with midi-qol with full automation, all accomplished with a single click of the item button.
@@ -23,12 +23,12 @@ Midi-qol exists to help you automate some or all of these steps. Before going th
 | ![midi-qol spider bite](GettingStartedPics/Auto%20Spider%20Bite.png)
 
 Here's what happened with that single click:
-  * The attack roll was made
-  * The attack was determined to have hit the goblin
-  * Because of that, damage was rolled (both bite and poison, because midi knows that poison damage will be applied even on a success)
-  * A constitution save was rolled for the goblin, and the goblin was found to have succeeded
-  * Damage was applied to the goblin accordingly (full piercing damage, as the goblin has no resistances, and half poison damage, as the goblin succeeded the save)
-  * A GM-only summary damage card was displayed, showing the GM precisely what damage was done, and giving them the option to reverse or revise it
+  * The attack roll was made (24)
+  * The attack was determined to have hit the goblin (AC 15)
+  * Because of that, damage was rolled: the bite (10 piercing) and, from the poison save activity, the poison (7). The attack runs the save activity after it because the attack's *Other Activity* is the poison save (see *Other Activity Default* below)
+  * A Constitution save was rolled for the goblin against DC 11, and the goblin succeeded (15)
+  * Damage was applied to the goblin accordingly (full piercing damage, as the goblin has no resistances, and half poison damage, as the goblin succeeded the save): 13 in all
+  * A damage card was displayed showing precisely what damage was done, and giving the option to reverse or revise it
   * If there _had_ been an effect that should be applied only on a failed save, it would automatically have done so
 
 Importantly, while this was only a single click, it could be configured to be exactly as "automatic" as the table wants it to be. While it is possible to set up items with flags for advantage and disadvantage under certain circumstances, players may still want the normal attack popup, rather than "fast-forwarding" - this is configurable. Players may want to still click a button to roll their damage - this is configurable. Players likely _will_ object to their saves being automatically rolled for them - this is, of course, configurable! A GM may prefer the damage to _not_ be applied automatically, but rather simply calculated, leaving them the final option to click "apply damage" - this is configurable. With great configurability comes a great number of settings; all that configuration will be addressed further below. First: Troubleshooting.
@@ -48,7 +48,8 @@ Once you've done that come back and read through the rest of the configuration g
 3. Get some midi-compatible items to make all this automation stuff work.
 
 ## Prerequisites (modules you must install)
-* Dynamic Active Effects
+This version of midi-qol is for Foundry v14 (14.369 or later) with dnd5e 6.
+* Dynamic Active Effects (14.6.2 or later)
 * libwrapper
 * socketlib
 
@@ -56,6 +57,8 @@ Once you've done that come back and read through the rest of the configuration g
 * Advanced Macros
 * ItemMacro
 * Times-up (duration management is now handled by DAE)
+
+Before installing any of the modules below, check that the version you get supports Foundry v14 and dnd5e 6.
 
 ## Modules you really should install
 * **Simple Calendar** and/or **Small Time** if you want time to advance in your world.
@@ -100,14 +103,16 @@ The steps are:
   * Mechanics
   * Rules
 
-Most settings are configured on the configuration application (the workflow button on configure settings) and is accessible only to a GM.
+Most settings are configured on the configuration application (the workflow button on configure settings) and is accessible only to a GM. The *Search Settings* box at the bottom of the panel filters every tab by setting name.
 
 #### Configure attack and damage rolls
 Midi has several concepts that can be confusing to first time users.
 ##### Rolling Attacks and Damage.
 Normally when you roll an item it displays a chat card with attack and damage buttons. There are Midi settings to alter that process. Both the GM and Player tabs let you configure how rolling an item behaves, which will be described in more detail below. Briefly: Auto-rolling attack/damage results in the attack being rolled immediately upon item use, and the damage being rolled either every time an attack is rolled, or only upon a hit. Fast-forwarding attack/damage results in skipping the configuration (advantage/normal/disadvantage or critical/normal) window for attack/damage rolls.
 
-This works fine if you are doing an ordinary attack, but sometimes you want to do some hand editing of the roll and not do everything automatically. The rollToggle key allows you to do this (default T). If you hold T when clicking on the item icon the normal sense of fastForwarding and auto roll is reversed. So if you were doing automatic rolls pressing T will display the Chat card for the item with attack and damage buttons ready for you to click.
+This works fine if you are doing an ordinary attack, but sometimes you want to do some hand editing of the roll and not do everything automatically. The Roll Toggle key allows you to do this (default F, changeable in Configure Controls). If you hold it when clicking on the item icon the normal sense of fast forwarding and auto roll is reversed: a roll that would be fast forwarded shows its roll dialog, and one that wouldn't is fast forwarded. The same applies to ability, save, skill and tool rolls.
+
+Alt and Ctrl work as they do in dnd5e: held when rolling, they give advantage or disadvantage and skip the roll dialog. Shift+Alt+Ctrl forces a normal roll, without advantage or disadvantage.
 
 ##### GM Tab
 ![GM Attack](GettingStartedPics/GM_Settings.png)  
@@ -136,14 +141,13 @@ This works fine if you are doing an ordinary attack, but sometimes you want to d
 **Chat Card Display**
 
 - **Remove chat card buttons after roll**: Which buttons to remove from the chat card after the roll is done.
-- **GM Roll details hiding**: Choose how much of GM rolls to hide/show to players. Options range from showing everything to hiding the entire roll.
-- **Always display attack/damage cards for hidden merge cards**: (Experimental) For GM rolls (self, private, blind) display an attack/damage roll card which triggers a 'gm rolled some dice' card for the players.
 
-**Dice So Nice Integration**
+**GM Roll Hiding**
 
-- **Hide GM attack/damage/saving throw 3d dice rolls**: Hides visual dice rolls for the GM (merge card only).
-- **Display with 'dice so nice ghost rolls'**: Still shows the roll but replaces die values with `?`s so results are secret (merge card only).
-- **Add fake dice to GM Dice So Nice rolls**: Add additional "decoy" dice so players aren't certain how many dice are being rolled.
+- **GM Attack Roll Display**: What players see of GM attack rolls. Options: *Full Roll*, *Hide Formula*, *D20 Only*, *Attack Total Only*, *Hit/Miss Only*, *Hit/Miss/Critical/Fumble*, *Hidden*. A second choice sets what Dice So Nice shows them: *Show Dice*, *Ghost Dice* (the dice roll but their values are hidden) or *No Dice*.
+- **GM Damage Roll Display**: The same for GM damage rolls. Options: *Full Roll*, *Damage Total Only*, *Hidden*, with the same Dice So Nice choice.
+- **Show players when the GM rolls privately**: When the GM rolls with a private, self or blind roll mode, other players see a 'rolled some dice' stand-in instead of nothing.
+- **Add fake dice to GM Dice So Nice rolls**: Add additional "decoy" dice so players can't count dice to work out modifiers.
 
 **Other**
 
@@ -175,6 +179,7 @@ As players have been known to forget to target when it is their turn and this re
 
 Often, an item will have an active effect on it which should be applied to the target of the item's use (for instance, a "bless" effect for the bless spell). By default, such an effect can only be applied by the GM. With midi, these can be set to auto-apply.
 
+- **Other Activity Default**: Many items pair an attack with a save (poison, say) without linking the two. This sets what *Default* means in an activity's *Other Activity* field: *Auto - roll a single matching activity* (the save is rolled after the attack hits) or *None - roll nothing*.
 - **Auto remove placed template on spell expiry**: Removes templates when the spell's effect expires
 - **Auto remove instantaneous templates**: Templates placed by an item with duration instantaneous are removed at the end of the item roll
 - **Auto remove summoned creatures on item expiry/concentration removal**: For dnd5e summons items, removes summoned creatures when the summoning effect ends
@@ -190,9 +195,12 @@ Often, an item will have an active effect on it which should be applied to the t
 - **Only highlight critical/fumble hits**: Override dnd5e highlighting and only highlight critical/fumble attack rolls
 - **Auto check if attack hits target**: Check if an attack roll hits selected targets. If disabled midi-qol will assume the attack hits and continue rolling. Options: *None*, *Check - all see result*, *Check - only GM sees results*, *Check - only GM sees anything*
 - **Roll a separate attack per target**: When targeting multiple creatures with an attack-rolling item, roll a separate attack for each
-- **Walls block ranged attacks**: If a cover module determines total cover, the attack is blocked. Options: *No*, *Center Check*, *Center + Levels*, *Levels Auto Cover*, *Simbul's Cover Calculator*, *Alternative Token Cover*, *Simple Cover 5e*
-- **Calculate Cover**: Calculate AC bonus for targets in cover using a compatible cover module
-- **Vision test point height**: Which elevation to test for token visibility. Options: *Center*, *Top*, *Center and Top*
+**Walls, cover and vision**
+- **Walls block ranged attacks**: If a wall that blocks movement, or a cover module, gives total cover, the attack is blocked. Options: *No*, *Center Check*, *Levels Auto Cover*, *Simbul's Cover Calculator*, *Alternative Token Cover*, *Simple Cover 5e*
+- **Calculate Cover**: Calculate the AC bonus for targets in cover. Options: *None*, *dnd5e cover status only* (the target's Half/Three-Quarters/Total Cover status) or a compatible cover module
+- **Vision test point height**: Which elevation to test for token visibility. Options: *Center*, *Top*
+- **Template Origin Height**: The height of the caster that activity templates are measured from: a sphere is centred on it, a cylinder, cube or line stands on it. Options: *Caster's base*, *Caster's top*, *Caster's eye level*. An activity can override this in its Region settings
+- **Occlude upper floor surfaces** / **Dim lower floors through surface holes**: For multi-level scenes, how floors above and below are drawn when viewed from a lower or upper floor
 
 #### Configure checking saves
 Midi can automate the process of requesting and adjudicating saves.
@@ -200,7 +208,8 @@ Midi can automate the process of requesting and adjudicating saves.
 
 - **DND5E Challenge Visibility**: Control what roll DCs are visible to the players and whether successes/failures are highlighted. Options: *Show all*, *Show only from other players*, *Hide all*
 - **Auto check Saves**: Automatically check saving throws when a saving throw is required. If disabled midi will assume that all targets failed their save. Options: *Off*, *Save - All see result only*, *Save - All see result + save total*, *Save - All see Result + Rolls*, *Save - only GM sees results + rolls*, *Save - only GM sees anything*
-- **Display if save had Advantage/Disadvantage**: Shows whether a save was made with advantage or disadvantage
+- **Save summary style**: With dnd5e's *Summarize chat cards* on, a card's saves are shown on the card rather than as separate messages. *midi saves section* (DC, success/failure and damage) or *dnd5e summaries*
+- **Show damage after each save**: Under each target's save result, the damage of each type it takes after its save, and what changed it (e.g. Super Saver)
 - **Default saving throw multiplier**: If there are no other modifiers a saving throw will do this fraction of the damage of the original attack. Default 0.5 (half damage on save)
 - **Prompt Players to Roll Saves**: How players will be prompted when they need to roll saves. Options:
   - *None (private roll)* / *None (public roll)*: Midi rolls the save automatically
@@ -216,15 +225,14 @@ Midi can automate the process of requesting and adjudicating saves.
 
 - **Choose critical damage for Players** / **Choose critical damage for GM**: How critical hit damage is calculated. These are separate settings for players and GM. Options: *DND5e Settings Only*, *Max Normal Damage*, *Max Critical Dice (flat number)*, *Max Critical Dice (roll dice)*, *Max All Dice*, *Double Rolled Damage*, *Explode all critical dice*, *Max base damage and explode critical dice*, *Explode Character critical dice*, *Explode NPC critical dice*, *Only Weapon Extra Critical*, *Max Base Roll Crit*, *Roll damage die twice and pick the highest*
 - **Auto apply damage to target**: Whether to automatically apply damage to hit targets and whether to show a damage card. The "damage card" shows the total damage, the applied damage (after resistance/vulnerability/modification), and apply/undo buttons. Options: *No*, *No + damage card*, *No + damage card + misses*, *Yes*, *Yes + damage card*, *Yes + damage card + misses*, *Yes(NPC) No(PC) + damage card*
-- **Damage card style**: Choose between *Flexbox layout* and *Classic (table)*
-- **Add damage buttons to chat message**: Enable the dnd5e damage tray on chat messages. Options: *None*, *Only add buttons for GM*, *Only add buttons for Players*, *Add buttons for everyone*
 - **Show a player's damage card**: A simpler version of the damage card. Only displayed if the GM card is displayed. Options: *Don't show*, *Show player results*, *Show player results + buttons*, *Show player and npc results*, *Show player and npc + buttons*
 - **Display the player damage card if the rolled damage does not match the applied damage for some target**: Shows a simpler damage card only when damage rolled is not equal to damage applied (e.g. due to resistance). This overrides the previous setting when checked
 
 ![UnmatchedDamage](GettingStartedPics/PlayerDamageCard.png)
 
 - **Apply Damage immunities**: When using midi-qol damage buttons or auto applying damage, apply target's damage immunity/vulnerabilities/resistances. Options: *Never*, *apply immunities*, *apply immunities + physical*
-- **Immunity/Resistance/Vulnerability multipliers**: Configure the exact multiplier for immunity (default 0), resistance (default 0.5), and vulnerability (default 2)
+- **Immunity reduces damage to** / **Resistance reduces damage to** / **Vulnerability multiplies damage by**: The exact multipliers (defaults 0, 0.5 and 2)
+- **Single Damage Calculation**: Calculate base, other and bonus damage in one pass, so damage modification and midi damage reduction are shared across all of an activity's damage rather than applied once per damage category
 - **Damage Reduction Save Order**: Order in which damage reduction is applied. Options: *dm.midi/dnd5e.dm -> Saves/(dr/dv/di) - dnd5e RAW*, *Saves -> dm.midi/dm.dnd5e -> (dr/dv/di)*, *Saves -> dm -> (dr/dv/di) -> dm.midi*
 - **Require 'Magical' property**: Controls whether items do magical damage by default. Options: *Off: Non-weapons do magical damage*, *Non spells do non-magical damage*, *All Items do non-magical damage*
 
@@ -298,6 +306,7 @@ There are a lot of extra options that midi's got. The Misc tab covers chat card 
 ![MiscMisc](GettingStartedPics/MiscMisc.png)
 
 - **Chat cards use token name**: Chat card titles and target names use the token name rather than the actor name
+- **Hide NPC names**: The name players see for creatures with no player owner, on chat cards and the damage tray. Blank shows the real name. If Anonymous or Hide NPC Names is active, that module decides instead
 - **Use Actor portrait in chat cards**: For Actors of type character use the actor portrait instead of the token image in midi-qol chat cards
 
 **Custom Sounds**
@@ -310,11 +319,13 @@ For configuring gameplay mechanics:
 
 - **Add effect when hp falls below %**: Add a selected status when HP are less than or equal to a specified percentage of max. 0 disables. Choose the condition and whether to add it as an overlay or icon
 - **Add effect when HP = 0**: As above, but for 0hp. Separate settings for Player Controlled and GM Controlled tokens. Options: *Do Not Update*, *Add effect as overlay*, *Add effect as icon*. Also includes a "Mark defeated in combat tracker" checkbox
-- **Which ability/skill checks/saves are rolled blind**: Select which ability checks, ability saves, and skill checks are rolled blind
+- **Which ability checks / ability saves / skill checks are rolled blind**: Three settings choosing which rolls are always blind (death saves included)
+- **Blind roll display**: How those rolls appear to players: *Hidden* (players see nothing) or *Obscured* (the card is shown with the result as ??)
 - **Expire 1Hit/1Attack/1Action on roll**: Don't wait for damage roll before expiring attack/hit/action special duration effects
 - **Wait for damage application**: Wait for the GM client to apply damage before completing the workflow. Disabling gives a small performance improvement but may interfere with some 3rd party modules
 - **When an Incapacitated actor takes an action**: Options: *Do nothing*, *Enforce no actions*, *Post a warning only*
 - **Check weapon range when attacking**: Options: *Do not check range*, *target range > long range: fail*, *target range > long range: disadvantage*
+- **Targets you can see**: For activities whose targets must be creatures you can see. Options: *Do not check*, *Unseen targets can't be targeted*, *Post a warning only*
 - **Require no shield equipped for two-handed/off-hand attacks**: Prevents two-handed or off-hand attacks when a shield is equipped
 
 ![Mechanics2](GettingStartedPics/Mechanics2.png)
@@ -325,7 +336,6 @@ For configuring gameplay mechanics:
 - **Include height difference in distance calculations**: As described
 - **Constrain Template Placement**: Constrains template placement — cone/ray templates with range Self/None are anchored to the caster's token border. All templates are clamped to stay within the activity's range during preview
 - **Template Grid Snapping**: Controls grid snapping when placing templates. *Full grid* snaps to grid intersections only. *Half grid* also snaps to grid square centers and side midpoints
-- **Ability Check Advantage gives Skill Advantage**: If an actor has advantage/disadvantage on ability checks, skills based on that ability also have advantage/disadvantage
 - **Show before and after optional bonus chat card**: Display a chat card with the before and after roll when an optional bonus is applied
 - **Auto reroll initiative**: Auto reroll initiative for all combatants at the start of a new round. Warning: can break round/turn effect expiry
 - **Support undoing item rolls**: If enabled midi will store undo data for all item/activity rolls. Undo via `MidiQOL.undoMostRecentWorkflow()`
@@ -348,6 +358,7 @@ For configuring optional game rules:
   - *Convenient Effects Flanked + no conga line*: As above, but Flanked tokens cannot flank other tokens
   - *Midi Flanked + no conga line*: As above, but Flanked tokens cannot flank other tokens
 - **Flanking Bonus Type**: When flanking is detected, grant advantage (default) or reduce the target's effective AC by a fixed amount (+1 to +5 to hit, or Advantage)
+- **Flanking requires target can sense flanker**: An ally only counts as a flanker if the target can sense them, so invisible or hidden allies don't help
 - **Show Flanking Positions**: Highlight grid cells where an ally would create flanking against your current target
 - **Unseen/Invisible attackers have advantage/disadvantage on attacks**: Options:
   - *Do not apply*
@@ -365,7 +376,8 @@ For configuring optional game rules:
 ![Rules2](GettingStartedPics/Rules2.png)
 
 - **Critical/Fumble always succeed/fail for saving throws**: House rule
-- **Critical Roll Margin**: Attack rolls this much above AC are critical. -1 disables. Option to allow normal critical rolls as well
+- **Critical Roll Margin**: Attack rolls this much above AC are critical. -1 disables
+- **Allow normal critical rolls**: With a critical margin set, a roll in the critical range is still a critical even if it doesn't beat AC by the margin
 - **Ranged Attacks at foes near allies have disadvantage**: Ranged attacks with allies nearby (5 feet) to the target have disadvantage for targets smaller than a specified size. 0 disables
 - **Active Defence**: Instead of GM rolling 'To Hit', players make a defence roll. Sub-settings:
   - *Active Defence Modifier*: The DC will be `attack bonus + modifier` and roll will be `1d20 + AC - (22 - modifier)`. Suggested values: 12, 10, or 0

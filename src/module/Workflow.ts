@@ -105,7 +105,7 @@ import {
   tokenSourceElevation,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
-import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap } from "./patching.js";
+import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -2212,7 +2212,7 @@ export class Workflow {
       if (configSettings.confirmAttackDamage !== "none" && !this.workflowOptions.forceCompletion)
         return this.WorkflowState_ConfirmRoll;
       if (this.workflowOptions.forceCompletion || configSettings.autoCompleteWorkflow) {
-        expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"])
+        expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell", "1Critical", "1Fumble"])
         return this.WorkflowState_RollFinished;
       }
       // if (configSettings.autoRollDamage !== "always") return this.WorkflowState_RollFinished;
@@ -2621,7 +2621,8 @@ export class Workflow {
           this.otherActivationFails.add(token);
       } else this.otherActivationMatches.add(token)
     }
-    expireMyEffects.bind(this)(["1Action", "1Spell"]);
+    // once attacked, the attack keys too: an attack without damage never reaches the damage roll states that expire them
+    expireMyEffects.bind(this)(["1Action", "1Spell", ...(this.attackRoll ? ["1Attack", "1Hit", "1Critical", "1Fumble"] : [])]);
 
     this.effectTargets = new Set();
     this.otherEffectTargets = new Set();
@@ -4012,31 +4013,33 @@ export class Workflow {
           }
         }
         if (!this.activity) return wasExpired;
-        if ((this.activity.save || this.activity.check) && expireList.includes("isSaveSuccess") && specialDuration.includes(`isSaveSuccess`) && this.saves.has(target)) {
-          wasExpired = true;
-          expiryReason.push(`isSaveSuccess`);
+        // the save or check of the workflow's save activity (which may be another activity than the one used)
+        const saveDetails = this.saveActivityDetails;
+        if (!saveDetails) return wasExpired;
+        // only targets whose save was rolled (failedSaves starts as every hit target)
+        const saveRoll = this.targetSaveDetails?.[target.document.uuid]?.saveRoll;
+        if (!saveRoll) return wasExpired;
+        const saved = this.saves.has(target);
+        const failed = !saved && this.failedSaves.has(target);
+        // the ability the target chose, else the save's only one; with several and no choice recorded only the bare keys
+        const offered: string[] = typeof saveDetails.ability === "string" ? [saveDetails.ability] : [...(saveDetails.ability ?? [])];
+        // @ts-expect-error midiChosenId is a custom roll option
+        const chosen: string | undefined = saveRoll.options?.midiChosenId;
+        const abilities = chosen && offered.includes(chosen) ? [chosen] : offered.length === 1 ? offered : [];
+        for (const suffix of ["", ...abilities.map(abl => `.${abl}`)]) {
+          if (expireList.includes("isSaveSuccess") && saved && specialDuration.includes(`isSaveSuccess${suffix}`)) {
+            wasExpired = true;
+            expiryReason.push(`isSaveSuccess${suffix}`);
+          }
+          if (expireList.includes("isSaveFailure") && failed && specialDuration.includes(`isSaveFailure${suffix}`)) {
+            wasExpired = true;
+            expiryReason.push(`isSaveFailure${suffix}`);
+          }
+          if (expireList.includes("isSave") && specialDuration.includes(`isSave${suffix}`)) {
+            wasExpired = true;
+            expiryReason.push(`isSave${suffix}`);
+          }
         }
-        if ((this.activity.save || this.activity.check) && expireList.includes("isSaveFailure") && specialDuration.includes(`isSaveFailure`) && !this.saves.has(target)) {
-          wasExpired = true;
-          expiryReason.push(`isSaveFailure`);
-        }
-        if ((this.activity.save || this.activity.check) && expireList.includes("isSave") && specialDuration.includes(`isSave`)) {
-          wasExpired = true;
-          expiryReason.push(`isSave`);
-        }
-        const abl = this.activity.save?.ability ?? this.activity.check?.ability;
-        if ((this.activity.save || this.activity.check) && expireList.includes(`isSaveSuccess`) && specialDuration.includes(`isSaveSuccess.${abl}`) && this.saves.has(target)) {
-          wasExpired = true;
-          expiryReason.push(`isSaveSuccess.${abl}`);
-        };
-        if ((this.activity.save || this.activity.check) && expireList.includes(`isSaveFailure`) && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) {
-          wasExpired = true;
-          expiryReason.push(`isSaveFailure.${abl}`);
-        };
-        if ((this.activity.save || this.activity.check) && expireList.includes(`isSave`) && specialDuration.includes(`isSave.${abl}`)) {
-          wasExpired = true;
-          expiryReason.push(`isSave.${abl}`);
-        };
         return wasExpired;
       }).map(ef => ef.uuid);
       if (expiredEffects.length > 0) {
@@ -6345,10 +6348,11 @@ export class Workflow {
     };
 
     // Trackers (advantage and roll modifiers) for each choice the roll offers: abilities for a save or plain check,
-    // else the skills or tools, rolled with the check's ability.
+    // else the skills or tools, each rolled with its ability.
     const isSkillOrTool = rollType === "skill" || rollType === "tool";
     const choiceIds = rollType === "skill" ? rollSkills : rollType === "tool" ? rollTools : rollAbilities;
     const checkAbility = this.saveActivity?.check?.ability || undefined;
+    const abilityFor = isSkillOrTool ? checkActivityAbilities(this.saveActivity, target.actor) : undefined;
     const isConcentrationCheck = this.item.flags?.[MODULE_ID]?.isConcentrationCheck;
     // A concentration check's save also takes the concentration advantage flags.
     const preComputedMap = await buildPreComputedAdvantageMap(
@@ -6356,7 +6360,7 @@ export class Workflow {
       (rollType === "save" && isConcentrationCheck) ? "concentration" : rollType ?? "",
       choiceIds,
       { workflow: this, isMagicSave: !!isMagicSave },
-      isSkillOrTool ? checkAbility : undefined
+      abilityFor
     );
 
     const defaultId = isSkillOrTool ? choiceIds[0] : (this.saveActivity!.save?.ability?.first() ?? checkAbility ?? "");
@@ -7855,7 +7859,7 @@ export class SavesFirstWorkflow extends Workflow {
       if (configSettings.confirmAttackDamage !== "none" && !this.workflowOptions.forceCompletion)
         return this.WorkflowState_ConfirmRoll;
       if (this.workflowOptions.forceCompletion || configSettings.autoCompleteWorkflow) {
-        expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"])
+        expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell", "1Critical", "1Fumble"])
         return this.WorkflowState_RollFinished;
       }
     }

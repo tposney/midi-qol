@@ -13,7 +13,7 @@ import { AnyMutableObject } from "fvtt-types/utils";
 import { Activity, ActivityUseConfiguration, RollDialogConfig, RollMessageConfig, RollProcessConfig } from "../globals.js";
 import { Workflow } from "./Workflow.js";
 import { preferredActiveGM, socketlibSocket } from "./GMAction.js";
-import { MidiDependentsRegistry, MidiDependentDocumentMixin } from "./lib/MidiDependentsRegistry.js";
+import { MidiDependentsRegistry, MidiDependentDocumentMixin, actorEmbeddedByPath } from "./lib/MidiDependentsRegistry.js";
 import { ADVANTAGE, DISADVANTAGE, NORMAL, decideRollDialog, heldKeys, keyMode } from "./lib/rollKeys.js";
 import { RollModifierTracker, computeAdvantageFlags, computeRollModifiers, applyRollModifiers, RollModifierFlags, RollModifierResult, AdvantageFlags, applyTrackerAdvantage } from "./lib/RollModifierTracker.js";
 
@@ -28,6 +28,17 @@ export const skipConcentrationActorUuids = new Set<string>();
 // Per-actor semaphores to prevent race conditions in checkWounded
 // Multiple concurrent updateActor hooks can fire for the same actor, causing duplicate status effects
 const actorWoundedSemaphores = new Map<string, foundry.utils.Semaphore>();
+
+/** A workflow is waiting on a save or check from this actor (its requests are keyed by the token's id or the actor's uuid). */
+function awaitedByWorkflow(actor: Actor.Implementation): boolean {
+  const tokenIds = actor.getActiveTokens(false, true).map(t => t.id);
+  for (const ref of Workflow.workflows.values()) {
+    const workflow = ref instanceof WeakRef ? ref.deref() : ref;
+    const requests = workflow?.saveRequests;
+    if (requests && (requests[actor.uuid] || tokenIds.some(id => id && requests[id]))) return true;
+  }
+  return false;
+}
 
 export function getActorWoundedSemaphore(actorUuid: string): foundry.utils.Semaphore {
   if (!actorWoundedSemaphores.has(actorUuid)) {
@@ -81,6 +92,7 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._onStartTurn", combatOnStartTurn, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._onEndTurn", combatOnEndTurn, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.getRollData", itemGetRollData, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.dependentOrigin", itemDependentOrigin, "MIXED");
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
   libWrapper.register(MODULE_ID, "dnd5e.applications.actor.BaseActorSheet.prototype._prepareItem", _prepareItem, "WRAPPER");
@@ -969,13 +981,14 @@ function setupChoiceDialog(
   advantageMap: Record<string, PreComputedAdvantage>,
   hasPreComputedAdvantage: boolean,
   rollTypeForChoices: "skill" | "tool" | "save" | "check",
-  onChoiceCapture: (choice: string) => void
+  onChoiceCapture: (choice: string) => void,
+  abilityFor?: (id: string) => string | undefined
 ): { hasMultiple: boolean } {
   const hasMultiple = choices.length > 1;
 
   dialog.applicationClass = MidiRollChoiceDialog;
   dialog.options ??= {};
-  const rollChoices = buildRollChoices(actor, rollTypeForChoices, choices);
+  const rollChoices = buildRollChoices(actor, rollTypeForChoices, choices, abilityFor);
   const best = selectBestRollChoice(rollChoices, advantageMap);
 
   if (best) {
@@ -993,6 +1006,7 @@ function setupChoiceDialog(
   dialog.options.rollChoices = rollChoices;
   dialog.options.advantageByChoice = advantageMap;
   dialog.options.choiceType = choiceType;
+  dialog.options.abilityForChoice = abilityFor;
 
   // Only set buildConfig when we need to rebuild parts on choice change:
   // - Skills/tools: Always (dnd5e's pattern expects buildConfig to construct parts)
@@ -1475,12 +1489,16 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
     const hasPassedMap = !!passedMap && Object.values(passedMap).some(v => v.tracker instanceof RollModifierTracker);
     // Concentration saves use the "concentration" roll type which composes with "save"
     const advantageType = kind.rollType === "save" && config.hookNames?.includes("concentration") ? "concentration" : kind.rollType;
+    // A check activity's skills and tools each roll with their own ability
+    const abilityFor = isAbility ? undefined : checkActivityAbilities(rollActivity(config.midiOptions), this);
     const advantageMap: Record<string, PreComputedAdvantage> = sourceInfo.isExternalModule ? {}
-      : hasPassedMap ? passedMap! : await buildPreComputedAdvantageMap(this, advantageType, rollIds, config.midiOptions, isAbility ? undefined : config.ability);
+      : hasPassedMap ? passedMap! : await buildPreComputedAdvantageMap(this, advantageType, rollIds, config.midiOptions, isAbility ? undefined : abilityFor ?? config.ability);
 
     let userExplicitChoice: string | undefined;
     const { hasMultiple } = setupChoiceDialog(this, config, dialog, kind.idKey, rollIds, advantageMap, hasPreComputedAdvantage,
-      kind.rollType, choice => { userExplicitChoice = choice; });
+      kind.rollType, choice => { userExplicitChoice = choice; }, abilityFor);
+    const chosenAbility = abilityFor?.(config[kind.idKey] ?? "");
+    if (chosenAbility) config.ability = chosenAbility;
 
     preRollHookId = Hooks.once(`dnd5e.preRoll${kind.hook}`, (configData, dialogData) => {
       configData.midiOptions = { ...(configData.midiOptions ?? {}), ...(midiOptions ?? {}) };
@@ -1579,14 +1597,16 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
       // dnd5e sets roll.parent in buildPost; replicate here since we bypass buildPost
       if (chatMsg) result.forEach(r => (r as any).parent = chatMsg);
     }
+    // Outside a workflow the roll's own DC decides success; a workflow decides it for its targets (cover, bonuses).
+    // A save from midi's card carries its requestId; the workflow may be on another client.
+    const inWorkflow = !!(config.midiOptions.workflowId || config.midiOptions.workflow || config.midiOptions.saveActivityUuid || config.workflow || foundry.utils.getProperty(message, "flags.midi-qol.requestId")) || awaitedByWorkflow(this);
+    const concentration = !!config.hookNames?.includes("concentration");
+    // @ts-expect-error no dnd5e-types
+    if (success === undefined && (!inWorkflow || concentration)) success = result[0]?.isSuccess;
     if (rollId && kind.expireType) await expireRollEffect.bind(this)(kind.expireType, rollId, success);
     // Concentration saves arrive as rollType "save" with "concentration" in hookNames (see advantageType).
     // Pass the bare "ConcentrationSave" so expireRollEffect matches is/isConcentrationSaveSuccess/Failure.
-    if (config.hookNames?.includes("concentration")) {
-      // @ts-expect-error no dnd5e-types
-      if (success === undefined && result[0]?.isSuccess !== undefined) success = result[0].isSuccess;
-      await expireRollEffect.bind(this)("ConcentrationSave", "", success);
-    }
+    if (concentration) await expireRollEffect.bind(this)("ConcentrationSave", "", success);
     return result;
   } catch (err) {
     const errorMessage = `midi-qol | ${kind.hook} roll error ${this.name} ${rollId} ${this.uuid}`;
@@ -1852,6 +1872,28 @@ interface RollTypeHandler {
   getModifierFlags: (actor: Actor.Implementation, id: string, options?: MidiOptions, ability?: string) => RollModifierFlags;
 }
 
+/**
+ * The ability a check activity rolls each of its skills or tools with, as dnd5e's check buttons do (the activity's own,
+ * else the skill's or tool's), with "spellcasting" resolved for the actor.
+ */
+export function checkActivityAbilities(activity: Activity | undefined, actor: Actor.Implementation | undefined | null): ((id: string) => string | undefined) | undefined {
+  if (!activity?.check || typeof activity.getAbility !== "function") return undefined;
+  return id => {
+    const ability = activity.getAbility?.(id) || undefined;
+    // @ts-expect-error no dnd5e-types
+    return ability === "spellcasting" ? actor?.system.attributes?.spellcasting || undefined : ability;
+  };
+}
+
+/** The activity a roll was made for: the workflow's, else from its uuid */
+function rollActivity(midiOptions: MidiOptions): Activity | undefined {
+  const uuid = midiOptions.saveActivityUuid;
+  if (!uuid) return undefined;
+  const workflowActivity = midiOptions.workflow?.saveActivity;
+  if (workflowActivity?.uuid === uuid) return workflowActivity;
+  return fromUuidSync(uuid, { strict: false }) as Activity | undefined;
+}
+
 /** The ability a skill or tool check is rolled with: the one asked for, else its default. */
 function skillToolAbility(actor: Actor.Implementation, type: "skill" | "tool", id: string, ability?: string): string {
   if (ability) return ability;
@@ -1979,7 +2021,7 @@ export async function buildPreComputedAdvantageMap(
   rollType: string,
   rollIds: string[],
   options: MidiOptions,
-  ability?: string
+  ability?: string | ((id: string) => string | undefined)
 ): Promise<Record<string, PreComputedAdvantage>> {
   const result: Record<string, PreComputedAdvantage> = {};
   const workflow = options.workflow;
@@ -1991,11 +2033,12 @@ export async function buildPreComputedAdvantageMap(
   }
 
   for (const id of rollIds) {
+    const idAbility = typeof ability === "function" ? ability(id) : ability;
     // Compute advantage/disadvantage with attribution tracking
-    const tracker = await handler.computeAdvantage(actor, id, options, ability);
+    const tracker = await handler.computeAdvantage(actor, id, options, idAbility);
 
     // Add roll modifiers (fail/success/max/min) to the same tracker
-    const modifierFlags = handler.getModifierFlags(actor, id, options, ability);
+    const modifierFlags = handler.getModifierFlags(actor, id, options, idAbility);
     computeRollModifiers(actor, modifierFlags, tracker, { workflow });
 
     const hasAdv = !!tracker.hasAdvantage;
@@ -2794,6 +2837,19 @@ function actorGetRollData(this: Actor.Implementation, wrapped, ...args) {
     data.traits.sizeNumeric = GameSystemConfig.actorSizes[this.system.traits?.size]?.numerical ?? 2;
   }
   return data;
+}
+
+// dnd5e resolves dependentOn with fromUuidSync during item preparation. For an item on an unlinked token that goes back
+// through the token's lazy delta while it is being built (Foundry 14.369) and recurses, so resolve UUIDs inside the
+// item's own token actor from the actor.
+function itemDependentOrigin(this: Item.Implementation, wrapped) {
+  const uuid = this.flags.dnd5e?.dependentOn;
+  const actor = this.actor;
+  if (uuid && actor?.isToken) {
+    const resolved = foundry.utils.parseUuid(uuid, { relative: this })?.uuid;
+    if (resolved?.startsWith(`${actor.uuid}.`)) return actorEmbeddedByPath(actor, resolved.slice(actor.uuid.length + 1)) ?? null;
+  }
+  return wrapped();
 }
 
 function itemGetRollData(this: Item.Implementation, wrapped, ...args) {

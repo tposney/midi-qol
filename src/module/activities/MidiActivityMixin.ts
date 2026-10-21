@@ -33,6 +33,8 @@ import {
   canSee,
   canSense,
   checkActivityRange,
+  checkTargetsSeen,
+  checkTotalCover,
   checkIncapacitated,
   createConditionData,
   displayDSNForRoll,
@@ -254,6 +256,7 @@ export let MidiActivityMixin = Base => {
           chooseEffects: new BooleanField({ name: "chooseEffects", initial: false }),
           toggleEffect: new BooleanField({ name: "toggleEffect", initial: false }),
           ignoreFullCover: new BooleanField({ name: "ignoreFullCover", initial: false }),
+          targetMustBeSeen: new BooleanField({ name: "targetMustBeSeen", initial: false }),
           removeChatButtons: new StringField({ name: "removeChatButtons", initial: "default", blank: false, required: true }),
           magicEffect: new BooleanField({ name: "magicEffect", initial: false }),
           magicDamage: new BooleanField({ name: "magicDamage", initial: false }),
@@ -1802,6 +1805,12 @@ export let MidiActivityMixin = Base => {
         }
 
 
+        const targetsCreatures = !!this.attack || !["", "self"].includes(this.target?.affects?.type ?? "");
+        if (!isAoETargeting && !isEmanationTargeting && targetsCreatures && !checkTotalCover(this, tokenToUse, workflow.targets))
+          return removeWorkflow(workflow);
+        if (!isAoETargeting && !isEmanationTargeting && !checkTargetsSeen(this, tokenToUse, workflow.targets))
+          return removeWorkflow(workflow);
+
         if (!workflow) return false;
         workflow.token = tokenToUse;
         workflow.rangeDetails = rangeDetails;
@@ -2427,6 +2436,7 @@ export let MidiActivityMixinSheet = Base => {
         templates: [
           ...super.PARTS.activation.templates,
           "modules/midi-qol/templates/activity/parts/region-behavior-targeting.hbs",
+          "modules/midi-qol/templates/activity/parts/midi-targeting.hbs",
         ]
       },
       "midi-qol": {

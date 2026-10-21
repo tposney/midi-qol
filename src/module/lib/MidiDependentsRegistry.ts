@@ -255,3 +255,79 @@ export function MidiDependentDocumentMixin<T extends new (...args: any[]) => Mix
   }
   return MidiDependentDocument;
 }
+
+/** The item, actor effect or item effect at `path` (e.g. "Item.<id>.ActiveEffect.<id>") inside an actor. */
+export function actorEmbeddedByPath(actor: Actor.Implementation | null | undefined, path: string): Item.Implementation | ActiveEffect.Implementation | undefined {
+  const [type, id, subType, subId] = path.split(".");
+  if (type === "ActiveEffect" && !subType) return actor?.effects.get(id);
+  if (type !== "Item") return undefined;
+  const item = actor?.items.get(id);
+  if (!subType) return item;
+  return subType === "ActiveEffect" ? item?.effects.get(subId) : undefined;
+}
+
+/**
+ * A copied token, actor or scene keeps its embedded ids but gets a new UUID, so a dependentOn that pointed inside the
+ * original still does. Returns the same item or effect's UUID in the copy (actorUuid), or undefined if the flag
+ * doesn't point into another copy of it. A token's actor only re-points flags into another token: its base actor's
+ * items depend on the base actor.
+ */
+export function repointedDependentOn(flag: unknown, actorUuid: string, isToken: boolean, has: (path: string) => boolean): string | undefined {
+  if (typeof flag !== "string" || flag.startsWith(".") || flag.startsWith(`${actorUuid}.`)) return undefined;
+  const i = flag.lastIndexOf("Actor.");
+  if (i < 0 || (i > 0 && flag[i - 1] !== ".")) return undefined;
+  if (isToken && !flag.slice(0, i).includes(".Token.")) return undefined;
+  const path = flag.slice(i).split(".").slice(2).join(".");
+  return path && has(path) ? `${actorUuid}.${path}` : undefined;
+}
+
+type DependentSource = { _id?: string | null; flags?: { dnd5e?: { dependentOn?: string } } | null; effects?: DependentSource[] | null };
+
+function sourceHasDependentOn(docs: DependentSource[] | null | undefined): boolean {
+  return !!docs?.some(d => d.flags?.dnd5e?.dependentOn || sourceHasDependentOn(d.effects));
+}
+
+/** Re-point dependentOn flags in a copied actor (or token's actor) at its own items and effects. */
+export async function repointCopiedDependents(actor: Actor.Implementation | null | undefined) {
+  if (!actor) return;
+  const has = (path: string) => !!actorEmbeddedByPath(actor, path);
+  const fix = (doc: Item.Implementation | ActiveEffect.Implementation) => {
+    const dependentOn = repointedDependentOn(doc.flags.dnd5e?.dependentOn, actor.uuid, actor.isToken, has);
+    return dependentOn ? [{ _id: doc.id!, "flags.dnd5e.dependentOn": dependentOn }] : [];
+  };
+  try {
+    for (const item of actor.items) {
+      const effectUpdates = item.effects.contents.flatMap(fix);
+      if (effectUpdates.length) await item.updateEmbeddedDocuments("ActiveEffect", effectUpdates);
+    }
+    const itemUpdates = actor.items.contents.flatMap(fix);
+    if (itemUpdates.length) await actor.updateEmbeddedDocuments("Item", itemUpdates);
+    const effectUpdates = actor.effects.contents.flatMap(fix);
+    if (effectUpdates.length) await actor.updateEmbeddedDocuments("ActiveEffect", effectUpdates);
+  } catch (err) {
+    const message = `repointCopiedDependents | ${actor.uuid}`;
+    TroubleShooter.recordError(err, message);
+    error(message, err);
+  }
+}
+
+/** As repointCopiedDependents, for an unlinked token's delta before the token is created (midi's teleport). */
+export function repointCopiedDependentsSource(delta: { items?: DependentSource[] | null; effects?: DependentSource[] | null } | null | undefined,
+  actorUuid: string, has: (path: string) => boolean) {
+  const fix = (docs: DependentSource[] | null | undefined) => {
+    for (const doc of docs ?? []) {
+      const dependentOn = repointedDependentOn(doc.flags?.dnd5e?.dependentOn, actorUuid, true, has);
+      if (dependentOn) doc.flags!.dnd5e!.dependentOn = dependentOn;
+      fix(doc.effects);
+    }
+  };
+  fix(delta?.items);
+  fix(delta?.effects);
+}
+
+/** Whether an unlinked token's delta has a dependentOn anywhere, so its actor is worth building to re-point it. */
+export function tokenHasDependents(token: TokenDocument.Implementation): boolean {
+  if (token.actorLink) return false;
+  const delta = token._source.delta;
+  return sourceHasDependentOn(delta?.items) || sourceHasDependentOn(delta?.effects);
+}

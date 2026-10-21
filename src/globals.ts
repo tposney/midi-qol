@@ -168,6 +168,7 @@ declare module "fvtt-types/configuration" {
         ignoreSelf?: boolean;
       }
       dnd5e?: {
+        dependentOn?: string;
         dependents?: {
           uuid: string;
         }[];
@@ -561,6 +562,7 @@ declare module "fvtt-types/configuration" {
           value?: number;
         };
         cachedFor?: Item;
+        dependentOn?: string;
         riders?: {
           activity?: string[];
         }
@@ -709,6 +711,8 @@ declare global {
     /** DAE 14.6.2+ (dnd5e 6): an effect's item as data (live, else its card's snapshot) */
     getEffectItemData: (effect: unknown) => Item.Source | undefined;
     getActorItemData: (actor: Actor.Implementation, uuid: string) => Item.Source | undefined;
+    /** Ends an effect as its expiry settings say: delete, or suppress (disable) and keep */
+    expireEffect: (effect: ActiveEffect.Implementation, options?: object) => Promise<void>;
     doEffects: (...args: any[]) => Promise<any>;
     doActivityEffects: (...args: any[]) => Promise<any>;
     DIMEditor: any;
@@ -1458,6 +1462,7 @@ export interface Activity extends AnyMutableObject {
     chooseEffects?: boolean;
     toggleEffect?: boolean;
     ignoreFullCover?: boolean;
+    targetMustBeSeen?: boolean;
     removeChatButtons: string;
     magicEffect?: boolean;
     magicDamage?: boolean;
@@ -1584,6 +1589,8 @@ export type RollDialogConfig = {
     advantageByChoice?: Record<string, unknown>;
     /** Choice dropdown type: "ability" for saves, "skill" for skill checks, "tool" for tool checks */
     choiceType?: "ability" | "skill" | "tool";
+    /** Skill/tool choice dialog: the ability each choice rolls with */
+    abilityForChoice?: (id: string) => string | undefined;
     window?: { subtitle?: string };
   };
 };

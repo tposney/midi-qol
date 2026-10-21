@@ -1,12 +1,13 @@
 import { checkRule, configSettings } from "./settings.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
+import { getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
 import { bonusCheck } from "./patching.js";
 import { RollModifierTracker } from "./lib/RollModifierTracker.js";
+import { actorEmbeddedByPath, repointCopiedDependentsSource } from "./lib/MidiDependentsRegistry.js";
 import { queueUndoData, startUndoWorkflow, updateUndoChatCardUuids, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, updateUndoChatCardUuidsById } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { StatUpdateMessage } from "./RollStats.js";
@@ -311,8 +312,9 @@ async function removeEffects(data: { actorUuid: string; effects: string[]; optio
       debug("removeFunc: remove effects started")
       const actor = fromActorUuid(data.actorUuid);
       if (configSettings.paranoidGM && !paranoidCheck("removeEffects", actor, data)) return "gmBlocked";
-      const effectsToDelete = actor!.appliedEffects.filter(ef => data.effects.includes(ef.id!));
-      return await expireEffects(actor!, effectsToDelete, data.options);
+      // every effect, enabled or not: a suppressed effect is removed too
+      const effectsToDelete = Array.from(actor!.allApplicableEffects()).filter(ef => data.effects.includes(ef.id!));
+      return await deleteAppliedEffects(actor!, effectsToDelete, data.options);
     } catch (err) {
       const message = `GMACTION: remove effects error for ${data?.actorUuid}`;
       console.warn(message, err);
@@ -586,10 +588,10 @@ async function deleteEffects(data: { actorUuid: string, effectsToDelete: string[
   const actor = fromActorUuid(data.actorUuid);
   if (!actor) return;
   // Check that none of the effects were deleted while we were waiting to execute
-  let finalEffectsToDelete = actor.appliedEffects.filter(ef => data.effectsToDelete.includes(ef.id!) && !isEffectExpired(ef));
+  let finalEffectsToDelete = Array.from(actor.allApplicableEffects()).filter(ef => data.effectsToDelete.includes(ef.id!) && !isEffectExpired(ef));
   try {
     if (debugEnabled > 0) warn("_deleteEffects started", actor.name, data.effectsToDelete, finalEffectsToDelete, data.options)
-    const result = await expireEffects(actor, finalEffectsToDelete, data.options)
+    const result = await deleteAppliedEffects(actor, finalEffectsToDelete, data.options)
     if (debugEnabled > 0) warn("_deleteEffects completed", actor.name, data.effectsToDelete, finalEffectsToDelete, data.options)
     return result;
   } catch (err) {
@@ -617,7 +619,7 @@ async function deleteItemEffects(data: { targets: { tokenUuid?: string; actorUui
           error("GMAction:deleteItemEffects | could not find origin for ", origin);
           continue;
         }
-        effectsToDelete = actor?.appliedEffects?.filter(ef => {
+        effectsToDelete = Array.from(actor.allApplicableEffects()).filter(ef => {
           if (originEntity instanceof ActiveEffect) originEntity = originEntity.parent;
           return ef.origin === originEntity?.uuid && !ignore.includes(ef.uuid) && (!data.ignoreTransfer || !ef.transfer)
         });
@@ -629,7 +631,7 @@ async function deleteItemEffects(data: { targets: { tokenUuid?: string; actorUui
             // for (let ef of effectsToDelete) ef.delete();
             options = foundry.utils.mergeObject(options ?? {}, { parent: actor, concentrationDeleted: true });
             if (debugEnabled > 0) warn("deleteItemEffects ", actor.name, effectsToDelete, options);
-            await expireEffects(actor, effectsToDelete, options);
+            await deleteAppliedEffects(actor, effectsToDelete, options);
           } catch (err) {
             const message = `delete item effects failed for ${actor?.name} ${actor?.uuid}`;
             console.warn(message, err);
@@ -2372,12 +2374,16 @@ async function _teleportToken(data: { tokenUuid: string, destination: TeleportTo
   const snappedCenter = canvas.grid.getSnappedPoint({ x: dest.x, y: dest.y }, { mode: CONST.GRID_SNAPPING_MODES.CENTER });
   const topLeft = { x: snappedCenter.x - targetToken.w / 2, y: snappedCenter.y - targetToken.h / 2 };
   const tokenData = originToken.toObject();
-  delete (tokenData as any)._id;
+  tokenData._id = foundry.utils.randomID();
   tokenData.x = topLeft.x;
   tokenData.y = topLeft.y;
   if (dest.elevation !== undefined) tokenData.elevation = dest.elevation;
+  if (!tokenData.actorLink) {
+    repointCopiedDependentsSource(tokenData.delta, `${destScene.uuid}.Token.${tokenData._id}.Actor.${tokenData.actorId}`,
+      path => !!actorEmbeddedByPath(originToken.actor, path));
+  }
   // Create token on destination scene
-  const newToken = await TokenDocument.implementation.create(tokenData, { parent: destScene, keepId: false });
+  const newToken = await TokenDocument.implementation.create(tokenData, { parent: destScene, keepId: true });
   if (!newToken) {
     const message = `teleportToken | failed to create token on destination scene: ${destScene.uuid}`;
     error(message);
