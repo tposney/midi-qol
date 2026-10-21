@@ -1,0 +1,275 @@
+{
+  "_id": "DraughtSecBreath",
+  "_key": "!items!DraughtSecBreath",
+  "name": "Draught of the Second Breath",
+  "type": "consumable",
+  "img": "icons/consumables/potions/flask-corked-red-glow.webp",
+  "folder": "5Ok9Jbl5nOokCkqf",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>The liquid is the colour of a sunrise seen through closed eyes, and it is warm in the bottle.</em></p>\n<p>You can drink this potion as a <strong>reaction</strong> when damage would reduce you to 0 hit points. Instead, you remain standing with hit points equal to half your hit point maximum (any temporary hit points you had count toward this), and the damage is otherwise ignored.</p>\n<p>For the next minute, damage can't reduce you below 1 hit point. When the minute ends, you gain one level of <strong>exhaustion</strong> for each time this protection kept you standing.</p>\n<details><summary>Midi-QOL</summary><p>A reaction offered when incoming damage is at least your current hit points plus temporary hit points (before resistances). The Second Breath effect lasts 1 minute and uses an <code>isDamaged</code> macro; exhaustion is applied when it ends.</p></details>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "Midi-QOL sample",
+      "revision": 1,
+      "rules": "2024"
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 0.5,
+      "units": "lb"
+    },
+    "price": {
+      "value": 50000,
+      "denomination": "gp"
+    },
+    "attunement": "",
+    "rarity": "legendary",
+    "identified": true,
+    "uses": {
+      "max": "1",
+      "autoDestroy": true,
+      "spent": 0,
+      "recovery": []
+    },
+    "damage": {
+      "base": {
+        "number": null,
+        "denomination": null,
+        "types": [],
+        "custom": {
+          "enabled": false
+        },
+        "scaling": {
+          "number": 1
+        }
+      },
+      "replace": false
+    },
+    "unidentified": {
+      "description": ""
+    },
+    "type": {
+      "value": "potion",
+      "subtype": ""
+    },
+    "identifier": "draught-of-the-second-breath",
+    "container": null,
+    "magicalBonus": null,
+    "properties": [
+      "mgc"
+    ],
+    "attuned": false,
+    "equipped": false,
+    "activities": {
+      "SecondBreathAct0": {
+        "_id": "SecondBreathAct0",
+        "type": "utility",
+        "activation": {
+          "type": "reaction",
+          "value": 1,
+          "condition": "When damage would reduce you to 0 hit points",
+          "override": false
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "value": "1",
+              "target": "",
+              "scaling": {}
+            }
+          ],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "1",
+          "units": "minute",
+          "special": "",
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "SecondBreathEff0"
+          }
+        ],
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "self",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "sort": 0,
+        "useConditionText": "reaction === \"isDamaged\" && (workflow?.damageTotal ?? 0) >= (target?.attributes?.hp?.value ?? 0) + (target?.attributes?.hp?.temp ?? 0)",
+        "effectConditionText": "",
+        "name": "Drink",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    }
+  },
+  "effects": [
+    {
+      "changes": [
+        {
+          "key": "flags.midi-qol.onUseMacroName",
+          "mode": 0,
+          "value": "ItemMacro, isDamaged",
+          "priority": 20
+        },
+        {
+          "key": "macro.itemMacro",
+          "mode": 0,
+          "value": "",
+          "priority": 20
+        }
+      ],
+      "transfer": false,
+      "_id": "SecondBreathEff0",
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "origin": null,
+      "tint": "#ffffff",
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "selfTargetAlways": false,
+          "stackable": "noneName",
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "showIcon": true
+        },
+        "midi-qol": {
+          "secondBreath": {
+            "risen": false,
+            "saves": 0
+          }
+        }
+      },
+      "name": "Second Breath",
+      "description": "Damage can't reduce you below 1 hit point. Gain a level of exhaustion for each time it does when this ends.",
+      "statuses": [],
+      "img": "icons/consumables/potions/flask-corked-red-glow.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!DraughtSecBreath.SecondBreathEff0"
+    }
+  ],
+  "flags": {
+    "dae": {
+      "macro": {
+        "name": "Draught of the Second Breath",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "// Draught of the Second Breath\n// isDamaged, while the effect lasts: the blow that would drop the drinker to 0 leaves them at half their hit\n// point maximum; later ones leave them at 1 and are counted. When the effect ends, a level of exhaustion for each.\nconst FLAG = \"secondBreath\";\nconst name = macroItem?.name ?? \"Draught of the Second Breath\";\nconst say = (content) => ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<strong>${name}</strong>: ${content}` });\n\nif (args[0] === \"off\") {\n  const lastArg = args.at(-1);\n  const saves = foundry.utils.getProperty(lastArg?.efData ?? {}, `flags.midi-qol.${FLAG}.saves`) ?? 0;\n  if (saves < 1) return;\n  const exhaustion = Math.min(6, (actor.system.attributes.exhaustion ?? 0) + saves);\n  const updates = { \"system.attributes.exhaustion\": exhaustion };\n  if (actor.isOwner) await actor.update(updates);\n  else await MidiQOL.socket().executeAsGM(\"updateActor\", { actorUuid: actor.uuid, updates });\n  await say(`the second breath runs out: ${actor.name} gains ${saves} level${saves > 1 ? \"s\" : \"\"} of exhaustion.`);\n  return;\n}\nif (args[0]?.tag !== \"TargetOnUse\" || args[0].macroPass !== \"isDamaged\") return;\n\nconst di = workflow?.damageItem;\nif (!di || di.oldHP < 1 || di.newHP > 0) return;\nconst effect = actor.effects.find(e => e.getFlag(\"midi-qol\", FLAG) !== undefined);\nif (!effect) return;\nconst state = effect.getFlag(\"midi-qol\", FLAG);\n\n// Damage that leaves exactly 1 hit point, temporary hit points spent first.\nconst useDetail = MidiQOL.configSettings().useDamageDetail;\nconst base = useDetail ? di.totalDamage : di.hpDamage;\nconst leaveOne = useDetail ? (di.oldTempHP ?? 0) + di.oldHP - 1 : di.oldHP - 1;\nMidiQOL.modifyDamageBy({ damageItem: di, value: leaveOne - base, type: \"none\", reason: name });\ndi.newHP = 1;\n\nlet update;\nif (!state.risen) {\n  // the first blow: rise with half the hit point maximum\n  const half = Math.max(1, Math.floor(actor.system.attributes.hp.max / 2));\n  if (half > 1) MidiQOL.modifyDamageBy({ damageItem: di, value: -(half - 1), type: \"healing\", reason: name });\n  di.newHP = half;\n  update = { risen: true, saves: state.saves ?? 0 };\n  await say(`${actor.name} draws a second breath and stays standing.`);\n} else {\n  update = { risen: true, saves: (state.saves ?? 0) + 1 };\n  await say(`the draught holds ${actor.name} at 1 hit point.`);\n}\nawait MidiQOL.socket().executeAsGM(\"updateEffects\", { actorUuid: actor.uuid, updates: [{ _id: effect.id, [`flags.midi-qol.${FLAG}`]: update }] });\n",
+        "author": null,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {},
+        "_stats": {}
+      }
+    },
+    "midi-qol": {
+      "onUseMacroParts": {
+        "items": []
+      }
+    },
+    "midiProperties": {
+      "confirmTargets": "default"
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.68"
+      }
+    }
+  }
+}

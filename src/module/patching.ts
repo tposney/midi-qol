@@ -545,20 +545,25 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     const hasPassedSkillAdvantage = passedSkillAdvantageMap && Object.keys(passedSkillAdvantageMap).length > 0 &&
       Object.values(passedSkillAdvantageMap).some(v => v.tracker instanceof RollModifierTracker);
 
+    // A check activity's skills each roll with their own ability
+    const abilityFor = checkActivityAbilities(rollActivity(config.midiOptions), this);
     // Skip building advantage map for external module rolls - they already computed advantage
     const preComputedSkillAdvantageMap: Record<string, PreComputedAdvantage> = isExternalModuleRoll
       ? {} // External modules handle their own advantage - don't recompute
       : hasPassedSkillAdvantage && passedSkillAdvantageMap
         ? passedSkillAdvantageMap
-        : await buildPreComputedAdvantageMap(this, "skill", rollSkills, config.midiOptions ?? {}, config.ability);
+        : await buildPreComputedAdvantageMap(this, "skill", rollSkills, config.midiOptions ?? {}, abilityFor ?? config.ability);
 
     // Setup dialog with MidiRollChoiceDialog helper
     let userExplicitChoice: string | undefined;
     const { hasMultiple: hasMultipleSkills } = setupChoiceDialog(
       this, config, dialog, "skill", rollSkills,
       preComputedSkillAdvantageMap, hasPreComputedAdvantage, "skill",
-      (choice) => { userExplicitChoice = choice; }
+      (choice) => { userExplicitChoice = choice; }, abilityFor
     );
+    const chosenSkillAbility = abilityFor?.(config.skill ?? "");
+    if (chosenSkillAbility) config.ability = chosenSkillAbility;
+
 
     preRollSkillHookId = Hooks.once("dnd5e.preRollSkill", (configData, dialogData, messageData) => {
       configData.midiOptions = { ...(configData.midiOptions ?? {}), ...(midiOptions ?? {}) };
@@ -875,13 +880,14 @@ function setupChoiceDialog(
   advantageMap: Record<string, PreComputedAdvantage>,
   hasPreComputedAdvantage: boolean,
   rollTypeForChoices: "skill" | "tool" | "save" | "check",
-  onChoiceCapture: (choice: string) => void
+  onChoiceCapture: (choice: string) => void,
+  abilityFor?: (id: string) => string | undefined
 ): { hasMultiple: boolean } {
   const hasMultiple = choices.length > 1;
 
   dialog.applicationClass = MidiRollChoiceDialog;
   dialog.options ??= {};
-  const rollChoices = buildRollChoices(actor, rollTypeForChoices, choices);
+  const rollChoices = buildRollChoices(actor, rollTypeForChoices, choices, abilityFor);
   const best = selectBestRollChoice(rollChoices, advantageMap);
 
   if (best) {
@@ -896,6 +902,7 @@ function setupChoiceDialog(
   dialog.options.rollChoices = rollChoices;
   dialog.options.advantageByChoice = advantageMap;
   dialog.options.choiceType = choiceType;
+  dialog.options.abilityForChoice = abilityFor;
 
   // Only set buildConfig when we need to rebuild parts on choice change:
   // - Skills/tools: Always (dnd5e's pattern expects buildConfig to construct parts)
@@ -1601,6 +1608,28 @@ interface RollTypeHandler {
   getModifierFlags: (actor: Actor.Implementation, id: string, options?: MidiOptions, ability?: string) => RollModifierFlags;
 }
 
+/**
+ * The ability a check activity rolls each of its skills or tools with, as dnd5e's check buttons do (the activity's own,
+ * else the skill's or tool's), with "spellcasting" resolved for the actor.
+ */
+export function checkActivityAbilities(activity: Activity | undefined | null, actor: Actor.Implementation | undefined | null): ((id: string) => string | undefined) | undefined {
+  if (!activity?.check || typeof activity.getAbility !== "function") return undefined;
+  return id => {
+    const ability = activity.getAbility?.(id) || undefined;
+    // @ts-expect-error no dnd5e-types
+    return ability === "spellcasting" ? actor?.system.attributes?.spellcasting || undefined : ability;
+  };
+}
+
+/** The activity a roll was made for: the workflow's, else from its uuid */
+function rollActivity(midiOptions: MidiOptions): Activity | undefined {
+  const uuid = midiOptions.saveActivityUuid;
+  if (!uuid) return undefined;
+  const workflowActivity = midiOptions.workflow?.saveActivity;
+  if (workflowActivity?.uuid === uuid) return workflowActivity;
+  return fromUuidSync(uuid, { strict: false }) as Activity | undefined;
+}
+
 /** The ability a skill or tool check is rolled with: the one asked for, else its default. */
 function skillToolAbility(actor: Actor.Implementation, type: "skill" | "tool", id: string, ability?: string): string {
   if (ability) return ability;
@@ -1749,7 +1778,7 @@ export async function buildPreComputedAdvantageMap(
   rollType: string,
   rollIds: string[],
   options: MidiOptions,
-  ability?: string
+  ability?: string | ((id: string) => string | undefined)
 ): Promise<Record<string, PreComputedAdvantage>> {
   const result: Record<string, PreComputedAdvantage> = {};
   const workflow = options.workflow;
@@ -1761,11 +1790,12 @@ export async function buildPreComputedAdvantageMap(
   }
 
   for (const id of rollIds) {
+    const idAbility = typeof ability === "function" ? ability(id) : ability;
     // Compute advantage/disadvantage with attribution tracking
-    const tracker = await handler.computeAdvantage(actor, id, options, ability);
+    const tracker = await handler.computeAdvantage(actor, id, options, idAbility);
 
     // Add roll modifiers (fail/success/max/min) to the same tracker
-    const modifierFlags = handler.getModifierFlags(actor, id, options, ability);
+    const modifierFlags = handler.getModifierFlags(actor, id, options, idAbility);
     computeRollModifiers(actor, modifierFlags, tracker, { workflow });
 
     const hasAdv = !!tracker.hasAdvantage;
@@ -2512,11 +2542,15 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
         config.midiOptions.fastForward = true;
       }
     }
+    if (!config.midiOptions.workflow && config.midiOptions.workflowId) {
+      config.midiOptions.workflow = Workflow.getWorkflow(config.midiOptions.workflowId);
+    }
+    // A check activity's tools each roll with their own ability
+    const abilityFor = checkActivityAbilities(rollActivity(config.midiOptions), this);
+    const toolAbility = abilityFor?.(config.tool ?? "");
+    if (toolAbility) config.ability = toolAbility;
     // Only compute advantage from flags if not from external module and not pre-computed
     if (!hasPreComputedAdvantage && !isExternalModuleRoll) {
-      if (!config.midiOptions.workflow && config.midiOptions.workflowId) {
-        config.midiOptions.workflow = Workflow.getWorkflow(config.midiOptions.workflowId);
-      }
       const toolRollModifierTracker = await computeToolAdvantage(this, config.tool ?? "", config.ability ?? "", config.midiOptions);
       config.advantage = toolRollModifierTracker.hasAdvantage;
       config.disadvantage = toolRollModifierTracker.hasDisadvantage;
@@ -2536,15 +2570,17 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
       ? {} // External modules handle their own advantage - don't recompute
       : hasPassedToolAdvantage && passedToolAdvantageMap
         ? passedToolAdvantageMap
-        : await buildPreComputedAdvantageMap(this, "tool", rollTools, config.midiOptions ?? {}, config.ability);
+        : await buildPreComputedAdvantageMap(this, "tool", rollTools, config.midiOptions ?? {}, abilityFor ?? config.ability);
 
     // Setup dialog with MidiRollChoiceDialog helper
     let userExplicitChoice: string | undefined;
     const { hasMultiple: hasMultipleTools } = setupChoiceDialog(
       this, config, dialog, "tool", rollTools,
       preComputedToolAdvantageMap, hasPreComputedAdvantage, "tool",
-      (choice) => { userExplicitChoice = choice; }
+      (choice) => { userExplicitChoice = choice; }, abilityFor
     );
+    const chosenToolAbility = abilityFor?.(config.tool ?? "");
+    if (chosenToolAbility) config.ability = chosenToolAbility;
 
     preRollHookId = Hooks.once("dnd5e.preRollTool", (configData, dialogData, messageData) => {
       configData.midiOptions = { ...(configData.midiOptions ?? {}), ...(midiOptions ?? {}) };

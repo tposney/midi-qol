@@ -1,0 +1,433 @@
+{
+  "_id": "DraughtEchoStep0",
+  "_key": "!items!DraughtEchoStep0",
+  "name": "Draught of the Echoing Step",
+  "type": "consumable",
+  "img": "icons/consumables/potions/flask-corked-blue-glow.webp",
+  "folder": "5Ok9Jbl5nOokCkqf",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Drunk, it tastes of nothing at all, and for a moment you can hear yourself, a step behind.</em></p>\n<p>For 1 minute after you drink this potion (a bonus action), an <strong>echo</strong> of you, a silent translucent copy, appears where you stand when you drink it. Once it is gone (you stepped to it, or it was struck), a new one appears where you stand at the start of your next turn.</p>\n<p>When you are hit by an attack and your echo is within 60 feet, you can use your <strong>reaction</strong> to trade places with it: you appear where the echo was, and the attack strikes only the fading image instead, missing you. A creature that hits the echo itself hits nothing, but the echo is destroyed, so you can't step to it until your next turn starts.</p>\n<p>When the potion's magic ends, your last echo remains for a day, with your face and your voice, saying nothing.</p>\n<details><summary>Midi-QOL</summary><p>Step is a reaction offered when you are hit while the potion is active. It moves you to the echo and makes that one attack miss, even a critical hit. Echoes are unlinked copies of your token, created through DAE, so harm to them never reaches you; the last one is left for the GM to remove.</p></details>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "Midi-QOL sample",
+      "revision": 1,
+      "rules": "2024"
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 0.5,
+      "units": "lb"
+    },
+    "price": {
+      "value": 50000,
+      "denomination": "gp"
+    },
+    "attunement": "",
+    "rarity": "legendary",
+    "identified": true,
+    "uses": {
+      "max": "1",
+      "autoDestroy": false,
+      "spent": 0,
+      "recovery": []
+    },
+    "damage": {
+      "base": {
+        "number": null,
+        "denomination": null,
+        "types": [],
+        "custom": {
+          "enabled": false
+        },
+        "scaling": {
+          "number": 1
+        }
+      },
+      "replace": false
+    },
+    "unidentified": {
+      "description": ""
+    },
+    "type": {
+      "value": "potion",
+      "subtype": ""
+    },
+    "identifier": "draught-of-the-echoing-step",
+    "container": null,
+    "magicalBonus": null,
+    "properties": [
+      "mgc"
+    ],
+    "attuned": false,
+    "equipped": false,
+    "activities": {
+      "EchoStepDrink000": {
+        "_id": "EchoStepDrink000",
+        "type": "utility",
+        "activation": {
+          "type": "bonus",
+          "value": 1,
+          "condition": "",
+          "override": false
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "value": "1",
+              "target": "",
+              "scaling": {}
+            }
+          ],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "1",
+          "units": "minute",
+          "special": "",
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "EchoingStepEff00"
+          }
+        ],
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "self",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "name": "Drink",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      },
+      "EchoStepStep0000": {
+        "_id": "EchoStepStep0000",
+        "type": "utility",
+        "activation": {
+          "type": "reaction",
+          "value": 1,
+          "condition": "When you are hit by an attack and your echo is within 60 feet",
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "SteppedAsideEff0"
+          }
+        ],
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "self",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "sort": 0,
+        "useConditionText": "reaction === \"isHit\" && !!target?.flags?.[\"midi-qol\"]?.echoingStep && !target?.flags?.[\"midi-qol\"]?.isEcho",
+        "effectConditionText": "",
+        "name": "Step",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    }
+  },
+  "effects": [
+    {
+      "changes": [
+        {
+          "key": "macro.itemMacro",
+          "mode": 0,
+          "value": "",
+          "priority": 20
+        },
+        {
+          "key": "flags.midi-qol.echoingStep",
+          "mode": 5,
+          "value": "1",
+          "priority": 20
+        }
+      ],
+      "transfer": false,
+      "_id": "EchoingStepEff00",
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "origin": null,
+      "tint": "#ffffff",
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "selfTargetAlways": false,
+          "stackable": "noneName",
+          "durationExpression": "",
+          "macroRepeat": "startEveryTurn",
+          "specialDuration": [],
+          "showIcon": true
+        },
+        "midi-qol": {
+          "echoingStep": {
+            "echo": null
+          }
+        }
+      },
+      "name": "Echoing Step",
+      "description": "An echo of you appears where you end your turn. When hit, you can use your reaction to step to it.",
+      "statuses": [],
+      "img": "icons/consumables/potions/flask-corked-blue-glow.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!DraughtEchoStep0.EchoingStepEff00"
+    },
+    {
+      "changes": [
+        {
+          "key": "flags.midi-qol.grants.attack.fail.all",
+          "mode": 0,
+          "value": "1",
+          "priority": 20
+        }
+      ],
+      "transfer": false,
+      "_id": "SteppedAsideEff0",
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "origin": null,
+      "tint": "#ffffff",
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "selfTargetAlways": false,
+          "stackable": "noneName",
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [
+            "isAttacked"
+          ],
+          "showIcon": false
+        }
+      },
+      "name": "Stepped Aside",
+      "description": "The attack that provoked the step misses.",
+      "statuses": [],
+      "img": "icons/consumables/potions/flask-corked-blue-glow.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!DraughtEchoStep0.SteppedAsideEff0"
+    }
+  ],
+  "flags": {
+    "dae": {
+      "macro": {
+        "name": "Draught of the Echoing Step",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "// Draught of the Echoing Step\n// Effect \"Echoing Step\" (DAE on / each = start of your turn, only if the echo is gone / off), the Step reaction (postActiveEffects),\n// and the echo's own isHit: an echo that is hit is gone.\nconst FLAG = \"echoingStep\";\nconst name = macroItem?.name ?? \"Draught of the Echoing Step\";\nconst say = (who, content) => ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: who }), content: `<strong>${name}</strong>: ${content}` });\nconst effectOf = (a) => a?.effects.find(e => e.getFlag(\"midi-qol\", FLAG) !== undefined);\nconst setEcho = async (a, echoUuid) => {\n  const effect = effectOf(a);\n  if (effect) await MidiQOL.socket().executeAsGM(\"updateEffects\", { actorUuid: a.uuid, updates: [{ _id: effect.id, [`flags.midi-qol.${FLAG}.echo`]: echoUuid }] });\n};\nconst removeEcho = async (uuid) => { if (uuid && fromUuidSync(uuid)) await MidiQOL.socket().executeAsGM(\"deleteToken\", { tokenUuid: uuid }); };\n// an echo is scenery: never a combatant\nconst dropEchoCombatants = async () => {\n  for (const combat of game.combats) {\n    const ids = combat.combatants.filter(c => c.token?.getFlag(\"midi-qol\", \"echoOf\")).map(c => c.id);\n    if (ids.length && combat.canUserModify(game.user, \"update\")) await combat.deleteEmbeddedDocuments(\"Combatant\", ids);\n  }\n};\n\n// An echo where the drinker stands, replacing the last one.\nasync function placeEcho(drinker, drinkerToken) {\n  const doc = drinkerToken?.document ?? drinkerToken;\n  if (!doc) return;\n  // while the old echo's token still identifies its combatant\n  await dropEchoCombatants();\n  await removeEcho(effectOf(drinker)?.getFlag(\"midi-qol\", FLAG)?.echo);\n  const data = doc.toObject();\n  delete data._id;\n  // the echo is an unlinked copy: drop the effects it would inherit from the drinker's actor (Echoing Step among them)\n  const inherited = (game.actors.get(doc.actorId)?.effects ?? []).map(e => ({ _id: e.id, _tombstone: true }));\n  // under the drinker, so clicking the shared space picks the drinker\n  Object.assign(data, { name: `Echo of ${doc.name}`, alpha: 0.5, actorLink: false, hidden: false, sort: (doc.sort ?? 0) - 1 });\n  foundry.utils.setProperty(data, \"sight.enabled\", false);\n  foundry.utils.setProperty(data, \"flags.midi-qol.echoOf\", drinker.uuid);\n  // an echo that is hit disappears\n  // an image: no actions or reactions of its own (it is a copy of the drinker, items and all)\n  data.delta = { flags: { \"midi-qol\": { isEcho: true } }, effects: [...inherited, { name: \"Echo\", img: macroItem?.img ?? \"icons/svg/aura.svg\", transfer: false,\n    statuses: [\"incapacitated\"],\n    changes: [{ key: \"flags.midi-qol.onUseMacroName\", mode: 0, value: `ItemMacro.${macroItem.uuid}, isHit`, priority: 20 }] }] };\n  const created = await DAE.createToken(data, doc.x, doc.y);\n  const id = created?.[0]?._id;\n  if (id) await setEcho(drinker, `${doc.parent.uuid}.Token.${id}`);\n}\n\nconst pass = args[0]?.macroPass;\n// echoes made before their inherited effects were dropped still carry Echoing Step: they never act as the drinker\nconst isEcho = !!(actor?.getFlag(\"midi-qol\", \"isEcho\") || (token?.document ?? token)?.getFlag?.(\"midi-qol\", \"echoOf\"));\nif ([\"on\", \"each\", \"off\"].includes(args[0]) && isEcho) return;\nif (args[0] === \"on\") return placeEcho(actor, token);\n// a new echo only once the last one is used up (stepped to or struck)\nif (args[0] === \"each\") return fromUuidSync(effectOf(actor)?.getFlag(\"midi-qol\", FLAG)?.echo ?? \"\") ? undefined : placeEcho(actor, token);\n\nif (args[0] === \"off\") {\n  const echo = fromUuidSync(args.at(-1)?.efData?.flags?.[\"midi-qol\"]?.[FLAG]?.echo ?? \"\");\n  if (echo?.object) await DAE.renameToken(echo.object, `Lingering echo of ${token?.name ?? actor.name}`);\n  if (echo) await say(actor, `${actor.name}'s last echo lingers, silent, where they last stood.`);\n  const potion = actor.items.get(macroItem?.id);\n  if (potion) await potion.delete();\n  return;\n}\n\nif (args[0]?.tag === \"TargetOnUse\" && pass === \"isHit\") {\n  // this is the echo being hit\n  const echoToken = args[0].options?.token ?? token;\n  const drinker = fromUuidSync(echoToken?.document?.getFlag?.(\"midi-qol\", \"echoOf\") ?? echoToken?.getFlag?.(\"midi-qol\", \"echoOf\") ?? \"\");\n  const uuid = echoToken?.document?.uuid ?? echoToken?.uuid;\n  await removeEcho(uuid);\n  if (drinker && effectOf(drinker)?.getFlag(\"midi-qol\", FLAG)?.echo === uuid) await setEcho(drinker, null);\n  if (drinker) await say(drinker, `the blow passes through ${drinker.name}'s echo, which fades.`);\n  return;\n}\n\nif (args[0]?.tag === \"OnUse\" && pass === \"postActiveEffects\" && (workflow?.activity ?? args[0].activity)?.id === \"EchoStepStep0000\") {\n  const echo = fromUuidSync(effectOf(actor)?.getFlag(\"midi-qol\", FLAG)?.echo ?? \"\");\n  const me = token?.object ?? token;\n  if (!echo?.object || !me) return ui.notifications.warn(`${name}: there is no echo to step to.`);\n  const distance = canvas.grid.measurePath([me.center, echo.object.center]).distance;\n  if (distance > 60) return ui.notifications.warn(`${name}: the echo is ${Math.round(distance)} ft away, more than 60 ft.`);\n  await MidiQOL.moveToken(me, echo.object.center, { teleport: true });\n  await removeEcho(echo.uuid);\n  await setEcho(actor, null);\n  await say(actor, `${actor.name} steps into their echo; the blow strikes only a fading image.`);\n}\n",
+        "author": null,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {},
+        "_stats": {}
+      }
+    },
+    "midi-qol": {
+      "onUseMacroName": "[postActiveEffects]ItemMacro",
+      "onUseMacroParts": {
+        "items": [
+          {
+            "macroName": "ItemMacro",
+            "option": "postActiveEffects"
+          }
+        ]
+      }
+    },
+    "midiProperties": {
+      "confirmTargets": "default"
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.68"
+      }
+    }
+  }
+}

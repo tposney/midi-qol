@@ -105,7 +105,7 @@ import {
   getConsumptionData,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
-import { bonusCheck, collectBonusFlags, defaultRollOptions, computeAbilityAdvantage, buildPreComputedAdvantageMap } from "./patching.js";
+import { bonusCheck, collectBonusFlags, defaultRollOptions, computeAbilityAdvantage, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
 import { PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -6003,6 +6003,7 @@ return {
                   fastForward: true,
                   recomputeAdvantage: true, // compute advantage/disadvantage from flags in roll function
                   saveItemUuid: this.saveItem?.uuid,
+                  saveActivityUuid: this.saveActivity?.uuid,
                   isConcentrationCheck: saveDetails.isConcentrationCheck,
                   workflowOptions: saveDetails.workflowOptions,
                   rollAbilities,
@@ -6402,6 +6403,7 @@ return {
       isConcentrationCheck: undefined,
       rollDC: rollDC ?? 0,
       saveItemUuid: this.saveItem?.uuid ?? "",
+      saveActivityUuid: this.saveActivity?.uuid,
       workflowId: this.id,
       itemCardUuid: this.itemCardUuid ?? "",
       workflowOptions: this.workflowOptions,
@@ -6446,7 +6448,7 @@ return {
           "skill",
           rollSkills,
           { workflow: this, isMagicSave: false },
-          this.saveActivity?.check?.ability || undefined
+          checkActivityAbilities(this.saveActivity, target.actor)
         );
       } else {
         choiceMap = await buildPreComputedAdvantageMap(
@@ -6454,7 +6456,7 @@ return {
           "tool",
           rollTools,
           { workflow: this, isMagicSave: false },
-          this.saveActivity?.check?.ability || undefined
+          checkActivityAbilities(this.saveActivity, target.actor)
         );
       }
 

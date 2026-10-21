@@ -1,3 +1,15 @@
+### 13.0.69
+* Requires DAE 13.0.31.
+* Fixed: TroubleShooter's Auto Fix didn't refresh an open settings panel (it fired `midi-qol.configSettingsChanged` instead of `ConfigSettingsChanged`).
+* Added: sample item *Draught of the Echoing Step*, a legendary potion: for a minute an echo of you appears where you drink it, and again where you start your turn once the last one is used up, and when hit you can use your reaction to trade places with it so the attack misses, even a critical hit; an echo that is hit fades. The echo is never a combatant and carries none of your effects. Uses DAE's createToken and times-up's end-of-turn effect macros.
+* Added: sample item *Draught of the Second Breath*, a legendary potion drunk as a reaction when damage would drop you to 0: you stay up at half your hit points, can't drop below 1 for a minute, and gain a level of exhaustion for each time that saved you. Requires DAE 13.0.31.
+* Fixed: the default *Check weapon range when attacking* (`longFail`) wasn't one of the setting's options, so the settings panel showed none selected; stored values are migrated to `longfail`.
+* Fixed: once an actor whose reactions or bonus actions reset only on a rest (or never, or each turn) used one, every later reaction or bonus action marker, for any actor, reset that way too (a reaction no longer cleared at the start of its turn).
+* Changed: with *Calculate Cover* set, a target with total cover (dnd5e's Total Cover status, or the cover module's total cover) can't be targeted by an activity that targets creatures directly (not an area template or emanation), as the rules have it; previously attacks auto-missed and other spells (e.g. Hold Person, Magic Missile) still applied. New *Calculate Cover* option *dnd5e cover status only* uses the status alone. *Ignore total cover* still applies; None keeps the old behaviour.
+* Fixed: a check activity offering several skills or tools rolled the chosen one with the first one's ability (Athletics or Acrobatics: Acrobatics rolled with Strength); switching the skill in the roll dialog now switches the ability too.
+* Changed: walls block an attack (*Walls block ranged attacks*: Center Check, and the module fallbacks) only if they block movement, i.e. total cover, as in 11.0.13: darkness and walls that only block sight (curtains) no longer block it (if the target can't be seen the attack has disadvantage with vision checking); a wall that blocks movement but not sight (a window) does. The failure says the target has total cover.
+* Fixed: a tool's check activity offering several tools read advantage and fail/success flags for each tool's default ability, not the tool item's own.
+
 ### 13.0.68
 * From this release the v13 (Foundry 13 / dnd5e 5.x) line receives only bug fixes, no feature enhancements.
 * Fixed: on dnd5e 5.3, ignoring or downgrading an immunity, resistance or vulnerability for specific damage types left an "All Damage" trait (e.g. DAE's `system.traits.dr.all`) in force; `idi.<type>`/`ddi.<type>` now apply against an "All Damage" immunity, and downgrading a type the target isn't immune to no longer drops its resistance.

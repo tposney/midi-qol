@@ -1,4 +1,4 @@
-import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface } from "../midi-qol.js";
+import { debug, i18n, i18nFormat, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC, DOWNGRADE_IMMUNITY_KEY, ALL_DAMAGE_KEY } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { AttributionEntry, AttributionMap, AttributionType, AugmentedEvent, DummyWorkflow, Workflow, WorkflowOptions, WorkflowRollOptions } from "./Workflow.js";
@@ -893,13 +893,22 @@ export function getToolLabel(toolId: string): string {
 export function buildRollChoices(
   actor: Actor.Implementation,
   rollType: "save" | "check" | "skill" | "tool",
-  ids: string[]
+  ids: string[],
+  abilityFor?: (id: string) => string | undefined
 ): { value: string, label: string, modifier: string }[] {
+  // A skill or tool rolled with another ability than its own swaps that ability's modifier
+  const skillToolTotal = (entry: { total?: number, ability?: string } | undefined, ability: string | undefined): number => {
+    const total = entry?.total ?? 0;
+    if (!ability || !entry?.ability || ability === entry.ability) return total;
+    //@ts-expect-error no dnd5e-types
+    const abilities = actor.system.abilities;
+    return total - (abilities?.[entry.ability]?.mod ?? 0) + (abilities?.[ability]?.mod ?? 0);
+  };
   if (rollType === "skill") {
     return ids.map(skillId => {
       const label = GameSystemConfig.skills[skillId]?.label ?? skillId;
       //@ts-expect-error no dnd5e-types
-      const total: number = actor.system.skills?.[skillId]?.total ?? 0;
+      const total = skillToolTotal(actor.system.skills?.[skillId], abilityFor?.(skillId));
       const modifier = total >= 0 ? `+${total}` : `${total}`;
       return { value: skillId, label, modifier };
     });
@@ -908,7 +917,7 @@ export function buildRollChoices(
     return ids.map(toolId => {
       const label = getToolLabel(toolId);
       //@ts-expect-error no dnd5e-types
-      const total: number = actor.system.tools?.[toolId]?.total ?? 0;
+      const total = skillToolTotal(actor.system.tools?.[toolId], abilityFor?.(toolId));
       const modifier = total >= 0 ? `+${total}` : `${total}`;
       return { value: toolId, label, modifier };
     });
@@ -2547,6 +2556,7 @@ export type MidiOptions = {
   rollOptions?: WorkflowRollOptions;
   saveItem?: Item.Implementation;
   saveItemUuid?: string;
+  saveActivityUuid?: string;
   simulate?: boolean;
   // grantsActor/grantsToken: The opposing entity that grants advantage/disadvantage.
   // For attacks: the defender (target). For saves/checks: the caster (workflow.actor).
@@ -2976,6 +2986,11 @@ export interface WallCollisionOptions {
  * @param options - Collision check options
  * @returns true if collision detected (path blocked), false if clear
  */
+/** Only walls that block movement give total cover: darkness and sight-only walls (curtains) leave a target attackable */
+function wallBlocksPath(origin: { x: number, y: number }, dest: { x: number, y: number }, source: any): boolean {
+  return !!CONFIG.Canvas.polygonBackends.move.testCollision(origin, dest, { source, mode: "any", type: "move" });
+}
+
 export function checkWallCollision(
   origin: { x: number, y: number },
   dest: { x: number, y: number },
@@ -2986,11 +3001,7 @@ export function checkWallCollision(
 
   switch (wallsBlockRange) {
     case "center": {
-      blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
-        source,
-        mode: "any",
-        type: "sight"
-      });
+      blocked = !!wallBlocksPath(origin, dest, source);
       return blocked;
     }
 
@@ -3015,21 +3026,13 @@ export function checkWallCollision(
         return false;
       }
       // Fallback to basic check if Levels not installed
-      blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
-        source,
-        mode: "any",
-        type: "sight"
-      });
+      blocked = !!wallBlocksPath(origin, dest, source);
       return blocked;
 
     case "alternative":
     case "simbuls-cover-calculator":
       if (coverVisible === undefined) {
-        blocked = !!CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, {
-          source,
-          mode: "any",
-          type: "sight"
-        });
+        blocked = !!wallBlocksPath(origin, dest, source);
         return blocked;
       }
       return false;
@@ -3703,10 +3706,10 @@ export function checkActivityRange(activityIn: Activity, tokenRef: TokenOrDocume
 
       // Wall blocking is indicated by rawDistance < 0, check it first before applying fudge factor
       if (rawDistance < 0) {
-        log(`${target.name} is blocked by a wall`)
+        log(`${target.name} has total cover`)
         return {
           result: "fail",
-          reason: `${actor?.name}'s target is blocked by a wall`,
+          reason: i18nFormat("midi-qol.TargetTotalCover", { name: actor?.name ?? "" }),
           range,
           longRange
         }
@@ -3830,6 +3833,29 @@ export function initCoverConstants() {
 export function hasCoverStatus(actor: Actor | null | undefined): boolean {
   const statuses = actor?.statuses;
   return !!(statuses?.has("coverHalf") || statuses?.has("coverThreeQuarters") || statuses?.has("coverTotal"));
+}
+
+/**
+ * The targets with total cover, which can't be targeted: with *Cover calculation* set, the Total Cover status, or a cover
+ * module's total cover. None with *Ignore total cover*.
+ */
+export function totalCoverTargets(activity: Activity, token: TokenOrDocument | undefined, targets: Iterable<TokenOrDocument>): TokenOrDocument[] {
+  const coverCalculation = configSettings.optionalRules.coverCalculation;
+  if (!coverCalculation || coverCalculation === "none" || !token || activity.midiProperties?.ignoreFullCover) return [];
+  const tokenDocument = getTokenDocument(token);
+  return [...targets].filter(target => getTokenDocument(target) !== tokenDocument
+    && (hasCoverTotal(getTokenDocument(target)?.actor)
+      || (coverCalculation !== "dnd5eStatus" && computeCoverBonus(token, target, activity) === TOTAL_COVER)));
+}
+
+/** Warn about targets with total cover; false if there are any */
+export function checkTotalCover(activity: Activity, token: TokenOrDocument | undefined, targets: Iterable<TokenOrDocument>): boolean {
+  const covered = totalCoverTargets(activity, token, targets);
+  if (!covered.length) return true;
+  ui.notifications?.warn(i18nFormat("midi-qol.TargetsTotalCover", {
+    name: activity.item?.name ?? "", targets: covered.map(target => getTokenPlayerName(target)).join(", ")
+  }));
+  return false;
 }
 
 /** Check if an actor has the coverTotal status (impossible to hit). */
@@ -6783,7 +6809,7 @@ export async function setReactionUsed(actor: Actor.Implementation, active: boole
     const actions = actor.getFlag(MODULE_ID, "actions");
     const newCount = (actions?.reactionsUsed ?? 0) + 1;
     await actor.effects.get(getStaticID(id))?.delete();
-    const effect = foundry.utils.deepClone(getReactionEffect());
+    const effect = getReactionEffect()?.clone({}, { keepId: true });
     const allReactionsUsed = newCount >= (actor.getFlag(MODULE_ID, "actions")?.reactionsMax ?? 1);
     if (!effect) return;
     effect.updateSource({
@@ -6818,7 +6844,7 @@ export async function setBonusActionUsed(actor: Actor.Implementation) {
   const bonusActionsMax = actions?.bonusActionsMax ?? 1;
   const allBonusActionsUsed = newCount >= bonusActionsMax;
   await actor.effects.get(getStaticID(id))?.delete();
-  const effect = foundry.utils.deepClone(getBonusActionEffect());
+  const effect = getBonusActionEffect()?.clone({}, { keepId: true });
   if (!effect) return;
   effect.updateSource({
     origin: actor.uuid,

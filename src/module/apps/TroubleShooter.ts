@@ -298,8 +298,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
               await exportSettingsToJSON(); // Just a safety net saving of the settings
               const settingsJSON = TroubleShooter.data.midiSettings;
               importSettingsFromJSON(settingsJSON);
-              //@ts-expect-error
-              Hooks.callAll("midi-qol.configSettingsChanged");
+              Hooks.callAll("midi-qol.ConfigSettingsChanged");
               resolve(true);
             }
           },

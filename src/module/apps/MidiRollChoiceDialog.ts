@@ -37,12 +37,13 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
   get rolls(): any { return super.rolls; }
 
   /** Typed access to our custom options (ApplicationV2 options are untyped) */
-  get midiOptions(): { rollChoices: RollChoice[], choiceType: string, advantageByChoice?: Record<string, PreComputedAdvantage> } {
+  get midiOptions(): { rollChoices: RollChoice[], choiceType: string, advantageByChoice?: Record<string, PreComputedAdvantage>, abilityForChoice?: (id: string) => string | undefined } {
     const opts = (this as any).options;
     return {
       rollChoices: opts.rollChoices ?? [],
       choiceType: opts.choiceType ?? "ability",
-      advantageByChoice: opts.advantageByChoice
+      advantageByChoice: opts.advantageByChoice,
+      abilityForChoice: opts.abilityForChoice
     };
   }
 
@@ -131,8 +132,17 @@ export class MidiRollChoiceDialog extends D20RollConfigurationDialog {
 
   /** @override */
   _onChangeForm(formConfig, event) {
+    const { choiceType, advantageByChoice, abilityForChoice } = this.midiOptions;
+    // A check activity's skill or tool brings its ability, before the rolls are rebuilt from the form
+    if ((choiceType === "skill" || choiceType === "tool") && event.target?.name === choiceType) {
+      const ability = abilityForChoice?.(event.target.value);
+      const select = event.target.form?.elements.namedItem("ability");
+      if (ability && select instanceof HTMLSelectElement) {
+        select.value = ability;
+        this.config.ability = ability;
+      }
+    }
     super._onChangeForm(formConfig, event);
-    const { choiceType, advantageByChoice } = this.midiOptions;
 
     // Handle ability change on skill/tool rolls (replicates SkillToolRollConfigurationDialog)
     if ((choiceType === "skill" || choiceType === "tool") && event.target?.name === "ability") {

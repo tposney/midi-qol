@@ -31,6 +31,7 @@ import {
   canSee,
   canSense,
   checkActivityRange,
+  checkTotalCover,
   checkIncapacitated,
   createConditionData,
   displayDSNForRoll,
@@ -1723,6 +1724,10 @@ export let MidiActivityMixin = Base => {
           }
         }
 
+
+        const targetsCreatures = !!this.attack || !["", "self"].includes(this.target?.affects?.type ?? "");
+        if (!isAoETargeting && !isEmanationTargeting && targetsCreatures && !checkTotalCover(this, tokenToUse, workflow.targets))
+          return removeWorkflow(workflow);
 
         if (!workflow) return false;
         workflow.token = tokenToUse;

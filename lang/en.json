@@ -603,6 +603,7 @@
     "longdisadv": "target range > long range: disadvantage"
   },
   "midi-qol.NearbyFoe.Name": "Ranged attacks when a foe is closer than this have disadvantage. 0 disables",
+  "midi-qol.TargetTotalCover": "{name}'s target has total cover",
   "midi-qol.WallsBlockRange.Name": "Walls block ranged attacks",
   "midi-qol.WallsBlockRange.Hint": "If a cover module determines total cover, the attack is blocked.",
   "midi-qol.WallsBlockRangeOptionsNew": {
@@ -615,7 +616,7 @@
     "simplecover5e": "Simple Cover 5e",
     "expandedHints": {
       "none": "Walls do not block ranged attack checks.",
-      "center": "Check line of sight from token center to target center. If a wall blocks the line, the attack is blocked.",
+      "center": "Check the line from token center to target center. If a wall that blocks movement crosses it (total cover), the attack is blocked; darkness and walls that only block sight do not block it.",
       "centerLevels": "Center-to-center check using the Levels module to determine wall blocking LOS. Also uses Levels volumetric templates for template targeting. Requires the Levels module.",
       "levelsautocover": "Use the Levels Auto Cover module to calculate cover. Total cover blocks the attack. Requires the Levels Auto Cover module.",
       "simbuls-cover-calculator": "Use Simbul's Cover Calculator module to calculate cover. Total cover blocks the attack. Requires the Simbul's Cover Calculator module.",
@@ -630,9 +631,11 @@
     "centerLevels": "Center + Levels"
   },
   "midi-qol.CoverCalculation.Name": "Calculate Cover",
-  "midi-qol.CoverCalculation.Hint": "Calculate AC bonus for targets in cover - settings taken from the selected module",
+  "midi-qol.CoverCalculation.Hint": "Calculate AC bonus for targets in cover - settings taken from the selected module. Unless None, a target with total cover (the Total Cover status, or the module's) can't be targeted.",
+  "midi-qol.TargetsTotalCover": "{name}: {targets} has total cover and can't be targeted",
   "midi-qol.CoverCalculationOptions": {
     "none": "None",
+    "dnd5eStatus": "dnd5e cover status only",
     "simbuls-cover-calculator": "Simbul's Cover Calculator",
     "simplecover5e": "Simple Cover 5e",
     "levelsautocover": "Levels Auto Cover",

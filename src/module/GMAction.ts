@@ -905,6 +905,7 @@ async function rollAbility(data: {
     target: rollDC,
     isMagicSave,
     saveItemUuid,
+    saveActivityUuid: sd.saveActivityUuid,
     isConcentrationCheck,
     workflowOptions,
     itemCardUuid,

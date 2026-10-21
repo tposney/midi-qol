@@ -1434,6 +1434,8 @@ export type RollDialogConfig = {
     advantageByChoice?: Record<string, unknown>;
     /** Choice dropdown type: "ability" for saves, "skill" for skill checks, "tool" for tool checks */
     choiceType?: "ability" | "skill" | "tool";
+    /** Skill/tool choice dialog: the ability each choice rolls with */
+    abilityForChoice?: (id: string) => string | undefined;
     window?: { subtitle?: string };
   };
 };
@@ -1601,6 +1603,7 @@ export type SaveDetails = {
   isConcentrationCheck: boolean | undefined;
   rollDC: number;
   saveItemUuid: string;
+  saveActivityUuid?: string;
   workflowId: string;
   itemCardUuid: string;
   workflowOptions: object;
