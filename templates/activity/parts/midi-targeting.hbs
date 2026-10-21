@@ -1,0 +1,7 @@
+<section class="tab activity-{{ tab.id }} {{ tab.cssClass }}" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
+    <fieldset>
+        <legend>{{localize "midi-qol.TargetingHeader"}}</legend>
+        {{ formField fields.midiProperties.fields.targetMustBeSeen value=source.midiProperties.targetMustBeSeen
+            input=@root.inputs.createCheckboxInput }}
+    </fieldset>
+</section>

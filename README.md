@@ -1,8 +1,7 @@
 # Midi-QOL
 
 ![](https://img.shields.io/badge/Foundry-v14-informational)
-![](https://img.shields.io/badge/Dnd5e-v5.2.4+-informational)
-![](https://img.shields.io/badge/Dnd5e-v5.3+-informational)
+![](https://img.shields.io/badge/Dnd5e-v5.3-informational)
 ![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2Fmidi-qol&colorB=4aa94a)
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/tposney)
@@ -52,7 +51,7 @@ Midi-QOL is highly configurable with quick-start presets for common play styles,
 - [Flowchart](/docs/flowchart.md)
 - [Getting Started](/Getting%20Started.md)
 - [Macros](/MACROS.md)
-- [Workflow Fields](/docs/workflowfields.md)
+- [Workflow Fields](/docs/workflowfields-2026-02-01.md)
 
 ---
 
@@ -135,13 +134,14 @@ If you prefer to configure settings manually, here's a recommended full automati
 | v11.6.x | v12 | v3.3.x | [manifest](https://gitlab.com/tposney/midi-qol/raw/v11.6/package/module.json) |
 | v12.4.27+ | v12 | v4.2+ | [manifest](https://gitlab.com/tposney/midi-qol/raw/v12dnd4/package/module.json) |
 | v13.0.52+ | v13 | v5.2.4+ / v5.3 | [manifest](https://gitlab.com/tposney/midi-qol/raw/v13/package/module.json) |
-| v14.0.x | v14 | v5.2.4+ / v5.3 | [manifest](https://gitlab.com/tposney/midi-qol/raw/v14/package/module.json) |
+| v14.0.x | v14 (14.368+) | v5.3 | [manifest](https://gitlab.com/tposney/midi-qol/raw/v14/package/module.json) |
+| v14.6.x | v14 (14.369+) | v6 | [manifest](https://gitlab.com/tposney/midi-qol/raw/dnd6/package/module.json) |
 
 ## Required Modules
 
 | Module | Notes |
 |--------|-------|
-| **DAE** | Dynamic Active Effects - required |
+| **DAE** | Dynamic Active Effects - required (14.0.18+) |
 | **libwrapper** | Required |
 | **socketlib** | Required |
 
@@ -160,7 +160,7 @@ If you prefer to configure settings manually, here's a recommended full automati
 | Module | Description |
 |--------|-------------|
 | [**Aura Effects**](https://foundryvtt.com/packages/auraeffects) | **Recommended.** Converts Active Effects into auras with automatic range-based application. Features disposition filtering (friendly/hostile), stacking control ("best aura wins" logic), visual aura boundaries, and formula evaluation at the source for stat-based bonuses. |
-| [**Active Auras**](https://foundryvtt.com/packages/ActiveAuras) | *Legacy.* Propagates Active Effects labeled as auras onto nearby tokens. Use Aura Effects for new items instead. |
+| [**Active Auras**](https://foundryvtt.com/packages/ActiveAuras) | *Foundry 13 only* (not available for Foundry 14). Items that used it should be converted to Aura Effects. |
 
 ### Visual Effects & Animations
 
@@ -188,6 +188,7 @@ If you prefer to configure settings manually, here's a recommended full automati
 
 | Module | Description |
 |--------|-------------|
+| [**Covens Automation Toolkit (CAT)**](https://github.com/chrisk123999/covens-automation-toolkit) | Shared automation framework used by CPR 2 and other automation packs. Its medkit matches items to automations by identifier and updates them; midi registers its own sample items with CAT. See the [CAT wiki](https://github.com/chrisk123999/covens-automation-toolkit/wiki). |
 | [**Cauldron of Plentiful Resources**](https://foundryvtt.com/packages/chris-premades) | Comprehensive collection of automated spells, class features, and monster abilities. Includes custom roll resolver for in-person games, fancy Eskiemoh animations, and quality-of-life UI extensions. Extends Midi-QOL's workflow API. Has its own [wiki](https://github.com/chrisk123999/chris-premades/wiki). |
 | [**Midi Item Showcase Community**](https://foundryvtt.com/packages/midi-item-showcase-community) | Community-contributed automations from the Posney's Foundry Automation Discord. Growing collection of user-submitted items, spells, and scripts. |
 | [**Gambit's Premades**](https://foundryvtt.com/packages/gambits-premades) | Curated library of automated spells, items, and feats. Handles difficult "3rd party reaction" items like Counterspell, Opportunity Attacks, and Silvery Barbs. Features custom AppV2 dialogs with animated countdown timers for reactions. |
@@ -222,6 +223,7 @@ If you prefer to configure settings manually, here's a recommended full automati
 | Convenient Effects | Matches effects by name; toggle per-item |
 | Levels | Uses wall collision for distance/LOS |
 | DDB Game Log | Triggers workflow from D&D Beyond rolls |
+| Custom D&D 5e | Mostly compatible. Some of its options clash with midi (its Conditions config, average/mob damage, custom dice); midi reports the clashing settings on a GM card and in the TroubleShooter (Auto Fix) |
 
 ---
 
@@ -326,8 +328,8 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 | Only highlight critical/fumble hits | Only highlight critical/fumble attack rolls, not normal hits/misses |
 | Auto check if attack hits target | None/Check - all see result/Check - only GM sees results/Check - only GM sees anything. Damage rolls if one+ targets hit and auto roll damage enabled; if None, midi assumes the attack hits |
 | Roll a separate attack per target | Roll a separate attack per target |
-| Walls block ranged attacks | No/Center Check/Levels Auto Cover/Simbul's Cover Calculator/Alternative Token Cover/Simple Cover 5e. If the cover module determines total cover, the attack is blocked |
-| Calculate Cover | Calculate AC bonus for targets in cover using selected module (None/Simbul's Cover Calculator/Simple Cover 5e/Levels Auto Cover/Alternative Token Cover) |
+| Walls block ranged attacks | No/Center Check/Levels Auto Cover/Simbul's Cover Calculator/Alternative Token Cover/Simple Cover 5e. Only walls that block movement (total cover) block the attack: darkness and sight-only walls (curtains) don't, a window does. With a cover module, its total cover blocks the attack |
+| Calculate Cover | None/dnd5e cover status only/Simbul's Cover Calculator/Simple Cover 5e/Levels Auto Cover/Alternative Token Cover. AC bonus for targets in cover. Unless None, a target with total cover (dnd5e's Total Cover status, or the module's) can't be targeted by an activity that targets creatures directly (not an area template or emanation); *dnd5e cover status only* uses the status alone. An activity's *Ignore total cover* skips this |
 | Vision test point height | Elevation tested for token visibility, for Foundry's rendering and midi's vision checks: Center (default) or Top |
 | Template Origin Height | Caster height activity templates are measured from: Caster's base (default)/Caster's top/Caster's eye level. An activity can override this in its Region settings |
 | Occlude upper floor surfaces | Multi-level scenes: upper floor surfaces are transparent when viewed from a lower floor, even if the token is not directly underneath (default on) |
@@ -373,7 +375,7 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 
 ## Concentration Tab
 
-Shown only when dnd5e concentration tracking is enabled.
+With dnd5e concentration tracking disabled the tab shows only a notice; midi's concentration automation needs it.
 
 | Setting | Description |
 |---------|-------------|
@@ -447,7 +449,8 @@ Roll statistics (Keep Roll Statistics, Save statistics Every, Player statistics 
 | Expire 1Hit/1Attack/1Action on roll | Expire 1Hit/1Attack/1Action on roll, don't wait for damage |
 | Wait for damage application | Wait for damage application before continuing workflow |
 | When an Incapacitated actor takes an action, MidiQOL should | Do nothing/Enforce no actions/Post a warning only |
-| Check weapon range when attacking | Do not check range/target range > long range: fail/target range > long range: disadvantage |
+| Check weapon range when attacking | Do not check range/target range > long range: fail (default)/target range > long range: disadvantage |
+| Targets you can see | For activities with *Targets you can see* set on their Targeting tab: Do not check/Unseen targets can't be targeted (default)/Post a warning only. Visibility follows *Force vision when checking* |
 | Require no shield equipped for two-handed/off-hand attacks | Enforce two-handed weapon rules |
 | Distance measurement method | How distances are measured between tokens: Default (Foundry Core) (center-to-center), Grid Square Centers (default; center of all covered grid squares), or Token Perimeters (shortest distance between token boundary polygons). (Added in 13.0.45) |
 | Gridless Grid | Use the square grid for all distance calculations in gridless scenes |
@@ -541,7 +544,7 @@ Sounds can be configured for these workflow events:
 | `hit` | When an attack hits (non-critical) |
 | `miss` | When an attack misses |
 
-**Action Type Triggers** (played during attack roll based on item's action type):
+**Action Type Triggers** (played during the attack roll, so only for activities with an attack; the activity's action type):
 
 | Trigger | Action Type |
 |---------|-------------|
@@ -549,11 +552,6 @@ Sounds can be configured for these workflow events:
 | `rwak` | Ranged Weapon Attack |
 | `msak` | Melee Spell Attack |
 | `rsak` | Ranged Spell Attack |
-| `heal` | Healing |
-| `abil` | Ability Check |
-| `save` | Saving Throw |
-| `util` | Utility |
-| `other` | Other |
 
 **Damage Type Triggers** (played during damage roll based on damage type):
 
@@ -640,7 +638,7 @@ When midi-qol is installed, each activity on an item gains a "Midi" tab with add
 
 | Field | Description |
 |-------|-------------|
-| **Use Condition** | A roll expression that must evaluate to true for the activity to proceed. If false, the roll is blocked. Useful for conditional abilities (e.g., `@raceOrType.isUndead` for Turn Undead). |
+| **Use Condition** | A roll expression that must evaluate to true for the activity to proceed. If false, the roll is blocked. Useful for conditional abilities (e.g., `raceOrType === "undead"`). |
 | **Use Condition Reason** | Message displayed to the user when the use condition fails, explaining why the activity cannot be used. |
 | **Active Effect Condition** | Condition that must be true for active effects to be applied to targets. Allows selective effect application. |
 | **Choose Effects** | When enabled, presents a dialog to select which of the item's active effects to apply (useful for items with multiple optional effects). |
@@ -653,7 +651,7 @@ When midi-qol is installed, each activity on an item gains a "Midi" tab with add
 | Field | Description |
 |-------|-------------|
 | **Roll Mode** | Override the chat message visibility (Public/GM Only/Blind/Self). "Default" uses the global setting. |
-| **Remove Chat Buttons** | Control which buttons appear on the chat card (None/Attack/Damage/All). Useful for streamlining automated activities. |
+| **Remove Chat Buttons** | Which buttons to remove from the chat card: Off/Attack Only/Damage Only/Attack and Damage/All Buttons. Useful for streamlining automated activities. |
 | **Display Activity Name** | Show the activity name in the chat card header (useful when items have multiple activities). |
 | **Identifier** | A custom identifier string for the activity, used by macros and automation to reference specific activities. |
 | **Auto Consume** | Automatically consume resources (spell slots, item uses, etc.) without prompting. |
@@ -668,8 +666,8 @@ These fields appear only for activities with area targets (templates):
 
 | Field | Description |
 |-------|-------------|
-| **AoE Target Type** | Filter which tokens are targeted by the template: Any/Allies/Enemies. Overrides global setting. |
-| **Target on Template Draw** | When to auto-target tokens in the template: None/Always/Walls Block/Walled Templates. |
+| **AoE Target Type** | Which tokens the template targets, relative to the caster: Any/Ally/Not Ally/Enemy/Not Enemy/Neutral/Not Neutral/Hostile/Not Hostile/Friendly/Not Friendly. |
+| **Target on Template Draw** | When to auto-target tokens in the template: Default/None/Always/Walls Block (each with Ignore Incapacitated/Ignore Dead variants)/Walled Templates. |
 
 ### Region Behaviour (AoE)
 
@@ -695,8 +693,8 @@ These fields appear only for activities that deal damage:
 
 | Field | Description |
 |-------|-------------|
-| **Ignore Full Cover** | Targets with full cover still take damage/effects (for effects that go around corners). |
-| **Ignore Damage Traits** | Bypass target's damage immunities, resistances, vulnerabilities, and/or absorption. Select multiple. |
+| **Ignore Full Cover** | Targets with total cover can still be targeted and walls don't block the attack; spells ignore all cover, other activities treat total cover as three-quarters cover. |
+| **Ignore Damage Traits** | Per damage type (or all types): ignore the target's Immunity, Resistance, Vulnerability, Absorption or Modification, or *Downgrade Immunity* (immunity treated as resistance). |
 | **Magic Damage** | Treat damage as magical for overcoming resistance to non-magical damage. |
 
 ### Other Options
@@ -706,6 +704,11 @@ These fields appear only for activities that deal damage:
 | **Apply Convenient Effects** | Auto-apply Convenient Effects matching the activity name (or item name if no match). Requires the Convenient Effects module. |
 | **Automation Only** | Mark the activity as internal/hidden - not intended for manual use from the character sheet. Useful for triggered or secondary activities. |
 | **Other Activity Compatible** | Allow this activity to be used as an "Other Activity" by another activity (for bonus damage, etc.). |
+| **Use Other Activity** / **Override action type** | The activity used for this one's "other" damage, and whether it takes this activity's action type. |
+| **Magic Effect** | (Save activities) Saves against it are saves against magic (Magic Resistance). |
+| **Friendly Save** | (Save and check activities) Roll save/Friends Succeed/Friends Fail for the caster's allies. |
+| **Friendly Summons** | (Summon activities) The summoned token takes the caster's disposition. |
+| **Targets you can see** | On dnd5e's *Targeting* tab (*Midi Targeting*): the activity can only be used on targets its token can see ("a creature you can see"). Enforced by the Mechanics setting *Targets you can see*. |
 
 ### Triggered Activities
 
@@ -714,9 +717,11 @@ Configure an activity to automatically trigger another activity on the same item
 | Field | Description |
 |-------|-------------|
 | **Trigger Activity** | Select another activity on this item to execute after this one completes. |
-| **Trigger Condition** | Roll expression that must be true for the triggered activity to run (e.g., `@item.flags.midi-qol.hits > 0` to only trigger on hit). |
-| **Trigger Targets** | Which targets receive the triggered activity: All/Hit/Hit+Failed Save/Hit+Successful Save/Missed/etc. |
-| **Roll As** | Whose permissions are used for the triggered activity: Self/GM/Target Owner. |
+| **Trigger Condition** | Condition that must be true for the triggered activity to run, evaluated with the workflow's data (e.g., `workflow.hitTargets.size > 0` to only trigger on a hit). |
+| **Trigger Targets** | Target item owner/Same targets/Hit targets/Missed targets/Target failed saves/Target successful saves/Generate new targets. |
+| **Roll As** | Roll the activity as if owned by: Item Owner/First target/First hit target/First missed target/First saved target/First failed save target. |
+| **Consume Resources** | Consume uses/slots when the triggered activity runs. |
+| **Show Configure Dialog** | Show the configuration/consume dialog when the triggered activity runs. |
 
 ### Over Time Effects (Activity Tab)
 
@@ -727,8 +732,9 @@ For activities that repeat on subsequent turns (like ongoing damage, regeneratio
 | **Is Over Time** | Enable over-time processing for this activity. When enabled, additional options appear. |
 | **Turn Choice** | When the effect triggers: **Start of Turn** or **End of Turn**. |
 | **Save Removes** | If checked, a successful save removes the entire effect (not just prevents this turn's damage). |
-| **Remove Condition** | Condition expression tested before or after the activity. If true, the effect is removed. Uses workflow data (see condition expressions). |
-| **Remove Before Rolling** | If checked, the remove condition is tested *before* rolling; otherwise tested *after*. |
+| **Roll As** | Who rolls the activity: the Effect Token or the Source Token. |
+| **Pre activity remove condition** | Tested before the activity is rolled; if true the effect is removed. |
+| **Post activity remove condition** | Tested after the activity is rolled; if true the effect is removed. |
 
 **Common Use Cases:**
 - **Ongoing Damage**: Apply damage each turn (burning, poison, bleeding)
@@ -746,8 +752,7 @@ For activities that repeat on subsequent turns (like ongoing damage, regeneratio
 2. Enable "Is Over Time" and set "Turn Choice" to "Start of Turn"
 
 **Example - Remove on Damage Taken:**
-1. Set Remove Condition to `@attributes.hp.value < @attributes.hp.max` or similar
-2. Check "Remove Before Rolling" if you want to check before the activity runs
+1. Set *Pre activity remove condition* (checked before the activity runs) or *Post activity remove condition* (checked after) to e.g. `@attributes.hp.value < @attributes.hp.max`
 
 ### Activity Macro
 
@@ -755,18 +760,18 @@ The pencil button opens a macro editor for the activity. This macro runs during 
 
 ## Concentration Automation
 
-Requires DAE. Disable CUB concentration if using midi-qol's.
+Uses dnd5e's concentration tracking (it must be enabled). The Concentration tab sets:
 
-| Feature | Description |
+| Setting | Description |
 |---------|-------------|
-| Confirmation | Prompts before casting second concentration spell |
-| Damage Check | Taking damage triggers concentration save |
-| Auto Remove | Concentration removed when spell expires |
-| Effect Cleanup | Removes effects on all targets when concentration ends |
-| Template Cleanup | Removes templates when concentration ends |
-| Non-Spell Support | Add "Concentration" to activation conditions |
+| Force a concentration save when damage taken | Never/Chat Message Only/Chat + Auto Roll/Roll Concentration Item |
+| Remove concentration on failed save | End concentration when the save fails |
+| Remove when incapacitated status applied | End concentration when the actor is incapacitated |
+| Single Concentration Check | One check for several damage instances in a workflow |
+| Temporary HP Concentration Check | Damage absorbed by temporary HP still forces a check |
+| Remove concentration when effects removed | Never/Effects/Effects and Templates: end concentration when its effects (and templates) are gone |
 
-Works with: Convenient Effects > Combat Utility Belt > Internal effect (in priority order)
+Effects and templates that depend on the concentration are removed when it ends.
 
 ## Reactions
 
@@ -795,7 +800,7 @@ Enable in config to prompt targets for reaction items when hit.
 
 ## Roll Statistics
 
-Track attack and damage data per actor and item:
+Track roll data per actor and item (attacks, saves, damage taken by type, concentration and death saves):
 - Attack rolls count
 - Criticals/Fumbles
 - Natural 20s
@@ -809,37 +814,36 @@ MidiQOL.gameStats.clearActorStats(id) // Clear actor (GM)
 MidiQOL.gameStats.endSession()        // End session (GM)
 MidiQOL.gameStats.showStats()         // Display stats
 MidiQOL.gameStats.statData            // Get raw data
+MidiQOL.gameStats.exportToJSON()      // Download as JSON
+MidiQOL.gameStats.exportToCSV()       // Download as CSV
 ```
 
 ## Magic Resistance
 
-Targets with "Magic Resistance" feat or `magic-resistant` trait get advantage on saves vs magic.
+Advantage on saves against magic (a spell, or an activity with *Magic Effect*) for an actor with a feat named "Magic Resistance", custom damage resistance text `magic-resistant`, or `flags.midi-qol.magicResistance.all`/`.<ability>`. Disadvantage likewise with `flags.midi-qol.magicVulnerability.*` or custom vulnerability text "Magic Vulnerable".
 
 ## Special Effect Expiry
 
-Additional expiry options (requires DAE 0.2.25+):
+midi adds these special durations to DAE (DAE 14.0.18+ on v14, 14.6.2+ on dnd6), which expires the effects:
 
 | Trigger | Description |
 |---------|-------------|
-| `1Attack` | After one attack |
-| `1Action` | After one action |
-| `1Hit` | After next successful hit |
-| `isAttacked` | When attacked |
-| `isHit` | When hit |
-| `isDamaged` | When damaged |
-| `isSave/isCheck/isSkill` | After rolling |
-| `isSaveSuccess/Failure` | After save result |
-| `isSave.str`, `isCheck.dex` | Specific ability |
-| `isSkill.acr` | Specific skill |
+| `1Action`, `Bonus Action`, `Reaction`, `Turn Action` | After the actor takes that kind of action |
+| `1Attack`, `1Hit`, `1Miss`, `1Critical`, `1Fumble`, `1Spell`, `1Reaction` | After the actor's next attack, hit, miss, critical, fumble, spell or reaction |
+| `1Attack:mwak` (`rwak`/`msak`/`rsak`), `1Hit:…`, `1Miss:…` | The same, for one attack type |
+| `isAttacked`, `isHit`, `isHitCritical`, `isMissed` (also `:mwak` etc. for attacked/hit) | When the actor is attacked, hit, critically hit or missed |
+| `isDamaged`, `isDamaged.<type>`, `isHealed`, `zeroHP`, `DamageDealt` | When the actor takes damage (of a type), is healed, drops to 0 HP, or deals damage |
+| `isSave`, `isSaveSuccess`, `isSaveFailure` (also `.str` etc.) | After a save, or its success/failure |
+| `isConcentrationSave`, `isConcentrationSaveSuccess`, `isConcentrationSaveFailure` | After a concentration save |
+| `isCheck`, `isCheck.dex`, `isSkill`, `isSkill.acr` | After an ability check or skill roll |
+| `isInitiative`, `isMoved` | After rolling initiative, or moving |
+| `shortRest`, `longRest`, `newDay` | On a rest or new day |
+
+*Expire 1Hit/1Attack/1Action on roll* (Mechanics tab) expires these when the roll is made instead of waiting for damage.
 
 ## Item Description Keywords
 
-| Keyword | Effect |
-|---------|--------|
-| "no damage on save" | Save = no damage |
-| "full damage on save" | Save = full damage (for condition-only saves) |
-| "half damage on save" | Save = half damage (if check spell text enabled) |
-| "auto fail friendly" | Friendly tokens auto-fail saves |
+Save damage comes from the activity's *Damage on save* field (none/half/full); descriptions are no longer read for it. The one keyword still read is "auto fail friendly" (friendly tokens fail the save), which the activity's *Friendly Save* field also sets.
 
 ---
 
@@ -874,20 +878,20 @@ Set via active effects using **CUSTOM** or **OVERRIDE** mode.
 | Save by School | `flags.midi-qol.advantage.save.school.nec` | Advantage/disadvantage on saves vs specific spell schools (13.0.52+) |
 | Tool Checks | `flags.midi-qol.advantage.tool.thief` | Per-tool advantage/disadvantage/fail/success/min/max (13.0.38+) |
 
-Advantage, disadvantage, noAdvantage and noDisadvantage flags for saves and checks are `…save.dex` / `…check.dex`; fail, success, min and max keep `.ability.`: `fail.ability.save.dex`, `success.ability.check.all`, `max.ability.save.all`.
+Advantage, disadvantage, noAdvantage and noDisadvantage flags for saves and checks are `…save.dex` / `…check.dex`; fail, success, min and max keep `.ability.`: `fail.ability.save.dex`, `success.ability.check.all`, `max.ability.save.all`. DAE converts `min`/`max.skill.<skill>` to dnd5e's `system.skills.<skill>.roll.min/max`, and `min`/`max.ability.save.concentration` to `system.attributes.concentration.roll.min/max`.
 
 **Special Flags:**
 | Flag | Effect |
 |------|--------|
 | `flags.midi-qol.uncanny-dodge` | Halve incoming damage |
 | `flags.midi-qol.ignoreNearbyFoes` | No disadvantage from nearby enemies |
-| `flags.midi-qol.sharpShooter` | No disadvantage at long range |
+| `flags.dnd5e.sharpShooter` | No disadvantage at long range (the older `flags.midi-qol.sharpShooter` is still read; DAE converts it) |
 | `flags.midi-qol.sculptSpells` | Evocation sculpt spell feature |
 | `flags.midi-qol.carefulSpells` | Metamagic careful spell |
 | `flags.midi-qol.potentCantrip` | Cantrips do half on save |
 | `flags.midi-qol.concentrationSaveBonus` | Deprecated: use `system.attributes.concentration.bonuses.save` |
 | `flags.midi-qol.deathSaveBonus` | Add to death saves |
-| `flags.midi-qol.bloodSense` | No disadvantage vs hidden/invisible creatures not at full HP within range (13.0.52+) |
+| `flags.midi-qol.bloodsense` | Range (e.g. 30): no disadvantage against hidden/invisible creatures that aren't at full HP within that range |
 
 > [!tip] Navigation 
 > See [FLAGS.md](FLAGS.md) for complete documentation of all flags.
@@ -897,6 +901,8 @@ Advantage, disadvantage, noAdvantage and noDisadvantage flags for saves and chec
 # Optional Rules
 
 Enabled by the **Optional Game Rules** checkbox on the Rules tab.
+
+Targeting rules that don't need it: with *Calculate Cover* set, a target with total cover (dnd5e's Total Cover status, or the cover module's) can't be targeted by an activity that targets creatures directly (not an area template or emanation); *Walls block ranged attacks* blocks an attack only at walls that block movement; *Targets you can see* (Mechanics tab) checks activities that need a target their token can see.
 
 | Rule | Description |
 |------|-------------|
@@ -914,7 +920,7 @@ Enabled by the **Optional Game Rules** checkbox on the Rules tab.
 | Enable Challenge Mode Armor Class | See below |
 | (House Rule) Vitality Item | Damage at 0 HP reduces the Vitality Item's uses |
 
-"When an Incapacitated actor takes an action, MidiQOL should", "Check weapon range when attacking" and "Include height difference in distance calculations" are Mechanics tab settings and apply whether or not optional rules are on.
+"When an Incapacitated actor takes an action, MidiQOL should", "Check weapon range when attacking", "Targets you can see" and "Include height difference in distance calculations" are Mechanics tab settings and apply whether or not optional rules are on.
 
 ## Active Defence
 
@@ -933,7 +939,14 @@ Alternative AC system with Evasion Class (EC) and Armor Resistance (AR):
 
 ---
 
-# Migration Notes (13.0.37+)
+# Migration Notes
+
+## Foundry 14 (midi-qol 14)
+
+- Chat message visibility is a *message mode*: core's `ChatMessage.create`/`Roll#toMessage` take `messageMode` (`public`, `gm`, `blind`, `self`). dnd5e keeps its `rollMode` field, but its values are message modes too; legacy names (`gmroll` etc.) are converted.
+- `Roll#evaluateSync` can't roll dice on Foundry 14. `MidiQOL.addRollTo` is for dice-free rolls only; use `MidiQOL.addRollToAsync` for rolls with dice.
+- Times-up isn't needed: DAE manages effect durations and special durations.
+- Boolean midi-qol flags use DAE's `BooleanFormulaField`: several effects on one flag combine with `||` (ADD/UPGRADE) and `&&` (MULTIPLY/DOWNGRADE).
 
 ## Removed Flags (13.0.49)
 
@@ -949,33 +962,7 @@ The following deprecated flags have been removed and will no longer function:
 
 The `.ability.` prefix was redundant and inconsistent with the attack/skill/tool flag naming pattern.
 
-## Removed Settings (13.0.39)
-
-| Setting | Notes |
-|---------|-------|
-| `effectActivation` | Removed |
-| `itemRollStartWorkflow` | Removed |
-
-## Default Changes (13.0.39+)
-
-| Setting | Old Default | New Default |
-|---------|------------|-------------|
-| `autoCompleteWorkflow` | false | true |
-| `collapsibleTargets` | true | false |
-
-## Settings Migration (13.0.43)
-
-Several standalone module settings were migrated into the midi-qol config panel for easier discovery. Existing values are automatically migrated on first load:
-
-| Setting | New Location |
-|---------|-------------|
-| Preferred GM | GM tab |
-| Critical Damage (Player/GM) | Workflow tab, Damage section |
-| Colored Borders | Misc tab |
-
-## BooleanFormula Flags (13.0.47+)
-
-Boolean midi-qol flags now use DAE's `BooleanFormulaField` class. Multiple active effects targeting the same flag compose with `||` (ADD/UPGRADE) and `&&` (MULTIPLY/DOWNGRADE). Requires DAE 13.0.22+.
+Earlier 13.x changes (removed settings, changed defaults, settings moved into the config panel) are in the [Changelog](Changelog.md).
 
 ---
 
@@ -987,14 +974,14 @@ Boolean midi-qol flags now use DAE's `BooleanFormulaField` class. Multiple activ
 Update your dnd5e system to the latest version.
 
 ### Nothing works after upgrade
-Check that "Enable workflow automation" is **on** for each player (it's a per-player setting). Use SocketSettings module to force-set on all clients.
+Check that "Enable roll automation support" is **on** for each player (it's a per-player setting). Use SocketSettings module to force-set on all clients.
 
 ### Works for some players, not others
 Same issue - check workflow automation is enabled on all clients.
 
 ### Sample compendium items don't work
-- Enable DamageBonusMacro in settings
-- ItemMacro names must match item names (e.g., rename "Rage MQ0.8.9" to "Rage")
+- On the Misc tab, enable "Add item on use macro to sheet" (and "Add actor on use macro to sheet" for actor macros)
+- Item macros are stored on the item (`flags.dae.macro`); use a current copy from the sample compendium
 
 ### Double effects applied
 If using Convenient Effects + DAE effects on same item, you'll get both. Choose one approach per item.
@@ -1016,7 +1003,7 @@ No world information is exported. Module list helps with debugging.
 
 ## Roll Modifier Tracker (13.0.40+)
 
-Attack rolls and saving throws use a `RollModifierTracker` API for advantage/disadvantage/critical/fumble attribution. The tracker is available as `workflow.tracker` or `workflow.attackRollModifierTracker`.
+Attack rolls, saves, checks and skill rolls use a `RollModifierTracker` API for advantage/disadvantage/critical/fumble attribution. The tracker is available as `workflow.tracker` or `workflow.attackRollModifierTracker`.
 
 ```js
 tracker.advantage.add(source, displayName)     // Add advantage source
@@ -1027,9 +1014,11 @@ tracker.critical.suppress(source, displayName)  // Prevent critical
 tracker.modifiers.fail(source, displayName)     // Auto-fail the roll
 ```
 
+Also `tracker.advantage.setOverride(source, displayName)` / `clearOverride()`, and `tracker.modifiers.succeed/min/max/forceMin/forceMax`.
+
 Query state: `tracker.hasAdvantage`, `tracker.hasDisadvantage`, `tracker.isCritical`, `tracker.isFumble`, `tracker.advantageMode`
 
-Use `midi-qol.preAttackConfig` hook/macro to modify the tracker before the roll is finalized. See `docs/RollModifierTracker.md` for full API documentation.
+Use the `midi-qol.preAttackRollConfig` hook or on-use pass to modify the tracker before the roll is made (return `false` to cancel the attack).
 
 ## Macro Writing
 
@@ -1045,11 +1034,11 @@ Use `midi-qol.preAttackConfig` hook/macro to modify the tracker before the roll 
 
 ## Hooks Reference
 
-All hooks receive the workflow as their argument unless noted. Hooks can be item-specific by appending `.{item.uuid}` or `.{activity.uuid}`.
+Workflow state and workflow event hooks receive the workflow; others take the arguments noted. Workflow, state and activity hooks can be made item-specific by appending `.{item.uuid}` or `.{activity.uuid}`; cancellable workflow hooks also fire with `.{workflow.id}`.
 
 ### Workflow State Hooks
 
-These hooks fire before (`pre`) and after (`post`) each workflow state. Return `false` from a `pre` hook to abort.
+These hooks fire before (`pre`) and after (`post`) each workflow state. Return `false` from either to abort.
 
 | Hook Pattern | States Available |
 |--------------|------------------|
@@ -1073,13 +1062,13 @@ Additional states: `AwaitTemplate`, `TemplatePlaced`, `AoETargetConfirmation`, `
 
 | Hook | When | Return `false` to... |
 |------|------|----------------------|
-| `midi-qol.preTargeting` | Before targeting phase | Cancel workflow |
-| `midi-qol.preTargetingV2` | Before targeting (v2 API) | Cancel workflow |
-| `midi-qol.preItemRoll` | Before item roll | Cancel workflow |
-| `midi-qol.preItemRollV2` | Before item roll (v2 API) | Cancel workflow |
-| `midi-qol.preAttackConfig` | Before attack advantage/disadvantage is finalized | Modify tracker state (13.0.43+) |
+| `midi-qol.preTargeting` | Before targeting phase; args `{activity, token, config, dialog, message}` | Cancel workflow |
+| `midi-qol.preTargetingV2` | Before targeting; args `{workflow, usage, dialog, message}` | Cancel workflow |
+| `midi-qol.preItemRoll` | Before item roll; args `{activity, token, config, dialog, message}` | Cancel workflow |
+| `midi-qol.preItemRollV2` | Before item roll; args `{workflow, usage, dialog, message}` | Cancel workflow |
 | `midi-qol.preAttackRoll` | Before attack roll | Cancel attack |
-| `midi-qol.preDamageRoll` | Before damage roll | Cancel damage |
+| `midi-qol.preAttackRollConfig` | After `preAttackRoll`, before the attack's advantage/disadvantage is final (the tracker may be modified) | Cancel attack |
+| `midi-qol.preDamageRoll` | Before damage roll; args `(workflow, activity, config, dialog, message)` | Cancel damage |
 | `midi-qol.preFormulaRoll` | Before utility formula roll | Cancel roll |
 
 ### Workflow Event Hooks
@@ -1092,29 +1081,30 @@ Additional states: `AwaitTemplate`, `TemplatePlaced`, `AoETargetConfirmation`, `
 | `midi-qol.AttackRollComplete` | After attack roll complete | |
 | `midi-qol.DamageRollComplete` | After damage roll complete | |
 | `midi-qol.preCheckSaves` | Before save rolls | |
+| `midi-qol.preTargetSave` | Before each target's save; args `(target, workflow, saveDetails)` | `saveDetails` can be changed (advantage, tracker) |
 | `midi-qol.postCheckSaves` | After save rolls | |
 | `midi-qol.postActiveEffects` | After effects applied | |
 | `midi-qol.RollComplete` | Workflow fully complete | |
 | `midi-qol.preTargetDamageApplication` | Before damage to target | Args: token, {item, workflow, damageItem} |
-| `midi-qol.healed` | After healing applied | Args: token, {item, workflow, damageItem} |
-| `midi-qol.damaged` | After damage applied | Args: token, {item, workflow, damageItem} |
+| `midi-qol.isHealed` | After healing applied | Args: token, {item, workflow, damageItem, ditem} |
+| `midi-qol.isDamaged` | After damage applied | Args: token, {item, workflow, damageItem, ditem} |
 
 ### Damage Calculation Hooks
 
 | Hook | When | Return `false` to... |
 |------|------|----------------------|
-| `midi-qol.dnd5ePreCalculateDamage` | Before damage calculation | Cancel damage calc |
-| `midi-qol.dnd5eCalculateDamage` | After damage calculation | Cancel damage calc |
+| `midi-qol.dnd5ePreCalculateDamage` | Before damage calculation; args `(actor, damages, options)` | Cancel damage calc |
+| `midi-qol.dnd5eCalculateDamage` | After damage calculation; args `(actor, damages, options)` | Cancel damage calc |
 
 ### Reaction Hooks
 
 | Hook | When | Notes |
 |------|------|-------|
-| `midi-qol.ReactionFilter` | Filtering available reactions | Return `false` to skip all |
+| `midi-qol.ReactionFilter` | Filtering available reactions; args `(reactions, options, triggerType, reactionActivityList)` | Return `false` to skip all |
 | `midi-qol.preSetReactionUsed` | Before marking reaction used | Args: actor, reactionEffect. AsyncHooksCall, effect is live (updateSource applies). (13.0.52+) |
 | `midi-qol.setReactionUsed` | After marking reaction used | Args: actor, reactionEffect. (13.0.52+) |
-| `midi-qol.preSetBonusActionUsed` | Before marking bonus action used | Args: actor, reactionEffect. (13.0.52+) |
-| `midi-qol.setBonusReactionUsed` | After marking bonus action used | Args: actor, reactionEffect. (13.0.52+) |
+| `midi-qol.preSetBonusActionUsed` | Before marking bonus action used | Args: actor, bonusActionEffect. (13.0.52+) |
+| `midi-qol.setBonusActionUsed` | After marking bonus action used | Args: actor, bonusActionEffect. (13.0.52+) |
 
 ### System Hooks
 
@@ -1128,7 +1118,8 @@ Additional states: `AwaitTemplate`, `TemplatePlaced`, `AoETargetConfirmation`, `
 | `midi-qol.addUndoEntry` | Undo entry added | undo data |
 | `midi-qol.removeUndoEntry` | Undo entry removed | undo data |
 | `midi-qol.itemUseActivitySelect` | Activity selection dialog | {activities, item} |
-| `midi-qol-targeted` | Targets selected | targets |
+| `midi-qol.dependentsRegistryChanged` | An effect/template dependency added or removed | {type, parentUuid, dependentUuid} |
+| `midi-qol.TroubleShooter.recordError` | An error recorded for the TroubleShooter | errorDetail |
 
 ### Premade Hooks
 
@@ -1142,9 +1133,11 @@ All workflow state hooks also have `midi-qol.premades.{pre|post}{StateName}` var
 ### DR/DI/DV
 System traits support expressions evaluated with actor roll data.
 
+An activity's *Ignore Damage Traits* can ignore a target's immunity, resistance, vulnerability, absorption or modification, per damage type or for all, or downgrade immunity to resistance (see [Damage Options](#damage-options)).
+
 ### Spell Sculpting
-- `flags.midi-qol.sculptSpell` - Evocation sculpt spell
-- `flags.midi-qol.carefulSpell` - Metamagic careful spell
+- `flags.midi-qol.sculptSpells` - Evocation sculpt spell
+- `flags.midi-qol.carefulSpells` - Metamagic careful spell
 
 ### OverTime Effects (Flag-Based)
 
@@ -1169,7 +1162,7 @@ turn=start/end, damageRoll=formula, damageType=type, saveDC=number, saveAbility=
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `damageRoll` | Damage roll formula (e.g., `2d6`, `1d8+@abilities.con.mod`) | - |
-| `damageType` | Damage type: fire, cold, poison, necrotic, etc. | piercing |
+| `damageType` | Damage type: fire, cold, poison, necrotic, etc. | untyped |
 | `damageBeforeSave` | `true/false` - Apply damage before the save roll | `false` |
 | `saveDamage` | Damage on save: `nodamage`, `halfdamage`, `fulldamage` | `nodamage` |
 
@@ -1242,8 +1235,7 @@ The action save's prompt or card always comes at the start of the creature's tur
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `chatFlavor` | Flavor text for chat messages | - |
-| `rollMode` | Roll visibility: `publicroll`, `gmroll`, `blindroll`, `selfroll` | - |
-| `actionType` | Item action type for display: mwak, rwak, msak, rsak, other | `other` |
+| `rollMode` | Roll visibility: `public`, `gm`, `blind`, `self` (legacy `publicroll`/`gmroll`/`blindroll`/`selfroll` accepted) | - |
 
 #### Advanced Parameters
 
@@ -1253,14 +1245,15 @@ The action save's prompt or card always comes at the start of the creature's tur
 | `itemName` | UUID or name of item to use as template for the overtime roll | - |
 | `macro` | Macro to call during overtime processing (see Macro Options below) | - |
 | `killAnim` | `true/false` - Suppress Sequencer animations | `false` |
-| `allowIncapacitated` | `true/false` - Process even if target is incapacitated | `true` |
-| `fastForwardDamage` | `true/false` - Skip damage dialog | - |
-| `fastForwardAttack` | `true/false` - Skip attack dialog | - |
+| `allowIncapacitated` | `true/false` - Process even if target is incapacitated | `false` |
+| `fastForwardDamage` | `true/false` - Skip damage dialog | `true` |
+| `fastForwardAttack` | `true/false` - Skip attack dialog | `true` |
+| `autoRollAttack` / `autoRollDamage` | `true/false` - Roll the attack/damage automatically | `true` |
 
 **Macro Options:**
 
 The `macro` parameter supports the following formats:
-- `function.functionName` - Call a global function (e.g., `function.MidiQOL.doOverTimeDamage`)
+- `function.functionName` - Call a global function (e.g., `function.myModule.overTimeHandler`)
 - `ItemMacro` - Execute the macro from the item that created this effect
 - `ItemMacro.itemNameOrUuid` - Execute a specific item's macro by name or UUID
 - `ActivityMacro` - Execute the macro from the activity that created this effect
@@ -1299,11 +1292,11 @@ turn=start, damageRoll=1d6, damageType=necrotic, applyCondition=@attributes.hp.v
 turn=start, saveDC=14, saveAbility=str|dex, rollType=check, actionSave=dialog, saveCount=1-, label="Grappled"
 ```
 
-**Flesh to Stone (fail 2 saves = petrified):**
+**Flesh to Stone (3 failed saves = petrified):**
 ```
 turn=end, saveDC=@attributes.spelldc, saveAbility=con, saveCount=2-, failCount=3-petrified, label="Flesh to Stone"
 ```
-*After 2 failed saves, target becomes petrified and the effect ends. After 3 successful saves, the effect simply ends.*
+*After 3 failed saves, the target becomes petrified and the effect ends. After 2 successful saves, the effect simply ends.*
 
 **Contagion (fail 3 saves = permanent disease):**
 ```
@@ -1325,7 +1318,7 @@ turn=end, saveDC=15, saveAbility=wis, failCount=2+, removeCondition=@attributes.
 - For activity-based overtime effects (recommended for v13+), see the Over Time Effects section in Activity configuration
 
 > [!tip] Navigation
-> See [docs/workflowfields.md](docs/workflowfields.md) for available workflow data in conditions.
+> See [docs/workflowfields-2026-02-01.md](docs/workflowfields-2026-02-01.md) for available workflow data in conditions.
 
 ---
 

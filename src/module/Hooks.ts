@@ -1,5 +1,5 @@
 import { moveRegionsOnTurnChange } from "./regionBehaviors/MidiRegionActivityBehaviorType.js";
-import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID, getStaticID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, obscureRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doConcentrationCheck, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, completeActivityUse, isAutoFastForward, areMidiKeysPressed, throttledScrollBottom, getVitalityItem, tokenForActor, resolveItemMacro, resolveActivityMacro, resolveDAEItemData, doSyncRoll, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, getActivityAutoTargetAction, getAoETargetType, updateFlankingHighlight, onUserManualTarget, rangeToSceneUnits, tokenSourceElevation, toggleStatus } from "./utils.js";
@@ -12,7 +12,7 @@ import { installedModules } from "./setupModules.js";
 import { preActivityConsumptionHook, activityConsumptionHook, selectTargetsFromTemplates, templateElevation } from "./activities/activityHelpers.js";
 import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 import { Activity, DamageApplicationOptions, DamageDescription } from "../globals.js";
-import { MidiDependentsRegistry } from "./lib/MidiDependentsRegistry.js";
+import { MidiDependentsRegistry, repointCopiedDependents, tokenHasDependents } from "./lib/MidiDependentsRegistry.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
@@ -25,7 +25,7 @@ export let readyHooks = async () => {
     const actor = tokenDocument.actor;
     const expiredEffects = actor?.effects.filter(ef => {
       const specialDuration = ef.flags?.dae?.specialDuration;
-      return !!specialDuration?.includes("isMoved");
+      return !ef.disabled && !!specialDuration?.includes("isMoved");
     }) ?? [];
     if (expiredEffects.length > 0) expireEffects(actor!, expiredEffects, { "expiry-reason": "midi-qol:isMoved" });
 
@@ -356,6 +356,19 @@ export let readyHooks = async () => {
     MidiDependentsRegistry.deleteDependents(deletedRegion.uuid);
   });
 
+  // A pasted, teleported or duplicated token, actor or scene keeps its embedded ids: re-point dependentOn flags that
+  // still point into the original.
+  Hooks.on("createToken", (token: TokenDocument.Implementation, options, userId: string) => {
+    if (userId === game.user?.id && tokenHasDependents(token)) repointCopiedDependents(token.actor);
+  });
+  Hooks.on("createActor", (actor: Actor.Implementation, options, userId: string) => {
+    if (userId === game.user?.id) repointCopiedDependents(actor);
+  });
+  Hooks.on("createScene", (scene: Scene.Implementation, options, userId: string) => {
+    if (userId !== game.user?.id) return;
+    for (const token of scene.tokens) if (tokenHasDependents(token)) repointCopiedDependents(token.actor);
+  });
+
   // Hooks.on("restCompleted", restManager); I think this means 1.6 is required.
   Hooks.on("dnd5e.restCompleted", restManager);
   Hooks.on("dnd5e.preActivityConsumption", preActivityConsumptionHook);
@@ -368,7 +381,9 @@ export async function restManager(actor: Actor.Implementation, result: { longRes
     return;
   const specialDuration = (effect): string[] | undefined => { return foundry.utils.getProperty(effect, "flags.dae.specialDuration") as string[] };
   const effectsToExpire = (actorRef) => {
-    const effects = actorRef.appliedEffects;
+    // the reaction/bonus action markers are removed below, through the actor's effect queue
+    const markers = [getStaticID("reaction"), getStaticID("bonusaction")];
+    const effects = actorRef.appliedEffects.filter(effect => !markers.includes(effect.id));
     const validEffects = effects.filter(effect => (specialDuration(effect) ?? []).length > 0);
     return {
       newDay: validEffects.filter(ef => result.newDay && specialDuration(ef)?.includes(`newDay`)),
@@ -382,8 +397,10 @@ export async function restManager(actor: Actor.Implementation, result: { longRes
   if (!result.longRest && myExpiredEffects.shortRest.length) await expireEffects(actor, myExpiredEffects.shortRest, { "expiry-reason": "midi-qol:shortRest" });
   if (result.newDay && myExpiredEffects.newDay.length) await expireEffects(actor, myExpiredEffects.newDay, { "expiry-reason": "midi-qol:newDay" });
   if (foundry.utils.getProperty(actor, "flags.midi-qol.actions.reactionsReset") !== "never") await removeReactionUsed(actor, true); // remove reaction used for a rest
-  if (foundry.utils.getProperty(actor, "flags.midi-qol.actions.bonusActionsReset") !== "never")
+  if (foundry.utils.getProperty(actor, "flags.midi-qol.actions.bonusActionsReset") !== "never") {
     await removeActionUsed(actor);
+    await removeBonusActionUsed(actor, true);
+  }
 }
 
 export function initHooks() {

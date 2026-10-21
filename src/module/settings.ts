@@ -273,7 +273,8 @@ class ConfigSettings {
     flankingBonus: "advantage" as string,
     flankingRequiresVisibility: false,
     showFlankingHighlight: false,
-    checkRange: "longFail",
+    checkRange: "longfail",
+    targetMustBeSeen: "enforce",
     coverCalculation: "none",
     criticalNat20: false,
     criticalSaves: false,
@@ -753,6 +754,7 @@ export let fetchParams = () => {
     flankingBonus: "advantage",
     flankingRequiresVisibility: false,
     checkRange: "longfail",
+    targetMustBeSeen: "enforce",
     coverCalculation: "none",
     displayBonusRolls: true,
     criticalNat20: false,
@@ -790,9 +792,9 @@ export let fetchParams = () => {
 
   //@ts-expect-error legacy boolean value
   if (configSettings.optionalRules.checkFlanking === false) configSettings.optionalRules.checkFlanking = "off";
-  //@ts-expect-error legacy boolean value
-  if (configSettings.optionalRules.checkRange === true) configSettings.optionalRules.checkRange = "longfail";
+  if ([true, "longFail"].includes(configSettings.optionalRules.checkRange)) configSettings.optionalRules.checkRange = "longfail";
   if (!configSettings.optionalRules.checkRange) configSettings.optionalRules.checkRange = "none";
+  configSettings.optionalRules.targetMustBeSeen ??= "enforce";
   if (!configSettings.optionalRules.invisAdvantage) configSettings.optionalRules.invisAdvantage = "none";
   //@ts-expect-error legacy boolean value
   if (configSettings.optionalRules.invisAdvantage === true) configSettings.optionalRules.invisAdvantage = "RAW2014";
@@ -1494,6 +1496,7 @@ export const wallsBlockRangeOptionsNew = keysToExtendedOptionsObj("WallsBlockRan
 
 export const coverCalculationOptions = keysToExtendedOptionsObj("CoverCalculationOptions", [
   "none",
+  "dnd5eStatus",
   "simbuls-cover-calculator",
   "simplecover5e",
   "levelsautocover",
@@ -1607,6 +1610,12 @@ export const removeConcentrationEffectsOptions = keysToExtendedOptionsObj("Remov
 ]);
 
 export const incapacitatedOptions = keysToExtendedOptionsObj("IncapacitatedOptions", [
+  "nothing",
+  "enforce",
+  "warn"
+]);
+
+export const targetMustBeSeenOptions = keysToExtendedOptionsObj("TargetMustBeSeenOptions", [
   "nothing",
   "enforce",
   "warn"

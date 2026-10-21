@@ -1,7 +1,27 @@
-### 14.0.16 (unreleased)
+### 14.0.16
 
 **Rolls and saves**
 * Fixed: a check activity's skill or tool check could lose the roller's fail/success, min/max and advantage (with CAT active, a Stealth check ignored `flags.midi-qol.success.skill.ste`).
+* Fixed: a check activity offering several skills or tools rolled the chosen one with the first one's ability (Athletics or Acrobatics: Acrobatics rolled with Strength); switching the skill in the roll dialog now switches the ability too.
+* Fixed: with CAT active, a check activity's own ability (e.g. Strength (Stealth)) was ignored when the GM rolled for a player.
+* Fixed: a tool's check activity read advantage and fail/success flags for the tool's default ability, not the tool item's own.
+* Changed: walls block an attack (*Walls block ranged attacks*: Center Check, and the module fallbacks) only if they block movement, i.e. total cover, as in 11.0.13: darkness and walls that only block sight (curtains) no longer block it (if the target can't be seen the attack has disadvantage with vision checking); a wall that blocks movement but not sight (a window) does. The failure says the target has total cover.
+* Added: *Targets you can see* on an activity's Targeting tab, for spells and features that target "a creature you can see": midi won't use it on a target its token can't see (each target of an activity that targets creatures directly, not an area template or emanation; vision follows *Force vision when checking*). Setting *Targets you can see* (Mechanics): do not check, enforce (default) or warn only.
+* Changed: with *Calculate Cover* set, a target with total cover (dnd5e's Total Cover status, or the cover module's total cover) can't be targeted by an activity that targets creatures directly (not an area template or emanation), as the rules have it; previously attacks auto-missed and other spells (e.g. Hold Person, Magic Missile) still applied. New *Calculate Cover* option *dnd5e cover status only* uses the status alone. *Ignore total cover* still applies; None keeps the old behaviour.
+* Fixed: once an actor whose reactions or bonus actions reset only on a rest (or never, or each turn) used one, every later reaction or bonus action marker, for any actor, reset that way too (a reaction no longer cleared at the start of its turn).
+* Fixed: the default *Check weapon range when attacking* (`longFail`) wasn't one of the setting's options, so the settings panel showed none selected; stored values are migrated to `longfail`.
+* Fixed: TroubleShooter's Auto Fix didn't refresh an open settings panel (it fired `midi-qol.configSettingsChanged` instead of `ConfigSettingsChanged`).
+
+**Effect expiry**
+* Changed: an effect ended by a special duration (1Attack, isAttacked, a save, a rest, zero HP, an over-time save, …) follows DAE's *Special Duration Expiry Action* and the effect's own *Expiry Mode*: under Mark Expired it is suppressed (disabled, kept). It was flagged expired, so it was deleted outside combat and left inactive for good after a combat.
+* Fixed: the `removeEffects`, `deleteEffects` and `deleteItemEffects` socket actions, and removing a token condition, delete the effect, suppressed (disabled) ones included; under Mark Expired they only flagged it expired.
+* Fixed: an attack without damage didn't end 1Attack, 1Hit, 1Critical or 1Fumble, and an all-missed attack that completed at once didn't end 1Critical or 1Fumble.
+* Fixed: `isSaveSuccess.<ability>`/`isSaveFailure.<ability>` never ended for a save activity. Target save durations follow the workflow's save activity and the ability the target chose (with several and no choice recorded, only the bare keys), and a target that never rolled (missed by the attack) no longer counts as failing.
+* Changed: a save or check rolled outside a workflow ends `isSaveSuccess`/`isSaveFailure` by its DC (one from midi's save card is the workflow's, whichever client rolls it).
+* Fixed: a rest could race DAE deleting the reaction and bonus action markers ("does not exist"), and didn't remove the bonus action marker when bonus actions reset on a rest.
+* Fixed: an applied enchantment that midi expired was disabled instead of deleted.
+* Fixed: a pasted, teleported (`MidiQOL.teleportToken`), duplicated or transformed token, actor or scene kept its dependent items and effects tied to the original's effects (`addDependent`, CAT/CPR): they were hidden and deleted with the original's, or never.
+* Requires DAE 14.0.19.
 
 **CAT**
 * Changed: sample items carry their CAT automation version in `flags.cat.automation.version` and the identifier of the item they automate (e.g. `sneak-attack`, `lucky`, `radiant-strikes`, `sword-of-wounding`), and midi registers them with CAT itself (when midi-qol is enabled in CAT's automation sources). Demos and legacy copies (versioned Sneak Attacks, "USE CPR" items, Turn into Frog, Mortar …) are no longer offered by the medkit.

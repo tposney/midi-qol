@@ -103,6 +103,13 @@
       </select>
     </div>
     <div class="form-group">
+      <label>{{localize "midi-qol.TargetMustBeSeen.Name"}}</label>
+      <select name="optionalRules.targetMustBeSeen" data-dtype="String">
+        {{selectOptions TargetMustBeSeenOptions selected=configSettings.optionalRules.targetMustBeSeen localize=true}}
+      </select>
+      <div class="notes midi-qol-faint">{{localize "midi-qol.TargetMustBeSeen.Hint"}}</div>
+    </div>
+    <div class="form-group">
       <label>{{localize "midi-qol.CheckTwoHanded.Name"}}</label>
       <input type="checkbox" name="checkTwoHanded" {{checked configSettings.checkTwoHanded}} />
     </div>
