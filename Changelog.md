@@ -1,3 +1,11 @@
+### 14.6.5 (unreleased)
+
+**Chat cards**
+* Changed: a damage card is linked to the card it came from (`system.origin`), is deleted with it, and no longer repeats its speaker and whisper recipients.
+
+**Rolls and saves**
+* Fixed: Dice So Nice's *Hide NPC rolls* and *Disabled during combat* were ignored for the dice midi shows itself (attacks, damage, saves, checks, optional bonus rerolls), including dice other modules show through `MidiQOL.displayDSNForRoll`, which now takes the rolling actor.
+
 ### 14.6.4
 
 **Rolls and saves**

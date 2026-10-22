@@ -574,7 +574,7 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
           if (configSettings.allowUseMacro) {
             workflow.ammunitionOnUseMacros = workflow.ammunition?.flags?.[MODULE_ID]?.onUseMacroParts ?? new OnUseMacros();
           }
-          if (workflow.workflowOptions?.attackRollDSN !== false) await displayDSNForRoll(rolls[0], "attackRollD20");
+          if (workflow.workflowOptions?.attackRollDSN !== false) await displayDSNForRoll(rolls[0], "attackRollD20", undefined, undefined, workflow?.actor);
           await workflow?.setAttackRoll(rolls[0]);
           rolls[0] = await workflow.processAttackRollBonusFlags();
           // Always add attribution to roll for indicator/tooltip display

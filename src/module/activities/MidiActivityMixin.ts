@@ -1402,7 +1402,7 @@ export let MidiActivityMixin = Base => {
           }
           // display roll not being used.
           if (config.workflow.workflowOptions?.damageRollDSN !== false) {
-            let promises = result2.map(r => displayDSNForRoll(r, "damageRoll"));
+            let promises = result2.map(r => displayDSNForRoll(r, "damageRoll", undefined, undefined, this.actor));
             await Promise.all(promises);
           }
           await DamageRoll.toMessage(result2, messageData, { rollMode: safeGetGameSetting("core", "messageMode") });
@@ -1413,7 +1413,7 @@ export let MidiActivityMixin = Base => {
 
         if (this.actionType === "heal" && !Object.keys(GameSystemConfig.healingTypes).includes(config.workflow.defaultDamageType ?? "")) config.workflow.defaultDamageType = "healing";
         if (config.workflow?.workflowOptions?.damageRollDSN !== false) {
-          let promises = result.map(r => displayDSNForRoll(r, "damageRoll"));
+          let promises = result.map(r => displayDSNForRoll(r, "damageRoll", undefined, undefined, this.actor));
           await Promise.all(promises);
         }
         if (config.midiOptions?.addOptionalBonuses !== false) {

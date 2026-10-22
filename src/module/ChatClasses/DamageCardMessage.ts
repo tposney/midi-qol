@@ -16,7 +16,7 @@ export function setupDamageCardMessage() {
         error("dnd5e does not expose ChatMessageDataModel; damage cards will keep their stored markup");
         return;
     }
-    const { BooleanField, StringField } = foundry.data.fields;
+    const { BooleanField, ForeignDocumentField, StringField } = foundry.data.fields;
 
     MidiDamageMessageData = class extends base {
         // defined by defineSchema below; declared so the compiler can see them
@@ -26,6 +26,7 @@ export function setupDamageCardMessage() {
         declare forceApply: boolean;
         declare showNPC: boolean;
         declare playerButtons: boolean;
+        declare origin: ChatMessage.Implementation | null;
         declare parent: ChatMessage.Implementation;
 
         /** Decisions taken when damage was applied; figures stay in `flags.midi-qol.undoDamage`. */
@@ -36,7 +37,9 @@ export function setupDamageCardMessage() {
                 autoApplyDamage: new StringField({ required: true, blank: true }),
                 forceApply: new BooleanField({ initial: false }),
                 showNPC: new BooleanField({ initial: true }),
-                playerButtons: new BooleanField({ initial: false })
+                playerButtons: new BooleanField({ initial: false }),
+                // The usage card the damage came from, as dnd5e links save messages: deleted with it.
+                origin: new ForeignDocumentField(foundry.documents.BaseChatMessage)
             };
         }
 
@@ -76,14 +79,37 @@ export function setupDamageCardMessage() {
             }, this.asPlayer);
         }
 
+        _getEnrichmentOptions() {
+            return { avatar: false };
+        }
+
         /** Buttons are wired here: renderChatMessageHTML fires before the body is filled (it remains for older cards). */
         _onRender(element: HTMLElement) {
             super._onRender?.(element);
             processUndoDamageCard(this.parent, element, {});
+            // Next to the card it came from, the speaker and whisper recipients only repeat it.
+            if (this.origin) element.querySelectorAll(".message-header :is(.message-sender, .whisper-to)").forEach(e => e.remove());
         }
     };
 
     CONFIG.ChatMessage.dataModels[DAMAGE_MESSAGE_TYPE] = MidiDamageMessageData;
+    Hooks.on("deleteChatMessage", deleteLinkedDamageCards);
+}
+
+/**
+ * Damage cards go with the card they came from. dnd5e deletes only summarised messages with their origin, and a player
+ * deleting their card can't delete the GM's damage cards, so the active GM does it.
+ */
+function deleteLinkedDamageCards(message: ChatMessage.Implementation, options: object) {
+    if (("deleteAll" in options && options.deleteAll) || !game.users?.activeGM?.isSelf) return;
+    const linked = () => (game.messages?.filter(m => m.type === DAMAGE_MESSAGE_TYPE
+        && (m._source.system as { origin?: string | null } | undefined)?.origin === message.id) ?? []).map(m => m.id!);
+    if (!linked().length) return;
+    // After the current delete operation, which may already include them.
+    setTimeout(() => {
+        const ids = linked();
+        if (ids.length) ChatMessage.deleteDocuments(ids);
+    }, 0);
 }
 
 function isDamageCardData(system: unknown): system is { playerView: boolean } {

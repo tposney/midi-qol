@@ -1053,6 +1053,7 @@ function withDamageOrigin<T>(options: T): T {
 async function createReverseDamageCard(data: {
   damageList: SerializedDamageListEntry[];
   autoApplyDamage: string;
+  chatCardUuid?: string,
   flagTags: any,
   charName: string,
   actorId: string,
@@ -1656,10 +1657,17 @@ function showsPlayerView(damageList: DamageListEntry[]): boolean {
  * One damage card serves the GM and the players: each sees their own view of it (DamageCardMessage). It is public
  * when players are shown their view, otherwise whispered to the GMs. A misses card is GM-only.
  */
+/** The id of the card the damage came from, when it is still in the log. */
+function damageCardOrigin(chatCardUuid: string | undefined): string | null {
+  const { documentType, id } = (chatCardUuid ? foundry.utils.parseUuid(chatCardUuid) : null) ?? {};
+  return documentType === "ChatMessage" && id && game.messages?.has(id) ? id : null;
+}
+
 async function createDamageCard(
   data: {
     damageList: DamageListEntry[];
     autoApplyDamage: string;
+    chatCardUuid?: string,
     flagTags: any,
     forceApply: boolean,
     updateOptions: any,
@@ -1696,8 +1704,9 @@ async function createDamageCard(
       system: {
         playerView, doHits, autoApplyDamage: data.autoApplyDamage, forceApply: data.forceApply,
         showNPC: ["npcplayerresults", "npcplayerbuttons"].includes(configSettings.playerDamageCard),
-        playerButtons: ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard)
-      } satisfies DamageCardOptions,
+        playerButtons: ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard),
+        origin: damageCardOrigin(data.chatCardUuid)
+      } satisfies DamageCardOptions & { origin: string | null },
       flags: { [MODULE_ID]: { "undoDamage": prepareDamageListForFlag(tokenDataList), actorUuid: data.actorUuid } }
     };
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;

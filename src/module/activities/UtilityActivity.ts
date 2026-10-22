@@ -120,7 +120,7 @@ let defineMidiUtilityActivityClass = <T extends Activity>(ActivityClass: T) => {
       if (rollToggle) dialog.configure = !!!dialog.configure;
       message.create ??= false;
       let result = await super.rollFormula!(config, dialog, message) as Roll[] | undefined;
-      if (result && workflow.workflowOptions?.formulaDSN !== false) await displayDSNForRoll(result[0], "formulaD20");
+      if (result && workflow.workflowOptions?.formulaDSN !== false) await displayDSNForRoll(result[0], "formulaD20", undefined, undefined, workflow?.actor);
 
       if (config.midiOptions.updateWorkflow !== false && workflow) {
         if (result) await workflow.setUtilityRolls(result);

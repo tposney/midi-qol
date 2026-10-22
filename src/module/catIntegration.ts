@@ -1,7 +1,7 @@
 import { MODULE_ID } from "../midi-qol.js";
 
 /** The last CAT whose medkit can update an item that an earlier update in the same run deleted. */
-const CAT_MEDKIT_FIX_MAX = "0.1.2";
+const CAT_MEDKIT_FIX_MAX = "0.1.3";
 
 /**
  * An item the medkit listed that is gone or going: deleted, or a cast activity's cached spell that dnd5e is replacing

@@ -1551,7 +1551,7 @@ async function doD20Roll(this: Actor.Implementation, wrapped, kind: D20RollKind,
     const saveDisplay = (activitySaveDisplay && activitySaveDisplay !== "default") ? activitySaveDisplay : configSettings.autoCheckSaves;
     // When obscuring, keep the 3D dice animation private so it can't reveal the hidden result to players
     const dsnRollMode = foundry.utils.getProperty(message, "data.flags.midi-qol.obscureRoll") ? "blind" : rollMode;
-    await displayDSNForRoll(result, kind.dsnType, dsnRollMode, isAbility ? saveDisplay : undefined);
+    await displayDSNForRoll(result, kind.dsnType, dsnRollMode, isAbility ? saveDisplay : undefined, this);
     DSNMarkDiceDisplayed(result);
     foundry.utils.mergeObject(message.data, { "flags": config.flags ?? {} });
     // Set overtimeActorUuid AFTER message object is replaced by hook and merged

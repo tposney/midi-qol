@@ -4111,7 +4111,7 @@ export class Workflow {
     setDamageRollMinTerms(validRolls);
     await this.setBonusDamageRolls(validRolls);
     if (this.workflowOptions?.damageRollDSN !== false) {
-      await displayDSNForRoll(this.bonusDamageRolls!, "damageRoll");
+      await displayDSNForRoll(this.bonusDamageRolls!, "damageRoll", undefined, undefined, this.actor);
     }
   }
 

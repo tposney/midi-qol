@@ -69,8 +69,9 @@ export let setupModules = () => {
 }
 
 export function dice3dEnabled() {
+  // DSN's own check: the user's setting and its world rules (e.g. Disabled during combat)
   // @ts-expect-error no dsn types
-  return Boolean(installedModules.get("dice-so-nice") && (game.dice3d?.config?.enabled || game.dice3d?.isEnabled()));
+  return Boolean(installedModules.get("dice-so-nice") && (game.dice3d?.isEnabled?.() ?? game.dice3d?.config?.enabled));
 }
 
 export function checkModules() { // this really should happen in TroubleShooter
