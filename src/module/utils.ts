@@ -1716,7 +1716,9 @@ async function handleActionSaveRollResponse(
 
   if (!options.rollFlags) return effect.id;
   if (options.rollFlags.type === "ability") options.rollFlags.type = "check";
-  if (!rollType.includes(options.rollFlags.type) || !saveAbility.includes(options.rollFlags.ability ?? options.rollFlags.skillId)) {
+  const rolled = options.rollFlags.type === "skill" ? options.rollFlags.skillId
+    : options.rollFlags.type === "tool" ? options.rollFlags.toolId : options.rollFlags.ability;
+  if (!rollType.includes(options.rollFlags.type) || !saveAbility.includes(rolled)) {
     return null; // continue to next effect
   }
 
@@ -1760,7 +1762,11 @@ async function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd
       midiRollMode: rollMode
     };
     if (["check", "save"].includes(rollTypeString)) dataset.ability = ability;
-    else if (rollTypeString === "skill") dataset.skill = ability;
+    else if (rollTypeString === "skill") {
+      // As dnd5e's own request buttons: the skill and its ability.
+      dataset.skill = ability;
+      dataset.ability = GameSystemConfig.skills[ability]?.ability;
+    }
 
     let whisper = ChatMessage.getWhisperRecipients(owner?.name ?? "");
     if (owner?.isGM) {
@@ -5336,11 +5342,11 @@ export async function bonusDialog(
     // do the roll modifications
     if (!resultApplied) switch (button.value) {
       case "reroll": reRoll = await roll!.reroll();
-        if (showDiceSoNice) await displayDSNForRoll(reRoll, rollType, rollMode);
+        if (showDiceSoNice) await displayDSNForRoll(reRoll, rollType, rollMode, undefined, this.actor);
         newRoll = reRoll; break;
       case "reroll-query":
         reRoll = reRoll = await roll!.reroll();
-        if (showDiceSoNice) await displayDSNForRoll(reRoll, rollType, rollMode);
+        if (showDiceSoNice) await displayDSNForRoll(reRoll, rollType, rollMode, undefined, this.actor);
         const newRollHTML = await midiRenderRoll(reRoll);
         if (await DialogV2.confirm({ window: { title: "Confirm reroll" }, content: `Replace ${rollHTML} with ${newRollHTML}`, defaultYes: true }))
           newRoll = reRoll
@@ -5348,20 +5354,20 @@ export async function bonusDialog(
           newRoll = roll!;
         break;
       case "reroll-kh": reRoll = await roll!.reroll();
-        if (showDiceSoNice) await displayDSNForRoll(reRoll, rollType === "attackRoll" ? "attackRollD20" : rollType, rollMode);
+        if (showDiceSoNice) await displayDSNForRoll(reRoll, rollType === "attackRoll" ? "attackRollD20" : rollType, rollMode, undefined, this.actor);
         newRoll = reRoll;
         if (reRoll.total! <= (roll!.total ?? 0)) newRoll = roll!;
         break;
       case "reroll-kl": reRoll = await roll!.reroll();
         newRoll = reRoll;
         if (reRoll.total! > (roll!.total ?? 0)) newRoll = roll!;
-        if (showDiceSoNice) await displayDSNForRoll(reRoll, rollType === "attackRoll" ? "attackRollD20" : rollType, rollMode);
+        if (showDiceSoNice) await displayDSNForRoll(reRoll, rollType === "attackRoll" ? "attackRollD20" : rollType, rollMode, undefined, this.actor);
         break;
       case "reroll-max": newRoll = await roll!.reroll({ maximize: true });
-        if (showDiceSoNice) await displayDSNForRoll(newRoll, rollType === "attackRoll" ? "attackRollD20" : rollType, rollMode);
+        if (showDiceSoNice) await displayDSNForRoll(newRoll, rollType === "attackRoll" ? "attackRollD20" : rollType, rollMode, undefined, this.actor);
         break;
       case "reroll-min": newRoll = await roll!.reroll({ minimize: true });
-        if (showDiceSoNice) await displayDSNForRoll(newRoll, rollType === "attackRoll" ? "attackRollD20" : rollType, rollMode);
+        if (showDiceSoNice) await displayDSNForRoll(newRoll, rollType === "attackRoll" ? "attackRollD20" : rollType, rollMode, undefined, this.actor);
         break;
 
       case "success":
@@ -5403,13 +5409,13 @@ export async function bonusDialog(
           const rollParts = button.value.split(" ");
           newRoll = new Roll(rollParts.slice(1).join(" "), { ...((this.activity ?? this.item ?? this.actor)?.getRollData() ?? {}), ...roll!.data });
           newRoll = await newRoll.evaluate();
-          if (showDiceSoNice) await displayDSNForRoll(newRoll, rollType, rollMode);
+          if (showDiceSoNice) await displayDSNForRoll(newRoll, rollType, rollMode, undefined, this.actor);
         } else if (typeof button.value == "string" && button.value.startsWith("reroll-withBonus")) {
           let bonus = button.value.split("reroll-withBonus ").slice(1).join(" ");
           if (!bonus.startsWith("+")) bonus = "+" + bonus;
           //@ts-expect-error
           newRoll = await new roll.constructor(`${roll.formula} ${bonus}`, { ...((this.activity ?? this.item ?? this.actor)?.getRollData() ?? {}), ...roll.data }).roll();
-          if (showDiceSoNice) await displayDSNForRoll(newRoll, rollType, rollMode);
+          if (showDiceSoNice) await displayDSNForRoll(newRoll, rollType, rollMode, undefined, this.actor);
         } else if (flagSelector.startsWith("damage.")) {
           //@ts-expect-error .DamageRoll
           const DamageRoll = CONFIG.Dice.DamageRoll
@@ -5423,7 +5429,7 @@ export async function bonusDialog(
           const tempRoll = new DamageRoll(`${button.value}`, { ...((this.activity ?? this.item ?? this.actor)?.getRollData() ?? {}), ...roll!.data }, rollOptions);
           await tempRoll.evaluate();
           setRollOperatorEvaluated(tempRoll);
-          if (showDiceSoNice) await displayDSNForRoll(tempRoll, rollType, rollMode);
+          if (showDiceSoNice) await displayDSNForRoll(tempRoll, rollType, rollMode, undefined, this.actor);
           newRoll = addRollTo(roll!, tempRoll);
         } else if (flagSelector === "ac") {
           let rollOptions = foundry.utils.duplicate(roll!.options);
@@ -5434,13 +5440,13 @@ export async function bonusDialog(
           const tempRoll = new Roll(`${button.value}`, { ...((this.activity ?? this.item ?? this.actor)?.getRollData() ?? {}), ...roll!.data }, rollOptions);
           await tempRoll.evaluate();
           setRollOperatorEvaluated(tempRoll);
-          if (showDiceSoNice) await displayDSNForRoll(tempRoll, rollType, rollMode);
+          if (showDiceSoNice) await displayDSNForRoll(tempRoll, rollType, rollMode, undefined, this.actor);
           newRoll = addRollTo(roll!, tempRoll);
         } else {
           //@ts-expect-error
           newRoll = CONFIG.Dice.D20Roll.fromRoll(roll);
           const tempRoll = await (new Roll(`${button.value}`, { ...((this.activity ?? this.item ?? this.actor)?.getRollData() ?? {}), ...roll!.data })).roll();
-          if (showDiceSoNice) await displayDSNForRoll(tempRoll, rollType, rollMode);
+          if (showDiceSoNice) await displayDSNForRoll(tempRoll, rollType, rollMode, undefined, this.actor);
           newRoll = addRollTo(newRoll, tempRoll);
         }
         break;
@@ -8666,9 +8672,19 @@ export function hasDAE(workflow: Workflow) {
 }
 
 
-export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string, defaultRollMode?: string, saveDisplay?: string) {
+export async function displayDSNForRoll(rolls?: Roll | Roll[], rollType?: string, defaultRollMode?: string, saveDisplay?: string, actor?: Actor.Implementation | null) {
   if (!rolls) return;
   if (!(rolls instanceof Array)) rolls = [rolls];
+  // Dice So Nice hides NPC rolls only for the chat messages it animates itself. Without an actor (e.g. another module
+  // showing a workflow's damage), as DSN: the speaker of the card the rolls belong to.
+  // @ts-expect-error originatingMessage is a custom roll option
+  const card = game.messages?.get(rolls.find(r => r.options?.originatingMessage)?.options.originatingMessage);
+  actor ??= card ? ChatMessage.getSpeakerActor(card.speaker) as Actor.Implementation | null : null;
+  // @ts-expect-error no dsn types
+  if (dice3dEnabled() && actor && !actor.hasPlayerOwner && game.settings.get("dice-so-nice", "hideNpcRolls")) {
+    DSNMarkDiceDisplayed(rolls);
+    return;
+  }
   /*
   "midi-qol.hideRollDetailsOptions": {
     "none": "None",

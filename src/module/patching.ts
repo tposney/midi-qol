@@ -923,7 +923,7 @@ async function doRollSkill(this: Actor.Implementation, wrapped, config: RollProc
     */
     // When obscuring, keep the 3D dice animation private so it can't reveal the hidden result to players
     const skillDsnRollMode = foundry.utils.getProperty(message, "data.flags.midi-qol.obscureRoll") ? "blind" : rollMode;
-    await displayDSNForRoll(result, "skill", skillDsnRollMode);
+    await displayDSNForRoll(result, "skill", skillDsnRollMode, undefined, this);
     DSNMarkDiceDisplayed(result);
     if (!config.simulate) {
       result[0] = await bonusCheck(this, result[0], "skill", skillId, message.data);
@@ -1725,7 +1725,7 @@ async function doRollAbility(this: Actor.Implementation, wrapped, rollType: stri
     const saveDisplay: string = (activitySaveDisplay && activitySaveDisplay !== "default") ? activitySaveDisplay : configSettings.autoCheckSaves;
     // When obscuring, keep the 3D dice animation private so it can't reveal the hidden result to players
     const abilityDsnRollMode = foundry.utils.getProperty(message, "data.flags.midi-qol.obscureRoll") ? "blind" : rollMode;
-    await displayDSNForRoll(result, rollType, abilityDsnRollMode, saveDisplay);
+    await displayDSNForRoll(result, rollType, abilityDsnRollMode, saveDisplay, this);
     DSNMarkDiceDisplayed(result);
     foundry.utils.mergeObject(message.data, { "flags": config.flags ?? {} });
     // Set overtimeActorUuid AFTER message object is replaced by hook and merged
@@ -3056,7 +3056,7 @@ export async function rollToolCheck(this: Actor.Implementation, wrapped, config:
     if (result) {
       // When obscuring, keep the 3D dice animation private so it can't reveal the hidden result to players
       const toolDsnRollMode = foundry.utils.getProperty(message, "data.flags.midi-qol.obscureRoll") ? "blind" : rollMode;
-      await displayDSNForRoll(result, "toolCheck", toolDsnRollMode);
+      await displayDSNForRoll(result, "toolCheck", toolDsnRollMode, undefined, this);
       DSNMarkDiceDisplayed(result);
       result![0] = await bonusCheck(this, result![0], "check", config.ability ?? "", message.data);
       DSNMarkDiceDisplayed(result);

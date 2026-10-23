@@ -1,3 +1,12 @@
+### 14.0.17 (unreleased)
+
+**Damage**
+* Fixed: damage to a creature at 0 hit points didn't count as damage, so `isDamaged` hooks, macros and special durations (e.g. Stable from a Healer's Kit) didn't fire.
+
+**Rolls and saves**
+* Fixed: an over-time action save with `rollType=skill` (e.g. an Athletics check to escape): its card's button didn't carry the skill's ability.
+* Fixed: Dice So Nice's *Hide NPC rolls* and *Disabled during combat* were ignored for the dice midi shows itself (attacks, damage, saves, checks, optional bonus rerolls), including dice other modules show through `MidiQOL.displayDSNForRoll`, which now takes the rolling actor.
+
 ### 14.0.16
 
 **Rolls and saves**

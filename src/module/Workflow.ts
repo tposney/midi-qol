@@ -4117,7 +4117,7 @@ export class Workflow {
     if (!validRolls.length) return;
     await this.setBonusDamageRolls(validRolls);
     if (this.workflowOptions?.damageRollDSN !== false) {
-      await displayDSNForRoll(this.bonusDamageRolls!, "damageRoll");
+      await displayDSNForRoll(this.bonusDamageRolls!, "damageRoll", undefined, undefined, this.actor);
     }
   }
 
@@ -6706,7 +6706,9 @@ export class Workflow {
     }
     await asyncHooksCallAll(`midi-qol.preTargetDamageApplication`, token, { item: this.item, workflow: this, damageItem: damages, ditem: damages });
 
-    if ((damages.hpDamage !== 0 || damages.tempDamage > 0) && (this.hitTargets.has(token) || this.hitTargetsEC.has(token) || this.otherActivity?.save || this.otherActivity?.check)) {
+    // A creature at 0 HP loses no hit points but is still damaged (e.g. ends Stable).
+    const damagedAtZero = (damages.oldHP ?? 1) <= 0 && (damages.totalDamage ?? 0) > 0 && (damages.hpDamage ?? 0) >= 0;
+    if ((damages.hpDamage !== 0 || damages.tempDamage > 0 || damagedAtZero) && (this.hitTargets.has(token) || this.hitTargetsEC.has(token) || this.otherActivity?.save || this.otherActivity?.check)) {
       let healedDamaged = damages.hpDamage < 0 ? "isHealed" : "isDamaged";
       await asyncHooksCallAll(`midi-qol.${healedDamaged}`, token, { item: this.item, workflow: this, damageItem: damages, ditem: damages });
       const actorOnUseMacros = foundry.utils.getProperty(token.actor ?? {}, midiFlag(`onUseMacroParts`)) as OnUseMacros ?? new OnUseMacros();
