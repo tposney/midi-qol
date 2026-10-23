@@ -390,6 +390,12 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
     }
 
     async rollAttack(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}): Promise<Roll[] | null> {
+      const workflow = config.workflow;
+      if (!workflow) return this._midiRollAttack(config, dialog, message);
+      return workflow.whileExecuting(() => this._midiRollAttack(config, dialog, message));
+    }
+
+    async _midiRollAttack(config: RollProcessConfig = {}, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}): Promise<Roll[] | null> {
       const hookIds: Record<string, number | undefined> = {};
       let rolls;
       const workflow = config.workflow;

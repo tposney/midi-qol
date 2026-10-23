@@ -279,6 +279,7 @@ declare module "fvtt-types/configuration" {
           "reroll-kl"?: boolean;
         };
         deathSaveBonus?: number;
+        noDeathSaveFailureFromDamage?: boolean;
         disadvantage?: {
           ability?: {
             all?: string;
@@ -1198,6 +1199,8 @@ export type PreSetupDamageListEntry = {
   oldVitality?: number;
   // vitalityItem fields (for items with uses as vitality pool)
   oldVitalitySpent?: number;
+  oldDeathFailures?: number;
+  newDeathFailures?: number;
   newVitalitySpent?: number;
   rawDamageDetail: DamageDescription[];
   rawTotalDamage?: number;

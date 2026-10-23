@@ -901,6 +901,8 @@
   "midi-qol.AddDead.Hint1": "Player Controlled",
   "midi-qol.AddDead.Hint2": "GM Controlled",
   "midi-qol.markDefeated": "Mark defeated in combat tracker",
+  "midi-qol.EnforceDeathSaves.Name": "Enforce death saves",
+  "midi-qol.EnforceDeathSaves.Hint": "A character at 0 hit points that takes damage suffers a death saving throw failure, two from a critical hit, and three (death) if the damage equals or exceeds its hit point maximum. At three it is marked dead as for a failed death save; undo on the damage card restores the count and status.",
   "midi-qol.AddDeadOptions": {
     "none": "Do Not Update",
     "overlay": "Add effect as overlay",

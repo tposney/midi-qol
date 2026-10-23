@@ -1753,16 +1753,26 @@ export function deathSaveHook(rolls: Roll[], { chatString, subject: actor }: { c
     }
     gameStats.addDeathSaveResult(actor, successes, failures);
   }
-  if (chatString === "DND5E.DeathSaveFailure") {
-    if (hasCondition(actor, "unconscious")) {
-      const _id = CONFIG.statusEffects.find(e => e.id === "unconscious")?._id;
-      const effect = actor.effects.find(e => e._id === _id);
-      if (effect) effect.setFlag("core", "overlay", false);
-    }
-    const status = getDeadStatus();
-    if (!status) return;
-    setDeadStatus(actor, { effect: status, useDefeated: true, makeDead: true, overlay: true });
+  if (chatString === "DND5E.DeathSaveFailure") applyFailedDeathSaves(actor);
+}
+
+/** Three failed death saves (rolled, or from damage at 0 HP): midi's dead status replaces unconscious. */
+export async function applyFailedDeathSaves(actor: Actor.Implementation) {
+  if (hasCondition(actor, "unconscious")) {
+    const _id = CONFIG.statusEffects.find(e => e.id === "unconscious")?._id;
+    const effect = actor.effects.find(e => e._id === _id);
+    if (effect) await effect.setFlag("core", "overlay", false);
   }
+  const status = getDeadStatus();
+  if (!status) return;
+  await setDeadStatus(actor, { effect: status, useDefeated: true, makeDead: true, overlay: true });
+}
+
+/** Undoes applyFailedDeathSaves: the dead status goes and midi's usual 0 HP handling (unconscious) applies again. */
+export async function revertFailedDeathSaves(actor: Actor.Implementation) {
+  const status = getDeadStatus();
+  if (status) await setDeadStatus(actor, { effect: status, useDefeated: true, makeDead: false });
+  await getActorWoundedSemaphore(actor.uuid).add(() => processWoundedStatus(actor));
 }
 
 export async function computeAbilityAdvantage(actor: Actor.Implementation, rollType: string, abilityId: string, options: MidiOptions, tracker?: RollModifierTracker, rollKind = "ability"): Promise<{ tracker: RollModifierTracker, magicResistance: boolean, magicVulnerability: boolean }> {

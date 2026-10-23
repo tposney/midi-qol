@@ -1,8 +1,10 @@
-import { configSettings, ALL_DAMAGE_KEY } from "../settings.js";
+import { configSettings, ALL_DAMAGE_KEY, safeGetGameSetting } from "../settings.js";
 import { GameSystemConfig, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { displayTokenName } from "../utils.js";
-import { CombinedTargetDescriptor, DamageApplicationOptions, Dnd5eSystem } from "../../globals.js";
+import { displayTokenName, setupDamageDetails } from "../utils.js";
+import { prepareDamageListToJSON, timedAwaitExecuteAsGM } from "../GMAction.js";
+import { Workflow } from "../Workflow.js";
+import { CombinedTargetDescriptor, DamageApplicationOptions, DamageDescription, DamageListEntry, Dnd5eSystem } from "../../globals.js";
 
 // SVG Icons for midi-qol custom change sources (using dnd5e SVGs for consistent styling)
 /** The two fields change-source cycling mutates, viewed generically. */
@@ -76,6 +78,57 @@ export class DamageApplicationElementMidi extends globalThis.dnd5e.applications.
   refreshListEntry(entry: HTMLElement, damage: { temp: number, tempMax: number, total: number }) {
     super.refreshListEntry(entry, damage);
     if (entry.isConnected && this.targetList?.isConnected) this.refreshMultiplier();
+  }
+
+  /**
+   * Apply as midi's workflow does: each target's damage, as this tray calculates it, goes through the workflow's
+   * damage hooks (CAT/CPR edit the damage item there), then the GM applies it and records a linked undo card.
+   * dnd5e's Apply calls `actor.applyDamage`, which skips the hooks and leaves no undo card.
+   */
+  async _onApplyDamage(event: Event) {
+    event.preventDefault();
+    const message = this.chatMessage as ChatMessage.Implementation | undefined;
+    const workflow = message ? Workflow.getWorkflow(message.uuid) : undefined;
+    const damageList: DamageListEntry[] = [];
+    for (const option of Array.from<HTMLOptionElement>(this.targetList.querySelectorAll("option"))) {
+      const token = fromUuidSync(option.value) as TokenDocument.Implementation | null;
+      const actor = token?.actor;
+      if (!token?.isOwner || !actor) continue;
+      const calcDamageOptions = this.getMergedOptions(option.value);
+      // @ts-expect-error no dnd5e-types
+      const combinedDamage: DamageDescription[] = foundry.utils.deepClone(actor.calculateDamage(this.damages, calcDamageOptions));
+      const midiOptions = (calcDamageOptions.midi ?? {}) as { saved?: boolean, superSaver?: boolean, semiSuperSaver?: boolean };
+      const entry = setupDamageDetails({
+        actorId: actor.id!,
+        actorUuid: actor.uuid,
+        critical: false,
+        damageDetail: combinedDamage,
+        damageDetails: { combinedDamage, rawcombinedDamage: this.damages, calcDamageOptions: { combinedDamage: calcDamageOptions } },
+        isHit: true,
+        rawDamageDetail: this.damages,
+        saved: !!midiOptions.saved,
+        sceneId: token.parent?.id ?? "",
+        semiSuperSaver: !!midiOptions.semiSuperSaver,
+        superSaver: !!midiOptions.superSaver,
+        totalDamage: this.damages.reduce((total: number, d: DamageDescription) => total + (d.value ?? 0), 0),
+        targetUuid: token.uuid,
+      }, "combinedDamage", actor);
+      if (!entry) continue;
+      if (workflow && token.object) await workflow.callDamageHooksAndMacros(entry, token.object);
+      damageList.push(entry);
+    }
+    if (damageList.length) await timedAwaitExecuteAsGM("createReverseDamageCard", {
+      autoApplyDamage: "yesCard",
+      actorId: workflow?.actor?.id,
+      actorUuid: workflow?.actor?.uuid,
+      charName: workflow?.token?.name ?? workflow?.actor?.name ?? game.user?.name,
+      damageList: prepareDamageListToJSON(damageList),
+      chatCardUuid: message?.uuid,
+      flagTags: workflow?.flagTags,
+      updateOptions: { awaitDamageApplication: true },
+      forceApply: true,
+    });
+    if (safeGetGameSetting("dnd5e", "autoCollapseChatTrays") !== "manual") this.open = false;
   }
 
   /**

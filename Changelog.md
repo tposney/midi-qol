@@ -1,9 +1,18 @@
 ### 14.6.5 (unreleased)
 
+**Damage**
+* Fixed: damage to a creature at 0 hit points didn't count as damage, so `isDamaged` hooks, macros and special durations (e.g. Stable from Spare the Dying or a Healer's Kit) didn't fire.
+* Added: setting *Enforce death saves* (Mechanics, off by default): a character at 0 hit points that takes damage suffers a death save failure, two from a critical hit, three if the damage equals or exceeds its hit point maximum; at three it is marked dead as for a failed death save. Undo on the damage card restores the count and, if it had died, the unconscious status.
+* Added: `flags.midi-qol.noDeathSaveFailureFromDamage`: damage at 0 hit points adds no death save failures under *Enforce death saves*.
+
 **Chat cards**
 * Changed: a damage card is linked to the card it came from (`system.origin`), is deleted with it, and no longer repeats its speaker and whisper recipients.
+* Changed: an item used from inside another workflow of the same actor (e.g. CPR's Sneak Attack spending its use) has its card linked to that workflow's card and is deleted with it.
+* Changed: the damage tray's Apply goes through midi: the workflow's damage hooks and macros run (CAT/CPR damage reductions apply) and a linked damage card records the undo.
 
 **Rolls and saves**
+* Changed: an over-time roll's card shows the effect's icon and name once, with the activity type (Damage, Saving Throw) as its subtitle.
+* Fixed: an over-time action save with `rollType=skill` or `tool` (e.g. an Athletics check to escape) showed "undefined check" on its card and its roll never ended the effect.
 * Fixed: Dice So Nice's *Hide NPC rolls* and *Disabled during combat* were ignored for the dice midi shows itself (attacks, damage, saves, checks, optional bonus rerolls), including dice other modules show through `MidiQOL.displayDSNForRoll`, which now takes the rolling actor.
 
 ### 14.6.4

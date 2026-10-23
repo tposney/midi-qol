@@ -9,6 +9,7 @@ import { configSettings, safeGetGameSetting } from "../settings.js";
 import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, midiRenderAttackRoll,
   midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML } from "../utils.js";
 import { MODULE_ID } from "../../midi-qol.js";
+import { Workflow } from "../Workflow.js";
 
 /** Renderer per roll-backed section; damage renderers aggregate the section's rolls into one block. */
 const SECTION_ROLL_RENDERERS: Record<string, (rolls: Roll[]) => Promise<string> | string> = {
@@ -110,7 +111,7 @@ export function setupUsageCardMessage() {
     return;
   }
 
-  const { BooleanField, NumberField, ObjectField, SchemaField, StringField } = foundry.data.fields;
+  const { BooleanField, ForeignDocumentField, NumberField, ObjectField, SchemaField, StringField } = foundry.data.fields;
 
   MidiUsageMessageData = class extends base {
     declare parent: ChatMessage.Implementation;
@@ -135,6 +136,8 @@ export function setupUsageCardMessage() {
       }
       return {
         ...schema,
+        // The card of the workflow this use was started from (Workflow.executingCardFor); deleted with it.
+        origin: new ForeignDocumentField(foundry.documents.BaseChatMessage),
         midi: new SchemaField({
           hasButtons: new BooleanField({ initial: false }),
           hasAttack: new BooleanField({ initial: false }),
@@ -425,6 +428,7 @@ export function setupUsageCardMessage() {
   };
 
   CONFIG.ChatMessage.dataModels[USAGE_MESSAGE_TYPE] = MidiUsageMessageData;
+  Hooks.on("createChatMessage", linkToExecutingWorkflow);
 
   // A card whose item is deleted loses its buttons, but only when rendered again; redraw the ones on screen.
   Hooks.on("deleteItem", (item: Item.Implementation) => {
@@ -435,4 +439,18 @@ export function setupUsageCardMessage() {
       if (ui.chat?.element?.querySelector(`.message[data-message-id="${message.id}"]`)) ui.chat.updateMessage(message);
     }
   });
+}
+
+/**
+ * A use started from inside a workflow can run on another client (CAT's `completeItemUse` runs it on the actor's owner),
+ * where the workflow doesn't exist, so the card arrives unlinked. The client running that workflow links it.
+ */
+function linkToExecutingWorkflow(message: ChatMessage.Implementation, _options: object, userId: string) {
+  if (userId === game.user?.id || !MidiUsageMessageData || !(message.system instanceof MidiUsageMessageData)) return;
+  if ((message._source.system as { origin?: string | null } | undefined)?.origin) return;
+  const actor = ChatMessage.getSpeakerActor(message.speaker);
+  const parent = actor ? Workflow.executingCardFor(actor) : undefined;
+  if (!parent || parent.id === message.id || !message.canUserModify(game.user!, "update")) return;
+  const path: string = "system.origin";
+  message.update({ [path]: parent.id });
 }

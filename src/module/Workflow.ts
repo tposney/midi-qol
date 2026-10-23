@@ -355,6 +355,30 @@ export class Workflow {
     if (useWeakReferences) Workflow.workflows.set(workflow.id, new WeakRef(workflow));
     else Workflow.workflows.set(workflow.id, workflow);
   }
+  /**
+   * The usage card of the actor's workflow that is executing now, if any: an item use started from inside it (a macro
+   * spending a resource item, a triggered activity) belongs to that card. The most recently added one wins.
+   */
+  static executingCardFor(actor: Actor.Implementation): ChatMessage.Implementation | undefined {
+    let parent: Workflow | undefined;
+    for (const entry of Workflow.workflows.values()) {
+      const workflow = entry instanceof WeakRef ? entry.deref() : entry;
+      if (!workflow?.executingStates || workflow.suspended || !workflow.itemCardUuid) continue;
+      if (workflow.actor?.uuid === actor.uuid) parent = workflow;
+    }
+    return parent ? fromUuidSync(parent.itemCardUuid!) as ChatMessage.Implementation | undefined : undefined;
+  }
+
+  /** Count the workflow as executing while `fn` runs: a roll from a card button happens outside performState. */
+  async whileExecuting<T>(fn: () => Promise<T>): Promise<T> {
+    this.executingStates += 1;
+    try {
+      return await fn();
+    } finally {
+      this.executingStates -= 1;
+    }
+  }
+
   static getWorkflow(id?: string): Workflow | undefined {
     if (debugEnabled > 0) warn("Get workflow ", id, Workflow.workflows, Workflow.workflows.get(id ?? ""))
     if (debugEnabled > 1) debug("Get workflow ", id, Workflow.workflows, Workflow.workflows.get(id ?? ""))
@@ -1384,6 +1408,8 @@ export class Workflow {
   disadvantageSaves: Set<Token.Implementation> | undefined;
   saveResults: Roll[] | undefined; /* D20Roll */
   stateTransitionCount: number | undefined;
+  /** Running performState calls: above 0 while the workflow executes, 0 when it is paused, finished or failed. */
+  executingStates = 0;
   maxTransitionCount: number = 250;
   selfTargeted: boolean | undefined;
   workflowStartTime: number | undefined;
@@ -1880,6 +1906,7 @@ export class Workflow {
   public async performState(newState: WorkflowState, context: WorkflowContext = {}) {
     if (this.stateTransitionCount === undefined) this.stateTransitionCount = 0;
     let isAborting = this.aborted;
+    this.executingStates += 1;
 
     try {
       while (this.stateTransitionCount < (this.maxTransitionCount)) {
@@ -1949,6 +1976,8 @@ export class Workflow {
       const message = `performState | ${this.workflowName} Workflow ${this.id}`;
       error(message, err);
       TroubleShooter.recordError(err, message);
+    } finally {
+      this.executingStates -= 1;
     }
   }
 
@@ -6728,7 +6757,9 @@ export class Workflow {
     }
     await asyncHooksCallAll(`midi-qol.preTargetDamageApplication`, token, { item: this.item, workflow: this, damageItem: damages, ditem: damages });
 
-    if ((damages.hpDamage !== 0 || damages.tempDamage > 0) && (this.hitTargets.has(token) || this.hitTargetsEC.has(token) || this.otherActivity?.save || this.otherActivity?.check)) {
+    // A creature at 0 HP loses no hit points but is still damaged (e.g. ends Stable).
+    const damagedAtZero = (damages.oldHP ?? 1) <= 0 && (damages.totalDamage ?? 0) > 0 && (damages.hpDamage ?? 0) >= 0;
+    if ((damages.hpDamage !== 0 || damages.tempDamage > 0 || damagedAtZero) && (this.hitTargets.has(token) || this.hitTargetsEC.has(token) || this.otherActivity?.save || this.otherActivity?.check)) {
       let healedDamaged = damages.hpDamage < 0 ? "isHealed" : "isDamaged";
       await asyncHooksCallAll(`midi-qol.${healedDamaged}`, token, { item: this.item, workflow: this, damageItem: damages, ditem: damages });
       const actorOnUseMacros = foundry.utils.getProperty(token.actor ?? {}, midiFlag(`onUseMacroParts`)) as OnUseMacros ?? new OnUseMacros();

@@ -5,7 +5,7 @@ import { getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReac
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow } from "./Workflow.js";
-import { bonusCheck } from "./patching.js";
+import { applyFailedDeathSaves, bonusCheck, revertFailedDeathSaves } from "./patching.js";
 import { RollModifierTracker } from "./lib/RollModifierTracker.js";
 import { actorEmbeddedByPath, repointCopiedDependentsSource } from "./lib/MidiDependentsRegistry.js";
 import { queueUndoData, startUndoWorkflow, updateUndoChatCardUuids, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, updateUndoChatCardUuidsById } from "./undo.js";
@@ -1050,6 +1050,13 @@ function withDamageOrigin<T>(options: T): T {
   return options;
 }
 
+/** A damage card moving the death save failures across three marks the character dead, or undoes that. */
+async function syncFailedDeathSaves(actor: Actor.Implementation | null | undefined, from: number | undefined, to: number | undefined) {
+  if (!actor || from === undefined || to === undefined) return;
+  if (from < 3 && to >= 3) await applyFailedDeathSaves(actor);
+  else if (from >= 3 && to < 3) await revertFailedDeathSaves(actor);
+}
+
 async function createReverseDamageCard(data: {
   damageList: SerializedDamageListEntry[];
   autoApplyDamage: string;
@@ -1523,6 +1530,19 @@ async function prepareDamageListItems(
         }
       }
 
+      // Damage at 0 HP: a death save failure, two from a critical, three if it equals or exceeds the hit point maximum.
+      // @ts-expect-error no dnd5e-types
+      const death = actor.system.attributes.death;
+      // @ts-expect-error no dnd5e-types
+      const isCharacter = actor.type === "character";
+      if (configSettings.enforceDeathSaves && isCharacter && death && hp.value <= 0 && amount > 0 && !actor.statuses.has("dead")
+        && !actor.getFlag(MODULE_ID, "noDeathSaveFailureFromDamage")) {
+        const oldFailures: number = death.failure ?? 0;
+        damageItem.oldDeathFailures = oldFailures;
+        damageItem.newDeathFailures = amount >= (hp.effectiveMax ?? hp.max) ? 3 : Math.min(3, oldFailures + (damageItem.critical ? 2 : 1));
+        updates["system.attributes.death.failure"] = damageItem.newDeathFailures;
+      }
+
       if (createPromises && doHits && (data.autoApplyDamage.includes("yes") || data.forceApply)) {
         //recover the options used when calculating the damage
         // If midi-qol handled vitality (overflow or direct damage), mark it so the hook doesn't double-handle
@@ -1544,6 +1564,7 @@ async function prepareDamageListItems(
               await vitalityItemUpdatePromise;
             }
             if (updatedActor) Hooks.callAll("dnd5e.applyDamage", updatedActor, amount, withDamageOrigin(damageItem.calcDamageOptions as DamageApplicationOptions));
+            await syncFailedDeathSaves(updatedActor ?? actor, damageItem.oldDeathFailures, damageItem.newDeathFailures);
             return updatedActor;
           });
           promises.push(updatePromise);
@@ -1725,7 +1746,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       // TODO: Remove the latter after sufficient time has passed
       const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
       const undoDamageData = recoverUndoListFromFlag(message, undoFlag);
-      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempMax, calcDamageOptions, updateOptions } of undoDamageData) {
+      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempMax, oldDeathFailures, newDeathFailures, calcDamageOptions, updateOptions } of undoDamageData) {
         if (!actorUuid) continue;
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
         applyButton?.children[0].classList.add("midi-qol-enable-damage-button");
@@ -1743,6 +1764,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           "system.attributes.hp.value": oldHP ?? 0
         };
         if (newTempMax! - oldTempMax!) updates["system.attributes.hp.tempmax"] = oldTempMax;
+        if (oldDeathFailures !== undefined) updates["system.attributes.death.failure"] = oldDeathFailures;
         // Handle vitality undo - only if actor still has a vitality item
         const undoItem = undoDamageData.find(d => d.actorUuid === actorUuid);
         const vitalityItem = getVitalityItem(actor);
@@ -1766,6 +1788,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
               updateHPStatusHeader(html, actorUuid, false);
               return updatedActor;
             })
+          await syncFailedDeathSaves(actor, newDeathFailures, oldDeathFailures);
         }
         ev.stopPropagation();
       }
@@ -1778,7 +1801,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
       // TODO: Remove the latter after sufficient time has passed
       const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
       const undoDamageData = recoverUndoListFromFlag(message, undoFlag);
-      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, newTempMax, oldHP, oldTempMax, calcDamageOptions, updateOptions } of undoDamageData) {
+      if (undoDamageData) for (let { actorUuid, newHP, newTempHP, newTempMax, oldHP, oldTempMax, oldDeathFailures, newDeathFailures, calcDamageOptions, updateOptions } of undoDamageData) {
         if (!actorUuid) continue;
         let actor = fromActorUuid(actorUuid);
         const applyButton = html.querySelector<HTMLButtonElement>(`#apply-${actorUuid.replaceAll(".", "")}`);
@@ -1790,6 +1813,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
         log(`Setting HP to ${newTempHP} and ${newHP} ${actor?.name} ${actorUuid}`);
         const update = { "system.attributes.hp.temp": newTempHP ?? 0, "system.attributes.hp.value": newHP ?? 0 } as Actor.UpdateData;
         if (newTempMax! - oldTempMax!) update["system.attributes.hp.tempmax"] = newTempMax;
+        if (newDeathFailures !== undefined) update["system.attributes.death.failure"] = newDeathFailures;
         const amount = (newHP ?? 0) - (oldHP ?? 0);
         // Handle vitality apply - only if actor still has a vitality item
         const applyItem = undoDamageData.find(d => d.actorUuid === actorUuid);
@@ -1812,6 +1836,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
             updateHPStatusHeader(html, actorUuid, true);
             return updatedActor;
           });
+          await syncFailedDeathSaves(actor, oldDeathFailures, newDeathFailures);
         }
         ev.stopPropagation();
       }
@@ -1822,7 +1847,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
   const undoFlag = message.flags?.[MODULE_ID]?.undoDamage ?? foundry.utils.getProperty(message, "flags.midi-qol.undoDamage") as SerializedDamageListEntry[];
   const undoDamageData = recoverUndoListFromFlag(message, undoFlag);
   undoDamageData?.forEach((undoEntry) => {
-    const { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempHP, newTempMax, damageDetail, calcDamageOptions, updateOptions, oldVitalitySpent, newVitalitySpent } = undoEntry;
+    const { actorUuid, oldTempHP, oldHP, oldTempMax, newHP, newTempHP, newTempMax, damageDetail, calcDamageOptions, updateOptions, oldVitalitySpent, newVitalitySpent, oldDeathFailures, newDeathFailures } = undoEntry;
     if (!actorUuid) return;
     let button = html.querySelector<HTMLButtonElement>(`#reverse-${actorUuid.replaceAll(".", "")}`);
     button?.addEventListener("click", (ev) => {
@@ -1845,6 +1870,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
           "system.attributes.hp.value": oldHP ?? 0
         };
         if (newTempMax! - oldTempMax!) updates["system.attributes.hp.tempmax"] = oldTempMax;
+        if (oldDeathFailures !== undefined) updates["system.attributes.death.failure"] = oldDeathFailures;
         // Handle vitality undo - only if actor still has a vitality item
         const vitalityItem = getVitalityItem(actor);
         let vitalityUpdated = false;
@@ -1866,6 +1892,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
             updateHPStatusHeader(html, actorUuid, false);
             return updatedActor;
           })
+          await syncFailedDeathSaves(actor, newDeathFailures, oldDeathFailures);
         }
         ev.stopPropagation();
       })();
@@ -1894,6 +1921,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
             "system.attributes.hp.value": newHP ?? 0
           };
           if (newTempMax! - oldTempMax!) updates["system.attributes.hp.tempmax"] = newTempMax;
+          if (newDeathFailures !== undefined) updates["system.attributes.death.failure"] = newDeathFailures;
           // Handle vitalityItem apply - only if actor still has a vitality item
           const vitalityItem = getVitalityItem(actor);
           let vitalityUpdated = false;
@@ -1914,6 +1942,7 @@ export let processUndoDamageCard = (message: ChatMessage.Implementation, html: H
               updateHPStatusHeader(html, actorUuid, true);
               return updatedActor;
             });
+            await syncFailedDeathSaves(actor, oldDeathFailures, newDeathFailures);
           }
         } else {
           // For other multipliers, use applyDamage with the new multiplier
@@ -2469,6 +2498,7 @@ export interface SerializedDamageListEntry extends Omit<DamageListEntry, "calcDa
 const PERSISTED_UNDO_FIELDS = ["actorUuid", "targetUuid", "damageSelector", "wasHit", "damageMods",
   "oldHP", "newHP", "oldTempHP", "newTempHP", "oldTempMax", "newTempMax",
   "oldVitality", "newVitality", "oldVitalitySpent", "newVitalitySpent",
+  "oldDeathFailures", "newDeathFailures",
   "hpDamage", "totalDamage", "rawTotalDamage"] as const;
 
 /** Members carried verbatim; those below need their encoding changed and are handled explicitly. */

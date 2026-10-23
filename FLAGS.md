@@ -1286,6 +1286,7 @@ No damage on save (normal damage on fail). Registered as **BooleanFormula** fiel
 |------|--------|-------------|
 | `flags.midi-qol.concentrationSaveBonus` | Evaluated | Add bonus to concentration saves. **Mapped to:** `system.attributes.concentration.bonuses.save` |
 | `flags.midi-qol.deathSaveBonus` | Evaluated | Add bonus to death saves. **Native alternative:** `system.attributes.death.bonuses.save` |
+| `flags.midi-qol.noDeathSaveFailureFromDamage` | Boolean | Damage at 0 HP adds no death save failures (with the *Enforce death saves* setting) |
 | `flags.midi-qol.save.fail.all` | Evaluated | Bonus applied when any save fails |
 | `flags.midi-qol.save.fail.{ability}` | Evaluated | Bonus applied when specific save fails |
 

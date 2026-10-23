@@ -958,6 +958,12 @@ export let MidiActivityMixin = Base => {
     }
 
     async rollDamage(config: RollProcessConfig, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
+      const workflow = config?.workflow;
+      if (!workflow) return this._midiRollDamage(config, dialog, message);
+      return workflow.whileExecuting(() => this._midiRollDamage(config, dialog, message));
+    }
+
+    async _midiRollDamage(config: RollProcessConfig, dialog: RollDialogConfig = {}, message: RollMessageConfig = {}) {
       // TODO decide what this should mean
       if (!config?.workflow) {
         return super.rollDamage(config, dialog, message);
@@ -2292,7 +2298,9 @@ export let MidiActivityMixin = Base => {
           displayProperties: !!context.displayProperties,
           dmgBtnText: context.dmgBtnText ?? ""
         };
-        message = foundry.utils.mergeObject({ data: { system: { midi } } }, message ?? {},
+        // A use started from inside another of the actor's workflows is linked to its card, as dnd5e links saves.
+        const origin = this.actor ? Workflow.executingCardFor(this.actor)?.id ?? null : null;
+        message = foundry.utils.mergeObject({ data: { system: { midi, ...(origin ? { origin } : {}) } } }, message ?? {},
                                             { inplace: false });
       } catch (err) {
         // A card that cannot describe itself is still better than no card at all.

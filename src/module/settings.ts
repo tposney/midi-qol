@@ -242,6 +242,7 @@ class ConfigSettings {
   undoWorkflow: boolean = false;
   useDamageDetail: boolean = true;
   waitForDamageApplication: boolean = true;
+  enforceDeathSaves: boolean = false;
   rollAlternate: string = "off";
   optionalRules = {
     actionSpecialDurationImmediate: false,

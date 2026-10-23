@@ -1683,7 +1683,9 @@ async function handleActionSaveRollResponse(
 
   if (!options.rollFlags) return effect.id;
   if (options.rollFlags.type === "ability") options.rollFlags.type = "check";
-  if (!rollType.includes(options.rollFlags.type) || !saveAbility.includes(options.rollFlags.ability ?? options.rollFlags.skillId)) {
+  const rolled = options.rollFlags.type === "skill" ? options.rollFlags.skillId
+    : options.rollFlags.type === "tool" ? options.rollFlags.toolId : options.rollFlags.ability;
+  if (!rollType.includes(options.rollFlags.type) || !saveAbility.includes(rolled)) {
     return null; // continue to next effect
   }
 
@@ -1719,9 +1721,11 @@ async function handleActionSaveRollRequest(ctx: ActionSaveContext, changeTurnEnd
   if (owner?.isGM) whisper = ChatMessage.getWhisperRecipients("GM");
   // A dnd5e 6 prompt message: not broadcast, so its buttons roll for the message's actor. The flags tell midi's
   // roll wrappers which over-time effect the roll answers.
-  const buttons = saveAbility.map(ability => ({
+  // A skill or tool button needs its ability as well, as dnd5e's own request buttons have.
+  const buttons = saveAbility.map(id => ({
     type: rollTypeString, format: "long", visibility: "all", dc: Number(saveDC),
-    ...(rollTypeString === "skill" ? { skill: ability } : { ability })
+    ...(rollTypeString === "skill" ? { skill: id, ability: GameSystemConfig.skills[id]?.ability }
+      : rollTypeString === "tool" ? { tool: id, ability: GameSystemConfig.tools[id]?.ability } : { ability: id })
   }));
   const chatCard = await MessageClass.create({
     // @ts-expect-error no dnd5e-types
@@ -1775,8 +1779,8 @@ async function buildOvertimeItemData(ctx: OvertimeItemBuildContext): Promise<{ i
   }
 
   // Build activity data
+  // No name or image of its own: the card shows the activity type's, not the item's twice.
   let activityData: any = {
-    name: label,
     id: "overtime",
     type: "damage"
   };
@@ -1793,7 +1797,6 @@ async function buildOvertimeItemData(ctx: OvertimeItemBuildContext): Promise<{ i
   }
 
   // Set properties on both
-  activityData.img = effect.img;
   itemData.img = effect.img;
   foundry.utils.setProperty(itemData, "target.affects.type", "self");
   itemData.type = "feat";

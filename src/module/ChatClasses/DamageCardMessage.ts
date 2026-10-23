@@ -3,6 +3,7 @@
 import { error } from "../../midi-qol.js";
 import { ChatMessageRenderOptions, ContextMenuEntryV14 } from "../../globals.js";
 import { buildDamageCardContext, DamageListContextEntry, processUndoDamageCard } from "../GMAction.js";
+import { USAGE_MESSAGE_TYPE } from "./UsageCardMessage.js";
 
 /** Registered at setup, once dnd5e's base class is on `game.dnd5e`. */
 export let MidiDamageMessageData: any;
@@ -97,12 +98,12 @@ export function setupDamageCardMessage() {
 }
 
 /**
- * Damage cards go with the card they came from. dnd5e deletes only summarised messages with their origin, and a player
- * deleting their card can't delete the GM's damage cards, so the active GM does it.
+ * midi's damage and usage cards go with the card they came from. dnd5e deletes only summarised messages with their
+ * origin, and a player deleting their card can't delete the GM's damage cards, so the active GM does it.
  */
 function deleteLinkedDamageCards(message: ChatMessage.Implementation, options: object) {
     if (("deleteAll" in options && options.deleteAll) || !game.users?.activeGM?.isSelf) return;
-    const linked = () => (game.messages?.filter(m => m.type === DAMAGE_MESSAGE_TYPE
+    const linked = () => (game.messages?.filter(m => [DAMAGE_MESSAGE_TYPE, USAGE_MESSAGE_TYPE].includes(m.type)
         && (m._source.system as { origin?: string | null } | undefined)?.origin === message.id) ?? []).map(m => m.id!);
     if (!linked().length) return;
     // After the current delete operation, which may already include them.
