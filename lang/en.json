@@ -545,6 +545,7 @@
   "midi-qol.RollOtherSpellDamage.Name": "Roll Other damage formula for spells",
   "midi-qol.RollOtherDamage.Hint": "<strong>Off</strong> Don't roll Other damage automatically.<br><strong>Condition True & Save Present</strong> If the condition is not blank and evaluates to true OR the item has a save and the activation condition is not false.<br><strong>Condition</strong> roll the Other damage if the other damage condition is empty or evaluates to true",
   "midi-qol.ApplyEffects": "Apply Active Effects",
+  "midi-qol.FollowUp.Unavailable": "{name} has no uses left",
   "midi-qol.spell-damage": "Spell Damage",
   "midi-qol.RemoveButtons.Name": "Remove chat card buttons after roll",
   "midi-qol.ActiveConcentrationSpell.Title": "Active Concentration Spell",
@@ -1445,6 +1446,14 @@
         "triggeredActivityConfigure": {
           "label": "Show Configure Dialog",
           "hint": "Show the configuration/consume dialog when the triggered activity runs"
+        },
+        "followUp": {
+          "label": "Follow-up Button",
+          "hint": "When another of this item's attacks hits, offer this activity as a button on the attack's card, run at the creatures hit (a critical as a critical)"
+        },
+        "followUpCondition": {
+          "label": "Follow-up Condition",
+          "hint": "Offer the button only when this condition is true (evaluated as the attack finishes, with the first creature hit as the target)"
         },
         "otherActivityCompatible": {
           "label": "Other Activity Compatible",

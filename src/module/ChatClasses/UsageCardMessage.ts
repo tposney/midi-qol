@@ -10,6 +10,7 @@ import { getRemoveAllButtons, getRemoveAttackButtons, getRemoveDamageButtons, mi
   midiRenderDamageRolls, midiRenderOtherDamageRolls, midiRenderBonusDamageRolls, midiRenderFormulaRoll, renderRollAttributionIcon, renderSaveRollHTML } from "../utils.js";
 import { MODULE_ID } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
+import { followUpButtons } from "../followUps.js";
 
 /** Renderer per roll-backed section; damage renderers aggregate the section's rolls into one block. */
 const SECTION_ROLL_RENDERERS: Record<string, (rolls: Roll[]) => Promise<string> | string> = {
@@ -111,7 +112,7 @@ export function setupUsageCardMessage() {
     return;
   }
 
-  const { BooleanField, ForeignDocumentField, NumberField, ObjectField, SchemaField, StringField } = foundry.data.fields;
+  const { ArrayField, BooleanField, ForeignDocumentField, NumberField, ObjectField, SchemaField, StringField } = foundry.data.fields;
 
   MidiUsageMessageData = class extends base {
     declare parent: ChatMessage.Implementation;
@@ -152,6 +153,15 @@ export function setupUsageCardMessage() {
           dmgBtnText: new StringField({ required: false, blank: true }),
           // Set while the workflow waits for a manual attack roll: the advantage state it will use.
           attackBtnText: new StringField({ required: false, blank: true }),
+
+          // Activities offered as buttons after the attack hit (followUps.ts).
+          followUps: new ArrayField(new SchemaField({
+            activityUuid: new StringField({ required: true, blank: false }),
+            label: new StringField({ required: false, blank: true }),
+            targetUuids: new ArrayField(new StringField()),
+            critical: new BooleanField({ initial: false }),
+            used: new BooleanField({ initial: false })
+          }), { required: false }),
 
           // Shown as a `[n]` button prefix after the first roll.
           attackRollCount: new NumberField({ required: false, integer: true, initial: 0 }),
@@ -233,6 +243,7 @@ export function setupUsageCardMessage() {
         buttons: midiButtonVisibility(this.parent, (this.parent as Dnd5eChatMessage).getAssociatedActivity?.()),
         // The damage roll about to be made; Handlebars has no arithmetic helper.
         nextDamageRollCount: (this.midi?.damageRollCount ?? 0) + 1,
+        followUps: followUpButtons(this.parent),
         damageApplicationTypes: this.#damageApplicationTypes()
       };
       return context;

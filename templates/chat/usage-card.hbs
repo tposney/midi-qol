@@ -124,6 +124,15 @@
 {{/each}}
 {{/if}}
 
+{{!-- Follow-ups offered after the attack hit; ignoring them costs nothing. --}}
+{{#if midi.followUps.length}}
+<div class="card-buttons midi-qol-follow-ups">
+  {{#each midi.followUps}}
+  <button type="button" data-action="midiFollowUp" data-follow-up="{{ index }}" {{#if disabled}}disabled{{/if}}>{{ label }}</button>
+  {{/each}}
+</div>
+{{/if}}
+
 {{!-- One tray per damage roll type: each applies its own save multiplier. --}}
 {{#each midi.damageApplicationTypes}}
 <midi-damage-application class="dnd5e2" data-damage-type="{{this}}"></midi-damage-application>

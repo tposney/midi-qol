@@ -6808,6 +6808,8 @@ export function createConditionData(data: {
     let exclusions: string[] = ["DOCUMENT_TYPES"];
     Object.keys(CONST).forEach(key => !exclusions.includes[key] && (rollData.CONST[key] = CONST[key]));
     //Only here to avoid deprecation warnings - remove when we get to v14
+    // Other modules add their own data, e.g. world state an item's conditions refer to.
+    Hooks.callAll("midi-qol.conditionData", rollData, data);
   } catch (err) {
     const message = `midi-qol | createConditionData`;
     TroubleShooter.recordError(err, message);

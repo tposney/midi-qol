@@ -725,6 +725,17 @@ Configure an activity to automatically trigger another activity on the same item
 | **Consume Resources** | Consume uses/slots when the triggered activity runs. |
 | **Show Configure Dialog** | Show the configuration/consume dialog when the triggered activity runs. |
 
+### Follow-up Buttons
+
+An optional extra a creature may use after its attack hits (bonus damage once per rest, a rider) is offered as a button on the attack's card instead of a prompt: the workflow finishes as usual and the button can be used or ignored.
+
+| Field | Description |
+|-------|-------------|
+| **Follow-up Button** | When another of this item's attacks hits, offer this activity as a button on the attack's card. |
+| **Follow-up Condition** | Offer it only when this condition is true, evaluated as the attack finishes (the first creature hit is the target). |
+
+The button is shown to the attacker's owners and the GM, greyed out when the activity's uses (its own or its item's) are spent. Clicking runs the activity at the creatures the attack hit, as a critical if the attack was one, spends its uses and links its card under the attack's; the button then goes. Automations can offer any activity, e.g. after checking that an attack qualifies, with `MidiQOL.addFollowUp(workflow, activity, { label })` (from `midi-qol.RollComplete` or a later workflow event; returns false if nothing was hit).
+
 ### Over Time Effects (Activity Tab)
 
 For activities that repeat on subsequent turns (like ongoing damage, regeneration, or repeated saves). When an effect with an OverTime activity is applied to a token, midi-qol automatically processes the activity at the specified point in the combat turn.
@@ -1121,6 +1132,7 @@ Additional states: `AwaitTemplate`, `TemplatePlaced`, `AoETargetConfirmation`, `
 | `midi-qol.preTargetDamageApplication` | Before damage to target | Args: token, {item, workflow, damageItem} |
 | `midi-qol.isHealed` | After healing applied | Args: token, {item, workflow, damageItem, ditem} |
 | `midi-qol.isDamaged` | After damage applied | Args: token, {item, workflow, damageItem, ditem} |
+| `midi-qol.conditionData` | Condition data being built | Args: (conditionData, {workflow, actor, item, target}); add fields conditions can refer to |
 
 ### Teleport Hooks
 

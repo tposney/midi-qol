@@ -50,6 +50,8 @@ declare module "fvtt-types/configuration" {
       "dae.addAutoFields": (addAutoFields: Function, fields: { BooleanFormulaField?: any }) => void;
       "dae.ready": (api: any) => void;
       "catReady": () => void;
+      /** Condition data being built (createConditionData): add fields an item's conditions can refer to. */
+      "midi-qol.conditionData": (conditionData: Record<string, unknown>, data: { workflow?: unknown, actor?: unknown, item?: unknown, target?: unknown }) => void;
       "dae.setupComplete": (api: any) => void;
       "dnd5e.preTeleport": (activity: Activity, config: { maxDistance: number, tokens: Token.Implementation[] }) => boolean | void;
       "dnd5e.teleport": (activity: Activity, plans: { token: Token.Implementation, plan: unknown }[]) => boolean | void;
@@ -1446,6 +1448,8 @@ export interface Activity extends AnyMutableObject {
     ignoreTraits: Set<string>;
     triggeredActivityId: string;
     triggeredActivityConditionText?: string;
+    followUp?: boolean;
+    followUpCondition?: string;
     triggeredActivityTargets: string;
     triggeredActivityRollAs?: string;
     triggeredActivityConsume?: boolean;

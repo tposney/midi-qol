@@ -6,6 +6,7 @@ import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFir
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { midiButtonVisibility } from "../ChatClasses/UsageCardMessage.js";
 import { ConditionEditor } from "../apps/ConditionEditor.js";
+import { runFollowUp } from "../followUps.js";
 import { RegionBehaviorEditor } from "../apps/RegionBehaviorEditor.js";
 import { averageDice, skipConcentrationActorUuids } from "../patching.js"
 import {
@@ -240,6 +241,10 @@ export let MidiActivityMixin = Base => {
           triggeredActivityRollAs: new StringField({ name: "triggeredActivityRollAs", initial: "self" }),
           triggeredActivityConsume: new BooleanField({ name: "triggeredActivityConsume", initial: true }),
           triggeredActivityConfigure: new BooleanField({ name: "triggeredActivityConfigure", initial: true }),
+          // Offered as a button on the card when another of the item's activities hits (followUps.ts).
+          followUp: new BooleanField({ name: "followUp", initial: false }),
+          //@ts-expect-error
+          followUpCondition: new MidiConditionField({ name: "followUpCondition", initial: "" }),
           autoConsume: new BooleanField({ name: "autoConsume", initial: false }),
           forceConsumeDialog: new StringField({ name: "forceConsumeDialog", initial: "default" }),
           forceRollDialog: new StringField({ name: "forceRollDialog", initial: "default" }),
@@ -415,6 +420,7 @@ export let MidiActivityMixin = Base => {
           confirmDamageRollCompleteHit: MidiActivityMixin.#confirmDamageRollCompleteHit,
           confirmDamageRollCompleteMiss: MidiActivityMixin.#confirmDamageRollCompleteMiss,
           midiApplyEffects: MidiActivityMixin.#applyEffects,
+          midiFollowUp: MidiActivityMixin.#followUp,
           refundOtherActivity: MidiActivityMixin.#refundOtherActivity,
           consumeOtherActivity: MidiActivityMixin.#consumeOtherActivity,
         }
@@ -451,6 +457,10 @@ export let MidiActivityMixin = Base => {
       }
     }
 
+    static async #followUp(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
+      const index = Number(target.dataset.followUp);
+      if (Number.isInteger(index)) await runFollowUp(message, index);
+    }
     static async #applyEffects(this: MidiActivityMixin, event: PointerEvent, target: HTMLElement, message: ChatMessage.Implementation) {
       const workflow = Workflow.getWorkflow(message.uuid);
       if (workflow) workflow.activity = this;

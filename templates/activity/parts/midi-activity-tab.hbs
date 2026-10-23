@@ -80,6 +80,10 @@
           {{ formField fields.triggeredActivityConsume value=../source.midiProperties.triggeredActivityConsume }}
           {{ formField fields.triggeredActivityConfigure value=../source.midiProperties.triggeredActivityConfigure }}
         {{/if}}
+        {{ formField fields.followUp value=../source.midiProperties.followUp }}
+        {{#if ../source.midiProperties.followUp}}
+          {{ formField fields.followUpCondition value=../source.midiProperties.followUpCondition }}
+        {{/if}}
       {{/with}}
     </fieldset>
   </section>
