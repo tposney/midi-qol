@@ -13,6 +13,7 @@
 * Changed: the damage tray's Apply goes through midi: the workflow's damage hooks and macros run (CAT/CPR damage reductions apply) and a linked damage card records the undo.
 
 **Rolls and saves**
+* Fixed: an optional bonus counted by `@resources.legres.value` or `@resources.legact.value` never spent a use (dnd5e 6 derives those from `spent`), so e.g. a Legendary Resistance bonus (`save.fail.all` `success`) could be used without limit.
 * Changed: an over-time roll's card shows the effect's icon and name once, with the activity type (Damage, Saving Throw) as its subtitle.
 * Fixed: an over-time action save with `rollType=skill` or `tool` (e.g. an Athletics check to escape) showed "undefined check" on its card and its roll never ended the effect.
 * Fixed: Dice So Nice's *Hide NPC rolls* and *Disabled during combat* were ignored for the dice midi shows itself (attacks, damage, saves, checks, optional bonus rerolls), including dice other modules show through `MidiQOL.displayDSNForRoll`, which now takes the rolling actor.

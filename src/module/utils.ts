@@ -5720,26 +5720,20 @@ export async function removeEffectGranting(actor: Actor.Implementation, changeKe
     await activity.update({ "uses.spent": Math.max(0, activity.uses.spent + 1) });
   }
   const actorUpdates: any = {};
-  if (typeof count.value === "string" && count.value.startsWith("@")) {
-    let key = count.value.slice(1);
-    if (key.startsWith("system.")) key = key.replace("system.", "")
-    // we have an @field to consume
-    let charges = foundry.utils.getProperty(actor?.system ?? {}, key) as number;
-    if (charges) {
-      charges -= 1;
-      actorUpdates[`system.${key}`] = charges;
-    }
-  }
-  if (typeof countAlt?.value === "string" && countAlt.value.startsWith("@")) {
-    let key = countAlt.value.slice(1);
-    if (key.startsWith("system.")) key = key.replace("system.", "")
-    // we have an @field to consume
-    let charges = foundry.utils.getProperty(actor?.system ?? {}, key) as number;
-    if (charges) {
-      charges -= 1;
-      actorUpdates[`system.${key}`] = charges;
-    }
-  }
+  // Consume one charge of an @field. A value dnd5e derives from a stored `spent` (legendary resistances and actions)
+  // is consumed through the `spent`: writing the derived value is dropped.
+  const consumeField = (field: string) => {
+    let key = field.slice(1);
+    if (key.startsWith("system.")) key = key.replace("system.", "");
+    const charges = foundry.utils.getProperty(actor?.system ?? {}, key) as number;
+    if (!charges) return;
+    const spentKey = key.replace(/\.value$/, ".spent");
+    const spent = spentKey !== key ? foundry.utils.getProperty(actor?._source.system ?? {}, spentKey) : undefined;
+    if (typeof spent === "number") actorUpdates[`system.${spentKey}`] = spent + 1;
+    else actorUpdates[`system.${key}`] = charges - 1;
+  };
+  if (typeof count.value === "string" && count.value.startsWith("@")) consumeField(count.value);
+  if (typeof countAlt?.value === "string" && countAlt.value.startsWith("@")) consumeField(countAlt.value);
 
   if (["turn", "each-round", "each-turn"].includes(count.value)) {
     actorUpdates[`${changeKey}.used`] = game.combat?.uuid;

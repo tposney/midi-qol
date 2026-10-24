@@ -378,7 +378,7 @@ export class Workflow {
   static async deleteAbortedCard(card: ChatMessage.Implementation | undefined): Promise<void> {
     if (!card) return;
     const origin = (card._source.system as { origin?: string | null } | undefined)?.origin ?? null;
-    const nested = game.messages?.filter(m => m.type === USAGE_MESSAGE_TYPE && m.id !== card.id
+    const nested = game.messages?.filter(m => [USAGE_MESSAGE_TYPE].includes(m.type) && m.id !== card.id
       && (m._source.system as { origin?: string | null } | undefined)?.origin === card.id && m.canUserModify(game.user!, "update")) ?? [];
     const path: string = "system.origin";
     if (nested.length) await ChatMessage.updateDocuments(nested.map(m => ({ _id: m.id, [path]: origin })));
