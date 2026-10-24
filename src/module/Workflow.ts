@@ -110,7 +110,7 @@ import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdva
 import { PreComputedAdvantage } from "./apps/MidiRollChoiceDialog.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
-import { SAVE_TEMPLATE_FIELDS, type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
+import { SAVE_TEMPLATE_FIELDS, USAGE_MESSAGE_TYPE, type MidiCardSection, type SectionName } from "./ChatClasses/UsageCardMessage.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
 import { activityHasScaledTargetCount, computeActivityTemplateTargets, createActivityTemplateRegions, postTemplateConfirmTargets, regionShapeOrigin, setDamageRollMinTerms } from "./activities/activityHelpers.js";
 import { Activity, Dnd5eChatMessage, ActivitySave, ActivityCheck, ActivityUseConfiguration, DamageDescription, DamageListEntry, TokenOrDocument, DND5ETargetDescriptor, CombinedTargetDescriptor, ActivityEffectData, QueueSaveRollOptions, SaveDetails, ProcessTargetSaveContext, ModuleIntegrationFlags, ModuleIntegrationRequests, MonksTokenBarRequest, FlashRollsRequest, EpicRollsRequest, RollProcessConfig, RollDialogConfig } from "../globals.js";
@@ -368,6 +368,21 @@ export class Workflow {
       if (workflow.actor?.uuid === actor.uuid) parent = workflow;
     }
     return parent ? fromUuidSync(parent.itemCardUuid!) as ChatMessage.Implementation | undefined : undefined;
+  }
+
+  /**
+   * Delete an aborted workflow's card. Usage cards of other workflows linked to it (a nested use that is the real
+   * result, e.g. CPR's grapple handing off to CAT) are moved to the card's own origin first, so they survive the
+   * linked-card cascade.
+   */
+  static async deleteAbortedCard(card: ChatMessage.Implementation | undefined): Promise<void> {
+    if (!card) return;
+    const origin = (card._source.system as { origin?: string | null } | undefined)?.origin ?? null;
+    const nested = game.messages?.filter(m => m.type === USAGE_MESSAGE_TYPE && m.id !== card.id
+      && (m._source.system as { origin?: string | null } | undefined)?.origin === card.id && m.canUserModify(game.user!, "update")) ?? [];
+    const path: string = "system.origin";
+    if (nested.length) await ChatMessage.updateDocuments(nested.map(m => ({ _id: m.id, [path]: origin })));
+    await card.delete();
   }
 
   /** Count the workflow as executing while `fn` runs: a roll from a card button happens outside performState. */
@@ -1677,8 +1692,7 @@ export class Workflow {
     // Remove buttons
     if (workflow.itemCardUuid) {
       if (workflow.currentAction === workflow.WorkflowState_ConfirmRoll) {
-        const itemCard = workflow.chatCard;
-        if (itemCard) await itemCard.delete();
+        await Workflow.deleteAbortedCard(workflow.chatCard);
         clearUpdatesCache(workflow.itemCardUuid);
       } else {
         await Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
@@ -3222,7 +3236,7 @@ export class Workflow {
     this.aborted = true;
     if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookId);
     if (!this.keepActivityCard && this.itemCardUuid && fromUuidSync(this.itemCardUuid)) {
-      await this.chatCard.delete();
+      await Workflow.deleteAbortedCard(this.chatCard);
       clearUpdatesCache(this.itemCardUuid);
     }
 

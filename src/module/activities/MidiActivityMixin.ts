@@ -1739,7 +1739,7 @@ export let MidiActivityMixin = Base => {
         if (!foundry.utils.isEmpty(consumed)) {
           await workflow.activity.refund(consumed);
         }
-        await workflow.chatCard?.delete()
+        await Workflow.deleteAbortedCard(workflow.chatCard);
         return false
       };
       if (debugEnabled > 0)

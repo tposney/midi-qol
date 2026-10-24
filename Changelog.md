@@ -9,7 +9,7 @@
 * Added: follow-up buttons. An activity marked *Follow-up Button* (with an optional *Follow-up Condition*) is offered as a button on its item's attack card when the attack hits, for the attacker's owners and the GM; clicking runs it at the creatures hit (a critical as a critical), spends its uses and links its card to the attack's. `MidiQOL.addFollowUp(workflow, activity, {label})` offers any activity.
 * Added: hook `midi-qol.conditionData` to add data conditions can read.
 * Changed: a damage card is linked to the card it came from (`system.origin`), is deleted with it, and no longer repeats its speaker and whisper recipients.
-* Changed: an item used from inside another workflow of the same actor (e.g. CPR's Sneak Attack spending its use) has its card linked to that workflow's card and is deleted with it.
+* Changed: an item used from inside another workflow of the same actor (e.g. CPR's Sneak Attack spending its use) has its card linked to that workflow's card and is deleted with it; if that workflow is aborted, the card stays, unlinked (e.g. CPR's grapple handing off to CAT).
 * Changed: the damage tray's Apply goes through midi: the workflow's damage hooks and macros run (CAT/CPR damage reductions apply) and a linked damage card records the undo.
 
 **Rolls and saves**
