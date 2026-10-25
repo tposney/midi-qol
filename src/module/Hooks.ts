@@ -892,8 +892,8 @@ export function initHooks() {
     return true;
   })
 
-  Hooks.on("dnd5e.preCalculateDamage", preCalculateDamageHandler_53);
-  Hooks.on("dnd5e.calculateDamage", calculateDamageHandler_53);
+  Hooks.on("dnd5e.preCalculateDamage", preCalculateDamageHandler);
+  Hooks.on("dnd5e.calculateDamage", calculateDamageHandler);
 }
 
 export function setupHooks() {
@@ -1162,6 +1162,7 @@ function applyUncannyDodge({ actor, damages, options }: DamageCalcParams): void 
 
   for (const damage of damages) {
     if (shouldIgnore(options, "uncannyDodge", damage.type, actorTraits, true)) continue;
+    if (isAbsorbed(actorTraits, damage, options)) continue;
     setDamageActiveFlag(damage, "uncannyDodge");
     //@ts-expect-error multiplier exists
     foundry.utils.setProperty(damage, "multiplier", (damage.multiplier ?? 1) * 0.5);
@@ -1190,7 +1191,7 @@ function applyDamageReduction({ actor, damages, options }: DamageCalcParams): bo
   const selectDamages = (predicate: (d: DamageDescription, bypasses?: Set<string>) => boolean): number => {
     const bypasses = actorTraits.dm?.bypasses ?? new Set();
     return damages.reduce((total, damage) => {
-      if (damage.value === 0 || isDRType(damage.type)) return total;
+      if (damage.value === 0 || isDRType(damage.type) || isAbsorbed(actorTraits, damage, options)) return total;
       return total + (predicate(damage, bypasses) ? damage.value : 0);
     }, 0);
   };
@@ -1236,7 +1237,7 @@ function applyDamageReduction({ actor, damages, options }: DamageCalcParams): bo
 
   const { totalDamage } = damages.reduce((acc, d) => {
     if (d.type === "temphp") acc.temp += d.value;
-    else if (d.type !== "midi-none" && d.type !== "vitality") acc.totalDamage += d.value;
+    else if (d.type !== "midi-none" && d.type !== "vitality" && !isAbsorbed(actorTraits, d, options)) acc.totalDamage += d.value;
     return acc;
   }, { totalDamage: 0, temp: 0 });
 
@@ -1284,7 +1285,7 @@ function applyDamageReductionInline(
   function distributeProportionally(drLabel: string, drAmount: number, predicate: (d: DamageDescription, bypasses?: Set<string>) => boolean): number {
     const bypasses = actorTraits.dm?.bypasses ?? new Set();
     const matching = damages.filter(d =>
-      d.value > 0 && !isDRType(d.type) && !GameSystemConfig.healingTypes[d.type] && predicate(d, bypasses)
+      d.value > 0 && !isDRType(d.type) && !GameSystemConfig.healingTypes[d.type] && !isAbsorbed(actorTraits, d, options) && predicate(d, bypasses)
     );
     const totalMatching = matching.reduce((sum, d) => sum + d.value, 0);
     if (totalMatching <= 0 || drAmount >= 0) return 0;
@@ -1324,7 +1325,7 @@ function applyDamageReductionInline(
 
       const bypasses = actorTraits.dm?.bypasses ?? new Set();
       const selectedDamage = damages
-        .filter(d => d.value > 0 && !isDRType(d.type) && !GameSystemConfig.healingTypes[d.type] && matcher.match(d, bypasses))
+        .filter(d => d.value > 0 && !isDRType(d.type) && !GameSystemConfig.healingTypes[d.type] && !isAbsorbed(actorTraits, d, options) && matcher.match(d, bypasses))
         .reduce((sum, d) => sum + d.value, 0);
 
       const effectiveImpact = Math.min(Math.abs(dm), selectedDamage);
@@ -1363,7 +1364,7 @@ function applyDamageReductionInline(
       if (useMaxDR) {
         // Compare effective impact of "all" against already-applied specific DR
         const remaining = damages
-          .filter(d => d.value > 0 && !isDRType(d.type) && !GameSystemConfig.healingTypes[d.type])
+          .filter(d => d.value > 0 && !isDRType(d.type) && !GameSystemConfig.healingTypes[d.type] && !isAbsorbed(actorTraits, d, options))
           .reduce((sum, d) => sum + d.value, 0);
         const allImpact = Math.min(Math.abs(dm), remaining);
 
@@ -1405,7 +1406,7 @@ function applyDamageReductionInline(
   return true;
 }
 
-// --- dnd5e 5.3+ variants ---
+// --- dnd5e calculateDamage hooks ---
 
 /** Whether the Damage Absorption trait's types (or "ALL", which excludes healing) cover this damage, unless bypassed. */
 function absorbsType(absorption: { value?: Set<string>, bypasses?: Set<string> } | undefined, damage: DamageDescription): boolean {
@@ -1417,7 +1418,39 @@ function absorbsType(absorption: { value?: Set<string>, bypasses?: Set<string> }
     && [...(damage.properties ?? [])].some(property => bypasses.has(property)));
 }
 
-function applyTraitMultipliers_53({ actor, damages, options }: DamageCalcParams): void {
+/** Whether the actor's Damage Absorption trait heals this damage (and the source doesn't ignore absorption). */
+type AbsorptionTraits = { da?: { value?: Set<string>; bypasses?: Set<string>; [type: string]: unknown } };
+function isAbsorbed(actorTraits: AbsorptionTraits, damage: DamageDescription, options: DamageApplicationOptions): boolean {
+  if (isDRType(damage.type) || damage.type === "midi-none" || GameSystemConfig.healingTypes[damage.type]) return false;
+  if (actorTraits.da?.[damage.type] === undefined && !absorbsType(actorTraits.da, damage)) return false;
+  return !shouldIgnore(options, "absorption", damage.type, actorTraits);
+}
+
+/**
+ * Absorption heals by the damage dealt (the published absorbers are also immune to the type), so the target's own
+ * reductions must not shrink it. Noted before dnd5e's calculation and restored after it, see restoreAbsorbedDamage.
+ */
+function noteAbsorbedDamage({ actor, damages, options }: DamageCalcParams): void {
+  //@ts-expect-error no dnd5e types
+  const actorTraits = actor.system?.traits ?? {};
+  for (const damage of damages) {
+    if (isAbsorbed(actorTraits, damage, options)) damage.midiAbsorbed = { value: damage.value, active: foundry.utils.deepClone(damage.active ?? {}) };
+    else delete damage.midiAbsorbed;
+  }
+}
+
+/** Undo dnd5e's modification, immunity, resistance and vulnerability on absorbed damage; the card's multiplier still applies. */
+function restoreAbsorbedDamage({ damages, options }: DamageCalcParams): void {
+  const multiplier = options.multiplier ?? 1;
+  for (const damage of damages) {
+    if (!damage.midiAbsorbed) continue;
+    damage.value = damage.midiAbsorbed.value * multiplier;
+    damage.active = foundry.utils.deepClone(damage.midiAbsorbed.active ?? {});
+    damage.active.multiplier = (damage.active.multiplier ?? 1) * multiplier;
+  }
+}
+
+function applyTraitMultipliers({ actor, damages, options }: DamageCalcParams): void {
   if (options.midi?.noCalc) return;
 
   //@ts-expect-error no dnd5e types
@@ -1448,7 +1481,7 @@ function applyTraitMultipliers_53({ actor, damages, options }: DamageCalcParams)
   }
 }
 
-function applyCustomResistances_53({ actor, damages, options }: DamageCalcParams): void {
+function applyCustomResistances({ actor, damages, options }: DamageCalcParams): void {
   const categories = { di: "immunity", dr: "resistance", dv: "vulnerability", da: "absorption" };
   const traitMultipliers = {
     dr: configSettings.damageResistanceMultiplier,
@@ -1479,6 +1512,7 @@ function applyCustomResistances_53({ actor, damages, options }: DamageCalcParams
       for (const damage of damages) {
         if (damage.type === "midi-none") continue;
         if (GameSystemConfig.healingTypes[damage.type]) continue;
+        if (trait !== "da" && damage.midiAbsorbed) continue;
         // Check nested (dnd5e 5.3+) active keys using helper
         if (getDamageActiveFlag(damage, categories[trait])) continue;
         if (getDamageActiveFlag(damage, custom)) continue;
@@ -1509,7 +1543,7 @@ function applyCustomResistances_53({ actor, damages, options }: DamageCalcParams
   }
 }
 
-function recalculateTotals_53({ damages }: DamageCalcParams): void {
+function recalculateTotals({ damages }: DamageCalcParams): void {
   //@ts-expect-error amount exists on damages array
   damages.amount = 0;
   //@ts-expect-error temp exists on damages array
@@ -1548,7 +1582,7 @@ function recalculateTotals_53({ damages }: DamageCalcParams): void {
   }
 }
 
-function calculateTotalDamage_53({ damages, options }: DamageCalcParams): number {
+function calculateTotalDamage({ damages, options }: DamageCalcParams): number {
   return damages.reduce((total, damage) => {
     if (damage.active?.inlined) return total;
     let value = damage.value;
@@ -1558,7 +1592,7 @@ function calculateTotalDamage_53({ damages, options }: DamageCalcParams): number
   }, 0);
 }
 
-function preCalculateDamageHandler_53(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {
+function preCalculateDamageHandler(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {
   try {
     if (options.midi?.noCalc) return true;
 
@@ -1582,7 +1616,8 @@ function preCalculateDamageHandler_53(actor: Actor.Implementation, damages: Dama
       }
     }
 
-    foundry.utils.setProperty(options, "midi.totalDamage", calculateTotalDamage_53(params));
+    noteAbsorbedDamage(params);
+    foundry.utils.setProperty(options, "midi.totalDamage", calculateTotalDamage(params));
     if (Hooks.call("midi-qol.dnd5ePreCalculateDamage", actor, damages, options) === false) return false;
   } catch (err) {
     const message = `Error in preCalculateDamage`;
@@ -1592,7 +1627,7 @@ function preCalculateDamageHandler_53(actor: Actor.Implementation, damages: Dama
   return true;
 }
 
-function calculateDamageHandler_53(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {
+function calculateDamageHandler(actor: Actor.Implementation, damages: DamageDescription[], options: DamageApplicationOptions) {
   try {
     if (options.midi?.noCalc) return true;
 
@@ -1602,21 +1637,22 @@ function calculateDamageHandler_53(actor: Actor.Implementation, damages: DamageD
     const params = { actor, sourceActor, damages, options };
 
     const saveDROrder = configSettings.saveDROrder;
+    restoreAbsorbedDamage(params);
 
     // Apply saves if not already done
     if (saveDROrder === "DRSaveDr") {
       applySaves(params);
     }
 
-    applyTraitMultipliers_53(params);
-    applyCustomResistances_53(params);
+    applyTraitMultipliers(params);
+    applyCustomResistances(params);
 
     // Apply DR if not already done
     if (saveDROrder === "SaveDrDR") {
       if (!applyDamageReduction(params)) return false;
     }
 
-    recalculateTotals_53(params);
+    recalculateTotals(params);
     if (Hooks.call("midi-qol.dnd5eCalculateDamage", actor, damages, options) === false) return false;
   } catch (err) {
     error(err);

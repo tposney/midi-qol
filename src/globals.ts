@@ -1521,6 +1521,8 @@ export type DamageDescription = {
   midiSaveMultiplier?: number;
   /** Other damage from the ammunition's activity rather than the item's other activity. */
   midiAmmunition?: boolean;
+  /** Absorbed damage as dealt, before the target's own reductions (set before dnd5e's calculation). */
+  midiAbsorbed?: { value: number; active?: DamageDescription["active"] };
 };
 
 type BasicRollConfig = {

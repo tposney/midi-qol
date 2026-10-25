@@ -1,6 +1,7 @@
 ### 14.6.5 (unreleased)
 
 **Damage**
+* Fixed: Damage Absorption heals the damage dealt: the target's immunity, resistance, vulnerability, damage modification and DR to that type no longer reduce it (an immune absorber, like the SRD golems, healed nothing). A save and the damage card's multiplier still apply.
 * Fixed: damage to a creature at 0 hit points didn't count as damage, so `isDamaged` hooks, macros and special durations (e.g. Stable from Spare the Dying or a Healer's Kit) didn't fire.
 * Added: setting *Enforce death saves* (Mechanics, off by default): a character at 0 hit points that takes damage suffers a death save failure, two from a critical hit, three if the damage equals or exceeds its hit point maximum; at three it is marked dead as for a failed death save. Undo on the damage card restores the count and, if it had died, the unconscious status.
 * Added: `flags.midi-qol.noDeathSaveFailureFromDamage`: damage at 0 hit points adds no death save failures under *Enforce death saves*.
