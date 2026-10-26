@@ -1,0 +1,146 @@
+{
+  "name": "Knock Out",
+  "type": "feat",
+  "img": "icons/skills/melee/strike-club-red.webp",
+  "system": {
+    "activities": {
+      "epActKnockOut000": {
+        "_id": "epActKnockOut000",
+        "type": "utility",
+        "name": "Knock Out",
+        "img": "icons/skills/melee/strike-club-red.webp",
+        "identifier": "knock-out",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [
+          {
+            "_id": "epActKnockOut000"
+          }
+        ],
+        "midiProperties": {
+          "forceConsumeDialog": "never",
+          "toggleEffect": true
+        }
+      }
+    },
+    "uses": {
+      "spent": 0,
+      "recovery": []
+    },
+    "advancement": [],
+    "description": {
+      "value": "<p>&Reference[knockingacreatureout]{Knock Out}</p><p><strong>midi-qol</strong>: For the rest of your turn, a melee attack that would drop a creature to 0 hit points leaves it at 1 and Unconscious. Use again to stop.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "chat": ""
+    },
+    "identifier": "knock-out",
+    "source": {
+      "revision": 1,
+      "rules": "2024",
+      "book": "",
+      "page": "",
+      "custom": "",
+      "license": ""
+    },
+    "crewed": false,
+    "enchant": {},
+    "prerequisites": {
+      "items": [],
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "type": {
+      "value": "",
+      "subtype": ""
+    }
+  },
+  "effects": [
+    {
+      "_id": "epActKnockOut000",
+      "name": "Knocking Out",
+      "img": "icons/skills/melee/strike-club-red.webp",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [],
+      "description": "<p>This turn, a melee attack that would reduce a creature to 0 hit points leaves it at 1 hit point with the Unconscious condition.</p>",
+      "duration": {},
+      "system": {
+        "changes": []
+      },
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "specialDuration": [
+            "turnEnd"
+          ]
+        },
+        "cat": {
+          "macros": {
+            "roll": [
+              {
+                "source": "midi-qol",
+                "rules": "2024",
+                "identifier": "knock-out"
+              }
+            ]
+          }
+        }
+      },
+      "_key": "!items.effects!epactKnockOut000.epActKnockOut000"
+    }
+  ],
+  "folder": "tWh6UgUeg2lxQ8uJ",
+  "flags": {
+    "cat": {
+      "macros": {
+        "roll": [
+          {
+            "source": "midi-qol",
+            "rules": "all",
+            "identifier": "toggle-effect"
+          }
+        ]
+      },
+      "automation": {
+        "version": "14.6.4"
+      }
+    }
+  },
+  "_id": "epactKnockOut000",
+  "sort": 0,
+  "_key": "!items!epactKnockOut000"
+}

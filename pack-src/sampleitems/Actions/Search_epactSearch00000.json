@@ -1,0 +1,288 @@
+{
+  "name": "Search",
+  "type": "feat",
+  "img": "icons/tools/navigation/spyglass-telescope-blue.webp",
+  "system": {
+    "activities": {
+      "epActSearchins00": {
+        "_id": "epActSearchins00",
+        "type": "check",
+        "name": "Insight",
+        "img": "icons/tools/navigation/spyglass-telescope-blue.webp",
+        "identifier": "ins",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        },
+        "check": {
+          "associated": [
+            "ins"
+          ],
+          "ability": "",
+          "dc": {
+            "calculation": "",
+            "formula": ""
+          }
+        }
+      },
+      "epActSearchmed00": {
+        "_id": "epActSearchmed00",
+        "type": "check",
+        "name": "Medicine",
+        "img": "icons/tools/navigation/spyglass-telescope-blue.webp",
+        "identifier": "med",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        },
+        "check": {
+          "associated": [
+            "med"
+          ],
+          "ability": "",
+          "dc": {
+            "calculation": "",
+            "formula": ""
+          }
+        }
+      },
+      "epActSearchprc00": {
+        "_id": "epActSearchprc00",
+        "type": "check",
+        "name": "Perception",
+        "img": "icons/tools/navigation/spyglass-telescope-blue.webp",
+        "identifier": "prc",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        },
+        "check": {
+          "associated": [
+            "prc"
+          ],
+          "ability": "",
+          "dc": {
+            "calculation": "",
+            "formula": ""
+          }
+        },
+        "flags": {
+          "cat": {
+            "macros": {
+              "roll": [
+                {
+                  "source": "midi-qol",
+                  "rules": "all",
+                  "identifier": "search"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "epActSearchsur00": {
+        "_id": "epActSearchsur00",
+        "type": "check",
+        "name": "Survival",
+        "img": "icons/tools/navigation/spyglass-telescope-blue.webp",
+        "identifier": "sur",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        },
+        "check": {
+          "associated": [
+            "sur"
+          ],
+          "ability": "",
+          "dc": {
+            "calculation": "",
+            "formula": ""
+          }
+        }
+      }
+    },
+    "uses": {
+      "spent": 0,
+      "recovery": []
+    },
+    "advancement": [],
+    "description": {
+      "value": "<p>&Reference[search]{Search}</p><p><strong>midi-qol</strong>: Rolls the chosen skill. Perception finds hidden enemies in your line of sight whose Hide DC your total meets; the GM confirms who is found (setting <em>Search: GM confirms who is found</em>), and they are no longer hidden.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "chat": ""
+    },
+    "identifier": "search",
+    "source": {
+      "revision": 1,
+      "rules": "2024"
+    },
+    "crewed": false,
+    "enchant": {},
+    "prerequisites": {
+      "items": [],
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "type": {
+      "value": "",
+      "subtype": ""
+    }
+  },
+  "effects": [],
+  "folder": "tWh6UgUeg2lxQ8uJ",
+  "flags": {
+    "cat": {
+      "automation": {
+        "version": "14.6.4"
+      }
+    }
+  },
+  "_id": "epactSearch00000",
+  "sort": 0,
+  "_key": "!items!epactSearch00000"
+}

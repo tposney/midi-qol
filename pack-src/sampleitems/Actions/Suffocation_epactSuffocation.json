@@ -1,0 +1,227 @@
+{
+  "name": "Suffocation",
+  "type": "feat",
+  "img": "icons/magic/air/wind-tornado-funnel-blue.webp",
+  "system": {
+    "activities": {
+      "epActHoldBreath0": {
+        "_id": "epActHoldBreath0",
+        "type": "utility",
+        "name": "Hold Breath",
+        "img": "icons/magic/air/wind-tornado-funnel-blue.webp",
+        "identifier": "hold-breath",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [
+          {
+            "_id": "epActHoldBreath0"
+          }
+        ],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        }
+      },
+      "epActOutOfAir000": {
+        "_id": "epActOutOfAir000",
+        "type": "utility",
+        "name": "Out of Air",
+        "img": "icons/magic/air/wind-tornado-funnel-blue.webp",
+        "identifier": "out-of-air",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [
+          {
+            "_id": "epActOutOfAir000"
+          }
+        ],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        }
+      }
+    },
+    "uses": {
+      "spent": 0,
+      "recovery": []
+    },
+    "advancement": [],
+    "description": {
+      "value": "<p>&Reference[suffocating]{Suffocation}</p><p><strong>midi-qol</strong>: Hold Breath lasts 1 + Constitution modifier minutes; then Out of Air adds 1 Exhaustion at the end of each of your turns, all removed when Out of Air ends.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "chat": ""
+    },
+    "identifier": "suffocation",
+    "source": {
+      "revision": 1,
+      "rules": "2024",
+      "book": "",
+      "page": "",
+      "custom": "",
+      "license": ""
+    },
+    "crewed": false,
+    "enchant": {},
+    "prerequisites": {
+      "items": [],
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "type": {
+      "value": "",
+      "subtype": ""
+    }
+  },
+  "effects": [
+    {
+      "_id": "epActHoldBreath0",
+      "name": "Holding Breath",
+      "img": "icons/magic/air/wind-tornado-funnel-blue.webp",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [],
+      "description": "<p>Holding your breath for 1 + Constitution modifier minutes (at least 30 seconds); then Out of Air.</p>",
+      "duration": {
+        "value": 60,
+        "units": "seconds"
+      },
+      "system": {
+        "changes": []
+      },
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "specialDuration": [],
+          "durationExpression": "max(30, 60 * (1 + @abilities.con.mod))"
+        },
+        "cat": {
+          "macros": {
+            "effect": [
+              {
+                "source": "midi-qol",
+                "rules": "2024",
+                "identifier": "suffocation-holding-breath"
+              }
+            ]
+          }
+        }
+      },
+      "_key": "!items.effects!epactSuffocation.epActHoldBreath0"
+    },
+    {
+      "_id": "epActOutOfAir000",
+      "name": "Out of Air",
+      "img": "icons/magic/air/wind-tornado-funnel-blue.webp",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [],
+      "description": "<p>1 Exhaustion level at the end of each of your turns. When you can breathe again, remove this effect: the Exhaustion gained from suffocating goes too.</p>",
+      "duration": {},
+      "system": {
+        "changes": []
+      },
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "specialDuration": []
+        },
+        "cat": {
+          "macros": {
+            "effect": [
+              {
+                "source": "midi-qol",
+                "rules": "2024",
+                "identifier": "suffocation-out-of-air"
+              }
+            ],
+            "combat": [
+              {
+                "source": "midi-qol",
+                "rules": "2024",
+                "identifier": "suffocation-out-of-air"
+              }
+            ]
+          }
+        }
+      },
+      "_key": "!items.effects!epactSuffocation.epActOutOfAir000"
+    }
+  ],
+  "folder": "tWh6UgUeg2lxQ8uJ",
+  "flags": {
+    "cat": {
+      "automation": {
+        "version": "14.6.4"
+      }
+    }
+  },
+  "_id": "epactSuffocation",
+  "sort": 0,
+  "_key": "!items!epactSuffocation"
+}

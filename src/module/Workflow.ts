@@ -33,7 +33,6 @@ import {
   getOrCreateTokenForActor,
   createConditionData,
   evalCondition,
-  removeHidden,
   computeCoverBonus,
   computeTargetAC,
   TOTAL_COVER,
@@ -43,7 +42,6 @@ import {
   isInCombat,
   displayDSNForRoll,
   setActionUsed,
-  removeInvisible,
   getTokenDocument,
   getToken,
   activityHasAutoPlaceTemplate,
@@ -1205,7 +1203,7 @@ export class Workflow {
     if (this.#onUseMacros) return this.#onUseMacros;
     if (configSettings.allowUseMacro) {
       this.#onUseMacros = new OnUseMacros();
-      const itemOnUseMacros = this.item.getFlag(MODULE_ID, "onUseMacroParts") ?? new OnUseMacros();
+      const itemOnUseMacros = OnUseMacros.withDefaults(this.item.getFlag(MODULE_ID, "onUseMacroParts"), this.item, this.activity);
       const actorOnUseMacros = this.actor.getFlag(MODULE_ID, "onUseMacroParts") ?? new OnUseMacros();
       if (this.workflowOptions?.onlyOnUseItemMacros) {
         this.#onUseMacros.items = [...itemOnUseMacros.items];
@@ -1225,7 +1223,9 @@ export class Workflow {
   get ammunitionOnUseMacros() {
     if (this.#ammunitionOnUseMacros) return this.#ammunitionOnUseMacros;
     this.#ammunitionOnUseMacros = new OnUseMacros();
-    const ammunitionOnUseMacros = this.ammunition?.getFlag(MODULE_ID, "onUseMacroParts") ?? new OnUseMacros();
+    const ammunitionActivity = this.ammunitionActivity;
+    const ammunitionOnUseMacros = OnUseMacros.withDefaults(this.ammunition?.getFlag(MODULE_ID, "onUseMacroParts"), this.ammunition,
+      ammunitionActivity, ammunitionActivity ? `ActivityMacro.${ammunitionActivity.uuid}` : undefined);
     this.#ammunitionOnUseMacros.items = ammunitionOnUseMacros.items;
     return this.#ammunitionOnUseMacros;
   }
@@ -1748,7 +1748,7 @@ export class Workflow {
     if (debugEnabled > 1) log(`callOnUseMacrosForAction | ${prePost} ${this.nameForState(action)}`)
     const macroPass = `${prePost}${this.nameForState(action)}`;
 
-    if (this.ammunition) await this.callMacros(this.item, this.ammunitionOnUseMacros?.getMacros(macroPass), "OnUse", macroPass);
+    if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros(macroPass), "OnUse", macroPass);
     if (debugEnabled > 1) log(`callOnUseMacrosForAction | ${this.onUseMacros?.getMacros(macroPass)}`)
     return this.callMacros(this.item, this.onUseMacros?.getMacros(macroPass), "OnUse", macroPass);
 
@@ -2228,8 +2228,6 @@ export class Workflow {
     } else {
       await this.displayAttackRoll();
     }
-    if (checkRule("removeHiddenInvis")) await removeHidden.bind(this)();
-    if (checkRule("removeHiddenInvis")) await removeInvisible.bind(this)();
     await this.expireTargetEffects(["isAttacked"]);
 
     await this.callMidiHooks("midi-qol.AttackRollComplete");
@@ -8696,7 +8694,6 @@ export class DDBGameLogWorkflow extends Workflow {
   }
   async WorkflowState_AttackRollComplete(context: WorkflowContext = {}): Promise<WorkflowState> {
     this.effectsAlreadyExpired = [];
-    if (checkRule("removeHiddenInvis")) await removeHidden.bind(this)();
     await this.callMidiHooks("midi-qol.preCheckHits");
 
     if (debugEnabled > 1) debug(this.attackRollHTML)

@@ -1,5 +1,22 @@
 ### 14.6.5 (unreleased)
 
+**Sample items**
+* Added: 2024 actions (sample items › Actions; automation needs CAT): Attack, Check Cover, Generic Actions, Hide, Influence, Knock Out, Magic, Mount, Ready, Search, Squeeze, Stabilize, Study, Suffocation, Underwater. Generic Actions lists these and, with CPR installed, CPR's actions; one both offer is listed twice, tagged with its source.
+* Added: *Hide* records the Stealth total as the DC to find you, for any activity using CPR's or midi's generic hide macro (with CPR installed its macro applies the effect); Hidden ends on an attack roll, a spell with a Verbal component, or being found. *Search*'s Perception finds hidden enemies in line of sight whose DC the total meets; setting *Search: GM confirms who is found*.
+* Added: the actions' result messages (Hide's DC, Search, Check Cover, Influence) are deleted with the action's card, as is a chosen action with its Generic Actions card. Any message flagged `flags.midi-qol.origin` with a card's id is deleted with that card.
+* Added: *Starfall Bullet* (legendary sling bullet): on a hit, 8d10 radiant to the target and DC 18 Dex for 4d10 fire (half on a success) to every other creature within 15 ft; the crater is difficult terrain and bright light for 1 minute (region and light made by the GM, removed when the minute ends).
+* Added: *Chainbreaker Bolt* (legendary crossbow bolt): on a hit, choose up to five more creatures, each within 30 ft of the last one hit; each takes the crossbow's damage dice plus 3d10 force.
+* Added: *Arrow of Echoed Wounds* (legendary arrow): on a hit it lodges for 1 minute, adding 2d6 piercing whenever the target takes damage; the target's Lodged Arrow item pulls it out (DC 18 Medicine, 4d6 piercing on a failure).
+
+**Macros**
+* Fixed: an ammunition's onUse macros at the workflow-state passes (e.g. `postAttackRollComplete`, `preDamageRollComplete`) got the weapon as the macro item, so its `ItemMacro` never ran.
+* Changed: a blank onUse macro name is the item's own macro (the used activity's, else the item's; for an effect change, the effect's activity's, else its item's), and an item with a macro but no onUse macros runs it after active effects. An onUseMacroName effect change with no pass is ignored and reported.
+
+**Breaking: attacking no longer removes invisible or hidden**
+* Removed: the optional rule *Attacking removes hidden/invisible*. midi no longer ends Invisible or Hiding when a creature attacks; an effect ends by its own special duration (midi's Invisibility: 1Attack, 1Spell, DamageDealt), so Greater Invisibility and other lasting invisibility survive an attack (it was ending the spell and its concentration). Invisible set from the token HUD has no special duration and stays until removed by hand.
+* Added: status *Invisible (until it attacks, casts a spell or deals damage)*: ends itself as the Invisibility spell does (1Attack, 1Spell, DamageDealt).
+* Changed: the *Invisibility* sample also ends when its target deals damage (DamageDealt), as the 2024 spell does.
+
 **Damage**
 * Fixed: Damage Absorption heals the damage dealt: the target's immunity, resistance, vulnerability, damage modification and DR to that type no longer reduce it (an immune absorber, like the SRD golems, healed nothing). A save and the damage card's multiplier still apply.
 * Fixed: damage to a creature at 0 hit points didn't count as damage, so `isDamaged` hooks, macros and special durations (e.g. Stable from Spare the Dying or a Healer's Kit) didn't fire.

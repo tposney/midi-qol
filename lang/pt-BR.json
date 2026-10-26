@@ -638,7 +638,6 @@
     "enforce": "Impôr 'Sem Ações'",
     "warn": "Apenas Avisar"
   },
-  "midi-qol.RemoveHiddenInvis.Name": "Atacar Remove Escondido (usa CE/CV/CUB/specialStatus do Foundry)",
   "midi-qol.CriticalSaves.Name": "(Regra da Casa) Acerto/Erro Crítico Sempre em Sucesso/Falha para Salvaguardas",
   "midi-qol.MaxDRValue.Name": "(Regra da Casa) Apenas a maior Redução de Dano será aplicada. Desabilitar significa que ela acumula",
   "midi-qol.invisible": "Invisível",

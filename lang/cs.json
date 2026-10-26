@@ -472,7 +472,6 @@
     "enforce": "Znemožní provést jakékoliv akce",
     "warn": "Pouze zobrazí varování"
   },
-  "midi-qol.RemoveHiddenInvis.Name": "Má útok odstranit stav ´skrytý´ (používá speciální stavy CE/CV/CUB/Foundry)?",
   "midi-qol.CriticalSaves.Name": "(Domácí pravidlo) Má při kritu záchranný hod vždy uspět či selhat?",
   "midi-qol.MaxDRValue.Name": "(Domácí pravidlo) Má být používáno pouze nejúčinnější snížení zranění (odškrtnutí znamená, že se budou snížení zranění sčítat)?",
   "midi-qol.invisible": "Neviditelný",

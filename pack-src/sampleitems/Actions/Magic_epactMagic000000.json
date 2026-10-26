@@ -1,0 +1,152 @@
+{
+  "name": "Magic",
+  "type": "feat",
+  "img": "icons/skills/trades/academics-study-reading-book.webp",
+  "system": {
+    "activities": {
+      "epActMagicSpell0": {
+        "_id": "epActMagicSpell0",
+        "type": "utility",
+        "name": "Spell",
+        "img": "icons/skills/trades/academics-study-reading-book.webp",
+        "identifier": "spell",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "any"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        }
+      },
+      "epActMagicItem00": {
+        "_id": "epActMagicItem00",
+        "type": "utility",
+        "name": "Magic Item",
+        "img": "icons/skills/trades/academics-study-reading-book.webp",
+        "identifier": "magic-item",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "any"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        }
+      }
+    },
+    "uses": {
+      "spent": 0,
+      "recovery": []
+    },
+    "advancement": [],
+    "description": {
+      "value": "<p>&Reference[magic]{Magic}</p><p><strong>midi-qol</strong>: Spell casts one of your spells that takes an action; Magic Item uses a magic item's action.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "chat": ""
+    },
+    "identifier": "magic",
+    "source": {
+      "revision": 1,
+      "rules": "2024"
+    },
+    "crewed": false,
+    "enchant": {},
+    "prerequisites": {
+      "items": [],
+      "repeatable": false
+    },
+    "properties": [
+      "mgc"
+    ],
+    "requirements": "",
+    "type": {
+      "value": "",
+      "subtype": ""
+    }
+  },
+  "effects": [],
+  "folder": "tWh6UgUeg2lxQ8uJ",
+  "flags": {
+    "cat": {
+      "macros": {
+        "roll": [
+          {
+            "source": "midi-qol",
+            "rules": "2024",
+            "identifier": "magic"
+          }
+        ]
+      },
+      "automation": {
+        "version": "14.6.4"
+      }
+    }
+  },
+  "_id": "epactMagic000000",
+  "sort": 0,
+  "_key": "!items!epactMagic000000"
+}

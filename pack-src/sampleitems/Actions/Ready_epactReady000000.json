@@ -1,0 +1,173 @@
+{
+  "name": "Ready",
+  "type": "feat",
+  "img": "icons/magic/time/hourglass-tilted-gray.webp",
+  "system": {
+    "activities": {
+      "epActReadyAct000": {
+        "_id": "epActReadyAct000",
+        "type": "utility",
+        "name": "Action",
+        "img": "icons/magic/time/hourglass-tilted-gray.webp",
+        "identifier": "action",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [
+          {
+            "_id": "epActReady000000"
+          }
+        ],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        }
+      },
+      "epActReadySpell0": {
+        "_id": "epActReadySpell0",
+        "type": "utility",
+        "name": "Spell",
+        "img": "icons/magic/time/hourglass-tilted-gray.webp",
+        "identifier": "spell",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "round",
+          "value": "1",
+          "override": true,
+          "concentration": true
+        },
+        "effects": [
+          {
+            "_id": "epActReady000000"
+          }
+        ],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        }
+      }
+    },
+    "uses": {
+      "spent": 0,
+      "recovery": []
+    },
+    "advancement": [],
+    "description": {
+      "value": "<p>&Reference[ready]{Ready}</p><p><strong>midi-qol</strong>: Marks the readied action until the start of your next turn; a readied spell is held with Concentration.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "chat": ""
+    },
+    "identifier": "ready",
+    "source": {
+      "revision": 1,
+      "rules": "2024"
+    },
+    "crewed": false,
+    "enchant": {},
+    "prerequisites": {
+      "items": [],
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "type": {
+      "value": "",
+      "subtype": ""
+    }
+  },
+  "effects": [
+    {
+      "_id": "epActReady000000",
+      "name": "Ready",
+      "img": "icons/magic/time/hourglass-tilted-gray.webp",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [],
+      "description": "<p>A readied action, used with your Reaction when its trigger occurs before the start of your next turn.</p>",
+      "duration": {},
+      "system": {
+        "changes": []
+      },
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "specialDuration": [
+            "turnStart"
+          ]
+        }
+      },
+      "_key": "!items.effects!epactReady000000.epActReady000000"
+    }
+  ],
+  "folder": "tWh6UgUeg2lxQ8uJ",
+  "flags": {
+    "cat": {
+      "automation": {
+        "version": "14.6.4"
+      }
+    }
+  },
+  "_id": "epactReady000000",
+  "sort": 0,
+  "_key": "!items!epactReady000000"
+}

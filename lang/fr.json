@@ -432,7 +432,6 @@
   },
   "midi-qol.NearbyAllyRanged.Hint": "Les attaques à distance avec des alliés à proximité (5 pieds) de la cible ont un désavantage pour les cibles plus petites que X (p*h). 0 désactive",
   "midi-qol.Incapacitated.Name": "Les acteurs incapables d'agir ne peuvent pas lancer d'attaques",
-  "midi-qol.RemoveHiddenInvis.Name": "Attaquer retire l'effet caché/invisible (nécessite Conditional Visibility ou CUB)",
   "midi-qol.CriticalSaves.Name": "Réussite et échec critique sont toujours des succès/échec pour les jets de sauvegarde",
   "midi-qol.MaxDRValue.Name": "(Règle maison) Activer ceci signifie que seule la réduction des dégâts la plus efficace s'appliquera. Désactivé signifie que la réduction des dégâts s'accumule",
   "midi-qol.invisible": "Invisible",

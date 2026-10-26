@@ -361,7 +361,6 @@
   "midi-qol.NearbyAllyRanged.Name": "(Regla de la casa) Los ataques a distancia a enemigos cercanos a los aliados tienen desventaja.",
   "midi-qol.NearbyAllyRanged.Hint": "Los ataques a distancia con aliados cercanos (5 pies) al objetivo tienen desventaja para los objetivos más pequeños que esto (w*h). 0 lo desactiva",
   "midi-qol.Incapacitated.Name": "Los actores incapacitados no pueden realizar acciones o reacciones",
-  "midi-qol.RemoveHiddenInvis.Name": "Atacar elimina oculto/invisible (utiliza CE/CV/CUB/specialStatus nativo de foundry)",
   "midi-qol.MaxDRValue.Name": "(Regla de la casa) Activar esto significa que sólo se aplicará la Reducción de Daño más efectiva. Desactivarlo significa que la RD se acumula",
   "midi-qol.invisible": "Invisible",
   "midi-qol.hidden": "Oculto",

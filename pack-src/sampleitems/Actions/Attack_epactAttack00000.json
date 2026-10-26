@@ -1,0 +1,103 @@
+{
+  "name": "Attack",
+  "type": "feat",
+  "img": "icons/skills/melee/sword-echo-stylized-tan.webp",
+  "system": {
+    "activities": {
+      "epActAttack00000": {
+        "_id": "epActAttack00000",
+        "type": "utility",
+        "name": "Attack",
+        "img": "icons/skills/melee/sword-echo-stylized-tan.webp",
+        "identifier": "attack",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "creature",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "any"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        }
+      }
+    },
+    "uses": {
+      "spent": 0,
+      "recovery": []
+    },
+    "advancement": [],
+    "description": {
+      "value": "<p>&Reference[attack]{Attack}</p><p><strong>midi-qol</strong>: Attacks your targets with an equipped weapon, chosen if you have more than one.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "chat": ""
+    },
+    "identifier": "attack",
+    "source": {
+      "revision": 1,
+      "rules": "2024"
+    },
+    "crewed": false,
+    "enchant": {},
+    "prerequisites": {
+      "items": [],
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "type": {
+      "value": "",
+      "subtype": ""
+    }
+  },
+  "effects": [],
+  "folder": "tWh6UgUeg2lxQ8uJ",
+  "flags": {
+    "cat": {
+      "macros": {
+        "roll": [
+          {
+            "source": "midi-qol",
+            "rules": "2024",
+            "identifier": "attack"
+          }
+        ]
+      },
+      "automation": {
+        "version": "14.6.4"
+      }
+    }
+  },
+  "_id": "epactAttack00000",
+  "sort": 0,
+  "_key": "!items!epactAttack00000"
+}

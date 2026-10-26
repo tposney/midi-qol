@@ -705,7 +705,6 @@
     "enforce": "Enforce no actions",
     "warn": "Post a warning only"
   },
-  "midi-qol.RemoveHiddenInvis.Name": "Attacking removes hidden (use CE/CV/CUB/core foundry specialStatus )",
   "midi-qol.CriticalSaves.Name": "(House Rule) Critical/Fumble always succeed/fail for saving throws",
   "midi-qol.MaxDRValue.Name": "(House rule) Enabling this means that only the most effective Damage Reduction will apply. Off means DR accumulates",
   "midi-qol.invisible": "Invisible",
@@ -1008,6 +1007,7 @@
     }
   },
   "midi-qol.Flanked": "Flanked",
+  "midi-qol.InvisibleBrief": "Invisible (until it attacks, casts a spell or deals damage)",
   "midi-qol.Flanking": "Flanking",
   "midi-qol.FlankingBonus.Name": "Flanking Bonus Type",
   "midi-qol.FlankingBonus.Hint": "When flanking is detected, grant advantage (default) or reduce the target's effective AC by a fixed amount.",
@@ -1039,6 +1039,7 @@
   "midi-qol.ActorOnUseMacros": "Actor On Use Macros",
   "midi-qol.MacroPass": "Macro Pass",
   "midi-qol.MacroName": "Macro Name",
+  "midi-qol.MacroNameDefault": "Blank: this item's or activity's macro",
   "midi-qol.DamageRolled": "Rolled",
   "midi-qol.DamageApplied": "Applied",
   "midi-qol.DamageDealt": "dealt",

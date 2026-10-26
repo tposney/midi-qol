@@ -272,7 +272,6 @@ class ConfigSettings {
     nearbyAllyRanged: 0,
     nearbyFoe: 5,
     optionalCritRule: -1,
-    removeHiddenInvis: true,
     vitalityItem: "", // Item name for vitality pool feature
     vitalityDeadCondition: "dead", // Condition to apply when vitality reaches 0
     vitalityDeathRequires: "vitalityOnly", // "vitalityOnly" = dead when vitality=0, "vitalityAndHP" = dead when vitality=0 AND HP=0
@@ -746,7 +745,6 @@ export let fetchParams = () => {
     nearbyAllyRanged: 0,
     nearbyFoe: 5,
     optionalCritRule: -1,
-    removeHiddenInvis: true,
     wallsBlockRange: "center",
     mergeCardMulti: false,
     displayProperties: true,

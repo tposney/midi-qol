@@ -1,0 +1,230 @@
+{
+  "_id": "ChainbreakerBolt",
+  "_key": "!items!ChainbreakerBolt",
+  "name": "Chainbreaker Bolt",
+  "type": "consumable",
+  "img": "icons/weapons/ammunition/arrowhead-glowing-blue.webp",
+  "folder": "5Ok9Jbl5nOokCkqf",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>A steel bolt whose head is wrapped in a coil of humming copper.</em></p><p>When you hit a creature with an attack using this bolt, it arcs onward: choose up to five more creatures, each within 30 feet of the last creature the bolt hit and none of them more than once. Each of them takes the weapon's damage plus <strong>3d10 force damage</strong>.</p><p>Once it hits, the bolt is destroyed.</p><details><summary>Midi-QOL</summary><p>An onUse macro on the bolt asks you for each creature in turn when the crossbow's attack hits, then uses its hidden Arc activity on all of them: the crossbow's damage dice plus its ability modifier (rolled again, never a critical) and 3d10 force.</p></details>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "Midi-QOL sample",
+      "revision": 1,
+      "rules": "2024"
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 0.05,
+      "units": "lb"
+    },
+    "price": {
+      "value": 100000,
+      "denomination": "gp"
+    },
+    "attunement": "",
+    "rarity": "legendary",
+    "identified": true,
+    "uses": {
+      "max": "",
+      "autoDestroy": false,
+      "spent": 0,
+      "recovery": []
+    },
+    "damage": {
+      "base": {
+        "number": null,
+        "denomination": null,
+        "bonus": "",
+        "types": [],
+        "custom": {
+          "enabled": false,
+          "formula": ""
+        },
+        "scaling": {
+          "number": 1
+        }
+      },
+      "replace": false
+    },
+    "properties": [
+      "mgc"
+    ],
+    "unidentified": {
+      "description": ""
+    },
+    "type": {
+      "value": "ammo",
+      "subtype": "crossbowBolt"
+    },
+    "container": null,
+    "identifier": "chainbreaker-bolt",
+    "magicalBonus": null,
+    "attuned": false,
+    "equipped": false,
+    "activities": {
+      "ChainbreakArc000": {
+        "_id": "ChainbreakArc000",
+        "type": "damage",
+        "name": "Chainbreaker: Arc",
+        "sort": 0,
+        "activation": {
+          "type": "special",
+          "value": 1,
+          "condition": "",
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "units": "any",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "creature",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "useConditionText": "",
+        "effectConditionText": "",
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "midiProperties": {
+          "automationOnly": true,
+          "forceDialog": false,
+          "confirmTargets": "never",
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "damage": {
+          "critical": {
+            "allow": false,
+            "bonus": ""
+          },
+          "includeBase": false,
+          "parts": [
+            {
+              "number": 3,
+              "denomination": 10,
+              "bonus": "",
+              "types": [
+                "force"
+              ],
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "scaling": {
+                "number": 1
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "onUseMacroName": "[postActiveEffects]ItemMacro",
+      "onUseMacroParts": {
+        "items": [
+          {
+            "macroName": "ItemMacro",
+            "option": "postActiveEffects"
+          }
+        ]
+      }
+    },
+    "dae": {
+      "macro": {
+        "name": "Chainbreaker Bolt",
+        "type": "script",
+        "img": "icons/weapons/ammunition/arrowhead-glowing-blue.webp",
+        "scope": "global",
+        "command": "// Chainbreaker Bolt\n// Fired as ammunition (postActiveEffects of the crossbow's attack): on a hit, the bolt arcs to up to five more creatures\n// you choose, each within 30 feet of the last one hit and none hit twice. They all take the crossbow's damage dice (rolled\n// again, not a critical) plus 3d10 force, from the bolt's Arc activity.\nconst ARC = \"ChainbreakArc000\", ARCS = 5, RANGE = 30;\nif (args[0]?.tag !== \"OnUse\" || args[0].macroPass !== \"postActiveEffects\") return;\nif (workflow?.ammunition?.id !== macroItem?.id) return;\nconst name = macroItem?.name ?? \"Chainbreaker Bolt\";\nlet last = workflow.hitTargets?.first();\nif (!last) return;\nconst bolt = workflow.ammunition;\nconst struck = new Set([last.document.uuid, workflow.token?.document?.uuid]);\nconst chosen = [];\nfor (let arc = 1; arc <= ARCS; arc++) {\n  const from = last;\n  const candidates = MidiQOL.findNearby(null, from, RANGE, { includeIncapacitated: true }).filter(t => !struck.has(t.document.uuid));\n  if (!candidates.length) break;\n  const pick = await foundry.applications.api.DialogV2.wait({\n    window: { title: `${name}: arc ${arc} of ${ARCS}` },\n    content: `<p>The bolt arcs from <strong>${from.name}</strong>. Choose the next creature.</p>`,\n    buttons: [...candidates.map(t => ({ action: t.document.uuid, label: `${t.name} (${Math.round(MidiQOL.getDistance(from, t))} ft)` })),\n      { action: \"stop\", label: \"Stop\" }],\n    rejectClose: false\n  });\n  if (!pick || pick === \"stop\") break;\n  last = candidates.find(t => t.document.uuid === pick);\n  struck.add(pick);\n  chosen.push(last);\n}\nif (!chosen.length) return;\n// the crossbow's damage dice and ability modifier, then 3d10 force\nconst base = workflow.item.system.damage?.base;\nconst dice = base?.formula ? `${base.formula} + @mod` : \"@mod\";\nconst formula = Roll.replaceFormulaData(dice, workflow.activity?.getRollData?.() ?? workflow.item.getRollData(), { missing: \"0\" });\nconst type = base?.types?.first?.() ?? [...(base?.types ?? [])][0] ?? \"piercing\";\nawait bolt.update({ [`system.activities.${ARC}.damage.parts`]: [\n  { custom: { enabled: true, formula }, types: [type] },\n  { number: 3, denomination: 10, types: [\"force\"], custom: { enabled: false, formula: \"\" } }] });\nconst arcActivity = (await fromUuid(bolt.uuid))?.system.activities.get(ARC);\nawait ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<strong>${name}</strong>: the bolt arcs through ${chosen.map(t => t.name).join(\", \")}.` });\nawait MidiQOL.completeActivityUse(arcActivity, { midiOptions: { targetUuids: chosen.map(t => t.document.uuid),\n  workflowOptions: { targetConfirmation: \"none\", autoRollDamage: \"always\", autoFastDamage: true } } }, { configure: false }, {});\n"
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": ""
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null
+  }
+}

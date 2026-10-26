@@ -1,0 +1,103 @@
+{
+  "name": "Generic Actions",
+  "type": "feat",
+  "img": "icons/skills/trades/academics-scribe-quill-gray.webp",
+  "system": {
+    "activities": {
+      "epActGeneric0000": {
+        "_id": "epActGeneric0000",
+        "type": "utility",
+        "name": "Generic Actions",
+        "img": "icons/skills/trades/academics-scribe-quill-gray.webp",
+        "identifier": "generic-actions",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "any"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        }
+      }
+    },
+    "uses": {
+      "spent": 0,
+      "recovery": []
+    },
+    "advancement": {},
+    "description": {
+      "value": "<p>Take an action: midi's 2024 actions (sample items › Actions) and, with CPR installed, CPR's Dash, Disengage, Dodge, Help, Fall, Jump and Unarmed Strike (Grapple, Shove).</p><p><strong>midi-qol</strong>: Choose an action from midi's and CPR's; one both offer is listed twice, tagged with its source.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "chat": ""
+    },
+    "identifier": "generic-actions",
+    "source": {
+      "revision": 1,
+      "rules": "2024"
+    },
+    "crewed": false,
+    "enchant": {},
+    "prerequisites": {
+      "items": [],
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "type": {
+      "value": "",
+      "subtype": ""
+    }
+  },
+  "effects": [],
+  "folder": "tWh6UgUeg2lxQ8uJ",
+  "flags": {
+    "cat": {
+      "macros": {
+        "roll": [
+          {
+            "source": "midi-qol",
+            "rules": "2024",
+            "identifier": "generic-actions"
+          }
+        ]
+      },
+      "automation": {
+        "version": "14.6.4"
+      }
+    }
+  },
+  "_id": "epactGenericActi",
+  "sort": 0,
+  "_key": "!items!epactGenericActi"
+}

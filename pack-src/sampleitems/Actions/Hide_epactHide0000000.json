@@ -1,0 +1,166 @@
+{
+  "name": "Hide",
+  "type": "feat",
+  "img": "icons/containers/barrels/barrel-open-brown-red.webp",
+  "system": {
+    "description": {
+      "value": "<p>&Reference[hide]{Hide}</p><p><strong>midi-qol</strong>: A DC 15 Stealth check; on a success you are Hidden (Invisible) and your total is the DC to find you. Hidden ends when you make an attack roll, cast a spell with a Verbal component, or are found (Search). With CPR installed its hide macro applies the effect (Supreme Sneak, animation); midi records the DC for any activity using CPR's hide.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "revision": 1,
+      "rules": "2024",
+      "book": "",
+      "page": "",
+      "license": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "",
+      "subtype": ""
+    },
+    "requirements": "",
+    "properties": [],
+    "prerequisites": {
+      "level": null,
+      "items": [],
+      "repeatable": false
+    },
+    "activities": {
+      "epActHide0000000": {
+        "_id": "epActHide0000000",
+        "type": "check",
+        "name": "Hide",
+        "img": "icons/containers/barrels/barrel-open-brown-red.webp",
+        "identifier": "hide",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        },
+        "check": {
+          "associated": [
+            "ste"
+          ],
+          "ability": "",
+          "dc": {
+            "calculation": "",
+            "formula": "15"
+          }
+        },
+        "flags": {
+          "cat": {
+            "macros": {
+              "roll": [
+                {
+                  "source": "chris-premades",
+                  "rules": "all",
+                  "identifier": "hide"
+                },
+                {
+                  "source": "midi-qol",
+                  "rules": "all",
+                  "identifier": "hide"
+                }
+              ]
+            },
+            "genericConfig": {
+              "chris-premades": {
+                "hide": {
+                  "effect": "epActHidden00000"
+                }
+              },
+              "midi-qol": {
+                "hide": {
+                  "effect": "epActHidden00000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "identifier": "hide",
+    "enchant": {},
+    "advancement": [],
+    "crewed": false
+  },
+  "effects": [
+    {
+      "_id": "epActHidden00000",
+      "name": "Hidden",
+      "img": "icons/containers/barrels/barrel-open-brown-red.webp",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [
+        "invisible",
+        "hiding"
+      ],
+      "description": "<p>Invisible until you make a sound louder than a whisper, an enemy finds you, or you make an attack roll or cast a spell with a Verbal component.</p>",
+      "duration": {},
+      "system": {
+        "changes": []
+      },
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "specialDuration": [
+            "1Attack"
+          ]
+        }
+      },
+      "_key": "!items.effects!epactHide0000000.epActHidden00000"
+    }
+  ],
+  "flags": {
+    "cat": {
+      "automation": {
+        "version": "14.6.4"
+      }
+    }
+  },
+  "folder": "tWh6UgUeg2lxQ8uJ",
+  "_id": "epactHide0000000",
+  "sort": 0,
+  "_key": "!items!epactHide0000000"
+}

@@ -1,0 +1,160 @@
+{
+  "name": "Underwater",
+  "type": "feat",
+  "img": "icons/tools/nautical/anchor-blue.webp",
+  "system": {
+    "description": {
+      "value": "<p>&Reference[underwatercombat]{Underwater}</p><p><strong>midi-qol</strong>: Fire Resistance; melee Disadvantage without a Swim Speed unless Piercing; ranged weapon attacks have Disadvantage and miss beyond normal range. Use again on leaving the water.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "revision": 1,
+      "rules": "2024",
+      "book": "",
+      "page": "",
+      "license": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "",
+      "subtype": ""
+    },
+    "requirements": "",
+    "properties": [],
+    "prerequisites": {
+      "level": null,
+      "items": [],
+      "repeatable": false
+    },
+    "activities": {
+      "epActUnderwater0": {
+        "_id": "epActUnderwater0",
+        "type": "utility",
+        "name": "Underwater",
+        "img": "icons/tools/nautical/anchor-blue.webp",
+        "identifier": "underwater",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [
+          {
+            "_id": "epActUnderwater0"
+          }
+        ],
+        "midiProperties": {
+          "forceConsumeDialog": "never",
+          "toggleEffect": true
+        }
+      }
+    },
+    "identifier": "underwater",
+    "enchant": {},
+    "advancement": [],
+    "crewed": false
+  },
+  "effects": [
+    {
+      "_id": "epActUnderwater0",
+      "name": "Underwater",
+      "img": "icons/tools/nautical/anchor-blue.webp",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [],
+      "description": "<p>Fire Resistance. Melee attacks have Disadvantage unless you have a Swim Speed or the attack deals Piercing damage; ranged weapon attacks have Disadvantage and miss beyond normal range.</p>",
+      "duration": {},
+      "system": {
+        "changes": [
+          {
+            "type": "add",
+            "phase": "initial",
+            "key": "system.traits.dr.value",
+            "value": "fire"
+          },
+          {
+            "type": "override",
+            "phase": "final",
+            "key": "flags.midi-qol.disadvantage.attack.mwak",
+            "value": "!(attributes.movement.swim > 0) && workflow.defaultDamageType !== \"piercing\""
+          },
+          {
+            "type": "override",
+            "phase": "final",
+            "key": "flags.midi-qol.disadvantage.attack.rwak",
+            "value": "1"
+          },
+          {
+            "type": "override",
+            "phase": "final",
+            "key": "system.rolls.attack.rwak.fail",
+            "value": "getDistance(workflow.token, workflow.targets.first()) > (workflow.item.system.range?.value || Infinity)"
+          }
+        ]
+      },
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "specialDuration": []
+        }
+      },
+      "_key": "!items.effects!epactUnderwater0.epActUnderwater0"
+    }
+  ],
+  "flags": {
+    "cat": {
+      "macros": {
+        "roll": [
+          {
+            "source": "midi-qol",
+            "rules": "all",
+            "identifier": "toggle-effect"
+          }
+        ]
+      },
+      "automation": {
+        "version": "14.6.4"
+      }
+    }
+  },
+  "folder": "tWh6UgUeg2lxQ8uJ",
+  "_id": "epactUnderwater0",
+  "sort": 0,
+  "_key": "!items!epactUnderwater0"
+}

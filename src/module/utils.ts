@@ -1072,6 +1072,24 @@ export function midiCustomEffect(actor: Actor.Implementation, change: MidiChange
     if (typeof change.value !== "string") return true;
     const args = change.value.split(",")?.map(arg => arg.trim());
     const currentFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.onUseMacroName`) as string ?? "";
+    if (!args[0]) {
+      // A blank macro name is the effect's own macro: its activity's, else its item's, if it has one
+      if (!args[1]) {
+        const message = `onUseMacroName change "${change.value}" on ${change.effect?.name ?? "an effect"} (${actor.name}) has no macro pass and is ignored`;
+        TroubleShooter.recordError(new Error(message), message);
+        return true;
+      }
+      const activityUuid = change.effect?.flags?.dae?.activity;
+      const activity = activityUuid ? fromUuidSync(activityUuid) as Activity | undefined : undefined;
+      const origin = originUuid ? fromUuidSync(originUuid) : undefined;
+      const item = origin instanceof Item ? origin : (origin instanceof ActiveEffect && origin.parent instanceof Item ? origin.parent : undefined);
+      if (activity?.macro?.command) args[0] = `ActivityMacro.${activityUuid}`;
+      else if (item && DAE.getItemMacroCommand(item)) args[0] = "ItemMacro";
+      else {
+        if (debugEnabled > 0) warn(`onUseMacroName change on ${change.effect?.name} (${actor.name}) has a blank macro name and its item has no macro`);
+        return true;
+      }
+    }
     if (args[0] === "ActivityMacro" || args[0] === MQActivityMacroLabel) {
       if (change.effect?.flags.dae?.activity) args[0] = `ActivityMacro.${change.effect.flags.dae.activity}`;
       // @ts-expect-error no dnd5e-types
@@ -4684,12 +4702,6 @@ export function hasCondition(
   return 0;
 }
 
-export async function removeInvisible(this: Workflow) {
-  if (!canvas || !canvas.scene) return;
-  const token = this.attackingToken ?? (fromUuidSync(this.tokenUuid) as TokenDocument.Implementation | undefined);
-  removeInvisibleCondition(token);
-}
-
 export async function removeInvisibleCondition(tokenRef?: TokenOrDocument | string) {
   const token = getToken(tokenRef);
   if (!token) return;
@@ -4701,13 +4713,6 @@ export async function removeInvisibleCondition(tokenRef?: TokenOrDocument | stri
     await toggleStatus(token.actor, invisId, { active: false })
   }
   if (debugEnabled > 0) log(`Invisibility removed for ${token.name}`)
-}
-
-export async function removeHidden(this: Workflow) {
-  if (!canvas?.scene) return;
-  const token = this.attackingToken ?? (fromUuidSync(this.tokenUuid) as TokenDocument.Implementation | undefined);
-  if (!token) return;
-  removeHiddenCondition(token);
 }
 
 export async function removeHiddenCondition(tokenRef?: TokenOrDocument | string) {

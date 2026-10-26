@@ -1,0 +1,332 @@
+{
+  "name": "Study",
+  "type": "feat",
+  "img": "icons/skills/trades/academics-investigation-study-blue.webp",
+  "system": {
+    "activities": {
+      "epActStudyarc000": {
+        "_id": "epActStudyarc000",
+        "type": "check",
+        "name": "Arcana",
+        "img": "icons/skills/trades/academics-investigation-study-blue.webp",
+        "identifier": "arc",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        },
+        "check": {
+          "associated": [
+            "arc"
+          ],
+          "ability": "",
+          "dc": {
+            "calculation": "",
+            "formula": ""
+          }
+        }
+      },
+      "epActStudyhis000": {
+        "_id": "epActStudyhis000",
+        "type": "check",
+        "name": "History",
+        "img": "icons/skills/trades/academics-investigation-study-blue.webp",
+        "identifier": "his",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        },
+        "check": {
+          "associated": [
+            "his"
+          ],
+          "ability": "",
+          "dc": {
+            "calculation": "",
+            "formula": ""
+          }
+        }
+      },
+      "epActStudyinv000": {
+        "_id": "epActStudyinv000",
+        "type": "check",
+        "name": "Investigation",
+        "img": "icons/skills/trades/academics-investigation-study-blue.webp",
+        "identifier": "inv",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        },
+        "check": {
+          "associated": [
+            "inv"
+          ],
+          "ability": "",
+          "dc": {
+            "calculation": "",
+            "formula": ""
+          }
+        }
+      },
+      "epActStudynat000": {
+        "_id": "epActStudynat000",
+        "type": "check",
+        "name": "Nature",
+        "img": "icons/skills/trades/academics-investigation-study-blue.webp",
+        "identifier": "nat",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        },
+        "check": {
+          "associated": [
+            "nat"
+          ],
+          "ability": "",
+          "dc": {
+            "calculation": "",
+            "formula": ""
+          }
+        }
+      },
+      "epActStudyrel000": {
+        "_id": "epActStudyrel000",
+        "type": "check",
+        "name": "Religion",
+        "img": "icons/skills/trades/academics-investigation-study-blue.webp",
+        "identifier": "rel",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        },
+        "check": {
+          "associated": [
+            "rel"
+          ],
+          "ability": "",
+          "dc": {
+            "calculation": "",
+            "formula": ""
+          }
+        }
+      }
+    },
+    "uses": {
+      "spent": 0,
+      "recovery": []
+    },
+    "advancement": [],
+    "description": {
+      "value": "<p>&Reference[study]{Study}</p><p><strong>midi-qol</strong>: Rolls the chosen skill.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "chat": ""
+    },
+    "identifier": "study",
+    "source": {
+      "revision": 1,
+      "rules": "2024"
+    },
+    "crewed": false,
+    "enchant": {},
+    "prerequisites": {
+      "items": [],
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "type": {
+      "value": "",
+      "subtype": ""
+    }
+  },
+  "effects": [],
+  "folder": "tWh6UgUeg2lxQ8uJ",
+  "flags": {
+    "cat": {
+      "automation": {
+        "version": "14.6.4"
+      }
+    }
+  },
+  "_id": "epactStudy000000",
+  "sort": 0,
+  "_key": "!items!epactStudy000000"
+}

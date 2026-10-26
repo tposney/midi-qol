@@ -477,7 +477,6 @@
     "enforce": "アクションの使用禁止",
     "warn": "警告のみ投稿"
   },
-  "midi-qol.RemoveHiddenInvis.Name": "攻撃は隠れ身状態を解除する（要CE/CV/CUBまたはコア機能の状態変化）",
   "midi-qol.CriticalSaves.Name": "（ハウスルール）セーヴ時のクリティカル（ファンブル）は常に成功（失敗）として扱う。",
   "midi-qol.MaxDRValue.Name": "（ハウスルール）最も効果的なダメージ軽減（DR）のみを適用します。オフの場合はDRを累積して計算します。",
   "midi-qol.invisible": "不可視",

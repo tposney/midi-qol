@@ -98,13 +98,15 @@ export function setupDamageCardMessage() {
 }
 
 /**
- * midi's damage and usage cards go with the card they came from. dnd5e deletes only summarised messages with their
+ * midi's damage and usage cards go with the card they came from, as do other messages flagged with it
+ * (`flags.midi-qol.origin`, e.g. a sample action's whispered result). dnd5e deletes only summarised messages with their
  * origin, and a player deleting their card can't delete the GM's damage cards, so the active GM does it.
  */
 function deleteLinkedDamageCards(message: ChatMessage.Implementation, options: object) {
     if (("deleteAll" in options && options.deleteAll) || !game.users?.activeGM?.isSelf) return;
-    const linked = () => (game.messages?.filter(m => [DAMAGE_MESSAGE_TYPE, USAGE_MESSAGE_TYPE].includes(m.type)
-        && (m._source.system as { origin?: string | null } | undefined)?.origin === message.id) ?? []).map(m => m.id!);
+    const linked = () => (game.messages?.filter(m => ([DAMAGE_MESSAGE_TYPE, USAGE_MESSAGE_TYPE].includes(m.type)
+        && (m._source.system as { origin?: string | null } | undefined)?.origin === message.id)
+        || m.getFlag("midi-qol", "origin") === message.id) ?? []).map(m => m.id!);
     if (!linked().length) return;
     // After the current delete operation, which may already include them.
     setTimeout(() => {

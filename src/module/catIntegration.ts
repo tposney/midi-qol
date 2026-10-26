@@ -1,4 +1,5 @@
 import { MODULE_ID } from "../midi-qol.js";
+import { registerCATMacros, registerHideSearchSettings } from "./catMacros/macros.mjs";
 
 /** The last CAT whose medkit can update an item that an earlier update in the same run deleted. */
 const CAT_MEDKIT_FIX_MAX = "0.1.3";
@@ -39,8 +40,10 @@ function setupCATMedkitFix() {
  * of the same identifier; demos and legacy copies have none and get a type no item has, so CAT never offers them.
  */
 export function setupCATIntegration() {
+  registerHideSearchSettings();
   Hooks.once("catReady", async () => {
     setupCATMedkitFix();
+    registerCATMacros(MODULE_ID);
     await globalThis.cat?.api.registerAutomationModule(MODULE_ID, {
       infoFetcherCallback: entry => entry.flags?.cat?.automation?.version ? {} : { type: "midi-qol-sample" }
     });

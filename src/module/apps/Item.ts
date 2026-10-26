@@ -1,3 +1,4 @@
+import type { Activity } from "../../globals.js";
 export class OnUseMacros {
   items: OnUseMacro[];
 
@@ -13,6 +14,31 @@ export class OnUseMacros {
     const macros = new OnUseMacros();
     parts.items?.forEach(x => macros.items.push(OnUseMacro.parsePart(x)));
     return macros;
+  }
+
+  /** The item (or activity) has a macro of its own that a blank macro name can stand for. */
+  static hasOwnMacro(item: Item.Implementation | undefined): boolean {
+    if (!item) return false;
+    if (DAE.getItemMacroCommand(item)) return true;
+    // @ts-expect-error no dnd5e-types
+    return !!item.system?.activities?.some((a: Activity) => a.macro?.command);
+  }
+
+  /**
+   * Blank macro names stand for the item's own macro: the activity's (activityMacroName, "ActivityMacro" for the activity
+   * being used) if it has one, else the item's. A blank name with neither is dropped.
+   */
+  static withDefaults(macros: OnUseMacros | undefined, item: Item.Implementation | undefined, activity: Activity | undefined, activityMacroName = "ActivityMacro"): OnUseMacros {
+    const resolved = new OnUseMacros();
+    for (const macro of macros?.items ?? []) {
+      if (macro.macroName?.trim().length > 0) {
+        resolved.items.push(macro);
+        continue;
+      }
+      const name = activity?.macro?.command ? activityMacroName : (item && DAE.getItemMacroCommand(item) ? "ItemMacro" : undefined);
+      if (name) resolved.items.push(Object.assign(new OnUseMacro(`[${macro.option}]${name}`), { macroPassOptions: macro.macroPassOptions }));
+    }
+    return resolved;
   }
 
   public getMacros(currentOption: string | undefined): string {

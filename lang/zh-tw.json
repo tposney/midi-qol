@@ -568,7 +568,6 @@
         "enforce": "強制禁止行動",
         "warn": "僅顯示警告"
     },
-    "midi-qol.RemoveHiddenInvis.Name": "攻擊會移除隱藏（使用 CE/CV/CUB/核心 specialStatus）",
     "midi-qol.CriticalSaves.Name": "（房規）豁免檢定達成重擊/嚴重失誤一律成功/失敗",
     "midi-qol.MaxDRValue.Name": "（房規）啟用此項表示僅套用最有效的傷害減免。關閉則為減免可疊加",
     "midi-qol.DRAllPerDamageDetail.Name": "（房規）DRALL (DR.rwak/...) 會從攻擊傷害與「其他」傷害中「分別」扣除",

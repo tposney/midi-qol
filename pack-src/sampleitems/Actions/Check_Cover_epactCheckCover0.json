@@ -1,0 +1,109 @@
+{
+  "name": "Check Cover",
+  "type": "feat",
+  "img": "icons/environment/settlement/fence-stone-brick.webp",
+  "system": {
+    "description": {
+      "value": "<p>&Reference[cover]{Check Cover}</p><p><strong>midi-qol</strong>: Whispers you the cover each target (or each creature you can sense) has from you.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "",
+      "revision": 1,
+      "rules": "2024",
+      "book": "",
+      "page": "",
+      "license": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "",
+      "subtype": ""
+    },
+    "requirements": "",
+    "properties": [],
+    "prerequisites": {
+      "level": null,
+      "items": [],
+      "repeatable": false
+    },
+    "activities": {
+      "epActCover000000": {
+        "_id": "epActCover000000",
+        "type": "utility",
+        "name": "Check Cover",
+        "img": "icons/environment/settlement/fence-stone-brick.webp",
+        "identifier": "check-cover",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "any"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        }
+      }
+    },
+    "identifier": "check-cover",
+    "enchant": {},
+    "advancement": [],
+    "crewed": false
+  },
+  "effects": [],
+  "flags": {
+    "cat": {
+      "macros": {
+        "roll": [
+          {
+            "source": "midi-qol",
+            "rules": "2024",
+            "identifier": "check-cover"
+          }
+        ]
+      },
+      "automation": {
+        "version": "14.6.4"
+      }
+    }
+  },
+  "folder": "tWh6UgUeg2lxQ8uJ",
+  "_id": "epactCheckCover0",
+  "sort": 0,
+  "_key": "!items!epactCheckCover0"
+}

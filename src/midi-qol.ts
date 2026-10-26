@@ -1858,6 +1858,17 @@ export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects 
       flags: { dae: { specialDuration: ["combatEnd", "shortRest"] } }
     });
   }
+  // Invisible that ends itself, as the Invisibility spell does; dnd5e's Invisible (set from the HUD) lasts until removed.
+  if (!statusEffects.find(e => e._id === getStaticID("invisibleBrief"))) {
+    statusEffects.push({
+      id: "invisibleBrief",
+      _id: getStaticID("invisibleBrief"),
+      name: i18n("midi-qol.InvisibleBrief"),
+      statuses: ["invisible"],
+      img: "systems/dnd5e/icons/svg/statuses/invisible.svg",
+      flags: { dae: { specialDuration: ["1Attack", "1Spell", "DamageDealt"] } }
+    });
+  }
   if (!statusEffects.find(e => e._id === getStaticID("flanking"))) {
     statusEffects.push({
       id: "flanking",

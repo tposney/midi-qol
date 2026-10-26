@@ -389,7 +389,6 @@
     },
     "midi-qol.NearbyAllyRanged.Hint": "Ranged Attacks with allies nearby (5 feet) to the target have disadvantage for targets smaller than this (w*h). 0 disables",
     "midi-qol.Incapacitated.Name": "무력화된 액터들의 공격 불가",
-    "midi-qol.RemoveHiddenInvis.Name": "공격시 은신/투명화가 제거됨 (Conditional Visibility or CUB 필요)",
     "midi-qol.CriticalSaves.Name": "크리티컬/펌블 시 항상 내성굴림에 성공/실패",
     "midi-qol.MaxDRValue.Name": "(House rule) Enabling this means that only the most effective Damage Reduction will apply. Off means DR accumulates",
     "midi-qol.invisible": "투명",

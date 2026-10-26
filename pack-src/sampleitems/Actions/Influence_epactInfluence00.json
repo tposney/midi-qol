@@ -1,0 +1,103 @@
+{
+  "name": "Influence",
+  "type": "feat",
+  "img": "icons/skills/social/diplomacy-offering-ritual.webp",
+  "system": {
+    "activities": {
+      "epActInfluence00": {
+        "_id": "epActInfluence00",
+        "type": "utility",
+        "name": "Influence",
+        "img": "icons/skills/social/diplomacy-offering-ritual.webp",
+        "identifier": "influence",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "creature",
+            "count": "1",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "any"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        }
+      }
+    },
+    "uses": {
+      "spent": 0,
+      "recovery": []
+    },
+    "advancement": [],
+    "description": {
+      "value": "<p>&Reference[influence]{Influence}</p><p><strong>midi-qol</strong>: The GM chooses the target's attitude; a hesitant creature needs a check against DC 15 or its Intelligence, with Advantage if Friendly and Disadvantage if Hostile.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "chat": ""
+    },
+    "identifier": "influence",
+    "source": {
+      "revision": 1,
+      "rules": "2024"
+    },
+    "crewed": false,
+    "enchant": {},
+    "prerequisites": {
+      "items": [],
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "type": {
+      "value": "",
+      "subtype": ""
+    }
+  },
+  "effects": [],
+  "folder": "tWh6UgUeg2lxQ8uJ",
+  "flags": {
+    "cat": {
+      "macros": {
+        "roll": [
+          {
+            "source": "midi-qol",
+            "rules": "2024",
+            "identifier": "influence"
+          }
+        ]
+      },
+      "automation": {
+        "version": "14.6.4"
+      }
+    }
+  },
+  "_id": "epactInfluence00",
+  "sort": 0,
+  "_key": "!items!epactInfluence00"
+}

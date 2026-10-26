@@ -474,7 +474,6 @@
     "enforce": "Non imporre alcuna azione",
     "warn": "Pubblica solo un avviso"
   },
-"midi-qol.RemoveHiddenInvis.Name": "L'attacco rimuove la nascosta (usa CE/CV/CUB/core foundry specialStatus )",
 "midi-qol.CriticalSaves.Name": "(Regola della Casa) Successo/Fallimento critico sempre riuscito/fallito per i tiri salvezza",
 "midi-qol.MaxDRValue.Name": "(Regola della Casa) Abilitando questa opzione significa che verrà applicata solo la Riduzione Danno più efficace. Spento significa che la RD si accumula",
 "midi-qol.invisible": "Invisibile",

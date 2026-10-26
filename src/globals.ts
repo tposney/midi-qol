@@ -555,6 +555,8 @@ declare module "fvtt-types/configuration" {
         syntheticItem?: boolean;
         isHit?: boolean;
         otherActivityConsumed?: object;
+        /** The card this message goes with: deleting that card deletes this message (e.g. a sample action's result) */
+        origin?: string;
       };
     };
     Item: {

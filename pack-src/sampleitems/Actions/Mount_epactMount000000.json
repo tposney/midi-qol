@@ -1,0 +1,211 @@
+{
+  "name": "Mount",
+  "type": "feat",
+  "img": "icons/environment/creatures/horse-brown.webp",
+  "system": {
+    "activities": {
+      "epActMount000000": {
+        "_id": "epActMount000000",
+        "type": "utility",
+        "name": "Mount",
+        "img": "icons/environment/creatures/horse-brown.webp",
+        "identifier": "mount",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [
+          {
+            "_id": "epActMounted0000"
+          }
+        ],
+        "midiProperties": {
+          "forceConsumeDialog": "never",
+          "toggleEffect": true
+        }
+      },
+      "epActFallOff0000": {
+        "_id": "epActFallOff0000",
+        "type": "save",
+        "name": "Fall Off",
+        "img": "icons/environment/creatures/horse-brown.webp",
+        "identifier": "fall-off",
+        "activation": {
+          "type": "special",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [
+          {
+            "_id": "epActFellOff0000"
+          }
+        ],
+        "midiProperties": {
+          "forceConsumeDialog": "never"
+        },
+        "save": {
+          "ability": [
+            "dex"
+          ],
+          "dc": {
+            "calculation": "",
+            "formula": "10"
+          }
+        }
+      }
+    },
+    "uses": {
+      "spent": 0,
+      "recovery": []
+    },
+    "advancement": [],
+    "description": {
+      "value": "<p>&Reference[mounting]{Mount}</p><p><strong>midi-qol</strong>: Mount marks you Mounted (use again to dismount); Fall Off is the DC 10 Dexterity save, Prone on a failure. Tokens are not linked.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "chat": ""
+    },
+    "identifier": "mount",
+    "source": {
+      "revision": 1,
+      "rules": "2024"
+    },
+    "crewed": false,
+    "enchant": {},
+    "prerequisites": {
+      "items": [],
+      "repeatable": false
+    },
+    "properties": [],
+    "requirements": "",
+    "type": {
+      "value": "",
+      "subtype": ""
+    }
+  },
+  "effects": [
+    {
+      "_id": "epActMounted0000",
+      "name": "Mounted",
+      "img": "icons/environment/creatures/horse-brown.webp",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [],
+      "description": "<p>Mounted. Use Mount again to dismount.</p>",
+      "duration": {},
+      "system": {
+        "changes": []
+      },
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "specialDuration": []
+        }
+      },
+      "_key": "!items.effects!epactMount000000.epActMounted0000"
+    },
+    {
+      "_id": "epActFellOff0000",
+      "name": "Fell Off",
+      "img": "icons/environment/creatures/horse-brown.webp",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [
+        "prone"
+      ],
+      "description": "<p>Fell off the mount.</p>",
+      "duration": {},
+      "system": {
+        "changes": []
+      },
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "specialDuration": []
+        }
+      },
+      "_key": "!items.effects!epactMount000000.epActFellOff0000"
+    }
+  ],
+  "folder": "tWh6UgUeg2lxQ8uJ",
+  "flags": {
+    "cat": {
+      "macros": {
+        "roll": [
+          {
+            "source": "midi-qol",
+            "rules": "all",
+            "identifier": "toggle-effect"
+          }
+        ]
+      },
+      "automation": {
+        "version": "14.6.4"
+      }
+    }
+  },
+  "_id": "epactMount000000",
+  "sort": 0,
+  "_key": "!items!epactMount000000"
+}

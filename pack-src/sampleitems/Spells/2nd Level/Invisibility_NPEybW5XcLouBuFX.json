@@ -18,7 +18,8 @@
           "macroRepeat": "none",
           "specialDuration": [
             "1Attack",
-            "1Spell"
+            "1Spell",
+            "DamageDealt"
           ],
           "transfer": false,
           "selfTarget": false,
