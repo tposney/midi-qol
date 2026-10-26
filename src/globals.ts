@@ -1478,6 +1478,8 @@ export interface Activity extends AnyMutableObject {
     noConcentrationCheck?: boolean;
     skipConcentrationCheck?: boolean;
     autoCEEffects: string;
+    /** Conditions applied to the targets as the condition itself, with extra special durations */
+    statuses?: { id: string; specialDuration: string[]; onSave: boolean }[];
   }
   // Midi mixin methods
   hasConsumption: () => boolean;

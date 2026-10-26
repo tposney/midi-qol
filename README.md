@@ -147,6 +147,8 @@ If you prefer to configure settings manually, here's a recommended full automati
 
 ## Recommended Modules
 
+**Strongly recommended:** [Covens Automation Toolkit (CAT)](https://github.com/chrisk123999/covens-automation-toolkit) — see [Pre-Built Automations](#pre-built-automations).
+
 ### Effect Timing & Expiry
 
 | Module | Description |
@@ -188,7 +190,7 @@ If you prefer to configure settings manually, here's a recommended full automati
 
 | Module | Description |
 |--------|-------------|
-| [**Covens Automation Toolkit (CAT)**](https://github.com/chrisk123999/covens-automation-toolkit) | Shared automation framework used by CPR 2 and other automation packs. Its medkit matches items to automations by identifier and updates them; midi registers its own sample items with CAT. See the [CAT wiki](https://github.com/chrisk123999/covens-automation-toolkit/wiki). |
+| [**Covens Automation Toolkit (CAT)**](https://github.com/chrisk123999/covens-automation-toolkit) | **Strongly recommended.** Midi's sample items that say *Automation requires Coven's Automation Toolkit (CAT)* (Hide, Search, the generic actions, …) only work with it; without it they still load, but that part of their automation does nothing. Shared automation framework used by CPR 2 and other automation packs. Its medkit matches items to automations by identifier and updates them; midi registers its own sample items with CAT. See the [CAT wiki](https://github.com/chrisk123999/covens-automation-toolkit/wiki). |
 | [**Cauldron of Plentiful Resources**](https://foundryvtt.com/packages/chris-premades) | Comprehensive collection of automated spells, class features, and monster abilities. Includes custom roll resolver for in-person games, fancy Eskiemoh animations, and quality-of-life UI extensions. Extends Midi-QOL's workflow API. Has its own [wiki](https://github.com/chrisk123999/chris-premades/wiki). |
 | [**Midi Item Showcase Community**](https://foundryvtt.com/packages/midi-item-showcase-community) | Community-contributed automations from the Posney's Foundry Automation Discord. Growing collection of user-submitted items, spells, and scripts. |
 | [**Gambit's Premades**](https://foundryvtt.com/packages/gambits-premades) | Curated library of automated spells, items, and feats. Handles difficult "3rd party reaction" items like Counterspell, Opportunity Attacks, and Silvery Barbs. Features custom AppV2 dialogs with animated countdown timers for reactions. |

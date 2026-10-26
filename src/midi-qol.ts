@@ -610,7 +610,11 @@ Hooks.on("dae.addFieldMappings", (fieldMappings) => {
 
 });
 
+/** DAE's special durations with midi's, for choosing them outside DAE's effect sheet (activity statuses). */
+export let specialDurationChoices: Record<string, string> = {};
+
 Hooks.on("dae.addSpecialDurations", daeSpecialDurations => {
+  specialDurationChoices = daeSpecialDurations;
   daeSpecialDurations["1Action"] = i18n("dae.1Action");
   daeSpecialDurations["Bonus Action"] = i18n("dae.Bonus Action");
   daeSpecialDurations["Reaction"] = i18n("dae.Reaction");
@@ -1816,6 +1820,9 @@ export async function createMidiMacros() {
   }
 }
 
+/** midi's statuses that also carry another status: the self-ending Invisible carries invisible. */
+export const MIDI_IMPLYING_STATUSES: Record<string, string> = { invisibleBrief: "invisible" };
+
 /** midi's statuses, added to `statusEffects` where missing. */
 export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects = CONFIG.statusEffects) {
   // @ts-expect-error no dnd5e-types
@@ -1859,6 +1866,7 @@ export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects 
     });
   }
   // Invisible that ends itself, as the Invisibility spell does; dnd5e's Invisible (set from the HUD) lasts until removed.
+  // DAE's dependent conditions add a plain Invisible for the status it implies: that one carries the token icon.
   if (!statusEffects.find(e => e._id === getStaticID("invisibleBrief"))) {
     statusEffects.push({
       id: "invisibleBrief",
@@ -1866,6 +1874,8 @@ export function addMidiStatusEffects(statusEffects: typeof CONFIG.statusEffects 
       name: i18n("midi-qol.InvisibleBrief"),
       statuses: ["invisible"],
       img: "systems/dnd5e/icons/svg/statuses/invisible.svg",
+      // showIcon 0: CONST.ACTIVE_EFFECT_SHOW_ICON.NEVER (Foundry 14, not in fvtt-types 13)
+      ...(safeGetGameSetting("dae", "DependentConditions") ? { showIcon: 0 } : {}),
       flags: { dae: { specialDuration: ["1Attack", "1Spell", "DamageDealt"] } }
     });
   }

@@ -372,6 +372,19 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     /**
+     * dnd5e's card face shows the item's icon and then the activity's. An activity whose image is the item's own (common in
+     * imported content) showed the same picture twice: the activity's is dropped. A different image, or dnd5e's activity
+     * type icon, stays.
+     */
+    #dropDuplicateActivityIcon(html: HTMLElement) {
+      for (const activityIcon of Array.from(html.querySelectorAll<HTMLElement>(".activity-icon"))) {
+        const itemSrc = activityIcon.parentElement?.querySelector(".item-icon img")?.getAttribute("src");
+        const activitySrc = activityIcon.querySelector("img, dnd5e-icon")?.getAttribute("src");
+        if (itemSrc && activitySrc === itemSrc) activityIcon.remove();
+      }
+    }
+
+    /**
      * Mask the dice of a blind roll, and blank an obscured roll's result, for non-GMs.
      *
      * Lives here rather than on `renderChatMessageHTML` because core fires that hook inside
@@ -642,6 +655,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         this._addMarkerClasses(html);
         this._addLegacyCardDataset(html);
         this.maskHiddenRolls(html);
+        this.#dropDuplicateActivityIcon(html);
         return applySpeakerNameAfter(enriched, html);
       }
       // Another player's view of a private card; the author of a blind roll still gets the card, its dice masked below.
@@ -665,6 +679,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       this._addMarkerClasses(html);
       this._addLegacyCardDataset(html);
       this.maskHiddenRolls(html);
+      this.#dropDuplicateActivityIcon(html);
       if (debugEnabled > 1) log("Finished enriching chat card", Date.now(), this.id);
       return applySpeakerNameAfter(enriched, html);
     }

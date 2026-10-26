@@ -1,4 +1,4 @@
-import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID, getStaticID } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, savedOverTimeEffectsToDelete, log, gameStats, GameSystemConfig, MODULE_ID, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { excludeRegionSourceEffect, moveRegionsOnTurnChange } from "./regionBehaviors/MidiRegionActivityBehaviorType.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard } from "./GMAction.js";
@@ -196,6 +196,8 @@ export let readyHooks = async () => {
       card.append(row);
     }
   });
+
+  Hooks.on("preDeleteActiveEffect", deleteStatusWithCarriers);
 
   // Handle removal of concentration
   Hooks.on("deleteActiveEffect", (deletedEffect, options: any, user) => {
@@ -1852,4 +1854,24 @@ Hooks.on("dnd5e.preConfigureInitiative", (actor, rollConfig) => {
   }
 });
 
+/** Status documents midi is deleting together with the statuses that carry them. */
+const carrierDeletes = new Set<string>();
 
+/**
+ * Deleting a status while one of midi's statuses carries it (Invisible while the self-ending Invisible is on, from the
+ * sheet, the token HUD or a macro): the delete is cancelled and redone with the carriers in the same operation. One
+ * render, and DAE's dependent conditions never see the carrier alone and put the plain status back.
+ */
+function deleteStatusWithCarriers(effect: ActiveEffect.Implementation, options: object, userId: string): boolean | void {
+  const actor = effect.parent;
+  if (!(actor instanceof Actor) || !effect.id || carrierDeletes.has(effect.uuid)) return;
+  const carriers = Object.entries(MIDI_IMPLYING_STATUSES).filter(([, implied]) => effect.id === getStaticID(implied))
+    .map(([status]) => getStaticID(status)).filter(id => actor.effects.has(id));
+  if (!carriers.length) return;
+  const uuid = effect.uuid;
+  carrierDeletes.add(uuid);
+  actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id, ...carriers])
+    .catch(err => { if (!/does not exist/.test(String(err?.message ?? err))) error("midi-qol | deleteStatusWithCarriers", err); })
+    .finally(() => carrierDeletes.delete(uuid));
+  return false;
+}

@@ -2,7 +2,7 @@
 
 **Sample items**
 * Added: 2024 actions (sample items › Actions; automation needs CAT): Attack, Check Cover, Generic Actions, Hide, Influence, Knock Out, Magic, Mount, Ready, Search, Squeeze, Stabilize, Study, Suffocation, Underwater. Generic Actions lists these and, with CPR installed, CPR's actions; one both offer is listed twice, tagged with its source.
-* Added: *Hide* records the Stealth total as the DC to find you, for any activity using CPR's or midi's generic hide macro (with CPR installed its macro applies the effect); Hidden ends on an attack roll, a spell with a Verbal component, or being found. *Search*'s Perception finds hidden enemies in line of sight whose DC the total meets; setting *Search: GM confirms who is found*.
+* Added: *Hide* follows the 2024 rules, as a generic action (midi's hide macro, usable on any activity; with CPR installed CPR's hide applies the effect): a DC 15 Stealth check makes you Hidden (Invisible), and your Stealth total is the DC to find you. Hidden ends when you make an attack roll, cast a spell with a Verbal component, or are found. *Search*: a Perception check finds hidden enemies in line of sight whose DC the total meets, ending their Hidden; setting *Search: GM confirms who is found*.
 * Added: the actions' result messages (Hide's DC, Search, Check Cover, Influence) are deleted with the action's card, as is a chosen action with its Generic Actions card. Any message flagged `flags.midi-qol.origin` with a card's id is deleted with that card.
 * Added: *Starfall Bullet* (legendary sling bullet): on a hit, 8d10 radiant to the target and DC 18 Dex for 4d10 fire (half on a success) to every other creature within 15 ft; the crater is difficult terrain and bright light for 1 minute (region and light made by the GM, removed when the minute ends).
 * Added: *Chainbreaker Bolt* (legendary crossbow bolt): on a hit, choose up to five more creatures, each within 30 ft of the last one hit; each takes the crossbow's damage dice plus 3d10 force.
@@ -13,9 +13,10 @@
 * Changed: a blank onUse macro name is the item's own macro (the used activity's, else the item's; for an effect change, the effect's activity's, else its item's), and an item with a macro but no onUse macros runs it after active effects. An onUseMacroName effect change with no pass is ignored and reported.
 
 **Breaking: attacking no longer removes invisible or hidden**
-* Removed: the optional rule *Attacking removes hidden/invisible*. midi no longer ends Invisible or Hiding when a creature attacks; an effect ends by its own special duration (midi's Invisibility: 1Attack, 1Spell, DamageDealt), so Greater Invisibility and other lasting invisibility survive an attack (it was ending the spell and its concentration). Invisible set from the token HUD has no special duration and stays until removed by hand.
-* Added: status *Invisible (until it attacks, casts a spell or deals damage)*: ends itself as the Invisibility spell does (1Attack, 1Spell, DamageDealt).
-* Changed: the *Invisibility* sample also ends when its target deals damage (DamageDealt), as the 2024 spell does.
+* Removed: the optional rule *Attacking removes hidden/invisible*. midi no longer ends Invisible or Hiding when a creature attacks; an effect ends by its own special duration (midi's Invisibility: 1Attack, 1Spell, DamageDealt on its status), so Greater Invisibility and other lasting invisibility survive an attack (it was ending the spell and its concentration). Invisible set from the token HUD has no special duration and stays until removed by hand.
+* Added: status *Invisible (until it attacks, casts a spell or deals damage)*: ends itself as the Invisibility spell does (1Attack, 1Spell, DamageDealt). With DAE's *Dependent Conditions* on, the plain Invisible it adds carries the token icon, so the token shows one. Removing Invisible (sheet or token HUD) removes it too, with or without dependent conditions.
+* Added: *Statuses Applied* on the activity sheet (midi-qol tab › Use sub-tab): statuses applied to the targets directly, the same status the token HUD toggles, not an active effect carrying it; each with extra special durations and On Save. They follow the activity's effects (hit, failed save, activation condition), including the item's other activity and an ammunition activity, and depend on the caster's concentration. A creature that already has the status keeps it.
+* Changed: the *Invisibility* sample applies the Invisible status that way (no item effect); it ends when the target attacks, casts a spell or deals damage (DamageDealt), ending the spell.
 
 **Damage**
 * Fixed: Damage Absorption heals the damage dealt: the target's immunity, resistance, vulnerability, damage modification and DR to that type no longer reduce it (an immune absorber, like the SRD golems, healed nothing). A save and the damage card's multiplier still apply.
@@ -24,6 +25,7 @@
 * Added: `flags.midi-qol.noDeathSaveFailureFromDamage`: damage at 0 hit points adds no death save failures under *Enforce death saves*.
 
 **Chat cards**
+* Fixed: a card showed the same picture twice when an activity's image is its item's (common in imported content); the duplicate activity icon is dropped. A different activity image, or dnd5e's activity type icon, still shows.
 * Added: follow-up buttons. An activity marked *Follow-up Button* (with an optional *Follow-up Condition*) is offered as a button on its item's attack card when the attack hits, for the attacker's owners and the GM; clicking runs it at the creatures hit (a critical as a critical), spends its uses and links its card to the attack's. `MidiQOL.addFollowUp(workflow, activity, {label})` offers any activity.
 * Added: hook `midi-qol.conditionData` to add data conditions can read.
 * Changed: a damage card is linked to the card it came from (`system.origin`), is deleted with it, and no longer repeats its speaker and whisper recipients.

@@ -2,61 +2,7 @@
   "name": "Invisibility",
   "type": "spell",
   "img": "icons/creatures/magical/spirit-undead-ghost-purple.webp",
-  "effects": [
-    {
-      "_id": "invisibleEffct00",
-      "disabled": false,
-      "duration": {
-        "value": 3600,
-        "units": "seconds"
-      },
-      "origin": null,
-      "transfer": false,
-      "flags": {
-        "dae": {
-          "stackable": "none",
-          "macroRepeat": "none",
-          "specialDuration": [
-            "1Attack",
-            "1Spell",
-            "DamageDealt"
-          ],
-          "transfer": false,
-          "selfTarget": false,
-          "selfTargetAlways": false,
-          "durationExpression": "",
-          "enableCondition": "",
-          "disableCondition": "",
-          "disableIncapacitated": false,
-          "dontApply": false
-        }
-      },
-      "name": "Invisible",
-      "description": "<p>The spell ends early immediately after the target makes an attack roll, deals damage, or casts a spell.</p>",
-      "statuses": [
-        "invisible"
-      ],
-      "_stats": {
-        "compendiumSource": null,
-        "duplicateSource": null,
-        "coreVersion": null,
-        "systemId": null,
-        "systemVersion": null,
-        "createdTime": null,
-        "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
-      },
-      "img": "systems/dnd5e/icons/svg/statuses/invisible.svg",
-      "type": "base",
-      "system": {
-        "changes": []
-      },
-      "sort": 0,
-      "_key": "!items.effects!NPEybW5XcLouBuFX.invisibleEffct00",
-      "showIcon": 2
-    }
-  ],
+  "effects": [],
   "flags": {
     "midi-qol": {
       "onUseMacroName": "",
@@ -96,13 +42,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.4"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>A creature you touch has the &amp;Reference[invisible]{Invisible} condition until the spell ends. The spell ends early immediately after the target makes an attack roll, deals damage, or casts a spell.</p><p><strong>Using a Higher-Level Spell Slot.</strong> You can target one additional creature for each spell slot level above 2.</p><p><em>Utility activity applies Invisible status. The effect auto-removes on first attack or spell cast via DAE specialDuration. Scales to additional targets with higher spell slots.</em></p>",
+      "value": "<p>A creature you touch has the &amp;Reference[invisible]{Invisible} condition until the spell ends. The spell ends early immediately after the target makes an attack roll, deals damage, or casts a spell.</p><p><strong>Using a Higher-Level Spell Slot.</strong> You can target one additional creature for each spell slot level above 2.</p><p><em>midi-qol: the activity applies the Invisible condition itself (Statuses Applied), which ends when the target makes an attack roll, casts a spell or deals damage, ending the spell and concentration. Scales to additional targets with higher spell slots.</em></p>",
       "chat": ""
     },
     "source": {
@@ -186,11 +132,7 @@
           "concentration": false,
           "override": false
         },
-        "effects": [
-          {
-            "_id": "invisibleEffct00"
-          }
-        ],
+        "effects": [],
         "range": {
           "override": false
         },
@@ -244,7 +186,18 @@
           "otherActivityCompatible": true,
           "displayActivityName": false,
           "rollMode": "default",
-          "chooseEffects": false
+          "chooseEffects": false,
+          "statuses": [
+            {
+              "id": "invisible",
+              "specialDuration": [
+                "1Attack",
+                "1Spell",
+                "DamageDealt"
+              ],
+              "onSave": false
+            }
+          ]
         },
         "useConditionReason": "",
         "otherActivityId": "none",

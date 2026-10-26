@@ -1,6 +1,6 @@
 import { heldKeys } from "../lib/rollKeys.js";
 import { Activity, ActivityEffectData, ActivityUseConfiguration, RollDialogConfig, DND5ETargetDescriptor, RollMessageConfig, RollProcessConfig, MidiUsageChatContext, Dnd5eSystem, EmanationShapeData } from "../../globals.js";
-import { GameSystemConfig, MODULE_ID, debugEnabled, error, i18n, i18nFormat, warn, busyWait } from "../../midi-qol.js";
+import { GameSystemConfig, MODULE_ID, debugEnabled, error, i18n, i18nFormat, warn, busyWait, specialDurationChoices } from "../../midi-qol.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "../GMAction.js";
 import { ActiveDefenceWorkflow, AugmentedEvent, TrapWorkflow, Workflow, SavesFirstWorkflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
@@ -268,6 +268,13 @@ export let MidiActivityMixin = Base => {
           noConcentrationCheck: new BooleanField({ name: "noConcentrationCheck", initial: false }),
           skipConcentrationCheck: new BooleanField({ name: "skipConcentrationCheck", initial: false }),
           autoCEEffects: new StringField({ name: "autoCEEffects", initial: "default", blank: false, required: true }),
+          // Conditions applied to the targets as the condition itself (as the token HUD does), with the activity's
+          // effects: on a failed save, or always with onSave. specialDuration adds to the status's own.
+          statuses: new ArrayField(new SchemaField({
+            id: new StringField({ initial: "" }),
+            specialDuration: new ArrayField(new StringField()),
+            onSave: new BooleanField({ initial: false })
+          }), { initial: [] }),
         }),
         isOverTimeFlag: new BooleanField({ name: "isOverTimeFlag", initial: false }),
         overTimeProperties: new SchemaField({
@@ -2416,7 +2423,43 @@ export let MidiActivityMixinSheet = Base => {
         addMacro: MidiActivitySheet.#addMacro,
         openConditionEditor: MidiActivitySheet.#openConditionEditor,
         openRegionBehaviorEditor: MidiActivitySheet.#openRegionBehaviorEditor,
+        addMidiStatus: MidiActivitySheet.#addMidiStatus,
+        deleteMidiStatus: MidiActivitySheet.#deleteMidiStatus,
+        deleteMidiStatusDuration: MidiActivitySheet.#deleteMidiStatusDuration,
       }
+    }
+
+    static CLEAN_ARRAYS = [...super.CLEAN_ARRAYS, "midiProperties.statuses"];
+
+    static #addMidiStatus() {
+      const statuses = this.activity.toObject().midiProperties?.statuses ?? [];
+      this.activity.update({ "midiProperties.statuses": [...statuses, { id: "", specialDuration: [], onSave: false }] });
+    }
+
+    static #deleteMidiStatus(event: PointerEvent, target: HTMLElement) {
+      const statuses = this.activity.toObject().midiProperties?.statuses ?? [];
+      statuses.splice(Number(target.dataset.index), 1);
+      this.activity.update({ "midiProperties.statuses": statuses });
+    }
+
+    static #deleteMidiStatusDuration(event: PointerEvent, target: HTMLElement) {
+      const statuses = this.activity.toObject().midiProperties?.statuses ?? [];
+      const entry = statuses[Number(target.dataset.index)];
+      if (!entry) return;
+      entry.specialDuration = entry.specialDuration.filter(key => key !== target.dataset.key);
+      this.activity.update({ "midiProperties.statuses": statuses });
+    }
+
+    /** A special duration chosen from a status's "add" list joins that status's durations. */
+    #onAddMidiStatusDuration(event: Event) {
+      // Not a form field: the form must not submit the status list before this update.
+      event.stopPropagation();
+      const select = event.currentTarget as HTMLSelectElement;
+      const statuses = this.activity.toObject().midiProperties?.statuses ?? [];
+      const entry = statuses[Number(select.dataset.midiStatusDuration)];
+      if (!entry || !select.value || entry.specialDuration.includes(select.value)) return;
+      entry.specialDuration.push(select.value);
+      this.activity.update({ "midiProperties.statuses": statuses });
     }
     static #addMacro() {
       const Editor = globalThis.DAE?.DIMEditor;
@@ -2514,6 +2557,12 @@ export let MidiActivityMixinSheet = Base => {
     }
 
     async _prepareMidiQolContext(context) {
+      context.midiStatuses = (this.activity.toObject().midiProperties?.statuses ?? []).map(entry => ({ ...entry,
+        durations: entry.specialDuration.map(key => ({ key, label: specialDurationChoices[key] ?? key }))
+      }));
+      context.midiStatusOptions = Object.fromEntries(CONFIG.statusEffects.map(status => [status.id, i18n(status.name ?? status.id)])
+        .sort((a, b) => a[1].localeCompare(b[1], game.i18n?.lang)));
+      context.specialDurationOptions = specialDurationChoices;
       // context = await super._prepareEffectContext(context);
       context.ConfirmTargetOptions = Object.entries(confirmTargetOptions).map(([value, label]) => ({ value, label }));
       if (this.activity.forcedTargetConfirmation) {
@@ -2625,6 +2674,8 @@ export let MidiActivityMixinSheet = Base => {
 
     async _onRender(context, options) {
       await super._onRender(context, options);
+      this.element.querySelectorAll("select[data-midi-status-duration]")
+        .forEach(select => select.addEventListener("change", this.#onAddMidiStatusDuration.bind(this)));
 
       // Auto-set target.override when region behaviour is enabled. The form-rendered
       // checkbox lives in the activation tab via region-behavior-targeting.hbs.

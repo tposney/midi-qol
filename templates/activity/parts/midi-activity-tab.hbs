@@ -14,6 +14,69 @@
         {{ formField fields.midiProperties.fields.skipConcentrationCheck value=source.midiProperties.skipConcentrationCheck input=@root.inputs.createCheckboxInput }}
       {{/if}}
     </fieldset>
+    <fieldset>
+      <legend>
+        <span>{{ localize "midi-qol.ActivityStatuses.Label" }}</span>
+        <button type="button" class="unbutton control-button" data-action="addMidiStatus" data-tooltip
+                aria-label="{{ localize 'midi-qol.ActivityStatuses.Add' }}">
+          <i class="fas fa-plus" inert></i>
+        </button>
+      </legend>
+      <p class="hint">{{ localize "midi-qol.ActivityStatuses.Hint" }}</p>
+      <ul class="separated-list flexcol unlist">
+        {{#each midiStatuses}}
+        <li>
+          <div class="form-group">
+            <label>{{ localize "midi-qol.ActivityStatuses.Status" }}</label>
+            <div class="form-fields">
+              <select name="midiProperties.statuses.{{ @index }}.id">
+                {{ selectOptions @root.midiStatusOptions selected=this.id blank="" }}
+              </select>
+              <div class="list-controls flexrow">
+                <button type="button" class="unbutton control-button" data-action="deleteMidiStatus" data-index="{{ @index }}"
+                        data-tooltip aria-label="{{ localize 'midi-qol.ActivityStatuses.Delete' }}">
+                  <i class="fa-solid fa-trash" inert></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>{{ localize "midi-qol.ActivityStatuses.SpecialDuration" }}</label>
+            <div class="form-fields">
+              <select data-midi-status-duration="{{ @index }}">
+                {{ selectOptions @root.specialDurationOptions blank=(localize "midi-qol.ActivityStatuses.AddDuration") }}
+              </select>
+            </div>
+          </div>
+          {{#if durations.length}}
+          <ul class="unlist">
+            {{#each durations}}
+            <li class="flexrow">
+              <span>{{ label }}</span>
+              <div class="list-controls flexrow">
+                <button type="button" class="unbutton control-button" data-action="deleteMidiStatusDuration"
+                        data-index="{{ @../index }}" data-key="{{ key }}" data-tooltip
+                        aria-label="{{ localize 'midi-qol.ActivityStatuses.DeleteDuration' }}">
+                  <i class="fa-solid fa-trash" inert></i>
+                </button>
+              </div>
+            </li>
+            {{/each}}
+          </ul>
+          {{/if}}
+          <select multiple hidden name="midiProperties.statuses.{{ @index }}.specialDuration">
+            {{ selectOptions @root.specialDurationOptions selected=this.specialDuration }}
+          </select>
+          <div class="form-group">
+            <label>{{ localize "midi-qol.ActivityStatuses.OnSave" }}</label>
+            <div class="form-fields">
+              <input type="checkbox" name="midiProperties.statuses.{{ @index }}.onSave" {{ checked this.onSave }}>
+            </div>
+          </div>
+        </li>
+        {{/each}}
+      </ul>
+    </fieldset>
   </section>
 
   <section class="tab activity-{{ tab.tabs.workflowSettings.id }} {{ tab.tabs.workflowSettings.cssClass }}"

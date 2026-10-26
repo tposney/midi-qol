@@ -102,6 +102,7 @@ import {
   isDnd5eRollMessage,
   dnd5eRollType,
   tokenSourceElevation,
+  applyStatusCondition,
 } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, buildPreComputedAdvantageMap, checkActivityAbilities } from "./patching.js";
@@ -2630,6 +2631,22 @@ export class Workflow {
     foundry.utils.setProperty(effectData, "system.origin", { activity: this.activity.uuid, effect: concentrationUuid ?? null, message: this.itemCardUuid ?? null });
   }
 
+  /**
+   * An activity's statuses (midiProperties.statuses) for `token`, applied as the condition itself and tied to
+   * concentration as its effects are: those marked onSave, or the others.
+   */
+  async applyActivityStatuses(activity: Activity | undefined, token: Token.Implementation, onSave: boolean) {
+    const entries = (activity?.midiProperties?.statuses ?? []).filter(entry => entry.id && !!entry.onSave === onSave);
+    if (!activity || !entries.length || !token.actor) return;
+    const concentrationUuid = this.actor.effects.get(this.concentrationId ?? "")?.uuid;
+    const prepare = (effectData: ActiveEffect.CreateData) => {
+      effectData.origin = concentrationUuid ?? activity.uuid;
+      foundry.utils.setProperty(effectData, "system.origin", { activity: activity.uuid, effect: concentrationUuid ?? null, message: this.itemCardUuid ?? null });
+      if (concentrationUuid) foundry.utils.setProperty(effectData, "flags.dnd5e.dependentOn", concentrationUuid);
+    };
+    for (const entry of entries) await applyStatusCondition(token.actor, entry.id, { specialDuration: entry.specialDuration, prepare });
+  }
+
   async WorkflowState_ApplyDynamicEffects(context: WorkflowContext = {}): Promise<WorkflowState> {
     this.activationMatches = new Set();
     this.otherActivationMatches = new Set();
@@ -2943,6 +2960,8 @@ export class Workflow {
           await globalThis.DAE.doActivityEffects(this.activity, true, [token], effectsToApplyUuids, doEffectsData)
         }
       }
+      if (this.forceApplyEffects || this.effectTargets.has(token)) await this.applyActivityStatuses(this.activity, token, false);
+      if (this.effectTargetsOnSave.has(token)) await this.applyActivityStatuses(this.activity, token, true);
       if (this.forceApplyEffects || this.otherEffectTargets.has(token)) {
         if (hasOtherActivityEffects) {
           let selectedEffects = otherActivityEffects;
@@ -2966,11 +2985,19 @@ export class Workflow {
           await globalThis.DAE.doActivityEffects(this.otherActivity, true, [token], effectsToApplyUuids, doEffectsData)
         }
       }
-      if (daeInstalled && ammunition) {
+      if (this.otherActivity) {
+        const otherApplies = this.forceApplyEffects || (this.otherActivationMatches?.has(token) && this.otherEffectTargets.has(token)
+          && (!(this.otherActivity.save || this.otherActivity.check) || this.failedSaves.has(token)));
+        if (otherApplies) await this.applyActivityStatuses(this.otherActivity, token, false);
+        if (this.otherEffectTargetsOnSave.has(token)) await this.applyActivityStatuses(this.otherActivity, token, true);
+      }
+      if (ammunition) {
         const applies = this.forceApplyEffects
           || (ammunitionEffectTargets.has(token) && (!ammunitionHasSave || this.failedSaves.has(token)));
         const uuids = [...(applies ? ammunitionEffects : []), ...(ammunitionEffectTargetsOnSave.has(token) ? onSaveAmmunitionEffects : [])].map(ef => ef.uuid);
-        if (uuids.length) await globalThis.DAE.doActivityEffects(ammunition, true, [token], uuids, doEffectsData);
+        if (daeInstalled && uuids.length) await globalThis.DAE.doActivityEffects(ammunition, true, [token], uuids, doEffectsData);
+        if (applies) await this.applyActivityStatuses(ammunition, token, false);
+        if (ammunitionEffectTargetsOnSave.has(token)) await this.applyActivityStatuses(ammunition, token, true);
       }
     }
     // Perhaps this should use this.effectTargets

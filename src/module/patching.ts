@@ -1,4 +1,4 @@
-import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats } from "../midi-qol.js";
+import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, gameStats, getStaticID, MIDI_IMPLYING_STATUSES } from "../midi-qol.js";
 import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGameSetting, playerControlsInvisibleTokens } from "./settings.js";
 import { bonusDialog, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditionsAsync, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, dnd5eRollType, updateUserTargets, isEffectExpired, processTurnOverTime, toggleStatus } from "./utils.js";
 import { computeActivityTemplateTargets } from "./activities/activityHelpers.js";
@@ -87,6 +87,7 @@ export function initPatching() {
   // I think this can be removed in v13 libWrapper.register(MODULE_ID, "KeyboardManager.prototype._onFocusIn", _onFocusIn, "OVERRIDE");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.getRollData", actorGetRollData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.calculateDamage", calculateDamageAllTraits, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.toggleStatusEffect", toggleImpliedStatus, "MIXED");
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preUpdate", combatPreUpdate, "WRAPPER");
   Hooks.on("updateCombat", recoverRerolledInitiativeUses);
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._onStartTurn", combatOnStartTurn, "WRAPPER");
@@ -1159,6 +1160,19 @@ const DAMAGE_TRAIT_KEYS = { immunity: "di", resistance: "dr", vulnerability: "dv
  * A per-type ignore or downgrade also reaches an "All Damage" trait: for the (synchronous) calculation the trait
  * lists the concrete damage types instead. dnd5e decides "All Damage" before, and apart from, per-type options.
  */
+/**
+ * A status carried only by one of midi's statuses (Invisible from the self-ending Invisible, before or without DAE's
+ * dependent condition): core finds no document to toggle, so off would do nothing and a toggle would add a second one.
+ */
+async function toggleImpliedStatus(this: Actor.Implementation, wrapped, statusId: string, options: Actor.ToggleStatusEffectOptions = {}) {
+  const carriers = Object.entries(MIDI_IMPLYING_STATUSES).filter(([, implied]) => implied === statusId)
+    .map(([status]) => getStaticID(status)).filter(id => this.effects.has(id));
+  if (!carriers.length || this.effects.has(getStaticID(statusId))) return wrapped(statusId, options);
+  if (options.active) return true;
+  await this.deleteEmbeddedDocuments("ActiveEffect", carriers);
+  return false;
+}
+
 function calculateDamageAllTraits(this: Actor.Implementation, wrapped, damages, options: any = {}) {
   const perType = (value: unknown) => value instanceof Set && value.size > 0 && !value.has("ALL");
   // @ts-expect-error no dnd5e-types

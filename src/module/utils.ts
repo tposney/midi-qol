@@ -10286,6 +10286,28 @@ export async function toggleStatus(actor: Actor.Implementation | null | undefine
   return queueActorEffects(actor, () => applyStatus(actor, statusId, options));
 }
 
+/**
+ * Apply a status to an actor as the condition itself (the document the token HUD creates), not an effect carrying it.
+ * `specialDuration` adds to the status's own; `prepare` sets the rest (origin, dependency). A creature that already
+ * has the status keeps it.
+ */
+export async function applyStatusCondition(actor: Actor.Implementation | null | undefined, statusId: string,
+  { specialDuration = [], prepare }: { specialDuration?: string[], prepare?: (effectData: ActiveEffect.CreateData) => void } = {}): Promise<void> {
+  if (!actor || !CONFIG.statusEffects.find(se => se.id === statusId)) return;
+  const effectData = (await ActiveEffect.implementation.fromStatusEffect(statusId)).toObject();
+  prepare?.(effectData);
+  const durations = new Set([...((effectData.flags?.dae?.specialDuration as string[] | undefined) ?? []), ...specialDuration]);
+  if (durations.size) foundry.utils.setProperty(effectData, "flags.dae.specialDuration", [...durations]);
+  const has = () => effectData._id ? actor.effects.has(effectData._id)
+    : actor.effects.some(ef => ef.statuses.size === 1 && ef.statuses.has(statusId));
+  if (has()) return;
+  if (!actor.isOwner) {
+    await unTimedExecuteAsGM("createEffects", { actorUuid: actor.uuid, effects: [effectData], options: { keepId: true } });
+    return;
+  }
+  await queueActorEffects(actor, async () => { if (!has()) await createEffectWithId(actor, effectData); });
+}
+
 async function applyStatus(actor: Actor.Implementation, statusId: string,
   options: Actor.ToggleStatusEffectOptions): Promise<ActiveEffect.Implementation | boolean | undefined> {
   try {
