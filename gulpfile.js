@@ -321,17 +321,31 @@ function setCPRInfo(item, source, version) {
   item.flags["chris-premades"].info = { ...item.flags["chris-premades"].info, source, version };
 }
 
+/**
+ * pack-src files that differ from the last release (the newest tag of midi's major.minor reachable from HEAD), or are
+ * new. Undefined, with a warning, when git can't tell: then only missing versions are set.
+ */
+function changedSinceRelease(packSrcDir) {
+  const { execFileSync } = require("child_process");
+  const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).split("\n").filter(Boolean);
+  const [major, minor] = PACKAGE.version.split(".");
+  try {
+    const [release] = git("describe", "--tags", "--abbrev=0", "--match", `v${major}.${minor}.*`);
+    // Paths relative to the working directory, as ensurePackIds compares them.
+    const files = [...git("diff", "--name-only", "--relative", release, "--", packSrcDir), ...git("ls-files", "--others", "--exclude-standard", "--", packSrcDir)];
+    plog(`CAT versions: ${files.length} file(s) in ${packSrcDir} changed since ${release}`);
+    return new Set(files);
+  } catch (err) {
+    console.warn(`CAT versions: no release to compare ${packSrcDir} with (${err.message.split("\n")[0]}); only missing versions are set`);
+  }
+}
+
 async function ensurePackIds(packSrcDir, { documentType = "Item", compendiumSource = "midi-qol.midiqol-sample-items" } = {}) {
   let modified = 0;
   const midiVersion = PACKAGE.version;
   const keyPrefix = documentType === "Item" ? "items" : "effects";
 
-  // Get the last compile time from marker file
-  const lastCompileMarker = path.join(packSrcDir, ".last-compile");
-  let lastCompileTime = 0;
-  if (fs.existsSync(lastCompileMarker)) {
-    lastCompileTime = fs.statSync(lastCompileMarker).mtimeMs;
-  }
+  const changedFiles = changedSinceRelease(packSrcDir);
 
   function processDirectory(dir, folderId) {
     // Check if this directory has a _Folder.json to determine its folder ID
@@ -401,13 +415,14 @@ async function ensurePackIds(packSrcDir, { documentType = "Item", compendiumSour
           }
         }
 
-        // CAT's automation version: set when missing, bumped to midi's version when the file changed since the last
-        // compile. Only items marked as automations (flags.cat.automation); demos and legacy copies carry none.
+        // CAT's automation version: set when missing, midi's version when the file changed since the last release
+        // (bumped when package.json is). Only items marked as automations (flags.cat.automation); demos and legacy
+        // copies carry none.
         // flags.chris-premades.info.version is kept in step: CAT 0.0.8 reads it when it re-registers midi's pack.
         const automation = item.flags?.cat?.automation;
         if (automation && typeof automation === "object") {
-          const fileModifiedSinceCompile = fs.statSync(fullPath).mtimeMs > lastCompileTime;
-          if ((!automation.version || fileModifiedSinceCompile) && automation.version !== midiVersion) {
+          const changedSinceRelease = changedFiles?.has(path.relative(process.cwd(), fullPath)) ?? false;
+          if ((!automation.version || changedSinceRelease) && automation.version !== midiVersion) {
             console.log(`CAT version updated for ${entry.name}: ${automation.version || "none"} -> ${midiVersion}`);
             automation.version = midiVersion;
             changed = true;
@@ -504,14 +519,10 @@ exports.compilePacks = gulp.series(
 
     await ensurePackIds("pack-src/sampleitems");
     await foundryvttCli.compilePack("pack-src/sampleitems", "packs/sampleitems", { recursive: true });
-    const itemsMarker = path.join("pack-src/sampleitems", ".last-compile");
-    fs.writeFileSync(itemsMarker, new Date().toISOString());
     plog("Compiled pack-src/sampleitems to packs/sampleitems");
 
     await ensurePackIds("pack-src/activeeffects", { documentType: "ActiveEffect", compendiumSource: "midi-qol.midiqol-active-effects" });
     await foundryvttCli.compilePack("pack-src/activeeffects", "packs/activeeffects", { recursive: true });
-    const effectsMarker = path.join("pack-src/activeeffects", ".last-compile");
-    fs.writeFileSync(effectsMarker, new Date().toISOString());
     plog("Compiled pack-src/activeeffects to packs/activeeffects");
   },
   pdel([DEV_DIST() + PACK + GLOB], { force: true }),

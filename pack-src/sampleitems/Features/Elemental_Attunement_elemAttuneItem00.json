@@ -4,14 +4,15 @@
   "img": "icons/magic/fire/flame-burning-fist-strike.webp",
   "system": {
     "description": {
-      "value": "<p>At the start of your turn, you can expend 1 Focus Point to imbue yourself with elemental energy. The energy lasts for 10 minutes or until you have the Incapacitated condition. You gain the following benefits while this feature is active.</p><p><strong>Reach.</strong> When you make an Unarmed Strike, your reach is 10 feet greater than normal, as elemental energy extends from you.</p><p><strong>Elemental Strikes.</strong> Whenever you hit with your Unarmed Strike, you can cause it to deal your choice of Acid, Cold, Fire, Lightning, or Thunder damage rather than its normal damage type. When you deal one of these types with it, you can also force the target to make a Strength saving throw (DC = your Wisdom save DC). On a failed save, you can move the target up to 10 feet toward or away from you.</p><section class=\"secret\" id=\"secret-elemAttuneNote\"><p><strong>Foundry Note</strong></p><p>The <em>Imbue Elements</em> activity spends 1 Focus Point and applies an enchantment to your Unarmed Strike that adds +10 ft reach plus a 10-minute trigger effect.</p><p>When you hit with an Unarmed Strike while attuned, you are prompted to choose a damage type (Acid / Cold / Fire / Lightning / Thunder / No Change). If you choose an elemental type, you are then prompted to push or pull the target 5 or 10 feet (the Pull option is filtered by current distance so you can't pull a target through your space). The push triggers the automation-only <em>Elemental Push</em> activity: a STR save vs DC = <code>@abilities.wis.dc</code> (your Wisdom save DC = 8 + proficiency + Wisdom modifier). On a failed save the target is moved via <code>MidiQOL.moveTokenAwayFromPoint</code> which preserves any active grappled / grappling effects.</p><p><strong>Note:</strong> chris-premades' <code>tokenUtils.pushToken</code> unconditionally removes grappled / grappling effects on the moved token without checking the grappler's reach. This sample item deliberately avoids that path.</p></section>",
+      "value": "<p><em>midi-qol: Imbue Elements spends 1 Focus Point and for 10 minutes gives your Unarmed Strike 10 feet more reach. When the strike hits you choose acid, cold, fire, lightning, thunder or no change; with an element you can then push or pull the target 5 or 10 feet, which it resists with a Strength save against your Wisdom save DC. A grapple survives the move.</em></p><p><em>No rules text (not SRD; Player's Handbook (2024)): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p>",
       "chat": ""
     },
     "source": {
-      "book": "PHB'24",
+      "book": "Player's Handbook (2024)",
       "page": "",
       "license": "",
-      "rules": "2024"
+      "rules": "2024",
+      "custom": "midi-qol sample"
     },
     "type": {
       "value": "class",
@@ -311,12 +312,12 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "14.0.12"
+        "version": "14.0.16"
       }
     },
     "cat": {
       "automation": {
-        "version": "14.0.12"
+        "version": "14.0.16"
       }
     }
   },

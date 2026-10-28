@@ -7,7 +7,7 @@
           {{selectOptions ../macros selected=macro}}
         </select>
         {{#if (eq macro "Custom")}}
-          <input type="text" name="onUseMacros.{{@index}}.macroName" value='{{macroName}}' placeholder='{{localize "midi-qol.MacroName"}}'/>
+          <input type="text" name="onUseMacros.{{@index}}.macroName" value='{{macroName}}' placeholder='{{localize "midi-qol.MacroNameDefault"}}'/>
         {{else}}
           <button type="button" data-action="editMacro">
             <i class="fa-solid fa-file-pen"></i>

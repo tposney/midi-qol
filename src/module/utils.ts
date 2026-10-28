@@ -70,9 +70,15 @@ export function modifyDamageBy({
   if (!damageItem || foundry.utils.isEmpty(damageItem)) return {};
   if (!value) return {};
   const damageModification = { value, active: { multiplier }, type, properties: new Set<string>() };
-  if (!configSettings.useDamageDetail) damageItem.hpDamage += value;
   damageItem.damageDetail.push(damageModification);
   if (reason) damageItem.details.push(reason);
+  // hpDamage and the rest follow the detail, as midi will apply it (isDamaged/isHealed and later macros read them).
+  // @ts-expect-error no dnd5e-types
+  const hp = fromActorUuid(damageItem.actorUuid)?.system.attributes.hp;
+  if (hp) {
+    const { totalDamage, deltaHP, deltaTemp, newTempHP } = hpChangeFromDetail(damageItem.damageDetail, hp);
+    Object.assign(damageItem, { totalDamage, hpDamage: deltaHP, tempDamage: deltaTemp, newHP: hp.value - deltaHP, newTempHP });
+  }
   return damageModification;
 }
 
@@ -468,40 +474,55 @@ export function mergeDamageDetail(damageDetail: any[]) {
   }
   return Object.values(merged);
 }
+/** Whether a damage detail heals: healing, or damage the target absorbs (Damage Absorption). Shared by the damage card's
+ * figures and the damage's application so the two agree. */
+export function detailHeals(d: DamageDescription): boolean {
+  return d.type === "healing" || !!d.active?.absorption || !!(d.active?.type as Record<string, boolean> | undefined)?.absorption;
+}
+
+export function calculateDamageAmounts(damageDetail: DamageDescription[]): { amount: number; temp: number; healing: number; vitality: number; tempMax: number } {
+  return damageDetail.reduce((acc, d) => {
+    if (d.type === "temphp") acc.temp += d.value;
+    else if (d.type === "vitality") acc.vitality += d.value; // Vitality damage (positive) or healing (negative)
+    else if (d.type === "maximum") acc.tempMax += d.value; // Max HP reduction (positive = reduce max)
+    else if (detailHeals(d)) acc.healing += d.value;
+    else if (d.type !== "midi-none") acc.amount += d.value;
+    return acc;
+  }, { amount: 0, temp: 0, healing: 0, vitality: 0, tempMax: 0 });
+}
+
+/** What a damage detail does to these hit points, as midi applies it: the damage list's figures and the hit point update both come from here. */
+export function hpChangeFromDetail(damageDetail: DamageDescription[], hp: { value: number; temp?: number | null; damage: number }) {
+  let { amount, temp, healing, vitality, tempMax } = calculateDamageAmounts(damageDetail);
+  const totalDamage = Math.max(0, amount);
+  tempMax = Math.trunc(tempMax);
+  let change = totalDamage + healing;
+  change = change > 0 ? Math.floor(change) : Math.ceil(change);
+  const oldTemp = hp.temp ?? 0;
+  const deltaTemp = change > 0 ? Math.min(oldTemp, change) : 0;
+  // A positive tempMax lowers the maximum, which can force the current value down.
+  const deltaHP = Math.clamp(change - deltaTemp, -hp.damage + tempMax, hp.value - tempMax);
+  const newTempHP = Math.max(oldTemp - deltaTemp, temp);
+  return { totalDamage, change, temp, healing, vitality, tempMax, deltaTemp, deltaHP, newTempHP };
+}
+
 export function setupDamageDetails(actorDamage: PreSetupDamageListEntry, selector: "combinedDamage" | "otherDamage", actor: Actor.Implementation) {
   const mergedDetails = mergeDamageDetail(actorDamage.damageDetails[selector] ?? []);
-  let { damage, temp, healing } = (mergedDetails).reduce((acc, d) => {
-    if (d.type === "temphp") acc.temp += d.value;
-    else if (d.type === "healing") acc.healing += d.value;
-    else if (!["midi-none", "vitality"].includes(d.type)) acc.damage += d.value; // Exclude vitality from HP damage
-    return acc;
-  }, { damage: 0, temp: 0, healing: 0 });
-  damage = Math.max(0, damage);
-  let totalDamage = damage;
-  let healingAdjustedTotalDamage = damage + healing;
-  healingAdjustedTotalDamage = healingAdjustedTotalDamage < 0 ? Math.ceil(healingAdjustedTotalDamage) : Math.floor(healingAdjustedTotalDamage);
   const as = actor?.system;
   // @ts-expect-error no dnd5e-types
   if (!as || !as.attributes.hp) return;
   // @ts-expect-error no dnd5e-types
-  let effectiveTemp = as.attributes.hp.temp ?? 0;
-  const deltaTemp = healingAdjustedTotalDamage > 0 ? Math.min(effectiveTemp, healingAdjustedTotalDamage) : 0;
-  // @ts-expect-error no dnd5e-types
-  const deltaHP = Math.clamp(healingAdjustedTotalDamage - deltaTemp, -as.attributes.hp.damage, as.attributes.hp.value);
-  // @ts-expect-error no dnd5e-types
-  const oldTempHP = as.attributes.hp.temp ?? 0;
-  const newTempHP = Math.floor(Math.max(0, effectiveTemp - deltaTemp, temp))
+  const hp = as.attributes.hp;
+  const { totalDamage, change: healingAdjustedTotalDamage, deltaHP, newTempHP } = hpChangeFromDetail(mergedDetails, hp);
+  const oldTempHP = hp.temp ?? 0;
   const completeActorDamage: DamageListEntry = {
     damageSelector: selector,
     ...actorDamage,
     updateOptions: {},
     calcDamageOptions: actorDamage.damageDetails.calcDamageOptions[selector] as CalcDamageOptions,
-    // @ts-expect-error no dnd5e-types
-    oldHP: as.attributes.hp.value,
-    // @ts-expect-error no dnd5e-types
-    newHP: as.attributes.hp.value - deltaHP,
+    oldHP: hp.value,
+    newHP: hp.value - deltaHP,
     oldTempHP,
-    useDamageDetail: configSettings.useDamageDetail,
     hpDamage: deltaHP,
     newTempHP,
     // damages.tempDamage = deltaTemp,
@@ -1085,6 +1106,24 @@ export function midiCustomEffect(actor: Actor.Implementation, change: MidiChange
     if (typeof change.value !== "string") return true;
     const args = change.value.split(",")?.map(arg => arg.trim());
     const currentFlag = foundry.utils.getProperty(actor, `flags.${MODULE_ID}.onUseMacroName`) as string ?? "";
+    if (!args[0]) {
+      // A blank macro name is the effect's own macro: its activity's, else its item's, if it has one
+      if (!args[1]) {
+        const message = `onUseMacroName change "${change.value}" on ${change.effect?.name ?? "an effect"} (${actor.name}) has no macro pass and is ignored`;
+        TroubleShooter.recordError(new Error(message), message);
+        return true;
+      }
+      const activityUuid = change.effect?.flags?.dae?.activity;
+      const activity = activityUuid ? fromUuidSync(activityUuid) as Activity | undefined : undefined;
+      const origin = originUuid ? fromUuidSync(originUuid) : undefined;
+      const item = origin instanceof Item ? origin : (origin instanceof ActiveEffect && origin.parent instanceof Item ? origin.parent : undefined);
+      if (activity?.macro?.command) args[0] = `ActivityMacro.${activityUuid}`;
+      else if (item && DAE.getItemMacroCommand(item)) args[0] = "ItemMacro";
+      else {
+        if (debugEnabled > 0) warn(`onUseMacroName change on ${change.effect?.name} (${actor.name}) has a blank macro name and its item has no macro`);
+        return true;
+      }
+    }
     if (args[0] === "ActivityMacro" || args[0] === MQActivityMacroLabel) {
       if (change.effect?.flags.dae?.activity) args[0] = `ActivityMacro.${change.effect.flags.dae.activity}`;
       // @ts-expect-error no dnd5e-types
@@ -1133,7 +1172,9 @@ export function midiCustomEffect(actor: Actor.Implementation, change: MidiChange
       // else if (sourceId) args[0] = `ItemMacro.${sourceId}`;
       else {
         if (originUuid?.includes("Item.")) {
-          args[0] = `ItemMacro.${originUuid}`;
+          // An origin on an item's effect (an aura's copy points at the aura) is that item's.
+          const effectAt = originUuid.indexOf(".ActiveEffect.");
+          args[0] = `ItemMacro.${effectAt >= 0 ? originUuid.slice(0, effectAt) : originUuid}`;
         } else {
           const origin = fromUuidSync(change.effect?.origin) as Item.Implementation | ActiveEffect.Implementation | undefined;
           if (origin instanceof Item) args[0] = `ItemMacro.${origin.uuid}`;
@@ -1218,9 +1259,11 @@ export function midiCustomEffect(actor: Actor.Implementation, change: MidiChange
 //   return returnvalue;
 // }
 
-export function untargetDeadTokens() {
+/** Untargets the user's targets at 0 hit points; with `only`, just those of them (a finished workflow's targets). */
+export function untargetDeadTokens(only?: Set<Token.Implementation>) {
   if (autoRemoveTargets !== "none") {
     game.user?.targets.forEach((t) => {
+      if (only && !only.has(t)) return;
       //@ts-expect-error no dnd5e-types
       if (t.actor?.system.attributes.hp.value <= 0) {
         t.setTarget(false, { releaseOthers: false });
@@ -2470,7 +2513,11 @@ export async function completeActivityUse(activityRef: Activity | string | undef
         //@ts-expect-error dynamic hook name
         Hooks.off(completeHookName, completeHookId);
         if (source && debugEnabled > 0) warn(`completeActivityUse ${source}: ${activity?.item?.name} ${completeHookName}`);
-        updateUserTargets(localSavedTargetIds);
+        // Put back the targets saved at the start only if the user's are still the ones this use left: another use
+        // (or the player) may have targeted since, and restoring would take its targets away.
+        const own = new Set([...((result as Workflow | undefined)?.targets ?? targetsToUse)].map(t => t.id));
+        const current = new Set([...(game.user?.targets ?? [])].map(t => t.id));
+        if (current.size === own.size && [...current].every(id => own.has(id))) updateUserTargets(localSavedTargetIds);
         resolve(result);
       };
 
@@ -6131,8 +6178,12 @@ export async function promptReactions(
       enableNotifications(false);
       for (let ref of reactionActivityList) {
         if (typeof ref === "string") reactionActivities.push((await fromUuid(ref)) as unknown as Activity);
-        // Inaccurate, but simplifies things
-        else reactionActivities.push(ref as unknown as Activity);
+        else {
+          // An object reference (the older form, still used by macros) is its activity when the uuid resolves: the
+          // dialog reads the activity's item.
+          const activity = "uuid" in ref && ref.uuid ? await fromUuid(ref.uuid) : undefined;
+          reactionActivities.push((activity ?? ref) as unknown as Activity);
+        }
       };
     } finally {
       enableNotifications(true);

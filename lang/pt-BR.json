@@ -613,8 +613,6 @@
   "midi-qol.VisionTestHeight.Hint": "Qual elevação usar para testar a visibilidade do token. Afeta tanto a renderização do Foundry quanto as verificações de visão do Midi-QOL.",
   "midi-qol.SurfaceOcclusion.Name": "Ocluir Superfícies de Andares Superiores",
   "midi-qol.SurfaceOcclusion.Hint": "Em cenas com múltiplos níveis, torna transparentes as superfícies dos andares superiores ao visualizar de um andar inferior, mesmo que o token não esteja diretamente abaixo delas.",
-  "midi-qol.SurfaceVisionFog.Name": "Escurecer Andares Inferiores Através de Aberturas nas Superfícies",
-  "midi-qol.SurfaceVisionFog.Hint": "Em cenas com múltiplos níveis, escurece áreas visíveis através de aberturas nas superfícies do piso quando o ângulo de visão bloquear a linha de visão para o andar abaixo.",
   "midi-qol.VisionTestHeightOptions": {
     "center": "Centro",
     "top": "Topo",

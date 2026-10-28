@@ -333,7 +333,7 @@ Target Confirmation displays a dialog before completing an item roll, allowing y
 | Vision test point height | Elevation tested for token visibility, for Foundry's rendering and midi's vision checks: Center (default) or Top |
 | Template Origin Height | Caster height activity templates are measured from: Caster's base (default)/Caster's top/Caster's eye level. An activity can override this in its Region settings |
 | Occlude upper floor surfaces | Multi-level scenes: upper floor surfaces are transparent when viewed from a lower floor, even if the token is not directly underneath (default on) |
-| Dim lower floors through surface holes | Multi-level scenes: dim areas seen through gaps in floor surfaces where the viewing angle blocks line of sight to the floor below |
+| Mark lower floors where creatures can't be seen | Per-player settings (Configure Settings › midi-qol), off by default. Scenes with levels: core draws a lower floor wherever an opening shows it but hides creatures standing there when a floor edge or wall blocks the line from your tokens' eyes; the squares where a medium creature would be hidden are marked, using core's own sight test. Style (tint, dim, hatch, outline, hatch and outline), colour and opacity are set per player |
 
 ### Saves
 
@@ -725,7 +725,7 @@ Configure an activity to automatically trigger another activity on the same item
 
 ### Over Time Effects (Activity Tab)
 
-For activities that repeat on subsequent turns (like ongoing damage, regeneration, or repeated saves). When an effect with an OverTime activity is applied to a token, midi-qol automatically processes the activity at the specified point in the combat turn.
+For activities that repeat on subsequent turns (like ongoing damage, regeneration, or repeated saves). Marking an activity *Is Over Time* does not run it by itself: an effect must name it with the change `flags.midi-qol.ActivityOverTime` (Override), value the activity's identifier (shown on its Midi tab) or its UUID. While a creature has that effect, midi-qol uses the activity at the chosen point of that creature's turn. The Regeneration and Acid Arrow sample items show the setup.
 
 | Field | Description |
 |-------|-------------|
@@ -746,10 +746,12 @@ For activities that repeat on subsequent turns (like ongoing damage, regeneratio
 1. Create a Save activity with damage and appropriate save DC
 2. Enable "Is Over Time" and set "Turn Choice" to "End of Turn"
 3. Check "Save Removes" so a successful save ends the burning
+4. On the activity that sets the target alight, apply an effect with the change `flags.midi-qol.ActivityOverTime` = the save activity's identifier
 
 **Example - Regeneration (Start of Turn):**
 1. Create a Heal activity with healing formula
 2. Enable "Is Over Time" and set "Turn Choice" to "Start of Turn"
+3. Give the item a transfer effect with the change `flags.midi-qol.ActivityOverTime` = the heal activity's identifier
 
 **Example - Remove on Damage Taken:**
 1. Set *Pre activity remove condition* (checked before the activity runs) or *Post activity remove condition* (checked after) to e.g. `@attributes.hp.value < @attributes.hp.max`
@@ -1000,6 +1002,13 @@ No world information is exported. Module list helps with debugging.
 ---
 
 # For Developers
+
+## OnUse macro names
+
+An onUse macro entry is `[pass]name` (item or actor *On Use Macros*), or `name, pass` in an effect change on `flags.midi-qol.onUseMacroName`. Besides `ItemMacro`, `ActivityMacro`, `function.…` and world macro names:
+- A **blank name** stands for the item's own macro: the macro of the activity being used if it has one, else the item macro. In an effect change it is the effect's activity macro, else the macro of the effect's item (its parent for a transfer effect, else its origin). With no such macro the entry does nothing.
+- An item that has a macro and no onUse macros runs that macro after active effects, as `[postActiveEffects]` with the name left blank. Macros shared with DAE (`macro.itemMacro` on/off) should check `args[0]`.
+- An effect change with no pass (`""`, `","`) is ignored and reported to the TroubleShooter.
 
 ## Roll Modifier Tracker (13.0.40+)
 

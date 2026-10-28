@@ -3,7 +3,7 @@
   "type": "weapon",
   "img": "icons/weapons/guns/gun-blunderbuss-bronze.webp",
   "effects": [],
-  "folder": null,
+  "folder": "22VNe8AIQbzkWcuW",
   "flags": {
     "core": {},
     "favtab": {
@@ -84,9 +84,12 @@
       "chat": ""
     },
     "source": {
-      "custom": "DMG pg. 213",
+      "custom": "midi-qol homebrew",
       "revision": 1,
-      "rules": "2014"
+      "rules": "2014",
+      "book": "Homebrew",
+      "license": "",
+      "page": ""
     },
     "quantity": 1,
     "weight": {

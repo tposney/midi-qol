@@ -1,23 +1,160 @@
 {
-  "name": "Dragon Slayer Longsword",
+  "name": "Longsword of Sharpness",
   "type": "weapon",
-  "img": "icons/skills/melee/strike-axe-blood-red.webp",
-  "effects": [],
-  "flags": {
-    "core": {
-      "sheetClass": "dnd5e.Tidy5eItemSheetClassic"
+  "img": "icons/skills/wounds/bone-broken-knee-beam.webp",
+  "effects": [
+    {
+      "_id": "4X2IaiMLJjtZdx6w",
+      "disabled": false,
+      "duration": {},
+      "origin": "Actor.BogmFuNh1wswTouJ.Item.CBdCa46auIpqxo2m",
+      "transfer": true,
+      "flags": {
+        "dae": {
+          "stackable": "none",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "transfer": true
+        },
+        "dnd5e-helpers": {
+          "rest-effect": "Ignore"
+        },
+        "ActiveAuras": {
+          "isAura": false,
+          "aura": "None",
+          "radius": null,
+          "alignment": "",
+          "type": "",
+          "ignoreSelf": false,
+          "height": false,
+          "hidden": false,
+          "hostile": false,
+          "onlyOnce": false
+        }
+      },
+      "name": "Light",
+      "description": "",
+      "statuses": [],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/skills/wounds/bone-broken-knee-beam.webp",
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "ATL.dimLight",
+            "value": "20",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "ATL.brightLight",
+            "value": "10",
+            "priority": 20,
+            "type": "add"
+          }
+        ]
+      },
+      "sort": 0,
+      "_key": "!items.effects!BtuJVytzMV8jUJFs.4X2IaiMLJjtZdx6w",
+      "start": {
+        "time": 47178646213,
+        "round": 265,
+        "turn": 5,
+        "combat": null
+      }
     },
+    {
+      "name": "Severed Limb",
+      "origin": "Item.we5KTHk3VjesXFkZ",
+      "duration": {},
+      "transfer": false,
+      "disabled": false,
+      "_id": "tTAx1lkzPXjzwxas",
+      "description": "",
+      "statuses": [],
+      "flags": {
+        "times-up": {
+          "isPassive": false
+        },
+        "dae": {
+          "disableIncapacitated": false,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "dontApply": false,
+          "stackable": "countDeleteDecrement",
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": ""
+        },
+        "ActiveAuras": {
+          "isAura": false,
+          "aura": "None",
+          "nameOverride": "",
+          "radius": "",
+          "alignment": "",
+          "type": "",
+          "customCheck": "",
+          "ignoreSelf": false,
+          "height": false,
+          "hidden": false,
+          "displayTemp": false,
+          "hostile": false,
+          "onlyOnce": false,
+          "wallsBlock": "system"
+        },
+        "core": {
+          "overlay": false
+        }
+      },
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/skills/wounds/bone-broken-knee-beam.webp",
+      "type": "base",
+      "system": {
+        "changes": []
+      },
+      "sort": 0,
+      "_key": "!items.effects!BtuJVytzMV8jUJFs.tTAx1lkzPXjzwxas",
+      "showIcon": 2
+    }
+  ],
+  "flags": {
     "midi-qol": {
-      "onUseMacroName": "",
       "criticalThreshold": "20",
-      "effectActivation": false,
+      "onUseMacroName": "",
       "fumbleThreshold": null,
-      "rollAttackPerTarget": "default",
       "removeAttackDamageButtons": "default",
       "itemCondition": "",
-      "otherCondition": "raceOrType.includes(\"dragon\") && (item.attuned || item.attunement !== \"required\")",
+      "reactionCondtion": "",
+      "otherCondition": "",
       "effectCondition": "",
-      "reactionCondition": ""
+      "reactionCondition": "",
+      "effectActivation": false,
+      "rollAttackPerTarget": "default",
+      "AoETargetType": "any",
+      "AoETargetTypeIncludeSelf": true,
+      "autoTarget": "default"
     },
     "magicitems": {
       "enabled": false,
@@ -33,27 +170,43 @@
       "rechargeUnit": "r1",
       "sorting": "l"
     },
+    "core": {},
     "itemacro": {
       "macro": {
         "data": {
           "_id": null,
-          "name": "Dragon Slayer Longsword MQ 0.8.55",
+          "name": "Longsword of Sharpness MQ0.8.85",
           "type": "script",
           "author": "devnIbfBHb74U9Zv",
           "img": "icons/svg/dice-target.svg",
           "scope": "global",
-          "command": "",
+          "command": "if (args[0].diceRoll === 20 && args[0]itemData.data.attunement !== 1) {\n    const d20 = await (new Roll(\"1d20\")).roll().total;\n    if (d20 === 20) {\n        ChatMessage.create({content: \"Sword of Sharpness severed a limb\"})\n    }\n}",
           "folder": null,
           "sort": 0,
           "permission": {
             "default": 0
           },
           "flags": {}
+        },
+        "name": "Longsword of Sharpness MQ0.8.85",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "const version = \"10.0.10\";\ntry {\n    if (args[0].diceRoll === 20 && args[0].itemData.system.attunement !== 1) {\n        const d20 = await (new Roll(\"1d20\")).roll().total;\n        if (d20 === 20) {\n            ChatMessage.create({content: \"Sword of Sharpness severed a limb\"})\n        }\n    }\n} catch (err) {\n\t    console.error(`${args[0].itemData.name} - Longsword of Sharpness ${version}`, err);\n\t\treturn {}\n}",
+        "sort": 0,
+        "ownership": {
+          "default": 0
+        },
+        "flags": {},
+        "_stats": {
+          "systemId": null,
+          "systemVersion": null,
+          "coreVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null
         }
       }
-    },
-    "favtab": {
-      "isFavorite": true
     },
     "betterRolls5e": {
       "quickDamage": {
@@ -106,29 +259,52 @@
       "color": "#000000"
     },
     "midiProperties": {
+      "nodam": false,
       "fulldam": false,
       "halfdam": false,
-      "nodam": false,
+      "rollOther": false,
       "critOther": false,
-      "rollOther": true,
       "magicdam": false,
       "magiceffect": false,
       "concentration": false,
       "toggleEffect": false,
-      "confirmTargets": "default",
       "autoFailFriendly": false,
       "autoSaveFriendly": false,
       "offHandWeapon": false,
-      "noConcentrationCheck": false,
       "ignoreTotalCover": false,
+      "confirmTargets": "never",
+      "noConcentrationCheck": false,
       "idr": false,
       "idi": false,
       "idv": false,
       "ida": false
     },
-    "scene-packer": {
-      "hash": "6aa5fabd27368a9dc9d2fb8ebea12c381ec09d5e",
-      "sourceId": "Compendium.midi-qol.midiqol-sample-items.Item.vtgp0tzcLKdIxO4s"
+    "dae": {
+      "macro": {
+        "name": "Longsword of Sharpness",
+        "img": "icons/skills/wounds/bone-broken-knee-beam.webp",
+        "type": "script",
+        "scope": "global",
+        "command": "",
+        "author": "Zl1BOUaPLwDEujaL",
+        "ownership": {
+          "default": 3
+        },
+        "_id": null,
+        "folder": null,
+        "sort": 0,
+        "flags": {},
+        "_stats": {
+          "systemId": "dnd5e",
+          "systemVersion": "4.1.2",
+          "coreVersion": "12.331",
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null,
+          "compendiumSource": null,
+          "duplicateSource": null
+        }
+      }
     },
     "dnd5e": {
       "persistSourceMigration": true,
@@ -143,12 +319,17 @@
             "0": "slashing"
           }
         },
-        "9uK3kf0FIqhFjYtS": {
+        "eDQ3DMzzPiS0qkGJ": {
           "damageType": {
             "0": "slashing"
           }
         }
-      }
+      },
+      "dependents": [
+        {
+          "uuid": "Scene.GO63mgFDMhBfPVWf.Token.0fnAbyGRmRg7wA9F.Actor.MBCKz7PyeQ8dykEk.ActiveEffect.G1zfEPI6FfrPj7XR"
+        }
+      ]
     },
     "tidy5e-sheet": {
       "section": "",
@@ -168,11 +349,11 @@
   },
   "system": {
     "description": {
-      "value": "<p><em>(Requires attunement)</em></p><p>You gain a +1 bonus to attack and damage rolls made with this magic weapon.</p><p>When you hit a dragon with this weapon, the dragon takes an extra 3d6 damage of the weapon's type. For the purpose of this weapon, \"dragon\" refers to any creature with the dragon type, including dragon turtles and wyverns.</p><p><strong>midi-qol</strong>: Requires dnd5e 3.2+</p>",
-      "chat": "<p><em>(Requires attunement)</em></p><p>You gain a +1 bonus to attack and damage rolls made with this magic weapon.</p><p>When you hit a dragon with this weapon, the dragon takes an extra 3d6 damage of the weapon's type. For the purpose of this weapon, \"dragon\" refers to any creature with the dragon type, including dragon turtles and wyverns.</p>"
+      "value": "<p><em>(Requires attunement)</em></p>\n<p>When you attack an object with this magic sword and hit, maximize your weapon damage dice against the target.</p>\n<p>When you attack a creature with this weapon and roll a 20 on the attack roll, that target takes an extra 4d6 slashing damage. Then roll another d20. If you roll a 20, you lop off one of the target's limbs, with the effect of such loss determined by the GM. If the creature has no limb to sever, you lop off a portion of its body instead.</p>\n<p>In addition, you can speak the sword's command word to cause the blade to shed bright light in a 10-foot radius and dim light for an additional 10 feet. Speaking the command word again or sheathing the sword puts out the light.</p>\n<p> </p>\n<p>MidiQOL: handles the damage. ATL handles the light effects.</p>",
+      "chat": ""
     },
     "source": {
-      "custom": "DMG pg. 166",
+      "custom": "DMG pg. 206",
       "revision": 1,
       "rules": "2024"
     },
@@ -182,19 +363,19 @@
       "units": "lb"
     },
     "price": {
-      "value": 8000,
+      "value": 1700,
       "denomination": "gp"
     },
-    "attunement": "",
-    "rarity": "rare",
+    "attunement": "required",
+    "rarity": "veryRare",
     "identified": true,
     "cover": null,
     "crewed": false,
     "range": {
       "value": null,
-      "long": 0,
+      "long": 20,
       "units": "ft",
-      "reach": 5
+      "reach": 10
     },
     "uses": {
       "max": "",
@@ -204,8 +385,8 @@
     "damage": {
       "versatile": {
         "number": 1,
-        "denomination": 0,
-        "bonus": "@mod",
+        "denomination": 10,
+        "bonus": "",
         "types": [],
         "custom": {
           "enabled": false,
@@ -220,13 +401,13 @@
       "base": {
         "number": 1,
         "denomination": 8,
-        "bonus": "@mod",
+        "bonus": "",
         "types": [
           "slashing"
         ],
         "custom": {
           "enabled": false,
-          "formula": "1d8 + @mod"
+          "formula": ""
         },
         "scaling": {
           "mode": "",
@@ -248,16 +429,14 @@
       "mgc",
       "ver"
     ],
-    "proficient": 1,
+    "proficient": null,
     "unidentified": {
       "description": ""
     },
     "type": {
       "value": "martialM",
-      "baseItem": "longsword"
+      "baseItem": ""
     },
-    "container": null,
-    "magicalBonus": 1,
     "activities": {
       "dnd5eactivity000": {
         "_id": "dnd5eactivity000",
@@ -290,8 +469,7 @@
         "range": {
           "units": "ft",
           "special": "",
-          "override": false,
-          "value": ""
+          "override": false
         },
         "target": {
           "template": {
@@ -304,8 +482,8 @@
             "units": ""
           },
           "affects": {
-            "count": "1",
-            "type": "creature",
+            "count": "",
+            "type": "",
             "choice": false,
             "special": ""
           },
@@ -319,7 +497,7 @@
         },
         "attack": {
           "ability": "",
-          "bonus": "1",
+          "bonus": "",
           "critical": {
             "threshold": null
           },
@@ -333,17 +511,33 @@
           "critical": {
             "bonus": ""
           },
-          "includeBase": true,
-          "parts": []
+          "includeBase": false,
+          "parts": [
+            {
+              "custom": {
+                "enabled": true,
+                "formula": "8+@mod"
+              },
+              "number": null,
+              "denomination": 0,
+              "bonus": "@mod",
+              "types": [
+                "slashing"
+              ],
+              "scaling": {
+                "number": 1
+              }
+            }
+          ]
         },
         "sort": 0,
-        "attackMode": "oneHanded",
         "useConditionText": "",
         "effectConditionText": "",
+        "attackMode": "oneHanded",
         "ammunition": "",
         "otherActivityUuid": "",
         "name": "",
-        "otherActivityId": "9uK3kf0FIqhFjYtS",
+        "otherActivityId": "eDQ3DMzzPiS0qkGJ",
         "macroData": {
           "name": "",
           "command": ""
@@ -379,9 +573,10 @@
           "postRemoveConditionText": ""
         }
       },
-      "9uK3kf0FIqhFjYtS": {
+      "eDQ3DMzzPiS0qkGJ": {
         "type": "damage",
-        "_id": "9uK3kf0FIqhFjYtS",
+        "name": "Extra Damage",
+        "_id": "eDQ3DMzzPiS0qkGJ",
         "sort": 0,
         "activation": {
           "type": "action",
@@ -400,11 +595,16 @@
           "chatFlavor": ""
         },
         "duration": {
-          "units": "inst",
+          "units": "perm",
           "concentration": false,
-          "override": false
+          "override": false,
+          "special": ""
         },
-        "effects": [],
+        "effects": [
+          {
+            "_id": "tTAx1lkzPXjzwxas"
+          }
+        ],
         "range": {
           "override": false
         },
@@ -420,7 +620,7 @@
             "type": ""
           },
           "override": false,
-          "prompt": false
+          "prompt": true
         },
         "uses": {
           "spent": 0,
@@ -429,8 +629,7 @@
         },
         "damage": {
           "critical": {
-            "allow": true,
-            "bonus": ""
+            "allow": false
           },
           "parts": [
             {
@@ -438,7 +637,7 @@
                 "enabled": false,
                 "formula": ""
               },
-              "number": 3,
+              "number": 4,
               "denomination": 6,
               "bonus": "",
               "types": [
@@ -450,13 +649,22 @@
             }
           ]
         },
-        "useConditionText": "raceOrType.includes(\"dragon\") && (item.attuned || item.attunement !== \"required\")",
-        "effectConditionText": "",
-        "name": "Bonus Damage",
+        "useConditionText": "isAttuned && w.d20AttackRoll === 20",
+        "effectConditionText": "(await new Roll(\"1d20\").roll()).total === 20",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
         "midiProperties": {
-          "automationOnly": true,
           "forceDialog": false,
           "confirmTargets": "default",
+          "automationOnly": false,
           "identifier": "",
           "ignoreTraits": [],
           "triggeredActivityId": "none",
@@ -470,16 +678,6 @@
           "rollMode": "default",
           "chooseEffects": false
         },
-        "macroData": {
-          "name": "",
-          "command": ""
-        },
-        "ignoreTraits": {
-          "idi": false,
-          "idr": false,
-          "idv": false,
-          "ida": false
-        },
         "useConditionReason": "",
         "otherActivityId": "",
         "isOverTimeFlag": false,
@@ -490,11 +688,13 @@
         }
       }
     },
-    "identifier": "dragon-slayer",
+    "identifier": "sword-of-sharpness",
+    "container": null,
     "ammunition": {},
+    "magicalBonus": null,
     "mastery": "",
-    "attuned": false,
-    "equipped": true
+    "attuned": true,
+    "equipped": false
   },
   "_stats": {
     "compendiumSource": null,
@@ -503,16 +703,16 @@
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741782992877,
-    "modifiedTime": 1743049166751,
+    "modifiedTime": 1741782992877,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL",
     "exportSource": null
   },
-  "folder": "5Ok9Jbl5nOokCkqf",
-  "_id": "QEkOwc7gMKfxO8Kr",
-  "sort": 700000,
+  "folder": "RXsaIREc3rAIE5OU",
+  "_id": "BtuJVytzMV8jUJFs",
+  "sort": 125000,
   "ownership": {
     "default": 0,
     "Zl1BOUaPLwDEujaL": 3
   },
-  "_key": "!items!QEkOwc7gMKfxO8Kr"
+  "_key": "!items!BtuJVytzMV8jUJFs"
 }

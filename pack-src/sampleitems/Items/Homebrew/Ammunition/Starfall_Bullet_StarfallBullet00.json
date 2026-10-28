@@ -1,0 +1,462 @@
+{
+  "_id": "StarfallBullet00",
+  "_key": "!items!StarfallBullet00",
+  "name": "Starfall Bullet",
+  "type": "consumable",
+  "img": "icons/weapons/ammunition/shot-round-blue.webp",
+  "folder": "kFNnjmj0lf4damuG",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>A sling stone of black glass with a pinprick of light at its heart.</em></p><p>When you hit a creature with an attack using this bullet, it bursts into a falling star. The target takes <strong>8d10 radiant damage</strong>, and every other creature within 15 feet of it must succeed on a <strong>DC 18 Dexterity saving throw</strong> or take <strong>4d10 fire damage</strong>, or half as much on a success.</p><p>The star leaves a glowing crater 15 feet in radius centred on the target's space. For 1 minute it is <strong>difficult terrain</strong> and is filled with bright light.</p><p>Once it hits, the bullet is destroyed.</p><details><summary>Midi-QOL</summary><p>An onUse macro on the bullet runs its hidden Impact, Burst and Crater activities when the sling's attack hits. The crater is created by the GM: a region with dnd5e's difficult terrain behavior and a Midi Region Light, which keeps the light inside the crater. The region and its light are removed when the 1-minute Starfall Crater effect on the attacker ends.</p></details>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "midi-qol homebrew",
+      "revision": 1,
+      "rules": "2024",
+      "book": "Homebrew",
+      "license": "",
+      "page": ""
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 0.05,
+      "units": "lb"
+    },
+    "price": {
+      "value": 100000,
+      "denomination": "gp"
+    },
+    "attunement": "",
+    "rarity": "legendary",
+    "identified": true,
+    "uses": {
+      "max": "",
+      "autoDestroy": false,
+      "spent": 0,
+      "recovery": []
+    },
+    "damage": {
+      "base": {
+        "number": null,
+        "denomination": null,
+        "bonus": "",
+        "types": [],
+        "custom": {
+          "enabled": false,
+          "formula": ""
+        },
+        "scaling": {
+          "number": 1
+        }
+      },
+      "replace": false
+    },
+    "properties": [
+      "mgc"
+    ],
+    "unidentified": {
+      "description": ""
+    },
+    "type": {
+      "value": "ammo",
+      "subtype": "slingBullet"
+    },
+    "container": null,
+    "identifier": "starfall-bullet",
+    "magicalBonus": null,
+    "attuned": false,
+    "equipped": false,
+    "activities": {
+      "StarfallImpact00": {
+        "_id": "StarfallImpact00",
+        "type": "damage",
+        "name": "Starfall: Impact",
+        "sort": 0,
+        "activation": {
+          "type": "special",
+          "value": 1,
+          "condition": "",
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "units": "any",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "1",
+            "type": "creature",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "useConditionText": "",
+        "effectConditionText": "",
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "midiProperties": {
+          "automationOnly": true,
+          "forceDialog": false,
+          "confirmTargets": "never",
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "damage": {
+          "critical": {
+            "allow": false,
+            "bonus": ""
+          },
+          "includeBase": false,
+          "parts": [
+            {
+              "number": 8,
+              "denomination": 10,
+              "bonus": "",
+              "types": [
+                "radiant"
+              ],
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "scaling": {
+                "number": 1
+              }
+            }
+          ]
+        }
+      },
+      "StarfallBurst000": {
+        "_id": "StarfallBurst000",
+        "type": "save",
+        "name": "Starfall: Burst",
+        "sort": 0,
+        "activation": {
+          "type": "special",
+          "value": 1,
+          "condition": "",
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "units": "any",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "creature",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "useConditionText": "",
+        "effectConditionText": "",
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "midiProperties": {
+          "automationOnly": true,
+          "forceDialog": false,
+          "confirmTargets": "never",
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "damage": {
+          "onSave": "half",
+          "parts": [
+            {
+              "number": 4,
+              "denomination": 10,
+              "bonus": "",
+              "types": [
+                "fire"
+              ],
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "scaling": {
+                "number": 1
+              }
+            }
+          ],
+          "critical": {
+            "allow": false,
+            "bonus": ""
+          }
+        },
+        "save": {
+          "ability": [
+            "dex"
+          ],
+          "dc": {
+            "calculation": "",
+            "formula": "18"
+          }
+        }
+      },
+      "StarfallCrater00": {
+        "_id": "StarfallCrater00",
+        "type": "utility",
+        "name": "Starfall: Crater",
+        "sort": 0,
+        "activation": {
+          "type": "special",
+          "value": 1,
+          "condition": "",
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "units": "any",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "1",
+            "type": "creature",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "useConditionText": "",
+        "effectConditionText": "",
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "midiProperties": {
+          "automationOnly": true,
+          "forceDialog": false,
+          "confirmTargets": "never",
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        }
+      }
+    }
+  },
+  "effects": [],
+  "flags": {
+    "midi-qol": {
+      "onUseMacroName": "[postActiveEffects]ItemMacro",
+      "onUseMacroParts": {
+        "items": [
+          {
+            "macroName": "ItemMacro",
+            "option": "postActiveEffects"
+          }
+        ]
+      }
+    },
+    "dae": {
+      "macro": {
+        "name": "Starfall Bullet",
+        "type": "script",
+        "img": "icons/weapons/ammunition/shot-round-blue.webp",
+        "scope": "global",
+        "command": "// Starfall Bullet\n// Fired as ammunition (postActiveEffects of the sling's attack): on a hit, the impact (8d10 radiant) on the target and\n// the burst (DC 18 Dex, 4d10 fire, half on a success) on every other creature within 15 feet, then the crater, which\n// the GM runs (it creates a region): difficult terrain, lit by a Midi Region Light confined to the crater, for 1 minute.\nconst IMPACT = \"StarfallImpact00\", BURST = \"StarfallBurst000\", CRATER = \"StarfallCrater00\";\nif (args[0]?.tag !== \"OnUse\" || args[0].macroPass !== \"postActiveEffects\") return;\nconst name = macroItem?.name ?? \"Starfall Bullet\";\nconst auto = { targetConfirmation: \"none\", autoRollAttack: true, autoFastAttack: true, autoRollDamage: \"always\", autoFastDamage: true };\nconst use = (activity, targetUuids) => MidiQOL.completeActivityUse(activity, { midiOptions: { targetUuids, workflowOptions: auto } }, { configure: false }, {});\n\n// one of the bullet's own activities: only the crater does anything here, on the GM's client\nif (workflow?.item?.id === macroItem?.id && !workflow?.ammunition) {\n  if (workflow.activity?.id !== CRATER) return;\n  const target = workflow.targets?.first();\n  const scene = target?.document?.parent;\n  if (!target || !scene) return;\n  const { x, y } = target.center;\n  const [effect] = await actor.createEmbeddedDocuments(\"ActiveEffect\", [{ name: \"Starfall Crater\", img: macroItem.img,\n    duration: { seconds: 60 }, flags: { dae: { showIcon: false } } }]);\n  const [region] = await scene.createEmbeddedDocuments(\"Region\", [{ name: \"Starfall Crater\", color: \"#ffb347\", visibility: CONST.REGION_VISIBILITY.ALWAYS,\n    shapes: [{ type: \"circle\", x, y, radius: 15 * canvas.dimensions.distancePixels }],\n    behaviors: [{ name: \"Difficult Terrain\", type: \"dnd5e.difficultTerrain\" },\n      { name: \"Starfall Light\", type: \"midi-qol.regionLight\", system: { bright: 15, dim: 15, fill: true, color: \"#ffd27a\", alpha: 0.5,\n        animationType: \"starlight\", animationSpeed: 3, animationIntensity: 3 } }] }]);\n  // removed with the crater effect when its minute is up (the light goes with the region)\n  await MidiQOL.addDependent(effect, region);\n  return;\n}\n\nif (workflow?.ammunition?.id !== macroItem?.id) return;\nconst target = workflow.hitTargets?.first();\nif (!target) return;\nconst bullet = workflow.ammunition;\nawait ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<strong>${name}</strong>: the bullet bursts into a falling star.` });\nawait use(bullet.system.activities.get(IMPACT), [target.document.uuid]);\nconst others = MidiQOL.findNearby(null, target, 15, { includeIncapacitated: true }).map(t => t.document.uuid);\nif (others.length) await use(bullet.system.activities.get(BURST), others);\nconst crater = bullet.system.activities.get(CRATER);\nif (game.user.isGM) await use(crater, [target.document.uuid]);\nelse await MidiQOL.socket().executeAsGM(\"completeActivityUse\", { activityUuid: crater.uuid, actorUuid: actor.uuid,\n  usage: { midiOptions: { targetUuids: [target.document.uuid], workflowOptions: auto } }, dialog: { configure: false }, message: {} });\n"
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": ""
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null
+  }
+}

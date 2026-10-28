@@ -214,6 +214,8 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
   // fix for very silly value choice in midi properties.
   if (["none", "never"].includes(options.workflowOptions?.targetConfirmation ?? "")) return false;
   if (options.workflowOptions?.targetConfirmation === "always") return true;
+  // The targets this use will have: those it was given, else the user's (another use can change the user's meanwhile).
+  const targets: Set<foundry.canvas.placeables.Token.Implementation> = options.targetsToUse?.size ? options.targetsToUse : new Set(game.user?.targets ?? []);
   if (["enchant", "summon"].includes(activity.type)) return false;
   /*
    * "Choose Targets" (target.affects.choice) means "when targeting an area, can the user choose who
@@ -228,9 +230,9 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
   if (options.workflowOptions?.attackPerTarget === true) return false;
   if ((activity.forcedTargetConfirmation ?? activity.midiProperties?.confirmTargets) === "always") return true;
   if ((activity.forcedTargetConfirmation ?? activity.midiProperties?.confirmTargets) === "never") return false;
-  if (targetConfirmation.enabled && targetConfirmation.noneTargeted && ((activity.target?.affects.type ?? "") !== "" || activity.attack) && (game.user?.targets?.size ?? 0) === 0)
+  if (targetConfirmation.enabled && targetConfirmation.noneTargeted && ((activity.target?.affects.type ?? "") !== "" || activity.attack) && targets.size === 0)
     return true;
-  let numTargets = game.user?.targets?.size ?? 0;
+  let numTargets = targets.size;
   // @ts-expect-error no dnd5e-types
   if (numTargets === 0 && activity.item.type === "weapon" && shouldEnforceSingleTarget(activity))
     numTargets = 1;
@@ -253,7 +255,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
       return true;
     }
     if (targetConfirmation.allies && token && numTargets > 0 && activity.target?.affects.type !== "self") {
-      if (game.user?.targets.some(t => t.document.disposition == token.document.disposition)) {
+      if (targets.some(t => t.document.disposition == token.document.disposition)) {
         if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.allies");
         return true;
       }
@@ -261,21 +263,21 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
     if (targetConfirmation.targetSelf && activity.target?.affects.type !== "self") {
       let tokenToUse = token;
       /*
-      if (tokenToUse && game.user?.targets) {
+      if (tokenToUse) {
         const { result, attackingToken } = checkActivityRange(activity, tokenToUse, new Set(game.user?.targets))
         if (speaker.token && result === "fail")
           tokenToUse = undefined; 
         else tokenToUse = attackingToken;
       }
       */
-      if (tokenToUse && game.user?.targets?.has(tokenToUse)) {
+      if (tokenToUse && targets.has(tokenToUse)) {
         if (debugEnabled > 0) warn("target confirmation triggered by has targetConfirmation.targetSelf");
         return true;
       }
     }
-    if (targetConfirmation.mixedDisposition && numTargets > 0 && game.user?.targets) {
+    if (targetConfirmation.mixedDisposition && numTargets > 0) {
       const dispositions = new Set();
-      for (let target of game.user?.targets) {
+      for (let target of targets) {
         if (target) dispositions.add(target.document.disposition);
       }
       if (dispositions.size > 1) {
@@ -283,11 +285,11 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
         return true;
       }
     }
-    if (targetConfirmation.longRange && game.user?.targets && numTargets > 0 &&
+    if (targetConfirmation.longRange && numTargets > 0 &&
       // @ts-expect-error no dnd5e-types
       (["ft", "m"].includes(activity.item.system.range?.units) || activity.item.system.range?.type === "touch")) {
       if (token) {
-        for (let target of game.user?.targets) {
+        for (let target of targets) {
           const { result, attackingToken } = checkActivityRange(activity, token, new Set([target]))
           if (result !== "normal") {
             if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.longRange");
@@ -296,10 +298,10 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
         }
       }
     }
-    if (targetConfirmation.inCover && numTargets > 0 && token && game.user?.targets) {
+    if (targetConfirmation.inCover && numTargets > 0 && token) {
       const isRangeTargeting = ["ft", "m"].includes(activity.range?.units ?? "") && ["creature", "ally", "enemy"].includes(activity.target?.affects?.type ?? "");
       if (!activity.target?.template?.type && !isRangeTargeting && token) {
-        for (let target of game.user?.targets) {
+        for (let target of targets) {
           if (computeCoverBonus(token, target, activity) > 0) {
             if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.inCover");
             return true;
@@ -930,4 +932,40 @@ function blockRoll(item, workflow) {
 
 export function getSceneTargets(): Token.Implementation[] {
   return globalThis.dnd5e.utils.getSceneTargets();
+}
+
+/**
+ * The point a Region's area spreads from, for wall and cover checks. Not every shape has x/y: an emanation keeps
+ * its position on its base token (dnd5e 6's self-centred areas), a polygon in its points; reading them as 0 measured
+ * from the scene's corner.
+ */
+export function regionShapeOrigin(regionDoc: RegionDocument.Implementation): { x: number, y: number } | undefined {
+  const shape = regionDoc.shapes?.at?.(0) as any;
+  if (!shape) return undefined;
+  const gridSize = canvas.scene?.grid.size ?? 100;
+  switch (shape.type) {
+    case "emanation": {
+      // core moves an attached emanation's base with its token, so the base is where the token is
+      const base = shape.base ?? {};
+      if (base.type === "token") return { x: base.x + (base.width ?? 1) * gridSize / 2, y: base.y + (base.height ?? 1) * gridSize / 2 };
+      if (base.type === "rectangle") return { x: base.x + (base.width ?? 0) / 2, y: base.y + (base.height ?? 0) / 2 };
+      return { x: base.x ?? 0, y: base.y ?? 0 };
+    }
+    case "rectangle": {
+      const dx = (0.5 - (shape.anchorX ?? 0)) * (shape.width ?? 0);
+      const dy = (0.5 - (shape.anchorY ?? 0)) * (shape.height ?? 0);
+      const angle = Math.toRadians(shape.rotation ?? 0);
+      return { x: shape.x + dx * Math.cos(angle) - dy * Math.sin(angle), y: shape.y + dx * Math.sin(angle) + dy * Math.cos(angle) };
+    }
+    case "polygon": {
+      const points: number[] = shape.points ?? [];
+      const n = points.length / 2;
+      if (!n) return undefined;
+      let x = 0, y = 0;
+      for (let i = 0; i < points.length; i += 2) { x += points[i]; y += points[i + 1]; }
+      return { x: x / n, y: y / n };
+    }
+    default:
+      return { x: shape.x ?? 0, y: shape.y ?? 0 };
+  }
 }

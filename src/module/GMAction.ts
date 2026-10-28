@@ -1,7 +1,7 @@
 import { checkRule, configSettings, safeGetGameSetting, isDnd5e53 } from "./settings.js";
 import { withWorkflowOptionsCodec } from "./lib/workflowOptionsCodec.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
+import { canSense, calculateDamageAmounts, hpChangeFromDetail, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, deleteAppliedEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget, hasUsedAnyReaction, getVitalityItem, getVitalityValue, MidiOptions, tokenSourceCenter, toggleStatus } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { DAMAGE_MESSAGE_TYPE } from "./ChatClasses/DamageCardMessage.js";
 import { DamageDescriptionObject, Workflow, WorkflowOptions } from "./Workflow.js";
@@ -1158,17 +1158,6 @@ export interface DamageListContextEntry {
 }
 
 /** Helper to calculate damage amounts from a damage detail array */
-function calculateDamageAmounts(damageDetail: DamageDescription[]): { amount: number; temp: number; healing: number; vitality: number; tempMax: number } {
-  return damageDetail.reduce((acc, d) => {
-    if (d.type === "temphp") acc.temp += d.value;
-    else if (d.type === "vitality") acc.vitality += d.value; // Vitality damage (positive) or healing (negative)
-    else if (d.type === "maximum") acc.tempMax += d.value; // Max HP reduction (positive = reduce max)
-    else if (d.type === "healing" || d.active?.absorption || (d.active?.type as Record<string, boolean> | undefined)?.absorption) acc.healing += d.value;
-    else if (d.type !== "midi-none") acc.amount += d.value;
-    return acc;
-  }, { amount: 0, temp: 0, healing: 0, vitality: 0, tempMax: 0 });
-}
-
 /** Helper to update damage card display elements */
 /**
  * Update damage card display using stored original values.
@@ -1479,26 +1468,15 @@ async function prepareDamageListItems(
     if (!fromStoredData && actor.isOwner && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
       // @ts-expect-error no dnd5e-types
       const hp = actor.system.attributes.hp;
-      let { amount, temp, healing, vitality: vitalityDamage, tempMax } = calculateDamageAmounts(damageItem.damageDetail);
-      amount = Math.max(0, amount);
-      tempMax = Math.trunc(tempMax);
+      const { change: amount, vitality: vitalityDamage, tempMax, deltaTemp, deltaHP, newTempHP } = hpChangeFromDetail(damageItem.damageDetail, hp);
       const { amount: rawAmount, healing: rawHealing, vitality: rawVitality } = calculateDamageAmounts(damageItem.rawDamageDetail);
       damageItem.totalDamage = damageItem.damageDetail.reduce((acc, d) => acc + (!["temphp", "midi-none", "vitality", "maximum"].includes(d.type) ? d.value : 0), 0);
-      amount = amount + healing;
-      amount = amount > 0 ? Math.floor(amount) : Math.ceil(amount);
-
-      let deltaTemp = amount > 0 ? Math.min(hp.temp, amount) : 0;
-      // Since tempDamage represents the final change in tempHP - we can use it for calcs and it is ignored.
-
-      // tempMax adjusts the clamp bounds: positive tempMax forces hp.value down if it would exceed new effective max
-      let deltaHP = Math.clamp(amount - deltaTemp, -hp.damage + tempMax, hp.value - tempMax);
-      if (hpDamage !== deltaHP && tempMax === 0) {
-        error(`damage detail amount ${amount} !== hpDamage ${hpDamage}`, configSettings.useDamageDetail ? "ignoring hpDamage" : "using hpDamage");
-        if (!configSettings.useDamageDetail) deltaHP = hpDamage;
-      }
+      // The detail decides; hpDamage only disagrees when something changed one without the other (use MidiQOL.modifyDamageBy).
+      if (hpDamage !== deltaHP && tempMax === 0)
+        error(`damage list entry for ${actor.name}: hpDamage ${hpDamage} but its damage detail gives ${deltaHP}; applying the detail`);
       const updates: Actor.UpdateData = {
         // @ts-expect-error no dnd5e-types
-        "system.attributes.hp.temp": hp.temp - deltaTemp,
+        "system.attributes.hp.temp": newTempHP,
         "system.attributes.hp.value": hp.value - deltaHP
       };
       // Apply tempmax reduction (positive tempMax = reduce max HP)
@@ -1506,7 +1484,6 @@ async function prepareDamageListItems(
         updates["system.attributes.hp.tempmax"] = (hp.tempmax ?? 0) - tempMax;
       }
 
-      if (temp > updates["system.attributes.hp.temp"]) updates["system.attributes.hp.temp"] = temp;
       damageItem.newTempHP = updates["system.attributes.hp.temp"];
       damageItem.newHP = updates["system.attributes.hp.value"];
       damageItem.oldTempMax = hp.tempmax ?? 0;

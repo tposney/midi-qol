@@ -3,6 +3,7 @@ import { configSettings, checkRule, checkMechanic, safeGetGameSetting, safeSetGa
 import { processTurnOverTime, bonusDialog, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getVitalityDeadStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, hasCondition, areMidiKeysPressed, MidiOptions, getVitalityItem, checkMagicResistanceAndVulnerability, isAutoFastForward, FastForwardRollType, buildRollChoices, selectBestRollChoice, getTokenPerimeterPolygon, closestPointOnPerimeter, measurePointDistance, setUserInitiatedTarget, isEffectExpired, toggleStatus } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
+import { initHiddenGroundCue } from "./lib/hiddenGroundCue.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiAttackActivity } from "./activities/AttackActivity.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
@@ -208,10 +209,7 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "foundry.canvas.layers.CanvasOcclusionMask.prototype._updateOccludedSurfaces",
     _updateOccludedSurfacesWrapper, "WRAPPER");
 
-  // Surface vision fog: draw a fog overlay for areas blocked by floor surfaces.
-  // Uses Foundry's surfaceExposure rendering to dim areas the token can't see through floors.
-  // Hook fires during refreshVisibility, after standard shapes are drawn.
-  Hooks.on("visibilityRefresh", _onVisibilityRefreshSurfaceFog);
+  initHiddenGroundCue();
 
   class MidiAmbientLightDocument extends MidiDependentDocumentMixin(
     globalThis.dnd5e.documents.mixins.DependentDocumentMixin(CONFIG.AmbientLight.documentClass)
@@ -282,137 +280,6 @@ function _updateOccludedSurfacesWrapper(this: any, wrapped: Function, flags: any
       this.occludedSurfaces.add(surface);
     }
   }
-}
-
-// Surface fog overlay: darkens areas on lower floors blocked by surface regions.
-// Fog = (vision polygon) ∩ (holes in surface) ∩ (projected shadow of surface edges)
-// - "holes" = areas within vision where there's no floor (vision − surface footprint)
-// - "projected shadow" = areas where the diagonal LOS from viewer to lower floor is blocked
-// - Only the intersection of holes and shadow gets fogged — areas you can see through
-//   a gap but where the surface edge blocks the angled view to the floor below.
-// To disable: remove the Hooks.on("visibilityRefresh", ...) call in initPatching.
-let _surfaceFogOverlay: any = null;
-
-function _onVisibilityRefreshSurfaceFog() {
-  if (!(canvas as any)?.interface) return;
-  if (configSettings.optionalRules.surfaceVisionFog === false) {
-    if (_surfaceFogOverlay && !_surfaceFogOverlay.destroyed) _surfaceFogOverlay.clear();
-    return;
-  }
-  if (!_surfaceFogOverlay || _surfaceFogOverlay.destroyed) {
-    _surfaceFogOverlay = new PIXI.LegacyGraphics();
-    _surfaceFogOverlay.zIndex = 1150;
-    (canvas as any).interface.addChild(_surfaceFogOverlay);
-  }
-  _surfaceFogOverlay.clear();
-
-  // @ts-expect-error v14 canvas.level not in fvtt-types
-  if (!canvas?.scene || !canvas.level) return;
-  // @ts-expect-error v14 scene.levels not in fvtt-types
-  if ((canvas.scene.levels?.size ?? 0) <= 1) return;
-
-  const controlled = canvas.tokens?.controlled?.[0];
-  if (!controlled?.vision) return;
-
-  const visionSource = controlled.vision;
-  const origin = visionSource.origin;
-  if (origin?.elevation == null) return;
-
-  const vx = origin.x;
-  const vy = origin.y;
-  const viewerElev = origin.elevation;
-  const visionPoly = visionSource.los ?? visionSource.shape;
-  if (!visionPoly?.points?.length) return;
-
-  // @ts-expect-error getSurfaces not in fvtt-types
-  const surfaces: Array<{ region: any, elevation: number }> = canvas.scene.getSurfaces({ type: "sight" });
-  if (!surfaces.length) return;
-
-  // Only process surfaces between the viewer and the level below
-  // @ts-expect-error v14 canvas.level not in fvtt-types
-  const currentLevel = canvas.level;
-  // @ts-expect-error v14 scene.levels not in fvtt-types
-  const levels: any[] = Array.from(canvas.scene.levels ?? []);
-  const sortedLevels = levels.sort((a: any, b: any) => b.elevation.bottom - a.elevation.bottom);
-  const currentIdx = sortedLevels.findIndex((l: any) => l.id === currentLevel?.id);
-  const levelBelow = sortedLevels[currentIdx + 1];
-  if (!levelBelow) return;
-  const targetElev = levelBelow.elevation.bottom;
-
-  const blockingSurfaces = surfaces.filter((s: any) =>
-    s.elevation < viewerElev && s.elevation > targetElev
-  );
-  if (!blockingSurfaces.length) return;
-
-  const SCALE = CONST.CLIPPER_SCALING_FACTOR;
-
-  // Step 1: Combine all blocking surface footprints into one Clipper path set
-  const surfaceClipper = new ClipperLib.Clipper();
-  const surfaceUnion: any[] = [];
-  let hasSurface = false;
-  for (const surface of blockingSurfaces) {
-    const region = surface.region;
-    const polygonTree = region.object?.animationState?.polygonTree ?? region.polygonTree;
-    if (!polygonTree?.clipperPaths?.length) continue;
-    surfaceClipper.AddPaths(polygonTree.clipperPaths, ClipperLib.PolyType.ptSubject, true);
-    hasSurface = true;
-  }
-  if (!hasSurface) return;
-  surfaceClipper.Execute(ClipperLib.ClipType.ctUnion, surfaceUnion,
-    ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-  if (!surfaceUnion.length) return;
-
-  // Step 2: Compute holes = vision polygon − surface footprint
-  // Both visionPath and surfaceUnion are already at CLIPPER_SCALING_FACTOR (×100)
-  const visionPath = visionPoly.toClipperPoints({ scalingFactor: SCALE });
-  const holeClipper = new ClipperLib.Clipper();
-  holeClipper.AddPath(visionPath, ClipperLib.PolyType.ptSubject, true);
-  holeClipper.AddPaths(surfaceUnion, ClipperLib.PolyType.ptClip, true);
-  const holes: any[] = [];
-  holeClipper.Execute(ClipperLib.ClipType.ctDifference, holes,
-    ClipperLib.PolyFillType.pftEvenOdd, ClipperLib.PolyFillType.pftEvenOdd);
-  if (!holes.length) return;
-
-  // Step 3: For each hole, compute the "clear cone" — the area visible through the hole
-  // from the viewer's angle. Scale each hole by 1/t from the viewer, where
-  // t = (viewerElev - surfaceElev) / (viewerElev - targetElev).
-  // Subtract the clear cone from the hole to get the fogged area.
-  // Use targetElev = standard token visibility test height (50% of 1-square depth = 2.5ft above floor).
-  const gridDist = canvas.scene?.grid?.distance ?? 5;
-  const targetMid = levelBelow.elevation.bottom + gridDist * 0.5;
-  const blockElev = blockingSurfaces[0].elevation;
-  const tFactor = (viewerElev - blockElev) / (viewerElev - targetMid);
-  if (tFactor <= 0 || tFactor >= 1) return;
-  const invT = 1 / tFactor;
-
-  const vxScaled = vx * SCALE;
-  const vyScaled = vy * SCALE;
-
-  _surfaceFogOverlay.beginFill(0x000000, 0.9);
-  for (const hole of holes) {
-    // Compute clear cone: scale hole vertices by invT from the viewer
-    const clearPoly = hole.map((pt: any) => ({
-      X: Math.round(vxScaled + (pt.X - vxScaled) * invT),
-      Y: Math.round(vyScaled + (pt.Y - vyScaled) * invT)
-    }));
-
-    // fog = hole − clear cone
-    const fogClipper = new ClipperLib.Clipper();
-    fogClipper.AddPath(hole, ClipperLib.PolyType.ptSubject, true);
-    fogClipper.AddPath(clearPoly, ClipperLib.PolyType.ptClip, true);
-    const fogResult: any[] = [];
-    fogClipper.Execute(ClipperLib.ClipType.ctDifference, fogResult,
-      ClipperLib.PolyFillType.pftEvenOdd, ClipperLib.PolyFillType.pftEvenOdd);
-
-    for (const path of fogResult) {
-      const points: number[] = [];
-      for (const pt of path) {
-        points.push(pt.X / SCALE, pt.Y / SCALE);
-      }
-      _surfaceFogOverlay.drawPolygon(points);
-    }
-  }
-  _surfaceFogOverlay.endFill();
 }
 
 /**
@@ -2732,7 +2599,11 @@ export function itemPrepareData(this: Item.Implementation, wrapped) {
 export function prepareOnUseMacroData(actorOrItem: Actor.Implementation | Item.Implementation) {
   try {
     const macros = actorOrItem.flags?.[MODULE_ID]?.onUseMacroName;
-    foundry.utils.setProperty(actorOrItem, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macros ?? null));
+    const parts = new OnUseMacros(macros ?? null);
+    // An item with a macro and no onUse macros runs its macro after active effects (a blank name; see OnUseMacros.withDefaults)
+    if (actorOrItem instanceof Item && parts.items.length === 0 && OnUseMacros.hasOwnMacro(actorOrItem))
+      parts.items.push(new OnUseMacro("[postActiveEffects]"));
+    foundry.utils.setProperty(actorOrItem, "flags.midi-qol.onUseMacroParts", parts);
   } catch (err) {
     const message = `midi-qol | failed to prepare onUse macro data ${actorOrItem?.name}`;
     console.warn(message, err);

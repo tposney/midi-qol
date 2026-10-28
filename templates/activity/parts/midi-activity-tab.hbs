@@ -89,6 +89,7 @@
     <fieldset>
       {{ formField fields.isOverTimeFlag value=source.isOverTimeFlag input=@root.inputs.createCheckboxInput }}
       {{#if source.isOverTimeFlag}}
+        <p class="hint">{{ localize "midi-qol.OVERTIME.Trigger" identifier=activity.identifier }}</p>
         {{#with fields.overTimeProperties.fields as |fields|}}
           {{ formField fields.turnChoice value=../source.overTimeProperties.turnChoice options=../turnChoiceOptions localize=true}}
           {{ formField fields.rollAs value=../source.overTimeProperties.rollAs options=../overTimeRollAsOptions localize=true}}

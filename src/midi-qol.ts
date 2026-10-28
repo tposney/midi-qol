@@ -402,6 +402,7 @@ Hooks.once('init', async function () {
   CONFIG.RegionBehavior.dataModels[`${MODULE_ID}.regionLight`] = MidiRegionLightBehaviorType as any;
   CONFIG.RegionBehavior.typeLabels![`${MODULE_ID}.regionLight`] = `BEHAVIOR.TYPES.${MODULE_ID}.regionLight.label`;
   CONFIG.RegionBehavior.typeIcons[`${MODULE_ID}.regionLight`] = "fa-solid fa-lightbulb";
+  MidiRegionLightBehaviorType.registerHooks();
 
   // @ts-expect-error no dnd5e-types
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;

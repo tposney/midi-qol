@@ -1,5 +1,5 @@
 {
-  "name": "Goggles of Night (RAW)",
+  "name": "Goggles of Night (Item Macro Light Amplification)",
   "type": "equipment",
   "img": "icons/magic/control/hypnosis-mesmerism-eye.webp",
   "system": {
@@ -55,122 +55,22 @@
       "value": "trinket",
       "baseItem": ""
     },
-    "activities": {
-      "TUdopFVun7JjIRc1": {
-        "type": "utility",
-        "_id": "TUdopFVun7JjIRc1",
-        "sort": 0,
-        "activation": {
-          "type": "bonus",
-          "value": null,
-          "override": false,
-          "condition": ""
-        },
-        "consumption": {
-          "scaling": {
-            "allowed": false
-          },
-          "spellSlot": true,
-          "targets": []
-        },
-        "description": {
-          "chatFlavor": ""
-        },
-        "duration": {
-          "units": "inst",
-          "concentration": false,
-          "override": false
-        },
-        "effects": [
-          {
-            "_id": "SBijQy1quToXi2F9"
-          }
-        ],
-        "range": {
-          "override": false,
-          "units": "self",
-          "special": ""
-        },
-        "target": {
-          "template": {
-            "contiguous": false,
-            "units": "ft",
-            "type": ""
-          },
-          "affects": {
-            "choice": false,
-            "count": "",
-            "type": "self"
-          },
-          "override": false,
-          "prompt": true
-        },
-        "uses": {
-          "spent": 0,
-          "recovery": [],
-          "max": ""
-        },
-        "roll": {
-          "prompt": false,
-          "visible": false,
-          "formula": "",
-          "name": ""
-        },
-        "useConditionText": "",
-        "effectConditionText": "",
-        "name": "",
-        "macroData": {
-          "name": "",
-          "command": ""
-        },
-        "ignoreTraits": {
-          "idi": false,
-          "idr": false,
-          "idv": false,
-          "ida": false
-        },
-        "midiProperties": {
-          "forceDialog": false,
-          "confirmTargets": "default",
-          "automationOnly": false,
-          "identifier": "",
-          "ignoreTraits": [],
-          "triggeredActivityId": "none",
-          "triggeredActivityConditionText": "",
-          "triggeredActivityTargets": "targets",
-          "triggeredActivityRollAs": "self",
-          "autoTargetType": "any",
-          "autoTargetAction": "default",
-          "otherActivityCompatible": true,
-          "displayActivityName": false,
-          "rollMode": "default",
-          "chooseEffects": false
-        },
-        "useConditionReason": "",
-        "otherActivityId": "",
-        "isOverTimeFlag": false,
-        "overTimeProperties": {
-          "saveRemoves": true,
-          "preRemoveConditionText": "",
-          "postRemoveConditionText": ""
-        }
-      }
-    },
-    "identifier": "goggles-of-night",
+    "activities": {},
+    "identifier": "goggles-of-night-item-macro-light-amplification-10037",
     "container": null,
     "properties": [
       "mgc"
     ],
     "attuned": false,
-    "equipped": true
+    "equipped": false
   },
   "effects": [
     {
-      "origin": "Actor.BogmFuNh1wswTouJ.Item.WMbFvwLw8edW0AbC",
+      "origin": "Actor.BogmFuNh1wswTouJ.Item.2JhVoUsNDytUcHyn",
       "duration": {},
       "disabled": false,
       "_id": "SBijQy1quToXi2F9",
-      "transfer": false,
+      "transfer": true,
       "flags": {
         "dae": {
           "selfTarget": false,
@@ -235,7 +135,7 @@
         ]
       },
       "sort": 0,
-      "_key": "!items.effects!kdUeEN6KnmNDvuuf.SBijQy1quToXi2F9",
+      "_key": "!items.effects!DklFQQNLObR1NoK9.SBijQy1quToXi2F9",
       "start": {
         "time": null,
         "round": 251,
@@ -252,11 +152,11 @@
     },
     "itemacro": {
       "macro": {
-        "name": "Googgles of Night Item Macro new",
+        "name": "Goggles of Night (Item Macro RAW)",
         "type": "script",
         "img": "icons/svg/dice-target.svg",
         "scope": "global",
-        "command": "const tokenDocument = token.document;\nif (args[0] === \"on\") {\n    const updates = {};\n    updates[\"flags.midi-qol.gogglesSave\"] = {\n        \"sight\": tokenDocument._source.sight\n    };\n    let newRange = 60;\n    if (tokenDocument.sight.visionMode === \"darkvision\") newRange = tokenDocument.sight.range + 60;\n\n    updates[\"sight\"] = CONFIG.Canvas.visionModes[\"darkvision\"].vision.defaults;\n    updates.sight.visionMode = \"darkvision\";\n    updates.sight.range = newRange;\n    return await tokenDocument.update(updates)\n} else if (args[0] === \"off\") {\n    const updates = tokenDocument.flags[\"midi-qol\"]?.gogglesSave ?? {};\n    updates[\"flags.midi-qol.gogglesSave\"] = _del;\n    return await tokenDocument.update(updates)\n}",
+        "command": "const tokenDocument = token.document;\nif (args[0] === \"on\") {\n    const updates = {};\n    updates[\"flags.midi-qol.gogglesSave\"] = {\n        \"sight\": tokenDocument._source.sight\n    };\n    let newRange = 60;\n    if (tokenDocument.sight.visionMode === \"darkvision\") newRange = tokenDocument.sight.range + 60;\n\n    updates[\"sight\"] = CONFIG.Canvas.visionModes[\"lightAmplification\"].vision.defaults;\n    updates.sight.visionMode = \"lightAmplification\";\n    updates.sight.range = newRange;\n    return await tokenDocument.update(updates)\n} else if (args[0] === \"off\") {\n    const updates = tokenDocument.flags[\"midi-qol\"]?.gogglesSave ?? {};\n    updates[\"flags.midi-qol.gogglesSave\"] = _del;\n    return await tokenDocument.update(updates)\n}",
         "sort": 0,
         "ownership": {
           "default": 0
@@ -291,8 +191,8 @@
       "id": "temp_mxc6kjqa6kp"
     },
     "scene-packer": {
-      "hash": "839526529253d61264f45b1e92dcb7e1f0383391",
-      "sourceId": "Item.BbUCCGZcYny2nHw8"
+      "hash": "53eab4a4729c5d1b693d8def44443857bf1088d7",
+      "sourceId": "Item.yOygOHQjd256S2Xm"
     },
     "midiProperties": {
       "confirmTargets": "default",
@@ -303,7 +203,7 @@
       "magicdam": false,
       "magiceffect": false,
       "noConcentrationCheck": false,
-      "toggleEffect": true,
+      "toggleEffect": false,
       "ignoreTotalCover": false,
       "idr": false,
       "idi": false,
@@ -319,12 +219,12 @@
     },
     "dae": {
       "macro": {
-        "name": "Goggles of Night (Item Macro RAW) 10.0.37",
+        "name": "Goggles of Night (Item Macro Light Amplification) 10.0.37",
         "img": "icons/magic/control/hypnosis-mesmerism-eye.webp",
         "type": "script",
         "scope": "global",
-        "command": "const tokenDocument = token.document;\nif (args[0] === \"on\") {\n    const updates = {};\n    updates[\"flags.midi-qol.gogglesSave\"] = {\n        \"sight\": tokenDocument._source.sight\n    };\n    let newRange = 60;\n    if (tokenDocument.sight.visionMode === \"darkvision\") newRange = tokenDocument.sight.range + 60;\n\n    updates[\"sight\"] = CONFIG.Canvas.visionModes[\"darkvision\"].vision.defaults;\n    updates.sight.visionMode = \"darkvision\";\n    updates.sight.range = newRange;\n    updates.sight.angle = 135;\n    return await tokenDocument.update(updates)\n} else if (args[0] === \"off\") {\n    const updates = tokenDocument.flags[\"midi-qol\"]?.gogglesSave ?? {};\n    updates[\"flags.midi-qol.gogglesSave\"] = _del;\n    return await tokenDocument.update(updates)\n}",
-        "author": "Zl1BOUaPLwDEujaL",
+        "command": "const tokenDocument = token.document;\nif (args[0] === \"on\") {\n    const updates = {};\n    updates[\"flags.midi-qol.gogglesSave\"] = {\n        \"sight\": tokenDocument._source.sight\n    };\n    let newRange = 60;\n    if (tokenDocument.sight.visionMode === \"darkvision\") newRange = tokenDocument.sight.range + 60;\n\n    updates[\"sight\"] = CONFIG.Canvas.visionModes[\"lightAmplification\"].vision.defaults;\n    updates.sight.visionMode = \"lightAmplification\";\n    updates.sight.range = newRange;\n    updates.sight.angle = 135;\n    return await tokenDocument.update(updates)\n} else if (args[0] === \"off\") {\n    const updates = tokenDocument.flags[\"midi-qol\"]?.gogglesSave ?? {};\n    updates[\"flags.midi-qol.gogglesSave\"] = _del;\n    return await tokenDocument.update(updates)\n}",
+        "author": "STcmc1QZ0hx024Tl",
         "ownership": {
           "default": 3
         },
@@ -333,9 +233,9 @@
         "sort": 0,
         "flags": {},
         "_stats": {
-          "coreVersion": "12.331",
+          "coreVersion": "12.328",
           "systemId": "dnd5e",
-          "systemVersion": "4.0.4",
+          "systemVersion": "3.2.1",
           "createdTime": null,
           "modifiedTime": null,
           "lastModifiedBy": null,
@@ -344,30 +244,13 @@
         }
       }
     },
-    "dnd5e": {
-      "riders": {
-        "activity": [],
-        "effect": []
-      },
-      "dependents": [
-        {
-          "uuid": "Actor.BogmFuNh1wswTouJ.ActiveEffect.3ufzg36aAjwyNCWB"
-        }
-      ]
-    },
     "tidy5e-sheet": {
       "section": "",
       "actionSection": ""
     },
-    "chris-premades": {
-      "info": {
-        "source": "midi-qol.midiqol-sample-items",
-        "version": "14.0.13"
-      }
-    },
-    "cat": {
-      "automation": {
-        "version": "14.0.13"
+    "dnd5e": {
+      "riders": {
+        "activity": []
       }
     }
   },
@@ -382,12 +265,12 @@
     "lastModifiedBy": "Zl1BOUaPLwDEujaL",
     "exportSource": null
   },
-  "folder": "5Ok9Jbl5nOokCkqf",
-  "_id": "kdUeEN6KnmNDvuuf",
-  "sort": 1000000,
+  "folder": "siWqYFXySiMF5GUD",
+  "_id": "DklFQQNLObR1NoK9",
+  "sort": 900000,
   "ownership": {
     "default": 0,
     "Zl1BOUaPLwDEujaL": 3
   },
-  "_key": "!items!kdUeEN6KnmNDvuuf"
+  "_key": "!items!DklFQQNLObR1NoK9"
 }

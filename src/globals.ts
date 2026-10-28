@@ -131,6 +131,10 @@ declare module "fvtt-types/configuration" {
     "midi-qol.AutoRemoveTargets": string;
     "midi-qol.ForceHideRoll": boolean;
     "midi-qol.EnableWorkflow": boolean;
+    "midi-qol.hiddenGroundCue": boolean;
+    "midi-qol.hiddenGroundCueStyle": string;
+    "midi-qol.hiddenGroundCueColor": foundry.data.fields.ColorField<{ nullable: boolean; initial: string }>;
+    "midi-qol.hiddenGroundCueOpacity": number;
     "midi-qol.DragDropTarget": boolean;
     "midi-qol.DebounceInterval": number;
     "midi-qol.TargetConfirmation": typeof targetConfirmation;
@@ -1172,7 +1176,6 @@ export type DamageListEntry = PreSetupDamageListEntry & {
   oldTempHP: number;
   oldTempMax?: number;
   tempDamage: number;
-  useDamageDetail: boolean;
   wasHit: boolean;
 }
 
