@@ -319,20 +319,20 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.58"
+        "version": "13.0.69"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>Beginning at 1st level, you know how to strike subtly and exploit a foe's distraction. Once per turn, you can deal an extra [[/r 1d6]] damage to one creature you hit with an attack if you have advantage on the attack roll. The attack must use a finesse or a ranged weapon.</p><p>You don't need advantage on the attack roll if another enemy of the target is within 5 feet of it, that enemy isn't <a href=\"https://5e.tools/conditionsdiseases.html#incapacitated_phb\">incapacitated</a>, and you don't have disadvantage on the attack roll.</p><p>The amount of the extra damage increases as you gain levels in this class, as shown in the Sneak Attack column of the Rogue table.</p><p></p>",
+      "value": "<p><em>The rules text is copyrighted and not included (not in the SRD): copy it from the Swashbuckler's Rakish Audacity in Xanathar's Guide to Everything into this description.</em></p><p><em>midi-qol: Sneak Attack (once per turn, a finesse or ranged weapon, Rogue levels needed) also applies without advantage when the target is the only creature within 5 feet of you and you don't have disadvantage. Your Charisma modifier is added to your initiative.</em></p>",
       "chat": ""
     },
     "source": {
       "custom": "Midi 12.4.25",
       "revision": 1,
       "rules": "2024",
-      "book": "",
+      "book": "Xanathar's Guide to Everything",
       "page": "",
       "license": ""
     },

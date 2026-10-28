@@ -1326,7 +1326,7 @@ export let MidiActivityMixin = Base => {
           }
           // display roll not being used.
           if (config.workflow.workflowOptions?.damageRollDSN !== false) {
-            let promises = result2.map(r => displayDSNForRoll(r, "damageRoll"));
+            let promises = result2.map(r => displayDSNForRoll(r, "damageRoll", undefined, undefined, this.actor));
             await Promise.all(promises);
           }
           await DamageRoll.toMessage(result2, messageData, { rollMode: game.settings.get("core", "rollMode") });
@@ -1338,7 +1338,7 @@ export let MidiActivityMixin = Base => {
 
         if (this.actionType === "heal" && !Object.keys(GameSystemConfig.healingTypes).includes(config.workflow.defaultDamageType ?? "")) config.workflow.defaultDamageType = "healing";
         if (config.workflow?.workflowOptions?.damageRollDSN !== false) {
-          let promises = result.map(r => displayDSNForRoll(r, "damageRoll"));
+          let promises = result.map(r => displayDSNForRoll(r, "damageRoll", undefined, undefined, this.actor));
           await Promise.all(promises);
         }
         if (config.midiOptions?.addOptionalBonuses !== false) {
@@ -1424,6 +1424,8 @@ export let MidiActivityMixin = Base => {
         // No confirmation needed — set workflow targets directly from the provided Set
         // to avoid race conditions with game.user.targets being changed by concurrent effects.
         workflow.setTargets(validTargetTokens(config.midiOptions!.targetsToUse!));
+        // Given its targets: later states keep them rather than re-reading the user's, which another use can change meanwhile.
+        workflow.workflowOptions.ignoreUserTargets = true;
       } else {
         // No targetsToUse and no confirmation — use current user targets or self-target.
         let selfTarget = this.target?.affects.type === "self";

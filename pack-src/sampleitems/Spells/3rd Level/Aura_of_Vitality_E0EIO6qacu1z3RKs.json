@@ -95,19 +95,19 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.69"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>Healing energy radiates from you in an aura with a 30-foot radius. Until the spell ends, the aura moves with you, centered on you. You can use a bonus action to cause one creature in the aura (including you) to regain 2d6 hit points.</p>\n<p><strong>midi-qol</strong>: No macros required. Two activities: \"Enable Aura\" (consumes spell slot, applies the Aura of Vitality effect) and \"Heal Target\" (bonus action, 2d6 healing, only usable while the aura effect is active via useConditionText).</p>",
-      "chat": "<p>Healing energy radiates from you in an aura with a 30-foot radius. Until the spell ends, the aura moves with you, centered on you. You can use a bonus action to cause one creature in the aura (including you) to regain 2d6 hit points.</p>"
+      "value": "<p><em>The rules text is copyrighted and not included (not in the SRD): copy it from the Aura of Vitality spell in Player's Handbook (2014) into this description.</em></p><p><em>midi-qol: Enable Aura casts the spell (spends the slot); Heal Target (a bonus action, 2d6) can be used only while the aura is active.</em></p>",
+      "chat": ""
     },
     "source": {
       "custom": "midi-qol sample",
       "rules": "2014",
-      "book": "",
+      "book": "Player's Handbook (2014)",
       "page": "",
       "license": ""
     },

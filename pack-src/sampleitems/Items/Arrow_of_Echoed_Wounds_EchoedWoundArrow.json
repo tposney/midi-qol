@@ -1,0 +1,264 @@
+{
+  "_id": "EchoedWoundArrow",
+  "_key": "!items!EchoedWoundArrow",
+  "name": "Arrow of Echoed Wounds",
+  "type": "consumable",
+  "img": "icons/weapons/ammunition/arrow-broadhead-bent-teal.webp",
+  "folder": "5Ok9Jbl5nOokCkqf",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>A barbed arrow that hums faintly, as if remembering every wound it has made.</em></p><p>When you hit a creature with an attack using this arrow, the arrow stays lodged in the wound for 1 minute. While it is lodged, whenever the creature takes damage, it takes an extra <strong>2d6 piercing damage</strong> as the arrow twists.</p><p>The creature can use an action to pull the arrow out with a <strong>DC 18 Wisdom (Medicine) check</strong>. On a success the arrow comes free and the wound closes; on a failure the wound tears, dealing <strong>4d6 piercing damage</strong>, and the arrow stays lodged.</p><p>Once it is removed or the minute ends, the arrow crumbles to dust.</p><details><summary>Midi-QOL</summary><p>An onUse macro on the arrow runs its hidden Lodge activity when the bow's attack hits, applying Echoed Wound to the creature hit. Its <code>isDamaged</code> macro adds the 2d6 (not reduced by resistance) to damage midi applies. While it lasts the creature has a Lodged Arrow item whose Pull Out activity makes the Medicine check.</p></details>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "Midi-QOL sample",
+      "revision": 1,
+      "rules": "2024"
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 0.05,
+      "units": "lb"
+    },
+    "price": {
+      "value": 100000,
+      "denomination": "gp"
+    },
+    "attunement": "",
+    "rarity": "legendary",
+    "identified": true,
+    "uses": {
+      "max": "",
+      "autoDestroy": false,
+      "spent": 0,
+      "recovery": []
+    },
+    "damage": {
+      "base": {
+        "number": null,
+        "denomination": null,
+        "bonus": "",
+        "types": [],
+        "custom": {
+          "enabled": false,
+          "formula": ""
+        },
+        "scaling": {
+          "number": 1
+        }
+      },
+      "replace": false
+    },
+    "properties": [
+      "mgc"
+    ],
+    "unidentified": {
+      "description": ""
+    },
+    "type": {
+      "value": "ammo",
+      "subtype": "arrow"
+    },
+    "container": null,
+    "identifier": "arrow-of-echoed-wounds",
+    "magicalBonus": null,
+    "attuned": false,
+    "equipped": false,
+    "activities": {
+      "EchoedWoundLodge": {
+        "_id": "EchoedWoundLodge",
+        "type": "utility",
+        "name": "Echoed Wounds: Lodge",
+        "sort": 0,
+        "activation": {
+          "type": "special",
+          "value": 1,
+          "condition": "",
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "1",
+          "units": "minute",
+          "special": "",
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "EchoedWoundEff00",
+            "onSave": false
+          }
+        ],
+        "range": {
+          "units": "any",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "1",
+            "type": "creature",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": false,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "useConditionText": "",
+        "effectConditionText": "",
+        "useConditionReason": "",
+        "otherActivityId": "none",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "midiProperties": {
+          "automationOnly": true,
+          "forceDialog": false,
+          "confirmTargets": "never",
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": true,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        }
+      }
+    }
+  },
+  "effects": [
+    {
+      "_id": "EchoedWoundEff00",
+      "_key": "!items.effects!EchoedWoundArrow.EchoedWoundEff00",
+      "name": "Echoed Wound",
+      "type": "base",
+      "img": "icons/weapons/ammunition/arrow-broadhead-bent-teal.webp",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [],
+      "duration": {
+        "startTime": null,
+        "seconds": null,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "description": "An arrow is lodged in you: whenever you take damage, you take an extra 2d6 piercing damage. Pull it out with the Lodged Arrow item.",
+      "system": {},
+      "flags": {
+        "dae": {
+          "stackable": "noneName",
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "durationExpression": "",
+          "showIcon": true
+        },
+        "midi-qol": {
+          "echoedWound": true
+        }
+      },
+      "origin": null,
+      "tint": "#ffffff",
+      "sort": 0,
+      "changes": [
+        {
+          "key": "flags.midi-qol.onUseMacroName",
+          "mode": 0,
+          "value": "ItemMacro, isDamaged",
+          "priority": 20
+        },
+        {
+          "key": "macro.itemMacro.GM",
+          "mode": 0,
+          "value": "",
+          "priority": 20
+        }
+      ]
+    }
+  ],
+  "flags": {
+    "midi-qol": {
+      "onUseMacroName": "[postActiveEffects]ItemMacro",
+      "onUseMacroParts": {
+        "items": [
+          {
+            "macroName": "ItemMacro",
+            "option": "postActiveEffects"
+          }
+        ]
+      }
+    },
+    "dae": {
+      "macro": {
+        "name": "Arrow of Echoed Wounds",
+        "type": "script",
+        "img": "icons/weapons/ammunition/arrow-broadhead-bent-teal.webp",
+        "scope": "global",
+        "command": "// Arrow of Echoed Wounds\n// Fired as ammunition (postActiveEffects of the bow's attack), the arrow's Lodge activity applies Echoed Wound to the creature hit;\n// the effect adds 2d6 piercing whenever the target\n// takes damage (isDamaged). While it lasts (DAE on/off, on the GM) the target carries a Lodged Arrow item: Pull Out is\n// a DC 18 Wisdom (Medicine) check by the wounded creature; a success ends the wound, a failure deals 4d6 piercing.\nconst FLAG = \"echoedWound\";\nconst LODGE = \"EchoedWoundLodge\", PULL = \"LodgedPullOut000\", TORN = \"LodgedTornWound0\";\nconst name = \"Arrow of Echoed Wounds\";\nconst lodged = !!macroItem?.getFlag(\"midi-qol\", \"lodgedArrow\");\n\nif (args[0] === \"on\") {\n  const macro = macroItem?.flags?.dae?.macro;\n  await actor.createEmbeddedDocuments(\"Item\", [{\n    name: \"Lodged Arrow\", type: \"feat\", img: macroItem?.img ?? \"icons/svg/aura.svg\",\n    system: {\n      description: { value: `<p>An arrow of echoed wounds is lodged in you. As an action, you can try to pull it out with a DC 18 Wisdom (Medicine) check: on a success the wound closes; on a failure it tears, dealing 4d6 piercing damage.</p>` },\n      activities: {\n        [PULL]: { _id: PULL, type: \"utility\", name: \"Pull Out\", activation: { type: \"action\", value: 1 }, target: { affects: { type: \"self\" } }, range: { units: \"self\" } },\n        [TORN]: { _id: TORN, type: \"damage\", name: \"Torn Wound\", activation: { type: \"special\" }, target: { affects: { type: \"self\" } }, range: { units: \"self\" },\n          damage: { parts: [{ number: 4, denomination: 6, types: [\"piercing\"] }] },\n          midiProperties: { automationOnly: true, otherActivityCompatible: false, forceConsumeDialog: \"never\" } }\n      }\n    },\n    flags: { \"midi-qol\": { lodgedArrow: true, onUseMacroName: \"[postActiveEffects]ItemMacro\" }, ...(macro ? { dae: { macro } } : {}) }\n  }]);\n  return;\n}\nif (args[0] === \"off\") {\n  const ids = actor.items.filter(i => i.getFlag(\"midi-qol\", \"lodgedArrow\")).map(i => i.id);\n  if (ids.length) await actor.deleteEmbeddedDocuments(\"Item\", ids);\n  return;\n}\n\nif (args[0]?.tag === \"OnUse\" && args[0].macroPass === \"postActiveEffects\" && workflow?.ammunition?.id === macroItem?.id) {\n  // fired as ammunition: on a hit the arrow lodges (its hidden Lodge activity applies Echoed Wound)\n  const target = workflow.hitTargets?.first();\n  const lodge = workflow.ammunition.system.activities.get(LODGE);\n  if (target && lodge) await MidiQOL.completeActivityUse(lodge, { midiOptions: { targetUuids: [target.document.uuid],\n    workflowOptions: { targetConfirmation: \"none\" } } }, { configure: false }, {});\n  return;\n}\n\nif (args[0]?.tag === \"TargetOnUse\" && args[0].macroPass === \"isDamaged\") {\n  // the wounded creature takes damage: the arrow twists\n  const di = workflow?.damageItem;\n  if (!di || ((di.hpDamage ?? 0) + (di.tempDamage ?? 0)) <= 0) return;\n  const roll = await new Roll(\"2d6[piercing]\").evaluate();\n  await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `${name}: the arrow twists in the wound` });\n  MidiQOL.modifyDamageBy({ damageItem: di, value: roll.total, type: \"piercing\", reason: name });\n  return;\n}\n\nif (lodged && args[0]?.tag === \"OnUse\" && args[0].macroPass === \"postActiveEffects\" && workflow?.activity?.id === PULL) {\n  const [check] = await actor.rollSkill({ skill: \"med\", target: 18 }, {}, {}) ?? [];\n  const wound = actor.effects.find(e => e.getFlag(\"midi-qol\", FLAG));\n  if ((check?.total ?? 0) >= 18) {\n    if (wound) await MidiQOL.socket().executeAsGM(\"removeEffects\", { actorUuid: actor.uuid, effects: [wound.id] });\n    return ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<strong>${name}</strong>: the arrow comes free and the wound closes.` });\n  }\n  await ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<strong>${name}</strong>: the arrow tears as it is pulled and stays lodged.` });\n  const torn = macroItem.system.activities.get(TORN);\n  const me = token?.document?.uuid ?? token?.uuid;\n  if (torn && me) await MidiQOL.completeActivityUse(torn, { midiOptions: { targetUuids: [me],\n    workflowOptions: { targetConfirmation: \"none\", autoRollDamage: \"always\", autoFastDamage: true } } }, { configure: false }, {});\n}\n"
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.69"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "exportSource": null
+  }
+}

@@ -4,16 +4,17 @@
   "img": "icons/equipment/hand/glove-armored-leather-steel-brown.webp",
   "system": {
     "description": {
-      "value": "<p>Your Constitution score is 20 while you wear these gloves. This property of the gloves has no effect on you if your Constitution is already 20 or higher.</p><p>After making a successful unarmed strike while wearing these gloves, you can use the gloves to deal an extra 2d10 force damage to the target, and you regain a number of hit points equal to the force damage dealt. Alternatively, instead of regaining hit points in this way, you can choose to gain advantage on one attack roll, ability check, or saving throw you make before the end of your next turn.</p><p><em>Foundry note:</em> while attuned, 2d10 force is appended to the Unarmed Strike's own damage roll, so a feature that re-types that damage (Elemental Attunement) changes it too, and a critical doubles it to 4d10. The extra damage is therefore always dealt; you are prompted only for the benefit (hit points or advantage), and healing matches the dice rolled. Use the standard “Gloves of Soul Catching” for a per-strike prompt with the damage kept as force.</p>",
+      "value": "<p><em>The rules text is copyrighted and not included (not in the SRD): copy it from the Gloves of Soul Catching in Candlekeep Mysteries into this description.</em></p><p><em>midi-qol: While attuned, 2d10 force is added to your Unarmed Strike's own damage roll, so a feature that changes that damage's type (Elemental Attunement) changes it too, and a critical hit doubles it. The extra damage is always dealt: you are asked only for the benefit (hit points equal to the dice rolled, or advantage). Gloves of Soul Catching asks on each strike and keeps the damage as force.</em></p>",
       "chat": ""
     },
     "identifier": "gloves-of-soul-catching-elemental",
     "source": {
       "revision": 1,
       "rules": "2014",
-      "book": "",
+      "book": "Candlekeep Mysteries",
       "page": "",
-      "custom": ""
+      "custom": "",
+      "license": ""
     },
     "quantity": 1,
     "weight": {
@@ -127,7 +128,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.65"
+        "version": "13.0.69"
       }
     }
   },

@@ -1746,7 +1746,7 @@ export class Workflow {
     if (debugEnabled > 1) log(`callOnUseMacrosForAction | ${prePost} ${this.nameForState(action)}`)
     const macroPass = `${prePost}${this.nameForState(action)}`;
 
-    if (this.ammunition) await this.callMacros(this.item, this.ammunitionOnUseMacros?.getMacros(macroPass), "OnUse", macroPass);
+    if (this.ammunition) await this.callMacros(this.ammunition, this.ammunitionOnUseMacros?.getMacros(macroPass), "OnUse", macroPass);
     if (debugEnabled > 1) log(`callOnUseMacrosForAction | ${this.onUseMacros?.getMacros(macroPass)}`)
     return this.callMacros(this.item, this.onUseMacros?.getMacros(macroPass), "OnUse", macroPass);
 
@@ -4227,7 +4227,7 @@ export class Workflow {
       this.rawBonusDamageDetail = [];
     }
     if (this.bonusDamageRolls && this.workflowOptions?.damageRollDSN !== false) {
-      await displayDSNForRoll(this.bonusDamageRolls, "damageRoll");
+      await displayDSNForRoll(this.bonusDamageRolls, "damageRoll", undefined, undefined, this.actor);
     }
     return;
   }

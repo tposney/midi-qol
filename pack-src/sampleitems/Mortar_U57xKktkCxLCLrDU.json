@@ -80,7 +80,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.58"
+        "version": "13.0.69"
       }
     }
   },
@@ -90,9 +90,12 @@
       "chat": ""
     },
     "source": {
-      "custom": "DMG pg. 213",
+      "custom": "midi-qol homebrew",
       "revision": 1,
-      "rules": "2014"
+      "rules": "2014",
+      "book": "",
+      "page": "",
+      "license": ""
     },
     "quantity": 1,
     "weight": {

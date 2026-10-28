@@ -11,7 +11,7 @@
   },
   "system": {
     "description": {
-      "value": "<p><em>The liquid is the colour of a sunrise seen through closed eyes, and it is warm in the bottle.</em></p>\n<p>You can drink this potion as a <strong>reaction</strong> when damage would reduce you to 0 hit points. Instead, you remain standing with hit points equal to half your hit point maximum (any temporary hit points you had count toward this), and the damage is otherwise ignored.</p>\n<p>For the next minute, damage can't reduce you below 1 hit point. When the minute ends, you gain one level of <strong>exhaustion</strong> for each time this protection kept you standing.</p>\n<details><summary>Midi-QOL</summary><p>A reaction offered when incoming damage is at least your current hit points plus temporary hit points (before resistances). The Second Breath effect lasts 1 minute and uses an <code>isDamaged</code> macro; exhaustion is applied when it ends.</p></details>",
+      "value": "<p><em>The liquid is the colour of a sunrise seen through closed eyes, and it is warm in the bottle.</em></p><p>You can drink this potion as a <strong>reaction</strong> when damage would reduce you to 0 hit points. Instead, you rise with hit points equal to your hit point maximum, the damage is otherwise ignored, and you are no longer <strong>charmed</strong>, <strong>frightened</strong>, <strong>paralyzed</strong>, <strong>poisoned</strong> or <strong>stunned</strong>.</p><p>For the next minute, you have resistance to all damage. If damage reduces you to 0 hit points during that minute, you make a <strong>Constitution saving throw</strong> with a DC of 5 + the damage taken; on a success, you drop to 1 hit point instead. When the minute ends, you gain one level of <strong>exhaustion</strong> for each of these saving throws you succeeded on.</p><details><summary>Midi-QOL</summary><p>A reaction offered when incoming damage is at least your current hit points plus temporary hit points (before resistances). The Second Breath effect lasts 1 minute and uses an <code>isDamaged</code> macro, which rolls the saving throws; the exhaustion is applied when it ends.</p></details>",
       "chat": ""
     },
     "source": {
@@ -25,7 +25,7 @@
       "units": "lb"
     },
     "price": {
-      "value": 50000,
+      "value": 100000,
       "denomination": "gp"
     },
     "attunement": "",
@@ -198,6 +198,84 @@
           "mode": 0,
           "value": "",
           "priority": 20
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "acid",
+          "priority": 20
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "bludgeoning",
+          "priority": 20
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "cold",
+          "priority": 20
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "fire",
+          "priority": 20
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "force",
+          "priority": 20
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "lightning",
+          "priority": 20
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "necrotic",
+          "priority": 20
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "piercing",
+          "priority": 20
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "poison",
+          "priority": 20
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "psychic",
+          "priority": 20
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "radiant",
+          "priority": 20
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "slashing",
+          "priority": 20
+        },
+        {
+          "key": "system.traits.dr.value",
+          "mode": 2,
+          "value": "thunder",
+          "priority": 20
         }
       ],
       "transfer": false,
@@ -232,7 +310,7 @@
         }
       },
       "name": "Second Breath",
-      "description": "Damage can't reduce you below 1 hit point. Gain a level of exhaustion for each time it does when this ends.",
+      "description": "Resistance to all damage. Damage that would drop you to 0 calls for a Constitution save (DC 5 + damage): on a success you drop to 1 instead. A level of exhaustion for each such save when this ends.",
       "statuses": [],
       "img": "icons/consumables/potions/flask-corked-red-glow.webp",
       "type": "base",
@@ -248,7 +326,7 @@
         "type": "script",
         "img": "icons/svg/dice-target.svg",
         "scope": "global",
-        "command": "// Draught of the Second Breath\n// isDamaged, while the effect lasts: the blow that would drop the drinker to 0 leaves them at half their hit\n// point maximum; later ones leave them at 1 and are counted. When the effect ends, a level of exhaustion for each.\nconst FLAG = \"secondBreath\";\nconst name = macroItem?.name ?? \"Draught of the Second Breath\";\nconst say = (content) => ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<strong>${name}</strong>: ${content}` });\n\nif (args[0] === \"off\") {\n  const lastArg = args.at(-1);\n  const saves = foundry.utils.getProperty(lastArg?.efData ?? {}, `flags.midi-qol.${FLAG}.saves`) ?? 0;\n  if (saves < 1) return;\n  const exhaustion = Math.min(6, (actor.system.attributes.exhaustion ?? 0) + saves);\n  const updates = { \"system.attributes.exhaustion\": exhaustion };\n  if (actor.isOwner) await actor.update(updates);\n  else await MidiQOL.socket().executeAsGM(\"updateActor\", { actorUuid: actor.uuid, updates });\n  await say(`the second breath runs out: ${actor.name} gains ${saves} level${saves > 1 ? \"s\" : \"\"} of exhaustion.`);\n  return;\n}\nif (args[0]?.tag !== \"TargetOnUse\" || args[0].macroPass !== \"isDamaged\") return;\n\nconst di = workflow?.damageItem;\nif (!di || di.oldHP < 1 || di.newHP > 0) return;\nconst effect = actor.effects.find(e => e.getFlag(\"midi-qol\", FLAG) !== undefined);\nif (!effect) return;\nconst state = effect.getFlag(\"midi-qol\", FLAG);\n\n// Damage that leaves exactly 1 hit point, temporary hit points spent first.\nconst useDetail = MidiQOL.configSettings().useDamageDetail;\nconst base = useDetail ? di.totalDamage : di.hpDamage;\nconst leaveOne = useDetail ? (di.oldTempHP ?? 0) + di.oldHP - 1 : di.oldHP - 1;\nMidiQOL.modifyDamageBy({ damageItem: di, value: leaveOne - base, type: \"none\", reason: name });\ndi.newHP = 1;\n\nlet update;\nif (!state.risen) {\n  // the first blow: rise with half the hit point maximum\n  const half = Math.max(1, Math.floor(actor.system.attributes.hp.max / 2));\n  if (half > 1) MidiQOL.modifyDamageBy({ damageItem: di, value: -(half - 1), type: \"healing\", reason: name });\n  di.newHP = half;\n  update = { risen: true, saves: state.saves ?? 0 };\n  await say(`${actor.name} draws a second breath and stays standing.`);\n} else {\n  update = { risen: true, saves: (state.saves ?? 0) + 1 };\n  await say(`the draught holds ${actor.name} at 1 hit point.`);\n}\nawait MidiQOL.socket().executeAsGM(\"updateEffects\", { actorUuid: actor.uuid, updates: [{ _id: effect.id, [`flags.midi-qol.${FLAG}`]: update }] });\n",
+        "command": "// Draught of the Second Breath\n// isDamaged, while the effect lasts: the blow that would drop the drinker to 0 when they drink leaves them at their hit\n// point maximum and clears the conditions that hold them down. Later blows that would drop them to 0 call for a\n// Constitution save (DC 5 + the damage taken): on a success they drop to 1 instead and the save is counted. Resistance to\n// all damage comes from the effect. When the effect ends, a level of exhaustion for each save made.\nconst FLAG = \"secondBreath\";\nconst CLEARED = [\"charmed\", \"frightened\", \"paralyzed\", \"poisoned\", \"stunned\"];\nconst name = macroItem?.name ?? \"Draught of the Second Breath\";\nconst say = (content) => ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<strong>${name}</strong>: ${content}` });\n\nif (args[0] === \"off\") {\n  const lastArg = args.at(-1);\n  const saves = foundry.utils.getProperty(lastArg?.efData ?? {}, `flags.midi-qol.${FLAG}.saves`) ?? 0;\n  if (saves < 1) return say(`the second breath runs out.`);\n  const current = actor.system.attributes.exhaustion ?? 0;\n  const exhaustion = Math.min(6, current + saves);\n  if (exhaustion <= current) return say(`the second breath runs out.`);\n  const updates = { \"system.attributes.exhaustion\": exhaustion };\n  if (actor.isOwner) await actor.update(updates);\n  else await MidiQOL.socket().executeAsGM(\"updateActor\", { actorUuid: actor.uuid, updates });\n  const gained = exhaustion - current;\n  await say(`the second breath runs out: ${actor.name} gains ${gained} level${gained > 1 ? \"s\" : \"\"} of exhaustion.`);\n  return;\n}\nif (args[0]?.tag !== \"TargetOnUse\" || args[0].macroPass !== \"isDamaged\") return;\n\nconst di = workflow?.damageItem;\nif (!di || di.oldHP < 1 || di.newHP > 0) return;\nconst effect = actor.effects.find(e => e.getFlag(\"midi-qol\", FLAG) !== undefined);\nif (!effect) return;\nconst state = effect.getFlag(\"midi-qol\", FLAG);\n\n// Damage that leaves exactly 1 hit point, temporary hit points spent first.\nconst leaveOne = () => {\n  const useDetail = MidiQOL.configSettings().useDamageDetail;\n  const base = useDetail ? di.totalDamage : di.hpDamage;\n  const target = useDetail ? (di.oldTempHP ?? 0) + di.oldHP - 1 : di.oldHP - 1;\n  MidiQOL.modifyDamageBy({ damageItem: di, value: target - base, type: \"none\", reason: name });\n  di.newHP = 1;\n};\n\nif (!state.risen) {\n  // the blow you drink against: rise at the hit point maximum, free of what was holding you down\n  leaveOne();\n  const max = Math.max(1, actor.system.attributes.hp.max);\n  if (max > 1) MidiQOL.modifyDamageBy({ damageItem: di, value: -(max - 1), type: \"healing\", reason: name });\n  di.newHP = max;\n  for (const status of CLEARED.filter(s => actor.statuses.has(s)))\n    await MidiQOL.socket().executeAsGM(\"toggleStatusEffect\", { actorUuid: actor.uuid, statusId: status, options: { active: false } });\n  await MidiQOL.socket().executeAsGM(\"updateEffects\", { actorUuid: actor.uuid, updates: [{ _id: effect.id, [`flags.midi-qol.${FLAG}`]: { risen: true, saves: state.saves ?? 0 } }] });\n  return say(`${actor.name} draws a second breath and rises, whole.`);\n}\n\n// later blows: hold on with a Constitution save, as undead fortitude\nconst dc = 5 + Math.max(0, di.totalDamage);\nconst flavor = `${name} - DC ${dc} Constitution saving throw`;\nconst save = (await actor.rollSavingThrow({ ability: \"con\", target: dc }, {}, { flavor, fastForward: true }))?.[0]?.total ?? 0;\nif (save < dc) return say(`${actor.name} fails the DC ${dc} Constitution save, and the second breath gives out.`);\nleaveOne();\nconst saves = (state.saves ?? 0) + 1;\nawait MidiQOL.socket().executeAsGM(\"updateEffects\", { actorUuid: actor.uuid, updates: [{ _id: effect.id, [`flags.midi-qol.${FLAG}.saves`]: saves }] });\nawait say(`${actor.name} succeeds on a DC ${dc} Constitution save and holds on at 1 hit point (${saves} level${saves > 1 ? \"s\" : \"\"} of exhaustion to come).`);\n",
         "author": null,
         "ownership": {
           "default": 3
@@ -268,7 +346,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.68"
+        "version": "13.0.69"
       }
     }
   }

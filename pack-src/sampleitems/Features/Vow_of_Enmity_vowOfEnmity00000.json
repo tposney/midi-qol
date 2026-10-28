@@ -4,15 +4,16 @@
   "img": "icons/magic/fire/explosion-embers-evade-silhouette.webp",
   "system": {
     "description": {
-      "value": "<p>When you take the Attack action, you can expend one use of Channel Divinity to utter a vow of enmity against a creature you can see within 30 feet of yourself. You have advantage on attack rolls against that creature for 1 minute, or until you use this feature again.</p><p>If the creature drops to 0 hit points before the vow ends, use <em>Transfer Vow</em> to move it to another creature within 30 feet (no action required). The original duration keeps running.</p><p><em>Sample item note:</em> uses are tracked on this item. On a 2024 paladin, repoint the Utter Vow consumption at the actor's own Channel Divinity feature.</p>",
+      "value": "<p><em>The rules text is copyrighted and not included (not in the SRD): copy it from the Oath of Vengeance's Vow of Enmity in Player's Handbook (2024) into this description.</em></p><p><em>midi-qol: Utter Vow gives you advantage on attack rolls against the creature for 1 minute; Transfer Vow moves the vow to another creature within 30 feet when the first drops to 0 hit points, keeping the time left. Uses are tracked on this item: on a 2024 Paladin, point Utter Vow's consumption at your Channel Divinity feature.</em></p>",
       "chat": ""
     },
     "source": {
       "revision": 1,
       "rules": "2024",
-      "book": "",
+      "book": "Player's Handbook (2024)",
       "page": "",
-      "custom": ""
+      "custom": "",
+      "license": ""
     },
     "activities": {
       "vowMakeVowAct000": {
@@ -376,7 +377,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.64"
+        "version": "13.0.69"
       }
     }
   },

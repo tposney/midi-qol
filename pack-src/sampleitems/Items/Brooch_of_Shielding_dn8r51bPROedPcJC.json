@@ -1,5 +1,5 @@
 {
-  "name": "Broach of Shielding",
+  "name": "Brooch of Shielding",
   "type": "equipment",
   "img": "icons/equipment/neck/pendant-bronze-gem-blue.webp",
   "system": {
@@ -56,7 +56,7 @@
       "baseItem": ""
     },
     "activities": {},
-    "identifier": "broach-of-shielding",
+    "identifier": "brooch-of-shielding",
     "container": null,
     "properties": [
       "mgc"
@@ -170,31 +170,6 @@
       "rechargeUnit": "r1",
       "sorting": "l"
     },
-    "itemacro": {
-      "macro": {
-        "name": "Broach of Shielding (10.0.44)",
-        "type": "script",
-        "img": "icons/svg/dice-target.svg",
-        "scope": "global",
-        "command": "if (args[0].tag!== \"TargetOnUse\") return;\nif (!workflow.item.name.includes(\"Magic Missile\")) return;\nworkflow.damageItem.hpDamage = 0;",
-        "sort": 0,
-        "ownership": {
-          "default": 3
-        },
-        "flags": {},
-        "_stats": {
-          "systemId": null,
-          "systemVersion": null,
-          "coreVersion": null,
-          "createdTime": null,
-          "modifiedTime": null,
-          "lastModifiedBy": null
-        },
-        "author": "ffUVCzLexh57kZfU",
-        "_id": null,
-        "folder": null
-      }
-    },
     "cf": {
       "id": "temp_mxc6kjqa6kp"
     },
@@ -237,7 +212,32 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.69"
+      }
+    },
+    "dae": {
+      "macro": {
+        "name": "Broach of Shielding (10.0.44)",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "// Immune to Magic Missile's damage (preTargetDamageApplication); the force resistance is the effect's.\nif (args[0].tag !== \"TargetOnUse\" || args[0].macroPass !== \"preTargetDamageApplication\") return;\nconst spell = workflow.item;\nif (spell?.system.identifier !== \"magic-missile\" && !spell?.name.includes(\"Magic Missile\")) return;\nconst di = workflow.damageItem;\nif (di?.totalDamage > 0) MidiQOL.modifyDamageBy({ damageItem: di, value: -di.totalDamage, reason: macroItem.name });\n",
+        "sort": 0,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {},
+        "_stats": {
+          "systemId": null,
+          "systemVersion": null,
+          "coreVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null
+        },
+        "author": "ffUVCzLexh57kZfU",
+        "_id": null,
+        "folder": null
       }
     }
   },

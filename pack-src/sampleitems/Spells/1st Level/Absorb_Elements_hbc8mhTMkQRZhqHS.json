@@ -198,19 +198,19 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.69"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>The description for this spell is not in the SRD. When you take acid, cold, fire, lightning, or thunder damage, you can use your reaction to capture some of the incoming energy and gain resistance to the triggering damage type until the start of your next turn. Your first melee attack on your next turn deals an extra 1d6 damage of the triggering type.</p><p><strong>At Higher Levels.</strong> The extra damage increases by 1d6 for each slot level above 1st.</p>\n<p><strong>midi-qol</strong>: Uses a <code>[postActiveEffects]ItemMacro</code> that presents a dialog to choose the element type (acid, cold, fire, lightning, thunder), then updates the Absorb Elements effect's bonus damage and the Resistance effect's damage type accordingly. The damage scales with spell level.</p>",
-      "chat": "<p>The description for this spell is not in the SRD. When you take acid, cold, fire, lightning, or thunder damage, you can use your reaction to capture some of the incoming energy and gain resistance to the triggering damage type until the start of your next turn. Your first melee attack on your next turn deals an extra 1d6 damage of the triggering type.</p><p><strong>At Higher Levels.</strong> The extra damage increases by 1d6 for each slot level above 1st.</p>"
+      "value": "<p><em>The rules text is copyrighted and not included (not in the SRD): copy it from the Absorb Elements spell in Xanathar's Guide to Everything into this description.</em></p><p><em>midi-qol: Cast as a reaction when you take acid, cold, fire, lightning or thunder damage: you choose the element, have resistance to it until the start of your next turn, and your first melee hit on your next turn deals the extra damage of that element (more from a higher slot).</em></p>",
+      "chat": ""
     },
     "source": {
       "custom": "midi-qol sample",
       "rules": "2014",
-      "book": "",
+      "book": "Xanathar's Guide to Everything",
       "page": "",
       "license": ""
     },

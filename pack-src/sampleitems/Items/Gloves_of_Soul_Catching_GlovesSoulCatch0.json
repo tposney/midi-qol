@@ -4,16 +4,17 @@
   "img": "icons/equipment/hand/glove-armored-leather-steel-brown.webp",
   "system": {
     "description": {
-      "value": "<p>Your Constitution score is 20 while you wear these gloves. This property of the gloves has no effect on you if your Constitution is already 20 or higher.</p><p>After making a successful unarmed strike while wearing these gloves, you can use the gloves to deal an extra 2d10 force damage to the target, and you regain a number of hit points equal to the force damage dealt. Alternatively, instead of regaining hit points in this way, you can choose to gain advantage on one attack roll, ability check, or saving throw you make before the end of your next turn.</p>",
+      "value": "<p><em>The rules text is copyrighted and not included (not in the SRD): copy it from the Gloves of Soul Catching in Candlekeep Mysteries into this description.</em></p><p><em>midi-qol: Your Constitution is 20 while attuned, if it is lower. When your Unarmed Strike hits you are asked whether to use the gloves: 2d10 force damage and you regain hit points equal to the roll, or advantage on your next attack roll, ability check or saving throw before the end of your next turn.</em></p>",
       "chat": ""
     },
     "identifier": "gloves-of-soul-catching",
     "source": {
       "revision": 1,
       "rules": "2014",
-      "book": "",
+      "book": "Candlekeep Mysteries",
       "page": "",
-      "custom": ""
+      "custom": "",
+      "license": ""
     },
     "quantity": 1,
     "weight": {
@@ -121,7 +122,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.65"
+        "version": "13.0.69"
       }
     }
   },

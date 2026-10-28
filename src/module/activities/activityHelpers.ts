@@ -198,6 +198,8 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
   // fix for very silly value choice in midi properties.
   if (["none", "never"].includes(options.workflowOptions?.targetConfirmation ?? "")) return false;
   if (options.workflowOptions?.targetConfirmation === "always") return true;
+  // The targets this use will have: those it was given, else the user's (another use can change the user's meanwhile).
+  const targets: Set<foundry.canvas.placeables.Token.Implementation> = options.targetsToUse?.size ? options.targetsToUse : new Set(game.user?.targets ?? []);
   if (["enchant", "summon"].includes(activity.type)) return false;
   /*
    * "Choose Targets" (target.affects.choice) means "when targeting an area, can the user choose who
@@ -212,9 +214,9 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
   if (options.workflowOptions?.attackPerTarget === true) return false;
   if ((activity.forcedTargetConfirmation ?? activity.midiProperties?.confirmTargets) === "always") return true;
   if ((activity.forcedTargetConfirmation ?? activity.midiProperties?.confirmTargets) === "never") return false;
-  if (targetConfirmation.enabled && targetConfirmation.noneTargeted && ((activity.target?.affects.type ?? "") !== "" || activity.attack) && (game.user?.targets?.size ?? 0) === 0)
+  if (targetConfirmation.enabled && targetConfirmation.noneTargeted && ((activity.target?.affects.type ?? "") !== "" || activity.attack) && targets.size === 0)
     return true;
-  let numTargets = game.user?.targets?.size ?? 0;
+  let numTargets = targets.size;
   // @ts-expect-error no dnd5e-types
   if (numTargets === 0 && activity.item.type === "weapon" && shouldEnforceSingleTarget(activity))
     numTargets = 1;
@@ -237,7 +239,7 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
       return true;
     }
     if (targetConfirmation.allies && token && numTargets > 0 && activity.target?.affects.type !== "self") {
-      if (game.user?.targets.some(t => t.document.disposition == token.document.disposition)) {
+      if (targets.some(t => t.document.disposition == token.document.disposition)) {
         if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.allies");
         return true;
       }
@@ -245,21 +247,21 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
     if (targetConfirmation.targetSelf && activity.target?.affects.type !== "self") {
       let tokenToUse = token;
       /*
-      if (tokenToUse && game.user?.targets) {
+      if (tokenToUse) {
         const { result, attackingToken } = checkActivityRange(activity, tokenToUse, new Set(game.user?.targets))
         if (speaker.token && result === "fail")
           tokenToUse = undefined; 
         else tokenToUse = attackingToken;
       }
       */
-      if (tokenToUse && game.user?.targets?.has(tokenToUse)) {
+      if (tokenToUse && targets.has(tokenToUse)) {
         if (debugEnabled > 0) warn("target confirmation triggered by has targetConfirmation.targetSelf");
         return true;
       }
     }
-    if (targetConfirmation.mixedDisposition && numTargets > 0 && game.user?.targets) {
+    if (targetConfirmation.mixedDisposition && numTargets > 0) {
       const dispositions = new Set();
-      for (let target of game.user?.targets) {
+      for (let target of targets) {
         if (target) dispositions.add(target.document.disposition);
       }
       if (dispositions.size > 1) {
@@ -267,11 +269,11 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
         return true;
       }
     }
-    if (targetConfirmation.longRange && game.user?.targets && numTargets > 0 &&
+    if (targetConfirmation.longRange && numTargets > 0 &&
       // @ts-expect-error no dnd5e-types
       (["ft", "m"].includes(activity.item.system.range?.units) || activity.item.system.range?.type === "touch")) {
       if (token) {
-        for (let target of game.user?.targets) {
+        for (let target of targets) {
           const { result, attackingToken } = checkActivityRange(activity, token, new Set([target]))
           if (result !== "normal") {
             if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.longRange");
@@ -280,10 +282,10 @@ export function requiresTargetConfirmation(activity: Activity, options: MidiOpti
         }
       }
     }
-    if (targetConfirmation.inCover && numTargets > 0 && token && game.user?.targets) {
+    if (targetConfirmation.inCover && numTargets > 0 && token) {
       const isRangeTargeting = ["ft", "m"].includes(activity.range?.units ?? "") && ["creature", "ally", "enemy"].includes(activity.target?.affects?.type ?? "");
       if (!activity.target?.template?.type && !isRangeTargeting && token) {
-        for (let target of game.user?.targets) {
+        for (let target of targets) {
           if (computeCoverBonus(token, target, activity) > 0) {
             if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.inCover");
             return true;

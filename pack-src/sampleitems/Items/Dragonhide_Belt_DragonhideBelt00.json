@@ -73,19 +73,22 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.62"
+        "version": "13.0.69"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p><em>Wondrous Item, Rare (Requires Attunement by a Monk)</em></p><p>This finely detailed belt is made of dragonhide. While wearing it, you gain a +2 bonus to the saving throw DCs of your ki features.</p><p>In addition, you can use an action to regain ki points equal to a roll of your Martial Arts die. You can't use this action again until the next dawn.</p><section class=\"secret\" id=\"secret-dragonhideBeltNote\"><p><strong>Foundry Note</strong></p><p>The +2 DC bonus is applied via <code>system.bonuses.spell.dc</code>, which increases all ability-based save DCs (including ki). The Regain Focus activity rolls the Martial Arts die (<code>@scale.monk.die</code>) and restores that many Focus Points on the Monk's Focus feature. Requires the 2024 Monk class with the <strong>Monk's Focus</strong> feature (identifier: <code>monks-focus</code>).</p></section>",
+      "value": "<p><em>The rules text is copyrighted and not included (not in the SRD): copy it from the Dragonhide Belt in Fizban's Treasury of Dragons into this description.</em></p><p><em>midi-qol: +2 to all your saving throw DCs (dnd5e has no separate one for Focus features). Regain Focus rolls your Martial Arts die and restores that many Focus Points; it needs a 2024 Monk with Monk's Focus.</em></p>",
       "chat": ""
     },
     "source": {
       "custom": "midi-qol sample",
       "revision": 1,
-      "rules": "2024"
+      "rules": "2024",
+      "book": "Fizban's Treasury of Dragons",
+      "license": "",
+      "page": ""
     },
     "quantity": 1,
     "weight": {
@@ -202,7 +205,7 @@
         "img": "icons/magic/symbols/runes-star-magenta.webp",
         "macroData": {
           "name": "Regain Focus",
-          "command": "const version = \"13.0.61\";\ntry {\n  if (args[0].tag !== \"OnUse\" || args[0].macroPass !== \"postActiveEffects\") return;\n  const actor = rolledItem.parent;\n  const monksFocus = actor.items.find(i => i.system.identifier === \"monks-focus\");\n  if (!monksFocus) {\n    ui.notifications.warn(\"No Monk's Focus feature found on this actor.\");\n    return;\n  }\n  const rolled = workflow.utilityRoll?.total;\n  if (!rolled || rolled <= 0) {\n    ui.notifications.warn(\"No utility roll result \u2014 was the Martial Arts die rolled?\");\n    return;\n  }\n  const maxUses = monksFocus.system.uses.max;\n  const resolvedMax = typeof maxUses === \"string\"\n    ? Roll.safeEval(Roll.replaceFormulaData(maxUses, actor.getRollData()))\n    : maxUses;\n  const currentSpent = monksFocus.system.uses.spent;\n  const regained = Math.min(rolled, currentSpent);\n  if (regained > 0) {\n    await monksFocus.update({ \"system.uses.spent\": currentSpent - regained });\n    ChatMessage.create({\n      content: `<p><strong>${actor.name}</strong> regains <strong>${regained}</strong> Focus Point${regained !== 1 ? \"s\" : \"\"} (${currentSpent - regained}/${resolvedMax} spent).</p>`,\n      speaker: ChatMessage.getSpeaker({ actor })\n    });\n  } else {\n    ChatMessage.create({\n      content: `<p><strong>${actor.name}</strong> has no spent Focus Points to regain.</p>`,\n      speaker: ChatMessage.getSpeaker({ actor })\n    });\n  }\n} catch (err) {\n  console.error(`Dragonhide Belt ${version}`, err);\n}",
+          "command": "const version = \"13.0.61\";\ntry {\n  if (args[0].tag !== \"OnUse\" || args[0].macroPass !== \"postActiveEffects\") return;\n  const actor = rolledItem.parent;\n  const monksFocus = actor.items.find(i => i.system.identifier === \"monks-focus\");\n  if (!monksFocus) {\n    ui.notifications.warn(\"No Monk's Focus feature found on this actor.\");\n    return;\n  }\n  const rolled = workflow.utilityRoll?.total;\n  if (!rolled || rolled <= 0) {\n    ui.notifications.warn(\"No utility roll result — was the Martial Arts die rolled?\");\n    return;\n  }\n  const maxUses = monksFocus.system.uses.max;\n  const resolvedMax = typeof maxUses === \"string\"\n    ? Roll.safeEval(Roll.replaceFormulaData(maxUses, actor.getRollData()))\n    : maxUses;\n  const currentSpent = monksFocus.system.uses.spent;\n  const regained = Math.min(rolled, currentSpent);\n  if (regained > 0) {\n    await monksFocus.update({ \"system.uses.spent\": currentSpent - regained });\n    ChatMessage.create({\n      content: `<p><strong>${actor.name}</strong> regains <strong>${regained}</strong> Focus Point${regained !== 1 ? \"s\" : \"\"} (${currentSpent - regained}/${resolvedMax} spent).</p>`,\n      speaker: ChatMessage.getSpeaker({ actor })\n    });\n  } else {\n    ChatMessage.create({\n      content: `<p><strong>${actor.name}</strong> has no spent Focus Points to regain.</p>`,\n      speaker: ChatMessage.getSpeaker({ actor })\n    });\n  }\n} catch (err) {\n  console.error(`Dragonhide Belt ${version}`, err);\n}",
           "type": "script"
         },
         "midiProperties": {

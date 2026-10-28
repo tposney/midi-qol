@@ -1,18 +1,19 @@
 {
-  "name": "Jewel of the Three Prayers (Awakened)",
+  "name": "Jewel of Three Prayers (Awakened)",
   "type": "equipment",
   "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
   "system": {
     "description": {
-      "value": "<p>Wondrous item, legendary (requires attunement). This jewel is in its <strong>awakened</strong> state and confers both its dormant and awakened properties.</p><p><strong>Dormant</strong></p><ul><li>+1 bonus to AC while worn.</li><li>Action: shed bright light in a 15-foot radius and dim light for an additional 15 feet, until extinguished (no action required).</li><li>3 charges, regained at dawn. Expend 1 charge to cast Invisibility.</li></ul><p><strong>Awakened</strong></p><ul><li>The AC bonus increases to +2.</li><li>Charges increase to 5.</li><li>Expend 1 charge (no action required) to end grappled, paralyzed or restrained on yourself.</li><li>When another creature you can see within 60 feet fails a saving throw, expend 1 charge as a reaction to let it reroll. The creature must use the new roll.</li></ul>",
+      "value": "<p><em>The rules text is copyrighted and not included (not in the SRD): copy it from the Jewel of Three Prayers (Awakened) in Critical Role: Call of the Netherdeep into this description.</em></p><p><em>midi-qol: The awakened jewel: +2 AC while attuned, and charges regained at dawn. Light makes your token shed bright light for 15 feet and dim for 15 more until you end it; Invisibility (1 charge) casts the spell; Free the Body (1 charge, no action) ends Grappled, Paralyzed and Restrained on you; Prayer of Fortune (1 charge, a reaction) lets an ally you can see within 60 feet reroll a failed saving throw (the Aura Effects module is required). The rules allow any creature: set the Ward effect's Aura Effects disposition to Any for that.</em></p>",
       "chat": ""
     },
     "source": {
       "revision": 1,
       "rules": "2014",
-      "book": "",
+      "book": "Critical Role: Call of the Netherdeep",
       "page": "",
-      "custom": ""
+      "custom": "",
+      "license": ""
     },
     "quantity": 1,
     "weight": {
@@ -438,7 +439,7 @@
   "effects": [
     {
       "_id": "jewel3prayerAC00",
-      "name": "Jewel of the Three Prayers (Awakened)",
+      "name": "Jewel of Three Prayers (Awakened)",
       "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
       "type": "base",
       "changes": [
@@ -484,7 +485,7 @@
     },
     {
       "_id": "jewel3prayerAura",
-      "name": "Jewel of the Three Prayers: Ward",
+      "name": "Jewel of Three Prayers: Ward",
       "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
       "type": "auraeffects.aura",
       "changes": [
@@ -529,7 +530,7 @@
       "_key": "!items.effects!jewel3prayers000.jewel3prayerAura",
       "system": {
         "distanceFormula": "60",
-        "disposition": 0,
+        "disposition": 1,
         "applyToSelf": false,
         "collisionTypes": [],
         "script": "",
@@ -542,7 +543,7 @@
     },
     {
       "_id": "jewel3prayerLite",
-      "name": "Jewel of the Three Prayers: Light",
+      "name": "Jewel of Three Prayers: Light",
       "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
       "type": "base",
       "changes": [
@@ -602,11 +603,11 @@
     "core": {},
     "itemacro": {
       "macro": {
-        "name": "Jewel of the Three Prayers (Awakened)",
+        "name": "Jewel of Three Prayers (Awakened)",
         "type": "script",
         "img": "icons/svg/dice-target.svg",
         "scope": "global",
-        "command": "const pass = args[0].macroPass;\n\n// Third party reaction: an ally within 60ft failed a save - offer to spend a charge for a reroll.\nif (args[0].tag === \"TargetOnUse\" && pass === \"isSaveFailure\") {\n  const jewel = macroItem;\n  const owner = jewel?.actor;\n  if (!owner) return;\n  const failed = token;\n  if (!failed?.actor) return;\n  if (failed.actor.uuid === owner.uuid) return; // \"another creature\"\n  if ((jewel.system.uses?.value ?? 0) < 1) return;\n  if (MidiQOL.hasUsedReaction(owner)) return;\n\n  const ownerToken = MidiQOL.tokenForActor(owner);\n  if (!ownerToken) return;\n  if (MidiQOL.computeDistance(ownerToken, failed) > 60) return;\n  if (!MidiQOL.canSee(ownerToken, failed)) return;\n\n  const reaction = jewel.system.activities.get(\"jewel3prayReact0\");\n  if (!reaction) return;\n\n  // Hand the prompt to midi so it is shown on the jewel owner's client, not wherever this macro runs.\n  const player = MidiQOL.playerForActor(owner);\n  if (!player?.active) return;\n  const payload = {\n    tokenUuid: ownerToken.document.uuid,\n    reactionFlavor: `${failed.name} failed a ${CONFIG.DND5E.abilities?.[[...(workflow.saveActivity?.save?.ability ?? [])][0]]?.label ?? \"saving\"} throw within 60 feet. Expend a charge of ${jewel.name} to let them reroll?`,\n    triggerTokenUuid: failed.document.uuid,\n    triggerType: \"reactionmanual\",\n    options: { workflowId: workflow.id },\n    reactionActivityList: [{\n      itemName: jewel.name, itemId: jewel.id, actionName: reaction.name,\n      img: jewel.img, id: reaction.id, uuid: reaction.uuid\n    }]\n  };\n  const socket = MidiQOL.socket();\n  const result = player.isGM\n    ? await socket.executeAsGM(\"chooseReactions\", payload)\n    : await socket.executeAsUser(\"chooseReactions\", player.id, payload);\n  if (!result?.uuid || result.name === \"None\") return; // declined or timed out\n\n  const abl = [...(workflow.saveActivity?.save?.ability ?? [])][0] ?? \"dex\";\n  const abilities = failed.actor.system.abilities ?? {};\n  const bonus = abilities[abl]?.save?.value ?? abilities[abl]?.mod ?? 0;\n  const label = CONFIG.DND5E.abilities?.[abl]?.label ?? abl;\n  const reroll = await new CONFIG.Dice.D20Roll(`1d20 + ${bonus}`, failed.actor.getRollData(), {\n    flavor: `${label} Save - ${jewel.name} reroll`\n  }).evaluate();\n  await MidiQOL.displayDSNForRoll(reroll, \"savingThrow\");\n  return reroll; // midi replaces the save roll with whatever Roll is returned\n}\n\n// Free the Body: end grappled, paralyzed or restrained on yourself.\nif (pass === \"postActiveEffects\" && rolledActivity?.id === \"jewel3prayFree00\") {\n  const candidates = [\"grappled\", \"paralyzed\", \"restrained\"].filter(c => MidiQOL.hasCondition(actor, c));\n  if (!candidates.length) {\n    ui.notifications?.info(`${macroItem.name}: no grappled, paralyzed or restrained condition to end.`);\n    return;\n  }\n  let chosen = candidates[0];\n  if (candidates.length > 1) {\n    chosen = await foundry.applications.api.DialogV2.wait({\n      window: { title: macroItem.name },\n      content: \"<p>End which condition?</p>\",\n      buttons: candidates.map(c => ({ label: c.capitalize(), action: c })),\n      rejectClose: false\n    });\n    if (!chosen) return;\n  }\n  await actor.toggleStatusEffect(chosen, { active: false });\n}\n",
+        "command": "const pass = args[0].macroPass;\n\n// Third party reaction: an ally within 60ft failed a save - offer to spend a charge for a reroll.\nif (args[0].tag === \"TargetOnUse\" && pass === \"isSaveFailure\") {\n  const jewel = macroItem;\n  const owner = jewel?.actor;\n  if (!owner) return;\n  const failed = token;\n  if (!failed?.actor) return;\n  if (failed.actor.uuid === owner.uuid) return; // \"another creature\"\n  if ((jewel.system.uses?.value ?? 0) < 1) return;\n  if (MidiQOL.hasUsedReaction(owner)) return;\n\n  const ownerToken = MidiQOL.tokenForActor(owner);\n  if (!ownerToken) return;\n  if (MidiQOL.computeDistance(ownerToken, failed) > 60) return;\n  if (!MidiQOL.canSee(ownerToken, failed)) return;\n\n  const reaction = jewel.system.activities.get(\"jewel3prayReact0\");\n  if (!reaction) return;\n\n  // Hand the prompt to midi so it is shown on the jewel owner's client (the GM's when its player is away), not\n  // wherever this macro runs.\n  const owningPlayer = MidiQOL.playerForActor(owner);\n  const player = owningPlayer?.active ? owningPlayer : game.users.activeGM;\n  if (!player) return;\n  const payload = {\n    tokenUuid: ownerToken.document.uuid,\n    reactionFlavor: `${failed.name} failed a ${CONFIG.DND5E.abilities?.[[...(workflow.saveActivity?.save?.ability ?? [])][0]]?.label ?? \"saving\"} throw within 60 feet. Expend a charge of ${jewel.name} to let them reroll?`,\n    triggerTokenUuid: failed.document.uuid,\n    triggerType: \"reactionmanual\",\n    options: { workflowId: workflow.id },\n    reactionActivityList: [reaction.uuid]\n  };\n  const socket = MidiQOL.socket();\n  const result = player.isGM\n    ? await socket.executeAsGM(\"chooseReactions\", payload)\n    : await socket.executeAsUser(\"chooseReactions\", player.id, payload);\n  if (!result?.uuid || result.name === \"None\") return; // declined or timed out\n\n  const abl = [...(workflow.saveActivity?.save?.ability ?? [])][0] ?? \"dex\";\n  const abilities = failed.actor.system.abilities ?? {};\n  const bonus = abilities[abl]?.save?.value ?? abilities[abl]?.mod ?? 0;\n  const label = CONFIG.DND5E.abilities?.[abl]?.label ?? abl;\n  const reroll = await new CONFIG.Dice.D20Roll(`1d20 + ${bonus}`, failed.actor.getRollData(), {\n    flavor: `${label} Save - ${jewel.name} reroll`\n  }).evaluate();\n  await MidiQOL.displayDSNForRoll(reroll, \"savingThrow\");\n  return reroll; // midi replaces the save roll with whatever Roll is returned\n}\n\n// Free the Body: end grappled, paralyzed or restrained on yourself.\nif (pass === \"postActiveEffects\" && rolledActivity?.id === \"jewel3prayFree00\") {\n  const candidates = [\"grappled\", \"paralyzed\", \"restrained\"].filter(c => MidiQOL.hasCondition(actor, c));\n  if (!candidates.length) {\n    ui.notifications?.info(`${macroItem.name}: no grappled, paralyzed or restrained condition to end.`);\n    return;\n  }\n  let chosen = candidates[0];\n  if (candidates.length > 1) {\n    chosen = await foundry.applications.api.DialogV2.wait({\n      window: { title: macroItem.name },\n      content: \"<p>End which condition?</p>\",\n      buttons: candidates.map(c => ({ label: c.capitalize(), action: c })),\n      rejectClose: false\n    });\n    if (!chosen) return;\n  }\n  // End it by removing the effects that grant only that condition (and what it brings with it, e.g. Paralyzed's\n  // Incapacitated); one that grants other conditions too (Swallowed) is left, with a note.\n  const brings = new Set([chosen, ...(CONFIG.DND5E.conditionTypes?.[chosen]?.riders ?? []),\n    ...(CONFIG.statusEffects.find(s => s.id === chosen)?.statuses ?? [])]);\n  const granting = actor.effects.filter(e => e.statuses.has(chosen));\n  const only = granting.filter(e => [...e.statuses].every(s => brings.has(s)));\n  if (only.length) await actor.deleteEmbeddedDocuments(\"ActiveEffect\", only.map(e => e.id));\n  const kept = granting.filter(e => !only.includes(e));\n  if (kept.length) ui.notifications?.warn(`${macroItem.name}: ${chosen} also comes from ${kept.map(e => e.name).join(\", \")}, which grants more than that condition; end it there.`);\n}\n",
         "sort": 0,
         "ownership": {
           "default": 0
@@ -658,7 +659,7 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.64"
+        "version": "13.0.69"
       }
     }
   },

@@ -70,19 +70,19 @@
     "chris-premades": {
       "info": {
         "source": "midi-qol.midiqol-sample-items",
-        "version": "13.0.51"
+        "version": "13.0.69"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>You point at one creature you can see within range, and the sound of a dolorous bell fills the air around it for a moment. The target must succeed on a Wisdom saving throw or take 1d8 necrotic damage. If the target is missing any of its hit points, it instead takes 1d12 necrotic damage.</p><p>The spell's damage increases by one die when you reach 5th level (2d8 or 2d12), 11th level (3d8 or 3d12), and 17th level (4d8 or 4d12).</p>\n<p><strong>midi-qol</strong>: Uses a <code>[preDamageRoll]ItemMacro</code> to swap the damage die from d8 to d12 when the target is below max HP. The macro modifies <code>rolledActivity.damage.parts[0].denomination</code> before the damage roll.</p>",
-      "chat": "<p>You point at one creature you can see within range, and the sound of a dolorous bell fills the air around it for a moment. The target must succeed on a Wisdom saving throw or take 1d8 necrotic damage. If the target is missing any of its hit points, it instead takes 1d12 necrotic damage.</p><p>The spell's damage increases by one die when you reach 5th level (2d8 or 2d12), 11th level (3d8 or 3d12), and 17th level (4d8 or 4d12).</p>"
+      "value": "<p><em>The rules text is copyrighted and not included (not in the SRD): copy it from the Toll the Dead cantrip in Xanathar's Guide to Everything into this description.</em></p><p><em>midi-qol: The damage die is a d12 instead of a d8 when the target is missing any of its hit points.</em></p>",
+      "chat": ""
     },
     "source": {
       "custom": "midi-qol sample",
       "rules": "2014",
-      "book": "",
+      "book": "Xanathar's Guide to Everything",
       "page": "",
       "license": ""
     },
