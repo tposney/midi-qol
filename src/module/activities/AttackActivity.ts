@@ -485,6 +485,13 @@ let defineMidiAttackActivityClass = <T extends Activity>(ActivityClass: T) => {
             computeRollModifiers(this.actor!, attackModifierFlags, workflow.attackRollModifierTracker, { workflow });
             applyRollModifiers(workflow.attackRollModifierTracker, rollConfig, dialogConfig);
           }
+          // A single target's flanking and granted attack bonuses, labelled in the roll; the reasons go with the roll
+          // for its display (ChatMessageMidi)
+          const { parts: extraParts, modifiers } = workflow?.attackRollParts() ?? { parts: [], modifiers: [] };
+          for (const roll of rollConfig.rolls ?? []) {
+            if (extraParts.length) roll.parts = [...(roll.parts ?? []), ...extraParts];
+            if (modifiers.length) foundry.utils.setProperty(roll, `options.${MODULE_ID}.attackModifiers`, modifiers);
+          }
 
           if (dialogConfig.configure && workflow) showAttackTargets(workflow);
           return true;

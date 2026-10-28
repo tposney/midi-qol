@@ -1030,7 +1030,7 @@
   "midi-qol.InvisibleBrief": "Invisible (until it attacks, casts a spell or deals damage)",
   "midi-qol.Flanking": "Flanking",
   "midi-qol.FlankingBonus.Name": "Flanking Bonus Type",
-  "midi-qol.FlankingBonus.Hint": "When flanking is detected, grant advantage (default) or reduce the target's effective AC by a fixed amount.",
+  "midi-qol.FlankingBonus.Hint": "When flanking is detected, grant advantage (default) or add a fixed bonus to the attack roll. Flanking applies to melee attacks against a single target (with Roll a separate attack per target, each roll counts).",
   "midi-qol.SharpShooter": "Sharpshooter",
   "midi-qol.SpellSniper": "Spell Sniper",
   "midi-qol.FlankingRequiresVisibility.Name": "Flanking requires target can sense flanker",

@@ -4,7 +4,7 @@
 * Fixed: with *Auto Check Saves* off and *Save summary style* midi, a save rolled from the card's button showed its result nowhere (dnd5e folded the save message into the card, and midi dropped dnd5e's summary for its own saves section, which had no saves); dnd5e's summary is now kept for every target midi's section doesn't show.
 
 **Vision**
-* Changed: *Dim lower floors through surface holes* is replaced by the player setting *Mark lower floors where creatures can't be seen*: the squares of a lower floor, seen through an opening, where a creature would be hidden from the selected token (core's sight test) are marked in a style (tint, dim, hatch, outline), colour and opacity each player chooses.
+* Changed: *Dim lower floors through surface holes* is replaced by the player setting *Mark lower floors where creatures can't be seen*: When foundry displays the lower floor all squares on the flower floor are visible, however, tokens on the lower floor may not be visible because the surface obscures them. Where a creature would be hidden from the selected token (core's sight test) such squares are marked in a style (tint, dim, hatch, outline), colour and opacity which each player chooses.
 
 **Activities**
 * Changed: the activity's *Midi Overtime* tab says which effect change runs an over-time activity (`flags.midi-qol.ActivityOverTime` = its identifier); marking an activity *Is Over Time* alone does nothing.
@@ -14,7 +14,7 @@
 * Added: *Midi Region Light* can be a source of darkness (Darkness), with a Priority, Constrained by Walls (off by default, as before), Fill Region (the radius reaches the whole region), and an animation list that includes the darkness animations.
 
 **Targeting**
-* Fixed: a use given its targets (a macro's or an automation's) re-read the user's targets when its saves were checked, so another use finishing at that moment could leave it with none and its damage was lost (e.g. damage landing as a creature's turn-start Regeneration finished); such a use keeps its own targets.
+* Fixed: an activity use given its targets (a macro's or an automation's) re-read the user's targets when its saves were checked, so another use finishing at that moment could leave it with none and its damage was lost (e.g. damage landing as a creature's turn-start Regeneration finished); such a use keeps its own targets.
 * Fixed: a `completeActivityUse` (a macro's, or an automation's such as a turn-start effect) that finished while another use was starting put its saved user targets back over the new use's, which could then hit no one; the targets are put back only if nothing has targeted since, and a use given its own targets decides on target confirmation from them.
 * Fixed: *Un-target at end of turn* (dead targets) untargeted every target at 0 hit points half a second after any use finished, so a Healer's Kit or Spare the Dying used on a downed creature in that time lost its target; midi now untargets only the finished use's own targets.
 

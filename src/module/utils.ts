@@ -1,3 +1,4 @@
+import type { AttackModifier } from "./Workflow.js";
 import { debug, i18n, error, warn, busyWait, allAttackTypes, debugEnabled, overTimeEffectsToDelete, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, MODULE_ID, midiReactionEffect, midiBonusActionEffect, MQActivityMacroLabel, ceInterface, i18nFormat } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, debounceInterval, autoRollDamageOptions, showReactionAttackRollOptions, shouldDisplaySaveDC, DOWNGRADE_IMMUNITY_KEY, ALL_DAMAGE_KEY } from "./settings.js";
 import { log } from "../midi-qol.js";
@@ -4206,14 +4207,13 @@ export interface TargetACResult {
   appliedCoverDelta: number;    // Extra cover added beyond status (module - status, if positive)
   effectiveCoverBonus: number;  // Total effective cover after reductions (0 if ignored)
   coverIgnored: boolean;        // Whether cover was stripped by a feat/flag
-  flankingMod: number;          // Flanking reduction
   targetACMod: number;          // From targetDescriptors
 }
 
 /**
  * Compute the effective AC for a target, reconciling status-based cover with module-computed
  * cover (status acts as minimum), applying attack-specific reductions (ignoreFullCover,
- * sharpShooter, spellSniper, ignoreCover), and incorporating flanking and targetACMod.
+ * sharpShooter, spellSniper, ignoreCover), and incorporating targetACMod.
  */
 export function computeTargetAC(
   attacker: Token,
@@ -4221,13 +4221,12 @@ export function computeTargetAC(
   activity: Activity | undefined,
   options: {
     ignoreCover?: boolean;
-    flankingMod?: number;
     targetACMod?: number;
   } = {}
 ): TargetACResult {
   const targetActor = target.actor;
   const item = activity?.item;
-  const { ignoreCover = false, flankingMod = 0, targetACMod = 0 } = options;
+  const { ignoreCover = false, targetACMod = 0 } = options;
 
   //@ts-expect-error no dnd5e-types
   const acValue: number = targetActor?.system?.attributes?.ac?.value ?? 10;
@@ -4310,7 +4309,6 @@ export function computeTargetAC(
     // Add any module cover above the status
     effectiveAC += appliedCoverDelta;
   }
-  effectiveAC -= flankingMod;
 
   // Total cover from module/status → auto-miss
   if (effectiveCoverBonus === TOTAL_COVER) effectiveAC = Infinity;
@@ -4323,7 +4321,6 @@ export function computeTargetAC(
     appliedCoverDelta,
     effectiveCoverBonus,
     coverIgnored,
-    flankingMod,
     targetACMod
   };
   return result;
@@ -7696,8 +7693,22 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
     ? (GameSystemConfig.damageTypes[damageType] ?? GameSystemConfig.healingTypes?.[damageType])
     : undefined;
 
+  // Attack roll reasons (flanking, granted bonuses) recorded when the roll was built: an icon each beside the total,
+  // all of them as chips in the total's tooltip, and their labels left out of the shown formula
+  const attackModifiers = (foundry.utils.getProperty(roll, `options.${MODULE_ID}.attackModifiers`) ?? []) as AttackModifier[];
+  const describeReason = (m: AttackModifier) => m.advantage ? `${i18n("DND5E.Advantage")}: ${m.label}` : `${m.value} ${m.label}`;
+  const reasonIcon = (m: AttackModifier, attrs = "") => m.kind === "granted"
+    ? `<i class="fas fa-bolt"${attrs}></i>`
+    : `<img src="${m.kind === "flanked" ? "modules/midi-qol/icons/encirclement.svg" : "icons/svg/sword.svg"}" alt="${foundry.utils.escapeHTML(m.label)}"${attrs}>`;
+  const attackReasons = attackModifiers.map(m => reasonIcon(m, ` class="midi-attack-reason" data-tooltip="${foundry.utils.escapeHTML(describeReason(m))}"`));
+  const attackReasonsTooltip = attackModifiers.length
+    ? `<div class="midi-attack-reason-chips">${attackModifiers.map(m => `<span class="midi-attack-reason-chip">${reasonIcon(m)} ${foundry.utils.escapeHTML(describeReason(m))}</span>`).join("")}</div>`
+    : "";
+
   const chatData = {
-    formula: roll.formula,
+    formula: attackModifiers.length ? roll.formula.replace(/\[[^\]]*\]/g, "") : roll.formula,
+    attackReasons,
+    attackReasonsTooltip,
     user: game.user?.id,
     tooltip: await getTooltip(roll, options),
     tooltipFormula: options?.tooltipFormula ?? false,
@@ -8191,6 +8202,7 @@ async function _markFlankingImpl(token?: Token.Implementation | null, target?: T
         }
       }
     }
+    return needsFlanked;
   }
   return false;
 }

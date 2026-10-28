@@ -127,7 +127,6 @@ export function setupUsageCardMessage() {
         Object.assign(targets.element.fields, {
           uncannyDodge: new BooleanField({ required: false }),
           uncannyDodgeIcon: new StringField({ required: false, blank: true }),
-          flankingBonus: new NumberField({ required: false }),
           saved: new BooleanField({ required: false }),
           superSaver: new BooleanField({ required: false }),
           semiSuperSaver: new BooleanField({ required: false }),

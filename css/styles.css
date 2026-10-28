@@ -714,6 +714,49 @@
   opacity: 0.6;
 }
 
+/* Attack roll reasons (flanking, granted bonuses), placed as the damage type icons are */
+.midi-attack-roll .dice-total > .midi-attack-reasons {
+  position: absolute;
+  inset: 0 auto 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  opacity: 0.7;
+}
+.midi-attack-reason {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: none;
+  font-size: 14px;
+  line-height: 16px;
+  text-align: center;
+}
+img.midi-attack-reason,
+.midi-attack-reason-chip img {
+  filter: brightness(0) invert(0.5);
+}
+.midi-attack-reason-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+}
+.midi-attack-reason-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+.midi-attack-reason-chip img {
+  width: 14px;
+  height: 14px;
+  border: none;
+}
+
 /* Damage type icon next to total */
 .midi-damage-type-icon {
   display: inline-block;

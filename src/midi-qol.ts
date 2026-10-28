@@ -13,7 +13,7 @@ import { setupMagicSight, drawnMagicSight } from './module/magicSight.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, getCoverBonus, tokenAtPosition, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, unseenTargets, totalCoverTargets, modifyDamageBy, computeDistance, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets, setupMarkerChecks, setupCheckVision } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, addRollToAsync, applyTokenDamage, applyTokenDamageMany, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, chooseEffect, completeItemUse, computeCoverBonus, getCoverBonus, tokenAtPosition, contestedRoll, createConditionData, throttledUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, actorFromUuid, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, unseenTargets, totalCoverTargets, modifyDamageBy, computeDistance, convertDuration, splitOvertimeSpec, isRangeCheckable, activityRanges, getDistance, getItemFromEffectOrigin, addDependent, cleanCPRFlanked, updatesCache, createDamageDetail, activityHasEmanationNoTemplate, getVitalityItem, getVitalityValue, getVitalityMax, hasVitalitySystem, resolveItemMacro, resolveActivityMacro, setupMidiFlagTypes, initCoverConstants, ReactionDialog, RollModifyDialog, sizeNumeric, restoreWorkflowTokenSets, setupMarkerChecks, setupCheckVision, toggleStatus } from './module/utils.js';
 import { addFollowUp } from './module/followUps.js';
 import { highlightTokens } from './module/lib/tokenHighlight.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
@@ -1958,11 +1958,21 @@ function getFlankedStatusChanges(): object[] {
   return [];
 }
 
+let lastFlankingSettings: string | undefined;
+
 export function updateFlankingStatusEffects() {
   const flanking = CONFIG.statusEffects.find(e => e.id === "flanking") as any;
   const flanked = CONFIG.statusEffects.find(e => e.id === "flanked") as any;
   if (flanking) flanking.system = { changes: getFlankingStatusChanges() };
   if (flanked) flanked.system = { changes: getFlankedStatusChanges() };
+
+  // Statuses already on tokens keep the changes they were created with (an advantage-mode Flanked status would go on
+  // granting advantage under a fixed bonus): when the flanking settings change, the GM takes them off; advantage mode
+  // puts them back, from the new definition, on the next melee attack.
+  const settingsKey = `${configSettings.optionalRules?.checkFlanking}|${configSettings.optionalRules?.flankingBonus}`;
+  if (lastFlankingSettings !== undefined && settingsKey !== lastFlankingSettings && game.ready && game.user === game.users?.activeGM)
+    void removeFlankingStatuses();
+  lastFlankingSettings = settingsKey;
 
   // Rebuild cached effect instances (only if statuses have been registered)
   if (flanking) {
@@ -1976,5 +1986,16 @@ export function updateFlankingStatusEffects() {
       midiFlankedEffect = effect;
       globalThis.MidiQOL.midiFlankedEffect = effect;
     });
+  }
+}
+
+async function removeFlankingStatuses() {
+  for (const scene of game.scenes ?? []) {
+    for (const tokenDocument of scene.tokens) {
+      const actor = tokenDocument.actor;
+      for (const statusId of ["flanking", "flanked"]) {
+        if (actor?.statuses.has(statusId)) await toggleStatus(actor, statusId, { active: false });
+      }
+    }
   }
 }

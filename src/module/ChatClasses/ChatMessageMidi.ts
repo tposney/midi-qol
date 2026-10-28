@@ -329,6 +329,23 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     /**
+     * The attack roll's reasons (flanking, granted bonuses) are drawn by its template (midiRenderTemplateRoll): leave
+     * their labels out of the dice tooltip's formula too, and drop the icons and their tooltip wherever the attack's
+     * formula isn't shown, so nothing the GM hides from players is revealed.
+     */
+    #addAttackReasons(html: HTMLElement) {
+      const formulas = html.querySelectorAll(".midi-attack-roll .dice-formula");
+      const total = html.querySelector<HTMLElement>(".midi-attack-roll .dice-total");
+      if (!total?.querySelector(".midi-attack-reasons")) return;
+      if (!formulas.length) {
+        total.querySelector(".midi-attack-reasons")?.remove();
+        delete total.dataset.tooltipHtml;
+        return;
+      }
+      for (const formula of Array.from(formulas)) formula.textContent = (formula.textContent ?? "").replace(/\[[^\]]*\]/g, "");
+    }
+
+    /**
      * Strip or adjust classes and icons based on midi highlight/visibility settings.
      */
     private _applyMidiHighlightSettings(html: HTMLElement) {
@@ -675,6 +692,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         this._highlightMidiRolls(html);
       }
       this._applyMidiHighlightSettings(html);
+      this.#addAttackReasons(html);
       this.#addMasteryLine(html);
       this._addMarkerClasses(html);
       this._addLegacyCardDataset(html);

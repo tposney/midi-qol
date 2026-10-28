@@ -1776,7 +1776,6 @@ export type MidiTargetDescriptor = {
   itemType?: string;
   uncannyDodge?: boolean;
   uncannyDodgeIcon?: string;
-  flankingBonus?: number;
 };
 
 export type CombinedTargetDescriptor = MidiTargetDescriptor & DND5ETargetDescriptor;

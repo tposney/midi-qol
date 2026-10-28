@@ -7,6 +7,6 @@
         <div class="dice-formula">{{formula}}</div>
       {{/unless}}
         {{{tooltip}}}
-        <h4 class="dice-total">{{total}}</h4>
+        <h4 class="dice-total"{{#if attackReasonsTooltip}} data-tooltip-html="{{attackReasonsTooltip}}"{{/if}}>{{total}}{{#if attackReasons.length}}<div class="midi-attack-reasons">{{#each attackReasons}}{{{this}}}{{/each}}</div>{{/if}}</h4>
     </div>
 </div>

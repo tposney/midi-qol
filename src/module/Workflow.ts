@@ -333,6 +333,9 @@ class PersistedFieldStore {
   }
 }
 
+/** A reason shown on the attack roll: a bonus part (value) or the source of advantage. */
+export interface AttackModifier { kind: "flanking" | "flanked" | "granted", label: string, value?: string, advantage?: boolean }
+
 export class Workflow {
   public static WorkflowDataFlags = WorkflowDataFlags;
 
@@ -1452,6 +1455,12 @@ export class Workflow {
   // TODO: Type this
   conditionData: any | undefined;
   flankingAdvantage: boolean | undefined;
+  /** A fixed flanking bonus for this single-target melee attack, added to the roll (attackRollParts). */
+  flankingRollBonus: { bonus: number, kind: AttackModifier["kind"], label: string } | undefined;
+  /** The target whose granted attack bonus is already in the attack roll, so checkHits doesn't add it again. */
+  grantedAttackBonusInRollUuid: string | undefined;
+  /** Flanking that gave this attack advantage, shown on the attack roll ("flanking" or "flanked"). */
+  flankingAdvantageKind: AttackModifier["kind"] | undefined;
   bonusDamageHTML: string | undefined;
   otherDamageList: DamageListEntry[] | undefined;
   macroPass: string | undefined;
@@ -2218,7 +2227,6 @@ export class Workflow {
     if (configSettings.autoCheckHit !== "none") {
       await this.displayAttackRoll({ GMOnlyAttackRoll: true });
       this.recordTargetACModifiers();
-      await this.recordFlankingBonuses();
       await this.checkHits();
       await this.displayAttackRoll();
       const rollMode = safeGetGameSetting("core", "messageMode") as string;
@@ -3772,74 +3780,85 @@ export class Workflow {
       return false;
     }
     this.flankingAdvantage = false;
+    this.flankingRollBonus = undefined;
+    this.flankingAdvantageKind = undefined;
     if (this.item && !(["mwak", "msak"].includes(this.activity.actionType ?? ""))) return false;
+    // Flanking is between an attacker and one enemy: an attack roll against several targets gets none.
+    // Roll a separate attack per target gives each roll its own.
+    if (this.targets.size !== 1) return false;
 
     const token = (fromUuidSync(this.tokenUuid) as TokenDocument)?.object;
     const target = this.targets.first();
     const flankingMode = checkRule("checkFlanking") as string;
     const isFlankedMode = ["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(flankingMode);
+    const isFlankingMode = ["advonly", "ceonly", "midiFlanking"].includes(flankingMode);
+    if (!isFlankedMode && !isFlankingMode) return false;
     const flankingBonusSetting = configSettings.optionalRules.flankingBonus ?? "advantage";
 
-    // Flanked modes: markFlanking applies the flanked status to the target.
-    if (isFlankedMode) {
-      if (flankingBonusSetting === "advantage") {
-        // Advantage mode: flanked status grants advantage via getFlankedStatusChanges
-        await markFlanking(token, target);
-      }
-      // Numeric mode: flanked status is visual-only; bonus computed in recordFlankingBonuses
+    // A fixed bonus goes into the attack roll as a labelled part (attackRollParts)
+    if (flankingBonusSetting !== "advantage") {
+      const bonus = Number(flankingBonusSetting) || 0;
+      const flanked = isFlankedMode ? await computeFlankedStatus(target!) : !!token && await computeFlankingStatus(token, target!);
+      if (bonus && flanked) this.flankingRollBonus = { bonus, kind: isFlankedMode ? "flanked" : "flanking", label: i18n(isFlankedMode ? "midi-qol.Flanked" : "midi-qol.Flanking") };
       return false;
     }
 
-    // Flanking modes (advonly, ceonly, midiFlanking) from here.
-    if (flankingBonusSetting === "advantage") {
-      // markFlanking checks first target and applies attacker status for ceonly/midiFlanking
-      const needsFlanking = await markFlanking(token, target);
-      if (needsFlanking && this.actor) {
-        foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.flanking", { value: true, effects: ["Flanking"] });
-      }
-      if (flankingMode === "advonly") {
-        this.flankingAdvantage = needsFlanking;
-      }
-      return needsFlanking;
+    // Flanked modes: markFlanking applies the flanked status to the target, which grants advantage
+    if (isFlankedMode) {
+      if (await markFlanking(token, target)) this.flankingAdvantageKind = "flanked";
+      return false;
     }
 
-    // Numeric bonus: nothing to do here — per-target flanking bonus
-    // is computed and recorded on target descriptors in recordFlankingBonuses(),
-    // which runs after target descriptors are captured (in WorkflowState_AttackRollComplete).
-    return false;
+    // Flanking modes (advonly, ceonly, midiFlanking): markFlanking applies the attacker's status (ceonly, midiFlanking)
+    const needsFlanking = await markFlanking(token, target);
+    if (needsFlanking) this.flankingAdvantageKind = "flanking";
+    if (needsFlanking && this.actor) {
+      foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.flanking", { value: true, effects: ["Flanking"] });
+    }
+    if (flankingMode === "advonly") {
+      this.flankingAdvantage = needsFlanking;
+    }
+    return needsFlanking;
   }
 
-  async recordFlankingBonuses(): Promise<void> {
-    // Flanking only applies to melee attacks
-    if (!(["mwak", "msak"].includes(this.activity?.actionType ?? ""))) return;
-    const flankingBonusSetting = configSettings.optionalRules.flankingBonus ?? "advantage";
-    if (flankingBonusSetting === "advantage") return;
-    const bonusValue = Number(flankingBonusSetting) || 0;
-    if (!bonusValue) return;
-    const flankingMode = checkRule("checkFlanking") as string;
-    const isFlankingMode = ["advonly", "ceonly", "midiFlanking"].includes(flankingMode);
-    const isFlankedMode = ["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(flankingMode);
-    if (!isFlankingMode && !isFlankedMode) return;
-    if (isFlankingMode && !this.token) return;
-
-    const allDescriptors = this.targetDescriptors;
-    if (!allDescriptors) return;
-    let modified = false;
-    for (const t of this.targets) {
-      const hasBonus = isFlankingMode
-        ? await computeFlankingStatus(this.token!, t)
-        : await computeFlankedStatus(t);
-      if (hasBonus) {
-        const targetDescriptor = getTargetDescriptor(t.actor?.uuid ?? "", allDescriptors) as CombinedTargetDescriptor | undefined;
-        if (targetDescriptor) {
-          targetDescriptor.flankingBonus = bonusValue;
-          modified = true;
-        }
-      }
+  /**
+   * Parts added to a single-target attack roll before it is rolled, labelled so the roll shows them: a fixed
+   * flanking bonus and the target's granted attack bonus (flags.midi-qol.grants.attack.bonus). With several
+   * targets the granted bonus is added per target when hits are checked, as one roll can't carry it for some only.
+   * `modifiers` are the reasons the attack roll's display shows (attackRollModifiers on the roll's options).
+   */
+  attackRollParts(): { parts: string[], modifiers: AttackModifier[] } {
+    const parts: string[] = [];
+    const modifiers: AttackModifier[] = [];
+    this.grantedAttackBonusInRollUuid = undefined;
+    if (this.flankingAdvantageKind)
+      modifiers.push({ kind: this.flankingAdvantageKind, label: i18n(this.flankingAdvantageKind === "flanked" ? "midi-qol.Flanked" : "midi-qol.Flanking"), advantage: true });
+    if (this.targets.size !== 1) return { parts, modifiers };
+    if (this.flankingRollBonus) {
+      parts.push(`${this.flankingRollBonus.bonus}[${this.flankingRollBonus.label}]`);
+      modifiers.push({ kind: this.flankingRollBonus.kind, label: this.flankingRollBonus.label, value: `+${this.flankingRollBonus.bonus}` });
     }
-    if (modified) {
-      this.targetDescriptors = allDescriptors; // trigger setter to persist
+    const targetActor = this.targets.first()?.actor;
+    const granted = targetActor?.flags?.[MODULE_ID]?.grants?.attack?.bonus;
+    if (!targetActor || !granted) return { parts, modifiers };
+    const formulas = [granted.all, granted[this.activity?.actionType ?? ""]].filter(f => f !== undefined && f !== null && `${f}`.trim() !== "");
+    if (!formulas.length) return { parts, modifiers };
+    const grantsFlagKey = `flags.${MODULE_ID}.grants.attack.bonus`;
+    const label = targetActor.allApplicableEffects()
+      // @ts-expect-error fvtt-types v14 ActiveEffect
+      .filter(e => !e.disabled && e.system.changes?.some(c => c.key.startsWith(grantsFlagKey)))
+      .map(e => e.name)
+      .toArray().join(", ") || targetActor.name;
+    const rollData = targetActor.getRollData();
+    for (const formula of formulas) {
+      // Evaluated against the target's data, as the hit check did
+      const resolved = Roll.replaceFormulaData(`${formula}`, rollData);
+      const numeric = Number.isNumeric(resolved);
+      parts.push(numeric ? `${Number(resolved)}[${label}]` : `(${resolved})[${label}]`);
+      modifiers.push({ kind: "granted", label, value: numeric ? `${Number(resolved) >= 0 ? "+" : ""}${Number(resolved)}` : `+${resolved}` });
     }
+    this.grantedAttackBonusInRollUuid = targetActor.uuid;
+    return { parts, modifiers };
   }
 
   async checkTargetAdvantage() {
@@ -5092,8 +5111,8 @@ export class Workflow {
     for (const descriptor of descriptors) {
       const detail = midiByToken.get(descriptor.token as string);
       if (!detail) continue;
-      const { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon, flankingBonus } = detail;
-      Object.assign(descriptor, { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon, flankingBonus });
+      const { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon } = detail;
+      Object.assign(descriptor, { saved, superSaver, semiSuperSaver, saveMults, itemType, uncannyDodge, uncannyDodgeIcon });
     }
     return { "system.targets": descriptors };
   }
@@ -5127,7 +5146,6 @@ export class Workflow {
         token: t.uuid,
         //@ts-expect-error no dnd5e-types
         ac: recorded ? recorded.ac : (hasCoverTotal(t.actor) ? null : t?.actor?.system.attributes.ac.value as number),
-        flankingBonus: recorded?.flankingBonus,
         saved: saves?.has(t.uuid),
         semiSuperSaver: semiSuperSavers?.has(t.uuid),
         superSaver: superSavers?.has(t.uuid),
@@ -7327,28 +7345,19 @@ export class Workflow {
         ignoreCover ||= await evalAllConditionsAsync(this.actor, `flags.dnd5e.sharpShooter`, conditionData);
       }
 
-      // Flanking bonus (fixed-value mode): reduce effective AC for this target
-      // flankingBonus is recorded per-target in recordFlankingBonuses() before checkHits()
-      let flankingACMod = 0;
-      const flankingBonusSetting = configSettings.optionalRules.flankingBonus ?? "advantage";
-      if (flankingBonusSetting !== "advantage") {
-        const allDescriptors = this.targetDescriptors;
-        const targetFlankDescriptor = getTargetDescriptor(targetActor.uuid, allDescriptors) as CombinedTargetDescriptor | undefined;
-        flankingACMod = targetFlankDescriptor?.flankingBonus ?? 0;
-      }
-
       // Compute effective AC: reconciles status cover with module cover (status as minimum),
       // applies attack-specific reductions (ignoreFullCover, sharpShooter, spellSniper, ignoreCover),
-      // and incorporates flanking and targetACMod.
+      // and incorporates targetACMod.
       let acResult = this.token
-        ? computeTargetAC(this.token, targetToken, this.activity, { ignoreCover, flankingMod: flankingACMod, targetACMod })
+        ? computeTargetAC(this.token, targetToken, this.activity, { ignoreCover, targetACMod })
         : undefined;
 
       let targetAC = vehicleACOverride ?? acResult?.effectiveAC
         //@ts-expect-error no dnd5e-types
         ?? (Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + targetACMod);
 
-      const midiFlagsAttackBonus = targetActor.flags?.[MODULE_ID]?.grants?.attack?.bonus;
+      // Already in the attack roll for a single target (attackRollParts)
+      const midiFlagsAttackBonus = this.grantedAttackBonusInRollUuid === targetActor.uuid ? undefined : targetActor.flags?.[MODULE_ID]?.grants?.attack?.bonus;
       let reactionACDelta = 0;
       let reactionItemName: string | undefined;
       if (!this.isFumble) {
@@ -7376,12 +7385,12 @@ export class Workflow {
               const preReactionRawAC: number = targetToken.actor?.system.attributes.ac?.value ?? 10;
               reactionACDelta = result.ac - preReactionRawAC;
               reactionItemName = result.name;
-              targetAC = result.ac + (acResult?.appliedCoverDelta ?? 0) + targetACMod - flankingACMod;
+              targetAC = result.ac + (acResult?.appliedCoverDelta ?? 0) + targetACMod;
             } else if (result?.uuid && isFinite(targetAC)) {
               // Spell reaction (e.g. Shield) was used but didn't return ac directly.
               // The actor's AC has been updated by the reaction workflow — recompute effective AC.
               const postReactionACResult = this.token
-                ? computeTargetAC(this.token, targetToken, this.activity, { ignoreCover, flankingMod: flankingACMod, targetACMod })
+                ? computeTargetAC(this.token, targetToken, this.activity, { ignoreCover, targetACMod })
                 : undefined;
               if (postReactionACResult && postReactionACResult.effectiveAC !== targetAC) {
                 // Show the reaction's contribution separately: restore pre-reaction baseAC and track the delta
@@ -7416,11 +7425,11 @@ export class Workflow {
             const preReactionRawAC: number = targetToken.actor?.system.attributes.ac?.value ?? 10;
             reactionACDelta = result.ac - preReactionRawAC;
             reactionItemName = result.name;
-            targetAC = result.ac + (acResult?.appliedCoverDelta ?? 0) - flankingACMod;
+            targetAC = result.ac + (acResult?.appliedCoverDelta ?? 0);
           } else if (result?.uuid) {
             // Spell reaction was used but didn't return ac directly — recompute effective AC.
             const postReactionACResult = this.token
-              ? computeTargetAC(this.token, targetToken, this.activity, { ignoreCover, flankingMod: flankingACMod, targetACMod })
+              ? computeTargetAC(this.token, targetToken, this.activity, { ignoreCover, targetACMod })
               : undefined;
             if (postReactionACResult && postReactionACResult.effectiveAC !== targetAC) {
               const preReactionBaseAC = acResult?.baseAC ?? postReactionACResult.baseAC;
@@ -7590,18 +7599,6 @@ export class Workflow {
         } else if (this.activity?.actionType === "rsak") {
           acIcons.push({ img: "icons/skills/targeting/crosshair-triple-strike-orange.webp", tooltip: i18n("midi-qol.SpellSniper"), cssClass: "midi-qol-ac-icon-img" });
         }
-      }
-
-      const isMeleeAction = ["mwak", "msak"].includes(this.activity?.actionType ?? "");
-      if (flankingACMod > 0 && isMeleeAction) {
-        const flankingMode = checkRule("checkFlanking") as string;
-        const isFlankedMode = ["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(flankingMode);
-        acIcons.push({
-          img: isFlankedMode ? "modules/midi-qol/icons/encirclement.svg" : "icons/svg/sword.svg",
-          tooltip: `-${flankingACMod}: ${isFlankedMode ? i18n("midi-qol.Flanked") : i18n("midi-qol.Flanking")}`,
-          cssClass: "midi-qol-ac-icon-img"
-        });
-        acTooltipParts += ` -${flankingACMod}`;
       }
 
       if (reactionACDelta) {
@@ -8111,7 +8108,8 @@ export class ActiveDefenceWorkflow extends Workflow {
       if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
       const targetActor = target.actor;
       const targetActorSystem = target.actor.system;
-      const midiFlagsAttackBonus = targetActor.flags?.[MODULE_ID]?.grants?.attack?.bonus;
+      // Already in the attack roll for a single target (attackRollParts)
+      const midiFlagsAttackBonus = this.grantedAttackBonusInRollUuid === targetActor.uuid ? undefined : targetActor.flags?.[MODULE_ID]?.grants?.attack?.bonus;
 
       // TODO: Add in AC Bonus for cover
       // @ts-expect-error no dnd5e-types
