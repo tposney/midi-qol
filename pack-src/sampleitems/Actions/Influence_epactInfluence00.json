@@ -58,7 +58,7 @@
     },
     "advancement": [],
     "description": {
-      "value": "<p>&Reference[influence]{Influence}</p><p><strong>midi-qol</strong>: The GM chooses the target's attitude; a hesitant creature needs a check against DC 15 or its Intelligence, with Advantage if Friendly and Disadvantage if Hostile.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "value": "<p>&Reference[influence]{Influence}</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: The GM chooses the target's attitude; a hesitant creature needs a check against DC 15 or its Intelligence, with Advantage if Friendly and Disadvantage if Hostile.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "identifier": "influence",
@@ -93,7 +93,7 @@
         ]
       },
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },

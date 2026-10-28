@@ -63,7 +63,7 @@
     },
     "advancement": [],
     "description": {
-      "value": "<p>&Reference[knockingacreatureout]{Knock Out}</p><p><strong>midi-qol</strong>: For the rest of your turn, a melee attack that would drop a creature to 0 hit points leaves it at 1 and Unconscious. Use again to stop.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "value": "<p>&Reference[knockingacreatureout]{Knock Out}</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: For the rest of your turn, a melee attack that would drop a creature to 0 hit points leaves it at 1 and Unconscious. Use again to stop.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "identifier": "knock-out",
@@ -136,7 +136,7 @@
         ]
       },
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },

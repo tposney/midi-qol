@@ -1,0 +1,506 @@
+{
+  "_id": "mqsEversmokingBo",
+  "name": "Eversmoking Bottle",
+  "type": "equipment",
+  "folder": "YuEENpWPYkjPMzah",
+  "img": "icons/commodities/tech/smoke-bomb-purple.webp",
+  "system": {
+    "activities": {
+      "epBottleOpen0000": {
+        "_id": "epBottleOpen0000",
+        "type": "utility",
+        "name": "Open Bottle",
+        "activation": {
+          "type": "action",
+          "override": false
+        },
+        "target": {
+          "affects": {
+            "type": "self",
+            "choice": false
+          },
+          "template": {
+            "type": "",
+            "size": "",
+            "contiguous": false,
+            "stationary": false,
+            "units": "ft"
+          },
+          "override": false,
+          "prompt": true
+        },
+        "range": {
+          "units": "self",
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "epEversmokeSmoke",
+            "uuid": null,
+            "level": {}
+          }
+        ],
+        "midiProperties": {
+          "forceConsumeDialog": "never",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "triggeredActivityConsume": true,
+          "triggeredActivityConfigure": true,
+          "followUp": false,
+          "followUpCondition": "",
+          "autoConsume": false,
+          "forceRollDialog": "default",
+          "forceDamageDialog": "default",
+          "confirmTargets": "default",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "automationOnly": false,
+          "otherActivityCompatible": true,
+          "otherActivityAsParentType": true,
+          "identifier": "",
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "toggleEffect": false,
+          "ignoreFullCover": false,
+          "targetMustBeSeen": false,
+          "removeChatButtons": "default",
+          "magicEffect": false,
+          "magicDamage": false,
+          "noConcentrationCheck": false,
+          "skipConcentrationCheck": false,
+          "autoCEEffects": "default"
+        },
+        "img": null,
+        "sort": 0,
+        "behaviors": [],
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": []
+        },
+        "description": {
+          "value": ""
+        },
+        "duration": {
+          "units": "inst",
+          "expiry": null,
+          "concentration": false,
+          "override": false
+        },
+        "flags": {},
+        "uses": {
+          "spent": 0,
+          "recovery": []
+        },
+        "visibility": {
+          "level": {},
+          "requireAttunement": false,
+          "requireIdentification": false,
+          "requireMagic": false
+        },
+        "roll": {
+          "prompt": false,
+          "visible": false
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "otherActivityId": null,
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false,
+          "idm": false
+        },
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "rollAs": "target",
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "regionBehavior": {
+          "enabled": false,
+          "dispositionFilter": -1,
+          "excludeSource": true,
+          "oncePerTurn": true,
+          "wallRestriction": "none",
+          "regionVisibility": 2,
+          "attachToken": "default",
+          "moveDistance": 0,
+          "moveDirection": "away",
+          "moveTiming": "start",
+          "templateOrigin": "default",
+          "rules": []
+        },
+        "regionLight": {
+          "enabled": false,
+          "dim": 0,
+          "bright": 0,
+          "color": null,
+          "alpha": 0.5,
+          "luminosity": 0.5,
+          "animationType": "",
+          "animationSpeed": 5,
+          "animationIntensity": 5
+        },
+        "otherActivityAsParentType": true
+      },
+      "epBottleClose000": {
+        "_id": "epBottleClose000",
+        "type": "utility",
+        "name": "Close Bottle",
+        "activation": {
+          "type": "action",
+          "override": false
+        },
+        "target": {
+          "affects": {
+            "type": "self",
+            "choice": false
+          },
+          "template": {
+            "type": "",
+            "size": "",
+            "contiguous": false,
+            "stationary": false,
+            "units": "ft"
+          },
+          "override": false,
+          "prompt": true
+        },
+        "range": {
+          "units": "self",
+          "override": false
+        },
+        "midiProperties": {
+          "forceConsumeDialog": "never",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "triggeredActivityConsume": true,
+          "triggeredActivityConfigure": true,
+          "followUp": false,
+          "followUpCondition": "",
+          "autoConsume": false,
+          "forceRollDialog": "default",
+          "forceDamageDialog": "default",
+          "confirmTargets": "default",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "automationOnly": false,
+          "otherActivityCompatible": true,
+          "otherActivityAsParentType": true,
+          "identifier": "",
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "toggleEffect": false,
+          "ignoreFullCover": false,
+          "targetMustBeSeen": false,
+          "removeChatButtons": "default",
+          "magicEffect": false,
+          "magicDamage": false,
+          "noConcentrationCheck": false,
+          "skipConcentrationCheck": false,
+          "autoCEEffects": "default"
+        },
+        "img": null,
+        "sort": 0,
+        "behaviors": [],
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": []
+        },
+        "description": {
+          "value": ""
+        },
+        "duration": {
+          "units": "inst",
+          "expiry": null,
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "flags": {},
+        "uses": {
+          "spent": 0,
+          "recovery": []
+        },
+        "visibility": {
+          "level": {},
+          "requireAttunement": false,
+          "requireIdentification": false,
+          "requireMagic": false
+        },
+        "roll": {
+          "prompt": false,
+          "visible": false
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "otherActivityId": null,
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false,
+          "idm": false
+        },
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "rollAs": "target",
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "regionBehavior": {
+          "enabled": false,
+          "dispositionFilter": -1,
+          "excludeSource": true,
+          "oncePerTurn": true,
+          "wallRestriction": "none",
+          "regionVisibility": 2,
+          "attachToken": "default",
+          "moveDistance": 0,
+          "moveDirection": "away",
+          "moveTiming": "start",
+          "templateOrigin": "default",
+          "rules": []
+        },
+        "regionLight": {
+          "enabled": false,
+          "dim": 0,
+          "bright": 0,
+          "color": null,
+          "alpha": 0.5,
+          "luminosity": 0.5,
+          "animationType": "",
+          "animationSpeed": 5,
+          "animationIntensity": 5
+        },
+        "otherActivityAsParentType": true
+      }
+    },
+    "uses": {
+      "spent": 0,
+      "recovery": [],
+      "max": ""
+    },
+    "description": {
+      "value": "<div><p><em>Wondrous Item, Uncommon</em></p></div><p>As a Magic action, you can open or close this bottle.</p><p>Opening the bottle causes thick smoke to billow out, forming a cloud that fills a 60-foot Emanation originating from the bottle. The area within the smoke is &amp;Reference[HeavilyObscured].</p><p>Each minute the bottle remains open, the size of the Emanation increases by 10 feet until it reaches its maximum size of 120 feet.</p><p>Closing the bottle causes the cloud to become fixed in place until it disperses after 10 minutes. A strong wind (such as that created by the <em>Gust of Wind</em> spell) disperses the cloud after 1 minute.</p><div class=\"cat-description\"><p>The scaling slider of the <strong>Open Bottle</strong> activity controls the size of the created Emanation from 60 feet at scaling value 1 to 120 feet at scaling value 7 (increments of 10 feet).</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
+      "chat": ""
+    },
+    "identifier": "eversmoking-bottle",
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
+    },
+    "identified": true,
+    "unidentified": {
+      "description": ""
+    },
+    "container": null,
+    "quantity": 1,
+    "weight": {
+      "value": 0,
+      "units": "lb"
+    },
+    "price": {
+      "value": 400,
+      "denomination": "gp"
+    },
+    "attunement": "",
+    "attuned": false,
+    "equipped": false,
+    "armor": {
+      "value": null,
+      "dex": null
+    },
+    "cover": null,
+    "hp": {
+      "value": null,
+      "max": null,
+      "dt": null,
+      "conditions": ""
+    },
+    "type": {
+      "value": "wondrous",
+      "baseItem": ""
+    },
+    "properties": [
+      "mgc"
+    ],
+    "strength": null,
+    "proficient": null,
+    "rarities": [
+      "uncommon"
+    ],
+    "crew": {
+      "value": []
+    }
+  },
+  "effects": [
+    {
+      "_id": "epEversmokeSmoke",
+      "name": "Eversmoking Bottle (open)",
+      "img": "icons/commodities/tech/smoke-bomb-purple.webp",
+      "transfer": false,
+      "disabled": false,
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "selfTargetAlways": true,
+          "stackable": "noneName"
+        }
+      },
+      "system": {
+        "changes": [
+          {
+            "key": "token.light.negative",
+            "type": "override",
+            "value": true,
+            "priority": 20,
+            "phase": "initial",
+            "_id": "Bjqv1jf9BL0Ev0Ch",
+            "conditions": "{}",
+            "replacement": ""
+          },
+          {
+            "key": "token.light.dim",
+            "type": "override",
+            "value": 60,
+            "priority": 20,
+            "phase": "initial",
+            "_id": "jDyjGbXFKo9HoC6A",
+            "conditions": "{}",
+            "replacement": ""
+          },
+          {
+            "key": "token.light.bright",
+            "type": "override",
+            "value": 0,
+            "priority": 20,
+            "phase": "initial",
+            "_id": "GfGzPFQQ3dcl4C3B",
+            "conditions": "{}",
+            "replacement": ""
+          },
+          {
+            "key": "token.light.animation.type",
+            "type": "override",
+            "value": "fog",
+            "priority": 20,
+            "phase": "initial",
+            "_id": "lmrriGMD0tigOIl4",
+            "conditions": "{}",
+            "replacement": ""
+          },
+          {
+            "key": "token.light.animation.speed",
+            "type": "override",
+            "value": 2,
+            "priority": 20,
+            "phase": "initial",
+            "_id": "mSU5Bz1bU4vog8Qp",
+            "conditions": "{}",
+            "replacement": ""
+          },
+          {
+            "key": "token.light.animation.intensity",
+            "type": "override",
+            "value": 3,
+            "priority": 20,
+            "phase": "initial",
+            "_id": "KaUaiSACMgUFTPPF",
+            "conditions": "{}",
+            "replacement": ""
+          }
+        ],
+        "origin": {
+          "actor": null,
+          "behavior": null,
+          "effect": null,
+          "item": null,
+          "message": null
+        },
+        "conditions": "{}",
+        "magical": false,
+        "rider": {
+          "statuses": []
+        }
+      },
+      "type": "base",
+      "start": null,
+      "duration": {
+        "value": null,
+        "units": "seconds",
+        "expiry": null,
+        "expired": false
+      },
+      "description": "",
+      "origin": null,
+      "statuses": [],
+      "showIcon": 1,
+      "folder": null,
+      "sort": 0,
+      "_key": "!items.effects!mqsEversmokingBo.epEversmokeSmoke"
+    }
+  ],
+  "flags": {
+    "cat": {
+      "macros": {
+        "roll": [
+          {
+            "source": "midi-qol",
+            "identifier": "light-source",
+            "rules": "2024"
+          }
+        ]
+      },
+      "automation": {
+        "version": "14.6.5"
+      }
+    },
+    "dnd5e": {}
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!mqsEversmokingBo"
+}

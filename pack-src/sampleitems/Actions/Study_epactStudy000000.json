@@ -296,7 +296,7 @@
     },
     "advancement": [],
     "description": {
-      "value": "<p>&Reference[study]{Study}</p><p><strong>midi-qol</strong>: Rolls the chosen skill.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "value": "<p>&Reference[study]{Study}</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Rolls the chosen skill.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "identifier": "study",
@@ -322,7 +322,7 @@
   "flags": {
     "cat": {
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },

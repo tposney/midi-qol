@@ -1,0 +1,297 @@
+{
+  "name": "Lantern, Bullseye",
+  "system": {
+    "description": {
+      "value": "<p>A Bullseye Lantern burns Oil as fuel to cast Bright Light in a 60-foot Cone and Dim Light for an additional 60 feet.</p><div class=\"cat-description\"><p><em>midi-qol: Light uses the oil (bright 60-ft cone, dim 60 ft more, 6 hours); the cone follows the token's facing.</em></p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
+      "chat": ""
+    },
+    "price": {
+      "value": 10,
+      "denomination": "gp"
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
+    },
+    "identified": true,
+    "unidentified": {
+      "description": ""
+    },
+    "container": null,
+    "quantity": 1,
+    "weight": {
+      "value": 2,
+      "units": "lb"
+    },
+    "attunement": "",
+    "attuned": false,
+    "equipped": false,
+    "cover": null,
+    "uses": {
+      "max": "1",
+      "spent": 0,
+      "recovery": []
+    },
+    "armor": {
+      "value": null,
+      "dex": null
+    },
+    "hp": {
+      "value": null,
+      "max": null,
+      "dt": null,
+      "conditions": ""
+    },
+    "type": {
+      "value": "trinket",
+      "baseItem": ""
+    },
+    "properties": [],
+    "speed": {
+      "value": null,
+      "conditions": "",
+      "units": "ft"
+    },
+    "strength": null,
+    "proficient": null,
+    "activities": {
+      "epLantBLight0000": {
+        "_id": "epLantBLight0000",
+        "type": "utility",
+        "name": "Light",
+        "img": "icons/sundries/lights/lantern-bullseye-signal-copper.webp",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "value": "1",
+              "target": "",
+              "scaling": {}
+            }
+          ],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [
+          {
+            "_id": "epLantBLit000000"
+          }
+        ],
+        "roll": {
+          "prompt": false,
+          "visible": false
+        }
+      },
+      "epLantBExt000000": {
+        "_id": "epLantBExt000000",
+        "type": "utility",
+        "name": "Extinguish",
+        "img": "icons/sundries/lights/lantern-bullseye-signal-copper.webp",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "roll": {
+          "prompt": false,
+          "visible": false
+        }
+      }
+    },
+    "identifier": "lantern-bullseye",
+    "rarities": [],
+    "crew": {
+      "value": []
+    }
+  },
+  "_id": "J15SiWIKPritkZ6x",
+  "type": "equipment",
+  "folder": "LIVHl8j2x0qfD4Kx",
+  "img": "icons/sundries/lights/lantern-bullseye-signal-copper.webp",
+  "effects": [
+    {
+      "_id": "epLantBLit000000",
+      "name": "Lantern, Bullseye (lit)",
+      "img": "icons/sundries/lights/lantern-bullseye-signal-copper.webp",
+      "transfer": false,
+      "disabled": false,
+      "duration": {
+        "value": 21600,
+        "units": "seconds"
+      },
+      "system": {
+        "changes": [
+          {
+            "key": "token.light.bright",
+            "type": "override",
+            "value": "60",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.dim",
+            "type": "override",
+            "value": "120",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.color",
+            "type": "override",
+            "value": "#ffb433",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.angle",
+            "type": "override",
+            "value": "60",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.alpha",
+            "type": "override",
+            "value": "0.25",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.luminosity",
+            "type": "override",
+            "value": "0.5",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.attenuation",
+            "type": "override",
+            "value": "0.75",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.type",
+            "type": "override",
+            "value": "torch",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.speed",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.intensity",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          }
+        ]
+      },
+      "flags": {
+        "dae": {
+          "selfTarget": true
+        }
+      },
+      "_key": "!items.effects!J15SiWIKPritkZ6x.epLantBLit000000"
+    }
+  ],
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "cat": {
+      "macros": {
+        "roll": [
+          {
+            "source": "midi-qol",
+            "rules": "2024",
+            "identifier": "light-source"
+          }
+        ]
+      },
+      "automation": {
+        "version": "14.6.5"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "_key": "!items!J15SiWIKPritkZ6x"
+}

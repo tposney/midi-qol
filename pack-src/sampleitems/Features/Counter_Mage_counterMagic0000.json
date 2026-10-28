@@ -7,36 +7,8 @@
       "_id": "inuredToMagic000",
       "name": "Inured to Magic",
       "description": "<p>When you fail a saving throw against a spell or magical effect, you can take a Reaction to roll 1d6 and add it to the roll, potentially turning the failure into a success.</p>",
-      "changes": [
-        {
-          "key": "flags.midi-qol.optional.inuredToMagic.save.fail.all",
-          "mode": 5,
-          "value": "+1d6",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.inuredToMagic.label",
-          "mode": 5,
-          "value": "Inured to Magic (+1d6)",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.optional.inuredToMagic.count",
-          "mode": 5,
-          "value": "reaction",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "origin": null,
       "transfer": true,
       "flags": {
@@ -54,11 +26,31 @@
         },
         "core": {}
       },
-      "tint": "#ffffff",
       "statuses": [],
       "img": "icons/magic/defensive/shield-barrier-deflect-teal.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.optional.inuredToMagic.save.fail.all",
+            "value": "+1d6",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.inuredToMagic.label",
+            "value": "Inured to Magic (+1d6)",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.optional.inuredToMagic.count",
+            "value": "reaction",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      },
       "sort": 0,
       "_stats": {
         "compendiumSource": null,
@@ -77,36 +69,8 @@
       "_id": "ctrMagicMacro000",
       "name": "Counter Mage",
       "description": "<p>Abjuration-Breaker: On ranged attacks, suppresses magical effects on targets and blocks spell reactions. Antimagic Shot: On critical hit vs Gut Shot target, blocks spellcasting and imposes concentration disadvantage.</p>",
-      "changes": [
-        {
-          "key": "flags.midi-qol.onUseMacroName",
-          "mode": 0,
-          "value": "ItemMacro,preCleanup",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.onUseMacroName",
-          "mode": 0,
-          "value": "ItemMacro,preAttackRoll",
-          "priority": 20
-        },
-        {
-          "key": "flags.midi-qol.onUseMacroName",
-          "mode": 0,
-          "value": "ItemMacro,postActiveEffects",
-          "priority": 20
-        }
-      ],
       "disabled": false,
-      "duration": {
-        "startTime": null,
-        "seconds": null,
-        "combat": null,
-        "rounds": null,
-        "turns": null,
-        "startRound": null,
-        "startTurn": null
-      },
+      "duration": {},
       "origin": null,
       "transfer": true,
       "flags": {
@@ -124,11 +88,31 @@
         },
         "core": {}
       },
-      "tint": "#ffffff",
       "statuses": [],
       "img": "icons/magic/defensive/shield-barrier-deflect-teal.webp",
       "type": "base",
-      "system": {},
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ItemMacro,preCleanup",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ItemMacro,preAttackRoll",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ItemMacro,postActiveEffects",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
       "sort": 100,
       "_stats": {
         "compendiumSource": null,
@@ -153,7 +137,7 @@
         "img": "icons/magic/defensive/shield-barrier-deflect-teal.webp",
         "type": "script",
         "scope": "global",
-        "command": "// Counter Mage feat macro\n// Abjuration-Breaker: preAttackRoll suppresses + stores on workflow, postActiveEffects/preCleanup restore directly.\n// Cleanup effect on target (1-turn) stores recovery data in its flags for crash/reload safety.\n// Antimagic Shot: postActiveEffects creates, DAE on/off manages spellcasting block hook.\nconst macroPass = args[0].macroPass ?? args[0];\nconst socket = MidiQOL.socket();\nconst PHYSICAL_TYPES = new Set([\"weapon\", \"equipment\", \"tool\", \"consumable\", \"container\", \"loot\"]);\n\nfunction isSpellActivity(activity) {\n  return activity?.item?.type === \"spell\" || activity?.type === \"cast\";\n}\n\nfunction isMagicalEffect(ef) {\n  if (ef.type === \"enchantment\") return true;\n  if (!ef.origin) return false;\n  const originItem = MidiQOL.getItemFromEffectOrigin(ef.origin);\n  return originItem?.type === \"spell\" || originItem?.system?.properties?.has?.(\"mgc\");\n}\n\nasync function batchUpdateEffects(entries, disabled) {\n  const byParent = new Map();\n  for (const entry of entries) {\n    if (!entry.parentUuid) continue;\n    if (!byParent.has(entry.parentUuid)) byParent.set(entry.parentUuid, []);\n    byParent.get(entry.parentUuid).push({ _id: entry.id, disabled });\n  }\n  for (const [parentUuid, updates] of byParent) {\n    await socket.executeAsGM(\"updateEffects\", { actorUuid: parentUuid, updates });\n  }\n}\n\n// Collect suppression data (no DB writes)\nfunction collectSuppressData(targetActor) {\n  const suppressedEffects = [];\n  for (const ef of targetActor.allApplicableEffects()) {\n    if (ef.disabled || !isMagicalEffect(ef)) continue;\n    suppressedEffects.push({ parentUuid: ef.parent?.uuid, id: ef.id });\n  }\n  const suppressedItemIds = [];\n  const itemUpdates = [];\n  for (const item of targetActor.items) {\n    if (!PHYSICAL_TYPES.has(item.type) || !item.system?.properties?.has?.(\"mgc\")) continue;\n    suppressedItemIds.push(item.id);\n    itemUpdates.push({ _id: item.id, \"system.properties\": [...item.system.properties].filter(p => p !== \"mgc\") });\n  }\n  return { suppressedEffects, suppressedItemIds, itemUpdates };\n}\n\n// Apply suppression (DB writes only)\nasync function suppressTarget(targetActor, suppData) {\n  await batchUpdateEffects(suppData.suppressedEffects, true);\n  if (suppData.itemUpdates.length) {\n    await socket.executeAsGM(\"updateItems\", { actorUuid: targetActor.uuid, updates: suppData.itemUpdates });\n  }\n}\n\n// Restore from suppression data\nasync function restoreFromData(targetActor, suppData) {\n  await batchUpdateEffects(suppData.suppressedEffects, false);\n  const itemUpdates = [];\n  for (const itemId of suppData.suppressedItemIds) {\n    const item = targetActor.items.get(itemId);\n    if (item && !item.system?.properties?.has?.(\"mgc\")) {\n      itemUpdates.push({ _id: itemId, \"system.properties\": [...(item.system?.properties ?? []), \"mgc\"] });\n    }\n  }\n  if (itemUpdates.length) {\n    await socket.executeAsGM(\"updateItems\", { actorUuid: targetActor.uuid, updates: itemUpdates });\n  }\n}\n\n// Restore all targets from workflow data, delete cleanup effects, clean up hooks\nasync function cleanupAbjurationBreaker(wf) {\n  const data = wf.counterMagicData;\n  if (!data) return;\n  for (const target of data.targets) {\n    const doc = fromUuidSync(target.actorUuid);\n    const targetActor = doc instanceof TokenDocument ? doc.actor : doc;\n    if (targetActor) await restoreFromData(targetActor, target.suppData);\n  }\n  for (const effectUuid of data.cleanupEffectUuids) {\n    await socket.executeAsGM(\"removeEffect\", { effectUuid });\n  }\n  if (data.reactionFilterHookId !== undefined) {\n    Hooks.off(\"midi-qol.ReactionFilter\", data.reactionFilterHookId);\n  }\n  delete wf.counterMagicData;\n}\n\nif ([\"on\", \"off\", \"init\"].includes(macroPass)) {\n  const lastArg = args[args.length - 1];\n  const effectName = lastArg?.efData?.name ?? \"\";\n\n  if (effectName === \"Antimagic Shot\") {\n    const oldHookId = actor.getFlag(\"midi-qol\", \"antimagicShotHookId\");\n    if (oldHookId !== undefined) {\n      Hooks.off(\"dnd5e.preUseActivity\", oldHookId);\n      await actor.unsetFlag(\"midi-qol\", \"antimagicShotHookId\");\n    }\n    if (macroPass !== \"off\") {\n      const targetActorUuid = lastArg.actorUuid;\n      const hookId = Hooks.on(\"dnd5e.preUseActivity\", (activity) => {\n        if (activity.actor?.uuid !== targetActorUuid) return;\n        if (isSpellActivity(activity)) {\n          ui.notifications.warn(`${activity.actor.name}: Antimagic Shot prevents spellcasting!`);\n          return false;\n        }\n      });\n      await actor.setFlag(\"midi-qol\", \"antimagicShotHookId\", hookId);\n    }\n    return;\n  }\n\n  // Crash/reload recovery: effect expired without normal cleanup — read data from effect flags\n  if (effectName === \"Abjuration-Breaker Suppression\" && macroPass === \"off\") {\n    const suppData = lastArg.efData?.flags?.[\"midi-qol\"]?.suppData;\n    if (suppData) await restoreFromData(actor, suppData);\n  }\n  return;\n}\n\nif (macroPass === \"preCleanup\") {\n  await cleanupAbjurationBreaker(workflow);\n  return;\n}\n\nif (macroPass === \"preAttackRoll\") {\n  if (![\"rwak\", \"rsak\"].includes(rolledActivity?.actionType)) return;\n\n  const targetUuids = new Set([...workflow.targets].map(t => t.actor?.uuid).filter(Boolean));\n  const reactionFilterId = Hooks.on(\"midi-qol.ReactionFilter\", (reactions, options, triggerType, reactionActivityList) => {\n    if (!reactions.length || !targetUuids.has(reactions[0]?.actor?.uuid)) return;\n    for (let i = reactions.length - 1; i >= 0; i--) {\n      if (isSpellActivity(reactions[i])) {\n        reactions.splice(i, 1);\n        reactionActivityList.splice(i, 1);\n      }\n    }\n  });\n\n  workflow.counterMagicData = { targets: [], cleanupEffectUuids: [], reactionFilterHookId: reactionFilterId };\n\n  for (const target of workflow.targets) {\n    const targetActor = target.actor;\n    if (!targetActor || targetActor.uuid === actor.uuid) continue;\n\n    // Collect and apply suppression\n    const suppData = collectSuppressData(targetActor);\n    await suppressTarget(targetActor, suppData);\n    workflow.counterMagicData.targets.push({ actorUuid: targetActor.uuid, suppData });\n\n    // Cleanup effect stores suppData in its flags for crash/reload recovery via DAE \"off\"\n    const created = await MidiQOL.createEffects({ actorUuid: targetActor.uuid, effects: [{\n      name: \"Abjuration-Breaker Suppression\",\n      img: macroItem.img,\n      origin: macroItem.uuid,\n      transfer: false,\n      duration: { turns: 1 },\n      changes: [{ key: \"macro.itemMacro\", type: \"custom\", value: \"ItemMacro\", priority: 20 }],\n      flags: {\n        dae: { stackable: \"none\", transfer: false, showIcon: true },\n        \"midi-qol\": { suppData: { suppressedEffects: suppData.suppressedEffects, suppressedItemIds: suppData.suppressedItemIds } }\n      }\n    }]});\n    // socketlib serializes return — use _id to find the actual effect document\n    const createdId = created?.[0]?._id ?? created?.[0]?.id;\n    const cleanupEffect = createdId ? targetActor.effects.get(createdId) : undefined;\n    if (cleanupEffect?.uuid) workflow.counterMagicData.cleanupEffectUuids.push(cleanupEffect.uuid);\n  }\n\n  // CPR's Mirror Image may remove targets even though its effect is suppressed — re-add them\n  const abWorkflowId = workflow.id;\n  Hooks.once(\"midi-qol.premades.postAttackRollComplete\", (wf) => {\n    if (wf.id !== abWorkflowId) return;\n    for (const target of wf.targets) {\n      if (wf.hitTargets.has(target) || wf.isFumble) continue;\n      const targetAC = target.actor?.system?.attributes?.ac?.value;\n      if (targetAC !== undefined && wf.attackTotal >= targetAC) wf.hitTargets.add(target);\n    }\n  });\n\n  return;\n}\n\nif (macroPass === \"postActiveEffects\") {\n  await cleanupAbjurationBreaker(workflow);\n\n  if (workflow.isCritical) {\n    for (const target of workflow.hitTargets) {\n      const targetActor = target.actor;\n      if (!targetActor) continue;\n      const gutShot = targetActor.appliedEffects.find(e => e.name === \"Gut Shot\" && !e.disabled);\n      if (!gutShot) continue;\n\n      const created = await MidiQOL.createEffects({ actorUuid: targetActor.uuid, effects: [{\n        name: \"Antimagic Shot\",\n        img: macroItem.img,\n        origin: macroItem.uuid,\n        transfer: false,\n        duration: { rounds: 10 },\n        changes: [\n          { key: \"flags.midi-qol.disadvantage.concentration\", type: \"override\", value: \"1\", priority: 20 },\n          { key: \"macro.itemMacro\", type: \"custom\", value: \"ItemMacro\", priority: 20 }\n        ],\n        flags: {\n          dae: { stackable: \"none\", transfer: false, showIcon: true }\n        }\n      }]});\n      // Mark Antimagic Shot as a dependent of Gut Shot so it is removed automatically when Gut Shot ends.\n      const createdId = created?.[0]?._id ?? created?.[0]?.id;\n      const antimagicShot = createdId ? targetActor.effects.get(createdId) : undefined;\n      if (antimagicShot) await MidiQOL.addDependent(gutShot, antimagicShot);\n    }\n  }\n  return;\n}",
+        "command": "// Counter Mage feat macro\n// Abjuration-Breaker: preAttackRoll suppresses + stores on workflow, postActiveEffects/preCleanup restore directly.\n// Cleanup effect on target (1-turn) stores recovery data in its flags for crash/reload safety.\n// Antimagic Shot: postActiveEffects creates, DAE on/off manages spellcasting block hook.\nconst macroPass = args[0].macroPass ?? args[0];\nconst socket = MidiQOL.socket();\nconst PHYSICAL_TYPES = new Set([\"weapon\", \"equipment\", \"tool\", \"consumable\", \"container\", \"loot\"]);\n\nfunction isSpellActivity(activity) {\n  return activity?.item?.type === \"spell\" || activity?.type === \"cast\";\n}\n\nfunction isMagicalEffect(ef) {\n  if (ef.type === \"enchantment\") return true;\n  if (!ef.origin) return false;\n  const originItem = MidiQOL.getItemFromEffectOrigin(ef.origin);\n  return originItem?.type === \"spell\" || originItem?.system?.properties?.has?.(\"mgc\");\n}\n\nasync function batchUpdateEffects(entries, disabled) {\n  const byParent = new Map();\n  for (const entry of entries) {\n    if (!entry.parentUuid) continue;\n    if (!byParent.has(entry.parentUuid)) byParent.set(entry.parentUuid, []);\n    byParent.get(entry.parentUuid).push({ _id: entry.id, disabled });\n  }\n  for (const [parentUuid, updates] of byParent) {\n    await socket.executeAsGM(\"updateEffects\", { actorUuid: parentUuid, updates });\n  }\n}\n\n// Collect suppression data (no DB writes)\nfunction collectSuppressData(targetActor) {\n  const suppressedEffects = [];\n  for (const ef of targetActor.allApplicableEffects()) {\n    if (ef.disabled || !isMagicalEffect(ef)) continue;\n    suppressedEffects.push({ parentUuid: ef.parent?.uuid, id: ef.id });\n  }\n  const suppressedItemIds = [];\n  const itemUpdates = [];\n  for (const item of targetActor.items) {\n    if (!PHYSICAL_TYPES.has(item.type) || !item.system?.properties?.has?.(\"mgc\")) continue;\n    suppressedItemIds.push(item.id);\n    itemUpdates.push({ _id: item.id, \"system.properties\": [...item.system.properties].filter(p => p !== \"mgc\") });\n  }\n  return { suppressedEffects, suppressedItemIds, itemUpdates };\n}\n\n// Apply suppression (DB writes only)\nasync function suppressTarget(targetActor, suppData) {\n  await batchUpdateEffects(suppData.suppressedEffects, true);\n  if (suppData.itemUpdates.length) {\n    await socket.executeAsGM(\"updateItems\", { actorUuid: targetActor.uuid, updates: suppData.itemUpdates });\n  }\n}\n\n// Restore from suppression data\nasync function restoreFromData(targetActor, suppData) {\n  await batchUpdateEffects(suppData.suppressedEffects, false);\n  const itemUpdates = [];\n  for (const itemId of suppData.suppressedItemIds) {\n    const item = targetActor.items.get(itemId);\n    if (item && !item.system?.properties?.has?.(\"mgc\")) {\n      itemUpdates.push({ _id: itemId, \"system.properties\": [...(item.system?.properties ?? []), \"mgc\"] });\n    }\n  }\n  if (itemUpdates.length) {\n    await socket.executeAsGM(\"updateItems\", { actorUuid: targetActor.uuid, updates: itemUpdates });\n  }\n}\n\n// Restore all targets from workflow data, delete cleanup effects, clean up hooks\nasync function cleanupAbjurationBreaker(wf) {\n  const data = wf.counterMagicData;\n  if (!data) return;\n  for (const target of data.targets) {\n    const doc = fromUuidSync(target.actorUuid);\n    const targetActor = doc instanceof TokenDocument ? doc.actor : doc;\n    if (targetActor) await restoreFromData(targetActor, target.suppData);\n  }\n  for (const effectUuid of data.cleanupEffectUuids) {\n    await socket.executeAsGM(\"removeEffect\", { effectUuid });\n  }\n  if (data.reactionFilterHookId !== undefined) {\n    Hooks.off(\"midi-qol.ReactionFilter\", data.reactionFilterHookId);\n  }\n  delete wf.counterMagicData;\n}\n\nif ([\"on\", \"off\", \"init\"].includes(macroPass)) {\n  const lastArg = args[args.length - 1];\n  const effectName = lastArg?.efData?.name ?? \"\";\n\n  if (effectName === \"Antimagic Shot\") {\n    const oldHookId = actor.getFlag(\"midi-qol\", \"antimagicShotHookId\");\n    if (oldHookId !== undefined) {\n      Hooks.off(\"dnd5e.preUseActivity\", oldHookId);\n      await actor.unsetFlag(\"midi-qol\", \"antimagicShotHookId\");\n    }\n    if (macroPass !== \"off\") {\n      const targetActorUuid = lastArg.actorUuid;\n      const hookId = Hooks.on(\"dnd5e.preUseActivity\", (activity) => {\n        if (activity.actor?.uuid !== targetActorUuid) return;\n        if (isSpellActivity(activity)) {\n          ui.notifications.warn(`${activity.actor.name}: Antimagic Shot prevents spellcasting!`);\n          return false;\n        }\n      });\n      await actor.setFlag(\"midi-qol\", \"antimagicShotHookId\", hookId);\n    }\n    return;\n  }\n\n  // Crash/reload recovery: effect expired without normal cleanup — read data from effect flags\n  if (effectName === \"Abjuration-Breaker Suppression\" && macroPass === \"off\") {\n    const suppData = lastArg.efData?.flags?.[\"midi-qol\"]?.suppData;\n    if (suppData) await restoreFromData(actor, suppData);\n  }\n  return;\n}\n\nif (macroPass === \"preCleanup\") {\n  await cleanupAbjurationBreaker(workflow);\n  return;\n}\n\nif (macroPass === \"preAttackRoll\") {\n  if (![\"rwak\", \"rsak\"].includes(rolledActivity?.actionType)) return;\n\n  const targetUuids = new Set([...workflow.targets].map(t => t.actor?.uuid).filter(Boolean));\n  const reactionFilterId = Hooks.on(\"midi-qol.ReactionFilter\", (reactions, options, triggerType, reactionActivityList) => {\n    if (!reactions.length || !targetUuids.has(reactions[0]?.actor?.uuid)) return;\n    for (let i = reactions.length - 1; i >= 0; i--) {\n      if (isSpellActivity(reactions[i])) {\n        reactions.splice(i, 1);\n        reactionActivityList.splice(i, 1);\n      }\n    }\n  });\n\n  workflow.counterMagicData = { targets: [], cleanupEffectUuids: [], reactionFilterHookId: reactionFilterId };\n\n  for (const target of workflow.targets) {\n    const targetActor = target.actor;\n    if (!targetActor || targetActor.uuid === actor.uuid) continue;\n\n    // Collect and apply suppression\n    const suppData = collectSuppressData(targetActor);\n    await suppressTarget(targetActor, suppData);\n    workflow.counterMagicData.targets.push({ actorUuid: targetActor.uuid, suppData });\n\n    // Cleanup effect stores suppData in its flags for crash/reload recovery via DAE \"off\"\n    const created = await MidiQOL.createEffects({ actorUuid: targetActor.uuid, effects: [{\n      name: \"Abjuration-Breaker Suppression\",\n      img: macroItem.img,\n      origin: macroItem.uuid,\n      transfer: false,\n      duration: { value: 1, units: \"turns\" },\n      system: { changes: [{ key: \"macro.itemMacro\", type: \"custom\", value: \"ItemMacro\", priority: 20 }] },\n      flags: {\n        dae: { stackable: \"none\", transfer: false, showIcon: true },\n        \"midi-qol\": { suppData: { suppressedEffects: suppData.suppressedEffects, suppressedItemIds: suppData.suppressedItemIds } }\n      }\n    }]});\n    // socketlib serializes return — use _id to find the actual effect document\n    const createdId = created?.[0]?._id ?? created?.[0]?.id;\n    const cleanupEffect = createdId ? targetActor.effects.get(createdId) : undefined;\n    if (cleanupEffect?.uuid) workflow.counterMagicData.cleanupEffectUuids.push(cleanupEffect.uuid);\n  }\n\n  // CPR's Mirror Image may remove targets even though its effect is suppressed — re-add them\n  const abWorkflowId = workflow.id;\n  Hooks.once(\"midi-qol.premades.postAttackRollComplete\", (wf) => {\n    if (wf.id !== abWorkflowId) return;\n    for (const target of wf.targets) {\n      if (wf.hitTargets.has(target) || wf.isFumble) continue;\n      const targetAC = target.actor?.system?.attributes?.ac?.value;\n      if (targetAC !== undefined && wf.attackTotal >= targetAC) wf.hitTargets.add(target);\n    }\n  });\n\n  return;\n}\n\nif (macroPass === \"postActiveEffects\") {\n  await cleanupAbjurationBreaker(workflow);\n\n  if (workflow.isCritical) {\n    for (const target of workflow.hitTargets) {\n      const targetActor = target.actor;\n      if (!targetActor) continue;\n      const gutShot = targetActor.appliedEffects.find(e => e.name === \"Gut Shot\" && !e.disabled);\n      if (!gutShot) continue;\n\n      const created = await MidiQOL.createEffects({ actorUuid: targetActor.uuid, effects: [{\n        name: \"Antimagic Shot\",\n        img: macroItem.img,\n        origin: macroItem.uuid,\n        transfer: false,\n        duration: { value: 10, units: \"rounds\" },\n        system: { changes: [\n          { key: \"flags.midi-qol.disadvantage.concentration\", type: \"override\", value: \"1\", priority: 20 },\n          { key: \"macro.itemMacro\", type: \"custom\", value: \"ItemMacro\", priority: 20 }\n        ] },\n        flags: {\n          dae: { stackable: \"none\", transfer: false, showIcon: true }\n        }\n      }]});\n      // Mark Antimagic Shot as a dependent of Gut Shot so it is removed automatically when Gut Shot ends.\n      const createdId = created?.[0]?._id ?? created?.[0]?.id;\n      const antimagicShot = createdId ? targetActor.effects.get(createdId) : undefined;\n      if (antimagicShot) await MidiQOL.addDependent(gutShot, antimagicShot);\n    }\n  }\n  return;\n}",
         "author": "Zl1BOUaPLwDEujaL",
         "ownership": {
           "default": 3
@@ -217,7 +201,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },

@@ -1,0 +1,256 @@
+{
+  "name": "Bracers of Archery",
+  "type": "equipment",
+  "img": "icons/equipment/wrist/bracer-studded-leather-steel.webp",
+  "effects": [
+    {
+      "_id": "5YQAiFBcKFBjPEnq",
+      "flags": {
+        "dae": {
+          "stackable": "none",
+          "transfer": true,
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "selfTarget": false,
+          "selfTargetAlways": false
+        },
+        "core": {},
+        "ActiveAuras": {
+          "isAura": false,
+          "aura": "None",
+          "radius": null,
+          "alignment": "",
+          "type": "",
+          "ignoreSelf": false,
+          "height": false,
+          "hidden": false,
+          "displayTemp": false,
+          "hostile": false,
+          "onlyOnce": false
+        }
+      },
+      "disabled": false,
+      "duration": {},
+      "transfer": true,
+      "origin": "Actor.BogmFuNh1wswTouJ.Item.bxygzHyGsUWztdkU",
+      "name": "Bracers of Archery",
+      "description": "",
+      "statuses": [],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/equipment/wrist/bracer-studded-leather-steel.webp",
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "system.bonuses.rwak.damage",
+            "value": "+2",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "system.traits.weaponProf.value",
+            "value": "shortbow",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.weaponProf.value",
+            "value": "longbow",
+            "priority": 20,
+            "type": "add"
+          }
+        ]
+      },
+      "sort": 0,
+      "_key": "!items.effects!PK7zGIdSuauon3TR.5YQAiFBcKFBjPEnq",
+      "start": null
+    }
+  ],
+  "flags": {
+    "magicitems": {
+      "enabled": false,
+      "equipped": false,
+      "attuned": false,
+      "charges": "0",
+      "chargeType": "c1",
+      "destroy": false,
+      "destroyFlavorText": "reaches 0 charges: it crumbles into ashes and is destroyed.",
+      "rechargeable": false,
+      "recharge": "0",
+      "rechargeType": "t1",
+      "rechargeUnit": "r1",
+      "sorting": "l"
+    },
+    "dae": {
+      "activeEquipped": false,
+      "alwaysActive": false
+    },
+    "core": {},
+    "scene-packer": {
+      "sourceId": "Item.2l5MeYXc7ErrgZuQ",
+      "hash": "bf34b626cf968227dcc074f2868bd6a7a2f3c253"
+    },
+    "cf": {
+      "id": "temp_mxc6kjqa6kp"
+    },
+    "betterRolls5e": {
+      "quickDesc": {
+        "value": true,
+        "altValue": true
+      },
+      "quickProperties": {
+        "value": true,
+        "altValue": true
+      },
+      "quickOther": {
+        "value": true,
+        "altValue": true
+      },
+      "quickFlavor": {
+        "value": true,
+        "altValue": true
+      },
+      "quickCharges": {
+        "value": {
+          "quantity": false
+        },
+        "altValue": {
+          "quantity": false
+        }
+      }
+    },
+    "midiProperties": {
+      "confirmTargets": "default",
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "noConcentrationCheck": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "AoETargetType": "any",
+      "AoETargetTypeIncludeSelf": true,
+      "autoTarget": "default",
+      "removeAttackDamageButtons": "default"
+    },
+    "tidy5e-sheet": {
+      "section": "",
+      "actionSection": ""
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": []
+      }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.5"
+      }
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Wondrous item, (requires attunement)</em></p>\n<p>While wearing these bracers, you have proficiency with the longbow and shortbow, and you gain a +2 bonus to damage rolls on ranged attacks made with such weapons.</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "DMG pg. 156",
+      "revision": 1,
+      "rules": "2024"
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 1,
+      "units": "lb"
+    },
+    "price": {
+      "value": 1500,
+      "denomination": "gp"
+    },
+    "attunement": "required",
+    "rarity": "uncommon",
+    "identified": true,
+    "cover": null,
+    "crewed": false,
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "armor": {
+      "value": 0,
+      "dex": 0,
+      "magicalBonus": null
+    },
+    "hp": {
+      "value": 0,
+      "max": 0,
+      "dt": null,
+      "conditions": ""
+    },
+    "speed": {
+      "value": null,
+      "conditions": ""
+    },
+    "strength": 0,
+    "proficient": 1,
+    "unidentified": {
+      "description": ""
+    },
+    "type": {
+      "value": "clothing",
+      "baseItem": ""
+    },
+    "activities": {},
+    "identifier": "bracers-of-archery",
+    "container": null,
+    "properties": [
+      "mgc"
+    ],
+    "attuned": true,
+    "equipped": false
+  },
+  "_stats": {
+    "compendiumSource": "Item.93tqVAgnT6DsLnjy",
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782992877,
+    "modifiedTime": 1741782992877,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
+  },
+  "folder": "YuEENpWPYkjPMzah",
+  "_id": "PK7zGIdSuauon3TR",
+  "sort": 300000,
+  "ownership": {
+    "default": 0,
+    "Zl1BOUaPLwDEujaL": 3
+  },
+  "_key": "!items!PK7zGIdSuauon3TR"
+}

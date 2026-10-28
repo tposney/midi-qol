@@ -123,7 +123,7 @@
     },
     "advancement": [],
     "description": {
-      "value": "<p>&Reference[mounting]{Mount}</p><p><strong>midi-qol</strong>: Mount marks you Mounted (use again to dismount); Fall Off is the DC 10 Dexterity save, Prone on a failure. Tokens are not linked.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "value": "<p>&Reference[mounting]{Mount}</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Mount marks you Mounted (use again to dismount); Fall Off is the DC 10 Dexterity save, Prone on a failure. Tokens are not linked.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "identifier": "mount",
@@ -201,7 +201,7 @@
         ]
       },
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },

@@ -174,13 +174,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>You overwhelm the mind of one creature you can see within range. If the target has 150 Hit Points or fewer, it has the Stunned condition. Otherwise, its Speed is 0 until the start of your next turn.</p><p>The Stunned target makes a Constitution saving throw at the end of each of its turns, ending the condition on itself on a success.</p>\n<p><strong>midi-qol</strong>: No macros required. Uses two activities with conditional effects: if the target has 150 HP or fewer, the main activity applies the Stunned condition with an OverTime end-of-turn CON save (DC 20). If the target has more than 150 HP, the triggered \"No Movement\" activity sets all movement speeds to 0 until the start of the caster's next turn.</p>",
+      "value": "<p>You overwhelm the mind of one creature you can see within range. If the target has 150 Hit Points or fewer, it has the Stunned condition. Otherwise, its Speed is 0 until the start of your next turn.</p><p>The Stunned target makes a Constitution saving throw at the end of each of its turns, ending the condition on itself on a success.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: No macros required. Uses two activities with conditional effects: if the target has 150 HP or fewer, the main activity applies the Stunned condition with an OverTime end-of-turn CON save (DC 20). If the target has more than 150 HP, the triggered \"No Movement\" activity sets all movement speeds to 0 until the start of the caster's next turn.</p></div>",
       "chat": "<p>You overwhelm the mind of one creature you can see within range. If the target has 150 Hit Points or fewer, it has the Stunned condition. Otherwise, its Speed is 0 until the start of your next turn.</p><p>The Stunned target makes a Constitution saving throw at the end of each of its turns, ending the condition on itself on a success.</p>"
     },
     "source": {

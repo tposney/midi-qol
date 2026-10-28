@@ -58,7 +58,7 @@
     },
     "advancement": [],
     "description": {
-      "value": "<p>&Reference[attack]{Attack}</p><p><strong>midi-qol</strong>: Attacks your targets with an equipped weapon, chosen if you have more than one.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "value": "<p>&Reference[attack]{Attack}</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Attacks your targets with an equipped weapon, chosen if you have more than one.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "identifier": "attack",
@@ -93,7 +93,7 @@
         ]
       },
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },

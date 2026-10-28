@@ -58,7 +58,7 @@
     },
     "advancement": {},
     "description": {
-      "value": "<p>Take an action: midi's 2024 actions (sample items › Actions) and, with CPR installed, CPR's Dash, Disengage, Dodge, Help, Fall, Jump and Unarmed Strike (Grapple, Shove).</p><p><strong>midi-qol</strong>: Choose an action from midi's and CPR's; one both offer is listed twice, tagged with its source.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "value": "<p>Take an action: midi's 2024 actions (sample items › Actions) and, with CPR installed, CPR's Dash, Disengage, Dodge, Help, Fall, Jump and Unarmed Strike (Grapple, Shove).</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Choose an action from midi's and CPR's; one both offer is listed twice, tagged with its source.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "identifier": "generic-actions",
@@ -93,7 +93,7 @@
         ]
       },
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },

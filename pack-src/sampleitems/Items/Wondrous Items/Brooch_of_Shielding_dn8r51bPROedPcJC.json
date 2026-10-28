@@ -1,0 +1,258 @@
+{
+  "name": "Brooch of Shielding",
+  "type": "equipment",
+  "img": "icons/equipment/neck/pendant-bronze-gem-blue.webp",
+  "system": {
+    "description": {
+      "value": "<div><p><em>Wondrous Item, Uncommon (Requires Attunement)</em></p></div><p>While wearing this brooch, you have Resistance to Force damage, and you have Immunity to damage from the <em>@UUID[Compendium.dnd5e.spells24.Item.phbsplMagicMissi]{Magic Missile}</em> spell.</p><div class=\"cat-description\"><p><em>midi-qol: resistance to force damage, and Magic Missile does no damage to the wearer.</em></p></div>",
+      "chat": "<p><em>Wondrous item, (requires attunement)</em></p><p>While wearing this brooch, you have resistance to force damage, and you have immunity to damage from the <em>@Compendium[dnd5e.spells.41JIhpDyM9Anm7cs]{Magic Missile}</em> spell.</p>"
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "revision": 1,
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0",
+      "page": ""
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 1,
+      "units": "lb"
+    },
+    "price": {
+      "value": 7500,
+      "denomination": "gp"
+    },
+    "attunement": "required",
+    "rarity": "uncommon",
+    "identified": true,
+    "cover": null,
+    "crewed": false,
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "armor": {
+      "value": 0,
+      "dex": 0,
+      "magicalBonus": null
+    },
+    "hp": {
+      "value": 0,
+      "max": 0,
+      "dt": null,
+      "conditions": ""
+    },
+    "speed": {
+      "value": null,
+      "conditions": ""
+    },
+    "strength": null,
+    "proficient": 0,
+    "unidentified": {
+      "description": ""
+    },
+    "type": {
+      "value": "trinket",
+      "baseItem": ""
+    },
+    "activities": {},
+    "identifier": "brooch-of-shielding",
+    "container": null,
+    "properties": [
+      "mgc"
+    ],
+    "attuned": true,
+    "equipped": true
+  },
+  "effects": [
+    {
+      "origin": "Scene.GO63mgFDMhBfPVWf.Token.y8rDGEEuPTa8Oz4m.Actor.2W8ip8j0hvK2pQ7V.Item.GwIHAhyeTzBJUWil",
+      "duration": {},
+      "disabled": false,
+      "_id": "vfDPES065i7GQdeK",
+      "transfer": true,
+      "flags": {
+        "dfreds-convenient-effects": {
+          "description": ""
+        },
+        "dae": {
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "stackable": "noneName",
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "disableCondition": "",
+          "disableIncapacitated": false
+        },
+        "core": {
+          "overlay": false
+        },
+        "ActiveAuras": {
+          "isAura": false,
+          "aura": "None",
+          "nameOverride": "",
+          "radius": "",
+          "alignment": "",
+          "type": "",
+          "customCheck": "",
+          "ignoreSelf": false,
+          "height": false,
+          "hidden": false,
+          "displayTemp": false,
+          "hostile": false,
+          "onlyOnce": false,
+          "wallsBlock": "system"
+        }
+      },
+      "name": "Brooch of Shielding",
+      "description": "",
+      "statuses": [],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/equipment/neck/pendant-bronze-gem-blue.webp",
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "system.traits.dr.value",
+            "value": "force",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ItemMacro, preTargetDamageApplication",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
+      "sort": 0,
+      "_key": "!items.effects!dn8r51bPROedPcJC.vfDPES065i7GQdeK",
+      "start": null,
+      "showIcon": 0
+    }
+  ],
+  "flags": {
+    "core": {},
+    "scene-packer": {
+      "hash": "fa0bf85ac82c1f67f3621b6fcb642e6e13e18924",
+      "sourceId": "Compendium.world.backup-sample-items.Item.PmKoFztdy2JhYcgq"
+    },
+    "magicitems": {
+      "enabled": false,
+      "equipped": false,
+      "attuned": false,
+      "charges": "0",
+      "chargeType": "c1",
+      "destroy": false,
+      "destroyFlavorText": "reaches 0 charges: it crumbles into ashes and is destroyed.",
+      "rechargeable": false,
+      "recharge": "0",
+      "rechargeType": "t1",
+      "rechargeUnit": "r1",
+      "sorting": "l"
+    },
+    "cf": {
+      "id": "temp_mxc6kjqa6kp"
+    },
+    "midiProperties": {
+      "confirmTargets": "default",
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "noConcentrationCheck": false,
+      "toggleEffect": false,
+      "ignoreTotalCover": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "AoETargetType": "any",
+      "AoETargetTypeIncludeSelf": true,
+      "autoTarget": "default",
+      "removeAttackDamageButtons": "default"
+    },
+    "tidy5e-sheet": {
+      "section": "",
+      "actionSection": ""
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": []
+      }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.5"
+      }
+    },
+    "dae": {
+      "macro": {
+        "name": "Broach of Shielding (10.0.44)",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "// Immune to Magic Missile's damage (preTargetDamageApplication); the force resistance is the effect's.\nif (args[0].tag !== \"TargetOnUse\" || args[0].macroPass !== \"preTargetDamageApplication\") return;\nconst spell = workflow.item;\nif (spell?.system.identifier !== \"magic-missile\" && !spell?.name.includes(\"Magic Missile\")) return;\nconst di = workflow.damageItem;\nif (di?.totalDamage > 0) MidiQOL.modifyDamageBy({ damageItem: di, value: -di.totalDamage, reason: macroItem.name });\n",
+        "sort": 0,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {},
+        "_stats": {
+          "systemId": null,
+          "systemVersion": null,
+          "coreVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null
+        },
+        "author": "ffUVCzLexh57kZfU",
+        "_id": null,
+        "folder": null
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782992877,
+    "modifiedTime": 1741782992877,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
+  },
+  "folder": "YuEENpWPYkjPMzah",
+  "_id": "dn8r51bPROedPcJC",
+  "sort": 400000,
+  "ownership": {
+    "default": 0,
+    "Zl1BOUaPLwDEujaL": 3
+  },
+  "_key": "!items!dn8r51bPROedPcJC"
+}

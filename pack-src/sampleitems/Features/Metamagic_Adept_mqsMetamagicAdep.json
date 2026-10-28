@@ -1,0 +1,69 @@
+{
+  "_id": "mqsMetamagicAdep",
+  "name": "Metamagic Adept",
+  "type": "feat",
+  "img": "icons/magic/symbols/rune-sigil-green-purple.webp",
+  "system": {
+    "description": {
+      "value": "<div class=\"cat-description\"><p><em>midi-qol: 2 Sorcery Points, regained on a Long Rest, that midi's Metamagic options spend before any from Font of Magic. The two Metamagic options you choose are midi's Metamagic samples (sample items › Features). No rules text (not SRD): give the character your own copy of the feat and apply this automation to it with CAT's medkit, which keeps your copy's description and advancement.</em></p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "",
+      "license": ""
+    },
+    "uses": {
+      "max": "2",
+      "spent": 0,
+      "recovery": [
+        {
+          "period": "lr",
+          "type": "recoverAll"
+        }
+      ]
+    },
+    "type": {
+      "value": "feat",
+      "subtype": "general"
+    },
+    "prerequisites": {
+      "level": 4,
+      "repeatable": false,
+      "items": []
+    },
+    "properties": [],
+    "requirements": "",
+    "activities": {},
+    "enchant": {},
+    "identifier": "metamagic-adept",
+    "advancement": {},
+    "crewed": false
+  },
+  "effects": [],
+  "folder": "fZIl4G4qj3C894LI",
+  "flags": {
+    "cat": {
+      "automation": {
+        "version": "14.6.5"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "_key": "!items!mqsMetamagicAdep"
+}

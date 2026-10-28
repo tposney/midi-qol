@@ -199,7 +199,7 @@
   },
   "system": {
     "description": {
-      "value": "<p>A demo item showing how multiple activities on a single item can let the caster choose which effect to apply, without needing a macro. Each activity applies a different status effect (Blessed, Ethereal, or Invisible) for 1 round.</p>\n<p><strong>midi-qol</strong>: No macros required. Three utility activities each apply a different effect. In dnd5e v4 this is easily handled by multiple activities on the item.</p>",
+      "value": "<p>A demo item showing how multiple activities on a single item can let the caster choose which effect to apply, without needing a macro. Each activity applies a different status effect (Blessed, Ethereal, or Invisible) for 1 round.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: No macros required. Three utility activities each apply a different effect. In dnd5e v4 this is easily handled by multiple activities on the item.</p></div>",
       "chat": "<p>A demo item showing how multiple activities on a single item can let the caster choose which effect to apply, without needing a macro. Each activity applies a different status effect (Blessed, Ethereal, or Invisible) for 1 round.</p>"
     },
     "source": {

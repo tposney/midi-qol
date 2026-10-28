@@ -99,13 +99,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.2"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>Choose a Humanoid that you can see within range. The target must succeed on a Wisdom saving throw or have the Paralyzed condition for the duration. At the end of each of its turns, the target repeats the save, ending the spell on itself on a success.</p><p><strong>Using a Higher-Level Spell Slot.</strong> You can target one additional Humanoid for each spell slot level above 2.</p>\n<p><strong>midi-qol</strong>: No macros required. The WIS save activity applies the Paralyzed effect on a failed save. The Paralyzed effect includes an OverTime end-of-turn WIS save that removes the effect on a success. Scales to target additional creatures when cast with higher-level spell slots via <code>@item.level - 1</code>.</p>",
+      "value": "<p>Choose a Humanoid that you can see within range. The target must succeed on a Wisdom saving throw or have the Paralyzed condition for the duration. At the end of each of its turns, the target repeats the save, ending the spell on itself on a success.</p><p><strong>Using a Higher-Level Spell Slot.</strong> You can target one additional Humanoid for each spell slot level above 2.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: No macros required. The WIS save activity applies the Paralyzed effect on a failed save. The Paralyzed effect includes an OverTime end-of-turn WIS save that removes the effect on a success. Scales to target additional creatures when cast with higher-level spell slots via <code>@item.level - 1</code>.</p></div>",
       "chat": "<p>Choose a Humanoid that you can see within range. The target must succeed on a Wisdom saving throw or have the Paralyzed condition for the duration. At the end of each of its turns, the target repeats the save, ending the spell on itself on a success.</p><p><strong>Using a Higher-Level Spell Slot.</strong> You can target one additional Humanoid for each spell slot level above 2.</p>"
     },
     "source": {

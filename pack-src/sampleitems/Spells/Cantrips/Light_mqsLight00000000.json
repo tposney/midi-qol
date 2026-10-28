@@ -1,0 +1,711 @@
+{
+  "name": "Light",
+  "system": {
+    "description": {
+      "value": "<p>You touch one Large or smaller object that isn't being worn or carried by someone else. Until the spell ends, the object sheds Bright Light in a 20-foot radius and Dim Light for an additional 20 feet. The light can be colored as you like.</p><p>Covering the object with something opaque blocks the light. The spell ends if you cast it again.</p><div class=\"cat-description\"><p><em>midi-qol: Touch a creature (or the creature holding the object) and choose the colour; it sheds bright light 20 ft and dim 20 ft more for 1 hour.</em></p></div>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
+    },
+    "activation": {
+      "type": "action",
+      "condition": "",
+      "value": null
+    },
+    "duration": {
+      "value": "1",
+      "units": "hour",
+      "expiry": null
+    },
+    "target": {
+      "affects": {
+        "choice": false,
+        "count": "",
+        "type": ""
+      },
+      "template": {
+        "units": "ft",
+        "contiguous": false,
+        "type": "",
+        "stationary": false
+      }
+    },
+    "range": {
+      "units": "touch",
+      "special": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "level": 0,
+    "school": "evo",
+    "properties": [
+      "vocal",
+      "material"
+    ],
+    "materials": {
+      "value": "a firefly or phosphorescent moss",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "activities": {
+      "epLightCast00000": {
+        "_id": "epLightCast00000",
+        "type": "utility",
+        "name": "Cast",
+        "img": "icons/sundries/lights/candle-pillar-lit-yellow.webp",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "creature",
+            "count": "1",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "touch"
+        },
+        "duration": {
+          "units": "hour",
+          "value": "1",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [
+          {
+            "_id": "epLightWhite0000"
+          },
+          {
+            "_id": "epLightYellow000"
+          },
+          {
+            "_id": "epLightBlue00000"
+          },
+          {
+            "_id": "epLightGreen0000"
+          },
+          {
+            "_id": "epLightRed000000"
+          },
+          {
+            "_id": "epLightPurple000"
+          },
+          {
+            "_id": "epLightPink00000"
+          }
+        ],
+        "roll": {
+          "prompt": false,
+          "visible": false
+        },
+        "midiProperties": {
+          "chooseEffects": true
+        }
+      }
+    },
+    "identifier": "light",
+    "method": "spell",
+    "prepared": 2
+  },
+  "_id": "mqsLight00000000",
+  "type": "spell",
+  "img": "icons/sundries/lights/candle-pillar-lit-yellow.webp",
+  "effects": [
+    {
+      "_id": "epLightWhite0000",
+      "name": "Light (White)",
+      "img": "icons/sundries/lights/candle-pillar-lit-yellow.webp",
+      "transfer": false,
+      "disabled": false,
+      "duration": {
+        "value": 3600,
+        "units": "seconds"
+      },
+      "system": {
+        "changes": [
+          {
+            "key": "token.light.bright",
+            "type": "override",
+            "value": "20",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.dim",
+            "type": "override",
+            "value": "40",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.color",
+            "type": "override",
+            "value": "#ffffff",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.angle",
+            "type": "override",
+            "value": "360",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.alpha",
+            "type": "override",
+            "value": "0.25",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.luminosity",
+            "type": "override",
+            "value": "0.5",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.attenuation",
+            "type": "override",
+            "value": "0.75",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.type",
+            "type": "override",
+            "value": "",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.speed",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.intensity",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          }
+        ]
+      },
+      "flags": {},
+      "_key": "!items.effects!mqsLight00000000.epLightWhite0000"
+    },
+    {
+      "_id": "epLightYellow000",
+      "name": "Light (Yellow)",
+      "img": "icons/sundries/lights/candle-pillar-lit-yellow.webp",
+      "transfer": false,
+      "disabled": false,
+      "duration": {
+        "value": 3600,
+        "units": "seconds"
+      },
+      "system": {
+        "changes": [
+          {
+            "key": "token.light.bright",
+            "type": "override",
+            "value": "20",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.dim",
+            "type": "override",
+            "value": "40",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.color",
+            "type": "override",
+            "value": "#ffd84d",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.angle",
+            "type": "override",
+            "value": "360",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.alpha",
+            "type": "override",
+            "value": "0.25",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.luminosity",
+            "type": "override",
+            "value": "0.5",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.attenuation",
+            "type": "override",
+            "value": "0.75",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.type",
+            "type": "override",
+            "value": "",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.speed",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.intensity",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          }
+        ]
+      },
+      "flags": {},
+      "_key": "!items.effects!mqsLight00000000.epLightYellow000"
+    },
+    {
+      "_id": "epLightBlue00000",
+      "name": "Light (Blue)",
+      "img": "icons/sundries/lights/candle-pillar-lit-yellow.webp",
+      "transfer": false,
+      "disabled": false,
+      "duration": {
+        "value": 3600,
+        "units": "seconds"
+      },
+      "system": {
+        "changes": [
+          {
+            "key": "token.light.bright",
+            "type": "override",
+            "value": "20",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.dim",
+            "type": "override",
+            "value": "40",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.color",
+            "type": "override",
+            "value": "#4d88ff",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.angle",
+            "type": "override",
+            "value": "360",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.alpha",
+            "type": "override",
+            "value": "0.25",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.luminosity",
+            "type": "override",
+            "value": "0.5",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.attenuation",
+            "type": "override",
+            "value": "0.75",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.type",
+            "type": "override",
+            "value": "",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.speed",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.intensity",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          }
+        ]
+      },
+      "flags": {},
+      "_key": "!items.effects!mqsLight00000000.epLightBlue00000"
+    },
+    {
+      "_id": "epLightGreen0000",
+      "name": "Light (Green)",
+      "img": "icons/sundries/lights/candle-pillar-lit-yellow.webp",
+      "transfer": false,
+      "disabled": false,
+      "duration": {
+        "value": 3600,
+        "units": "seconds"
+      },
+      "system": {
+        "changes": [
+          {
+            "key": "token.light.bright",
+            "type": "override",
+            "value": "20",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.dim",
+            "type": "override",
+            "value": "40",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.color",
+            "type": "override",
+            "value": "#4dff88",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.angle",
+            "type": "override",
+            "value": "360",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.alpha",
+            "type": "override",
+            "value": "0.25",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.luminosity",
+            "type": "override",
+            "value": "0.5",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.attenuation",
+            "type": "override",
+            "value": "0.75",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.type",
+            "type": "override",
+            "value": "",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.speed",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.intensity",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          }
+        ]
+      },
+      "flags": {},
+      "_key": "!items.effects!mqsLight00000000.epLightGreen0000"
+    },
+    {
+      "_id": "epLightRed000000",
+      "name": "Light (Red)",
+      "img": "icons/sundries/lights/candle-pillar-lit-yellow.webp",
+      "transfer": false,
+      "disabled": false,
+      "duration": {
+        "value": 3600,
+        "units": "seconds"
+      },
+      "system": {
+        "changes": [
+          {
+            "key": "token.light.bright",
+            "type": "override",
+            "value": "20",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.dim",
+            "type": "override",
+            "value": "40",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.color",
+            "type": "override",
+            "value": "#ff4d4d",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.angle",
+            "type": "override",
+            "value": "360",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.alpha",
+            "type": "override",
+            "value": "0.25",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.luminosity",
+            "type": "override",
+            "value": "0.5",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.attenuation",
+            "type": "override",
+            "value": "0.75",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.type",
+            "type": "override",
+            "value": "",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.speed",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.intensity",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          }
+        ]
+      },
+      "flags": {},
+      "_key": "!items.effects!mqsLight00000000.epLightRed000000"
+    },
+    {
+      "_id": "epLightPurple000",
+      "name": "Light (Purple)",
+      "img": "icons/sundries/lights/candle-pillar-lit-yellow.webp",
+      "transfer": false,
+      "disabled": false,
+      "duration": {
+        "value": 3600,
+        "units": "seconds"
+      },
+      "system": {
+        "changes": [
+          {
+            "key": "token.light.bright",
+            "type": "override",
+            "value": "20",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.dim",
+            "type": "override",
+            "value": "40",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.color",
+            "type": "override",
+            "value": "#b04dff",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.angle",
+            "type": "override",
+            "value": "360",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.alpha",
+            "type": "override",
+            "value": "0.25",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.luminosity",
+            "type": "override",
+            "value": "0.5",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.attenuation",
+            "type": "override",
+            "value": "0.75",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.type",
+            "type": "override",
+            "value": "",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.speed",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.intensity",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          }
+        ]
+      },
+      "flags": {},
+      "_key": "!items.effects!mqsLight00000000.epLightPurple000"
+    },
+    {
+      "_id": "epLightPink00000",
+      "name": "Light (Pink)",
+      "img": "icons/sundries/lights/candle-pillar-lit-yellow.webp",
+      "transfer": false,
+      "disabled": false,
+      "duration": {
+        "value": 3600,
+        "units": "seconds"
+      },
+      "system": {
+        "changes": [
+          {
+            "key": "token.light.bright",
+            "type": "override",
+            "value": "20",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.dim",
+            "type": "override",
+            "value": "40",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.color",
+            "type": "override",
+            "value": "#ff6ec7",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.angle",
+            "type": "override",
+            "value": "360",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.alpha",
+            "type": "override",
+            "value": "0.25",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.luminosity",
+            "type": "override",
+            "value": "0.5",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.attenuation",
+            "type": "override",
+            "value": "0.75",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.type",
+            "type": "override",
+            "value": "",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.speed",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.intensity",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          }
+        ]
+      },
+      "flags": {},
+      "_key": "!items.effects!mqsLight00000000.epLightPink00000"
+    }
+  ],
+  "folder": "SpellFldrCantrip",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.5"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "_key": "!items!mqsLight00000000"
+}

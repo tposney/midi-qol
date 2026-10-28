@@ -107,13 +107,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.2"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>You touch a willing creature and bestow a limited ability to see into the immediate future. For the Duration, the target can't be surprised and has advantage on Attack rolls, Ability Checks, and Saving Throws. Additionally, other creatures have disadvantage on attack rolls against the target for the duration.</p>\n<p>This spell immediately ends if you cast it again before its Duration ends.</p>\n<p><strong>midi-qol</strong>: Applies an active effect granting advantage on all attack rolls, ability checks, and saving throws, and imposing disadvantage on all incoming attack rolls. Duration 8 hours. The \"can't be surprised\" aspect is not automated.</p>",
+      "value": "<p>You touch a willing creature and bestow a limited ability to see into the immediate future. For the Duration, the target can't be surprised and has advantage on Attack rolls, Ability Checks, and Saving Throws. Additionally, other creatures have disadvantage on attack rolls against the target for the duration.</p>\n<p>This spell immediately ends if you cast it again before its Duration ends.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Applies an active effect granting advantage on all attack rolls, ability checks, and saving throws, and imposing disadvantage on all incoming attack rolls. Duration 8 hours. The \"can't be surprised\" aspect is not automated.</p></div>",
       "chat": "<p>You touch a willing creature and bestow a limited ability to see into the immediate future. For the Duration, the target can't be surprised and has advantage on Attack rolls, Ability Checks, and Saving Throws. Additionally, other creatures have disadvantage on attack rolls against the target for the duration.</p>\n<p>This spell immediately ends if you cast it again before its Duration ends.</p>"
     },
     "source": {

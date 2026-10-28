@@ -107,13 +107,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>Description not in the SRD.</p>\n<p><strong>midi-qol</strong>: Requires Aura Effects module. The effect uses an aura effect (allies, 30ft radius) that grants <code>flags.midi-qol.advantage.save.all</code> and <code>flags.midi-qol.superSaver.all</code>, both conditioned on <code>item.type === \"spell\" || item.flags?.midiProperties?.magiceffect</code>.</p>",
+      "value": "<p>Description not in the SRD.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Requires Aura Effects module. The effect uses an aura effect (allies, 30ft radius) that grants <code>flags.midi-qol.advantage.save.all</code> and <code>flags.midi-qol.superSaver.all</code>, both conditioned on <code>item.type === \"spell\" || item.flags?.midiProperties?.magiceffect</code>.</p></div>",
       "chat": "<p>Description not in the SRD.</p>"
     },
     "source": {

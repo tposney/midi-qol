@@ -4,7 +4,7 @@
   "img": "icons/magic/life/crosses-trio-red.webp",
   "system": {
     "description": {
-      "value": "<p>&Reference[stabilizing]{Stabilize}</p><p><strong>midi-qol</strong>: A DC 10 Medicine check stabilizes a creature at 0 hit points (Stable, death saves reset).</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "value": "<p>&Reference[stabilizing]{Stabilize}</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: A DC 10 Medicine check stabilizes a creature at 0 hit points (Stable, death saves reset).</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "source": {
@@ -190,7 +190,7 @@
         ]
       },
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },

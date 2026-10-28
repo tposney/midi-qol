@@ -96,13 +96,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.2"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>You unleash virulent magic on a creature you can see within range. The target makes a Constitution saving throw. On a failed save, it takes 14d6 Necrotic damage, and its Hit Point maximum is reduced by an amount equal to the Necrotic damage it took. On a successful save, it takes half as much damage only. This spell can't reduce a target's Hit Point maximum below 1.</p>\n<p><strong>midi-qol</strong>: No macros required. Uses a save activity for 14d6 Necrotic (half on save). On a failed save, applies an HP Maximum Reduced effect that reduces <code>system.attributes.hp.tempmax</code> by <code>@damageTotal</code>. The effect lasts until a long rest (via DAE specialDuration).</p>",
+      "value": "<p>You unleash virulent magic on a creature you can see within range. The target makes a Constitution saving throw. On a failed save, it takes 14d6 Necrotic damage, and its Hit Point maximum is reduced by an amount equal to the Necrotic damage it took. On a successful save, it takes half as much damage only. This spell can't reduce a target's Hit Point maximum below 1.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: No macros required. Uses a save activity for 14d6 Necrotic (half on save). On a failed save, applies an HP Maximum Reduced effect that reduces <code>system.attributes.hp.tempmax</code> by <code>@damageTotal</code>. The effect lasts until a long rest (via DAE specialDuration).</p></div>",
       "chat": "<p>You unleash virulent magic on a creature you can see within range. The target makes a Constitution saving throw. On a failed save, it takes 14d6 Necrotic damage, and its Hit Point maximum is reduced by an amount equal to the Necrotic damage it took. On a successful save, it takes half as much damage only. This spell can't reduce a target's Hit Point maximum below 1.</p>"
     },
     "source": {

@@ -1,0 +1,108 @@
+{
+  "_id": "mqmPackTactics00",
+  "name": "Pack Tactics",
+  "type": "feat",
+  "system": {
+    "type": {
+      "value": "monster",
+      "subtype": ""
+    },
+    "activities": {},
+    "uses": {
+      "spent": 0,
+      "recovery": [],
+      "max": ""
+    },
+    "description": {
+      "value": "<p>The [[lookup @name lowercase]]{monster} has Advantage on an attack roll against a creature if at least one of the [[lookup @name lowercase]]{monster}'s allies is within 5 feet of the creature and the ally doesn't have the Incapacitated condition.</p><div class=\"cat-description\"><p><em>midi-qol: Advantage on attack rolls against a creature that has a non-incapacitated ally of the attacker within 5 feet.</em></p></div>",
+      "chat": ""
+    },
+    "identifier": "pack-tactics",
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
+    },
+    "enchant": {},
+    "prerequisites": {
+      "level": null,
+      "repeatable": false,
+      "items": []
+    },
+    "properties": [
+      "trait"
+    ],
+    "requirements": "Ally within 5 feet of attack target",
+    "advancement": {},
+    "cover": null,
+    "crewed": false
+  },
+  "folder": "MonsterFeatFldr0",
+  "img": "icons/creatures/abilities/wolf-heads-swirl-purple.webp",
+  "effects": [
+    {
+      "_id": "mqPackTacticsEff",
+      "name": "Pack Tactics",
+      "img": "icons/creatures/abilities/wolf-heads-swirl-purple.webp",
+      "type": "base",
+      "transfer": true,
+      "disabled": false,
+      "statuses": [],
+      "description": "",
+      "origin": null,
+      "sort": 0,
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.advantage.attack.all",
+            "type": "custom",
+            "value": "findNearbyCount(fromUuidSync(tokenUuid).disposition, targetUuid, 5, {relative: false, includeIncapacitated: false}) - (computeDistance(tokenUuid, targetUuid) <= 5 ? 1 : 0) >= 1",
+            "priority": 20,
+            "phase": "initial",
+            "_id": "Hvs5yS9sjFfAxgdr",
+            "conditions": "{}",
+            "replacement": ""
+          }
+        ]
+      },
+      "duration": {
+        "value": null,
+        "units": "seconds",
+        "expiry": null,
+        "expired": false
+      },
+      "flags": {
+        "dae": {
+          "stackable": "noneName"
+        }
+      },
+      "_key": "!items.effects!mqmPackTactics00.mqPackTacticsEff"
+    }
+  ],
+  "flags": {
+    "dnd5e": {},
+    "cat": {
+      "automation": {
+        "version": "14.6.5",
+        "npc": true
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!mqmPackTactics00"
+}

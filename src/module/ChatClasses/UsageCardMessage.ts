@@ -251,8 +251,9 @@ export function setupUsageCardMessage() {
 
     /**
      * dnd5e 6 folds the card's save and check messages into it as summaries for viewers with "Summarize chat cards"
-     * on. On a midi card that summary is midi's saves section (style "midi") or dnd5e's per-roll summaries, with
-     * midi's section keeping only saves that have none: other modules' saves reach midi without a linked message.
+     * on. On a midi card that summary is midi's saves section (style "midi", with dnd5e's summaries kept for targets
+     * the section does not show) or dnd5e's per-roll summaries, with midi's section keeping only saves that have none:
+     * other modules' saves reach midi without a linked message.
      * With the setting off neither is drawn and the messages show in the log. Returns the save targets to omit.
      */
     #applySaveSummaries(context: Record<string, any>): Set<string> | "all" {
@@ -262,8 +263,14 @@ export function setupUsageCardMessage() {
         return "all";
       }
       if (configSettings.saveSummaryStyle !== "dnd5e") {
-        context.summaries = [];
-        return new Set();
+        // midi's section stands in for dnd5e's summaries only for the targets it has a result for: with Auto Check Saves
+        // off its rows are just the targets, and a save rolled from the card's button is dnd5e's summary or nowhere.
+        // Those targets' empty rows are left out, as dnd5e's summary shows them.
+        const resolved = new Set((this.midi.sections?.saves?.data?.saves ?? [])
+          .filter((save: any) => save?.saveClass || (save?.rollTotal != null && save.rollTotal !== ""))
+          .map((save: any) => save?.target?.document?.uuid).filter(Boolean));
+        context.summaries = (context.summaries ?? []).filter((summary: any) => !resolved.has(summary.token?.uuid));
+        return new Set(context.summaries.map((summary: any) => summary.token?.uuid).filter(Boolean));
       }
       return new Set((context.summaries ?? []).map((summary: any) => summary.token?.uuid).filter(Boolean));
     }

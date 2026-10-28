@@ -1,0 +1,382 @@
+{
+  "name": "Goggles of Night (RAW)",
+  "type": "equipment",
+  "img": "icons/magic/control/hypnosis-mesmerism-eye.webp",
+  "system": {
+    "description": {
+      "value": "<p><em>Wondrous item</em></p><p>While wearing these dark lenses, you have darkvision out to a range of 60 feet. If you already have darkvision, wearing the goggles increases its range by 60 feet.</p><p></p><div class=\"cat-description\"><p>Midi-qol: activated by equipping/unequipping the item. This version is not stricly correct, it grants light amplification instead of darkvision, but that is so much cooler. If you don't like it edit the macro.</p></div>",
+      "chat": "<p><em>Wondrous item</em></p><p>While wearing these dark lenses, you have darkvision out to a range of 60 feet. If you already have darkvision, wearing the goggles increases its range by 60 feet.</p>"
+    },
+    "source": {
+      "custom": "DMG pg 172",
+      "revision": 1,
+      "rules": "2024"
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 0.3,
+      "units": "lb"
+    },
+    "price": {
+      "value": 1500,
+      "denomination": "gp"
+    },
+    "attunement": "",
+    "rarity": "uncommon",
+    "identified": true,
+    "cover": null,
+    "crewed": false,
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "armor": {
+      "value": 0,
+      "dex": 0,
+      "magicalBonus": null
+    },
+    "hp": {
+      "value": 0,
+      "max": 0,
+      "dt": null,
+      "conditions": ""
+    },
+    "speed": {
+      "value": null,
+      "conditions": ""
+    },
+    "strength": 0,
+    "proficient": 0,
+    "unidentified": {
+      "description": ""
+    },
+    "type": {
+      "value": "trinket",
+      "baseItem": ""
+    },
+    "activities": {
+      "TUdopFVun7JjIRc1": {
+        "type": "utility",
+        "_id": "TUdopFVun7JjIRc1",
+        "sort": 0,
+        "activation": {
+          "type": "bonus",
+          "value": null,
+          "override": false,
+          "condition": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": []
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "SBijQy1quToXi2F9"
+          }
+        ],
+        "range": {
+          "override": false,
+          "units": "self",
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "",
+            "type": "self"
+          },
+          "override": false,
+          "prompt": true
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "roll": {
+          "prompt": false,
+          "visible": false,
+          "formula": "",
+          "name": ""
+        },
+        "useConditionText": "",
+        "effectConditionText": "",
+        "name": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    },
+    "identifier": "goggles-of-night",
+    "container": null,
+    "properties": [
+      "mgc"
+    ],
+    "attuned": false,
+    "equipped": true
+  },
+  "effects": [
+    {
+      "origin": "Actor.BogmFuNh1wswTouJ.Item.WMbFvwLw8edW0AbC",
+      "duration": {},
+      "disabled": false,
+      "_id": "SBijQy1quToXi2F9",
+      "transfer": false,
+      "flags": {
+        "dae": {
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "stackable": "noneName",
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "dontApply": false
+        },
+        "core": {
+          "overlay": false
+        },
+        "dfreds-convenient-effects": {
+          "description": ""
+        },
+        "ActiveAuras": {
+          "isAura": false,
+          "aura": "None",
+          "radius": "undefined",
+          "alignment": "",
+          "type": "",
+          "ignoreSelf": false,
+          "height": false,
+          "hidden": false,
+          "displayTemp": false,
+          "hostile": false,
+          "onlyOnce": false,
+          "nameOverride": "",
+          "customCheck": "",
+          "wallsBlock": "system"
+        },
+        "effectmacro": {}
+      },
+      "name": "Goggles of Night",
+      "description": "",
+      "statuses": [],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.346",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "img": "icons/magic/control/hypnosis-mesmerism-eye.webp",
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "macro.itemMacro",
+            "value": "",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
+      "sort": 0,
+      "_key": "!items.effects!kdUeEN6KnmNDvuuf.SBijQy1quToXi2F9",
+      "start": null,
+      "showIcon": 0
+    }
+  ],
+  "flags": {
+    "core": {},
+    "favtab": {
+      "isFavorite": true
+    },
+    "itemacro": {
+      "macro": {
+        "name": "Googgles of Night Item Macro new",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "const tokenDocument = token.document;\nif (args[0] === \"on\") {\n    const updates = {};\n    updates[\"flags.midi-qol.gogglesSave\"] = {\n        \"sight\": tokenDocument._source.sight\n    };\n    let newRange = 60;\n    if (tokenDocument.sight.visionMode === \"darkvision\") newRange = tokenDocument.sight.range + 60;\n\n    updates[\"sight\"] = CONFIG.Canvas.visionModes[\"darkvision\"].vision.defaults;\n    updates.sight.visionMode = \"darkvision\";\n    updates.sight.range = newRange;\n    return await tokenDocument.update(updates)\n} else if (args[0] === \"off\") {\n    const updates = tokenDocument.flags[\"midi-qol\"]?.gogglesSave ?? {};\n    updates[\"flags.midi-qol.gogglesSave\"] = _del;\n    return await tokenDocument.update(updates)\n}",
+        "sort": 0,
+        "ownership": {
+          "default": 0
+        },
+        "flags": {},
+        "_stats": {
+          "systemId": null,
+          "systemVersion": null,
+          "coreVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null
+        }
+      }
+    },
+    "magicitems": {
+      "enabled": false,
+      "equipped": false,
+      "attuned": false,
+      "charges": "0",
+      "chargeType": "c1",
+      "destroy": false,
+      "destroyFlavorText": "reaches 0 charges: it crumbles into ashes and is destroyed.",
+      "rechargeable": false,
+      "recharge": "0",
+      "rechargeType": "t1",
+      "rechargeUnit": "r1",
+      "sorting": "l",
+      "default": ""
+    },
+    "cf": {
+      "id": "temp_mxc6kjqa6kp"
+    },
+    "scene-packer": {
+      "hash": "839526529253d61264f45b1e92dcb7e1f0383391",
+      "sourceId": "Item.BbUCCGZcYny2nHw8"
+    },
+    "midiProperties": {
+      "confirmTargets": "default",
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "critOther": false,
+      "offHandWeapon": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "noConcentrationCheck": false,
+      "toggleEffect": true,
+      "ignoreTotalCover": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": ""
+    },
+    "dae": {
+      "macro": {
+        "name": "Goggles of Night (Item Macro RAW) 10.0.37",
+        "img": "icons/magic/control/hypnosis-mesmerism-eye.webp",
+        "type": "script",
+        "scope": "global",
+        "command": "const tokenDocument = token.document;\nif (args[0] === \"on\") {\n    const updates = {};\n    updates[\"flags.midi-qol.gogglesSave\"] = {\n        \"sight\": tokenDocument._source.sight\n    };\n    let newRange = 60;\n    if (tokenDocument.sight.visionMode === \"darkvision\") newRange = tokenDocument.sight.range + 60;\n\n    updates[\"sight\"] = CONFIG.Canvas.visionModes[\"darkvision\"].vision.defaults;\n    updates.sight.visionMode = \"darkvision\";\n    updates.sight.range = newRange;\n    updates.sight.angle = 135;\n    return await tokenDocument.update(updates)\n} else if (args[0] === \"off\") {\n    const updates = tokenDocument.flags[\"midi-qol\"]?.gogglesSave ?? {};\n    updates[\"flags.midi-qol.gogglesSave\"] = _del;\n    return await tokenDocument.update(updates)\n}",
+        "author": "Zl1BOUaPLwDEujaL",
+        "ownership": {
+          "default": 3
+        },
+        "_id": null,
+        "folder": null,
+        "sort": 0,
+        "flags": {},
+        "_stats": {
+          "coreVersion": "12.331",
+          "systemId": "dnd5e",
+          "systemVersion": "4.0.4",
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null,
+          "compendiumSource": null,
+          "duplicateSource": null
+        }
+      }
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      },
+      "dependents": [
+        {
+          "uuid": "Actor.BogmFuNh1wswTouJ.ActiveEffect.3ufzg36aAjwyNCWB"
+        }
+      ]
+    },
+    "tidy5e-sheet": {
+      "section": "",
+      "actionSection": ""
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.5"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": "Compendium.dnd5e.items.XGAWqtmhK6SYBL6A",
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782992877,
+    "modifiedTime": 1741782992877,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
+  },
+  "folder": "YuEENpWPYkjPMzah",
+  "_id": "kdUeEN6KnmNDvuuf",
+  "sort": 1000000,
+  "ownership": {
+    "default": 0,
+    "Zl1BOUaPLwDEujaL": 3
+  },
+  "_key": "!items!kdUeEN6KnmNDvuuf"
+}

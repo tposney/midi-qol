@@ -176,7 +176,7 @@
   },
   "system": {
     "description": {
-      "value": "<p>Starting at 7th level, you and friendly creatures within 10 feet of you can’t be Charmed while you are conscious.</p>\n<p>At 18th level, the range of this aura increases to 30 feet.</p>\n<p> </p>\n<p><strong>midi-qol</strong>: Requires Aura Effects module. Uses an aura effect (allies, 10/30ft radius based on paladin level) that grants immunity to the charmed condition.</p>",
+      "value": "<p>Starting at 7th level, you and friendly creatures within 10 feet of you can’t be Charmed while you are conscious.</p>\n<p>At 18th level, the range of this aura increases to 30 feet.</p>\n<p> </p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Requires Aura Effects module. Uses an aura effect (allies, 10/30ft radius based on paladin level) that grants immunity to the charmed condition.</p></div>",
       "chat": "<p>Starting at 7th level, you and friendly creatures within 10 feet of you can’t be Charmed while you are conscious.</p>\n<p>At 18th level, the range of this aura increases to 30 feet.</p>"
     },
     "source": {

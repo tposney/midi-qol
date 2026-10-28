@@ -1,0 +1,108 @@
+{
+  "_id": "mqmLightningAbso",
+  "name": "Lightning Absorption",
+  "type": "feat",
+  "system": {
+    "type": {
+      "value": "monster",
+      "subtype": ""
+    },
+    "activities": {},
+    "uses": {
+      "spent": 0,
+      "recovery": [],
+      "max": ""
+    },
+    "description": {
+      "value": "<p class=\"feature\">Whenever the [[lookup @name lowercase]]{monster} is subjected to Lightning damage, it regains a number of Hit Points equal to the Lightning damage dealt.</p><div class=\"cat-description\"><p><em>midi-qol: Lightning damage heals it instead (midi's Damage Absorption trait).</em></p></div>",
+      "chat": ""
+    },
+    "identifier": "lightning-absorption",
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
+    },
+    "enchant": {},
+    "prerequisites": {
+      "level": null,
+      "repeatable": false,
+      "items": []
+    },
+    "properties": [
+      "trait"
+    ],
+    "requirements": "Subjected to Lightning damage",
+    "advancement": {},
+    "cover": null,
+    "crewed": false
+  },
+  "folder": "MonsterFeatFldr0",
+  "img": "icons/magic/lightning/barrier-shield-orb-pink.webp",
+  "effects": [
+    {
+      "_id": "mqLightningAbsEf",
+      "name": "Lightning Absorption",
+      "img": "icons/magic/lightning/bolt-strike-blue.webp",
+      "type": "base",
+      "transfer": true,
+      "disabled": false,
+      "statuses": [],
+      "description": "",
+      "origin": null,
+      "sort": 0,
+      "system": {
+        "changes": [
+          {
+            "key": "system.traits.da.value",
+            "type": "add",
+            "value": "lightning",
+            "priority": 20,
+            "phase": "initial",
+            "_id": "gnt2Fso2UkFgk3zM",
+            "conditions": "{}",
+            "replacement": ""
+          }
+        ]
+      },
+      "duration": {
+        "value": null,
+        "units": "seconds",
+        "expiry": null,
+        "expired": false
+      },
+      "flags": {
+        "dae": {
+          "stackable": "noneName"
+        }
+      },
+      "_key": "!items.effects!mqmLightningAbso.mqLightningAbsEf"
+    }
+  ],
+  "flags": {
+    "dnd5e": {},
+    "cat": {
+      "automation": {
+        "version": "14.6.5",
+        "npc": true
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!mqmLightningAbso"
+}

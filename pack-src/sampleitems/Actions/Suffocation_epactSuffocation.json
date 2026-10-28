@@ -113,7 +113,7 @@
     },
     "advancement": [],
     "description": {
-      "value": "<p>&Reference[suffocating]{Suffocation}</p><p><strong>midi-qol</strong>: Hold Breath lasts 1 + Constitution modifier minutes; then Out of Air adds 1 Exhaustion at the end of each of your turns, all removed when Out of Air ends.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "value": "<p>&Reference[suffocating]{Suffocation}</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Hold Breath lasts 1 + Constitution modifier minutes; then Out of Air adds 1 Exhaustion at the end of each of your turns, all removed when Out of Air ends.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "identifier": "suffocation",
@@ -217,7 +217,7 @@
   "flags": {
     "cat": {
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },

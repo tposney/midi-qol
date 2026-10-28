@@ -1,0 +1,421 @@
+{
+  "name": "Jewel of Three Prayers (Dormant)",
+  "type": "equipment",
+  "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
+  "system": {
+    "description": {
+      "value": "<div class=\"cat-description\"><p><em>midi-qol: The dormant jewel: +1 AC while attuned, and 3 charges regained at dawn. Light makes your token shed bright light for 15 feet and dim for 15 more until you end it; Invisibility (1 charge) casts the spell.</em></p><p><em>No rules text (not SRD; Critical Role: Call of the Netherdeep): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
+      "chat": ""
+    },
+    "source": {
+      "revision": 1,
+      "rules": "2014",
+      "book": "Critical Role: Call of the Netherdeep",
+      "page": "",
+      "custom": "midi-qol sample",
+      "license": ""
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 1,
+      "units": "lb"
+    },
+    "price": {
+      "value": 0,
+      "denomination": "gp"
+    },
+    "attunement": "required",
+    "attuned": true,
+    "equipped": true,
+    "rarity": "legendary",
+    "identified": true,
+    "cover": null,
+    "crewed": false,
+    "uses": {
+      "max": "3",
+      "spent": 0,
+      "recovery": [
+        {
+          "period": "dawn",
+          "type": "recoverAll",
+          "formula": ""
+        }
+      ]
+    },
+    "armor": {
+      "value": null,
+      "magicalBonus": null,
+      "dex": null
+    },
+    "hp": {
+      "value": 0,
+      "max": 0,
+      "dt": null,
+      "conditions": ""
+    },
+    "speed": {
+      "value": null,
+      "conditions": ""
+    },
+    "strength": null,
+    "proficient": null,
+    "unidentified": {
+      "description": ""
+    },
+    "type": {
+      "value": "wondrous",
+      "baseItem": ""
+    },
+    "properties": [
+      "mgc"
+    ],
+    "identifier": "jewel-of-three-prayers-dormant",
+    "container": null,
+    "activities": {
+      "jewel3prayLight0": {
+        "type": "utility",
+        "_id": "jewel3prayLight0",
+        "name": "Light",
+        "sort": 0,
+        "description": {
+          "chatFlavor": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false,
+          "targets": []
+        },
+        "duration": {
+          "units": "perm",
+          "concentration": false,
+          "override": true
+        },
+        "effects": [
+          {
+            "_id": "jewel3prayerLite"
+          }
+        ],
+        "range": {
+          "units": "self",
+          "override": true,
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "",
+            "type": "self",
+            "special": ""
+          },
+          "override": true,
+          "prompt": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "toggleEffect": true,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true,
+          "condition": ""
+        }
+      },
+      "jewel3prayInvis0": {
+        "type": "cast",
+        "_id": "jewel3prayInvis0",
+        "name": "Invisibility",
+        "sort": 1,
+        "description": {
+          "chatFlavor": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false,
+          "targets": [
+            {
+              "type": "itemUses",
+              "target": "",
+              "value": "1",
+              "scaling": {
+                "mode": "",
+                "formula": ""
+              }
+            }
+          ]
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "units": "self",
+          "override": true,
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "",
+            "type": "self",
+            "special": ""
+          },
+          "override": true,
+          "prompt": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "toggleEffect": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true,
+          "condition": ""
+        },
+        "spell": {
+          "uuid": "Compendium.dnd5e.spells.Item.1N8dDMMgZ1h1YJ3B",
+          "challenge": {
+            "attack": "",
+            "save": "",
+            "override": false
+          },
+          "level": 2,
+          "properties": [
+            "vocal",
+            "somatic",
+            "material"
+          ],
+          "spellbook": false
+        }
+      }
+    }
+  },
+  "effects": [
+    {
+      "_id": "jewel3prayerAC00",
+      "name": "Jewel of Three Prayers (Dormant)",
+      "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
+      "type": "base",
+      "disabled": false,
+      "transfer": true,
+      "origin": null,
+      "duration": {},
+      "description": "",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "disableIncapacitated": false,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "dontApply": false,
+          "stackable": "noneName",
+          "showIcon": false,
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": ""
+        }
+      },
+      "_key": "!items.effects!jewel3prayDorm00.jewel3prayerAC00",
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.ac.bonus",
+            "value": "+1",
+            "priority": 20,
+            "type": "add"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "jewel3prayerLite",
+      "name": "Jewel of Three Prayers: Light",
+      "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
+      "type": "base",
+      "disabled": false,
+      "transfer": false,
+      "origin": null,
+      "duration": {},
+      "description": "",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "disableIncapacitated": false,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "dontApply": false,
+          "stackable": "noneName",
+          "showIcon": false,
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": ""
+        }
+      },
+      "_key": "!items.effects!jewel3prayDorm00.jewel3prayerLite",
+      "system": {
+        "changes": [
+          {
+            "key": "ATL.light.bright",
+            "value": "15",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "ATL.light.dim",
+            "value": "30",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      }
+    }
+  ],
+  "folder": "YuEENpWPYkjPMzah",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {
+    "core": {},
+    "midiProperties": {
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "rollOther": false,
+      "critOther": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "autoFailFriendly": false,
+      "offHandWeapon": false,
+      "ignoreTotalCover": false,
+      "autoSaveFriendly": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "effectActivation": false,
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "reactionCondition": "",
+      "effectCondition": "",
+      "otherCondition": "",
+      "AoETargetType": "any",
+      "AoETargetTypeIncludeSelf": true,
+      "autoTarget": "default",
+      "removeAttackDamageButtons": "default",
+      "onUseMacroName": ""
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.64"
+      }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.5"
+      }
+    },
+    "dae": {}
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "5.3.3",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "_id": "jewel3prayDorm00",
+  "_key": "!items!jewel3prayDorm00"
+}

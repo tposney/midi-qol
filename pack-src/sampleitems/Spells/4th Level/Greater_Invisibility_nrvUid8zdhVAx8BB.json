@@ -92,13 +92,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>A creature you touch has the Invisible condition until the spell ends.</p><p>midi-qol: Utility activity applies Invisible status for the full duration. Unlike regular Invisibility, the effect does NOT end when the target attacks or casts a spell.</p>",
+      "value": "<p>A creature you touch has the Invisible condition until the spell ends.</p><div class=\"cat-description\"><p>midi-qol: Utility activity applies Invisible status for the full duration. Unlike regular Invisibility, the effect does NOT end when the target attacks or casts a spell.</p></div>",
       "chat": "<p>A creature you touch has the Invisible condition until the spell ends.</p>"
     },
     "source": {

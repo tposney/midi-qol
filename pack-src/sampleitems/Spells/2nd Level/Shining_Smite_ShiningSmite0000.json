@@ -179,13 +179,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>The target hit by the strike takes an extra 2d6 Radiant damage from the attack. Until the spell ends, the target sheds Bright Light in a 5-foot radius, attack rolls against it have Advantage, and it can't benefit from the Invisible condition.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d6 for each spell slot level above 2.</p><p><strong>midi-qol</strong>: Uses a transfer effect that registers a <code>DamageBonusMacro</code> on the actor. On any melee weapon hit, the macro prompts to use Shining Smite, lets the player choose a spell slot level (2+), consumes the slot, and adds <code>(1+level)d6</code> Radiant damage. After the weapon workflow completes, a utility activity applies the Shining effect to the target — granting condition immunity to Invisible, advantage on all attacks against it (<code>grants.advantage.attack.all</code>), and the <code>marked</code> status. Concentration is handled automatically by the utility activity. Critical hits are handled via <code>isCritical</code> on the DamageRoll. The Bright Light aura is not automated (requires ATL).</p>",
+      "value": "<p>The target hit by the strike takes an extra 2d6 Radiant damage from the attack. Until the spell ends, the target sheds Bright Light in a 5-foot radius, attack rolls against it have Advantage, and it can't benefit from the Invisible condition.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d6 for each spell slot level above 2.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Uses a transfer effect that registers a <code>DamageBonusMacro</code> on the actor. On any melee weapon hit, the macro prompts to use Shining Smite, lets the player choose a spell slot level (2+), consumes the slot, and adds <code>(1+level)d6</code> Radiant damage. After the weapon workflow completes, a utility activity applies the Shining effect to the target — granting condition immunity to Invisible, advantage on all attacks against it (<code>grants.advantage.attack.all</code>), and the <code>marked</code> status. Concentration is handled automatically by the utility activity. Critical hits are handled via <code>isCritical</code> on the DamageRoll. The Bright Light aura is not automated (requires ATL).</p></div>",
       "chat": "<p>The target hit by the strike takes an extra 2d6 Radiant damage from the attack. Until the spell ends, the target sheds Bright Light in a 5-foot radius, attack rolls against it have Advantage, and it can't benefit from the Invisible condition.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage increases by 1d6 for each spell slot level above 2.</p>"
     },
     "source": {

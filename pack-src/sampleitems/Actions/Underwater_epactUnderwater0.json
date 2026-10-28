@@ -4,7 +4,7 @@
   "img": "icons/tools/nautical/anchor-blue.webp",
   "system": {
     "description": {
-      "value": "<p>&Reference[underwatercombat]{Underwater}</p><p><strong>midi-qol</strong>: Fire Resistance; melee Disadvantage without a Swim Speed unless Piercing; ranged weapon attacks have Disadvantage and miss beyond normal range. Use again on leaving the water.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "value": "<p>&Reference[underwatercombat]{Underwater}</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Fire Resistance; melee Disadvantage without a Swim Speed unless Piercing; ranged weapon attacks have Disadvantage and miss beyond normal range. Use again on leaving the water.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "source": {
@@ -149,7 +149,7 @@
         ]
       },
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },

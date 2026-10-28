@@ -1,0 +1,487 @@
+{
+  "_id": "DraughtEchoStep0",
+  "_key": "!items!DraughtEchoStep0",
+  "name": "Draught of the Echoing Step",
+  "type": "consumable",
+  "img": "icons/consumables/potions/flask-corked-blue-glow.webp",
+  "folder": "uGajckZrE7FsOsSY",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>Drunk, it tastes of nothing at all, and for a moment you can hear yourself, a step behind.</em></p><p>For 10 minutes after you drink this potion (a bonus action), you leave <strong>echoes</strong>: silent, translucent copies of you. One appears where you stand when you drink it, and another where you stand at the start of each of your turns, up to three at a time.</p><p><strong>Which of you is real?</strong> While at least one echo is within 5 feet of you, attack rolls against you have <strong>disadvantage</strong>. When an attack would hit you, roll a d6 for each echo within 5 feet of you. If any of them rolls a 3 or higher, one of those echoes takes the hit instead and is destroyed, and the attack misses you. Echoes farther away don't confuse your attackers, but they are the ones you can step to.</p><p><strong>Step.</strong> When an attack hits you and you can see one of your echoes more than 5 feet away, you can trade places with it: you appear where the echo was and the echo where you were, and the attack strikes the echo instead, even on a critical hit. The echo bursts, dealing <strong>3d8 force damage</strong> to the attacker. Your first step each round costs nothing; any further step that round uses your <strong>reaction</strong>.</p><p>A creature that attacks an echo itself and hits destroys it.</p><p>When the potion's magic ends, your last echo remains for a day, with your face and your voice, saying nothing.</p><div class=\"cat-description\"><p>midi-qol: The echoes' d6s are rolled when you are attacked, before the hit is checked, against your Armor Class (cover and other changes to Armor Class are not counted); if an echo takes the hit, Step is not offered. Echo distances are measured when you are attacked. Step is offered in midi's reaction prompt when you are hit and can see an echo more than 5 feet away, so it only appears while your reaction is unused; the first step each combat round gives the reaction back, and outside combat stepping never uses it. It moves you to the echo you choose (if more than one qualifies), makes that one attack miss and deals the burst to the attacker; the echo is gone afterwards. Echoes are unlinked copies of your token, created through DAE, so harm to them never reaches you; the last one is left for the GM to remove.</p></div>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "midi-qol homebrew",
+      "revision": 1,
+      "rules": "2024",
+      "book": "Homebrew",
+      "license": "",
+      "page": ""
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 0.5,
+      "units": "lb"
+    },
+    "price": {
+      "value": 100000,
+      "denomination": "gp"
+    },
+    "attunement": "",
+    "rarity": "legendary",
+    "identified": true,
+    "uses": {
+      "max": "1",
+      "autoDestroy": false,
+      "spent": 0,
+      "recovery": []
+    },
+    "damage": {
+      "base": {
+        "number": null,
+        "denomination": null,
+        "types": [],
+        "custom": {
+          "enabled": false
+        },
+        "scaling": {
+          "number": 1
+        }
+      },
+      "replace": false
+    },
+    "unidentified": {
+      "description": ""
+    },
+    "type": {
+      "value": "potion",
+      "subtype": ""
+    },
+    "identifier": "draught-of-the-echoing-step",
+    "container": null,
+    "magicalBonus": null,
+    "properties": [
+      "mgc"
+    ],
+    "attuned": false,
+    "equipped": false,
+    "activities": {
+      "EchoStepDrink000": {
+        "_id": "EchoStepDrink000",
+        "type": "utility",
+        "activation": {
+          "type": "bonus",
+          "value": 1,
+          "condition": "",
+          "override": false
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "value": "1",
+              "target": "",
+              "scaling": {}
+            }
+          ],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "10",
+          "units": "minute",
+          "special": "",
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "EchoingStepEff00"
+          },
+          {
+            "_id": "EchoShroudEff000"
+          }
+        ],
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "self",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "name": "Drink",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      },
+      "EchoStepStep0000": {
+        "_id": "EchoStepStep0000",
+        "type": "damage",
+        "activation": {
+          "type": "reaction",
+          "value": 1,
+          "condition": "When you are hit by an attack and you can see an echo more than 5 feet away",
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": false
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "",
+          "units": "inst",
+          "special": "",
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "SteppedAsideEff0"
+          }
+        ],
+        "range": {
+          "units": "any",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "1",
+            "type": "creature",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "sort": 0,
+        "useConditionText": "reaction === \"isHit\" && !!target?.flags?.[\"midi-qol\"]?.echoStepReady && !target?.flags?.[\"midi-qol\"]?.echoStruck && !target?.flags?.[\"midi-qol\"]?.isEcho",
+        "effectConditionText": "",
+        "name": "Step",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "damage": {
+          "critical": {
+            "allow": false,
+            "bonus": ""
+          },
+          "includeBase": false,
+          "parts": [
+            {
+              "number": 3,
+              "denomination": 8,
+              "bonus": "",
+              "types": [
+                "force"
+              ],
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "scaling": {
+                "mode": "",
+                "number": null,
+                "formula": ""
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "effects": [
+    {
+      "transfer": false,
+      "_id": "EchoingStepEff00",
+      "disabled": false,
+      "duration": {},
+      "origin": null,
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "selfTargetAlways": false,
+          "stackable": "noneName",
+          "durationExpression": "",
+          "macroRepeat": "startEveryTurn",
+          "specialDuration": []
+        },
+        "midi-qol": {
+          "echoingStep": {
+            "echoes": [],
+            "freeStep": null
+          }
+        }
+      },
+      "name": "Echoing Step",
+      "description": "Up to three echoes of you, a new one where you stand at the start of each of your turns. While one is within 5 feet of you, attacks against you have disadvantage, and when an attack would hit you, a d6 for each of those: on any 3 or higher an echo takes the hit instead. When hit, you can trade places with an echo you can see more than 5 feet away: the attack strikes the echo, which bursts against the attacker. The first step each round costs nothing; a second uses your reaction.",
+      "statuses": [],
+      "img": "icons/consumables/potions/flask-corked-blue-glow.webp",
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "macro.itemMacro",
+            "value": "",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "flags.midi-qol.echoingStep",
+            "value": "1",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ItemMacro, isAttacked",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
+      "sort": 0,
+      "_key": "!items.effects!DraughtEchoStep0.EchoingStepEff00",
+      "showIcon": 2
+    },
+    {
+      "transfer": false,
+      "_id": "EchoShroudEff000",
+      "disabled": false,
+      "duration": {},
+      "origin": null,
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "selfTargetAlways": false,
+          "stackable": "noneName",
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": []
+        },
+        "midi-qol": {
+          "echoShroud": true
+        }
+      },
+      "name": "Echo Shroud",
+      "description": "While one of your echoes is within 5 feet of you, attack rolls against you have disadvantage.",
+      "statuses": [],
+      "img": "icons/consumables/potions/flask-corked-blue-glow.webp",
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.grants.disadvantage.attack.all",
+            "value": "[...(workflow?.targets ?? [])].some(t => findNearby(null, t, 5, { includeIncapacitated: true }).some(e => e.document.getFlag(\"midi-qol\", \"echoOf\") === t.actor?.uuid))",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
+      "sort": 0,
+      "_key": "!items.effects!DraughtEchoStep0.EchoShroudEff000",
+      "showIcon": 2
+    },
+    {
+      "transfer": false,
+      "_id": "SteppedAsideEff0",
+      "disabled": false,
+      "duration": {},
+      "origin": null,
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "selfTargetAlways": false,
+          "stackable": "noneName",
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [
+            "isAttacked"
+          ]
+        }
+      },
+      "name": "Stepped Aside",
+      "description": "The attack that provoked the step misses.",
+      "statuses": [],
+      "img": "icons/consumables/potions/flask-corked-blue-glow.webp",
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.grants.attack.fail.all",
+            "value": "1",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
+      "sort": 0,
+      "_key": "!items.effects!DraughtEchoStep0.SteppedAsideEff0"
+    }
+  ],
+  "flags": {
+    "dae": {
+      "macro": {
+        "name": "Draught of the Echoing Step",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "// Draught of the Echoing Step\n// Effect \"Echoing Step\" (DAE on / each = start of your turn / off, and isAttacked), the Step reaction (postActiveEffects;\n// its damage is the burst against the attacker), and each echo's own isHit: an echo that is hit is gone. Up to three\n// echoes at a time; while one is within 5 feet of you, the \"Echo Shroud\" effect gives attacks against you disadvantage. When an attack\n// would hit you, a d6 for each echo within 5 feet: on any 3 or higher an echo takes the hit instead. Step is only to an\n// echo more than 5 feet away that you can see. Both are worked out when you are attacked (isAttacked, before hits are\n// checked and reactions offered), as one-attack effects. Once a round the step gives your reaction back.\nconst FLAG = \"echoingStep\";\nconst MAX_ECHOES = 3;\nconst NEAR = 5;\nconst name = macroItem?.name ?? \"Draught of the Echoing Step\";\nconst say = (who, content) => ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor: who }), content: `<strong>${name}</strong>: ${content}` });\nconst effectOf = (a) => a?.effects.find(e => e.getFlag(\"midi-qol\", FLAG) !== undefined);\nconst shroudOf = (a) => a?.effects.find(e => e.getFlag(\"midi-qol\", \"echoShroud\"));\nconst updateEffect = (a, effect, update) => effect && MidiQOL.socket().executeAsGM(\"updateEffects\", { actorUuid: a.uuid, updates: [{ _id: effect.id, ...update }] });\n// the drinker's live echoes, oldest first (echo is the single-echo flag of earlier versions)\nconst echoesOf = (a) => {\n  const state = effectOf(a)?.getFlag(\"midi-qol\", FLAG) ?? {};\n  return (state.echoes ?? (state.echo ? [state.echo] : [])).filter(uuid => fromUuidSync(uuid));\n};\nconst setEchoes = async (a, echoes) => {\n  await updateEffect(a, effectOf(a), { [`flags.midi-qol.${FLAG}.echoes`]: echoes, [`flags.midi-qol.${FLAG}.echo`]: null });\n  const shroud = shroudOf(a);\n  if (shroud && shroud.disabled !== (echoes.length === 0)) await updateEffect(a, shroud, { disabled: echoes.length === 0 });\n};\nconst removeEcho = async (uuid) => { if (uuid && fromUuidSync(uuid)) await MidiQOL.socket().executeAsGM(\"deleteToken\", { tokenUuid: uuid }); };\n// an echo is scenery: never a combatant\nconst dropEchoCombatants = async () => {\n  for (const combat of game.combats) {\n    const ids = combat.combatants.filter(c => c.token?.getFlag(\"midi-qol\", \"echoOf\")).map(c => c.id);\n    if (ids.length && combat.canUserModify(game.user, \"update\")) await combat.deleteEmbeddedDocuments(\"Combatant\", ids);\n  }\n};\n\n// A new echo where the drinker stands, if there is room for one and none is already there.\nasync function placeEcho(drinker, drinkerToken) {\n  const doc = drinkerToken?.document ?? drinkerToken;\n  if (!doc) return;\n  await dropEchoCombatants();\n  const echoes = echoesOf(drinker);\n  if (echoes.length >= MAX_ECHOES) return;\n  if (echoes.some(uuid => { const e = fromUuidSync(uuid); return e?.x === doc.x && e?.y === doc.y; })) return;\n  const data = doc.toObject();\n  delete data._id;\n  // the echo is an unlinked copy: drop the effects it would inherit from the drinker's actor (Echoing Step among them)\n  const inherited = (game.actors.get(doc.actorId)?.effects ?? []).map(e => ({ _id: e.id, _tombstone: true }));\n  // under the drinker, so clicking the shared space picks the drinker\n  Object.assign(data, { name: `Echo of ${doc.name}`, alpha: 0.5, actorLink: false, hidden: false, sort: (doc.sort ?? 0) - 1 });\n  foundry.utils.setProperty(data, \"sight.enabled\", false);\n  foundry.utils.setProperty(data, \"flags.midi-qol.echoOf\", drinker.uuid);\n  // an image: no actions or reactions of its own (it is a copy of the drinker, items and all); an echo that is hit disappears\n  data.delta = { flags: { \"midi-qol\": { isEcho: true } }, effects: [...inherited, { name: \"Echo\", img: macroItem?.img ?? \"icons/svg/aura.svg\", transfer: false,\n    statuses: [\"incapacitated\"],\n    system: { changes: [{ key: \"flags.midi-qol.onUseMacroName\", type: \"custom\", value: `ItemMacro.${macroItem.uuid}, isHit` }] } }] };\n  const created = await DAE.createToken(data, doc.x, doc.y);\n  const id = created?.[0]?._id;\n  if (id) await setEchoes(drinker, [...echoes, `${doc.parent.uuid}.Token.${id}`]);\n}\n\nconst pass = args[0]?.macroPass;\n// echoes made before their inherited effects were dropped still carry Echoing Step: they never act as the drinker\nconst isEcho = !!(actor?.getFlag(\"midi-qol\", \"isEcho\") || (token?.document ?? token)?.getFlag?.(\"midi-qol\", \"echoOf\"));\nif ([\"on\", \"each\", \"off\"].includes(args[0]) && isEcho) return;\nif (args[0] === \"on\" || args[0] === \"each\") return placeEcho(actor, token);\n\nif (args[0] === \"off\") {\n  const state = args.at(-1)?.efData?.flags?.[\"midi-qol\"]?.[FLAG] ?? {};\n  const echoes = (state.echoes ?? (state.echo ? [state.echo] : [])).filter(uuid => fromUuidSync(uuid));\n  // the newest echo lingers; the others fade\n  const last = fromUuidSync(echoes.at(-1) ?? \"\");\n  for (const uuid of echoes.slice(0, -1)) await removeEcho(uuid);\n  if (last?.object) await DAE.renameToken(last.object, `Lingering echo of ${token?.name ?? actor.name}`);\n  if (last) await say(actor, `${actor.name}'s last echo lingers, silent, where they last stood.`);\n  const shroud = shroudOf(actor);\n  if (shroud && !shroud.disabled) await updateEffect(actor, shroud, { disabled: true });\n  const potion = actor.items.get(macroItem?.id);\n  if (potion) await potion.delete();\n  return;\n}\n\nif (args[0]?.tag === \"TargetOnUse\" && pass === \"isAttacked\" && !isEcho) {\n  const me = token?.object ?? token;\n  if (!me) return;\n  const placed = echoesOf(actor).map(uuid => fromUuidSync(uuid)).filter(e => e?.object)\n    .map(e => ({ echo: e, distance: MidiQOL.getDistance(me, e.object) }));\n  const near = placed.filter(({ distance }) => distance <= NEAR);\n  const reach = placed.filter(({ echo, distance }) => distance > NEAR && MidiQOL.canSee(me, echo.object));\n  // one-attack effects (expire once this attack's hits are checked): the miss, and whether Step can be offered\n  const changes = [];\n  // as mirror image: when the attack would hit, the echoes close by may take it instead\n  const attackTotal = workflow?.attackTotal ?? workflow?.attackRoll?.total;\n  const ac = actor.system.attributes.ac?.value ?? 10;\n  const wouldHit = attackTotal !== undefined && !workflow?.isFumble && (workflow?.isCritical || attackTotal >= ac);\n  let struck;\n  if (wouldHit && near.length) {\n    const roll = await new Roll(`${near.length}d6`).evaluate();\n    await roll.toMessage({ speaker: ChatMessage.getSpeaker({ actor }), flavor: `${name}: does an echo take the blow? (3 or higher)` });\n    if (roll.dice[0].results.some(r => r.result >= 3)) struck = near[Math.floor(Math.random() * near.length)].echo;\n  }\n  // the miss is applied after reactions are offered; echoStruck keeps Step from being offered for this attack\n  if (struck) changes.push({ key: \"flags.midi-qol.grants.attack.fail.all\", type: \"custom\", value: \"1\" }, { key: \"flags.midi-qol.echoStruck\", type: \"override\", value: \"1\" });\n  else if (reach.length) changes.push({ key: \"flags.midi-qol.echoStepReady\", type: \"override\", value: \"1\" });\n  if (changes.length) await MidiQOL.socket().executeAsGM(\"createEffects\", { actorUuid: actor.uuid, effects: [{\n    name: struck ? \"Struck an Echo\" : \"Echo in Reach\", img: macroItem?.img ?? \"icons/svg/aura.svg\", system: { changes },\n    flags: { dae: { specialDuration: [\"isAttacked\"], showIcon: false } }, transfer: false }] });\n  if (struck) {\n    await removeEcho(struck.uuid);\n    await setEchoes(actor, echoesOf(actor).filter(u => u !== struck.uuid));\n    await say(actor, `the blow meant for ${actor.name} strikes one of their echoes, which fades.`);\n  }\n  return;\n}\n\nif (args[0]?.tag === \"TargetOnUse\" && pass === \"isHit\") {\n  // this is an echo being hit\n  const echoToken = args[0].options?.token ?? token;\n  const drinker = fromUuidSync(echoToken?.document?.getFlag?.(\"midi-qol\", \"echoOf\") ?? echoToken?.getFlag?.(\"midi-qol\", \"echoOf\") ?? \"\");\n  const uuid = echoToken?.document?.uuid ?? echoToken?.uuid;\n  await removeEcho(uuid);\n  if (drinker) {\n    await setEchoes(drinker, echoesOf(drinker).filter(u => u !== uuid));\n    await say(drinker, `the blow passes through ${drinker.name}'s echo, which fades.`);\n  }\n  return;\n}\n\nif (args[0]?.tag === \"OnUse\" && pass === \"postActiveEffects\" && (workflow?.activity ?? args[0].activity)?.id === \"EchoStepStep0000\") {\n  const me = token?.object ?? token;\n  const echoes = echoesOf(actor);\n  const inRange = echoes.map(uuid => fromUuidSync(uuid)).filter(e => e?.object && me)\n    .map(e => ({ echo: e, distance: MidiQOL.getDistance(me, e.object) }))\n    .filter(({ echo, distance }) => distance > NEAR && MidiQOL.canSee(me, echo.object));\n  if (!inRange.length) return ui.notifications.warn(`${name}: there is no echo you can see more than ${NEAR} ft away to step to.`);\n  let choice = inRange[0];\n  if (inRange.length > 1) {\n    const picked = await foundry.applications.api.DialogV2.wait({\n      window: { title: name },\n      content: \"<p>Step to which echo?</p>\",\n      buttons: inRange.sort((a, b) => a.distance - b.distance)\n        .map(({ echo, distance }, i) => ({ action: echo.uuid, label: `Echo ${Math.round(distance)} ft away`, default: i === 0 })),\n      rejectClose: false\n    });\n    choice = inRange.find(({ echo }) => echo.uuid === picked) ?? inRange[0];\n  }\n  await MidiQOL.moveToken(me, choice.echo.object.center, { teleport: true });\n  await removeEcho(choice.echo.uuid);\n  await setEchoes(actor, echoes.filter(u => u !== choice.echo.uuid));\n\n  // once a round the step costs no reaction: give it back once midi has marked it used\n  let free = \"\";\n  const round = game.combat?.started ? `${game.combat.id}.${game.combat.round}` : null;\n  const effect = effectOf(actor);\n  if (!round || effect?.getFlag(\"midi-qol\", FLAG)?.freeStep !== round) {\n    for (let i = 0; i < 30 && !MidiQOL.hasUsedReaction(actor); i++) await new Promise(r => setTimeout(r, 100));\n    await MidiQOL.removeReactionUsed(actor, true);\n    if (round) await updateEffect(actor, effect, { [`flags.midi-qol.${FLAG}.freeStep`]: round });\n    free = \" The step costs them nothing.\";\n  }\n  await say(actor, `${actor.name} trades places with an echo; the blow strikes the echo, which bursts against the attacker.${free}`);\n}\n",
+        "author": null,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {},
+        "_stats": {}
+      }
+    },
+    "midi-qol": {
+      "onUseMacroName": "[postActiveEffects]ItemMacro",
+      "onUseMacroParts": {
+        "items": [
+          {
+            "macroName": "ItemMacro",
+            "option": "postActiveEffects"
+          }
+        ]
+      }
+    },
+    "midiProperties": {
+      "confirmTargets": "default"
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.69"
+      }
+    }
+  }
+}

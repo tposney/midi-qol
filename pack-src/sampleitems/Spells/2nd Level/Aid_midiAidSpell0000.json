@@ -312,7 +312,6 @@
         "expired": false
       },
       "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
-      "tint": "#ffffff",
       "statuses": [],
       "sort": 0,
       "flags": {
@@ -378,7 +377,6 @@
         "expired": false
       },
       "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
-      "tint": "#ffffff",
       "statuses": [],
       "sort": 0,
       "flags": {
@@ -445,7 +443,6 @@
         "expired": false
       },
       "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
-      "tint": "#ffffff",
       "statuses": [],
       "sort": 0,
       "flags": {
@@ -512,7 +509,6 @@
         "expired": false
       },
       "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
-      "tint": "#ffffff",
       "statuses": [],
       "sort": 0,
       "flags": {
@@ -579,7 +575,6 @@
         "expired": false
       },
       "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
-      "tint": "#ffffff",
       "statuses": [],
       "sort": 0,
       "flags": {
@@ -646,7 +641,6 @@
         "expired": false
       },
       "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
-      "tint": "#ffffff",
       "statuses": [],
       "sort": 0,
       "flags": {
@@ -713,7 +707,6 @@
         "expired": false
       },
       "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
-      "tint": "#ffffff",
       "statuses": [],
       "sort": 0,
       "flags": {
@@ -780,7 +773,6 @@
         "expired": false
       },
       "description": "<p>The target's Hit Point maximum is increased for the duration.</p>",
-      "tint": "#ffffff",
       "statuses": [],
       "sort": 0,
       "flags": {
@@ -816,7 +808,7 @@
   "flags": {
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },

@@ -3,7 +3,7 @@
   "type": "feat",
   "system": {
     "description": {
-      "value": "<p>midi-qol: 11.0.7 Cause the actor to be untargetable</p>",
+      "value": "<div class=\"cat-description\"><p>midi-qol: 11.0.7 Cause the actor to be untargetable</p></div>",
       "chat": ""
     },
     "source": {
@@ -126,7 +126,7 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },

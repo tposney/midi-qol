@@ -105,7 +105,7 @@
     },
     "advancement": [],
     "description": {
-      "value": "<p>&Reference[magic]{Magic}</p><p><strong>midi-qol</strong>: Spell casts one of your spells that takes an action; Magic Item uses a magic item's action.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "value": "<p>&Reference[magic]{Magic}</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Spell casts one of your spells that takes an action; Magic Item uses a magic item's action.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "identifier": "magic",
@@ -142,7 +142,7 @@
         ]
       },
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },

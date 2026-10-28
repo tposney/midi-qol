@@ -1,0 +1,148 @@
+{
+  "name": "Gloves of Soul Catching",
+  "type": "equipment",
+  "img": "icons/equipment/hand/glove-armored-leather-steel-brown.webp",
+  "system": {
+    "description": {
+      "value": "<div class=\"cat-description\"><p><em>midi-qol: Your Constitution is 20 while attuned, if it is lower. When your Unarmed Strike hits you are asked whether to use the gloves: 2d10 force damage and you regain hit points equal to the roll, or advantage on your next attack roll, ability check or saving throw before the end of your next turn.</em></p><p><em>No rules text (not SRD; Candlekeep Mysteries): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
+      "chat": ""
+    },
+    "identifier": "gloves-of-soul-catching",
+    "source": {
+      "revision": 1,
+      "rules": "2014",
+      "book": "Candlekeep Mysteries",
+      "page": "",
+      "custom": "midi-qol sample",
+      "license": ""
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 0,
+      "units": "lb"
+    },
+    "price": {
+      "value": 0,
+      "denomination": "gp"
+    },
+    "rarity": "legendary",
+    "attunement": "required",
+    "attuned": false,
+    "equipped": false,
+    "identified": true,
+    "type": {
+      "value": "wondrous",
+      "baseItem": ""
+    },
+    "armor": {
+      "value": null,
+      "dex": null,
+      "magicalBonus": null
+    },
+    "properties": [
+      "mgc"
+    ],
+    "activities": {},
+    "uses": {
+      "spent": 0,
+      "max": "",
+      "recovery": [],
+      "autoDestroy": false
+    }
+  },
+  "effects": [
+    {
+      "_id": "glovesSoulCatEf0",
+      "name": "Gloves of Soul Catching",
+      "img": "icons/equipment/hand/glove-armored-leather-steel-brown.webp",
+      "type": "base",
+      "disabled": false,
+      "duration": {},
+      "transfer": true,
+      "origin": null,
+      "description": "<p>Constitution 20 (if lower), and an optional 2d10 force rider on unarmed strikes.</p>",
+      "statuses": [],
+      "flags": {
+        "dae": {
+          "stackable": "noneName",
+          "transfer": true
+        }
+      },
+      "system": {
+        "changes": [
+          {
+            "key": "system.abilities.con.value",
+            "value": "20",
+            "priority": 20,
+            "type": "upgrade"
+          },
+          {
+            "key": "flags.dnd5e.DamageBonusMacro",
+            "value": "ItemMacro",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      },
+      "sort": 0,
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "13.351",
+        "systemId": "dnd5e",
+        "systemVersion": "5.3.0",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null,
+        "exportSource": null
+      },
+      "_key": "!items.effects!GlovesSoulCatch0.glovesSoulCatEf0"
+    }
+  ],
+  "folder": "YuEENpWPYkjPMzah",
+  "sort": 0,
+  "flags": {
+    "midi-qol": {
+      "onUseMacroName": "",
+      "effectActivation": false
+    },
+    "dae": {
+      "macro": {
+        "name": "Gloves of Soul Catching",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "const version = \"13.0.65\";\nconst ADV_NAME = \"Gloves of Soul Catching: Advantage\";\ntry {\n  if (workflow.hitTargets.size === 0) return {};\n  const isUnarmed = rolledItem?.system?.identifier === \"unarmed-strike\"\n    || rolledItem?.system?.type?.value === \"unarmed\"\n    || rolledItem?.name === \"Unarmed Strike\";\n  if (!isUnarmed) return {};\n\n  const hp = actor.system.attributes.hp;\n  const choice = await foundry.applications.api.DialogV2.wait({\n    window: { title: macroItem.name },\n    position: { width: 420 },\n    content: `<p>Spend the gloves' power for an extra 2d10 force damage?</p>`\n      + (hp.value >= hp.max ? `<p><em>You are already at full hit points.</em></p>` : \"\"),\n    buttons: [\n      { action: \"heal\", label: \"Regain hit points\", default: true },\n      { action: \"advantage\", label: \"Advantage on one roll instead\" },\n      { action: \"no\", label: \"Don't use\" }\n    ],\n    close: () => \"no\"\n  });\n  if (choice === \"no\") return {};\n\n  const roll = await new CONFIG.Dice.DamageRoll(\"2d10\", {}, {\n    type: \"force\", isCritical: workflow.isCritical, flavor: macroItem.name\n  }).evaluate();\n\n  if (choice === \"heal\") {\n    // Rolled force damage, not the amount left after the target's resistances. Applied via\n    // applyDamage so dnd5e's damage/healing hooks fire and dependent automation can react.\n    await actor.applyDamage([{ value: roll.total, type: \"healing\" }]);\n  } else {\n    for (const ef of actor.effects.filter(e => e.name === ADV_NAME)) await ef.delete();\n    await actor.createEmbeddedDocuments(\"ActiveEffect\", [{\n      name: ADV_NAME,\n      img: macroItem.img,\n      origin: macroItem.uuid,\n      duration: { value: 1, units: \"rounds\" },\n      system: { changes: [{ key: \"flags.midi-qol.advantage.all\", type: \"override\", value: \"1\" }] },\n      // Consumed by the first attack, check, save or skill roll; the duration is the backstop.\n      flags: { dae: { specialDuration: [\"1Attack\", \"isCheck\", \"isSave\", \"isSkill\"], stackable: \"noneName\" } }\n    }]);\n  }\n  return roll;\n} catch (err) {\n  console.error(`Gloves of Soul Catching ${version}`, err);\n  return {};\n}",
+        "author": null,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {}
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.65"
+      }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.5"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.351",
+    "systemId": "dnd5e",
+    "systemVersion": "5.3.0",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "_id": "GlovesSoulCatch0",
+  "_key": "!items!GlovesSoulCatch0"
+}

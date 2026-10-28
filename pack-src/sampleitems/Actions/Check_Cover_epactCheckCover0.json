@@ -4,7 +4,7 @@
   "img": "icons/environment/settlement/fence-stone-brick.webp",
   "system": {
     "description": {
-      "value": "<p>&Reference[cover]{Check Cover}</p><p><strong>midi-qol</strong>: Whispers you the cover each target (or each creature you can sense) has from you.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "value": "<p>&Reference[cover]{Check Cover}</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Whispers you the cover each target (or each creature you can sense) has from you.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "source": {
@@ -98,7 +98,7 @@
         ]
       },
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },

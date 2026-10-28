@@ -8,6 +8,8 @@ import { itemPatching, visionPatching, actorAbilityRollPatching, readyPatching, 
 import { MidiDependentsRegistry } from './module/lib/MidiDependentsRegistry.js';
 import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { setupCATIntegration } from './module/catIntegration.js';
+import { setupRegionMagic } from './module/regionMagic.js';
+import { setupMagicSight, drawnMagicSight } from './module/magicSight.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
@@ -202,6 +204,7 @@ Object.assign(globalThis.MidiQOL, {
   applyTokenDamageMany,
   actorFromUuid,
   canSee,
+  drawnMagicSight,
   canSense,
   canSenseModes,
   checkActivityRange,
@@ -393,6 +396,8 @@ Hooks.once('init', async function () {
   window.customElements.define("midi-damage-application", DamageApplicationElementMidi as unknown as CustomElementConstructor);
   setupActivities();
   setupCATIntegration();
+  setupRegionMagic();
+  setupMagicSight();
 
   // Register custom RegionBehaviorType for region activities (emanation auras)
   CONFIG.RegionBehavior.dataModels[`${MODULE_ID}.regionActivity`] = MidiRegionActivityBehaviorType as any;
@@ -410,6 +415,7 @@ Hooks.once('init', async function () {
   CONFIG.RegionBehavior.dataModels[`${MODULE_ID}.regionLight`] = MidiRegionLightBehaviorType as any;
   CONFIG.RegionBehavior.typeLabels![`${MODULE_ID}.regionLight`] = `BEHAVIOR.TYPES.${MODULE_ID}.regionLight.label`;
   CONFIG.RegionBehavior.typeIcons[`${MODULE_ID}.regionLight`] = "fa-solid fa-lightbulb";
+  MidiRegionLightBehaviorType.registerHooks();
 
   // @ts-expect-error no dnd5e-types
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;

@@ -97,13 +97,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>An imperceptible barrier of magical force protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from <em>Magic Missile</em>.</p>\n<p><strong>midi-qol</strong>: Reaction spell. The utility activity applies an Imperceptible Barrier effect that grants a +5 AC bonus. The effect lasts until the start of the caster's next turn via DAE specialDuration (<code>turnStartSource</code>). The Magic Missile immunity is not automated.</p>",
+      "value": "<p>An imperceptible barrier of magical force protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from <em>Magic Missile</em>.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Reaction spell. The utility activity applies an Imperceptible Barrier effect that grants a +5 AC bonus. The effect lasts until the start of the caster's next turn via DAE specialDuration (<code>turnStartSource</code>). The Magic Missile immunity is not automated.</p></div>",
       "chat": "<p>An imperceptible barrier of magical force protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from <em>Magic Missile</em>.</p>"
     },
     "source": {

@@ -252,7 +252,7 @@
     },
     "advancement": [],
     "description": {
-      "value": "<p>&Reference[search]{Search}</p><p><strong>midi-qol</strong>: Rolls the chosen skill. Perception finds hidden enemies in your line of sight whose Hide DC your total meets; the GM confirms who is found (setting <em>Search: GM confirms who is found</em>), and they are no longer hidden.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "value": "<p>&Reference[search]{Search}</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Rolls the chosen skill. Perception finds hidden enemies in your line of sight whose Hide DC your total meets; the GM confirms who is found (setting <em>Search: GM confirms who is found</em>), and they are no longer hidden.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "identifier": "search",
@@ -278,7 +278,7 @@
   "flags": {
     "cat": {
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },

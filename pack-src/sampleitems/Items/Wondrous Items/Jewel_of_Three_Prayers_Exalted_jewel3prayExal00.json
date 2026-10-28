@@ -1,0 +1,957 @@
+{
+  "name": "Jewel of Three Prayers (Exalted)",
+  "type": "equipment",
+  "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
+  "system": {
+    "description": {
+      "value": "<div class=\"cat-description\"><p><em>midi-qol: The exalted jewel: +3 AC while attuned, and 7 charges regained at dawn. Your swimming speed equals your walking speed, and so does that of allies within 30 feet (an Aura Effects aura); breathing water is not automated (dnd5e has no field for it). Light, Invisibility, Free the Body and Prayer of Fortune work as on the awakened jewel (Prayer of Fortune for allies only; set the Ward effect's Aura Effects disposition to Any to allow any creature, as the rules do). Golden Flash (a bonus action, 1 charge) teleports you or a willing creature within 15 feet to a space you choose within 15 feet of you; you then choose the creatures within 5 feet of it that the radiance strikes: DC 18 Constitution save, 4d10 radiant and Blinded until the start of your next turn, half and not Blinded on a success. The Aura Effects module is required.</em></p><p><em>No rules text (not SRD; Critical Role: Call of the Netherdeep): give the character your own copy and apply this automation to it with CAT's medkit, which keeps your copy's description.</em></p></div>",
+      "chat": ""
+    },
+    "source": {
+      "revision": 1,
+      "rules": "2014",
+      "book": "Critical Role: Call of the Netherdeep",
+      "page": "",
+      "custom": "midi-qol sample",
+      "license": ""
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 1,
+      "units": "lb"
+    },
+    "price": {
+      "value": 0,
+      "denomination": "gp"
+    },
+    "attunement": "required",
+    "attuned": true,
+    "equipped": true,
+    "rarity": "legendary",
+    "identified": true,
+    "cover": null,
+    "crewed": false,
+    "uses": {
+      "max": "7",
+      "spent": 0,
+      "recovery": [
+        {
+          "period": "dawn",
+          "type": "recoverAll",
+          "formula": ""
+        }
+      ]
+    },
+    "armor": {
+      "value": null,
+      "magicalBonus": null,
+      "dex": null
+    },
+    "hp": {
+      "value": 0,
+      "max": 0,
+      "dt": null,
+      "conditions": ""
+    },
+    "speed": {
+      "value": null,
+      "conditions": ""
+    },
+    "strength": null,
+    "proficient": null,
+    "unidentified": {
+      "description": ""
+    },
+    "type": {
+      "value": "wondrous",
+      "baseItem": ""
+    },
+    "properties": [
+      "mgc"
+    ],
+    "identifier": "jewel-of-three-prayers-exalted",
+    "container": null,
+    "activities": {
+      "jewel3prayLight0": {
+        "type": "utility",
+        "_id": "jewel3prayLight0",
+        "name": "Light",
+        "sort": 0,
+        "description": {
+          "chatFlavor": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false,
+          "targets": []
+        },
+        "duration": {
+          "units": "perm",
+          "concentration": false,
+          "override": true
+        },
+        "effects": [
+          {
+            "_id": "jewel3prayerLite"
+          }
+        ],
+        "range": {
+          "units": "self",
+          "override": true,
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "",
+            "type": "self",
+            "special": ""
+          },
+          "override": true,
+          "prompt": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "toggleEffect": true,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true,
+          "condition": ""
+        }
+      },
+      "jewel3prayInvis0": {
+        "type": "cast",
+        "_id": "jewel3prayInvis0",
+        "name": "Invisibility",
+        "sort": 1,
+        "description": {
+          "chatFlavor": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false,
+          "targets": [
+            {
+              "type": "itemUses",
+              "target": "",
+              "value": "1",
+              "scaling": {
+                "mode": "",
+                "formula": ""
+              }
+            }
+          ]
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "units": "self",
+          "override": true,
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "",
+            "type": "self",
+            "special": ""
+          },
+          "override": true,
+          "prompt": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "toggleEffect": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true,
+          "condition": ""
+        },
+        "spell": {
+          "uuid": "Compendium.dnd5e.spells.Item.1N8dDMMgZ1h1YJ3B",
+          "challenge": {
+            "attack": "",
+            "save": "",
+            "override": false
+          },
+          "level": 2,
+          "properties": [
+            "vocal",
+            "somatic",
+            "material"
+          ],
+          "spellbook": false
+        }
+      },
+      "jewel3prayFree00": {
+        "type": "utility",
+        "_id": "jewel3prayFree00",
+        "name": "Free the Body",
+        "sort": 2,
+        "description": {
+          "chatFlavor": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false,
+          "targets": [
+            {
+              "type": "itemUses",
+              "target": "",
+              "value": "1",
+              "scaling": {
+                "mode": "",
+                "formula": ""
+              }
+            }
+          ]
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "units": "self",
+          "override": true,
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "",
+            "type": "self",
+            "special": ""
+          },
+          "override": true,
+          "prompt": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "toggleEffect": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "activation": {
+          "type": "special",
+          "value": null,
+          "override": true,
+          "condition": "End grappled, paralyzed or restrained on yourself"
+        }
+      },
+      "jewel3prayReact0": {
+        "type": "utility",
+        "_id": "jewel3prayReact0",
+        "name": "Prayer of Fortune",
+        "sort": 3,
+        "description": {
+          "chatFlavor": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false,
+          "targets": [
+            {
+              "type": "itemUses",
+              "target": "",
+              "value": "1",
+              "scaling": {
+                "mode": "",
+                "formula": ""
+              }
+            }
+          ]
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "units": "ft",
+          "value": "60",
+          "override": true,
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "",
+            "type": "self",
+            "special": ""
+          },
+          "override": true,
+          "prompt": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "toggleEffect": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "activation": {
+          "type": "reaction",
+          "value": 1,
+          "override": true,
+          "condition": "When another creature you can see within 60 feet fails a saving throw"
+        }
+      },
+      "jewel3prayFlash0": {
+        "type": "teleport",
+        "_id": "jewel3prayFlash0",
+        "name": "Golden Flash",
+        "sort": 2,
+        "description": {
+          "chatFlavor": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false,
+          "targets": [
+            {
+              "type": "itemUses",
+              "target": "",
+              "value": "1",
+              "scaling": {
+                "mode": "",
+                "formula": ""
+              }
+            }
+          ]
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "units": "ft",
+          "value": "15",
+          "override": true,
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "1",
+            "type": "creature",
+            "special": "You or a willing creature"
+          },
+          "override": true,
+          "prompt": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "toggleEffect": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "activation": {
+          "type": "bonus",
+          "value": 1,
+          "condition": "",
+          "override": false
+        },
+        "teleport": {
+          "override": true,
+          "value": "15",
+          "units": "ft"
+        },
+        "midiTeleport": {
+          "movers": "targets",
+          "blocked": "refuse",
+          "requireSight": false
+        }
+      },
+      "jewel3prayBurst0": {
+        "type": "save",
+        "_id": "jewel3prayBurst0",
+        "name": "Golden Flash: Radiance",
+        "sort": 2,
+        "description": {
+          "chatFlavor": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false,
+          "targets": []
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "jewel3prayerBlnd",
+            "onSave": false
+          }
+        ],
+        "range": {
+          "units": "any",
+          "override": true,
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "count": "",
+            "type": "creature",
+            "special": ""
+          },
+          "override": true,
+          "prompt": false
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "never",
+          "automationOnly": true,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": false,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "toggleEffect": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionText": "",
+        "useConditionReason": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "activation": {
+          "type": "special",
+          "value": null,
+          "condition": "",
+          "override": false
+        },
+        "save": {
+          "ability": [
+            "con"
+          ],
+          "dc": {
+            "calculation": "",
+            "formula": "18"
+          }
+        },
+        "damage": {
+          "onSave": "half",
+          "parts": [
+            {
+              "number": 4,
+              "denomination": 10,
+              "bonus": "",
+              "types": [
+                "radiant"
+              ],
+              "custom": {
+                "enabled": false,
+                "formula": ""
+              },
+              "scaling": {
+                "mode": "",
+                "number": null,
+                "formula": ""
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "effects": [
+    {
+      "_id": "jewel3prayerAC00",
+      "name": "Jewel of Three Prayers (Exalted)",
+      "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
+      "type": "base",
+      "disabled": false,
+      "transfer": true,
+      "origin": null,
+      "duration": {},
+      "description": "",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "disableIncapacitated": false,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "dontApply": false,
+          "stackable": "noneName",
+          "showIcon": false,
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": ""
+        }
+      },
+      "_key": "!items.effects!jewel3prayExal00.jewel3prayerAC00",
+      "system": {
+        "changes": [
+          {
+            "key": "system.attributes.ac.bonus",
+            "value": "+3",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.attributes.movement.swim",
+            "value": "@attributes.movement.walk",
+            "priority": 20,
+            "type": "upgrade"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "jewel3prayerAura",
+      "name": "Jewel of Three Prayers: Ward",
+      "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
+      "type": "auraeffects.aura",
+      "disabled": false,
+      "transfer": true,
+      "origin": null,
+      "duration": {},
+      "description": "",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "disableIncapacitated": false,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "dontApply": false,
+          "stackable": "noneName",
+          "showIcon": false,
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": ""
+        }
+      },
+      "_key": "!items.effects!jewel3prayExal00.jewel3prayerAura",
+      "system": {
+        "distanceFormula": "60",
+        "disposition": 1,
+        "applyToSelf": false,
+        "collisionTypes": [],
+        "script": "",
+        "canStack": false,
+        "combatOnly": false,
+        "disableOnHidden": true,
+        "evaluatePreApply": false,
+        "showRadius": false,
+        "changes": [
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ItemMacro, isSaveFailure",
+            "priority": 20,
+            "type": "custom"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "jewel3prayerLite",
+      "name": "Jewel of Three Prayers: Light",
+      "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
+      "type": "base",
+      "disabled": false,
+      "transfer": false,
+      "origin": null,
+      "duration": {},
+      "description": "",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "disableIncapacitated": false,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "dontApply": false,
+          "stackable": "noneName",
+          "showIcon": false,
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": ""
+        }
+      },
+      "_key": "!items.effects!jewel3prayExal00.jewel3prayerLite",
+      "system": {
+        "changes": [
+          {
+            "key": "ATL.light.bright",
+            "value": "15",
+            "priority": 20,
+            "type": "override"
+          },
+          {
+            "key": "ATL.light.dim",
+            "value": "30",
+            "priority": 20,
+            "type": "override"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "jewel3prayerSwim",
+      "name": "Jewel of Three Prayers: Water Blessing",
+      "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
+      "type": "auraeffects.aura",
+      "disabled": false,
+      "transfer": true,
+      "origin": null,
+      "duration": {},
+      "description": "",
+      "statuses": [],
+      "sort": 0,
+      "flags": {
+        "dae": {
+          "disableIncapacitated": false,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "dontApply": false,
+          "stackable": "noneName",
+          "showIcon": false,
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "enableCondition": "",
+          "disableCondition": ""
+        }
+      },
+      "_key": "!items.effects!jewel3prayExal00.jewel3prayerSwim",
+      "system": {
+        "distanceFormula": "30",
+        "disposition": 1,
+        "applyToSelf": false,
+        "collisionTypes": [],
+        "script": "",
+        "canStack": false,
+        "combatOnly": false,
+        "disableOnHidden": true,
+        "evaluatePreApply": false,
+        "showRadius": false,
+        "changes": [
+          {
+            "key": "system.attributes.movement.swim",
+            "value": "@attributes.movement.walk",
+            "priority": 20,
+            "type": "upgrade"
+          }
+        ]
+      }
+    },
+    {
+      "_id": "jewel3prayerBlnd",
+      "name": "Jewel of Three Prayers: Blinded",
+      "img": "icons/commodities/gems/gem-faceted-diamond-blue.webp",
+      "type": "base",
+      "transfer": false,
+      "disabled": false,
+      "statuses": [
+        "blinded"
+      ],
+      "system": {
+        "changes": []
+      },
+      "duration": {},
+      "description": "",
+      "origin": null,
+      "sort": 0,
+      "showIcon": 1,
+      "flags": {
+        "dae": {
+          "specialDuration": [
+            "turnStartSource"
+          ],
+          "stackable": "noneName"
+        }
+      },
+      "_key": "!items.effects!jewel3prayExal00.jewel3prayerBlnd"
+    }
+  ],
+  "folder": "YuEENpWPYkjPMzah",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {
+    "core": {},
+    "midiProperties": {
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "rollOther": false,
+      "critOther": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "autoFailFriendly": false,
+      "offHandWeapon": false,
+      "ignoreTotalCover": false,
+      "autoSaveFriendly": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "midi-qol": {
+      "effectActivation": false,
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "reactionCondition": "",
+      "effectCondition": "",
+      "otherCondition": "",
+      "AoETargetType": "any",
+      "AoETargetTypeIncludeSelf": true,
+      "autoTarget": "default",
+      "removeAttackDamageButtons": "default",
+      "onUseMacroName": "[postActiveEffects]ItemMacro,[postTeleport]ItemMacro"
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.64"
+      }
+    },
+    "cat": {
+      "automation": {
+        "version": "14.6.5"
+      }
+    },
+    "dae": {
+      "macro": {
+        "name": "Jewel of Three Prayers (Exalted)",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "const pass = args[0].macroPass;\n\n// Third party reaction: an ally within 60ft failed a save - offer to spend a charge for a reroll.\nif (args[0].tag === \"TargetOnUse\" && pass === \"isSaveFailure\") {\n  const jewel = macroItem;\n  const owner = jewel?.actor;\n  if (!owner) return;\n  const failed = token;\n  if (!failed?.actor) return;\n  if (failed.actor.uuid === owner.uuid) return; // \"another creature\"\n  if ((jewel.system.uses?.value ?? 0) < 1) return;\n  if (MidiQOL.hasUsedReaction(owner)) return;\n\n  const ownerToken = MidiQOL.tokenForActor(owner);\n  if (!ownerToken) return;\n  if (MidiQOL.computeDistance(ownerToken, failed) > 60) return;\n  if (!MidiQOL.canSee(ownerToken, failed)) return;\n\n  const reaction = jewel.system.activities.get(\"jewel3prayReact0\");\n  if (!reaction) return;\n\n  // Hand the prompt to midi so it is shown on the jewel owner's client (the GM's when its player is away), not\n  // wherever this macro runs.\n  const owningPlayer = MidiQOL.playerForActor(owner);\n  const player = owningPlayer?.active ? owningPlayer : game.users.activeGM;\n  if (!player) return;\n  const payload = {\n    tokenUuid: ownerToken.document.uuid,\n    reactionFlavor: `${failed.name} failed a ${CONFIG.DND5E.abilities?.[[...(workflow.saveActivity?.save?.ability ?? [])][0]]?.label ?? \"saving\"} throw within 60 feet. Expend a charge of ${jewel.name} to let them reroll?`,\n    triggerTokenUuid: failed.document.uuid,\n    triggerType: \"reactionmanual\",\n    options: { workflowId: workflow.id },\n    reactionActivityList: [reaction.uuid]\n  };\n  const socket = MidiQOL.socket();\n  const result = player.isGM\n    ? await socket.executeAsGM(\"chooseReactions\", payload)\n    : await socket.executeAsUser(\"chooseReactions\", player.id, payload);\n  if (!result?.uuid || result.name === \"None\") return; // declined or timed out\n\n  const abl = [...(workflow.saveActivity?.save?.ability ?? [])][0] ?? \"dex\";\n  const abilities = failed.actor.system.abilities ?? {};\n  const bonus = abilities[abl]?.save?.value ?? abilities[abl]?.mod ?? 0;\n  const label = CONFIG.DND5E.abilities?.[abl]?.label ?? abl;\n  const reroll = await new CONFIG.Dice.D20Roll(`1d20 + ${bonus}`, failed.actor.getRollData(), {\n    flavor: `${label} Save - ${jewel.name} reroll`\n  }).evaluate();\n  await MidiQOL.displayDSNForRoll(reroll, \"savingThrow\");\n  return reroll; // midi replaces the save roll with whatever Roll is returned\n}\n\n// Free the Body: end grappled, paralyzed or restrained on yourself.\nif (pass === \"postActiveEffects\" && rolledActivity?.id === \"jewel3prayFree00\") {\n  const candidates = [\"grappled\", \"paralyzed\", \"restrained\"].filter(c => MidiQOL.hasCondition(actor, c));\n  if (!candidates.length) {\n    ui.notifications?.info(`${macroItem.name}: no grappled, paralyzed or restrained condition to end.`);\n    return;\n  }\n  let chosen = candidates[0];\n  if (candidates.length > 1) {\n    chosen = await foundry.applications.api.DialogV2.wait({\n      window: { title: macroItem.name },\n      content: \"<p>End which condition?</p>\",\n      buttons: candidates.map(c => ({ label: c.capitalize(), action: c })),\n      rejectClose: false\n    });\n    if (!chosen) return;\n  }\n  // End it by removing the effects that grant only that condition (and what it brings with it, e.g. Paralyzed's\n  // Incapacitated); one that grants other conditions too (Swallowed) is left, with a note.\n  const brings = new Set([chosen, ...(CONFIG.DND5E.conditionTypes?.[chosen]?.riders ?? []),\n    ...(CONFIG.statusEffects.find(s => s.id === chosen)?.statuses ?? [])]);\n  const granting = actor.effects.filter(e => e.statuses.has(chosen));\n  const only = granting.filter(e => [...e.statuses].every(s => brings.has(s)));\n  if (only.length) await actor.deleteEmbeddedDocuments(\"ActiveEffect\", only.map(e => e.id));\n  const kept = granting.filter(e => !only.includes(e));\n  if (kept.length) ui.notifications?.warn(`${macroItem.name}: ${chosen} also comes from ${kept.map(e => e.name).join(\", \")}, which grants more than that condition; end it there.`);\n}\n\n\n// Golden Flash: after the teleport, radiance bursts on the creatures you choose within 5 feet of where it ends.\nif (pass === \"postTeleport\" && rolledActivity?.id === \"jewel3prayFlash0\") {\n  const landed = (workflow.teleportResults ?? []).find(r => r.moved)?.token;\n  if (!landed) return;\n  const nearby = MidiQOL.findNearby(null, landed, 5, { includeIncapacitated: true }).filter(t => t !== landed && t.actor);\n  if (!nearby.length) return;\n  const wearer = MidiQOL.tokenForActor(actor);\n  const rows = nearby.map(t => `<label><input type=\"checkbox\" name=\"${t.id}\" ${t.document.disposition !== wearer?.document.disposition ? \"checked\" : \"\"}> ${t.name}</label>`).join(\"<br>\");\n  const picked = await foundry.applications.api.DialogV2.wait({\n    window: { title: `${macroItem.name}: Golden Flash` },\n    content: `<p>Which creatures within 5 feet of ${landed.name} does the radiance strike?</p><p>${rows}</p>`,\n    buttons: [{ action: \"ok\", label: \"Strike\", default: true,\n      callback: (event, button) => nearby.filter(t => button.form.elements[t.id]?.checked).map(t => t.document.uuid) }],\n    rejectClose: false\n  });\n  if (!picked?.length) return;\n  await MidiQOL.completeActivityUse(macroItem.system.activities.get(\"jewel3prayBurst0\"),\n    { midiOptions: { targetUuids: picked, workflowOptions: { targetConfirmation: \"none\" } } }, { configure: false }, {});\n}",
+        "sort": 0,
+        "ownership": {
+          "default": 0
+        },
+        "flags": {},
+        "_stats": {}
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "13.346",
+    "systemId": "dnd5e",
+    "systemVersion": "5.3.3",
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "_id": "jewel3prayExal00",
+  "_key": "!items!jewel3prayExal00"
+}

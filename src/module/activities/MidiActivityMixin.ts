@@ -1522,6 +1522,8 @@ export let MidiActivityMixin = Base => {
         // No confirmation needed — set workflow targets directly from the provided Set
         // to avoid race conditions with game.user.targets being changed by concurrent effects.
         workflow.setTargets(validTargetTokens(config.midiOptions!.targetsToUse!));
+        // Given its targets: later states keep them rather than re-reading the user's, which another use can change meanwhile.
+        workflow.workflowOptions.ignoreUserTargets = true;
       } else {
         // No targetsToUse and no confirmation — use current user targets or self-target.
         let selfTarget = this.target?.affects.type === "self";

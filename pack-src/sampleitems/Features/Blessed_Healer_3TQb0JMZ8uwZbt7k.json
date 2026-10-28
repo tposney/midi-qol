@@ -226,13 +226,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>Beginning at 6th level, the healing spells you cast on others heal you as well.</p><p>When you cast a spell of 1st level or higher that restores hit points to a creature other than you, you regain hit points equal to 2 + the spell's level. </p><p><em>**Foundry note: The healing formula is set to 2. Please add the additional from the spell level manually.</em></p><p><em>Midi-qol: Add the feature to a character and healing spells will reestore 2 + spell level points to the caster.</em></p>",
+      "value": "<p>Beginning at 6th level, the healing spells you cast on others heal you as well.</p><p>When you cast a spell of 1st level or higher that restores hit points to a creature other than you, you regain hit points equal to 2 + the spell's level. </p><div class=\"cat-description\"><p><em>Midi-qol: Add the feature to a character and healing spells will restore 2 + spell level points to the caster.</em></p></div>",
       "chat": "<p>Beginning at 6th level, the healing spells you cast on others heal you as well.</p><p>When you cast a spell of 1st level or higher that restores hit points to a creature other than you, you regain hit points equal to 2 + the spell's level. </p><p><em>**Foundry note: The healing formula is set to 2. Please add the additional from the spell level manually.</em></p>"
     },
     "source": {

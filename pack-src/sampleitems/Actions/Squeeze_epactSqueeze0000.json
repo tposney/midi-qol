@@ -4,7 +4,7 @@
   "img": "icons/magic/control/silhouette-grow-shrink-blue.webp",
   "system": {
     "description": {
-      "value": "<p>&Reference[squeezing]{Squeeze}</p><p><strong>midi-qol</strong>: While squeezing: Disadvantage on attacks and Dexterity saves, and attacks against you have Advantage. Use again to stop.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "value": "<p>&Reference[squeezing]{Squeeze}</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: While squeezing: Disadvantage on attacks and Dexterity saves, and attacks against you have Advantage. Use again to stop.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "source": {
@@ -143,7 +143,7 @@
         ]
       },
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },

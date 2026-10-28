@@ -42,13 +42,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>A creature you touch has the &amp;Reference[invisible]{Invisible} condition until the spell ends. The spell ends early immediately after the target makes an attack roll, deals damage, or casts a spell.</p><p><strong>Using a Higher-Level Spell Slot.</strong> You can target one additional creature for each spell slot level above 2.</p><p><em>midi-qol: the activity applies the Invisible condition itself (Statuses Applied), which ends when the target makes an attack roll, casts a spell or deals damage, ending the spell and concentration. Scales to additional targets with higher spell slots.</em></p>",
+      "value": "<p>A creature you touch has the &amp;Reference[invisible]{Invisible} condition until the spell ends. The spell ends early immediately after the target makes an attack roll, deals damage, or casts a spell.</p><p><strong>Using a Higher-Level Spell Slot.</strong> You can target one additional creature for each spell slot level above 2.</p><div class=\"cat-description\"><p><em>midi-qol: the activity applies the Invisible condition itself (Statuses Applied), which ends when the target makes an attack roll, casts a spell or deals damage, ending the spell and concentration. Scales to additional targets with higher spell slots.</em></p></div>",
       "chat": ""
     },
     "source": {

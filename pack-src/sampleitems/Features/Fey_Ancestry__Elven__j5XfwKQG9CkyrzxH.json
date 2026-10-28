@@ -158,13 +158,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>You have advantage on saving throws against being charmed, and magic can’t put you to sleep.</p><p><strong>midi-qol</strong>: any save from an item roll that applies an effect called Charmed or has Charmed as an change effect value (i.e. a statusEffect Charmed) will be made at advantage.</p>",
+      "value": "<p>You have advantage on saving throws against being charmed, and magic can’t put you to sleep.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: any save from an item roll that applies an effect called Charmed or has Charmed as an change effect value (i.e. a statusEffect Charmed) will be made at advantage.</p></div>",
       "chat": "<p>You have advantage on saving throws against being charmed, and magic can’t put you to sleep.</p>"
     },
     "source": {

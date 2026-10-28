@@ -189,13 +189,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>You touch a willing creature and channel divination magic. Until the spell ends, the target adds 1d4 to one ability check of its choice, ending the spell.</p>\n<p><strong>midi-qol</strong>: Two effects on a single item.<br><strong>Transfer effect (Guidance Self)</strong>: Always active on the caster via <code>flags.midi-qol.optional.guidanceSelf.skill.all</code>. Prompts to add 1d4 on every skill check with <code>count: every</code>. A <code>macroToCall</code> runs an ItemMacro that ends any active Guidance concentration on the caster when the self-bonus is used.<br><strong>Activity effect (Guidance)</strong>: Cast on a willing target via the utility activity. Applies <code>flags.midi-qol.optional.guidance.skill.all</code> with <code>count: 1</code> — one use, then the effect expires and concentration ends. Duration 1 minute, concentration.</p>",
+      "value": "<p>You touch a willing creature and channel divination magic. Until the spell ends, the target adds 1d4 to one ability check of its choice, ending the spell.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Two effects on a single item.<br><strong>Transfer effect (Guidance Self)</strong>: Always active on the caster via <code>flags.midi-qol.optional.guidanceSelf.skill.all</code>. Prompts to add 1d4 on every skill check with <code>count: every</code>. A <code>macroToCall</code> runs an ItemMacro that ends any active Guidance concentration on the caster when the self-bonus is used.<br><strong>Activity effect (Guidance)</strong>: Cast on a willing target via the utility activity. Applies <code>flags.midi-qol.optional.guidance.skill.all</code> with <code>count: 1</code> — one use, then the effect expires and concentration ends. Duration 1 minute, concentration.</p></div>",
       "chat": "<p>You touch a willing creature and channel divination magic. Until the spell ends, the target adds 1d4 to one ability check of its choice, ending the spell.</p>"
     },
     "source": {

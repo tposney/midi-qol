@@ -1,0 +1,108 @@
+{
+  "_id": "mqmAcidAbsorptio",
+  "name": "Acid Absorption",
+  "type": "feat",
+  "system": {
+    "type": {
+      "value": "monster",
+      "subtype": ""
+    },
+    "activities": {},
+    "uses": {
+      "spent": 0,
+      "recovery": [],
+      "max": ""
+    },
+    "description": {
+      "value": "<p>Whenever the [[lookup @name lowercase]]{monster} is subjected to &amp;Reference[Acid] damage, it takes no damage and instead regains a number of Hit Points equal to the Acid damage dealt.</p><div class=\"cat-description\"><p><em>midi-qol: Acid damage heals it instead (midi's Damage Absorption trait).</em></p></div>",
+      "chat": ""
+    },
+    "identifier": "acid-absorption",
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
+    },
+    "enchant": {},
+    "prerequisites": {
+      "level": null,
+      "repeatable": false,
+      "items": []
+    },
+    "properties": [
+      "trait"
+    ],
+    "requirements": "Subjected to Acid damage",
+    "advancement": {},
+    "cover": null,
+    "crewed": false
+  },
+  "folder": "MonsterFeatFldr0",
+  "img": "icons/magic/acid/orb-bubble-smoke-drip.webp",
+  "effects": [
+    {
+      "_id": "mqAcidAbsorbEff0",
+      "name": "Acid Absorption",
+      "img": "icons/magic/acid/dissolve-pool-bubbles.webp",
+      "type": "base",
+      "transfer": true,
+      "disabled": false,
+      "statuses": [],
+      "description": "",
+      "origin": null,
+      "sort": 0,
+      "system": {
+        "changes": [
+          {
+            "key": "system.traits.da.value",
+            "type": "add",
+            "value": "acid",
+            "priority": 20,
+            "phase": "initial",
+            "_id": "Nag0PtojdrNXhHJe",
+            "conditions": "{}",
+            "replacement": ""
+          }
+        ]
+      },
+      "duration": {
+        "value": null,
+        "units": "seconds",
+        "expiry": null,
+        "expired": false
+      },
+      "flags": {
+        "dae": {
+          "stackable": "noneName"
+        }
+      },
+      "_key": "!items.effects!mqmAcidAbsorptio.mqAcidAbsorbEff0"
+    }
+  ],
+  "flags": {
+    "dnd5e": {},
+    "cat": {
+      "automation": {
+        "version": "14.6.5",
+        "npc": true
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "ownership": {
+    "default": 0
+  },
+  "sort": 0,
+  "_key": "!items!mqmAcidAbsorptio"
+}

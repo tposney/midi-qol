@@ -1,0 +1,292 @@
+{
+  "name": "Candle",
+  "system": {
+    "description": {
+      "value": "<p>For 1 hour, a lit Candle sheds Bright Light in a 5-foot radius and Dim Light for an additional 5 feet.</p><div class=\"cat-description\"><p><em>midi-qol: Light (bright 5 ft, dim 5 ft more, 1 hour); Extinguish puts it out.</em></p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
+      "chat": ""
+    },
+    "price": {
+      "value": 1,
+      "denomination": "cp"
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
+    },
+    "identified": true,
+    "unidentified": {
+      "description": ""
+    },
+    "container": null,
+    "quantity": 1,
+    "weight": {
+      "value": 0,
+      "units": "lb"
+    },
+    "attunement": "",
+    "attuned": false,
+    "equipped": false,
+    "uses": {
+      "max": "1",
+      "autoDestroy": true,
+      "spent": 0,
+      "recovery": []
+    },
+    "damage": {
+      "base": {
+        "number": null,
+        "denomination": null,
+        "types": [],
+        "custom": {
+          "enabled": false
+        },
+        "scaling": {
+          "number": 1
+        },
+        "modifiers": []
+      },
+      "replace": false
+    },
+    "type": {
+      "value": "trinket",
+      "subtype": ""
+    },
+    "properties": [],
+    "activities": {
+      "epCandleLight000": {
+        "_id": "epCandleLight000",
+        "type": "utility",
+        "name": "Light",
+        "img": "icons/sundries/lights/candle-unlit-tan.webp",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "value": "1",
+              "target": "",
+              "scaling": {}
+            }
+          ],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [
+          {
+            "_id": "epCandleLit00000"
+          }
+        ],
+        "roll": {
+          "prompt": false,
+          "visible": false
+        }
+      },
+      "epCandleExt00000": {
+        "_id": "epCandleExt00000",
+        "type": "utility",
+        "name": "Extinguish",
+        "img": "icons/sundries/lights/candle-unlit-tan.webp",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "roll": {
+          "prompt": false,
+          "visible": false
+        }
+      }
+    },
+    "identifier": "candle",
+    "rarities": []
+  },
+  "_id": "mqsCandle0000000",
+  "type": "consumable",
+  "folder": "LIVHl8j2x0qfD4Kx",
+  "img": "icons/sundries/lights/candle-unlit-tan.webp",
+  "effects": [
+    {
+      "_id": "epCandleLit00000",
+      "name": "Candle (lit)",
+      "img": "icons/sundries/lights/candle-unlit-tan.webp",
+      "transfer": false,
+      "disabled": false,
+      "duration": {
+        "value": 3600,
+        "units": "seconds"
+      },
+      "system": {
+        "changes": [
+          {
+            "key": "token.light.bright",
+            "type": "override",
+            "value": "5",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.dim",
+            "type": "override",
+            "value": "10",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.color",
+            "type": "override",
+            "value": "#ffb433",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.angle",
+            "type": "override",
+            "value": "360",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.alpha",
+            "type": "override",
+            "value": "0.25",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.luminosity",
+            "type": "override",
+            "value": "0.5",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.attenuation",
+            "type": "override",
+            "value": "0.75",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.type",
+            "type": "override",
+            "value": "flame",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.speed",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.intensity",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          }
+        ]
+      },
+      "flags": {
+        "dae": {
+          "selfTarget": true
+        }
+      },
+      "_key": "!items.effects!mqsCandle0000000.epCandleLit00000"
+    }
+  ],
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "cat": {
+      "macros": {
+        "roll": [
+          {
+            "source": "midi-qol",
+            "rules": "2024",
+            "identifier": "light-source"
+          }
+        ]
+      },
+      "automation": {
+        "version": "14.6.5"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "_key": "!items!mqsCandle0000000"
+}

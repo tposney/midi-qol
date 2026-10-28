@@ -114,7 +114,7 @@
     },
     "advancement": [],
     "description": {
-      "value": "<p>&Reference[ready]{Ready}</p><p><strong>midi-qol</strong>: Marks the readied action until the start of your next turn; a readied spell is held with Concentration.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p>",
+      "value": "<p>&Reference[ready]{Ready}</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Marks the readied action until the start of your next turn; a readied spell is held with Concentration.</p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
       "chat": ""
     },
     "identifier": "ready",
@@ -163,7 +163,7 @@
   "flags": {
     "cat": {
       "automation": {
-        "version": "14.6.4"
+        "version": "14.6.5"
       }
     }
   },

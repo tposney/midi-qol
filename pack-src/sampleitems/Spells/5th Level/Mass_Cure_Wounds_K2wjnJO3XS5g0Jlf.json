@@ -46,13 +46,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>A wave of healing energy washes out from a point you can see within range. Choose up to six creatures in a 30-foot-radius Sphere centered on that point. Each target regains Hit Points equal to 5d8 plus your spellcasting ability modifier.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The healing increases by 1d8 for each spell slot level above 5.</p>\n<p><strong>midi-qol</strong>: No macros required. Uses a heal activity for 5d8 + @mod healing that scales by 1d8 per slot level above 5th. Auto-targets up to 6 creatures in a 30-foot sphere (confirm targets enabled). The caster is included in auto-targeting.</p>",
+      "value": "<p>A wave of healing energy washes out from a point you can see within range. Choose up to six creatures in a 30-foot-radius Sphere centered on that point. Each target regains Hit Points equal to 5d8 plus your spellcasting ability modifier.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The healing increases by 1d8 for each spell slot level above 5.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: No macros required. Uses a heal activity for 5d8 + @mod healing that scales by 1d8 per slot level above 5th. Auto-targets up to 6 creatures in a 30-foot sphere (confirm targets enabled). The caster is included in auto-targeting.</p></div>",
       "chat": "<p>A wave of healing energy washes out from a point you can see within range. Choose up to six creatures in a 30-foot-radius Sphere centered on that point. Each target regains Hit Points equal to 5d8 plus your spellcasting ability modifier.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The healing increases by 1d8 for each spell slot level above 5.</p>"
     },
     "source": {

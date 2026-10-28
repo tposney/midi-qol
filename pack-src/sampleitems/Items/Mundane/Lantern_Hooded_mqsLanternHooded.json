@@ -1,0 +1,429 @@
+{
+  "name": "Lantern, Hooded",
+  "system": {
+    "description": {
+      "value": "<p>A Hooded Lantern burns Oil as fuel to cast Bright Light in a 30-foot radius and Dim Light for an additional 30 feet. As a Bonus Action, you can lower the hood, reducing the light to Dim Light in a 5-foot radius, or raise it again.</p><div class=\"cat-description\"><p><em>midi-qol: Light uses the oil (bright 30 ft, dim 30 ft more, 6 hours); Lower Hood dims it to 5 ft; Extinguish puts it out.</em></p><p><em>Automation requires Coven's Automation Toolkit (CAT).</em></p></div>",
+      "chat": ""
+    },
+    "price": {
+      "value": 5,
+      "denomination": "gp"
+    },
+    "source": {
+      "custom": "midi-qol sample",
+      "rules": "2024",
+      "book": "SRD 5.2",
+      "license": "CC-BY-4.0"
+    },
+    "identified": true,
+    "unidentified": {
+      "description": ""
+    },
+    "container": null,
+    "quantity": 1,
+    "weight": {
+      "value": 2,
+      "units": "lb"
+    },
+    "attunement": "",
+    "attuned": false,
+    "equipped": false,
+    "cover": null,
+    "uses": {
+      "max": "1",
+      "spent": 0,
+      "recovery": []
+    },
+    "armor": {
+      "value": null,
+      "dex": null
+    },
+    "hp": {
+      "value": null,
+      "max": null,
+      "dt": null,
+      "conditions": ""
+    },
+    "type": {
+      "value": "trinket",
+      "baseItem": ""
+    },
+    "properties": [],
+    "speed": {
+      "value": null,
+      "conditions": "",
+      "units": "ft"
+    },
+    "strength": null,
+    "proficient": null,
+    "activities": {
+      "epLantHLight0000": {
+        "_id": "epLantHLight0000",
+        "type": "utility",
+        "name": "Light",
+        "img": "icons/sundries/lights/lantern-steel.webp",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "value": "1",
+              "target": "",
+              "scaling": {}
+            }
+          ],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [
+          {
+            "_id": "epLantHLit000000"
+          }
+        ],
+        "roll": {
+          "prompt": false,
+          "visible": false
+        }
+      },
+      "epLantHExt000000": {
+        "_id": "epLantHExt000000",
+        "type": "utility",
+        "name": "Extinguish",
+        "img": "icons/sundries/lights/lantern-steel.webp",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [],
+        "roll": {
+          "prompt": false,
+          "visible": false
+        }
+      },
+      "epLantHLower0000": {
+        "_id": "epLantHLower0000",
+        "type": "utility",
+        "name": "Lower Hood",
+        "img": "icons/sundries/lights/lantern-steel.webp",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": true
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": false
+        },
+        "target": {
+          "override": true,
+          "prompt": false,
+          "template": {
+            "type": "",
+            "count": "",
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "type": "self",
+            "count": "",
+            "choice": false
+          }
+        },
+        "range": {
+          "override": true,
+          "units": "self"
+        },
+        "duration": {
+          "units": "inst",
+          "override": true,
+          "concentration": false
+        },
+        "effects": [
+          {
+            "_id": "epLantHHoodLow00"
+          }
+        ],
+        "roll": {
+          "prompt": false,
+          "visible": false
+        }
+      }
+    },
+    "identifier": "lantern-hooded",
+    "rarities": [],
+    "crew": {
+      "value": []
+    }
+  },
+  "_id": "mqsLanternHooded",
+  "type": "equipment",
+  "folder": "LIVHl8j2x0qfD4Kx",
+  "img": "icons/sundries/lights/lantern-steel.webp",
+  "effects": [
+    {
+      "_id": "epLantHLit000000",
+      "name": "Lantern, Hooded (lit)",
+      "img": "icons/sundries/lights/lantern-steel.webp",
+      "transfer": false,
+      "disabled": false,
+      "duration": {
+        "value": 21600,
+        "units": "seconds"
+      },
+      "system": {
+        "changes": [
+          {
+            "key": "token.light.bright",
+            "type": "override",
+            "value": "30",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.dim",
+            "type": "override",
+            "value": "60",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.color",
+            "type": "override",
+            "value": "#ffb433",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.angle",
+            "type": "override",
+            "value": "360",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.alpha",
+            "type": "override",
+            "value": "0.25",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.luminosity",
+            "type": "override",
+            "value": "0.5",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.attenuation",
+            "type": "override",
+            "value": "0.75",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.type",
+            "type": "override",
+            "value": "torch",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.speed",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.intensity",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          }
+        ]
+      },
+      "flags": {
+        "dae": {
+          "selfTarget": true
+        }
+      },
+      "_key": "!items.effects!mqsLanternHooded.epLantHLit000000"
+    },
+    {
+      "_id": "epLantHHoodLow00",
+      "name": "Lantern, Hooded (hood lowered)",
+      "img": "icons/sundries/lights/lantern-steel.webp",
+      "transfer": false,
+      "disabled": false,
+      "duration": {
+        "value": 21600,
+        "units": "seconds"
+      },
+      "system": {
+        "changes": [
+          {
+            "key": "token.light.bright",
+            "type": "override",
+            "value": "0",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.dim",
+            "type": "override",
+            "value": "5",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.color",
+            "type": "override",
+            "value": "#ffb433",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.angle",
+            "type": "override",
+            "value": "360",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.alpha",
+            "type": "override",
+            "value": "0.25",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.luminosity",
+            "type": "override",
+            "value": "0.5",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.attenuation",
+            "type": "override",
+            "value": "0.75",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.type",
+            "type": "override",
+            "value": "torch",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.speed",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          },
+          {
+            "key": "token.light.animation.intensity",
+            "type": "override",
+            "value": "4",
+            "phase": "final"
+          }
+        ]
+      },
+      "flags": {
+        "dae": {
+          "selfTarget": true
+        }
+      },
+      "_key": "!items.effects!mqsLanternHooded.epLantHHoodLow00"
+    }
+  ],
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "flags": {
+    "dnd5e": {
+      "riders": {
+        "activity": [],
+        "effect": []
+      }
+    },
+    "cat": {
+      "macros": {
+        "roll": [
+          {
+            "source": "midi-qol",
+            "rules": "2024",
+            "identifier": "light-source"
+          }
+        ]
+      },
+      "automation": {
+        "version": "14.6.5"
+      }
+    }
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": null,
+    "systemId": null,
+    "systemVersion": null,
+    "createdTime": null,
+    "modifiedTime": null,
+    "lastModifiedBy": null,
+    "exportSource": null
+  },
+  "_key": "!items!mqsLanternHooded"
+}

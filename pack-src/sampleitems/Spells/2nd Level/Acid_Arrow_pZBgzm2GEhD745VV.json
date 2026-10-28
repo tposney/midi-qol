@@ -97,13 +97,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>A shimmering green arrow streaks toward a target within range and bursts in a spray of acid. Make a ranged spell attack against the target. On a hit, the target takes 4d4 Acid damage and 2d4 Acid damage at the end of its next turn. On a miss, the arrow splashes the target with acid for half as much of the initial damage only.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage (both initial and later) increases by 1d4 for each spell slot level above 2.</p><p><strong>midi-qol</strong>: Three activities — the main attack (4d4 Acid, scales +1d4/level) applies a Lingering Acid effect on hit that triggers deferred damage (2d4 Acid, scales +1d4/level) at end of the target's next turn via <code>ActivityOverTime</code>. On a miss, a triggered \"Missed Damage\" activity deals half initial damage. Both the Missed Damage and Deferred Damage activities are <code>automationOnly</code>.</p>",
+      "value": "<p>A shimmering green arrow streaks toward a target within range and bursts in a spray of acid. Make a ranged spell attack against the target. On a hit, the target takes 4d4 Acid damage and 2d4 Acid damage at the end of its next turn. On a miss, the arrow splashes the target with acid for half as much of the initial damage only.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage (both initial and later) increases by 1d4 for each spell slot level above 2.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Three activities — the main attack (4d4 Acid, scales +1d4/level) applies a Lingering Acid effect on hit that triggers deferred damage (2d4 Acid, scales +1d4/level) at end of the target's next turn via <code>ActivityOverTime</code>. On a miss, a triggered \"Missed Damage\" activity deals half initial damage. Both the Missed Damage and Deferred Damage activities are <code>automationOnly</code>.</p></div>",
       "chat": "<p>A shimmering green arrow streaks toward a target within range and bursts in a spray of acid. Make a ranged spell attack against the target. On a hit, the target takes 4d4 Acid damage and 2d4 Acid damage at the end of its next turn. On a miss, the arrow splashes the target with acid for half as much of the initial damage only.</p><p><strong>Using a Higher-Level Spell Slot.</strong> The damage (both initial and later) increases by 1d4 for each spell slot level above 2.</p>"
     },
     "source": {

@@ -98,13 +98,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>Channeling the chill of the grave, make a melee spell attack against a target within reach. On a hit, the target takes 1d10 Necrotic damage, and it can't regain Hit Points until the end of your next turn.</p><p><strong>Cantrip Upgrade.</strong> The damage increases by 1d10 when you reach levels 5 (2d10), 11 (3d10), and 17 (4d10).</p>\n<p><strong>midi-qol</strong>: No macros required. Melee spell attack deals 1d10 Necrotic (cantrip scaling). On hit, applies a Blocked Healing effect that grants immunity to healing damage type, expiring at end of caster's next turn via DAE specialDuration.</p>",
+      "value": "<p>Channeling the chill of the grave, make a melee spell attack against a target within reach. On a hit, the target takes 1d10 Necrotic damage, and it can't regain Hit Points until the end of your next turn.</p><p><strong>Cantrip Upgrade.</strong> The damage increases by 1d10 when you reach levels 5 (2d10), 11 (3d10), and 17 (4d10).</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: No macros required. Melee spell attack deals 1d10 Necrotic (cantrip scaling). On hit, applies a Blocked Healing effect that grants immunity to healing damage type, expiring at end of caster's next turn via DAE specialDuration.</p></div>",
       "chat": "<p>Channeling the chill of the grave, make a melee spell attack against a target within reach. On a hit, the target takes 1d10 Necrotic damage, and it can't regain Hit Points until the end of your next turn.</p><p><strong>Cantrip Upgrade.</strong> The damage increases by 1d10 when you reach levels 5 (2d10), 11 (3d10), and 17 (4d10).</p>"
     },
     "source": {

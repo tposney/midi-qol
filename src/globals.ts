@@ -43,6 +43,8 @@ declare module "fvtt-types/configuration" {
   namespace Hooks {
     interface HookConfig {
       "dae.addSpecialDurations": (daeSpecialDurations: Record<string, string>) => void;
+      /** Foundry 14's region editor (fvtt-types 13 has no RegionConfig render hook). */
+      "renderRegionConfig": (app: foundry.applications.sheets.RegionConfig, html: HTMLElement) => void;
       /** Custom D&D 5e, just before it replaces CONFIG.statusEffects with this list. */
       "customDnd5e.setStatusEffectsConfig": (statusEffects: typeof CONFIG.statusEffects) => void;
       "getChatMessageContextOptions": (app: unknown, options: ContextMenuEntryV14[]) => void;
@@ -150,6 +152,10 @@ declare module "fvtt-types/configuration" {
     "midi-qol.AutoRemoveTargets": string;
     "midi-qol.ForceHideRoll": boolean;
     "midi-qol.EnableWorkflow": boolean;
+    "midi-qol.hiddenGroundCue": boolean;
+    "midi-qol.hiddenGroundCueStyle": string;
+    "midi-qol.hiddenGroundCueColor": foundry.data.fields.ColorField<{ nullable: boolean; initial: string }>;
+    "midi-qol.hiddenGroundCueOpacity": number;
     "midi-qol.DragDropTarget": boolean;
     "midi-qol.DebounceInterval": number;
     "midi-qol.TargetConfirmation": typeof targetConfirmation;
@@ -164,6 +170,13 @@ declare module "fvtt-types/configuration" {
     "midi-qol.instanceId": string;
   }
   interface FlagConfig {
+    /** Detect Magic: a region marked magical, and its school (a spell school key). */
+    Region: {
+      "midi-qol"?: {
+        magical?: boolean;
+        magicSchool?: string;
+      }
+    };
     ActiveEffect: {
       ActiveAuras?: {
         isAura?: boolean;
@@ -227,6 +240,11 @@ declare module "fvtt-types/configuration" {
         };
         overtimeChatCardUuids?: string[];
         transformedActorUuids?: string[];
+        /** Detect Magic (Vision): the auras the caster sees, until `expires` (ms). Colours are 0xRRGGBB, levels 1-9. */
+        magicSight?: {
+          expires: number;
+          entries: { tokenUuid?: string; regionUuid?: string; rings: { color: number; level: number }[] }[];
+        };
       };
     };
     Actor: {
@@ -734,6 +752,7 @@ declare global {
     };
     utils: {
       automationUtils: { updateItem: (item: Item.Implementation, options?: object) => Promise<unknown> };
+      effectUtils: { getOriginActivitySync: (effect: ActiveEffect.Implementation) => unknown };
     };
   } | undefined;
   var MidiDAEEval: {
@@ -1236,7 +1255,6 @@ export type DamageListEntry = PreSetupDamageListEntry & {
   oldTempHP: number;
   oldTempMax?: number;
   tempDamage: number;
-  useDamageDetail: boolean;
   wasHit: boolean;
 }
 

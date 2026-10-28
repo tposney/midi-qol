@@ -1,3 +1,4 @@
+import { registerHiddenGroundCueSetting } from "./lib/hiddenGroundCue.js";
 import { debug, setDebugLevel, i18n, debugEnabled, gameStats, updateFlankingStatusEffects } from "../midi-qol.js";
 import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { DependentsExplorer } from "./apps/DependentsExplorer.js";
@@ -240,7 +241,6 @@ class ConfigSettings {
   hideNPCNames: string = "";
   undoChatColor: string = "Delete";
   undoWorkflow: boolean = false;
-  useDamageDetail: boolean = true;
   waitForDamageApplication: boolean = true;
   enforceDeathSaves: boolean = false;
   rollAlternate: string = "off";
@@ -278,7 +278,6 @@ class ConfigSettings {
     visionTestHeight: "center",
     templateOriginHeight: "base",
     surfaceOcclusion: true,
-    surfaceVisionFog: false,
     wallsBlockRange: "center",
   };
 }
@@ -853,7 +852,14 @@ export let fetchParams = () => {
   if (configSettings.autoTarget === "wallsBlockIgnoreIncapcitated") configSettings.autoTarget = "wallsBlockIgnoreIncapacitated";
   if (configSettings.autoTarget === "wallsBlockIgnoreIncapacitated") configSettings.autoTarget = "wallsBlockIgnoreIncapacitated";
   if (configSettings.autoTarget === "alwaysIgnoreIncapcitated") configSettings.autoTarget = "alwaysIgnoreIncapacitated";
-  configSettings.useDamageDetail = true;
+  // Removed setting (midi always applies the damage detail); kept readable for macros, never saved.
+  Object.defineProperty(configSettings, "useDamageDetail", {
+    configurable: true, enumerable: false,
+    get() {
+      foundry.utils.logCompatibilityWarning("MidiQOL.configSettings().useDamageDetail is deprecated: midi always applies the damage detail.", { since: "midi-qol 14.6.5", until: "midi-qol 14.8" });
+      return true;
+    }
+  });
   if (configSettings.collapsibleTargets === undefined) configSettings.collapsibleTargets = true;
   if (configSettings.displayProperties === undefined) configSettings.displayProperties = true;
   criticalDamage = configSettings.criticalDamage ?? "default";
@@ -1751,6 +1757,8 @@ export const registerSettings = function () {
   // ========================================
   // Visible settings (config: true)
   // ========================================
+
+  registerHiddenGroundCueSetting();
 
   game.settings.register("midi-qol", "EnableWorkflow", {
     name: i18n("midi-qol.EnableWorkflow.Name"),

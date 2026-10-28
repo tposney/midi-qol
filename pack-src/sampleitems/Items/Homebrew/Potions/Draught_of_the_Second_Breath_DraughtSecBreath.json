@@ -1,0 +1,348 @@
+{
+  "_id": "DraughtSecBreath",
+  "_key": "!items!DraughtSecBreath",
+  "name": "Draught of the Second Breath",
+  "type": "consumable",
+  "img": "icons/consumables/potions/flask-corked-red-glow.webp",
+  "folder": "uGajckZrE7FsOsSY",
+  "sort": 0,
+  "ownership": {
+    "default": 0
+  },
+  "system": {
+    "description": {
+      "value": "<p><em>The liquid is the colour of a sunrise seen through closed eyes, and it is warm in the bottle.</em></p><p>You can drink this potion as a <strong>reaction</strong> when damage would reduce you to 0 hit points. Instead, you rise with hit points equal to your hit point maximum, the damage is otherwise ignored, and you are no longer <strong>charmed</strong>, <strong>frightened</strong>, <strong>paralyzed</strong>, <strong>poisoned</strong> or <strong>stunned</strong>.</p><p>For the next minute, you have resistance to all damage. If damage reduces you to 0 hit points during that minute, you make a <strong>Constitution saving throw</strong> with a DC of 5 + the damage taken; on a success, you drop to 1 hit point instead. When the minute ends, you gain one level of <strong>exhaustion</strong> for each of these saving throws you succeeded on.</p><div class=\"cat-description\"><p>midi-qol: A reaction offered when incoming damage is at least your current hit points plus temporary hit points (before resistances). The Second Breath effect lasts 1 minute and uses an <code>isDamaged</code> macro, which rolls the saving throws; the exhaustion is applied when it ends.</p></div>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "midi-qol homebrew",
+      "revision": 1,
+      "rules": "2024",
+      "book": "Homebrew",
+      "license": "",
+      "page": ""
+    },
+    "quantity": 1,
+    "weight": {
+      "value": 0.5,
+      "units": "lb"
+    },
+    "price": {
+      "value": 100000,
+      "denomination": "gp"
+    },
+    "attunement": "",
+    "rarity": "legendary",
+    "identified": true,
+    "uses": {
+      "max": "1",
+      "autoDestroy": true,
+      "spent": 0,
+      "recovery": []
+    },
+    "damage": {
+      "base": {
+        "number": null,
+        "denomination": null,
+        "types": [],
+        "custom": {
+          "enabled": false
+        },
+        "scaling": {
+          "number": 1
+        }
+      },
+      "replace": false
+    },
+    "unidentified": {
+      "description": ""
+    },
+    "type": {
+      "value": "potion",
+      "subtype": ""
+    },
+    "identifier": "draught-of-the-second-breath",
+    "container": null,
+    "magicalBonus": null,
+    "properties": [
+      "mgc"
+    ],
+    "attuned": false,
+    "equipped": false,
+    "activities": {
+      "SecondBreathAct0": {
+        "_id": "SecondBreathAct0",
+        "type": "utility",
+        "activation": {
+          "type": "reaction",
+          "value": 1,
+          "condition": "When damage would reduce you to 0 hit points",
+          "override": false
+        },
+        "consumption": {
+          "targets": [
+            {
+              "type": "itemUses",
+              "value": "1",
+              "target": "",
+              "scaling": {}
+            }
+          ],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "concentration": false,
+          "value": "1",
+          "units": "minute",
+          "special": "",
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "SecondBreathEff0"
+          }
+        ],
+        "range": {
+          "units": "self",
+          "special": "",
+          "override": false
+        },
+        "target": {
+          "template": {
+            "count": "",
+            "contiguous": false,
+            "type": "",
+            "size": "",
+            "width": "",
+            "height": "",
+            "units": ""
+          },
+          "affects": {
+            "count": "",
+            "type": "self",
+            "choice": false,
+            "special": ""
+          },
+          "prompt": true,
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "sort": 0,
+        "useConditionText": "reaction === \"isDamaged\" && (workflow?.damageTotal ?? 0) >= (target?.attributes?.hp?.value ?? 0) + (target?.attributes?.hp?.temp ?? 0)",
+        "effectConditionText": "",
+        "name": "Drink",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false,
+          "forceConsumeDialog": "never"
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    }
+  },
+  "effects": [
+    {
+      "transfer": false,
+      "_id": "SecondBreathEff0",
+      "disabled": false,
+      "duration": {},
+      "origin": null,
+      "flags": {
+        "dae": {
+          "selfTarget": true,
+          "selfTargetAlways": false,
+          "stackable": "noneName",
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": []
+        },
+        "midi-qol": {
+          "secondBreath": {
+            "risen": false,
+            "saves": 0
+          }
+        }
+      },
+      "name": "Second Breath",
+      "description": "Resistance to all damage. Damage that would drop you to 0 calls for a Constitution save (DC 5 + damage): on a success you drop to 1 instead. A level of exhaustion for each such save when this ends.",
+      "statuses": [],
+      "img": "icons/consumables/potions/flask-corked-red-glow.webp",
+      "type": "base",
+      "system": {
+        "changes": [
+          {
+            "key": "flags.midi-qol.onUseMacroName",
+            "value": "ItemMacro, isDamaged",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "macro.itemMacro",
+            "value": "",
+            "priority": 20,
+            "type": "custom"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "acid",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "bludgeoning",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "cold",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "fire",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "force",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "lightning",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "necrotic",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "piercing",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "poison",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "psychic",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "radiant",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "slashing",
+            "priority": 20,
+            "type": "add"
+          },
+          {
+            "key": "system.traits.dr.value",
+            "value": "thunder",
+            "priority": 20,
+            "type": "add"
+          }
+        ]
+      },
+      "sort": 0,
+      "_key": "!items.effects!DraughtSecBreath.SecondBreathEff0",
+      "showIcon": 2
+    }
+  ],
+  "flags": {
+    "dae": {
+      "macro": {
+        "name": "Draught of the Second Breath",
+        "type": "script",
+        "img": "icons/svg/dice-target.svg",
+        "scope": "global",
+        "command": "// Draught of the Second Breath\n// isDamaged, while the effect lasts: the blow that would drop the drinker to 0 when they drink leaves them at their hit\n// point maximum and clears the conditions that hold them down. Later blows that would drop them to 0 call for a\n// Constitution save (DC 5 + the damage taken): on a success they drop to 1 instead and the save is counted. Resistance to\n// all damage comes from the effect. When the effect ends, a level of exhaustion for each save made.\nconst FLAG = \"secondBreath\";\nconst CLEARED = [\"charmed\", \"frightened\", \"paralyzed\", \"poisoned\", \"stunned\"];\nconst name = macroItem?.name ?? \"Draught of the Second Breath\";\nconst say = (content) => ChatMessage.create({ speaker: ChatMessage.getSpeaker({ actor }), content: `<strong>${name}</strong>: ${content}` });\n\nif (args[0] === \"off\") {\n  const lastArg = args.at(-1);\n  const saves = foundry.utils.getProperty(lastArg?.efData ?? {}, `flags.midi-qol.${FLAG}.saves`) ?? 0;\n  if (saves < 1) return say(`the second breath runs out.`);\n  const current = actor.system.attributes.exhaustion ?? 0;\n  const exhaustion = Math.min(6, current + saves);\n  if (exhaustion <= current) return say(`the second breath runs out.`);\n  const updates = { \"system.attributes.exhaustion\": exhaustion };\n  if (actor.isOwner) await actor.update(updates);\n  else await MidiQOL.socket().executeAsGM(\"updateActor\", { actorUuid: actor.uuid, updates });\n  const gained = exhaustion - current;\n  await say(`the second breath runs out: ${actor.name} gains ${gained} level${gained > 1 ? \"s\" : \"\"} of exhaustion.`);\n  return;\n}\nif (args[0]?.tag !== \"TargetOnUse\" || args[0].macroPass !== \"isDamaged\") return;\n\nconst di = workflow?.damageItem;\nif (!di || di.oldHP < 1 || di.newHP > 0) return;\nconst effect = actor.effects.find(e => e.getFlag(\"midi-qol\", FLAG) !== undefined);\nif (!effect) return;\nconst state = effect.getFlag(\"midi-qol\", FLAG);\n\n// Damage that leaves exactly 1 hit point, temporary hit points spent first.\nconst leaveOne = () => {\n    const base = di.totalDamage;\n  const target = (di.oldTempHP ?? 0) + di.oldHP - 1;\n  MidiQOL.modifyDamageBy({ damageItem: di, value: target - base, type: \"none\", reason: name });\n  di.newHP = 1;\n};\n\nif (!state.risen) {\n  // the blow you drink against: rise at the hit point maximum, free of what was holding you down\n  leaveOne();\n  const max = Math.max(1, actor.system.attributes.hp.max);\n  if (max > 1) MidiQOL.modifyDamageBy({ damageItem: di, value: -(max - 1), type: \"healing\", reason: name });\n  di.newHP = max;\n  for (const status of CLEARED.filter(s => actor.statuses.has(s)))\n    await MidiQOL.socket().executeAsGM(\"toggleStatusEffect\", { actorUuid: actor.uuid, statusId: status, options: { active: false } });\n  await MidiQOL.socket().executeAsGM(\"updateEffects\", { actorUuid: actor.uuid, updates: [{ _id: effect.id, [`flags.midi-qol.${FLAG}`]: { risen: true, saves: state.saves ?? 0 } }] });\n  return say(`${actor.name} draws a second breath and rises, whole.`);\n}\n\n// later blows: hold on with a Constitution save, as undead fortitude\nconst dc = 5 + Math.max(0, di.totalDamage);\nconst flavor = `${name} - DC ${dc} Constitution saving throw`;\nconst save = (await actor.rollSavingThrow({ ability: \"con\", target: dc }, {}, { flavor, fastForward: true }))?.[0]?.total ?? 0;\nif (save < dc) return say(`${actor.name} fails the DC ${dc} Constitution save, and the second breath gives out.`);\nleaveOne();\nconst saves = (state.saves ?? 0) + 1;\nawait MidiQOL.socket().executeAsGM(\"updateEffects\", { actorUuid: actor.uuid, updates: [{ _id: effect.id, [`flags.midi-qol.${FLAG}.saves`]: saves }] });\nawait say(`${actor.name} succeeds on a DC ${dc} Constitution save and holds on at 1 hit point (${saves} level${saves > 1 ? \"s\" : \"\"} of exhaustion to come).`);\n",
+        "author": null,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {},
+        "_stats": {}
+      }
+    },
+    "midi-qol": {
+      "onUseMacroParts": {
+        "items": []
+      }
+    },
+    "midiProperties": {
+      "confirmTargets": "default"
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "version": "13.0.69"
+      }
+    }
+  }
+}

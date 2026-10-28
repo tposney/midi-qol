@@ -660,8 +660,19 @@
   "midi-qol.VisionTestHeight.Hint": "Which elevation to test for token visibility. Affects both Foundry's rendering and midi's vision checks.",
   "midi-qol.SurfaceOcclusion.Name": "Occlude upper floor surfaces",
   "midi-qol.SurfaceOcclusion.Hint": "In multi-level scenes, make upper floor surfaces transparent when viewing from a lower floor, even if the token is not directly underneath.",
-  "midi-qol.SurfaceVisionFog.Name": "Dim lower floors through surface holes",
-  "midi-qol.SurfaceVisionFog.Hint": "In multi-level scenes, dim areas visible through gaps in floor surfaces where the viewing angle blocks line of sight to the floor below.",
+  "midi-qol.HiddenGroundCue.Name": "Mark lower floors where creatures can't be seen",
+  "midi-qol.HiddenGroundCue.Hint": "In scenes with levels, the floor below is drawn wherever an opening shows it, but a creature standing there is hidden if the floor's edge or a wall blocks the line from your token's eyes. Marks those squares, in the style chosen below.",
+  "midi-qol.HiddenGroundCue.Style.Name": "Hidden ground style",
+  "midi-qol.HiddenGroundCue.Style.Hint": "How squares where creatures can't be seen are marked.",
+  "midi-qol.HiddenGroundCue.Style.tint": "Tint",
+  "midi-qol.HiddenGroundCue.Style.dim": "Dim",
+  "midi-qol.HiddenGroundCue.Style.hatch": "Hatch",
+  "midi-qol.HiddenGroundCue.Style.outline": "Outline",
+  "midi-qol.HiddenGroundCue.Style.hatchOutline": "Hatch and outline",
+  "midi-qol.HiddenGroundCue.Color.Name": "Hidden ground colour",
+  "midi-qol.HiddenGroundCue.Color.Hint": "Colour of the tint, hatch and outline (Dim is always black).",
+  "midi-qol.HiddenGroundCue.Opacity.Name": "Hidden ground opacity",
+  "midi-qol.HiddenGroundCue.Opacity.Hint": "How strongly the squares are marked.",
   "midi-qol.VisionTestHeightOptions": {
     "center": "Center",
     "top": "Top",
@@ -1669,6 +1680,7 @@
     }
   },
   "midi-qol.OVERTIME": {
+    "Trigger": "Runs at the chosen turn point for each creature with an effect whose change is flags.midi-qol.ActivityOverTime = {identifier} (this activity's identifier, or its UUID). Add that change to the effect your item applies.",
     "Title": {
       "one": "Midi Overtime",
       "other": "Midi Overtime"
@@ -2519,13 +2531,21 @@
   "midi-qol.REGION_BEHAVIOR.templateOrigin.top": "Caster's top",
   "midi-qol.REGION_BEHAVIOR.templateOrigin.eye": "Caster's eye level",
   "BEHAVIOR.TYPES.midi-qol.regionLight.label": "Midi Region Light",
-  "BEHAVIOR.TYPES.midi-qol.regionLight.hint": "Create an ambient light at the region center that follows the region.",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.hint": "An ambient light, or a darkness source, at the region center, confined to the region and following it.",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.dim.label": "Dim Light Radius",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.bright.label": "Bright Light Radius",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.color.label": "Light Color",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.alpha.label": "Light Alpha",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.luminosity.label": "Luminosity",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.animationType.label": "Animation Type",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.negative.label": "Darkness",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.negative.hint": "A source of darkness instead of light: the radii are its darkness, and it uses the darkness animations.",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.priority.label": "Priority",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.priority.hint": "Where lights and darkness overlap, the source with the higher priority wins.",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.walls.label": "Constrained by Walls",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.fill.label": "Fill Region",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.fill.hint": "Size the light to reach the whole region (bright throughout, or dim if Bright Light Radius is 0) instead of using the radii above.",
+  "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.walls.hint": "Walls block the light (or darkness), as for an ambient light. Off: it passes through walls.",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.animationSpeed.label": "Animation Speed",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.animationIntensity.label": "Animation Intensity",
   "BEHAVIOR.TYPES.midi-qol.regionLight.FIELDS.lightDocId.label": "Light Document ID",
@@ -2539,5 +2559,9 @@
   },
   "midi-qol.defaultOtherActivity.Name": "Other Activity Default",
   "midi-qol.defaultOtherActivity.Hint": "What <b>Default</b> means in an activity's Other Activity field. Many dnd5e items pair an attack with a save - poison, say - without linking the two.",
-  "midi-qol.TargetNotEvaluated": "Added to the card after the roll: not checked by midi."
+  "midi-qol.TargetNotEvaluated": "Added to the card after the roll: not checked by midi.",
+  "midi-qol.RegionMagic.Magical": "Magical",
+  "midi-qol.RegionMagic.MagicalHint": "Detect Magic senses this region. Regions made by a spell or a magic item are sensed anyway.",
+  "midi-qol.RegionMagic.School": "Magic School",
+  "midi-qol.RegionMagic.SchoolFromSpell": "The school of the spell that made it"
 }

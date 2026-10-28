@@ -166,13 +166,13 @@
     },
     "cat": {
       "automation": {
-        "version": "14.6.0"
+        "version": "14.6.5"
       }
     }
   },
   "system": {
     "description": {
-      "value": "<p>Starting at 6th level, whenever you or a friendly creature within 10 feet of you must make a saving throw, the creature gains a bonus to the saving throw equal to your Charisma modifier (with a minimum bonus of +1). You must be conscious to grant this bonus.</p>\n<p> At 18th level, the range of this aura increases to 30 feet.</p>\n<p><strong>midi-qol</strong>: Requires Aura Effects module. Uses an aura effect (allies, 10ft radius) that adds CHA modifier to saving throws. Adjust the distance formula to 30 for level 18+.</p>",
+      "value": "<p>Starting at 6th level, whenever you or a friendly creature within 10 feet of you must make a saving throw, the creature gains a bonus to the saving throw equal to your Charisma modifier (with a minimum bonus of +1). You must be conscious to grant this bonus.</p>\n<p> At 18th level, the range of this aura increases to 30 feet.</p><div class=\"cat-description\"><p><strong>midi-qol</strong>: Requires Aura Effects module. Uses an aura effect (allies, 10ft radius) that adds CHA modifier to saving throws. Adjust the distance formula to 30 for level 18+.</p></div>",
       "chat": "<p>Starting at 6th level, whenever you or a friendly creature within 10 feet of you must make a saving throw, the creature gains a bonus to the saving throw equal to your Charisma modifier (with a minimum bonus of +1). You must be conscious to grant this bonus.</p>\n<p> At 18th level, the range of this aura increases to 30 feet.</p>"
     },
     "source": {

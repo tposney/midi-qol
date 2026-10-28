@@ -1988,3 +1988,11 @@ body.theme-dark input[type="checkbox"] {
   display: flex;
   gap: 4px;
 }
+
+/* CAT's description block (midi's automation notes, CPR's chosen options): set off from the item's own text. */
+.cat-description {
+  margin-top: 0.75em;
+  padding-top: 0.25em;
+  border-top: 1px solid var(--dnd5e-color-gold, var(--color-border));
+  opacity: 0.85;
+}

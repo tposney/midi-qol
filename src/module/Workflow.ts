@@ -3486,7 +3486,11 @@ export class Workflow {
 
     await this.callMidiHooks("midi-qol.RollComplete");
     if (this.aborted) return this.WorkflowState_Abort;  // TODO This is wrong
-    if (autoRemoveTargets !== "none") setTimeout(untargetDeadTokens, 500); // delay to let the updates finish
+    // Delayed to let the updates finish; only this workflow's targets, not ones targeted since for another use.
+    if (autoRemoveTargets !== "none") {
+      const finishedTargets = new Set(this.targets);
+      setTimeout(() => untargetDeadTokens(finishedTargets), 500);
+    }
     const inCombat = this.actor && isInCombat(this.actor);
     let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
     const isTurn = activeCombatants?.includes(this.token?.id);
