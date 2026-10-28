@@ -1989,13 +1989,26 @@ export function updateFlankingStatusEffects() {
   }
 }
 
-async function removeFlankingStatuses() {
+let removingFlankingStatuses: Promise<void> = Promise.resolve();
+
+// One removal at a time: settings changed again while statuses are coming off would delete them twice
+function removeFlankingStatuses(): Promise<void> {
+  removingFlankingStatuses = removingFlankingStatuses.then(removeFlankingStatusesNow, removeFlankingStatusesNow);
+  return removingFlankingStatuses;
+}
+
+async function removeFlankingStatusesNow() {
+  // A linked actor has a token on several scenes: take each actor's statuses off once
+  const actors = new Map<string, Actor.Implementation>();
   for (const scene of game.scenes ?? []) {
     for (const tokenDocument of scene.tokens) {
       const actor = tokenDocument.actor;
-      for (const statusId of ["flanking", "flanked"]) {
-        if (actor?.statuses.has(statusId)) await toggleStatus(actor, statusId, { active: false });
-      }
+      if (actor && (actor.statuses.has("flanking") || actor.statuses.has("flanked"))) actors.set(actor.uuid, actor);
+    }
+  }
+  for (const actor of actors.values()) {
+    for (const statusId of ["flanking", "flanked"]) {
+      if (actor.statuses.has(statusId)) await toggleStatus(actor, statusId, { active: false });
     }
   }
 }

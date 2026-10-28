@@ -7697,12 +7697,16 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
   // all of them as chips in the total's tooltip, and their labels left out of the shown formula
   const attackModifiers = (foundry.utils.getProperty(roll, `options.${MODULE_ID}.attackModifiers`) ?? []) as AttackModifier[];
   const describeReason = (m: AttackModifier) => m.advantage ? `${i18n("DND5E.Advantage")}: ${m.label}` : `${m.value} ${m.label}`;
-  const reasonIcon = (m: AttackModifier, attrs = "") => m.kind === "granted"
-    ? `<i class="fas fa-bolt"${attrs}></i>`
-    : `<img src="${m.kind === "flanked" ? "modules/midi-qol/icons/encirclement.svg" : "icons/svg/sword.svg"}" alt="${foundry.utils.escapeHTML(m.label)}"${attrs}>`;
-  const attackReasons = attackModifiers.map(m => reasonIcon(m, ` class="midi-attack-reason" data-tooltip="${foundry.utils.escapeHTML(describeReason(m))}"`));
+  // Green for what helps the attack (a bonus, advantage), red for a penalty
+  const reasonSign = (m: AttackModifier) => (m.advantage || !`${m.value ?? ""}`.startsWith("-")) ? "plus" : "minus";
+  const reasonIcon = (m: AttackModifier, cls: string, attrs = "") => m.kind === "granted"
+    ? `<i class="fas fa-bolt ${cls}"${attrs}></i>`
+    // The SVG as a mask, coloured by the text colour (core's icons carry their own fill); an absolute route, as a
+    // url() in a custom property resolves against the stylesheet that uses it
+    : `<span class="${cls} midi-attack-reason-mask" style="--midi-reason-icon: url('${foundry.utils.getRoute(m.kind === "flanked" ? "modules/midi-qol/icons/encirclement.svg" : "icons/svg/sword.svg")}')" role="img" aria-label="${foundry.utils.escapeHTML(m.label)}"${attrs}></span>`;
+  const attackReasons = attackModifiers.map(m => reasonIcon(m, `midi-attack-reason ${reasonSign(m)}`, ` data-tooltip="${foundry.utils.escapeHTML(describeReason(m))}"`));
   const attackReasonsTooltip = attackModifiers.length
-    ? `<div class="midi-attack-reason-chips">${attackModifiers.map(m => `<span class="midi-attack-reason-chip">${reasonIcon(m)} ${foundry.utils.escapeHTML(describeReason(m))}</span>`).join("")}</div>`
+    ? `<div class="midi-attack-reason-chips">${attackModifiers.map(m => `<span class="midi-attack-reason-chip ${reasonSign(m)}">${reasonIcon(m, "midi-attack-reason-icon")} ${foundry.utils.escapeHTML(describeReason(m))}</span>`).join("")}</div>`
     : "";
 
   const chatData = {
